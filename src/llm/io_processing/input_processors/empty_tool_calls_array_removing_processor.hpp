@@ -15,7 +15,7 @@
 //*****************************************************************************
 #pragma once
 
-#include "../base_input_processor.hpp"
+#include "src/llm/io_processing/base_input_processor.hpp"
 
 namespace ovms {
 

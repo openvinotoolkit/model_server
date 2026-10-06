@@ -28,10 +28,10 @@
 #include <openvino/core/type/element_type.hpp>
 #include <openvino/openvino.hpp>
 
-#include "../ocl_utils.hpp"
-#include "../ov_utils.hpp"
-#include "../ovms.h"           // NOLINT
-#include "../ovms_internal.h"  // NOLINT
+#include "src/ocl_utils.hpp"
+#include "src/ov_utils.hpp"
+#include "src/ovms.h"           // NOLINT
+#include "src/ovms_internal.h"  // NOLINT
 #include "src/status.hpp"
 #include "c_api_test_utils.hpp"
 #include "gpuenvironment.hpp"

@@ -22,10 +22,10 @@
 
 #include <openvino/runtime/core.hpp>
 
-#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
-#include "../modelconfig.hpp"
-#include "../modelinstance.hpp"
-#include "../predict_request_validation_utils.hpp"
+#include "src/kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "src/modelconfig.hpp"
+#include "src/modelinstance.hpp"
+#include "src/predict_request_validation_utils.hpp"
 #include "test_utils.hpp"
 
 using ::testing::NiceMock;

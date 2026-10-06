@@ -20,9 +20,9 @@
 #include <gtest/gtest.h>
 #include <openvino/genai/chat_history.hpp>
 
-#include "../../../llm/io_processing/input_processors/image_decoding_processor.hpp"
-#include "../../../llm/io_processing/image_utils.hpp"
-#include "../../../llm/io_processing/input_request.hpp"
+#include "src/llm/io_processing/input_processors/image_decoding_processor.hpp"
+#include "src/llm/io_processing/image_utils.hpp"
+#include "src/llm/io_processing/input_request.hpp"
 
 using namespace ovms;
 

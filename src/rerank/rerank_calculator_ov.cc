@@ -34,15 +34,15 @@
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 
-#include "../http_payload.hpp"
-#include "../logging.hpp"
-#include "../profiler.hpp"
+#include "src/http_payload.hpp"
+#include "src/logging.hpp"
+#include "src/profiler.hpp"
 #include "src/rerank/rerank_calculator_ov.pb.h"
 #include "src/rerank/rerank_utils.hpp"
 #include "rerank_servable.hpp"
-#include "../model_metric_reporter.hpp"
-#include "../executingstreamidguard.hpp"
-#include "../tokenize/tokenize_parser.hpp"
+#include "src/model_metric_reporter.hpp"
+#include "src/executingstreamidguard.hpp"
+#include "src/tokenize/tokenize_parser.hpp"
 
 using namespace rapidjson;
 using namespace ovms;

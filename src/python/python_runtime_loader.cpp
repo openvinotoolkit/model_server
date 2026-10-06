@@ -29,10 +29,10 @@ using PythonLibraryHandle = void*;
 using PythonLibraryHandle = HMODULE;
 #endif
 
-#include "../config.hpp"
-#include "../logging.hpp"
-#include "../module.hpp"
-#include "../status.hpp"
+#include "src/config.hpp"
+#include "src/logging.hpp"
+#include "src/module.hpp"
+#include "src/status.hpp"
 #include "python_runtime_module_api.hpp"
 
 namespace ovms {

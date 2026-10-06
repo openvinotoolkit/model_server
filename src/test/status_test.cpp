@@ -20,7 +20,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../ovms.h"
+#include "src/ovms.h"
 #include "src/status.hpp"
 #include "test_utils.hpp"
 

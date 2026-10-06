@@ -17,7 +17,7 @@
 #include <fstream>
 #include <iostream>
 
-#include "../modelversionstatus.hpp"
+#include "src/modelversionstatus.hpp"
 #include "gtest/gtest.h"
 
 using namespace ovms;

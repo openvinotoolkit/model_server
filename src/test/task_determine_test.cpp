@@ -22,8 +22,8 @@
 
 #include <gtest/gtest.h>
 
-#include "../default_task.hpp"
-#include "../default_task_detector.hpp"
+#include "src/default_task.hpp"
+#include "src/default_task_detector.hpp"
 
 class CLIParserDetermineTaskTest : public ::testing::TestWithParam<std::pair<std::string, std::string>> {
 public:

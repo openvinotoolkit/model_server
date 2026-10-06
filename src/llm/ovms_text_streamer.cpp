@@ -19,7 +19,7 @@
 #include <string>
 #include <utility>
 
-#include "../logging.hpp"
+#include "src/logging.hpp"
 
 namespace {
 // Matches GenAI's is_incomplete() in text_streamer.cpp.

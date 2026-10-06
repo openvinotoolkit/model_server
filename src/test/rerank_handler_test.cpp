@@ -16,7 +16,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../rerank/rerank_utils.hpp"
+#include "src/rerank/rerank_utils.hpp"
 
 using namespace ovms;
 

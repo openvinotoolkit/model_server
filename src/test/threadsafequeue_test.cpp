@@ -21,7 +21,7 @@
 
 #include <gtest/gtest.h>
 
-#include "../threadsafequeue.hpp"
+#include "src/threadsafequeue.hpp"
 
 using ovms::ThreadSafeQueue;
 

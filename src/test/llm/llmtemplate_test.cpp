@@ -29,15 +29,15 @@
 #include <rapidjson/error/en.h>
 
 #include "src/filesystem/filesystem.hpp"
-#include "../../http_payload.hpp"
-#include "../../http_rest_api_handler.hpp"
-#include "../../httpservermodule.hpp"
-#include "../../llm/language_model/continuous_batching/servable.hpp"
-#include "../../llm/language_model/continuous_batching/servable_initializer.hpp"
-#include "../../llm/py_jinja_template_processor.hpp"
-#include "../../mediapipe_internal/mediapipegraphdefinition.hpp"
-#include "../../server.hpp"
-#include "../platform_utils.hpp"
+#include "src/http_payload.hpp"
+#include "src/http_rest_api_handler.hpp"
+#include "src/httpservermodule.hpp"
+#include "src/llm/language_model/continuous_batching/servable.hpp"
+#include "src/llm/language_model/continuous_batching/servable_initializer.hpp"
+#include "src/llm/py_jinja_template_processor.hpp"
+#include "src/mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "src/server.hpp"
+#include "src/test/platform_utils.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"

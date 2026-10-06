@@ -20,7 +20,7 @@
 #include <utility>
 #include <variant>
 
-#include "../logging.hpp"
+#include "src/logging.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 4005 4309 6001 6386 6011 6246)

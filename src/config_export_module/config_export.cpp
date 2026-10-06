@@ -23,7 +23,7 @@
 #include <rapidjson/prettywriter.h>
 #pragma warning(pop)
 
-#include "../capi_frontend/server_settings.hpp"
+#include "src/capi_frontend/server_settings.hpp"
 #include "src/filesystem/filesystem.hpp"
 #include "src/filesystem/localfilesystem.hpp"
 #include "src/logging.hpp"

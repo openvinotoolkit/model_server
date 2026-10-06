@@ -24,9 +24,9 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include "../http_payload.hpp"
-#include "../logging.hpp"
-#include "../image_conversion.hpp"
+#include "src/http_payload.hpp"
+#include "src/logging.hpp"
+#include "src/image_conversion.hpp"
 
 #include "pipelines.hpp"
 #include "imagegenutils.hpp"

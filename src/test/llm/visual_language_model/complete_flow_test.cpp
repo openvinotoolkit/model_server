@@ -25,14 +25,14 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../../../http_rest_api_handler.hpp"
-#include "../../../http_status_code.hpp"
-#include "../../../json_parser.hpp"
-#include "../../../llm/apis/openai_completions.hpp"
-#include "../../../ov_utils.hpp"
-#include "../../../server.hpp"
-#include "../../test_http_utils.hpp"
-#include "../../test_utils.hpp"
+#include "src/http_rest_api_handler.hpp"
+#include "src/http_status_code.hpp"
+#include "src/json_parser.hpp"
+#include "src/llm/apis/openai_completions.hpp"
+#include "src/ov_utils.hpp"
+#include "src/server.hpp"
+#include "src/test/test_http_utils.hpp"
+#include "src/test/test_utils.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"

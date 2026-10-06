@@ -19,7 +19,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../rest_parser.hpp"
+#include "src/rest_parser.hpp"
 #include "src/status.hpp"
 
 using namespace ovms;

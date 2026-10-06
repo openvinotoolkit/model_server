@@ -17,10 +17,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../http_rest_api_handler.hpp"
-#include "../http_status_code.hpp"
-#include "../ov_utils.hpp"
-#include "../server.hpp"
+#include "src/http_rest_api_handler.hpp"
+#include "src/http_status_code.hpp"
+#include "src/ov_utils.hpp"
+#include "src/server.hpp"
 #include "test_http_utils.hpp"
 #include "test_utils.hpp"
 #include "platform_utils.hpp"

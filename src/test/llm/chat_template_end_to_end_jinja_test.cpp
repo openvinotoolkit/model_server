@@ -33,16 +33,16 @@
 
 #include <openvino/genai/chat_history.hpp>
 
-#include "../../llm/io_processing/chat_template/analyzer.hpp"
-#include "../../llm/io_processing/chat_template/caps.hpp"
-#include "../../llm/io_processing/chat_template/probe.hpp"
-#include "../../llm/io_processing/input_processors/chat_template_adapter.hpp"
-#include "../../llm/py_jinja_template_processor.hpp"
-#include "../../utils/env_guard.hpp"
-#include "../../llm/language_model/continuous_batching/servable.hpp"
-#include "../../llm/servable_initializer.hpp"
-#include "../platform_utils.hpp"
-#include "../test_with_temp_dir.hpp"
+#include "src/llm/io_processing/chat_template/analyzer.hpp"
+#include "src/llm/io_processing/chat_template/caps.hpp"
+#include "src/llm/io_processing/chat_template/probe.hpp"
+#include "src/llm/io_processing/input_processors/chat_template_adapter.hpp"
+#include "src/llm/py_jinja_template_processor.hpp"
+#include "src/utils/env_guard.hpp"
+#include "src/llm/language_model/continuous_batching/servable.hpp"
+#include "src/llm/servable_initializer.hpp"
+#include "src/test/platform_utils.hpp"
+#include "src/test/test_with_temp_dir.hpp"
 
 #include "src/filesystem/filesystem.hpp"
 

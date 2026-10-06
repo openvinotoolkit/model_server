@@ -27,8 +27,8 @@
 
 #include <gtest/gtest.h>
 
-#include "../../audio/audio_utils.hpp"
-#include "../../utils/env_guard.hpp"
+#include "src/audio/audio_utils.hpp"
+#include "src/utils/env_guard.hpp"
 
 using namespace ovms::audio_utils;
 

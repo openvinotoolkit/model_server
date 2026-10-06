@@ -18,17 +18,17 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../config.hpp"
+#include "src/config.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
 #include "src/kfs_frontend/kfs_graph_executor_impl.hpp"
 #endif
-#include "../kfs_frontend/kfs_utils.hpp"
+#include "src/kfs_frontend/kfs_utils.hpp"
 #include "src/filesystem/localfilesystem.hpp"
-#include "../logging.hpp"
+#include "src/logging.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
-#include "../server.hpp"
+#include "src/server.hpp"
 #include "src/status.hpp"
-#include "../stringutils.hpp"
+#include "src/stringutils.hpp"
 #include "stress_test_utils.hpp"
 #include "test_models.hpp"
 #include "test_utils.hpp"

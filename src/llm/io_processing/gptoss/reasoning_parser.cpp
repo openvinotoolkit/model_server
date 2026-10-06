@@ -18,8 +18,8 @@
 #include <string>
 #include <vector>
 
-#include "../../../logging.hpp"
-#include "../../../stringutils.hpp"
+#include "src/logging.hpp"
+#include "src/stringutils.hpp"
 #include "reasoning_parser.hpp"
 #include "harmony.hpp"
 

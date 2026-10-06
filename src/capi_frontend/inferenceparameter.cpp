@@ -18,7 +18,7 @@
 
 #include <stdexcept>
 
-#include "../ovms.h"  // NOLINT
+#include "src/ovms.h"  // NOLINT
 #include "capi_utils.hpp"
 namespace ovms {
 InferenceParameter::InferenceParameter(const char* name, OVMS_DataType datatype, const void* data) :

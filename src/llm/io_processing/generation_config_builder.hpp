@@ -25,8 +25,8 @@
 #include "llama3/generation_config_builder.hpp"
 #include "hermes3/generation_config_builder.hpp"
 #include "devstral/generation_config_builder.hpp"
-#include "../apis/openai_request.hpp"
-#include "../../logging.hpp"
+#include "src/llm/apis/openai_request.hpp"
+#include "src/logging.hpp"
 
 namespace ovms {
 class GenerationConfigBuilder {

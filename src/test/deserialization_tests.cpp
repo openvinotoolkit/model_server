@@ -25,13 +25,13 @@
 
 #include <openvino/runtime/core.hpp>
 
-#include "../capi_frontend/buffer.hpp"
-#include "../capi_frontend/capi_utils.hpp"
-#include "../kfs_frontend/kfs_utils.hpp"
-#include "../capi_frontend/deserialization.hpp"
-#include "../kfs_frontend/deserialization.hpp"
-#include "../deserialization_main.hpp"
-#include "../regularovtensorfactory.hpp"
+#include "src/capi_frontend/buffer.hpp"
+#include "src/capi_frontend/capi_utils.hpp"
+#include "src/kfs_frontend/kfs_utils.hpp"
+#include "src/capi_frontend/deserialization.hpp"
+#include "src/kfs_frontend/deserialization.hpp"
+#include "src/deserialization_main.hpp"
+#include "src/regularovtensorfactory.hpp"
 #include "test_utils.hpp"
 
 using namespace ovms;

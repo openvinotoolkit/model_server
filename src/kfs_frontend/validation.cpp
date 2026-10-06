@@ -23,12 +23,12 @@
 #include <sstream>
 #include <string>
 
-#include "../tensor_conversion_common.hpp"
+#include "src/tensor_conversion_common.hpp"
 #include "kfs_utils.hpp"
-#include "../precision.hpp"
-#include "../predict_request_validation_utils.hpp"
-#include "../profiler.hpp"
-#include "../logging.hpp"
+#include "src/precision.hpp"
+#include "src/predict_request_validation_utils.hpp"
+#include "src/profiler.hpp"
+#include "src/logging.hpp"
 #include "src/status.hpp"
 
 namespace ovms {

@@ -22,8 +22,8 @@
 #include <utility>
 #include <variant>
 
-#include "../logging.hpp"
-#include "../modelversionstatus.hpp"
+#include "src/logging.hpp"
+#include "src/modelversionstatus.hpp"
 
 namespace ovms {
 

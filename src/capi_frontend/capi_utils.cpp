@@ -20,7 +20,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include "../logging.hpp"
+#include "src/logging.hpp"
 #include "src/status.hpp"
 #include "buffer.hpp"
 #include "inferencerequest.hpp"

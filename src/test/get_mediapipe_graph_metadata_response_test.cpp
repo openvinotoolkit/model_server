@@ -23,21 +23,21 @@
 #include <rapidjson/document.h>
 
 #if (MEDIAPIPE_DISABLE == 0)
-#include "../mediapipe_internal/mediapipegraphdefinition.hpp"
-#include "../mediapipe_internal/mediapipegraphexecutor.hpp"
+#include "src/mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "src/mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif
-#include "../executingstreamidguard.hpp"
-#include "../grpcservermodule.hpp"
-#include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "src/executingstreamidguard.hpp"
+#include "src/grpcservermodule.hpp"
+#include "src/kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "src/filesystem/localfilesystem.hpp"
-#include "../model.hpp"
-#include "../modelinstance.hpp"
-#include "../modelinstanceunloadguard.hpp"
+#include "src/model.hpp"
+#include "src/modelinstance.hpp"
+#include "src/modelinstanceunloadguard.hpp"
 #include "src/servable_management/modelmanager.hpp"
-#include "../modelversionstatus.hpp"
-#include "../prediction_service_utils.hpp"
-#include "../schema.hpp"
-#include "../server.hpp"
+#include "src/modelversionstatus.hpp"
+#include "src/prediction_service_utils.hpp"
+#include "src/schema.hpp"
+#include "src/server.hpp"
 
 #include "constructor_enabled_model_manager.hpp"
 #include "mockmodelinstancechangingstates.hpp"

@@ -25,8 +25,8 @@
 
 #include <openvino/genai/omni/pipeline.hpp>
 
-#include "../../../logging.hpp"
-#include "../../../profiler.hpp"
+#include "src/logging.hpp"
+#include "src/profiler.hpp"
 
 namespace ovms {
 struct OmniModelLegacyServableExecutionContext;

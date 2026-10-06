@@ -21,8 +21,8 @@
 
 #include "mediapipe/framework/port/parse_text_proto.h"
 
-#include "../rest_parser.hpp"
-#include "../http_payload.hpp"
+#include "src/rest_parser.hpp"
+#include "src/http_payload.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6001)
 #include "absl/strings/escaping.h"

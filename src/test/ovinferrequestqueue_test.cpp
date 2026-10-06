@@ -23,8 +23,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../ovinferrequestsqueue.hpp"
-#include "../timer.hpp"
+#include "src/ovinferrequestsqueue.hpp"
+#include "src/timer.hpp"
 
 #include <openvino/runtime/core.hpp>
 

@@ -22,7 +22,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "../modelconfig.hpp"
+#include "src/modelconfig.hpp"
 #include "src/status.hpp"
 #include "test_utils.hpp"
 

@@ -20,7 +20,7 @@
 #include <utility>
 #include <vector>
 
-#include "../../ovms_text_streamer.hpp"
+#include "src/llm/ovms_text_streamer.hpp"
 #include "servable.hpp"
 
 namespace ovms {
