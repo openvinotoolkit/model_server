@@ -3212,6 +3212,22 @@ TEST(OvmsGraphCliParserTest, embeddingsMaxLengthNonZeroIsAccepted) {
     ASSERT_EQ(embeddingsGraphSettings.maxLength.value(), 1u);
 }
 
+TEST(OvmsGraphCliParserTest, embeddingsMaxBatchSizeZeroThrowsInvalidArgument) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::EmbeddingsGraphCLIParser parser;
+    parser.parse({"--max_batch_size", "0"});
+    EXPECT_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"), std::invalid_argument);
+}
+
+TEST(OvmsGraphCliParserTest, embeddingsMaxBatchSizeNonZeroIsAccepted) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::EmbeddingsGraphCLIParser parser;
+    parser.parse({"--max_batch_size", "32"});
+    parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model");
+    const auto& settings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(settings.maxBatchSize, 32u);
+}
+
 TEST(OvmsGraphCliParserTest, validParserNamesAreAccepted) {
     ovms::HFSettingsImpl hfSettings;
     ovms::GraphCLIParser parser;

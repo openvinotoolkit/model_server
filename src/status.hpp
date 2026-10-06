@@ -97,6 +97,7 @@ enum class StatusCode {
     INVALID_STRING_INPUT,             /*!< Invalid string input */
     INVALID_INPUT_FORMAT,             /*!< Invalid format of the input inside buffer */
     INVALID_STRING_MAX_SIZE_EXCEEDED, /*!< Maximum 2D array after string conversion exceeded 1GB */
+    INVALID_IMAGE_MAX_SIZE_EXCEEDED,  /*!< Image binary payload size exceeds maximum allowed limit */
 
     // Deserialization
     OV_UNSUPPORTED_DESERIALIZATION_PRECISION, /*!< Unsupported deserialization precision, theoretically should never be returned since ModelInstance::validation checks against model precision */

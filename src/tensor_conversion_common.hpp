@@ -15,7 +15,9 @@
 //*****************************************************************************
 #pragma once
 
+#include <cstdint>
 #include <memory>
+#include <string_view>
 #include <vector>
 #include <string>
 
@@ -40,9 +42,11 @@ Status validateNumberOfChannels(const TensorInfo& tensorInfo,
     const cv::Mat input,
     cv::Mat* firstBatchImage);
 Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::Mat* firstBatchImage);
-/////////////////////////////////
+Status checkEstimatedImageSize(std::string_view encodedImage, const std::string& inputName,
+    size_t alreadyAllocatedPixels, size_t maxAllowedImagePixels);
+Status accumulateAndCheckDecodedImageSize(const cv::Mat& image, const TensorInfo& tensorInfo,
+    size_t& totalAllocatedPixels, size_t maxAllowedImagePixels);
 }  // namespace tensor_conversion
-/////////////////////////////////
 Dimension getTensorInfoHeightDim(const TensorInfo& tensorInfo);
 void updateTargetResolution(Dimension& height, Dimension& width, const cv::Mat& image);
 bool isResizeSupported(const TensorInfo& tensorInfo);

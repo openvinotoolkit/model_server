@@ -496,6 +496,18 @@ TEST_F(RerankTokenizeHttpTest, tokenizePositivePaddingSideRight) {
     AssertTokenizationResult(response, expectedTokens);
 }
 
+TEST_F(RerankTokenizeHttpTest, tokenizeNegativeMaxLenParamAboveLimit) {
+    std::string requestBody = R"(
+        {
+            "model": "rerank_ov",
+            "text": "hello world",
+            "max_length": 1000001
+        }
+    )";
+    Status status = handler->dispatchToProcessor(endpointTokenize, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+}
+
 TEST_F(RerankTokenizeHttpTest, tokenizeNegativeInvalidPaddingSide) {
     std::string requestBody = R"(
         {
