@@ -32,19 +32,47 @@ class GptOssToolParser : public BaseOutputParser {
     static const std::string parsingEndTag;
 
     enum class StreamState : int {
-        READING_CHANNEL,
+        READING_HEADER,
         READING_CONSTRAIN,
         READING_MESSAGE,
+        READING_CONTENT,
+        WAITING_FOR_FINAL,
     };
 
+    enum class StepAction : int {
+        CONTINUE,
+        NEED_MORE_INPUT,
+        EMIT_DELTA,
+    };
+
+    struct StepResult {
+        StepAction action;
+        std::optional<Delta> delta;
+    };
+
+    static StepResult continueParsing() { return {StepAction::CONTINUE, std::nullopt}; }
+    static StepResult needMoreInput() { return {StepAction::NEED_MORE_INPUT, std::nullopt}; }
+    static StepResult emitDelta(Delta delta) { return {StepAction::EMIT_DELTA, std::move(delta)}; }
+
     // Streaming temp variables
-    StreamState streamState = StreamState::READING_CHANNEL;
+    StreamState streamState = StreamState::READING_HEADER;
     std::string cache;
+    std::string postToolCallCache;
     bool isStreamingFunctionName = false;
     int toolCallIndex = -1;
     std::string functionNameCache;
 
     std::optional<Delta> wrapDeltaIntoDocument(const std::string& chunk);
+    StepResult consumeHeader(std::string& chunk, std::optional<Delta>& pendingDelta);
+    StepResult consumeConstrain(std::string& chunk, std::optional<Delta>& pendingDelta);
+    StepResult consumeMessage(std::string& chunk, std::optional<Delta>& pendingDelta);
+    StepResult consumeContent(std::string& chunk);
+    StepResult consumePostToolCall(std::string& chunk);
+    StepResult consumePartialHeader(std::string chunk);
+    bool consumeToolCallStartTag(std::string& chunk);
+    bool consumeCompleteHeader(std::string& chunk, std::optional<Delta>& result);
+    bool consumeHeaderMarker(std::string& chunk, std::optional<Delta>& result);
+    bool closeMessage(std::string& chunk, std::optional<Delta>& result);
 
     void clearState();
 
@@ -54,7 +82,10 @@ public:
     static OutputParsingConfig defaultParsingConfig() {
         OutputParsingConfig cfg;
         cfg.startTags = {"<|channel|>commentary to=",
-            "<|channel|>analysis to="};
+            "<|channel|>analysis to=",
+            "<|start|>assistant to=",
+            "<|channel|>final<|message|>",
+            "<|start|>assistant<|channel|>final<|message|>"};
         cfg.endTag = "<|call|>";
         cfg.needsSpecialTokens = true;
         cfg.defaultDecodingWithSpecialTokens = true;
@@ -67,7 +98,8 @@ public:
             configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
 
     void resetState() override {
-        streamState = StreamState::READING_CHANNEL;
+        streamState = StreamState::READING_HEADER;
+        postToolCallCache.clear();
         toolCallIndex = -1;
         clearState();
     }
