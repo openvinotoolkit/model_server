@@ -324,6 +324,8 @@ public:
 
     bool disableInputCountValidation() const;
     bool allowCredentials() const;
+    uint64_t maxImageDecodePixels() const;
+    bool allowUnestimatableImageFormats() const;
     const std::string& allowedOrigins() const;
     const std::string& allowedMethods() const;
     const std::string& allowedHeaders() const;
