@@ -141,14 +141,14 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "Time interval between config and model versions changes detection. Default is 1. Zero or negative value disables changes monitoring.",
                 cxxopts::value<uint32_t>()->default_value("1"),
                 "FILE_SYSTEM_POLL_WAIT_SECONDS")
+            ("memory_trimming_interval_seconds",
+                "Time interval between memory trimming cycles. Default is 300.",
+                cxxopts::value<uint32_t>()->default_value("300"),
+                "MEMORY_TRIMMING_INTERVAL_SECONDS")
             ("idle_unload_timeout_seconds",
                 "Idle timeout in seconds for model group unloading. When > 0, models not in the 'permanent' group are loaded on demand and unloaded after this idle period. Only effective with config.json multi-model setup. Default is 0 (disabled).",
                 cxxopts::value<uint32_t>()->default_value("0"),
                 "IDLE_UNLOAD_TIMEOUT_SECONDS")
-            ("custom_node_resources_cleaner_interval_seconds",
-                "Time interval between two consecutive resources cleanup scans. Default is 300. Zero value disables resources cleaner.",
-                cxxopts::value<uint32_t>()->default_value("300"),
-                "CUSTOM_NODE_RESOURCES_CLEANER_INTERVAL_SECONDS")
             ("cache_dir",
                 "Overrides model cache directory. By default cache files are saved into"
 #ifdef __linux__
@@ -179,6 +179,19 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "Path to directory that contains multimedia files that can be used as input for LLMs.",
                 cxxopts::value<std::string>(),
                 "ALLOWED_LOCAL_MEDIA_PATH")
+            ("max_image_decode_pixels",
+                    "Maximum total number of decoded input-image pixels (the sum of width x height across all images in a request). "
+                    "Images that would make the request exceed this limit are rejected before decoding, guarding against decompression-bomb inputs. "
+                "Default matches OpenCV's OPENCV_IO_MAX_IMAGE_PIXELS. Note: this does not change OpenCV's own internal limit, "
+                "which is controlled separately by the OPENCV_IO_MAX_IMAGE_PIXELS environment variable read at startup.",
+                cxxopts::value<uint64_t>()->default_value(std::to_string(OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS)),
+                "MAX_IMAGE_DECODE_PIXELS")
+            ("allow_unestimatable_image_formats",
+                "Flag allowing input images whose decoded size cannot be estimated (formats OVMS cannot inspect the header of) "
+                "to be decoded anyway. Disabled by default, so such images are rejected. Enable only if you must accept formats "
+                "OVMS cannot pre-validate.",
+                cxxopts::value<bool>()->default_value("false"),
+                "ALLOW_UNESTIMATABLE_IMAGE_FORMATS")
             ("allow_credentials",
                 "Flag enabling credentials on the API.",
                 cxxopts::value<bool>()->default_value("false"),
@@ -199,6 +212,14 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "path to the text file containing API key for authentication for generative endpoints. If not set, authentication is disabled.",
                 cxxopts::value<std::string>()->default_value(""),
                 "API_KEY");
+
+#if (PYTHON_DISABLE == 0)
+        options->add_options()
+            ("with_python",
+                "Enable Python runtime support",
+                cxxopts::value<bool>()->default_value("true"),
+                "WITH_PYTHON");
+#endif
 
         options->add_options("multi model")
             ("config_path",
@@ -583,8 +604,8 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
     serverSettings.metricsEnabled = result->operator[]("metrics_enable").as<bool>();
     serverSettings.metricsList = result->operator[]("metrics_list").as<std::string>();
     serverSettings.filesystemPollWaitMilliseconds = result->operator[]("file_system_poll_wait_seconds").as<uint32_t>() * 1000;
+    serverSettings.memoryTrimmingIntervalSeconds = result->operator[]("memory_trimming_interval_seconds").as<uint32_t>();
 
-    serverSettings.resourcesCleanerPollWaitSeconds = result->operator[]("custom_node_resources_cleaner_interval_seconds").as<uint32_t>();
     serverSettings.idleUnloadTimeoutSeconds = result->operator[]("idle_unload_timeout_seconds").as<uint32_t>();
     serverSettings.grpcWorkers = result->operator[]("grpc_workers").as<uint32_t>();
 
@@ -625,11 +646,14 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
     if (result->count("grpc_memory_quota"))
         serverSettings.grpcMemoryQuota = result->operator[]("grpc_memory_quota").as<size_t>();
 
+    serverSettings.maxImageDecodePixels = result->operator[]("max_image_decode_pixels").as<uint64_t>();
+    serverSettings.allowUnestimatableImageFormats = result->operator[]("allow_unestimatable_image_formats").as<bool>();
+
     if (result->count("rest_workers"))
         serverSettings.restWorkers = result->operator[]("rest_workers").as<uint32_t>();
 
 #if (PYTHON_DISABLE == 0)
-        serverSettings.withPython = true;
+    serverSettings.withPython = result->operator[]("with_python").as<bool>();
 #endif
 
 #ifdef MTR_ENABLED

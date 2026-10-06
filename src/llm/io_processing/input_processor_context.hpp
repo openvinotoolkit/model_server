@@ -21,9 +21,7 @@
 
 #include "chat_template/caps.hpp"
 #include "input_processing_config.hpp"
-#if (PYTHON_DISABLE == 0)
-#include "../py_jinja_template_processor.hpp"
-#endif
+#include "../runtime_chat_template.hpp"
 
 namespace ovms {
 
@@ -33,9 +31,7 @@ struct InputProcessorContext {
     InputProcessingConfig config;
     ChatTemplateCaps chatTemplateCaps;
     ov::genai::Tokenizer tokenizer;
-#if (PYTHON_DISABLE == 0)
-    PyJinjaTemplateProcessor* templateProcessor = nullptr;
-#endif
+    PreparedRuntimeChatTemplate* preparedRuntimeChatTemplate = nullptr;
 };
 
 }  // namespace ovms

@@ -97,6 +97,7 @@ enum class StatusCode {
     INVALID_STRING_INPUT,             /*!< Invalid string input */
     INVALID_INPUT_FORMAT,             /*!< Invalid format of the input inside buffer */
     INVALID_STRING_MAX_SIZE_EXCEEDED, /*!< Maximum 2D array after string conversion exceeded 1GB */
+    INVALID_IMAGE_MAX_SIZE_EXCEEDED,  /*!< Image binary payload size exceeds maximum allowed limit */
 
     // Deserialization
     OV_UNSUPPORTED_DESERIALIZATION_PRECISION, /*!< Unsupported deserialization precision, theoretically should never be returned since ModelInstance::validation checks against model precision */
@@ -269,6 +270,10 @@ enum class StatusCode {
     PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED,
     PYTHON_NODE_MISSING_OPTIONS,
     PYTHON_NODE_MISSING_NAME,
+
+    // Python Runtime Initialization
+    PYTHON_INTERPRETER_INITIALIZATION_FAILED, /*!< Python interpreter failed to initialize (libpython.so missing) */
+    PYTHON_BACKEND_CREATION_FAILED,           /*!< Python backend creation failed (pyovms module missing/broken) */
 
     // LLM Nodes
     LLM_NODE_NAME_ALREADY_EXISTS,

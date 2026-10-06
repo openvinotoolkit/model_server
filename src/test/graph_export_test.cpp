@@ -27,7 +27,7 @@
 #include "../capi_frontend/server_settings.hpp"
 #include "../graph_export/graph_export.hpp"
 #include "src/filesystem/filesystem.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../version.hpp"
 
 const std::string expectedOneSettingPluginGraphContents = R"(
@@ -352,6 +352,7 @@ node {
             truncate: true,
             pooling: LAST,
             max_length: 512,
+            max_batch_size: 32,
             target_device: "GPU",
             plugin_config: '{"NUM_STREAMS":"2"}',
         }
@@ -787,6 +788,7 @@ TEST_F(GraphCreationTest, embeddingsPositiveNonDefault) {
     embeddingsGraphSettings.truncate = "true";
     embeddingsGraphSettings.pooling = "LAST";
     embeddingsGraphSettings.maxLength = 512;
+    embeddingsGraphSettings.maxBatchSize = 32;
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
     assertCreatedGraphEquals(hfSettings, expectedEmbeddingsGraphContents);
 }

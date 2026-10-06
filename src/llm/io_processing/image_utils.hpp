@@ -33,10 +33,19 @@ namespace ovms {
 constexpr std::string_view BASE64_PREFIX = "base64,";
 constexpr int64_t MAX_IMAGE_SIZE_BYTES = 20000000;  // 20MB
 
-// Loads an image from a base64 data URI, HTTP/HTTPS URL, or local file path.
-// Returns the decoded image as an ov::Tensor (RGB, u8).
-absl::StatusOr<ov::Tensor> loadImage(const std::string& imageSource,
+struct ImageDownloadContext {
+    std::string* image;
+    size_t sizeLimit;
+    size_t bytesReceived = 0;
+    bool sizeLimitExceeded = false;
+    bool allocationFailed = false;
+
+    size_t append(const void* downloadedChunk, size_t size, size_t nmemb) noexcept;
+};
+
+absl::StatusOr<ov::Tensor> fetchAndDecodeImage(const std::string& imageSource,
     const std::optional<std::string>& allowedLocalMediaPath,
-    const std::optional<std::vector<std::string>>& allowedMediaDomains);
+    const std::optional<std::vector<std::string>>& allowedMediaDomains,
+    size_t& totalAllocatedPixels, size_t maxAllowedImagePixels);
 
 }  // namespace ovms

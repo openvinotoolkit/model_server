@@ -136,6 +136,7 @@ struct EmbeddingsGraphSettingsImpl {
     std::string truncate = "false";
     std::optional<std::string> pooling;
     std::optional<uint32_t> maxLength;
+    std::optional<uint32_t> maxBatchSize;
 };
 
 struct TextToSpeechGraphSettingsImpl {
@@ -217,6 +218,8 @@ struct HFSettingsImpl {
     std::variant<TextGenGraphSettingsImpl, RerankGraphSettingsImpl, EmbeddingsGraphSettingsImpl, TextToSpeechGraphSettingsImpl, SpeechToTextGraphSettingsImpl, ImageGenerationGraphSettingsImpl> graphSettings;
 };
 
+constexpr uint64_t OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS = 67108864;
+
 struct ServerSettingsImpl {
     uint32_t grpcPort = 0;
     uint32_t restPort = 0;
@@ -235,6 +238,9 @@ struct ServerSettingsImpl {
     bool verboseResponse = false;
     bool disableInputCountValidation = false;
     bool allowCredentials = false;
+    uint64_t maxImageDecodePixels = OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS;
+    // When false, images whose decoded size cannot be estimated are rejected; when true they are decoded anyway.
+    bool allowUnestimatableImageFormats = false;
     std::string allowedOrigins{"*"};
     std::string allowedMethods{"*"};
     std::string allowedHeaders{"*"};
@@ -245,7 +251,7 @@ struct ServerSettingsImpl {
     std::optional<size_t> grpcMemoryQuota;
     std::string grpcChannelArguments;
     uint32_t filesystemPollWaitMilliseconds = 1000;
-    uint32_t resourcesCleanerPollWaitSeconds = 300;
+    uint32_t memoryTrimmingIntervalSeconds = 300;
     uint32_t idleUnloadTimeoutSeconds = 0;
     std::string cacheDir;
     bool withPython = false;
@@ -253,6 +259,11 @@ struct ServerSettingsImpl {
     ConfigExportType exportConfigType = UNKNOWN_MODEL;
     HFSettingsImpl hfSettings;
     OvmsServerMode serverMode = SERVING_MODELS_MODE;
+    // Populated once by Server::startModules when serverMode == IN_MEMORY_GRAPH_MODE
+    // (task inferred, --model_path given, no HF download). Consumers (ModelManager,
+    // MediapipeGraphDefinition, MediapipeGraphConfig) read this instead of taking a
+    // dependency on //src/graph_export. Not mutated after startup, so no locking needed.
+    std::optional<std::string> inMemoryGraphPbtxt;
 };
 
 struct ModelsSettingsImpl {

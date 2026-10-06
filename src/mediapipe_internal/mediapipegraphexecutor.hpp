@@ -26,11 +26,12 @@
 #include <utility>
 #include <vector>
 
-#include "../execution_context.hpp"
+#include "src/execution_context.hpp"
+#include "mediapipe_graph_executor_interface.hpp"
 #include "../model_metric_reporter.hpp"
 #include "src/time_utils.hpp"
 #include "../profiler.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../timer.hpp"
 #include "src/llm/execution_context_utils.hpp"
 #pragma warning(push)
@@ -91,6 +92,7 @@ struct ActiveInferenceGuard {
     ActiveInferenceGuard& operator=(ActiveInferenceGuard&&) = default;
 };
 class MediapipeGraphExecutor;
+class ServableDefinitionUnloadGuard;
 
 inline StatusCode mediapipeAbslToOvmsStatus(absl::StatusCode code) {
     if (code == absl::StatusCode::kFailedPrecondition) {  // ovms session calculator returns this status code when loading model fails
@@ -163,10 +165,20 @@ struct StreamingFunctor : public OutputStreamObserverI {
     absl::Status handlePacket(const ::mediapipe::Packet& packet) override;
     ~StreamingFunctor() = default;
 };
-class MediapipeGraphExecutor {
+class MediapipeGraphExecutor : public MediapipeGraphExecutorInterface {
 public:
     const std::string name;
     const std::string version;
+
+    // These virtual overloads are the actual public API for the executor.
+    // Each front-end (gRPC/KFS/HTTP) resolves into one of these request-specific
+    // entry points and then calls the typed template helper below with the
+    // concrete request/response model.
+    //
+    // The template methods are intentionally named differently from the virtual
+    // interface methods to make the dispatch flow explicit: the virtual methods
+    // are the transport-facing contract, while the typed helpers perform the
+    // concrete Mediapipe execution logic.
 
 private:
     const ::mediapipe::CalculatorGraphConfig config;
@@ -215,8 +227,29 @@ public:
         std::shared_ptr<std::atomic<int64_t>> activeInferenceCount = nullptr,
         std::shared_ptr<std::atomic<int64_t>> lastActivityTimeNs = nullptr);
 
+    // Transport-facing virtual API. These are the overloads selected by the
+    // front-end adapters and then immediately delegated into the typed helper
+    // below for the actual mediapipe execution.
+    Status infer(const inference::ModelInferRequest* request,
+        inference::ModelInferResponse* response,
+        const ExecutionContext& executionContext) override;
+    Status inferStream(const inference::ModelInferRequest& firstRequest,
+        grpc_impl::ServerReaderWriterInterface<inference::ModelStreamInferResponse, inference::ModelInferRequest>& serverReaderWriter,
+        const ExecutionContext& executionContext) override;
+    Status infer(const HttpPayload* request,
+        std::string* response,
+        const ExecutionContext& executionContext) override;
+    Status inferStream(const HttpPayload& firstRequest,
+        HttpAsyncWriter& serverReaderWriter,
+        const ExecutionContext& executionContext) override;
+
+    // Template helper used by the transport-specific overloads above.
+    // This is the real implementation body: it is templated so one execution
+    // path can handle both gRPC and HTTP request types without duplicating the
+    // graph logic. The name intentionally differs from the virtual API to keep
+    // the front-end dispatch and the concrete runtime implementation separate.
     template <typename RequestType, typename ResponseType>
-    Status infer(const RequestType* request, ResponseType* response, ExecutionContext executionContext) {
+    Status inferTyped(const RequestType* request, ResponseType* response, ExecutionContext executionContext) {
         OVMS_PROFILE_FUNCTION();
         SPDLOG_DEBUG("Start unary KServe request mediapipe graph: {} execution", this->name);
         MetricCounterGuard failedRequestsGuard(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, false));
@@ -395,7 +428,7 @@ public:
     }
 
     template <typename RequestType, typename ReaderWriterType>
-    Status inferStream(const RequestType& req, ReaderWriterType& serverReaderWriter, ExecutionContext executionContext) {
+    Status inferStreamTyped(const RequestType& req, ReaderWriterType& serverReaderWriter, ExecutionContext executionContext) {
         OVMS_PROFILE_FUNCTION();
         if (this->guard.has_value()) {
             return inferStreamWithQueue(req, serverReaderWriter, executionContext);

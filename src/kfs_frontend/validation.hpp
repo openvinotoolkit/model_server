@@ -26,7 +26,7 @@
 #include "../predict_request_validation_utils.hpp"
 #include "../profiler.hpp"
 #include "../tensorinfo.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 
 namespace ovms {
 }  // namespace ovms

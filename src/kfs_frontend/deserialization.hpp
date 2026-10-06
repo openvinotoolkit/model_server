@@ -26,7 +26,7 @@
 #include "kfs_utils.hpp"
 #include "../logging.hpp"
 #include "../profiler.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../tensor_conversion.hpp"
 #include "../tensorinfo.hpp"
 

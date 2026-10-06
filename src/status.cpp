@@ -92,6 +92,7 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::INVALID_DEVICE_ID, "Invalid input buffer device id"},
     {StatusCode::INVALID_STRING_INPUT, "Invalid string input"},
     {StatusCode::INVALID_STRING_MAX_SIZE_EXCEEDED, "Maximum 2D array after string conversion exceeded 1GB"},
+    {StatusCode::INVALID_IMAGE_MAX_SIZE_EXCEEDED, "Image exceeds maximum decoded size"},
     {StatusCode::INVALID_INPUT_FORMAT, "Inputs inside buffer does not match expected format."},
     {StatusCode::INVALID_PRECISION, "Invalid input precision"},
     {StatusCode::INVALID_VALUE_COUNT, "Invalid number of values in tensor proto container"},
@@ -223,6 +224,10 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED, "The Python Node state initialization failed"},
     {StatusCode::PYTHON_NODE_MISSING_OPTIONS, "The Python Node is missing options definition"},
     {StatusCode::PYTHON_NODE_MISSING_NAME, "The Python Node is missing name definition"},
+
+    // Python Runtime Initialization
+    {StatusCode::PYTHON_INTERPRETER_INITIALIZATION_FAILED, "Failed to initialize Python interpreter."},
+    {StatusCode::PYTHON_BACKEND_CREATION_FAILED, "Failed to create Python backend."},
 
     // LLM Nodes
     {StatusCode::LLM_NODE_NAME_ALREADY_EXISTS, "The LLM Node name is already present in nodes list"},
