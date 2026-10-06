@@ -593,6 +593,48 @@ TEST_F(EmbeddingsHttpTest, negativeExceedsConfiguredMaxLength) {
     ASSERT_THAT(status.string(), ::testing::HasSubstr("longer than allowed"));
 }
 
+TEST_F(EmbeddingsHttpTest, negativeExceedsConfiguredMaxBatchSizeStrings) {
+    const std::string requestBody = R"({"model":"embeddings_ov_max_length","input":["one","two","three"]})";
+    Status status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    ASSERT_THAT(status.string(), ::testing::HasSubstr("Batch size 3 exceeds allowed maximum of 2"));
+}
+
+TEST_F(EmbeddingsHttpTest, negativeExceedsConfiguredMaxBatchSizeTokens) {
+    const std::string requestBody = R"({"model":"embeddings_ov_max_length","input":[[1],[2],[3]]})";
+    Status status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    ASSERT_THAT(status.string(), ::testing::HasSubstr("Batch size 3 exceeds allowed maximum of 2"));
+}
+
+TEST_F(EmbeddingsHttpTest, positiveWithinConfiguredMaxBatchSize) {
+    const std::string requestBody = R"({"model":"embeddings_ov_max_length","input":["one","two"]})";
+    Status status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+}
+
+TEST_F(EmbeddingsHttpTest, negativeExceedsDefaultMaxBatchSize) {
+    std::string requestBody = R"({"model":"embeddings_ov","input":[)";
+    for (size_t i = 0; i < 1025; ++i) {
+        if (i != 0) {
+            requestBody += ",";
+        }
+        requestBody += R"("a")";
+    }
+    requestBody += "]}";
+    Status status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    ASSERT_THAT(status.string(), ::testing::HasSubstr("Batch size 1025 exceeds allowed maximum of 1024"));
+}
+
+TEST_F(EmbeddingsHttpTest, negativeExceedsRequestBodyLimit) {
+    const std::string requestBody = R"({"model":"embeddings_ov","input":")" + std::string(2'000'000, 'a') + R"("})";
+    Status status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    ASSERT_THAT(status.string(), ::testing::HasSubstr("Request body size"));
+    ASSERT_THAT(status.string(), ::testing::HasSubstr("2000000 bytes"));
+}
+
 TEST_F(EmbeddingsHttpTest, accessingCalculatorWithInvalidJson) {
     std::string requestBody = R"(
         {
