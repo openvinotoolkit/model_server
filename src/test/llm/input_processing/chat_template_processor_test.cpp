@@ -246,7 +246,7 @@ TEST(ChatTemplateProcessorNoChatTemplateTest, TokenizerWithoutChatTemplate_Retur
 
 #if (PYTHON_DISABLE == 0)
 static std::unique_ptr<ov::genai::Tokenizer> pyJinjaTokenizer;
-static std::unique_ptr<PreparedChatTemplateRuntime> sharedPyJinjaTemplateProcessor;
+static std::unique_ptr<PreparedChatTemplateRuntime> sharedPreparedChatTemplateRuntime;
 
 class ChatTemplateProcessorPyJinjaTest : public ::testing::Test {
 protected:
@@ -254,17 +254,17 @@ protected:
         const std::string modelsPath = getGenericFullPathForSrcTest(
             "/ovms/src/test/dummy/1");
         pyJinjaTokenizer = std::make_unique<ov::genai::Tokenizer>();
-        sharedPyJinjaTemplateProcessor = std::make_unique<PreparedChatTemplateRuntime>();
+        sharedPreparedChatTemplateRuntime = std::make_unique<PreparedChatTemplateRuntime>();
         const std::string chatTemplate =
             "{% for message in messages %}[{{ message.role }}]{{ message.content }}{% endfor %}"
             "{% if add_generation_prompt %}[assistant]{% endif %}";
         std::string errorMessage;
-        ASSERT_TRUE(sharedPyJinjaTemplateProcessor->prepare(modelsPath, chatTemplate, "", "", errorMessage))
+        ASSERT_TRUE(sharedPreparedChatTemplateRuntime->prepare(modelsPath, chatTemplate, "", "", errorMessage))
             << errorMessage;
     }
 
     static void TearDownTestSuite() {
-        sharedPyJinjaTemplateProcessor.reset();
+        sharedPreparedChatTemplateRuntime.reset();
         pyJinjaTokenizer.reset();
     }
 };
@@ -274,7 +274,7 @@ TEST_F(ChatTemplateProcessorPyJinjaTest, TextMessage_CustomTemplate_GenerationPr
     history.push_back({{"role", "user"}, {"content", "What is OpenVINO?"}});
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(*pyJinjaTokenizer, sharedPyJinjaTemplateProcessor.get());
+    ChatTemplateProcessor processor(*pyJinjaTokenizer, sharedPreparedChatTemplateRuntime.get());
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok()) << status.message();
@@ -290,7 +290,7 @@ TEST_F(ChatTemplateProcessorPyJinjaTest, ExplicitSystemMessage_SuppressesDefault
     history.push_back({{"role", "user"}, {"content", "Hello."}});
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(*pyJinjaTokenizer, sharedPyJinjaTemplateProcessor.get());
+    ChatTemplateProcessor processor(*pyJinjaTokenizer, sharedPreparedChatTemplateRuntime.get());
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok()) << status.message();
@@ -308,7 +308,7 @@ TEST_F(ChatTemplateProcessorPyJinjaTest, MultiTurnConversation_AllTurnsRendered)
     history.push_back({{"role", "user"}, {"content", "Second question."}});
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(*pyJinjaTokenizer, sharedPyJinjaTemplateProcessor.get());
+    ChatTemplateProcessor processor(*pyJinjaTokenizer, sharedPreparedChatTemplateRuntime.get());
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok()) << status.message();
@@ -331,7 +331,7 @@ TEST_F(ChatTemplateProcessorPyJinjaTest, AddGenerationPromptFalse_OmitsGeneratio
     history.set_extra_context(ov::genai::JsonContainer::from_json_string(R"({"add_generation_prompt": false})"));
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(*pyJinjaTokenizer, sharedPyJinjaTemplateProcessor.get());
+    ChatTemplateProcessor processor(*pyJinjaTokenizer, sharedPreparedChatTemplateRuntime.get());
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok()) << status.message();
@@ -345,7 +345,7 @@ TEST_F(ChatTemplateProcessorPyJinjaTest, EmptyStringContent_TemplateStillProduce
     history.push_back({{"role", "user"}, {"content", ""}});
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(*pyJinjaTokenizer, sharedPyJinjaTemplateProcessor.get());
+    ChatTemplateProcessor processor(*pyJinjaTokenizer, sharedPreparedChatTemplateRuntime.get());
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok()) << status.message();
