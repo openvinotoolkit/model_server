@@ -12,28 +12,29 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//*****************************************************************************
+//*****************************************************************************/
 #pragma once
 
+#include <cstdint>
+#include <optional>
 #include <string>
-
-#include <openvino/genai/tokenizer.hpp>
-
-#include "chat_template/caps.hpp"
-#include "input_processing_config.hpp"
-#include "../runtime_chat_template.hpp"
-#include "../../mediapipe_internal/runtime_config.hpp"
+#include <vector>
 
 namespace ovms {
 
-// Holds the per-deployment resources needed by InputProcessor.
-// Created once during servable initialization; reused across requests.
-struct InputProcessorContext {
-    InputProcessingConfig config;
-    RuntimeConfig runtimeConfig;
-    ChatTemplateCaps chatTemplateCaps;
-    ov::genai::Tokenizer tokenizer;
-    PreparedRuntimeChatTemplate* preparedRuntimeChatTemplate = nullptr;
+struct RuntimeConfig {
+    std::optional<std::string> allowedLocalMediaPath;
+    std::vector<std::string> allowedMediaDomains;
+    std::string cacheDir;
+    bool verboseResponse = false;
+    uint32_t restWorkers = 1;
 };
+
+const RuntimeConfig& getRuntimeConfig();
+void setRuntimeConfig(const char* allowedLocalMediaPath,
+    const char* allowedMediaDomains,
+    const char* cacheDir,
+    uint32_t restWorkers,
+    bool verboseResponse);
 
 }  // namespace ovms

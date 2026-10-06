@@ -14,10 +14,12 @@
 // limitations under the License.
 //*****************************************************************************
 #include <atomic>
+#include <cstdlib>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <optional>
 #include <regex>
 #include <sstream>
 #include <string>
@@ -25,6 +27,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../../../config.hpp"
 #include "../../../http_rest_api_handler.hpp"
 #include "../../../http_status_code.hpp"
 #include "../../../json_parser.hpp"
@@ -83,6 +86,69 @@ public:
 };
 
 std::unique_ptr<std::thread> VLMServableExecutionTest::t;
+
+#ifdef __linux__
+class VLMAllowedMediaDomainTest : public VLMServableExecutionTest {
+    static std::optional<std::string> previousRuntimeMode;
+    static ovms::ServerSettingsImpl savedServerSettings;
+    static ovms::ModelsSettingsImpl savedModelsSettings;
+
+public:
+    static void SetUpTestSuite() {
+        savedServerSettings = ovms::Config::instance().getServerSettings();
+        savedModelsSettings = ovms::Config::instance().getModelSettings();
+        const char* runtimeMode = std::getenv("OVMS_TEST_MEDIAPIPE_RUNTIME_INPROCESS");
+        previousRuntimeMode = runtimeMode ? std::make_optional<std::string>(runtimeMode) : std::nullopt;
+        EXPECT_EQ(setenv("OVMS_TEST_MEDIAPIPE_RUNTIME_INPROCESS", "0", 1), 0);
+
+        std::string port = "9173";
+        ovms::Server& server = ovms::Server::instance();
+        server.setShutdownRequest(0);
+        randomizeAndEnsureFree(port);
+        const std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/llm/visual_language_model/config.json");
+        t = std::make_unique<std::thread>([&server, port, configPath]() {
+            std::vector<std::string> args = {"ovms", "--config_path", configPath, "--port", port,
+                "--with_python=true", "--allowed_media_domains", "127.0.0.1"};
+            std::vector<char*> argv;
+            for (auto& arg : args) {
+                argv.push_back(arg.data());
+            }
+            EXPECT_EQ(server.start(static_cast<int>(argv.size()), argv.data()), EXIT_SUCCESS);
+        });
+        EnsureServerStartedWithTimeout(server, 60);
+    }
+
+    static void TearDownTestSuite() {
+        VLMServableExecutionTest::TearDownTestSuite();
+        ovms::Config::instance().parse(&savedServerSettings, &savedModelsSettings);
+        if (previousRuntimeMode) {
+            EXPECT_EQ(setenv("OVMS_TEST_MEDIAPIPE_RUNTIME_INPROCESS", previousRuntimeMode->c_str(), 1), 0);
+        } else {
+            EXPECT_EQ(unsetenv("OVMS_TEST_MEDIAPIPE_RUNTIME_INPROCESS"), 0);
+        }
+    }
+};
+
+std::optional<std::string> VLMAllowedMediaDomainTest::previousRuntimeMode;
+ovms::ServerSettingsImpl VLMAllowedMediaDomainTest::savedServerSettings;
+ovms::ModelsSettingsImpl VLMAllowedMediaDomainTest::savedModelsSettings;
+
+TEST_F(VLMAllowedMediaDomainTest, HttpImageUrlReachesDownload) {
+    const std::string requestBody = R"({
+        "model": "vlm_cb_regular",
+        "messages": [{"role": "user", "content": [
+            {"type": "image_url", "image_url": {"url": "http://127.0.0.1:1/image.png"}}
+        ]}]
+    })";
+
+    const auto status = handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp,
+        responseComponents, writer, multiPartParser);
+    EXPECT_EQ(status.getCode(), ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+    EXPECT_TRUE(status.string().find("Image downloading failed") != std::string::npos ||
+                status.string().find("Image parsing failed") != std::string::npos)
+        << status.string();
+}
+#endif
 
 static std::string createRequestBody(const std::string& modelName, const std::vector<std::pair<std::string, std::string>>& fields, bool includeText = true, int numberOfImages = 1, const std::string contentOfTheFirstMessage = "What is in this image?") {
     std::ostringstream oss;

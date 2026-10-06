@@ -17,10 +17,12 @@
 #include "mediapipe_runtime_api.hpp"
 
 #include <array>
+#include <cstdint>
 #include <memory>
 #include <climits>
 #include <cstdlib>
 #include <filesystem>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -69,6 +71,7 @@ extern "C" int OVMS_MPGraphExportCreateServableConfigInMemory(const char*, const
 extern "C" const ovms::KfsPyTensorBridgeVTable* OVMS_getKfsPyTensorBridgeVTable() __attribute__((weak));
 extern "C" void OVMS_MPSetExternalServerHandle(void*) __attribute__((weak));
 extern "C" void OVMS_MPFactoryConfigureLogging(const char*, const char*) __attribute__((weak));
+extern "C" void OVMS_MPFactoryConfigureRuntime(const char*, const char*, const char*, uint32_t, bool) __attribute__((weak));
 #endif
 
 namespace ovms {
@@ -102,6 +105,7 @@ struct MediapipeRuntimeApi::ApiSymbols {
     using CreateServableConfigInMemoryFn = int (*)(const char*, const HFSettingsImpl*, char**);
     using SetExternalServerHandleFn = void (*)(void*);
     using ConfigureLoggingFn = void (*)(const char*, const char*);
+    using ConfigureRuntimeFn = void (*)(const char*, const char*, const char*, uint32_t, bool);
     LibraryHandle handle = nullptr;
     void* factoryHandle = nullptr;
 
@@ -127,6 +131,7 @@ struct MediapipeRuntimeApi::ApiSymbols {
     CreateServableConfigInMemoryFn createServableConfigInMemory = nullptr;
     SetExternalServerHandleFn setExternalServerHandle = nullptr;
     ConfigureLoggingFn configureLogging = nullptr;
+    ConfigureRuntimeFn configureRuntime = nullptr;
 };
 
 #ifdef __linux__
@@ -207,6 +212,7 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
         api->createServableConfig = OVMS_MPGraphExportCreateServableConfig != nullptr ? OVMS_MPGraphExportCreateServableConfig : reinterpret_cast<ApiSymbols::CreateServableConfigFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPGraphExportCreateServableConfig"));
         api->createServableConfigInMemory = OVMS_MPGraphExportCreateServableConfigInMemory != nullptr ? OVMS_MPGraphExportCreateServableConfigInMemory : reinterpret_cast<ApiSymbols::CreateServableConfigInMemoryFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPGraphExportCreateServableConfigInMemory"));
         api->configureLogging = OVMS_MPFactoryConfigureLogging != nullptr ? OVMS_MPFactoryConfigureLogging : reinterpret_cast<ApiSymbols::ConfigureLoggingFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryConfigureLogging"));
+        api->configureRuntime = OVMS_MPFactoryConfigureRuntime != nullptr ? OVMS_MPFactoryConfigureRuntime : reinterpret_cast<ApiSymbols::ConfigureRuntimeFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryConfigureRuntime"));
 
         loadedFromInProcessSymbols =
             api->create != nullptr &&
@@ -306,6 +312,7 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
             api->createServableConfigInMemory = reinterpret_cast<ApiSymbols::CreateServableConfigInMemoryFn>(resolveSymbol(currentModule, "OVMS_MPGraphExportCreateServableConfigInMemory"));
             api->setExternalServerHandle = reinterpret_cast<ApiSymbols::SetExternalServerHandleFn>(resolveSymbol(currentModule, "OVMS_MPSetExternalServerHandle"));
             api->configureLogging = reinterpret_cast<ApiSymbols::ConfigureLoggingFn>(resolveSymbol(currentModule, "OVMS_MPFactoryConfigureLogging"));
+            api->configureRuntime = reinterpret_cast<ApiSymbols::ConfigureRuntimeFn>(resolveSymbol(currentModule, "OVMS_MPFactoryConfigureRuntime"));
 
             loadedFromInProcessSymbols =
                 api->create != nullptr &&
@@ -432,6 +439,7 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
         api->createServableConfigInMemory = reinterpret_cast<ApiSymbols::CreateServableConfigInMemoryFn>(resolveSymbol(api->handle, "OVMS_MPGraphExportCreateServableConfigInMemory"));
         api->setExternalServerHandle = reinterpret_cast<ApiSymbols::SetExternalServerHandleFn>(resolveSymbol(api->handle, "OVMS_MPSetExternalServerHandle"));
         api->configureLogging = reinterpret_cast<ApiSymbols::ConfigureLoggingFn>(resolveSymbol(api->handle, "OVMS_MPFactoryConfigureLogging"));
+        api->configureRuntime = reinterpret_cast<ApiSymbols::ConfigureRuntimeFn>(resolveSymbol(api->handle, "OVMS_MPFactoryConfigureRuntime"));
 
         tryActivateKfsPythonTensorBridgeFromRuntimeSymbols(api->handle);
     }
@@ -469,6 +477,25 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
     if (api->configureLogging != nullptr) {
         const auto& config = Config::instance();
         api->configureLogging(config.logLevel().c_str(), config.logPath().c_str());
+    }
+
+    if (api->configureRuntime != nullptr) {
+        const auto& settings = Config::instance().getServerSettings();
+        std::stringstream allowedMediaDomains;
+        if (settings.allowedMediaDomains.has_value()) {
+            for (size_t i = 0; i < settings.allowedMediaDomains->size(); ++i) {
+                if (i > 0) {
+                    allowedMediaDomains << ',';
+                }
+                allowedMediaDomains << settings.allowedMediaDomains->at(i);
+            }
+        }
+        api->configureRuntime(
+            settings.allowedLocalMediaPath.has_value() ? settings.allowedLocalMediaPath->c_str() : nullptr,
+            allowedMediaDomains.str().c_str(),
+            settings.cacheDir.c_str(),
+            Config::instance().restWorkers(),
+            settings.verboseResponse);
     }
 
     api->factoryHandle = api->create(static_cast<void*>(pythonBackend));

@@ -2273,6 +2273,8 @@ cc_test(
     deps = [
             "optimum-cli",
             "//src:ovms_lib",
+            "//src:mediapipe_runtime_api",
+            "//src/mediapipe_internal:runtime_config",
             "//src:libovms_default_task_detector",
             "//src/filesystem:libovmsfilesystemfactory",
             "@cpp_httplib//:cpp_httplib", # server_test.cpp
@@ -3058,7 +3060,9 @@ cc_library(
         ":test_platform_utils",
         ":test_wav_utils",
         "//src/llm:image_utils",
+        "//src/llm:io_processing_input_processor",
         "//src/llm:io_processing_input_processors",
+        "//src/mediapipe_internal:runtime_config",
         "//src/llm:runtime_chat_template_loader",
     ],
     copts = COPTS_TESTS,

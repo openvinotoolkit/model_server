@@ -22,6 +22,9 @@
 #include <openvino/runtime/core.hpp>
 
 #include "src/filesystem/filesystem.hpp"
+#include "../config.hpp"
+#include "../mediapipe_runtime_api.hpp"
+#include "../mediapipe_internal/runtime_config.hpp"
 #include "../modelinstance.hpp"
 #include "../ov_utils.hpp"
 #include "test_utils.hpp"
@@ -204,6 +207,52 @@ TEST(OVUtils, ValidatePluginConfigurationPositive) {
     ovms::plugin_config_t supportedPluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
     auto status = ovms::validatePluginConfiguration(supportedPluginConfig, "CPU", ieCore);
     EXPECT_TRUE(status.ok());
+}
+
+TEST(OVUtils, ApplyGlobalCacheDirFallbackUsesExplicitCacheDir) {
+    ov::AnyMap properties;
+
+    ovms::applyGlobalCacheDirFallback(properties, "/shared/cache");
+    ASSERT_NE(properties.find(ov::cache_dir.name()), properties.end());
+    EXPECT_EQ(properties[ov::cache_dir.name()].as<std::string>(), "/shared/cache");
+
+    properties[ov::cache_dir.name()] = "/node/cache";
+    ovms::applyGlobalCacheDirFallback(properties, "/shared/cache");
+    EXPECT_EQ(properties[ov::cache_dir.name()].as<std::string>(), "/node/cache");
+}
+
+TEST(OVUtils, MediapipeRuntimeApiPassesServerSettingsToRuntime) {
+    auto& config = ovms::Config::instance();
+    struct RuntimeConfigGuard {
+        ovms::ServerSettingsImpl serverSettings;
+        ovms::ModelsSettingsImpl modelsSettings;
+
+        ~RuntimeConfigGuard() {
+            ovms::Config::instance().parse(&serverSettings, &modelsSettings);
+            ovms::setRuntimeConfig(nullptr, nullptr, nullptr, 1, false);
+        }
+    } guard{config.getServerSettings(), config.getModelSettings()};
+
+    auto serverSettings = guard.serverSettings;
+    serverSettings.allowedLocalMediaPath = "/shared/media";
+    serverSettings.allowedMediaDomains = std::vector<std::string>{"safe.example", "trusted.example"};
+    serverSettings.cacheDir = "/shared/cache";
+    serverSettings.restWorkers = std::nullopt;
+    serverSettings.verboseResponse = true;
+    config.parse(&serverSettings, &guard.modelsSettings);
+
+    {
+        ovms::MediapipeRuntimeApi runtimeApi(nullptr);
+        ASSERT_TRUE(runtimeApi.isLoaded());
+
+        const auto& runtimeConfig = ovms::getRuntimeConfig();
+        ASSERT_TRUE(runtimeConfig.allowedLocalMediaPath.has_value());
+        EXPECT_EQ(runtimeConfig.allowedLocalMediaPath.value(), "/shared/media");
+        EXPECT_THAT(runtimeConfig.allowedMediaDomains, ElementsAre("safe.example", "trusted.example"));
+        EXPECT_EQ(runtimeConfig.cacheDir, "/shared/cache");
+        EXPECT_EQ(runtimeConfig.restWorkers, config.restWorkers());
+        EXPECT_TRUE(runtimeConfig.verboseResponse);
+    }
 }
 
 TEST(OVUtils, ValidatePluginConfigurationPositiveBatch) {
