@@ -1430,19 +1430,15 @@ TEST(PredictValidationStringNativeKFSTest, negative_over_element_count_limit_con
     EXPECT_EQ(status, ovms::StatusCode::INVALID_STRING_MAX_SIZE_EXCEEDED) << status.string();
 }
 
-TEST(PredictValidationImageKFSTest, validation_stage_does_not_reject_on_size) {
+static ovms::Status validateUnestimatableImageFormat(bool allowUnestimatableImageFormats) {
     ScopedOVMSConfigGuard configGuard;
     ovms::ServerSettingsImpl scopedServerSettings = configGuard.getServerSettings();
-    scopedServerSettings.allowUnestimatableImageFormats = true;
+    scopedServerSettings.allowUnestimatableImageFormats = allowUnestimatableImageFormats;
     ovms::ModelsSettingsImpl scopedModelsSettings = configGuard.getModelSettings();
     configGuard.parse(scopedServerSettings, scopedModelsSettings);
 
-    // Image size/amplification is bounded at decode stage (OpenCV pre-decode pixel gate +
-    // decoded-byte budget), not at request validation. Validation must pass regardless of
-    // the compressed payload size, since the compressed size does not reflect decoded size.
     const char* tensorName = "image_input";
     ovms::tensor_map_t mockedInputsInfo, mockedOutputsInfo;
-    // 4D image input tensor (1x224x224x3, FP32, NHWC layout) -> gets ProcessingHint::IMAGE
     mockedInputsInfo[tensorName] = std::make_shared<ovms::TensorInfo>(
         tensorName, ovms::Precision::FP32, ovms::shape_t{1, 224, 224, 3}, ovms::Layout{"NHWC"});
 
@@ -1457,21 +1453,29 @@ TEST(PredictValidationImageKFSTest, validation_stage_does_not_reject_on_size) {
     std::memcpy(largeRawBuffer.data(), &payloadLen, sizeof(payloadLen));
     *request.add_raw_input_contents() = std::move(largeRawBuffer);
 
-    auto status = ovms::request_validation_utils::validate(
+    return ovms::request_validation_utils::validate(
         request, mockedInputsInfo, mockedOutputsInfo, "image_model", ovms::model_version_t{1});
+}
 
+TEST(PredictValidationImageKFSTest, unestimatable_image_format_allowed_when_configured) {
+    auto status = validateUnestimatableImageFormat(true);
     EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
+}
+
+TEST(PredictValidationImageKFSTest, unestimatable_image_format_rejected_when_not_configured) {
+    auto status = validateUnestimatableImageFormat(false);
+    EXPECT_EQ(status, ovms::StatusCode::IMAGE_PARSING_FAILED) << status.string();
 }
 
 TEST(PredictValidationImageKFSTest, decode_pixel_budget_from_config) {
     ScopedOVMSConfigGuard configGuard;
 
     ovms::ServerSettingsImpl scopedServerSettings = configGuard.getServerSettings();
-    scopedServerSettings.maxImageDecodePixels = 67108864;
+    scopedServerSettings.maxImageDecodePixels = ovms::OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS;
     scopedServerSettings.allowUnestimatableImageFormats = false;
     ovms::ModelsSettingsImpl scopedModelsSettings = configGuard.getModelSettings();
     configGuard.parse(scopedServerSettings, scopedModelsSettings);
-    EXPECT_EQ(ovms::request_validation_utils::getMaxImageDecodePixels(), 67108864u);
+    EXPECT_EQ(ovms::request_validation_utils::getMaxImageDecodePixels(), ovms::OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS);
     EXPECT_FALSE(ovms::request_validation_utils::allowUnestimatableImageFormats());
 
     scopedServerSettings.maxImageDecodePixels = 1024;

@@ -97,7 +97,7 @@ TYPED_TEST(NativeFileInputConversionTest, tensorWithExceededMemoryBudget) {
 TYPED_TEST(NativeFileInputConversionTest, tensorWithinMemoryBudget) {
     ScopedOVMSConfigGuard configGuard;
     ovms::ServerSettingsImpl scopedServerSettings = configGuard.getServerSettings();
-    scopedServerSettings.maxImageDecodePixels = 67108864;  // default pixel budget
+    scopedServerSettings.maxImageDecodePixels = ovms::OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS;
     ovms::ModelsSettingsImpl scopedModelsSettings = configGuard.getModelSettings();
     configGuard.parse(scopedServerSettings, scopedModelsSettings);
     ov::Tensor tensor;

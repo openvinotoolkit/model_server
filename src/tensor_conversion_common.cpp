@@ -246,7 +246,7 @@ Status checkEstimatedImageSize(std::string_view encodedImage, const std::string&
 }
 Status accumulateAndCheckDecodedImageSize(const cv::Mat& image, const TensorInfo& tensorInfo,
     size_t& totalAllocatedPixels, size_t maxAllowedImagePixels) {
-    size_t imagePixels = image.total();  // rows * cols
+    size_t imagePixels = image.total();
     size_t remainingBudget = totalAllocatedPixels >= maxAllowedImagePixels ? 0 : maxAllowedImagePixels - totalAllocatedPixels;
     if (imagePixels > remainingBudget) {
         SPDLOG_DEBUG("Decoded image pixel budget exceeded for input: {}. Image pixels: {}, max allowed: {}",

@@ -169,7 +169,6 @@ TEST(DecodedImageSizeTest, EmptyInputUnsupported) {
     EXPECT_EQ(estimateDecodedImageSize(std::string(), bytes), DecodedSizeEstimate::UnsupportedFormat);
 }
 
-// Truncated real files and synthetic WebP headers must never crash.
 TEST(DecodedImageSizeTest, TruncatedInputsDoNotCrash) {
     std::vector<std::string> imgs = {
         readImageFixture("rgb8.png"),
@@ -189,8 +188,6 @@ TEST(DecodedImageSizeTest, TruncatedInputsDoNotCrash) {
     }
     SUCCEED();
 }
-
-// Garbage after a valid magic must not crash.
 TEST(DecodedImageSizeTest, GarbageAfterMagicDoesNotCrash) {
     std::string prefixes[] = {
         std::string("\x89PNG\r\n\x1a\n", 8),

@@ -22,9 +22,9 @@ namespace ovms {
 namespace image_utils {
 
 enum class DecodedSizeEstimate {
-    Estimated,          // outDecodedPixels holds a valid estimate
-    UnsupportedFormat,  // format not recognized (stb + WebP fallback); caller may fail open
-    InputTooLarge,      // buffer too large to inspect safely; caller should reject
+    Estimated,
+    UnsupportedFormat,
+    InputTooLarge,
 };
 
 // Estimates the decoded pixel count (width*height) of an encoded image by reading ONLY its header

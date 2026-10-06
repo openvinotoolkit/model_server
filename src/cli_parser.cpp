@@ -184,7 +184,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                     "Images that would make the request exceed this limit are rejected before decoding, guarding against decompression-bomb inputs. "
                 "Default matches OpenCV's OPENCV_IO_MAX_IMAGE_PIXELS. Note: this does not change OpenCV's own internal limit, "
                 "which is controlled separately by the OPENCV_IO_MAX_IMAGE_PIXELS environment variable read at startup.",
-                cxxopts::value<uint64_t>()->default_value("67108864"),
+                cxxopts::value<uint64_t>()->default_value(std::to_string(OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS)),
                 "MAX_IMAGE_DECODE_PIXELS")
             ("allow_unestimatable_image_formats",
                 "Flag allowing input images whose decoded size cannot be estimated (formats OVMS cannot inspect the header of) "

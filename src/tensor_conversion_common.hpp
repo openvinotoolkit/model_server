@@ -42,14 +42,8 @@ Status validateNumberOfChannels(const TensorInfo& tensorInfo,
     const cv::Mat input,
     cv::Mat* firstBatchImage);
 Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::Mat* firstBatchImage);
-// Rejects, before decoding, an encoded image whose header-estimated decoded pixel count would blow
-// the per-request pixel budget (accounting for what previous images already reserved). Logs on
-// rejection. Rejects unestimatable formats unless allow_unestimatable_image_formats is set.
 Status checkEstimatedImageSize(std::string_view encodedImage, const std::string& inputName,
     size_t alreadyAllocatedPixels, size_t maxAllowedImagePixels);
-// Adds a decoded image's pixel count to the running per-request total, rejecting if the budget is
-// exceeded. Logs on rejection. Arithmetic is overflow-safe. On success totalAllocatedPixels is
-// advanced by this image's pixel count.
 Status accumulateAndCheckDecodedImageSize(const cv::Mat& image, const TensorInfo& tensorInfo,
     size_t& totalAllocatedPixels, size_t maxAllowedImagePixels);
 }  // namespace tensor_conversion
