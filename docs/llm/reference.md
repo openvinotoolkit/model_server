@@ -299,10 +299,13 @@ __Reasoning parsers:__
 - `gemma4`
 - `onyx`
 - `minicpm5`
+- `granite42` (pair with `qwen3coder` for its tool-call format)
 
 #### Automatic parser detection
 
 For most models with recognized chat templates, the server automatically detects the appropriate `tool_parser` and `reasoning_parser` at startup. This means you can deploy a model without explicitly specifying parsers — the server will analyze the chat template and select the correct one.
+
+Granite 4.2 deployments should explicitly set `reasoning_parser` to `granite42`; its production parser has request-dependent promotion semantics that generic `<think>` detection cannot infer. Use `qwen3coder` as the companion `tool_parser` when the model emits Qwen3-Coder tool-call markup. OVMS's implementation follows IBM's [Granite 4.2 thinking parser](https://huggingface.co/ibm-granite/granite-4.2-8b/raw/f8de16cdcdbc6c779ca517604e050d82cc119e44/granite_thinking_parser.py).
 
 If the auto-detected parser is not what you want, you can always override it by explicitly passing `--tool_parser` or `--reasoning_parser`.
 

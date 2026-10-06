@@ -34,6 +34,7 @@ STT_MODEL="openai/whisper-tiny"
 
 # Models for tools testing. Only tokenizers are downloaded.
 QWEN3_MODEL="Qwen/Qwen3-8B"
+GRANITE42_MODEL="ibm-granite/granite-4.2-8b"
 LLAMA3_MODEL="unsloth/Llama-3.1-8B-Instruct"
 HERMES3_MODEL="NousResearch/Hermes-3-Llama-3.1-8B"
 PHI4_MODEL="microsoft/Phi-4-mini-instruct"
@@ -158,6 +159,17 @@ else
 fi
 if [ ! -f "$1/$QWEN3_MODEL/$TOKENIZER_FILE" ]; then
   echo "[ERROR] Models file $1/$QWEN3_MODEL/$TOKENIZER_FILE does not exist."
+  exit 1
+fi
+
+if [ -f "$1/$GRANITE42_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Models file $1/$GRANITE42_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
+else
+  mkdir -p "$1/$GRANITE42_MODEL"
+  convert_tokenizer "$GRANITE42_MODEL" --with_detokenizer -o "$1/$GRANITE42_MODEL"
+fi
+if [ ! -f "$1/$GRANITE42_MODEL/$TOKENIZER_FILE" ]; then
+  echo "[ERROR] Models file $1/$GRANITE42_MODEL/$TOKENIZER_FILE does not exist."
   exit 1
 fi
 

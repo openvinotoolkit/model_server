@@ -416,7 +416,7 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTojsonNoHtmlEscaping) {
         "{%- set ns = namespace(tool_text='<tools>') %}"
         "{%- if tools %}"
         "  {%- for tool in tools %}"
-        "    {%- set ns.tool_text = ns.tool_text + '\\n' + (tool | tojson) %}"
+        "    {%- set ns.tool_text = ns.tool_text + '\\n' + (tool | tojson(ensure_ascii=False)) %}"
         "  {%- endfor %}"
         "  {%- set ns.tool_text = ns.tool_text + '\\n</tools>' %}"
         "{%- endif %}"
@@ -438,6 +438,38 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTojsonNoHtmlEscaping) {
     EXPECT_THAT(finalPrompt, ::testing::HasSubstr("<tools>"));
     EXPECT_THAT(finalPrompt, ::testing::HasSubstr("</tools>"));
     // Must not contain any HTML-escaped entities
+    EXPECT_THAT(finalPrompt, ::testing::Not(::testing::HasSubstr("&lt;")));
+    EXPECT_THAT(finalPrompt, ::testing::Not(::testing::HasSubstr("&gt;")));
+    EXPECT_THAT(finalPrompt, ::testing::Not(::testing::HasSubstr("&quot;")));
+    EXPECT_THAT(finalPrompt, ::testing::Not(::testing::HasSubstr("&amp;")));
+    EXPECT_THAT(finalPrompt, ::testing::HasSubstr("get_weather"));
+}
+
+TEST_F(LLMChatTemplateTest, ChatTemplateTojsonDefaultArgumentsNoHtmlEscaping) {
+    std::string jinjaTemplate =
+        "{%- set ns = namespace(tool_text='<tools>') %}"
+        "{%- if tools %}"
+        "  {%- for tool in tools %}"
+        "    {%- set ns.tool_text = ns.tool_text + '\\n' + (tool | tojson) %}"
+        "  {%- endfor %}"
+        "  {%- set ns.tool_text = ns.tool_text + '\\n</tools>' %}"
+        "{%- endif %}"
+        "{{ ns.tool_text }}";
+    ASSERT_EQ(CreateJinjaConfig(jinjaTemplate), true);
+    LoadTemplateProcessor();
+
+    std::string finalPrompt;
+    const std::string payloadBody = R"(
+        {
+            "model": "gpt",
+            "stream": false,
+            "messages": [{"role": "user", "content": "hello"}],
+            "tools": [{"type": "function", "function": {"name": "get_weather", "parameters": {"type": "object"}}}]
+        }
+    )";
+    ASSERT_EQ(PyJinjaTemplateProcessor::applyChatTemplate(servable->getProperties()->templateProcessor, payloadBody, finalPrompt), true);
+    EXPECT_THAT(finalPrompt, ::testing::HasSubstr("<tools>"));
+    EXPECT_THAT(finalPrompt, ::testing::HasSubstr("</tools>"));
     EXPECT_THAT(finalPrompt, ::testing::Not(::testing::HasSubstr("&lt;")));
     EXPECT_THAT(finalPrompt, ::testing::Not(::testing::HasSubstr("&gt;")));
     EXPECT_THAT(finalPrompt, ::testing::Not(::testing::HasSubstr("&quot;")));
