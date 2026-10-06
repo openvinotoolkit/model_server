@@ -161,18 +161,18 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
         }
     }
-    if (nodeOptions.has_chat_template_mode()) {
-        properties->chatTemplateModeExplicit = true;
+    if (nodeOptions.has_chat_template_engine()) {
+        properties->chatTemplateEngineExplicit = true;
 #if (PYTHON_DISABLE == 0)
-        properties->chatTemplateMode = (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::JINJA)
-                                           ? ChatTemplateMode::JINJA
-                                           : ChatTemplateMode::MINJA;
+        properties->chatTemplateEngine = (nodeOptions.chat_template_engine() == mediapipe::LLMCalculatorOptions::JINJA)
+                                             ? ChatTemplateEngine::JINJA
+                                             : ChatTemplateEngine::MINJA;
 #else
-        if (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::JINJA) {
-            SPDLOG_ERROR("chat_template_mode=JINJA requires Python support.");
+        if (nodeOptions.chat_template_engine() == mediapipe::LLMCalculatorOptions::JINJA) {
+            SPDLOG_ERROR("chat_template_engine=JINJA requires Python support.");
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
         }
-        properties->chatTemplateMode = ChatTemplateMode::MINJA;
+        properties->chatTemplateEngine = ChatTemplateEngine::MINJA;
 #endif
     }
 

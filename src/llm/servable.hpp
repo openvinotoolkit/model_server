@@ -74,7 +74,7 @@ enum class GenerationPhase {
     OUTPUT_TOKEN_PROCESSING,
 };
 
-enum class ChatTemplateMode {
+enum class ChatTemplateEngine {
     MINJA,  // Use GenAI's apply_chat_template (minja-based)
     JINJA,  // Use Python Jinja2 module for chat template processing
 };
@@ -187,11 +187,11 @@ struct GenAiServableProperties {
     ov::AnyMap tokenizerPluginConfig;
     bool enableToolGuidedGeneration = false;
 #if (PYTHON_DISABLE == 0)
-    ChatTemplateMode chatTemplateMode = ChatTemplateMode::JINJA;
+    ChatTemplateEngine chatTemplateEngine = ChatTemplateEngine::JINJA;
 #else
-    ChatTemplateMode chatTemplateMode = ChatTemplateMode::MINJA;
+    ChatTemplateEngine chatTemplateEngine = ChatTemplateEngine::MINJA;
 #endif
-    bool chatTemplateModeExplicit = false;
+    bool chatTemplateEngineExplicit = false;
     // Chat template analysis
     ChatTemplateCaps chatTemplateCaps;
     // Sampling

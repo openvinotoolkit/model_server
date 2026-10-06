@@ -110,7 +110,7 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional CacheEvictionConfig cache_eviction_config` - KV cache eviction configuration. Disabled if not specified.
 -    `optional string reasoning_parser` - name of the parser to use for reasoning content extraction from model output before creating a response;
 -    `optional string tool_parser` - name of the parser to use for tool calls extraction from model output before creating a response;
--    `optional ChatTemplateMode chat_template_mode` - template renderer: `JINJA` or `MINJA`. Defaults to Jinja when Python is available, otherwise Minja. Explicit Jinja fails initialization if Python or the template is unavailable;
+-    `optional ChatTemplateEngine chat_template_engine` - template renderer: `JINJA` or `MINJA`. Defaults to Jinja when Python is available, otherwise Minja. Explicit Jinja fails initialization if Python or the template is unavailable;
 -    `optional bool enable_tool_guided_generation` - enable enforcing tool schema during generation. Requires setting response parser. [default = false];
 -    `optional SparseAttentionConfig sparse_attention_config` - Sparse attention configuration. Disabled if not specified.
 

@@ -965,10 +965,10 @@ TEST_F(GraphCreationTest, chatTemplateEngineIsEmittedOnlyWhenExplicit) {
     hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     hfSettings.graphSettings = ovms::TextGenGraphSettingsImpl{};
 
-    EXPECT_EQ(createGraphAndReadContents(hfSettings).find("chat_template_mode:"), std::string::npos);
+    EXPECT_EQ(createGraphAndReadContents(hfSettings).find("chat_template_engine:"), std::string::npos);
 
     std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings).chatTemplateEngine = "MINJA";
-    EXPECT_NE(createGraphAndReadContents(hfSettings).find("chat_template_mode: MINJA"), std::string::npos);
+    EXPECT_NE(createGraphAndReadContents(hfSettings).find("chat_template_engine: MINJA"), std::string::npos);
 }
 
 TEST_F(GraphCreationTest, positivePluginConfigOne) {
