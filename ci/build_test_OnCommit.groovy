@@ -77,125 +77,127 @@ pipeline {
           }
           steps {
             script {
-              withGithubStageStatus('jenkins/oncommit/configure', 'Configure') {
-              println "BUILD CAUSE ONCOMMIT: ${currentBuild.getBuildCauses()}"
-              agent_name_linux = env.NODE_NAME
-              println "Running on NODE = ${env.NODE_NAME}"
+              timeout(time: 20, unit: 'MINUTES') {
+                withGithubStageStatus('jenkins/oncommit/configure', 'Configure') {
+                  println "BUILD CAUSE ONCOMMIT: ${currentBuild.getBuildCauses()}"
+                  agent_name_linux = env.NODE_NAME
+                  println "Running on NODE = ${env.NODE_NAME}"
 
-              shortCommit = sh(returnStdout: true, script: "git log -n 1 --pretty=format:'%h'").trim()
-              echo shortCommit
-              echo sh(script: 'env|sort', returnStdout: true)
-              def git_diff = ""
-              def diffBase = ""
-              if (env.CHANGE_ID){ // PR - check changes between target branch
-                withCredentials([usernamePassword(credentialsId: 'workflow_lab_mediapipe', usernameVariable: 'GIT_USERNAME', passwordVariable: 'TOKEN')]) {
-                  sh 'git fetch https://${GIT_USERNAME}:${TOKEN}@github.com/openvinotoolkit/model_server.git ${CHANGE_TARGET}'
-                }
-                diffBase = sh(script: 'git merge-base FETCH_HEAD HEAD', returnStdout: true).trim()
-                git_diff = sh (script: "git diff --name-only ${diffBase}", returnStdout: true).trim()
-                println("git diff:\n${git_diff}")
-              } else {  // branches without PR - check changes in last commit
-                diffBase = 'HEAD^'
-                git_diff = sh (script: "git diff --name-only HEAD^..HEAD", returnStdout: true).trim()
-              }
+                  shortCommit = sh(returnStdout: true, script: "git log -n 1 --pretty=format:'%h'").trim()
+                  echo shortCommit
+                  echo sh(script: 'env|sort', returnStdout: true)
+                  def git_diff = ""
+                  def diffBase = ""
+                  if (env.CHANGE_ID){ // PR - check changes between target branch
+                    withCredentials([usernamePassword(credentialsId: 'workflow_lab_mediapipe', usernameVariable: 'GIT_USERNAME', passwordVariable: 'TOKEN')]) {
+                      sh 'git fetch https://${GIT_USERNAME}:${TOKEN}@github.com/openvinotoolkit/model_server.git ${CHANGE_TARGET}'
+                    }
+                    diffBase = sh(script: 'git merge-base FETCH_HEAD HEAD', returnStdout: true).trim()
+                    git_diff = sh (script: "git diff --name-only ${diffBase}", returnStdout: true).trim()
+                    println("git diff:\n${git_diff}")
+                  } else {  // branches without PR - check changes in last commit
+                    diffBase = 'HEAD^'
+                    git_diff = sh (script: "git diff --name-only HEAD^..HEAD", returnStdout: true).trim()
+                  }
 
-              if (git_diff =~ /src|third_party|external|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|\.bazel|\.bzl|\.groovy|BUILD|create_package\.sh|WORKSPACE|(\n|^)run_unit_tests\.sh|versions\.mk/) {
-                  image_build_needed = "true"
-              }
-              if (git_diff =~ /(\n|^)client/) {
-                  client_test_needed = "true"
-              }
-              if (git_diff =~ /(\n|^)tests\/functional/) {
-                  functional_tests_changed = "true"
-              }
-              if (git_diff =~ /(\n|^)(demos\/common\/export_models\/|prepare_llm_models\.sh$)/) {
-                  export_models_changed = "true"
-              }
-              if (git_diff =~ /src|third_party|external|ci|test_install_ovms_service_windows\\.py|\.c|\.h|\.bazel|\.bzl|BUILD|versions\.mk|WORKSPACE|\.bat|\.groovy/) {
-                  win_image_build_needed = "true"
-              }
+                  if (git_diff =~ /src|third_party|external|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|\.bazel|\.bzl|\.groovy|BUILD|create_package\.sh|WORKSPACE|(\n|^)run_unit_tests\.sh|versions\.mk/) {
+                      image_build_needed = "true"
+                  }
+                  if (git_diff =~ /(\n|^)client/) {
+                      client_test_needed = "true"
+                  }
+                  if (git_diff =~ /(\n|^)tests\/functional/) {
+                      functional_tests_changed = "true"
+                  }
+                  if (git_diff =~ /(\n|^)(demos\/common\/export_models\/|prepare_llm_models\.sh$)/) {
+                      export_models_changed = "true"
+                  }
+                  if (git_diff =~ /src|third_party|external|ci|test_install_ovms_service_windows\\.py|\.c|\.h|\.bazel|\.bzl|BUILD|versions\.mk|WORKSPACE|\.bat|\.groovy/) {
+                      win_image_build_needed = "true"
+                  }
 
-              // Override flags from commit message, e.g. [disable_doc_tests_linux]
-              def commitMsg = sh(returnStdout: true, script: "git log -1 --pretty=format:'%B'").trim()
-              if (commitMsg =~ /\[disable_doc_tests_linux\]/) {
-                  disable_doc_tests_linux = true
-                  println "Commit override: disable_doc_tests_linux = true"
-              }
-              if (commitMsg =~ /\[disable_doc_tests_windows\]/) {
-                  disable_doc_tests_windows = true
-                  println "Commit override: disable_doc_tests_windows = true"
-              }
-              def agentLinuxDocMatcher = (commitMsg =~ /\[test_agent_linux=([^\]]+)\]/)
-              def agentLinuxDocValue = agentLinuxDocMatcher ? agentLinuxDocMatcher[0][1] : null
-              agentLinuxDocMatcher = null // Matcher is not serializable; null it before CPS checkpoint
-              if (agentLinuxDocValue) {
-                  if (!(agentLinuxDocValue ==~ /[a-zA-Z0-9_-]+/)) {
-                      error "Invalid test_agent_linux override: '${agentLinuxDocValue}'. Only alphanumeric, hyphens and underscores allowed."
+                  // Override flags from commit message, e.g. [disable_doc_tests_linux]
+                  def commitMsg = sh(returnStdout: true, script: "git log -1 --pretty=format:'%B'").trim()
+                  if (commitMsg =~ /\[disable_doc_tests_linux\]/) {
+                      disable_doc_tests_linux = true
+                      println "Commit override: disable_doc_tests_linux = true"
                   }
-                  test_agent_linux = agentLinuxDocValue
-                  println "Commit override: test_agent_linux = ${test_agent_linux}"
-              }
-              def agentWindowsDocMatcher = (commitMsg =~ /\[test_agent_windows=([^\]]+)\]/)
-              def agentWindowsDocValue = agentWindowsDocMatcher ? agentWindowsDocMatcher[0][1] : null
-              agentWindowsDocMatcher = null // Matcher is not serializable; null it before CPS checkpoint
-              if (agentWindowsDocValue) {
-                  if (!(agentWindowsDocValue ==~ /[a-zA-Z0-9_-]+/)) {
-                      error "Invalid test_agent_windows override: '${agentWindowsDocValue}'. Only alphanumeric, hyphens and underscores allowed."
+                  if (commitMsg =~ /\[disable_doc_tests_windows\]/) {
+                      disable_doc_tests_windows = true
+                      println "Commit override: disable_doc_tests_windows = true"
                   }
-                  test_agent_windows = agentWindowsDocValue
-                  println "Commit override: test_agent_windows = ${test_agent_windows}"
-              }
-              def validationBranchMatcher = (commitMsg =~ /\[validation_branch=([^\]]+)\]/)
-              def validationBranchValue = validationBranchMatcher ? validationBranchMatcher[0][1] : null
-              validationBranchMatcher = null // Matcher is not serializable; null it before CPS checkpoint
-              if (validationBranchValue) {
-                  if (!(validationBranchValue ==~ /[a-zA-Z0-9_\/.\-]+/)) {
-                      error "Invalid validation_branch override: '${validationBranchValue}'. Only alphanumeric, hyphens, underscores, dots and slashes allowed."
+                  def agentLinuxDocMatcher = (commitMsg =~ /\[test_agent_linux=([^\]]+)\]/)
+                  def agentLinuxDocValue = agentLinuxDocMatcher ? agentLinuxDocMatcher[0][1] : null
+                  agentLinuxDocMatcher = null // Matcher is not serializable; null it before CPS checkpoint
+                  if (agentLinuxDocValue) {
+                      if (!(agentLinuxDocValue ==~ /[a-zA-Z0-9_-]+/)) {
+                          error "Invalid test_agent_linux override: '${agentLinuxDocValue}'. Only alphanumeric, hyphens and underscores allowed."
+                      }
+                      test_agent_linux = agentLinuxDocValue
+                      println "Commit override: test_agent_linux = ${test_agent_linux}"
                   }
-                  validation_branch = validationBranchValue
-                  println "Commit override: validation_branch = ${validation_branch}"
-              }
-              def docChangedFilesLinuxMatcher = (commitMsg =~ /\[test_doc_files_linux=([^\]]+)\]/)
-              def docChangedFilesLinuxValue = docChangedFilesLinuxMatcher ? docChangedFilesLinuxMatcher[0][1] : null
-              docChangedFilesLinuxMatcher = null // Matcher is not serializable; null it before CPS checkpoint
-              if (docChangedFilesLinuxValue) {
-                  // Validate each entry is a safe .md path (no shell metacharacters)
-                  docChangedFilesLinuxValue.split(' ').each { entry ->
-                      if (!(entry ==~ /[a-zA-Z0-9_\/.\-]+\.md/)) {
-                          error "Invalid test_doc_files_linux entry: '${entry}'. Must be a .md file path with no special characters."
+                  def agentWindowsDocMatcher = (commitMsg =~ /\[test_agent_windows=([^\]]+)\]/)
+                  def agentWindowsDocValue = agentWindowsDocMatcher ? agentWindowsDocMatcher[0][1] : null
+                  agentWindowsDocMatcher = null // Matcher is not serializable; null it before CPS checkpoint
+                  if (agentWindowsDocValue) {
+                      if (!(agentWindowsDocValue ==~ /[a-zA-Z0-9_-]+/)) {
+                          error "Invalid test_agent_windows override: '${agentWindowsDocValue}'. Only alphanumeric, hyphens and underscores allowed."
+                      }
+                      test_agent_windows = agentWindowsDocValue
+                      println "Commit override: test_agent_windows = ${test_agent_windows}"
+                  }
+                  def validationBranchMatcher = (commitMsg =~ /\[validation_branch=([^\]]+)\]/)
+                  def validationBranchValue = validationBranchMatcher ? validationBranchMatcher[0][1] : null
+                  validationBranchMatcher = null // Matcher is not serializable; null it before CPS checkpoint
+                  if (validationBranchValue) {
+                      if (!(validationBranchValue ==~ /[a-zA-Z0-9_\/.\-]+/)) {
+                          error "Invalid validation_branch override: '${validationBranchValue}'. Only alphanumeric, hyphens, underscores, dots and slashes allowed."
+                      }
+                      validation_branch = validationBranchValue
+                      println "Commit override: validation_branch = ${validation_branch}"
+                  }
+                  def docChangedFilesLinuxMatcher = (commitMsg =~ /\[test_doc_files_linux=([^\]]+)\]/)
+                  def docChangedFilesLinuxValue = docChangedFilesLinuxMatcher ? docChangedFilesLinuxMatcher[0][1] : null
+                  docChangedFilesLinuxMatcher = null // Matcher is not serializable; null it before CPS checkpoint
+                  if (docChangedFilesLinuxValue) {
+                      // Validate each entry is a safe .md path (no shell metacharacters)
+                      docChangedFilesLinuxValue.split(' ').each { entry ->
+                          if (!(entry ==~ /[a-zA-Z0-9_\/.\-]+\.md/)) {
+                              error "Invalid test_doc_files_linux entry: '${entry}'. Must be a .md file path with no special characters."
+                          }
+                      }
+                      test_doc_files_linux = docChangedFilesLinuxValue.replaceAll(' ', '\n')
+                      println "Commit override: test_doc_files_linux = ${test_doc_files_linux}"
+                  } else {
+                      test_doc_files_linux = sh (script: "./ci/check_md_code_changes.sh linux ${diffBase}", returnStdout: true).trim()
+                      if (test_doc_files_linux) {
+                        println "test_doc_files_linux = ${test_doc_files_linux}"
+                      } else {
+                        println "No documentation files changed for linux"
                       }
                   }
-                  test_doc_files_linux = docChangedFilesLinuxValue.replaceAll(' ', '\n')
-                  println "Commit override: test_doc_files_linux = ${test_doc_files_linux}"
-              } else {
-                  test_doc_files_linux = sh (script: "./ci/check_md_code_changes.sh linux ${diffBase}", returnStdout: true).trim()
-                  if (test_doc_files_linux) {
-                    println "test_doc_files_linux = ${test_doc_files_linux}"
+                  def docChangedFilesWindowsMatcher = (commitMsg =~ /\[test_doc_files_windows=([^\]]+)\]/)
+                  def docChangedFilesWindowsValue = docChangedFilesWindowsMatcher ? docChangedFilesWindowsMatcher[0][1] : null
+                  docChangedFilesWindowsMatcher = null // Matcher is not serializable; null it before CPS checkpoint
+                  if (docChangedFilesWindowsValue) {
+                      // Validate each entry is a safe .md path (no shell metacharacters)
+                      docChangedFilesWindowsValue.split(' ').each { entry ->
+                          if (!(entry ==~ /[a-zA-Z0-9_\/.\-]+\.md/)) {
+                              error "Invalid test_doc_files_windows entry: '${entry}'. Must be a .md file path with no special characters."
+                          }
+                      }
+                      test_doc_files_windows = docChangedFilesWindowsValue.replaceAll(' ', '\n')
+                      println "Commit override: test_doc_files_windows = ${test_doc_files_windows}"
                   } else {
-                    println "No documentation files changed for linux"
-                  }
-              }
-              def docChangedFilesWindowsMatcher = (commitMsg =~ /\[test_doc_files_windows=([^\]]+)\]/)
-              def docChangedFilesWindowsValue = docChangedFilesWindowsMatcher ? docChangedFilesWindowsMatcher[0][1] : null
-              docChangedFilesWindowsMatcher = null // Matcher is not serializable; null it before CPS checkpoint
-              if (docChangedFilesWindowsValue) {
-                  // Validate each entry is a safe .md path (no shell metacharacters)
-                  docChangedFilesWindowsValue.split(' ').each { entry ->
-                      if (!(entry ==~ /[a-zA-Z0-9_\/.\-]+\.md/)) {
-                          error "Invalid test_doc_files_windows entry: '${entry}'. Must be a .md file path with no special characters."
+                      test_doc_files_windows = sh (script: "./ci/check_md_code_changes.sh windows ${diffBase}", returnStdout: true).trim()
+                      if (test_doc_files_windows) {
+                        println "test_doc_files_windows = ${test_doc_files_windows}"
+                      } else {
+                        println "No documentation files changed for windows"
                       }
                   }
-                  test_doc_files_windows = docChangedFilesWindowsValue.replaceAll(' ', '\n')
-                  println "Commit override: test_doc_files_windows = ${test_doc_files_windows}"
-              } else {
-                  test_doc_files_windows = sh (script: "./ci/check_md_code_changes.sh windows ${diffBase}", returnStdout: true).trim()
-                  if (test_doc_files_windows) {
-                    println "test_doc_files_windows = ${test_doc_files_windows}"
-                  } else {
-                    println "No documentation files changed for windows"
-                  }
-              }
                 }
+              }
             }
           }
         }
