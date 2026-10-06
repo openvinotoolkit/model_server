@@ -21,7 +21,7 @@ pip3 install -r requirements.txt
 ## Download and convert model
 
 ```bash
-pip3 install --extra-index-url "https://download.pytorch.org/whl/cpu" "openvino" "pillow" "torch" "transformers<5.11"
+pip3 install --extra-index-url "https://download.pytorch.org/whl/cpu" "openvino" "numpy<2.0" "pillow==12.2.0" "torch==2.8.0+cpu" "transformers<=4.53.0"
 ```
 
 ```bash
