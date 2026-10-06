@@ -240,7 +240,7 @@ The `--target_device` option defaults to auto-detected based on available GPU de
 
 ## Image input decode protection
 
-Binary image inputs (KServe / TensorFlow Serving predict requests and multimodal `/v3` requests) are decoded before inference. A small compressed image can decode into a far larger raw buffer, and for vision language models even a "reasonable" ~1 GB image can amplify further inside the vision encoder. The server therefore bounds the decoded image size by pixel count (width × height) before decoding.
+Binary image inputs (KServe infer requests and multimodal `/v1` or `/v3` requests) are decoded before inference. A small compressed image can decode into a far larger raw buffer, and for vision language models even a "reasonable" ~1 GB image can amplify further inside the vision encoder. The server therefore bounds the decoded image size by pixel count (width × height) before decoding.
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|

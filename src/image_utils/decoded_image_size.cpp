@@ -136,7 +136,7 @@ constexpr int WEBP_DIMENSION_BITS_14 = 14;
     // Reads only the image header via stb_image (no pixel decode or allocation). Fills width/height
     // for formats stb recognizes (PNG, JPEG, BMP, GIF, ...). Returns false for empty/oversized input
     // or formats stb does not support (e.g. WebP), in which case the caller uses its own fallback.
-    [[nodiscard]] bool tryReadImageHeaderStbi(std::string_view imageBytes, int& width, int& height) {
+    [[nodiscard]] bool tryReadImageDimensionsStbi(std::string_view imageBytes, int& width, int& height) {
     width = 0;
     height = 0;
     if (imageBytes.empty() || imageBytes.size() > static_cast<size_t>(std::numeric_limits<int>::max()))
@@ -158,7 +158,7 @@ constexpr int WEBP_DIMENSION_BITS_14 = 14;
     // Primary: reuse the stb_image header parser (PNG, JPEG, BMP, GIF, ...) instead of
     // maintaining per-format header parsers ourselves.
     int width = 0, height = 0;
-    if (tryReadImageHeaderStbi(data, width, height)) {
+    if (tryReadImageDimensionsStbi(data, width, height)) {
         if (width <= 0 || height <= 0)
             return DecodedSizeEstimate::UnsupportedFormat;
         outDecodedPixels = decodedPixels(static_cast<uint64_t>(width), static_cast<uint64_t>(height));

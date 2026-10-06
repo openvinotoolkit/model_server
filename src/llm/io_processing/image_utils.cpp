@@ -266,10 +266,14 @@ absl::StatusOr<ov::Tensor> fetchAndDecodeImage(const std::string& imageSource,
     // Part 3: bound the actual decoded pixel count against the remaining per-request budget and
     // advance the running total so subsequent images in the same request see the reduced budget.
     const auto& shape = imageTensor.get_shape();
-    if (shape.size() < 3) {
+    if (shape.size() != 4) {
         return absl::InternalError("Decoded image tensor has unexpected shape");
     }
-    size_t imagePixels = shape[shape.size() - 3] * shape[shape.size() - 2];
+    if (shape[1] != 0 && shape[2] > remainingBudget / shape[1]) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Decoded image dimensions exceed remaining budget {}", remainingBudget);
+        return absl::InvalidArgumentError("Image exceeds maximum decoded size");
+    }
+    size_t imagePixels = shape[1] * shape[2];
     if (imagePixels > remainingBudget) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Decoded image pixels {} exceeds remaining budget {}",
             imagePixels, remainingBudget);
