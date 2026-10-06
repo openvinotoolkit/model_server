@@ -501,6 +501,7 @@ ovms_cc_library(
         "//src:libovmslogging",
         "//src:libovmsstatus",
         "//src:libovms_module",
+        "//src:libovms_config",
     ],
     visibility = ["//visibility:public"],
 )

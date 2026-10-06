@@ -37,9 +37,6 @@
 #include "src/port/rapidjson_writer.hpp"
 
 #include "config.hpp"
-#include "dags/pipeline.hpp"
-#include "dags/pipeline_factory.hpp"
-#include "dags/pipelinedefinition.hpp"
 #include "servable_definition_unload_guard.hpp"
 #include "execution_context.hpp"
 #include "filesystem/filesystem.hpp"
@@ -584,32 +581,8 @@ void parseModel(rapidjson::Writer<rapidjson::StringBuffer>& writer, const std::s
 }
 
 Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, std::string& response) {
-    bool available = false;
-
-    // MediaPipe first, it is most likely that anyone will check llms
-#if (MEDIAPIPE_DISABLE == 0)
-    if (!available) {
-        auto names = modelManager.getNamesOfAvailableMediapipePipelines();
-        if (std::find(names.begin(), names.end(), name) != names.end()) {
-            available = true;
-        }
-    }
-#endif
-
-    // Single Model
-    if (!available) {
-        auto availableModelNames = modelManager.getNamesOfAvailableModels();
-        if (std::find(availableModelNames.begin(), availableModelNames.end(), name) != availableModelNames.end()) {
-            available = true;
-        }
-    }
-    // DAG (deprecated)
-    if (!available) {
-        auto availableDagNames = modelManager.getPipelineFactory().getNamesOfAvailablePipelines();
-        if (std::find(availableDagNames.begin(), availableDagNames.end(), name) != availableDagNames.end()) {
-            available = true;
-        }
-    }
+    const auto names = modelManager.getNamesOfAvailableServables();
+    const bool available = std::find(names.begin(), names.end(), name) != names.end();
 
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
@@ -636,26 +609,9 @@ Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
     writer.StartObject();
     writer.String("data");
     writer.StartArray();
-
-    // Single Model
-    auto availableModelNames = modelManager.getNamesOfAvailableModels();
-    for (auto const& name : availableModelNames) {
+    for (auto const& name : modelManager.getNamesOfAvailableServables()) {
         parseModel(writer, name, timestamp);
     }
-
-    // DAG
-    auto availableModels = modelManager.getPipelineFactory().getNamesOfAvailablePipelines();
-    for (auto const& name : availableModels) {
-        parseModel(writer, name, timestamp);
-    }
-
-    // MediaPipe
-#if (MEDIAPIPE_DISABLE == 0)
-    auto availableMediapipes = modelManager.getNamesOfAvailableMediapipePipelines();
-    for (auto const& graphName : availableMediapipes) {
-        parseModel(writer, graphName, timestamp);
-    }
-#endif
     writer.EndArray();
     writer.String("object");
     writer.String("list");
@@ -1206,32 +1162,12 @@ Status HttpRestApiHandler::getReporter(const HttpRequestComponents& components, 
         modelInstance,
         modelInstanceUnloadGuard);
     if (status == StatusCode::MODEL_NAME_MISSING) {
-        auto pipelineDefinition = this->modelManager.getPipelineFactory().findDefinitionByName(components.model_name);
-        if (!pipelineDefinition) {
-            return StatusCode::MODEL_MISSING;
-        }
-        reporter = &pipelineDefinition->getMetricReporter();
-        return StatusCode::OK;
+        return StatusCode::MODEL_MISSING;
     }
     if (!status.ok()) {
         return StatusCode::MODEL_MISSING;
     }
     reporter = &modelInstance->getMetricReporter();
-    return StatusCode::OK;
-}
-
-Status HttpRestApiHandler::getPipelineInputsAndReporter(const std::string& modelName, ovms::tensor_map_t& inputs, ovms::ServableMetricReporter*& reporter) {
-    auto pipelineDefinition = this->modelManager.getPipelineFactory().findDefinitionByName(modelName);
-    if (!pipelineDefinition) {
-        return StatusCode::MODEL_MISSING;
-    }
-    std::unique_ptr<ServableDefinitionUnloadGuard> unloadGuard;
-    Status status = pipelineDefinition->waitForLoaded(unloadGuard);
-    if (!status.ok()) {
-        return status;
-    }
-    reporter = &pipelineDefinition->getMetricReporter();
-    inputs = pipelineDefinition->getInputsInfo();
     return StatusCode::OK;
 }
 

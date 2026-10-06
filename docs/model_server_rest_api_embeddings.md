@@ -73,7 +73,9 @@ curl http://localhost/v3/embeddings \
 Endpoint can raise an error related to incorrect request in the following conditions:
 - Incorrect format of any of the fields based on the schema
 - Any tokenized input text exceeds the maximum length of the model context. Make sure input documents are chunked to fit the model
-- The number of input documents exceeds allowed configured value - default 500
+- The request body exceeds 2,000,000 bytes
+- The number of input documents exceeds `max_batch_size` (default 1024). Set `max_batch_size` in the embeddings graph node options or pass `--max_batch_size` when generating a graph with `--task embeddings`.
+- The input tensors exceed 1 GiB. For string batches, the server checks the worst-case padded tensor size (batch size times the model context length) before tokenization, so even short strings may be rejected in a sufficiently large batch. Split such batches into smaller requests.
 
 
 ## References

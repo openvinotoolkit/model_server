@@ -42,8 +42,6 @@
 #pragma GCC diagnostic pop
 
 #include "../config.hpp"
-#include "../dags/pipeline_factory.hpp"
-#include "../dags/pipelinedefinition.hpp"
 #include "../grpcservermodule.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_graph_executor_impl.hpp"
@@ -1179,82 +1177,6 @@ TEST_F(MediapipeFlowTwoOutputsTest, Infer) {
         << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
 }
 
-class MediapipeFlowTwoOutputsDagTest : public MediapipeFlowTest {
-public:
-    void SetUp() {
-        SetUpServer("/ovms/src/test/mediapipe/config_mediapipe_two_outputs_dag.json");
-    }
-};
-
-TEST_F(MediapipeFlowTwoOutputsDagTest, Infer) {
-    std::vector<float> input{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-    std::vector<float> factors{1, 3, 2, 2};
-
-    ::KFSRequest request;
-    ::KFSResponse response;
-    const std::string modelName = "mediapipeTwoOutputsDag";
-    request.mutable_inputs()->Clear();
-    request.mutable_raw_input_contents()->Clear();
-    prepareKFSInferInputTensor(request, "in_1", {{1, 10}, ovms::Precision::FP32}, input, false);
-    prepareKFSInferInputTensor(request, "in_2", {{1, 4}, ovms::Precision::FP32}, factors, false);
-    ASSERT_EQ(request.inputs_size(), 2);
-    request.mutable_model_name()->assign(modelName);
-    const ovms::Module* grpcModule = server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
-    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
-    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
-
-    ASSERT_EQ(response.model_name(), modelName);
-    ASSERT_EQ(response.outputs_size(), 2);
-    ASSERT_EQ(response.raw_output_contents_size(), 2);
-
-    ASSERT_TRUE((response.outputs().Get(0).name() == "out_1" && response.outputs().Get(1).name() == "out_2") ||
-                (response.outputs().Get(0).name() == "out_2" && response.outputs().Get(1).name() == "out_1"));
-
-    std::string* content1;
-    std::string* content2;
-    KFSTensorOutputProto outputProto1, outputProto2;
-    if (response.outputs().Get(0).name() == "out_1") {
-        outputProto1 = response.outputs().Get(0);
-        content1 = response.mutable_raw_output_contents(0);
-        outputProto2 = response.outputs().Get(1);
-        content2 = response.mutable_raw_output_contents(1);
-    } else {
-        outputProto1 = response.outputs().Get(1);
-        content1 = response.mutable_raw_output_contents(1);
-        outputProto2 = response.outputs().Get(0);
-        content2 = response.mutable_raw_output_contents(0);
-    }
-
-    int out1DataSize = 40;
-    int out2DataSize = 16;
-    std::vector<float> out1Data{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 0.0, 2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5};
-    std::vector<float> out2Data{1, 3, 2, 2, 1, 3, 2, 2, 1, 3, 2, 2, 1, 3, 2, 2};
-
-    ASSERT_EQ(content1->size(), out1DataSize * sizeof(float));
-    ASSERT_EQ(outputProto1.shape_size(), 3);
-    ASSERT_EQ(outputProto1.shape(0), 4);
-    ASSERT_EQ(outputProto1.shape(1), 1);
-    ASSERT_EQ(outputProto1.shape(2), 10);
-
-    float* actual_output = (float*)content1->data();
-    float* expected_output = out1Data.data();
-    int dataLengthToCheck = out1DataSize * sizeof(float);
-    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
-        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
-
-    ASSERT_EQ(content2->size(), out2DataSize * sizeof(float));
-    ASSERT_EQ(outputProto2.shape_size(), 3);
-    ASSERT_EQ(outputProto2.shape(0), 4);
-    ASSERT_EQ(outputProto2.shape(1), 1);
-    ASSERT_EQ(outputProto2.shape(2), 4);
-
-    actual_output = (float*)content2->data();
-    expected_output = out2Data.data();
-    dataLengthToCheck = out2DataSize * sizeof(float);
-    EXPECT_EQ(0, std::memcmp(actual_output, expected_output, dataLengthToCheck))
-        << readableError(expected_output, actual_output, dataLengthToCheck / sizeof(float));
-}
-
 class MediapipeFlowDummyDummyInSubconfigAndConfigTest : public MediapipeFlowTest {
 public:
     void SetUp() {
@@ -2356,31 +2278,6 @@ TEST_P(MediapipeConfig, MediapipeAdd) {
         ASSERT_NE(graphDefinition, nullptr);
         EXPECT_EQ(graphDefinition->getStatus().isAvailable(), true);
     }
-
-    manager.join();
-}
-
-TEST_P(MediapipeConfig, MediapipeDummyWithDag) {
-    ConstructorEnabledModelManager manager;
-    std::string basePath = GetParam();
-    std::replace(basePath.begin(), basePath.end(), 'X', '/');
-    basePath = basePath + "test/mediapipe/config_mediapipe_dummy_adapter_full_dag.json";
-    auto status = manager.startFromFile(getGenericFullPathForSrcTest(basePath));
-    EXPECT_EQ(status, ovms::StatusCode::OK);
-
-    for (auto& graphName : mediaGraphsDummy) {
-        auto graphDefinition = manager.getMediapipeFactory().findDefinitionByName(graphName);
-        ASSERT_NE(graphDefinition, nullptr);
-        EXPECT_EQ(graphDefinition->getStatus().isAvailable(), true);
-    }
-
-    auto pipelineDefinition = manager.getPipelineFactory().findDefinitionByName("dummyDAG");
-    EXPECT_NE(pipelineDefinition, nullptr);
-    EXPECT_EQ(pipelineDefinition->getStatus().getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
-
-    auto model = manager.findModelByName("dummy");
-    ASSERT_NE(nullptr, model->getDefaultModelInstance());
-    ASSERT_EQ(model->getDefaultModelInstance()->getStatus().getState(), ModelVersionState::AVAILABLE);
 
     manager.join();
 }
@@ -3503,9 +3400,9 @@ protected:
     }
 
     void TearDown() override {
-        TestWithTempDir::TearDown();
         stopServer();
         t->join();
+        TestWithTempDir::TearDown();
     }
 
     void performInference(ovms::StatusCode expectedStatus) {
@@ -3662,6 +3559,46 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, OVTensorCheckExpectedStatusCode) {
     const std::string servableName{"mediapipeDummy"};
     this->request.mutable_model_name()->assign(servableName);
     this->performInference(TYPE_TO_OVMS_PRECISION_TO_STATUS_OV_TENSOR[typeid(TypeParam)].second);
+}
+
+TEST(Mediapipe, OVTensorZeroElementTypedContentsShouldPass) {
+    const std::string pbTxt{R"(
+input_stream: "in"
+output_stream: "out"
+node {
+  calculator: "PassThroughCalculator"
+  input_stream: "in"
+  output_stream: "out"
+}
+)"};
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(pbTxt, &config));
+
+    auto sidePackets = std::make_shared<GraphSidePackets>();
+    auto reporter = std::make_unique<MediapipeServableMetricReporter>(nullptr, nullptr, "");
+    auto queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
+    GraphIdGuard guard(queue);
+    MediapipeGraphExecutor executor{
+        "zero_tensor_graph", "1", config,
+        {{"in", mediapipe_packet_type_enum::OVTENSOR}},
+        {{"out", mediapipe_packet_type_enum::OVTENSOR}},
+        {"in"}, {"out"}, *sidePackets, nullptr, reporter.get(), std::move(guard)};
+
+    KFSRequest request;
+    request.set_model_name("zero_tensor_graph");
+    auto* input = request.add_inputs();
+    input->set_name("in");
+    input->set_datatype("FP32");
+    input->add_shape(0);
+    input->add_shape(10);
+    KFSResponse response;
+
+    ExecutionContext executionContext{ExecutionContext::Interface::GRPC, ExecutionContext::Method::ModelInfer};
+    auto status = executor.inferTyped<KFSRequest, KFSResponse>(&request, &response, executionContext);
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
+    ASSERT_EQ(response.outputs_size(), 1);
+    ASSERT_EQ(response.raw_output_contents_size(), 1);
+    EXPECT_EQ(response.raw_output_contents(0).size(), 0);
 }
 
 #if (PYTHON_DISABLE == 0)
@@ -3912,6 +3849,144 @@ TYPED_TEST(KFSGRPCContentFieldsSupportTest, TFTensorInvalidContentSize) {
         }
     )";
     this->performInvalidContentSizeTest(pbtxtContentTFTensor, ovms::StatusCode::INVALID_VALUE_COUNT);
+}
+
+class MPTensorOversizedShapeTest : public TestWithTempDir {
+protected:
+    ovms::Server& server = ovms::Server::instance();
+    std::unique_ptr<std::thread> t;
+    std::string port = "9000";
+    KFSRequest request;
+    KFSResponse response;
+
+    void SetUp() override {
+        TestWithTempDir::SetUp();
+        randomizeAndEnsureFree(port);
+    }
+
+    void TearDown() override {
+        stopServer();
+        t->join();
+        TestWithTempDir::TearDown();
+    }
+
+    // Writes out graph.pbtxt/config.json for a single-node passthrough graph and starts the server with it.
+    void startServerWithGraph(const std::string& pbtxtContent, const std::string& servableName) {
+        std::string graphFilePath = this->directoryPath + "/graph.pbtxt";
+        createConfigFileWithContent(pbtxtContent, graphFilePath);
+        std::string configContent = R"(
+{
+    "model_config_list": [],
+    "mediapipe_config_list": [
+    {
+        "name":")" + servableName + R"(",
+        "graph_path": ")" + graphFilePath +
+                                    R"("
+    }
+    ]
+}
+)";
+        std::string configFilePath = this->directoryPath + "/config.json";
+        createConfigFileWithContent(configContent, configFilePath);
+
+        char* argv[] = {(char*)"ovms",
+            (char*)"--config_path",
+            (char*)configFilePath.c_str(),
+            (char*)"--port",
+            (char*)this->port.c_str()};
+        int argc = 5;
+        this->server.setShutdownRequest(0);
+        this->t = std::make_unique<std::thread>([&argc, &argv, this]() {
+            EXPECT_EQ(EXIT_SUCCESS, this->server.start(argc, argv));
+        });
+        auto start = std::chrono::high_resolution_clock::now();
+        while (!isMpReady(servableName) &&
+               (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - start).count() < SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS)) {
+            std::this_thread::sleep_for(std::chrono::microseconds(100));
+        }
+    }
+};
+
+TEST_F(MPTensorOversizedShapeTest, HugeDimensionRejectedWithServableStayingHealthy) {
+    const std::string pbtxtContent = R"(
+        input_stream: "TENSOR:in"
+        output_stream: "TENSOR:out"
+        node {
+        calculator: "PassThroughCalculator"
+        input_stream: "TENSOR:in"
+        output_stream: "TENSOR:out"
+        }
+    )";
+    this->startServerWithGraph(pbtxtContent, "shapeTest");
+
+    const ovms::Module* grpcModule = this->server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    ASSERT_NE(grpcModule, nullptr);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+
+    // Malicious request: declared shape[0] == INT_MAX + 1, single FP32 value in contents.
+    request.Clear();
+    request.mutable_model_name()->assign("shapeTest");
+    auto* input = request.add_inputs();
+    input->set_name("in");
+    input->set_datatype("FP32");
+    input->add_shape(static_cast<int64_t>(std::numeric_limits<int32_t>::max()) + 1);
+    input->mutable_contents()->add_fp32_contents(1.0f);
+    response.Clear();
+    auto maliciousStatus = impl.ModelInfer(nullptr, &request, &response);
+    EXPECT_NE(maliciousStatus.error_code(), grpc::StatusCode::OK);
+
+    // Server must still be alive and able to serve a normal request afterwards.
+    request.Clear();
+    request.mutable_model_name()->assign("shapeTest");
+    input = request.add_inputs();
+    input->set_name("in");
+    input->set_datatype("FP32");
+    input->add_shape(1);
+    input->mutable_contents()->add_fp32_contents(1.0f);
+    response.Clear();
+    auto healthyStatus = impl.ModelInfer(nullptr, &request, &response);
+    EXPECT_EQ(healthyStatus.error_code(), grpc::StatusCode::OK) << healthyStatus.error_message();
+}
+
+TEST_F(MPTensorOversizedShapeTest, LargeShapeContentMismatchRejectedWithoutAllocating) {
+    const std::string pbtxtContent = R"(
+        input_stream: "TENSOR:in"
+        output_stream: "TENSOR:out"
+        node {
+        calculator: "PassThroughCalculator"
+        input_stream: "TENSOR:in"
+        output_stream: "TENSOR:out"
+        }
+    )";
+    this->startServerWithGraph(pbtxtContent, "shapeTest");
+
+    const ovms::Module* grpcModule = this->server.getModule(ovms::GRPC_SERVER_MODULE_NAME);
+    ASSERT_NE(grpcModule, nullptr);
+    KFSInferenceServiceImpl& impl = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+
+    // Declares a ~2GiB FP32 buffer (536870911 * 4 bytes, still < INT_MAX) but carries a single value.
+    request.Clear();
+    request.mutable_model_name()->assign("shapeTest");
+    auto* input = request.add_inputs();
+    input->set_name("in");
+    input->set_datatype("FP32");
+    input->add_shape(536870911);
+    input->mutable_contents()->add_fp32_contents(1.0f);
+    response.Clear();
+    auto maliciousStatus = impl.ModelInfer(nullptr, &request, &response);
+    EXPECT_EQ(maliciousStatus.error_code(), grpc::StatusCode::INVALID_ARGUMENT) << maliciousStatus.error_message();
+
+    // Server must still be alive and able to serve a normal request afterwards.
+    request.Clear();
+    request.mutable_model_name()->assign("shapeTest");
+    input = request.add_inputs();
+    input->set_name("in");
+    input->set_datatype("FP32");
+    input->add_shape(1);
+    input->mutable_contents()->add_fp32_contents(1.0f);
+    response.Clear();
+    auto healthyStatus = impl.ModelInfer(nullptr, &request, &response);
+    EXPECT_EQ(healthyStatus.error_code(), grpc::StatusCode::OK) << healthyStatus.error_message();
 }
 
 INSTANTIATE_TEST_SUITE_P(

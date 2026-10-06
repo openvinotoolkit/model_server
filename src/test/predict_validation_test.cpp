@@ -15,6 +15,7 @@
 //*****************************************************************************
 
 #include <limits>
+#include <cstring>
 #include <string>
 
 #include <gmock/gmock.h>
@@ -207,6 +208,12 @@ TEST_F(KFSPredictValidation, RequestWrongBatchSizeAuto) {
 }
 
 TEST_F(KFSPredictValidation, ValidRequestBinaryInputs) {
+    ScopedOVMSConfigGuard configGuard;
+    ovms::ServerSettingsImpl serverSettings = configGuard.getServerSettings();
+    serverSettings.allowUnestimatableImageFormats = true;
+    ovms::ModelsSettingsImpl modelsSettings = configGuard.getModelSettings();
+    configGuard.parse(serverSettings, modelsSettings);
+
     std::string inputName = "Binary_Input";
     ::KFSRequest binaryInputRequest;
 
@@ -255,6 +262,12 @@ TEST_F(KFSPredictValidation, Batch0RequestBinaryInputs) {
 }
 
 TEST_F(KFSPredictValidation, RequestWrongBatchSizeBinaryInputs) {
+    ScopedOVMSConfigGuard configGuard;
+    ovms::ServerSettingsImpl serverSettings = configGuard.getServerSettings();
+    serverSettings.allowUnestimatableImageFormats = true;
+    ovms::ModelsSettingsImpl modelsSettings = configGuard.getModelSettings();
+    configGuard.parse(serverSettings, modelsSettings);
+
     std::string inputName = "Binary_Input";
     ::KFSRequest binaryInputRequest;
 
@@ -307,6 +320,12 @@ TEST_F(KFSPredictValidation, BinaryRequestEndpointScalar) {
 }
 
 TEST_F(KFSPredictValidation, RequestWrongBatchSizeAutoBinaryInputs) {
+    ScopedOVMSConfigGuard configGuard;
+    ovms::ServerSettingsImpl serverSettings = configGuard.getServerSettings();
+    serverSettings.allowUnestimatableImageFormats = true;
+    ovms::ModelsSettingsImpl modelsSettings = configGuard.getModelSettings();
+    configGuard.parse(serverSettings, modelsSettings);
+
     modelConfig.setBatchingParams("auto");
     std::string inputName = "Binary_Input";
     ::KFSRequest binaryInputRequest;
@@ -1409,6 +1428,135 @@ TEST(PredictValidationStringNativeKFSTest, negative_over_element_count_limit_con
     auto status = ovms::request_validation_utils::validate(
         request, mockedInputsInfo, mockedOutputsInfo, "dummy", ovms::model_version_t{1});
     EXPECT_EQ(status, ovms::StatusCode::INVALID_STRING_MAX_SIZE_EXCEEDED) << status.string();
+}
+
+static ovms::Status validateUnestimatableImageFormat(bool allowUnestimatableImageFormats) {
+    ScopedOVMSConfigGuard configGuard;
+    ovms::ServerSettingsImpl scopedServerSettings = configGuard.getServerSettings();
+    scopedServerSettings.allowUnestimatableImageFormats = allowUnestimatableImageFormats;
+    ovms::ModelsSettingsImpl scopedModelsSettings = configGuard.getModelSettings();
+    configGuard.parse(scopedServerSettings, scopedModelsSettings);
+
+    const char* tensorName = "image_input";
+    ovms::tensor_map_t mockedInputsInfo, mockedOutputsInfo;
+    mockedInputsInfo[tensorName] = std::make_shared<ovms::TensorInfo>(
+        tensorName, ovms::Precision::FP32, ovms::shape_t{1, 224, 224, 3}, ovms::Layout{"NHWC"});
+
+    ::KFSRequest request;
+    auto* input = request.add_inputs();
+    input->set_name(tensorName);
+    input->set_datatype("BYTES");
+    input->add_shape(1);
+
+    const uint32_t payloadLen = 2 * 1024 * 1024;
+    std::string largeRawBuffer(sizeof(uint32_t) + payloadLen, 'A');
+    std::memcpy(largeRawBuffer.data(), &payloadLen, sizeof(payloadLen));
+    *request.add_raw_input_contents() = std::move(largeRawBuffer);
+
+    return ovms::request_validation_utils::validate(
+        request, mockedInputsInfo, mockedOutputsInfo, "image_model", ovms::model_version_t{1});
+}
+
+TEST(PredictValidationImageKFSTest, unestimatable_image_format_allowed_when_configured) {
+    auto status = validateUnestimatableImageFormat(true);
+    EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
+}
+
+TEST(PredictValidationImageKFSTest, unestimatable_image_format_rejected_when_not_configured) {
+    auto status = validateUnestimatableImageFormat(false);
+    EXPECT_EQ(status, ovms::StatusCode::IMAGE_PARSING_FAILED) << status.string();
+}
+
+TEST(PredictValidationImageKFSTest, decode_pixel_budget_from_config) {
+    ScopedOVMSConfigGuard configGuard;
+
+    ovms::ServerSettingsImpl scopedServerSettings = configGuard.getServerSettings();
+    scopedServerSettings.maxImageDecodePixels = ovms::OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS;
+    scopedServerSettings.allowUnestimatableImageFormats = false;
+    ovms::ModelsSettingsImpl scopedModelsSettings = configGuard.getModelSettings();
+    configGuard.parse(scopedServerSettings, scopedModelsSettings);
+    EXPECT_EQ(ovms::request_validation_utils::getMaxImageDecodePixels(), ovms::OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS);
+    EXPECT_FALSE(ovms::request_validation_utils::allowUnestimatableImageFormats());
+
+    scopedServerSettings.maxImageDecodePixels = 1024;
+    scopedServerSettings.allowUnestimatableImageFormats = true;
+    configGuard.parse(scopedServerSettings, scopedModelsSettings);
+    EXPECT_EQ(ovms::request_validation_utils::getMaxImageDecodePixels(), 1024u);
+    EXPECT_TRUE(ovms::request_validation_utils::allowUnestimatableImageFormats());
+}
+
+TEST(PredictValidationImageKFSTest, single_estimatable_image_within_budget_passes) {
+    ScopedOVMSConfigGuard configGuard;
+
+    ovms::ServerSettingsImpl scopedServerSettings = configGuard.getServerSettings();
+    scopedServerSettings.maxImageDecodePixels = 1;
+    scopedServerSettings.allowUnestimatableImageFormats = false;
+    ovms::ModelsSettingsImpl scopedModelsSettings = configGuard.getModelSettings();
+    configGuard.parse(scopedServerSettings, scopedModelsSettings);
+
+    ovms::tensor_map_t mockedInputsInfo, mockedOutputsInfo;
+    mockedInputsInfo["image_input"] = std::make_shared<ovms::TensorInfo>(
+        "image_input", ovms::Precision::FP32, ovms::shape_t{1, 224, 224, 3}, ovms::Layout{"NHWC"});
+
+    ::KFSRequest request;
+    auto* input = request.add_inputs();
+    input->set_name("image_input");
+    input->set_datatype("BYTES");
+    input->add_shape(1);
+
+    const std::string tinyPng(
+        "\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52"
+        "\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90\x77\x53\xde"
+        "\x00\x00\x00\x10\x49\x44\x41\x54\x78\x9c\x62\xca\xdb\xba\x00\x10\x00\x00"
+        "\xff\xff\x03\x60\x01\xc6\x80\x4b\xf2\xe4\x00\x00\x00\x00\x49\x45\x4e\x44"
+        "\xae\x42\x60\x82",
+        73);
+    input->mutable_contents()->add_bytes_contents(tinyPng);
+
+    auto status = ovms::request_validation_utils::validate(
+        request, mockedInputsInfo, mockedOutputsInfo, "image_model", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
+}
+
+TEST(PredictValidationImageKFSTest, two_estimatable_images_cross_aggregate_budget_fail) {
+    ScopedOVMSConfigGuard configGuard;
+
+    ovms::ServerSettingsImpl scopedServerSettings = configGuard.getServerSettings();
+    scopedServerSettings.maxImageDecodePixels = 1;
+    scopedServerSettings.allowUnestimatableImageFormats = false;
+    ovms::ModelsSettingsImpl scopedModelsSettings = configGuard.getModelSettings();
+    configGuard.parse(scopedServerSettings, scopedModelsSettings);
+
+    ovms::tensor_map_t mockedInputsInfo, mockedOutputsInfo;
+    mockedInputsInfo["image_input_1"] = std::make_shared<ovms::TensorInfo>(
+        "image_input_1", ovms::Precision::FP32, ovms::shape_t{1, 224, 224, 3}, ovms::Layout{"NHWC"});
+    mockedInputsInfo["image_input_2"] = std::make_shared<ovms::TensorInfo>(
+        "image_input_2", ovms::Precision::FP32, ovms::shape_t{1, 224, 224, 3}, ovms::Layout{"NHWC"});
+
+    ::KFSRequest request;
+    auto* input1 = request.add_inputs();
+    input1->set_name("image_input_1");
+    input1->set_datatype("BYTES");
+    input1->add_shape(1);
+
+    auto* input2 = request.add_inputs();
+    input2->set_name("image_input_2");
+    input2->set_datatype("BYTES");
+    input2->add_shape(1);
+
+    const std::string tinyPng(
+        "\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52"
+        "\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90\x77\x53\xde"
+        "\x00\x00\x00\x10\x49\x44\x41\x54\x78\x9c\x62\xca\xdb\xba\x00\x10\x00\x00"
+        "\xff\xff\x03\x60\x01\xc6\x80\x4b\xf2\xe4\x00\x00\x00\x00\x49\x45\x4e\x44"
+        "\xae\x42\x60\x82",
+        73);
+    input1->mutable_contents()->add_bytes_contents(tinyPng);
+    input2->mutable_contents()->add_bytes_contents(tinyPng);
+
+    auto status = ovms::request_validation_utils::validate(
+        request, mockedInputsInfo, mockedOutputsInfo, "image_model", ovms::model_version_t{1});
+    EXPECT_EQ(status, ovms::StatusCode::INVALID_IMAGE_MAX_SIZE_EXCEEDED) << status.string();
 }
 
 #define VERIFY_COMPUTE_BUFFER_SIZE(SHAPE, ELEMENT_SIZE, WILL_NOT_OVERFLOW, EXPECTED_BYTES)                                                  \

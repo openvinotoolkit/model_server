@@ -170,7 +170,7 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   ifeq ($(BASE_OS_TAG),24.04)
         OS=ubuntu24
-	INSTALL_DRIVER_VERSION ?= "26.18.38308"
+	INSTALL_DRIVER_VERSION ?= "26.31.39395"
 	DLDT_PACKAGE_URL ?= $(DLDT_PACKAGE_URL_UBUNTU24)
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
@@ -185,7 +185,7 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
   DLDT_PACKAGE_URL ?= $(DLDT_PACKAGE_URL_RHEL) # not used
-  INSTALL_DRIVER_VERSION ?= "24.52.32224"
+  INSTALL_DRIVER_VERSION ?= "25.18.33578"
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -222,6 +222,9 @@ BUILDX = buildx
 $(GIT_CONFIG_FILE):
 	@git config --file $@ url."https://x-access-token:$(TOKEN)@github.com/".insteadOf https://github.com/
 endif
+
+# Mount .gitconfig into unit-test containers when present so git operations can reuse the token-authenticated config.
+GIT_CONFIG_MOUNT = $(if $(wildcard .gitconfig),-v $(shell realpath .gitconfig):/root/.gitconfig:ro,)
 
 BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg https_proxy=$(HTTPS_PROXY)\
@@ -674,6 +677,7 @@ ifeq ($(RUN_GPU_TESTS),1)
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
 		-v $(shell realpath ${GPU_MODEL_PATH}):/ovms/src/test/face_detection_adas/1:ro \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
+		$(GIT_CONFIG_MOUNT) \
 		-e https_proxy=${https_proxy} \
 		-e RUN_TESTS=1 \
 		-e RUN_GPU_TESTS=$(RUN_GPU_TESTS) \
@@ -691,6 +695,7 @@ else
 		--name $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
+		$(GIT_CONFIG_MOUNT) \
 		-e https_proxy=${https_proxy} \
 		-e RUN_TESTS=1 \
 		-e JOBS=$(JOBS) \

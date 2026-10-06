@@ -318,12 +318,14 @@ public:
      * 
      * @return uint32_t
      */
-    uint32_t resourcesCleanerPollWaitSeconds() const;
+    uint32_t memoryTrimmingIntervalSeconds() const;
 
     uint32_t idleUnloadTimeoutSeconds() const;
 
     bool disableInputCountValidation() const;
     bool allowCredentials() const;
+    uint64_t maxImageDecodePixels() const;
+    bool allowUnestimatableImageFormats() const;
     const std::string& allowedOrigins() const;
     const std::string& allowedMethods() const;
     const std::string& allowedHeaders() const;

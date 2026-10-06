@@ -70,6 +70,12 @@ extern "C" MEDIAPIPE_RUNTIME_EXPORT void* OVMS_MPFactoryCreate(void* pythonBacke
     return static_cast<void*>(factory);
 }
 
+// Applies the real --log_level/--log_path config to this library's own logger
+// instances (isolated from the main process by RTLD_DEEPBIND/header-only spdlog).
+extern "C" MEDIAPIPE_RUNTIME_EXPORT void OVMS_MPFactoryConfigureLogging(const char* logLevel, const char* logPath) {
+    ovms::configure_logger(logLevel != nullptr ? logLevel : "", logPath != nullptr ? logPath : "");
+}
+
 extern "C" MEDIAPIPE_RUNTIME_EXPORT void OVMS_MPFactoryDestroy(void* factoryHandle) {
     auto* factory = static_cast<ovms::MediapipeFactory*>(factoryHandle);
     delete factory;

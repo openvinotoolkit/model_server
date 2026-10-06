@@ -144,6 +144,12 @@ bool validateEnvPaths(std::string& details) {
 
 }  // namespace
 
+// Applies the real --log_level/--log_path config to this library's own logger
+// instances (isolated from the main process by RTLD_DEEPBIND/header-only spdlog).
+extern "C" PYTHON_RUNTIME_EXPORT void OVMS_ConfigureRuntimeLogging(const char* logLevel, const char* logPath) {
+    ovms::configure_logger(logLevel != nullptr ? logLevel : "", logPath != nullptr ? logPath : "");
+}
+
 extern "C" PYTHON_RUNTIME_EXPORT ovms::Module* OVMS_createPythonInterpreterModule() {
     ovms::initialize_named_loggers_from_default();
     return new ovms::PythonInterpreterModule();
@@ -531,6 +537,8 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_createPreparedChatTemplateRuntime(
         prepared->chatTemplate = chatTemplateObject.release().ptr();
         prepared->toolTemplate = toolTemplateObject.release().ptr();
         *preparedHandle = prepared.release();
+        SPDLOG_LOGGER_DEBUG(ovms::modelmanager_logger, "Loaded runtime Jinja template processor. Bos token: {}, Eos token: {}, Chat template: \n{}",
+            bosToken, eosToken, locals["chat_template"].cast<std::string>());
         return true;
     } catch (const py::error_already_set& e) {
         setRuntimeOutput(e.what(), output);
