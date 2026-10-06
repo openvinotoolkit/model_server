@@ -57,11 +57,9 @@ def withGithubStageStatus = { String context, String stageName, Closure body ->
 //
 
 pipeline {
-    agent {
-      label 'ovmsbuilder'
-    }
+    agent none
     options {
-      timeout(time: 4, unit: 'HOURS')
+      timeout(time: 16, unit: 'HOURS')
     }
     stages {
         stage('Approve fork PR') {
@@ -74,6 +72,9 @@ pipeline {
           }
         }
         stage('Configure') {
+          agent {
+            label 'ovmsbuilder'
+          }
           steps {
             script {
               withGithubStageStatus('jenkins/oncommit/configure', 'Configure') {
