@@ -94,10 +94,6 @@ void GraphCLIParser::createOptions() {
             "Chat template engine: jinja or minja. Defaults to jinja when Python is available.",
             cxxopts::value<std::string>(),
             "CHAT_TEMPLATE_ENGINE")
-        ("chat_tempate_engine",
-            "Alias for --chat_template_engine.",
-            cxxopts::value<std::string>(),
-            "CHAT_TEMPLATE_ENGINE")
         ("enable_tool_guided_generation",
             "Enables enforcing tool schema during generation. Requires setting tool parser. Default: false.",
             cxxopts::value<std::string>()->default_value("false"),
@@ -201,12 +197,8 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
                                             "\". Supported tool parsers are: " + getSupportedToolParserNamesAsString());
             }
         }
-        if (result->count("chat_template_engine") && result->count("chat_tempate_engine")) {
-            throw std::invalid_argument("--chat_template_engine and --chat_tempate_engine cannot be used together");
-        }
-        if (result->count("chat_template_engine") || result->count("chat_tempate_engine")) {
-            const char* optionName = result->count("chat_template_engine") ? "chat_template_engine" : "chat_tempate_engine";
-            std::string engine = result->operator[](optionName).as<std::string>();
+        if (result->count("chat_template_engine")) {
+            std::string engine = result->operator[]("chat_template_engine").as<std::string>();
             std::transform(engine.begin(), engine.end(), engine.begin(), [](unsigned char ch) { return std::toupper(ch); });
             if (engine != "JINJA" && engine != "MINJA") {
                 throw std::invalid_argument("Unsupported chat template engine: \"" + engine + "\". Supported engines are: jinja, minja");

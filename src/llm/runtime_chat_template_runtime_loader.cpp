@@ -202,6 +202,7 @@ bool PreparedChatTemplateRuntime::apply(const std::string& requestBody, std::str
         return false;
     }
     const char* runtimeOutput = nullptr;
+    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Executing Python jinja chat template processor to apply chat template");
     const bool success = render(handle, requestBody.c_str(), &runtimeOutput);
     output = runtimeOutput != nullptr ? runtimeOutput : "Python chat template rendering failed";
     return success;

@@ -763,26 +763,4 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 
-ovms_cc_library(
-    name = "py_jinja_template_processor_header",
-    hdrs = ["py_jinja_template_processor.hpp"],
-    deps = select({
-            "//:not_disable_python": PYBIND_HEADERS_ONLY,
-            "//:disable_python": []
-        }) + [
-        "//src/python:python_headers_only",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-ovms_cc_library(
-    name = "py_jinja_template_processor",
-    hdrs = ["py_jinja_template_processor.hpp"],
-    srcs = ["py_jinja_template_processor.cpp"],
-    deps = [
-        "//src:libovmslogging",
-        "//src/python:utils",
-    ] + PYBIND_HEADERS_ONLY,
-    visibility = ["//visibility:public"],
-)
 

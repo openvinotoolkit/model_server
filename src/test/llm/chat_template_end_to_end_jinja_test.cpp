@@ -63,7 +63,7 @@ protected:
         const char* prev = std::getenv("OPENVINO_LOG_LEVEL");
         savedLogLevel = prev ? prev : "";
         SetEnvironmentVar("OPENVINO_LOG_LEVEL", "0");
-        // Copy tokenizer model files to temp dir (required by PyJinjaTemplateProcessor)
+        // Copy tokenizer model files required by the prepared Python runtime.
         for (const auto& filename : {"openvino_tokenizer.xml", "openvino_tokenizer.bin",
                  "openvino_detokenizer.xml", "openvino_detokenizer.bin"}) {
             std::filesystem::copy_file(
