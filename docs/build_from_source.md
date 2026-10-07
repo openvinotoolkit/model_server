@@ -31,7 +31,7 @@ Select base OS:
 - `ubuntu24` for Ubuntu 24.04 (default)
 - `redhat` for Red Hat UBI 9.7
 
-```bash
+```text
 make release_image BASE_OS=redhat
 ```
 
@@ -45,7 +45,7 @@ Parameter used to control which GPU driver version will be installed. Supported 
 
 
 Example:
-```bash
+```text
 make release_image BASE_OS=ubuntu INSTALL_DRIVER_VERSION=26.31.39395 GPU=1
 ```
 
@@ -75,7 +75,7 @@ Running the unit tests will increase build time and consume more RAM
 
 Number of compilation jobs. By default it is set to the number of CPU cores. On hosts with low RAM, this value can be reduced to avoid out of memory errors during the compilation.
 
-```bash
+```text
 make release_image JOBS=2
 ```
 <hr />
@@ -105,7 +105,7 @@ make release_image MEDIAPIPE_DISABLE=1 PYTHON_DISABLE=1
 When set to `1`, OpenVINO&trade Model Server will be built with the drivers required by [GPU plugin](https://docs.openvino.ai/2026/openvino-workflow/running-inference/inference-devices-and-modes/gpu-device.html) support. Default value: `0`.
 
 Example:
-```bash
+```text
 make release_image GPU=1
 ```
 
@@ -122,12 +122,12 @@ make release_image TOKEN=<your_github_token>
 
 The binary packages includes the `ovms` executable and linked libraries for bare metal deployments. It includes also a shared library for the model server CAPI interface. Building `ovms.tar.gz` package is possible by using `targz_package` target:
 
-```bash
+```text
 make targz_package
 tree dist/ubuntu24
 ````
 
-```bash
+```text
 dist/ubuntu24
 ├── ovms.tar.gz
 └── ovms.tar.gz.sha256
@@ -144,7 +144,7 @@ If you do not need Kokoro non-English support and can accept reduced English OOV
 
 - skip building `espeak-ng` during image/package build:
 
-```bash
+```text
 make targz_package ESPEAK=0
 ```
 
