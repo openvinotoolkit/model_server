@@ -2261,7 +2261,10 @@ cc_test(
             ],
             "//:disable_mediapipe": [],
         }),
-    copts = COPTS_TESTS,
+    copts = COPTS_TESTS + select({
+        "//conditions:default": ["-Wno-deprecated-declarations"],
+        "//src:windows": [],
+    }),
     local_defines = COMMON_LOCAL_DEFINES,
     linkopts = LINKOPTS_ADJUSTED + select({
         "//conditions:default": [

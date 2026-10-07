@@ -46,6 +46,10 @@ ovms_cc_library(
         "imagegenpipelineargs",
         "image_gen_calculator_cc_proto",
     ],
+    additional_copts = select({
+        "//conditions:default": [],
+        "//src:windows": ["/wd6001"],
+    }),
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )
