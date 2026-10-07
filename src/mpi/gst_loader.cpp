@@ -117,6 +117,19 @@ struct GstFunctionTable {
     void* (*vaGetDisplayDRM)(int);                          // returns VADisplay
     int   (*vaInitialize)(void*, int*, int*);               // (VADisplay, &major, &minor)
     int   (*vaTerminate)(void*);                            // (VADisplay)
+
+    // libgstva-1.0 — external display injection (Option B: OVMS owns the VADisplay
+    // and shares it with GStreamer so decode happens on the server's display).
+    void* (*gst_va_display_wrapped_new)(void*);             // (VADisplay) -> GstVaDisplay*
+    void  (*gst_context_set_va_display)(GstContext*, void*); // populates gst.va.display.handle
+
+    // gstreamer-1.0 — GstContext plumbing to push the display into the pipeline.
+    GstContext*   (*gst_context_new)(const gchar*, gboolean);
+    void          (*gst_element_set_context)(GstElement*, GstContext*);
+    void          (*gst_mini_object_unref)(GstMiniObject*);
+    void          (*gst_message_parse_context_type)(GstMessage*, const gchar**);
+    void          (*gst_bus_set_sync_handler)(GstBus*, GstBusSyncHandler,
+                                              gpointer, GDestroyNotify);
 };
 
 static GstFunctionTable s_fns       = {};
@@ -125,6 +138,7 @@ static bool s_initialized           = false;
 static bool s_va_available          = false;  // true when vapostproc element found
 static bool s_va_surface_capable    = false;  // true when gst_va + libva dlopen succeeded
 static void* s_va_display           = nullptr; // process-wide VADisplay (valid for lifetime of loader)
+static void* s_injected_va_display  = nullptr; // external VADisplay to push into GStreamer (Option B)
 static int   s_drm_fd               = -1;      // /dev/dri/renderD128 fd (owned)
 
 // ============================================================================
@@ -178,6 +192,13 @@ static bool load_symbols(void* gst_h, void* app_h,
 
     LOAD_SYM(glib_h, g_error_free);
 
+    // GstContext plumbing (core gstreamer) for external VADisplay injection.
+    LOAD_SYM(gst_h,  gst_context_new);
+    LOAD_SYM(gst_h,  gst_element_set_context);
+    LOAD_SYM(gst_h,  gst_mini_object_unref);
+    LOAD_SYM(gst_h,  gst_message_parse_context_type);
+    LOAD_SYM(gst_h,  gst_bus_set_sync_handler);
+
     return true;
 }
 
@@ -215,6 +236,13 @@ static void try_load_va_symbols() {
     s_fns.vaGetDisplayDRM            = get_drm_disp;
     s_fns.vaInitialize               = va_init;
     s_fns.vaTerminate                = va_term;
+
+    // Optional: symbols needed to push an externally-owned VADisplay into the
+    // pipeline (Option B). Non-fatal when missing — injection simply stays off.
+    s_fns.gst_va_display_wrapped_new = reinterpret_cast<decltype(s_fns.gst_va_display_wrapped_new)>(
+        dlsym(gstva_h, "gst_va_display_wrapped_new"));
+    s_fns.gst_context_set_va_display = reinterpret_cast<decltype(s_fns.gst_context_set_va_display)>(
+        dlsym(gstva_h, "gst_context_set_va_display"));
 
     // Open DRM device and initialise a VADisplay for the lifetime of this process.
     s_drm_fd = open("/dev/dri/renderD128", O_RDWR);
@@ -317,7 +345,10 @@ void gst_loader_set_va_display(void* va_display) {
     // process-wide VADisplay so GStreamer VA surfaces are valid in OV's
     // GPU context.  The old display is intentionally NOT terminated here
     // because OV owns its own lifecycle; we simply stop using our probe copy.
+    // We also remember it as the display to push into the GStreamer pipeline so
+    // decode actually happens on this (externally-owned) display — Option B.
     s_va_display = va_display;
+    s_injected_va_display = va_display;
     s_va_surface_capable = (va_display != nullptr);
 }
 
@@ -458,6 +489,48 @@ static bool read_frame_va_surface(imp_branch_info_t& branch,
     auto t2 = chrono::high_resolution_clock::now();
     total_ms += chrono::duration<double, std::milli>(t2 - t0).count();
     return true;
+}
+
+// ============================================================================
+// Option B: inject an externally-owned VADisplay into a VA element so it
+// decodes/processes onto the server's display instead of creating its own.
+// Used both preemptively (on the pipeline) and in response to NEED_CONTEXT
+// from dynamically-created elements (e.g. the decoder inside decodebin).
+// ============================================================================
+
+static void gst_inject_va_display_context(GstElement* target) {
+    const auto& f = s_fns;
+    if (!s_injected_va_display || !target)
+        return;
+    if (!(f.gst_va_display_wrapped_new && f.gst_context_set_va_display &&
+          f.gst_context_new && f.gst_element_set_context &&
+          f.gst_mini_object_unref))
+        return;
+    void* gst_disp = f.gst_va_display_wrapped_new(s_injected_va_display);
+    if (!gst_disp)
+        return;
+    GstContext* va_ctx = f.gst_context_new("gst.va.display.handle", TRUE);
+    f.gst_context_set_va_display(va_ctx, gst_disp);
+    f.gst_element_set_context(target, va_ctx);
+    f.gst_mini_object_unref(GST_MINI_OBJECT_CAST(va_ctx));
+    f.gst_object_unref(gst_disp);
+}
+
+// Synchronous bus handler: VA elements post NEED_CONTEXT and then immediately
+// create their own display if the app does not answer in the SAME thread, so
+// an async bus poll is too late — we must inject here, synchronously.
+static GstBusSyncReply gst_va_sync_bus_handler(GstBus* /*bus*/,
+                                               GstMessage* msg,
+                                               gpointer /*user_data*/) {
+    const auto& f = s_fns;
+    if (GST_MESSAGE_TYPE(msg) == GST_MESSAGE_NEED_CONTEXT) {
+        const gchar* ctype = nullptr;
+        if (f.gst_message_parse_context_type)
+            f.gst_message_parse_context_type(msg, &ctype);
+        if (ctype && std::strcmp(ctype, "gst.va.display.handle") == 0)
+            gst_inject_va_display_context(GST_ELEMENT(GST_MESSAGE_SRC(msg)));
+    }
+    return GST_BUS_PASS;
 }
 
 // ============================================================================
@@ -654,6 +727,28 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
         s->branches[i].height = resolved[i].height;
         s->branches[i].name   = resolved[i].name;
         s->branches[i].frame.allocate(resolved[i].width, resolved[i].height);
+    }
+
+    // Option B: push an externally-owned VADisplay (e.g. created by OVMS and
+    // registered as globalVaDisplay) into the pipeline so GStreamer's VA
+    // elements decode onto THAT display instead of creating their own. A sync
+    // bus handler answers NEED_CONTEXT in the element's own thread, which is
+    // required: the elements fall back to their own display otherwise.
+    const bool inject_display =
+        want_va_surface && s_injected_va_display &&
+        f.gst_va_display_wrapped_new && f.gst_context_set_va_display &&
+        f.gst_context_new && f.gst_message_parse_context_type &&
+        f.gst_bus_set_sync_handler;
+    if (inject_display) {
+        gst_inject_va_display_context(s->pipeline);  // preemptive
+        GstBus* bus = f.gst_element_get_bus(s->pipeline);
+        if (bus) {
+            f.gst_bus_set_sync_handler(bus, gst_va_sync_bus_handler,
+                                       nullptr, nullptr);
+            f.gst_object_unref(bus);
+        }
+        std::cout << "[linux_video_open] External VADisplay "
+                  << s_injected_va_display << " injection armed.\n";
     }
 
     f.gst_element_set_state(s->pipeline, GST_STATE_PLAYING);

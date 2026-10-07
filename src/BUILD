@@ -2883,6 +2883,7 @@ cc_library(
         ":test_test_with_temp_dir",
         "//src:ovms_lib",
 	":libovmsoclutils",
+        "//src/mpi:intel_mpi",
         "@com_google_googletest//:gtest",
     ],
     local_defines = COMMON_LOCAL_DEFINES,

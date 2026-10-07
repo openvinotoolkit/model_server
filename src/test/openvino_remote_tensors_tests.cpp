@@ -37,6 +37,7 @@
 #include "gpuenvironment.hpp"
 #include "light_test_utils.hpp"
 #include "test_with_temp_dir.hpp"
+#include "src/mpi/intel_mpi.h"
 
 using namespace ov;
 
@@ -500,6 +501,179 @@ TEST_F(CAPINonCopy, VAContextGlobalPreprocHardcodedInput) {  // TODO rename
         SPDLOG_ERROR(row);
     }
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSetGlobalVADisplay(cserver, 0));  // TODO reset always on exit
+    OVMS_ServerDelete(cserver);
+#endif
+}
+
+// POC (A): prove the server-owns-the-display ordering. OVMS creates a VADisplay
+// first, hands it to GStreamer (imp_video_set_va_display), and GStreamer must
+// decode onto THAT display rather than creating its own. The decoded VA
+// surface's display equalling the one we created is the proof.
+TEST_F(CAPINonCopy, GStreamerDecodesOntoServerOwnedVADisplay) {
+#ifndef BUILD_VAAPITESTS
+    GTEST_SKIP() << "Test not enabled on UBI images";
+#else
+    const std::string videoPath = "/ovms/recording_3_raw.avi";
+    if (!std::ifstream(videoPath).good())
+        GTEST_SKIP() << "test video not found: " << videoPath;
+    if (!imp_video_va_available())
+        GTEST_SKIP() << "VA/GPU surface sharing not available on this host";
+
+    // Server-owned display (stands in for globalVaDisplay), created up front.
+    VAHelper vaHelper;
+    ASSERT_NE(vaHelper.getVADisplay(), nullptr);
+
+    // Share it with GStreamer BEFORE opening the stream (Option B ordering).
+    imp_video_set_va_display(vaHelper.getVADisplay());
+
+    imp_context_t* ctx = nullptr;
+    ASSERT_EQ(imp_context_create(&ctx, nullptr), IMP_OK);
+
+    imp_video_source_t* src = nullptr;
+    imp_video_source_create(&src, IMP_SOURCE_FILE);
+    imp_video_source_set(src, "path", videoPath.c_str());
+
+    imp_video_decode_opts_t vopts{};
+    vopts.use_va_surface_memory = true;
+
+    imp_video_stream_t* stream = nullptr;
+    imp_status_t st = imp_video_open(&stream, src, ctx, &vopts);
+    imp_video_source_destroy(src);
+    ASSERT_EQ(st, IMP_OK) << "imp_video_open failed: " << imp_context_get_error(ctx);
+
+    imp_tensor_t* tensor = nullptr;
+    st = imp_video_read_frame(&tensor, stream, 0);
+    ASSERT_EQ(st, IMP_OK);
+    ASSERT_NE(tensor, nullptr);
+    ASSERT_EQ(imp_tensor_get_memory_type(tensor), IMP_MEM_VA_SURFACE)
+        << "expected a GPU VA surface frame";
+
+    uint32_t surfaceId = 0;
+    void* decodeDisplay = nullptr;
+    int fw = 0, fh = 0;
+    ASSERT_EQ(imp_tensor_get_va_surface(tensor, &surfaceId, &decodeDisplay, &fw, &fh), IMP_OK);
+
+    // The proof: GStreamer decoded onto the server-owned display.
+    EXPECT_EQ(decodeDisplay, vaHelper.getVADisplay())
+        << "GStreamer used its own display instead of the server-owned one";
+
+    imp_tensor_release(tensor);
+    imp_video_close(stream);
+    imp_context_destroy(ctx);
+    imp_video_set_va_display(nullptr);
+#endif
+}
+
+// POC (B): end-to-end zero-copy. OVMS owns the VADisplay (globalVaDisplay) and
+// shares it with GStreamer; a GStreamer-decoded VA surface is fed straight into
+// a ModelManager-loaded model via the OVMS C-API (OVMS_BUFFERTYPE_VASURFACE_*),
+// with no host copy. This is the productization path the in-tree inference
+// calculator was standing in for.
+TEST_F(CAPINonCopy, GStreamerSurfaceInferenceViaGlobalVADisplay) {
+#ifndef BUILD_VAAPITESTS
+    GTEST_SKIP() << "Test not enabled on UBI images";
+#else
+    const std::string videoPath = "/ovms/recording_3_raw.avi";
+    if (!std::ifstream(videoPath).good())
+        GTEST_SKIP() << "test video not found: " << videoPath;
+    if (!imp_video_va_available())
+        GTEST_SKIP() << "VA/GPU surface sharing not available on this host";
+
+    // Model input is NCHW [1,3,384,672] -> H=384, W=672. Decode straight to it.
+    const int modelW = 672;
+    const int modelH = 384;
+
+    std::string port = "9000";
+    randomizeAndEnsureFree(port);
+    OVMS_ServerSettings* serverSettings = nullptr;
+    OVMS_ModelsSettings* modelsSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, FACE_DETECTION_ADAS_MODEL_CONFIG_JSON.c_str()));
+    OVMS_Server* cserver = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+
+    // One server-owned display, shared with BOTH OVMS and GStreamer up front.
+    VAHelper vaHelper;
+    ASSERT_NE(vaHelper.getVADisplay(), nullptr);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSetGlobalVADisplay(cserver, vaHelper.getVADisplay()));
+    imp_video_set_va_display(vaHelper.getVADisplay());
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+
+    // Decode one frame to a VA surface on the shared display, sized to the model.
+    imp_context_t* ctx = nullptr;
+    ASSERT_EQ(imp_context_create(&ctx, nullptr), IMP_OK);
+    imp_video_source_t* src = nullptr;
+    imp_video_source_create(&src, IMP_SOURCE_FILE);
+    imp_video_source_set(src, "path", videoPath.c_str());
+    imp_video_source_set(src, "width", std::to_string(modelW).c_str());
+    imp_video_source_set(src, "height", std::to_string(modelH).c_str());
+    imp_video_decode_opts_t vopts{};
+    vopts.use_va_surface_memory = true;
+    imp_video_stream_t* stream = nullptr;
+    ASSERT_EQ(imp_video_open(&stream, src, ctx, &vopts), IMP_OK) << imp_context_get_error(ctx);
+    imp_video_source_destroy(src);
+
+    imp_tensor_t* tensor = nullptr;
+    ASSERT_EQ(imp_video_read_frame(&tensor, stream, 0), IMP_OK);
+    ASSERT_NE(tensor, nullptr);
+    uint32_t surfaceId = 0;
+    void* decodeDisplay = nullptr;
+    int fw = 0, fh = 0;
+    ASSERT_EQ(imp_tensor_get_va_surface(tensor, &surfaceId, &decodeDisplay, &fw, &fh), IMP_OK);
+    ASSERT_EQ(decodeDisplay, vaHelper.getVADisplay()) << "surface not on the shared display";
+
+    // Feed the GStreamer-decoded surface into OVMS via the C-API (zero-copy).
+    OVMS_InferenceRequest* request = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestNew(&request, cserver, FACE_DETECTION_ADAS_MODEL_NAME.c_str(), 1));
+    const std::string inputName_y = FACE_DETECTION_ADAS_INPUT_NAME + "/y";
+    const std::string inputName_uv = FACE_DETECTION_ADAS_INPUT_NAME + "/uv";
+    const std::vector<int64_t> shapeY{1, fh, fw, 1};
+    const std::vector<int64_t> shapeUV{1, fh / 2, fw / 2, 2};
+    const size_t bytesY = static_cast<size_t>(fw) * fh;
+    const size_t bytesUV = static_cast<size_t>(fw) * fh / 2;
+    void* surfaceHandle = reinterpret_cast<void*>(static_cast<uintptr_t>(surfaceId));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, inputName_y.c_str(), OVMS_DATATYPE_U8, shapeY.data(), shapeY.size()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, inputName_y.c_str(), surfaceHandle, bytesY, OVMS_BUFFERTYPE_VASURFACE_Y, 1));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestAddInput(request, inputName_uv.c_str(), OVMS_DATATYPE_U8, shapeUV.data(), shapeUV.size()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceRequestInputSetData(request, inputName_uv.c_str(), surfaceHandle, bytesUV, OVMS_BUFFERTYPE_VASURFACE_UV, 1));
+
+    OVMS_InferenceResponse* response = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_Inference(cserver, request, &response));
+    ASSERT_NE(response, nullptr);
+
+    const void* outputData = nullptr;
+    size_t bytesize = 0;
+    uint32_t outputId = 0;
+    OVMS_DataType datatype = (OVMS_DataType)199;
+    const int64_t* oshape = nullptr;
+    size_t dimCount = 0;
+    OVMS_BufferType bufferType = (OVMS_BufferType)199;
+    uint32_t deviceId = 42;
+    const char* outputName = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_InferenceResponseOutput(response, outputId, &outputName, &datatype, &oshape, &dimCount, &outputData, &bytesize, &bufferType, &deviceId));
+    ASSERT_GT(bytesize, 0u);
+    ASSERT_NE(outputData, nullptr);
+
+    // face-detection-adas output: [1,1,N,7]; conf at offset 2 of each 7-tuple.
+    int detections = 0;
+    const float* vals = reinterpret_cast<const float*>(outputData);
+    const size_t floats = bytesize / sizeof(float);
+    for (size_t i = 0; i + 7 <= floats; i += 7) {
+        if (vals[i + 2] >= 0.5f)
+            detections++;
+    }
+    SPDLOG_INFO("GStreamer->OVMS zero-copy inference produced {} detection(s)", detections);
+    EXPECT_GE(detections, 1) << "expected at least one face detection";
+
+    OVMS_InferenceResponseDelete(response);
+    OVMS_InferenceRequestDelete(request);
+    imp_tensor_release(tensor);
+    imp_video_close(stream);
+    imp_context_destroy(ctx);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSetGlobalVADisplay(cserver, 0));
+    imp_video_set_va_display(nullptr);
     OVMS_ServerDelete(cserver);
 #endif
 }
