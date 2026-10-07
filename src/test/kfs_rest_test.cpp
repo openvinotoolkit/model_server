@@ -45,20 +45,6 @@ using ovms::Server;
 using ovms::StatusCode;
 
 namespace {
-std::string makeKfsComplexityLimitPayload(size_t dataElements) {
-    std::string payload;
-    payload.reserve(dataElements * 2 + 128);
-    payload += R"({"inputs":[{"name":"b","shape":[1],"datatype":"FP32","data":[)";
-    if (dataElements > 0) {
-        payload.push_back('0');
-        for (size_t i = 1; i < dataElements; ++i) {
-            payload += ",0";
-        }
-    }
-    payload += R"(]}]})";
-    return payload;
-}
-
 class MockedServer : public Server {
 public:
     MockedServer() = default;
@@ -1479,13 +1465,19 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsInvalidJson) {
 }
 
 TEST_F(HttpRestApiHandlerTest, PrepareGrpcRequestRejectsExcessiveJsonComplexity) {
-    std::string request_body = makeKfsComplexityLimitPayload(ovms::DEFAULT_MAX_JSON_COMPLEXITY);
+    auto& config = const_cast<ovms::ServerSettingsImpl&>(Config::instance().getServerSettings());
+    const auto previousMaxComplexity = config.jsonMaxComplexity;
+    config.jsonMaxComplexity = 5;
+
+    std::string request_body = R"({"a":[0]})";
 
     ::KFSRequest grpc_request;
     auto status = HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request);
 
     ASSERT_EQ(status.getCode(), ovms::StatusCode::JSON_COMPLEXITY_EXCEEDED);
     ASSERT_EQ(status.string(), "JSON structure exceeds the allowed complexity");
+
+    config.jsonMaxComplexity = previousMaxComplexity;
 }
 
 TEST_F(HttpRestApiHandlerWithStringModelTest, invalidPrecision) {
