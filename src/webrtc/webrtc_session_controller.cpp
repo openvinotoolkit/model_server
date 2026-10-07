@@ -21,6 +21,7 @@
 #include <cstdlib>
 #include <exception>
 #include <sstream>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
@@ -190,12 +191,26 @@ void WebRtcSessionController::Session::sendTranscript(const std::string& message
     channel->send(message);
 }
 
+AudioChunk WebRtcSessionController::Session::decodeAudioFrame(const rtc::binary& data, const rtc::FrameInfo& info) {
+    std::vector<uint8_t> encoded(data.size());
+    for (size_t index = 0; index < data.size(); ++index)
+        encoded[index] = std::to_integer<uint8_t>(data[index]);
+    const auto decoded = codec.decode(encoded);
+    const uint64_t timestampUs = info.timestampSeconds ?
+        static_cast<uint64_t>(info.timestampSeconds->count() * 1000000.0) :
+        static_cast<uint64_t>((static_cast<uint64_t>(info.timestamp) * 1000000) / OpusAudioCodec::SampleRate);
+    return AudioChunk{decoded, OpusAudioCodec::SampleRate, timestampUs, static_cast<uint32_t>(codec.channels())};
+}
+
 WebRtcSessionController::WebRtcSessionController(size_t maxSessions, std::string omniModelPath,
-    std::string sttModelPath, std::string sttDevice) :
+    std::string sttModelPath, std::string sttDevice, std::string voxtralModelPath) :
     maxSessions_(maxSessions),
     omniModelPath_(std::move(omniModelPath)),
     sttModelPath_(std::move(sttModelPath)),
-    sttDevice_(std::move(sttDevice)) {
+    sttDevice_(std::move(sttDevice)),
+    voxtralModelPath_(std::move(voxtralModelPath)) {
+    if (!voxtralModelPath_.empty() && (!omniModelPath_.empty() || !sttModelPath_.empty()))
+        throw std::invalid_argument("Voxtral WebRTC cannot be combined with Omni or Whisper STT");
 }
 
 bool WebRtcSessionController::createSession(const std::string& offerSdp, const std::string& offerType, OfferResult& result) {
@@ -206,6 +221,7 @@ bool WebRtcSessionController::createSession(const std::string& offerSdp, const s
 
     std::shared_ptr<OmniAudioAdapter> omniAdapter;
     std::shared_ptr<SttAudioAdapter> sttAdapter;
+    std::shared_ptr<VoxtralAudioAdapter> voxtralAdapter;
     {
         std::lock_guard<std::mutex> lock(mutex_);
         if (sessions_.size() >= maxSessions_) {
@@ -247,6 +263,16 @@ bool WebRtcSessionController::createSession(const std::string& offerSdp, const s
             }
         }
         sttAdapter = sttAdapter_;
+        if (!voxtralModelPath_.empty() && !voxtralAdapter_) {
+            try {
+                voxtralAdapter_ = std::make_shared<VoxtralAudioAdapter>(voxtralModelPath_, sttDevice_);
+                SPDLOG_LOGGER_INFO(webrtc_logger, "Initialized WebRTC Voxtral model from {} on {}", voxtralModelPath_, sttDevice_);
+            } catch (const std::exception& e) {
+                SPDLOG_LOGGER_ERROR(webrtc_logger, "Could not initialize WebRTC Voxtral model at {}: {}", voxtralModelPath_, e.what());
+                return false;
+            }
+        }
+        voxtralAdapter = voxtralAdapter_;
     }
 
     SPDLOG_LOGGER_INFO(webrtc_logger, "Creating WebRTC session from browser offer");
@@ -256,6 +282,12 @@ bool WebRtcSessionController::createSession(const std::string& offerSdp, const s
     configuration.portRangeEnd = 52000;
     auto session = std::make_shared<Session>(std::move(configuration));
     session->peer.onStateChange([session](rtc::PeerConnection::State state) {
+        if (state == rtc::PeerConnection::State::Disconnected ||
+            state == rtc::PeerConnection::State::Failed || state == rtc::PeerConnection::State::Closed) {
+            if (session->voxtralStream)
+                session->voxtralStream->finish();
+            return;
+        }
         if (state != rtc::PeerConnection::State::Connected) {
             return;
         }
@@ -290,7 +322,40 @@ bool WebRtcSessionController::createSession(const std::string& offerSdp, const s
         std::lock_guard<std::mutex> lock(session->mutex);
         session->transcriptChannel = std::move(channel);
     });
-    if (omniAdapter) {
+    if (voxtralAdapter) {
+        const std::weak_ptr<Session> weakSession = session;
+        session->voxtralStream = voxtralAdapter->createStream(
+            [weakSession](const std::string& text) {
+                if (const auto activeSession = weakSession.lock())
+                    activeSession->sendTranscript(transcriptMessage("user_delta", text));
+            },
+            [weakSession](const std::string& text) {
+                if (const auto activeSession = weakSession.lock())
+                    activeSession->sendTranscript(transcriptMessage("user_final", text));
+            },
+            [weakSession](std::exception_ptr error) {
+                try {
+                    if (error)
+                        std::rethrow_exception(error);
+                } catch (const std::exception& e) {
+                    SPDLOG_LOGGER_ERROR(webrtc_logger, "WebRTC Voxtral transcription failed: {}", e.what());
+                    if (const auto activeSession = weakSession.lock())
+                        activeSession->sendTranscript(transcriptMessage("user_error", e.what()));
+                }
+            });
+        session->peer.onAudioFrame([weakSession](rtc::binary data, rtc::FrameInfo info) {
+            const auto currentSession = weakSession.lock();
+            if (!currentSession)
+                return;
+            try {
+                currentSession->voxtralStream->push(currentSession->decodeAudioFrame(data, info));
+            } catch (const std::exception& e) {
+                SPDLOG_LOGGER_ERROR(webrtc_logger, "Failed to process WebRTC Voxtral audio: {}", e.what());
+                currentSession->sendTranscript(transcriptMessage("user_error", e.what()));
+                currentSession->voxtralStream->finish();
+            }
+        });
+    } else if (omniAdapter) {
         session->conversation = omniAdapter->createConversation();
         const std::weak_ptr<Session> weakSession = session;
         session->peer.onAudioFrame([weakSession, omniAdapter, sttAdapter, conversation = session->conversation](rtc::binary data, rtc::FrameInfo info) {
@@ -298,15 +363,7 @@ bool WebRtcSessionController::createSession(const std::string& offerSdp, const s
             if (!currentSession)
                 return;
             try {
-                std::vector<uint8_t> encoded(data.size());
-                for (size_t index = 0; index < data.size(); ++index)
-                    encoded[index] = std::to_integer<uint8_t>(data[index]);
-                const auto decoded = currentSession->codec.decode(encoded);
-                const uint64_t timestampUs = info.timestampSeconds ?
-                    static_cast<uint64_t>(info.timestampSeconds->count() * 1000000.0) :
-                    static_cast<uint64_t>((static_cast<uint64_t>(info.timestamp) * 1000000) / OpusAudioCodec::SampleRate);
-                auto utterance = currentSession->utteranceBuffer.push(
-                    AudioChunk{decoded, OpusAudioCodec::SampleRate, timestampUs, static_cast<uint32_t>(currentSession->codec.channels())});
+                auto utterance = currentSession->utteranceBuffer.push(currentSession->decodeAudioFrame(data, info));
                 if (!utterance)
                     return;
 
@@ -457,14 +514,21 @@ bool WebRtcSessionController::getCandidates(const std::string& sessionId, std::v
 }
 
 bool WebRtcSessionController::removeSession(const std::string& sessionId) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    const bool removed = sessions_.erase(sessionId) != 0;
-    if (removed) {
-        SPDLOG_LOGGER_INFO(webrtc_logger, "WebRTC session {} closed", sessionId);
-    } else {
-        SPDLOG_LOGGER_WARN(webrtc_logger, "Cannot close unknown session: {}", sessionId);
+    std::shared_ptr<Session> session;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        const auto it = sessions_.find(sessionId);
+        if (it == sessions_.end()) {
+            SPDLOG_LOGGER_WARN(webrtc_logger, "Cannot close unknown session: {}", sessionId);
+            return false;
+        }
+        session = it->second;
+        sessions_.erase(it);
     }
-    return removed;
+    if (session->voxtralStream)
+        session->voxtralStream->close();
+    SPDLOG_LOGGER_INFO(webrtc_logger, "WebRTC session {} closed", sessionId);
+    return true;
 }
 
 size_t WebRtcSessionController::sessionCount() const {

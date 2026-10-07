@@ -46,6 +46,8 @@ public:
     void submit(AudioChunk utterance, TextCallback textCallback, ErrorCallback errorCallback,
         CompletionCallback completionCallback);
 
+    static std::vector<float> prepareAudio(const AudioChunk& utterance);
+
 private:
     struct Request {
         AudioChunk utterance;
@@ -56,7 +58,6 @@ private:
 
     void run();
     void transcribe(Request& request);
-    static std::vector<float> prepareAudio(const AudioChunk& utterance);
 
     std::shared_ptr<ov::genai::ASRPipeline> pipeline_;
     std::mutex mutex_;

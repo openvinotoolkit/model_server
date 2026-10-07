@@ -63,6 +63,18 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "voxtral_audio_adapter",
+    srcs = ["voxtral_audio_adapter.cpp"],
+    hdrs = ["voxtral_audio_adapter.hpp"],
+    deps = [
+        ":streaming_audio_model",
+        ":stt_audio_adapter",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "mock_echo_streaming_audio_model",
     srcs = ["mock_echo_streaming_audio_model.cpp"],
     hdrs = ["mock_echo_streaming_audio_model.hpp"],
@@ -118,6 +130,7 @@ ovms_cc_library(
         ":opus_audio_codec",
         ":streaming_audio_processor",
         ":stt_audio_adapter",
+        ":voxtral_audio_adapter",
         ":webrtc_peer_connection",
         "//third_party:genai",
         "@libdatachannel//:libdatachannel",
@@ -158,7 +171,11 @@ cc_test(
     srcs = ["webrtc_session_controller_test.cpp"],
     linkstatic = 1,
     deps = [
+        "//src/audio:audio_utils",
         ":webrtc_session_controller",
+        ":voxtral_audio_adapter",
+        ":opus_audio_codec",
+        "@libdatachannel//:libdatachannel",
         "@com_google_googletest//:gtest_main",
     ],
 )
