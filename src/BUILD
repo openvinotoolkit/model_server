@@ -2141,6 +2141,7 @@ cc_test(
         "test/llm/config_queue.json",
         "test/llm/assisted_decoding_config.json",
         "test/llm/lm_cb_regular.pbtxt",
+        "test/llm/lm_cb_prefix_caching.pbtxt",
         "test/llm/lm_cb_regular_queue.pbtxt",
         "test/llm/lm_cb_with_tool_parser.pbtxt",
         "test/llm/lm_legacy_regular.pbtxt",
