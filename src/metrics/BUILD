@@ -37,6 +37,7 @@ ovms_cc_library(
         "//src/port:rapidjson_stringbuffer",
         "//src/port:rapidjson_writer",
         "//src:cpp_headers",
+        "//src:module_names",
         "//src:libovms_module",
         "//src:libovmslogging",
         "//src:libovmsschema",

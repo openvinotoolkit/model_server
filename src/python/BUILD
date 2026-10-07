@@ -259,7 +259,9 @@ ovms_cc_library(
     deps = PYBIND_DEPS + [
         "//src:cpp_headers", # TODO make ovmslib depend on that
         "//src:libovmslogging",
+        "//src:libovmsstatus",
         "//src:libovms_module",
+        "//src:module_names",
         ":python_calculators_plugin_loader",
         "//src/mediapipe_internal:mediapipe_utils",
         "pythonbackend",
@@ -302,7 +304,9 @@ ovms_cc_library(
     deps = PYBIND_DEPS + [
         "//src:cpp_headers",
         "//src:libovmslogging",
+        "//src:libovmsstatus",
         "//src:libovms_module",
+        "//src:module_names",
         ":python_calculators_plugin_loader",
         "pythonbackend",
     ],
@@ -325,8 +329,10 @@ cc_test(
         ":pythonbackend",
         "//src:cpp_headers",
         "//src:libovmslogging",
+        "//src:libovmsstatus",
         "//src:libovms_module",
-        "//src:python_interpreter_module_test_symbols",
+        "//src:module_names",
+        "//src/utils:env_guard",
         "@com_google_googletest//:gtest_main",
     ],
     data = select({
@@ -349,8 +355,11 @@ cc_test(
         ":pythonbackend",
         "//src:cpp_headers",
         "//src:libovmslogging",
+        "//src:libovmsstatus",
         "//src:libovms_module",
-        "//src:python_interpreter_module_test_symbols",
+        "//src:module_names",
+        "//src:test_test_with_temp_dir",
+        "//src/utils:env_guard",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -369,8 +378,10 @@ cc_test(
         ":pythonbackend",
         "//src:cpp_headers",
         "//src:libovmslogging",
+        "//src:libovmsstatus",
         "//src:libovms_module",
-        "//src:python_interpreter_module_test_symbols",
+        "//src:module_names",
+        "//src/utils:env_guard",
         "@com_google_googletest//:gtest_main",
     ],
     data = select({

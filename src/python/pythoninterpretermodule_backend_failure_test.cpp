@@ -14,12 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <chrono>
-#include <cstdlib>
-#include <filesystem>
 #include <fstream>
 #include <string>
-#include <utility>
 
 #include <gtest/gtest.h>
 #include <pybind11/embed.h>
@@ -27,6 +23,8 @@
 #include "src/config.hpp"
 #include "src/python/pythoninterpretermodule.hpp"
 #include "src/status.hpp"
+#include "src/test/test_with_temp_dir.hpp"
+#include "src/utils/env_guard.hpp"
 
 namespace ovms {
 bool loadPythonCalculatorsPlugin() {
@@ -38,73 +36,22 @@ namespace {
 
 struct LifecycleTestConfig : ovms::Config {};
 
-class ScopedPythonPath {
-    std::filesystem::path directory;
-    bool hadPreviousValue = false;
-    std::string previousValue;
-
-public:
-    explicit ScopedPythonPath(std::filesystem::path directory) :
-        directory(std::move(directory)) {
-        if (const char* currentValue = std::getenv("PYTHONPATH"); currentValue != nullptr) {
-            hadPreviousValue = true;
-            previousValue = currentValue;
-        }
-#ifdef _WIN32
-        _putenv_s("PYTHONPATH", this->directory.string().c_str());
-#else
-        setenv("PYTHONPATH", this->directory.string().c_str(), 1);
-#endif
-    }
-
-    ~ScopedPythonPath() {
-#ifdef _WIN32
-        _putenv_s("PYTHONPATH", hadPreviousValue ? previousValue.c_str() : "");
-#else
-        if (hadPreviousValue) {
-            setenv("PYTHONPATH", previousValue.c_str(), 1);
-        } else {
-            unsetenv("PYTHONPATH");
-        }
-#endif
-    }
-};
-
-class ScopedTempDirectory {
-    std::filesystem::path path;
-
-public:
-    ScopedTempDirectory() {
-        const auto uniqueValue = std::chrono::steady_clock::now().time_since_epoch().count();
-        path = std::filesystem::temp_directory_path() /
-               ("ovms-python-backend-failure-" + std::to_string(uniqueValue));
-        std::filesystem::create_directories(path);
-    }
-
-    ~ScopedTempDirectory() {
-        std::error_code error;
-        std::filesystem::remove_all(path, error);
-    }
-
-    const std::filesystem::path& get() const {
-        return path;
-    }
-};
+class PythonInterpreterModuleBackendFailureTest : public TestWithTempDir {};
 
 }  // namespace
 
 // Keep this failure scenario in its own binary because interpreter reinitialization is unsupported within one process.
 // Shadow pyovms so backend creation fails after Python initialization succeeds.
-TEST(PythonInterpreterModuleStartupFailure, MissingBackendModuleReturnsSpecificStatusAndFinalizes) {
+TEST_F(PythonInterpreterModuleBackendFailureTest, MissingBackendModuleReturnsSpecificStatusAndFinalizes) {
     ASSERT_FALSE(Py_IsInitialized());
 
-    ScopedTempDirectory tempDirectory;
     {
-        std::ofstream shadowModule(tempDirectory.get() / "pyovms.py");
+        std::ofstream shadowModule(directoryPath + "/pyovms.py");
         ASSERT_TRUE(shadowModule.is_open());
         shadowModule << "raise ImportError('forced PythonBackend initialization failure')\n";
     }
-    ScopedPythonPath pythonPath(tempDirectory.get());
+    EnvGuard pythonPath;
+    pythonPath.set("PYTHONPATH", directoryPath);
 
     LifecycleTestConfig config;
     ovms::PythonInterpreterModule pythonModule;

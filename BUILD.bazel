@@ -54,7 +54,6 @@ cc_library(
             "//:not_disable_mediapipe": [
                 "@model_api//:model_api",],
             "//:disable_mediapipe": []
-            })
-            + [],
+            }),
     visibility = ["//visibility:public"],
 )

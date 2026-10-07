@@ -3974,7 +3974,6 @@ TEST(WhitelistRegistered, InputStreamHandlers) {
 }
 
 TEST(WhitelistRegistered, MediapipeCalculatorsList) {
-    // Expected when building with python
     std::unordered_set<std::string> expected({"CalculatorRunnerSinkCalculator",
         "CalculatorRunnerSourceCalculator",
         "PyTensorOvTensorConverterCalculator",  // integral OVMS calculator

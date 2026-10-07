@@ -26,17 +26,6 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
-    name = "pipelinedefinitionstatus",
-    hdrs = ["pipelinedefinitionstatus.hpp"],
-    srcs = ["pipelinedefinitionstatus.cpp"],
-    deps = [
-        "//src:libovmslogging",
-        "//src:libovmsmodelversionstatus",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-ovms_cc_library(
     name = "node_initializer",
     srcs = [
         "node_initializer.cpp",
@@ -47,6 +36,17 @@ ovms_cc_library(
     deps = [
         ":graph_side_packets",
         "//src:libovmsstatus",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "pipelinedefinitionstatus",
+    hdrs = ["pipelinedefinitionstatus.hpp"],
+    srcs = ["pipelinedefinitionstatus.cpp"],
+    deps = [
+        "//src:libovmslogging",
+        "//src:libovmsmodelversionstatus",
     ],
     visibility = ["//visibility:public"],
 )

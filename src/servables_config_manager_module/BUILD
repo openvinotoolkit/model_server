@@ -35,6 +35,7 @@ ovms_cc_library(
              "listmodels",
              "//src/config_export_module:config_export",
              "//src:cpp_headers",
+             "//src:module_names",
              "//src:libovmsstring_utils",
              "//src:libovmslogging",
              "//src:libovms_server_settings",

@@ -25,6 +25,7 @@
 #include "src/config.hpp"
 #include "src/python/pythoninterpretermodule.hpp"
 #include "src/status.hpp"
+#include "src/utils/env_guard.hpp"
 
 namespace ovms {
 bool loadPythonCalculatorsPlugin() {
@@ -36,109 +37,83 @@ namespace {
 
 struct LifecycleTestConfig : ovms::Config {};
 
-class ScopedPythonPath {
-    bool hadPreviousValue = false;
-    std::string previousValue;
+bool addBindingRunfile(EnvGuard& pythonPathGuard) {
+    std::vector<std::filesystem::path> bindingDirectories;
 
-public:
-    bool addBindingRunfile() {
-        std::vector<std::filesystem::path> bindingDirectories;
-
-        if (const char* pythonPath = std::getenv("PYTHONPATH"); pythonPath != nullptr && pythonPath[0] != '\0') {
-            std::string pathCopy(pythonPath);
-            std::size_t start = 0;
-            while (start <= pathCopy.size()) {
-                const std::size_t sep = pathCopy.find_first_of(";:", start);
-                const std::string entry = (sep == std::string::npos) ? pathCopy.substr(start) : pathCopy.substr(start, sep - start);
-                if (!entry.empty()) {
-                    bindingDirectories.emplace_back(entry);
-                }
-                if (sep == std::string::npos) {
-                    break;
-                }
-                start = sep + 1;
+    if (const char* pythonPath = std::getenv("PYTHONPATH"); pythonPath != nullptr && pythonPath[0] != '\0') {
+        std::string pathCopy(pythonPath);
+        std::size_t start = 0;
+        while (start <= pathCopy.size()) {
+            const std::size_t sep = pathCopy.find_first_of(";:", start);
+            const std::string entry = (sep == std::string::npos) ? pathCopy.substr(start) : pathCopy.substr(start, sep - start);
+            if (!entry.empty()) {
+                bindingDirectories.emplace_back(entry);
             }
-        }
-
-        if (const char* testSrcDir = std::getenv("TEST_SRCDIR"); testSrcDir != nullptr && testSrcDir[0] != '\0') {
-            const char* testWorkspace = std::getenv("TEST_WORKSPACE");
-            std::filesystem::path runfilesRoot(testSrcDir);
-            for (std::filesystem::path current = runfilesRoot; !current.empty(); current = current.parent_path()) {
-                if (testWorkspace != nullptr && testWorkspace[0] != '\0') {
-                    bindingDirectories.emplace_back(current / testWorkspace / "src/python/binding");
-                }
-                bindingDirectories.emplace_back(current / "bazel-bin" / "src/python/binding");
-                bindingDirectories.emplace_back(current / "bazel-out" / "x64_windows-opt" / "bin" / "src/python/binding");
-                bindingDirectories.emplace_back(current / "_main" / "src/python/binding");
-                bindingDirectories.emplace_back(current / "model_server" / "src/python/binding");
-                if (current == current.parent_path()) {
-                    break;
-                }
+            if (sep == std::string::npos) {
+                break;
             }
+            start = sep + 1;
         }
+    }
 
-        const auto currentDir = std::filesystem::current_path();
-        bindingDirectories.emplace_back(currentDir / "src/python/binding");
-        bindingDirectories.emplace_back(currentDir / "bazel-bin/src/python/binding");
-        bindingDirectories.emplace_back(currentDir / "bazel-out" / "x64_windows-opt" / "bin" / "src/python/binding");
-
-#ifdef _WIN32
-        const char* extension = "pyovms.pyd";
-        const char separator = ';';
-#else
-        const char* extension = "pyovms.so";
-        const char separator = ':';
-#endif
-
-        std::filesystem::path bindingDirectory;
-        for (const auto& candidate : bindingDirectories) {
-            if (std::filesystem::exists(candidate / extension)) {
-                bindingDirectory = candidate;
+    if (const char* testSrcDir = std::getenv("TEST_SRCDIR"); testSrcDir != nullptr && testSrcDir[0] != '\0') {
+        const char* testWorkspace = std::getenv("TEST_WORKSPACE");
+        std::filesystem::path runfilesRoot(testSrcDir);
+        for (std::filesystem::path current = runfilesRoot; !current.empty(); current = current.parent_path()) {
+            if (testWorkspace != nullptr && testWorkspace[0] != '\0') {
+                bindingDirectories.emplace_back(current / testWorkspace / "src/python/binding");
+            }
+            bindingDirectories.emplace_back(current / "bazel-bin" / "src/python/binding");
+            bindingDirectories.emplace_back(current / "bazel-out" / "x64_windows-opt" / "bin" / "src/python/binding");
+            bindingDirectories.emplace_back(current / "_main" / "src/python/binding");
+            bindingDirectories.emplace_back(current / "model_server" / "src/python/binding");
+            if (current == current.parent_path()) {
                 break;
             }
         }
-        if (bindingDirectory.empty()) {
-            return false;
-        }
-
-        const char* currentPythonPath = std::getenv("PYTHONPATH");
-        if (currentPythonPath != nullptr) {
-            hadPreviousValue = true;
-            previousValue = currentPythonPath;
-        }
-        std::string pythonPath = bindingDirectory.string();
-        if (currentPythonPath != nullptr && currentPythonPath[0] != '\0') {
-            pythonPath += separator;
-            pythonPath += currentPythonPath;
-        }
-#ifdef _WIN32
-        _putenv_s("PYTHONPATH", pythonPath.c_str());
-#else
-        setenv("PYTHONPATH", pythonPath.c_str(), 1);
-#endif
-        return true;
     }
 
-    ~ScopedPythonPath() {
+    const auto currentDir = std::filesystem::current_path();
+    bindingDirectories.emplace_back(currentDir / "src/python/binding");
+    bindingDirectories.emplace_back(currentDir / "bazel-bin/src/python/binding");
+    bindingDirectories.emplace_back(currentDir / "bazel-out" / "x64_windows-opt" / "bin" / "src/python/binding");
+
 #ifdef _WIN32
-        _putenv_s("PYTHONPATH", hadPreviousValue ? previousValue.c_str() : "");
+    const char* extension = "pyovms.pyd";
+    const char separator = ';';
 #else
-        if (hadPreviousValue) {
-            setenv("PYTHONPATH", previousValue.c_str(), 1);
-        } else {
-            unsetenv("PYTHONPATH");
-        }
+    const char* extension = "pyovms.so";
+    const char separator = ':';
 #endif
+
+    std::filesystem::path bindingDirectory;
+    for (const auto& candidate : bindingDirectories) {
+        if (std::filesystem::exists(candidate / extension)) {
+            bindingDirectory = candidate;
+            break;
+        }
     }
-};
+    if (bindingDirectory.empty()) {
+        return false;
+    }
+
+    const char* currentPythonPath = std::getenv("PYTHONPATH");
+    std::string pythonPath = bindingDirectory.string();
+    if (currentPythonPath != nullptr && currentPythonPath[0] != '\0') {
+        pythonPath += separator;
+        pythonPath += currentPythonPath;
+    }
+    pythonPathGuard.set("PYTHONPATH", pythonPath);
+    return true;
+}
 
 }  // namespace
 
 // Python state is process-wide: an externally initialized interpreter is borrowed, never initialized or finalized by this module.
 TEST(PythonInterpreterModuleBorrowedInterpreter, DoesNotOwnOrFinalizeExternalInterpreter) {
     ASSERT_FALSE(Py_IsInitialized());
-    ScopedPythonPath pythonPath;
-    ASSERT_TRUE(pythonPath.addBindingRunfile()) << "Could not locate the pyovms runfile";
+    EnvGuard pythonPathGuard;
+    ASSERT_TRUE(addBindingRunfile(pythonPathGuard)) << "Could not locate the pyovms runfile";
 
     py::initialize_interpreter();
     LifecycleTestConfig config;

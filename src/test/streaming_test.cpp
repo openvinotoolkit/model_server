@@ -13,8 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <array>
-#include <chrono>
 #include <future>
 #include <optional>
 
@@ -45,7 +43,6 @@ extern "C" const ovms::KfsPyTensorBridgeVTable* OVMS_getKfsPyTensorBridgeVTable(
 
 using namespace ovms;
 using namespace ::testing;
-using namespace std::chrono_literals;
 
 template <class W, class R>
 class MockedServerReaderWriter final : public ::grpc::ServerReaderWriterInterface<W, R> {
@@ -138,36 +135,6 @@ public:
 
 TEST_F(PythonStreamingTest, RepeatedStartIsRejected) {
     EXPECT_EQ(pythonModule->start(ovms::Config::instance()), StatusCode::INTERNAL_ERROR);
-}
-
-// A module borrowing PythonEnvironment's interpreter must reject duplicate starts and leave the borrowed runtime alive.
-TEST(PythonInterpreterModuleLifecycle, ConcurrentStartCallsAreSerialized) {
-    PythonInterpreterModule pythonModule;
-    std::promise<void> startPromise;
-    std::shared_future<void> startSignal = startPromise.get_future().share();
-    std::array<Status, 2> statuses;
-    std::array<std::thread, 2> threads{
-        std::thread([&]() {
-            startSignal.wait();
-            statuses[0] = pythonModule.start(ovms::Config::instance());
-        }),
-        std::thread([&]() {
-            startSignal.wait();
-            statuses[1] = pythonModule.start(ovms::Config::instance());
-        })};
-
-    startPromise.set_value();
-    for (auto& thread : threads) {
-        thread.join();
-    }
-
-    const size_t successfulStarts = std::count_if(statuses.begin(), statuses.end(), [](const Status& status) { return status.ok(); });
-    EXPECT_EQ(successfulStarts, 1);
-    EXPECT_EQ((statuses[0].ok() ? statuses[1] : statuses[0]).getCode(), StatusCode::INTERNAL_ERROR);
-    EXPECT_FALSE(pythonModule.ownsPythonInterpreter());
-    ASSERT_NE(pythonModule.getPythonBackend(), nullptr);
-    pythonModule.shutdown();
-    EXPECT_NE(getGlobalPythonBackend(), nullptr);
 }
 
 static const std::string TIMESTAMP_PARAMETER_NAME{"OVMS_MP_TIMESTAMP"};

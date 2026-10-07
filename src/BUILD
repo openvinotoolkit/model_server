@@ -186,15 +186,6 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
-    name = "python_interpreter_module_test_symbols",
-    srcs = ["status.cpp", "module_names.cpp"],
-    hdrs = ["status.hpp", "module_names.hpp"],
-    deps = ["@fmtlib"],
-    linkstatic = 1,
-    visibility = ["//src/python:__pkg__"],
-)
-
-ovms_cc_library(
     name = "libovms_ovinferrequestsqueue",
     hdrs = ["ovinferrequestsqueue.hpp"],
     srcs = ["ovinferrequestsqueue.cpp"],
@@ -857,6 +848,7 @@ ovms_cc_library(
             "libdrogon_http_server",
             "libmultipart_parser_drogon_impl",
             "cpp_headers",
+            "//src:module_names",
             "libovms_shutdown_state",
             "libovms_curl_global_init",
             "ovms_header",
@@ -1212,6 +1204,7 @@ ovms_cc_library(
     srcs = ["status.cpp",],
     deps = ["libovmslogging",
             "@fmtlib",],
+    linkstatic = 1,
     visibility = ["//visibility:public"],
 )
 
@@ -1915,6 +1908,14 @@ ovms_cc_library(
     visibility = ["//visibility:public",],
 )
 
+ovms_cc_library(
+    name = "module_names",
+    hdrs = ["module_names.hpp"],
+    srcs = ["module_names.cpp"],
+    linkstatic = 1,
+    visibility = ["//visibility:public"],
+)
+
 ovms_cc_library( # TODO split further
     name = "cpp_headers",
     hdrs = [
@@ -1923,10 +1924,8 @@ ovms_cc_library( # TODO split further
     srcs = ["server.hpp",
         "config.hpp",
         "status.hpp",
-        "module_names.hpp",
-        "module_names.cpp",
     ],
-    deps = ["libovmslogging", "libovmsstring_utils"],
+    deps = ["libovmslogging", "libovmsstring_utils", ":module_names"],
     visibility = ["//visibility:public"],
 )
 
@@ -1994,6 +1993,7 @@ cc_binary(
     deps = [
         "//src:ovms_lib",
         "//src/filesystem:libovmsfilesystemfactory",
+        "//src:module_names",
         "//src:libovms_mediapipe_runtime_tensorflow_owner",
         # NOTE: the MediaPipe runtime shared object is NOT linked into the main binary.
         # Runtime loading keeps registration ownership outside of ovms and avoids
@@ -2267,6 +2267,7 @@ cc_test(
     deps = [
             "optimum-cli",
             "//src:ovms_lib",
+            "//src:module_names",
             "//src:libovms_default_task_detector",
             "//src/filesystem:libovmsfilesystemfactory",
             "@cpp_httplib//:cpp_httplib", # server_test.cpp
@@ -2564,6 +2565,7 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+    visibility = ["//src:__pkg__", "//src/python:__pkg__"],
 )
 cc_library( # DO NOT ADD BIG DEPENDENCIES HERE
     name = "test_light_test_utils",
@@ -2831,6 +2833,7 @@ cc_library(
         "//src/mediapipe_internal:graphqueue",
         "//src/mediapipe_internal:libovms_mediapipe",
         "//src:libovms_server_settings",
+        "//src:module_names",
         "@com_google_googletest//:gtest",
     ],
     local_defines = COMMON_LOCAL_DEFINES,
