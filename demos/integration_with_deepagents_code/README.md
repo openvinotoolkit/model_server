@@ -2,8 +2,6 @@
 
 ## Description
 
-[OpenVINO Model Server (OVMS)](https://github.com/openvinotoolkit/model_server) serves local AI models behind a standard, OpenAI-compatible REST API. Because the API matches the OpenAI specification, any OpenAI-compatible frontend can talk to a locally served OpenVINO model **without code changes** — you only point the client at the OVMS endpoint.
-
 This demo presents [OpenVINO Model Server (OVMS)](https://github.com/openvinotoolkit/model_server) integration with [DeepAgents Code](https://github.com/langchain-ai/deepagents) (`dcode`), an open coding agent. You run a model on OVMS, point `dcode` at it with a single environment variable, and then use the agent to build and call a custom MCP tool — all served locally, with no cloud model and no provider lock-in.
 
 ### How it fits together
@@ -24,7 +22,7 @@ This demo deploys OpenVINO Model Server with a Docker container (Linux) or the n
 
 Requirements:
 * Intel x86_64 host, Linux or Windows
-* [Docker Engine](https://docs.docker.com/engine/) on Linux, or [Docker Desktop](https://docs.docker.com/desktop/) on Windows
+* [Docker Engine](https://docs.docker.com/engine/) on Linux
 * Python 3.12+ with pip
 * HuggingFace access to `OpenVINO/Qwen3.8-27B-int4-ov` (auto-downloaded on first OVMS start)
 
@@ -141,7 +139,7 @@ dcode --default-model openai:OpenVINO/Qwen3.8-27B-int4-ov
 - **`OPENAI_API_KEY=not_used`**: OVMS does not require a key for local serving, but the OpenAI client library expects the variable to be set.
 - **`TAVILY_API_KEY=not_used`**: silences the web-search key warning; the demo never invokes web search, so the placeholder is inert.
 - **`DEEPAGENTS_CODE_PRICES_AUTO_UPDATE=0`**: avoids external pricing refresh.
-- **`DEMO_DIR`**: expanded inside `.deepagents/.mcp.json` so the MCP server script is located reliably. dcode spawns MCP stdio servers from a temporary CWD, so a relative path in `.mcp.json` cannot be resolved.
+- **`DEMO_DIR`**: expanded inside [`.deepagents/.mcp.json`](https://github.com/openvinotoolkit/model_server/blob/main/demos/integration_with_deepagents_code/.deepagents/.mcp.json) so the MCP server script is located reliably.
 
 dcode uses git to track file state and pins its project root (and its skill / MCP / subagent discovery) at the closest `.git` directory. Initialize a repository *inside the demo folder* so dcode scopes to it, even when the folder itself lives inside another checkout (like the `model_server` clone):
 
@@ -187,9 +185,9 @@ First response can be slower because initial dcode context is large. Later turns
 
 ![demo summary](./screenshots/demo_summary.jpg)
 
-### Step 3: Create MCP server file
+### Step 3: Create MCP server
 
-The project ships with a preconfigured MCP client entry in `.deepagents/.mcp.json`, but the actual server script does not exist yet. In interactive mode, dcode surfaces this as a tool-loading error — a good signal that the agent is aware of the MCP configuration. Ask the agent to create the script using the project skill located at `.deepagents/skills/python-mcp-sdk-skill/SKILL.md`. Invoking a skill with `/skill:<name>` gives the agent a focused, tested recipe instead of relying on generic knowledge:
+The project ships with a preconfigured MCP client entry in [`.deepagents/.mcp.json`](https://github.com/openvinotoolkit/model_server/blob/main/demos/integration_with_deepagents_code/.deepagents/.mcp.json), but the actual server script does not exist yet. In interactive mode, dcode surfaces this as a tool-loading error — a good signal that the agent is aware of the MCP configuration. Ask the agent to create the script using the project skill located at [`.deepagents/skills/python-mcp-sdk-skill/SKILL.md`](https://github.com/openvinotoolkit/model_server/blob/main/demos/integration_with_deepagents_code/.deepagents/skills/python-mcp-sdk-skill/SKILL.md). Invoking a skill with `/skill:<name>` gives the agent a focused, tested recipe instead of relying on generic knowledge:
 
 ```text
 /skill:python-mcp-sdk-skill implement a Python MCP stdio server at mcp_server/time_mcp_server.py that provides current UTC time using the Python MCP SDK.
@@ -223,11 +221,11 @@ Once the goal is satisfied, clear it so subsequent prompts run in normal mode:
 /goal clear
 ```
 
-### Step 5: Delegate validation to subagent
+### Step 5: Validate MCP server with subagent
 
 Instead of running tests in the main context, delegate validation to a dedicated subagent. This keeps the main conversation focused. The subagent definition lives in:
 
-- `.deepagents/agents/mcp-tester/AGENTS.md`
+- [`.deepagents/agents/mcp-tester/AGENTS.md`](https://github.com/openvinotoolkit/model_server/blob/main/demos/integration_with_deepagents_code/.deepagents/agents/mcp-tester/AGENTS.md)
 
 `mcp-tester` verifies static structure and runtime behavior of the MCP server and returns a concise `PASS`/`FAIL` verdict.
 
@@ -240,7 +238,7 @@ Test mcp_server/time_mcp_server.py
 
 If tester returns `FAIL`, main agent can proceed with fixes. If tester returns `PASS`, continue below.
 
-### Step 6: Reload tools in current session
+### Step 6: Reload MCP tools
 
 The MCP server is now on disk, but the current dcode session was started before it existed, so its tools are not yet registered. Use `/tools` to inspect the currently loaded tool list, then `/reload` to re-scan the MCP configuration without restarting dcode.
 
@@ -257,7 +255,7 @@ The MCP server is now on disk, but the current dcode session was started before 
 
 ![tools after reload](./screenshots/tools_after.jpg)
 
-### Step 7: Verify tool use
+### Step 7: Verify end-to-end tool call
 
 With the MCP tools now registered, issue a prompt that can only be answered correctly by calling the freshly created server. If the agent invokes the MCP tool and reports the real UTC time and date, the end-to-end integration is working.
 
@@ -318,7 +316,7 @@ This demo (`integration_with_deepagents_code`) showcases how to integrate [DeepA
 
 </details>
 
-### Step 2: Create MCP server file
+### Step 2: Create MCP server
 
 ```console
 dcode -n "Implement a Python MCP stdio server at mcp_server/time_mcp_server.py that provides current UTC time using the Python MCP SDK." --skill python-mcp-sdk-skill --allow-fs-tools read_file,write_file,grep,ls,execute -S python,python3,timeout,cat,grep,ls --no-mcp --no-interpreter --quiet
@@ -353,7 +351,7 @@ Done. Added `get_current_utc_date()` tool to `time_mcp_server.py`. It returns th
 
 </details>
 
-### Step 4: Validate with subagent
+### Step 4: Validate MCP server with subagent
 
 ```console
 dcode -n "Delegate to subagent mcp-tester: Test mcp_server/time_mcp_server.py" --allow-fs-tools read_file,grep,ls,execute -S python,python3,timeout,cat,grep,ls --no-mcp --no-interpreter --quiet
@@ -375,7 +373,7 @@ dcode -n "Delegate to subagent mcp-tester: Test mcp_server/time_mcp_server.py" -
 
 </details>
 
-### Step 5: Verify tool use
+### Step 5: Verify end-to-end tool call
 
 ```console
 dcode -n "Give me the exact current UTC timestamp down to the current second along with current date." --allow-fs-tools read_file,grep,ls,execute -S python,python3,timeout,cat,grep,ls --trust-project-mcp --no-interpreter --quiet
@@ -432,11 +430,4 @@ With `/offload` command the agent can reduce its context by dropping messages th
 
 ---
 
-## What you proved
-
-By completing this demo you ran a model entirely locally on OVMS, exposed it over an OpenAI-compatible endpoint, and drove a real coding agent against it by setting a single environment variable. On top of that connection you built a custom MCP tool, validated it with a subagent, and called it end to end — with no cloud model, no API key, and no provider lock-in.
-
-Because the endpoint is OpenAI-compatible, the same OVMS deployment works with other frontends and clients. To go further:
-- Swap the served model with `--source_model` and re-run the flow.
-- Point other OpenAI-compatible tools at the same `http://localhost:8000/v1` endpoint.
-- Explore more OpenAI-compatible frontend integrations in the [OVMS integrations page](../integrations.md).
+## Explore more OpenAI-compatible frontend integrations in the [OVMS integrations page](../integrations.md).
