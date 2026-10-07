@@ -827,10 +827,10 @@ static Status deserializeTensor(const std::string& requestedName, const KFSReque
             }
         } else {
             OVMS_RETURN_ON_FAIL(validateInputContent(*requestInputItr, expectedBytes, requestedName, request));
+            outTensor = std::make_unique<ov::Tensor>(precision, shape);
             if (expectedBytes == 0) {
                 return StatusCode::OK;
             }
-            outTensor = std::make_unique<ov::Tensor>(precision, shape);
             void* data = outTensor->data();
             switch (precision) {
             case ov::element::Type_t::f32: {
