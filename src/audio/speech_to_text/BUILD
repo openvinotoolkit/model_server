@@ -35,6 +35,10 @@ ovms_cc_library(
         "@com_google_absl//absl/status",
         "//third_party:genai",
     ],
+    additional_copts = select({
+        "//conditions:default": [],
+        "//src:windows": ["/wd6001"],
+    }),
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )
