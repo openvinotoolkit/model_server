@@ -24,6 +24,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../config.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../filesystem/filesystem.hpp"
 #include "../llm/apis/openai_completions.hpp"
@@ -80,22 +81,6 @@ protected:
         server.setShutdownRequest(0);
     }
 };
-
-namespace {
-std::string makeOpenAIComplexityLimitPayload(size_t dataElements) {
-    std::string payload;
-    payload.reserve(dataElements * 2 + 64);
-    payload += R"({"model":"dummy_gpt","data":[)";
-    if (dataElements > 0) {
-        payload.push_back('0');
-        for (size_t i = 1; i < dataElements; ++i) {
-            payload += ",0";
-        }
-    }
-    payload += R"(]})";
-    return payload;
-}
-}  // namespace
 
 class HttpOpenAIHandlerAuthorizationTest : public ::testing::Test {
 protected:
@@ -378,7 +363,10 @@ TEST_F(HttpOpenAIHandlerTest, JsonBodyExceedsNestingDepth_NestedArrays) {
 }
 
 TEST_F(HttpOpenAIHandlerTest, JsonBodyExceedsComplexityLimit) {
-    std::string requestBody = makeOpenAIComplexityLimitPayload(ovms::DEFAULT_MAX_JSON_COMPLEXITY);
+    std::string requestBody = R"({"a":[0]})";
+    auto& config = const_cast<ovms::ServerSettingsImpl&>(ovms::Config::instance().getServerSettings());
+    const auto previousMaxComplexity = config.jsonMaxComplexity;
+    config.jsonMaxComplexity = 5;
 
     EXPECT_CALL(*writer, PartialReplyEnd()).Times(0);
     EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
@@ -387,6 +375,8 @@ TEST_F(HttpOpenAIHandlerTest, JsonBodyExceedsComplexityLimit) {
     auto status = handler->dispatchToProcessor("/v1/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::JSON_COMPLEXITY_EXCEEDED);
     ASSERT_EQ(status.string(), "JSON structure exceeds the allowed complexity - JSON body exceeds maximum complexity");
+
+    config.jsonMaxComplexity = previousMaxComplexity;
 }
 
 TEST_F(HttpOpenAIHandlerTest, GraphWithANameDoesNotExist) {

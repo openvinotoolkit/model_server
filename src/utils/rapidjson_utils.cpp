@@ -69,28 +69,31 @@ struct DepthOnlyHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
         maxComplexity(maxComplexity) {}
 
     bool incrementComplexity() {
-        if (++complexity > maxComplexity) {
+        if (complexity >= maxComplexity) {
             violation = JsonLimitViolation::COMPLEXITY;
             return false;
         }
+        ++complexity;
         return true;
     }
 
     bool StartObject() {
-        if (!incrementComplexity())
-            return false;
-        if (++depth > maxDepth)
+        if (depth >= maxDepth) {
             violation = JsonLimitViolation::DEPTH;
-        if (violation == JsonLimitViolation::DEPTH)
+            return false;
+        }
+        ++depth;
+        if (!incrementComplexity())
             return false;
         return true;
     }
     bool StartArray() {
-        if (!incrementComplexity())
-            return false;
-        if (++depth > maxDepth)
+        if (depth >= maxDepth) {
             violation = JsonLimitViolation::DEPTH;
-        if (violation == JsonLimitViolation::DEPTH)
+            return false;
+        }
+        ++depth;
+        if (!incrementComplexity())
             return false;
         return true;
     }
@@ -125,10 +128,14 @@ struct DepthOnlyHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
         return incrementComplexity();
     }
     bool EndObject(rapidjson::SizeType) {
+        if (!incrementComplexity())
+            return false;
         --depth;
         return true;
     }
     bool EndArray(rapidjson::SizeType) {
+        if (!incrementComplexity())
+            return false;
         --depth;
         return true;
     }

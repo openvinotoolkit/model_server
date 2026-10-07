@@ -30,8 +30,9 @@ inline constexpr std::size_t DEFAULT_MAX_JSON_COMPLEXITY = 8ull * 1024 * 1024;
 
 // Parses `json` into `doc` with iterative parsing and a nesting depth limit.
 // Pass 1: lightweight depth-only scan (no DOM allocation) — aborts early on
-//   depth > maxDepth (JSON_NESTING_DEPTH_EXCEEDED), total SAX events >
-//   maxComplexity (JSON_COMPLEXITY_EXCEEDED) or malformed JSON (JSON_INVALID).
+//   depth > maxDepth (JSON_NESTING_DEPTH_EXCEEDED), total SAX events including
+//   object/array close delimiters > maxComplexity (JSON_COMPLEXITY_EXCEEDED) or
+//   malformed JSON (JSON_INVALID).
 // Pass 2: normal Document parse to build the DOM after the structure is proven safe.
 // Returns StatusCode::OK on success.
 Status parseJsonWithDepthLimit(

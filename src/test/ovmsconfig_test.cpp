@@ -25,6 +25,7 @@
 
 #include "../capi_frontend/server_settings.hpp"
 #include "../utils/env_guard.hpp"
+#include "../utils/rapidjson_utils.hpp"
 #include "../config.hpp"
 #include "src/filesystem/filesystem.hpp"
 #include "../graph_export/embeddings_graph_cli_parser.hpp"

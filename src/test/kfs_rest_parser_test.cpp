@@ -1044,13 +1044,13 @@ TEST_F(KFSRestParserTest, ComplexityLimitExceededBeforeDomParse) {
 
 TEST_F(KFSRestParserTest, ComplexityLimitBoundary) {
     rapidjson::Document doc;
-    std::string request = R"({"inputs":[{"name":"input0","shape":[4],"datatype":"FP32","data":[0,1,2,3]}]})";
+    std::string request = R"({"a":[0]})";
 
-    auto okStatus = parseJsonWithDepthLimit(doc, request.c_str(), request.size(), DEFAULT_MAX_JSON_NESTING_DEPTH, 17);
+    auto okStatus = parseJsonWithDepthLimit(doc, request.c_str(), request.size(), DEFAULT_MAX_JSON_NESTING_DEPTH, 6);
     EXPECT_EQ(okStatus, StatusCode::OK);
 
     rapidjson::Document failingDoc;
-    auto failingStatus = parseJsonWithDepthLimit(failingDoc, request.c_str(), request.size(), DEFAULT_MAX_JSON_NESTING_DEPTH, 16);
+    auto failingStatus = parseJsonWithDepthLimit(failingDoc, request.c_str(), request.size(), DEFAULT_MAX_JSON_NESTING_DEPTH, 5);
     EXPECT_EQ(failingStatus, StatusCode::JSON_COMPLEXITY_EXCEEDED);
 }
 
