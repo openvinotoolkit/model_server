@@ -19,23 +19,34 @@
 
 #include <cstdint>
 #include <memory>
-#include <vector>
-
-#include <openvino/openvino.hpp>
+#include <variant>
 
 namespace mediapipe {
 
-// One decoded video frame flowing on a MediaPipe stream.
-//
-// The surface backing `planes` is kept alive by `owner` — a type-erased handle
-// (typically shared_ptr<imp_tensor_t> with imp_tensor_release as its deleter).
-// Because MediaPipe packets are shared, the surface survives until inference and
-// every consumer have released the packet. Each frame owns its own surface, so
-// distinct in-flight packets reference distinct, simultaneously valid surfaces.
+struct VaSurfaceFrame {
+    uint32_t surface_id = 0;
+};
+
+struct D3D11Frame {
+    uintptr_t texture_handle = 0;
+    uint32_t subresource = 0;
+};
+
+struct CpuNv12Frame {
+    const uint8_t* y = nullptr;
+    const uint8_t* uv = nullptr;
+    int y_stride = 0;
+    int uv_stride = 0;
+};
+
+using GstVideoFrameResource = std::variant<VaSurfaceFrame, D3D11Frame, CpuNv12Frame>;
+
+// The native frame resource stays alive through owner until all packet consumers finish.
 struct GstVideoFramePacket {
-    std::vector<ov::RemoteTensor> planes;  // NV12 GPU: [Y, UV]
-    std::shared_ptr<void> owner;           // keeps the backing surface alive
-    uint32_t va_surface_id = 0;            // VA surface id (verification/debug)
+    GstVideoFrameResource resource = VaSurfaceFrame{};
+    std::shared_ptr<void> owner;
+    int width = 0;
+    int height = 0;
 };
 
 }  // namespace mediapipe

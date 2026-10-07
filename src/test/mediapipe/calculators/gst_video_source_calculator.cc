@@ -13,13 +13,12 @@
 // limitations under the License.
 
 /**
- * GstVideoSourceCalculator — P2 split-out video source (GPU VA path).
+ * GstVideoSourceCalculator — split-out video source (GPU VA path).
  *
  * A MediaPipe source calculator: decodes a video with GStreamer/VA and emits one
- * GstVideoFramePacket per frame, each owning its own VA surface (per-packet
- * ownership from P2). No inference here — that is the downstream calculator's job
- * (P3). The VA context is created internally in Open() from the first frame's
- * shared display and used to import surfaces as ov::RemoteTensor pairs.
+ * GstVideoFramePacket per frame, each owning its native frame resource. No
+ * inference here — that is the downstream calculator's job. The packet carries
+ * a backend-specific resource descriptor, not an OpenVINO tensor or context.
  *
  * Side packets:
  *   VIDEO_PATH : std::string — path to input video file.
@@ -31,12 +30,7 @@
  */
 
 #include <memory>
-#include <optional>
 #include <string>
-#include <utility>
-
-#include <openvino/openvino.hpp>
-#include <openvino/runtime/intel_gpu/ocl/va.hpp>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -55,7 +49,6 @@ constexpr char kVideoPathTag[] = "VIDEO_PATH";
 constexpr char kWidthTag[] = "WIDTH";
 constexpr char kHeightTag[] = "HEIGHT";
 constexpr char kFrameTag[] = "FRAME";
-constexpr char kVaContextTag[] = "VA_CONTEXT";
 }  // namespace
 
 class GstVideoSourceCalculator : public CalculatorBase {
@@ -65,11 +58,6 @@ class GstVideoSourceCalculator : public CalculatorBase {
         cc->InputSidePackets().Tag(kWidthTag).Set<int>();
         cc->InputSidePackets().Tag(kHeightTag).Set<int>();
         cc->Outputs().Tag(kFrameTag).Set<GstVideoFramePacket>();
-        // Shared VA context so a downstream inference calculator can compile its
-        // model on the exact same context the surfaces were imported on.
-        if (cc->OutputSidePackets().HasTag(kVaContextTag)) {
-            cc->OutputSidePackets().Tag(kVaContextTag).Set<ov::RemoteContext>();
-        }
         return absl::OkStatus();
     }
 
@@ -98,31 +86,13 @@ class GstVideoSourceCalculator : public CalculatorBase {
             return absl::InternalError(std::string("imp_video_open failed: ") +
                                        imp_context_get_error(ctx_));
 
-        // Build the VA context from the first frame's shared display (P2/D2:
-        // context created internally by the source). Keep the first frame to
-        // emit it on the first Process() call.
+        // Keep the first frame to emit it on the first Process() call.
         st = imp_video_read_frame(&pending_, stream_, 0);
         if (st != IMP_OK || !pending_)
             return absl::InternalError("first frame read failed");
 
-        uint32_t surf = 0;
-        void* disp = nullptr;
-        int fw = 0, fh = 0;
-        imp_tensor_get_va_surface(pending_, &surf, &disp, &fw, &fh);
-        if (!disp)
-            return absl::InternalError("no VADisplay from first frame");
-        try {
-            va_ctx_ = ov::intel_gpu::ocl::VAContext(core_, disp);
-        } catch (const std::exception& e) {
-            return absl::InternalError(std::string("VAContext creation failed: ") + e.what());
-        }
-
-        // Publish the context so the inference calculator compiles on the same one.
-        if (cc->OutputSidePackets().HasTag(kVaContextTag)) {
-            cc->OutputSidePackets()
-                .Tag(kVaContextTag)
-                .Set(MakePacket<ov::RemoteContext>(*va_ctx_));
-        }
+        if (imp_tensor_get_memory_type(pending_) != IMP_MEM_VA_SURFACE)
+            return absl::InternalError("expected a VA surface from GStreamer");
         return absl::OkStatus();
     }
 
@@ -146,17 +116,9 @@ class GstVideoSourceCalculator : public CalculatorBase {
         }
 
         auto pkt = std::make_unique<GstVideoFramePacket>();
-        try {
-            auto nv12 = va_ctx_->create_tensor_nv12(static_cast<size_t>(fh),
-                                                    static_cast<size_t>(fw),
-                                                    surface_id);
-            pkt->planes = {nv12.first, nv12.second};
-        } catch (const std::exception& e) {
-            imp_tensor_release(tensor);
-            return absl::InternalError(std::string("create_tensor_nv12 failed: ") + e.what());
-        }
-        pkt->va_surface_id = surface_id;
-        // Transfer surface ownership into the packet; released when the packet dies.
+        pkt->resource = VaSurfaceFrame{surface_id};
+        pkt->width = fw;
+        pkt->height = fh;
         pkt->owner = std::shared_ptr<imp_tensor_t>(tensor, imp_tensor_release);
 
         cc->Outputs()
@@ -191,8 +153,6 @@ class GstVideoSourceCalculator : public CalculatorBase {
     imp_video_stream_t* stream_ = nullptr;
     imp_tensor_t* pending_ = nullptr;  // first frame, emitted on first Process()
 
-    ov::Core core_;
-    std::optional<ov::intel_gpu::ocl::VAContext> va_ctx_;
 };
 
 REGISTER_CALCULATOR(GstVideoSourceCalculator);

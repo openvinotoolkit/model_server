@@ -39,6 +39,12 @@
 #include "test_with_temp_dir.hpp"
 #include "src/mpi/intel_mpi.h"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#include "mediapipe/framework/calculator_framework.h"
+#include "mediapipe/framework/port/parse_text_proto.h"
+#pragma GCC diagnostic pop
+
 using namespace ov;
 
 #pragma GCC diagnostic push
@@ -669,6 +675,38 @@ TEST_F(CAPINonCopy, GStreamerSurfaceInferenceViaGlobalVADisplay) {
 
     OVMS_InferenceResponseDelete(response);
     OVMS_InferenceRequestDelete(request);
+
+    const std::string graphPath = "/ovms/src/test/mediapipe/calculators/gst_video_infer.pbtxt";
+    std::ifstream graphFile(graphPath);
+    ASSERT_TRUE(graphFile.good()) << "graph not found: " << graphPath;
+    std::stringstream graphText;
+    graphText << graphFile.rdbuf();
+    auto graphConfig = mediapipe::ParseTextProtoOrDie<mediapipe::CalculatorGraphConfig>(graphText.str());
+    mediapipe::CalculatorGraph graph;
+    ASSERT_TRUE(graph.Initialize(graphConfig).ok());
+    auto pollerOr = graph.AddOutputStreamPoller("detections");
+    ASSERT_TRUE(pollerOr.ok());
+    mediapipe::OutputStreamPoller poller = std::move(pollerOr.value());
+    std::map<std::string, mediapipe::Packet> sidePackets = {
+        {"video_path", mediapipe::MakePacket<std::string>(videoPath)},
+        {"width", mediapipe::MakePacket<int>(modelW)},
+        {"height", mediapipe::MakePacket<int>(modelH)},
+        {"servable_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_MODEL_NAME)},
+        {"servable_version", mediapipe::MakePacket<int>(1)},
+        {"input_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_INPUT_NAME)},
+    };
+    ASSERT_TRUE(graph.StartRun(sidePackets).ok());
+    int graphFrames = 0;
+    int graphDetections = 0;
+    mediapipe::Packet graphPacket;
+    while (poller.Next(&graphPacket)) {
+        graphDetections += graphPacket.Get<int>();
+        ++graphFrames;
+    }
+    EXPECT_GT(graphFrames, 0);
+    EXPECT_GE(graphDetections, 1) << "expected graph inference through the ModelManager servable";
+    ASSERT_TRUE(graph.WaitUntilDone().ok());
+
     imp_tensor_release(tensor);
     imp_video_close(stream);
     imp_context_destroy(ctx);

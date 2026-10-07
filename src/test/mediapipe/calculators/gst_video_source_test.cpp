@@ -113,17 +113,13 @@ TEST(GstVideoSourceGraph, PerPacketSurfaceOwnership) {
     std::vector<uint32_t> surfaces;
     for (const auto& packet : held) {
         const auto& frame = packet.Get<::mediapipe::GstVideoFramePacket>();
-        ASSERT_EQ(frame.planes.size(), 2u) << "NV12 must have Y and UV planes";
-        EXPECT_GT(frame.planes[0].get_size(), 0u);
-        EXPECT_GT(frame.planes[1].get_size(), 0u);
+        const auto* va_frame = std::get_if<::mediapipe::VaSurfaceFrame>(&frame.resource);
+        ASSERT_NE(va_frame, nullptr) << "expected a VA surface resource";
         EXPECT_TRUE(frame.owner != nullptr);
-        // Zero-copy proof: planes are real device (remote) handles, not host
-        // tensors — remote tensors expose a non-empty params map, and the frame
-        // carries a live VA surface id. No host mapping happened on this path.
-        EXPECT_FALSE(frame.planes[0].get_params().empty());
-        EXPECT_FALSE(frame.planes[1].get_params().empty());
-        EXPECT_NE(frame.va_surface_id, 0u);
-        surfaces.push_back(frame.va_surface_id);
+        EXPECT_GT(frame.width, 0);
+        EXPECT_GT(frame.height, 0);
+        EXPECT_NE(va_frame->surface_id, 0u);
+        surfaces.push_back(va_frame->surface_id);
     }
     // All held surfaces must be distinct (per-packet ownership).
     for (size_t i = 0; i < surfaces.size(); i++)

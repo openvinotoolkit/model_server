@@ -124,7 +124,6 @@ cc_library(
     deps = [
         "//src/mpi:intel_mpi",
         "@mediapipe_calculators//:mediapipe_calculators",
-        "//third_party:openvino",
     ],
     linkopts = LINKOPTS_ADJUSTED,
 )
@@ -207,43 +206,20 @@ cc_test(
     }),
 )
 
-# P3: in-tree NV12 two-plane GPU inference calculator (temporary stand-in for the
-# external OpenVINOInferenceCalculator). Binds Y/UV on the shared VA context.
+# Inference against an already-loaded ModelManager servable through the OVMS C-API.
 cc_library(
-    name = "gst_nv12_inference_calculator",
+    name = "gst_capi_inference_calculator",
     linkstatic = 1,
     alwayslink = 1,
-    srcs = ["gst_nv12_inference_calculator.cc"],
+    srcs = ["gst_capi_inference_calculator.cc"],
     hdrs = ["gst_video_frame_packet.hpp"],
     copts = COPTS_ADJUSTED,
     visibility = ["//visibility:public"],
     deps = [
+        "//src:ovms_lib",
         "@mediapipe_calculators//:mediapipe_calculators",
-        "//third_party:openvino",
     ],
     linkopts = LINKOPTS_ADJUSTED,
-)
-
-# P3/P4 split-path graph test: source -> inference, zero-copy on GPU.
-cc_test(
-    name = "gst_video_infer_test",
-    srcs = ["gst_video_infer_test.cpp"],
-    data = ["gst_video_infer.pbtxt"],
-    copts = COPTS_ADJUSTED,
-    linkstatic = 1,
-    deps = [
-        ":gst_video_source_calculator",
-        ":gst_nv12_inference_calculator",
-        "//src/mpi:intel_mpi",
-        "@com_google_googletest//:gtest_main",
-        "@mediapipe//mediapipe/framework:calculator_framework",
-        "@mediapipe_calculators//:mediapipe_calculators",
-        "//third_party:openvino",
-    ],
-    linkopts = LINKOPTS_ADJUSTED + select({
-        "//src:windows": [],
-        "//conditions:default": ["-lOpenCL"],
-    }),
 )
 
 # Linux video encoder test: decode host NV12 -> encode H.264/MP4 -> verify

@@ -1,11 +1,11 @@
-# P3/P4 split graph: GStreamer/VA source -> NV12 GPU inference, zero-copy.
-# The source publishes its VA context as a side packet; the inference node
-# compiles its model on that same context and binds the Y/UV planes.
+# Split graph: GStreamer/VA source -> ModelManager servable inference via C-API.
 
 input_side_packet: "VIDEO_PATH:video_path"
 input_side_packet: "WIDTH:width"
 input_side_packet: "HEIGHT:height"
-input_side_packet: "MODEL_PATH:model_path"
+input_side_packet: "SERVABLE_NAME:servable_name"
+input_side_packet: "SERVABLE_VERSION:servable_version"
+input_side_packet: "INPUT_NAME:input_name"
 output_stream: "DETECTIONS:detections"
 
 node {
@@ -13,14 +13,14 @@ node {
   input_side_packet: "VIDEO_PATH:video_path"
   input_side_packet: "WIDTH:width"
   input_side_packet: "HEIGHT:height"
-  output_side_packet: "VA_CONTEXT:va_context"
   output_stream: "FRAME:frame"
 }
 
 node {
-  calculator: "GstNv12InferenceCalculator"
+  calculator: "GstCapiInferenceCalculator"
   input_stream: "FRAME:frame"
-  input_side_packet: "MODEL_PATH:model_path"
-  input_side_packet: "VA_CONTEXT:va_context"
+  input_side_packet: "SERVABLE_NAME:servable_name"
+  input_side_packet: "SERVABLE_VERSION:servable_version"
+  input_side_packet: "INPUT_NAME:input_name"
   output_stream: "DETECTIONS:detections"
 }
