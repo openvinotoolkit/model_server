@@ -37,7 +37,7 @@ namespace {
 
 uint16_t readLe16(const char* ptr) {
     return static_cast<uint16_t>(static_cast<unsigned char>(ptr[0])) |
-        (static_cast<uint16_t>(static_cast<unsigned char>(ptr[1])) << 8);
+           (static_cast<uint16_t>(static_cast<unsigned char>(ptr[1])) << 8);
 }
 
 // Builds an in-memory PCM16 mono WAV file with an attacker-controlled sample rate
