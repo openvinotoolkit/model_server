@@ -122,7 +122,6 @@ http_archive(
 )
 
 # RapidJSON
-# Must be defined earlier than tensorflow_serving because TFS is using older rapidjson
 # Version must match openvino.genai -> jinja2cpp -> rapidjson
 # git/Jinja2Cpp/third_party/internal_deps.cmake
 # Date:   Tue May 9 21:31:22 2023 +0000 Avoid ptrdiff between pointers to different allocations
@@ -142,7 +141,7 @@ http_archive(
     build_file = "@//third_party/libevent:BUILD",
 )
 
-# overriding tensorflow serving bazel dependency
+# overriding grpc boringssl dependency
 # alternative would be to use cmake build of grpc and flag
 # to use system ssl instead
 new_local_repository(

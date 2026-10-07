@@ -92,6 +92,10 @@ ovms_cc_library(
         "//src/mediapipe_internal:node_initializer",
         "//src:libovmsstring_utils",
     ],
+    additional_copts = select({
+        "//conditions:default": [],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
+    }),
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )

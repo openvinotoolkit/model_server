@@ -521,6 +521,10 @@ ovms_cc_library(
         "anonymous_input_name",
         "inference_request_common",
     ],
+    additional_copts = select({
+        "//conditions:default": [],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
+    }),
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
@@ -605,7 +609,7 @@ ovms_cc_library(
     ],
     additional_copts = select({
         "//conditions:default": ["-fvisibility=default"],
-        "//src:windows": [],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
     }),
     visibility = ["//visibility:public",],
     alwayslink = 1,
@@ -692,6 +696,10 @@ ovms_cc_library(
         "libovmsstatus",
         "libovmstimer",
     ],
+    additional_copts = select({
+        "//conditions:default": [],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
+    }),
     visibility = ["//visibility:public"],
 )
 
@@ -887,7 +895,10 @@ ovms_cc_library(
                     ],
                 }),
     visibility = ["//visibility:public",],
-    additional_copts = COPTS_OV_TRACE,
+    additional_copts = COPTS_OV_TRACE + select({
+        "//conditions:default": [],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
+    }),
     additional_linkopts = select({
                 "//conditions:default": ["-lOpenCL"], # TODO make as direct dependency
                 "//src:windows" : ["/DEFAULTLIB:Rpcrt4.lib"],}),
@@ -1309,6 +1320,10 @@ ovms_cc_library(
             "extractchoice",
             "requesttensorextractor",
     ],
+    additional_copts = select({
+        "//conditions:default": [],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
+    }),
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
@@ -1332,6 +1347,10 @@ ovms_cc_library(
             "kfs_serialization",
             "tensor_conversion_after",
     ],
+    additional_copts = select({
+        "//conditions:default": [],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
+    }),
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )
@@ -1350,6 +1369,10 @@ ovms_cc_library(
             "libovms_config",
             "cpp_headers",
 ],
+    additional_copts = select({
+        "//conditions:default": [],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
+    }),
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
@@ -1366,6 +1389,10 @@ ovms_cc_library(
             "libovms_tensorinfo",
             "tensor_conversion",
     ],
+    additional_copts = select({
+        "//conditions:default": [],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
+    }),
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
@@ -1384,6 +1411,10 @@ ovms_cc_library(
             "requesttensorextractor",
             "tensor_conversion",
     ],
+    additional_copts = select({
+        "//conditions:default": [],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
+    }),
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
