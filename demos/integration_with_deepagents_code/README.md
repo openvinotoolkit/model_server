@@ -429,5 +429,3 @@ With `/offload` command the agent can reduce its context by dropping messages th
 ```
 
 ---
-
-## Explore more OpenAI-compatible frontend integrations in the [OVMS integrations page](../integrations.md).
