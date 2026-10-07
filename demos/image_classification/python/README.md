@@ -18,7 +18,7 @@ curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.x
 docker run -d -u $(id -u) -v $PWD/model:/models -p 9000:9000 \
   openvino/model_server:latest \
   --model_path /models/resnet50.xml --model_name resnet \
-  --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" \
+  --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NCHW" \
   --port 9000
 ```
 
@@ -45,8 +45,8 @@ usage: image_classification.py [-h] [--images_list IMAGES_LIST]
 | --images_list   |   Path to a file with a list of labeled images      |
 | --grpc_address GRPC_ADDRESS | Specify url to grpc service. Default:localhost |
 | --grpc_port GRPC_PORT | Specify port to grpc service. Default: 9000 |
-| --input_name | Specify input tensor name. Default: input |
-| --output_name | Specify output name. Default: resnet_v1_50/predictions/Reshape_1 |
+| --input_name | Specify input tensor name. Default: image |
+| --output_name | Specify output name. Default: output |
 | --model_name | Define model name, must be same as is in service. Default: resnet|
 | --size SIZE  | The size of the image in the model|
 | --rgb_image RGB_IMAGE | Convert BGR channels to RGB channels in the input image |

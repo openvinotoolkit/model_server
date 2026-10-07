@@ -144,18 +144,17 @@ openvino/model_server:latest --model_name resnet --model_path /models/resnet50.x
 	source .venv/bin/activate
 	cd client/python/kserve-api/samples/
 	pip3 install -r requirements.txt
-	python grpc_infer_resnet.py --grpc_port 9178 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name image --output_name output --model_name resnet --transpose_input False
+	python grpc_infer_resnet.py --grpc_port 9178 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --batchsize 1 --iterations 1000 --input_name image --output_name output --model_name resnet --transpose_input False
 	```
 
 Where:
 
 | Argument Used     | Description |
 | :---        |    :----   |
-| `images_numpy_path tests/performance/imgs.npy`  | The path to a numpy array. `imgs.npy` is the numpy array with a batch of input data.|
-| `labels_numpy_path tests/performance/labels.npy`| Includes a numpy array  named labels.npy. This array has image classification results       |
-| `iteration 1000` | Run the data 1000 times |
+| `images_numpy_path client/python/imgs.npy`  | The path to a numpy array. `imgs.npy` is the numpy array with a batch of input data.|
+| `labels_numpy_path client/python/labels.npy`| Includes a numpy array  named labels.npy. This array has image classification results       |
+| `iterations 1000` | Run the data 1000 times |
 | `batchsize 1` | Batch size to be used in the inference request |
-| `report_every 10` | Number of iterations followed by results summary report|
 | `input_name image` | Name of the deployed model input called "image" |
 | `output_name output` | Name of the deployed model output called "output"|
 
