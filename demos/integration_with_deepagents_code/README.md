@@ -427,5 +427,3 @@ With `/offload` command the agent can reduce its context by dropping messages th
 ```text
 /offload
 ```
-
----
