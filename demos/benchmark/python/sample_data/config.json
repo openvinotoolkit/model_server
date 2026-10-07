@@ -1,17 +1,6 @@
 {
-    "model_config_list": [
-        {
-            "config": {
-                "name": "resnet50",
-                "base_path": "/workspace/resnet50.xml",
-                "mean": "[123.675,116.28,103.53]",
-                "scale": "[58.395,57.12,57.375]",
-                "layout": "NHWC:NCHW",
-                "plugin_config": {"PERFORMANCE_HINT":"LATENCY"}
-            }
-        }
-    ],
+    "model_config_list": [],
     "mediapipe_config_list": [
-        {"name": "resnet_mediapipe", "graph_path": "/workspace/sample_data/graph.pbtxt"}
+        {"name": "resnet_mediapipe", "base_path": "/workspace/sample_data"}
     ]
 }

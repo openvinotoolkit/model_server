@@ -368,10 +368,10 @@ NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a 
 ```
 ## MediaPipe benchmarking
 
-Reuse the resnet50 model downloaded earlier in the [OVMS Deployment](#ovms-deployment) step (`${HOME}/models`), then start OVMS container with `config.json` including mediapipe servable. OVMS should be built with MediaPipe enabled.
+Reuse the resnet50 model downloaded earlier in the [OVMS Deployment](#ovms-deployment) step (`${HOME}/models`), then start OVMS container with `config.json` including mediapipe servable. The `sample_data` directory contains `config.json` listing the MediaPipe graph, `graph.pbtxt` and `subconfig.json` defining the `resnet50` model used by the graph. The model directory is mounted as version `1` of the model. OVMS should be built with MediaPipe enabled.
 ```bash
 docker run -u $(id -u) -p 9000:9000 -p 8000:8000 -d \
-  -v ${HOME}/models:/workspace \
+  -v ${HOME}/models:/workspace/resnet50/1 \
   -v ${PWD}/sample_data:/workspace/sample_data \
   openvino/model_server --port 9000 --rest_port 8000 --config_path /workspace/sample_data/config.json
 ```
@@ -381,9 +381,9 @@ python -c 'import numpy as np ; \
 arr = np.ones((1,3,224,224),dtype=np.float32); \
 np.save("sample_data/resnet50.npy", arr)'
 ```
-Having MediaPipe graph file and servable specified in config.json, we call it by its name instead of the model name: `-m <mediapipe-servable-name>`. It is necessary to set `--api KFS` since the Mediapipe graphs are exposed only via KServe API.
+Having MediaPipe graph file and servable specified in config.json, we call it by its name instead of the model name: `-m <mediapipe-servable-name>`. It is necessary to set `--api GRPC` since the Mediapipe graphs are exposed only via KServe API.
 ```bash
-docker run -v ${PWD}/sample_data:/workspace/sample_data --network host benchmark_client -a localhost -r 8000 -m resnet_mediapipe -p 9000 -n 8 --api KFS -d /workspace/sample_data/resnet50.npy --report_warmup --print_all
+docker run -v ${PWD}/sample_data:/workspace/sample_data --network host benchmark_client -a localhost -r 8000 -m resnet_mediapipe -p 9000 -n 8 --api GRPC -d /workspace/sample_data/resnet50.npy --report_warmup --print_all
 ```
 
 Many other client options together with benchmarking examples are presented in
