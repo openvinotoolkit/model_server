@@ -30,6 +30,8 @@
 #include <vector>
 #include <ctime>
 
+#include "absl/strings/match.h"
+
 #ifndef _WIN32
 #include <curl/curl.h>
 #endif
@@ -37,6 +39,7 @@
 #include "src/port/rapidjson_writer.hpp"
 
 #include "config.hpp"
+#include "audio/audio_utils.hpp"
 #include "servable_definition_unload_guard.hpp"
 #include "execution_context.hpp"
 #include "filesystem/filesystem.hpp"
@@ -67,6 +70,28 @@
 #include "http_payload.hpp"
 #include "http_frontend/http_client_connection.hpp"
 #endif
+
+namespace {
+
+bool isTextToSpeechEndpoint(const std::string_view uri) {
+    return absl::StartsWith(uri, "/v3/audio/speech") || absl::StartsWith(uri, "/v1/audio/speech");
+}
+
+std::optional<ovms::audio_utils::TextToSpeechResponseFormat> getRequestedTextToSpeechResponseFormat(const ovms::HttpPayload& request) {
+    if (!request.parsedJson || request.parsedJson->HasParseError() || !request.parsedJson->IsObject()) {
+        return std::nullopt;
+    }
+    auto responseFormatIt = request.parsedJson->FindMember("response_format");
+    if (responseFormatIt == request.parsedJson->MemberEnd()) {
+        return ovms::audio_utils::TextToSpeechResponseFormat::WAV;
+    }
+    if (!responseFormatIt->value.IsString()) {
+        return std::nullopt;
+    }
+    return ovms::audio_utils::tryParseTextToSpeechResponseFormat(responseFormatIt->value.GetString());
+}
+
+}  // namespace
 
 #include "src/servable_management/servable_group_manager.hpp"
 #include "kfs_frontend/kfs_request_utils.hpp"
@@ -192,7 +217,7 @@ void HttpRestApiHandler::registerAll() {
     });
     registerHandler(V3, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         OVMS_PROFILE_FUNCTION();
-        return processOpenAI(uri, request_components, response, request_body, std::move(serverReaderWriter), std::move(multiPartParser));
+        return processOpenAI(uri, request_components, response, request_body, response_components, std::move(serverReaderWriter), std::move(multiPartParser));
     });
     registerHandler(Metrics, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processMetrics(request_components, response_components, response, request_body);
@@ -668,7 +693,7 @@ struct V3StreamCallbackResourceGuard {
 };
 #endif
 
-Status HttpRestApiHandler::processOpenAI(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) {
+Status HttpRestApiHandler::processOpenAI(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) {
 #if (MEDIAPIPE_DISABLE == 0)
     OVMS_PROFILE_FUNCTION();
 
@@ -697,7 +722,15 @@ Status HttpRestApiHandler::processOpenAI(const std::string_view uri, const HttpR
             return status;
         }
         ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Unary};
-        return executor->infer(request.get(), &response, executionContext);
+        status = executor->infer(request.get(), &response, executionContext);
+        if (status.ok() && isTextToSpeechEndpoint(uri)) {
+            auto responseFormat = getRequestedTextToSpeechResponseFormat(*request);
+            if (responseFormat.has_value()) {
+                response_components.contentType = ContentType::CUSTOM;
+                response_components.customContentType = responseFormat.value() == ovms::audio_utils::TextToSpeechResponseFormat::PCM ? "application/octet-stream" : "audio/wav";
+            }
+        }
+        return status;
     } else {
         serverReaderWriter->OverwriteResponseHeader("Content-Type", "text/event-stream");
         serverReaderWriter->OverwriteResponseHeader("Cache-Control", "no-cache");
@@ -754,6 +787,11 @@ Status HttpRestApiHandler::processOpenAI(const std::string_view uri, const HttpR
     SPDLOG_DEBUG("Mediapipe support was disabled during build process...");
     return StatusCode::NOT_IMPLEMENTED;
 #endif
+}
+
+Status HttpRestApiHandler::processOpenAI(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) {
+    HttpResponseComponents response_components;
+    return processOpenAI(uri, request_components, response, request_body, response_components, std::move(serverReaderWriter), std::move(multiPartParser));
 }
 
 Status HttpRestApiHandler::processMetrics(const HttpRequestComponents& request_components, HttpResponseComponents& response_components, std::string& response, const std::string& request_body) {
