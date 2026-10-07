@@ -18,7 +18,6 @@
 
 #include <array>
 #include <climits>
-#include <cstdlib>
 #include <filesystem>
 #include <mutex>
 #include <string>
@@ -35,29 +34,15 @@ namespace ovms {
 namespace {
 
 std::vector<std::string> getLlmPluginCandidates() {
-    std::vector<std::string> candidates{
-        "libovms_llm_calculators.so",
-        "/ovms/lib/libovms_llm_calculators.so",
-        "./libovms_llm_calculators.so",
-        "src/llm/libovms_llm_calculators.so",
-        "./src/llm/libovms_llm_calculators.so",
-        "bazel-bin/src/llm/libovms_llm_calculators.so",
-        "./bazel-bin/src/llm/libovms_llm_calculators.so"};
-
-    if (const char* testSrcDir = std::getenv("TEST_SRCDIR"); testSrcDir != nullptr) {
-        candidates.emplace_back(std::string(testSrcDir) + "/_main/src/llm/libovms_llm_calculators.so");
-        candidates.emplace_back(std::string(testSrcDir) + "/ovms/src/llm/libovms_llm_calculators.so");
-    }
+    std::vector<std::string> candidates;
 
     std::array<char, PATH_MAX> exePath{};
     ssize_t exePathLength = readlink("/proc/self/exe", exePath.data(), exePath.size() - 1);
     if (exePathLength > 0) {
         exePath[exePathLength] = '\0';
         std::filesystem::path exeDir = std::filesystem::path(exePath.data()).parent_path();
-        candidates.insert(candidates.begin(), (exeDir.parent_path() / "lib/libovms_llm_calculators.so").string());
-        candidates.emplace_back((exeDir / "libovms_llm_calculators.so").string());
-        candidates.emplace_back((exeDir / "src/llm/libovms_llm_calculators.so").string());
-        candidates.emplace_back((exeDir / "llm/libovms_llm_calculators.so").string());
+        candidates.emplace_back((exeDir / "lib" / "libovms_llm_calculators.so").string());
+        candidates.emplace_back((exeDir.parent_path() / "lib" / "libovms_llm_calculators.so").string());
     }
     return candidates;
 }

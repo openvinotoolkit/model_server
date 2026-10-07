@@ -58,6 +58,12 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 
+filegroup(
+    name = "llm_calculators_plugin_src",
+    srcs = ["llm_calculators_plugin.cpp"],
+    visibility = ["//visibility:public"],
+)
+
 ovms_cc_library(
     name = "llm_calculators_plugin_loader",
     hdrs = ["llm_calculators_plugin_loader.hpp"],
@@ -65,24 +71,6 @@ ovms_cc_library(
     deps = [
         "//src:libovmslogging",
     ],
-    visibility = ["//visibility:public"],
-)
-
-cc_binary(
-    name = "libovms_llm_calculators.so",
-    srcs = ["llm_calculators_plugin.cpp"],
-    deps = [
-        ":llm_calculators_plugin_api",
-    ],
-    linkopts = COMMON_STATIC_LIBS_LINKOPTS + select({
-        "//src:windows": ["/FORCE:UNRESOLVED"],
-        "//conditions:default": [
-            "-Wl,--allow-shlib-undefined",
-            "-Wl,-rpath,/ovms/lib:/opt/intel/openvino/runtime/lib/intel64",
-        ],
-    }),
-    linkshared = True,
-    local_defines = COMMON_LOCAL_DEFINES,
     visibility = ["//visibility:public"],
 )
 
@@ -102,7 +90,7 @@ ovms_cc_library(
     deps = [":llmcalculator_cc_proto"],
     additional_copts = select({
         "//conditions:default": ["-fvisibility=default"],
-        "//src:windows": [],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
     }),
     alwayslink = 1,
     visibility = ["//visibility:public"],

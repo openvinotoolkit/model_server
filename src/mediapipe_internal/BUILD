@@ -180,7 +180,6 @@ ovms_cc_library(
         ":graphqueue",
         ":mediapipe_utils",
         ":side_packet_builder",
-    ] + [
         "//src/llm:execution_context_utils_runtime",
         "//src:model_metric_reporter",
         "//src:libovms_execution_context",
@@ -229,7 +228,6 @@ ovms_cc_library(
         "//src:libovmstimer",
         "//src:libovms_time_utils",
         "//src:libovmsprofiler",
-    ] + [
         "//src/llm:execution_context_utils_runtime",
         "//src/utils:env_guard",
     ],

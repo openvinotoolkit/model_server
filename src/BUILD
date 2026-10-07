@@ -1929,7 +1929,7 @@ cc_binary(
         "//:disable_python": [],
     }) + select({
         "//:not_disable_mediapipe": [
-            "//src/llm:libovms_llm_calculators.so",
+            "//src/lib:ovms_llm_calculators",
         ],
         "//:disable_mediapipe": [],
     }),
@@ -2147,7 +2147,7 @@ cc_test(
         "test/scalar/1/saved_model.bin",
     ] + glob(["test/models_config_json/**"]) + select({
         "//:not_disable_mediapipe": [
-            "//src/llm:libovms_llm_calculators.so",
+            "//src/lib:ovms_llm_calculators",
         ],
         "//:disable_mediapipe": [],
     }) + select({

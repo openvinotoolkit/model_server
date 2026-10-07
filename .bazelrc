@@ -80,6 +80,12 @@ build --incompatible_strict_action_env
 build --cxxopt=-DOVMS_DUMP_TO_FILE=0
 build --remote_upload_local_results=true
 
+# Bzlmod must stay disabled: with it enabled Bazel resolves an extra
+# "protobuf" repo from the registry alongside the WORKSPACE-declared
+# "com_google_protobuf", causing ODR conflicts (e.g. duplicate/mismatched
+# FieldMask symbols in field_mask_util.cc).
+build --noenable_bzlmod
+
 build:avx_win --copt=/arch=AVX
 build:avx2_win --copt=/arch=AVX2
 
@@ -109,12 +115,6 @@ build:linux --cxxopt=-Werror=format-security
 # TODO: Add equivalent windows flag
 build:linux --force_pic
 
-# Bzlmod must stay disabled: with it enabled Bazel resolves an extra
-# "protobuf" repo from the registry alongside the WORKSPACE-declared
-# "com_google_protobuf", causing ODR conflicts (e.g. duplicate/mismatched
-# FieldMask symbols in field_mask_util.cc).
-build:linux --noenable_bzlmod
-
 build:mp_on_py_on --config=linux
 build:mp_on_py_on --define=MEDIAPIPE_DISABLE=0
 build:mp_on_py_on --define=PYTHON_DISABLE=0
@@ -143,8 +143,6 @@ build:v2 --define=tf_api_version=2 --action_env=TF2_BEHAVIOR=1
 
 build:windows --host_cxxopt=/std:c++20
 build:windows --cxxopt=/std:c++20
-# TODO Windows: may impact python nodes execution
-build:windows --noenable_bzlmod
 
 # TF bazelrc settings
 # TensorFlow Bazel configuration file.
@@ -177,7 +175,6 @@ build:windows --experimental_link_static_libraries_once=false
 # Prevent regressions on those two incompatible changes
 # TODO: remove those flags when they are flipped in the default Bazel version TF uses.
 build:windows --incompatible_enforce_config_setting_visibility
-build:windows --noenable_bzlmod
 
 # Config to use a mostly-static build and disable modular op registration
 # support (this will revert to loading TensorFlow with RTLD_GLOBAL in Python).
