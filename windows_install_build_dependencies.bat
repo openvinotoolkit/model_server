@@ -98,7 +98,7 @@ IF /I EXIST %bash_path% (
         if !errorlevel! neq 0 exit /b !errorlevel!
     )
     IF /I NOT EXIST %msys_install% (
-        curl -k -f -L -o %msys_install% %msys_url%
+        curl -f -L -o %msys_install% %msys_url%
         if !errorlevel! neq 0 exit /b !errorlevel!
     )
 
@@ -184,7 +184,7 @@ IF /I EXIST %genai_zip% (
     if %expunge% EQU 1 (
         del /S /Q %genai_zip%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        curl -k -f -L -o %genai_zip% %GENAI_PACKAGE_URL%
+        curl -f -L -o %genai_zip% %GENAI_PACKAGE_URL%
         if !errorlevel! neq 0 exit /b !errorlevel!
     ) else ( echo [INFO] file exists %genai_zip% )
     
@@ -364,7 +364,7 @@ IF /I EXIST %bazel_path% (
     )
 )
 IF /I NOT EXIST %bazel_path% (
-    curl -k -f -L -o %bazel_path% %bazel_url%
+    curl -f -L -o %bazel_path% %bazel_url%
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 echo [INFO] Bazel installed: %bazel_file%
@@ -500,7 +500,7 @@ IF /I EXIST %curl_zip% (
     if %expunge% EQU 1 (
         del /S /Q %curl_zip%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        curl -k -f -L -o %curl_zip% %curl_http%%curl_ver%
+        curl -f -L -o %curl_zip% %curl_http%%curl_ver%
         if !errorlevel! neq 0 exit /b !errorlevel!
     ) else ( echo [INFO] file exists %curl_zip% )
     
