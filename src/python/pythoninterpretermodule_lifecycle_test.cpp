@@ -139,10 +139,8 @@ public:
 
 }  // namespace
 
-// This standalone binary skips PythonEnvironment and exercises exactly one interpreter cycle per process.
-// Interpreter initialization, GIL release/reacquire, and finalization must remain on the lifecycle thread.
 TEST(PythonInterpreterModuleIsolatedLifecycle, ConcurrentStartAndShutdownStayOnLifecycleThread) {
-    ASSERT_FALSE(Py_IsInitialized());
+    ASSERT_FALSE(Py_IsInitialized()) << "Test is supposed to run without external Python Environment explicitly starting the Interpreter;
     ScopedPythonPath pythonPath;
     ASSERT_TRUE(pythonPath.addBindingRunfile()) << "Could not locate the pyovms runfile";
 
