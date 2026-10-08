@@ -22,6 +22,7 @@
 
 #include "image_utils.hpp"
 #include "../../logging.hpp"
+#include "../../predict_request_validation_utils_impl.hpp"
 
 namespace ovms {
 
@@ -36,10 +37,16 @@ absl::StatusOr<ov::Tensor> loadVideoFrames(const std::vector<std::string>& frame
     }
     const size_t numFrames = frameSources.size();
 
+    // Per-request decoded-pixel budget shared across all frames: fetchAndDecodeImage
+    // rejects a frame (before allocating its pixel buffer) once the running total
+    // would exceed the configured limit, bounding the whole video's decoded size.
+    size_t totalAllocatedPixels = 0;
+    const size_t maxAllowedImagePixels = request_validation_utils::getMaxImageDecodePixels();
+
     // Decode the first frame to determine the shared frame shape. All frames
     // must have the same [1, H, W, C], so this shape (times numFrames) gives the
     // exact size of the stacked video tensor up front.
-    auto firstResult = loadImage(frameSources[0], allowedLocalMediaPath, allowedMediaDomains);
+    auto firstResult = fetchAndDecodeImage(frameSources[0], allowedLocalMediaPath, allowedMediaDomains, totalAllocatedPixels, maxAllowedImagePixels);
     if (!firstResult.ok()) {
         return firstResult.status();
     }
@@ -49,14 +56,6 @@ absl::StatusOr<ov::Tensor> loadVideoFrames(const std::vector<std::string>& frame
     const size_t width = frameShape[2];
     const size_t channels = frameShape[3];
     const size_t frameBytes = height * width * channels * firstFrame.get_element_type().size();
-
-    // Predictive byte-budget check: reject before allocating the stacked tensor
-    // if the total decoded size would exceed the budget. This bounds memory even
-    // when the frame count is within MAX_VIDEO_FRAMES but the resolution is large.
-    const int64_t totalBytes = static_cast<int64_t>(frameBytes) * static_cast<int64_t>(numFrames);
-    if (totalBytes > MAX_VIDEO_DECODED_BYTES) {
-        return absl::InvalidArgumentError("Total decoded video size exceeds the allowed maximum of " + std::to_string(MAX_VIDEO_DECODED_BYTES) + " bytes");
-    }
 
     // Allocate the stacked tensor once and copy each frame into it incrementally,
     // releasing the per-frame tensor right after. This keeps the peak memory at
@@ -68,7 +67,7 @@ absl::StatusOr<ov::Tensor> loadVideoFrames(const std::vector<std::string>& frame
     firstFrame = ov::Tensor();  // release the first frame
 
     for (size_t i = 1; i < numFrames; i++) {
-        auto frameResult = loadImage(frameSources[i], allowedLocalMediaPath, allowedMediaDomains);
+        auto frameResult = fetchAndDecodeImage(frameSources[i], allowedLocalMediaPath, allowedMediaDomains, totalAllocatedPixels, maxAllowedImagePixels);
         if (!frameResult.ok()) {
             return frameResult.status();
         }

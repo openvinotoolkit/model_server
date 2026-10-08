@@ -2507,7 +2507,7 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--rest_bind_address", "2.2.2.2",
         "--grpc_channel_arguments", "grpc_channel_args",
         "--file_system_poll_wait_seconds", "2",
-        "--custom_node_resources_cleaner_interval_seconds", "8",
+        "--memory_trimming_interval_seconds", "8",
         "--allow_credentials",
         "--allowed_headers", "Content-Type",
         "--allowed_methods", "GET,POST",
@@ -2540,7 +2540,7 @@ TEST(OvmsConfigTest, positiveMulti) {
     EXPECT_EQ(config.restBindAddress(), "2.2.2.2");
     EXPECT_EQ(config.grpcChannelArguments(), "grpc_channel_args");
     EXPECT_EQ(config.filesystemPollWaitMilliseconds(), 2000);
-    EXPECT_EQ(config.resourcesCleanerPollWaitSeconds(), 8);
+    EXPECT_EQ(config.memoryTrimmingIntervalSeconds(), 8);
     EXPECT_TRUE(config.disableInputCountValidation());
 #ifdef _WIN32
     EXPECT_EQ(config.cpuExtensionLibraryPath(), cpu_extension_lib_path);
@@ -2630,7 +2630,7 @@ TEST(OvmsConfigTest, positiveSingle) {
         "grpc_channel_args",
         "--file_system_poll_wait_seconds",
         "2",
-        "--custom_node_resources_cleaner_interval_seconds",
+        "--memory_trimming_interval_seconds",
         "8",
 #ifdef _WIN32
         "--cpu_extension",
@@ -2690,7 +2690,7 @@ TEST(OvmsConfigTest, positiveSingle) {
     EXPECT_EQ(config.restBindAddress(), "2.2.2.2");
     EXPECT_EQ(config.grpcChannelArguments(), "grpc_channel_args");
     EXPECT_EQ(config.filesystemPollWaitMilliseconds(), 2000);
-    EXPECT_EQ(config.resourcesCleanerPollWaitSeconds(), 8);
+    EXPECT_EQ(config.memoryTrimmingIntervalSeconds(), 8);
 #ifdef _WIN32
     EXPECT_EQ(config.cpuExtensionLibraryPath(), cpu_extension_lib_path);
     EXPECT_EQ(config.grpcWorkers(), 1);
@@ -3183,6 +3183,22 @@ TEST(OvmsGraphCliParserTest, embeddingsMaxLengthNonZeroIsAccepted) {
     auto& embeddingsGraphSettings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
     ASSERT_TRUE(embeddingsGraphSettings.maxLength.has_value());
     ASSERT_EQ(embeddingsGraphSettings.maxLength.value(), 1u);
+}
+
+TEST(OvmsGraphCliParserTest, embeddingsMaxBatchSizeZeroThrowsInvalidArgument) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::EmbeddingsGraphCLIParser parser;
+    parser.parse({"--max_batch_size", "0"});
+    EXPECT_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"), std::invalid_argument);
+}
+
+TEST(OvmsGraphCliParserTest, embeddingsMaxBatchSizeNonZeroIsAccepted) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::EmbeddingsGraphCLIParser parser;
+    parser.parse({"--max_batch_size", "32"});
+    parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model");
+    const auto& settings = std::get<ovms::EmbeddingsGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(settings.maxBatchSize, 32u);
 }
 
 TEST(OvmsGraphCliParserTest, validParserNamesAreAccepted) {

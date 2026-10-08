@@ -29,6 +29,7 @@ using PythonLibraryHandle = void*;
 using PythonLibraryHandle = HMODULE;
 #endif
 
+#include "../config.hpp"
 #include "../logging.hpp"
 #include "../module.hpp"
 #include "../status.hpp"
@@ -39,14 +40,25 @@ namespace ovms {
 namespace {
 using CreatePythonInterpreterModuleFn = Module* (*)();
 using ValidatePythonEnvironmentFn = bool (*)(const char** errorMessage);
+using ConfigureRuntimeLoggingFn = void (*)(const char* logLevel, const char* logPath);
 
 PythonLibraryHandle pythonRuntimeHandle = nullptr;
 CreatePythonInterpreterModuleFn createPythonInterpreterModuleFn = nullptr;
 ValidatePythonEnvironmentFn validatePythonEnvironmentFn = nullptr;
+ConfigureRuntimeLoggingFn configureRuntimeLoggingFn = nullptr;
+
+void applyConfiguredLoggingToRuntimeLibrary() {
+    if (configureRuntimeLoggingFn == nullptr) {
+        return;
+    }
+    const auto& config = Config::instance();
+    configureRuntimeLoggingFn(config.logLevel().c_str(), config.logPath().c_str());
+}
 
 void unloadPythonRuntimeLibrary() {
     createPythonInterpreterModuleFn = nullptr;
     validatePythonEnvironmentFn = nullptr;
+    configureRuntimeLoggingFn = nullptr;
     if (pythonRuntimeHandle == nullptr) {
         return;
     }
@@ -116,7 +128,9 @@ Module* ensurePythonRuntimeLoaded() {
 #ifdef __linux__
         createPythonInterpreterModuleFn = reinterpret_cast<CreatePythonInterpreterModuleFn>(dlsym(RTLD_DEFAULT, "OVMS_createPythonInterpreterModule"));
         validatePythonEnvironmentFn = reinterpret_cast<ValidatePythonEnvironmentFn>(dlsym(RTLD_DEFAULT, "OVMS_validatePythonEnvironment"));
+        configureRuntimeLoggingFn = reinterpret_cast<ConfigureRuntimeLoggingFn>(dlsym(RTLD_DEFAULT, "OVMS_ConfigureRuntimeLogging"));
         if (createPythonInterpreterModuleFn != nullptr && validatePythonEnvironmentFn != nullptr) {
+            applyConfiguredLoggingToRuntimeLibrary();
             const char* pythonRuntimeValidationError = nullptr;
             if (!validatePythonEnvironmentFn(&pythonRuntimeValidationError)) {
                 SPDLOG_WARN("In-process python runtime environment validation failed. Details: {}",
@@ -133,8 +147,10 @@ Module* ensurePythonRuntimeLoaded() {
         if (currentProcess != nullptr) {
             createPythonInterpreterModuleFn = reinterpret_cast<CreatePythonInterpreterModuleFn>(GetProcAddress(currentProcess, "OVMS_createPythonInterpreterModule"));
             validatePythonEnvironmentFn = reinterpret_cast<ValidatePythonEnvironmentFn>(GetProcAddress(currentProcess, "OVMS_validatePythonEnvironment"));
+            configureRuntimeLoggingFn = reinterpret_cast<ConfigureRuntimeLoggingFn>(GetProcAddress(currentProcess, "OVMS_ConfigureRuntimeLogging"));
         }
         if (createPythonInterpreterModuleFn != nullptr && validatePythonEnvironmentFn != nullptr) {
+            applyConfiguredLoggingToRuntimeLibrary();
             const char* pythonRuntimeValidationError = nullptr;
             if (!validatePythonEnvironmentFn(&pythonRuntimeValidationError)) {
                 SPDLOG_WARN("In-process python runtime environment validation failed. Details: {}",
@@ -184,6 +200,7 @@ Module* ensurePythonRuntimeLoaded() {
         pythonRuntimeHandle = nullptr;
         return nullptr;
     }
+    configureRuntimeLoggingFn = reinterpret_cast<ConfigureRuntimeLoggingFn>(dlsym(pythonRuntimeHandle, "OVMS_ConfigureRuntimeLogging"));
 #elif _WIN32
     std::vector<std::string> candidates{
         "libovmspython.dll",
@@ -249,7 +266,10 @@ Module* ensurePythonRuntimeLoaded() {
         pythonRuntimeHandle = nullptr;
         return nullptr;
     }
+    configureRuntimeLoggingFn = reinterpret_cast<ConfigureRuntimeLoggingFn>(GetProcAddress(pythonRuntimeHandle, "OVMS_ConfigureRuntimeLogging"));
 #endif
+
+    applyConfiguredLoggingToRuntimeLibrary();
 
     const char* pythonRuntimeValidationError = nullptr;
     if (!validatePythonEnvironmentFn(&pythonRuntimeValidationError)) {

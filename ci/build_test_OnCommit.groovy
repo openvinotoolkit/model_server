@@ -230,21 +230,20 @@ pipeline {
           }
         }
         stage('Cleanup node') {
-          options {
-              timeout(time: 30, unit: 'MINUTES')
-          }
           agent {
             label 'win_ovms'
           }
           steps {
             script {
-              withGithubStageStatus('jenkins/oncommit/cleanup-node', 'Cleanup node') {
-                agent_name_windows = env.NODE_NAME
-                def windows = load 'ci/loadWin.groovy'
-                if (windows != null) {
-                    windows.cleanup_directories()
-                } else {
-                    error "Cannot load ci/loadWin.groovy file."
+              timeout(time: 30, unit: 'MINUTES') {
+                withGithubStageStatus('jenkins/oncommit/cleanup-node', 'Cleanup node') {
+                  agent_name_windows = env.NODE_NAME
+                  def windows = load 'ci/loadWin.groovy'
+                  if (windows != null) {
+                      windows.cleanup_directories()
+                  } else {
+                      error "Cannot load ci/loadWin.groovy file."
+                  }
                 }
               }
             }
@@ -365,7 +364,7 @@ pipeline {
                       def pwd = sh(returnStdout:true, script: "pwd").strip()
                       def cmd_venv = "make create-venv"
                       def cmd_links = "rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional"
-                      def cmd_export = "TT_OVMS_C_REPO_PATH=../ TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10 TT_MINIO_IMAGE_NAME=quay.io/minio/minio:latest"
+                      def cmd_export = "TT_OVMS_C_REPO_PATH=../ TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10"
                       def cmd_run_tests = "make tests"
                       def cmd = ""
                       if (image_build_needed == "true") {
