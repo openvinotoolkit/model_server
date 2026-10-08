@@ -120,6 +120,7 @@ export TAVILY_API_KEY=not_used
 export DEEPAGENTS_CODE_PRICES_AUTO_UPDATE=0
 export DEMO_DIR="$PWD"
 dcode --default-model openai:OpenVINO/Qwen3.8-27B-int4-ov
+git init
 ```
 :::
 :::{tab-item} Windows
@@ -131,6 +132,7 @@ set TAVILY_API_KEY=not_used
 set DEEPAGENTS_CODE_PRICES_AUTO_UPDATE=0
 set DEMO_DIR=%CD%
 dcode --default-model openai:OpenVINO/Qwen3.8-27B-int4-ov
+git init
 ```
 :::
 ::::
@@ -142,12 +144,6 @@ dcode --default-model openai:OpenVINO/Qwen3.8-27B-int4-ov
 - **`DEMO_DIR`**: expanded inside [`.deepagents/.mcp.json`](https://github.com/openvinotoolkit/model_server/blob/main/demos/integration_with_deepagents_code/.deepagents/.mcp.json) so the MCP server script is located reliably.
 
 dcode uses git to track file state and pins its project root (and its skill / MCP / subagent discovery) at the closest `.git` directory. Initialize a repository *inside the demo folder* so dcode scopes to it, even when the folder itself lives inside another checkout (like the `model_server` clone):
-
-```console
-git init
-```
-
-The check keeps re-runs idempotent while still creating a fresh nested repo the first time.
 
 ---
 
