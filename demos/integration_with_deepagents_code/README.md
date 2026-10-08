@@ -147,7 +147,7 @@ dcode --default-model openai:OpenVINO/Qwen3.8-27B-int4-ov
 
 dcode uses git to track file state and pins its project root (and its skill / MCP / subagent discovery) at the closest `.git` directory. Initialize a repository *inside the demo folder* so dcode scopes to it, even when the folder itself lives inside another checkout (like the `model_server` clone):
 
-```console
+```text
 git init
 ```
 
