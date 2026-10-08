@@ -2512,7 +2512,6 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--allowed_headers", "Content-Type",
         "--allowed_methods", "GET,POST",
         "--allowed_origins", "example.com,example.org",
-        "--disable_input_count_validation",
 #ifdef _WIN32
         "--grpc_workers", "1",
         "--cpu_extension", "tmp_cpu_extension_library_dir",
@@ -2529,7 +2528,7 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--grpc_memory_quota", "1000000",
         "--config_path", "/config.json"};
 
-    int arg_count = 45;
+    int arg_count = 44;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -2541,7 +2540,6 @@ TEST(OvmsConfigTest, positiveMulti) {
     EXPECT_EQ(config.grpcChannelArguments(), "grpc_channel_args");
     EXPECT_EQ(config.filesystemPollWaitMilliseconds(), 2000);
     EXPECT_EQ(config.memoryTrimmingIntervalSeconds(), 8);
-    EXPECT_TRUE(config.disableInputCountValidation());
 #ifdef _WIN32
     EXPECT_EQ(config.cpuExtensionLibraryPath(), cpu_extension_lib_path);
     EXPECT_EQ(config.grpcWorkers(), 1);
@@ -2667,6 +2665,7 @@ TEST(OvmsConfigTest, positiveSingle) {
         "BGR:RGB",
         "--precision",
         "FP16:INT16",
+        "--disable_input_count_validation",
         "--model_version_policy",
         "setting",
         "--nireq",
@@ -2679,7 +2678,7 @@ TEST(OvmsConfigTest, positiveSingle) {
         "--metrics_list",
         "ovms_streams,ovms_other",
     };
-    int arg_count = 56;
+    int arg_count = 57;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -2710,6 +2709,7 @@ TEST(OvmsConfigTest, positiveSingle) {
     EXPECT_EQ(config.scales(), "[58.395,57.12,57.375]");
     EXPECT_EQ(config.precision(), "FP16:INT16");
     EXPECT_EQ(config.colorFormat(), "BGR:RGB");
+    EXPECT_TRUE(config.disableInputCountValidation());
     EXPECT_EQ(config.modelVersionPolicy(), "setting");
     EXPECT_EQ(config.nireq(), 2);
     EXPECT_EQ(config.targetDevice(), "GPU");

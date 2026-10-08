@@ -329,9 +329,9 @@ const std::string* getRawInputContents(const KFSRequest& request, size_t bufferI
     }
 
 template <>
-Status validate(const KFSRequest& request, const tensor_map_t& inputsInfo, const tensor_map_t& outputsInfo, const std::string& servableName, const model_version_t servableVersion, const std::set<std::string>& optionalAllowedInputNames, const Mode batchingMode, const shapes_info_map_t& shapeInfo) {
+Status validate(const KFSRequest& request, const tensor_map_t& inputsInfo, const tensor_map_t& outputsInfo, const std::set<std::string>& optionalAllowedInputNames, const ModelConfig& modelConfig) {
     OVMS_PROFILE_FUNCTION();
-    return RequestValidator<KFSRequest, KFSTensorInputProto, ValidationChoice::INPUT, KFSInputTensorIteratorType, KFSShapeType>(request, inputsInfo, outputsInfo, servableName, servableVersion, optionalAllowedInputNames, batchingMode, shapeInfo).validate();
+    return RequestValidator<KFSRequest, KFSTensorInputProto, ValidationChoice::INPUT, KFSInputTensorIteratorType, KFSShapeType>(request, inputsInfo, outputsInfo, optionalAllowedInputNames, modelConfig).validate();
 }
 }  // namespace request_validation_utils
 }  // namespace ovms

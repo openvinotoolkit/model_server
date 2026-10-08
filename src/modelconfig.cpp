@@ -133,6 +133,10 @@ bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
     if (this->isAllowCacheSetToTrue() != rhs.isAllowCacheSetToTrue()) {
         return true;
     }
+    if (this->isInputCountValidationDisabled() != rhs.isInputCountValidationDisabled()) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to disable_input_count_validation mismatch", this->name);
+        return true;
+    }
     return false;
 }
 
@@ -722,6 +726,11 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
     if (v.HasMember("allow_cache")) {
         setAllowCache(v["allow_cache"].GetBool());
         SPDLOG_DEBUG("allow_cache: {}", v["allow_cache"].GetBool());
+    }
+
+    if (v.HasMember("disable_input_count_validation")) {
+        setDisableInputCountValidation(v["disable_input_count_validation"].GetBool());
+        SPDLOG_DEBUG("disable_input_count_validation: {}", v["disable_input_count_validation"].GetBool());
     }
 
     // Group name for idle model management
