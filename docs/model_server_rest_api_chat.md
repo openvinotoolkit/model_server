@@ -228,7 +228,7 @@ curl http://localhost/v3/chat/completions \
 }'
 ```
 
-**Note**: Unlike `image_url.url` which is a single string, `video_url.url` is an **array of strings** (one per frame). All frames of a single video must share the same height, width and channel count. The same `--allowed_media_domains` / `--allowed_local_media_path` restrictions apply to each frame reference. Multiple `video_url` parts, and mixing `image_url` and `video_url` in one message, are supported.
+**Note**: Unlike `image_url.url`, which is a single string, `video_url.url` is an **array of 1 to 1024 strings** (one per frame). All frames of a single video must share the same height, width and channel count. Decoded frame pixels count toward the request-wide `--max_image_decode_pixels` budget shared by all `image_url` and `video_url` parts. The same `--allowed_media_domains` / `--allowed_local_media_path` restrictions apply to each frame reference. Multiple `video_url` parts, and mixing `image_url` and `video_url` in one message, are supported.
 
 ### Request
 
