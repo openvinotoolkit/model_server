@@ -29,6 +29,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "io_processing/delta.hpp"
+#include "openvino/genai/perf_metrics.hpp"
 #include "openvino/genai/text_streamer.hpp"
 #include "mediapipe/framework/calculator_graph.h"
 #pragma GCC diagnostic pop
@@ -148,6 +149,7 @@ struct GenAiServableExecutionContext {
     InputRequest inputRequest;
     // Required for generating output and handle request on the calculator side
     std::vector<ov::genai::GenerationOutput> generationOutputs;
+    std::unique_ptr<ov::genai::PerfMetrics> perfMetrics;
     std::string response;
     std::shared_ptr<ov::genai::TextStreamer> textStreamer;
     bool sendLoopbackSignal = false;
