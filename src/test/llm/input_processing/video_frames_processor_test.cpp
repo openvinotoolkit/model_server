@@ -273,6 +273,36 @@ TEST(VideoFramesProcessorTest, PerRequestPixelBudgetAcceptsFramesWithinTotal) {
     EXPECT_EQ(req.inputVideos[0].get_shape()[0], 2u);
 }
 
+TEST(VideoFramesProcessorTest, PerRequestPixelBudgetRejectsManyFramesBeforeAllocation) {
+    // Aggregate budget check: with many frame references the full
+    // {numFrames, H, W, C} tensor must not be allocated when the combined frame
+    // pixels exceed the budget. Here the first 1x1 frame consumes 1 pixel of the
+    // budget of 4, but the remaining frames (7 pixels) cannot fit the remaining 3,
+    // so the request is rejected before the stacked tensor is allocated rather
+    // than after a potentially multi-GB allocation.
+    ScopedImageDecodeBudget budgetGuard(4, /*allowUnestimatableImageFormats=*/false);
+
+    std::string urls;
+    for (int i = 0; i < 8; i++) {
+        urls += (i ? ",\"" : "\"") + FRAME_BASE64 + "\"";
+    }
+    ov::genai::ChatHistory history;
+    ov::AnyMap msg;
+    msg["role"] = std::string("user");
+    msg["content"] = ov::genai::JsonContainer::from_json_string(
+        R"([{"type":"video_url","video_url":{"url":[)" + urls + R"(]}}])");
+    history.push_back(msg);
+
+    InputRequest req = makeChatRequest(history);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    const auto status = processor.process(req);
+
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_EQ(status.message(), "Image exceeds maximum decoded size");
+    EXPECT_TRUE(req.inputVideos.empty());
+}
+
 TEST(VideoFramesProcessorTest, OversizedFrameArrayRejected) {
     // A frame array larger than MAX_VIDEO_FRAMES must be rejected before any
     // frame is copied or decoded. The url entries can be short placeholders

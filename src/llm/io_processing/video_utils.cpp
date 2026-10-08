@@ -59,6 +59,20 @@ absl::StatusOr<ov::Tensor> loadVideoFrames(const std::vector<std::string>& frame
     const size_t channels = frameShape[3];
     const size_t frameBytes = height * width * channels * firstFrame.get_element_type().size();
 
+    // Validate the aggregate decoded-pixel budget before allocating the stacked
+    // tensor. All frames share frameShape (enforced during the copy loop below),
+    // so framePixels is exact; the first frame is already counted in
+    // totalAllocatedPixels, leaving numFrames - 1 frames to account for. Without
+    // this up-front check the full {numFrames, H, W, C} tensor would be allocated
+    // before the per-frame budget checks run, letting a request with many frame
+    // references allocate a multi-GB tensor only to fail on a later frame. The
+    // comparison uses division to stay overflow-safe.
+    const size_t framePixels = height * width;
+    const size_t remainingPixels = maxAllowedImagePixels - totalAllocatedPixels;
+    if (numFrames > 1 && framePixels > remainingPixels / (numFrames - 1)) {
+        return absl::InvalidArgumentError("Image exceeds maximum decoded size");
+    }
+
     // Allocate the stacked tensor once and copy each frame into it incrementally,
     // releasing the per-frame tensor right after. This keeps the peak memory at
     // roughly the stacked tensor plus a single frame, instead of holding all

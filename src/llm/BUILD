@@ -88,6 +88,7 @@ ovms_cc_library(
         ":openai_request",
         ":output_parsers",
         ":io_processing_input_processor",
+        ":video_utils",
         "//third_party:genai",],
     visibility = ["//visibility:public"],
 )
