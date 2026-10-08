@@ -16,6 +16,7 @@
 #include "graph_cli_parser.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <iostream>
 #include <optional>
 #include <stdexcept>
@@ -89,6 +90,14 @@ void GraphCLIParser::createOptions() {
             "Tool parser",
             cxxopts::value<std::string>(),
             "TOOL_PARSER")
+        ("chat_template_engine",
+            "Chat template engine: jinja or minja. Defaults to jinja when Python is available.",
+            cxxopts::value<std::string>(),
+            "CHAT_TEMPLATE_ENGINE")
+        ("chat_tempate_engine",
+            "Alias for --chat_template_engine.",
+            cxxopts::value<std::string>(),
+            "CHAT_TEMPLATE_ENGINE")
         ("enable_tool_guided_generation",
             "Enables enforcing tool schema during generation. Requires setting tool parser. Default: false.",
             cxxopts::value<std::string>()->default_value("false"),
@@ -191,6 +200,23 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
                 throw std::invalid_argument("Unsupported tool_parser: \"" + graphSettings.toolParser.value() +
                                             "\". Supported tool parsers are: " + getSupportedToolParserNamesAsString());
             }
+        }
+        if (result->count("chat_template_engine") && result->count("chat_tempate_engine")) {
+            throw std::invalid_argument("--chat_template_engine and --chat_tempate_engine cannot be used together");
+        }
+        if (result->count("chat_template_engine") || result->count("chat_tempate_engine")) {
+            const char* optionName = result->count("chat_template_engine") ? "chat_template_engine" : "chat_tempate_engine";
+            std::string engine = result->operator[](optionName).as<std::string>();
+            std::transform(engine.begin(), engine.end(), engine.begin(), [](unsigned char ch) { return std::toupper(ch); });
+            if (engine != "JINJA" && engine != "MINJA") {
+                throw std::invalid_argument("Unsupported chat template engine: \"" + engine + "\". Supported engines are: jinja, minja");
+            }
+#if (PYTHON_DISABLE == 1)
+            if (engine == "JINJA") {
+                throw std::invalid_argument("chat_template_engine=jinja requires Python support");
+            }
+#endif
+            graphSettings.chatTemplateEngine = std::move(engine);
         }
         graphSettings.enableToolGuidedGeneration = result->operator[]("enable_tool_guided_generation").as<std::string>();
         if (result->count("cache_interval_multiplier")) {

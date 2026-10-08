@@ -23,7 +23,8 @@
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246 6313)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mediapipe/framework/calculator_graph.h"
+#include "mediapipe/framework/calculator.pb.h"
+#include "mediapipe/framework/port/ret_check.h"
 #include <rapidjson/document.h>
 #include <rapidjson/prettywriter.h>
 #pragma GCC diagnostic pop
@@ -38,6 +39,7 @@
 #include "apis/openai_responses.hpp"
 #include "io_processing/generation_config_builder.hpp"
 #include "io_processing/input_processor.hpp"
+#include "llm_calculators_plugin_api.hpp"
 #include "ovms_text_streamer.hpp"
 #include "servable.hpp"
 #include "text_utils.hpp"
@@ -47,6 +49,10 @@ namespace ovms {
 
 double calculatePrefillSpeed(size_t inputTokenCount, double ttftMs) {
     return ttftMs > 0.0 ? (1000.0 * inputTokenCount) / ttftMs : 0.0;
+}
+
+std::shared_ptr<GenAiServableExecutionContext> createGenAiServableExecutionContext(GenAiServable& servable) {
+    return servable.createExecutionContext();
 }
 
 void GenAiServable::determineDecodingMethod() {

@@ -26,7 +26,7 @@
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mediapipe/framework/calculator_graph.h"
+#include "mediapipe/framework/calculator.pb.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
@@ -74,13 +74,15 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
         }
     }
     if (nodeOptions.has_chat_template_mode()) {
+        properties->chatTemplateModeExplicit = true;
 #if (PYTHON_DISABLE == 0)
         properties->chatTemplateMode = (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::JINJA)
                                            ? ChatTemplateMode::JINJA
                                            : ChatTemplateMode::MINJA;
 #else
         if (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::JINJA) {
-            SPDLOG_WARN("chat_template_mode=JINJA is not supported in Python-disabled builds. Falling back to MINJA.");
+            SPDLOG_ERROR("chat_template_mode=JINJA requires Python support.");
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
         }
         properties->chatTemplateMode = ChatTemplateMode::MINJA;
 #endif
@@ -115,7 +117,10 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
         SPDLOG_ERROR("Error during llm node initialization for models_path: {}", parsedModelsPath);
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
-    loadChatTemplate(properties, parsedModelsPath);
+    status = loadChatTemplate(properties, parsedModelsPath);
+    if (!status.ok()) {
+        return status;
+    }
     properties->legacyExecutor = std::make_shared<VisualLanguageModelLegacyExecutorWrapper>(properties->pipeline);
     if (nodeOptions.has_max_tokens_limit()) {
         properties->maxTokensLimit = nodeOptions.max_tokens_limit();

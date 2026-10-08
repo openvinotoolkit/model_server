@@ -38,8 +38,8 @@ using KFSShapeType = google::protobuf::RepeatedField<int64_t>;
 using KFSGetModelStatusRequest = inference::ModelReadyRequest;
 using KFSGetModelStatusResponse = inference::ModelReadyResponse;
 using KFSDataType = std::string;
-using KFSInputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferRequest_InferInputTensor>;
-using KFSOutputTensorIteratorType = google::protobuf::internal::RepeatedPtrIterator<const ::inference::ModelInferResponse_InferOutputTensor>;
+using KFSInputTensorIteratorType = google::protobuf::RepeatedPtrField<::inference::ModelInferRequest_InferInputTensor>::const_iterator;
+using KFSOutputTensorIteratorType = google::protobuf::RepeatedPtrField<::inference::ModelInferResponse_InferOutputTensor>::const_iterator;
 namespace ovms {
 class Status;
 

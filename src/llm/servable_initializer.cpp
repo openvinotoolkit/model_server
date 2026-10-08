@@ -33,7 +33,7 @@
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mediapipe/framework/calculator_graph.h"
+#include "mediapipe/framework/calculator.pb.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
@@ -44,6 +44,7 @@
 #include "io_processing/chat_template/analyzer.hpp"
 #include "io_processing/chat_template/probe.hpp"
 #include "io_processing/parser_config_validation.hpp"
+#include "runtime_chat_template_runtime_loader.hpp"
 #include "src/filesystem/filesystem.hpp"
 #include "../stringutils.hpp"
 #include "language_model/continuous_batching/servable.hpp"
@@ -161,8 +162,11 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
     }
 
 #if (PYTHON_DISABLE == 0)
-    if (properties->chatTemplateMode == ChatTemplateMode::JINJA && properties->templateProcessor.chatTemplate != nullptr) {
-        if (!probeChatTemplateCapsJinja(properties->templateProcessor, properties->chatTemplateCaps)) {
+    if (properties->chatTemplateMode == ChatTemplateMode::JINJA && properties->preparedChatTemplate.isPrepared()) {
+        if (!probeChatTemplateCapsJinja([& templateProcessor = properties->preparedChatTemplate](const std::string& body, std::string& output) {
+                return templateProcessor.apply(body, output);
+            },
+                properties->chatTemplateCaps)) {
             SPDLOG_LOGGER_WARN(llm_calculator_logger, "Jinja cannot render this template's tool calls correctly");
         }
         return;
@@ -183,7 +187,7 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
     }
 }
 
-void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
+Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
     const bool shouldWarnOnEmptyTemplate = (properties->chatTemplateMode == ChatTemplateMode::MINJA);
     if (shouldWarnOnEmptyTemplate) {
         if (properties->tokenizer.get_chat_template().empty()) {
@@ -210,6 +214,9 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
 
     // Analyze the chat template to detect capabilities and model family
     std::string templateSource = properties->tokenizer.get_chat_template();
+    if (templateSource.empty() && properties->chatTemplateMode == ChatTemplateMode::JINJA && properties->chatTemplateModeExplicit) {
+        return Status(StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED, "chat_template_mode=JINJA requires a chat template");
+    }
     if (!templateSource.empty()) {
         auto analysisResult = ChatTemplateAnalyzer::analyze(templateSource);
         properties->chatTemplateCaps = analysisResult.caps;
@@ -236,63 +243,45 @@ void GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServablePro
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected reasoning_parser: {}", properties->reasoningParserName);
         }
 
-        // Dry-run probes: empirically verify requiresObjectArguments
-        // by rendering synthetic messages through GenAI's minja and checking the output.
-        // First check if minja can render basic chat at all (catches unsupported Jinja extensions)
-        if (properties->chatTemplateMode == ChatTemplateMode::MINJA) {
-            if (!probeChatTemplateBasicRenderMinja(properties->tokenizer)) {
-                SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Chat template is not compatible with minja — basic rendering failed. "
-                                                           "Disabling /chat/completions endpoint for this model.");
-                properties->tokenizer.set_chat_template("");
-                return;
+#if (PYTHON_DISABLE == 0)
+        if (properties->chatTemplateMode == ChatTemplateMode::JINJA) {
+            std::string initializationError;
+            const bool pythonInitialized = ensurePythonRuntimeInitialized(initializationError);
+            if (pythonInitialized) {
+                std::string errorMessage;
+                if (!properties->preparedChatTemplate.prepare(chatTemplateDirectory, properties->tokenizer.get_chat_template(),
+                        properties->tokenizer.get_bos_token(), properties->tokenizer.get_eos_token(), errorMessage)) {
+                    if (properties->chatTemplateModeExplicit) {
+                        return Status(StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED, "Failed to prepare Jinja chat template: " + errorMessage);
+                    }
+                    SPDLOG_LOGGER_WARN(llm_calculator_logger, "Failed to prepare Jinja chat template; falling back to Minja: {}", errorMessage);
+                    properties->chatTemplateMode = ChatTemplateMode::MINJA;
+                }
+            } else {
+                if (properties->chatTemplateModeExplicit) {
+                    return Status(StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED, "Python is required for chat_template_mode=JINJA: " + initializationError);
+                }
+                SPDLOG_LOGGER_WARN(llm_calculator_logger,
+                    "Python interpreter initialization failed; falling back to Minja chat template rendering: {}", initializationError);
+                properties->chatTemplateMode = ChatTemplateMode::MINJA;
             }
+        }
+#endif
+        if (properties->chatTemplateMode == ChatTemplateMode::MINJA && !probeChatTemplateBasicRenderMinja(properties->tokenizer)) {
+            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Chat template is not compatible with minja — basic rendering failed. "
+                                                       "Disabling /chat/completions endpoint for this model.");
+            properties->tokenizer.set_chat_template("");
+            return StatusCode::OK;
         }
         probeServableChatTemplateCaps(properties);
     }
 
-#if (PYTHON_DISABLE == 0)
-    if (properties->chatTemplateMode == ChatTemplateMode::JINJA) {
-        std::string runtimeOutput;
-        RuntimeChatTemplateError runtimeError = RuntimeChatTemplateError::NONE;
-        const auto prepareStatus = prepareRuntimeChatTemplate(
-            chatTemplateDirectory,
-            properties->tokenizer.get_chat_template(),
-            properties->tokenizer.get_bos_token(),
-            properties->tokenizer.get_eos_token(),
-            properties->preparedRuntimeChatTemplate,
-            runtimeOutput,
-            &runtimeError);
-
-        if (prepareStatus == RuntimeChatTemplatePrepareStatus::PREPARED) {
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Prepared runtime chat template via libovmspython");
-        } else {
-            if (prepareStatus == RuntimeChatTemplatePrepareStatus::UNAVAILABLE) {
-                SPDLOG_LOGGER_WARN(llm_calculator_logger,
-                    "Runtime chat template API is unavailable. In-process PyJinjaTemplateProcessor is disabled in this path.");
-            } else {
-                if (runtimeError == RuntimeChatTemplateError::PYTHON_RUNTIME_INITIALIZATION) {
-                    SPDLOG_LOGGER_WARN(llm_calculator_logger,
-                        "Runtime chat template preparation failed due to Python runtime initialization issue: {}. "
-                        "In-process PyJinjaTemplateProcessor is disabled in this path.",
-                        runtimeOutput.empty() ? std::string("unknown error") : runtimeOutput);
-                } else {
-                    SPDLOG_LOGGER_WARN(llm_calculator_logger,
-                        "Runtime chat template preparation failed: {}. In-process PyJinjaTemplateProcessor is disabled in this path.",
-                        runtimeOutput.empty() ? std::string("unknown error") : runtimeOutput);
-                }
-            }
-        }
-    }
-#endif
-
     // Populate the InputProcessorContext from the now-fully-initialized properties.
     properties->inputProcessorContext.tokenizer = properties->tokenizer;
-    const bool runtimeTemplatePrepared = properties->preparedRuntimeChatTemplate.isPrepared();
-    properties->inputProcessorContext.config.useMinja =
-        properties->chatTemplateMode == ChatTemplateMode::MINJA;
     properties->inputProcessorContext.chatTemplateCaps = properties->chatTemplateCaps;
-    properties->inputProcessorContext.preparedRuntimeChatTemplate =
-        runtimeTemplatePrepared ? &properties->preparedRuntimeChatTemplate : nullptr;
+    properties->inputProcessorContext.templateProcessor =
+        properties->preparedChatTemplate.isPrepared() ? &properties->preparedChatTemplate : nullptr;
+    return StatusCode::OK;
 }
 
 void GenAiServableInitializer::applyGlobalCacheDir(std::shared_ptr<GenAiServableProperties> properties) {
@@ -312,233 +301,6 @@ void GenAiServableInitializer::applyGlobalCacheDir(std::shared_ptr<GenAiServable
         SPDLOG_DEBUG("CACHE_DIR set explicitly in node plugin_config; keeping user value over global cache_dir");
     }
 }
-
-#if (PYTHON_DISABLE == 0)
-// Helper function for case-insensitive comparison of file extensions
-static bool hasGGUFExtension(const std::filesystem::path& path) {
-    auto ext = path.extension().string();
-    if (ext.size() != 5)  // ".gguf" is 5 characters
-        return false;
-    // Compare case-insensitively
-    return std::equal(ext.begin(), ext.end(), ".gguf",
-        [](char a, char b) { return std::tolower(a) == std::tolower(b); });
-}
-
-static bool checkIfGGUFModel(const std::string& modelDirectoryPath) {
-    if (!std::filesystem::exists(modelDirectoryPath))
-        return false;
-
-    std::filesystem::path modelPath(modelDirectoryPath);
-    if (std::filesystem::is_regular_file(modelPath) && hasGGUFExtension(modelPath)) {
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model path is a GGUF file: {}", modelDirectoryPath);
-        return true;
-    }
-    if (std::filesystem::is_directory(modelPath)) {
-        for (const auto& entry : std::filesystem::directory_iterator(modelPath)) {
-            if (entry.is_regular_file() && hasGGUFExtension(entry.path())) {
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model path is a directory that contains GGUF file: {}", entry.path().filename().string());
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-ExtraGenerationInfo GenAiServableInitializer::readExtraGenerationInfo(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
-    ExtraGenerationInfo extraGenInfo;
-    bool isGgufModel = checkIfGGUFModel(chatTemplateDirectory);
-    // we need to pass tokenizer template and bos/eos tokens to python code
-    // if we have GGUF model, we will use them to create a template object
-    std::string tokenizerTemplate;
-    std::string tokenizerBosToken;
-    std::string tokenizerEosToken;
-    if (isGgufModel) {
-        tokenizerTemplate = properties->tokenizer.get_chat_template();
-        tokenizerBosToken = properties->tokenizer.get_bos_token();
-        tokenizerEosToken = properties->tokenizer.get_eos_token();
-
-        SPDLOG_TRACE("Tokenizer bos token: {}, eos token: {}, bos token id: {}, eos token id: {} isGGUF:{} chat_template from tokenizer: \n{}",
-            tokenizerBosToken, tokenizerEosToken, properties->tokenizer.get_bos_token_id(), properties->tokenizer.get_eos_token_id(), isGgufModel, tokenizerTemplate);
-
-        extraGenInfo.bosTokenFromTokenizer = tokenizerBosToken;
-        extraGenInfo.bosTokenIdFromTokenizer = properties->tokenizer.get_bos_token_id();
-        extraGenInfo.eosTokenFromTokenizer = tokenizerEosToken;
-        extraGenInfo.eosTokenIdFromTokenizer = properties->tokenizer.get_eos_token_id();
-        extraGenInfo.chatTemplateFromTokenizer = tokenizerTemplate;
-    }
-
-    extraGenInfo.chatTemplateDirectory = chatTemplateDirectory;
-    extraGenInfo.isGgufModel = isGgufModel;
-
-    return extraGenInfo;
-}
-
-void GenAiServableInitializer::loadPyTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, const ExtraGenerationInfo& extraGenInfo) {
-    // At this point tokenizer cannot be uninitialized as we need to access its methods for prepare for chat template processing
-    if (properties->tokenizer == ov::genai::Tokenizer()) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Tokenizer is not initialized. Cannot load chat template processor.");
-        return;
-    }
-    std::string chatTemplate = properties->tokenizer.get_original_chat_template();
-    std::string bosToken = properties->tokenizer.get_bos_token();
-    std::string eosToken = properties->tokenizer.get_eos_token();
-    if (chatTemplate.empty()) {
-        SPDLOG_ERROR("Chat template was not found in model files.");
-        return;
-    }
-
-    properties->templateProcessor.bosToken = bosToken;
-    properties->templateProcessor.eosToken = eosToken;
-
-    py::gil_scoped_acquire acquire;
-    try {
-        auto locals = py::dict("chat_template"_a = chatTemplate,
-            "templates_directory"_a = extraGenInfo.chatTemplateDirectory);
-        py::exec(R"(
-            # Following the logic from:
-            # https://github.com/huggingface/transformers/blob/25245ec26dc29bcf6102e1b4ddd0dfd02e720cf5/src/transformers/tokenization_utils_base.py#L1837
-            global json
-            import json
-            from pathlib import Path
-
-            global contextmanager
-            from contextlib import contextmanager
-
-            global jinja2
-            import jinja2
-            global ImmutableSandboxedEnvironment
-            from jinja2.sandbox import ImmutableSandboxedEnvironment
-            from jinja2.ext import Extension
-
-            def raise_exception(message):
-                raise jinja2.exceptions.TemplateError(message)
-
-            # Appears in some of mistral chat templates and gpt-oss chat templates
-            def strftime_now(format):
-                import datetime as _dt
-                return _dt.datetime.now().strftime(format)
-
-            # Following the logic from:
-            # https://github.com/huggingface/transformers/blob/7188e2e28c6d663284634732564143b820a03f8b/src/transformers/utils/chat_template_utils.py#L398
-            class AssistantTracker(Extension):
-                # This extension is used to track the indices of assistant-generated tokens in the rendered chat
-                tags = {"generation"}
-
-                def __init__(self, environment: ImmutableSandboxedEnvironment):
-                    # The class is only initiated by jinja.
-                    super().__init__(environment)
-                    environment.extend(activate_tracker=self.activate_tracker)
-                    self._rendered_blocks = None
-                    self._generation_indices = None
-
-                def parse(self, parser: jinja2.parser.Parser) -> jinja2.nodes.CallBlock:
-                    lineno = next(parser.stream).lineno
-                    body = parser.parse_statements(["name:endgeneration"], drop_needle=True)
-                    return jinja2.nodes.CallBlock(self.call_method("_generation_support"), [], [], body).set_lineno(lineno)
-
-                @jinja2.pass_eval_context
-                def _generation_support(self, context: jinja2.nodes.EvalContext, caller: jinja2.runtime.Macro) -> str:
-                    rv = caller()
-                    if self.is_active():
-                        # Only track generation indices if the tracker is active
-                        start_index = len("".join(self._rendered_blocks))
-                        end_index = start_index + len(rv)
-                        self._generation_indices.append((start_index, end_index))
-                    return rv
-
-                def is_active(self) -> bool:
-                    return self._rendered_blocks or self._generation_indices
-
-                @contextmanager
-                def activate_tracker(self, rendered_blocks: list[int], generation_indices: list[int]):
-                    try:
-                        if self.is_active():
-                            raise ValueError("AssistantTracker should not be reused before closed")
-                        self._rendered_blocks = rendered_blocks
-                        self._generation_indices = generation_indices
-
-                        yield
-                    finally:
-                        self._rendered_blocks = None
-                        self._generation_indices = None
-
-            
-            # Optional dedicated tool chat template (might not be present)
-            tool_chat_template = None
-
-            # Variables needed to be set at the end of this script execution
-            template = None
-            tool_template = None
-
-            # Load Jinja2 environment
-            template_loader = jinja2.FileSystemLoader(searchpath=templates_directory)
-            jinja_env = ImmutableSandboxedEnvironment(trim_blocks=True, lstrip_blocks=True, extensions=[AssistantTracker, jinja2.ext.loopcontrols], loader=template_loader)
-            jinja_env.policies["json.dumps_kwargs"]["ensure_ascii"] = False
-            jinja_env.globals["raise_exception"] = raise_exception
-            jinja_env.globals["strftime_now"] = strftime_now
-            jinja_env.filters["from_json"] = json.loads
-            # Override tojson to return plain str instead of Markup to prevent HTML escaping in LLM prompts
-            jinja_env.filters["tojson"] = lambda value, indent=None: json.dumps(value, ensure_ascii=False, indent=indent)
-
-            # Try to read data from tokenizer_config.json to get additional tool chat template if present
-            tokenizer_config_file = Path(templates_directory + "/tokenizer_config.json")
-            if tokenizer_config_file.is_file():
-                with open(templates_directory + "/tokenizer_config.json", "r", encoding="utf-8") as f:
-                    data = json.load(f)
-
-                chat_template_from_tokenizer_config = data.get("chat_template", None)
-                if isinstance(chat_template_from_tokenizer_config, list):
-                    for template_entry in chat_template_from_tokenizer_config:
-                        if isinstance(template_entry, dict):
-                            if template_entry.get("name") == "tool_use":
-                                tool_chat_template = template_entry.get("template")
-            
-            # Try read tool_use.jinja template file from additional_chat_templates directory if exists
-            additional_templates_dir = Path(templates_directory + "/additional_chat_templates")
-            tool_use_template_file = additional_templates_dir / "tool_use.jinja"
-            if tool_use_template_file.is_file():
-                with open(tool_use_template_file, "r", encoding="utf-8") as f:
-                    tool_chat_template = f.read()
-            
-            # Temporary override of GenAI value as we want jinja file to have priority over tokenizer RT info
-            chat_template_jinja_file = Path(templates_directory + "/chat_template.jinja")
-            if chat_template_jinja_file.is_file():
-                with open(chat_template_jinja_file, "r", encoding="utf-8") as f:
-                    chat_template = f.read()
-                print("\n[INFO] Reading chat template from chat_template.jinja file in model directory.")
-            
-            # Load templates from strings
-            template = jinja_env.from_string(chat_template)
-            if tool_chat_template is not None:
-                tool_template = jinja_env.from_string(tool_chat_template)
-            else:
-                tool_template = template
-        )",
-            py::globals(), locals);
-
-        properties->templateProcessor.chatTemplate = std::make_unique<PyObjectWrapper<py::object>>(locals["template"]);
-        properties->templateProcessor.toolTemplate = std::make_unique<PyObjectWrapper<py::object>>(locals["tool_template"]);
-
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Loaded Python Jinja template processor. Bos token: {}, Eos token: {}, Chat template: \n{}",
-            bosToken, eosToken, locals["chat_template"].cast<std::string>());
-    } catch (const pybind11::error_already_set& e) {
-        SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
-        SPDLOG_DEBUG("Chat template loading failed with error: {}", e.what());
-    } catch (const pybind11::cast_error& e) {
-        SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
-        SPDLOG_DEBUG("Chat template loading failed with error: {}", e.what());
-    } catch (const pybind11::key_error& e) {
-        SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
-        SPDLOG_DEBUG("Chat template loading failed with error: {}", e.what());
-    } catch (const std::exception& e) {
-        SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
-        SPDLOG_DEBUG("Chat template loading failed with error: {}", e.what());
-    } catch (...) {
-        SPDLOG_INFO(CHAT_TEMPLATE_WARNING_MESSAGE);
-        SPDLOG_DEBUG("Chat template loading failed with an unexpected error");
-    }
-}
-#endif
 
 Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string graphPath) {
     auto fsModelsPath = std::filesystem::path(modelsPath);

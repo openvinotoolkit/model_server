@@ -960,6 +960,17 @@ TEST_F(GraphCreationTest, positiveWithParsersAndToolGuidedGeneration) {
     assertCreatedGraphEquals(hfSettings, expectedGraphContentsWithResponseParser);
 }
 
+TEST_F(GraphCreationTest, chatTemplateEngineIsEmittedOnlyWhenExplicit) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
+    hfSettings.graphSettings = ovms::TextGenGraphSettingsImpl{};
+
+    EXPECT_EQ(createGraphAndReadContents(hfSettings).find("chat_template_mode:"), std::string::npos);
+
+    std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings).chatTemplateEngine = "MINJA";
+    EXPECT_NE(createGraphAndReadContents(hfSettings).find("chat_template_mode: MINJA"), std::string::npos);
+}
+
 TEST_F(GraphCreationTest, positivePluginConfigOne) {
     ovms::HFSettingsImpl hfSettings;
     hfSettings.task = ovms::TEXT_GENERATION_GRAPH;

@@ -20,7 +20,7 @@
 #include "src/execution_context.hpp"
 #include "src/status.hpp"
 
-namespace grpc_impl {
+namespace grpc {
 template <typename W, typename R>
 class ServerReaderWriterInterface;
 }
@@ -44,7 +44,7 @@ public:
         inference::ModelInferResponse* response,
         const ExecutionContext& executionContext) = 0;
     virtual Status inferStream(const inference::ModelInferRequest& firstRequest,
-        grpc_impl::ServerReaderWriterInterface<inference::ModelStreamInferResponse, inference::ModelInferRequest>& serverReaderWriter,
+        grpc::ServerReaderWriterInterface<inference::ModelStreamInferResponse, inference::ModelInferRequest>& serverReaderWriter,
         const ExecutionContext& executionContext) = 0;
     virtual Status infer(const HttpPayload* request,
         std::string* response,

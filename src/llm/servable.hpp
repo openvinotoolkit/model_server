@@ -30,7 +30,7 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "io_processing/delta.hpp"
 #include "openvino/genai/text_streamer.hpp"
-#include "mediapipe/framework/calculator_graph.h"
+#include "mediapipe/framework/calculator.pb.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
@@ -41,12 +41,10 @@
 #include "io_processing/base_generation_config_builder.hpp"
 #include "io_processing/input_processor_context.hpp"
 #include "io_processing/input_request.hpp"
-#include "runtime_chat_template.hpp"
-#if (PYTHON_DISABLE == 0)
-#include "py_jinja_template_processor.hpp"
-#endif
+#include "runtime_chat_template_runtime_loader.hpp"
 
 namespace ovms {
+
 // Some pipelines internals rely on request_id, so for now we provide increasing ID
 static std::atomic<uint64_t> currentRequestId = 0;
 
@@ -178,16 +176,6 @@ struct LegacyServableExecutionContextBase : public GenAiServableExecutionContext
 // Defined in servable.cpp. Both Legacy servable overrides delegate here.
 absl::Status prepareLegacyPartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
-struct ExtraGenerationInfo {
-    std::string bosTokenFromTokenizer;
-    std::string bosTokenIdFromTokenizer;
-    std::string eosTokenFromTokenizer;
-    std::string eosTokenIdFromTokenizer;
-    std::string chatTemplateFromTokenizer;
-    std::string chatTemplateDirectory;
-    bool isGgufModel;
-};
-
 struct GenAiServableProperties {
     // General configuration
     std::string modelsPath;
@@ -203,6 +191,7 @@ struct GenAiServableProperties {
 #else
     ChatTemplateMode chatTemplateMode = ChatTemplateMode::MINJA;
 #endif
+    bool chatTemplateModeExplicit = false;
     // Chat template analysis
     ChatTemplateCaps chatTemplateCaps;
     // Sampling
@@ -222,27 +211,7 @@ struct GenAiServableProperties {
     // Controls which steps InputProcessor builds for this servable type.
     // Aggregated per-deployment context for InputProcessor.
     InputProcessorContext inputProcessorContext;
-    PreparedRuntimeChatTemplate preparedRuntimeChatTemplate;
-
-#if (PYTHON_DISABLE == 0)
-    PyJinjaTemplateProcessor templateProcessor;
-#endif
-
-    bool hasPreparedPyTemplateProcessor() const {
-#if (PYTHON_DISABLE == 0)
-        return templateProcessor.chatTemplate != nullptr;
-#else
-        return false;
-#endif
-    }
-
-    PyJinjaTemplateProcessor* getPreparedPyTemplateProcessorOrNull() {
-#if (PYTHON_DISABLE == 0)
-        return hasPreparedPyTemplateProcessor() ? &templateProcessor : nullptr;
-#else
-        return nullptr;
-#endif
-    }
+    PreparedChatTemplateRuntime preparedChatTemplate;
 };
 
 class GenAiServable {
