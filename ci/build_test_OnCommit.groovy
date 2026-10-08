@@ -57,11 +57,9 @@ def withGithubStageStatus = { String context, String stageName, Closure body ->
 //
 
 pipeline {
-    agent {
-      label 'ovmsbuilder'
-    }
+    agent none
     options {
-      timeout(time: 4, unit: 'HOURS')
+      timeout(time: 16, unit: 'HOURS')
     }
     stages {
         stage('Approve fork PR') {
@@ -74,8 +72,12 @@ pipeline {
           }
         }
         stage('Configure') {
+          agent {
+            label 'ovmsbuilder'
+          }
           steps {
             script {
+              timeout(time: 20, unit: 'MINUTES') {
               withGithubStageStatus('jenkins/oncommit/configure', 'Configure') {
               println "BUILD CAUSE ONCOMMIT: ${currentBuild.getBuildCauses()}"
               agent_name_linux = env.NODE_NAME
@@ -195,13 +197,11 @@ pipeline {
                   }
               }
                 }
+              }
             }
           }
         }
         stage('Style, SDL') {
-          options {
-                timeout(time: 20, unit: 'MINUTES')
-          }
           parallel {
             stage('Style check') {
               agent {
@@ -209,8 +209,10 @@ pipeline {
               }
               steps {
                 script {
+                  timeout(time: 20, unit: 'MINUTES') {
                   withGithubStageStatus('jenkins/oncommit/style-check', 'Style check') {
                     sh 'make style'
+                  }
                   }
                 }
               }
@@ -221,8 +223,10 @@ pipeline {
               }
               steps {
                 script {
+                  timeout(time: 20, unit: 'MINUTES') {
                   withGithubStageStatus('jenkins/oncommit/sdl-check', 'SDL check') {
                     sh 'make sdl-check'
+                  }
                   }
                 }
               }
@@ -250,9 +254,6 @@ pipeline {
           }
         }
         stage('Build') {
-          options {
-            timeout(time: 4, unit: 'HOURS')
-          }
           parallel {
             stage("Build linux") {
               agent {
@@ -264,6 +265,7 @@ pipeline {
               }
               steps {
                   script {
+                    timeout(time: 4, unit: 'HOURS') {
                     withGithubStageStatus('jenkins/oncommit/build-linux', 'Build linux') {
                     def runTestsFlag = export_models_changed == "true" ? "1" : "0"
                     sh "echo 'Build linux RUN_TESTS=${runTestsFlag} (export_models_changed=${export_models_changed})'"
@@ -283,6 +285,7 @@ pipeline {
                       }
                     }
                     }
+                    }
                   }
               }
             }
@@ -297,6 +300,7 @@ pipeline {
               // }
               steps {
                   script {
+                  timeout(time: 4, unit: 'HOURS') {
                       withGithubStageStatus('jenkins/oncommit/build-windows', 'Build windows') {
                       agent_name_windows = env.NODE_NAME
                       echo sh(script: 'env|sort', returnStdout: true)
@@ -320,15 +324,13 @@ pipeline {
                           error "Cannot load ci/loadWin.groovy file."
                       }
                         }
+                    }
                   }
               }
             }
           }
         }
         stage("Tests in parallel") {
-          options {
-            timeout(time: 120, unit: 'MINUTES')
-          }
           parallel {
             stage("Run unit tests") {
               agent {
@@ -337,6 +339,7 @@ pipeline {
               when { expression { image_build_needed == "true" } }
               steps {
               script {
+                timeout(time: 120, unit: 'MINUTES') {
                 withGithubStageStatus('jenkins/oncommit/unit-tests-linux', 'Linux unit tests') {
                   println "Running unit tests: NODE_NAME = ${env.NODE_NAME}"
                   try {
@@ -346,6 +349,7 @@ pipeline {
                       archiveArtifacts allowEmptyArchive: true, artifacts: "test_logs.tar.gz"
                       archiveArtifacts allowEmptyArchive: true, artifacts: "linux_tests_summary.log"
                   }
+                }
                 }
               } 
               }
@@ -357,6 +361,7 @@ pipeline {
               when { expression { image_build_needed == "true" || functional_tests_changed == "true" } }
               steps {
                 script {
+                  timeout(time: 120, unit: 'MINUTES') {
                   withGithubStageStatus('jenkins/oncommit/internal-tests', 'Internal tests') {
                     dir ('internal_tests'){
                       checkout scmGit(branches: [[name: validation_branch]], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
@@ -375,6 +380,7 @@ pipeline {
                       sh cmd
                     }
                   }
+                  }
                 }
               }            
             }
@@ -386,6 +392,7 @@ pipeline {
               }
               steps {
                 node(test_agent_linux) {
+                  timeout(time: 120, unit: 'MINUTES') {
                   script {
                     withGithubStageStatus('jenkins/oncommit/doc-tests-linux', 'Linux doc tests') {
                       checkout scm
@@ -419,6 +426,7 @@ pipeline {
                       }
                     }
                   }
+                  }
                 }
               }
             }
@@ -429,6 +437,7 @@ pipeline {
               when { expression { win_image_build_needed == "true" } }
               steps {
                   script {
+                    timeout(time: 120, unit: 'MINUTES') {
                     withGithubStageStatus('jenkins/oncommit/unit-tests-windows', 'Windows unit tests') {
                       def windows = load 'ci/loadWin.groovy'
                       println "Running unit tests: NODE_NAME = ${env.NODE_NAME}"
@@ -445,6 +454,7 @@ pipeline {
                           error "Cannot load ci/loadWin.groovy file."
                         }
                     }
+                    }
                   }
               }
             }
@@ -456,6 +466,7 @@ pipeline {
               }
               steps {
                 node(test_agent_windows) {
+                  timeout(time: 120, unit: 'MINUTES') {
                   script {
                     withGithubStageStatus('jenkins/oncommit/doc-tests-windows', 'Windows doc tests') {
                       checkout scm
@@ -487,6 +498,7 @@ pipeline {
                         }
                       }
                     }
+                  }
                   }
                 }
               }

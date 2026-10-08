@@ -1033,7 +1033,11 @@ void OpenAIResponsesHandler::serializeResponseObject(Writer<StringBuffer>& write
         writer.StartObject();
         writer.String("input_tokens");
         writer.Uint64(static_cast<uint64_t>(usage.promptTokens));
-        // TODO: input_tokens_details.cached_tokens not supported
+        writer.String("input_tokens_details");
+        writer.StartObject();
+        writer.String("cached_tokens");
+        writer.Uint64(static_cast<uint64_t>(usage.cachedPromptTokens));
+        writer.EndObject();
         writer.String("output_tokens");
         writer.Uint64(static_cast<uint64_t>(usage.completionTokens));
         // TODO: output_tokens_details.reasoning_tokens not supported
@@ -1165,7 +1169,11 @@ std::string OpenAIResponsesHandler::serializeUnaryResponseImpl(const std::vector
     writer.StartObject();
     writer.String("input_tokens");
     writer.Uint64(static_cast<uint64_t>(usage.promptTokens));
-    // TODO: input_tokens_details.cached_tokens not supported
+    writer.String("input_tokens_details");
+    writer.StartObject();
+    writer.String("cached_tokens");
+    writer.Uint64(static_cast<uint64_t>(usage.cachedPromptTokens));
+    writer.EndObject();
     writer.String("output_tokens");
     writer.Uint64(static_cast<uint64_t>(usage.completionTokens));
     // TODO: output_tokens_details.reasoning_tokens not supported
