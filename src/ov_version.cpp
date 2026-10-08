@@ -32,4 +32,3 @@ const char* getGenAIVersion() {
 #endif
 }
 }  // namespace ovms
-
