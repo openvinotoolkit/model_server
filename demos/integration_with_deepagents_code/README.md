@@ -108,7 +108,7 @@ If you already have the repository checked out, just change into `demos/integrat
 
 ### Step 4: Prepare dcode configuration
 
-The only line that actually connects `dcode` to OVMS is `OPENAI_BASE_URL=http://localhost:8000/v1` — everything else below is dcode convenience configuration. Set the default model once so subsequent dcode invocations don't have to repeat `--model` (persisted to `~/.deepagents/config.toml`):
+The only line that actually connects `dcode` to OVMS is `OPENAI_BASE_URL=http://localhost:8000/v1` — everything else below is dcode convenience configuration. First export the environment variables below:
 
 ::::{tab-set}
 :::{tab-item} Linux
@@ -119,8 +119,6 @@ export OPENAI_BASE_URL=http://localhost:8000/v1
 export TAVILY_API_KEY=not_used
 export DEEPAGENTS_CODE_PRICES_AUTO_UPDATE=0
 export DEMO_DIR="$PWD"
-dcode --default-model openai:OpenVINO/Qwen3.8-27B-int4-ov
-git init
 ```
 :::
 :::{tab-item} Windows
@@ -131,11 +129,15 @@ set OPENAI_BASE_URL=http://localhost:8000/v1
 set TAVILY_API_KEY=not_used
 set DEEPAGENTS_CODE_PRICES_AUTO_UPDATE=0
 set DEMO_DIR=%CD%
-dcode --default-model openai:OpenVINO/Qwen3.8-27B-int4-ov
-git init
 ```
 :::
 ::::
+
+Then set the default model so later `dcode` invocations don't need to repeat `--model`. This writes `~/.deepagents/config.toml` and exits immediately:
+
+```text
+dcode --default-model openai:OpenVINO/Qwen3.8-27B-int4-ov
+```
 
 - **`OPENAI_BASE_URL`**: points dcode at the OVMS endpoint. 
 - **`OPENAI_API_KEY=not_used`**: OVMS does not require a key for local serving, but the OpenAI client library expects the variable to be set.
@@ -144,6 +146,10 @@ git init
 - **`DEMO_DIR`**: expanded inside [`.deepagents/.mcp.json`](https://github.com/openvinotoolkit/model_server/blob/main/demos/integration_with_deepagents_code/.deepagents/.mcp.json) so the MCP server script is located reliably.
 
 dcode uses git to track file state and pins its project root (and its skill / MCP / subagent discovery) at the closest `.git` directory. Initialize a repository *inside the demo folder* so dcode scopes to it, even when the folder itself lives inside another checkout (like the `model_server` clone):
+
+```console
+git init
+```
 
 ---
 
@@ -267,7 +273,7 @@ Use these one-shot commands for automation or quick verification. In this mode, 
 
 ### Step 1: Summarize demo
 
-```console
+```text
 dcode -n "Summarize demo in current directory." --allow-fs-tools read_file,grep,ls --no-mcp --no-interpreter --quiet
 ```
 
@@ -314,7 +320,7 @@ This demo (`integration_with_deepagents_code`) showcases how to integrate [DeepA
 
 ### Step 2: Create MCP server
 
-```console
+```text
 dcode -n "Implement a Python MCP stdio server at mcp_server/time_mcp_server.py that provides current UTC time using the Python MCP SDK." --skill python-mcp-sdk-skill --allow-fs-tools read_file,write_file,grep,ls,execute -S python,python3,timeout,cat,grep,ls --no-mcp --no-interpreter --quiet
 ```
 
@@ -333,7 +339,7 @@ Created `mcp_server/time_mcp_server.py` with:
 
 ### Step 3: Extend MCP server with date tool
 
-```console
+```text
 dcode -n "Extend mcp_server/time_mcp_server.py with a date tool." --rubric "mcp_server/time_mcp_server.py defines a new @mcp.tool returning the current UTC date as an ISO string; the existing time tool still works; python -m py_compile mcp_server/time_mcp_server.py succeeds." --allow-fs-tools read_file,write_file,grep,ls,execute -S python,python3,timeout,cat,grep,ls --no-mcp --no-interpreter --quiet
 ```
 
@@ -349,7 +355,7 @@ Done. Added `get_current_utc_date()` tool to `time_mcp_server.py`. It returns th
 
 ### Step 4: Validate MCP server with subagent
 
-```console
+```text
 dcode -n "Delegate to subagent mcp-tester: Test mcp_server/time_mcp_server.py" --allow-fs-tools read_file,grep,ls,execute -S python,python3,timeout,cat,grep,ls --no-mcp --no-interpreter --quiet
 ```
 
@@ -371,7 +377,7 @@ dcode -n "Delegate to subagent mcp-tester: Test mcp_server/time_mcp_server.py" -
 
 ### Step 5: Verify end-to-end tool call
 
-```console
+```text
 dcode -n "Give me the exact current UTC timestamp down to the current second along with current date." --allow-fs-tools read_file,grep,ls,execute -S python,python3,timeout,cat,grep,ls --trust-project-mcp --no-interpreter --quiet
 ```
 
