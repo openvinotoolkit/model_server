@@ -539,7 +539,7 @@ TEST_P(InputProcessingIntegrationTest, VideoAndImageTogether_BothTagsInPrompt) {
         R"({"type":"text","text":"Compare."},)"
         R"({"type":"image_url","image_url":{"url":")" +
         std::string(TINY_PNG) + R"("}},)"
-        R"({"type":"video_url","video_url":{"url":[")" +
+                                R"({"type":"video_url","video_url":{"url":[")" +
         std::string(TINY_PNG) + R"(",")" + std::string(TINY_PNG) + R"("]}}]}]})";
 
     auto result = runPipeline(json, /*isVLM=*/true);

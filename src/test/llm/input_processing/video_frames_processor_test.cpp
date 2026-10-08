@@ -104,7 +104,8 @@ TEST(VideoFramesProcessorTest, SingleFrameVideoDecodedAndTagged) {
     msg["role"] = std::string("user");
     msg["content"] = ov::genai::JsonContainer::from_json_string(
         R"([{"type":"text","text":"describe the video"},)"
-        R"( {"type":"video_url","video_url":{"url":[")" + FRAME_BASE64 + R"("]}}])");
+        R"( {"type":"video_url","video_url":{"url":[")" +
+        FRAME_BASE64 + R"("]}}])");
     history.push_back(msg);
 
     InputRequest req = makeChatRequest(history);
