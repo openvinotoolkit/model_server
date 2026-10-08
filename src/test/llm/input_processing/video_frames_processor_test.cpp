@@ -21,10 +21,36 @@
 #include "../../../llm/io_processing/input_processors/video_frames_processor.hpp"
 #include "../../../llm/io_processing/input_request.hpp"
 #include "../../../llm/io_processing/video_utils.hpp"
+#include "src/config.hpp"
 
 using namespace ovms;
 
 // Helpers ----------------------------------------------------------------
+
+// Temporarily overrides the global per-request decoded-pixel budget so the video
+// path's cross-frame accumulation can be exercised, restoring the previous
+// configuration on destruction.
+class ScopedImageDecodeBudget {
+public:
+    ScopedImageDecodeBudget(uint64_t maxImageDecodePixels, bool allowUnestimatableImageFormats) :
+        savedServerSettings(ovms::Config::instance().getServerSettings()),
+        savedModelsSettings(ovms::Config::instance().getModelSettings()) {
+        ovms::ServerSettingsImpl serverSettings = savedServerSettings;
+        serverSettings.maxImageDecodePixels = maxImageDecodePixels;
+        serverSettings.allowUnestimatableImageFormats = allowUnestimatableImageFormats;
+        ovms::ModelsSettingsImpl modelsSettings = savedModelsSettings;
+        ovms::Config::instance().parse(&serverSettings, &modelsSettings);
+    }
+    ScopedImageDecodeBudget(const ScopedImageDecodeBudget&) = delete;
+    ScopedImageDecodeBudget& operator=(const ScopedImageDecodeBudget&) = delete;
+    ~ScopedImageDecodeBudget() {
+        ovms::Config::instance().parse(&savedServerSettings, &savedModelsSettings);
+    }
+
+private:
+    ovms::ServerSettingsImpl savedServerSettings;
+    ovms::ModelsSettingsImpl savedModelsSettings;
+};
 
 static InputRequest makeChatRequest(ov::genai::ChatHistory chatHistory) {
     InputRequest req;
@@ -199,6 +225,52 @@ TEST(VideoFramesProcessorTest, MismatchingFrameResolutionRejected) {
     EXPECT_FALSE(status.ok());
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
     EXPECT_TRUE(req.inputVideos.empty());
+}
+
+TEST(VideoFramesProcessorTest, PerRequestPixelBudgetRejectsAccumulatedFrames) {
+    // The decoded-pixel budget is shared across all frames of a video. With a
+    // budget of a single pixel, the first 1x1 frame consumes it and the second
+    // frame must be rejected before its pixel buffer is allocated.
+    ScopedImageDecodeBudget budgetGuard(1, /*allowUnestimatableImageFormats=*/false);
+
+    ov::genai::ChatHistory history;
+    ov::AnyMap msg;
+    msg["role"] = std::string("user");
+    msg["content"] = ov::genai::JsonContainer::from_json_string(
+        R"([{"type":"video_url","video_url":{"url":[")" + FRAME_BASE64 + R"(",")" +
+        FRAME_BASE64 + R"("]}}])");
+    history.push_back(msg);
+
+    InputRequest req = makeChatRequest(history);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    const auto status = processor.process(req);
+
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_EQ(status.message(), "Image exceeds maximum decoded size");
+    EXPECT_TRUE(req.inputVideos.empty());
+}
+
+TEST(VideoFramesProcessorTest, PerRequestPixelBudgetAcceptsFramesWithinTotal) {
+    // A budget large enough for both 1x1 frames lets the same two-frame video
+    // through, confirming the rejection above is driven by the shared budget.
+    ScopedImageDecodeBudget budgetGuard(2, /*allowUnestimatableImageFormats=*/false);
+
+    ov::genai::ChatHistory history;
+    ov::AnyMap msg;
+    msg["role"] = std::string("user");
+    msg["content"] = ov::genai::JsonContainer::from_json_string(
+        R"([{"type":"video_url","video_url":{"url":[")" + FRAME_BASE64 + R"(",")" +
+        FRAME_BASE64 + R"("]}}])");
+    history.push_back(msg);
+
+    InputRequest req = makeChatRequest(history);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    const auto status = processor.process(req);
+
+    ASSERT_TRUE(status.ok()) << status.message();
+    ASSERT_EQ(req.inputVideos.size(), 1u);
+    EXPECT_EQ(req.inputVideos[0].get_shape()[0], 2u);
 }
 
 TEST(VideoFramesProcessorTest, OversizedFrameArrayRejected) {
