@@ -44,6 +44,7 @@
 #include "../ovms.h"
 #include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
+#include "../ov_version.hpp"
 #include "../version.hpp"
 #include "c_api_test_utils.hpp"
 #include "mockmodelinstancechangingstates.hpp"
@@ -347,7 +348,7 @@ TEST(CAPIServerMetadata, Basic) {
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_SerializeMetadataToString(metadata, nullptr, &size), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_SerializeMetadataToString(metadata, &json, nullptr), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NULL(OVMS_SerializeMetadataToString(metadata, &json, &size));
-    ASSERT_EQ(std::string(json), std::string("{\"name\":\"" + std::string(PROJECT_NAME) + "\",\"version\":\"" + std::string(PROJECT_VERSION) + "\",\"ov_version\":\"" + std::string(ovms::getOpenVINOVersion()) + "\"}"));
+    ASSERT_EQ(std::string(json), std::string("{\"name\":\"") + std::string(PROJECT_NAME) + "\",\"version\":\"" + std::string(ovms::getProjectVersion()) + "\",\"ov_version\":\"" + std::string(ovms::getOpenVINOVersion()) + "\"}"));
     ASSERT_EQ(size, std::strlen(json));
     OVMS_StringFree(json);
     const char* pointer = "/name";
@@ -364,7 +365,7 @@ TEST(CAPIServerMetadata, Basic) {
 
     pointer = "/version";
     ASSERT_CAPI_STATUS_NULL(OVMS_MetadataFieldByPointer(metadata, pointer, &value, &size));
-    ASSERT_EQ(std::string(value), std::string(PROJECT_VERSION));
+    ASSERT_EQ(std::string(value), std::string(ovms::getProjectVersion()));
     ASSERT_EQ(size, std::strlen(value));
     OVMS_StringFree(value);
 
