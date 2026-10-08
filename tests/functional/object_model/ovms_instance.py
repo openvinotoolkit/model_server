@@ -399,19 +399,19 @@ class OvmsInstance(ABC):
             raise NotImplementedError(f"Unknown signal: {terminate_signal_type}")
 
     def filter_unexpected_messages(self, unexpected_messages):
-        for msg in unexpected_messages:
-            # 1) This message is expected in OV tests with batch_size=0
-            # 2) This message can happen in Cython instances that use threading # CVS-165321
-            if all([
-                OvmsMessages.ERROR_TERMINATE_CALLED in msg,
-                self.context is not None and "test_ov_app_cpp_batch_size_0" in self.context.name,
-            ]) or all([
-                OvmsMessages.ERROR_TERMINATE_CALLED in msg,
-                OvmsMessages.STD_SYSTEM_ERROR in msg,
-                hasattr(self, "cmd") and self.cmd is not None and "OvmsCapiInstance" in self.cmd.__str__,
-            ]):
-                unexpected_messages.remove(msg)
-        return unexpected_messages
+        return [msg for msg in unexpected_messages if not self._is_expected_message(msg)]
+
+    def _is_expected_message(self, msg):
+        # 1) This message is expected in OV tests with batch_size=0
+        # 2) This message can happen in Cython instances that use threading # CVS-165321
+        return all([
+            OvmsMessages.ERROR_TERMINATE_CALLED in msg,
+            self.context is not None and "test_ov_app_cpp_batch_size_0" in self.context.name,
+        ]) or all([
+            OvmsMessages.ERROR_TERMINATE_CALLED in msg,
+            OvmsMessages.STD_SYSTEM_ERROR in msg,
+            getattr(self, "cmd", None) is not None and "OvmsCapiInstance" in str(self.cmd),
+        ])
 
     def cleanup(self, timeout=30):
         try:
