@@ -156,6 +156,7 @@ std::optional<Delta> OutputParser::parseContentChunk(ProcessingPhase newPhase) {
     return result;
 }
 
+// TODO: In a separate OutputParser PR, advance tool/reasoning phases when start and end tags arrive in one chunk.
 std::optional<Delta> OutputParser::parseToolCallChunk(const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase) {
     if (!toolParser) {
         throw std::runtime_error("Tool parser is not available, cannot parse tool call chunk");
