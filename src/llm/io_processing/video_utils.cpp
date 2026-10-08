@@ -18,6 +18,7 @@
 
 #include <cstring>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "image_utils.hpp"
@@ -52,7 +53,10 @@ absl::StatusOr<ov::Tensor> loadVideoFrames(const std::vector<std::string>& frame
     if (!firstResult.ok()) {
         return firstResult.status();
     }
-    ov::Tensor firstFrame = firstResult.value();
+    // Move the tensor out of the StatusOr so resetting firstFrame below actually
+    // releases the first frame's buffer; copying the handle would keep it alive
+    // via the shared reference and defeat the incremental-release intent.
+    ov::Tensor firstFrame = std::move(firstResult).value();
     const ov::Shape frameShape = firstFrame.get_shape();
     const size_t height = frameShape[1];
     const size_t width = frameShape[2];

@@ -150,6 +150,38 @@ TEST(VideoFramesProcessorTest, InjectionGuardBlocksTagInReasoningContent) {
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
 }
 
+TEST(VideoFramesProcessorTest, InjectionGuardBlocksTagInTools) {
+    // ChatTemplateProcessor also serializes the tools array into the prompt, so
+    // a reserved tag placed in a tool definition must be rejected too.
+    ov::genai::ChatHistory history;
+    history.push_back({{"role", "user"}, {"content", "hi"}});
+    history.set_tools(ov::genai::JsonContainer::from_json_string(
+        R"([{"type":"function","function":{"name":"f","description":"<ov_genai_video_0>"}}])"));
+
+    InputRequest req = makeChatRequest(history);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    const auto status = processor.process(req);
+
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+}
+
+TEST(VideoFramesProcessorTest, InjectionGuardBlocksTagInExtraContext) {
+    // chat_template_kwargs (extra context) is the third client-controlled
+    // container rendered by the template, so a reserved tag there is rejected.
+    ov::genai::ChatHistory history;
+    history.push_back({{"role", "user"}, {"content", "hi"}});
+    history.set_extra_context(ov::genai::JsonContainer::from_json_string(
+        R"({"custom_instruction":"<ov_genai_video_0>"})"));
+
+    InputRequest req = makeChatRequest(history);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    const auto status = processor.process(req);
+
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+}
+
 TEST(VideoFramesProcessorTest, SkipsMessagesWithNonArrayContent) {
     ov::genai::ChatHistory history;
     history.push_back({{"role", "system"}, {"content", "You are helpful."}});
