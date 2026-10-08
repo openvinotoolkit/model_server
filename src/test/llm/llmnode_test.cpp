@@ -1325,6 +1325,43 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsNonVlmWithImageRejecte
         ovms::StatusCode::PARTIAL_END);
 }
 
+// Non-VLM (text-only) servables reject requests that contain video_url content at
+// the servable level, before any processor runs.
+// Verify that the error propagates all the way to an HTTP 400 response.
+TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsNonVlmWithVideoRejected) {
+    auto params = GetParam();
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();  // video rejection check runs only for non-VLM servables
+    }
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": true,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": [{"type": "text", "text": "What is this?"}, {"type": "video_url", "video_url": {"url": ["data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg=="]}}]
+            }
+            ]
+        }
+    )";
+
+    EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
+        .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: This servable supports only text input, but video_url has been provided\"}");
+            rapidjson::Document d;
+            rapidjson::ParseResult ok = d.Parse(response.c_str());
+            ASSERT_EQ(ok.Code(), 0);
+            ASSERT_EQ(code, ovms::HTTPStatusCode::BAD_REQUEST);
+        });
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
+}
+
 TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonNMultipleStopStrings) {
     auto params = GetParam();
     std::string requestBody = R"(

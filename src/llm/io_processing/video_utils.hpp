@@ -39,6 +39,7 @@ constexpr int64_t MAX_VIDEO_FRAMES = 1024;
 // expected to be already decoded on the client side.
 absl::StatusOr<ov::Tensor> loadVideoFrames(const std::vector<std::string>& frameSources,
     const std::optional<std::string>& allowedLocalMediaPath,
-    const std::optional<std::vector<std::string>>& allowedMediaDomains);
+    const std::optional<std::vector<std::string>>& allowedMediaDomains,
+    size_t& totalAllocatedPixels);
 
 }  // namespace ovms

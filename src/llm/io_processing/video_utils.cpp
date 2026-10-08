@@ -28,7 +28,8 @@ namespace ovms {
 
 absl::StatusOr<ov::Tensor> loadVideoFrames(const std::vector<std::string>& frameSources,
     const std::optional<std::string>& allowedLocalMediaPath,
-    const std::optional<std::vector<std::string>>& allowedMediaDomains) {
+    const std::optional<std::vector<std::string>>& allowedMediaDomains,
+    size_t& totalAllocatedPixels) {
     if (frameSources.empty()) {
         return absl::InvalidArgumentError("Video must contain at least one frame");
     }
@@ -37,10 +38,11 @@ absl::StatusOr<ov::Tensor> loadVideoFrames(const std::vector<std::string>& frame
     }
     const size_t numFrames = frameSources.size();
 
-    // Per-request decoded-pixel budget shared across all frames: fetchAndDecodeImage
-    // rejects a frame (before allocating its pixel buffer) once the running total
-    // would exceed the configured limit, bounding the whole video's decoded size.
-    size_t totalAllocatedPixels = 0;
+    // Per-request decoded-pixel budget shared across all frames and across all
+    // image_url/video_url parts of the request (totalAllocatedPixels is owned by
+    // the caller): fetchAndDecodeImage rejects a frame before allocating its pixel
+    // buffer once the running total would exceed the configured limit, bounding the
+    // whole request's decoded size rather than giving each video a fresh budget.
     const size_t maxAllowedImagePixels = request_validation_utils::getMaxImageDecodePixels();
 
     // Decode the first frame to determine the shared frame shape. All frames

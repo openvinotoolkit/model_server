@@ -92,7 +92,7 @@ absl::Status VideoFramesProcessor::process(InputRequest& req) {
                 for (size_t k = 0; k < urls.size(); k++) {
                     frameSources.push_back(urls[k].as_string().value_or(""));
                 }
-                auto videoResult = loadVideoFrames(frameSources, allowedLocalMediaPath, allowedMediaDomains);
+                auto videoResult = loadVideoFrames(frameSources, allowedLocalMediaPath, allowedMediaDomains, req.totalDecodedPixels);
                 if (!videoResult.ok()) {
                     return videoResult.status();
                 }
