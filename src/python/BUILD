@@ -417,6 +417,7 @@ ovms_cc_library(
             "/wd4456",  # variable shadowing (mediapipe graph_profiler.h)
             "/wd6246",  # local declaration hides previous declaration (mediapipe graph_profiler.h)
             "/wd6011",  # NULL pointer dereference (mediapipe packet.h)
+            "/wd6001",  # uninitialized memory false positive (absl/strings/str_cat.h)
         ],
     }),
     visibility = ["//visibility:public"],

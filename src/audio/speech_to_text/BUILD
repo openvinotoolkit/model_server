@@ -37,7 +37,7 @@ ovms_cc_library(
     ],
     additional_copts = select({
         "//conditions:default": [],
-        "//src:windows": ["/wd6001"],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
     }),
     visibility = ["//visibility:public"],
     alwayslink = 1,
@@ -91,6 +91,10 @@ ovms_cc_library(
         "//src:libmodelconfigjsonparser",
         "//src/mediapipe_internal:node_initializer",
     ],
+    additional_copts = select({
+        "//conditions:default": [],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
+    }),
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )
