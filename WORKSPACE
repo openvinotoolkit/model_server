@@ -573,15 +573,6 @@ new_local_repository(
     path = "third_party/mediapipe_calculators",
 )
 
-# Eigen — referenced by mediapipe upstream calculators (e.g. matrix_to_vector).
-http_archive(
-    name = "eigen",
-    build_file = "@mediapipe//third_party:eigen.BUILD",
-    sha256 = "35c6126e246585d9cf6600b65471582c2701aae64b784a6fd19168a90cfc841e",
-    strip_prefix = "eigen-ea13a98decd497a8c5588fb5de71b57bcf10d864",
-    urls = ["https://gitlab.com/libeigen/eigen/-/archive/ea13a98decd497a8c5588fb5de71b57bcf10d864/eigen-ea13a98decd497a8c5588fb5de71b57bcf10d864.tar.gz"],
-)
-
 http_archive(
     name = "nlohmann_json",
     sha256 = "0d8ef5af7f9794e3263480193c491549b2ba6cc74bb018906202ada498a79406",

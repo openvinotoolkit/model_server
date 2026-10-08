@@ -249,8 +249,13 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
             const bool pythonInitialized = ensurePythonRuntimeInitialized(initializationError);
             if (pythonInitialized) {
                 std::string errorMessage;
-                if (!properties->preparedChatTemplate.prepare(chatTemplateDirectory, properties->tokenizer.get_chat_template(),
-                        properties->tokenizer.get_bos_token(), properties->tokenizer.get_eos_token(), errorMessage)) {
+                const bool chatTemplatePrepared = properties->preparedChatTemplate.prepare(
+                    chatTemplateDirectory,
+                    properties->tokenizer.get_chat_template(),
+                    properties->tokenizer.get_bos_token(),
+                    properties->tokenizer.get_eos_token(),
+                    errorMessage);
+                if (!chatTemplatePrepared) {
                     if (properties->chatTemplateEngineExplicit) {
                         return Status(StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED, "Failed to prepare Jinja chat template: " + errorMessage);
                     }

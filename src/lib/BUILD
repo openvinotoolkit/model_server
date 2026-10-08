@@ -14,6 +14,11 @@
 # limitations under the License.
 #
 
+
+# This target ensures placing of those libs in the same structure like in release package
+# In ensures build environment matches the release.
+# In is useful for libs loaded dynamically 
+
 load("//:common_settings.bzl", "COMMON_LOCAL_DEFINES", "COMMON_STATIC_LIBS_LINKOPTS")
 
 cc_binary(

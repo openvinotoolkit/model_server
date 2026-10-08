@@ -42,16 +42,6 @@ ovms_cc_library(
     alwayslink = 1, # needed, so the calculator can be registered by MediaPipe
 )
 
-# NOTE: the optional plugin must not own calculator registration. It only exports
-# the runtime entry point used by the main MediaPipe runtime to initialize
-# LLM execution contexts. Keeping the registration in the main runtime avoids
-# duplicate MediaPipe framework registry ownership when the plugin is dlopened.
-ovms_cc_library(
-    name = "llmcalculator",
-    deps = [":llmcalculator_registration"],
-    visibility = ["//visibility:public"],
-)
-
 ovms_cc_library(
     name = "llm_calculators_plugin_api",
     hdrs = ["llm_calculators_plugin_api.hpp"],

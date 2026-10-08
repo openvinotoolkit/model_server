@@ -2250,7 +2250,7 @@ cc_test(
                 "//src/audio/speech_to_text:s2t_calculator",
                 "//src/audio/text_to_speech:t2s_calculator",
                 "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
-                "//src/llm:llmcalculator",
+                "//src/llm:llmcalculator_registration",
                 "//src/embeddings:embeddingscalculator_ov",
                 "//src/rerank:rerankcalculator_ov",
                 "//src/image_gen:image_gen_calculator",

@@ -317,29 +317,33 @@ bool MediapipeRuntimeApi::hasActiveInference(const std::string& name) const {
 }
 
 std::string MediapipeRuntimeApi::getDefinitionGroupName(const std::string& name) const {
-    if (!isLoaded())
+    if (!isLoaded()) {
         return "";
+    }
     const char* groupName = api->getDefinitionGroupName(api->factoryHandle, name.c_str());
     return groupName == nullptr ? "" : groupName;
 }
 
 bool MediapipeRuntimeApi::aliasesConflictExcluding(const std::vector<std::string>& aliases, const std::string& ownGraphName) const {
-    if (!isLoaded())
+    if (!isLoaded()) {
         return false;
+    }
     std::string joinedAliases = joinWithNewlines(aliases);
     return api->aliasesConflictExcluding(api->factoryHandle, joinedAliases.c_str(), ownGraphName.c_str()) != 0;
 }
 
 const std::vector<std::string> MediapipeRuntimeApi::getMediapipePipelinesNames() const {
-    if (!isLoaded())
+    if (!isLoaded()) {
         return {};
+    }
     const char* names = api->getNames(api->factoryHandle, 0);
     return names == nullptr ? std::vector<std::string>{} : splitNewlineDelimited(names);
 }
 
 const std::vector<std::string> MediapipeRuntimeApi::getNamesOfAvailableMediapipePipelines() const {
-    if (!isLoaded())
+    if (!isLoaded()) {
         return {};
+    }
     const char* names = api->getNames(api->factoryHandle, 1);
     return names == nullptr ? std::vector<std::string>{} : splitNewlineDelimited(names);
 }
@@ -349,8 +353,9 @@ MediapipeGraphDefinition* MediapipeRuntimeApi::findDefinitionByName(const std::s
 }
 
 ServableDefinition* MediapipeRuntimeApi::findServableDefinitionByName(const std::string& name) const {
-    if (!isLoaded())
+    if (!isLoaded()) {
         return nullptr;
+    }
     return reinterpret_cast<ServableDefinition*>(api->findServableDefinition(api->factoryHandle, name.c_str()));
 }
 
@@ -368,14 +373,16 @@ Status MediapipeRuntimeApi::createServableConfig(const std::string& directoryPat
 Status MediapipeRuntimeApi::createServableConfigInMemory(const std::string& directoryPath,
     const HFSettingsImpl& hfSettings,
     std::string& outPbtxt) const {
-    if (api == nullptr || api->createServableConfigInMemory == nullptr)
+    if (api == nullptr || api->createServableConfigInMemory == nullptr) {
         return StatusCode::INTERNAL_ERROR;
+    }
     char* buffer = nullptr;
     int code = api->createServableConfigInMemory(directoryPath.c_str(), &hfSettings, &buffer);
     std::unique_ptr<char, decltype(&std::free)> bufferGuard(buffer, &std::free);
     if (code == static_cast<int>(StatusCode::OK)) {
-        if (buffer != nullptr)
+        if (buffer != nullptr) {
             outPbtxt.assign(buffer);
+        }
         return StatusCode::OK;
     }
     const char* details = api->lastError ? api->lastError() : nullptr;
