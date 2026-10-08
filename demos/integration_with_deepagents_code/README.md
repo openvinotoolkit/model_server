@@ -344,7 +344,7 @@ dcode -n "Extend mcp_server/time_mcp_server.py with a date tool." --rubric "mcp_
 <details>
 <summary>Expected output</summary>
 
-```console
+```text
 Done. Added `get_current_utc_date()` tool to `time_mcp_server.py`. It returns the current UTC date as an ISO 8601 string (`YYYY-MM-DD`). Compiles cleanly.⏳ Checking acceptance criteria…
 ✓ Acceptance criteria satisfied
 ```
@@ -382,7 +382,7 @@ dcode -n "Give me the exact current UTC timestamp down to the current second alo
 <details>
 <summary>Expected output</summary>
 
-```console
+```text
 Current UTC timestamp: `2026-09-30T14:00:12.508579Z`
 
 Current UTC date: `2026-09-30`
