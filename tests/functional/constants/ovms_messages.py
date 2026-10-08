@@ -249,6 +249,7 @@ class OvmsMessages:
     ERROR_INVALID_LAYOUT_NHWC = "Received binary image input but resource not configured to accept NHWC layout"
     ERROR_BINARY_INPUTS_CONVERSION_FAILED = "Binary inputs conversion failed."
     ERROR_BINARY_INPUTS_NATIVE_FILE_FORMAT_CONVERSION = "Input native file format conversion failed"
+    ERROR_BINARY_INPUTS_DECODED_SIZE_ESTIMATION = "Decoded size could not be estimated for input"
     ERROR_BINARY_INPUTS_CORRUPT_JPEG_DATA = "Corrupt JPEG data"
 
     ERROR_INTERPOLATE_NODE_IS_NOT_SUPPORTED = "Interpolate node is not supported:"
