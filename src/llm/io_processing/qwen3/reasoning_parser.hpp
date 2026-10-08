@@ -45,7 +45,7 @@ public:
     static OutputParsingConfig defaultParsingConfig() {
         OutputParsingConfig cfg;
         cfg.startTags = {"<think>"};
-        cfg.endTag = "</think>";
+        cfg.endTags = {"</think>"};
         return cfg;
     }
 

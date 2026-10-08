@@ -34,7 +34,7 @@ std::optional<Delta> Qwen3ReasoningParser::parseChunk(const std::string& chunk, 
     // streamer flush as preceding reasoning text (FOUND_INCOMPLETE hold-back
     // accumulates e.g. "...ing</think>" in the cache).
     std::string text = chunk;
-    const std::string& endTag = parsingConfig.endTag;
+    const std::string& endTag = parsingConfig.endTags.front();
     const size_t endTagPos = text.rfind(endTag);
     if (endTagPos != std::string::npos) {
         text = text.substr(0, endTagPos);

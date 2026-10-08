@@ -41,7 +41,7 @@ std::optional<Delta> GptOssReasoningParser::parseChunk(const std::string& newChu
         chunk = chunk.substr(startPos + parsingConfig.startTags[0].size());
     }
 
-    const std::size_t endPos = chunk.find(parsingConfig.endTag);
+    const std::size_t endPos = chunk.find(parsingConfig.endTags.front());
     const std::size_t returnPos = chunk.find("<|return|>");
     const std::size_t closingPos = std::min(endPos, returnPos);
     if (closingPos != std::string::npos) {

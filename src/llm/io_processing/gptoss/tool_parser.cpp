@@ -37,16 +37,14 @@ std::optional<Delta> GptOssToolParser::wrapDeltaIntoDocument(const std::string& 
     return ToolCallDelta{toolCallIndex, std::nullopt, std::nullopt, chunk};
 }
 
-void GptOssToolParser::clearState() {
+void GptOssToolParser::clearHeaderState() {
     cache.clear();
     isStreamingFunctionName = false;
     functionNameCache.clear();
 }
 
-// <|start|>assistant to=functions.foo <|constrain|>json<|message|> | {...}<|call|>
-// consumeToolCallStartTag -> consumeHeader -> consumeConstrain     | consumeMessage
-// ...tool response...<|channel|>final<|message|> | done<|end|>
-// consumePostToolCall                            | consumeContent
+// <|start|>assistant to=functions.foo <|constrain|>json<|message|>{...}<|call|>
+// consumeToolCallStartTag -> consumeHeader -> consumeConstrain -> consumeMessage
 std::optional<Delta> GptOssToolParser::parseChunk(const std::string& newChunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Tool | Processing Chunk [{}]", newChunk);
 
@@ -65,13 +63,6 @@ std::optional<Delta> GptOssToolParser::parseChunk(const std::string& newChunk, c
                 return consumeConstrain(chunk, pendingDelta);
             case StreamState::READING_MESSAGE:
                 return consumeMessage(chunk, pendingDelta);
-            case StreamState::READING_CONTENT:
-                return consumeContent(chunk);
-            case StreamState::WAITING_FOR_FINAL:
-                if (consumeToolCallStartTag(chunk)) {
-                    return continueParsing();
-                }
-                return consumePostToolCall(chunk);
             default:
                 throw std::logic_error("Unexpected GPT-OSS tool parser state");
             }
@@ -93,11 +84,10 @@ std::optional<Delta> GptOssToolParser::parseChunk(const std::string& newChunk, c
 bool GptOssToolParser::consumeToolCallStartTag(std::string& chunk) {
     for (const auto& parsingStartTag : parsingConfig.startTags) {
         const std::size_t startPos = chunk.find(parsingStartTag);
-        if (startPos != std::string::npos && parsingStartTag.find(" to=") != std::string::npos) {
+        if (startPos != std::string::npos) {
             toolCallIndex++;  // starting with -1, first call will be 0
-            postToolCallCache.clear();
             streamState = StreamState::READING_HEADER;
-            clearState();
+            clearHeaderState();
             chunk = chunk.substr(startPos + parsingStartTag.size());
             return true;
         }
@@ -106,16 +96,6 @@ bool GptOssToolParser::consumeToolCallStartTag(std::string& chunk) {
 }
 
 GptOssToolParser::StepResult GptOssToolParser::consumeHeader(std::string& chunk, std::optional<Delta>& pendingDelta) {
-    static const std::string finalMessageTag = "<|channel|>final<|message|>";
-    const std::size_t finalPos = chunk.find(finalMessageTag);
-    const std::size_t toolRoutePos = chunk.find("to=functions.");
-    if (finalPos != std::string::npos && (toolRoutePos == std::string::npos || toolRoutePos > finalPos)) {
-        chunk = chunk.substr(finalPos + finalMessageTag.size());
-        streamState = StreamState::READING_CONTENT;
-        clearState();
-        return continueParsing();
-    }
-
     const StreamState startingState = streamState;
     if (consumeCompleteHeader(chunk, pendingDelta)) {
         return pendingDelta.has_value() ? emitDelta(std::move(*pendingDelta)) : needMoreInput();
@@ -124,30 +104,7 @@ GptOssToolParser::StepResult GptOssToolParser::consumeHeader(std::string& chunk,
         return continueParsing();
     }
     if (consumeHeaderMarker(chunk, pendingDelta)) {
-        if (pendingDelta.has_value()) {
-            return emitDelta(std::move(*pendingDelta));
-        }
-        return needMoreInput();
-    }
-    if (streamState != startingState) {
-        return continueParsing();
-    }
-    if (closeMessage(chunk, pendingDelta)) {
         return pendingDelta.has_value() ? emitDelta(std::move(*pendingDelta)) : needMoreInput();
-    }
-    if (streamState != startingState) {
-        return continueParsing();
-    }
-    return consumePartialHeader(std::move(chunk));
-}
-
-GptOssToolParser::StepResult GptOssToolParser::consumeConstrain(std::string& chunk, std::optional<Delta>& pendingDelta) {
-    const StreamState startingState = streamState;
-    if (consumeHeaderMarker(chunk, pendingDelta)) {
-        if (pendingDelta.has_value()) {
-            return emitDelta(std::move(*pendingDelta));
-        }
-        return needMoreInput();
     }
     if (streamState != startingState) {
         return continueParsing();
@@ -159,6 +116,23 @@ GptOssToolParser::StepResult GptOssToolParser::consumeConstrain(std::string& chu
         return continueParsing();
     }
     cache += chunk;
+    return consumePartialHeader(std::move(chunk));
+}
+
+GptOssToolParser::StepResult GptOssToolParser::consumeConstrain(std::string& chunk, std::optional<Delta>& pendingDelta) {
+    const StreamState startingState = streamState;
+    if (consumeHeaderMarker(chunk, pendingDelta)) {
+        return pendingDelta.has_value() ? emitDelta(std::move(*pendingDelta)) : needMoreInput();
+    }
+    if (streamState != startingState) {
+        return continueParsing();
+    }
+    if (closeMessage(chunk, pendingDelta)) {
+        return pendingDelta.has_value() ? emitDelta(std::move(*pendingDelta)) : needMoreInput();
+    }
+    if (streamState != startingState) {
+        return continueParsing();
+    }
     return needMoreInput();
 }
 
@@ -170,53 +144,15 @@ GptOssToolParser::StepResult GptOssToolParser::consumeMessage(std::string& chunk
     if (streamState != startingState) {
         return continueParsing();
     }
-    cache += chunk;
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Tool | Sending Argument Part [{}]", chunk);
     const auto* toolDelta = pendingDelta.has_value() ? std::get_if<ToolCallDelta>(&*pendingDelta) : nullptr;
     if (toolDelta != nullptr && toolDelta->name.has_value()) {
-        return emitDelta(ToolCallDelta{toolCallIndex, toolDelta->id, toolDelta->name, chunk});
+        return emitDelta(ToolCallDelta{toolCallIndex, toolDelta->id, toolDelta->name, ""});
     }
     return emitDelta(*wrapDeltaIntoDocument(chunk));
 }
 
-GptOssToolParser::StepResult GptOssToolParser::consumeContent(std::string& chunk) {
-    const std::size_t endPos = chunk.find(openai::Harmony::TOKEN_END);
-    const std::size_t returnPos = chunk.find(openai::Harmony::TOKEN_RETURN);
-    const std::size_t callPos = chunk.find(openai::Harmony::TOKEN_CALL);
-    const std::size_t terminatorPos = std::min({endPos, returnPos, callPos});
-    if (terminatorPos != std::string::npos) {
-        std::string content = chunk.substr(0, terminatorPos);
-        chunk.clear();
-        streamState = StreamState::READING_HEADER;
-        clearState();
-        if (!content.empty()) {
-            return emitDelta(ContentDelta{std::move(content)});
-        }
-        return continueParsing();
-    }
-    if (!chunk.empty()) {
-        return emitDelta(ContentDelta{std::move(chunk)});
-    }
-    return needMoreInput();
-}
-
-GptOssToolParser::StepResult GptOssToolParser::consumePostToolCall(std::string& chunk) {
-    static const std::string finalMessageTag = "<|channel|>final<|message|>";
-    postToolCallCache += chunk;
-    chunk.clear();
-    const std::size_t finalPos = postToolCallCache.find(finalMessageTag);
-    if (finalPos == std::string::npos) {
-        return needMoreInput();
-    }
-    chunk = postToolCallCache.substr(finalPos + finalMessageTag.size());
-    postToolCallCache.clear();
-    streamState = StreamState::READING_CONTENT;
-    clearState();
-    return continueParsing();
-}
-
 GptOssToolParser::StepResult GptOssToolParser::consumePartialHeader(std::string chunk) {
-    cache += chunk;
     if (!isStreamingFunctionName && startsWith(cache, "functions.")) {
         isStreamingFunctionName = true;
         functionNameCache.clear();
@@ -241,9 +177,6 @@ GptOssToolParser::StepResult GptOssToolParser::consumePartialHeader(std::string 
 }
 
 bool GptOssToolParser::consumeCompleteHeader(std::string& chunk, std::optional<Delta>& result) {
-    if (streamState != StreamState::READING_HEADER) {
-        return false;
-    }
     const std::size_t constrainPos = chunk.find(openai::Harmony::TOKEN_CONSTRAIN);
     const std::size_t messagePos = chunk.find(openai::Harmony::TOKEN_MESSAGE);
     const std::size_t headerEnd = std::min(constrainPos, messagePos);
@@ -263,13 +196,8 @@ bool GptOssToolParser::consumeCompleteHeader(std::string& chunk, std::optional<D
         } else if (messagePos != std::string::npos) {
             streamState = StreamState::READING_MESSAGE;
             chunk = chunk.substr(messagePos + openai::Harmony::TOKEN_MESSAGE.size());
-            if (!chunk.empty()) {
-                if (result.has_value()) {
-                    result = ToolCallDelta{toolCallIndex, std::get<ToolCallDelta>(*result).id,
-                        functionNameCache, chunk};
-                } else {
-                    result = wrapDeltaIntoDocument(chunk);
-                }
+            if (!chunk.empty() && !result.has_value()) {
+                result = wrapDeltaIntoDocument(chunk);
             }
             return true;
         }
@@ -292,7 +220,7 @@ bool GptOssToolParser::consumeHeaderMarker(std::string& chunk, std::optional<Del
         }
 
         streamState = StreamState::READING_CONSTRAIN;
-        clearState();
+        clearHeaderState();
         return true;
     }
 
@@ -311,7 +239,7 @@ bool GptOssToolParser::consumeHeaderMarker(std::string& chunk, std::optional<Del
         // StreamState::READING_CONSTRAIN implement here if required
 
         streamState = StreamState::READING_MESSAGE;
-        clearState();
+        clearHeaderState();
 
         if (chunk.size() > openai::Harmony::TOKEN_MESSAGE.size()) {
             // Move chunk pointer after message tag, continue with everything after message token
@@ -329,33 +257,25 @@ bool GptOssToolParser::closeMessage(std::string& chunk, std::optional<Delta>& re
     const std::size_t endPos = chunk.find(openai::Harmony::TOKEN_END);
     const std::size_t returnPos = chunk.find(openai::Harmony::TOKEN_RETURN);
     const std::size_t terminatorPos = std::min({callPos, endPos, returnPos});
-    if (terminatorPos != std::string::npos && streamState != StreamState::READING_CONTENT) {
-        const std::string terminator = terminatorPos == callPos ? openai::Harmony::TOKEN_CALL : (terminatorPos == endPos ? openai::Harmony::TOKEN_END : openai::Harmony::TOKEN_RETURN);
-        const std::size_t suffixPos = terminatorPos + terminator.size();
-        const std::string suffix = chunk.substr(suffixPos);
-        if (terminator != openai::Harmony::TOKEN_CALL) {
-            postToolCallCache += suffix;
-        }
+    if (terminatorPos != std::string::npos) {
         std::string clearedChunk = chunk.substr(0, terminatorPos);
         if (!clearedChunk.empty()) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Tool | Sending Argument Part [{}]", clearedChunk);
             const auto* toolDelta = result.has_value() ? std::get_if<ToolCallDelta>(&*result) : nullptr;
             if (toolDelta != nullptr && toolDelta->name.has_value()) {
-                result = ToolCallDelta{toolCallIndex, toolDelta->id, toolDelta->name, clearedChunk};
+                result = ToolCallDelta{toolCallIndex, toolDelta->id, toolDelta->name, ""};
             } else {
                 result = wrapDeltaIntoDocument(clearedChunk);
             }
         }
 
-        streamState = StreamState::WAITING_FOR_FINAL;
-        clearState();
-        if (terminator == openai::Harmony::TOKEN_CALL) {
-            return true;
-        }
+        streamState = StreamState::READING_HEADER;
+        clearHeaderState();
         if (result.has_value()) {
             return true;
         }
         chunk.clear();
+        return true;
     }
     return false;
 }

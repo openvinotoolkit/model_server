@@ -182,7 +182,7 @@ public:
     static OutputParsingConfig defaultParsingConfig() {
         OutputParsingConfig cfg;
         cfg.startTags = {"<atem:function_calls>"};
-        cfg.endTag = "</atem:function_calls>";
+        cfg.endTags = {"</atem:function_calls>"};
         cfg.needsSpecialTokens = true;
         return cfg;
     }

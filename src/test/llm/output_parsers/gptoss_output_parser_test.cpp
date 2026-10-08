@@ -567,6 +567,18 @@ TEST_F(GptOssOutputStreamParserTest, ToolCallInAssistantRoleHeaderWithoutChannel
     });
 }
 
+TEST_F(GptOssOutputStreamParserTest, CoalescedToolCallEmitsNameOnly) {
+    for (const auto& metadata : std::vector<std::string>{"", "<|constrain|>json"}) {
+        for (const auto& terminator : std::vector<std::string>{"", "<|call|>"}) {
+            test({
+                {"<|start|>assistant to=functions.echo " + metadata + "<|message|>{\"value\":1}" + terminator,
+                    ov::genai::GenerationFinishReason::NONE,
+                    {R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"echo"}}]}})"}},
+            });
+        }
+    }
+}
+
 TEST_F(GptOssOutputStreamParserTest, ToolCallSurvivesGarbledConstrainMetadata) {
     for (const auto& constrainMetadata : std::vector<std::string>{"wcommentary json", "??commentary json"}) {
         test({
@@ -583,7 +595,7 @@ TEST_F(GptOssOutputStreamParserTest, ToolCallSurvivesGarbledConstrainMetadata) {
 }
 
 TEST_F(GptOssOutputStreamParserTest, ToolResponseIsDiscardedBeforeFinalMessage) {
-    for (const auto& callTerminator : std::vector<std::string>{"<|call|>", "<|end|>"}) {
+    for (const auto& callTerminator : std::vector<std::string>{"<|call|>", "<|end|>", "<|return|>"}) {
         test({
             {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
             {"commentary to=functions.echo ", ov::genai::GenerationFinishReason::NONE, std::nullopt},
@@ -591,8 +603,40 @@ TEST_F(GptOssOutputStreamParserTest, ToolResponseIsDiscardedBeforeFinalMessage) 
                 {R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"echo"}}]}})"}},
             {"{}" + callTerminator, ov::genai::GenerationFinishReason::NONE,
                 {R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{}"}}]}})"}},
-            {"<|start|>functions.echo to=assistant<|message|>tool result<|end|><|start|>assistant<|channel|>final<|message|>done<|end|>",
+            {"<|start|>functions.echo to=assistant<|message|>tool result<|end|><|start|>assistant<|channel|>final<|message|>do",
                 ov::genai::GenerationFinishReason::NONE,
+                {R"({"delta":{"content":"do"}})"}},
+            {"ne<|end|>", ov::genai::GenerationFinishReason::NONE,
+                {R"({"delta":{"content":"ne"}})"}},
+        });
+    }
+}
+
+TEST_F(GptOssOutputStreamParserTest, AssistantCommentaryAndFinalAfterToolResponse) {
+    test({
+        {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"commentary to=functions.echo ", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|message|>", ov::genai::GenerationFinishReason::NONE,
+            {R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"echo"}}]}})"}},
+        {"{}<|call|>", ov::genai::GenerationFinishReason::NONE,
+            {R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{}"}}]}})"}},
+        {"<|start|>functions.echo to=assistant<|message|>tool result<|end|><|start|>assistant<|channel|>commentary<|message|>Working.<|end|><|start|>assistant<|channel|>final<|message|>Done.<|end|>",
+            ov::genai::GenerationFinishReason::NONE,
+            {R"({"delta":{"content":"Working.Done."}})"}},
+    });
+}
+
+TEST_F(GptOssOutputStreamParserTest, ToolTerminatorPreservesPostCallSuffix) {
+    for (const auto& callTerminator : std::vector<std::string>{"<|call|>", "<|end|>", "<|return|>"}) {
+        test({
+            {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+            {"commentary to=functions.echo ", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+            {"<|message|>", ov::genai::GenerationFinishReason::NONE,
+                {R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"echo"}}]}})"}},
+            {"{}" + callTerminator + "<|start|>functions.echo to=assistant<|message|>tool result<|end|><|start|>assistant<|channel|>final<|message|>done<|end|>",
+                ov::genai::GenerationFinishReason::NONE,
+                {R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{}"}}]}})"}},
+            {"", ov::genai::GenerationFinishReason::NONE,
                 {R"({"delta":{"content":"done"}})"}},
         });
     }

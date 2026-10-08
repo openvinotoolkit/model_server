@@ -35,8 +35,6 @@ class GptOssToolParser : public BaseOutputParser {
         READING_HEADER,
         READING_CONSTRAIN,
         READING_MESSAGE,
-        READING_CONTENT,
-        WAITING_FOR_FINAL,
     };
 
     enum class StepAction : int {
@@ -57,7 +55,6 @@ class GptOssToolParser : public BaseOutputParser {
     // Streaming temp variables
     StreamState streamState = StreamState::READING_HEADER;
     std::string cache;
-    std::string postToolCallCache;
     bool isStreamingFunctionName = false;
     int toolCallIndex = -1;
     std::string functionNameCache;
@@ -66,15 +63,13 @@ class GptOssToolParser : public BaseOutputParser {
     StepResult consumeHeader(std::string& chunk, std::optional<Delta>& pendingDelta);
     StepResult consumeConstrain(std::string& chunk, std::optional<Delta>& pendingDelta);
     StepResult consumeMessage(std::string& chunk, std::optional<Delta>& pendingDelta);
-    StepResult consumeContent(std::string& chunk);
-    StepResult consumePostToolCall(std::string& chunk);
     StepResult consumePartialHeader(std::string chunk);
     bool consumeToolCallStartTag(std::string& chunk);
     bool consumeCompleteHeader(std::string& chunk, std::optional<Delta>& result);
     bool consumeHeaderMarker(std::string& chunk, std::optional<Delta>& result);
     bool closeMessage(std::string& chunk, std::optional<Delta>& result);
 
-    void clearState();
+    void clearHeaderState();
 
 public:
     GptOssToolParser() = delete;
@@ -83,10 +78,8 @@ public:
         OutputParsingConfig cfg;
         cfg.startTags = {"<|channel|>commentary to=",
             "<|channel|>analysis to=",
-            "<|start|>assistant to=",
-            "<|channel|>final<|message|>",
-            "<|start|>assistant<|channel|>final<|message|>"};
-        cfg.endTag = "<|call|>";
+            "<|start|>assistant to="};
+        cfg.endTags = {"<|call|>", "<|end|>", "<|return|>"};
         cfg.needsSpecialTokens = true;
         cfg.defaultDecodingWithSpecialTokens = true;
         return cfg;
@@ -99,11 +92,12 @@ public:
 
     void resetState() override {
         streamState = StreamState::READING_HEADER;
-        postToolCallCache.clear();
         toolCallIndex = -1;
-        clearState();
+        clearHeaderState();
     }
 
+    // Known limitation: arguments arriving with the function name in one chunk are dropped.
+    // The one-delta parser contract requires a higher-layer change to deliver both separately.
     std::optional<Delta> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
 };
 }  // namespace ovms

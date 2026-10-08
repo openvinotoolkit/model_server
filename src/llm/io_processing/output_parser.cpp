@@ -26,6 +26,7 @@
 #include "phi4/tool_parser.hpp"
 #include "mistral/tool_parser.hpp"
 #include "gptoss/tool_parser.hpp"
+#include "gptoss/content_parser.hpp"
 #include "qwen3/reasoning_parser.hpp"
 #include "qwen3coder/qwen3coder_tool_parser.hpp"
 #include "devstral/tool_parser.hpp"
@@ -42,6 +43,30 @@
 #include "minicpm5/minicpm5_reasoning_parser.hpp"
 
 namespace ovms {
+namespace {
+
+struct TagMatch {
+    std::size_t position = std::string::npos;
+    std::size_t length = 0;
+};
+
+TagMatch findEarliestTag(const std::string& buffer, const std::vector<std::string>& tags) {
+    TagMatch earliest;
+    for (const auto& tag : tags) {
+        if (tag.empty()) {
+            continue;
+        }
+        const std::size_t position = buffer.find(tag);
+        if (position != std::string::npos &&
+            (position < earliest.position || (position == earliest.position && tag.size() > earliest.length))) {
+            earliest = {position, tag.size()};
+        }
+    }
+    return earliest;
+}
+
+}  // namespace
+
 OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const std::string& tag) const {
     if (tag.empty()) {
         return TagLookupStatus::NOT_FOUND;
@@ -137,12 +162,11 @@ std::optional<Delta> OutputParser::parseToolCallChunk(const std::vector<int64_t>
     }
     // Bytes after the end tag belong to the next phase — preserve them before clearing.
     std::string remainder;
-    const std::string& endTag = toolParser->getParsingConfig().endTag;
-    if (!endTag.empty()) {
-        const std::string& buf = streamOutputCache.getBuffer();
-        const size_t pos = buf.find(endTag);
-        if (pos != std::string::npos)
-            remainder = buf.substr(pos + endTag.size());
+    const auto& endTags = toolParser->getParsingConfig().endTags;
+    const std::string& buffer = streamOutputCache.getBuffer();
+    const TagMatch toolEndMatch = findEarliestTag(buffer, endTags);
+    if (toolEndMatch.position != std::string::npos) {
+        remainder = buffer.substr(toolEndMatch.position + toolEndMatch.length);
     }
     std::optional<Delta> result;
     try {
@@ -164,12 +188,11 @@ std::optional<Delta> OutputParser::parseReasoningChunk(const std::vector<int64_t
     }
     // Bytes after the end tag belong to the next phase — preserve them before clearing.
     std::string remainder;
-    const std::string& endTag = reasoningParser->getParsingConfig().endTag;
-    if (!endTag.empty()) {
-        const std::string& buf = streamOutputCache.getBuffer();
-        const size_t pos = buf.find(endTag);
-        if (pos != std::string::npos)
-            remainder = buf.substr(pos + endTag.size());
+    const auto& endTags = reasoningParser->getParsingConfig().endTags;
+    const std::string& buffer = streamOutputCache.getBuffer();
+    const TagMatch reasoningEndMatch = findEarliestTag(buffer, endTags);
+    if (reasoningEndMatch.position != std::string::npos) {
+        remainder = buffer.substr(reasoningEndMatch.position + reasoningEndMatch.length);
     }
     std::optional<Delta> result;
     try {
@@ -239,12 +262,7 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     if (toolParserName == "onyx" || reasoningParserName == "onyx")
         contentParser = std::make_unique<OnyxContentParser>(tokenizer);
     else if (toolParserName == "gptoss" || reasoningParserName == "gptoss")
-        contentParser = std::make_unique<DefaultContentParser>(tokenizer, std::vector<std::string>{
-                                                                              "<|start|>assistant<|channel|>final<|message|>",
-                                                                              "<|channel|>final<|message|>",
-                                                                              "<|channel|>commentary<|message|>",
-                                                                              "<|end|>",
-                                                                              "<|return|>"});
+        contentParser = std::make_unique<GptOssContentParser>(tokenizer);
     else if (toolParserName == "gemma4")
         // "<|channel>thought\n"/"<channel|>" guard against a reasoning re-entry mid-CONTENT
         // (e.g. an empty "ghost" thought channel) leaking into visible content.
@@ -373,7 +391,7 @@ std::optional<Delta> OutputParser::parseChunk(const std::string& chunkResponse, 
     so only use those methods or return nullopt.
     */
 
-    bool reasoningParserExistsAndSupportsStreaming = reasoningParser && !reasoningParser->getParsingConfig().startTags.empty() && !reasoningParser->getParsingConfig().endTag.empty();
+    bool reasoningParserExistsAndSupportsStreaming = reasoningParser && !reasoningParser->getParsingConfig().startTags.empty() && !reasoningParser->getParsingConfig().endTags.empty();
     bool toolParserExistsAndSupportsStreaming = toolParser && !toolParser->getParsingConfig().startTags.empty();
     bool applyToolParser = toolParserExistsAndSupportsStreaming && toolsAvailable;
 
@@ -454,7 +472,7 @@ std::optional<Delta> OutputParser::parseChunk(const std::string& chunkResponse, 
         return std::nullopt;
     } else if (processingPhase == REASONING) {
         // If we are in the REASONING phase, we check if parsing end tag is found and if so, switch to UNKNOWN phase.
-        TagLookupStatus endTagStatus = streamOutputCache.lookupTag(reasoningParser->getParsingConfig().endTag);
+        TagLookupStatus endTagStatus = streamOutputCache.lookupTags(reasoningParser->getParsingConfig().endTags);
         if (endTagStatus == TagLookupStatus::FOUND_COMPLETE) {
             // Switch back to UNKNOWN phase (we can have either CONTENT or TOOL_CALLS next)
             return parseReasoningChunk(tokens, finishReason, UNKNOWN);
@@ -478,7 +496,7 @@ std::optional<Delta> OutputParser::parseChunk(const std::string& chunkResponse, 
     } else if (processingPhase == TOOL_CALLS_PROCESSING_TOOL) {
         // Active tool call: accumulate until the end tag, then transition to WAITING_FOR_TOOL
         // to determine whether another tool call or a content turn follows.
-        TagLookupStatus toolEndTagStatus = streamOutputCache.lookupTag(toolParser->getParsingConfig().endTag);
+        TagLookupStatus toolEndTagStatus = streamOutputCache.lookupTags(toolParser->getParsingConfig().endTags);
         if (toolEndTagStatus == TagLookupStatus::FOUND_INCOMPLETE && finishReason == ov::genai::GenerationFinishReason::NONE) {
             return std::nullopt;  // Wait for more chunks to determine if end tag is complete
         }
