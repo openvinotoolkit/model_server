@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "cli_parser.hpp"
 
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -27,6 +28,8 @@
 
 #include "capi_frontend/server_settings.hpp"
 #include "default_task.hpp"
+#include "pull_module/curl_downloader.hpp"
+#include "pull_module/hf_env_vars.hpp"
 #include "logging.hpp"
 #include "graph_export/graph_cli_parser.hpp"
 #include "graph_export/rerank_graph_cli_parser.hpp"
@@ -56,6 +59,46 @@ std::string getConfigPath(const std::string& configPath) {
         return FileSystem::joinPath({configPath, "config.json"});
     }
     return configPath;
+}
+
+static std::string ensureTrailingSlash(std::string path) {
+    if (path.empty() || path.back() == '/') {
+        return path;
+    }
+    path.push_back('/');
+    return path;
+}
+
+static std::string describeSourceModelAvailabilityFailure(const std::string& sourceModel, int httpCode) {
+    if (httpCode == 401 || httpCode == 403 || httpCode == 404) {
+        return "Model '" + sourceModel + "' was not found locally and is not accessible on Hugging Face (check whether it is private or the repo name is wrong).";
+    }
+    if (httpCode == -1 || httpCode == 0) {
+        return "Could not reach Hugging Face to resolve model '" + sourceModel + "'. Check the internet connection or proxy configuration.";
+    }
+    return "Model '" + sourceModel + "' was not found locally and is not accessible on Hugging Face (check whether it is private or the repo name is wrong).";
+}
+
+static std::optional<std::string> validateSourceModelAvailability(const std::optional<std::string>& modelRepositoryPath, const std::string& sourceModel) {
+    if (modelRepositoryPath.has_value() && !modelRepositoryPath->empty()) {
+        const auto localModelDir = std::filesystem::path(*modelRepositoryPath) / sourceModel;
+        if (std::filesystem::exists(localModelDir)) {
+            return std::nullopt;
+        }
+        SPDLOG_INFO("Model '{}' was not found locally in '{}'. Probing Hugging Face...", sourceModel, localModelDir.string());
+    }
+
+    const std::string hfEndpoint = ensureTrailingSlash(std::getenv(HF_ENDPOINT_ENV_VAR) != nullptr ? std::getenv(HF_ENDPOINT_ENV_VAR) : DEFAULT_HF_ENDPOINT);
+    const char* tokenEnv = std::getenv(HF_TOKEN_ENV_VAR);
+    const std::string token = tokenEnv != nullptr ? tokenEnv : "";
+    std::string responseBody;
+    int httpCode = -1;
+    const std::string repoUrl = hfEndpoint + "api/models/" + sourceModel;
+    const auto repoStatus = fetchUrlToString(repoUrl, token, responseBody, httpCode);
+    if (!repoStatus.ok()) {
+        return describeSourceModelAvailabilityFailure(sourceModel, httpCode);
+    }
+    return std::nullopt;
 }
 
 std::string CLIParser::getEffectiveTaskParameter() const {
@@ -401,6 +444,11 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 // For model_path in in-memory graph mode, check if task should be inferred based on parameters and graph.pbtxt
                 bool shouldInferTask = false;
                 if (sourceModel.has_value() && !sourceModel->empty()) {
+                    const auto availabilityError = validateSourceModelAvailability(modelRepositoryPath, *sourceModel);
+                    if (availabilityError.has_value()) {
+                        ss << "error parsing options - " << availabilityError.value() << std::endl;
+                        return std::make_pair(OVMS_EX_USAGE, ss.str());
+                    }
                     // Always infer task when pulling from HuggingFace
                     shouldInferTask = true;
                 } else if (isConfigureMode(this->result) && modelPath.has_value() && !modelPath->empty()) {
