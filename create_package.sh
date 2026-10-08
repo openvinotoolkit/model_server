@@ -177,8 +177,26 @@ if [ "$FUZZER_BUILD" == "0" ]; then
 			exit 1
 		fi
 		exported_symbols=$(nm -D ./ovms | awk '$2 ~ /^[A-TV-Z]$/ { print $3 }')
-		for symbol in OVMS_MPFactoryCreate OVMS_MPFactoryDestroy OVMS_MPFactoryProcessConfig \
-			OVMS_MPFactoryCreateExecutor OVMS_MPGraphExportCreateServableConfig \
+		for symbol in \
+			OVMS_MPFactoryCreate \
+			OVMS_MPFactoryDestroy \
+			OVMS_MPFactoryGetLastError \
+			OVMS_MPFactoryProcessConfig \
+			OVMS_MPFactoryCreateExecutor \
+			OVMS_MPFactoryCreateExecutorHandle \
+			OVMS_MPFactoryDefinitionExists \
+			OVMS_MPFactoryWakeUpDefinition \
+			OVMS_MPFactoryPutToSleepDefinition \
+			OVMS_MPFactoryRetireDefinition \
+			OVMS_MPFactoryIsDefinitionRetired \
+			OVMS_MPFactoryIsDefinitionAvailable \
+			OVMS_MPFactoryShouldUnloadDefinitionDueToIdle \
+			OVMS_MPFactoryHasActiveInference \
+			OVMS_MPFactoryGetDefinitionGroupName \
+			OVMS_MPFactoryAliasesConflictExcluding \
+			OVMS_MPFactoryGetNames \
+			OVMS_MPFactoryFindServableDefinitionByName \
+			OVMS_MPGraphExportCreateServableConfig \
 			OVMS_MPGraphExportCreateServableConfigInMemory; do
 			count=$(grep -cx "$symbol" <<< "$exported_symbols" || true)
 			if [ "$count" -ne 1 ]; then
@@ -186,6 +204,45 @@ if [ "$FUZZER_BUILD" == "0" ]; then
 				exit 1
 			fi
 		done
+
+		registration_artifacts=(./ovms ../lib/libovms_llm_calculators.so)
+		if [[ "$debug_bazel_flags" != *"_py_off"* ]]; then
+			registration_artifacts+=(../lib/libovmspython.so ../lib/libpython_calculators.so)
+		fi
+		registration_symbol_sets=()
+		for artifact in "${registration_artifacts[@]}"; do
+			if [ ! -f "$artifact" ]; then
+				echo "Missing MediaPipe runtime artifact for registration-symbol check: $artifact."
+				exit 1
+			fi
+			defined_symbols=$(nm -an --defined-only -C "$artifact") || {
+				echo "Failed to read symbols from $artifact."
+				exit 1
+			}
+			calculator_options=$(printf '%s\n' "$defined_symbols" \
+				| grep -oE '\b[A-Za-z_][A-Za-z0-9_]*CalculatorOptions\b' \
+				| sort -u)
+			registration_symbol_sets+=("$calculator_options")
+		done
+
+		registration_symbols_failed=0
+		for ((left_index = 0; left_index < ${#registration_artifacts[@]}; ++left_index)); do
+			for ((right_index = left_index + 1; right_index < ${#registration_artifacts[@]}; ++right_index)); do
+				overlap=$(comm -12 \
+					<(printf '%s\n' "${registration_symbol_sets[$left_index]}" | sed '/^$/d' | sort -u) \
+					<(printf '%s\n' "${registration_symbol_sets[$right_index]}" | sed '/^$/d' | sort -u))
+				if [ -n "$overlap" ]; then
+					while IFS= read -r symbol; do
+						[ -n "$symbol" ] || continue
+						echo "ERROR: duplicate CalculatorOptions symbol $symbol in ${registration_artifacts[$left_index]} and ${registration_artifacts[$right_index]}." >&2
+					done <<< "$overlap"
+					registration_symbols_failed=1
+				fi
+			done
+		done
+		if [ "$registration_symbols_failed" -ne 0 ]; then
+			exit 1
+		fi
 	fi
     patchelf --remove-rpath ./ovms && \
     patchelf --set-rpath '$ORIGIN/../lib/' ./ovms

@@ -122,6 +122,7 @@ http_archive(
 )
 
 # RapidJSON
+# Must be defined earlier than tensorflow_serving because TFS is using older rapidjson
 # Version must match openvino.genai -> jinja2cpp -> rapidjson
 # git/Jinja2Cpp/third_party/internal_deps.cmake
 # Date:   Tue May 9 21:31:22 2023 +0000 Avoid ptrdiff between pointers to different allocations
@@ -141,7 +142,7 @@ http_archive(
     build_file = "@//third_party/libevent:BUILD",
 )
 
-# overriding grpc boringssl dependency
+# overriding tensorflow serving bazel dependency
 # alternative would be to use cmake build of grpc and flag
 # to use system ssl instead
 new_local_repository(
@@ -570,6 +571,15 @@ new_local_repository(
     name = "mediapipe_calculators",
     build_file = "@//third_party/mediapipe_calculators:BUILD",
     path = "third_party/mediapipe_calculators",
+)
+
+# Eigen — referenced by mediapipe upstream calculators (e.g. matrix_to_vector).
+http_archive(
+    name = "eigen",
+    build_file = "@mediapipe//third_party:eigen.BUILD",
+    sha256 = "35c6126e246585d9cf6600b65471582c2701aae64b784a6fd19168a90cfc841e",
+    strip_prefix = "eigen-ea13a98decd497a8c5588fb5de71b57bcf10d864",
+    urls = ["https://gitlab.com/libeigen/eigen/-/archive/ea13a98decd497a8c5588fb5de71b57bcf10d864/eigen-ea13a98decd497a8c5588fb5de71b57bcf10d864.tar.gz"],
 )
 
 http_archive(

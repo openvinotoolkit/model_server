@@ -15,7 +15,13 @@
 ::
 echo off
 setlocal EnableExtensions EnableDelayedExpansion
-set "setPath=C:\opt;C:\opt\msys64\usr\bin\;%PATH%;"
+set "msvc_tools_dir=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC"
+for /f "delims=" %%V in ('dir /b /ad /o-n "%msvc_tools_dir%" 2^>nul') do (
+    if not defined dumpbin_dir if exist "%msvc_tools_dir%\%%V\bin\Hostx64\x64\dumpbin.exe" (
+        set "dumpbin_dir=%msvc_tools_dir%\%%V\bin\Hostx64\x64"
+    )
+)
+set "setPath=C:\opt;C:\opt\msys64\usr\bin\;!dumpbin_dir!;%PATH%;"
 set "PATH=%setPath%"
 
 set "libovmspython_src="
@@ -73,8 +79,49 @@ if !errorlevel! equ 0 (
         exit /b 1
     )
     del "!deps_file!"
+
+    echo DEBUG: Running MediaPipe runtime export check with dumpbin.
+    set "exports_file=%TEMP%\ovms_exports_!RANDOM!.txt"
+    dumpbin /EXPORTS dist\windows\ovms\ovms.exe > "!exports_file!"
+    if !errorlevel! neq 0 (
+        del "!exports_file!"
+        echo Failed to inspect OVMS exports with dumpbin.
+        exit /b 1
+    )
+    :: These are required by MediapipeRuntimeApi's GetProcAddress initialization.
+    for %%S in (
+        OVMS_MPFactoryCreate
+        OVMS_MPFactoryDestroy
+        OVMS_MPFactoryGetLastError
+        OVMS_MPFactoryProcessConfig
+        OVMS_MPFactoryCreateExecutor
+        OVMS_MPFactoryCreateExecutorHandle
+        OVMS_MPFactoryDefinitionExists
+        OVMS_MPFactoryWakeUpDefinition
+        OVMS_MPFactoryPutToSleepDefinition
+        OVMS_MPFactoryRetireDefinition
+        OVMS_MPFactoryIsDefinitionRetired
+        OVMS_MPFactoryIsDefinitionAvailable
+        OVMS_MPFactoryShouldUnloadDefinitionDueToIdle
+        OVMS_MPFactoryHasActiveInference
+        OVMS_MPFactoryGetDefinitionGroupName
+        OVMS_MPFactoryAliasesConflictExcluding
+        OVMS_MPFactoryGetNames
+        OVMS_MPFactoryFindServableDefinitionByName
+        OVMS_MPGraphExportCreateServableConfig
+        OVMS_MPGraphExportCreateServableConfigInMemory
+    ) do (
+        findstr /R /C:"[ ]%%S$" "!exports_file!" >nul
+        if !errorlevel! neq 0 (
+            del "!exports_file!"
+            echo Missing required MediaPipe runtime export %%S in OVMS.
+            exit /b 1
+        )
+    )
+    del "!exports_file!"
+    echo PASS: all required MediaPipe runtime exports are present in OVMS.
 ) else (
-    echo dumpbin not available; skipping OVMS Python linkage check.
+    echo dumpbin not available; skipping OVMS Python linkage and MediaPipe export checks.
 )
 
 copy C:\%output_user_root%\openvino\runtime\bin\intel64\Release\*.dll dist\windows\ovms
