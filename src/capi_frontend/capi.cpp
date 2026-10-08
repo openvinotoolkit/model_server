@@ -301,7 +301,9 @@ DLL_PUBLIC OVMS_Status* OVMS_ServerMetadata(OVMS_Server* server, OVMS_Metadata**
     rapidjson::Document* doc = new rapidjson::Document;
     doc->SetObject();
     doc->AddMember("name", PROJECT_NAME, doc->GetAllocator());
-    doc->AddMember("version", ovms::getProjectVersion(), doc->GetAllocator());
+    rapidjson::Value projectVersion;
+    projectVersion.SetString(ovms::getProjectVersion(), doc->GetAllocator());
+    doc->AddMember("version", std::move(projectVersion), doc->GetAllocator());
     rapidjson::Value ovVersion;
     ovVersion.SetString(ovms::getOpenVINOVersion(), doc->GetAllocator());
     doc->AddMember("ov_version", std::move(ovVersion), doc->GetAllocator());

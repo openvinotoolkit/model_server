@@ -161,7 +161,7 @@ cc_binary(
     deps = [
         "//src/mediapipe_internal:libovms_mediapipe_runtime_owner",
         "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
-        ":libovms_version_impl",
+        ":libovms_ov_version",
     ],
     linkopts = select({
         "//conditions:default": ["-Wl,--allow-shlib-undefined"],
@@ -1980,7 +1980,6 @@ cc_binary(
         # NOTE: the MediaPipe runtime shared object is NOT linked into the main binary.
         # Runtime loading keeps registration ownership outside of ovms and avoids
         # duplicate symbol/registration conflicts.
-        ":libovms_ov_version",
     ]
     + select({
             "//conditions:default": [],
