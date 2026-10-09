@@ -167,17 +167,19 @@ You can also build model server from source by following the [developer guide](w
 
 Download ResNet50 model:
 ```console
-curl --create-dirs -k https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet50/1/model.xml
-curl --create-dirs -k https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -o models/resnet50/1/model.bin
+mkdir -p ${HOME}/models
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o ${HOME}/models/resnet50.bin
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o ${HOME}/models/resnet50.xml
 ```
 
 For linux run:
 ```bash
-chmod -R 755 models
+chmod -R 755 ${HOME}/models
 ```
 Start the server:
 ```console
-ovms --port 9000 --model_name resnet --model_path models/resnet50
+ovms --port 9000 --model_name resnet --model_path ${HOME}/models/resnet50.xml \
+  --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW"
 ```
 
 or start as a background process, daemon initiated by ```systemctl/initd``` or a Windows service depending on the operating system and specific hosting requirements.

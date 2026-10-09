@@ -22,7 +22,7 @@ This guide shows how to interact with KServe API endpoints on both gRPC and HTTP
   - [http_infer_binary_resnet.py](#run-the-client-to-perform-inference-with-binary-encoded-image-1)
   - [http_async_infer_resnet.py](#run-the-client-to-perform-asynchronous-inference-1)
 
-> **Note:** Some of the samples will use [ResNet50](https://github.com/openvinotoolkit/open_model_zoo/blob/2022.1.0/models/intel/resnet50-binary-0001/README.md).
+> **Note:** Some of the samples will use [ResNet50](https://huggingface.co/OpenVINO/resnet50-int8-ov).
 
 ## Before you run the samples
 
@@ -42,8 +42,9 @@ pip install -r requirements.txt
 ### Download the Pretrained Model
 Download the model files and store them in the `models` directory
 ```Bash
-mkdir -p models/resnet/1
-curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
+mkdir -p ${HOME}/models
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o ${HOME}/models/resnet50.bin
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o ${HOME}/models/resnet50.xml
 ```
 
 ### Pull the Latest Model Server Image
@@ -55,7 +56,11 @@ docker pull openvino/model_server:latest
 ### Start the Model Server Container with Downloaded Model
 Start the server container with the image pulled in the previous step and mount the `models` directory :
 ```Bash
-docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 -p 8000:8000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --port 9000 --rest_port 8000 --layout NHWC:NCHW
+docker run --rm -d -u $(id -u) -v ${HOME}/models:/models -p 9000:9000 -p 8000:8000 \
+  openvino/model_server:latest \
+  --model_name resnet --model_path /models/resnet50.xml \
+  --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" \
+  --port 9000 --rest_port 8000
 ```
 
 > Note: The model default setting is to accept inputs in layout NCHW, but we change it to NHWC to make it work with samples using either regular, array-like input data or JPEG encoded images.
@@ -204,7 +209,7 @@ name: "resnet"
 versions: "1"
 platform: "OpenVINO"
 inputs {
-  name: "0"
+  name: "image"
   datatype: "FP32"
   shape: 1
   shape: 224
@@ -212,7 +217,7 @@ inputs {
   shape: 3
 }
 outputs {
-  name: "1463"
+  name: "output"
   datatype: "FP32"
   shape: 1
   shape: 1000
@@ -243,9 +248,9 @@ optional arguments:
   --grpc_port GRPC_PORT
                         Specify port to grpc service. default: 9000
   --input_name INPUT_NAME
-                        Specify input tensor name. default: input
+                        Specify input tensor name. default: image
   --output_name OUTPUT_NAME
-                        Specify output name. default: resnet_v1_50/predictions/Reshape_1
+                        Specify output name. default: output
   --transpose_input {False,True}
                         Set to False to skip NHWC>NCHW or NCHW>NHWC input transposing. default: True
   --transpose_method {nchw2nhwc,nhwc2nchw}
@@ -272,7 +277,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python grpc_infer_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False
+python grpc_infer_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --model_name resnet --transpose_input False
 Image data range: 0.0 : 255.0
 Start processing:
         Model name: resnet
@@ -343,9 +348,9 @@ optional arguments:
   --grpc_port GRPC_PORT
                         Specify port to grpc service. default: 9000
   --input_name INPUT_NAME
-                        Specify input tensor name. default: input
+                        Specify input tensor name. default: image
   --output_name OUTPUT_NAME
-                        Specify output name. default: resnet_v1_50/predictions/Reshape_1
+                        Specify output name. default: output
   --batchsize BATCHSIZE
                         Number of images in a single request. default: 1
   --model_name MODEL_NAME
@@ -358,7 +363,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python grpc_infer_binary_resnet.py --grpc_port 9000 --images_list ../../resnet_input_images.txt --input_name 0 --output_name 1463 --model_name resnet
+python grpc_infer_binary_resnet.py --grpc_port 9000 --images_list ../../resnet_input_images.txt --model_name resnet
 Start processing:
         Model name: resnet
 Iteration 0; Processing time: 27.09 ms; speed 36.92 fps
@@ -428,9 +433,9 @@ optional arguments:
   --grpc_port GRPC_PORT
                         Specify port to grpc service. default: 9000
   --input_name INPUT_NAME
-                        Specify input tensor name. default: input
+                        Specify input tensor name. default: image
   --output_name OUTPUT_NAME
-                        Specify output name. default: resnet_v1_50/predictions/Reshape_1
+                        Specify output name. default: output
   --transpose_input {False,True}
                         Set to False to skip NHWC>NCHW or NCHW>NHWC input transposing. default: True
   --transpose_method {nchw2nhwc,nhwc2nchw}
@@ -458,7 +463,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python grpc_async_infer_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --transpose_input False --model_name resnet
+python grpc_async_infer_resnet.py --grpc_port 9000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --transpose_input False --model_name resnet
 Image data range: 0.0 : 255.0
 Start processing:
         Model name: resnet
@@ -624,7 +629,7 @@ optional arguments:
 
 ```Bash
 python ./http_model_metadata.py --http_port 8000 --http_address localhost --model_name resnet
-{'name': 'resnet', 'versions': ['1'], 'platform': 'OpenVINO', 'inputs': [{'name': '0', 'datatype': 'FP32', 'shape': [1, 224, 224, 3]}], 'outputs': [{'name': '1463', 'datatype': 'FP32', 'shape': [1, 1000]}]}
+{'name': 'resnet', 'versions': ['1'], 'platform': 'OpenVINO', 'inputs': [{'name': 'image', 'datatype': 'FP32', 'shape': [1, 224, 224, 3]}], 'outputs': [{'name': 'output', 'datatype': 'FP32', 'shape': [1, 1000]}]}
 ```
 
 ### Run the Client to perform inference
@@ -651,9 +656,9 @@ optional arguments:
   --http_port HTTP_PORT
                         Specify port to http service. default: 8000
   --input_name INPUT_NAME
-                        Specify input tensor name. default: input
+                        Specify input tensor name. default: image
   --output_name OUTPUT_NAME
-                        Specify output name. default: resnet_v1_50/predictions/Reshape_1
+                        Specify output name. default: output
   --transpose_input {False,True}
                         Set to False to skip NHWC>NCHW or NCHW>NHWC input transposing. default: True
   --transpose_method {nchw2nhwc,nhwc2nchw}
@@ -681,7 +686,7 @@ optional arguments:
 - Usage Example #1 - Input data placed in JSON object.
 
 ```Bash
-python ./http_infer_resnet.py --http_port 8000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False
+python ./http_infer_resnet.py --http_port 8000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name image --output_name output --model_name resnet --transpose_input False
 Image data range: 0.0 : 255.0
 Start processing:
         Model name: resnet
@@ -735,7 +740,7 @@ Classification accuracy: 100.00
 - Usage Example #2 - Input data placed as binary, outside JSON object.
 
 ```Bash
-python ./http_infer_resnet.py --http_port 8000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --model_name resnet --transpose_input False --binary_data
+python ./http_infer_resnet.py --http_port 8000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --model_name resnet --transpose_input False --binary_data
 Image data range: 0.0 : 255.0
 Start processing:
         Model name: resnet
@@ -806,9 +811,9 @@ optional arguments:
   --http_port HTTP_PORT
                         Specify port to http service. default: 8000
   --input_name INPUT_NAME
-                        Specify input tensor name. default: input
+                        Specify input tensor name. default: image
   --output_name OUTPUT_NAME
-                        Specify output name. default: resnet_v1_50/predictions/Reshape_1
+                        Specify output name. default: output
   --batchsize BATCHSIZE
                         Number of images in a single request. default: 1
   --model_name MODEL_NAME
@@ -827,7 +832,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python ./http_infer_binary_resnet.py --http_port 8000 --images_list ../../resnet_input_images.txt --input_name 0 --output_name 1463 --model_name resnet
+python ./http_infer_binary_resnet.py --http_port 8000 --images_list ../../resnet_input_images.txt --model_name resnet
 Start processing:
         Model name: resnet
 Iteration 0; Processing time: 38.61 ms; speed 25.90 fps
@@ -896,9 +901,9 @@ optional arguments:
   --http_port HTTP_PORT
                         Specify port to http service. default: 8000
   --input_name INPUT_NAME
-                        Specify input tensor name. default: input
+                        Specify input tensor name. default: image
   --output_name OUTPUT_NAME
-                        Specify output name. default: resnet_v1_50/predictions/Reshape_1
+                        Specify output name. default: output
   --transpose_input {False,True}
                         Set to False to skip NHWC>NCHW or NCHW>NHWC input transposing. default: True
   --transpose_method {nchw2nhwc,nhwc2nchw}
@@ -926,7 +931,7 @@ optional arguments:
 - Usage Example
 
 ```Bash
-python http_async_infer_resnet.py --http_port 8000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --input_name 0 --output_name 1463 --transpose_input False --model_name resnet
+python http_async_infer_resnet.py --http_port 8000 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --transpose_input False --model_name resnet
 Image data range: 0.0 : 255.0
 Start processing:
         Model name: resnet
