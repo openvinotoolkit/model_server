@@ -1967,6 +1967,9 @@ cc_binary(
             # Export executable symbols to the dynamic symbol table so dlopen()
             # of dependent shared libraries can resolve them.
             "-Wl,--export-dynamic",
+            "-Wl,-rpath,$$ORIGIN/../lib",
+            "-Wl,-rpath,$$ORIGIN/ovms.runfiles/ovms/src",
+            "-Wl,-rpath,$$ORIGIN/ovms.runfiles/ovms/src/python",
             "-Wl,-rpath,$$ORIGIN/ovms.runfiles/ovms/external/azure/lib",
             "-Wl,-rpath,$$ORIGIN/ovms.runfiles/azure/lib",
         ],
@@ -2025,10 +2028,6 @@ sh_test(
 cc_test(
     name = "ovms_test",
     linkstatic = 1,
-    env = {
-        "OVMS_TEST_PYTHON_CALCULATORS_INPROCESS": "1",
-        "OVMS_TEST_MEDIAPIPE_RUNTIME_INPROCESS": "1",
-    },
     srcs = [
         "test/c_api_tests.cpp",
         "test/capi_predict_validation_test.cpp",
@@ -2247,11 +2246,13 @@ cc_test(
         "//:disable_mediapipe": [],
     }) + select({
         "//:is_windows_and_python_is_enabled": [
+            "//src/python/binding:pyovms.pyd",
             "//src/python:libovmspython.dll",
             "//src/python:libpython_calculators",
         ],
         "//:disable_python": [],
         "//conditions:default": [
+            "//src/python/binding:pyovms.so",
             "//src/python:libovmspython.so",
             "//src/python:libpython_calculators.so",
         ],
@@ -2359,6 +2360,9 @@ cc_test(
     linkopts = LINKOPTS_ADJUSTED + select({
         "//conditions:default": [
             "-Wl,--export-dynamic",
+            "-Wl,-rpath,$$ORIGIN/../lib",
+            "-Wl,-rpath,$$ORIGIN/ovms_test.runfiles/ovms/src",
+            "-Wl,-rpath,$$ORIGIN/ovms_test.runfiles/ovms/src/python",
             "-Wl,-rpath,$$ORIGIN/ovms_test.runfiles/ovms/external/azure/lib",
             "-Wl,-rpath,$$ORIGIN/ovms_test.runfiles/azure/lib",
         ],

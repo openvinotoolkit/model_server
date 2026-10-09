@@ -523,7 +523,7 @@ cc_binary(
         "//conditions:default": [
             "-Wl,--as-needed",  # Only link needed symbols
             "-Wl,--allow-shlib-undefined",  # Allow undefined symbols in plugin (resolved at runtime from main binary)
-            "-Wl,-rpath,/ovms/lib:/opt/intel/openvino/runtime/lib/intel64",  # Search for dependencies in deployment and OV directories
+            "-Wl,-rpath,$$ORIGIN",  # Resolve dependencies colocated with the plugin
         ],
     }),
     local_defines = COMMON_LOCAL_DEFINES,

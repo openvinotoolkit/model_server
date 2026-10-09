@@ -16,18 +16,14 @@
 
 #include "mediapipe_runtime_api.hpp"
 
-#include <array>
-#include <memory>
-#include <climits>
 #include <cstdlib>
-#include <filesystem>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
 #ifdef __linux__
 #include <dlfcn.h>
-#include <unistd.h>
 #elif _WIN32
 #include <windows.h>
 #endif
@@ -181,106 +177,57 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
     bool loadedFromInProcessSymbols = false;
 
 #ifdef __linux__
-    const bool preferInProcessSymbols = []() {
-        const char* value = std::getenv("OVMS_TEST_MEDIAPIPE_RUNTIME_INPROCESS");
-        return value != nullptr && std::string(value) == "1";
-    }();
-    if (preferInProcessSymbols) {
-        api->create = OVMS_MPFactoryCreate != nullptr ? OVMS_MPFactoryCreate : reinterpret_cast<ApiSymbols::CreateFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryCreate"));
-        api->destroy = OVMS_MPFactoryDestroy != nullptr ? OVMS_MPFactoryDestroy : reinterpret_cast<ApiSymbols::DestroyFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryDestroy"));
-        api->lastError = OVMS_MPFactoryGetLastError != nullptr ? OVMS_MPFactoryGetLastError : reinterpret_cast<ApiSymbols::LastErrorFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryGetLastError"));
-        api->processConfig = OVMS_MPFactoryProcessConfig != nullptr ? OVMS_MPFactoryProcessConfig : reinterpret_cast<ApiSymbols::ProcessConfigFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryProcessConfig"));
-        api->createExecutor = OVMS_MPFactoryCreateExecutor != nullptr ? OVMS_MPFactoryCreateExecutor : reinterpret_cast<ApiSymbols::CreateExecutorFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryCreateExecutor"));
-        api->createExecutorHandle = OVMS_MPFactoryCreateExecutorHandle != nullptr ? OVMS_MPFactoryCreateExecutorHandle : reinterpret_cast<ApiSymbols::CreateExecutorHandleFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryCreateExecutorHandle"));
-        api->definitionExists = OVMS_MPFactoryDefinitionExists != nullptr ? OVMS_MPFactoryDefinitionExists : reinterpret_cast<ApiSymbols::DefinitionExistsFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryDefinitionExists"));
-        api->wakeUpDefinition = OVMS_MPFactoryWakeUpDefinition != nullptr ? OVMS_MPFactoryWakeUpDefinition : reinterpret_cast<ApiSymbols::WakeUpDefinitionFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryWakeUpDefinition"));
-        api->putToSleepDefinition = OVMS_MPFactoryPutToSleepDefinition != nullptr ? OVMS_MPFactoryPutToSleepDefinition : reinterpret_cast<ApiSymbols::PutToSleepDefinitionFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryPutToSleepDefinition"));
-        api->retireDefinition = OVMS_MPFactoryRetireDefinition != nullptr ? OVMS_MPFactoryRetireDefinition : reinterpret_cast<ApiSymbols::RetireDefinitionFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryRetireDefinition"));
-        api->isDefinitionRetired = OVMS_MPFactoryIsDefinitionRetired != nullptr ? OVMS_MPFactoryIsDefinitionRetired : reinterpret_cast<ApiSymbols::IsDefinitionRetiredFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryIsDefinitionRetired"));
-        api->isDefinitionAvailable = OVMS_MPFactoryIsDefinitionAvailable != nullptr ? OVMS_MPFactoryIsDefinitionAvailable : reinterpret_cast<ApiSymbols::IsDefinitionAvailableFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryIsDefinitionAvailable"));
-        api->shouldUnloadDefinitionDueToIdle = OVMS_MPFactoryShouldUnloadDefinitionDueToIdle != nullptr ? OVMS_MPFactoryShouldUnloadDefinitionDueToIdle : reinterpret_cast<ApiSymbols::ShouldUnloadDefinitionDueToIdleFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryShouldUnloadDefinitionDueToIdle"));
-        api->hasActiveInference = OVMS_MPFactoryHasActiveInference != nullptr ? OVMS_MPFactoryHasActiveInference : reinterpret_cast<ApiSymbols::HasActiveInferenceFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryHasActiveInference"));
-        api->getDefinitionGroupName = OVMS_MPFactoryGetDefinitionGroupName != nullptr ? OVMS_MPFactoryGetDefinitionGroupName : reinterpret_cast<ApiSymbols::GetDefinitionGroupNameFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryGetDefinitionGroupName"));
-        api->aliasesConflictExcluding = OVMS_MPFactoryAliasesConflictExcluding != nullptr ? OVMS_MPFactoryAliasesConflictExcluding : reinterpret_cast<ApiSymbols::AliasesConflictExcludingFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryAliasesConflictExcluding"));
-        api->getNames = OVMS_MPFactoryGetNames != nullptr ? OVMS_MPFactoryGetNames : reinterpret_cast<ApiSymbols::GetNamesFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryGetNames"));
-        api->findServableDefinition = OVMS_MPFactoryFindServableDefinitionByName != nullptr ? OVMS_MPFactoryFindServableDefinitionByName : reinterpret_cast<ApiSymbols::FindServableDefinitionFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryFindServableDefinitionByName"));
-        api->createServableConfig = OVMS_MPGraphExportCreateServableConfig != nullptr ? OVMS_MPGraphExportCreateServableConfig : reinterpret_cast<ApiSymbols::CreateServableConfigFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPGraphExportCreateServableConfig"));
-        api->createServableConfigInMemory = OVMS_MPGraphExportCreateServableConfigInMemory != nullptr ? OVMS_MPGraphExportCreateServableConfigInMemory : reinterpret_cast<ApiSymbols::CreateServableConfigInMemoryFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPGraphExportCreateServableConfigInMemory"));
-        api->configureLogging = OVMS_MPFactoryConfigureLogging != nullptr ? OVMS_MPFactoryConfigureLogging : reinterpret_cast<ApiSymbols::ConfigureLoggingFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPFactoryConfigureLogging"));
+    api->create = OVMS_MPFactoryCreate;
+    api->destroy = OVMS_MPFactoryDestroy;
+    api->lastError = OVMS_MPFactoryGetLastError;
+    api->processConfig = OVMS_MPFactoryProcessConfig;
+    api->createExecutor = OVMS_MPFactoryCreateExecutor;
+    api->createExecutorHandle = OVMS_MPFactoryCreateExecutorHandle;
+    api->definitionExists = OVMS_MPFactoryDefinitionExists;
+    api->wakeUpDefinition = OVMS_MPFactoryWakeUpDefinition;
+    api->putToSleepDefinition = OVMS_MPFactoryPutToSleepDefinition;
+    api->retireDefinition = OVMS_MPFactoryRetireDefinition;
+    api->isDefinitionRetired = OVMS_MPFactoryIsDefinitionRetired;
+    api->isDefinitionAvailable = OVMS_MPFactoryIsDefinitionAvailable;
+    api->shouldUnloadDefinitionDueToIdle = OVMS_MPFactoryShouldUnloadDefinitionDueToIdle;
+    api->hasActiveInference = OVMS_MPFactoryHasActiveInference;
+    api->getDefinitionGroupName = OVMS_MPFactoryGetDefinitionGroupName;
+    api->aliasesConflictExcluding = OVMS_MPFactoryAliasesConflictExcluding;
+    api->getNames = OVMS_MPFactoryGetNames;
+    api->findServableDefinition = OVMS_MPFactoryFindServableDefinitionByName;
+    api->createServableConfig = OVMS_MPGraphExportCreateServableConfig;
+    api->createServableConfigInMemory = OVMS_MPGraphExportCreateServableConfigInMemory;
+    api->setExternalServerHandle = OVMS_MPSetExternalServerHandle;
+    api->configureLogging = OVMS_MPFactoryConfigureLogging;
 
-        loadedFromInProcessSymbols =
-            api->create != nullptr &&
-            api->destroy != nullptr &&
-            api->lastError != nullptr &&
-            api->processConfig != nullptr &&
-            api->createExecutor != nullptr &&
-            api->createExecutorHandle != nullptr &&
-            api->definitionExists != nullptr &&
-            api->wakeUpDefinition != nullptr &&
-            api->putToSleepDefinition != nullptr &&
-            api->retireDefinition != nullptr &&
-            api->isDefinitionRetired != nullptr &&
-            api->isDefinitionAvailable != nullptr &&
-            api->shouldUnloadDefinitionDueToIdle != nullptr &&
-            api->hasActiveInference != nullptr &&
-            api->getDefinitionGroupName != nullptr &&
-            api->aliasesConflictExcluding != nullptr &&
-            api->getNames != nullptr &&
-            api->findServableDefinition != nullptr &&
-            api->createServableConfig != nullptr &&
-            api->createServableConfigInMemory != nullptr;
+    loadedFromInProcessSymbols =
+        api->create != nullptr &&
+        api->destroy != nullptr &&
+        api->lastError != nullptr &&
+        api->processConfig != nullptr &&
+        api->createExecutor != nullptr &&
+        api->createExecutorHandle != nullptr &&
+        api->definitionExists != nullptr &&
+        api->wakeUpDefinition != nullptr &&
+        api->putToSleepDefinition != nullptr &&
+        api->retireDefinition != nullptr &&
+        api->isDefinitionRetired != nullptr &&
+        api->isDefinitionAvailable != nullptr &&
+        api->shouldUnloadDefinitionDueToIdle != nullptr &&
+        api->hasActiveInference != nullptr &&
+        api->getDefinitionGroupName != nullptr &&
+        api->aliasesConflictExcluding != nullptr &&
+        api->getNames != nullptr &&
+        api->findServableDefinition != nullptr &&
+        api->createServableConfig != nullptr &&
+        api->createServableConfigInMemory != nullptr;
 
-        if (loadedFromInProcessSymbols) {
-            SPDLOG_TRACE("MediaPipe runtime API resolved from in-process symbols");
-            tryActivateKfsPythonTensorBridgeFromRuntimeSymbols(RTLD_DEFAULT);
-        } else {
-            std::vector<std::string> missingSymbols;
-            if (api->create == nullptr)
-                missingSymbols.emplace_back("OVMS_MPFactoryCreate");
-            if (api->destroy == nullptr)
-                missingSymbols.emplace_back("OVMS_MPFactoryDestroy");
-            if (api->lastError == nullptr)
-                missingSymbols.emplace_back("OVMS_MPFactoryGetLastError");
-            if (api->processConfig == nullptr)
-                missingSymbols.emplace_back("OVMS_MPFactoryProcessConfig");
-            if (api->createExecutor == nullptr)
-                missingSymbols.emplace_back("OVMS_MPFactoryCreateExecutor");
-            if (api->createExecutorHandle == nullptr)
-                missingSymbols.emplace_back("OVMS_MPFactoryCreateExecutorHandle");
-            if (api->definitionExists == nullptr)
-                missingSymbols.emplace_back("OVMS_MPFactoryDefinitionExists");
-            if (api->wakeUpDefinition == nullptr)
-                missingSymbols.emplace_back("OVMS_MPFactoryWakeUpDefinition");
-            if (api->putToSleepDefinition == nullptr)
-                missingSymbols.emplace_back("OVMS_MPFactoryPutToSleepDefinition");
-            if (api->retireDefinition == nullptr)
-                missingSymbols.emplace_back("OVMS_MPFactoryRetireDefinition");
-            if (api->isDefinitionRetired == nullptr)
-                missingSymbols.emplace_back("OVMS_MPFactoryIsDefinitionRetired");
-            if (api->isDefinitionAvailable == nullptr)
-                missingSymbols.emplace_back("OVMS_MPFactoryIsDefinitionAvailable");
-            if (api->shouldUnloadDefinitionDueToIdle == nullptr)
-                missingSymbols.emplace_back("OVMS_MPFactoryShouldUnloadDefinitionDueToIdle");
-            if (api->hasActiveInference == nullptr)
-                missingSymbols.emplace_back("OVMS_MPFactoryHasActiveInference");
-            if (api->getDefinitionGroupName == nullptr)
-                missingSymbols.emplace_back("OVMS_MPFactoryGetDefinitionGroupName");
-            if (api->aliasesConflictExcluding == nullptr)
-                missingSymbols.emplace_back("OVMS_MPFactoryAliasesConflictExcluding");
-            if (api->getNames == nullptr)
-                missingSymbols.emplace_back("OVMS_MPFactoryGetNames");
-            if (api->findServableDefinition == nullptr)
-                missingSymbols.emplace_back("OVMS_MPFactoryFindServableDefinitionByName");
-            if (api->createServableConfig == nullptr)
-                missingSymbols.emplace_back("OVMS_MPGraphExportCreateServableConfig");
-            if (api->createServableConfigInMemory == nullptr)
-                missingSymbols.emplace_back("OVMS_MPGraphExportCreateServableConfigInMemory");
-            SPDLOG_ERROR("OVMS_TEST_MEDIAPIPE_RUNTIME_INPROCESS=1 but in-process runtime API symbols are incomplete. Missing: {}", joinWithNewlines(missingSymbols));
-            SPDLOG_ERROR("Refusing to fall back to libovms_mediapipe_runtime_shared.so in strict test in-process mode.");
-            return;
-        }
+    if (loadedFromInProcessSymbols) {
+        SPDLOG_TRACE("MediaPipe runtime API resolved from in-process symbols (Linux)");
+        tryActivateKfsPythonTensorBridgeFromRuntimeSymbols(RTLD_DEFAULT);
     }
-#elif _WIN32
+#endif
+#ifdef _WIN32
     {
         HMODULE currentModule = GetModuleHandleA(nullptr);
         if (currentModule != nullptr) {
@@ -351,56 +298,9 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
             return flags;
         }();
 
-        std::vector<std::string> candidates{
-            "libovms_mediapipe_runtime_shared.so",
-            "/ovms/lib/libovms_mediapipe_runtime_shared.so",
-            "./libovms_mediapipe_runtime_shared.so",
-            "src/libovms_mediapipe_runtime_shared.so",
-            "./src/libovms_mediapipe_runtime_shared.so",
-            "bazel-bin/src/libovms_mediapipe_runtime_shared.so",
-            "./bazel-bin/src/libovms_mediapipe_runtime_shared.so"};
-
-        if (const char* testSrcDir = std::getenv("TEST_SRCDIR"); testSrcDir != nullptr) {
-            std::vector<std::string> runfilesCandidates{
-                std::string(testSrcDir) + "/_main/src/libovms_mediapipe_runtime_shared.so",
-                std::string(testSrcDir) + "/ovms/src/libovms_mediapipe_runtime_shared.so"};
-            candidates.insert(candidates.end(), runfilesCandidates.begin(), runfilesCandidates.end());
-        }
-
-        std::array<char, PATH_MAX> exePath{};
-        ssize_t exePathLength = readlink("/proc/self/exe", exePath.data(), exePath.size() - 1);
-        if (exePathLength > 0) {
-            exePath[exePathLength] = '\0';
-            std::filesystem::path exeDir = std::filesystem::path(exePath.data()).parent_path();
-            std::vector<std::string> exeRelativeCandidates{
-                (exeDir / "libovms_mediapipe_runtime_shared.so").string(),
-                (exeDir / "src/libovms_mediapipe_runtime_shared.so").string()};
-            candidates.insert(candidates.end(), exeRelativeCandidates.begin(), exeRelativeCandidates.end());
-        }
-
-        for (const auto& candidate : candidates) {
-            api->handle = dlopen(candidate.c_str(), runtimeDlopenFlags);
-            if (api->handle != nullptr) {
-                SPDLOG_TRACE("MediaPipe runtime API loaded from: {}", candidate);
-                break;
-            }
-        }
+        api->handle = dlopen("libovms_mediapipe_runtime_shared.so", runtimeDlopenFlags);
 #elif _WIN32
-        std::vector<std::string> candidates{
-            "ovms_mediapipe_runtime_shared.dll",
-            ".\\ovms_mediapipe_runtime_shared.dll",
-            "src\\ovms_mediapipe_runtime_shared.dll",
-            ".\\src\\ovms_mediapipe_runtime_shared.dll",
-            "bazel-bin\\src\\ovms_mediapipe_runtime_shared.dll",
-            ".\\bazel-bin\\src\\ovms_mediapipe_runtime_shared.dll"};
-
-        for (const auto& candidate : candidates) {
-            api->handle = LoadLibraryA(candidate.c_str());
-            if (api->handle != nullptr) {
-                SPDLOG_TRACE("MediaPipe runtime API loaded from: {}", candidate);
-                break;
-            }
-        }
+        api->handle = LoadLibraryA("ovms_mediapipe_runtime_shared.dll");
 #endif
     }
 
