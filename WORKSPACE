@@ -575,7 +575,7 @@ new_local_repository(
 
 # Eigen — referenced by mediapipe upstream calculators (e.g. matrix_to_vector).
 http_archive(
-    name = "eigen",
+    name = "eigen_archive",
     build_file = "@mediapipe//third_party:eigen.BUILD",
     sha256 = "35c6126e246585d9cf6600b65471582c2701aae64b784a6fd19168a90cfc841e",
     strip_prefix = "eigen-ea13a98decd497a8c5588fb5de71b57bcf10d864",

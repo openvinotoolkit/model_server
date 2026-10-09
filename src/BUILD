@@ -1949,7 +1949,7 @@ cc_binary(
         "//src/filesystem:libovmsfilesystemfactory",
         "//src/mediapipe_internal:libovms_mediapipe_runtime_owner_no_python_calculators",
         "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
-        ":libovms_version_impl",
+        ":libovms_ov_version",
         "//src/llm:llmcalculator_proto_owner",
     ]
     + select({
