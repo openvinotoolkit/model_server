@@ -50,7 +50,6 @@ def getJpeg(path, size, rgb_image=0):
     #convert to RGB instead of BGR if required by model
     if rgb_image:
         img = img[:, :, [2, 1, 0]]
-    # switch from HWC to CHW and reshape to 1,3,size,size for model blob input requirements
     img = img.transpose(2,0,1).reshape(1,3,size,size)
     print(path, img.shape, "; data range:",np.amin(img),":",np.amax(img))
     return img
@@ -59,8 +58,8 @@ parser = argparse.ArgumentParser(description='Do requests to OpenVINO Model Serv
 parser.add_argument('--images_list', required=False, default='input_images.txt', help='path to a file with a list of labeled images')
 parser.add_argument('--grpc_address',required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
 parser.add_argument('--grpc_port',required=False, default=9000, help='Specify port to grpc service. default: 9000')
-parser.add_argument('--input_name',required=False, default='input', help='Specify input tensor name. default: input')
-parser.add_argument('--output_name',required=False, default='resnet_v1_50/predictions/Reshape_1', help='Specify output name. default: resnet_v1_50/predictions/Reshape_1')
+parser.add_argument('--input_name',required=False, default='image', help='Specify input tensor name. default: image')
+parser.add_argument('--output_name',required=False, default='output', help='Specify output name. default: output')
 parser.add_argument('--model_name', default='resnet', help='Define model name, must be same as is in service. default: resnet',
                     dest='model_name')
 parser.add_argument('--size',required=False, default=224, type=int, help='The size of the image in the model')

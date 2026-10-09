@@ -37,7 +37,7 @@ class KFS_Client(BaseClient):
     """
 
     # override
-    status_endpoint = "/v2/repository/index"
+    status_endpoint = "/v1/config"
     DTYPE_FLOAT_64 = "FP64"
     DTYPE_FLOAT_32 = "FP32"
     DTYPE_FLOAT_16 = "FP16"
@@ -61,16 +61,19 @@ class KFS_Client(BaseClient):
         assert self.rest_port is not None, "checking only via REST port, which is not set"
         status_url = f"http://{self.address}:{self.rest_port}{self.status_endpoint}"
         self.print_info(f"try to send request to endpoint: {status_url}")
-        response = requests.post(url=status_url, params={}, timeout=15)
+        response = requests.get(url=status_url, timeout=15)
         self.print_info(f"received status code is {response.status_code}.")
         message = "It seems to REST service is not running"
         assert response.status_code == HTTPStatus.OK.value, message
         self.print_info("found models and their status:")
-        for model in list(response.json()):
-            name, version, state = model.values()
-            self.print_info(
-                f"{self.indent}model: {name:20s} version: {version} - {state}")
         jstatus = response.json()
+        for model, status in jstatus.items():
+            for item in status["model_version_status"]:
+                self.print_info(
+                    f"{self.indent}model: {model:20s} "
+                    f"version: {item['version']} - {item['state']}")
+            if not status["model_version_status"]:
+                self.print_info(f"{self.indent}{model} - EMPTY")
         if not self.jsonout:
             return jstatus
         jout = json.dumps(jstatus)
