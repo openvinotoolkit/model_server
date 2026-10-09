@@ -13,10 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <chrono>
+#include <cerrno>
 #include <filesystem>
 #include <fstream>
 #include <memory>
 #include <string>
+#include <thread>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <signal.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#endif
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -368,6 +379,25 @@ TEST_F(OciDownloaderPayload, GgufModelIsSplitIntoDirectoryAndFilename) {
     EXPECT_EQ(hfSettings.ggufFilename, downloader.getGgufFilename());
 }
 
+TEST_F(OciDownloaderPayload, ContentAddressedGgufBlobGetsUsableExtensionWithoutCopying) {
+    const std::string blobPath = std::filesystem::path(resolvedPath).append("sha256-digest").generic_string();
+    createFile(resolvedPath, "sha256-digest", "raw GGUF bytes");
+
+    EnvGuard guard;
+    guard.set("LLMMAN_MOCK_PATH", blobPath);
+    guard.set("LLMMAN_MOCK_FORMAT", "gguf");
+
+    TestOciDownloader downloader(hfSettings);
+    ASSERT_EQ(downloader.downloadModel(), StatusCode::OK);
+    ASSERT_EQ(downloader.getModelPath(), downloader.getGraphDirectory());
+    ASSERT_TRUE(downloader.getGgufFilename().has_value());
+    EXPECT_EQ(downloader.getGgufFilename().value(), "sha256-digest.gguf");
+
+    const std::filesystem::path modelFile = std::filesystem::path(downloader.getGraphDirectory()) / downloader.getGgufFilename().value();
+    ASSERT_TRUE(std::filesystem::is_regular_file(modelFile));
+    EXPECT_EQ(std::filesystem::file_size(modelFile), std::filesystem::file_size(blobPath));
+}
+
 TEST_F(OciDownloaderPayload, GgufResolvedToDirectoryIsRejected) {
     EnvGuard guard;
     guard.set("LLMMAN_MOCK_PATH", resolvedPath);
@@ -417,4 +447,164 @@ TEST_F(OciDownloaderPayload, EscapedDownloadPathIsRejected) {
     hfSettings.downloadPath = "../some/path";
     TestOciDownloader downloader(hfSettings);
     EXPECT_EQ(downloader.downloadModel(), StatusCode::PATH_INVALID);
+}
+
+class OciModelPackServerProcess {
+public:
+    ~OciModelPackServerProcess() {
+        this->stop();
+    }
+
+    bool start(const std::string& executable, const std::vector<std::string>& arguments) {
+#ifdef _WIN32
+        std::string commandLine = ovms::quote_cmd_arg(executable);
+        for (const auto& argument : arguments) {
+            commandLine += " " + ovms::quote_cmd_arg(argument);
+        }
+        STARTUPINFOA startupInfo{};
+        startupInfo.cb = sizeof(startupInfo);
+        if (!CreateProcessA(nullptr, commandLine.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW,
+                nullptr, nullptr, &startupInfo, &processInfo)) {
+            this->lastError = "CreateProcessA failed with error " + std::to_string(GetLastError());
+            return false;
+        }
+        return true;
+#else
+        processId = fork();
+        if (processId < 0) {
+            this->lastError = "fork failed";
+            return false;
+        }
+        if (processId == 0) {
+            std::vector<std::string> commandArguments;
+            commandArguments.reserve(arguments.size() + 1);
+            commandArguments.push_back(executable);
+            commandArguments.insert(commandArguments.end(), arguments.begin(), arguments.end());
+            std::vector<char*> argv;
+            argv.reserve(commandArguments.size() + 1);
+            for (auto& argument : commandArguments) {
+                argv.push_back(argument.data());
+            }
+            argv.push_back(nullptr);
+            execv(executable.c_str(), argv.data());
+            _exit(127);
+        }
+        return true;
+#endif
+    }
+
+    const std::string& getLastError() const { return this->lastError; }
+
+    void stop() {
+#ifdef _WIN32
+        if (processInfo.hProcess != nullptr) {
+            DWORD exitCode = 0;
+            if (GetExitCodeProcess(processInfo.hProcess, &exitCode) && exitCode == STILL_ACTIVE) {
+                TerminateProcess(processInfo.hProcess, 0);
+                WaitForSingleObject(processInfo.hProcess, 30000);
+            }
+            CloseHandle(processInfo.hThread);
+            CloseHandle(processInfo.hProcess);
+            processInfo = {};
+        }
+#else
+        if (processId > 0) {
+            kill(processId, SIGTERM);
+            int status = 0;
+            while (waitpid(processId, &status, 0) < 0 && errno == EINTR) {
+            }
+            processId = -1;
+        }
+#endif
+    }
+
+private:
+    std::string lastError;
+#ifdef _WIN32
+    PROCESS_INFORMATION processInfo{};
+#else
+    pid_t processId = -1;
+#endif
+};
+
+class OciModelPackInferenceTest : public TestWithTempDir {
+public:
+    const std::string modelReference = "docker.io/ai/qwen3:0.6b";
+    OciModelPackServerProcess ovmsProcess;
+    bool modelPullAttempted = false;
+
+    void TearDown() override {
+        this->ovmsProcess.stop();
+        if (modelPullAttempted) {
+            int retCode = -1;
+            const std::string output = ovms::exec_cmd("llmman rm " + ovms::quote_cmd_arg(modelReference), retCode);
+            EXPECT_EQ(retCode, 0) << "Failed to remove test OCI model from llmman's store: " << output;
+        }
+        TestWithTempDir::TearDown();
+    }
+};
+
+TEST_F(OciModelPackInferenceTest, PullSmallPublicModelAndRunInference) {
+    std::string sourceModel = "oci://" + modelReference;
+    std::string repositoryPath = std::filesystem::path(this->directoryPath).append("repository").string();
+    std::string task = "text_generation";
+    std::string restPort = "9233";
+    modelPullAttempted = true;
+    std::string serverPort = "9133";
+    randomizeAndEnsureFrees(serverPort, restPort);
+    const std::string ovmsExecutable = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/ovms");
+#ifdef _WIN32
+    const std::string ovmsExecutableWithExtension = ovmsExecutable + ".exe";
+#else
+    const std::string& ovmsExecutableWithExtension = ovmsExecutable;
+#endif
+    // ovms_test sets these to require in-process MediaPipe/Python symbols.
+    // The standalone ovms binary must load its runtime shared libraries like
+    // a production process instead.
+    EnvGuard testRuntimeGuard;
+    testRuntimeGuard.unset("OVMS_TEST_PYTHON_CALCULATORS_INPROCESS");
+    testRuntimeGuard.unset("OVMS_TEST_MEDIAPIPE_RUNTIME_INPROCESS");
+    ASSERT_TRUE(this->ovmsProcess.start(ovmsExecutableWithExtension,
+        {"--port", serverPort, "--rest_port", restPort, "--source_model", sourceModel,
+            "--model_repository_path", repositoryPath, "--task", task}))
+        << this->ovmsProcess.getLastError();
+
+    EnvGuard proxyGuard;
+    proxyGuard.unset("http_proxy");
+    proxyGuard.unset("https_proxy");
+    proxyGuard.unset("HTTP_PROXY");
+    proxyGuard.unset("HTTPS_PROXY");
+    proxyGuard.unset("ALL_PROXY");
+    proxyGuard.unset("all_proxy");
+
+    bool httpReady = false;
+    std::string lastHealthOutput;
+    for (int attempt = 0; attempt < 30; ++attempt) {
+        int healthCode = -1;
+        lastHealthOutput = ovms::exec_cmd("curl --noproxy " + ovms::quote_cmd_arg("*") + " --silent --show-error --fail http://127.0.0.1:" + restPort + "/v2/health/live", healthCode);
+        if (healthCode == 0) {
+            httpReady = true;
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+    ASSERT_TRUE(httpReady) << "OVMS REST endpoint did not become ready on port " << restPort << ": " << lastHealthOutput;
+
+    const std::string requestBody = R"({
+        "model": ")" + modelReference + R"(",
+        "stream": false,
+        "max_tokens": 8,
+        "messages": [{"role": "user", "content": "Reply with one word: hello"}]
+    })";
+
+    int inferenceCode = -1;
+    const std::string response = ovms::exec_cmd("curl --noproxy " + ovms::quote_cmd_arg("*") + " --silent --show-error --write-out " +
+            ovms::quote_cmd_arg("\\nHTTP_STATUS:%{http_code}") + " --request POST http://127.0.0.1:" + restPort +
+            "/v3/chat/completions --header " + ovms::quote_cmd_arg("Content-Type: application/json") + " --data " +
+            ovms::quote_cmd_arg(requestBody),
+        inferenceCode);
+    ASSERT_EQ(inferenceCode, 0) << "curl failed during OCI ModelPack inference: " << response;
+    EXPECT_THAT(response, EndsWith("HTTP_STATUS:200"));
+    EXPECT_THAT(response, HasSubstr("\"choices\""));
+    EXPECT_THAT(response, HasSubstr("\"content\""));
 }

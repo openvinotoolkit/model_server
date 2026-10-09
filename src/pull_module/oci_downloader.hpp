@@ -70,6 +70,9 @@ protected:
     // Converts a HuggingFace-format checkout that llmman resolved into
     // OpenVINO IR inside the graph directory, reusing OptimumDownloader.
     Status convertToOpenVinoIr(const std::string& resolvedPath);
+    // Gives content-addressed raw GGUF blobs the .gguf filename extension
+    // required by the graph loader, preferring a hardlink to avoid a copy.
+    Status prepareGgufPath(const std::string& resolvedPath);
     // Seam for tests, which substitute mock optimum-cli commands.
     virtual std::unique_ptr<IModelDownloader> createConverter(const std::string& resolvedPath) const;
 };

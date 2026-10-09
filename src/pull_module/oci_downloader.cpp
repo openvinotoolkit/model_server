@@ -142,6 +142,49 @@ Status OciDownloader::convertToOpenVinoIr(const std::string& resolvedPath) {
     return StatusCode::OK;
 }
 
+Status OciDownloader::prepareGgufPath(const std::string& resolvedPath) {
+    const std::filesystem::path ggufPath(resolvedPath);
+    if (ggufPath.extension() == ".gguf") {
+        this->modelPath = ggufPath.parent_path().string();
+        this->ggufFilename = ggufPath.filename().string();
+        return StatusCode::OK;
+    }
+
+    std::error_code ec;
+    std::filesystem::create_directories(this->downloadPath, ec);
+    if (ec) {
+        SPDLOG_ERROR("Failed to create directory {}: {}", this->downloadPath, ec.message());
+        return StatusCode::PATH_INVALID;
+    }
+
+    const std::string filename = ggufPath.filename().string() + ".gguf";
+    const std::filesystem::path modelFilePath = std::filesystem::path(this->downloadPath) / filename;
+    std::filesystem::remove(modelFilePath, ec);
+    if (ec) {
+        SPDLOG_ERROR("Failed to remove existing GGUF link {}: {}", modelFilePath.string(), ec.message());
+        return StatusCode::INTERNAL_ERROR;
+    }
+
+    std::filesystem::create_hard_link(ggufPath, modelFilePath, ec);
+    if (ec) {
+        ec.clear();
+        std::filesystem::create_symlink(ggufPath, modelFilePath, ec);
+    }
+    if (ec) {
+        ec.clear();
+        std::filesystem::copy_file(ggufPath, modelFilePath, std::filesystem::copy_options::none, ec);
+    }
+    if (ec) {
+        std::filesystem::remove(modelFilePath);
+        SPDLOG_ERROR("Failed to expose resolved GGUF {} as {}: {}", resolvedPath, modelFilePath.string(), ec.message());
+        return StatusCode::INTERNAL_ERROR;
+    }
+
+    this->modelPath = this->downloadPath;
+    this->ggufFilename = filename;
+    return StatusCode::OK;
+}
+
 Status OciDownloader::downloadModel() {
     if (FileSystem::isPathEscaped(this->downloadPath)) {
         SPDLOG_ERROR("Path {} escape with .. is forbidden.", this->downloadPath);
@@ -186,11 +229,10 @@ Status OciDownloader::downloadModel() {
             SPDLOG_ERROR("llmman reported format gguf for {}, but {} is not a regular file.", this->sourceModel, resolvedPath);
             return StatusCode::OCI_LLMMAN_RESOLVE_OUTPUT_INVALID;
         }
-        // models_path must point at the GGUF file itself, which the graph
-        // exporter builds by joining the directory with ggufFilename.
-        const std::filesystem::path ggufPath(resolvedPath);
-        this->modelPath = ggufPath.parent_path().string();
-        this->ggufFilename = ggufPath.filename().string();
+        status = this->prepareGgufPath(resolvedPath);
+        if (!status.ok()) {
+            return status;
+        }
     } else if (format == "safetensors") {
         if (!std::filesystem::is_directory(resolvedPath, ec)) {
             SPDLOG_ERROR("llmman reported format safetensors for {}, but {} is not a directory.", this->sourceModel, resolvedPath);

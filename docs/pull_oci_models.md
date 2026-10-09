@@ -1,4 +1,3 @@
-For OpenVINO IR and GGUF payloads that directory holds only `graph.pbtxt` — the weights stay in `llmman`'s content-addressed store and are referenced by absolute path, so pulling the same image for several servables does not duplicate them on disk. Removing a model therefore takes two steps: delete the directory from the model repository, then reclaim its blobs—for example, `llmman rm ghcr.io/my-org/model:1.0`.
 # OVMS Pull mode for CNCF ModelPack images {#ovms_docs_pull_oci}
 
 Besides Hugging Face Hub, OVMS can pull models that are distributed as OCI artifacts following the [CNCF ModelPack specification](https://github.com/modelpack/model-spec). Because ModelPack images are ordinary OCI artifacts, they can be stored in and served from any OCI registry — Docker Hub, GHCR, quay, Artifactory or a self-hosted registry — with the same tooling, authentication and mirroring you already use for container images.
@@ -21,7 +20,43 @@ curl -fsSL https://llmmanorg.github.io/install.sh | sh
 
 OVMS reports an error when `llmman` is not available on `PATH`.
 
-Registry credentials are `llmman`'s concern, not OVMS's. Log in once with `llmman login <registry>` and every subsequent `ovms --pull oci://<registry>/...` reuses that session.
+Public registries can be used without credentials. For a private registry, authenticate with `llmman login <registry>` and make the resulting Docker-compatible credential configuration available to the user running OVMS. `llmman` reads credentials from the Docker credential configuration; it does not use `HF_TOKEN` for OCI registry authentication.
+
+In a container, logging in on the host alone is not sufficient because the container does not automatically see the host's credentials. Mount the Docker config directory read-only and point `DOCKER_CONFIG` at it. For example:
+
+```text
+docker run --mount type=bind,src="$HOME/.docker",dst=/home/ovms/.docker,readonly -e DOCKER_CONFIG=/home/ovms/.docker ... openvino/model_server:latest
+```
+
+If the Docker config uses a credential helper (`credsStore` or `credHelpers`), that helper and any service it depends on must also be available inside the container. Alternatively, configure credentials in a mounted Docker config that does not rely on an unavailable helper. Do not bake registry credentials into the image.
+
+In Kubernetes, store the Docker config in a Secret and mount it into the OVMS pod. For example, create a Secret from a Docker config file:
+
+```text
+kubectl create secret generic registry-auth --from-file=config.json="$HOME/.docker/config.json"
+```
+
+Mount the Secret read-only and set `DOCKER_CONFIG` to the mount directory in the OVMS container spec:
+
+```yaml
+spec:
+  containers:
+    - name: ovms
+      image: openvino/model_server:latest
+      env:
+        - name: DOCKER_CONFIG
+          value: /var/run/registry-auth
+      volumeMounts:
+        - name: registry-auth
+          mountPath: /var/run/registry-auth
+          readOnly: true
+  volumes:
+    - name: registry-auth
+      secret:
+        secretName: registry-auth
+```
+
+The Secret must contain a `config.json` usable by llmman. As with a Docker bind mount, any credential helper it references must also be installed and usable in the pod.
 
 ## Supported payloads
 

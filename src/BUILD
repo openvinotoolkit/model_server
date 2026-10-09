@@ -2779,11 +2779,13 @@ cc_library(
     linkstatic = 1,
     alwayslink = True,
     srcs = ["test/pull_oci_model_test.cpp"],
+    data = ["//src:ovms"],
     linkopts = [],
     deps = [
         ":test_platform_utils",
         ":test_utils",
         ":test_test_with_temp_dir",
+        ":libtest_environment",
         "//src/utils:env_guard",
         "//src/pull_module:cmd_exec",
         "//src/pull_module:oci_downloader",
