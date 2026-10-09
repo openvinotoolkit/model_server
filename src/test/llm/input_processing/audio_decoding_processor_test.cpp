@@ -109,7 +109,7 @@ TEST(AudioDecodingProcessorTest, ValidWavAudioDecodedSuccessfully) {
     EXPECT_EQ(req.inputAudios[0].get_element_type(), ov::element::f32);
 }
 
-TEST(AudioDecodingProcessorTest, AudioPartRemovedFromContentArray) {
+TEST(AudioDecodingProcessorTest, AudioPartReplacedWithIndexedTag) {
     const std::string wavData = buildWavBuffer(16);
     const std::string base64 = toBase64(wavData);
 
@@ -131,15 +131,17 @@ TEST(AudioDecodingProcessorTest, AudioPartRemovedFromContentArray) {
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(req.inputAudios.size(), 1u);
 
-    // Content array should now only contain the two text parts
+    // Content array keeps the audio position between the two text parts.
     const auto& result = std::get<ov::genai::ChatHistory>(req.input);
     const auto content = result[0]["content"];
     ASSERT_TRUE(content.is_array());
-    ASSERT_EQ(content.size(), 2u);
+    ASSERT_EQ(content.size(), 3u);
     EXPECT_EQ(content[0]["type"].as_string().value_or(""), "text");
     EXPECT_EQ(content[0]["text"].as_string().value_or(""), "before");
     EXPECT_EQ(content[1]["type"].as_string().value_or(""), "text");
-    EXPECT_EQ(content[1]["text"].as_string().value_or(""), "after");
+    EXPECT_EQ(content[1]["text"].as_string().value_or(""), "<ov_genai_audio_0>");
+    EXPECT_EQ(content[2]["type"].as_string().value_or(""), "text");
+    EXPECT_EQ(content[2]["text"].as_string().value_or(""), "after");
 }
 
 TEST(AudioDecodingProcessorTest, EmptyDataFieldRejected) {
@@ -200,6 +202,9 @@ TEST(AudioDecodingProcessorTest, MultipleAudioPartsProduceMultipleTensors) {
     ASSERT_EQ(req.inputAudios.size(), 2u);
     EXPECT_EQ(req.inputAudios[0].get_shape()[0], 16u);
     EXPECT_EQ(req.inputAudios[1].get_shape()[0], 32u);
+    const auto& result = std::get<ov::genai::ChatHistory>(req.input);
+    EXPECT_EQ(result[0]["content"][0]["text"].as_string().value_or(""), "<ov_genai_audio_0>");
+    EXPECT_EQ(result[0]["content"][1]["text"].as_string().value_or(""), "<ov_genai_audio_1>");
 }
 
 TEST(AudioDecodingProcessorTest, AudioAcrossMultipleMessagesCollected) {
@@ -232,6 +237,9 @@ TEST(AudioDecodingProcessorTest, AudioAcrossMultipleMessagesCollected) {
     ASSERT_EQ(req.inputAudios.size(), 2u);
     EXPECT_EQ(req.inputAudios[0].get_shape()[0], 16u);
     EXPECT_EQ(req.inputAudios[1].get_shape()[0], 24u);
+    const auto& result = std::get<ov::genai::ChatHistory>(req.input);
+    EXPECT_EQ(result[0]["content"][0]["text"].as_string().value_or(""), "<ov_genai_audio_0>");
+    EXPECT_EQ(result[1]["content"][0]["text"].as_string().value_or(""), "<ov_genai_audio_1>");
 }
 
 TEST(AudioDecodingProcessorTest, NonChatHistoryInputRejected) {
@@ -245,8 +253,24 @@ TEST(AudioDecodingProcessorTest, NonChatHistoryInputRejected) {
     EXPECT_EQ(status.code(), absl::StatusCode::kInternal);
 }
 
+TEST(AudioDecodingProcessorTest, UserSuppliedAudioTagInTextPartRejected) {
+    ov::genai::ChatHistory history;
+    ov::AnyMap message;
+    message["role"] = std::string("user");
+    message["content"] = ov::genai::JsonContainer::from_json_string(
+        R"([{"type":"text","text":"<ov_genai_audio_0>"}])");
+    history.push_back(message);
+
+    InputRequest req = makeChatRequest(history);
+    AudioDecodingProcessor processor;
+    const auto status = processor.process(req);
+
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_TRUE(req.inputAudios.empty());
+}
+
 TEST(AudioDecodingProcessorTest, OtherContentTypesPreserved) {
-    // Content array with text + image_url + input_audio: only input_audio removed
+    // Content array with text + image_url + input_audio: audio becomes an indexed tag.
     const std::string wavData = buildWavBuffer(16);
     const std::string base64 = toBase64(wavData);
 
@@ -267,11 +291,12 @@ TEST(AudioDecodingProcessorTest, OtherContentTypesPreserved) {
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(req.inputAudios.size(), 1u);
 
-    // Content array should keep text and image_url, remove input_audio
+    // Content array keeps text and image_url alongside the audio tag.
     const auto& result = std::get<ov::genai::ChatHistory>(req.input);
     const auto content = result[0]["content"];
     ASSERT_TRUE(content.is_array());
-    ASSERT_EQ(content.size(), 2u);
+    ASSERT_EQ(content.size(), 3u);
     EXPECT_EQ(content[0]["type"].as_string().value_or(""), "text");
     EXPECT_EQ(content[1]["type"].as_string().value_or(""), "image_url");
+    EXPECT_EQ(content[2]["text"].as_string().value_or(""), "<ov_genai_audio_0>");
 }
