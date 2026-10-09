@@ -63,10 +63,10 @@ private:
 // be asserted without running the whole download.
 class TestOciDownloader : public OciDownloader {
 public:
-    TestOciDownloader(const ovms::HFSettingsImpl& inHfSettings, const std::string& llmmanBinary = "") :
+    explicit TestOciDownloader(const ovms::HFSettingsImpl& inHfSettings) :
         OciDownloader(inHfSettings.exportSettings, inHfSettings.task, inHfSettings.sourceModel,
             ovms::IModelDownloader::getGraphDirectory(inHfSettings.downloadPath, inHfSettings.sourceModel),
-            inHfSettings.overwriteModels, llmmanBinary) {}
+            inHfSettings.overwriteModels) {}
 
     std::string getVersionCmd() const { return OciDownloader::getVersionCmd(); }
     std::string getResolveCmd() const { return OciDownloader::getResolveCmd(); }
@@ -141,10 +141,13 @@ TEST(OciSchemeTest, OciReferencesAreNotOptimumCliDownloads) {
 // llmman command construction
 // ----------------------------------------------------------------------------
 
-class OciDownloaderCommands : public ::testing::Test {
+class OciDownloaderCommands : public TestWithTempDir {
 public:
     ovms::HFSettingsImpl hfSettings;
+    EnvGuard pathGuard;
     void SetUp() override {
+        TestWithTempDir::SetUp();
+        pathGuard.set("PATH", this->directoryPath);
         hfSettings.sourceModel = "oci://ghcr.io/org/model:tag";
         hfSettings.downloadPath = "/models";
         hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
@@ -153,39 +156,25 @@ public:
 };
 
 TEST_F(OciDownloaderCommands, ResolveCommandDropsTheScheme) {
-    TestOciDownloader downloader(hfSettings, "llmman");
+    TestOciDownloader downloader(hfSettings);
     EXPECT_EQ(downloader.getResolveCmd(), "llmman resolve ghcr.io/org/model:tag");
     EXPECT_EQ(downloader.getVersionCmd(), "llmman --version");
 }
 
-TEST_F(OciDownloaderCommands, BinaryPathAndReferenceWithSpacesAreQuoted) {
+TEST_F(OciDownloaderCommands, ReferenceWithSpacesIsQuoted) {
     hfSettings.sourceModel = "oci://ghcr.io/org/my model:tag";
-    TestOciDownloader downloader(hfSettings, "/opt/my tools/llmman");
-    EXPECT_EQ(downloader.getVersionCmd(), "\"/opt/my tools/llmman\" --version");
-    EXPECT_EQ(downloader.getResolveCmd(), "\"/opt/my tools/llmman\" resolve \"ghcr.io/org/my model:tag\"");
+    TestOciDownloader downloader(hfSettings);
+    EXPECT_EQ(downloader.getVersionCmd(), "llmman --version");
+    EXPECT_EQ(downloader.getResolveCmd(), "llmman resolve \"ghcr.io/org/my model:tag\"");
 }
 
 TEST_F(OciDownloaderCommands, GraphDirectoryIsSanitized) {
-    TestOciDownloader downloader(hfSettings, "llmman");
+    TestOciDownloader downloader(hfSettings);
     EXPECT_EQ(downloader.getGraphDirectory(), ovms::FileSystem::joinPath({"/models", "ghcr.io/org/model+tag"}));
 }
 
-TEST_F(OciDownloaderCommands, BinaryIsTakenFromEnvironment) {
-    EnvGuard guard;
-    guard.set("LLMMAN_BIN", "/opt/bin/llmman");
-    EXPECT_EQ(OciDownloader::resolveLlmmanBinary(), "/opt/bin/llmman");
-    TestOciDownloader downloader(hfSettings);
-    EXPECT_EQ(downloader.getVersionCmd(), "/opt/bin/llmman --version");
-}
-
-TEST_F(OciDownloaderCommands, BinaryDefaultsToPathLookup) {
-    EnvGuard guard;
-    guard.unset("LLMMAN_BIN");
-    EXPECT_EQ(OciDownloader::resolveLlmmanBinary(), "llmman");
-}
-
 TEST_F(OciDownloaderCommands, MissingBinaryIsReported) {
-    TestOciDownloader downloader(hfSettings, "llmman-that-does-not-exist");
+    TestOciDownloader downloader(hfSettings);
     EXPECT_EQ(downloader.checkLlmmanIsPresent(), StatusCode::OCI_LLMMAN_NOT_FOUND);
 }
 
@@ -252,6 +241,7 @@ public:
     std::string optimumMockPath;
     std::string resolvedPath;
     ovms::HFSettingsImpl hfSettings;
+    EnvGuard pathGuard;
 
     void SetUp() override {
         TestWithTempDir::SetUp();
@@ -262,6 +252,13 @@ public:
         llmmanMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/llmman");
         optimumMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli");
 #endif
+        const std::string pathSeparator =
+#ifdef _WIN32
+            ";";
+#else
+            ":";
+#endif
+        pathGuard.set("PATH", std::filesystem::path(llmmanMockPath).parent_path().string() + pathSeparator + GetEnvVar("PATH"));
         resolvedPath = std::filesystem::path(this->directoryPath).append("llmman-store").generic_string();
         std::filesystem::create_directories(resolvedPath);
 
@@ -299,7 +296,7 @@ TEST_F(OciDownloaderPayload, OpenVinoIrModelIsServedFromTheLlmmanStore) {
     guard.set("LLMMAN_MOCK_FORMAT", "safetensors");
     guard.set("LLMMAN_MOCK_NOISE", "1");
 
-    TestOciDownloader downloader(hfSettings, llmmanMockPath);
+    TestOciDownloader downloader(hfSettings);
     ASSERT_EQ(downloader.downloadModel(), StatusCode::OK);
     // No second copy of the weights: graph.pbtxt just points at llmman's store.
     EXPECT_EQ(downloader.getModelPath(), resolvedPath);
@@ -326,7 +323,7 @@ TEST_F(OciDownloaderPayload, SafetensorsCheckoutIsConvertedIntoTheGraphDirectory
     guard.set("LLMMAN_MOCK_PATH", resolvedPath);
     guard.set("LLMMAN_MOCK_FORMAT", "safetensors");
 
-    TestOciDownloader downloader(hfSettings, llmmanMockPath);
+    TestOciDownloader downloader(hfSettings);
     downloader.optimumMockPath = optimumMockPath;
     ASSERT_EQ(downloader.downloadModel(), StatusCode::OK);
     // The checkout is the export source and the graph directory the target,
@@ -346,7 +343,7 @@ TEST_F(OciDownloaderPayload, SafetensorsConversionFailureIsPropagated) {
     guard.set("LLMMAN_MOCK_PATH", resolvedPath);
     guard.set("LLMMAN_MOCK_FORMAT", "safetensors");
 
-    TestOciDownloader downloader(hfSettings, llmmanMockPath);
+    TestOciDownloader downloader(hfSettings);
     downloader.optimumMockPath = "NonExistingCommand33";
     EXPECT_EQ(downloader.downloadModel(), StatusCode::HF_FAILED_TO_INIT_OPTIMUM_CLI);
 }
@@ -359,12 +356,16 @@ TEST_F(OciDownloaderPayload, GgufModelIsSplitIntoDirectoryAndFilename) {
     guard.set("LLMMAN_MOCK_PATH", ggufPath);
     guard.set("LLMMAN_MOCK_FORMAT", "gguf");
 
-    TestOciDownloader downloader(hfSettings, llmmanMockPath);
+    TestOciDownloader downloader(hfSettings);
     ASSERT_EQ(downloader.downloadModel(), StatusCode::OK);
     // The graph exporter joins these two back together into models_path.
     EXPECT_EQ(std::filesystem::path(downloader.getModelPath()).generic_string(), resolvedPath);
     ASSERT_TRUE(downloader.getGgufFilename().has_value());
     EXPECT_EQ(downloader.getGgufFilename().value(), "model-Q4_K_M.gguf");
+
+    downloader.onDownloadComplete(hfSettings);
+    EXPECT_EQ(hfSettings.exportSettings.modelPath, downloader.getModelPath());
+    EXPECT_EQ(hfSettings.ggufFilename, downloader.getGgufFilename());
 }
 
 TEST_F(OciDownloaderPayload, GgufResolvedToDirectoryIsRejected) {
@@ -372,7 +373,7 @@ TEST_F(OciDownloaderPayload, GgufResolvedToDirectoryIsRejected) {
     guard.set("LLMMAN_MOCK_PATH", resolvedPath);
     guard.set("LLMMAN_MOCK_FORMAT", "gguf");
 
-    TestOciDownloader downloader(hfSettings, llmmanMockPath);
+    TestOciDownloader downloader(hfSettings);
     EXPECT_EQ(downloader.downloadModel(), StatusCode::OCI_LLMMAN_RESOLVE_OUTPUT_INVALID);
 }
 
@@ -382,7 +383,7 @@ TEST_F(OciDownloaderPayload, SafetensorsResolvedToFileIsRejected) {
     guard.set("LLMMAN_MOCK_PATH", std::filesystem::path(resolvedPath).append("model.safetensors").generic_string());
     guard.set("LLMMAN_MOCK_FORMAT", "safetensors");
 
-    TestOciDownloader downloader(hfSettings, llmmanMockPath);
+    TestOciDownloader downloader(hfSettings);
     EXPECT_EQ(downloader.downloadModel(), StatusCode::OCI_LLMMAN_RESOLVE_OUTPUT_INVALID);
 }
 
@@ -391,23 +392,15 @@ TEST_F(OciDownloaderPayload, UnsupportedFormatIsRejected) {
     guard.set("LLMMAN_MOCK_PATH", resolvedPath);
     guard.set("LLMMAN_MOCK_FORMAT", "onnx");
 
-    TestOciDownloader downloader(hfSettings, llmmanMockPath);
+    TestOciDownloader downloader(hfSettings);
     EXPECT_EQ(downloader.downloadModel(), StatusCode::OCI_UNSUPPORTED_MODEL_FORMAT);
-}
-
-TEST_F(OciDownloaderPayload, ResolveFailureIsPropagated) {
-    EnvGuard guard;
-    guard.set("LLMMAN_MOCK_FAIL", "1");
-
-    TestOciDownloader downloader(hfSettings, llmmanMockPath);
-    EXPECT_EQ(downloader.downloadModel(), StatusCode::OCI_LLMMAN_RESOLVE_FAILED);
 }
 
 TEST_F(OciDownloaderPayload, UnparseableResolveOutputIsRejected) {
     EnvGuard guard;
     guard.set("LLMMAN_MOCK_OUTPUT", "this is not the JSON you are looking for");
 
-    TestOciDownloader downloader(hfSettings, llmmanMockPath);
+    TestOciDownloader downloader(hfSettings);
     EXPECT_EQ(downloader.downloadModel(), StatusCode::OCI_LLMMAN_RESOLVE_OUTPUT_INVALID);
 }
 
@@ -416,12 +409,12 @@ TEST_F(OciDownloaderPayload, NonExistentResolvedPathIsRejected) {
     guard.set("LLMMAN_MOCK_PATH", std::filesystem::path(this->directoryPath).append("gone").generic_string());
     guard.set("LLMMAN_MOCK_FORMAT", "safetensors");
 
-    TestOciDownloader downloader(hfSettings, llmmanMockPath);
+    TestOciDownloader downloader(hfSettings);
     EXPECT_EQ(downloader.downloadModel(), StatusCode::OCI_LLMMAN_RESOLVE_OUTPUT_INVALID);
 }
 
 TEST_F(OciDownloaderPayload, EscapedDownloadPathIsRejected) {
     hfSettings.downloadPath = "../some/path";
-    TestOciDownloader downloader(hfSettings, llmmanMockPath);
+    TestOciDownloader downloader(hfSettings);
     EXPECT_EQ(downloader.downloadModel(), StatusCode::PATH_INVALID);
 }

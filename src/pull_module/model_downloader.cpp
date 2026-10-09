@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <iostream>
 #include <string>
 
 #include "model_downloader.hpp"
@@ -28,6 +29,10 @@ IModelDownloader::IModelDownloader(const std::string& inSourceModel, const std::
     sourceModel(inSourceModel),
     downloadPath(inDownloadPath),
     overwriteModels(inOverwriteModels) {}
+
+void IModelDownloader::onDownloadComplete(HFSettingsImpl&) const {
+    std::cout << "Model: " << this->sourceModel << " downloaded to: " << this->getGraphDirectory() << std::endl;
+}
 
 Status IModelDownloader::checkIfOverwriteAndRemove() {
     auto lfstatus = StatusCode::OK;
@@ -54,7 +59,7 @@ std::string IModelDownloader::getGraphDirectory(const std::string& inDownloadPat
     return fullPath;
 }
 
-std::string IModelDownloader::getGraphDirectory() {
+std::string IModelDownloader::getGraphDirectory() const {
     return this->downloadPath;
 }
 }  // namespace ovms

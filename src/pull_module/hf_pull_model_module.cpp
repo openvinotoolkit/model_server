@@ -33,7 +33,6 @@
 #include "../graph_export/graph_export_paths.hpp"
 #include "hf_env_vars.hpp"
 #include "oci_downloader.hpp"
-#include "../graph_export/graph_export.hpp"
 #include "../logging.hpp"
 #include "../mediapipe_runtime_api.hpp"
 #include "../module_names.hpp"
@@ -264,17 +263,7 @@ Status HfPullModelModule::clone() {
         return status;
     }
     graphDirectory = downloader->getGraphDirectory();
-    if (this->hfSettings.downloadType == OCI_DOWNLOAD) {
-        const auto* ociDownloader = static_cast<const OciDownloader*>(downloader.get());
-        // llmman keeps the weights in its own content-addressed store, so the
-        // resolved location has to be propagated into graph.pbtxt rather than
-        // relying on the default "models live next to graph.pbtxt" layout.
-        this->hfSettings.exportSettings.modelPath = ociDownloader->getModelPath();
-        this->hfSettings.ggufFilename = ociDownloader->getGgufFilename();
-        std::cout << "Model: " << this->hfSettings.sourceModel << " resolved to: " << this->hfSettings.exportSettings.modelPath << std::endl;
-    } else {
-        std::cout << "Model: " << this->hfSettings.sourceModel << " downloaded to: " << graphDirectory << std::endl;
-    }
+    downloader->onDownloadComplete(this->hfSettings);
 
     // Text gen with draft source model case - downloads second model
     if (std::holds_alternative<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings) && std::get<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings).draftModelDirName.has_value()) {

@@ -259,7 +259,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             cxxopts::value<bool>()->default_value("false"),
             "PULL_HF")
             ("source_model",
-            "HF source model path, or a CNCF ModelPack OCI reference prefixed with oci:// (e.g. oci://ghcr.io/org/model:tag). OCI references are pulled with the llmman executable, which must be on PATH or pointed at by LLMMAN_BIN.",
+            "HF source model path, or a CNCF ModelPack OCI reference prefixed with oci://",
             cxxopts::value<std::string>(),
             "HF_SOURCE")
             ("source_loras",

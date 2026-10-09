@@ -350,7 +350,7 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::HF_GIT_STATUS_UNCLEAN, "Unclean status detected in libgit2 repository path"},
 
     // CNCF ModelPack (OCI) model download errors
-    {StatusCode::OCI_LLMMAN_NOT_FOUND, "The llmman executable required to pull oci:// models was not found"},
+    {StatusCode::OCI_LLMMAN_NOT_FOUND, "The llmman executable required to pull oci:// models is not available on PATH"},
     {StatusCode::OCI_LLMMAN_RESOLVE_FAILED, "Failed to run llmman resolve for the requested OCI model"},
     {StatusCode::OCI_LLMMAN_RESOLVE_OUTPUT_INVALID, "llmman resolve returned output that could not be parsed"},
     {StatusCode::OCI_UNSUPPORTED_MODEL_FORMAT, "The OCI model does not contain a format that OpenVINO Model Server can serve"},

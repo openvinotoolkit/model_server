@@ -41,9 +41,9 @@ class Status;
 class OciDownloader : public IModelDownloader {
 public:
     OciDownloader(const ExportSettings& exportSettings, const GraphExportType& task, const std::string& inSourceModel,
-        const std::string& inDownloadPath, bool inOverwrite,
-        const std::string& llmmanBinary = "");
+        const std::string& inDownloadPath, bool inOverwrite);
     Status downloadModel() override;
+    void onDownloadComplete(HFSettingsImpl& hfSettings) const override;
 
     // Only valid after downloadModel() returned OK.
     // Absolute path to write into graph.pbtxt as models_path, or "./" when the
@@ -51,14 +51,9 @@ public:
     const std::string& getModelPath() const { return this->modelPath; }
     const std::optional<std::string>& getGgufFilename() const { return this->ggufFilename; }
 
-    // Name of the llmman executable to invoke: $LLMMAN_BIN when set, "llmman"
-    // otherwise. Resolved through PATH by exec_cmd().
-    static std::string resolveLlmmanBinary();
-
 protected:
     ExportSettings exportSettings;
     const GraphExportType task;
-    const std::string llmmanBinary;
     std::string modelPath;
     std::optional<std::string> ggufFilename;
 

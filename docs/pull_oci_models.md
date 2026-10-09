@@ -1,3 +1,4 @@
+For OpenVINO IR and GGUF payloads that directory holds only `graph.pbtxt` — the weights stay in `llmman`'s content-addressed store and are referenced by absolute path, so pulling the same image for several servables does not duplicate them on disk. Removing a model therefore takes two steps: delete the directory from the model repository, then reclaim its blobs—for example, `llmman rm ghcr.io/my-org/model:1.0`.
 # OVMS Pull mode for CNCF ModelPack images {#ovms_docs_pull_oci}
 
 Besides Hugging Face Hub, OVMS can pull models that are distributed as OCI artifacts following the [CNCF ModelPack specification](https://github.com/modelpack/model-spec). Because ModelPack images are ordinary OCI artifacts, they can be stored in and served from any OCI registry — Docker Hub, GHCR, quay, Artifactory or a self-hosted registry — with the same tooling, authentication and mirroring you already use for container images.
@@ -18,11 +19,7 @@ OCI pulling is delegated to [`llmman`](https://github.com/llmmanorg/llmman), whi
 curl -fsSL https://llmmanorg.github.io/install.sh | sh
 ```
 
-If the binary lives outside `PATH`, point OVMS at it with the `LLMMAN_BIN` environment variable:
-
-```text
-export LLMMAN_BIN=/opt/llmman/bin/llmman
-```
+OVMS reports an error when `llmman` is not available on `PATH`.
 
 Registry credentials are `llmman`'s concern, not OVMS's. Log in once with `llmman login <registry>` and every subsequent `ovms --pull oci://<registry>/...` reuses that session.
 

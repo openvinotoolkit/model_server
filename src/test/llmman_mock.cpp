@@ -18,8 +18,6 @@
 // the OciDownloader tests, so they never touch a container registry. What it
 // prints is driven entirely by the environment:
 //
-//   LLMMAN_MOCK_FAIL=1       `resolve` exits non-zero, as it would for an
-//                            unauthorized or nonexistent reference
 //   LLMMAN_MOCK_NOISE=1      emit a progress line before the JSON, the way the
 //                            real binary writes diagnostics to stderr (which
 //                            exec_cmd() merges into the same buffer)
@@ -53,10 +51,6 @@ int main(int argc, char** argv) {
     }
 
     const std::string reference = (argc > 2) ? argv[2] : "";
-    if (std::getenv("LLMMAN_MOCK_FAIL") != nullptr) {
-        std::cout << "Error: failed to pull " << reference << std::endl;
-        return 1;
-    }
     if (std::getenv("LLMMAN_MOCK_NOISE") != nullptr) {
         std::cout << "[llmman] pulling " << reference << std::endl;
     }

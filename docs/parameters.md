@@ -126,10 +126,6 @@ Shared configuration options for the pull, and pull & start mode. In the presenc
 
 When `--source_model` is prefixed with `oci://`, the model is pulled from an OCI registry as a [CNCF ModelPack](https://github.com/modelpack/model-spec) artifact instead of from Hugging Face. `--task` is required, and `--gguf_filename` is not accepted. See [OCI pull mode](./pull_oci_models.md) for details.
 
-| Variable        | Value format | Description                                                                                                              |
-|-----------------|--------------|--------------------------------------------------------------------------------------------------------------------------|
-| `LLMMAN_BIN`    | `string`     | Default: `llmman` resolved through `PATH`. Full path to the [llmman](https://github.com/llmmanorg/llmman) executable that performs the registry pull. |
-
 ## Pull Mode Options for optimum-cli mode
 
 When pulling models outside of OpenVINO organization the optimum-cli api is used inside ovms. You can set additional parameters for this mode.

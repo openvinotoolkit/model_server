@@ -15,8 +15,8 @@
 //*****************************************************************************
 #include "oci_downloader.hpp"
 
-#include <cstdlib>
 #include <filesystem>
+#include <iostream>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -34,31 +34,24 @@
 
 namespace ovms {
 
-static const char* LLMMAN_BIN_ENV_VAR = "LLMMAN_BIN";
-static const char* DEFAULT_LLMMAN_BINARY = "llmman";
-
-std::string OciDownloader::resolveLlmmanBinary() {
-    const char* override = std::getenv(LLMMAN_BIN_ENV_VAR);
-    if (override != nullptr && std::string(override).length() > 0) {
-        return override;
-    }
-    return DEFAULT_LLMMAN_BINARY;
-}
-
 OciDownloader::OciDownloader(const ExportSettings& inExportSettings, const GraphExportType& inTask,
-    const std::string& inSourceModel, const std::string& inDownloadPath, bool inOverwrite,
-    const std::string& inLlmmanBinary) :
+    const std::string& inSourceModel, const std::string& inDownloadPath, bool inOverwrite) :
     IModelDownloader(inSourceModel, inDownloadPath, inOverwrite),
     exportSettings(inExportSettings),
-    task(inTask),
-    llmmanBinary(inLlmmanBinary.empty() ? resolveLlmmanBinary() : inLlmmanBinary) {}
+    task(inTask) {}
 
 std::string OciDownloader::getVersionCmd() const {
-    return quote_cmd_arg(this->llmmanBinary) + " --version";
+    return "llmman --version";
 }
 
 std::string OciDownloader::getResolveCmd() const {
-    return quote_cmd_arg(this->llmmanBinary) + " resolve " + quote_cmd_arg(stripOciScheme(this->sourceModel));
+    return "llmman resolve " + quote_cmd_arg(stripOciScheme(this->sourceModel));
+}
+
+void OciDownloader::onDownloadComplete(HFSettingsImpl& hfSettings) const {
+    hfSettings.exportSettings.modelPath = this->modelPath;
+    hfSettings.ggufFilename = this->ggufFilename;
+    std::cout << "Model: " << this->sourceModel << " resolved to: " << this->modelPath << std::endl;
 }
 
 Status OciDownloader::checkLlmmanIsPresent() {
@@ -66,9 +59,9 @@ Status OciDownloader::checkLlmmanIsPresent() {
     const std::string output = exec_cmd(this->getVersionCmd(), retCode);
     if (retCode != 0) {
         SPDLOG_DEBUG("Command output {}", output);
-        SPDLOG_ERROR("Trying to pull {} but the llmman executable was not found. Install it from "
-                     "https://github.com/llmmanorg/llmman or point {} at its full path.",
-            this->sourceModel, LLMMAN_BIN_ENV_VAR);
+        SPDLOG_ERROR("Trying to pull {} but llmman could not be run from PATH. Install it from "
+                     "https://github.com/llmmanorg/llmman and ensure it is available in PATH.",
+            this->sourceModel);
         return StatusCode::OCI_LLMMAN_NOT_FOUND;
     }
     SPDLOG_DEBUG("llmman executable is present");

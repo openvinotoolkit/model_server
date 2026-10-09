@@ -18,13 +18,15 @@
 
 namespace ovms {
 class Status;
+struct HFSettingsImpl;
 class IModelDownloader {
 public:
     IModelDownloader(const std::string& inSourceModel, const std::string& inDownloadPath, const bool inOverwriteModels);
     virtual ~IModelDownloader() = default;
     virtual Status downloadModel() = 0;
+    virtual void onDownloadComplete(HFSettingsImpl& hfSettings) const;
     static std::string getGraphDirectory(const std::string& inDownloadPath, const std::string& inSourceModel);
-    std::string getGraphDirectory();
+    std::string getGraphDirectory() const;
 
 protected:
     Status checkIfOverwriteAndRemove();
