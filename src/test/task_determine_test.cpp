@@ -15,6 +15,7 @@
 //*****************************************************************************
 
 #include <filesystem>
+#include <fstream>
 #include <optional>
 #include <string>
 #include <utility>
@@ -24,6 +25,7 @@
 
 #include "../default_task.hpp"
 #include "../default_task_detector.hpp"
+#include "test_with_temp_dir.hpp"
 
 class CLIParserDetermineTaskTest : public ::testing::TestWithParam<std::pair<std::string, std::string>> {
 public:
@@ -273,4 +275,19 @@ TEST(TaskDetectorTest, DefaultDetectorReturnsImageGenForModelIndexOnly) {
     auto ctx = makeCtx("sdxl", "", "", R"({"_class_name":"StableDiffusionXLPipeline"})");
     ovms::DefaultTaskDetector det;
     EXPECT_EQ(det.detect(ctx), "image_generation");
+}
+
+// ── OCI references ────────────────────────────────────────────────────────────
+class TaskDetermineOciTest : public TestWithTempDir {};
+
+TEST_F(TaskDetermineOciTest, OciReferenceNeverInfersTaskFromLocalRepository) {
+    const std::string config = R"({"architectures":["LlamaForCausalLM"]})";
+    const std::filesystem::path root(this->directoryPath);
+    for (const auto& name : {"org/model", "ghcr.io/org/model+tag"}) {
+        std::filesystem::create_directories(root / name);
+        std::ofstream(root / name / "config.json") << config;
+    }
+    // Control: a Hugging Face id is inferred from the local copy.
+    EXPECT_EQ(ovms::determineDefaultTaskParameter(std::nullopt, "org/model", this->directoryPath).value_or(""), "text_generation");
+    EXPECT_FALSE(ovms::determineDefaultTaskParameter(std::nullopt, "oci://ghcr.io/org/model:tag", this->directoryPath).has_value());
 }

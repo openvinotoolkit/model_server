@@ -234,4 +234,25 @@ std::string exec_cmd_utf8(const std::string& command, int& returnCode) {
     return exec_secure_internal(command, returnCode, true);
 }
 
+std::string quote_cmd_arg(const std::string& arg) {
+    if (arg.find_first_of(" \t\r\n\"'") == std::string::npos) {
+        return arg;
+    }
+    std::string quoted = "\"";
+    for (char c : arg) {
+#ifndef _WIN32
+        // parseCommand() treats a backslash as an escape inside double quotes.
+        if (c == '\\') {
+            quoted += '\\';
+        }
+#endif
+        if (c == '"') {
+            quoted += '\\';
+        }
+        quoted += c;
+    }
+    quoted += '"';
+    return quoted;
+}
+
 }  // namespace ovms
