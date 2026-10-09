@@ -37,6 +37,7 @@
 #include "../../logging.hpp"
 #include "../../profiler.hpp"
 #include "src/filesystem/filesystem.hpp"
+#include "../io_processing/video_utils.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/strings/str_cat.h"
@@ -270,6 +271,29 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                         const auto inputAudio = entry["input_audio"].GetObject();
                         if (!inputAudio.HasMember("data") || !inputAudio["data"].IsString()) {
                             return absl::InvalidArgumentError("Invalid message structure - input_audio does not have a valid data field");
+                        }
+                    } else if (entryType == "video_url") {
+                        // Video is passed as a sequence of already-decoded frames; the client
+                        // is responsible for extracting frames from the source video.
+                        // VideoFramesProcessor decodes them later.
+                        if (!entry.HasMember("video_url") || !entry["video_url"].IsObject()) {
+                            return absl::InvalidArgumentError("Invalid message structure - content video_url missing");
+                        }
+                        const auto videoUrl = entry["video_url"].GetObject();
+                        if (!videoUrl.HasMember("url") || !videoUrl["url"].IsArray()) {
+                            return absl::InvalidArgumentError("Invalid message structure - video_url does not have a url array field");
+                        }
+                        const auto frames = videoUrl["url"].GetArray();
+                        if (frames.Size() == 0) {
+                            return absl::InvalidArgumentError("Invalid message structure - video_url url array cannot be empty");
+                        }
+                        if (static_cast<int64_t>(frames.Size()) > MAX_VIDEO_FRAMES) {
+                            return absl::InvalidArgumentError("Invalid message structure - video_url url array exceeds the allowed maximum of " + std::to_string(MAX_VIDEO_FRAMES) + " frames");
+                        }
+                        for (const auto& frame : frames) {
+                            if (!frame.IsString()) {
+                                return absl::InvalidArgumentError("Invalid message structure - video_url url array must contain only strings");
+                            }
                         }
                     } else {
                         return absl::InvalidArgumentError("Unsupported content type");

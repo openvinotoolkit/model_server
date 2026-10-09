@@ -205,8 +205,12 @@ absl::Status GenAiServable::validateInputCompatibility(std::shared_ptr<GenAiServ
             const auto content = ch[i]["content"];
             if (content.is_array()) {
                 for (size_t j = 0; j < content.size(); j++) {
-                    if (content[j]["type"].as_string().value_or("") == "image_url") {
+                    const auto type = content[j]["type"].as_string().value_or("");
+                    if (type == "image_url") {
                         return absl::Status(absl::StatusCode::kInvalidArgument, "This servable supports only text input, but image_url has been provided");
+                    }
+                    if (type == "video_url") {
+                        return absl::Status(absl::StatusCode::kInvalidArgument, "This servable supports only text input, but video_url has been provided");
                     }
                 }
             }

@@ -26,6 +26,7 @@
 #include "input_processors/empty_content_array_normalization_processor.hpp"
 #include "input_processors/empty_tool_calls_array_removing_processor.hpp"
 #include "input_processors/image_decoding_processor.hpp"
+#include "input_processors/video_frames_processor.hpp"
 #include "input_processors/audio_decoding_processor.hpp"
 #include "input_processors/chat_template_adapter.hpp"
 #include "input_processors/raw_prompt_extractor.hpp"
@@ -50,6 +51,11 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
         if (context.config.isVLM) {  // isVLM is true both in VLMPipeline and OmniPipeline
             const auto& settings = Config::instance().getServerSettings();
             processors.emplace_back(std::make_unique<ImageDecodingProcessor>(
+                settings.allowedLocalMediaPath,
+                settings.allowedMediaDomains));
+            // Runs after ImageDecodingProcessor and before TextContentNormalizationProcessor:
+            // rewrites video_url parts into <ov_genai_video_N> text tags and fills inputVideos.
+            processors.emplace_back(std::make_unique<VideoFramesProcessor>(
                 settings.allowedLocalMediaPath,
                 settings.allowedMediaDomains));
         }

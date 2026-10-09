@@ -41,7 +41,7 @@ void VisualLanguageModelLegacyExecutor::processRequest() {
     } else {
         SPDLOG_LOGGER_TRACE(llm_executor_logger, "Generation started");
         try {
-            requestExecutionContext->results = pipe->generate(requestExecutionContext->inputRequest.promptText, requestExecutionContext->inputRequest.inputImages, requestExecutionContext->inputRequest.generationConfig, requestExecutionContext->textStreamer);
+            requestExecutionContext->results = pipe->generate(requestExecutionContext->inputRequest.promptText, requestExecutionContext->inputRequest.inputImages, requestExecutionContext->inputRequest.inputVideos, requestExecutionContext->inputRequest.generationConfig, requestExecutionContext->textStreamer);
             auto streamer = std::dynamic_pointer_cast<OVMSTextStreamer>(requestExecutionContext->textStreamer);
             if (streamer != nullptr && streamer->hadParserError()) {
                 requestExecutionContext->success = false;
