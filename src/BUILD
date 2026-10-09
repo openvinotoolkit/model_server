@@ -72,7 +72,7 @@ cc_shared_library(
         "@snappy//:__subpackages__",
         "@double_conversion//:__subpackages__",
         "@nsync//:__subpackages__",
-        "@eigen_archive//:__subpackages__",
+        "@eigen//:__subpackages__",
         "//third_party:openvino//:__subpackages__",
         "@com_github_jupp0r_prometheus_cpp//:__subpackages__",
         "@//:__subpackages__",
