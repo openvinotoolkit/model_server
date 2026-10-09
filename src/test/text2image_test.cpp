@@ -137,6 +137,51 @@ void testNegativeDimensions(const std::string& dims) {
     ASSERT_TRUE(std::holds_alternative<absl::Status>(dimensions)) << dims;
     EXPECT_EQ(std::get<absl::Status>(dimensions).code(), absl::StatusCode::kInvalidArgument) << dims;
 }
+
+void testMaxResolutionExceeded(std::optional<std::pair<unsigned int, unsigned int> > maxRes,const std::string& dims) {
+    // /create JSON
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    payload.parsedJson->Parse(dims.c_str());
+    ovms::ImageGenPipelineArgs args;
+    if (maxRes.has_value()) {
+        args.maxResolution = maxRes.value();
+    }
+    std::variant<absl::Status, ov::AnyMap> requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args, true );
+
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions)) << dims;
+
+    EXPECT_EQ(std::get<absl::Status>(requestOptions).code(), absl::StatusCode::kInvalidArgument) << dims;
+}
+
+void testMaxResolutionNotExceeded(std::optional<std::pair<unsigned int, unsigned int> > maxRes,const std::string& dims) {
+    // /create JSON
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    payload.parsedJson->Parse(dims.c_str());
+    ovms::ImageGenPipelineArgs args;
+    if (maxRes.has_value()) {
+        args.maxResolution = maxRes.value();
+    }
+    std::variant<absl::Status, ov::AnyMap> requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args, true );
+
+    ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(requestOptions)) << dims;
+}
+
+
+TEST(Text2ImageTest, testMaxResolutionExceeded) {
+    testMaxResolutionExceeded(std::make_optional(std::make_pair(500, 500)), R"({"size":"1000x1000"})");
+    testMaxResolutionExceeded(std::make_optional(std::make_pair(500, 500)), R"({"size":"400x1000"})");
+    testMaxResolutionExceeded(std::make_optional(std::make_pair(500, 500)), R"({"size":"1000x400"})");
+    testMaxResolutionExceeded(std::nullopt, R"({"size":"5000x5000"})");
+}
+
+TEST(Text2ImageTest, testMaxResolutionNotExceeded) {
+    testMaxResolutionNotExceeded(std::nullopt, R"({"size":"1000x1000"})");
+    testMaxResolutionNotExceeded(std::make_optional(std::make_pair(2000, 2000)), R"({"size":"1000x1000"})");
+}
+
+
 TEST(Text2ImageTest, testGetDimensionsNegativeImproperFormat) {
     testNegativeDimensions(R"({"size":"51:512"})");
     testNegativeDimensions(R"({"size":"512_51x"})");
