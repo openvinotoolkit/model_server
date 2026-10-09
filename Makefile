@@ -72,7 +72,7 @@ $(error PYTHON_DISABLE cannot be 0 when MEDIAPIPE_DISABLE is 1)
 endif
 endif
 FUZZER_BUILD ?= 0
-DOCKER_BUILDKIT ?= 1
+export DOCKER_BUILDKIT ?= 1
 KONFLUX ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
@@ -217,7 +217,7 @@ VERBOSE_LOGS ?= OFF
 ifneq ($(TOKEN),)
 GIT_CONFIG_FILE := .gitconfig
 GIT_CONFIG_SECRET = --secret id=gitconfig,src=$(GIT_CONFIG_FILE)
-BUILDX = buildx
+BUILDX ?= buildx
 
 $(GIT_CONFIG_FILE):
 	@git config --file $@ url."https://x-access-token:$(TOKEN)@github.com/".insteadOf https://github.com/
