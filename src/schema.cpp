@@ -71,6 +71,18 @@ const std::string MODEL_CONFIG_DEFINITION = R"(
 				"layout": {
 		"$ref": "#/definitions/layout_shape_def"
 				},
+				"mean": {
+					"type": "string"
+				},
+				"scale": {
+					"type": "string"
+				},
+				"color_format": {
+					"type": "string"
+				},
+				"precision": {
+					"type": "string"
+				},
 				"nireq": {
 					"type": "integer",
 					"minimum": 0
@@ -79,6 +91,9 @@ const std::string MODEL_CONFIG_DEFINITION = R"(
 					"type": "string"
 				},
 				"allow_cache": {
+					"type": "boolean"
+				},
+				"disable_input_count_validation": {
 					"type": "boolean"
 				},
 				"plugin_config": {

@@ -93,6 +93,15 @@ bool Config::parse(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* model
     return validate();
 }
 
+bool Config::hasModelParametersSetViaCLI() const {
+    return std::any_of(
+        modelsSettings.userSetSingleModelArguments.begin(),
+        modelsSettings.userSetSingleModelArguments.end(),
+        [](const std::string& argument) {
+            return argument != "model_name" && argument != "model_path" && argument != "config_path";
+        });
+}
+
 bool Config::is_ipv6(const std::string& s) {
     addrinfo hints{};
     hints.ai_family = AF_INET6;
@@ -141,7 +150,7 @@ bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl
     static const std::vector<std::string> allowedForRemove = {"model_name", "config_path"};
     static const std::vector<std::string> allowedForAdd = {"model_name", "model_path", "config_path",
         "batch_size", "shape", "layout", "mean", "scale", "color_format", "precision",
-        "model_version_policy", "nireq", "target_device", "plugin_config", "group_name"};
+        "disable_input_count_validation", "model_version_policy", "nireq", "target_device", "plugin_config", "group_name"};
 
     const auto& allowedUserSettings = (exportType == ENABLE_MODEL) ? allowedForAdd : allowedForRemove;
     std::vector<std::string> usedButDisallowedUserSettings;
@@ -278,9 +287,7 @@ bool Config::validate() {
             std::cerr << "Use config_path or model_path with model_name" << std::endl;
             return false;
         }
-        if (!configPath().empty() && (!this->modelsSettings.batchSize.empty() || !shape().empty() ||
-                                         nireq() != 0 || !modelVersionPolicy().empty() || !this->modelsSettings.targetDevice.empty() ||
-                                         !pluginConfig().empty())) {
+        if (!configPath().empty() && hasModelParametersSetViaCLI()) {
             std::cerr << "Model parameters in CLI are exclusive with the config file" << std::endl;
             return false;
         }
@@ -433,7 +440,7 @@ const std::string& Config::grpcChannelArguments() const { return this->serverSet
 uint32_t Config::filesystemPollWaitMilliseconds() const { return this->serverSettings.filesystemPollWaitMilliseconds; }
 uint32_t Config::memoryTrimmingIntervalSeconds() const { return this->serverSettings.memoryTrimmingIntervalSeconds; }
 uint32_t Config::idleUnloadTimeoutSeconds() const { return this->serverSettings.idleUnloadTimeoutSeconds; }
-bool Config::disableInputCountValidation() const { return this->serverSettings.disableInputCountValidation; }
+bool Config::disableInputCountValidation() const { return this->modelsSettings.disableInputCountValidation.value_or(false); }
 bool Config::allowCredentials() const { return this->serverSettings.allowCredentials; }
 uint64_t Config::maxImageDecodePixels() const { return this->serverSettings.maxImageDecodePixels; }
 bool Config::allowUnestimatableImageFormats() const { return this->serverSettings.allowUnestimatableImageFormats; }

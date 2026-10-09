@@ -18,8 +18,10 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <rapidjson/document.h>
 
 #include "src/filesystem/filesystem.hpp"
+#include "src/schema.hpp"
 #include "src/status.hpp"
 #include "src/stringutils.hpp"
 #include "src/capi_frontend/server_settings.hpp"
@@ -151,6 +153,29 @@ TEST_F(ConfigCreationTest, positiveAddWithDirectConfigFilePathNotExisting) {
     std::string configFile = this->modelsSettings.configPath;
     std::string configContents = GetFileContents(configFile);
     ASSERT_EQ(expectedConfigContents, configContents) << configContents;
+}
+TEST_F(ConfigCreationTest, positiveAddWithDisableInputCountValidation) {
+    this->modelsSettings.disableInputCountValidation = true;
+    auto status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+
+    std::string configContents = GetFileContents(this->modelsSettings.configPath);
+    EXPECT_NE(configContents.find("\"disable_input_count_validation\": true"), std::string::npos) << configContents;
+}
+TEST_F(ConfigCreationTest, positiveAddWithPreprocessingParamsMatchesSchema) {
+    this->modelsSettings.layout = "NHWC:NCHW";
+    this->modelsSettings.mean = "[123.675,116.28,103.53]";
+    this->modelsSettings.scale = "[58.395,57.12,57.375]";
+    this->modelsSettings.colorFormat = "BGR:RGB";
+    this->modelsSettings.precision = "FP16:FP32";
+    this->modelsSettings.disableInputCountValidation = true;
+    auto status = ovms::updateConfig(this->modelsSettings, ovms::ENABLE_MODEL);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+
+    std::string configContents = GetFileContents(this->modelsSettings.configPath);
+    rapidjson::Document configJson;
+    ASSERT_FALSE(configJson.Parse(configContents.c_str()).HasParseError()) << configContents;
+    EXPECT_EQ(ovms::validateJsonAgainstSchema(configJson, ovms::MODELS_CONFIG_SCHEMA.c_str()), ovms::StatusCode::OK) << configContents;
 }
 TEST_F(ConfigCreationTest, positiveAddWithDirectConfigFilePathExisting) {
     std::string configContents = expectedEmptyConfigContents;

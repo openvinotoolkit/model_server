@@ -236,7 +236,6 @@ struct ServerSettingsImpl {
     std::string logLevel = "INFO";
     std::string logPath;
     bool verboseResponse = false;
-    bool disableInputCountValidation = false;
     bool allowCredentials = false;
     uint64_t maxImageDecodePixels = OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS;
     // When false, images whose decoded size cannot be estimated are rejected; when true they are decoded anyway.
@@ -276,6 +275,7 @@ struct ModelsSettingsImpl {
     std::optional<std::string> scale;
     std::optional<std::string> colorFormat;
     std::optional<std::string> precision;
+    std::optional<bool> disableInputCountValidation;
     std::string modelVersionPolicy;
     uint32_t nireq = 0;
     std::string targetDevice;
