@@ -150,26 +150,26 @@ TEST_F(OvmsConfigDeathTest, negativeConfigPathWithLayout) {
 }
 
 TEST_F(OvmsConfigDeathTest, negativeConfigPathWithPrecision) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--precision", "FP32"};
-    int arg_count = 5;
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--precision", "FP32", "--layout", "NCHW"};
+    int arg_count = 7;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Model parameters in CLI are exclusive with the config file");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeConfigPathWithColorFormat) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--color_format", "RGB:BGR"};
-    int arg_count = 5;
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--color_format", "RGB:BGR", "--layout", "NCHW"};
+    int arg_count = 7;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Model parameters in CLI are exclusive with the config file");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeConfigPathWithMean) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--mean", "111"};
-    int arg_count = 5;
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--mean", "111", "--layout", "NCHW"};
+    int arg_count = 7;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Model parameters in CLI are exclusive with the config file");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeConfigPathWithScale) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--scale", "111"};
-    int arg_count = 5;
+    char* n_argv[] = {"ovms", "--config_path", "/path1", "--scale", "111", "--layout", "NCHW"};
+    int arg_count = 7;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Model parameters in CLI are exclusive with the config file");
 }
 
