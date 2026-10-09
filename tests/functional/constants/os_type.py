@@ -22,12 +22,14 @@ class OsType:
     Redhat = "redhat"
     Ubuntu22 = "ubuntu22"
     Ubuntu24 = "ubuntu24"
+    Ubuntu26 = "ubuntu26"
     Windows = "windows"
 
 
 UBUNTU = "ubuntu"
 UBUNTU_22_OS_VERSION = "22.04"
 UBUNTU_24_OS_VERSION = "24.04"
+UBUNTU_26_OS_VERSION = "26.04"
 WINDOWS_MSYS_NT = "msys_nt"
 
 
@@ -40,6 +42,8 @@ def get_host_os():
             return OsType.Ubuntu22
         elif ubuntu_version == UBUNTU_24_OS_VERSION:
             return OsType.Ubuntu24
+        elif ubuntu_version == UBUNTU_26_OS_VERSION:
+            return OsType.Ubuntu26
     elif result == "rhel":
         return OsType.Redhat
     elif result.lower() == OsType.Windows:

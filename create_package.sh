@@ -263,7 +263,8 @@ cp -rv /ovms/release_files/thirdparty-licenses /ovms_release/
 if [ "$ov_use_binary" == "1" ] ; then cp -rf /opt/intel/openvino/docs/licensing/EULA.txt /ovms/release_files/thirdparty-licenses/openvino.LICENSE.txt; fi
 if [ "$ov_use_binary" == "0" ] ; then cp -rf /openvino/LICENSE /ovms/release_files/thirdparty-licenses/openvino.LICENSE.txt; fi
 mkdir -vp /ovms_release/include && cp /ovms/src/ovms.h /ovms_release/include
-ls -lahR /ovms_release/
+# -A not -a: uutils ls (Ubuntu 26.04) fails recursing into ".."
+ls -lAhR /ovms_release/
 
 # removing 29MB of cpython packages for unsupported python versions
 rls_python=cpython-"$(python3 --version 2>&1 | awk '{gsub(/\./, "", $2); print $2}' | cut -c1-3)"

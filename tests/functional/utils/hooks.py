@@ -741,8 +741,12 @@ def parametrize_base_os(metafunc):
                 os_name = OsType.Ubuntu22
             elif dist_name.startswith("Ubuntu 24.04") or dist_name.startswith(OsType.Ubuntu24):
                 os_name = OsType.Ubuntu24
+            elif dist_name.startswith("Ubuntu 26.04") or dist_name.startswith(OsType.Ubuntu26):
+                os_name = OsType.Ubuntu26
             elif dist_name.startswith("Red Hat") or dist_name.startswith(OsType.Redhat):
                 os_name = OsType.Redhat
+            else:
+                raise NotImplementedError(f"Unsupported OS distribution: {dist_name} (base_os: {_os}, image: {image})")
         else:
             raise Exception("Unexpected OS")
         if config.is_nginx_mtls:

@@ -19,11 +19,14 @@ def _python_repository_impl(repository_ctx):
     ubuntu20_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 20")
     ubuntu22_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 22")
     ubuntu24_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 24")
+    ubuntu26_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 26")
 
-    if ubuntu22_count == 1 or ubuntu24_count == 1:
+    if ubuntu22_count == 1 or ubuntu24_count == 1 or ubuntu26_count == 1:
         lib_path = "lib/x86_64-linux-gnu"
         if ubuntu22_count == 1:
             version = "3.10"
+        elif ubuntu26_count == 1:
+            version = "3.14"
         else:
             version = "3.12"
     else: # for redhat

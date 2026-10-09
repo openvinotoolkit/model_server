@@ -45,7 +45,7 @@ JOBS ?= $(CORES_TOTAL)
 
 
 # Image on which OVMS is compiled. If DIST_OS is not set, it's also used for a release image.
-# Currently supported BASE_OS values are: ubuntu24 ubuntu22 redhat
+# Currently supported BASE_OS values are: ubuntu26 ubuntu24 ubuntu22 redhat
 BASE_OS ?= ubuntu24
 
 # do not change this; change versions per OS a few lines below (BASE_OS_TAG_*)!
@@ -166,12 +166,19 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   ifeq ($(BASE_OS),ubuntu24)
 	BASE_OS_TAG=24.04
   endif
+	ifeq ($(BASE_OS),ubuntu26)
+	BASE_OS_TAG=26.04
+	endif
   BASE_IMAGE ?= ubuntu:$(BASE_OS_TAG)
   BASE_IMAGE_RELEASE=$(BASE_IMAGE)
   ifeq ($(BASE_OS_TAG),24.04)
         OS=ubuntu24
 	INSTALL_DRIVER_VERSION ?= "26.31.39395"
 	DLDT_PACKAGE_URL ?= $(DLDT_PACKAGE_URL_UBUNTU24)
+	else ifeq ($(BASE_OS_TAG),26.04)
+				OS=ubuntu26
+	INSTALL_DRIVER_VERSION ?= "26.31.39395"
+	DLDT_PACKAGE_URL ?= $(DLDT_PACKAGE_URL_UBUNTU26)
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
 	INSTALL_DRIVER_VERSION ?= "24.39.31294"

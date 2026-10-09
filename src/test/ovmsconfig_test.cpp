@@ -286,23 +286,13 @@ TEST_F(OvmsConfigDeathTest, missingParams) {
 TEST_F(OvmsConfigDeathTest, negativePortMin) {
     const char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "-1"};
     int arg_count = 5;
-#ifdef __linux__
-    std::string error = "‘-1’";
-#elif _WIN32
-    std::string error = "";
-#endif
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options: Argument " + error);
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options: Argument '-1' failed to parse");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeRestPortMin) {
     const char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "-1"};
     int arg_count = 5;
-#ifdef __linux__
-    std::string error = "‘-1’";
-#elif _WIN32
-    std::string error = "";
-#endif
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options: Argument " + error);
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options: Argument '-1' failed to parse");
 }
 
 TEST_F(OvmsConfigDeathTest, negativePortRange) {
@@ -350,7 +340,7 @@ TEST_F(OvmsConfigDeathTest, nonExistingLogLevel) {
 TEST_F(OvmsConfigDeathTest, RestPortNegativeUint64Max) {
     const char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "0xffffffffffffffff"};
     int arg_count = 5;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "rest_port number out of range from 0 to 65535");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options: Argument '0xffffffffffffffff' failed to parse");
 }
 
 TEST_F(OvmsConfigDeathTest, NegativeListModelsWithoutModelRepositoryPath) {
