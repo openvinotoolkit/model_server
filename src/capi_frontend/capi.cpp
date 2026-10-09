@@ -1372,6 +1372,15 @@ DLL_PUBLIC OVMS_Status* OVMS_ServerSetGlobalVADisplay(OVMS_Server* server, void*
 #endif
     return nullptr;
 }
+
+DLL_PUBLIC OVMS_Status* OVMS_ServerSetGlobalD3D11Device(OVMS_Server* server, void* d3d11Device) {
+    // Windows D3D11 analog of OVMS_ServerSetGlobalVADisplay. nullptr resets.
+#ifdef _WIN32
+    // TODO make it so that the server keeps those as a variable
+    ovms::globalD3D11Device = d3d11Device;
+#endif
+    return nullptr;
+}
 #ifdef __cplusplus
 }
 #endif

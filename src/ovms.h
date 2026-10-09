@@ -84,6 +84,8 @@ typedef enum OVMS_BufferType_enum {
     OVMS_BUFFERTYPE_VASURFACE_Y,
     OVMS_BUFFERTYPE_VASURFACE_UV,
     OVMS_BUFFERTYPE_HDDL,  // not supported
+    OVMS_BUFFERTYPE_D3D11_TEXTURE_Y,   // Windows: ID3D11Texture2D* NV12 Y plane
+    OVMS_BUFFERTYPE_D3D11_TEXTURE_UV,  // Windows: ID3D11Texture2D* NV12 UV plane
 } OVMS_BufferType;
 
 typedef enum OVMS_ServableState_enum {
@@ -685,6 +687,16 @@ OVMS_Status* OVMS_ServableMetadataInfo(OVMS_ServableMetadata* metadata, const vo
 // \param server server for which we set VA Display
 // \param vaDisplay VADisplay that will be used to compile models
 OVMS_Status* OVMS_ServerSetGlobalVADisplay(OVMS_Server* server, void* vaDisplay);
+
+// EXPERIMENTAL (Windows)
+// Set a global ID3D11Device for the OpenVINO model compile phase. This triggers
+// ov::Core::compile_model to use an OpenVINO D3DContext built from the device,
+// enabling zero-copy inference on D3D11 NV12 textures for GPU-loaded models.
+// Must be called before server start. Keep the device alive during server usage.
+//
+// \param server server for which we set the D3D11 device
+// \param d3d11Device ID3D11Device* used to compile models (nullptr resets)
+OVMS_Status* OVMS_ServerSetGlobalD3D11Device(OVMS_Server* server, void* d3d11Device);
 
 // Deallocates a status object.
 //

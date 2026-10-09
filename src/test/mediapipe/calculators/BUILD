@@ -97,3 +97,198 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 
+# Standalone smoke test: decode video with GStreamer + infer with OV directly
+# Run with:
+#   bazel run //src/test/mediapipe/calculators:video_decode_infer_test \
+#     -- /path/to/video.avi /path/to/model.xml
+cc_binary(
+    name = "video_decode_infer_test",
+    srcs = ["video_decode_infer_test.cpp"],
+    copts = COPTS_ADJUSTED,
+    deps = [
+        "//src/mpi:intel_mpi",
+        "//third_party:openvino",
+    ],
+    linkopts = LINKOPTS_ADJUSTED + select({
+        "//src:windows": [],
+        "//conditions:default": ["-lOpenCL"],
+    }),
+)
+
+cc_library(
+    name = "video_decode_infer_calculator",
+    linkstatic = 1,
+    alwayslink = 1,
+    srcs = ["video_decode_infer_calculator.cc"],
+    copts = COPTS_ADJUSTED,
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/mpi:intel_mpi",
+        "@mediapipe_calculators//:mediapipe_calculators",
+    ],
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+# P0: monolithic decode+infer calculator using the GPU VA zero-copy path.
+cc_library(
+    name = "video_decode_infer_va_calculator",
+    linkstatic = 1,
+    alwayslink = 1,
+    srcs = ["video_decode_infer_va_calculator.cc"],
+    copts = COPTS_ADJUSTED,
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/mpi:intel_mpi",
+        "@mediapipe_calculators//:mediapipe_calculators",
+        "//third_party:openvino",
+    ],
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+# P0 graph test. Needs GPU + GStreamer + test assets; skips otherwise.
+# Run with:
+#   bazel run //src/test/mediapipe/calculators:video_decode_infer_va_test
+cc_test(
+    name = "video_decode_infer_va_test",
+    srcs = ["video_decode_infer_va_test.cpp"],
+    data = ["video_decode_infer_va.pbtxt"],
+    copts = COPTS_ADJUSTED,
+    linkstatic = 1,
+    deps = [
+        ":video_decode_infer_va_calculator",
+        "//src/mpi:intel_mpi",
+        "@com_google_googletest//:gtest_main",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe_calculators//:mediapipe_calculators",
+        "//third_party:openvino",
+    ],
+    linkopts = LINKOPTS_ADJUSTED + select({
+        "//src:windows": [],
+        "//conditions:default": ["-lOpenCL"],
+    }),
+)
+
+# P2: standalone GStreamer/VA video source calculator emitting GstVideoFramePacket.
+cc_library(
+    name = "gst_video_source_calculator",
+    linkstatic = 1,
+    alwayslink = 1,
+    srcs = ["gst_video_source_calculator.cc"],
+    hdrs = ["gst_video_frame_packet.hpp"],
+    copts = COPTS_ADJUSTED,
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/mpi:intel_mpi",
+        "@mediapipe_calculators//:mediapipe_calculators",
+        "//third_party:openvino",
+    ],
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+# P2 graph test: proves per-packet surface ownership (N in-flight distinct
+# surfaces). Needs GPU + GStreamer + test video; skips otherwise.
+cc_test(
+    name = "gst_video_source_test",
+    srcs = ["gst_video_source_test.cpp"],
+    data = ["gst_video_source.pbtxt"],
+    copts = COPTS_ADJUSTED,
+    linkstatic = 1,
+    deps = [
+        ":gst_video_source_calculator",
+        "//src/mpi:intel_mpi",
+        "@com_google_googletest//:gtest_main",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe_calculators//:mediapipe_calculators",
+        "//third_party:openvino",
+    ],
+    linkopts = LINKOPTS_ADJUSTED + select({
+        "//src:windows": [],
+        "//conditions:default": ["-lOpenCL"],
+    }),
+)
+
+# Inference against an already-loaded ModelManager servable through the OVMS C-API.
+cc_library(
+    name = "gst_capi_inference_calculator",
+    linkstatic = 1,
+    alwayslink = 1,
+    srcs = ["gst_capi_inference_calculator.cc"],
+    hdrs = ["gst_video_frame_packet.hpp"],
+    copts = COPTS_ADJUSTED,
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src:ovms_lib",
+        "@mediapipe_calculators//:mediapipe_calculators",
+    ],
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+# Linux video encoder test: decode host NV12 -> encode H.264/MP4 -> verify
+# readable. Needs GStreamer + test video; skips otherwise.
+cc_test(
+    name = "gst_video_encode_test",
+    srcs = ["gst_video_encode_test.cpp"],
+    copts = COPTS_ADJUSTED,
+    linkstatic = 1,
+    deps = [
+        "//src/mpi:intel_mpi",
+        "@com_google_googletest//:gtest_main",
+    ],
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+# P5 Windows test A: decoded D3D11 texture uses the injected server-owned device.
+# Windows + Intel GPU + GStreamer D3D11 + test video; skips otherwise.
+cc_test(
+    name = "gst_d3d11_surface_test",
+    srcs = select({
+        "//src:windows": ["gst_d3d11_surface_test.cpp"],
+        "//conditions:default": [],
+    }),
+    copts = COPTS_ADJUSTED,
+    linkstatic = 1,
+    target_compatible_with = select({
+        "//src:windows": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//src/mpi:intel_mpi",
+        "@com_google_googletest//:gtest_main",
+    ],
+    linkopts = LINKOPTS_ADJUSTED + select({
+        "//src:windows": ["d3d11.lib", "dxgi.lib"],
+        "//conditions:default": [],
+    }),
+)
+
+# P5 Windows tests B and C (C-API inference + split graph). Standalone cc_test
+# depending on ovms_lib for the C-API/servable path. Windows-only (skips without
+# GPU/fixtures); kept out of the aggregate ovms_test to avoid unrelated py_off
+# breakage in other LLM translation units.
+cc_test(
+    name = "gst_d3d11_capi_test",
+    srcs = select({
+        "//src:windows": ["gst_d3d11_capi_test.cpp"],
+        "//conditions:default": [],
+    }),
+    copts = COPTS_ADJUSTED,
+    linkstatic = 1,
+    target_compatible_with = select({
+        "//src:windows": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//src/mpi:intel_mpi",
+        ":gst_video_source_calculator",
+        ":gst_capi_inference_calculator",
+        "//src:ovms_lib",
+        "@com_google_googletest//:gtest_main",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe_calculators//:mediapipe_calculators",
+    ],
+    linkopts = LINKOPTS_ADJUSTED + select({
+        "//src:windows": ["d3d11.lib", "dxgi.lib"],
+        "//conditions:default": [],
+    }),
+)
+

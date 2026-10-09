@@ -68,6 +68,9 @@
 #include "opencltensorfactory.hpp"
 #include "vaapitensorfactory.hpp"
 #endif
+#ifdef _WIN32
+#include "d3d11tensorfactory.hpp"
+#endif
 
 namespace {
 enum : unsigned int {
@@ -192,9 +195,14 @@ class Meta;  // pure fwd declaration in getRTInfo
 
 namespace ovms {
 
-// TODO windows
+// TODO make it not global but per server/per model/mediapipe specific.
 #ifdef __linux__
 void* globalVaDisplay = nullptr;
+#endif
+#ifdef _WIN32
+// TODO: Verify that a fully drained server teardown can safely replace this
+// process-global device after all GStreamer and OpenVINO resources are gone.
+void* globalD3D11Device = nullptr;
 #endif
 
 const uint32_t MAX_NIREQ_COUNT = 100000;
@@ -985,9 +993,15 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
             compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
         }
 #else
-        // TODO: Rremove when enabled on windows with global disaplay
-        OV_LOGGER("ov::Core: {} compile_model(model: {}, target_device:{}, pluginConfig:{})", (void*)&this->ieCore, (void*)this->model.get(), this->targetDevice, (void*)&pluginConfig);
-        compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
+        if (globalD3D11Device) {
+            OV_LOGGER("ov::intel_gpu::ocl::D3DContext(core: {}, globalD3D11Device: {})", (void*)&this->ieCore, globalD3D11Device);
+            this->d3dContext = std::make_unique<ov::intel_gpu::ocl::D3DContext>(this->ieCore, reinterpret_cast<ID3D11Device*>(globalD3D11Device));
+            OV_LOGGER("ov::Core: {} compile_model(model: {}, d3dContext:{}, pluginConfig:{})", (void*)&this->ieCore, (void*)this->model.get(), (void*)this->d3dContext.get(), (void*)&pluginConfig);
+            compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, *this->d3dContext, pluginConfig));
+        } else {
+            OV_LOGGER("ov::Core: {} compile_model(model: {}, target_device:{}, pluginConfig:{})", (void*)&this->ieCore, (void*)this->model.get(), this->targetDevice, (void*)&pluginConfig);
+            compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
+        }
 #endif
 
 #ifdef __linux__
@@ -1000,12 +1014,15 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {}, version:{}, oclContextC:{}", getName(), getVersion(), (void*)&this->oclContextC);
 #endif
     } else {
-        compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
+        this->compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
 // TODO reset contexts
 #ifdef __linux__
         this->oclContextCpp.reset();
         this->vaContext.reset();
         this->oclContextC = nullptr;
+#endif
+#ifdef _WIN32
+        this->d3dContext.reset();
 #endif
     }
 }
@@ -1226,6 +1243,12 @@ void ModelInstance::loadTensorFactories() {
 
         this->tensorFactories.emplace(OVMS_BUFFERTYPE_VASURFACE_Y, make_shared<VAAPITensorFactory>(*this->vaContext, OVMS_BUFFERTYPE_VASURFACE_Y));
         this->tensorFactories.emplace(OVMS_BUFFERTYPE_VASURFACE_UV, make_shared<VAAPITensorFactory>(*this->vaContext, OVMS_BUFFERTYPE_VASURFACE_UV));
+    }
+#endif
+#ifdef _WIN32
+    if (this->d3dContext) {
+        this->tensorFactories.emplace(OVMS_BUFFERTYPE_D3D11_TEXTURE_Y, make_shared<D3D11TensorFactory>(*this->d3dContext, OVMS_BUFFERTYPE_D3D11_TEXTURE_Y));
+        this->tensorFactories.emplace(OVMS_BUFFERTYPE_D3D11_TEXTURE_UV, make_shared<D3D11TensorFactory>(*this->d3dContext, OVMS_BUFFERTYPE_D3D11_TEXTURE_UV));
     }
 #endif
     // TODO test MULTI/AUTO/HETERO

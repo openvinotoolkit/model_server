@@ -1257,7 +1257,9 @@ ovms_cc_library(
                     "vaapitensorfactory.hpp",
                     "opencltensorfactory.hpp",
                 ],
-                "//src:windows" : [],
+                "//src:windows" : [
+                    "d3d11tensorfactory.hpp",
+                ],
             }),
     srcs = ["regularovtensorfactory.cpp"]
             + select({
@@ -1265,14 +1267,22 @@ ovms_cc_library(
                     "vaapitensorfactory.cpp",
                     "opencltensorfactory.cpp",
                 ],
-                "//src:windows" : [],
+                "//src:windows" : [
+                    "d3d11tensorfactory.cpp",
+                ],
             }),
     deps = ["//third_party:openvino",
             "libovmscapibuffer",
             "libovms_itensorfactory",
             "libovmslogging",
             "ovms_header",
-    ],
+    ] + select({
+            "//src:windows": [
+                "@windows_opencl//:opencl",
+                "@windows_opencl2//:opencl2",
+            ],
+            "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
@@ -2905,6 +2915,11 @@ cc_library(
         ":test_test_with_temp_dir",
         "//src:ovms_lib",
 	":libovmsoclutils",
+        "//src/mpi:intel_mpi",
+        "//src/test/mediapipe/calculators:gst_video_source_calculator",
+        "//src/test/mediapipe/calculators:gst_capi_inference_calculator",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe_calculators//:mediapipe_calculators",
         "@com_google_googletest//:gtest",
     ],
     local_defines = COMMON_LOCAL_DEFINES,
