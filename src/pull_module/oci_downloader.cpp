@@ -1,0 +1,323 @@
+//*****************************************************************************
+// Copyright 2026 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//*****************************************************************************
+#include "oci_downloader.hpp"
+
+#include <filesystem>
+#include <iostream>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <vector>
+
+#include "src/port/rapidjson_document.hpp"
+
+#include "../capi_frontend/server_settings.hpp"
+#include "../logging.hpp"
+#include "../status.hpp"
+#include "cmd_exec.hpp"
+#include "model_downloader.hpp"
+#include "optimum_export.hpp"
+#include "src/filesystem/filesystem.hpp"
+
+namespace ovms {
+
+static Status validateNoSymlinkPathComponents(const std::string& path) {
+    std::error_code ec;
+    const std::filesystem::path absolutePath = std::filesystem::absolute(path, ec);
+    if (ec) {
+        SPDLOG_ERROR("Failed to resolve model repository path {}: {}", path, ec.message());
+        return StatusCode::PATH_INVALID;
+    }
+
+    std::filesystem::path currentPath = absolutePath.root_path();
+    for (const auto& component : absolutePath.relative_path()) {
+        currentPath /= component;
+        const auto componentStatus = std::filesystem::symlink_status(currentPath, ec);
+        if (ec == std::errc::no_such_file_or_directory) {
+            return StatusCode::OK;
+        }
+        if (ec) {
+            SPDLOG_ERROR("Failed to inspect model repository path component {}: {}", currentPath.string(), ec.message());
+            return StatusCode::PATH_INVALID;
+        }
+        if (std::filesystem::is_symlink(componentStatus)) {
+            SPDLOG_ERROR("Symbolic links are not allowed in OCI model repository paths: {}", currentPath.string());
+            return StatusCode::PATH_INVALID;
+        }
+    }
+    return StatusCode::OK;
+}
+
+Status OciDownloader::validateGraphDirectory() const {
+    return validateNoSymlinkPathComponents(this->downloadPath);
+}
+
+OciDownloader::OciDownloader(const ExportSettings& inExportSettings, const GraphExportType& inTask,
+    const std::string& inSourceModel, const std::string& inDownloadPath, bool inOverwrite) :
+    IModelDownloader(inSourceModel, inDownloadPath, inOverwrite),
+    exportSettings(inExportSettings),
+    task(inTask) {}
+
+std::string OciDownloader::getVersionCmd() const {
+    return "llmman --version";
+}
+
+std::string OciDownloader::getResolveCmd() const {
+    return "llmman resolve " + quote_cmd_arg(stripOciScheme(this->sourceModel));
+}
+
+void OciDownloader::onDownloadComplete(HFSettingsImpl& hfSettings) const {
+    hfSettings.exportSettings.modelPath = this->modelPath;
+    hfSettings.ggufFilename = this->ggufFilename;
+    std::cout << "Model: " << this->sourceModel << " resolved to: " << this->modelPath << std::endl;
+}
+
+Status OciDownloader::checkLlmmanIsPresent() {
+    int retCode = -1;
+    const std::string output = exec_cmd(this->getVersionCmd(), retCode);
+    if (retCode != 0) {
+        SPDLOG_DEBUG("Command output {}", output);
+        SPDLOG_ERROR("Trying to pull {} but llmman could not be run from PATH. Install it from "
+                     "https://github.com/llmmanorg/llmman and ensure it is available in PATH.",
+            this->sourceModel);
+        return StatusCode::OCI_LLMMAN_NOT_FOUND;
+    }
+    SPDLOG_DEBUG("llmman executable is present");
+    return StatusCode::OK;
+}
+
+Status OciDownloader::parseResolveOutput(const std::string& output, std::string& outPath, std::string& outFormat) {
+    std::vector<std::string> lines;
+    std::istringstream iss(output);
+    std::string line;
+    while (std::getline(iss, line)) {
+        if (!line.empty() && line.back() == '\r') {
+            line.pop_back();
+        }
+        if (!line.empty()) {
+            lines.push_back(line);
+        }
+    }
+
+    for (auto it = lines.rbegin(); it != lines.rend(); ++it) {
+        rapidjson::Document document;
+        if (document.Parse(it->c_str()).HasParseError() || !document.IsObject()) {
+            continue;
+        }
+        if (!document.HasMember("path") || !document["path"].IsString()) {
+            continue;
+        }
+        if (!document.HasMember("format") || !document["format"].IsString()) {
+            continue;
+        }
+        outPath = document["path"].GetString();
+        outFormat = document["format"].GetString();
+        return StatusCode::OK;
+    }
+
+    SPDLOG_ERROR("Could not parse llmman resolve output. Expected a single line of JSON with \"path\" and \"format\" members.");
+    SPDLOG_DEBUG("Command output {}", output);
+    return StatusCode::OCI_LLMMAN_RESOLVE_OUTPUT_INVALID;
+}
+
+bool OciDownloader::containsOpenVinoIr(const std::string& directory) {
+    std::error_code ec;
+    if (!std::filesystem::is_directory(directory, ec)) {
+        return false;
+    }
+    const std::filesystem::path modelXml = std::filesystem::path(directory) / "openvino_model.xml";
+    const std::filesystem::path modelBin = std::filesystem::path(directory) / "openvino_model.bin";
+    return std::filesystem::is_regular_file(modelXml, ec) && !ec &&
+           std::filesystem::is_regular_file(modelBin, ec) && !ec;
+}
+
+std::unique_ptr<IModelDownloader> OciDownloader::createConverter(const std::string& resolvedPath) const {
+    // optimum-cli accepts a local directory for --model, so the checkout that
+    // llmman produced is passed straight through as the export source.
+    return std::make_unique<OptimumDownloader>(this->exportSettings, this->task, resolvedPath, this->downloadPath, this->overwriteModels);
+}
+
+Status OciDownloader::convertToOpenVinoIr(const std::string& resolvedPath) {
+    auto status = this->validateGraphDirectory();
+    if (!status.ok()) {
+        return status;
+    }
+
+    SPDLOG_INFO("OCI model {} contains a HuggingFace-format checkout. Converting it to OpenVINO IR with optimum-cli.", this->sourceModel);
+    // The conversion output lands in the graph directory, which keeps
+    // models_path at its default of "./".
+    status = this->createConverter(resolvedPath)->downloadModel();
+    if (!status.ok()) {
+        return status;
+    }
+    status = this->validateGraphDirectory();
+    if (!status.ok()) {
+        return status;
+    }
+    this->modelPath = "./";
+    return StatusCode::OK;
+}
+
+Status OciDownloader::prepareGgufPath(const std::string& resolvedPath) {
+    const std::filesystem::path ggufPath(resolvedPath);
+    if (ggufPath.extension() == ".gguf") {
+        this->modelPath = ggufPath.parent_path().string();
+        this->ggufFilename = ggufPath.filename().string();
+        return StatusCode::OK;
+    }
+
+    auto status = this->validateGraphDirectory();
+    if (!status.ok()) {
+        return status;
+    }
+
+    std::error_code ec;
+    std::filesystem::create_directories(this->downloadPath, ec);
+    if (ec) {
+        SPDLOG_ERROR("Failed to create directory {}: {}", this->downloadPath, ec.message());
+        return StatusCode::PATH_INVALID;
+    }
+
+    const std::string filename = ggufPath.filename().string() + ".gguf";
+    const std::filesystem::path modelFilePath = std::filesystem::path(this->downloadPath) / filename;
+    std::filesystem::remove(modelFilePath, ec);
+    if (ec) {
+        SPDLOG_ERROR("Failed to remove existing GGUF link {}: {}", modelFilePath.string(), ec.message());
+        return StatusCode::INTERNAL_ERROR;
+    }
+
+    std::filesystem::create_hard_link(ggufPath, modelFilePath, ec);
+    if (ec) {
+        ec.clear();
+        std::filesystem::create_symlink(ggufPath, modelFilePath, ec);
+    }
+    if (ec) {
+        ec.clear();
+        std::filesystem::copy_file(ggufPath, modelFilePath, std::filesystem::copy_options::none, ec);
+    }
+    if (ec) {
+        std::filesystem::remove(modelFilePath);
+        SPDLOG_ERROR("Failed to expose resolved GGUF {} as {}: {}", resolvedPath, modelFilePath.string(), ec.message());
+        return StatusCode::INTERNAL_ERROR;
+    }
+
+    this->modelPath = this->downloadPath;
+    this->ggufFilename = filename;
+    return StatusCode::OK;
+}
+
+Status OciDownloader::downloadModel() {
+    if (FileSystem::isPathEscaped(this->downloadPath)) {
+        SPDLOG_ERROR("Path {} escape with .. is forbidden.", this->downloadPath);
+        return StatusCode::PATH_INVALID;
+    }
+
+    auto status = this->validateGraphDirectory();
+    if (!status.ok()) {
+        return status;
+    }
+
+    status = this->checkLlmmanIsPresent();
+    if (!status.ok()) {
+        return status;
+    }
+
+    status = IModelDownloader::checkIfOverwriteAndRemove();
+    if (!status.ok()) {
+        return status;
+    }
+
+    const std::string cmd = this->getResolveCmd();
+    SPDLOG_DEBUG("Executing command: {}", cmd);
+    int retCode = -1;
+    const std::string output = exec_cmd(cmd, retCode);
+    if (retCode != 0) {
+        SPDLOG_ERROR("llmman resolve failed for {}: {}", this->sourceModel, output);
+        return StatusCode::OCI_LLMMAN_RESOLVE_FAILED;
+    }
+
+    std::string resolvedPath;
+    std::string format;
+    status = parseResolveOutput(output, resolvedPath, format);
+    if (!status.ok()) {
+        return status;
+    }
+
+    // llmman resolution may take a long time. Re-check immediately before any
+    // follow-up writes because an untrusted concurrent writer could replace a
+    // repository component with a symlink while the registry request runs.
+    status = this->validateGraphDirectory();
+    if (!status.ok()) {
+        return status;
+    }
+
+    std::error_code ec;
+    if (!std::filesystem::exists(resolvedPath, ec)) {
+        SPDLOG_ERROR("llmman resolved {} to {}, which does not exist.", this->sourceModel, resolvedPath);
+        return StatusCode::OCI_LLMMAN_RESOLVE_OUTPUT_INVALID;
+    }
+    SPDLOG_DEBUG("llmman resolved {} to {} (format: {})", this->sourceModel, resolvedPath, format);
+
+    if (format == "gguf") {
+        if (this->task != TEXT_GENERATION_GRAPH) {
+            SPDLOG_ERROR("OCI GGUF model {} supports only the text_generation task; requested task is {}.",
+                this->sourceModel, enumToString(this->task));
+            return StatusCode::OCI_UNSUPPORTED_MODEL_FORMAT;
+        }
+        if (!std::filesystem::is_regular_file(resolvedPath, ec)) {
+            SPDLOG_ERROR("llmman reported format gguf for {}, but {} is not a regular file.", this->sourceModel, resolvedPath);
+            return StatusCode::OCI_LLMMAN_RESOLVE_OUTPUT_INVALID;
+        }
+        status = this->prepareGgufPath(resolvedPath);
+        if (!status.ok()) {
+            return status;
+        }
+    } else if (format == "safetensors") {
+        if (!std::filesystem::is_directory(resolvedPath, ec)) {
+            SPDLOG_ERROR("llmman reported format safetensors for {}, but {} is not a directory.", this->sourceModel, resolvedPath);
+            return StatusCode::OCI_LLMMAN_RESOLVE_OUTPUT_INVALID;
+        }
+        if (containsOpenVinoIr(resolvedPath)) {
+            // Already an OpenVINO IR ModelPack - serve it straight from
+            // llmman's store, no conversion and no second copy on disk.
+            this->modelPath = resolvedPath;
+        } else {
+            status = this->convertToOpenVinoIr(resolvedPath);
+            if (!status.ok()) {
+                return status;
+            }
+        }
+    } else {
+        SPDLOG_ERROR("llmman reported unsupported format \"{}\" for {}. Supported formats: gguf, safetensors.", format, this->sourceModel);
+        return StatusCode::OCI_UNSUPPORTED_MODEL_FORMAT;
+    }
+
+    // The graph directory holds graph.pbtxt even when the weights stay in
+    // llmman's store, so it has to exist before the graph is exported.
+    status = this->validateGraphDirectory();
+    if (!status.ok()) {
+        return status;
+    }
+    std::filesystem::create_directories(this->downloadPath, ec);
+    if (ec) {
+        SPDLOG_ERROR("Failed to create directory {}: {}", this->downloadPath, ec.message());
+        return StatusCode::PATH_INVALID;
+    }
+
+    return StatusCode::OK;
+}
+
+}  // namespace ovms

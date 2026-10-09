@@ -130,8 +130,16 @@ RUN if [ "$VERBOSE_LOGS" == "ON" ] ; then export VERBOSE=1 ; fi && OPENCV_VERSIO
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 FROM base_build as build
 ARG BASE_IMAGE
+ARG LLMMAN_VERSION
+ARG LLMMAN_SHA256_X86_64
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
+
+# Install the pinned llmman CLI in the build container. The release stage
+# copies this same verified executable from the build stage.
+RUN curl -fsSL "https://github.com/llmmanorg/llmman/releases/download/v${LLMMAN_VERSION}/llmman-x86_64-unknown-linux-gnu" -o /usr/local/bin/llmman && \
+    echo "${LLMMAN_SHA256_X86_64}  /usr/local/bin/llmman" | sha256sum -c - && \
+    chmod 0755 /usr/local/bin/llmman
 
 ARG JOBS=40
 ARG VERBOSE_LOGS=OFF
@@ -459,6 +467,7 @@ ENV PATH="$PATH:/ovms/bin"
 ENTRYPOINT ["/bin/bash", "-c", "if [ -d /ovms/share/espeak-ng-data ]; then export ESPEAK_DATA_PATH=/ovms/share/espeak-ng-data; fi; if [ -z \"$OPENCV_IO_MAX_IMAGE_PIXELS\" ]; then export OPENCV_IO_MAX_IMAGE_PIXELS=67108864; fi; exec /ovms/bin/ovms \"$@\"", "--"]
 
 COPY --from=pkg /ovms_release /ovms
+COPY --from=build /usr/local/bin/llmman /usr/local/bin/llmman
 COPY --from=build /usr/local/lib/python3.*/dist-packages/numpy /ovms/python_deps/numpy/
 COPY --from=build /usr/local/lib/python3.*/dist-packages/numpy-*.dist-info /ovms/python_deps/
 COPY --from=pkg /usr/local/lib/python3.12/site-packages/jinja2 /ovms/python_deps/jinja2

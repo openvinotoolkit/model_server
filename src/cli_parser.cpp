@@ -260,7 +260,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, const
             cxxopts::value<bool>()->default_value("false"),
             "PULL_HF")
             ("source_model",
-            "HF source model path",
+            "HF source model path, or a CNCF ModelPack OCI reference prefixed with oci://",
             cxxopts::value<std::string>(),
             "HF_SOURCE")
             ("source_loras",
@@ -283,6 +283,10 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, const
             "Model precision used in optimum-cli export with conversion",
             cxxopts::value<std::string>()->default_value("int8"),
             "WEIGHT_FORMAT")
+            ("trust_remote_code",
+            "Allow optimum-cli to execute custom code from the source model during conversion. Use only for trusted models.",
+            cxxopts::value<bool>()->default_value("false"),
+            "TRUST_REMOTE_CODE")
             ("extra_quantization_params",
                 "Model quantization parameters used in optimum-cli export with conversion for text generation models",
                 cxxopts::value<std::string>(),
@@ -848,6 +852,14 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
         if (result->count("source_loras")) {
             hfSettings.sourceLoras = result->operator[]("source_loras").as<std::string>();
         }
+        if (isOciDownload(hfSettings.sourceModel)) {
+            // The layer media types in a CNCF ModelPack image already describe
+            // the payload, so there is nothing for --gguf_filename to select.
+            if (result->count("gguf_filename")) {
+                throw std::logic_error("--gguf_filename parameter unsupported for oci:// models.");
+            }
+            hfSettings.downloadType = OCI_DOWNLOAD;
+        }
         if ((result->count("weight-format") || result->count("extra_quantization_params")) && isOptimumCliDownload(hfSettings.sourceModel, hfSettings.ggufFilename)) {
             hfSettings.downloadType = OPTIMUM_CLI_DOWNLOAD;
         }
@@ -860,6 +872,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
 
         if (result->count("weight-format"))
             hfSettings.exportSettings.precision = result->operator[]("weight-format").as<std::string>();
+        hfSettings.exportSettings.trustRemoteCode = result->operator[]("trust_remote_code").as<bool>();
         if (result->count("extra_quantization_params"))
             hfSettings.exportSettings.extraQuantizationParams = result->operator[]("extra_quantization_params").as<std::string>();
         hfSettings.exportSettings.restWorkers = serverSettings.restWorkers;
@@ -991,12 +1004,14 @@ void CLIParser::prepareGraphStart(HFSettingsImpl& hfSettings, ModelsSettingsImpl
     if (result->count("model_name")) {
         modelsSettings.modelName = result->operator[]("model_name").as<std::string>();
     } else if (!hfSettings.sourceModel.empty()) {
-        modelsSettings.modelName = hfSettings.sourceModel;
+        // For an OCI reference the scheme is dropped so the served name is the
+        // registry reference a user would type, e.g. ghcr.io/org/model:tag.
+        modelsSettings.modelName = stripOciScheme(hfSettings.sourceModel);
     }
 
     // Only override modelPath if it wasn't already set via --model_path
     if (!result->count("model_path")) {
-        modelsSettings.modelPath = FileSystem::joinPath({hfSettings.downloadPath, hfSettings.sourceModel});
+        modelsSettings.modelPath = FileSystem::joinPath({hfSettings.downloadPath, localModelDirectoryName(hfSettings.sourceModel)});
     }
 }
 

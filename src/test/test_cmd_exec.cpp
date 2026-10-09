@@ -163,6 +163,26 @@ TEST_F(ExecCmdTest, LegitimateCommandWorks) {
 #endif
 }
 
+#ifdef _WIN32
+TEST_F(ExecCmdTest, QuotesWindowsArgumentEndingWithBackslash) {
+    const std::string argument = R"(C:\some path\)";
+    int returnCode = -1;
+    const std::string output = ovms::exec_cmd(
+        "python.exe -c \"import sys; print(sys.argv[1])\" " + ovms::quote_cmd_arg(argument), returnCode);
+    EXPECT_EQ(returnCode, 0);
+    EXPECT_EQ(output, argument + "\n");
+}
+
+TEST_F(ExecCmdTest, QuotesWindowsArgumentWithBackslashBeforeQuote) {
+    const std::string argument = R"(C:\some path\\\"segment)";
+    int returnCode = -1;
+    const std::string output = ovms::exec_cmd(
+        "python.exe -c \"import sys; print(sys.argv[1])\" " + ovms::quote_cmd_arg(argument), returnCode);
+    EXPECT_EQ(returnCode, 0);
+    EXPECT_EQ(output, argument + "\n");
+}
+#endif
+
 // Test exec_cmd_utf8 also blocks command separator injection
 TEST_F(ExecCmdTest, CommandSeparatorInjectionBlockedUtf8) {
     int returnCode = 0;

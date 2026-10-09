@@ -32,6 +32,7 @@
 #include "gguf_downloader.hpp"
 #include "../graph_export/graph_export_paths.hpp"
 #include "hf_env_vars.hpp"
+#include "oci_downloader.hpp"
 #include "../logging.hpp"
 #include "../mediapipe_runtime_api.hpp"
 #include "../module_names.hpp"
@@ -250,6 +251,8 @@ Status HfPullModelModule::clone() {
         downloader = std::make_unique<OptimumDownloader>(this->hfSettings.exportSettings, this->hfSettings.task, this->hfSettings.sourceModel, IModelDownloader::getGraphDirectory(this->hfSettings.downloadPath, this->hfSettings.sourceModel), this->hfSettings.overwriteModels);
     } else if (this->hfSettings.downloadType == GGUF_DOWNLOAD) {
         downloader = std::make_unique<GGUFDownloader>(this->hfSettings.sourceModel, IModelDownloader::getGraphDirectory(this->hfSettings.downloadPath, this->hfSettings.sourceModel), this->hfSettings.overwriteModels, this->hfSettings.ggufFilename, this->GetHfEndpoint());
+    } else if (this->hfSettings.downloadType == OCI_DOWNLOAD) {
+        downloader = std::make_unique<OciDownloader>(this->hfSettings.exportSettings, this->hfSettings.task, this->hfSettings.sourceModel, IModelDownloader::getGraphDirectory(this->hfSettings.downloadPath, this->hfSettings.sourceModel), this->hfSettings.overwriteModels);
     } else {
         SPDLOG_ERROR("Unsupported download type");
         return StatusCode::INTERNAL_ERROR;
@@ -260,7 +263,7 @@ Status HfPullModelModule::clone() {
         return status;
     }
     graphDirectory = downloader->getGraphDirectory();
-    std::cout << "Model: " << this->hfSettings.sourceModel << " downloaded to: " << graphDirectory << std::endl;
+    downloader->onDownloadComplete(this->hfSettings);
 
     // Text gen with draft source model case - downloads second model
     if (std::holds_alternative<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings) && std::get<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings).draftModelDirName.has_value()) {
@@ -277,6 +280,14 @@ Status HfPullModelModule::clone() {
 
     // Image gen with LoRA adapters case - resolve filenames and download safetensors files
     status = this->pullLoraAdapters(graphDirectory);
+    if (!status.ok()) {
+        return status;
+    }
+
+    // Revalidate the downloader's output path immediately before graph export.
+    // OCI downloads reject symlinked repository components to reduce path-swap
+    // exposure while llmman or model conversion is running.
+    status = downloader->validateGraphDirectory();
     if (!status.ok()) {
         return status;
     }

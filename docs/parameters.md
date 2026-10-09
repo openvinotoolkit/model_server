@@ -112,7 +112,7 @@ Shared configuration options for the pull, and pull & start mode. In the presenc
 | Option                      | Value format | Description                                                                                                   |
 |-----------------------------|--------------|---------------------------------------------------------------------------------------------------------------|
 | `--pull`                    | `NA`         | Runs the server in pull mode to download the model from the Hugging Face repository.                          |
-| `--source_model`            | `string`     | Name of the model in the Hugging Face repository. If not set, `model_name` is used.                           |
+| `--source_model`            | `string`     | Name of the model in the Hugging Face repository, or a CNCF ModelPack OCI reference prefixed with `oci://` (for example `oci://ghcr.io/org/model:tag`). If not set, `model_name` is used. See [OCI pull mode](./pull_oci_models.md). |
 | `--model_repository_path`   | `string`     | Directory where all required model files will be saved.                                                       |
 | `--model_name`              | `string`     | Name of the model as exposed externally by the server.                                                        |
 | `--target_device`           | `string`     | Device name to be used to execute inference operations. For `--task text_generation`, accepted values include `CPU`/`GPU`/`NPU`/`AUTO`, `GPU.<index>`, and `HETERO:<...>`/`AUTO:<...>` (for example `AUTO:GPU,CPU`). If not specified, it is auto-detected using available GPU devices, with fallback to `CPU` (NPU must be selected explicitly). See [Automatic target device detection](#automatic-target-device-detection). |
@@ -122,6 +122,10 @@ Shared configuration options for the pull, and pull & start mode. In the presenc
 
 > **NOTE:** If you want to use model that is split into several `.gguf` files, you should specify the filename of the first part only, e.g. `--gguf_filename model-name-00001-of-00002.gguf`.
 
+## Pull Mode Options for CNCF ModelPack (OCI) sources
+
+When `--source_model` is prefixed with `oci://`, the model is pulled from an OCI registry as a [CNCF ModelPack](https://github.com/modelpack/model-spec) artifact instead of from Hugging Face. `--task` is required, and `--gguf_filename` is not accepted. See [OCI pull mode](./pull_oci_models.md) for details.
+
 ## Pull Mode Options for optimum-cli mode
 
 When pulling models outside of OpenVINO organization the optimum-cli api is used inside ovms. You can set additional parameters for this mode.
@@ -129,6 +133,7 @@ When pulling models outside of OpenVINO organization the optimum-cli api is used
 |------------------------------|--------------|---------------------------------------------------------------------------------------------------------------|
 | `--extra_quantization_params`| `string`     | Add advanced quantization parameters. Check [optimum-intel](https://github.com/huggingface/optimum-intel) documentation. Example: `--sym --group-size -1 --ratio 1.0 --awq --scale-estimation --dataset wikitext2`  |
 | `--weight-format`            | `string`     | Model precision used in optimum-cli export with conversion. Default `int8`.                |
+| `--trust_remote_code`        | `NA`         | Allow optimum-cli to execute custom code supplied by the source model during conversion. Disabled by default; use only with trusted models. |
 
 There are also additional environment variables that may change the behavior of pulling:
 

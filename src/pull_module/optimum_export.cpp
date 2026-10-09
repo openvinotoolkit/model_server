@@ -37,12 +37,15 @@ std::string OptimumDownloader::getExportCmdText() {
     }
     // clang-format off
     oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
-    oss << "--model " << this->sourceModel << " --trust-remote-code ";
+    oss << "--model " << quote_cmd_arg(this->sourceModel);
+    if (this->exportSettings.trustRemoteCode) {
+        oss << " --trust-remote-code";
+    }
     oss << " --weight-format " << this->exportSettings.precision << " ";
     if (this->exportSettings.extraQuantizationParams.has_value()) {
         oss << this->exportSettings.extraQuantizationParams.value() << " ";
     }
-    oss << this->downloadPath;
+    oss << quote_cmd_arg(this->downloadPath);
     // clang-format on
     return oss.str();
 }
@@ -52,12 +55,15 @@ std::string OptimumDownloader::getExportCmdEmbeddings() {
     // clang-format off
     oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
     oss << "--disable-convert-tokenizer --task feature-extraction --library sentence_transformers";
-    oss << " --model " << this->sourceModel << " --trust-remote-code ";
+    oss << " --model " << quote_cmd_arg(this->sourceModel);
+    if (this->exportSettings.trustRemoteCode) {
+        oss << " --trust-remote-code";
+    }
     oss << " --weight-format " << this->exportSettings.precision;
     if (this->exportSettings.extraQuantizationParams.has_value()) {
         oss << " " << this->exportSettings.extraQuantizationParams.value();
     }
-    oss << " " << this->downloadPath;
+    oss << " " << quote_cmd_arg(this->downloadPath);
     // clang-format on
 
     return oss.str();
@@ -74,12 +80,15 @@ std::string OptimumDownloader::getExportCmdTextToSpeech() {
     } else if (this->exportSettings.vocoder.has_value()) {
         oss << "--model-kwargs \"{\"vocoder\": \"" << this->exportSettings.vocoder.value() << "\"}\" ";
     }
-    oss << "--model " << this->sourceModel << " --trust-remote-code ";
+    oss << "--model " << quote_cmd_arg(this->sourceModel);
+    if (this->exportSettings.trustRemoteCode) {
+        oss << " --trust-remote-code";
+    }
     oss << " --weight-format " << this->exportSettings.precision;
     if (this->exportSettings.extraQuantizationParams.has_value()) {
         oss << " " << this->exportSettings.extraQuantizationParams.value();
     }
-    oss << " " << this->downloadPath;
+    oss << " " << quote_cmd_arg(this->downloadPath);
     // clang-format on
 
     return oss.str();
@@ -89,12 +98,15 @@ std::string OptimumDownloader::getExportCmdSpeechToText() {
     std::ostringstream oss;
     // clang-format off
     oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
-    oss << "--model " << this->sourceModel << " --trust-remote-code ";
+    oss << "--model " << quote_cmd_arg(this->sourceModel);
+    if (this->exportSettings.trustRemoteCode) {
+        oss << " --trust-remote-code";
+    }
     oss << " --weight-format " << this->exportSettings.precision;
     if (this->exportSettings.extraQuantizationParams.has_value()) {
         oss << " " << this->exportSettings.extraQuantizationParams.value();
     }
-    oss << " " << this->downloadPath;
+    oss << " " << quote_cmd_arg(this->downloadPath);
     // clang-format on
 
     return oss.str();
@@ -104,14 +116,16 @@ std::string OptimumDownloader::getExportCmdRerank() {
     std::ostringstream oss;
     // clang-format off
     oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
-    oss << "--disable-convert-tokenizer --model " << this->sourceModel;
-    oss << " --trust-remote-code ";
+    oss << "--disable-convert-tokenizer --model " << quote_cmd_arg(this->sourceModel);
+    if (this->exportSettings.trustRemoteCode) {
+        oss << " --trust-remote-code";
+    }
     oss << " --weight-format " << this->exportSettings.precision;
     oss << " --task text-classification ";
     if (this->exportSettings.extraQuantizationParams.has_value()) {
         oss << " " << this->exportSettings.extraQuantizationParams.value();
     }
-    oss << " " << this->downloadPath;
+    oss << " " << quote_cmd_arg(this->downloadPath);
     // clang-format on
 
     return oss.str();
@@ -121,12 +135,15 @@ std::string OptimumDownloader::getExportCmdImageGeneration() {
     std::ostringstream oss;
     // clang-format off
     oss << this->OPTIMUM_CLI_EXPORT_COMMAND;
-    oss << "--model " << this->sourceModel;
+    oss << "--model " << quote_cmd_arg(this->sourceModel);
+    if (this->exportSettings.trustRemoteCode) {
+        oss << " --trust-remote-code";
+    }
     oss << " --weight-format " << this->exportSettings.precision;
     if (this->exportSettings.extraQuantizationParams.has_value()) {
         oss << " " << this->exportSettings.extraQuantizationParams.value();
     }
-    oss << " " << this->downloadPath;
+    oss << " " << quote_cmd_arg(this->downloadPath);
     // clang-format on
 
     return oss.str();
@@ -208,9 +225,9 @@ std::string OptimumDownloader::getConvertCmdWithDetokenizer() {
     std::ostringstream oss;
     // clang-format off
     oss << this->CONVERT_TOKENIZER_EXPORT_COMMAND;
-    oss << this->sourceModel;
+    oss << quote_cmd_arg(this->sourceModel);
     oss << " --with-detokenizer -o ";
-    oss << this->downloadPath;
+    oss << quote_cmd_arg(this->downloadPath);
     // clang-format on
 
     return oss.str();
@@ -220,9 +237,9 @@ std::string OptimumDownloader::getConvertCmdOnlyTokenizer() {
     std::ostringstream oss;
     // clang-format off
     oss << this->CONVERT_TOKENIZER_EXPORT_COMMAND;
-    oss << this->sourceModel;
+    oss << quote_cmd_arg(this->sourceModel);
     oss << " -o ";
-    oss << this->downloadPath;
+    oss << quote_cmd_arg(this->downloadPath);
     // clang-format on
 
     return oss.str();

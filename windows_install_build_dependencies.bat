@@ -537,6 +537,7 @@ IF /I EXIST %curl_path% (
     C:\Windows\System32\tar.exe -xf "%curl_zip%" -C %opt_install_dir%
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
+set "PATH=%curl_path%\bin;%PATH%"
 
 :: Create lib file for libgit2 linking
 set "curl_lib=%curl_path%\bin\libcurl-x64.lib"
@@ -564,6 +565,40 @@ IF /I EXIST %curl_lib% (
 )
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: Installing llmman
+echo [INFO] Installing llmman ...
+set "llmman_dir=%opt_install_dir%\llmman-%LLMMAN_VERSION%"
+set "llmman_path=%llmman_dir%\llmman.exe"
+set "llmman_url=https://github.com/llmmanorg/llmman/releases/download/v%LLMMAN_VERSION%/llmman-x86_64-pc-windows-msvc.exe"
+IF /I EXIST "%llmman_dir%" (
+    if %expunge% EQU 1 (
+        rmdir /S /Q "%llmman_dir%"
+        if !errorlevel! neq 0 exit /b !errorlevel!
+    )
+)
+IF /I NOT EXIST "%llmman_path%" (
+    mkdir "%llmman_dir%"
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    %wget_path% -O "%llmman_path%" "%llmman_url%"
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+for /f "usebackq delims=" %%H in (`powershell -NoProfile -Command "(Get-FileHash -LiteralPath '%llmman_path%' -Algorithm SHA256).Hash.ToLowerInvariant()"`) do set "llmman_actual_sha256=%%H"
+if /I not "!llmman_actual_sha256!"=="%LLMMAN_SHA256_X86_64_WINDOWS%" (
+    echo [ERROR] llmman %LLMMAN_VERSION% SHA-256 checksum mismatch
+    del /Q "%llmman_path%"
+    exit /b 1
+)
+set "llmman_stable_path=%opt_install_dir%\llmman.exe"
+IF /I EXIST "%llmman_stable_path%" (
+    del /Q "%llmman_stable_path%"
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+:: Use a hard link for the stable name; unlike an NTFS symbolic link, this does not require elevated privileges.
+mklink /H "%llmman_stable_path%" "%llmman_path%"
+if !errorlevel! neq 0 exit /b !errorlevel!
+set "PATH=%llmman_dir%;%PATH%"
+echo [INFO] llmman %LLMMAN_VERSION% installed in %llmman_path% and linked as %llmman_stable_path%
+
 ::::::::::::::::::::::: OpenCV
 :install_opencv
 set "opencv_git=https://github.com/opencv/opencv.git"

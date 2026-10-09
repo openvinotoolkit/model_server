@@ -13,12 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <iostream>
 #include <string>
 
 #include "model_downloader.hpp"
 
 #include "src/filesystem/filesystem.hpp"
 #include "src/filesystem/localfilesystem.hpp"
+#include "../capi_frontend/server_settings.hpp"
 #include "../logging.hpp"
 
 namespace ovms {
@@ -27,6 +29,14 @@ IModelDownloader::IModelDownloader(const std::string& inSourceModel, const std::
     sourceModel(inSourceModel),
     downloadPath(inDownloadPath),
     overwriteModels(inOverwriteModels) {}
+
+Status IModelDownloader::validateGraphDirectory() const {
+    return StatusCode::OK;
+}
+
+void IModelDownloader::onDownloadComplete(HFSettingsImpl&) const {
+    std::cout << "Model: " << this->sourceModel << " downloaded to: " << this->getGraphDirectory() << std::endl;
+}
 
 Status IModelDownloader::checkIfOverwriteAndRemove() {
     auto lfstatus = StatusCode::OK;
@@ -46,11 +56,14 @@ Status IModelDownloader::checkIfOverwriteAndRemove() {
 }
 
 std::string IModelDownloader::getGraphDirectory(const std::string& inDownloadPath, const std::string& inSourceModel) {
-    std::string fullPath = FileSystem::joinPath({inDownloadPath, inSourceModel});
+    // localModelDirectoryName() is the identity for HuggingFace repo ids; it
+    // only rewrites OCI references, whose "oci://" scheme and ':' tag
+    // separator are not usable as a directory name.
+    std::string fullPath = FileSystem::joinPath({inDownloadPath, localModelDirectoryName(inSourceModel)});
     return fullPath;
 }
 
-std::string IModelDownloader::getGraphDirectory() {
+std::string IModelDownloader::getGraphDirectory() const {
     return this->downloadPath;
 }
 }  // namespace ovms
