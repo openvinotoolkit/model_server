@@ -34,7 +34,7 @@ For this demo we use [OpenVINO/Qwen3.8-27B-int4-ov](https://huggingface.co/OpenV
 :::{dropdown} **Deploying with Docker**
 ```bash
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
-docker run -d --rm ${GPU_ARGS} --user $(id -u):$(id -g) -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:2026.4.0-gpu \
+docker run -d --rm ${GPU_ARGS} --user $(id -u):$(id -g) -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:2026.4.1-gpu \
   --rest_port 8000 \
   --model_repository_path /models \
   --source_model OpenVINO/Qwen3.8-27B-int4-ov \
@@ -173,7 +173,7 @@ models
 :::{dropdown} **Deploying with Docker**
 ```text
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
-docker run -d ${GPU_ARGS} --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:2026.4.0-gpu \
+docker run -d ${GPU_ARGS} --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:2026.4.1-gpu \
   --model_repository_path /models \
   --source_model OpenVINO/gemma-4-31B-it-int4-ov \
   --draft_model_path /models/gemma-4-31b-it-dflash-int4-ov \
@@ -279,7 +279,7 @@ models
 :::{dropdown} **Deploying with Docker**
 ```text
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
-docker run -d ${GPU_ARGS} --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:ro openvino/model_server:2026.4.0-gpu \
+docker run -d ${GPU_ARGS} --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:ro openvino/model_server:2026.4.1-gpu \
     --model_path /models/Qwen/Qwen3-8B \
     --model_name Qwen/Qwen3-8B \
     --rest_port 8000
