@@ -274,7 +274,7 @@ absl::Status ensureCommonValidations(ov::AnyMap& requestOptions, const ovms::Ima
             return absl::InvalidArgumentError(absl::StrCat("height must be higher than 0"));
         }
     }
-    
+
     it = requestOptions.find("strength");
     if (it != requestOptions.end()) {
         auto strength = it->second.as<float>();
@@ -288,7 +288,7 @@ absl::Status ensureCommonValidations(ov::AnyMap& requestOptions, const ovms::Ima
 }
 
 absl::Status ensureAcceptableForDynamic(ov::AnyMap& requestOptions, const ovms::ImageGenPipelineArgs& args) {
-    
+
     // Check against maxResolution
     auto widthIt = requestOptions.find("width");
     auto heightIt = requestOptions.find("height");
@@ -329,10 +329,7 @@ absl::Status ensureAcceptableForDynamic(ov::AnyMap& requestOptions, const ovms::
         requestOptions.insert({"num_inference_steps", args.defaultNumInferenceSteps});
     }
     return absl::OkStatus();
-
 }
-
-
 
 absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOptions, const ovms::ImageGenPipelineArgs& args) {
     // Apply common validations first (basic sanity checks)
