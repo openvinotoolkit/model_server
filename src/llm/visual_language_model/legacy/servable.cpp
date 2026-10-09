@@ -198,6 +198,8 @@ absl::Status VisualLanguageModelLegacyServable::prepareCompleteResponse(std::sha
         legacyExecutionContext->results.perf_metrics.get_num_input_tokens());
     executionContext->apiHandler->setCompletionTokensUsage(
         legacyExecutionContext->results.perf_metrics.get_num_generated_tokens());
+    executionContext->apiHandler->setCachedPromptTokensUsage(
+        legacyExecutionContext->results.perf_metrics.get_num_prefix_cache_hit_tokens());
 
     if (legacyExecutionContext->results.finish_reasons.empty()) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Missing finish reason in legacy VLM unary generation result, defaulting to STOP");

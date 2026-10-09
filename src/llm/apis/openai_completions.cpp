@@ -362,7 +362,8 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(
         jsonResponse.String("object", "text_completion");
     }
 
-    jsonResponse.UsageObject(usage);
+    const bool includeCachedPromptTokens = endpoint == Endpoint::CHAT_COMPLETIONS;
+    jsonResponse.UsageObject(usage, includeCachedPromptTokens);
 
     if (isVerboseResponse()) {
         jsonResponse.StartObject("__verbose");
@@ -473,7 +474,8 @@ std::string OpenAIChatCompletionsHandler::serializeUnaryResponse(
         jsonResponse.String("object", "text_completion");
     }
 
-    jsonResponse.UsageObject(usage);
+    const bool includeCachedPromptTokens = endpoint == Endpoint::CHAT_COMPLETIONS;
+    jsonResponse.UsageObject(usage, includeCachedPromptTokens);
 
     if (isVerboseResponse()) {
         jsonResponse.StartObject("__verbose");
@@ -617,6 +619,13 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingUsageChunk() {
     writer.Uint64(static_cast<uint64_t>(usage.completionTokens));
     writer.String("total_tokens");
     writer.Uint64(static_cast<uint64_t>(usage.calculateTotalTokens()));
+    if (endpoint == Endpoint::CHAT_COMPLETIONS) {
+        writer.String("prompt_tokens_details");
+        writer.StartObject();
+        writer.String("cached_tokens");
+        writer.Uint64(static_cast<uint64_t>(usage.cachedPromptTokens));
+        writer.EndObject();
+    }
     writer.EndObject();  // }
 
     writer.EndObject();  // }

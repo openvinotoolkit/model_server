@@ -239,6 +239,9 @@ absl::Status OmniModelLegacyServable::prepareCompleteResponse(std::shared_ptr<Ge
         return absl::CancelledError();
     }
 
+    executionContext->apiHandler->setPromptTokensUsage(omniExecutionContext->results.perf_metrics.get_num_input_tokens());
+    executionContext->apiHandler->setCompletionTokensUsage(omniExecutionContext->results.perf_metrics.get_num_generated_tokens());
+    executionContext->apiHandler->setCachedPromptTokensUsage(omniExecutionContext->results.perf_metrics.get_num_prefix_cache_hit_tokens());
     auto deltas = omniExecutionContext->deltaChannel.drain();
     const ov::genai::GenerationFinishReason finishReason =
         omniExecutionContext->results.finish_reasons.empty()
@@ -448,6 +451,7 @@ absl::Status OmniModelLegacyServable::preparePartialResponse(std::shared_ptr<Gen
         ov::genai::GenerationFinishReason finishReason = omniExecutionContext->results.finish_reasons.empty() ? ov::genai::GenerationFinishReason::STOP : omniExecutionContext->results.finish_reasons[0];
         executionContext->apiHandler->setPromptTokensUsage(omniExecutionContext->results.perf_metrics.get_num_input_tokens());
         executionContext->apiHandler->setCompletionTokensUsage(omniExecutionContext->results.perf_metrics.get_num_generated_tokens());
+        executionContext->apiHandler->setCachedPromptTokensUsage(omniExecutionContext->results.perf_metrics.get_num_prefix_cache_hit_tokens());
         if (!deltas.empty()) {
             for (size_t i = 0; i < deltas.size(); ++i) {
                 const bool isLast = (i == deltas.size() - 1);
