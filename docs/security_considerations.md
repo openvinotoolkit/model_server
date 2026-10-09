@@ -11,7 +11,9 @@ docker run --rm -d --user $(id -u):$(id -g) --read-only --tmpfs /tmp -p 9000:900
 
 ```
 ---
-OpenVINO Model Server currently does not provide access restrictions and traffic encryption on gRPC and REST API endpoints. The endpoints can be secured using network settings like docker network settings or network firewall on the host. The recommended configuration is to place OpenVINO Model Server behind any reverse proxy component or load balancer, which provides traffic encryption and user authorization.
+OpenVINO Model Server does not provide user authorization on the gRPC and REST API endpoints. The endpoints can be secured using network settings like docker network settings or network firewall on the host. The recommended configuration is to place OpenVINO Model Server behind any reverse proxy component or load balancer, which provides traffic encryption and user authorization.
+
+The gRPC endpoint additionally supports native TLS traffic encryption. Provide a PEM server certificate and key via `--grpc_certificate_path` and `--grpc_key_path` to serve gRPC over TLS, and optionally `--grpc_ca_path` to require and verify client certificates (mutual TLS). See [parameters](parameters.md). Native REST HTTPS is not enabled in the current build (setting `--rest_certificate_path`/`--rest_key_path` is rejected at startup rather than silently serving plaintext); terminate REST TLS with a reverse proxy.
 
 When deploying in environments where only local access is required, administrators can configure the server to bind exclusively to localhost addresses. This can be achieved by setting the bind address to `127.0.0.1` for IPv4 or `::1` for IPv6, which restricts incoming connections to the local machine only. This configuration prevents external network access to the server endpoints, providing an additional layer of security for local development or testing environments.
 ```
