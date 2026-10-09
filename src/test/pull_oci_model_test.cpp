@@ -42,6 +42,7 @@
 #include "platform_utils.hpp"
 #include "test_utils.hpp"
 #include "test_with_temp_dir.hpp"
+#include "environment.hpp"
 
 #include "../status.hpp"
 
@@ -82,6 +83,7 @@ public:
     std::string getVersionCmd() const { return OciDownloader::getVersionCmd(); }
     std::string getResolveCmd() const { return OciDownloader::getResolveCmd(); }
     ovms::Status checkLlmmanIsPresent() { return OciDownloader::checkLlmmanIsPresent(); }
+    ovms::Status validateGraphDirectory() const { return OciDownloader::validateGraphDirectory(); }
     std::string getGraphDirectory() { return OciDownloader::getGraphDirectory(); }
     static ovms::Status parseResolveOutput(const std::string& output, std::string& outPath, std::string& outFormat) {
         return OciDownloader::parseResolveOutput(output, outPath, outFormat);
@@ -293,6 +295,12 @@ TEST_F(OciDownloaderPayload, ContainsOpenVinoIrNeedsBothXmlAndBin) {
     EXPECT_TRUE(TestOciDownloader::containsOpenVinoIr(resolvedPath));
 }
 
+TEST_F(OciDownloaderPayload, ContainsOpenVinoIrIgnoresAuxiliaryTokenizerPair) {
+    createFile(resolvedPath, "openvino_tokenizer.xml");
+    createFile(resolvedPath, "openvino_tokenizer.bin");
+    EXPECT_FALSE(TestOciDownloader::containsOpenVinoIr(resolvedPath));
+}
+
 TEST_F(OciDownloaderPayload, ContainsOpenVinoIrIsFalseForMissingDirectory) {
     EXPECT_FALSE(TestOciDownloader::containsOpenVinoIr(std::filesystem::path(this->directoryPath).append("nope").generic_string()));
 }
@@ -407,6 +415,17 @@ TEST_F(OciDownloaderPayload, GgufResolvedToDirectoryIsRejected) {
     EXPECT_EQ(downloader.downloadModel(), StatusCode::OCI_LLMMAN_RESOLVE_OUTPUT_INVALID);
 }
 
+TEST_F(OciDownloaderPayload, GgufPayloadRejectsNonTextGenerationTasks) {
+    EnvGuard guard;
+    guard.set("LLMMAN_MOCK_PATH", std::filesystem::path(resolvedPath).append("model.gguf").generic_string());
+    guard.set("LLMMAN_MOCK_FORMAT", "gguf");
+    createFile(resolvedPath, "model.gguf");
+
+    hfSettings.task = ovms::EMBEDDINGS_GRAPH;
+    TestOciDownloader downloader(hfSettings);
+    EXPECT_EQ(downloader.downloadModel(), StatusCode::OCI_UNSUPPORTED_MODEL_FORMAT);
+}
+
 TEST_F(OciDownloaderPayload, SafetensorsResolvedToFileIsRejected) {
     createFile(resolvedPath, "model.safetensors");
     EnvGuard guard;
@@ -447,6 +466,39 @@ TEST_F(OciDownloaderPayload, EscapedDownloadPathIsRejected) {
     hfSettings.downloadPath = "../some/path";
     TestOciDownloader downloader(hfSettings);
     EXPECT_EQ(downloader.downloadModel(), StatusCode::PATH_INVALID);
+}
+
+TEST_F(OciDownloaderPayload, SymlinkedRepositoryPathIsRejectedBeforeRunningLlmman) {
+    const std::string externalDirectory = std::filesystem::path(this->directoryPath).append("external-repository").string();
+    ASSERT_TRUE(std::filesystem::create_directories(externalDirectory));
+    const std::string symlinkPath = std::filesystem::path(this->directoryPath).append("repository-link").string();
+    std::error_code ec;
+    std::filesystem::create_directory_symlink(externalDirectory, symlinkPath, ec);
+    if (ec) {
+        GTEST_SKIP() << "Could not create directory symlink on this platform: " << ec.message();
+    }
+    hfSettings.downloadPath = symlinkPath;
+
+    TestOciDownloader downloader(hfSettings);
+    EXPECT_EQ(downloader.downloadModel(), StatusCode::PATH_INVALID);
+    EXPECT_TRUE(std::filesystem::is_empty(externalDirectory));
+}
+
+TEST_F(OciDownloaderPayload, GraphDirectoryIsRevalidatedAfterItBecomesASymlink) {
+    const std::string externalDirectory = std::filesystem::path(this->directoryPath).append("external-repository").string();
+    ASSERT_TRUE(std::filesystem::create_directories(externalDirectory));
+    hfSettings.downloadPath = std::filesystem::path(this->directoryPath).append("repository").string();
+    TestOciDownloader downloader(hfSettings);
+
+    ASSERT_EQ(downloader.validateGraphDirectory(), StatusCode::OK);
+    std::filesystem::remove(hfSettings.downloadPath);
+    std::error_code ec;
+    std::filesystem::create_directory_symlink(externalDirectory, hfSettings.downloadPath, ec);
+    if (ec) {
+        GTEST_SKIP() << "Could not create directory symlink on this platform: " << ec.message();
+    }
+
+    EXPECT_EQ(downloader.validateGraphDirectory(), StatusCode::PATH_INVALID);
 }
 
 class OciModelPackServerProcess {
@@ -529,8 +581,12 @@ private:
 
 class OciModelPackInferenceTest : public TestWithTempDir {
 public:
-    const std::string modelReference = "docker.io/ai/qwen3:0.6b";
+    // Immutable Docker Hub manifest digest: updates to the mutable 0.6b tag
+    // cannot silently change the code or weights exercised by CI.
+    const std::string modelReference = "docker.io/ai/qwen3@sha256:34d2ca5e0ab03487bd1883013f2aca671fc5440dfa6dbacf9e439ef677ca0626";
     OciModelPackServerProcess ovmsProcess;
+    EnvGuard llmmanStoreGuard;
+    std::string llmmanStorePath;
     bool modelPullAttempted = false;
 
     void TearDown() override {
@@ -547,10 +603,12 @@ public:
 TEST_F(OciModelPackInferenceTest, PullSmallPublicModelAndRunInference) {
     std::string sourceModel = "oci://" + modelReference;
     std::string repositoryPath = std::filesystem::path(this->directoryPath).append("repository").string();
+    llmmanStorePath = std::filesystem::path(this->directoryPath).append("llmman-store").string();
+    llmmanStoreGuard.set("LLMMAN_MODELS", llmmanStorePath);
     std::string task = "text_generation";
     std::string restPort = "9233";
     std::string serverPort = "9133";
-    const std::string modelPath = std::filesystem::path(repositoryPath).append("docker.io/ai/qwen3+0.6b").string();
+    const std::string modelPath = ovms::IModelDownloader::getGraphDirectory(repositoryPath, sourceModel);
     randomizeAndEnsureFrees(serverPort, restPort);
     const std::string ovmsExecutable = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/ovms");
 #ifdef _WIN32

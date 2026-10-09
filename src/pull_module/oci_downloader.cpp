@@ -34,6 +34,37 @@
 
 namespace ovms {
 
+static Status validateNoSymlinkPathComponents(const std::string& path) {
+    std::error_code ec;
+    const std::filesystem::path absolutePath = std::filesystem::absolute(path, ec);
+    if (ec) {
+        SPDLOG_ERROR("Failed to resolve model repository path {}: {}", path, ec.message());
+        return StatusCode::PATH_INVALID;
+    }
+
+    std::filesystem::path currentPath = absolutePath.root_path();
+    for (const auto& component : absolutePath.relative_path()) {
+        currentPath /= component;
+        const auto componentStatus = std::filesystem::symlink_status(currentPath, ec);
+        if (ec == std::errc::no_such_file_or_directory) {
+            return StatusCode::OK;
+        }
+        if (ec) {
+            SPDLOG_ERROR("Failed to inspect model repository path component {}: {}", currentPath.string(), ec.message());
+            return StatusCode::PATH_INVALID;
+        }
+        if (std::filesystem::is_symlink(componentStatus)) {
+            SPDLOG_ERROR("Symbolic links are not allowed in OCI model repository paths: {}", currentPath.string());
+            return StatusCode::PATH_INVALID;
+        }
+    }
+    return StatusCode::OK;
+}
+
+Status OciDownloader::validateGraphDirectory() const {
+    return validateNoSymlinkPathComponents(this->downloadPath);
+}
+
 OciDownloader::OciDownloader(const ExportSettings& inExportSettings, const GraphExportType& inTask,
     const std::string& inSourceModel, const std::string& inDownloadPath, bool inOverwrite) :
     IModelDownloader(inSourceModel, inDownloadPath, inOverwrite),
@@ -107,21 +138,10 @@ bool OciDownloader::containsOpenVinoIr(const std::string& directory) {
     if (!std::filesystem::is_directory(directory, ec)) {
         return false;
     }
-    for (const auto& entry : std::filesystem::directory_iterator(directory, ec)) {
-        if (!entry.is_regular_file(ec)) {
-            continue;
-        }
-        const auto& path = entry.path();
-        if (path.extension() != ".xml") {
-            continue;
-        }
-        auto weights = path;
-        weights.replace_extension(".bin");
-        if (std::filesystem::exists(weights, ec)) {
-            return true;
-        }
-    }
-    return false;
+    const std::filesystem::path modelXml = std::filesystem::path(directory) / "openvino_model.xml";
+    const std::filesystem::path modelBin = std::filesystem::path(directory) / "openvino_model.bin";
+    return std::filesystem::is_regular_file(modelXml, ec) && !ec &&
+           std::filesystem::is_regular_file(modelBin, ec) && !ec;
 }
 
 std::unique_ptr<IModelDownloader> OciDownloader::createConverter(const std::string& resolvedPath) const {
@@ -131,10 +151,19 @@ std::unique_ptr<IModelDownloader> OciDownloader::createConverter(const std::stri
 }
 
 Status OciDownloader::convertToOpenVinoIr(const std::string& resolvedPath) {
+    auto status = this->validateGraphDirectory();
+    if (!status.ok()) {
+        return status;
+    }
+
     SPDLOG_INFO("OCI model {} contains a HuggingFace-format checkout. Converting it to OpenVINO IR with optimum-cli.", this->sourceModel);
     // The conversion output lands in the graph directory, which keeps
     // models_path at its default of "./".
-    auto status = this->createConverter(resolvedPath)->downloadModel();
+    status = this->createConverter(resolvedPath)->downloadModel();
+    if (!status.ok()) {
+        return status;
+    }
+    status = this->validateGraphDirectory();
     if (!status.ok()) {
         return status;
     }
@@ -148,6 +177,11 @@ Status OciDownloader::prepareGgufPath(const std::string& resolvedPath) {
         this->modelPath = ggufPath.parent_path().string();
         this->ggufFilename = ggufPath.filename().string();
         return StatusCode::OK;
+    }
+
+    auto status = this->validateGraphDirectory();
+    if (!status.ok()) {
+        return status;
     }
 
     std::error_code ec;
@@ -191,7 +225,12 @@ Status OciDownloader::downloadModel() {
         return StatusCode::PATH_INVALID;
     }
 
-    auto status = this->checkLlmmanIsPresent();
+    auto status = this->validateGraphDirectory();
+    if (!status.ok()) {
+        return status;
+    }
+
+    status = this->checkLlmmanIsPresent();
     if (!status.ok()) {
         return status;
     }
@@ -217,6 +256,14 @@ Status OciDownloader::downloadModel() {
         return status;
     }
 
+    // llmman resolution may take a long time. Re-check immediately before any
+    // follow-up writes because an untrusted concurrent writer could replace a
+    // repository component with a symlink while the registry request runs.
+    status = this->validateGraphDirectory();
+    if (!status.ok()) {
+        return status;
+    }
+
     std::error_code ec;
     if (!std::filesystem::exists(resolvedPath, ec)) {
         SPDLOG_ERROR("llmman resolved {} to {}, which does not exist.", this->sourceModel, resolvedPath);
@@ -225,6 +272,11 @@ Status OciDownloader::downloadModel() {
     SPDLOG_DEBUG("llmman resolved {} to {} (format: {})", this->sourceModel, resolvedPath, format);
 
     if (format == "gguf") {
+        if (this->task != TEXT_GENERATION_GRAPH) {
+            SPDLOG_ERROR("OCI GGUF model {} supports only the text_generation task; requested task is {}.",
+                this->sourceModel, enumToString(this->task));
+            return StatusCode::OCI_UNSUPPORTED_MODEL_FORMAT;
+        }
         if (!std::filesystem::is_regular_file(resolvedPath, ec)) {
             SPDLOG_ERROR("llmman reported format gguf for {}, but {} is not a regular file.", this->sourceModel, resolvedPath);
             return StatusCode::OCI_LLMMAN_RESOLVE_OUTPUT_INVALID;
@@ -255,6 +307,10 @@ Status OciDownloader::downloadModel() {
 
     // The graph directory holds graph.pbtxt even when the weights stay in
     // llmman's store, so it has to exist before the graph is exported.
+    status = this->validateGraphDirectory();
+    if (!status.ok()) {
+        return status;
+    }
     std::filesystem::create_directories(this->downloadPath, ec);
     if (ec) {
         SPDLOG_ERROR("Failed to create directory {}: {}", this->downloadPath, ec.message());

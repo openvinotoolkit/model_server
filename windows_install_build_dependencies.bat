@@ -544,6 +544,7 @@ IF /I EXIST %curl_path% (
     C:\Windows\System32\tar.exe -xf "%curl_zip%" -C %opt_install_dir%
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
+set "PATH=%curl_path%\bin;%PATH%"
 
 :: Create lib file for libgit2 linking
 set "curl_lib=%curl_path%\bin\libcurl-x64.lib"

@@ -133,6 +133,7 @@ When pulling models outside of OpenVINO organization the optimum-cli api is used
 |------------------------------|--------------|---------------------------------------------------------------------------------------------------------------|
 | `--extra_quantization_params`| `string`     | Add advanced quantization parameters. Check [optimum-intel](https://github.com/huggingface/optimum-intel) documentation. Example: `--sym --group-size -1 --ratio 1.0 --awq --scale-estimation --dataset wikitext2`  |
 | `--weight-format`            | `string`     | Model precision used in optimum-cli export with conversion. Default `int8`.                |
+| `--trust_remote_code`        | `NA`         | Allow optimum-cli to execute custom code supplied by the source model during conversion. Disabled by default; use only with trusted models. |
 
 There are also additional environment variables that may change the behavior of pulling:
 

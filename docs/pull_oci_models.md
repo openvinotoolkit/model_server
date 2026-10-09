@@ -12,11 +12,19 @@ ovms --pull --source_model oci://ghcr.io/<org>/<model>:<tag> --model_repository_
 
 ## Prerequisites
 
-OCI pulling is delegated to [`llmman`](https://github.com/llmmanorg/llmman), which implements registry authentication, the ModelPack media types, resumable blob downloads and a local content-addressed store. Install it and make sure it is on `PATH`:
+OCI pulling is delegated to [`llmman`](https://github.com/llmmanorg/llmman), which implements registry authentication, the ModelPack media types, resumable blob downloads and a local content-addressed store. Install a pinned release binary and verify its SHA-256 checksum before placing it on `PATH`.
 
-```text
-curl -fsSL https://llmmanorg.github.io/install.sh | sh
+For example, to install the currently validated Linux x86-64 release (v0.1.534):
+
+```sh
+LLMMAN_VERSION=0.1.534
+LLMMAN_SHA256=33801d30c3a6f4d6ac0b8b2bb18f63b7af6b67c0b3ef04ea443eeba4df0879b5
+curl -fsSLo llmman "https://github.com/llmmanorg/llmman/releases/download/v${LLMMAN_VERSION}/llmman-x86_64-unknown-linux-gnu"
+echo "${LLMMAN_SHA256}  llmman" | sha256sum -c -
+install -m 0755 llmman "$HOME/.local/bin/llmman"
 ```
+
+For other operating systems and architectures, select the corresponding asset from the [llmman release](https://github.com/llmmanorg/llmman/releases/tag/v0.1.534) and verify it against that release's `checksums.txt` before installation.
 
 OVMS reports an error when `llmman` is not available on `PATH`.
 
@@ -56,7 +64,7 @@ spec:
         secretName: registry-auth
 ```
 
-The Secret must contain a `config.json` usable by llmman. As with a Docker bind mount, any credential helper it references must also be installed and usable in the pod.
+The Secret must contain a `config.json` usable by llmman. As with a Docker bind mount, any credential helper it references must also be installed and usable in the pod. If you opt in to `--trust_remote_code` for safetensors conversion, model-supplied code runs as the OVMS user and can read mounted registry credentials; use narrowly scoped credentials and only trust reviewed artifacts.
 
 ## Supported payloads
 
@@ -66,7 +74,7 @@ The Secret must contain a `config.json` usable by llmman. As with a Docker bind 
 |---|---|---|
 | OpenVINO IR (`openvino_model.xml` + `.bin`) | Serves it directly out of the `llmman` store; only `graph.pbtxt` is written to the model repository. `llmman resolve` only reports `gguf` and `safetensors`, so an IR-only image fails with `OCI_LLMMAN_RESOLVE_FAILED` for now. IR is used in place only when a `safetensors` image also carries IR files. | none |
 | GGUF | Serves the `.gguf` file directly out of the `llmman` store. | `--task text_generation` only |
-| Hugging Face safetensors | Converts to OpenVINO IR with `optimum-cli` into the model repository, honoring `--weight-format` and `--extra_quantization_params`. | Python dependencies, see [pulling with conversion](./pull_optimum_cli.md) |
+| Hugging Face safetensors | Converts to OpenVINO IR with `optimum-cli` into the model repository, honoring `--weight-format` and `--extra_quantization_params`. Remote model code is not trusted by default; pass `--trust_remote_code` only for a model you trust. | Python dependencies, see [pulling with conversion](./pull_optimum_cli.md) |
 
 ## Examples
 

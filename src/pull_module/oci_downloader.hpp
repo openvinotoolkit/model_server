@@ -43,6 +43,7 @@ public:
     OciDownloader(const ExportSettings& exportSettings, const GraphExportType& task, const std::string& inSourceModel,
         const std::string& inDownloadPath, bool inOverwrite);
     Status downloadModel() override;
+    Status validateGraphDirectory() const override;
     void onDownloadComplete(HFSettingsImpl& hfSettings) const override;
 
     // Only valid after downloadModel() returned OK.

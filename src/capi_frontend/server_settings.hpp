@@ -203,6 +203,7 @@ struct ExportSettings {
     std::string modelName = "";
     std::string modelPath = "./";
     std::string targetDevice;
+    bool trustRemoteCode = false;
     std::optional<uint32_t> restWorkers;
     std::optional<std::string> extraQuantizationParams;
     std::optional<std::string> vocoder;

@@ -1389,6 +1389,7 @@ TEST(OvmsExportHfSettingsTest, pullOciModelPack) {
     ASSERT_EQ(hfSettings.sourceModel, modelName);
     ASSERT_EQ(hfSettings.downloadPath, downloadPath);
     ASSERT_EQ(hfSettings.downloadType, ovms::OCI_DOWNLOAD);
+    ASSERT_FALSE(hfSettings.exportSettings.trustRemoteCode);
     ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
 }
 
@@ -1406,17 +1407,19 @@ TEST(OvmsExportHfSettingsTest, pullOciModelPackWithWeightFormatStaysOci) {
         (char*)downloadPath.c_str(),
         (char*)"--weight-format",
         (char*)"fp16",
+        (char*)"--trust_remote_code",
         (char*)"--task",
         (char*)"text_generation",
     };
 
-    int arg_count = 10;
+    int arg_count = 11;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
     auto& hfSettings = config.getServerSettings().hfSettings;
     ASSERT_EQ(hfSettings.downloadType, ovms::OCI_DOWNLOAD);
     ASSERT_EQ(hfSettings.exportSettings.precision, "fp16");
+    ASSERT_TRUE(hfSettings.exportSettings.trustRemoteCode);
 }
 
 TEST(OvmsExportHfSettingsTest, pullAndStartOciModelPackNaming) {

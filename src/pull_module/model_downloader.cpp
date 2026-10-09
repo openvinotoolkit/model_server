@@ -30,6 +30,10 @@ IModelDownloader::IModelDownloader(const std::string& inSourceModel, const std::
     downloadPath(inDownloadPath),
     overwriteModels(inOverwriteModels) {}
 
+Status IModelDownloader::validateGraphDirectory() const {
+    return StatusCode::OK;
+}
+
 void IModelDownloader::onDownloadComplete(HFSettingsImpl&) const {
     std::cout << "Model: " << this->sourceModel << " downloaded to: " << this->getGraphDirectory() << std::endl;
 }

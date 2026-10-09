@@ -284,6 +284,14 @@ Status HfPullModelModule::clone() {
         return status;
     }
 
+    // Revalidate the downloader's output path immediately before graph export.
+    // OCI downloads reject symlinked repository components to reduce path-swap
+    // exposure while llmman or model conversion is running.
+    status = downloader->validateGraphDirectory();
+    if (!status.ok()) {
+        return status;
+    }
+
     PythonBackend* pythonBackend = nullptr;
     MediapipeRuntimeApi runtimeApi(pythonBackend);
     status = runtimeApi.createServableConfig(graphDirectory, this->hfSettings);  // when downloading from HF we always create the config file on disk; the in-memory variant is used only in IN_MEMORY_GRAPH_MODE (local model with --task).

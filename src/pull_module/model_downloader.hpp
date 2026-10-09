@@ -24,6 +24,7 @@ public:
     IModelDownloader(const std::string& inSourceModel, const std::string& inDownloadPath, const bool inOverwriteModels);
     virtual ~IModelDownloader() = default;
     virtual Status downloadModel() = 0;
+    virtual Status validateGraphDirectory() const;
     virtual void onDownloadComplete(HFSettingsImpl& hfSettings) const;
     static std::string getGraphDirectory(const std::string& inDownloadPath, const std::string& inSourceModel);
     std::string getGraphDirectory() const;

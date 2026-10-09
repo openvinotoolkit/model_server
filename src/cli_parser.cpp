@@ -282,6 +282,10 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             "Model precision used in optimum-cli export with conversion",
             cxxopts::value<std::string>()->default_value("int8"),
             "WEIGHT_FORMAT")
+            ("trust_remote_code",
+            "Allow optimum-cli to execute custom code from the source model during conversion. Use only for trusted models.",
+            cxxopts::value<bool>()->default_value("false"),
+            "TRUST_REMOTE_CODE")
             ("extra_quantization_params",
                 "Model quantization parameters used in optimum-cli export with conversion for text generation models",
                 cxxopts::value<std::string>(),
@@ -867,6 +871,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
 
         if (result->count("weight-format"))
             hfSettings.exportSettings.precision = result->operator[]("weight-format").as<std::string>();
+        hfSettings.exportSettings.trustRemoteCode = result->operator[]("trust_remote_code").as<bool>();
         if (result->count("extra_quantization_params"))
             hfSettings.exportSettings.extraQuantizationParams = result->operator[]("extra_quantization_params").as<std::string>();
         hfSettings.exportSettings.restWorkers = serverSettings.restWorkers;
