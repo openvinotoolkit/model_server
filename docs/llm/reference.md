@@ -125,6 +125,7 @@ The dynamic allocation reserves as much as required to prevent preemption. In su
 
 `enable_prefix_caching` can improve generation performance when the initial prompt content is repeated. That is the case with chat applications which resend the history of the conversations. Thanks to prefix caching, there is no need to reevaluate the same sequence of tokens. Thanks to that, first token will be generated much quicker and the overall
 utilization of resource will be lower. Old cache will be cleared automatically when entire free cache is consumed, so it is recommended to increase `cache_size` to get better performance advantage and store longer history of previous requests.
+The number of prompt tokens reused from the cache is reported per request in `usage.prompt_tokens_details.cached_tokens` (chat/completions) and `usage.input_tokens_details.cached_tokens` (responses). Cache reuse works mostly at KV block granularity, so the reported value may be lower than the actual matching prefix.
 
 Another cache related option is `cache_eviction_config` which can help with latency of the long generation, but at the cost of accuracy. It's type is defined as follows:
 ```

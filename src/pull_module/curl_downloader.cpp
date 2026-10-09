@@ -185,7 +185,7 @@ Status downloadFileWithCurl(const std::string& url, const std::string& filePath)
 }
 
 Status downloadFileWithCurl(const std::string& url, const std::string& filePath, const std::string& authTokenHF) {
-    std::string agentString = std::string(PROJECT_NAME) + "/" + std::string(PROJECT_VERSION);
+    std::string agentString = std::string(PROJECT_NAME) + "/" + std::string(getProjectVersion());
 
     CURL* curl = nullptr;
     curl = curl_easy_init();
@@ -234,7 +234,7 @@ static size_t string_write_callback(void* buffer, size_t size, size_t nmemb, voi
 }
 
 Status fetchUrlToString(const std::string& url, const std::string& authToken, std::string& responseBody) {
-    std::string agentString = std::string(PROJECT_NAME) + "/" + std::string(PROJECT_VERSION);
+    std::string agentString = std::string(PROJECT_NAME) + "/" + std::string(getProjectVersion());
 
     CURL* curl = nullptr;
     curl = curl_easy_init();

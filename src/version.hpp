@@ -16,11 +16,9 @@
 #ifndef SRC_VERSION_HPP_
 #define SRC_VERSION_HPP_
 #define PROJECT_NAME "OpenVINO Model Server"
-#define PROJECT_VERSION "REPLACE_PROJECT_VERSION"
-#define BAZEL_BUILD_FLAGS "REPLACE_BAZEL_BUILD_FLAGS"
 
 namespace ovms {
-const char* getOpenVINOVersion();
-const char* getGenAIVersion();
+const char* getProjectVersion();
+const char* getBazelBuildFlags();
 }  // namespace ovms
 #endif  // SRC_VERSION_HPP_
