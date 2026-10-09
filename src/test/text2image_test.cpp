@@ -164,7 +164,6 @@ void testMaxResolutionNotExceeded(std::optional<std::pair<unsigned int, unsigned
     ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(requestOptions)) << dims;
 }
 
-
 TEST(Text2ImageTest, testMaxResolutionExceeded) {
     testMaxResolutionExceeded(std::make_optional(std::make_pair(500, 500)), R"({"size":"1000x1000"})");
     testMaxResolutionExceeded(std::make_optional(std::make_pair(500, 500)), R"({"size":"400x1000"})");

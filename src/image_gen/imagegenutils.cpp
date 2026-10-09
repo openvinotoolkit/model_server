@@ -303,7 +303,6 @@ absl::Status ensureCommonValidations(ov::AnyMap& requestOptions, const ovms::Ima
 }
 
 absl::Status ensureAcceptableForDynamic(ov::AnyMap& requestOptions, const ovms::ImageGenPipelineArgs& args) {
-
     // check if we have any unhandled parameters
     auto it = requestOptions.find("num_images_per_prompt");
     if (it != requestOptions.end()) {
