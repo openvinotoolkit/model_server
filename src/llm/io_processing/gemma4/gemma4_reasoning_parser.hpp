@@ -44,7 +44,7 @@ public:
             cfg.startTags = {"<|channel>"};
             cfg.preambleStartTags = {"thought\n"};
             cfg.tokenIdStartTags = {"<|channel>"};
-            cfg.endTag = "<channel|>";
+            cfg.endTags = {"<channel|>"};
             cfg.needsSpecialTokens = true;
             return cfg;
         }()) {

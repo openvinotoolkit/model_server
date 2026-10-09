@@ -45,7 +45,7 @@ std::optional<Delta> Gemma4ReasoningParser::parseChunk(const std::string& chunk,
     if (phase == Phase::AwaitingChannelHeader) {
         pendingChannelHeaderText += text;
         const size_t newlinePos = pendingChannelHeaderText.find('\n');
-        const size_t endTagPos = pendingChannelHeaderText.find(parsingConfig.endTag);
+        const size_t endTagPos = pendingChannelHeaderText.find(parsingConfig.endTags.front());
         bool firstLineIsMultiWord = false;
         if (newlinePos != std::string::npos) {
             const std::string firstLine = pendingChannelHeaderText.substr(0, newlinePos);
@@ -72,7 +72,7 @@ std::optional<Delta> Gemma4ReasoningParser::parseChunk(const std::string& chunk,
         phase = Phase::Body;
     }
 
-    const size_t endTagPos = text.find(parsingConfig.endTag);
+    const size_t endTagPos = text.find(parsingConfig.endTags.front());
     if (endTagPos != std::string::npos) {
         text = text.substr(0, endTagPos);
     }

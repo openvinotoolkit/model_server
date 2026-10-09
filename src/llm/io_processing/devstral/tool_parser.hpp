@@ -58,7 +58,7 @@ public:
         // Put it in startTags for reliable text-based detection.
         cfg.startTags = {"[TOOL_CALLS]"};
         cfg.tokenIdStartTags = {"[TOOL_CALLS]"};
-        cfg.endTag = "</s>";
+        cfg.endTags = {"</s>"};
         cfg.needsSpecialTokens = true;
         cfg.defaultDecodingWithSpecialTokens = true;
         return cfg;

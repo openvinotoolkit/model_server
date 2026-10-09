@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 
+#include <algorithm>
 #include <openvino/genai/tokenizer.hpp>
 #include <string>
 #include <vector>
@@ -34,29 +35,30 @@ std::optional<Delta> GptOssReasoningParser::parseChunk(const std::string& newChu
 
     std::string chunk = newChunk;
 
-    StreamState lastState = state;
-
-    if (startsWith(chunk, parsingConfig.startTags[0])) {
+    const std::size_t startPos = chunk.find(parsingConfig.startTags[0]);
+    if (startPos != std::string::npos) {
         state = StreamState::READING_REASONING;
-        chunk = chunk.substr(parsingConfig.startTags[0].size());
-    } else if (endsWith(chunk, parsingConfig.endTag)) {
-        // End
-        state = StreamState::UNKNOWN;
-        chunk = chunk.substr(0, chunk.size() - parsingConfig.endTag.size());
-    } else if (endsWith(chunk, "<|return|>")) {
-        // End
-        state = StreamState::UNKNOWN;
-        chunk = chunk.substr(0, chunk.size() - std::strlen("<|return|>"));
+        chunk = chunk.substr(startPos + parsingConfig.startTags[0].size());
     }
 
-    if (chunk.size() == 0)
-        return std::nullopt;
+    const std::size_t endPos = chunk.find(parsingConfig.endTags.front());
+    const std::size_t returnPos = chunk.find("<|return|>");
+    const std::size_t closingPos = std::min(endPos, returnPos);
+    if (closingPos != std::string::npos) {
+        chunk = chunk.substr(0, closingPos);
+    }
 
-    if (lastState == StreamState::READING_REASONING) {
+    if (state == StreamState::READING_REASONING && !chunk.empty()) {
+        if (closingPos != std::string::npos) {
+            state = StreamState::UNKNOWN;
+        }
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Reason | Sending Reasoning [{}]", chunk);
         return ReasoningDelta{chunk};
     }
 
+    if (closingPos != std::string::npos) {
+        state = StreamState::UNKNOWN;
+    }
     return std::nullopt;
 }
 }  // namespace ovms

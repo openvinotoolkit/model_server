@@ -73,7 +73,11 @@ std::string BaseOutputParser::buildParsingConfigStringRepresentation() const {
     for (const auto& tag : parsingConfig.startTags) {
         result += tag + ", ";
     }
-    result += "], EndTag: " + parsingConfig.endTag + ", ContentTagsToErase: [";
+    result += "], EndTags: [";
+    for (const auto& tag : parsingConfig.endTags) {
+        result += tag + ", ";
+    }
+    result += "], ContentTagsToErase: [";
     for (const auto& tag : parsingConfig.stringsToErase) {
         result += tag + ", ";
     }

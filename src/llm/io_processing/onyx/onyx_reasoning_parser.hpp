@@ -44,7 +44,7 @@ public:
     static OutputParsingConfig defaultParsingConfig() {
         OutputParsingConfig cfg;
         cfg.startTags = {"to=self"};
-        cfg.endTag = "<|eom|>";
+        cfg.endTags = {"<|eom|>"};
         cfg.needsSpecialTokens = true;
         cfg.defaultDecodingWithSpecialTokens = true;
         return cfg;
