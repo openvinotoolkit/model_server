@@ -21,8 +21,8 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "logging.hpp"
-#include "profiler.hpp"
+#include "src/logging.hpp"
+#include "src/profiler.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 6262 6386 6385)

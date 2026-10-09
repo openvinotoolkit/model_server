@@ -292,11 +292,11 @@ public:
 
         if (TokenizeParser::isTokenizeEndpoint(payload.uri)) {
             TokenizeRequest tokenizeRequest;
-            absl::Status status = TokenizeParser::parseTokenizeRequest(*payload.parsedJson, tokenizeRequest);
-            tokenizeRequest.parameters["add_special_tokens"] = false;  // Rerank model tokenizer should not add special tokens
+            absl::Status status = TokenizeParser::parseTokenizeRequest(*payload.parsedJson, tokenizeRequest, this->max_position_embeddings);
             if (!status.ok()) {
                 return status;
             }
+            tokenizeRequest.parameters["add_special_tokens"] = false;  // Rerank model tokenizer should not add special tokens
             if (auto strings = std::get_if<std::vector<std::string>>(&tokenizeRequest.input)) {
                 auto tokens = rerank_session->getTokenizer().encode(*strings, tokenizeRequest.parameters);
                 StringBuffer buffer;

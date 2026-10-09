@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "time-server": {
+      "command": "python",
+      "args": [
+        "${DEMO_DIR}/mcp_server/time_mcp_server.py"
+      ]
+    }
+  }
+}

@@ -110,7 +110,7 @@ absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionCo
 
 absl::Status GenAiServable::processTokenizeRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     ovms::TokenizeRequest tokenizeRequest;
-    auto status = ovms::TokenizeParser::parseTokenizeRequest(*executionContext->payload.parsedJson, tokenizeRequest);
+    auto status = ovms::TokenizeParser::parseTokenizeRequest(*executionContext->payload.parsedJson, tokenizeRequest, getProperties()->maxModelLength);
     if (status != absl::OkStatus()) {
         return status;
     }
@@ -323,6 +323,16 @@ absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServabl
         }
     }
 
+    if (executionContext->perfMetrics) {
+        auto& perfMetrics = *executionContext->perfMetrics;
+        executionContext->apiHandler->setPromptTokensUsage(perfMetrics.get_num_input_tokens());
+        executionContext->apiHandler->setCachedPromptTokensUsage(perfMetrics.get_num_prefix_cache_hit_tokens());
+        // For beam search we do not rely on perfMetrics for completion tokens usage, as multiple beams may contribute.
+        if (numOutputs == 1 && executionContext->inputRequest.generationConfig.num_beams == 1) {
+            executionContext->apiHandler->setCompletionTokensUsage(perfMetrics.get_num_generated_tokens());
+        }
+    }
+
     if (hasLogprobs) {
         executionContext->response = executionContext->apiHandler->serializeUnaryResponse(
             allDeltas, finishReasons, logprobData);
@@ -351,6 +361,12 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
 
     ov::genai::GenerationFinishReason finishReason = generationOutput.finish_reason;
     const bool isFinishing = (finishReason != ov::genai::GenerationFinishReason::NONE);
+    if (isFinishing && executionContext->perfMetrics) {
+        auto& perfMetrics = *executionContext->perfMetrics;
+        executionContext->apiHandler->setPromptTokensUsage(perfMetrics.get_num_input_tokens());
+        executionContext->apiHandler->setCompletionTokensUsage(perfMetrics.get_num_generated_tokens());
+        executionContext->apiHandler->setCachedPromptTokensUsage(perfMetrics.get_num_prefix_cache_hit_tokens());
+    }
 
     // OVMSTextStreamer::write() fires the callback for each flush event, pushing
     // Documents into executionContext->deltaChannel.

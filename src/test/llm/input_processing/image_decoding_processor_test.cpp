@@ -23,10 +23,33 @@
 #include "../../../llm/io_processing/input_processors/image_decoding_processor.hpp"
 #include "../../../llm/io_processing/image_utils.hpp"
 #include "../../../llm/io_processing/input_request.hpp"
+#include "src/config.hpp"
 
 using namespace ovms;
 
 // Helpers ----------------------------------------------------------------
+
+class ScopedImageDecodeBudget {
+public:
+    ScopedImageDecodeBudget(uint64_t maxImageDecodePixels, bool allowUnestimatableImageFormats) :
+        savedServerSettings(ovms::Config::instance().getServerSettings()),
+        savedModelsSettings(ovms::Config::instance().getModelSettings()) {
+        ovms::ServerSettingsImpl serverSettings = savedServerSettings;
+        serverSettings.maxImageDecodePixels = maxImageDecodePixels;
+        serverSettings.allowUnestimatableImageFormats = allowUnestimatableImageFormats;
+        ovms::ModelsSettingsImpl modelsSettings = savedModelsSettings;
+        ovms::Config::instance().parse(&serverSettings, &modelsSettings);
+    }
+    ScopedImageDecodeBudget(const ScopedImageDecodeBudget&) = delete;
+    ScopedImageDecodeBudget& operator=(const ScopedImageDecodeBudget&) = delete;
+    ~ScopedImageDecodeBudget() {
+        ovms::Config::instance().parse(&savedServerSettings, &savedModelsSettings);
+    }
+
+private:
+    ovms::ServerSettingsImpl savedServerSettings;
+    ovms::ModelsSettingsImpl savedModelsSettings;
+};
 
 static InputRequest makeChatRequest(ov::genai::ChatHistory chatHistory) {
     InputRequest req;
@@ -234,7 +257,7 @@ TEST(ImageDecodingProcessorTest, LocalPathInsideAllowedDirectoryButFileNotFound)
     const auto status = processor.process(req);
     EXPECT_FALSE(status.ok());
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
-    EXPECT_EQ(status.message(), "Image file parsing failed");
+    EXPECT_EQ(status.message(), "Image loading failed");
 }
 
 TEST(ImageDecodingProcessorTest, Base64ImageDecodedAndStoredInInputImages) {
@@ -329,8 +352,54 @@ TEST(ImageDecodingProcessorTest, MultipleImageUrlsProduceSeparateInputImageSlots
     const auto status = processor.process(req);
     EXPECT_FALSE(status.ok());
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
-    EXPECT_EQ(status.message(), "Loading images from local filesystem is disabled.");
     EXPECT_TRUE(req.inputImages.empty());
+}
+
+// Minimal 1x1 PNG data URI decoding to a single pixel; used by the per-request budget tests.
+static const std::string kOnePixelPngUrl =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1Pe"
+    "AAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==";
+
+// Builds a single user message whose content array holds `count` copies of the 1x1 PNG image_url.
+static InputRequest makeMultiImageRequest(size_t count) {
+    std::string contentJson = "[";
+    for (size_t i = 0; i < count; i++) {
+        if (i > 0) {
+            contentJson += ",";
+        }
+        contentJson += R"({"type":"image_url","image_url":{"url":")" + kOnePixelPngUrl + R"("}})";
+    }
+    contentJson += "]";
+
+    ov::genai::ChatHistory history;
+    ov::AnyMap msg;
+    msg["role"] = std::string("user");
+    msg["content"] = ov::genai::JsonContainer::from_json_string(contentJson);
+    history.push_back(msg);
+    return makeChatRequest(history);
+}
+
+TEST(ImageDecodingProcessorTest, PerRequestPixelBudgetRejectsAccumulatedImages) {
+    bool allowUnestimatableFormats{false};
+    ScopedImageDecodeBudget budgetGuard(1, allowUnestimatableFormats);
+
+    InputRequest req = makeMultiImageRequest(2);
+    ImageDecodingProcessor processor(std::nullopt, std::nullopt);
+    const auto status = processor.process(req);
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_EQ(status.message(), "Image exceeds maximum decoded size");
+}
+
+TEST(ImageDecodingProcessorTest, PerRequestPixelBudgetAcceptsImagesWithinTotal) {
+    bool allowUnestimatableFormats{false};
+    ScopedImageDecodeBudget budgetGuard(2, allowUnestimatableFormats);
+
+    InputRequest req = makeMultiImageRequest(2);
+    ImageDecodingProcessor processor(std::nullopt, std::nullopt);
+    const auto status = processor.process(req);
+    ASSERT_TRUE(status.ok()) << status.message();
+    EXPECT_EQ(req.inputImages.size(), 2u);
 }
 
 TEST(ImageDecodingProcessorTest, InterleavedTextAndImageUrlInContentArray) {
