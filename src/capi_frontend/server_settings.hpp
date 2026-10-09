@@ -249,6 +249,7 @@ struct ServerSettingsImpl {
     std::string tracePath;
 #endif
     std::optional<size_t> grpcMemoryQuota;
+    std::optional<size_t> jsonMaxComplexity;
     std::string grpcChannelArguments;
     uint32_t filesystemPollWaitMilliseconds = 1000;
     uint32_t memoryTrimmingIntervalSeconds = 300;

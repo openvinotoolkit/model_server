@@ -48,6 +48,7 @@ Configuration options for the server are defined only via command-line options a
 | `grpc_channel_arguments` | `string` |   A comma separated list of arguments to be passed to the grpc server. (e.g. grpc.max_connection_age_ms=2000) |
 | `grpc_max_threads` | `string` |   Maximum number of threads which can be used by the grpc server. Default value depends on number of CPUs. |
 | `grpc_memory_quota` | `string` |   GRPC server buffer memory quota. Default value set to 2147483648 (2GB). |
+| `json_max_complexity` | `integer` | Maximum number of JSON SAX events allowed in a request body before the request is rejected. Default value is 8388608. This guard rejects malformed, overly nested, or adversarial JSON payloads before the full DOM parse, helping reduce CPU and memory exhaustion risk from oversized or complex input documents. |
 | `help` | `NA` |  Shows help message and exit |
 | `version` | `NA` |  Shows binary version |
 | `allow_credentials` | `bool` (default: false) | Whether to allow credentials in CORS requests. |

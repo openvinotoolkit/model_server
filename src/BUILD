@@ -392,6 +392,7 @@ ovms_cc_library(
         "libovms_cliparser",
         "libovms_systeminfo",
         "ovms_exit_codes",
+        "//src/utils:rapidjson_utils",
     ],
     visibility = ["//visibility:public",],
 )

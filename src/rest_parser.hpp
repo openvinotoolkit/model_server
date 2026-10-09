@@ -43,6 +43,7 @@ class KFSRestParser : RestParser {
 
 public:
     Status parse(const char* json);
+    Status parse(const char* json, size_t jsonLength);
     ::KFSRequest& getProto() { return requestProto; }
 };
 

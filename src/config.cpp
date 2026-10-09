@@ -30,6 +30,7 @@
 
 #include "logging.hpp"
 #include "ovms_exit_codes.hpp"
+#include "utils/rapidjson_utils.hpp"
 
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
@@ -391,6 +392,10 @@ bool Config::validate() {
         std::cerr << "log_level should be one of: TRACE, DEBUG, INFO, WARNING, ERROR" << std::endl;
         return false;
     }
+    if (this->serverSettings.jsonMaxComplexity.has_value() && this->serverSettings.jsonMaxComplexity.value() == 0) {
+        std::cerr << "json_max_complexity must be greater than 0" << std::endl;
+        return false;
+    }
     return true;
 }
 
@@ -403,6 +408,7 @@ const std::string Config::restBindAddress() const { return this->serverSettings.
 uint32_t Config::grpcWorkers() const { return this->serverSettings.grpcWorkers; }
 uint32_t Config::grpcMaxThreads() const { return this->serverSettings.grpcMaxThreads.value_or(DEFAULT_GRPC_MAX_THREADS); }
 size_t Config::grpcMemoryQuota() const { return this->serverSettings.grpcMemoryQuota.value_or(DEFAULT_GRPC_MEMORY_QUOTA); }
+size_t Config::jsonMaxComplexity() const { return this->serverSettings.jsonMaxComplexity.value_or(DEFAULT_MAX_JSON_COMPLEXITY); }
 uint32_t Config::restWorkers() const { return static_cast<uint32_t>(std::max(static_cast<uint64_t>(2), static_cast<uint64_t>(this->serverSettings.restWorkers.value_or(getDefaultRestWorkers())))); }
 const std::string& Config::modelName() const { return this->modelsSettings.modelName; }
 const std::string& Config::modelPath() const { return this->modelsSettings.modelPath; }

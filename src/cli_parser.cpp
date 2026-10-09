@@ -111,6 +111,10 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "GRPC server buffer memory quota. Default value set to 2147483648 (2GB).",
                 cxxopts::value<size_t>(),
                 "GRPC_MEMORY_QUOTA")
+            ("json_max_complexity",
+                "Maximum JSON SAX event count allowed before request parsing is rejected. Default value is 8388608.",
+                cxxopts::value<size_t>(),
+                "JSON_MAX_COMPLEXITY")
             ("rest_workers",
                 "Number of worker threads in REST server - has no effect if rest_port is not set. Default value depends on number of CPUs. ",
                 cxxopts::value<uint32_t>(),
@@ -649,6 +653,8 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
 
     serverSettings.maxImageDecodePixels = result->operator[]("max_image_decode_pixels").as<uint64_t>();
     serverSettings.allowUnestimatableImageFormats = result->operator[]("allow_unestimatable_image_formats").as<bool>();
+    if (result->count("json_max_complexity"))
+        serverSettings.jsonMaxComplexity = result->operator[]("json_max_complexity").as<size_t>();
 
     if (result->count("rest_workers"))
         serverSettings.restWorkers = result->operator[]("rest_workers").as<uint32_t>();

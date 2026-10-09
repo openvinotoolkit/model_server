@@ -24,6 +24,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../config.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../filesystem/filesystem.hpp"
 #include "../llm/apis/openai_completions.hpp"
@@ -37,6 +38,7 @@
 #include <openvino/genai/visual_language/pipeline.hpp>
 #include "../module_names.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
+#include "src/utils/rapidjson_utils.hpp"
 #include "../server.hpp"
 #include "environment.hpp"
 #include "src/utils/env_guard.hpp"
@@ -359,6 +361,23 @@ TEST_F(HttpOpenAIHandlerTest, JsonBodyExceedsNestingDepth_NestedArrays) {
     auto status = handler->dispatchToProcessor("/v1/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - JSON body exceeds maximum nesting depth");
+}
+
+TEST_F(HttpOpenAIHandlerTest, JsonBodyExceedsComplexityLimit) {
+    std::string requestBody = R"({"a":[0]})";
+    auto& config = const_cast<ovms::ServerSettingsImpl&>(ovms::Config::instance().getServerSettings());
+    const auto previousMaxComplexity = config.jsonMaxComplexity;
+    config.jsonMaxComplexity = 5;
+
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(0);
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
+    EXPECT_CALL(*writer, IsDisconnected()).Times(0);
+
+    auto status = handler->dispatchToProcessor("/v1/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::JSON_COMPLEXITY_EXCEEDED);
+    ASSERT_EQ(status.string(), "JSON structure exceeds the allowed complexity - JSON body exceeds maximum complexity");
+
+    config.jsonMaxComplexity = previousMaxComplexity;
 }
 
 TEST_F(HttpOpenAIHandlerTest, GraphWithANameDoesNotExist) {
