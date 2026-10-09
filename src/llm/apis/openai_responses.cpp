@@ -922,7 +922,7 @@ void OpenAIResponsesHandler::serializeCommonResponseParameters(Writer<StringBuff
     writer.String(status.c_str());
 
     writer.String("parallel_tool_calls");
-    writer.Bool(true);
+    writer.Bool(request.parallelToolCalls);
     // TODO: previous_response_id not supported
     writer.String("store");
     writer.Bool(true);

@@ -96,6 +96,14 @@ protected:
     }
 
 public:
+    struct PendingToolFrameDiagnostic {
+        std::string phase;
+        size_t bufferedBytes;
+        std::string toolName;
+    };
+    virtual std::optional<PendingToolFrameDiagnostic> pendingToolFrameDiagnostic() const {
+        return std::nullopt;
+    }
     BaseOutputParser() = delete;
     explicit BaseOutputParser(ov::genai::Tokenizer& tokenizer) :
         tokenizer(tokenizer) {}

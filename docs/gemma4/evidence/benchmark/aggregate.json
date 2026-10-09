@@ -1,0 +1,16 @@
+[
+  {
+    "transport": "curl",
+    "cases": 2,
+    "completion_tokens": 1797,
+    "elapsed_s": 72.979,
+    "weighted_tokens_per_s": 24.624
+  },
+  {
+    "transport": "InvokeWebRequest",
+    "cases": 2,
+    "completion_tokens": 2186,
+    "elapsed_s": 86.639,
+    "weighted_tokens_per_s": 25.231
+  }
+]
