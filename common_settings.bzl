@@ -144,6 +144,8 @@ LINUX_COMMON_STATIC_LIBS_COPTS_WITHOUT_VISIBILITY = [
                     "-Wno-sign-compare",
                     "-Werror",
                     # ov::Tensor::data method call results in deprecated warning and we use it in multiple places
+                    # Some upstream dependencies (e.g. Abseil / Google Cloud C++) still use deprecated APIs
+                    # that are not actionable for OVMS and must not fail the build under -Werror.
                     "-Wno-deprecated-declarations",
                     "-Werror",
                     "-Wimplicit-fallthrough",

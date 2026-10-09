@@ -5,7 +5,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,22 +15,20 @@
 //*****************************************************************************
 #pragma once
 
-#pragma warning(push)
-#pragma warning(disable : 4624 6001 6385 6386 6326 6011 4457 6308 6387 6246)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-#pragma GCC diagnostic ignored "-Wall"
-#include "tensorflow/core/framework/tensor.h"
-#pragma GCC diagnostic pop
-#pragma warning(pop)
-
-#include "precision.hpp"
-
-using TFSDataType = tensorflow::DataType;  // TODO @atobiszei since we dont have TFS now we can rename to TFDataType?
+#include <memory>
 
 namespace ovms {
 
-Precision TFSPrecisionToOvmsPrecision(const TFSDataType& datatype);
-TFSDataType getPrecisionAsDataType(Precision precision);
+class GenAiServable;
+struct GenAiServableExecutionContext;
+
+#if defined(_WIN32)
+#define OVMS_LLM_HOST_EXPORT
+#else
+#define OVMS_LLM_HOST_EXPORT __attribute__((visibility("default")))
+#endif
+
+// Defined in servable.cpp; the plugin resolves it from the host process so it never depends on GenAiServable's vtable layout.
+OVMS_LLM_HOST_EXPORT std::shared_ptr<GenAiServableExecutionContext> createGenAiServableExecutionContext(GenAiServable& servable);
 
 }  // namespace ovms
