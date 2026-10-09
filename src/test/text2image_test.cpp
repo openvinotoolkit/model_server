@@ -1475,6 +1475,22 @@ TEST(Text2ImageTest, validateForStaticReshapeSettings_MatchesOneResolution) {
     ASSERT_FALSE(holdsStatus) << std::get<absl::Status>(requestOptions).ToString();
 }
 
+TEST(Text2ImageTest, validateForStaticReshapeSettings_ExceedsDefaultMaxResolution) {
+    ImageGenPipelineArgs args = DEFAULTIMAGE_GEN_ARGS;
+    args.modelsPath = "/ovms/src/test/dummy";
+    args.staticReshapeSettings = ovms::StaticReshapeSettingsArgs({{5000, 512}});
+
+    std::string value = R"({"prompt": "test prompt", "size": "5000x512", "n": 1, "model": "test model"})";
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    payload.parsedJson->Parse(value.c_str());
+    ASSERT_FALSE(payload.parsedJson->HasParseError());
+
+    auto requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    EXPECT_THAT(std::get<absl::Status>(requestOptions).message(), ::testing::HasSubstr("exceeds maxResolution"));
+}
+
 TEST(Text2ImageTest, validateForStaticReshapeSettings_DoesntMatchResolution) {
     ImageGenPipelineArgs args;
     args.modelsPath = "/ovms/src/test/dummy";

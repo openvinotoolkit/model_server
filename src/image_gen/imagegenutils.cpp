@@ -275,6 +275,21 @@ absl::Status ensureCommonValidations(ov::AnyMap& requestOptions, const ovms::Ima
         }
     }
 
+    auto widthIt = requestOptions.find("width");
+    if (widthIt != requestOptions.end()) {
+        auto width = widthIt->second.as<int64_t>();
+        if (width > args.maxResolution.first) {
+            return absl::InvalidArgumentError(absl::StrCat("width ", width, " exceeds maxResolution width: ", args.maxResolution.first));
+        }
+    }
+    auto heightIt = requestOptions.find("height");
+    if (heightIt != requestOptions.end()) {
+        auto height = heightIt->second.as<int64_t>();
+        if (height > args.maxResolution.second) {
+            return absl::InvalidArgumentError(absl::StrCat("height ", height, " exceeds maxResolution height: ", args.maxResolution.second));
+        }
+    }
+
     it = requestOptions.find("strength");
     if (it != requestOptions.end()) {
         auto strength = it->second.as<float>();
@@ -288,22 +303,6 @@ absl::Status ensureCommonValidations(ov::AnyMap& requestOptions, const ovms::Ima
 }
 
 absl::Status ensureAcceptableForDynamic(ov::AnyMap& requestOptions, const ovms::ImageGenPipelineArgs& args) {
-
-    // Check against maxResolution
-    auto widthIt = requestOptions.find("width");
-    auto heightIt = requestOptions.find("height");
-    if (widthIt != requestOptions.end()) {
-        auto width = widthIt->second.as<int64_t>();
-        if (width > args.maxResolution.first) {
-            return absl::InvalidArgumentError(absl::StrCat("width ", width, " exceeds maxResolution width: ", args.maxResolution.first));
-        }
-    }
-    if (heightIt != requestOptions.end()) {
-        auto height = heightIt->second.as<int64_t>();
-        if (height > args.maxResolution.second) {
-            return absl::InvalidArgumentError(absl::StrCat("height ", height, " exceeds maxResolution height: ", args.maxResolution.second));
-        }
-    }
 
     // check if we have any unhandled parameters
     auto it = requestOptions.find("num_images_per_prompt");
