@@ -230,7 +230,9 @@ template <typename RequestType, typename InputTensorType, ValidationChoice choic
 Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, ShapeType>::validateInferenceTensorBufferType(const InputTensorType& it) const {
     const Buffer* buffer = it.getBuffer();
     const OVMS_BufferType bufType = buffer->getBufferType();
-    if (bufType < OVMS_BUFFERTYPE_CPU || bufType > OVMS_BUFFERTYPE_HDDL) {
+    if ((bufType < OVMS_BUFFERTYPE_CPU || bufType > OVMS_BUFFERTYPE_HDDL) &&
+        bufType != OVMS_BUFFERTYPE_D3D11_TEXTURE_Y &&
+        bufType != OVMS_BUFFERTYPE_D3D11_TEXTURE_UV) {
         std::stringstream ss;
         if (choice == ValidationChoice::INPUT) {
             ss << "Required input ";
@@ -247,7 +249,9 @@ Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, Shap
         if (bufType != OVMS_BUFFERTYPE_CPU &&
             bufType != OVMS_BUFFERTYPE_OPENCL &&
             bufType != OVMS_BUFFERTYPE_VASURFACE_Y &&
-            bufType != OVMS_BUFFERTYPE_VASURFACE_UV) {
+            bufType != OVMS_BUFFERTYPE_VASURFACE_UV &&
+            bufType != OVMS_BUFFERTYPE_D3D11_TEXTURE_Y &&
+            bufType != OVMS_BUFFERTYPE_D3D11_TEXTURE_UV) {
             std::stringstream ss;
             ss << "Required input ";
             const std::string details = ss.str();

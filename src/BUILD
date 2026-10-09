@@ -1253,7 +1253,9 @@ ovms_cc_library(
                     "vaapitensorfactory.hpp",
                     "opencltensorfactory.hpp",
                 ],
-                "//src:windows" : [],
+                "//src:windows" : [
+                    "d3d11tensorfactory.hpp",
+                ],
             }),
     srcs = ["regularovtensorfactory.cpp"]
             + select({
@@ -1261,14 +1263,22 @@ ovms_cc_library(
                     "vaapitensorfactory.cpp",
                     "opencltensorfactory.cpp",
                 ],
-                "//src:windows" : [],
+                "//src:windows" : [
+                    "d3d11tensorfactory.cpp",
+                ],
             }),
     deps = ["//third_party:openvino",
             "libovmscapibuffer",
             "libovms_itensorfactory",
             "libovmslogging",
             "ovms_header",
-    ],
+    ] + select({
+            "//src:windows": [
+                "@windows_opencl//:opencl",
+                "@windows_opencl2//:opencl2",
+            ],
+            "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(

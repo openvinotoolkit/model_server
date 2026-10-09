@@ -6,6 +6,7 @@ input_side_packet: "HEIGHT:height"
 input_side_packet: "SERVABLE_NAME:servable_name"
 input_side_packet: "SERVABLE_VERSION:servable_version"
 input_side_packet: "INPUT_NAME:input_name"
+input_side_packet: "SERVER:server"
 output_stream: "DETECTIONS:detections"
 
 node {
@@ -22,5 +23,6 @@ node {
   input_side_packet: "SERVABLE_NAME:servable_name"
   input_side_packet: "SERVABLE_VERSION:servable_version"
   input_side_packet: "INPUT_NAME:input_name"
+  input_side_packet: "SERVER:server"
   output_stream: "DETECTIONS:detections"
 }

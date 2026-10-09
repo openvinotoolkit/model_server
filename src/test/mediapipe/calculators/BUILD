@@ -236,3 +236,58 @@ cc_test(
     linkopts = LINKOPTS_ADJUSTED,
 )
 
+# P5 Windows test A: decoded D3D11 texture uses the injected server-owned device.
+# Windows + Intel GPU + GStreamer D3D11 + test video; skips otherwise.
+cc_test(
+    name = "gst_d3d11_surface_test",
+    srcs = select({
+        "//src:windows": ["gst_d3d11_surface_test.cpp"],
+        "//conditions:default": [],
+    }),
+    copts = COPTS_ADJUSTED,
+    linkstatic = 1,
+    target_compatible_with = select({
+        "//src:windows": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//src/mpi:intel_mpi",
+        "@com_google_googletest//:gtest_main",
+    ],
+    linkopts = LINKOPTS_ADJUSTED + select({
+        "//src:windows": ["d3d11.lib", "dxgi.lib"],
+        "//conditions:default": [],
+    }),
+)
+
+# P5 Windows tests B and C (C-API inference + split graph). Standalone cc_test
+# depending on ovms_lib for the C-API/servable path. Windows-only (skips without
+# GPU/fixtures); kept out of the aggregate ovms_test to avoid unrelated py_off
+# breakage in other LLM translation units.
+cc_test(
+    name = "gst_d3d11_capi_test",
+    srcs = select({
+        "//src:windows": ["gst_d3d11_capi_test.cpp"],
+        "//conditions:default": [],
+    }),
+    copts = COPTS_ADJUSTED,
+    linkstatic = 1,
+    target_compatible_with = select({
+        "//src:windows": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//src/mpi:intel_mpi",
+        ":gst_video_source_calculator",
+        ":gst_capi_inference_calculator",
+        "//src:ovms_lib",
+        "@com_google_googletest//:gtest_main",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe_calculators//:mediapipe_calculators",
+    ],
+    linkopts = LINKOPTS_ADJUSTED + select({
+        "//src:windows": ["d3d11.lib", "dxgi.lib"],
+        "//conditions:default": [],
+    }),
+)
+

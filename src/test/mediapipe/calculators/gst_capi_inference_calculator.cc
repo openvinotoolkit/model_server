@@ -32,6 +32,7 @@ constexpr char kFrameTag[] = "FRAME";
 constexpr char kServableNameTag[] = "SERVABLE_NAME";
 constexpr char kServableVersionTag[] = "SERVABLE_VERSION";
 constexpr char kInputNameTag[] = "INPUT_NAME";
+constexpr char kServerTag[] = "SERVER";
 constexpr char kDetectionsTag[] = "DETECTIONS";
 
 absl::Status checkCapiStatus(OVMS_Status* status, const char* operation) {
@@ -55,6 +56,7 @@ class GstCapiInferenceCalculator : public CalculatorBase {
         cc->InputSidePackets().Tag(kServableNameTag).Set<std::string>();
         cc->InputSidePackets().Tag(kServableVersionTag).Set<int>();
         cc->InputSidePackets().Tag(kInputNameTag).Set<std::string>();
+        cc->InputSidePackets().Tag(kServerTag).Set<OVMS_Server*>();
         cc->Outputs().Tag(kDetectionsTag).Set<int>();
         return absl::OkStatus();
     }
@@ -63,18 +65,39 @@ class GstCapiInferenceCalculator : public CalculatorBase {
         servable_name_ = cc->InputSidePackets().Tag(kServableNameTag).Get<std::string>();
         servable_version_ = cc->InputSidePackets().Tag(kServableVersionTag).Get<int>();
         input_name_ = cc->InputSidePackets().Tag(kInputNameTag).Get<std::string>();
-        return checkCapiStatus(OVMS_ServerNew(&server_), "OVMS_ServerNew");
+        server_ = cc->InputSidePackets().Tag(kServerTag).Get<OVMS_Server*>();
+        RET_CHECK(server_ != nullptr) << "missing started OVMS server";
+        return absl::OkStatus();
     }
 
     absl::Status Process(CalculatorContext* cc) override {
         const auto& frame = cc->Inputs().Tag(kFrameTag).Get<GstVideoFramePacket>();
-        const auto* va_frame = std::get_if<VaSurfaceFrame>(&frame.resource);
-        RET_CHECK(va_frame) << "C-API inference currently requires a VA surface frame";
-        RET_CHECK(va_frame->surface_id != 0) << "invalid VA surface id";
         RET_CHECK_GT(frame.width, 0);
         RET_CHECK_GT(frame.height, 0);
         RET_CHECK_EQ(frame.width % 2, 0) << "NV12 width must be even";
         RET_CHECK_EQ(frame.height % 2, 0) << "NV12 height must be even";
+
+        // Pick the C-API buffer type and native handle from the tagged resource.
+        void* surface_handle = nullptr;
+        OVMS_BufferType buffer_type_y = OVMS_BUFFERTYPE_VASURFACE_Y;
+        OVMS_BufferType buffer_type_uv = OVMS_BUFFERTYPE_VASURFACE_UV;
+        if (const auto* va_frame = std::get_if<VaSurfaceFrame>(&frame.resource)) {
+            RET_CHECK(va_frame->surface_id != 0) << "invalid VA surface id";
+            surface_handle = reinterpret_cast<void*>(static_cast<uintptr_t>(va_frame->surface_id));
+            buffer_type_y = OVMS_BUFFERTYPE_VASURFACE_Y;
+            buffer_type_uv = OVMS_BUFFERTYPE_VASURFACE_UV;
+        } else if (const auto* d3d11_frame = std::get_if<D3D11Frame>(&frame.resource)) {
+            RET_CHECK(d3d11_frame->texture_handle != 0) << "invalid D3D11 texture handle";
+            // OpenVINO's D3D11 import addresses a whole ID3D11Texture2D (plane only);
+            // the source must emit a non-array texture (subresource 0).
+            RET_CHECK_EQ(d3d11_frame->subresource, 0u)
+                << "D3D11 texture array slice not importable by OpenVINO; expected subresource 0";
+            surface_handle = reinterpret_cast<void*>(d3d11_frame->texture_handle);
+            buffer_type_y = OVMS_BUFFERTYPE_D3D11_TEXTURE_Y;
+            buffer_type_uv = OVMS_BUFFERTYPE_D3D11_TEXTURE_UV;
+        } else {
+            RET_CHECK(false) << "unsupported frame resource for C-API inference";
+        }
 
         OVMS_InferenceRequest* raw_request = nullptr;
         absl::Status status = checkCapiStatus(
@@ -91,7 +114,6 @@ class GstCapiInferenceCalculator : public CalculatorBase {
         const int64_t shape_uv[] = {1, frame.height / 2, frame.width / 2, 2};
         const size_t bytes_y = static_cast<size_t>(frame.width) * frame.height;
         const size_t bytes_uv = bytes_y / 2;
-        void* surface_handle = reinterpret_cast<void*>(static_cast<uintptr_t>(va_frame->surface_id));
 
         status = checkCapiStatus(
             OVMS_InferenceRequestAddInput(request.get(), input_name_y.c_str(), OVMS_DATATYPE_U8,
@@ -101,7 +123,7 @@ class GstCapiInferenceCalculator : public CalculatorBase {
             return status;
         status = checkCapiStatus(
             OVMS_InferenceRequestInputSetData(request.get(), input_name_y.c_str(), surface_handle,
-                                              bytes_y, OVMS_BUFFERTYPE_VASURFACE_Y, 1),
+                                              bytes_y, buffer_type_y, 1),
             "OVMS_InferenceRequestInputSetData(Y)");
         if (!status.ok())
             return status;
@@ -113,7 +135,7 @@ class GstCapiInferenceCalculator : public CalculatorBase {
             return status;
         status = checkCapiStatus(
             OVMS_InferenceRequestInputSetData(request.get(), input_name_uv.c_str(), surface_handle,
-                                              bytes_uv, OVMS_BUFFERTYPE_VASURFACE_UV, 1),
+                                              bytes_uv, buffer_type_uv, 1),
             "OVMS_InferenceRequestInputSetData(UV)");
         if (!status.ok())
             return status;

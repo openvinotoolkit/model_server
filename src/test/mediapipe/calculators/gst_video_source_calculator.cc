@@ -49,6 +49,7 @@ constexpr char kVideoPathTag[] = "VIDEO_PATH";
 constexpr char kWidthTag[] = "WIDTH";
 constexpr char kHeightTag[] = "HEIGHT";
 constexpr char kFrameTag[] = "FRAME";
+constexpr int64_t kMaxFrames = 4;
 }  // namespace
 
 class GstVideoSourceCalculator : public CalculatorBase {
@@ -66,8 +67,12 @@ class GstVideoSourceCalculator : public CalculatorBase {
         width_ = cc->InputSidePackets().Tag(kWidthTag).Get<int>();
         height_ = cc->InputSidePackets().Tag(kHeightTag).Get<int>();
 
-        if (!imp_video_va_available())
-            return absl::UnavailableError("GstVideoSourceCalculator: VA/GPU not available");
+        // Pick the native GPU surface path available on this platform: D3D11 on
+        // Windows, VA on Linux. Both emit a GstVideoFramePacket; only the tagged
+        // resource variant differs.
+        use_d3d11_ = imp_video_d3d11_available();
+        if (!use_d3d11_ && !imp_video_va_available())
+            return absl::UnavailableError("GstVideoSourceCalculator: no GPU surface path (VA/D3D11) available");
 
         if (imp_context_create(&ctx_, nullptr) != IMP_OK)
             return absl::InternalError("imp_context_create failed");
@@ -79,7 +84,8 @@ class GstVideoSourceCalculator : public CalculatorBase {
         imp_video_source_set(src, "height", std::to_string(height_).c_str());
 
         imp_video_decode_opts_t vopts{};
-        vopts.use_va_surface_memory = true;
+        vopts.use_va_surface_memory = !use_d3d11_;
+        vopts.use_d3d11_surface_memory = use_d3d11_;
         imp_status_t st = imp_video_open(&stream_, src, ctx_, &vopts);
         imp_video_source_destroy(src);
         if (st != IMP_OK)
@@ -91,12 +97,16 @@ class GstVideoSourceCalculator : public CalculatorBase {
         if (st != IMP_OK || !pending_)
             return absl::InternalError("first frame read failed");
 
-        if (imp_tensor_get_memory_type(pending_) != IMP_MEM_VA_SURFACE)
-            return absl::InternalError("expected a VA surface from GStreamer");
+        const imp_tensor_memory_type_t expected =
+            use_d3d11_ ? IMP_MEM_D3D11_SURFACE : IMP_MEM_VA_SURFACE;
+        if (imp_tensor_get_memory_type(pending_) != expected)
+            return absl::InternalError("expected a GPU surface from GStreamer");
         return absl::OkStatus();
     }
 
     absl::Status Process(CalculatorContext* cc) override {
+        if (frame_index_ >= kMaxFrames)
+            return tool::StatusStop();
         imp_tensor_t* tensor = pending_;
         pending_ = nullptr;
         if (!tensor) {
@@ -107,18 +117,31 @@ class GstVideoSourceCalculator : public CalculatorBase {
                 return tool::StatusStop();
         }
 
-        uint32_t surface_id = 0;
-        void* disp = nullptr;
-        int fw = 0, fh = 0;
-        if (imp_tensor_get_va_surface(tensor, &surface_id, &disp, &fw, &fh) != IMP_OK) {
-            imp_tensor_release(tensor);
-            return absl::InternalError("tensor is not a VA surface");
-        }
-
         auto pkt = std::make_unique<GstVideoFramePacket>();
-        pkt->resource = VaSurfaceFrame{surface_id};
-        pkt->width = fw;
-        pkt->height = fh;
+        if (use_d3d11_) {
+            void* texture = nullptr;
+            void* device = nullptr;
+            uint32_t subresource = 0;
+            int fw = 0, fh = 0;
+            if (imp_tensor_get_d3d11_texture(tensor, &texture, &device, &subresource, &fw, &fh) != IMP_OK) {
+                imp_tensor_release(tensor);
+                return absl::InternalError("tensor is not a D3D11 surface");
+            }
+            pkt->resource = D3D11Frame{reinterpret_cast<uintptr_t>(texture), subresource};
+            pkt->width = fw;
+            pkt->height = fh;
+        } else {
+            uint32_t surface_id = 0;
+            void* disp = nullptr;
+            int fw = 0, fh = 0;
+            if (imp_tensor_get_va_surface(tensor, &surface_id, &disp, &fw, &fh) != IMP_OK) {
+                imp_tensor_release(tensor);
+                return absl::InternalError("tensor is not a VA surface");
+            }
+            pkt->resource = VaSurfaceFrame{surface_id};
+            pkt->width = fw;
+            pkt->height = fh;
+        }
         pkt->owner = std::shared_ptr<imp_tensor_t>(tensor, imp_tensor_release);
 
         cc->Outputs()
@@ -148,6 +171,7 @@ class GstVideoSourceCalculator : public CalculatorBase {
     int width_ = 0;
     int height_ = 0;
     int64_t frame_index_ = 0;
+    bool use_d3d11_ = false;
 
     imp_context_t* ctx_ = nullptr;
     imp_video_stream_t* stream_ = nullptr;

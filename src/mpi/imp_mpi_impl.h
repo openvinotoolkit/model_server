@@ -161,6 +161,13 @@ struct imp_tensor_s {
     uint32_t  va_surface_id = 0;
     void*     va_display    = nullptr;  // VADisplay, not owned
 
+    // D3D11 surface fields (when memory_type == IMP_MEM_D3D11_SURFACE, Windows).
+    // The texture is kept alive by owned_gst_sample until imp_tensor_release().
+    void*     d3d11_texture     = nullptr;  // ID3D11Texture2D*, owned via owned_gst_sample
+    void*     d3d11_device      = nullptr;  // ID3D11Device*, not owned
+    uint32_t  d3d11_subresource = 0;        // array slice index for this frame
+    void*     owned_d3d11_texture = nullptr;  // ID3D11Texture2D*, released with this tensor
+
     // Optional ov::Tensor (for non-NV12 or GPU tensors)
     ov::Tensor        ov_tensor;
     imp_device_type_t device_type = IMP_DEVICE_CPU;
@@ -214,6 +221,8 @@ struct imp_video_stream_s {
     bool use_hw_decode        = false;
     bool use_va_surface_memory = false;  // true when VA surface output requested
     void* va_display          = nullptr; // VADisplay shared across branches (borrowed from gst_loader)
+    bool use_d3d11_surface_memory = false; // true when D3D11 texture output requested (Windows)
+    void* d3d11_device        = nullptr; // ID3D11Device injected into the pipeline (borrowed)
 
     // Dynamic branches (replaces fixed fullres + small appsinks)
     std::vector<imp_branch_info_t> branches;

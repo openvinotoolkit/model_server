@@ -114,8 +114,9 @@ typedef enum {
 } imp_pixel_format_t;
 
 typedef enum {
-    IMP_MEM_SYSTEM     = 0,  // host RAM — y_data/uv_data valid
-    IMP_MEM_VA_SURFACE = 1,  // VA surface on GPU — va_surface_id/va_display valid
+    IMP_MEM_SYSTEM       = 0,  // host RAM — y_data/uv_data valid
+    IMP_MEM_VA_SURFACE   = 1,  // VA surface on GPU — va_surface_id/va_display valid
+    IMP_MEM_D3D11_SURFACE = 2, // D3D11 NV12 texture on GPU (Windows) — d3d11 fields valid
 } imp_tensor_memory_type_t;
 
 typedef enum {
@@ -335,6 +336,11 @@ typedef struct {
     // zero-copy import into an OpenVINO VAContext. No DMA copy to system RAM occurs.
     // When false (default): frames are delivered as system-memory NV12 (IMP_MEM_SYSTEM).
     bool use_va_surface_memory;
+    // Windows D3D11 analog of use_va_surface_memory: when true AND D3D11 GPU decode is
+    // available, decoded frames stay in D3D11 texture memory (IMP_MEM_D3D11_SURFACE).
+    // Use imp_tensor_get_d3d11_texture() to obtain the ID3D11Texture2D for zero-copy
+    // import into an OpenVINO D3DContext. When false (default): host NV12 (IMP_MEM_SYSTEM).
+    bool use_d3d11_surface_memory;
 } imp_video_decode_opts_t;
 
 /**
@@ -1019,6 +1025,35 @@ imp_status_t imp_tensor_get_va_surface(imp_tensor_t* tensor,
                                        int*      height);
 
 /**
+ * Get the D3D11 NV12 texture for GPU-resident tensors (Windows).
+ * Only valid when imp_tensor_get_memory_type() == IMP_MEM_D3D11_SURFACE.
+ *
+ * The returned texture is valid until imp_tensor_release() is called on this
+ * tensor. Each frame owns its own GStreamer sample, so distinct in-flight
+ * tensors return distinct, simultaneously valid textures.
+ *
+ * NOTE: GStreamer may hand back an element of a texture array; `subresource`
+ * is the array slice index for this frame. OpenVINO's D3D11 import addresses
+ * a whole ID3D11Texture2D (plane only, no slice), so a non-zero subresource
+ * must be resolved by the consumer (e.g. a GPU copy into an ArraySize=1
+ * texture) before import.
+ *
+ * @param tensor      Tensor handle
+ * @param texture     Output: ID3D11Texture2D* (cast from void*)
+ * @param device      Output: ID3D11Device* owning the texture (cast from void*)
+ * @param subresource Output: array slice / subresource index for this frame
+ * @param width       Output: frame width in pixels
+ * @param height      Output: frame height in pixels
+ * @return IMP_OK on success, IMP_ERROR_INVALID_ARGUMENT if not a D3D11 surface tensor
+ */
+imp_status_t imp_tensor_get_d3d11_texture(imp_tensor_t* tensor,
+                                          void**    texture,
+                                          void**    device,
+                                          uint32_t* subresource,
+                                          int*      width,
+                                          int*      height);
+
+/**
  * Release tensor
  * 
  * @param tensor Tensor handle
@@ -1093,6 +1128,24 @@ void* imp_video_va_display(void);
  *                    ov::intel_gpu::ocl::VAContext::operator VADisplay().
  */
 void imp_video_set_va_display(void* va_display);
+
+/**
+ * Returns true if D3D11 GPU decode / surface sharing is available (Windows).
+ * Always false on Linux. Safe to call before imp_context_create().
+ */
+bool imp_video_d3d11_available(void);
+
+/**
+ * Inject a server-owned ID3D11Device into the GStreamer D3D11 pipeline.
+ * Call this BEFORE imp_video_open() when using use_d3d11_surface_memory=true.
+ *
+ * Mirrors imp_video_set_va_display on the Windows D3D11 path: GStreamer decodes
+ * onto this exact device, so the decoded NV12 texture is valid in the model's
+ * ov::intel_gpu::ocl::D3DContext (built from the same device). No-op on Linux.
+ *
+ * @param d3d11_device  ID3D11Device* (cast from void*). Pass nullptr to reset.
+ */
+void imp_video_set_d3d11_device(void* d3d11_device);
 
 #ifdef __cplusplus
 }

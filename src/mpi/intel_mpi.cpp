@@ -59,12 +59,9 @@ imp_status_t imp_context_create(imp_context_t** ctx,
     if (!ctx) return IMP_ERROR_INVALID_ARGUMENT;
 
     // compiled_model is a C++ ov::CompiledModel* cast through the C opaque pointer.
-    // On Linux / CPU-only mode, nullptr is valid — creates a standalone context
-    // with no model dimension hints.
+    // nullptr is valid — creates a standalone context with no model dimension
+    // hints (used by the media-only decode path and the source calculator).
     auto* cm = reinterpret_cast<ov::CompiledModel*>(compiled_model);
-#ifdef _WIN32
-    if (!cm) return IMP_ERROR_INVALID_ARGUMENT;
-#endif
 
     auto start = chrono::high_resolution_clock::now();
 
@@ -183,6 +180,119 @@ void imp_video_source_destroy(imp_video_source_t* source) {
 // Linux equivalents live in gst_loader.cpp (dlopen-based).
 // ============================================================================
 #ifdef _WIN32
+
+//////////////////////////////////////////////////////////////////////////////
+// D3D11 server-owned device injection (Option B — mirrors the Linux VA path).
+// The server creates one ID3D11Device, injects it here before imp_video_open,
+// and GStreamer decodes onto that exact device so the NV12 texture is valid in
+// the model's ov::intel_gpu::ocl::D3DContext (built from the same device).
+//////////////////////////////////////////////////////////////////////////////
+
+static ID3D11Device* s_injected_d3d11_device = nullptr;
+
+// Push the injected device into a VA/d3d11 element via the canonical
+// "gst.d3d11.device.handle" context. Used both preemptively on the pipeline and
+// in response to NEED_CONTEXT from dynamically-created elements (decodebin).
+static void gst_inject_d3d11_device_context(GstElement* target) {
+    if (!s_injected_d3d11_device || !target)
+        return;
+    GstD3D11Device* gst_dev = gst_d3d11_device_new_wrapped(s_injected_d3d11_device);
+    if (!gst_dev)
+        return;
+    GstContext* ctx = gst_d3d11_context_new(gst_dev);
+    gst_element_set_context(target, ctx);
+    gst_context_unref(ctx);
+    gst_object_unref(gst_dev);
+}
+
+// Synchronous bus handler: d3d11 elements post NEED_CONTEXT and then immediately
+// create their own device if the app does not answer in the SAME thread, so an
+// async bus poll is too late — inject here, synchronously (VA path parity).
+static GstBusSyncReply gst_d3d11_sync_bus_handler(GstBus* /*bus*/,
+                                                  GstMessage* msg,
+                                                  gpointer /*user_data*/) {
+    if (GST_MESSAGE_TYPE(msg) == GST_MESSAGE_NEED_CONTEXT) {
+        const gchar* ctype = nullptr;
+        gst_message_parse_context_type(msg, &ctype);
+        if (ctype && std::strcmp(ctype, GST_D3D11_DEVICE_HANDLE_CONTEXT_TYPE) == 0)
+            gst_inject_d3d11_device_context(GST_ELEMENT(GST_MESSAGE_SRC(msg)));
+    }
+    return GST_BUS_PASS;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Internal: read one NV12 frame as a D3D11 texture (GPU surface-sharing path).
+//
+// The GstBuffer stays in D3D11 memory — no download to system RAM. The
+// ID3D11Texture2D and its subresource (array slice) index are extracted and the
+// owning GstSample is transferred to a heap-owned per-frame tensor, so distinct
+// in-flight frames keep distinct, valid textures until imp_tensor_release().
+//////////////////////////////////////////////////////////////////////////////
+
+static bool read_frame_d3d11_surface(imp_branch_info_t& branch,
+                                     imp_tensor_s& out,
+                                     double& total_ms, double& pull_ms) {
+    auto t0 = chrono::high_resolution_clock::now();
+    GstSample* sample = gst_app_sink_try_pull_sample(GST_APP_SINK(branch.appsink), GST_SECOND);
+    auto t1 = chrono::high_resolution_clock::now();
+    if (!sample) return false;
+    pull_ms += chrono::duration<double, std::milli>(t1 - t0).count();
+
+    GstBuffer* buffer = gst_sample_get_buffer(sample);
+    GstMemory* mem = buffer ? gst_buffer_peek_memory(buffer, 0) : nullptr;
+    if (!mem || !gst_is_d3d11_memory(mem)) {
+        gst_sample_unref(sample);
+        return false;
+    }
+
+    GstD3D11Memory* dmem = reinterpret_cast<GstD3D11Memory*>(mem);
+    ID3D11Resource* res = gst_d3d11_memory_get_resource_handle(dmem);
+    guint subresource = gst_d3d11_memory_get_subresource_index(dmem);
+    ID3D11Device* dev = dmem->device ? gst_d3d11_device_get_device_handle(dmem->device) : nullptr;
+    ID3D11Texture2D* sourceTexture = static_cast<ID3D11Texture2D*>(res);
+    ID3D11Texture2D* importTexture = nullptr;
+    if (!sourceTexture || !dev || subresource != 0) {
+        gst_sample_unref(sample);
+        return false;
+    }
+
+    D3D11_TEXTURE2D_DESC desc{};
+    sourceTexture->GetDesc(&desc);
+    desc.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
+    desc.MiscFlags |= D3D11_RESOURCE_MISC_SHARED;
+    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.CPUAccessFlags = 0;
+    gst_d3d11_device_lock(dmem->device);
+    const HRESULT createResult = dev->CreateTexture2D(&desc, nullptr, &importTexture);
+    if (SUCCEEDED(createResult)) {
+        ID3D11DeviceContext* deviceContext = gst_d3d11_device_get_device_context_handle(dmem->device);
+        deviceContext->CopyResource(importTexture, sourceTexture);
+    }
+    gst_d3d11_device_unlock(dmem->device);
+    if (FAILED(createResult)) {
+        gst_sample_unref(sample);
+        return false;
+    }
+
+    // Transfer sample ownership to the tensor; the texture stays valid until
+    // imp_tensor_release() unrefs it. Each frame owns its own sample.
+    out.owned_gst_sample   = sample;
+    out.y_data             = nullptr;
+    out.uv_data            = nullptr;
+    out.width              = branch.width;
+    out.height             = branch.height;
+    out.valid              = true;
+    out.memory_type        = IMP_MEM_D3D11_SURFACE;
+    out.d3d11_texture      = importTexture;
+    out.d3d11_device       = dev;
+    out.d3d11_subresource  = subresource;
+    out.owned_d3d11_texture = importTexture;
+    out.heap_owned         = true;
+
+    auto t2 = chrono::high_resolution_clock::now();
+    total_ms += chrono::duration<double, std::milli>(t2 - t0).count();
+    return true;
+}
 
 //////////////////////////////////////////////////////////////////////////////
 // Internal: read NV12 from appsink into frame buffer
@@ -310,6 +420,11 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
     // Determine if we need a tee (multiple branches or single branch != source res)
     bool needs_tee = (resolved.size() > 1);
 
+    // Zero-copy D3D11 surface output: keep buffers in memory:D3D11Memory and skip
+    // d3d11download (the explicit CPU fallback). Each appsink then yields an
+    // ID3D11Texture2D imported straight into the model's D3DContext.
+    bool d3d11_surface = (opts && opts->use_d3d11_surface_memory);
+
     // Build GStreamer pipeline string
     std::string pipeline_str;
 
@@ -339,8 +454,12 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
 
     // Source + decode + NV12 convert
     if (is_file) {
+        // gst_parse_launch treats '\' as an escape; use forward slashes so
+        // Windows paths like C:\dir\file.avi survive parsing (filesrc accepts them).
+        std::string gst_path = source->path;
+        std::replace(gst_path.begin(), gst_path.end(), '\\', '/');
         pipeline_str =
-            "filesrc location=\"" + source->path + "\" ! "
+            "filesrc location=\"" + gst_path + "\" ! "
             "decodebin ! "
             "d3d11upload ! "
             "d3d11convert ! "
@@ -373,11 +492,18 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
                     "width=" + std::to_string(rb.width) + ",height=" + std::to_string(rb.height) + " ! ";
             }
 
-            pipeline_str +=
-                "d3d11download ! "
-                "video/x-raw,format=NV12,"
-                "width=" + std::to_string(rb.width) + ",height=" + std::to_string(rb.height) + " ! "
-                "appsink name=" + sink_name + " " + sink_props;
+            if (d3d11_surface) {
+                // Buffers are already D3D11 NV12 from convert/scale above; feed
+                // the texture straight to appsink (no download, no extra caps).
+                pipeline_str +=
+                    "appsink name=" + sink_name + " " + sink_props;
+            } else {
+                pipeline_str +=
+                    "d3d11download ! "
+                    "video/x-raw,format=NV12,"
+                    "width=" + std::to_string(rb.width) + ",height=" + std::to_string(rb.height) + " ! "
+                    "appsink name=" + sink_name + " " + sink_props;
+            }
         }
     } else {
         // Single branch — no tee needed
@@ -390,11 +516,18 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
                 "width=" + std::to_string(rb.width) + ",height=" + std::to_string(rb.height);
         }
 
-        pipeline_str +=
-            " ! d3d11download ! "
-            "video/x-raw,format=NV12,"
-            "width=" + std::to_string(rb.width) + ",height=" + std::to_string(rb.height) + " ! "
-            "appsink name=branch_0 " + sink_props;
+        if (d3d11_surface) {
+            // Buffers are already D3D11 NV12 from convert/scale above; feed the
+            // texture straight to appsink (no download, no extra caps filter).
+            pipeline_str +=
+                " ! appsink name=branch_0 " + sink_props;
+        } else {
+            pipeline_str +=
+                " ! d3d11download ! "
+                "video/x-raw,format=NV12,"
+                "width=" + std::to_string(rb.width) + ",height=" + std::to_string(rb.height) + " ! "
+                "appsink name=branch_0 " + sink_props;
+        }
     }
 
     std::cout << "Pipeline: " << pipeline_str << std::endl;
@@ -406,6 +539,22 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
         if (error) g_error_free(error);
         delete s;
         return IMP_ERROR_DECODE_FAILED;
+    }
+
+    s->use_va_surface_memory = false;
+    s->use_d3d11_surface_memory = d3d11_surface;
+    s->d3d11_device = s_injected_d3d11_device;
+
+    // Inject the server-owned D3D11 device (Option B). A synchronous bus handler
+    // answers NEED_CONTEXT in the element's own thread — an async poll is too
+    // late, elements fall back to creating their own device (VA path parity).
+    if (d3d11_surface && s_injected_d3d11_device) {
+        GstBus* bus = gst_element_get_bus(s->pipeline);
+        if (bus) {
+            gst_bus_set_sync_handler(bus, gst_d3d11_sync_bus_handler, nullptr, nullptr);
+            gst_object_unref(bus);
+        }
+        gst_inject_d3d11_device_context(s->pipeline);
     }
 
     // Retrieve appsinks and populate branch info
@@ -496,6 +645,22 @@ imp_status_t imp_video_read_frame(imp_tensor_t** tensor,
 #ifdef _WIN32
 
     auto& branch = stream->branches[branch_index];
+
+    // Zero-copy D3D11 surface path: heap-allocate a per-frame tensor that owns
+    // its GstSample (texture), so N in-flight frames keep distinct, valid
+    // textures until each is released (VA path parity).
+    if (stream->use_d3d11_surface_memory) {
+        auto* t = new imp_tensor_s();
+        bool ok = read_frame_d3d11_surface(
+            branch, *t, branch.total_decode_ms, branch.total_decode_pull_ms);
+        if (!ok) {
+            delete t;
+            return IMP_ERROR_STREAM_END;
+        }
+        t->device_type = IMP_DEVICE_GPU;
+        if (tensor) *tensor = t;
+        return IMP_OK;
+    }
 
     bool ok = read_nv12_from_appsink(
         branch.appsink, &branch.frame,
@@ -834,10 +999,34 @@ imp_status_t imp_tensor_get_va_surface(imp_tensor_t* tensor,
     return IMP_OK;
 }
 
+imp_status_t imp_tensor_get_d3d11_texture(imp_tensor_t* tensor,
+                                          void**    texture,
+                                          void**    device,
+                                          uint32_t* subresource,
+                                          int*      width,
+                                          int*      height) {
+    if (!tensor || !texture || !device || !subresource || !width || !height)
+        return IMP_ERROR_INVALID_ARGUMENT;
+    if (tensor->memory_type != IMP_MEM_D3D11_SURFACE)
+        return IMP_ERROR_INVALID_ARGUMENT;
+    *texture     = tensor->d3d11_texture;
+    *device      = tensor->d3d11_device;
+    *subresource = tensor->d3d11_subresource;
+    *width       = tensor->width;
+    *height      = tensor->height;
+    return IMP_OK;
+}
+
 void imp_tensor_release(imp_tensor_t* tensor) {
     if (!tensor) return;
     if (!tensor->heap_owned) return;  // reusable cache tensor (Windows) — not owned
-#ifndef _WIN32
+#ifdef _WIN32
+    // Windows links GStreamer directly (no dlopen); unref the owned sample here.
+    if (tensor->owned_gst_sample)
+        gst_sample_unref(static_cast<GstSample*>(tensor->owned_gst_sample));
+    if (tensor->owned_d3d11_texture)
+        static_cast<ID3D11Texture2D*>(tensor->owned_d3d11_texture)->Release();
+#else
     if (tensor->owned_gst_sample || tensor->owned_gst_vframe)
         gst_loader_release_natives(tensor->owned_gst_sample, tensor->owned_gst_vframe);
 #endif
@@ -880,6 +1069,16 @@ void imp_video_set_va_display(void* va_display) {
 bool imp_video_va_available(void) { return false; }
 void* imp_video_va_display(void)  { return nullptr; }
 void imp_video_set_va_display(void* /*va_display*/) {}
+#endif
+
+#ifdef _WIN32
+bool imp_video_d3d11_available(void) { return true; }
+void imp_video_set_d3d11_device(void* d3d11_device) {
+    s_injected_d3d11_device = static_cast<ID3D11Device*>(d3d11_device);
+}
+#else
+bool imp_video_d3d11_available(void) { return false; }
+void imp_video_set_d3d11_device(void* /*d3d11_device*/) {}
 #endif
 
 // ============================================================================
