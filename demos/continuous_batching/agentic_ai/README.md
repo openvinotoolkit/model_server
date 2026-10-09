@@ -64,7 +64,7 @@ Use MCP server, with additional image of Gdańsk old town. VLM model deduces loc
 > **Note**: Image source: [Link](https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg)
 
 ```bat
-python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/continuous_batching/agentic_ai/photo.jpeg --model OpenVINO/Qwen3.5-9B-int4-ov --base-url http://localhost:8000/v1 --mcp-server weather
+python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/4/demos/continuous_batching/agentic_ai/photo.jpeg --model OpenVINO/Qwen3.5-9B-int4-ov --base-url http://localhost:8000/v1 --mcp-server weather
 ```
 
 Exemplary output:
@@ -142,7 +142,7 @@ Use MCP server, with additional image of Gdańsk old town. VLM model deduces loc
 > **Note**: Image source: [Link](https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg)
 
 ```bat
-python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/continuous_batching/agentic_ai/photo.jpeg --model OpenVINO/Qwen3.6-35B-A3B-int4-ov --base-url http://localhost:8000/v1 --mcp-server weather
+python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/4/demos/continuous_batching/agentic_ai/photo.jpeg --model OpenVINO/Qwen3.6-35B-A3B-int4-ov --base-url http://localhost:8000/v1 --mcp-server weather
 ```
 :::
 :::{tab-item} gpt-oss-20b
@@ -204,7 +204,7 @@ Use MCP server, with additional image of Gdańsk old town. VLM model deduces loc
 > **Note**: Image source: [Link](https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg)
 
 ```text
-python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/continuous_batching/agentic_ai/photo.jpeg --model OpenVINO/Qwen3.5-9B-int4-ov --base-url http://localhost:8000/v1 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/4/demos/continuous_batching/agentic_ai/photo.jpeg --model OpenVINO/Qwen3.5-9B-int4-ov --base-url http://localhost:8000/v1 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 
 > **Troubleshooting**: If you get `Given url does not match any allowed domain from allowed_media_domains`, download the image locally and pass a local path to `--image` (for example `/tmp/photo.jpeg`) instead of a remote URL.
@@ -296,7 +296,7 @@ Use MCP server, with additional image of Gdańsk old town. VLM model deduces loc
 > **Note**: Image source: [Link](https://images.pexels.com/photos/20015887/pexels-photo-20015887.jpeg)
 
 ```bash
-python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/1/demos/continuous_batching/agentic_ai/photo.jpeg --model OpenVINO/Qwen3.6-35B-A3B-int4-ov --base-url http://localhost:8000/v1 --mcp-server-url http://localhost:8080/sse --mcp-server weather
+python openai_agent.py --query "What is the current weather in location depicted in the image?" --image https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/4/demos/continuous_batching/agentic_ai/photo.jpeg --model OpenVINO/Qwen3.6-35B-A3B-int4-ov --base-url http://localhost:8000/v1 --mcp-server-url http://localhost:8080/sse --mcp-server weather
 ```
 :::
 :::{tab-item} gpt-oss-20b

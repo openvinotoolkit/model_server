@@ -43,9 +43,7 @@ static InputRequest makeChatRequest(ov::genai::ChatHistory chatHistory) {
 
 // Encodes binary data to base64.
 static std::string toBase64(const std::string& raw) {
-    std::string encoded;
-    absl::Base64Escape(raw, &encoded);
-    return encoded;
+    return absl::Base64Escape(raw);
 }
 
 // Builds a ChatHistory message with a content array containing an input_audio part.

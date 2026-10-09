@@ -1,0 +1,23 @@
+diff --git a/src/core/util/glob.cc b/src/core/util/glob.cc
+index 1111111..2222222 100644
+--- a/src/core/util/glob.cc
++++ b/src/core/util/glob.cc
+@@ -12,6 +12,7 @@
+ // See the License for the specific language governing permissions and
+ // limitations under the License.
+ 
++#include <algorithm>
+ #include "absl/strings/string_view.h"
+ 
+ namespace grpc_core {
+diff --git a/include/grpc/event_engine/memory_request.h b/include/grpc/event_engine/memory_request.h
+--- a/include/grpc/event_engine/memory_request.h
++++ b/include/grpc/event_engine/memory_request.h
+@@ -17,6 +17,7 @@
+ #include <grpc/support/port_platform.h>
+ #include <stddef.h>
+ 
++#include <string>
+ #include "absl/strings/string_view.h"
+ 
+ namespace grpc_event_engine {

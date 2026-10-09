@@ -37,7 +37,7 @@
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mediapipe/framework/calculator_graph.h"
+#include "mediapipe/framework/calculator.pb.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
@@ -51,7 +51,6 @@
 #include "../../text_utils.hpp"
 #include "../../../tokenize/tokenize_parser.hpp"
 #if (PYTHON_DISABLE == 0)
-#include "src/llm/py_jinja_template_processor.hpp"
 #endif
 #include "../../io_processing/generation_config_builder.hpp"
 #include "src/audio/audio_utils.hpp"
@@ -239,6 +238,9 @@ absl::Status OmniModelLegacyServable::prepareCompleteResponse(std::shared_ptr<Ge
         return absl::CancelledError();
     }
 
+    executionContext->apiHandler->setPromptTokensUsage(omniExecutionContext->results.perf_metrics.get_num_input_tokens());
+    executionContext->apiHandler->setCompletionTokensUsage(omniExecutionContext->results.perf_metrics.get_num_generated_tokens());
+    executionContext->apiHandler->setCachedPromptTokensUsage(omniExecutionContext->results.perf_metrics.get_num_prefix_cache_hit_tokens());
     auto deltas = omniExecutionContext->deltaChannel.drain();
     const ov::genai::GenerationFinishReason finishReason =
         omniExecutionContext->results.finish_reasons.empty()
@@ -448,6 +450,7 @@ absl::Status OmniModelLegacyServable::preparePartialResponse(std::shared_ptr<Gen
         ov::genai::GenerationFinishReason finishReason = omniExecutionContext->results.finish_reasons.empty() ? ov::genai::GenerationFinishReason::STOP : omniExecutionContext->results.finish_reasons[0];
         executionContext->apiHandler->setPromptTokensUsage(omniExecutionContext->results.perf_metrics.get_num_input_tokens());
         executionContext->apiHandler->setCompletionTokensUsage(omniExecutionContext->results.perf_metrics.get_num_generated_tokens());
+        executionContext->apiHandler->setCachedPromptTokensUsage(omniExecutionContext->results.perf_metrics.get_num_prefix_cache_hit_tokens());
         if (!deltas.empty()) {
             for (size_t i = 0; i < deltas.size(); ++i) {
                 const bool isLast = (i == deltas.size() - 1);

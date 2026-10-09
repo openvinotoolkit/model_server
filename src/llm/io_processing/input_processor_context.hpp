@@ -21,7 +21,7 @@
 
 #include "chat_template/caps.hpp"
 #include "input_processing_config.hpp"
-#include "../runtime_chat_template.hpp"
+#include "../runtime_chat_template_runtime_loader.hpp"
 
 namespace ovms {
 
@@ -31,7 +31,7 @@ struct InputProcessorContext {
     InputProcessingConfig config;
     ChatTemplateCaps chatTemplateCaps;
     ov::genai::Tokenizer tokenizer;
-    PreparedRuntimeChatTemplate* preparedRuntimeChatTemplate = nullptr;
+    PreparedChatTemplateRuntime* templateProcessor = nullptr;
 };
 
 }  // namespace ovms

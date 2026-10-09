@@ -63,7 +63,6 @@ case $INSTALL_DRIVER_VERSION in \
         rpm -ivh https://repositories.intel.com/gpu/rhel/9.7/pool/i/intel-level-zero-gpu-1.6.33578.77-1146.el9_7.x86_64.rpm ; \
         rpm -ivh https://repositories.intel.com/gpu/rhel/9.7/pool/l/level-zero-1.24.0.0-1146.el9_7.x86_64.rpm ; \
 ;; \
-
         *) \
         echo "ERROR: Unrecognized driver ${INSTALL_DRIVER_VERSION}." ; \
         exit 1 ; \

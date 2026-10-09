@@ -36,6 +36,8 @@ IF "%~1"=="" (
 
 set "bazelStartupCmd=--output_user_root=!BAZEL_SHORT_PATH!"
 set "openvino_dir=!BAZEL_SHORT_PATH!/openvino/runtime/cmake"
+set /p bazelVersion=<"%~dp0.bazelversion"
+set "bazelPath=C:\opt\bazel-%bazelVersion%-windows-x86_64.exe"
 set "OVMS_MEDIA_URL_ALLOW_REDIRECTS=1"
 
 IF "%~3"=="" (
@@ -48,15 +50,13 @@ IF "%~2"=="--with_python" (
     set "bazelBuildArgs=--config=win_mp_on_py_on --action_env OpenVINO_DIR=%openvino_dir%"
     set "testTargets=//src:ovms_test //src:python_runtime_library_test"
     set "runPythonRuntimeTest=%cd%\bazel-bin\src\python_runtime_library_test.exe --gtest_filter=!gtestFilter!"
-    set "runNoLibpythonSmokeTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures --test_output=errors //src:ovms_no_libpython_smoke_test"
 ) ELSE (
     set "bazelBuildArgs=--config=win_mp_on_py_off --action_env OpenVINO_DIR=%openvino_dir%"
     set "testTargets=//src:ovms_test"
     set "runPythonRuntimeTest="
-    set "runNoLibpythonSmokeTest="
 )
 
-set "buildTestCommand=bazel %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %testTargets%"
+set "buildTestCommand=%bazelPath% %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %testTargets%"
 set "changeConfigsCmd=python windows_change_test_configs.py"
 set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=!gtestFilter! > win_full_test.log 2>&1"
 
@@ -152,10 +152,6 @@ IF "%~2"=="--with_python" (
     echo Running: %runPythonRuntimeTest%
     %runPythonRuntimeTest% >> win_full_test.log 2>&1
     set "pythonTestExitCode=!errorlevel!"
-
-    echo Running: %runNoLibpythonSmokeTest%
-    %runNoLibpythonSmokeTest% >> win_full_test.log 2>&1
-    set "smokeTestExitCode=!errorlevel!"
 )
 
 :: Cut tests log to results

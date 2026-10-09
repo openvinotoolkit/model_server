@@ -593,7 +593,7 @@ protected:
 
     std::string getVersionString() {
         std::stringstream expected;
-        expected << "# File created with: " << PROJECT_NAME << " " << PROJECT_VERSION << std::endl;
+        expected << "# File created with: " << PROJECT_NAME << " " << ovms::getProjectVersion() << std::endl;
         return expected.str();
     }
 };
@@ -958,6 +958,17 @@ TEST_F(GraphCreationTest, positiveWithParsersAndToolGuidedGeneration) {
     hfSettings.graphSettings = std::move(graphSettings);
 
     assertCreatedGraphEquals(hfSettings, expectedGraphContentsWithResponseParser);
+}
+
+TEST_F(GraphCreationTest, chatTemplateEngineIsEmittedOnlyWhenExplicit) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
+    hfSettings.graphSettings = ovms::TextGenGraphSettingsImpl{};
+
+    EXPECT_EQ(createGraphAndReadContents(hfSettings).find("chat_template_engine:"), std::string::npos);
+
+    std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings).chatTemplateEngine = "MINJA";
+    EXPECT_NE(createGraphAndReadContents(hfSettings).find("chat_template_engine: MINJA"), std::string::npos);
 }
 
 TEST_F(GraphCreationTest, positivePluginConfigOne) {
