@@ -1,6 +1,7 @@
 # ByteTrack Demo Setup
 
 > **Preview feature**
+
 End-to-end demo: video source (webcam / file) → OpenVINO Model Server (YOLOX Tiny + ByteTrack) → output (screen / file).
 
 ---
