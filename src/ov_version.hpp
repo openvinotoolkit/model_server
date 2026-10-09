@@ -13,14 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "version.hpp"
+#ifndef SRC_OV_VERSION_HPP_
+#define SRC_OV_VERSION_HPP_
 
 namespace ovms {
-const char* getProjectVersion() {
-    return "REPLACE_PROJECT_VERSION";
-}
-
-const char* getBazelBuildFlags() {
-    return "REPLACE_BAZEL_BUILD_FLAGS";
-}
+const char* getOpenVINOVersion();
+const char* getGenAIVersion();
 }  // namespace ovms
+#endif  // SRC_OV_VERSION_HPP_

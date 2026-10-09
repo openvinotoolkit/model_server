@@ -13,14 +13,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "version.hpp"
+// kalman_matrices.h
+#pragma once
 
-namespace ovms {
-const char* getProjectVersion() {
-    return "REPLACE_PROJECT_VERSION";
+#include <Eigen/Dense>
+
+namespace mediapipe {
+namespace bytetrack {
+
+static constexpr float kStdWeightPos = 1.0f / 20.0f;
+static constexpr float kStdWeightVel = 1.0f / 160.0f;
+
+inline Eigen::Matrix<float, 8, 8> MakeMotionMatrix() {
+    Eigen::Matrix<float, 8, 8> F = Eigen::Matrix<float, 8, 8>::Identity();
+    F.block<4, 4>(0, 4) = Eigen::Matrix4f::Identity();
+    return F;
 }
 
-const char* getBazelBuildFlags() {
-    return "REPLACE_BAZEL_BUILD_FLAGS";
+inline Eigen::Matrix<float, 4, 8> MakeUpdateMatrix() {
+    Eigen::Matrix<float, 4, 8> H = Eigen::Matrix<float, 4, 8>::Zero();
+    H.block<4, 4>(0, 0) = Eigen::Matrix4f::Identity();
+    return H;
 }
-}  // namespace ovms
+
+}  // namespace bytetrack
+}  // namespace mediapipe
