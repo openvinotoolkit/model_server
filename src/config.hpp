@@ -78,7 +78,7 @@ public:
          * @param argv 
          * @return Config& 
          */
-    Config& parse(int argc, char** argv);
+    Config& parse(int argc, const char* const* argv);
     bool parse(ServerSettingsImpl*, ModelsSettingsImpl*);
 
     /**

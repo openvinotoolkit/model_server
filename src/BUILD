@@ -62,7 +62,6 @@ cc_shared_library(
         "@com_github_libevent_libevent//:__subpackages__",
         "@com_google_protobuf//:__subpackages__",
         "@com_github_tencent_rapidjson//:__subpackages__",
-        "@org_tensorflow//:__subpackages__",
         "@com_google_absl//:__subpackages__",
         "@gif//:__subpackages__",
         "@libjpeg_turbo//:__subpackages__",
@@ -73,7 +72,7 @@ cc_shared_library(
         "@snappy//:__subpackages__",
         "@double_conversion//:__subpackages__",
         "@nsync//:__subpackages__",
-        "@eigen_archive//:__subpackages__",
+        "@eigen//:__subpackages__",
         "//third_party:openvino//:__subpackages__",
         "@com_github_jupp0r_prometheus_cpp//:__subpackages__",
         "@//:__subpackages__",
@@ -135,14 +134,7 @@ ovms_cc_library(
             "@mediapipe//mediapipe/framework/formats:image_frame",
             "@mediapipe//mediapipe/framework/formats:image_frame_opencv",
             "@mediapipe//mediapipe/framework/formats:tensor",
-            "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_to_render_data",
-            "@mediapipe//mediapipe/graphs/iris_tracking:iris_tracking_cpu_deps",
             "@mediapipe//mediapipe/calculators/tensor:image_to_tensor_calculator",
-            "@mediapipe//mediapipe/modules/holistic_landmark:holistic_landmark_cpu",
-            "@mediapipe//mediapipe/calculators/geti/inference:inference_calculators",
-            "@mediapipe//mediapipe/calculators/geti/utils:utils",
-            "@mediapipe//mediapipe/calculators/geti/utils:emptylabel_calculators",
-            "@mediapipe//mediapipe/calculators/geti/serialization:calculators",
             "opencv_dep",
         ],
         "//:disable_mediapipe": [],
@@ -170,7 +162,6 @@ cc_binary(
     linkshared = 1,
     visibility = ["//visibility:public"],
 )
-
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
 
 mediapipe_proto_library(
@@ -550,6 +541,10 @@ ovms_cc_library(
         "anonymous_input_name",
         "inference_request_common",
     ],
+    additional_copts = select({
+        "//conditions:default": [],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
+    }),
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
@@ -622,7 +617,6 @@ ovms_cc_library(
         "kfs_python_tensor_bridge",
         "//src/mediapipe_internal:mediapipegraphexecutor_h",
         "predict_request_validation_utils",
-        "tensorflow_type_utils",
         "libovms_kfs_utils",
         "libovms_kfs_grpc_inference_service_h",
         "libovms_single_version_servable_definition",
@@ -635,34 +629,7 @@ ovms_cc_library(
     ],
     additional_copts = select({
         "//conditions:default": ["-fvisibility=default"],
-        "//src:windows": [],
-    }),
-    visibility = ["//visibility:public",],
-    alwayslink = 1,
-)
-ovms_cc_library(
-    name = "kfs_graph_executor_impl_runtime",
-    srcs = [
-        "kfs_frontend/kfs_graph_executor_impl.cpp",
-        "kfs_frontend/kfs_graph_executor_impl.hpp",
-    ],
-    deps = [
-        "kfs_python_tensor_bridge",
-        "//src/mediapipe_internal:mediapipegraphexecutor_h",
-        "predict_request_validation_utils",
-        "libovms_kfs_utils",
-        "libovms_kfs_grpc_inference_service_h",
-        "libovms_single_version_servable_definition",
-        "libovms_time_utils",
-        "//src/kfserving_api:kfserving_api_cpp",
-        "opencv_dep",
-        "@mediapipe//mediapipe/framework/formats:image_frame",
-        "@mediapipe//mediapipe/framework/formats:image_frame_opencv",
-        "@mediapipe//mediapipe/framework/formats:tensor",
-    ],
-    additional_copts = select({
-        "//conditions:default": ["-fvisibility=default", "-DOVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME=1"],
-        "//src:windows": ["-DOVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME=1"],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
     }),
     visibility = ["//visibility:public",],
     alwayslink = 1,
@@ -716,7 +683,6 @@ ovms_cc_library(
     srcs = ["mediapipe_runtime_api.cpp"],
     deps = [
         "cpp_headers",
-        "kfs_python_tensor_bridge_hdrs",
         "mediapipe_executor_interface",
         "libovms_execution_context",
         "libovmsstatus",
@@ -750,18 +716,13 @@ ovms_cc_library(
         "libovmsstatus",
         "libovmstimer",
     ],
+    additional_copts = select({
+        "//conditions:default": [],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
+    }),
     visibility = ["//visibility:public"],
 )
 
-ovms_cc_library(
-    name = "libovms_mediapipe_runtime_tensorflow_owner",
-    deps = [
-        "@org_tensorflow//tensorflow/core:framework",
-        "@org_tensorflow//tensorflow/lite/c:c_api",
-    ],
-    visibility = ["//visibility:public"],
-    alwayslink = 1,
-)
 ovms_cc_library(
     name = "customloaders",
     hdrs = [
@@ -954,7 +915,10 @@ ovms_cc_library(
                     ],
                 }),
     visibility = ["//visibility:public",],
-    additional_copts = COPTS_OV_TRACE,
+    additional_copts = COPTS_OV_TRACE + select({
+        "//conditions:default": [],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
+    }),
     additional_linkopts = select({
                 "//conditions:default": ["-lOpenCL"], # TODO make as direct dependency
                 "//src:windows" : ["/DEFAULTLIB:Rpcrt4.lib"],}),
@@ -1174,19 +1138,6 @@ cc_import(
 )
 
 ovms_cc_library(
-
-    name = "tensorflow_type_utils",
-    hdrs = ["tensorflow_type_utils.hpp"],
-    srcs = ["tensorflow_type_utils.cpp"],
-    deps = [
-        "@org_tensorflow//tensorflow/core:framework",
-        "libovmsprecision",
-        "libovmsstatus",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-ovms_cc_library(
     name = "libovmsschema",
     hdrs = ["schema.hpp",],
     srcs = ["schema.cpp",],
@@ -1389,6 +1340,10 @@ ovms_cc_library(
             "extractchoice",
             "requesttensorextractor",
     ],
+    additional_copts = select({
+        "//conditions:default": [],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
+    }),
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
@@ -1412,6 +1367,10 @@ ovms_cc_library(
             "kfs_serialization",
             "tensor_conversion_after",
     ],
+    additional_copts = select({
+        "//conditions:default": [],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
+    }),
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )
@@ -1430,6 +1389,10 @@ ovms_cc_library(
             "libovms_config",
             "cpp_headers",
 ],
+    additional_copts = select({
+        "//conditions:default": [],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
+    }),
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
@@ -1446,6 +1409,10 @@ ovms_cc_library(
             "libovms_tensorinfo",
             "tensor_conversion",
     ],
+    additional_copts = select({
+        "//conditions:default": [],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
+    }),
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
@@ -1464,6 +1431,10 @@ ovms_cc_library(
             "requesttensorextractor",
             "tensor_conversion",
     ],
+    additional_copts = select({
+        "//conditions:default": [],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
+    }),
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
@@ -1976,14 +1947,18 @@ cc_binary(
     deps = [
         "//src:ovms_lib",
         "//src/filesystem:libovmsfilesystemfactory",
-        "//src:libovms_mediapipe_runtime_tensorflow_owner",
-        # NOTE: the MediaPipe runtime shared object is NOT linked into the main binary.
-        # Runtime loading keeps registration ownership outside of ovms and avoids
-        # duplicate symbol/registration conflicts.
+        "//src/mediapipe_internal:libovms_mediapipe_runtime_owner_no_python_calculators",
+        "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
+        ":libovms_ov_version",
+        "//src/llm:llmcalculator_proto_owner",
     ]
     + select({
             "//conditions:default": [],
             "//src:windows" : ["@winreg//:winreg"],
+        })
+    + select({
+            "//:not_disable_python": ["//src/python:python_calculators_host"],
+            "//:disable_python": [],
         })
      + select({
             "//conditions:default": [],
@@ -2003,32 +1978,18 @@ cc_binary(
             "//src/python:libpython_calculators",
         ],
         "//:disable_python": [],
+    }) + select({
+        "//:not_disable_mediapipe": [
+            "//src/lib:ovms_llm_calculators",
+        ],
+        "//:disable_mediapipe": [],
     }),
     # linkstatic = False,  # Use for dynamic linking when necessary
-)
-
-sh_test(
-    name = "ovms_no_libpython_smoke_test",
-    srcs = ["test/ovms_no_libpython_smoke.sh"],
-    data = [":ovms"],
-)
-
-sh_test(
-    name = "ovms_no_duplicate_calculator_extensions_smoke_test",
-    srcs = ["test/ovms_no_duplicate_calculator_extensions_smoke.sh"],
-    data = [
-        ":ovms",
-        ":ovms_mediapipe_runtime_shared",
-    ],
 )
 
 cc_test(
     name = "ovms_test",
     linkstatic = 1,
-    env = {
-        "OVMS_TEST_PYTHON_CALCULATORS_INPROCESS": "1",
-        "OVMS_TEST_MEDIAPIPE_RUNTIME_INPROCESS": "1",
-    },
     srcs = [
         "test/c_api_tests.cpp",
         "test/capi_predict_validation_test.cpp",
@@ -2176,7 +2137,6 @@ cc_test(
         "test/mediapipe/config_mediapipe_graph_with_side_packets.json",
         "test/mediapipe/config_mediapipe_two_inputs.json",
         "test/mediapipe/config_mediapipe_multipart_mock.json",
-        "test/mediapipe/config_mp_tf_passthrough.json",
         "test/mediapipe/config_standard_add.json",
         "test/mediapipe/config_standard_dummy.json",
         "test/mediapipe/graph_two_inputs_model.pbtxt",
@@ -2184,11 +2144,9 @@ cc_test(
         "test/mediapipe/graph_gpt.pbtxt",
         "test/mediapipe/graphadd.pbtxt",
         "test/mediapipe/graphaddadapterfull.pbtxt",
-        "test/mediapipe/graphdummy_tf.pbtxt",
         "test/mediapipe/graphdummy.pbtxt",
         "test/mediapipe/graphdummyadapterfull.pbtxt",
         "test/mediapipe/graphdummynonexistentcalculator.pbtxt",
-        "test/mediapipe/graphtfpassthrough.pbtxt",
         "test/mediapipe/graphscalar.pbtxt",
         "test/mediapipe/graphWithParams.pbtxt",
         "test/mediapipe/graphdummyadapterfull_dummyinputnames.pbtxt",
@@ -2207,7 +2165,6 @@ cc_test(
         "test/mediapipe/relative_paths/config_relative_add_subconfig_negative.json",
         "test/mediapipe/relative_paths/config_relative_add_subconfig.json",
         "test/mediapipe/relative_paths/config_relative_dummy.json",
-        "test/mediapipe/relative_paths/config_tflite_passthrough.json",
         "test/mediapipe/relative_paths/config_relative_dummy_subconfig_base_path.json",
         "test/mediapipe/relative_paths/graph1/dummy1/1/dummy.xml",
         "test/mediapipe/relative_paths/graph1/graph.pbtxt",
@@ -2242,7 +2199,7 @@ cc_test(
         "test/scalar/1/saved_model.bin",
     ] + glob(["test/models_config_json/**"]) + select({
         "//:not_disable_mediapipe": [
-            "//src:ovms_mediapipe_runtime_shared",
+            "//src/lib:ovms_llm_calculators",
         ],
         "//:disable_mediapipe": [],
     }) + select({
@@ -2316,14 +2273,14 @@ cc_test(
                 ":test_llm_input_processing_integration_tests",
                 "//src/test/mediapipe/calculators:mediapipe_test_calculators",
                 "//src/test/mediapipe/calculators:dependency_free_http_test_calculators",
-                "@mediapipe//mediapipe/calculators/ovms:ovms_calculator",
+                "//src/mediapipe_calculators/ovms:ovms_calculator",
                 "@mediapipe//mediapipe/framework:calculator_runner",
                 ":text2image_test",
                 "//src/rerank:rerank_api_handler",
                 ":embeddings_handler_tests",
                 ":test_idle_mediapipe_test",
                 "//src/mediapipe_internal:mediapipe_utils",
-                "tensorflow_type_utils",
+                "//src/llm:llmcalculator_proto_owner",
             ],
             "//:disable_mediapipe": [
                 "serialization_common",
@@ -2336,6 +2293,8 @@ cc_test(
                 # tests and embedded execution paths without pulling the full
                 # runtime into the main ovms link graph.
                 "//src/python:python_runtime_entry_static",
+                "//src/python:python_calculators_host",
+                "//src/python:python_calculators_runtime_objects",
             ],
             "//:disable_python": [],
         }) + select({
@@ -2344,7 +2303,7 @@ cc_test(
                 "//src/audio/speech_to_text:s2t_calculator",
                 "//src/audio/text_to_speech:t2s_calculator",
                 "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
-                "//src/llm:llmcalculator",
+                "//src/llm:llmcalculator_registration",
                 "//src/embeddings:embeddingscalculator_ov",
                 "//src/rerank:rerankcalculator_ov",
                 "//src/image_gen:image_gen_calculator",
@@ -2357,7 +2316,10 @@ cc_test(
             ],
             "//:disable_mediapipe": [],
         }),
-    copts = COPTS_TESTS,
+    copts = COPTS_TESTS + select({
+        "//conditions:default": ["-Wno-deprecated-declarations"],
+        "//src:windows": [],
+    }),
     local_defines = COMMON_LOCAL_DEFINES,
     linkopts = LINKOPTS_ADJUSTED + select({
         "//conditions:default": [
@@ -3081,7 +3043,6 @@ cc_library(
         ":test_wav_utils",
         "//src/llm:image_utils",
         "//src/llm:io_processing_input_processors",
-        "//src/llm:runtime_chat_template_loader",
     ],
     copts = COPTS_TESTS,
     local_defines = COMMON_LOCAL_DEFINES,

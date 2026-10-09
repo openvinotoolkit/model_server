@@ -13,49 +13,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-//
-// KFS OVMS_PY_TENSOR bridge — compiled into libpython_calculators.so.
-//
-// Why this file lives in libpython_calculators.so (not libovmspython.so):
-//   Both PythonExecutorCalculator and this bridge must use the same RTTI for
-//   PyObjectWrapper<py::object> so that mediapipe's packet.Get<T>() succeeds
-//   across both the input (KFS→packet) and output (packet→KFS) paths.  Both
-//   DSOs are built without -fvisibility=hidden, so the dynamic linker
-//   deduplicates the typeinfo and typeid comparisons work correctly.
-
-#include "python_backend.hpp"
-#include "utils.hpp"
-#include "src/kfs_python_tensor_bridge.hpp"
-#include "../logging.hpp"
-#include "src/status.hpp"
+#include <algorithm>
+#include <cstring>
+#include <string>
+#include <vector>
 
 #pragma warning(push)
-#pragma warning(disable : 6326 28182 6011 28020)
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
-#pragma warning(pop)
-
+#pragma warning(disable : 4005 6001 6385 6386 6326 6011 6246 4456)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/packet.h"
 #include "mediapipe/framework/timestamp.h"
 #pragma GCC diagnostic pop
+#pragma warning(pop)
 
-#include <algorithm>
-#include <cstring>
-#include <sstream>
-#include <stdexcept>
-#include <vector>
+#include "src/kfs_python_tensor_bridge.hpp"
+#include "src/logging.hpp"
+#include "src/status.hpp"
+#include "py_object_handle.hpp"
+#include "python_calculators_plugin_api.hpp"
+#include "python_calculators_plugin_loader.hpp"
 
-namespace py = pybind11;
-
+namespace ovms {
 namespace {
 
-// ---------------------------------------------------------------------------
-// Input path: KFS raw bytes → PyObjectWrapper<py::object> packet → graph
-// ---------------------------------------------------------------------------
-static int kfsBridgeDeserializeAndPush(
+int kfsBridgeDeserializeAndPush(
     const char* streamName,
     const void* rawData,
     size_t rawSize,
@@ -64,53 +47,28 @@ static int kfsBridgeDeserializeAndPush(
     const char* datatype,
     void* graphPtr,
     int64_t timestampMicros) {
-    try {
-        py::gil_scoped_acquire acquire;
-        py::module_ pyovms = py::module_::import("pyovms");
-        py::object TensorClass = pyovms.attr("Tensor");
-
-        std::vector<py::ssize_t> pyShape(shape, shape + shapeLen);
-        // copy=true so the packet owns its data independently of the request buffer
-        py::object tensor = TensorClass.attr("_create_from_data")(
-            streamName,
-            const_cast<void*>(rawData),
-            pyShape,
-            datatype,
-            py::ssize_t(rawSize),
-            true /* copy */);
-
-        auto* wrapper = new ovms::PyObjectWrapper<py::object>(tensor);
-        auto packet = ::mediapipe::packet_internal::Create(
-            new ::mediapipe::packet_internal::Holder<
-                ovms::PyObjectWrapper<py::object>>(wrapper))
-                          .At(mediapipe::Timestamp(timestampMicros));
-
-        auto* graph = static_cast<mediapipe::CalculatorGraph*>(graphPtr);
-        auto absStatus = graph->AddPacketToInputStream(streamName, packet);
-        if (!absStatus.ok()) {
-            SPDLOG_ERROR(
-                "KFS Python tensor bridge: AddPacketToInputStream failed for stream: {} datatype: {} raw_size: {} timestamp_us: {} status: {}",
-                streamName,
-                datatype,
-                rawSize,
-                timestampMicros,
-                absStatus.ToString());
-            return -static_cast<int>(ovms::StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
-        }
-        return 0;
-    } catch (const pybind11::error_already_set& e) {
-        SPDLOG_DEBUG("KFS Python tensor bridge deserialize: Python error: {}", e.what());
-        return -static_cast<int>(ovms::StatusCode::UNKNOWN_ERROR);
-    } catch (const std::exception& e) {
-        SPDLOG_DEBUG("KFS Python tensor bridge deserialize: error: {}", e.what());
-        return -static_cast<int>(ovms::StatusCode::UNKNOWN_ERROR);
+    const auto* api = getPythonCalculatorsPluginApi();
+    if (api == nullptr) {
+        return -static_cast<int>(StatusCode::NOT_IMPLEMENTED);
     }
+    void* tensor = nullptr;
+    std::string message;
+    if (api->createTensor(streamName, rawData, std::vector<int64_t>(shape, shape + shapeLen), datatype, rawSize, tensor, message) != PythonPluginResult::OK) {
+        SPDLOG_DEBUG("KFS Python tensor bridge deserialize error: {}", message);
+        return -static_cast<int>(StatusCode::UNKNOWN_ERROR);
+    }
+    auto packet = ::mediapipe::Adopt(new PyObjectHandle(tensor, api->releaseObject)).At(::mediapipe::Timestamp(timestampMicros));
+    auto absStatus = static_cast<::mediapipe::CalculatorGraph*>(graphPtr)->AddPacketToInputStream(streamName, std::move(packet));
+    if (!absStatus.ok()) {
+        SPDLOG_ERROR(
+            "KFS Python tensor bridge: AddPacketToInputStream failed for stream: {} datatype: {} raw_size: {} timestamp_us: {} status: {}",
+            streamName, datatype, rawSize, timestampMicros, absStatus.ToString());
+        return -static_cast<int>(StatusCode::MEDIAPIPE_GRAPH_ADD_PACKET_INPUT_STREAM);
+    }
+    return 0;
 }
 
-// ---------------------------------------------------------------------------
-// Output path: mediapipe packet → metadata + data pointer for KFS response
-// ---------------------------------------------------------------------------
-static int kfsBridgeExtractPacketData(
+int kfsBridgeExtractPacketData(
     const void* packetPtr,
     char* datatypeBuf,
     size_t datatypeMax,
@@ -119,60 +77,40 @@ static int kfsBridgeExtractPacketData(
     size_t* shapeLenOut,
     const void** dataPtrOut,
     size_t* dataSizeOut) {
-    try {
-        const auto* packet = static_cast<const mediapipe::Packet*>(packetPtr);
-        const auto& wrapper = packet->Get<ovms::PyObjectWrapper<py::object>>();
-        const auto datatype = wrapper.getProperty<std::string>("datatype");
-        const auto userShape = wrapper.getProperty<std::vector<py::ssize_t>>("shape");
-        const auto ptr = wrapper.getProperty<void*>("ptr");
-        const auto size = wrapper.getProperty<size_t>("size");
-
-        if (datatypeBuf == nullptr || datatypeMax == 0 || shapeBuf == nullptr || shapeLenOut == nullptr || dataPtrOut == nullptr || dataSizeOut == nullptr) {
-            return -static_cast<int>(ovms::StatusCode::INTERNAL_ERROR);
-        }
-        if (shapeMax == 0) {
-            return -static_cast<int>(ovms::StatusCode::INTERNAL_ERROR);
-        }
-
-        std::strncpy(datatypeBuf, datatype.c_str(), datatypeMax - 1);
-        datatypeBuf[datatypeMax - 1] = '\0';
-        *shapeLenOut = std::min(userShape.size(), shapeMax);
-        for (size_t i = 0; i < *shapeLenOut; i++) {
-            shapeBuf[i] = static_cast<int64_t>(userShape[i]);
-        }
-
-        *dataPtrOut = ptr;
-        *dataSizeOut = size;
-        return 0;
-    } catch (const pybind11::error_already_set& e) {
-        SPDLOG_DEBUG("KFS Python tensor bridge serialize: Python error: {}", e.what());
-        return -static_cast<int>(ovms::StatusCode::UNKNOWN_ERROR);
-    } catch (const std::exception& e) {
-        SPDLOG_DEBUG("KFS Python tensor bridge serialize: error: {}", e.what());
-        return -static_cast<int>(ovms::StatusCode::UNKNOWN_ERROR);
+    const auto* api = getPythonCalculatorsPluginApi();
+    if (api == nullptr) {
+        return -static_cast<int>(StatusCode::NOT_IMPLEMENTED);
     }
+    if (datatypeBuf == nullptr || datatypeMax == 0 || shapeBuf == nullptr || shapeMax == 0 || shapeLenOut == nullptr || dataPtrOut == nullptr || dataSizeOut == nullptr) {
+        return -static_cast<int>(StatusCode::INTERNAL_ERROR);
+    }
+    const auto* packet = static_cast<const ::mediapipe::Packet*>(packetPtr);
+    if (!packet->ValidateAsType<PyObjectHandle>().ok()) {
+        return -static_cast<int>(StatusCode::INTERNAL_ERROR);
+    }
+    std::string datatype;
+    std::vector<int64_t> shape;
+    std::string message;
+    if (api->getTensorInfo(packet->Get<PyObjectHandle>().get(), datatype, shape, *dataPtrOut, *dataSizeOut, message) != PythonPluginResult::OK) {
+        SPDLOG_DEBUG("KFS Python tensor bridge serialize error: {}", message);
+        return -static_cast<int>(StatusCode::UNKNOWN_ERROR);
+    }
+    std::strncpy(datatypeBuf, datatype.c_str(), datatypeMax - 1);
+    datatypeBuf[datatypeMax - 1] = '\0';
+    *shapeLenOut = std::min(shape.size(), shapeMax);
+    std::copy_n(shape.begin(), *shapeLenOut, shapeBuf);
+    return 0;
 }
 
-// Static vtable — always valid for the lifetime of libpython_calculators.so
-static const ovms::KfsPyTensorBridgeVTable g_kfsBridgeVTable{
-    ovms::KFS_PY_TENSOR_BRIDGE_ABI_VERSION,
+const KfsPyTensorBridgeVTable kfsPyTensorBridgeVTable{
+    KFS_PY_TENSOR_BRIDGE_ABI_VERSION,
     kfsBridgeDeserializeAndPush,
     kfsBridgeExtractPacketData,
 };
 
+bool kfsPyTensorBridgeInstalled = []() {
+    return setKfsPyTensorBridgeVTable(&kfsPyTensorBridgeVTable);
+}();
+
 }  // namespace
-
-#if defined(_WIN32)
-#define KFS_BRIDGE_EXPORT __declspec(dllexport)
-#else
-#define KFS_BRIDGE_EXPORT __attribute__((visibility("default")))
-#endif
-
-// Exported symbol loaded by python_calculators_plugin_loader via dlsym.
-// Returns the vtable pointer if libpython_calculators.so is loaded and Python
-// calculators are registered; nullptr is never returned (the vtable is always
-// available once the DSO is loaded).
-extern "C" KFS_BRIDGE_EXPORT const ovms::KfsPyTensorBridgeVTable*
-OVMS_getKfsPyTensorBridgeVTable() {
-    return &g_kfsBridgeVTable;
-}
+}  // namespace ovms

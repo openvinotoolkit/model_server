@@ -30,7 +30,6 @@
 #include "../../../tokenize/tokenize_parser.hpp"
 #include "../../text_utils.hpp"
 #if (PYTHON_DISABLE == 0)
-#include "src/llm/py_jinja_template_processor.hpp"
 #endif
 
 namespace ovms {

@@ -14,28 +14,16 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
-#include <memory>
-#include <sstream>
+#include <map>
 #include <string>
 
-#pragma warning(push)
-#pragma warning(disable : 6326 28182 6011 28020)
-// Python execution for template processing
-#include <pybind11/embed.h>  // everything needed for embedding
-#include <pybind11/stl.h>
-#pragma warning(pop)
+namespace ov {
+class Tensor;
+}
 
-#include "src/python/utils.hpp"
+namespace mediapipe {
 
-namespace ovms {
+using InferenceInput = std::map<std::string, ov::Tensor>;
+void dumpOvTensorInput(const InferenceInput& input, const std::string& dumpDirectoryName);
 
-class PyJinjaTemplateProcessor {
-public:
-    std::string bosToken = "";
-    std::string eosToken = "";
-    std::unique_ptr<PyObjectWrapper<py::object>> chatTemplate = nullptr;
-    std::unique_ptr<PyObjectWrapper<py::object>> toolTemplate = nullptr;
-
-    static bool applyChatTemplate(PyJinjaTemplateProcessor& templateProcessor, const std::string& requestBody, std::string& output);
-};
-}  // namespace ovms
+}  // namespace mediapipe

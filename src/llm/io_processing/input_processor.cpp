@@ -66,8 +66,7 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
 
         processors.emplace_back(std::make_unique<ChatTemplateProcessor>(
             context.tokenizer,
-            context.config.useMinja,
-            context.preparedRuntimeChatTemplate));
+            context.templateProcessor));
     } else {
         processors.emplace_back(std::make_unique<RawPromptExtractor>());
     }
