@@ -593,7 +593,7 @@ protected:
 
     std::string getVersionString() {
         std::stringstream expected;
-        expected << "# File created with: " << PROJECT_NAME << " " << PROJECT_VERSION << std::endl;
+        expected << "# File created with: " << PROJECT_NAME << " " << ovms::getProjectVersion() << std::endl;
         return expected.str();
     }
 };

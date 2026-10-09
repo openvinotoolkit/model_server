@@ -319,8 +319,8 @@ LABEL description="OpenVINO Model Server"
 ARG minitrace_flags
 ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 # Set OVMS version strings
-RUN bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.hpp" && \
-    bash -c "sed -i -e 's|REPLACE_BAZEL_BUILD_FLAGS|${debug_bazel_flags}${minitrace_flags}|g' /ovms/src/version.hpp"
+RUN bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.cpp" && \
+    bash -c "sed -i -e 's|REPLACE_BAZEL_BUILD_FLAGS|${debug_bazel_flags}${minitrace_flags}|g' /ovms/src/version.cpp"
 
 WORKDIR /patchelf
 # hadolint ignore=DL3003

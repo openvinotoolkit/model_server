@@ -55,7 +55,7 @@
 #endif
 namespace ovms {
 
-static const std::string OVMS_VERSION_GRAPH_LINE = std::string("# File created with: ") + PROJECT_NAME + std::string(" ") + PROJECT_VERSION + std::string("\n");
+static const std::string OVMS_VERSION_GRAPH_LINE = std::string("# File created with: ") + PROJECT_NAME + std::string(" ") + getProjectVersion() + std::string("\n");
 static const std::string OVMS_GRAPH_QUEUE_MAX_SIZE_LINE_PREFIX = "# OVMS_GRAPH_QUEUE_MAX_SIZE: ";
 static const std::string OVMS_GRAPH_QUEUE_SIZE_AUTO = "AUTO";
 

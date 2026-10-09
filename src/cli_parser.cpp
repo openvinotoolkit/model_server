@@ -37,6 +37,7 @@
 #include "ovms_exit_codes.hpp"
 #include "filesystem/filesystem.hpp"
 #include "filesystem/localfilesystem.hpp"
+#include "ov_version.hpp"
 #include "version.hpp"
 
 namespace ovms {
@@ -530,14 +531,14 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, const
 #pragma warning(disable : 4129)
         if (result->count("version")) {
             std::string project_name(PROJECT_NAME);
-            std::string project_version(PROJECT_VERSION);
+            std::string project_version(ovms::getProjectVersion());
             ss << project_name + " " + project_version << std::endl;
             ss << "OpenVINO backend " << ovms::getOpenVINOVersion() << std::endl;
             const char* genaiVersion = ovms::getGenAIVersion();
             if (genaiVersion[0] != '\0') {
                 ss << "OpenVINO GenAI backend " << genaiVersion << std::endl;
             }
-            ss << "Bazel build flags: " << BAZEL_BUILD_FLAGS << std::endl;
+            ss << "Bazel build flags: " << ovms::getBazelBuildFlags() << std::endl;
 #pragma warning(pop)
             return std::make_pair(OVMS_EX_OK, ss.str());
         }
