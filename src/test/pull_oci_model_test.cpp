@@ -50,6 +50,7 @@ using ovms::OciDownloader;
 using ovms::StatusCode;
 using testing::EndsWith;
 using testing::HasSubstr;
+using testing::Not;
 
 // OptimumDownloader driven by the mock optimum-cli that records the export
 // command it was about to run.
@@ -250,7 +251,6 @@ TEST(OciResolveOutputTest, RejectsJsonWithoutRequiredMembers) {
 
 class OciDownloaderPayload : public TestWithTempDir {
 public:
-    std::string llmmanMockPath;
     std::string optimumMockPath;
     std::string resolvedPath;
     ovms::HFSettingsImpl hfSettings;
@@ -259,19 +259,26 @@ public:
     void SetUp() override {
         TestWithTempDir::SetUp();
 #ifdef _WIN32
-        llmmanMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/llmman.exe");
+        const std::string mockBinary = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/llmman_mock.exe");
+        const std::string mockName = "llmman.exe";
         optimumMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli.exe");
 #else
-        llmmanMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/llmman");
+        const std::string mockBinary = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/llmman_mock");
+        const std::string mockName = "llmman";
         optimumMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli");
 #endif
+        // Keep the mock out of the test binary's directory: Windows searches
+        // that directory before PATH when CreateProcessA runs "llmman".
+        const std::filesystem::path mockDirectory = std::filesystem::path(this->directoryPath) / "mock-bin";
+        std::filesystem::create_directories(mockDirectory);
+        std::filesystem::copy_file(mockBinary, mockDirectory / mockName);
         const std::string pathSeparator =
 #ifdef _WIN32
             ";";
 #else
             ":";
 #endif
-        pathGuard.set("PATH", std::filesystem::path(llmmanMockPath).parent_path().string() + pathSeparator + GetEnvVar("PATH"));
+        pathGuard.set("PATH", mockDirectory.string() + pathSeparator + GetEnvVar("PATH"));
         resolvedPath = std::filesystem::path(this->directoryPath).append("llmman-store").generic_string();
         std::filesystem::create_directories(resolvedPath);
 
@@ -587,11 +594,11 @@ public:
     OciModelPackServerProcess ovmsProcess;
     EnvGuard llmmanStoreGuard;
     std::string llmmanStorePath;
-    bool modelPullAttempted = false;
+    bool modelPulled = false;
 
     void TearDown() override {
         this->ovmsProcess.stop();
-        if (modelPullAttempted) {
+        if (modelPulled) {
             int retCode = -1;
             const std::string output = ovms::exec_cmd("llmman rm " + ovms::quote_cmd_arg(modelReference), retCode);
             EXPECT_EQ(retCode, 0) << "Failed to remove test OCI model from llmman's store: " << output;
@@ -601,6 +608,11 @@ public:
 };
 
 TEST_F(OciModelPackInferenceTest, PullSmallPublicModelAndRunInference) {
+    // Linux CI may require a trusted proxy CA for the external registry.
+    // Keep the network test opt-in there; run it by default on Windows.
+#ifndef _WIN32
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
+#endif
     std::string sourceModel = "oci://" + modelReference;
     std::string repositoryPath = std::filesystem::path(this->directoryPath).append("repository").string();
     llmmanStorePath = std::filesystem::path(this->directoryPath).append("llmman-store").string();
@@ -634,8 +646,8 @@ TEST_F(OciModelPackInferenceTest, PullSmallPublicModelAndRunInference) {
     int llmmanVersionResult = -1;
     const std::string llmmanVersion = ovms::exec_cmd("llmman --version", llmmanVersionResult);
     ASSERT_EQ(llmmanVersionResult, 0) << "llmman is not available to the standalone OVMS process: " << llmmanVersion;
+    ASSERT_THAT(llmmanVersion, Not(HasSubstr("-mock"))) << "The OCI inference test must use the real llmman binary";
 
-    modelPullAttempted = true;
     const std::string pullCommand = ovms::quote_cmd_arg(ovmsExecutableWithExtension) +
                                     " --pull --source_model " + ovms::quote_cmd_arg(sourceModel) +
                                     " --model_repository_path " + ovms::quote_cmd_arg(repositoryPath) +
@@ -643,6 +655,7 @@ TEST_F(OciModelPackInferenceTest, PullSmallPublicModelAndRunInference) {
     int pullResult = -1;
     const std::string pullOutput = ovms::exec_cmd(pullCommand, pullResult);
     ASSERT_EQ(pullResult, 0) << "OVMS failed to pull the OCI ModelPack: " << pullOutput;
+    modelPulled = true;
 
     ASSERT_TRUE(this->ovmsProcess.start(ovmsExecutableWithExtension,
         {"--port", serverPort, "--rest_port", restPort, "--model_name", "qwen", "--model_path", modelPath}))

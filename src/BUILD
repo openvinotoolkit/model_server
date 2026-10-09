@@ -1952,7 +1952,7 @@ cc_binary(
 )
 
 cc_binary(
-    name = "llmman",
+    name = "llmman_mock",
     srcs = [
         "test/llmman_mock.cpp",
     ],
@@ -2269,7 +2269,7 @@ cc_test(
     }),
     deps = [
             "optimum-cli",
-            "llmman",
+            "llmman_mock",
             "//src:ovms_lib",
             "//src:libovms_default_task_detector",
             "//src/filesystem:libovmsfilesystemfactory",
