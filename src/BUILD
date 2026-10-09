@@ -161,7 +161,7 @@ cc_binary(
     deps = [
         "//src/mediapipe_internal:libovms_mediapipe_runtime_owner",
         "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
-        ":libovms_version_impl",
+        ":libovms_ov_version",
     ],
     linkopts = select({
         "//conditions:default": ["-Wl,--allow-shlib-undefined"],
@@ -345,15 +345,15 @@ ovms_cc_library(
 ovms_cc_library(
     name = "libovms_version",
     hdrs = ["version.hpp"],
-    srcs = [],
+    srcs = ["version.cpp"],
     deps = [],
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
-    name = "libovms_version_impl",
-    srcs = ["version.cpp"],
+    name = "libovms_ov_version",
+    hdrs = ["ov_version.hpp"],
+    srcs = ["ov_version.cpp"],
     deps = [
-        ":libovms_version",
         "//third_party:openvino",
     ] + select({
         "//:not_disable_mediapipe": ["//third_party:genai"],
@@ -428,6 +428,7 @@ ovms_cc_library(
         "libovms_default_task",
         "libovms_server_settings",
         "libovms_version",
+        "libovms_ov_version",
         "//src/filesystem:libovmsfilesystem",
         "//src/filesystem:libovmslocalfilesystem",
         "//src/graph_export:graph_cli_parser",
@@ -909,7 +910,7 @@ ovms_cc_library(
             "libovms_tensorinfo",
             "libovmstimer",
             "libovms_version",
-            "libovms_version_impl",
+            "libovms_ov_version",
             "serialization_common",
             "libovmsprofiler",
             "libovmsstatus",

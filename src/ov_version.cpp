@@ -13,14 +13,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "version.hpp"
+#include "ov_version.hpp"
+
+#include <openvino/openvino.hpp>
+#if (MEDIAPIPE_DISABLE == 0)
+#include <openvino/genai/version.hpp>
+#endif
 
 namespace ovms {
-const char* getProjectVersion() {
-    return "REPLACE_PROJECT_VERSION";
+const char* getOpenVINOVersion() {
+    return ov::get_openvino_version().buildNumber;
 }
-
-const char* getBazelBuildFlags() {
-    return "REPLACE_BAZEL_BUILD_FLAGS";
+const char* getGenAIVersion() {
+#if (MEDIAPIPE_DISABLE == 0)
+    return ov::genai::get_version().buildNumber;
+#else
+    return "";
+#endif
 }
 }  // namespace ovms
