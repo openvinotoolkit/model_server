@@ -170,7 +170,7 @@ Status KFSInferenceServiceImpl::ServerMetadataImpl(::grpc::ServerContext* contex
     (void)request;
     (void)response;
     response->set_name(PROJECT_NAME);
-    response->set_version(PROJECT_VERSION);
+    response->set_version(getProjectVersion());
     return StatusCode::OK;
 }
 

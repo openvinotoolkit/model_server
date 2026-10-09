@@ -264,3 +264,90 @@ TEST(TokenizeDeserialization, invalidTokenizeMaxLengthZero) {
     auto error = status.message();
     ASSERT_EQ(error, "max_length should be greater than 0");
 }
+
+TEST(TokenizeDeserialization, positiveTokenizeMaxLengthAtLimit) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "text": ["one", "two", "three"],
+            "max_length": 1000000
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ovms::TokenizeRequest request;
+    ASSERT_EQ(ok.Code(), 0);
+    auto status = ovms::TokenizeParser::parseTokenizeRequest(d, request);
+    ASSERT_EQ(status, absl::OkStatus());
+    ASSERT_EQ(request.parameters["max_length"].as<size_t>(), 1000000);
+}
+
+TEST(TokenizeDeserialization, invalidTokenizeMaxLengthAboveLimit) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "text": ["one", "two", "three"],
+            "max_length": 1000001
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ovms::TokenizeRequest request;
+    ASSERT_EQ(ok.Code(), 0);
+    auto status = ovms::TokenizeParser::parseTokenizeRequest(d, request);
+    ASSERT_NE(status, absl::OkStatus());
+    auto error = status.message();
+    ASSERT_EQ(error, "max_length 1000001 exceeds the allowed limit of 1000000");
+}
+
+TEST(TokenizeDeserialization, positiveTokenizeMaxLengthAboveLimitWithLargerModelContext) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "text": ["one", "two", "three"],
+            "max_length": 1000001
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ovms::TokenizeRequest request;
+    ASSERT_EQ(ok.Code(), 0);
+    auto status = ovms::TokenizeParser::parseTokenizeRequest(d, request, 2000000);
+    ASSERT_EQ(status, absl::OkStatus());
+    ASSERT_EQ(request.parameters["max_length"].as<size_t>(), 1000001);
+}
+
+TEST(TokenizeDeserialization, invalidTokenizeMaxLengthAboveLargerModelContext) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "text": ["one", "two", "three"],
+            "max_length": 2000001
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ovms::TokenizeRequest request;
+    ASSERT_EQ(ok.Code(), 0);
+    auto status = ovms::TokenizeParser::parseTokenizeRequest(d, request, 2000000);
+    ASSERT_NE(status, absl::OkStatus());
+    auto error = status.message();
+    ASSERT_EQ(error, "max_length 2000001 exceeds the allowed limit of 2000000");
+}
+
+TEST(TokenizeDeserialization, positiveTokenizeMaxLengthWithSmallModelContext) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "text": ["one", "two", "three"],
+            "max_length": 1000000
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ovms::TokenizeRequest request;
+    ASSERT_EQ(ok.Code(), 0);
+    auto status = ovms::TokenizeParser::parseTokenizeRequest(d, request, 512);
+    ASSERT_EQ(status, absl::OkStatus());
+    ASSERT_EQ(request.parameters["max_length"].as<size_t>(), 1000000);
+}

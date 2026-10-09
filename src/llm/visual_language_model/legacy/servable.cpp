@@ -32,7 +32,7 @@
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mediapipe/framework/calculator_graph.h"
+#include "mediapipe/framework/calculator.pb.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
@@ -46,7 +46,6 @@
 #include "../../text_utils.hpp"
 #include "../../../tokenize/tokenize_parser.hpp"
 #if (PYTHON_DISABLE == 0)
-#include "src/llm/py_jinja_template_processor.hpp"
 #endif
 #include "../../io_processing/generation_config_builder.hpp"
 #include "servable.hpp"
@@ -198,6 +197,8 @@ absl::Status VisualLanguageModelLegacyServable::prepareCompleteResponse(std::sha
         legacyExecutionContext->results.perf_metrics.get_num_input_tokens());
     executionContext->apiHandler->setCompletionTokensUsage(
         legacyExecutionContext->results.perf_metrics.get_num_generated_tokens());
+    executionContext->apiHandler->setCachedPromptTokensUsage(
+        legacyExecutionContext->results.perf_metrics.get_num_prefix_cache_hit_tokens());
 
     if (legacyExecutionContext->results.finish_reasons.empty()) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Missing finish reason in legacy VLM unary generation result, defaulting to STOP");

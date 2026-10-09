@@ -28,6 +28,7 @@
 #include "src/port/rapidjson_writer.hpp"
 #pragma warning(pop)
 
+#include "../ov_version.hpp"
 #include "../version.hpp"
 #include "../modelinstance.hpp"
 #include "capi_request_utils.hpp"  // TODO @atobisze must be before executor
@@ -300,7 +301,9 @@ DLL_PUBLIC OVMS_Status* OVMS_ServerMetadata(OVMS_Server* server, OVMS_Metadata**
     rapidjson::Document* doc = new rapidjson::Document;
     doc->SetObject();
     doc->AddMember("name", PROJECT_NAME, doc->GetAllocator());
-    doc->AddMember("version", PROJECT_VERSION, doc->GetAllocator());
+    rapidjson::Value projectVersion;
+    projectVersion.SetString(ovms::getProjectVersion(), doc->GetAllocator());
+    doc->AddMember("version", std::move(projectVersion), doc->GetAllocator());
     rapidjson::Value ovVersion;
     ovVersion.SetString(ovms::getOpenVINOVersion(), doc->GetAllocator());
     doc->AddMember("ov_version", std::move(ovVersion), doc->GetAllocator());

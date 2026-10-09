@@ -167,7 +167,7 @@ ENV HDDL_INSTALL_DIR=/opt/intel/openvino/deployment_tools/inference_engine/exter
 ENV TF_SYSTEM_LIBS="curl"
 
 # Set up Bazel
-ENV BAZEL_VERSION 6.1.1
+ENV BAZEL_VERSION 7.4.1
 WORKDIR /bazel
 RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
     curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
@@ -299,21 +299,12 @@ COPY package.json /ovms/
 
 # prebuild dependencies before copying sources & test dependencies for caching
 # hadolint ignore=DL3059
+
 RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false \
     bazel build --repo_env=GIT_CONFIG_GLOBAL=/root/.gitconfig \
         --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
 
 COPY src/ /ovms/src/
-
-# hadolint ignore=DL3059
-RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$BASE_OS" == "ubuntu24" ] ; then \
-        bazel build --jobs=$JOBS ${debug_bazel_flags} \
-            --action_env=PYTHON_BIN_PATH=/usr/bin/python3.10 \
-            --define=PYTHON_BIN_PATH=/usr/bin/python3.10 \
-            @org_tensorflow//tensorflow/core:framework; \
-    else \
-        bazel build --jobs=$JOBS ${debug_bazel_flags} @org_tensorflow//tensorflow/core:framework; \
-    fi
 
 # hadolint ignore=DL3059
 RUN if [ "$BASE_OS" == "ubuntu24" ] ; then update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 2; fi
@@ -333,8 +324,8 @@ LABEL description="OpenVINO Model Server"
 ARG minitrace_flags
 ENV PYTHONPATH=/opt/intel/openvino/python:/ovms/bazel-bin/src/python/binding
 # Set OVMS version strings
-RUN bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.hpp" && \
-    bash -c "sed -i -e 's|REPLACE_BAZEL_BUILD_FLAGS|${debug_bazel_flags}${minitrace_flags}|g' /ovms/src/version.hpp"
+RUN bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/src/version.cpp" && \
+    bash -c "sed -i -e 's|REPLACE_BAZEL_BUILD_FLAGS|${debug_bazel_flags}${minitrace_flags}|g' /ovms/src/version.cpp"
 
 WORKDIR /patchelf
 # hadolint ignore=DL3003
@@ -355,8 +346,7 @@ ARG OPTIMIZE_BUILDING_TESTS=0
 # Builds unit tests together with ovms server in one step
 # It speeds up CI when tests are executed outside of the image building
 # hadolint ignore=SC2046
-RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$FUZZER_BUILD" == "0" ]; then bazel build --config=short_logs --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms \
-    $(if [[ "${debug_bazel_flags}" != *"mp_off"* ]]; then echo -n "//src:ovms_mediapipe_runtime_shared"; fi) \
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms \
     $(if [[ "${debug_bazel_flags}" != *"py_off"* ]]; then echo -n "//src/python:libovmspython //src/python:libpython_calculators"; fi) \
     $(if [ "${OPTIMIZE_BUILDING_TESTS}" == "1" ] ; then echo -n "//src:ovms_test //src:python_runtime_library_test"; fi); fi;
 
@@ -502,7 +492,10 @@ ENV PATH="$PATH:/ovms/bin"
 # When espeak-ng data is present in the package, point runtime to it.
 # Keep this conditional to avoid exporting a non-existent path when
 # espeak support is disabled.
-ENTRYPOINT ["/bin/bash", "-c", "if [ -d /ovms/share/espeak-ng-data ]; then export ESPEAK_DATA_PATH=/ovms/share/espeak-ng-data; fi; exec /ovms/bin/ovms \"$@\"", "--"]
+# Install a default OpenCV pre-decode pixel guard so oversized image
+# headers are rejected before allocation. ~1GB decoded budget / 16 B worst-case per pixel.
+# Only set when unset so operators can override.
+ENTRYPOINT ["/bin/bash", "-c", "if [ -d /ovms/share/espeak-ng-data ]; then export ESPEAK_DATA_PATH=/ovms/share/espeak-ng-data; fi; if [ -z \"$OPENCV_IO_MAX_IMAGE_PIXELS\" ]; then export OPENCV_IO_MAX_IMAGE_PIXELS=67108864; fi; exec /ovms/bin/ovms \"$@\"", "--"]
 
 RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms

@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "pythonnoderesources.hpp"
 
+#include <algorithm>
 #include <filesystem>
 #include <memory>
 #include <string>
@@ -29,9 +30,6 @@
 #pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/embed.h>  // everything needed for embedding
 #pragma warning(pop)
-
-#include "../mediapipe_internal/mediapipe_utils.hpp"
-#include "src/python/python_executor_calculator.pb.h"
 
 namespace ovms {
 
@@ -64,69 +62,38 @@ void PythonNodeResources::finalize() {
 // IMPORTANT: This is an internal method meant to be run in a specific context.
 // It assumes GIL is being held by the thread and doesn't handle potential errors.
 // It MUST be called in the scope of py::gil_scoped_acquire and within the try - catch block
-py::dict PythonNodeResources::preparePythonNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, const std::string& basePath) {
+py::dict PythonNodeResources::preparePythonNodeInitializeArguments(const PythonNodeConfig& nodeConfig, const std::string& basePath) {
     py::dict kwargsParam = py::dict();
-    std::string nodeName = graphNodeConfig.name();
     py::list inputStreams = py::list();
     py::list outputStreams = py::list();
-    for (auto& name : graphNodeConfig.input_stream()) {
-        inputStreams.append(getStreamName(name));
+    for (const auto& name : nodeConfig.inputNames) {
+        inputStreams.append(name);
     }
 
-    for (auto& name : graphNodeConfig.output_stream()) {
-        outputStreams.append(getStreamName(name));
+    for (const auto& name : nodeConfig.outputNames) {
+        outputStreams.append(name);
     }
 
     kwargsParam["input_names"] = inputStreams;
     kwargsParam["output_names"] = outputStreams;
-    kwargsParam["node_name"] = nodeName;
+    kwargsParam["node_name"] = nodeConfig.nodeName;
     kwargsParam["base_path"] = py::str(basePath);
 
     return kwargsParam;
 }
 
-void createOutputTagNameMapping(std::shared_ptr<PythonNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig) {
-    for (auto& name : graphNodeConfig.output_stream()) {
-        std::string delimiter = ":";
-        std::string streamTag, streamName;
-        size_t tagDelimiterPos = name.find(delimiter, 0);
-
-        if (tagDelimiterPos == std::string::npos) {
-            // Empty tag - example: output_stream: "output"
-            streamTag = "";
-            streamName = name;
-        } else {
-            streamTag = name.substr(0, tagDelimiterPos);
-            size_t indexDelimiterPos = name.find(delimiter, tagDelimiterPos + 1);
-            if (indexDelimiterPos == std::string::npos) {
-                // Only tag, no index - example: output_stream: "OUTPUT:output"
-                streamName = name.substr(tagDelimiterPos + 1, std::string::npos);
-            } else {
-                // Both tag and index - example: output_stream: "OUTPUT:0:output"
-                // It's permitted by MediaPipe, but PythonExecutorCalculator ignores it.
-                streamName = name.substr(indexDelimiterPos + 1, std::string::npos);
-            }
-        }
-        // PythonExecutorCalculator ignores index value, so only Tag gets mapped
-        nodeResources->outputsNameTagMapping.insert({streamName, streamTag});
-    }
-}
-
-Status PythonNodeResources::createPythonNodeResources(std::shared_ptr<PythonNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, PythonBackend* pythonBackend, std::string graphPath) {
-    mediapipe::PythonExecutorCalculatorOptions nodeOptions;
-    graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
-
+Status PythonNodeResources::createPythonNodeResources(std::shared_ptr<PythonNodeResources>& nodeResources, const PythonNodeConfig& nodeConfig, PythonBackend* pythonBackend) {
     nodeResources = std::make_shared<PythonNodeResources>(pythonBackend);
-    createOutputTagNameMapping(nodeResources, graphNodeConfig);
+    nodeResources->outputsNameTagMapping = nodeConfig.outputsNameTagMapping;
 
-    auto fsHandlerPath = std::filesystem::path(nodeOptions.handler_path());
+    auto fsHandlerPath = std::filesystem::path(nodeConfig.handlerPath);
 
     std::string basePath;
     std::string extension = fsHandlerPath.extension().string();
     fsHandlerPath.replace_extension();
     std::string filename = fsHandlerPath.filename().string();
     if (fsHandlerPath.is_relative()) {
-        basePath = (std::filesystem::path(graphPath) / fsHandlerPath.parent_path()).string();
+        basePath = (std::filesystem::path(nodeConfig.graphPath) / fsHandlerPath.parent_path()).string();
     } else {
         basePath = fsHandlerPath.parent_path().string();
     }
@@ -146,28 +113,28 @@ Status PythonNodeResources::createPythonNodeResources(std::shared_ptr<PythonNode
         py::module_ script = py::module_::import(filename.c_str());
 
         if (!py::hasattr(script, "OvmsPythonModel")) {
-            SPDLOG_ERROR("Error during python node initialization. No OvmsPythonModel class found in {}", nodeOptions.handler_path());
+            SPDLOG_ERROR("Error during python node initialization. No OvmsPythonModel class found in {}", nodeConfig.handlerPath);
             return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
         }
 
         py::object OvmsPythonModel = script.attr("OvmsPythonModel");
         if (!py::hasattr(OvmsPythonModel, "execute")) {
-            SPDLOG_ERROR("Error during python node initialization. OvmsPythonModel class defined in {} does not implement execute method.", nodeOptions.handler_path());
+            SPDLOG_ERROR("Error during python node initialization. OvmsPythonModel class defined in {} does not implement execute method.", nodeConfig.handlerPath);
             return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
         }
 
         nodeResources->ovmsPythonModel = std::make_unique<py::object>(OvmsPythonModel());
         if (py::hasattr(*nodeResources->ovmsPythonModel, "initialize")) {
-            py::dict kwargsParam = preparePythonNodeInitializeArguments(graphNodeConfig, basePath);
+            py::dict kwargsParam = preparePythonNodeInitializeArguments(nodeConfig, basePath);
             nodeResources->ovmsPythonModel->attr("initialize")(kwargsParam);
         } else {
-            SPDLOG_DEBUG("OvmsPythonModel class defined in {} does not implement initialize method.", nodeOptions.handler_path());
+            SPDLOG_DEBUG("OvmsPythonModel class defined in {} does not implement initialize method.", nodeConfig.handlerPath);
         }
     } catch (const pybind11::error_already_set& e) {
-        SPDLOG_ERROR("Error during python node initialization for handler_path: {} - {}", nodeOptions.handler_path(), e.what());
+        SPDLOG_ERROR("Error during python node initialization for handler_path: {} - {}", nodeConfig.handlerPath, e.what());
         return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
     } catch (...) {
-        SPDLOG_ERROR("Error during python node initialization for handler_path: {}", nodeOptions.handler_path());
+        SPDLOG_ERROR("Error during python node initialization for handler_path: {}", nodeConfig.handlerPath);
         return StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED;
     }
     return StatusCode::OK;

@@ -24,12 +24,9 @@
 #include <utility>
 #include <vector>
 
+#include "absl/status/status.h"
 #include "src/audio/speech_to_text/s2t_executor.hpp"
 #include "src/status.hpp"
-
-namespace absl {
-class Status;
-}  // namespace absl
 
 namespace mediapipe {
 class S2tCalculatorOptions;

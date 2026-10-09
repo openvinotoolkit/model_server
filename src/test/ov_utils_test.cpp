@@ -197,7 +197,7 @@ TEST(OVUtils, GetLayoutFromRTMap) {
 
 TEST(OVUtils, ValidatePluginConfigurationPositive) {
     ov::Core ieCore;
-    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().string() + "/src/test/dummy/1/dummy.xml");
     ovms::ModelConfig config;
     config.setTargetDevice("CPU");
     config.setPluginConfig({{"NUM_STREAMS", "10"}});
@@ -208,7 +208,7 @@ TEST(OVUtils, ValidatePluginConfigurationPositive) {
 
 TEST(OVUtils, ValidatePluginConfigurationPositiveBatch) {
     ov::Core ieCore;
-    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().string() + "/src/test/dummy/1/dummy.xml");
     ovms::ModelConfig config;
     config.setTargetDevice("BATCH:CPU(4)");
     config.setPluginConfig({{"AUTO_BATCH_TIMEOUT", 10}});
@@ -219,7 +219,7 @@ TEST(OVUtils, ValidatePluginConfigurationPositiveBatch) {
 
 TEST(OVUtils, ValidatePluginConfigurationNegative) {
     ov::Core ieCore;
-    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().string() + "/src/test/dummy/1/dummy.xml");
     ovms::ModelConfig config;
     config.setTargetDevice("CPU");
     config.setPluginConfig({{"WRONG_KEY ", "10"}});
@@ -237,7 +237,7 @@ TEST(OVUtils, ValidatePluginConfigurationAllowEnableMmap) {
     ovms::plugin_config_t pluginConfig = ovms::ModelInstance::prepareDefaultPluginConfig(config);
     auto status = ovms::validatePluginConfiguration(pluginConfig, "CPU", ieCore);
     EXPECT_TRUE(status.ok());
-    auto model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml", {}, pluginConfig);
+    auto model = ieCore.read_model(std::filesystem::current_path().string() + "/src/test/dummy/1/dummy.xml", {}, pluginConfig);
     auto compiledModel = ieCore.compile_model(model, "CPU", pluginConfig);
 }
 

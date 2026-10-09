@@ -27,7 +27,7 @@
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mediapipe/framework/calculator_graph.h"
+#include "mediapipe/framework/calculator.pb.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
@@ -74,10 +74,19 @@ Status OmniModelLegacyServableInitializer::initialize(std::shared_ptr<GenAiServa
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
         }
     }
-    if (nodeOptions.has_chat_template_mode()) {
-        properties->chatTemplateMode = (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::JINJA)
-                                           ? ChatTemplateMode::JINJA
-                                           : ChatTemplateMode::MINJA;
+    if (nodeOptions.has_chat_template_engine()) {
+#if (PYTHON_DISABLE == 0)
+        properties->chatTemplateEngineExplicit = true;
+        properties->chatTemplateEngine = (nodeOptions.chat_template_engine() == mediapipe::LLMCalculatorOptions::JINJA)
+                                             ? ChatTemplateEngine::JINJA
+                                             : ChatTemplateEngine::MINJA;
+#else
+        if (nodeOptions.chat_template_engine() == mediapipe::LLMCalculatorOptions::JINJA) {
+            SPDLOG_ERROR("chat_template_engine=JINJA requires Python support.");
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
+        properties->chatTemplateEngine = ChatTemplateEngine::MINJA;
+#endif
     }
 
     properties->device = nodeOptions.device();
@@ -104,7 +113,10 @@ Status OmniModelLegacyServableInitializer::initialize(std::shared_ptr<GenAiServa
         SPDLOG_ERROR("Error during omni model node initialization for models_path: {}", parsedModelsPath);
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
-    loadChatTemplate(properties, parsedModelsPath);
+    status = loadChatTemplate(properties, parsedModelsPath);
+    if (!status.ok()) {
+        return status;
+    }
     properties->legacyExecutor = std::make_shared<OmniModelLegacyExecutorWrapper>(properties->pipeline);
     if (nodeOptions.has_max_tokens_limit()) {
         properties->maxTokensLimit = nodeOptions.max_tokens_limit();

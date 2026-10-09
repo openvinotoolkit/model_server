@@ -87,6 +87,7 @@ ovms_cc_library(
         "//src:cpp_headers",
         "//src:libovms_module",
         "//src:libovmslogging",
+        "//src/llm:llm_calculators_plugin_loader",
         "modelmanager",
         "//src/metrics:libovmsmetrics",
         "//src/python:python_runtime_module_api_hdrs",

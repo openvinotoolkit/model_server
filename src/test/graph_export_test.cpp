@@ -352,6 +352,7 @@ node {
             truncate: true,
             pooling: LAST,
             max_length: 512,
+            max_batch_size: 32,
             target_device: "GPU",
             plugin_config: '{"NUM_STREAMS":"2"}',
         }
@@ -592,7 +593,7 @@ protected:
 
     std::string getVersionString() {
         std::stringstream expected;
-        expected << "# File created with: " << PROJECT_NAME << " " << PROJECT_VERSION << std::endl;
+        expected << "# File created with: " << PROJECT_NAME << " " << ovms::getProjectVersion() << std::endl;
         return expected.str();
     }
 };
@@ -787,6 +788,7 @@ TEST_F(GraphCreationTest, embeddingsPositiveNonDefault) {
     embeddingsGraphSettings.truncate = "true";
     embeddingsGraphSettings.pooling = "LAST";
     embeddingsGraphSettings.maxLength = 512;
+    embeddingsGraphSettings.maxBatchSize = 32;
     hfSettings.graphSettings = std::move(embeddingsGraphSettings);
     assertCreatedGraphEquals(hfSettings, expectedEmbeddingsGraphContents);
 }
@@ -956,6 +958,17 @@ TEST_F(GraphCreationTest, positiveWithParsersAndToolGuidedGeneration) {
     hfSettings.graphSettings = std::move(graphSettings);
 
     assertCreatedGraphEquals(hfSettings, expectedGraphContentsWithResponseParser);
+}
+
+TEST_F(GraphCreationTest, chatTemplateEngineIsEmittedOnlyWhenExplicit) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
+    hfSettings.graphSettings = ovms::TextGenGraphSettingsImpl{};
+
+    EXPECT_EQ(createGraphAndReadContents(hfSettings).find("chat_template_engine:"), std::string::npos);
+
+    std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings).chatTemplateEngine = "MINJA";
+    EXPECT_NE(createGraphAndReadContents(hfSettings).find("chat_template_engine: MINJA"), std::string::npos);
 }
 
 TEST_F(GraphCreationTest, positivePluginConfigOne) {
