@@ -66,12 +66,14 @@ struct HttpRequestComponents {
 
 enum class ContentType {
     JSON,
-    PLAIN_TEXT
+    PLAIN_TEXT,
+    CUSTOM
 };
 
 struct HttpResponseComponents {
     std::optional<int> inferenceHeaderContentLength;
     ContentType contentType = ContentType::JSON;
+    std::string customContentType;
 };
 
 using HandlerCallbackFn = std::function<Status(
@@ -168,6 +170,7 @@ public:
     Status processServerLiveKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processServerMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
+    Status processOpenAI(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser);
     Status processOpenAI(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser);
     Status processListModelsRequest(std::string& response);
     Status processRetrieveModelRequest(const std::string& name, std::string& response);

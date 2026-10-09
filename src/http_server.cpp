@@ -212,6 +212,8 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
 
         if (responseComponents.contentType == ContentType::PLAIN_TEXT) {
             resp->setContentTypeCode(drogon::CT_TEXT_PLAIN);
+        } else if (responseComponents.contentType == ContentType::CUSTOM) {
+            resp->setContentTypeString(responseComponents.customContentType);
         } else {
             resp->setContentTypeCode(drogon::CT_APPLICATION_JSON);
         }

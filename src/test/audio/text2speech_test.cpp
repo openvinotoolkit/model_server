@@ -65,9 +65,66 @@ TEST_F(Text2SpeechHttpTest, simplePositive) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
+    EXPECT_EQ(responseComponents.contentType, ContentType::CUSTOM);
+    EXPECT_EQ(responseComponents.customContentType, "audio/wav");
     EXPECT_NO_THROW({
         auto wav = readWav(response);
     });
+}
+
+TEST_F(Text2SpeechHttpTest, explicitWavResponseFormat) {
+    std::string requestBody = R"(
+        {
+            "model": ")" + modelName +
+                              R"(",
+            "input": "The quick brown fox jumped over the lazy dog.",
+            "voice": "af_alloy",
+            "response_format": "wav"
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    EXPECT_EQ(responseComponents.contentType, ContentType::CUSTOM);
+    EXPECT_EQ(responseComponents.customContentType, "audio/wav");
+    EXPECT_NO_THROW({
+        auto wav = readWav(response);
+    });
+}
+
+TEST_F(Text2SpeechHttpTest, explicitPcmResponseFormat) {
+    std::string requestBody = R"(
+        {
+            "model": ")" + modelName +
+                              R"(",
+            "input": "The quick brown fox jumped over the lazy dog.",
+            "voice": "af_alloy",
+            "response_format": "pcm"
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    EXPECT_EQ(responseComponents.contentType, ContentType::CUSTOM);
+    EXPECT_EQ(responseComponents.customContentType, "application/octet-stream");
+    EXPECT_FALSE(isWavBuffer(response));
+    EXPECT_FALSE(response.empty());
+    EXPECT_EQ(response.size() % sizeof(int16_t), 0u);
+}
+
+TEST_F(Text2SpeechHttpTest, unsupportedResponseFormatRejected) {
+    std::string requestBody = R"(
+        {
+            "model": ")" + modelName +
+                              R"(",
+            "input": "The quick brown fox jumped over the lazy dog.",
+            "voice": "af_alloy",
+            "response_format": "mp3"
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
 TEST_F(Text2SpeechHttpTest, emptyInput) {
