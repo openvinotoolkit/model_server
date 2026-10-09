@@ -143,10 +143,8 @@ void testMaxResolutionExceeded(std::optional<std::pair<unsigned int, unsigned in
     ovms::HttpPayload payload;
     payload.parsedJson = std::make_shared<rapidjson::Document>();
     payload.parsedJson->Parse(dims.c_str());
-    ovms::ImageGenPipelineArgs args;
-    if (maxRes.has_value()) {
-        args.maxResolution = maxRes.value();
-    }
+    ovms::ImageGenPipelineArgs args = DEFAULTIMAGE_GEN_ARGS;
+    args.maxResolution = maxRes.value_or(args.maxResolution);
     std::variant<absl::Status, ov::AnyMap> requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args, true );
 
     ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions)) << dims;
@@ -159,10 +157,8 @@ void testMaxResolutionNotExceeded(std::optional<std::pair<unsigned int, unsigned
     ovms::HttpPayload payload;
     payload.parsedJson = std::make_shared<rapidjson::Document>();
     payload.parsedJson->Parse(dims.c_str());
-    ovms::ImageGenPipelineArgs args;
-    if (maxRes.has_value()) {
-        args.maxResolution = maxRes.value();
-    }
+    ovms::ImageGenPipelineArgs args = DEFAULTIMAGE_GEN_ARGS;
+    args.maxResolution = maxRes.value_or(args.maxResolution);
     std::variant<absl::Status, ov::AnyMap> requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args, true );
 
     ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(requestOptions)) << dims;
@@ -178,6 +174,8 @@ TEST(Text2ImageTest, testMaxResolutionExceeded) {
 
 TEST(Text2ImageTest, testMaxResolutionNotExceeded) {
     testMaxResolutionNotExceeded(std::nullopt, R"({"size":"1000x1000"})");
+    testMaxResolutionNotExceeded(std::make_optional(std::make_pair(2000, 2000)), R"({"size":"1000x500"})");
+    testMaxResolutionNotExceeded(std::make_optional(std::make_pair(2000, 2000)), R"({"size":"500x1000"})");
     testMaxResolutionNotExceeded(std::make_optional(std::make_pair(2000, 2000)), R"({"size":"1000x1000"})");
 }
 
@@ -192,6 +190,8 @@ TEST(Text2ImageTest, testGetDimensionsNegativeImproperFormat) {
     testNegativeDimensions(R"({"size":"51x0"})");
     testNegativeDimensions(R"({"size":"abcx512"})");
     testNegativeDimensions(R"({"size":"5151xabc"})");
+    testNegativeDimensions(R"({"size":"5151x"})");
+    testNegativeDimensions(R"({"size":"x5151"})");
     // max int64_t 9223372036854775807
     // min int64_t -9223372036854775808
     testNegativeDimensions(R"({"size":"9223372036854775808x1"})");
@@ -1456,12 +1456,13 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsValidatedFields) {
     }
 }
 TEST(Text2ImageTest, validateForStaticReshapeSettings_MatchesOneResolution) {
-    ImageGenPipelineArgs args;
+    ImageGenPipelineArgs args = DEFAULTIMAGE_GEN_ARGS;
     args.modelsPath = "/ovms/src/test/dummy";
     args.device.push_back("NPU");
     args.defaultNumInferenceSteps = 10;
     args.maxNumInferenceSteps = 50;
     args.maxNumImagesPerPrompt = 10;
+
     args.staticReshapeSettings = ovms::StaticReshapeSettingsArgs({{512, 256}, {1024, 512}, {2048, 1024}});
 
     std::string value = R"({"prompt": "test prompt", "size": "1024x512", "n": 1, "model": "test model"})";

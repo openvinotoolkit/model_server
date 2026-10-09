@@ -46,7 +46,6 @@ static std::variant<absl::Status, std::vector<std::string>> convert2Strings(cons
     } catch (...) {
         return absl::InternalError("Unknown error during image conversion");
     }
-    return absl::OkStatus();
 }
 
 std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const std::string& dimensions) {
@@ -275,21 +274,7 @@ absl::Status ensureCommonValidations(ov::AnyMap& requestOptions, const ovms::Ima
             return absl::InvalidArgumentError(absl::StrCat("height must be higher than 0"));
         }
     }
-
-    // Check against maxResolution
-    auto widthIt = requestOptions.find("width");
-    auto heightIt = requestOptions.find("height");
-    if (widthIt != requestOptions.end() && heightIt != requestOptions.end()) {
-        auto width = widthIt->second.as<int64_t>();
-        auto height = heightIt->second.as<int64_t>();
-        if (width > args.maxResolution.first) {
-            return absl::InvalidArgumentError(absl::StrCat("width ", width, " exceeds maxResolution width: ", args.maxResolution.first));
-        }
-        if (height > args.maxResolution.second) {
-            return absl::InvalidArgumentError(absl::StrCat("height ", height, " exceeds maxResolution height: ", args.maxResolution.second));
-        }
-    }
-
+    
     it = requestOptions.find("strength");
     if (it != requestOptions.end()) {
         auto strength = it->second.as<float>();
@@ -303,6 +288,22 @@ absl::Status ensureCommonValidations(ov::AnyMap& requestOptions, const ovms::Ima
 }
 
 absl::Status ensureAcceptableForDynamic(ov::AnyMap& requestOptions, const ovms::ImageGenPipelineArgs& args) {
+    
+    // Check against maxResolution
+    auto widthIt = requestOptions.find("width");
+    auto heightIt = requestOptions.find("height");
+    if (widthIt != requestOptions.end()) {
+        auto width = widthIt->second.as<int64_t>();
+        if (width > args.maxResolution.first) {
+            return absl::InvalidArgumentError(absl::StrCat("width ", width, " exceeds maxResolution width: ", args.maxResolution.first));
+        }
+    }
+    if (heightIt != requestOptions.end()) {
+        auto height = heightIt->second.as<int64_t>();
+        if (height > args.maxResolution.second) {
+            return absl::InvalidArgumentError(absl::StrCat("height ", height, " exceeds maxResolution height: ", args.maxResolution.second));
+        }
+    }
 
     // check if we have any unhandled parameters
     auto it = requestOptions.find("num_images_per_prompt");
@@ -328,7 +329,10 @@ absl::Status ensureAcceptableForDynamic(ov::AnyMap& requestOptions, const ovms::
         requestOptions.insert({"num_inference_steps", args.defaultNumInferenceSteps});
     }
     return absl::OkStatus();
+
 }
+
+
 
 absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOptions, const ovms::ImageGenPipelineArgs& args) {
     // Apply common validations first (basic sanity checks)
@@ -339,11 +343,9 @@ absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOpt
     // validate for static
     if (args.staticReshapeSettings.has_value()) {
         SPDLOG_DEBUG("Validating request options for static reshape settings");
-        auto staticStatus = ensureAcceptableForStatic(requestOptions, args);
-        if (!staticStatus.ok()) {
-            return staticStatus;
-        }
+        return ensureAcceptableForStatic(requestOptions, args);
     }
+    SPDLOG_DEBUG("Validating request options for static reshape settings");
     return ensureAcceptableForDynamic(requestOptions, args);
 }
 
