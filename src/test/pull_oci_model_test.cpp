@@ -549,8 +549,8 @@ TEST_F(OciModelPackInferenceTest, PullSmallPublicModelAndRunInference) {
     std::string repositoryPath = std::filesystem::path(this->directoryPath).append("repository").string();
     std::string task = "text_generation";
     std::string restPort = "9233";
-    modelPullAttempted = true;
     std::string serverPort = "9133";
+    const std::string modelPath = std::filesystem::path(repositoryPath).append("docker.io/ai/qwen3+0.6b").string();
     randomizeAndEnsureFrees(serverPort, restPort);
     const std::string ovmsExecutable = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/ovms");
 #ifdef _WIN32
@@ -564,9 +564,30 @@ TEST_F(OciModelPackInferenceTest, PullSmallPublicModelAndRunInference) {
     EnvGuard testRuntimeGuard;
     testRuntimeGuard.unset("OVMS_TEST_PYTHON_CALCULATORS_INPROCESS");
     testRuntimeGuard.unset("OVMS_TEST_MEDIAPIPE_RUNTIME_INPROCESS");
+#ifdef _WIN32
+    const std::string llmmanInstallDir = "C:\\opt";
+    const std::string pathSeparator = ";";
+#else
+    const std::string llmmanInstallDir = "/usr/local/bin";
+    const std::string pathSeparator = ":";
+#endif
+    EnvGuard llmmanPathGuard;
+    llmmanPathGuard.set("PATH", llmmanInstallDir + pathSeparator + GetEnvVar("PATH"));
+    int llmmanVersionResult = -1;
+    const std::string llmmanVersion = ovms::exec_cmd("llmman --version", llmmanVersionResult);
+    ASSERT_EQ(llmmanVersionResult, 0) << "llmman is not available to the standalone OVMS process: " << llmmanVersion;
+
+    modelPullAttempted = true;
+    const std::string pullCommand = ovms::quote_cmd_arg(ovmsExecutableWithExtension) +
+                                    " --pull --source_model " + ovms::quote_cmd_arg(sourceModel) +
+                                    " --model_repository_path " + ovms::quote_cmd_arg(repositoryPath) +
+                                    " --task " + ovms::quote_cmd_arg(task);
+    int pullResult = -1;
+    const std::string pullOutput = ovms::exec_cmd(pullCommand, pullResult);
+    ASSERT_EQ(pullResult, 0) << "OVMS failed to pull the OCI ModelPack: " << pullOutput;
+
     ASSERT_TRUE(this->ovmsProcess.start(ovmsExecutableWithExtension,
-        {"--port", serverPort, "--rest_port", restPort, "--source_model", sourceModel,
-            "--model_repository_path", repositoryPath, "--task", task}))
+        {"--port", serverPort, "--rest_port", restPort, "--model_name", "qwen", "--model_path", modelPath}))
         << this->ovmsProcess.getLastError();
 
     EnvGuard proxyGuard;
@@ -581,17 +602,17 @@ TEST_F(OciModelPackInferenceTest, PullSmallPublicModelAndRunInference) {
     std::string lastHealthOutput;
     for (int attempt = 0; attempt < 30; ++attempt) {
         int healthCode = -1;
-        lastHealthOutput = ovms::exec_cmd("curl --noproxy " + ovms::quote_cmd_arg("*") + " --silent --show-error --fail http://127.0.0.1:" + restPort + "/v2/health/live", healthCode);
+        lastHealthOutput = ovms::exec_cmd("curl --noproxy " + ovms::quote_cmd_arg("*") + " --silent --show-error --fail http://127.0.0.1:" + restPort + "/v2/models/qwen/ready", healthCode);
         if (healthCode == 0) {
             httpReady = true;
             break;
         }
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
-    ASSERT_TRUE(httpReady) << "OVMS REST endpoint did not become ready on port " << restPort << ": " << lastHealthOutput;
+    ASSERT_TRUE(httpReady) << "OVMS model qwen did not become ready on port " << restPort << ": " << lastHealthOutput;
 
     const std::string requestBody = R"({
-        "model": ")" + modelReference + R"(",
+        "model": "qwen",
         "stream": false,
         "max_tokens": 8,
         "messages": [{"role": "user", "content": "Reply with one word: hello"}]
@@ -599,9 +620,9 @@ TEST_F(OciModelPackInferenceTest, PullSmallPublicModelAndRunInference) {
 
     int inferenceCode = -1;
     const std::string response = ovms::exec_cmd("curl --noproxy " + ovms::quote_cmd_arg("*") + " --silent --show-error --write-out " +
-            ovms::quote_cmd_arg("\\nHTTP_STATUS:%{http_code}") + " --request POST http://127.0.0.1:" + restPort +
-            "/v3/chat/completions --header " + ovms::quote_cmd_arg("Content-Type: application/json") + " --data " +
-            ovms::quote_cmd_arg(requestBody),
+                                                    ovms::quote_cmd_arg("\\nHTTP_STATUS:%{http_code}") + " --request POST http://127.0.0.1:" + restPort +
+                                                    "/v3/chat/completions --header " + ovms::quote_cmd_arg("Content-Type: application/json") + " --data " +
+                                                    ovms::quote_cmd_arg(requestBody),
         inferenceCode);
     ASSERT_EQ(inferenceCode, 0) << "curl failed during OCI ModelPack inference: " << response;
     EXPECT_THAT(response, EndsWith("HTTP_STATUS:200"));
