@@ -37,6 +37,8 @@ RUN echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf && \
             bc \
             cmake \
             gcc-c++ \
+            gcc-toolset-13-gcc-c++ \
+            gcc-toolset-13-binutils \
             git \
             libcurl-devel \
             libtool \
@@ -47,6 +49,10 @@ RUN echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf && \
             pkg-config \
             wget && \
             dnf clean all
+
+ENV PATH=/opt/rh/gcc-toolset-13/root/usr/bin:${PATH} \
+    CC=/opt/rh/gcc-toolset-13/root/usr/bin/gcc \
+    CXX=/opt/rh/gcc-toolset-13/root/usr/bin/g++
 
 ####### Azure SDK (modern azure-sdk-for-cpp: azure-core, azure-storage-blobs, azure-storage-files-shares)
 ARG SDL_OPS="-Wl,-z,relro,-z,now,-z,noexecstack -Wall -Wextra -Wimplicit-fallthrough -fPIE -pie -fstack-protector-strong -fexceptions -fasynchronous-unwind-tables -fcf-protection -fpic -O2 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv -fstack-clash-protection -Wformat -Wformat-security -Werror=format-security -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wuninitialized"
