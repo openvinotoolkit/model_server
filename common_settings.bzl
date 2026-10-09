@@ -28,7 +28,7 @@ load("//:distro.bzl", "distro_flag")
 def ovms_cc_library(**kwargs):
     """
     Wrapper for cc_library that sets default copts and linkopts if not provided.
-    Transitive defines (PYTHON_DISABLE, MEDIAPIPE_DISABLE) are always set via 'defines'
+    Transitive defines (MEDIAPIPE_DISABLE) are always set via 'defines'
     so that any target depending on an ovms_cc_library automatically gets these macros.
     """
     if "copts" not in kwargs:
@@ -80,18 +80,6 @@ def create_config_settings():
         name = "not_disable_cloud",
         negate = ":disable_cloud",
     )
-    #To build without python use flags - bazel build --config=linux --define PYTHON_DISABLE=1 //src:ovms
-    native.config_setting(
-        name = "disable_python",
-        define_values = {
-            "PYTHON_DISABLE": "1",
-        },
-        visibility = ["//visibility:public"],
-    )
-    more_selects.config_setting_negation(
-        name = "not_disable_python",
-        negate = ":disable_python",
-    )
     native.config_setting(
         name = "disable_ov_trace",
         define_values = {
@@ -119,18 +107,6 @@ def create_config_settings():
     selects.config_setting_group(
         name = "is_windows_or_mediapipe_is_disabled_no_http",
         match_any = ["//src:windows", "//:disable_mediapipe"]
-    )
-
-    # is windows or python is disabled"(no llm dependency)
-    selects.config_setting_group(
-        name = "is_windows_or_python_is_disabled_no_llm",
-        match_any = ["//src:windows", "//:disable_python"]
-    )
-
-    # is windows and python is enabled"
-    selects.config_setting_group(
-        name = "is_windows_and_python_is_enabled",
-        match_all = ["//src:windows", "//:not_disable_python"]
     )
 
 ###############################
@@ -234,10 +210,6 @@ COMMON_STATIC_LIBS_LINKOPTS = select({
                     "/LTCG",
                 ],
                 })
-DEFINES_PYTHON = select({
-    "//conditions:default": ["PYTHON_DISABLE=1"],
-    "//:not_disable_python" : ["PYTHON_DISABLE=0"],
-})
 DEFINES_MEDIAPIPE = select({
     "//conditions:default": ["MEDIAPIPE_DISABLE=1"],
     "//:not_disable_mediapipe" : ["MEDIAPIPE_DISABLE=0"],
@@ -254,7 +226,7 @@ COMMON_FUZZER_LINKOPTS = [
     "-static-libasan",
 ]
 COMMON_LOCAL_DEFINES = ["SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE"]
-COMMON_DEFINES = DEFINES_PYTHON + DEFINES_MEDIAPIPE
+COMMON_DEFINES = DEFINES_MEDIAPIPE
 COPTS_CLOUD = select({
     "//conditions:default": ["-DCLOUD_DISABLE=1"],
     "//:not_disable_cloud": ["-DCLOUD_DISABLE=0"],

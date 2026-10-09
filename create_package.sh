@@ -36,7 +36,7 @@ find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d \
     -exec cp -vP {} /ovms_release/lib/ \;
 
 # Copy pyovms.so directly as a file (not symlink) to avoid broken Bazel cache paths.
-if ! [[ $debug_bazel_flags == *"_py_off"* ]] && [ "$FUZZER_BUILD" == "0" ]; then
+if [ "$FUZZER_BUILD" == "0" ]; then
     find /ovms/bazel-out/k8-*/bin/src/python/binding -name 'pyovms.so' -type f -exec cp -v {} /ovms_release/lib/ \;
 fi
 
@@ -106,23 +106,21 @@ if [ -f /ovms_release/lib/libsrc_Slibovms_Ushared.so ] ; then \
 fi
 
 # Add Python bindings for pyovms, openvino, openvino_tokenizers and openvino_genai, so they are all available for OVMS Python servables
-if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then
-	# Keep explicit copies for Python runtime/plugin artifacts so release staging
-	# remains stable even if the generic .so copy filter changes.
-	OVMS_PY_RUNTIME_LIB=$(find /ovms/bazel-out/k8-*/bin -type f -name 'libovmspython.so' | head -n 1 || true)
-	OVMS_PY_CALCULATORS_LIB=$(find /ovms/bazel-out/k8-*/bin -type f -name 'libpython_calculators.so' | head -n 1 || true)
-	if [ -z "$OVMS_PY_RUNTIME_LIB" ] || [ -z "$OVMS_PY_CALCULATORS_LIB" ]; then
-		echo "Missing Python runtime/plugin shared libraries in bazel outputs. Ensure //src/python:libovmspython and //src/python:libpython_calculators are built."
-		exit 1
-	fi
-	# --remove-destination overwrites any prior symlink staged by the generic *.so find above.
-	cp -vLf --remove-destination "$OVMS_PY_RUNTIME_LIB" /ovms_release/lib/
-	cp -vLf --remove-destination "$OVMS_PY_CALCULATORS_LIB" /ovms_release/lib/
-	# Verify the copies landed in the staging directory.
-	if [ ! -f /ovms_release/lib/libovmspython.so ] || [ ! -f /ovms_release/lib/libpython_calculators.so ]; then
-		echo "Missing libovmspython.so or libpython_calculators.so in package staging after cp."
-		exit 1
-	fi
+# Keep explicit copies for Python runtime/plugin artifacts so release staging
+# remains stable even if the generic .so copy filter changes.
+OVMS_PY_RUNTIME_LIB=$(find /ovms/bazel-out/k8-*/bin -type f -name 'libovmspython.so' | head -n 1 || true)
+OVMS_PY_CALCULATORS_LIB=$(find /ovms/bazel-out/k8-*/bin -type f -name 'libpython_calculators.so' | head -n 1 || true)
+if [ -z "$OVMS_PY_RUNTIME_LIB" ] || [ -z "$OVMS_PY_CALCULATORS_LIB" ]; then
+	echo "Missing Python runtime/plugin shared libraries in bazel outputs. Ensure //src/python:libovmspython and //src/python:libpython_calculators are built."
+	exit 1
+fi
+# --remove-destination overwrites any prior symlink staged by the generic *.so find above.
+cp -vLf --remove-destination "$OVMS_PY_RUNTIME_LIB" /ovms_release/lib/
+cp -vLf --remove-destination "$OVMS_PY_CALCULATORS_LIB" /ovms_release/lib/
+# Verify the copies landed in the staging directory.
+if [ ! -f /ovms_release/lib/libovmspython.so ] || [ ! -f /ovms_release/lib/libpython_calculators.so ]; then
+	echo "Missing libovmspython.so or libpython_calculators.so in package staging after cp."
+	exit 1
 fi
 
 if ! [[ $debug_bazel_flags == *"mp_off"* ]]; then
@@ -141,12 +139,12 @@ if ! [[ $debug_bazel_flags == *"mp_off"* ]]; then
 	fi
 fi
 
-if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then cp -r /opt/intel/openvino/python /ovms_release/lib/python ; fi
-if ! [[ $debug_bazel_flags == *"_py_off"* ]] && [ "$FUZZER_BUILD" == "0" ]; then mv /ovms_release/lib/pyovms.so /ovms_release/lib/python ; fi
-if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then mv /ovms_release/lib/python/bin/convert_tokenizer /ovms_release/bin/convert_tokenizer ; \
-   chmod +x /ovms_release/bin/convert_tokenizer ; fi
-if  ! [[ $debug_bazel_flags == *"_py_off"* ]]; then	mkdir -p /ovms_release/lib/python/openvino_genai-2026.5.dist-info ; \
-	echo $'Metadata-Version: 1.0\nName: openvino-genai\nVersion: 2026.5\nRequires-Python: >=3.9\nRequires-Dist: openvino-genai~=2026.5.0' > /ovms_release/lib/python/openvino_genai-2026.5.dist-info/METADATA; fi
+cp -r /opt/intel/openvino/python /ovms_release/lib/python
+if [ "$FUZZER_BUILD" == "0" ]; then mv /ovms_release/lib/pyovms.so /ovms_release/lib/python ; fi
+mv /ovms_release/lib/python/bin/convert_tokenizer /ovms_release/bin/convert_tokenizer ; \
+	chmod +x /ovms_release/bin/convert_tokenizer
+ mkdir -p /ovms_release/lib/python/openvino_genai-2026.5.dist-info
+ echo $'Metadata-Version: 1.0\nName: openvino-genai\nVersion: 2026.5\nRequires-Python: >=3.9\nRequires-Dist: openvino-genai~=2026.5.0' > /ovms_release/lib/python/openvino_genai-2026.5.dist-info/METADATA
 
 if [ -f /opt/intel/openvino/runtime/lib/intel64/plugins.xml ]; then cp /opt/intel/openvino/runtime/lib/intel64/plugins.xml /ovms_release/lib/ ; fi
 find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.mvcmd*' -exec cp -vP {} /ovms_release/lib/ \;

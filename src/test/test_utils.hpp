@@ -52,9 +52,7 @@
 
 #include "../kfs_frontend/validation.hpp"
 
-#if (PYTHON_DISABLE == 0)
 #include "../python/pythonnoderesources.hpp"
-#endif
 
 #include "test_models.hpp"
 
@@ -746,7 +744,7 @@ void SetUpServerForDownloadAndStartWithLoras(std::unique_ptr<std::thread>& t, ov
 /*
  *  starts loading OVMS on separate thread but waits until it is ready
  */
-void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS, std::string apiKeyFile = "", bool withPython = true);
+void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS, std::string apiKeyFile = "");
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName, int timeoutSeconds, const char* task);
 void SetUpServerWithExtraArgs(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, std::vector<std::string> extraArgs, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
@@ -768,7 +766,6 @@ void checkBuffers(const T* expected, const T* actual, size_t bufferSize) {
 class DummyMediapipeGraphDefinition : public ovms::MediapipeGraphDefinition {
 public:
     std::string inputConfig;
-#if (PYTHON_DISABLE == 0)
     ovms::PythonNodeResources* getPythonNodeResources(const std::string& nodeName) {
         auto it = this->sidePacketMaps->pythonNodeResourcesMap.find(nodeName);
         if (it == std::end(this->sidePacketMaps->pythonNodeResourcesMap)) {
@@ -777,7 +774,6 @@ public:
             return it->second.get();
         }
     }
-#endif
 
     ovms::GenAiServable* getGenAiServable(const std::string& nodeName) {
         auto it = this->sidePacketMaps->genAiServableMap.find(nodeName);

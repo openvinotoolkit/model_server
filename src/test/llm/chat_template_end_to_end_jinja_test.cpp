@@ -38,6 +38,8 @@
 #include "../../llm/io_processing/chat_template/probe.hpp"
 #include "../../llm/io_processing/input_processors/chat_template_adapter.hpp"
 #include "../../llm/py_jinja_template_processor.hpp"
+#include "../../llm/runtime_chat_template.hpp"
+#include "../../llm/runtime_chat_template_runtime_loader.hpp"
 #include "../../utils/env_guard.hpp"
 #include "../../llm/language_model/continuous_batching/servable.hpp"
 #include "../../llm/servable_initializer.hpp"
@@ -178,6 +180,48 @@ protected:
         }
     }
 };
+
+TEST_F(ChatTemplateEndToEndJinjaTest, RuntimeInitializationRendersOriginalTokenizerTemplate) {
+    ASSERT_NE(getRuntimeChatTemplateRuntimeApi(), nullptr)
+        << "libovmspython is unavailable; Jinja tests require the Python runtime";
+    ASSERT_FALSE(std::filesystem::exists(directoryPath + "/chat_template.jinja"));
+
+    auto properties = std::make_shared<GenAiServableProperties>();
+    properties->modelsPath = directoryPath;
+    properties->chatTemplateMode = ChatTemplateMode::JINJA;
+    const std::string originalTemplateTokenizerPath = getGenericFullPathForSrcTest(
+        "/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct", false);
+    properties->tokenizer = ov::genai::Tokenizer(originalTemplateTokenizerPath);
+
+    const std::string originalTemplate = properties->tokenizer.get_original_chat_template();
+    ASSERT_FALSE(originalTemplate.empty()) << "Tokenizer fixture must provide an original chat template";
+
+    GenAiServableInitializer::loadChatTemplate(properties, directoryPath);
+    ASSERT_TRUE(properties->preparedRuntimeChatTemplate.isPrepared());
+
+    const std::string requestBody = R"({"messages":[{"role":"user","content":"Hello"}]})";
+    std::string actualOutput;
+    ASSERT_EQ(tryApplyPreparedChatTemplateRuntime(
+                  properties->preparedRuntimeChatTemplate, requestBody, actualOutput),
+        RuntimeChatTemplateStatus::APPLIED);
+
+    PreparedRuntimeChatTemplate expectedTemplate;
+    std::string runtimeOutput;
+    ASSERT_EQ(prepareRuntimeChatTemplate(
+                  directoryPath,
+                  originalTemplate,
+                  properties->tokenizer.get_bos_token(),
+                  properties->tokenizer.get_eos_token(),
+                  expectedTemplate,
+                  runtimeOutput),
+        RuntimeChatTemplatePrepareStatus::PREPARED)
+        << runtimeOutput;
+
+    std::string expectedOutput;
+    ASSERT_EQ(tryApplyPreparedChatTemplateRuntime(expectedTemplate, requestBody, expectedOutput),
+        RuntimeChatTemplateStatus::APPLIED);
+    EXPECT_EQ(actualOutput, expectedOutput);
+}
 
 // =============================================================================
 // The chat template we use here contains multiple patches, including one that relates to `string2obj`.

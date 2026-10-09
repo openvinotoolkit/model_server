@@ -33,6 +33,7 @@ ovms_cc_library(
     name = "env_guard",
     hdrs = ["env_guard.hpp",],
     srcs = ["env_guard.cpp",],
+    linkstatic = 1,
     deps = [
         "@com_github_gabime_spdlog//:spdlog",
     ],

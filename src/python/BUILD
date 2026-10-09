@@ -21,7 +21,7 @@ load("//:common_settings.bzl",
      "COMMON_STATIC_LIBS_LINKOPTS",
      "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS",
     "COMMON_LOCAL_DEFINES", "LINUX_COMMON_STATIC_LIBS_COPTS_WITHOUT_VISIBILITY",
-    "PYBIND_HEADERS_ONLY", "PYBIND_DEPS", "ovms_cc_library")
+    "COPTS_TESTS", "PYBIND_HEADERS_ONLY", "PYBIND_DEPS", "ovms_cc_library")
 
 # Copts for the python shared library. These intentionally mirror the common
 # Linux static-library flags, but omit -fvisibility=hidden so the exported
@@ -94,9 +94,6 @@ _SHARED_LIB_COPTS_WINDOWS = [
 COPTS_SO = select({
     "//conditions:default": _SHARED_LIB_COPTS_LINUX,
     "//src:windows": _SHARED_LIB_COPTS_WINDOWS,
-}) + select({
-    "//conditions:default": ["-DPYTHON_DISABLE=1"],
-    "//:not_disable_python": ["-DPYTHON_DISABLE=0"],
 }) + select({
     "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
     "//:not_disable_mediapipe": ["-DMEDIAPIPE_DISABLE=0"],
@@ -262,7 +259,9 @@ ovms_cc_library(
     deps = PYBIND_DEPS + [
         "//src:cpp_headers", # TODO make ovmslib depend on that
         "//src:libovmslogging",
+        "//src:libovmsstatus",
         "//src:libovms_module",
+        "//src:module_names",
         ":python_calculators_plugin_loader",
         "//src/mediapipe_internal:mediapipe_utils",
         "pythonbackend",
@@ -305,12 +304,90 @@ ovms_cc_library(
     deps = PYBIND_DEPS + [
         "//src:cpp_headers",
         "//src:libovmslogging",
+        "//src:libovmsstatus",
         "//src:libovms_module",
+        "//src:module_names",
+        ":python_calculators_plugin_loader",
         "pythonbackend",
     ],
     visibility = ["//src:__pkg__"],
     alwayslink = 1,
     data = ["//src/python/binding:pyovms.so"],
+)
+
+cc_test(
+    name = "pythoninterpretermodule_lifecycle_test",
+    srcs = [
+        "pythoninterpretermodule.cpp",
+        "pythoninterpretermodule_lifecycle_test.cpp",
+        "python_calculators_plugin_loader.hpp",
+        "pythoninterpretermodule.hpp",
+        "python_runtime_module_api.hpp",
+    ],
+    copts = COPTS_TESTS,
+    deps = PYBIND_DEPS + [
+        ":pythonbackend",
+        "//src:cpp_headers",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+        "//src:libovms_module",
+        "//src:module_names",
+        "//src/utils:env_guard",
+        "@com_google_googletest//:gtest_main",
+    ],
+    data = select({
+        "//src:windows": ["//src/python/binding:copy_pyovms"],
+        "//conditions:default": ["//src/python/binding:pyovms.so"],
+    }),
+)
+
+cc_test(
+    name = "pythoninterpretermodule_backend_failure_test",
+    srcs = [
+        "pythoninterpretermodule.cpp",
+        "pythoninterpretermodule_backend_failure_test.cpp",
+        "python_calculators_plugin_loader.hpp",
+        "pythoninterpretermodule.hpp",
+        "python_runtime_module_api.hpp",
+    ],
+    copts = COPTS_TESTS,
+    deps = PYBIND_DEPS + [
+        ":pythonbackend",
+        "//src:cpp_headers",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+        "//src:libovms_module",
+        "//src:module_names",
+        "//src:test_test_with_temp_dir",
+        "//src/utils:env_guard",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "pythoninterpretermodule_borrowed_interpreter_test",
+    srcs = [
+        "pythoninterpretermodule.cpp",
+        "pythoninterpretermodule_borrowed_interpreter_test.cpp",
+        "python_calculators_plugin_loader.hpp",
+        "pythoninterpretermodule.hpp",
+        "python_runtime_module_api.hpp",
+    ],
+    copts = COPTS_TESTS,
+    deps = PYBIND_DEPS + [
+        ":pythonbackend",
+        "//src:cpp_headers",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+        "//src:libovms_module",
+        "//src:module_names",
+        "//src/utils:env_guard",
+        "@com_google_googletest//:gtest_main",
+    ],
+    data = select({
+        "//src:windows": ["//src/python/binding:copy_pyovms"],
+        "//conditions:default": ["//src/python/binding:pyovms.so"],
+    }),
 )
 
 # Shared library built from all Python binding sources.

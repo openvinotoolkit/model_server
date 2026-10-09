@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <chrono>
 #include <future>
 #include <optional>
 
@@ -33,19 +32,17 @@
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "constructor_enabled_model_manager.hpp"
 #include "platform_utils.hpp"
+#include "python_environment.hpp"
 #include "test_utils.hpp"
 
 #ifdef __linux__
 extern "C" const ovms::KfsPyTensorBridgeVTable* OVMS_getKfsPyTensorBridgeVTable() __attribute__((weak));
 #endif
 
-#if (PYTHON_DISABLE == 0)
 #include "../python/pythoninterpretermodule.hpp"
-#endif
 
 using namespace ovms;
 using namespace ::testing;
-using namespace std::chrono_literals;
 
 template <class W, class R>
 class MockedServerReaderWriter final : public ::grpc::ServerReaderWriterInterface<W, R> {
@@ -105,7 +102,6 @@ protected:
     }
 };
 
-#if (PYTHON_DISABLE == 0)
 class PythonStreamingTest : public StreamingTest {
 protected:
     // Defaults for executor
@@ -132,14 +128,14 @@ public:
 
     void TearDown() {
         manager.reset();
-        if (pythonModule->ownsPythonInterpreter()) {
-            pythonModule->reacquireGILForThisThread();
-        }
         pythonModule->shutdown();
         pythonModule.reset();
     }
 };
-#endif
+
+TEST_F(PythonStreamingTest, RepeatedStartIsRejected) {
+    EXPECT_EQ(pythonModule->start(ovms::Config::instance()), StatusCode::INTERNAL_ERROR);
+}
 
 static const std::string TIMESTAMP_PARAMETER_NAME{"OVMS_MP_TIMESTAMP"};
 
@@ -358,7 +354,6 @@ static auto SendWithTimestampAndNotifyEnd(std::vector<std::tuple<std::string, fl
     };
 }
 
-#if (PYTHON_DISABLE == 0)
 static auto SendWithAutomaticTimestampAndNotifyEnd(std::vector<std::tuple<std::string, float>> content, std::shared_ptr<int64_t> timestamp, std::promise<void>& signalPromise) {
     return [content, timestamp, &signalPromise](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
         assertResponse(msg, content, std::nullopt);
@@ -367,7 +362,6 @@ static auto SendWithAutomaticTimestampAndNotifyEnd(std::vector<std::tuple<std::s
         return true;
     };
 }
-#endif
 
 static auto SendError(const std::string& expectedMessage) {
     return [expectedMessage](const ::inference::ModelStreamInferResponse& msg, ::grpc::WriteOptions options) {
@@ -845,7 +839,6 @@ node {
 
 // PYTHON CALCULATOR CASES
 
-#if (PYTHON_DISABLE == 0)
 #pragma warning(push)
 #pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/embed.h>  // everything needed for embedding
@@ -1416,9 +1409,7 @@ node {
 
     ASSERT_EQ(pipeline->inferStream(this->firstRequest, this->stream, this->executionContext), StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
-
 // --- End Python cases
-#endif
 
 // Sending inputs separately for synchronized graph
 TEST_F(StreamingTest, MultipleStreamsDeliveredViaMultipleRequests) {

@@ -43,9 +43,7 @@
 #include "io_processing/input_processor_context.hpp"
 #include "io_processing/input_request.hpp"
 #include "runtime_chat_template.hpp"
-#if (PYTHON_DISABLE == 0)
 #include "py_jinja_template_processor.hpp"
-#endif
 
 namespace ovms {
 // Some pipelines internals rely on request_id, so for now we provide increasing ID
@@ -78,6 +76,7 @@ enum class GenerationPhase {
 };
 
 enum class ChatTemplateMode {
+    UNSET,
     MINJA,  // Use GenAI's apply_chat_template (minja-based)
     JINJA,  // Use Python Jinja2 module for chat template processing
 };
@@ -200,11 +199,7 @@ struct GenAiServableProperties {
     ov::AnyMap pluginConfig;
     ov::AnyMap tokenizerPluginConfig;
     bool enableToolGuidedGeneration = false;
-#if (PYTHON_DISABLE == 0)
-    ChatTemplateMode chatTemplateMode = ChatTemplateMode::JINJA;
-#else
-    ChatTemplateMode chatTemplateMode = ChatTemplateMode::MINJA;
-#endif
+    ChatTemplateMode chatTemplateMode = ChatTemplateMode::UNSET;
     // Chat template analysis
     ChatTemplateCaps chatTemplateCaps;
     // Sampling
@@ -226,24 +221,14 @@ struct GenAiServableProperties {
     InputProcessorContext inputProcessorContext;
     PreparedRuntimeChatTemplate preparedRuntimeChatTemplate;
 
-#if (PYTHON_DISABLE == 0)
     PyJinjaTemplateProcessor templateProcessor;
-#endif
 
     bool hasPreparedPyTemplateProcessor() const {
-#if (PYTHON_DISABLE == 0)
         return templateProcessor.chatTemplate != nullptr;
-#else
-        return false;
-#endif
     }
 
     PyJinjaTemplateProcessor* getPreparedPyTemplateProcessorOrNull() {
-#if (PYTHON_DISABLE == 0)
         return hasPreparedPyTemplateProcessor() ? &templateProcessor : nullptr;
-#else
-        return nullptr;
-#endif
     }
 };
 

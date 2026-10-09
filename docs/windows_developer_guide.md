@@ -70,42 +70,42 @@ windows_install_build_dependencies.bat my_dir_on_c 1 1
 
 ## COMPILE
 [WARNING] This step consumes up to 13GB of disk space. It can take up to 1h depending on host CPU and internet connection speed.
-This default command compiles ovms.exe without python dependencies, just C++ binary with limited support for chat template processing.
 ```bat
 windows_build.bat
 ```
 
 Optionally, you add parameter to the windows_build.bat script
 ```bat
-windows_build.bat my_dir_on_c --with_python --with_tests --integrity
+windows_build.bat my_dir_on_c --with_tests --integrity
 ```
-[arg1] This way you can change default dependency location directory to c:\my_dir_on_c
-[arg2] --with_python - this will build the ovms.exe with python dependency and support for python chat templates for GENAI LLM
-[arg3] --with_tests - this will also build ovms_test.exe target
-[arg4] --integrity - Add the compilation integrity flag to 0 or 1 - set the additional integritycheck compilation flag when compiling dependencies
+[arg1] - Change the default dependency location to `C:\my_dir_on_c`.
+[arg2..3] - Optional `--with_tests` and `--integrity` flags. They can be supplied individually or in either order.
 
 # Running unit tests - optional
-The script compiles ovms_test binary with C++ only, downloads and converts test LLM models (src\tests\llm_testing).
+The script compiles the Python-enabled ovms_test binary, downloads and converts test LLM models (src\tests\llm_testing), and installs Python torch and optimum.
 ```bat
 windows_test.bat
 ```
 
-The optional script compiles ovms_test binary with python support, downloads and converts test LLM models (src\tests\llm_testing) and installs Python torch and optimum.
+Optionally, pass the dependency location and a GoogleTest filter:
 ```bat
-windows_test.bat opt --with_python
+windows_test.bat my_dir_on_c PythonFlowTest.*
 ```
+[arg1] - Dependency location under `C:\`; defaults to `C:\opt`.
+[arg2] - GoogleTest filter; defaults to `*`.
 
 # Creating deployment package
 This step prepares ovms.zip deployment package from the build artifacts in the dist\windows\ directory. Run this script after successful compilation.
-The default version creates C++ only version without Python dependency.
 ```bat
 windows_create_package.bat
 ```
 
-Optionally you can create a package with Python dependency. Note that to create valid package with Python, you need to build using `--with_python` flag in the previous step as well.
+To include the embedded Python runtime, pass `--with_python` after the dependency location:
 ```bat
-windows_create_package.bat opt --with_python
+windows_create_package.bat my_dir_on_c --with_python
 ```
+[arg1] - Dependency location under `C:\`; defaults to `C:\opt`.
+[arg2] - `--with_python` includes the embedded Python runtime.
 
 # Test the Deployment
 You can follow the [baremetal deployment guide](deploying_server_baremetal.md) for information how to deploy and use the ovms.zip package.

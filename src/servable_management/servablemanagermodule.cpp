@@ -30,12 +30,10 @@ class PythonBackend;
 
 ServableManagerModule::ServableManagerModule(ovms::Server& ovmsServer) {
     PythonBackend* pythonBackend = nullptr;
-#if (PYTHON_DISABLE == 0)
     auto pythonModule = ovmsServer.getModule(PYTHON_INTERPRETER_MODULE_NAME);
     if (auto pythonRuntimeApi = dynamic_cast<const PythonRuntimeModuleApi*>(pythonModule)) {
         pythonBackend = pythonRuntimeApi->getPythonBackend();
     }
-#endif
     if (auto metricsModule = dynamic_cast<const MetricModule*>(ovmsServer.getModule(METRICS_MODULE_NAME))) {
         this->servableManager = std::make_unique<ModelManager>("", &metricsModule->getRegistry(), pythonBackend);
     } else {
