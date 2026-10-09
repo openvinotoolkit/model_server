@@ -93,6 +93,15 @@ bool Config::parse(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* model
     return validate();
 }
 
+bool Config::hasModelParametersSetViaCLI() const {
+    return std::any_of(
+        modelsSettings.userSetSingleModelArguments.begin(),
+        modelsSettings.userSetSingleModelArguments.end(),
+        [](const std::string& argument) {
+            return argument != "model_name" && argument != "model_path" && argument != "config_path";
+        });
+}
+
 bool Config::is_ipv6(const std::string& s) {
     addrinfo hints{};
     hints.ai_family = AF_INET6;
@@ -278,9 +287,7 @@ bool Config::validate() {
             std::cerr << "Use config_path or model_path with model_name" << std::endl;
             return false;
         }
-        if (!configPath().empty() && (!this->modelsSettings.batchSize.empty() || !shape().empty() ||
-                                         nireq() != 0 || !modelVersionPolicy().empty() || !this->modelsSettings.targetDevice.empty() ||
-                                         !pluginConfig().empty())) {
+        if (!configPath().empty() && hasModelParametersSetViaCLI()) {
             std::cerr << "Model parameters in CLI are exclusive with the config file" << std::endl;
             return false;
         }

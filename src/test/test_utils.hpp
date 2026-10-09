@@ -462,7 +462,7 @@ static std::vector<T> asVector(const std::string& tensor_content) {
     return v;
 }
 
-inline ovms::ModelConfig createValidationModelConfig(const std::string& name = "dummy", ovms::model_version_t version = 1) {
+inline ovms::ModelConfig createValidationModelConfig(std::string name = "dummy", ovms::model_version_t version = 1) {
     ovms::ModelConfig modelConfig{name};
     modelConfig.setVersion(version);
     return modelConfig;

@@ -39,6 +39,8 @@ private:
          */
     Config(const Config&) = delete;
 
+    bool hasModelParametersSetViaCLI() const;
+
     /**
          * @brief 
          */
