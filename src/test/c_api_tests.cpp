@@ -348,7 +348,7 @@ TEST(CAPIServerMetadata, Basic) {
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_SerializeMetadataToString(metadata, nullptr, &size), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NOT_NULL_EXPECT_CODE(OVMS_SerializeMetadataToString(metadata, &json, nullptr), StatusCode::NONEXISTENT_PTR);
     ASSERT_CAPI_STATUS_NULL(OVMS_SerializeMetadataToString(metadata, &json, &size));
-    ASSERT_EQ(std::string(json), std::string("{\"name\":\"") + std::string(PROJECT_NAME) + "\",\"version\":\"" + std::string(ovms::getProjectVersion()) + "\",\"ov_version\":\"" + std::string(ovms::getOpenVINOVersion()) + "\"}"));
+    ASSERT_EQ(std::string(json), std::string("{\"name\":\"") + std::string(PROJECT_NAME) + "\",\"version\":\"" + std::string(ovms::getProjectVersion()) + "\",\"ov_version\":\"" + std::string(ovms::getOpenVINOVersion()) + "\"}");
     ASSERT_EQ(size, std::strlen(json));
     OVMS_StringFree(json);
     const char* pointer = "/name";
