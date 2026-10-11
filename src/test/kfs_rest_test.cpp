@@ -1677,7 +1677,7 @@ TEST_F(HttpRestApiHandlerTest, serverMetadata) {
     rapidjson::Document doc;
     doc.Parse(response.c_str());
     ASSERT_EQ(std::string(doc["name"].GetString()), PROJECT_NAME);
-    ASSERT_EQ(std::string(doc["version"].GetString()), PROJECT_VERSION);
+    ASSERT_EQ(std::string(doc["version"].GetString()), ovms::getProjectVersion());
 }
 
 // binary_data_size=-1 must be rejected. Without a sign check the int64_t value

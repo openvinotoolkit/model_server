@@ -15,20 +15,12 @@
 //*****************************************************************************
 #include "version.hpp"
 
-#include <openvino/openvino.hpp>
-#if (MEDIAPIPE_DISABLE == 0)
-#include <openvino/genai/version.hpp>
-#endif
-
 namespace ovms {
-const char* getOpenVINOVersion() {
-    return ov::get_openvino_version().buildNumber;
+const char* getProjectVersion() {
+    return "REPLACE_PROJECT_VERSION";
 }
-const char* getGenAIVersion() {
-#if (MEDIAPIPE_DISABLE == 0)
-    return ov::genai::get_version().buildNumber;
-#else
-    return "";
-#endif
+
+const char* getBazelBuildFlags() {
+    return "REPLACE_BAZEL_BUILD_FLAGS";
 }
 }  // namespace ovms

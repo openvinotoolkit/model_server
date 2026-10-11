@@ -1,0 +1,19 @@
+diff --git a/src/cpp/CMakeLists.txt b/src/cpp/CMakeLists.txt
+index 0f822bc..43d1cc0 100644
+--- a/src/cpp/CMakeLists.txt
++++ b/src/cpp/CMakeLists.txt
+@@ -35,9 +35,11 @@ find_package(OpenVINO REQUIRED
+              COMPONENTS Runtime Threading)
+ 
+ include(FetchContent)
+-FetchContent_Declare(json GIT_REPOSITORY https://github.com/nlohmann/json.git
+-                          GIT_TAG d41ca94fa85d5119852e2f7a3f94335cc7cb0486  # PR #4709, fixes cmake deprecation warnings
+-                    )
++FetchContent_Declare(json
++    URL https://codeload.github.com/nlohmann/json/tar.gz/d41ca94fa85d5119852e2f7a3f94335cc7cb0486
++    URL_HASH SHA256=d107f80866a9940b1c1cc55e88629a8cd7e86d8b2991b38d9ff6404e49b7938e
++    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
++)
+ FetchContent_MakeAvailable(json)
+ 
+ file(GLOB MODELS_SOURCES ./models/src/*.cpp)

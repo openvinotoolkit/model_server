@@ -1,0 +1,23 @@
+--- a/mediapipe/framework/formats/tensor.h
++++ b/mediapipe/framework/formats/tensor.h
+@@ -484,8 +484,10 @@
+         return sizeof(int64_t);
+       case ElementType::kChar:
+         return sizeof(char);
+       case ElementType::kBool:
+         return sizeof(bool);
++      default:
++        return 0;
+     }
+   }
+   int bytes() const { return shape_.num_elements() * element_size(); }
+--- a/mediapipe/calculators/core/BUILD
++++ b/mediapipe/calculators/core/BUILD
+@@ -434,7 +434,6 @@
+         "//mediapipe/framework/formats:rect_cc_proto",
+         "//mediapipe/framework/port:ret_check",
+         "//mediapipe/framework/port:status",
+-        "@litert//tflite:framework",
+     ],
+     alwayslink = 1,
+ )

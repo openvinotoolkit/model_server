@@ -1,0 +1,10 @@
+--- a/mediapipe/framework/api3/calculator_context.h
++++ b/mediapipe/framework/api3/calculator_context.h
+@@ -434,2 +434,1 @@
+-template <typename T, typename U, typename... Rest, int&... DoNotSpecify,
+-          typename F>
++template <typename T, typename U, typename... Rest, typename F>
+@@ -450,2 +449,1 @@
+-template <typename T, typename U, typename... Rest, int&... DoNotSpecify,
+-          typename F>
++template <typename T, typename U, typename... Rest, typename F>
