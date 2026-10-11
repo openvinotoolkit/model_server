@@ -53,8 +53,6 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
             processors.emplace_back(std::make_unique<ImageDecodingProcessor>(
                 settings.allowedLocalMediaPath,
                 settings.allowedMediaDomains));
-            // Runs after ImageDecodingProcessor and before TextContentNormalizationProcessor:
-            // rewrites video_url parts into <ov_genai_video_N> text tags and fills inputVideos.
             processors.emplace_back(std::make_unique<VideoFramesProcessor>(
                 settings.allowedLocalMediaPath,
                 settings.allowedMediaDomains));

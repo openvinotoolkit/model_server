@@ -34,9 +34,7 @@ constexpr int64_t MAX_VIDEO_FRAMES = 1024;
 // Loads a sequence of video frames from a list of frame references (base64 data
 // URIs, HTTP/HTTPS URLs, or local file paths) and stacks them into a single
 // video tensor with [N, H, W, C] layout (RGB, u8), as expected by the GenAI VLM
-// pipeline video input. All frames must share the same height, width and channel
-// count. The mp4 decoding is intentionally not performed here; frames are
-// expected to be already decoded on the client side.
+// pipeline video input.
 absl::StatusOr<ov::Tensor> loadVideoFrames(const std::vector<std::string>& frameSources,
     const std::optional<std::string>& allowedLocalMediaPath,
     const std::optional<std::vector<std::string>>& allowedMediaDomains,

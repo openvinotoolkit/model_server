@@ -27,9 +27,8 @@ using namespace ovms;
 
 // Helpers ----------------------------------------------------------------
 
-// Temporarily overrides the global per-request decoded-pixel budget so the video
-// path's cross-frame accumulation can be exercised, restoring the previous
-// configuration on destruction.
+// Temporarily overrides the global per-request decoded-pixel budget and restores
+// it on destruction, so the video path's cross-frame accumulation can be tested.
 class ScopedImageDecodeBudget {
 public:
     ScopedImageDecodeBudget(uint64_t maxImageDecodePixels, bool allowUnestimatableImageFormats) :
@@ -344,12 +343,9 @@ TEST(VideoFramesProcessorTest, PerRequestPixelBudgetAcceptsFramesWithinTotal) {
 }
 
 TEST(VideoFramesProcessorTest, PerRequestPixelBudgetRejectsManyFramesBeforeAllocation) {
-    // Aggregate budget check: with many frame references the full
-    // {numFrames, H, W, C} tensor must not be allocated when the combined frame
-    // pixels exceed the budget. Here the first 1x1 frame consumes 1 pixel of the
-    // budget of 4, but the remaining frames (7 pixels) cannot fit the remaining 3,
-    // so the request is rejected before the stacked tensor is allocated rather
-    // than after a potentially multi-GB allocation.
+    // Aggregate budget check: the first 1x1 frame consumes 1 pixel of the budget
+    // of 4, but the remaining 7 frames cannot fit the remaining 3, so the request
+    // is rejected before the stacked tensor is allocated.
     ScopedImageDecodeBudget budgetGuard(4, /*allowUnestimatableImageFormats=*/false);
 
     std::string urls;

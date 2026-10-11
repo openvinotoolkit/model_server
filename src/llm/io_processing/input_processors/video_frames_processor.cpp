@@ -46,20 +46,12 @@ absl::Status VideoFramesProcessor::process(InputRequest& req) {
     }
     auto& chatHistory = std::get<ov::genai::ChatHistory>(req.input);
 
-    // Injection guard: ChatTemplateProcessor serializes three client-controlled
-    // containers into the rendered prompt - messages, tools and
-    // chat_template_kwargs (extra context). Fields such as
-    // tool_calls[].function.arguments, reasoning_content, a tool description or a
-    // template kwarg could otherwise smuggle a reserved <ov_genai_video_N> marker
-    // into the prompt and create a placeholder with no matching inputVideos entry.
-    // Scanning the serialized form of all three containers rejects the reserved
-    // prefix in every nested user-controlled value at once. The prefix contains
-    // no JSON-escapable characters, so it appears verbatim in the serialized form,
-    // and can never occur inside base64 frame data whose alphabet excludes '<',
-    // '_' and '>'.
+    // Injection guard: reject reserved video tags in any client-controlled
+    // container the chat template renders (messages, tools, extra context).
+    const auto& messages = chatHistory.get_messages();
     const auto& tools = chatHistory.get_tools();
     const auto& extraContext = chatHistory.get_extra_context();
-    if (chatHistory.get_messages().to_json_string().find(VIDEO_TAG_PREFIX) != std::string::npos ||
+    if (messages.to_json_string().find(VIDEO_TAG_PREFIX) != std::string::npos ||
         (!tools.empty() && tools.to_json_string().find(VIDEO_TAG_PREFIX) != std::string::npos) ||
         (!extraContext.empty() && extraContext.to_json_string().find(VIDEO_TAG_PREFIX) != std::string::npos)) {
         return absl::InvalidArgumentError("Message contains restricted <ov_genai_video> tag");
@@ -72,18 +64,11 @@ absl::Status VideoFramesProcessor::process(InputRequest& req) {
             continue;
         }
 
-        // Replace video_url parts with text tag parts in-place, mirroring
-        // ImageDecodingProcessor. Each video_url is decoded into a single
-        // {N,H,W,C} video tensor and replaced with a text part carrying the
-        // <ov_genai_video_N> tag consumed later by the VLM pipeline. All other
-        // parts (text, image_url) are preserved as-is. Flattening to a string is
-        // deferred to TextContentNormalizationProcessor.
         for (size_t j = 0; j < content.size(); j++) {
             const auto part = content[j];
             if (part["type"].as_string().value_or("") == "video_url") {
                 const auto urls = part["video_url"]["url"];
-                // Reject oversized frame arrays before reserving/copying to avoid
-                // allocating unbounded memory from an untrusted array length.
+                // Reject oversized frame arrays before allocating from an untrusted length.
                 if (static_cast<int64_t>(urls.size()) > MAX_VIDEO_FRAMES) {
                     return absl::InvalidArgumentError("Number of video frames exceeds the allowed maximum of " + std::to_string(MAX_VIDEO_FRAMES));
                 }

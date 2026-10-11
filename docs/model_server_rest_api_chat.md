@@ -201,7 +201,7 @@ curl http://localhost/v3/chat/completions \
 In case of VLM models that support video understanding (e.g. Qwen3-VL), a video can be sent as a `video_url` content part. Because the server does not decode compressed video containers (mp4 etc.), the client is responsible for extracting frames from the source video and sending them as an **array of already-decoded frames**. Each element of the `url` array is a single frame in the same formats accepted by `image_url` (base64 data URI, HTTP(S) URL, or local filesystem path). Frames are sent in the order given, so extract them in temporal order:
 
 ```
-curl http://localhost/v3/chat/completions \
+curl http://localhost/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "qwen3-vl",

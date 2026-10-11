@@ -45,9 +45,7 @@ struct InputRequest {
     std::vector<ov::Tensor> inputAudios;
 
     // Running total of decoded pixels across all image_url and video_url parts in
-    // this request. Shared by ImageDecodingProcessor and VideoFramesProcessor so the
-    // aggregate decoded size of the whole request is bounded by max_image_decode_pixels,
-    // instead of each part (or each video) receiving a fresh full budget.
+    // this request.
     size_t totalDecodedPixels = 0;
 };
 
