@@ -44,11 +44,7 @@ class KFSRestParser : RestParser {
 
 public:
     Status parse(const char* json);
-<<<<<<< Updated upstream
-    Status parse(const char* json, size_t jsonLength);
-=======
     Status parse(const char* json, std::size_t jsonLength);
->>>>>>> Stashed changes
     ::KFSRequest& getProto() { return requestProto; }
 };
 

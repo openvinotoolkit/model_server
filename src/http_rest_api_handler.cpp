@@ -512,11 +512,7 @@ static Status createV3HttpPayload(
                     return Status(StatusCode::JSON_INVALID, "JSON body exceeds maximum nesting depth");
                 }
                 if (status == StatusCode::JSON_COMPLEXITY_EXCEEDED) {
-<<<<<<< Updated upstream
                     return Status(StatusCode::JSON_COMPLEXITY_EXCEEDED, "JSON body exceeds maximum complexity");
-=======
-                    return Status(StatusCode::JSON_INVALID, "JSON body exceeds maximum complexity");
->>>>>>> Stashed changes
                 }
                 return Status(StatusCode::JSON_INVALID, "Cannot parse JSON body");
             }
