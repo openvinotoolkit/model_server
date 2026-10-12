@@ -29,6 +29,7 @@ py_runtime_pair(
     py3_runtime = ":system_python3_runtime",
 )
 
+# Used by the Python binding test to run with the system CPython ABI used by pyovms.so.
 toolchain(
     name = "system_python_toolchain",
     toolchain = ":system_python_runtime_pair",
