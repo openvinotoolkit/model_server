@@ -349,7 +349,7 @@ TEST_F(OvmsConfigDeathTest, nonExistingLogLevel) {
 }
 
 TEST_F(OvmsConfigDeathTest, jsonMaxComplexityZero) {
-    char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--json_max_complexity", "0"};
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--json_max_complexity", "0"};
     int arg_count = 7;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "json_max_complexity must be greater than 0");
 }
@@ -2599,7 +2599,7 @@ TEST(OvmsConfigTest, disableInputCountValidationDefaultsToFalse) {
 }
 
 TEST(OvmsConfigTest, jsonMaxComplexityDefaultsToBuiltInLimit) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--rest_port",
         "45",
