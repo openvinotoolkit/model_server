@@ -519,11 +519,12 @@ TEST_P(InputProcessingIntegrationTest, MultiTurnAudio_PreservesPlacement) {
     const size_t secondTag = prompt.find("<ov_genai_audio_1>");
     const size_t lastText = prompt.find("After.");
     ASSERT_NE(lastText, std::string::npos);
-    EXPECT_LT(firstText, firstTag);
-    EXPECT_LT(firstTag, assistantText);
-    EXPECT_LT(assistantText, secondText);
-    EXPECT_LT(secondText, secondTag);
-    EXPECT_LT(secondTag, lastText);
+    EXPECT_LT(firstText, firstTag) << "First audio tag should come after 'First.'";
+    EXPECT_LT(firstTag, assistantText) << "First audio tag should come before assistant's response";
+    EXPECT_LT(assistantText, secondText) << "Second text ('Before.') should come after assistant's response";
+    EXPECT_LT(secondText, secondTag) << "Second audio tag should come after 'Before.'";
+    EXPECT_LT(secondTag, lastText) << "Second audio tag should come before 'After.'";
+    EXPECT_LT(firstTag, secondTag) << "Audio tags must be in order: <ov_genai_audio_0> before <ov_genai_audio_1>";
 }
 
 TEST_P(InputProcessingIntegrationTest, AudioTagInUserTextRejected) {
