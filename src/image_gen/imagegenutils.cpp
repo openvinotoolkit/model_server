@@ -340,7 +340,7 @@ absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOpt
         SPDLOG_DEBUG("Validating request options for static reshape settings");
         return ensureAcceptableForStatic(requestOptions, args);
     }
-    SPDLOG_DEBUG("Validating request options for static reshape settings");
+    SPDLOG_DEBUG("Validating request options for dynamic reshape settings");
     return ensureAcceptableForDynamic(requestOptions, args);
 }
 
