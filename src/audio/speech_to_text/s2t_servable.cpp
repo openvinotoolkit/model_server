@@ -76,11 +76,6 @@ absl::Status SttServable::parseTemperature(const HttpPayload& payload, ov::genai
     std::string temperatureStr = payload.multipartParser->getFieldByName("temperature");
     if (temperatureStr.size() > 0) {
         SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received temperature: {}", temperatureStr);
-        // No integer fallback: ovms::stof already parses integer spellings ("1" -> 1.0f) and
-        // is the stricter of the two, requiring the whole field to be consumed. ovms::stou32
-        // does not, so it used to rescue exactly the values stof had just rejected - "0.5x"
-        // became 0.0 and "1e400" became 1.0 - turning malformed input into a plausible
-        // temperature instead of the intended "Invalid temperature type." error.
         auto temp = ovms::stof(temperatureStr);
         if (!temp.has_value())
             return absl::InvalidArgumentError("Invalid temperature type.");

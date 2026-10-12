@@ -129,9 +129,6 @@ TEST(SttServableParseTemperatureTest, positiveTemperatureEnablesSampling) {
     EXPECT_TRUE(config.do_sample);
 }
 
-// A temperature field that is not entirely a number must be rejected rather than silently
-// reinterpreted. These all used to be accepted: the ovms::stou32 fallback parsed the leading
-// digits of a value ovms::stof had already rejected.
 TEST(SttServableParseTemperatureTest, trailingGarbageTemperatureRejected) {
     HttpPayload payload;
     std::shared_ptr<MockedMultiPartParser> multipartParser = std::make_shared<MockedMultiPartParser>();
