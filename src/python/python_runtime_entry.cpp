@@ -158,6 +158,44 @@ bool validateEnvPaths(std::string& details) {
     return true;
 }
 
+void addCurrentPythonPathToSysPath() {
+    const char* pythonPath = std::getenv("PYTHONPATH");
+    if (pythonPath == nullptr || pythonPath[0] == '\0') {
+        return;
+    }
+
+#ifdef _WIN32
+    const char separator = ';';
+#else
+    const char separator = ':';
+#endif
+    py::list sysPath = py::module_::import("sys").attr("path");
+    const std::string pathValue(pythonPath);
+    std::vector<std::string> pathEntries;
+    size_t start = 0;
+    while (start <= pathValue.size()) {
+        const size_t end = pathValue.find(separator, start);
+        const std::string directory = (end == std::string::npos) ? pathValue.substr(start) : pathValue.substr(start, end - start);
+        if (!directory.empty()) {
+            pathEntries.emplace_back(directory);
+        }
+        if (end == std::string::npos) {
+            break;
+        }
+        start = end + 1;
+    }
+
+    for (const auto& directory : pathEntries) {
+        const py::str pathEntry(directory);
+        while (sysPath.attr("__contains__")(pathEntry).cast<bool>()) {
+            sysPath.attr("remove")(pathEntry);
+        }
+    }
+    for (auto directory = pathEntries.rbegin(); directory != pathEntries.rend(); ++directory) {
+        sysPath.attr("insert")(0, py::str(*directory));
+    }
+}
+
 }  // namespace
 
 // Applies the real --log_level/--log_path config to this library's own logger
@@ -208,6 +246,7 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_validatePythonEnvironment(const char*
         }
         {
             py::gil_scoped_acquire acquire;
+            addCurrentPythonPathToSysPath();
             // Validate that OVMS Python bindings are importable and executable.
             py::module_::import("pyovms");
         }
