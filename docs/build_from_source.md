@@ -4,8 +4,8 @@ This document gives information how to build docker images and the binary packag
 
 ## Prerequisites
 
-1. [Docker Engine](https://docs.docker.com/engine/)
-1. Ubuntu 22.04, Ubuntu 24.04, Ubuntu 26.04 or RedHat 9.6 host
+1. [Docker Engine](https://docs.docker.com/engine/) with Buildx CLI plugin or Podman.
+1. Host with x86_64 architecture
 1. make
 1. bash
 
@@ -18,7 +18,7 @@ Makefile located in root directory of this repository contains all targets neede
 ```bash
 git clone https://github.com/openvinotoolkit/model_server
 cd model_server
-make release_image
+make release_image GPU=1 NPU=1
 ````
 
 To build the image with non default configuration, add parameters described below.
@@ -28,12 +28,12 @@ To build the image with non default configuration, add parameters described belo
 ### `BASE_OS`
 
 Select base OS:
-- `ubuntu22` for Ubuntu 22.04 (default)
-- `ubuntu24` for Ubuntu 24.04
+- `ubuntu22` for Ubuntu 22.04
+- `ubuntu24` for Ubuntu 24.04 (default)
 - `ubuntu26` for Ubuntu 26.04
-- `redhat` for Red Hat UBI 9.6
+- `redhat` for Red Hat UBI 9.8
 
-```bash
+```text
 make release_image BASE_OS=redhat
 ```
 
@@ -43,36 +43,21 @@ Example:
 
 ### `INSTALL_DRIVER_VERSION`
 
-Parameter used to control which GPU driver version will be installed. Supported versions:
-| OS | Versions |
+`INSTALL_DRIVER_VERSION` selects the GPU driver version. The Makefile defaults are:
+
+| Base OS | Default version |
 |---|---|
-| Ubuntu22 | 24.39.31294 (default), <br /> 24.26.30049 (default), <br /> 23.22.26516|
-| Ubuntu24 | 24.52.32224 (default), <br /> 24.39.31294 |
-| Ubuntu26 | 26.31.39395 (default) |
-| RedHat | 23.22.26516 (default), <br /> 24.26.30049, <br />23.22.26516, <br /> 22.10.22597 |
+| Ubuntu 22.04 | `24.39.31294` |
+| Ubuntu 24.04 | `26.31.39395` |
+| Ubuntu 26.04 | `26.31.39395` |
+| Red Hat | `25.18.33578` |
 
-Additionally it is possible to specify custom (pre-production) drivers by providing location to NEO Runtime packages on local disk. Contact Intel representative to get the access to the pre-production drivers.
-Warning: _Maintained only for Ubuntu base OS._
+See [install_ubuntu_gpu_drivers.sh](../install_ubuntu_gpu_drivers.sh) and [install_redhat_gpu_drivers.sh](../install_redhat_gpu_drivers.sh) for the installer cases.
 
-Put NEO Runtime deb packages in the catalog `<model_server_dir>/release_files/drivers/dg2`. Expected structure is like below:
-
-```
-drivers
-└── dg2
-     ├── intel-igc-core_<version>_amd64.deb
-     ├── intel-igc-opencl_<version>_amd64.deb
-     ├── intel-level-zero-gpu-dbgsym_<version>_amd64.deb
-     ├── intel-level-zero-gpu_<version>_amd64.deb
-     ├── intel-opencl-icd-dbgsym_<version>_amd64.deb
-     ├── intel-opencl-icd_<version>_amd64.deb
-     ├── libigdgmm12_<version>_amd64.deb
-     └── libigdgmm12_<version>_amd64.deb
-```
-and run make release_image with parameter: INSTALL_DRIVER_VERSION=dg2.
 
 Example:
-```bash
-make release_image BASE_OS=ubuntu INSTALL_DRIVER_VERSION=dg2
+```text
+make release_image BASE_OS=ubuntu INSTALL_DRIVER_VERSION=26.31.39395 GPU=1
 ```
 
 <hr />
@@ -91,8 +76,8 @@ Use `OV_SOURCE_BRANCH` and `OV_SOURCE_ORG` to select [OpenVINO repository](https
 When `OV_USE_BINARY=1`, the OpenVINO backend will be installed from the binary archive set in `DLDT_PACKAGE_URL`.
 
 Example:
-```bash
-make release_image OV_USE_BINARY=0 OV_SOURCE_BRANCH=<commit or branch> OV_SOURCE_ORG=<fork org>
+```text
+make release_image OV_USE_BINARY=0 OV_SOURCE_BRANCH=master OV_SOURCE_ORG=openvinotoolkit
 ```
 
 Running the unit tests will increase build time and consume more RAM
@@ -101,7 +86,7 @@ Running the unit tests will increase build time and consume more RAM
 
 Number of compilation jobs. By default it is set to the number of CPU cores. On hosts with low RAM, this value can be reduced to avoid out of memory errors during the compilation.
 
-```bash
+```text
 make release_image JOBS=2
 ```
 <hr />
@@ -111,7 +96,7 @@ make release_image JOBS=2
 When set to `0`, OpenVINO&trade Model Server will be built with [Python Nodes](python_support/quickstart.md) support. Default value: `0`.
 
 Example:
-```bash
+```text
 make release_image PYTHON_DISABLE=1
 ```
 
@@ -120,7 +105,7 @@ make release_image PYTHON_DISABLE=1
 When set to `0`, OpenVINO&trade Model Server will be built with [MediaPipe](mediapipe.md) support. Default value: `0`.
 
 Example:
-```bash
+```text
 make release_image MEDIAPIPE_DISABLE=1 PYTHON_DISABLE=1
 ```
 
@@ -131,29 +116,30 @@ make release_image MEDIAPIPE_DISABLE=1 PYTHON_DISABLE=1
 When set to `1`, OpenVINO&trade Model Server will be built with the drivers required by [GPU plugin](https://docs.openvino.ai/2026/openvino-workflow/running-inference/inference-devices-and-modes/gpu-device.html) support. Default value: `0`.
 
 Example:
-```bash
+```text
 make release_image GPU=1
 ```
 
-## Building minimal image
+### `TOKEN`
 
-Building minimalistic OVMS docker image requires disabling all optional features:
+GitHub Personal Access Token (PAT) used to run builds with an authenticated GitHub user when cloning source repositories. This serves as a workaround for GitHub connection stability issues and API rate limits during the build.
 
-```bash
-make release_image GPU=0 MEDIAPIPE_DISABLE=1 PYTHON_DISABLE=1
+Example:
+```text
+make release_image TOKEN=<your_github_token>
 ```
 
 ## Building Binary Package
 
 The binary packages includes the `ovms` executable and linked libraries for bare metal deployments. It includes also a shared library for the model server CAPI interface. Building `ovms.tar.gz` package is possible by using `targz_package` target:
 
-```bash
-make targz_package PYTHON_DISABLE=1
-tree dist/ubuntu22
+```text
+make targz_package
+tree dist/ubuntu24
 ````
 
-```bash
-dist/ubuntu22
+```text
+dist/ubuntu24
 ├── ovms.tar.gz
 └── ovms.tar.gz.sha256
 ```
@@ -169,7 +155,7 @@ If you do not need Kokoro non-English support and can accept reduced English OOV
 
 - skip building `espeak-ng` during image/package build:
 
-```bash
+```text
 make targz_package ESPEAK=0
 ```
 
