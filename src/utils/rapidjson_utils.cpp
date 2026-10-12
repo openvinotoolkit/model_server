@@ -102,98 +102,98 @@ struct DepthOnlyHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
             violation = JsonLimitViolation::DEPTH;
 >>>>>>> Stashed changes
             return false;
-        }
-        return incrementComplexity();
     }
-    bool StartArray() {
+    return incrementComplexity();
+} bool StartArray() {
 <<<<<<< Updated upstream
-        if (depth >= maxDepth) {
-            violation = JsonLimitViolation::DEPTH;
-            return false;
-        }
-        ++depth;
-        if (!incrementComplexity())
+    if (depth >= maxDepth) {
+        violation = JsonLimitViolation::DEPTH;
+        return false;
+    }
+    ++depth;
+    if (!incrementComplexity())
 =======
         if (++depth > maxDepth) {
             violation = JsonLimitViolation::DEPTH;
 >>>>>>> Stashed changes
-            return false;
-        }
-        return incrementComplexity();
-    }
-    bool Key(const char*, rapidjson::SizeType, bool) {
-        return incrementComplexity();
-    }
-    bool Null() {
-        return incrementComplexity();
-    }
-    bool Bool(bool) {
-        return incrementComplexity();
-    }
-    bool Int(int) {
-        return incrementComplexity();
-    }
-    bool Uint(unsigned) {
-        return incrementComplexity();
-    }
-    bool Int64(int64_t) {
-        return incrementComplexity();
-    }
-    bool Uint64(uint64_t) {
-        return incrementComplexity();
-    }
-    bool Double(double) {
-        return incrementComplexity();
-    }
-    bool RawNumber(const char*, rapidjson::SizeType, bool) {
-        return incrementComplexity();
-    }
-    bool String(const char*, rapidjson::SizeType, bool) {
-        return incrementComplexity();
-    }
-    bool Key(const char*, rapidjson::SizeType, bool) {
-        return incrementComplexity();
-    }
-    bool Null() {
-        return incrementComplexity();
-    }
-    bool Bool(bool) {
-        return incrementComplexity();
-    }
-    bool Int(int) {
-        return incrementComplexity();
-    }
-    bool Uint(unsigned) {
-        return incrementComplexity();
-    }
-    bool Int64(int64_t) {
-        return incrementComplexity();
-    }
-    bool Uint64(uint64_t) {
-        return incrementComplexity();
-    }
-    bool Double(double) {
-        return incrementComplexity();
-    }
-    bool RawNumber(const char*, rapidjson::SizeType, bool) {
-        return incrementComplexity();
-    }
-    bool String(const char*, rapidjson::SizeType, bool) {
-        return incrementComplexity();
-    }
-    bool EndObject(rapidjson::SizeType) {
-        if (!incrementComplexity())
-            return false;
-        --depth;
-        return true;
-    }
-    bool EndArray(rapidjson::SizeType) {
-        if (!incrementComplexity())
-            return false;
-        --depth;
-        return true;
-    }
-};
+        return false;
+}
+return incrementComplexity();
+}  // namespace ovms
+bool Key(const char*, rapidjson::SizeType, bool) {
+    return incrementComplexity();
+}
+bool Null() {
+    return incrementComplexity();
+}
+bool Bool(bool) {
+    return incrementComplexity();
+}
+bool Int(int) {
+    return incrementComplexity();
+}
+bool Uint(unsigned) {
+    return incrementComplexity();
+}
+bool Int64(int64_t) {
+    return incrementComplexity();
+}
+bool Uint64(uint64_t) {
+    return incrementComplexity();
+}
+bool Double(double) {
+    return incrementComplexity();
+}
+bool RawNumber(const char*, rapidjson::SizeType, bool) {
+    return incrementComplexity();
+}
+bool String(const char*, rapidjson::SizeType, bool) {
+    return incrementComplexity();
+}
+bool Key(const char*, rapidjson::SizeType, bool) {
+    return incrementComplexity();
+}
+bool Null() {
+    return incrementComplexity();
+}
+bool Bool(bool) {
+    return incrementComplexity();
+}
+bool Int(int) {
+    return incrementComplexity();
+}
+bool Uint(unsigned) {
+    return incrementComplexity();
+}
+bool Int64(int64_t) {
+    return incrementComplexity();
+}
+bool Uint64(uint64_t) {
+    return incrementComplexity();
+}
+bool Double(double) {
+    return incrementComplexity();
+}
+bool RawNumber(const char*, rapidjson::SizeType, bool) {
+    return incrementComplexity();
+}
+bool String(const char*, rapidjson::SizeType, bool) {
+    return incrementComplexity();
+}
+bool EndObject(rapidjson::SizeType) {
+    if (!incrementComplexity())
+        return false;
+    --depth;
+    return true;
+}
+bool EndArray(rapidjson::SizeType) {
+    if (!incrementComplexity())
+        return false;
+    --depth;
+    return true;
+}
+}
+;
 
 Status parseJsonWithDepthLimit(
     rapidjson::Document& doc,
