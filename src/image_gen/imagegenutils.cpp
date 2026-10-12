@@ -429,6 +429,14 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ra
             requestOptions.insert({"width", args.defaultResolution->first});
         }
     }
+    if (args.nativeResolution.has_value()) {
+        if (requestOptions.find("height") == requestOptions.end()) {
+            requestOptions.insert({"height", args.nativeResolution->second});
+        }
+        if (requestOptions.find("width") == requestOptions.end()) {
+            requestOptions.insert({"width", args.nativeResolution->first});
+        }
+    }
     // now check if in httpPaylod.parsedJson we have any fields other than the ones we accept
     // accepted are: prompt, prompt_2, prompt_3, negative_prompt, negative_prompt_2, negative_prompt_3,
     // num_images_per_prompt, max_sequence_length, height, width, rng_seed, num_inference_steps,

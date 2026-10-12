@@ -73,5 +73,6 @@ struct ImageGenPipelineArgs {
     // the priority chain (request > composite > individual adapter) determines the effective value.
     using CompositeLoraMap = std::unordered_map<std::string, std::vector<std::pair<std::string, std::optional<float>>>>;
     CompositeLoraMap compositeLoraAdapters;
+    std::optional<resolution_t> nativeResolution;
 };
 }  // namespace ovms

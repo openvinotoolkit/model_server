@@ -674,6 +674,41 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsDefaultSizeBehavior) {
     EXPECT_EQ(options.at("height").as<int64_t>(), 256);
     EXPECT_EQ(options.at("width").as<int64_t>(), 512);
 }
+
+TEST(Text2ImageTest, getImageGenerationRequestOptionsUsesNativeResolutionWhenSizeIsMissing) {
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    payload.parsedJson->Parse(R"({"prompt":"test prompt","size":"auto"})");
+    auto args = DEFAULTIMAGE_GEN_ARGS;
+    args.nativeResolution = std::make_pair(1024, 768);
+
+    auto requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args);
+    ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(requestOptions));
+    auto& options = std::get<ov::AnyMap>(requestOptions);
+    EXPECT_EQ(options.at("width").as<int64_t>(), 1024);
+    EXPECT_EQ(options.at("height").as<int64_t>(), 768);
+
+    payload.parsedJson->Parse(R"({"prompt":"test prompt"})");
+    requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args);
+    ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(requestOptions));
+    auto& optionsWithoutSize = std::get<ov::AnyMap>(requestOptions);
+    EXPECT_EQ(optionsWithoutSize.at("width").as<int64_t>(), 1024);
+    EXPECT_EQ(optionsWithoutSize.at("height").as<int64_t>(), 768);
+}
+
+TEST(Text2ImageTest, getImageGenerationRequestOptionsRejectsNativeResolutionAboveMax) {
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    payload.parsedJson->Parse(R"({"prompt":"test prompt","size":"auto"})");
+    auto args = DEFAULTIMAGE_GEN_ARGS;
+    args.maxResolution = {64, 64};
+    args.nativeResolution = std::make_pair(128, 64);
+
+    auto requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    EXPECT_THAT(std::get<absl::Status>(requestOptions).message(), ::testing::HasSubstr("width 128 exceeds maxResolution"));
+}
+
 TEST(Text2ImageTest, getImageGenerationRequestOptionsRejectedFields) {
     // OpenAI fields background, mask, quality, response_format, user
     ovms::HttpPayload payload;
