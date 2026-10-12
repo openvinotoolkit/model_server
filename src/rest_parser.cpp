@@ -256,9 +256,15 @@ Status KFSRestParser::parse(const char* json) {
     return parse(json, std::strlen(json));
 }
 
+<<<<<<< Updated upstream
 Status KFSRestParser::parse(const char* json, size_t jsonLength) {
     rapidjson::Document doc;
     auto status = parseJsonWithDepthLimit(doc, json, jsonLength, MAX_NESTING_DEPTH, Config::instance().jsonMaxComplexity());
+=======
+Status KFSRestParser::parse(const char* json, std::size_t jsonLength) {
+    rapidjson::Document doc;
+    auto status = parseJsonWithDepthLimit(doc, json, jsonLength, MAX_NESTING_DEPTH, DEFAULT_MAX_JSON_COMPLEXITY);
+>>>>>>> Stashed changes
     if (!status.ok()) {
         SPDLOG_DEBUG("Request is not a valid JSON: {}", status.string());
         return status;

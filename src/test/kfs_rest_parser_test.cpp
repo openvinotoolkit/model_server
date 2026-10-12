@@ -22,6 +22,7 @@
 #include "../rest_parser.hpp"
 #include "../utils/rapidjson_utils.hpp"
 #include "src/status.hpp"
+#include "src/utils/rapidjson_utils.hpp"
 
 using namespace ovms;
 
@@ -1033,6 +1034,7 @@ TEST_F(KFSRestParserTest, NestingDepthExceeded_FP32) {
     EXPECT_EQ(status, StatusCode::JSON_NESTING_DEPTH_EXCEEDED);
 }
 
+<<<<<<< Updated upstream
 TEST_F(KFSRestParserTest, ComplexityLimitExceededBeforeDomParse) {
     rapidjson::Document doc;
     std::string request = R"({"inputs":[{"name":"input0","shape":[4],"datatype":"FP32","data":[0,1,2,3]}]})";
@@ -1066,3 +1068,13 @@ TEST_F(KFSRestParserTest, ParseJsonPrefixWithoutCopyingSubstring) {
     ASSERT_EQ(proto.inputs()[0].contents().fp32_contents_size(), 1);
     EXPECT_FLOAT_EQ(proto.inputs()[0].contents().fp32_contents(0), 1.5f);
 }
+=======
+TEST_F(KFSRestParserTest, ComplexityExceeded_WideArrayPayload) {
+    rapidjson::Document doc;
+    std::string request = R"({"junk":[1,1,1,1,1,1],"inputs":[{"name":"input0","shape":[1],"datatype":"FP32","data":[0]}]})";
+
+    auto status = parseJsonWithDepthLimit(doc, request.data(), request.size(), DEFAULT_MAX_JSON_NESTING_DEPTH, 10);
+
+    EXPECT_EQ(status, StatusCode::JSON_COMPLEXITY_EXCEEDED);
+}
+>>>>>>> Stashed changes

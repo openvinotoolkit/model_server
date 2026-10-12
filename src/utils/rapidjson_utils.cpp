@@ -49,19 +49,31 @@ void addJsonOrStringMember(rapidjson::Value& obj, const char* key, const std::st
     }
 }
 
+<<<<<<< Updated upstream
+=======
+// Lightweight SAX handler that only tracks nesting depth.
+// No DOM allocation — all SAX events are accepted and discarded.
+>>>>>>> Stashed changes
 enum class JsonLimitViolation {
     NONE,
     DEPTH,
     COMPLEXITY,
 };
 
+<<<<<<< Updated upstream
 // Lightweight SAX handler that tracks nesting depth and total JSON complexity.
 // No DOM allocation — all SAX events are accepted and discarded until a limit trips.
+=======
+>>>>>>> Stashed changes
 struct DepthOnlyHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>, DepthOnlyHandler> {
     std::size_t depth{0};
     std::size_t complexity{0};
     const std::size_t maxDepth;
     const std::size_t maxComplexity;
+<<<<<<< Updated upstream
+=======
+    std::size_t complexity{0};
+>>>>>>> Stashed changes
     JsonLimitViolation violation{JsonLimitViolation::NONE};
 
     DepthOnlyHandler(std::size_t maxDepth, std::size_t maxComplexity) :
@@ -78,24 +90,66 @@ struct DepthOnlyHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     }
 
     bool StartObject() {
+<<<<<<< Updated upstream
         if (depth >= maxDepth) {
             violation = JsonLimitViolation::DEPTH;
             return false;
         }
         ++depth;
         if (!incrementComplexity())
+=======
+        if (++depth > maxDepth) {
+            violation = JsonLimitViolation::DEPTH;
+>>>>>>> Stashed changes
             return false;
-        return true;
+        }
+        return incrementComplexity();
     }
     bool StartArray() {
+<<<<<<< Updated upstream
         if (depth >= maxDepth) {
             violation = JsonLimitViolation::DEPTH;
             return false;
         }
         ++depth;
         if (!incrementComplexity())
+=======
+        if (++depth > maxDepth) {
+            violation = JsonLimitViolation::DEPTH;
+>>>>>>> Stashed changes
             return false;
-        return true;
+        }
+        return incrementComplexity();
+    }
+    bool Key(const char*, rapidjson::SizeType, bool) {
+        return incrementComplexity();
+    }
+    bool Null() {
+        return incrementComplexity();
+    }
+    bool Bool(bool) {
+        return incrementComplexity();
+    }
+    bool Int(int) {
+        return incrementComplexity();
+    }
+    bool Uint(unsigned) {
+        return incrementComplexity();
+    }
+    bool Int64(int64_t) {
+        return incrementComplexity();
+    }
+    bool Uint64(uint64_t) {
+        return incrementComplexity();
+    }
+    bool Double(double) {
+        return incrementComplexity();
+    }
+    bool RawNumber(const char*, rapidjson::SizeType, bool) {
+        return incrementComplexity();
+    }
+    bool String(const char*, rapidjson::SizeType, bool) {
+        return incrementComplexity();
     }
     bool Key(const char*, rapidjson::SizeType, bool) {
         return incrementComplexity();
