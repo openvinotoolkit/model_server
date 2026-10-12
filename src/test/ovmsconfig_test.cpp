@@ -949,7 +949,7 @@ TEST_F(OvmsConfigDeathTest, hfPullNoRepositoryPath) {
 }
 
 TEST_F(OvmsConfigDeathTest, ociPullWithGgufFilename) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -966,7 +966,7 @@ TEST_F(OvmsConfigDeathTest, ociPullWithGgufFilename) {
 }
 
 TEST_F(OvmsConfigDeathTest, ociPullWithoutTask) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
