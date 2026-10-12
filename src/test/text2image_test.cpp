@@ -1507,6 +1507,41 @@ TEST(Text2ImageTest, validateForStaticReshapeSettings_MatchesOneResolution) {
     auto requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args);
     bool holdsStatus = std::holds_alternative<absl::Status>(requestOptions);
     ASSERT_FALSE(holdsStatus) << std::get<absl::Status>(requestOptions).ToString();
+    auto& options = std::get<ov::AnyMap>(requestOptions);
+    EXPECT_EQ(options.at("num_inference_steps").as<uint64_t>(), args.defaultNumInferenceSteps);
+}
+
+TEST(Text2ImageTest, validateForStaticReshapeSettings_ValidatesInferenceSteps) {
+    ImageGenPipelineArgs args = DEFAULTIMAGE_GEN_ARGS;
+    args.modelsPath = "/ovms/src/test/dummy";
+    args.maxNumInferenceSteps = 50;
+    args.staticReshapeSettings = ovms::StaticReshapeSettingsArgs({{512, 256}});
+
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    payload.parsedJson->Parse(R"({"prompt":"test prompt","size":"512x256","n":1,"num_inference_steps":0})");
+    auto requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    EXPECT_THAT(std::get<absl::Status>(requestOptions).message(), ::testing::HasSubstr("num_inference_steps must be higher than 0"));
+
+    payload.parsedJson->Parse(R"({"prompt":"test prompt","size":"512x256","n":1,"num_inference_steps":51})");
+    requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    EXPECT_THAT(std::get<absl::Status>(requestOptions).message(), ::testing::HasSubstr("num_inference_steps is greater than maxNumInferenceSteps"));
+}
+
+TEST(Text2ImageTest, validateForStaticReshapeSettings_ValidatesMaxNumImagesPerPrompt) {
+    ImageGenPipelineArgs args = DEFAULTIMAGE_GEN_ARGS;
+    args.modelsPath = "/ovms/src/test/dummy";
+    args.maxNumImagesPerPrompt = 1;
+    args.staticReshapeSettings = ovms::StaticReshapeSettingsArgs({{512, 256}, {1024, 512}});
+
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    payload.parsedJson->Parse(R"({"prompt":"test prompt","size":"1024x512","n":2})");
+    auto requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    EXPECT_THAT(std::get<absl::Status>(requestOptions).message(), ::testing::HasSubstr("num_images_per_prompt/n is greater than maxNumImagesPerPrompt"));
 }
 
 TEST(Text2ImageTest, validateForStaticReshapeSettings_ExceedsDefaultMaxResolution) {

@@ -290,21 +290,7 @@ absl::Status ensureCommonValidations(ov::AnyMap& requestOptions, const ovms::Ima
         }
     }
 
-    it = requestOptions.find("strength");
-    if (it != requestOptions.end()) {
-        auto strength = it->second.as<float>();
-        if (strength > 1.0f) {
-            return absl::InvalidArgumentError(absl::StrCat("strength is greater than maxStrength: ", 1));
-        } else if (strength < 0.0f) {
-            return absl::InvalidArgumentError(absl::StrCat("strength is less than minStrength: ", 0));
-        }
-    }
-    return absl::OkStatus();
-}
-
-absl::Status ensureAcceptableForDynamic(ov::AnyMap& requestOptions, const ovms::ImageGenPipelineArgs& args) {
-    // check if we have any unhandled parameters
-    auto it = requestOptions.find("num_images_per_prompt");
+    it = requestOptions.find("num_images_per_prompt");
     if (it != requestOptions.end()) {
         auto numImages = it->second.as<int>();
         if (numImages > args.maxNumImagesPerPrompt) {
@@ -314,6 +300,7 @@ absl::Status ensureAcceptableForDynamic(ov::AnyMap& requestOptions, const ovms::
             return absl::InvalidArgumentError(absl::StrCat("num_images_per_prompt/n must be higher than 0"));
         }
     }
+
     it = requestOptions.find("num_inference_steps");
     if (it != requestOptions.end()) {
         auto numInferenceSteps = it->second.as<int>();
@@ -325,6 +312,16 @@ absl::Status ensureAcceptableForDynamic(ov::AnyMap& requestOptions, const ovms::
         }
     } else {
         requestOptions.insert({"num_inference_steps", args.defaultNumInferenceSteps});
+    }
+
+    it = requestOptions.find("strength");
+    if (it != requestOptions.end()) {
+        auto strength = it->second.as<float>();
+        if (strength > 1.0f) {
+            return absl::InvalidArgumentError(absl::StrCat("strength is greater than maxStrength: ", 1));
+        } else if (strength < 0.0f) {
+            return absl::InvalidArgumentError(absl::StrCat("strength is less than minStrength: ", 0));
+        }
     }
     return absl::OkStatus();
 }
@@ -340,8 +337,7 @@ absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOpt
         SPDLOG_DEBUG("Validating request options for static reshape settings");
         return ensureAcceptableForStatic(requestOptions, args);
     }
-    SPDLOG_DEBUG("Validating request options for dynamic reshape settings");
-    return ensureAcceptableForDynamic(requestOptions, args);
+    return absl::OkStatus();
 }
 
 std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const rapidjson::Document& parser, const ovms::ImageGenPipelineArgs& args, bool hasDynamicAdapters) {
