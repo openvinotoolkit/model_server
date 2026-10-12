@@ -25,7 +25,7 @@
 #include <vector>
 
 #include "../logging.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../stringutils.hpp"
 
 namespace ovms {

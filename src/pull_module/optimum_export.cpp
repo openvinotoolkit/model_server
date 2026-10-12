@@ -23,7 +23,7 @@
 #include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../stringutils.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "cmd_exec.hpp"
 #include "model_downloader.hpp"
 

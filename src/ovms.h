@@ -290,13 +290,12 @@ OVMS_Status* OVMS_ServerSettingsSetFileSystemPollWaitSeconds(OVMS_ServerSettings
 OVMS_Status* OVMS_ServerSettingsSetSequenceCleanerPollWaitMinutes(OVMS_ServerSettings* settings,
     uint32_t minutes);
 
-// Set custom node resource cleaner interval server setting.
-// Equivalent of starting server with
-// --custom_node_resources_cleaner_interval_seconds.
+// Deprecated: Custom node resources cleaner interval is not configurable through the C API.
+// This function is kept for ABI compatibility and always returns an error status.
 //
-// \param settings The server settings object to be set
+// \param settings The server settings object
 // \param seconds The value to be set
-// \return OVMS_Status object in case of failure
+// \return OVMS_Status object indicating the feature is not supported
 OVMS_Status* OVMS_ServerSettingsSetCustomNodeResourcesCleanerIntervalSeconds(OVMS_ServerSettings* settings,
     uint32_t seconds);
 

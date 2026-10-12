@@ -141,9 +141,8 @@ print("Top-1 class index:", int(np.argmax(output[0])))
 - [Speech recognition and TTS](../demos/audio/README.md) — OpenAI-compatible audio API
 - [GGUF model support](../demos/gguf/README.md)
 
-### Classic Models & Pipelines
+### Classic Models and Pipelines
 - TensorFlow, ONNX, PaddlePaddle, OpenVINO IR model formats
-- [DAG pipelines](dag_scheduler.md) with [custom nodes](custom_node_development.md)
 - [MediaPipe graphs](mediapipe.md)
 - [Python execution nodes](python_support/reference.md)
 - [Dynamic input shapes](shape_batch_size_and_layout.md)
@@ -194,7 +193,7 @@ docker pull openvino/model_server:latest-gpu    # Intel CPU,GPU,NPU
 ## Contributing
 
 Contributions are welcome! Please open an issue or pull request on GitHub.  
-See [security policy](security.md) for responsible disclosure.
+See [security policy](../security.md) for responsible disclosure.
 
 ---
 

@@ -15,6 +15,10 @@
 #
 package(default_visibility = ["//visibility:public"])
 
+exports_files([
+    "mediapipe_model_api_openvino_windows.patch",
+])
+
 alias(
     name = "opencv",
     actual = select({
@@ -55,7 +59,7 @@ alias(
     name = "curl",
     actual = select({
         "//src:windows": "@windows_curl//:curl",
-        "//conditions:default": "@linux_curl//:curl",
+        "//conditions:default": "@curl//:curl",
     }),
     visibility = ["//visibility:public"],
 )

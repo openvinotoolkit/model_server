@@ -81,6 +81,10 @@ public:
             SPDLOG_ERROR("Embeddings node name: {} invalid max_length (0) in graph: {}.", nodeName, graphName);
             return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
         }
+        if (nodeOptions.max_batch_size() == 0) {
+            SPDLOG_ERROR("Embeddings node name: {} invalid max_batch_size (0) in graph: {}.", nodeName, graphName);
+            return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+        }
 
         auto servable = std::make_shared<EmbeddingsServable>(
             nodeOptions.models_path(),

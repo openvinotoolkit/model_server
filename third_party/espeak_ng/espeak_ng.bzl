@@ -21,24 +21,24 @@
 # build flag; when set to "off", the rule is still defined but no targets
 # in OVMS depend on it.
 
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 # Pinned to espeak-ng release tag 1.52.0 (commit hash).
 _ESPEAK_NG_COMMIT = "212928b394a96e8fd2096616bfd54e17845c48f6"  # 1.52.0
-_ESPEAK_NG_REMOTE = "https://github.com/espeak-ng/espeak-ng.git"
+_ESPEAK_NG_URL = "https://github.com/espeak-ng/espeak-ng/archive/" + _ESPEAK_NG_COMMIT + ".tar.gz"
+_ESPEAK_NG_SHA256 = "1f201cabc73e569a7cb434d40d3b30980f923010f8ecd4d1c4ae94691ac2888a"
 
 def _is_windows(ctx):
     return ctx.os.name.lower().find("windows") != -1
 
 def espeak_ng():
     _espeak_ng_repository(name = "_espeak_ng")
-    new_git_repository(
+    http_archive(
         name = "espeak_ng",
-        remote = _ESPEAK_NG_REMOTE,
-        commit = _ESPEAK_NG_COMMIT,
+        url = _ESPEAK_NG_URL,
+        sha256 = _ESPEAK_NG_SHA256,
+        strip_prefix = "espeak-ng-" + _ESPEAK_NG_COMMIT,
         build_file = "@_espeak_ng//:BUILD",
-        init_submodules = False,
-        shallow_since = "1709251200 +0000",  # roughly 2024-03-01, around 1.52.0
         patches = ["@ovms//third_party/espeak_ng:out_of_source_phsource.patch"],
         patch_args = ["-p1"],
     )

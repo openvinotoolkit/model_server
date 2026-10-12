@@ -54,16 +54,14 @@ struct Libgt2InitGuard {
 
 class HfDownloader : public IModelDownloader {
 public:
-    HfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& hfToken, const std::string& httpProxy, bool inOverwrite);
+    HfDownloader(const std::string& sourceModel, const std::string& downloadPath, const std::string& hfEndpoint, const std::string& httpProxy, bool inOverwrite);
     Status downloadModel() override;
 
 protected:
     const std::string hfEndpoint;
-    const std::string hfToken;
     const std::string httpProxy;
 
     std::string GetRepoUrl();
-    std::string GetRepositoryUrlWithPassword();
     bool CheckIfProxySet();
     Status RemoveReadonlyFileAttributeFromDir(const std::string& directoryPath);
     Status CheckRepositoryStatus(bool checkUntracked);

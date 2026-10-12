@@ -38,7 +38,7 @@ Document computeDeltaImpl(const Value::ConstObject& previous, const Value::Const
             delta.AddMember(key, copiedValue, delta.GetAllocator());
         } else if (m.value.IsObject() && previous[m.name].IsObject()) {
             Document nestedDelta = computeDeltaImpl(previous[m.name].GetObject(), m.value.GetObject());
-            if (!nestedDelta.Empty()) {
+            if (!nestedDelta.ObjectEmpty()) {
                 Value nestedDeltaValue;
                 nestedDeltaValue.CopyFrom(nestedDelta, delta.GetAllocator());
                 Value key;

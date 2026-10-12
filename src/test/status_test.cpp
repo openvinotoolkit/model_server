@@ -21,7 +21,7 @@
 #include <gtest/gtest.h>
 
 #include "../ovms.h"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "test_utils.hpp"
 
 namespace ovms {

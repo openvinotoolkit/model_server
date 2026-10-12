@@ -29,7 +29,6 @@ from tests.functional.constants.ovms_type import OvmsType
 from tests.functional.constants.paths import Paths
 from tests.functional.constants.pipelines import Pipeline
 from tests.functional.object_model.custom_loader import CustomLoader
-from tests.functional.object_model.custom_node import CustomNode
 from tests.functional.object_model.ovms_params import MetricsPolicy, OvmsParams
 from tests.functional.object_model.test_environment import TestEnvironment
 from tests.functional.utils.remote_test_environment import copy_custom_lib_to_host
@@ -51,9 +50,11 @@ class OvmsConfig(object):
         regular_models = []
         regular_models_used_in_pipelines = []
         for model in models or []:
-            if isinstance(model, Pipeline) and model.is_pipeline():
+            if isinstance(model, Pipeline) and model.is_mediapipe:
                 pipelines.append(model)
                 regular_models_used_in_pipelines.extend(model.get_regular_models())
+            elif isinstance(model, Pipeline):
+                continue
             else:
                 regular_models.append(model)
 
@@ -125,7 +126,6 @@ class OvmsConfig(object):
     def build(
         models: List[ModelInfo] = [],
         pipelines: List[Pipeline] = None,
-        custom_nodes: List[CustomNode] = None,
         metrics_enable=MetricsPolicy.NotDefined,
         resource_dir=None,
         mediapipe_models=None,
@@ -136,7 +136,6 @@ class OvmsConfig(object):
         config = OvmsConfig.build_ovms_config(
             models,
             pipelines,
-            custom_nodes,
             metrics_enable,
             resource_dir,
             mediapipe_models,
@@ -150,7 +149,6 @@ class OvmsConfig(object):
     def build_ovms_config(
         models: List[ModelInfo] = [],
         pipelines: List[Pipeline] = None,
-        custom_nodes: List[CustomNode] = None,
         metrics_enable=MetricsPolicy.NotDefined,
         resource_dir=None,
         mediapipe_models=None,
@@ -175,33 +173,18 @@ class OvmsConfig(object):
                         resource_dir,
                         *model_config_base_path.split(os.path.sep)[1:]
                     )
-        config_custom_nodes = []
         if pipelines is not None:
-            config[Config.PIPELINE_CONFIG_LIST] = []
             for pipeline in pipelines:
-                config, config_custom_nodes = pipeline.build_pipeline_config(
+                if not pipeline.is_mediapipe:
+                    continue
+                config = pipeline.build_pipeline_config(
                     config,
-                    custom_nodes,
-                    config_custom_nodes,
                     models,
                     use_custom_graphs,
                     mediapipe_models,
                     use_subconfig,
                     custom_graph_paths,
                 )
-
-        if config_custom_nodes:
-            config[Config.CUSTOM_NODE_LIBRARY_CONFIG_LIST] = [
-                custom_node.get_config() for custom_node in config_custom_nodes
-            ]
-            for model in config[Config.CUSTOM_NODE_LIBRARY_CONFIG_LIST]:
-                if (
-                    CurrentOvmsType.ovms_type in [OvmsType.CAPI, OvmsType.BINARY]
-                    and resource_dir
-                    and CurrentOvmsType.ovms_type in [OvmsType.CAPI, OvmsType.BINARY]
-                    and not model["base_path"].startswith(resource_dir)
-                ):
-                    model["base_path"] = os.path.join(resource_dir, f'./{model["base_path"]}')
 
         loader_configs = set([model.custom_loader.loader_config for model in models if model.custom_loader is not None])
         for loader in loader_configs:
@@ -266,15 +249,6 @@ class OvmsConfig(object):
                     if context.base_os == OsType.Windows:
                         raise NotImplementedError("Custom resources are not implemented for Windows")
                     copy_custom_lib_to_host(context.ovms_test_image, custom_loader_library_path, new_library_path)
-
-            if kwargs.get("replace_config_custom_nodes_paths_for_binary", True):
-                for custom_node in config_dict.get(Config.CUSTOM_NODE_LIBRARY_CONFIG_LIST, ""):
-                    custom_node_library_path = custom_node["base_path"]
-                    new_library_path = os.path.join(resources_dir, custom_node_library_path)
-                    custom_node["base_path"] = new_library_path
-                    if context.base_os == OsType.Windows:
-                        raise NotImplementedError("Custom resources are not implemented for Windows")
-                    copy_custom_lib_to_host(context.ovms_test_image, custom_node_library_path, new_library_path)
 
             if kwargs.get("replace_config_mediapipe_paths_for_binary", True):
                 for mediapipe_config in config_dict.get(Config.MEDIAPIPE_CONFIG_LIST, []):

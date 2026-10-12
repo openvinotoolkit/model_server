@@ -14,14 +14,18 @@
 // limitations under the License.
 //*****************************************************************************
 
-// Unit tests for ChatTemplateProcessor — native tokenizer path (useMinja=false).
+// Unit tests for ChatTemplateProcessor covering two orthogonal concerns:
 //
-// The PyJinja path is exercised by Python-enabled integration tests and is not
-// covered here.
+//   1. Native tokenizer path            — useMinja=true, no Python required.
+//      Uses GenAI's built-in minja (tokenizer.apply_chat_template).
 //
-// Each test group uses a different tokenizer fixture:
+//   2. Runtime PyJinja path             — useMinja=false with a prepared
+//      runtime chat template. Loads libovmspython at test setup and drives
+//      the same tokenizer/template through standard Python Jinja2.
+//
+// Each tokenizer-based group uses a different fixture:
 //   - SmolLM2-360M-Instruct: a model WITH a chat template (positive tests).
-//   - facebook/opt-125m     : a base model WITHOUT a chat template (negative
+//   - BAAI/bge-reranker-base: a model WITHOUT a chat template (negative
 //                             test for the "Failed to apply chat template" path).
 //
 // Error path NOT covered here:
@@ -37,6 +41,7 @@
 
 #include "../../../llm/io_processing/input_processors/chat_template_processor.hpp"
 #include "../../../llm/io_processing/input_request.hpp"
+#include "../../../llm/runtime_chat_template_runtime_loader.hpp"
 #include "../../platform_utils.hpp"
 
 namespace ovms {
@@ -233,6 +238,120 @@ TEST(ChatTemplateProcessorNoChatTemplateTest, TokenizerWithoutChatTemplate_Retur
         "Failed to apply chat template. The model either does not have chat template or has an invalid one.");
     EXPECT_TRUE(req.promptText.empty());
 }
+
+// ---------------------------------------------------------------------------
+// Fixture: a custom template rendered through the Python Jinja runtime.
+//
+// ---------------------------------------------------------------------------
+
+#if (PYTHON_DISABLE == 0)
+static std::unique_ptr<ov::genai::Tokenizer> pyJinjaTokenizer;
+static std::unique_ptr<PreparedChatTemplateRuntime> sharedPreparedChatTemplateRuntime;
+
+class ChatTemplateProcessorPyJinjaTest : public ::testing::Test {
+protected:
+    static void SetUpTestSuite() {
+        const std::string modelsPath = getGenericFullPathForSrcTest(
+            "/ovms/src/test/dummy/1");
+        pyJinjaTokenizer = std::make_unique<ov::genai::Tokenizer>();
+        sharedPreparedChatTemplateRuntime = std::make_unique<PreparedChatTemplateRuntime>();
+        const std::string chatTemplate =
+            "{% for message in messages %}[{{ message.role }}]{{ message.content }}{% endfor %}"
+            "{% if add_generation_prompt %}[assistant]{% endif %}";
+        std::string errorMessage;
+        ASSERT_TRUE(sharedPreparedChatTemplateRuntime->prepare(modelsPath, chatTemplate, "", "", errorMessage))
+            << errorMessage;
+    }
+
+    static void TearDownTestSuite() {
+        sharedPreparedChatTemplateRuntime.reset();
+        pyJinjaTokenizer.reset();
+    }
+};
+
+TEST_F(ChatTemplateProcessorPyJinjaTest, TextMessage_CustomTemplate_GenerationPromptAppended) {
+    ov::genai::ChatHistory history;
+    history.push_back({{"role", "user"}, {"content", "What is OpenVINO?"}});
+
+    InputRequest req = makeChatRequest(std::move(history));
+    ChatTemplateProcessor processor(*pyJinjaTokenizer, sharedPreparedChatTemplateRuntime.get());
+    const auto status = processor.process(req);
+
+    ASSERT_TRUE(status.ok()) << status.message();
+    EXPECT_NE(req.promptText.find("[user]"), std::string::npos) << req.promptText;
+    EXPECT_NE(req.promptText.find("What is OpenVINO?"), std::string::npos) << req.promptText;
+    EXPECT_NE(req.promptText.find("[assistant]"), std::string::npos)
+        << "Trailing generation prompt expected in: " << req.promptText;
+}
+
+TEST_F(ChatTemplateProcessorPyJinjaTest, ExplicitSystemMessage_SuppressesDefaultSystemInjection) {
+    ov::genai::ChatHistory history;
+    history.push_back({{"role", "system"}, {"content", "You are a custom assistant."}});
+    history.push_back({{"role", "user"}, {"content", "Hello."}});
+
+    InputRequest req = makeChatRequest(std::move(history));
+    ChatTemplateProcessor processor(*pyJinjaTokenizer, sharedPreparedChatTemplateRuntime.get());
+    const auto status = processor.process(req);
+
+    ASSERT_TRUE(status.ok()) << status.message();
+    EXPECT_NE(req.promptText.find("You are a custom assistant."), std::string::npos) << req.promptText;
+    EXPECT_EQ(req.promptText.find("SmolLM"), std::string::npos)
+        << "Default system injection must be absent when an explicit system message is provided: "
+        << req.promptText;
+}
+
+TEST_F(ChatTemplateProcessorPyJinjaTest, MultiTurnConversation_AllTurnsRendered) {
+    ov::genai::ChatHistory history;
+    history.push_back({{"role", "system"}, {"content", "Be concise."}});
+    history.push_back({{"role", "user"}, {"content", "First question."}});
+    history.push_back({{"role", "assistant"}, {"content", "First answer."}});
+    history.push_back({{"role", "user"}, {"content", "Second question."}});
+
+    InputRequest req = makeChatRequest(std::move(history));
+    ChatTemplateProcessor processor(*pyJinjaTokenizer, sharedPreparedChatTemplateRuntime.get());
+    const auto status = processor.process(req);
+
+    ASSERT_TRUE(status.ok()) << status.message();
+    EXPECT_NE(req.promptText.find("Be concise."), std::string::npos) << req.promptText;
+    EXPECT_NE(req.promptText.find("First question."), std::string::npos) << req.promptText;
+    EXPECT_NE(req.promptText.find("First answer."), std::string::npos) << req.promptText;
+    EXPECT_NE(req.promptText.find("Second question."), std::string::npos) << req.promptText;
+
+    // Turn order must be preserved.
+    const auto firstQ = req.promptText.find("First question.");
+    const auto firstA = req.promptText.find("First answer.");
+    const auto secondQ = req.promptText.find("Second question.");
+    EXPECT_LT(firstQ, firstA) << req.promptText;
+    EXPECT_LT(firstA, secondQ) << req.promptText;
+}
+
+TEST_F(ChatTemplateProcessorPyJinjaTest, AddGenerationPromptFalse_OmitsGenerationPromptSuffix) {
+    ov::genai::ChatHistory history;
+    history.push_back({{"role", "user"}, {"content", "What is OpenVINO?"}});
+    history.set_extra_context(ov::genai::JsonContainer::from_json_string(R"({"add_generation_prompt": false})"));
+
+    InputRequest req = makeChatRequest(std::move(history));
+    ChatTemplateProcessor processor(*pyJinjaTokenizer, sharedPreparedChatTemplateRuntime.get());
+    const auto status = processor.process(req);
+
+    ASSERT_TRUE(status.ok()) << status.message();
+    EXPECT_NE(req.promptText.find("What is OpenVINO?"), std::string::npos) << req.promptText;
+    EXPECT_EQ(req.promptText.find("[assistant]"), std::string::npos)
+        << "add_generation_prompt=false must omit the trailing generation prompt: " << req.promptText;
+}
+
+TEST_F(ChatTemplateProcessorPyJinjaTest, EmptyStringContent_TemplateStillProducesOutput) {
+    ov::genai::ChatHistory history;
+    history.push_back({{"role", "user"}, {"content", ""}});
+
+    InputRequest req = makeChatRequest(std::move(history));
+    ChatTemplateProcessor processor(*pyJinjaTokenizer, sharedPreparedChatTemplateRuntime.get());
+    const auto status = processor.process(req);
+
+    ASSERT_TRUE(status.ok()) << status.message();
+    EXPECT_FALSE(req.promptText.empty());
+}
+#endif  // PYTHON_DISABLE == 0
 
 }  // namespace
 }  // namespace ovms
