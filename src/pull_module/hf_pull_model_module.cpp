@@ -252,7 +252,7 @@ Status HfPullModelModule::clone() {
     } else if (this->hfSettings.downloadType == GGUF_DOWNLOAD) {
         downloader = std::make_unique<GGUFDownloader>(this->hfSettings.sourceModel, IModelDownloader::getGraphDirectory(this->hfSettings.downloadPath, this->hfSettings.sourceModel), this->hfSettings.overwriteModels, this->hfSettings.ggufFilename, this->GetHfEndpoint());
     } else if (this->hfSettings.downloadType == OCI_DOWNLOAD) {
-        downloader = std::make_unique<OciDownloader>(this->hfSettings.exportSettings, this->hfSettings.task, this->hfSettings.sourceModel, IModelDownloader::getGraphDirectory(this->hfSettings.downloadPath, this->hfSettings.sourceModel), this->hfSettings.overwriteModels);
+        downloader = std::make_unique<OciDownloader>(this->hfSettings.task, this->hfSettings.sourceModel, IModelDownloader::getGraphDirectory(this->hfSettings.downloadPath, this->hfSettings.sourceModel), this->hfSettings.overwriteModels);
     } else {
         SPDLOG_ERROR("Unsupported download type");
         return StatusCode::INTERNAL_ERROR;

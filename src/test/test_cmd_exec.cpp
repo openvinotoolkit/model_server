@@ -168,18 +168,18 @@ TEST_F(ExecCmdTest, QuotesWindowsArgumentEndingWithBackslash) {
     const std::string argument = R"(C:\some path\)";
     int returnCode = -1;
     const std::string output = ovms::exec_cmd(
-        "python.exe -c \"import sys; print(sys.argv[1])\" " + ovms::quote_cmd_arg(argument), returnCode);
+        "python.exe -c \"import sys; sys.stdout.write(sys.argv[1])\" " + ovms::quote_cmd_arg(argument), returnCode);
     EXPECT_EQ(returnCode, 0);
-    EXPECT_EQ(output, argument + "\n");
+    EXPECT_EQ(output, argument);
 }
 
 TEST_F(ExecCmdTest, QuotesWindowsArgumentWithBackslashBeforeQuote) {
     const std::string argument = R"(C:\some path\\\"segment)";
     int returnCode = -1;
     const std::string output = ovms::exec_cmd(
-        "python.exe -c \"import sys; print(sys.argv[1])\" " + ovms::quote_cmd_arg(argument), returnCode);
+        "python.exe -c \"import sys; sys.stdout.write(sys.argv[1])\" " + ovms::quote_cmd_arg(argument), returnCode);
     EXPECT_EQ(returnCode, 0);
-    EXPECT_EQ(output, argument + "\n");
+    EXPECT_EQ(output, argument);
 }
 #endif
 

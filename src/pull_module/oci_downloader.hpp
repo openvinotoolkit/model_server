@@ -14,7 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <memory>
 #include <optional>
 #include <string>
 
@@ -40,20 +39,18 @@ class Status;
 // payloads, the file name to append to it (getGgufFilename()).
 class OciDownloader : public IModelDownloader {
 public:
-    OciDownloader(const ExportSettings& exportSettings, const GraphExportType& task, const std::string& inSourceModel,
+    OciDownloader(const GraphExportType& task, const std::string& inSourceModel,
         const std::string& inDownloadPath, bool inOverwrite);
     Status downloadModel() override;
     Status validateGraphDirectory() const override;
     void onDownloadComplete(HFSettingsImpl& hfSettings) const override;
 
     // Only valid after downloadModel() returned OK.
-    // Absolute path to write into graph.pbtxt as models_path, or "./" when the
-    // model was converted into the graph directory itself.
+    // Path to write into graph.pbtxt as models_path.
     const std::string& getModelPath() const { return this->modelPath; }
     const std::optional<std::string>& getGgufFilename() const { return this->ggufFilename; }
 
 protected:
-    ExportSettings exportSettings;
     const GraphExportType task;
     std::string modelPath;
     std::optional<std::string> ggufFilename;
@@ -68,13 +65,8 @@ protected:
     // True when the directory already holds an OpenVINO IR model, i.e. it can
     // be served without an optimum-cli conversion.
     static bool containsOpenVinoIr(const std::string& directory);
-    // Converts a HuggingFace-format checkout that llmman resolved into
-    // OpenVINO IR inside the graph directory, reusing OptimumDownloader.
-    Status convertToOpenVinoIr(const std::string& resolvedPath);
     // Gives content-addressed raw GGUF blobs the .gguf filename extension
     // required by the graph loader, preferring a hardlink to avoid a copy.
     Status prepareGgufPath(const std::string& resolvedPath);
-    // Seam for tests, which substitute mock optimum-cli commands.
-    virtual std::unique_ptr<IModelDownloader> createConverter(const std::string& resolvedPath) const;
 };
 }  // namespace ovms

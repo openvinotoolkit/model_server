@@ -1941,17 +1941,6 @@ cc_binary(
 )
 
 cc_binary(
-    name = "optimum-cli",
-    srcs = [
-        "test/optimum_cli_mock.cpp",
-    ],
-    linkopts = LINKOPTS_ADJUSTED,
-    copts = COMMON_STATIC_LIBS_COPTS,
-    deps = [],
-    # linkstatic = False,  # Use for dynamic linking when necessary
-)
-
-cc_binary(
     name = "llmman_mock",
     srcs = [
         "test/llmman_mock.cpp",
@@ -2268,7 +2257,6 @@ cc_test(
         ],
     }),
     deps = [
-            "optimum-cli",
             "llmman_mock",
             "//src:ovms_lib",
             "//src:libovms_default_task_detector",

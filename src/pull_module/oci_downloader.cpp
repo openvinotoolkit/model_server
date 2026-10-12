@@ -17,7 +17,6 @@
 
 #include <filesystem>
 #include <iostream>
-#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -29,7 +28,6 @@
 #include "../status.hpp"
 #include "cmd_exec.hpp"
 #include "model_downloader.hpp"
-#include "optimum_export.hpp"
 #include "src/filesystem/filesystem.hpp"
 
 namespace ovms {
@@ -65,10 +63,9 @@ Status OciDownloader::validateGraphDirectory() const {
     return validateNoSymlinkPathComponents(this->downloadPath);
 }
 
-OciDownloader::OciDownloader(const ExportSettings& inExportSettings, const GraphExportType& inTask,
+OciDownloader::OciDownloader(const GraphExportType& inTask,
     const std::string& inSourceModel, const std::string& inDownloadPath, bool inOverwrite) :
     IModelDownloader(inSourceModel, inDownloadPath, inOverwrite),
-    exportSettings(inExportSettings),
     task(inTask) {}
 
 std::string OciDownloader::getVersionCmd() const {
@@ -142,33 +139,6 @@ bool OciDownloader::containsOpenVinoIr(const std::string& directory) {
     const std::filesystem::path modelBin = std::filesystem::path(directory) / "openvino_model.bin";
     return std::filesystem::is_regular_file(modelXml, ec) && !ec &&
            std::filesystem::is_regular_file(modelBin, ec) && !ec;
-}
-
-std::unique_ptr<IModelDownloader> OciDownloader::createConverter(const std::string& resolvedPath) const {
-    // optimum-cli accepts a local directory for --model, so the checkout that
-    // llmman produced is passed straight through as the export source.
-    return std::make_unique<OptimumDownloader>(this->exportSettings, this->task, resolvedPath, this->downloadPath, this->overwriteModels);
-}
-
-Status OciDownloader::convertToOpenVinoIr(const std::string& resolvedPath) {
-    auto status = this->validateGraphDirectory();
-    if (!status.ok()) {
-        return status;
-    }
-
-    SPDLOG_INFO("OCI model {} contains a HuggingFace-format checkout. Converting it to OpenVINO IR with optimum-cli.", this->sourceModel);
-    // The conversion output lands in the graph directory, which keeps
-    // models_path at its default of "./".
-    status = this->createConverter(resolvedPath)->downloadModel();
-    if (!status.ok()) {
-        return status;
-    }
-    status = this->validateGraphDirectory();
-    if (!status.ok()) {
-        return status;
-    }
-    this->modelPath = "./";
-    return StatusCode::OK;
 }
 
 Status OciDownloader::prepareGgufPath(const std::string& resolvedPath) {
@@ -295,10 +265,10 @@ Status OciDownloader::downloadModel() {
             // llmman's store, no conversion and no second copy on disk.
             this->modelPath = resolvedPath;
         } else {
-            status = this->convertToOpenVinoIr(resolvedPath);
-            if (!status.ok()) {
-                return status;
-            }
+            SPDLOG_ERROR("OCI safetensors model {} requires optimum-cli conversion, which is not supported for OCI ModelPacks. "
+                         "Publish the model as OpenVINO IR or GGUF instead.",
+                this->sourceModel);
+            return StatusCode::OCI_UNSUPPORTED_MODEL_FORMAT;
         }
     } else {
         SPDLOG_ERROR("llmman reported unsupported format \"{}\" for {}. Supported formats: gguf, safetensors.", format, this->sourceModel);

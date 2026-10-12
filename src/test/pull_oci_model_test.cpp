@@ -17,7 +17,6 @@
 #include <cerrno>
 #include <filesystem>
 #include <fstream>
-#include <memory>
 #include <string>
 #include <thread>
 
@@ -38,7 +37,6 @@
 #include "src/pull_module/cmd_exec.hpp"
 #include "src/pull_module/model_downloader.hpp"
 #include "src/pull_module/oci_downloader.hpp"
-#include "src/pull_module/optimum_export.hpp"
 #include "platform_utils.hpp"
 #include "test_utils.hpp"
 #include "test_with_temp_dir.hpp"
@@ -52,32 +50,12 @@ using testing::EndsWith;
 using testing::HasSubstr;
 using testing::Not;
 
-// OptimumDownloader driven by the mock optimum-cli that records the export
-// command it was about to run.
-class MockOptimumConverter : public ovms::OptimumDownloader {
-public:
-    MockOptimumConverter(const ovms::ExportSettings& exportSettings, const ovms::GraphExportType& task,
-        const std::string& sourceModel, const std::string& downloadPath, bool overwrite,
-        const std::string& cliMock, std::string& recordedCmd) :
-        OptimumDownloader(exportSettings, task, sourceModel, downloadPath, overwrite,
-            cliMock + " export ", cliMock + " -h", cliMock + " export ", cliMock + " -h"),
-        recordedCmd(recordedCmd) {}
-
-    ovms::Status downloadModel() override {
-        this->recordedCmd = this->getExportCmd();
-        return OptimumDownloader::downloadModel();
-    }
-
-private:
-    std::string& recordedCmd;
-};
-
 // Exposes the protected surface of OciDownloader so the individual steps can
 // be asserted without running the whole download.
 class TestOciDownloader : public OciDownloader {
 public:
     explicit TestOciDownloader(const ovms::HFSettingsImpl& inHfSettings) :
-        OciDownloader(inHfSettings.exportSettings, inHfSettings.task, inHfSettings.sourceModel,
+        OciDownloader(inHfSettings.task, inHfSettings.sourceModel,
             ovms::IModelDownloader::getGraphDirectory(inHfSettings.downloadPath, inHfSettings.sourceModel),
             inHfSettings.overwriteModels) {}
 
@@ -91,19 +69,6 @@ public:
     }
     static bool containsOpenVinoIr(const std::string& directory) {
         return OciDownloader::containsOpenVinoIr(directory);
-    }
-
-    // When set, the safetensors conversion runs against this mock optimum-cli.
-    std::string optimumMockPath;
-    mutable std::string recordedExportCmd;
-
-protected:
-    std::unique_ptr<ovms::IModelDownloader> createConverter(const std::string& resolvedPath) const override {
-        if (this->optimumMockPath.empty()) {
-            return OciDownloader::createConverter(resolvedPath);
-        }
-        return std::make_unique<MockOptimumConverter>(this->exportSettings, this->task, resolvedPath,
-            this->downloadPath, this->overwriteModels, this->optimumMockPath, this->recordedExportCmd);
     }
 };
 
@@ -194,7 +159,12 @@ TEST_F(OciDownloaderCommands, MissingBinaryIsReported) {
 
 TEST(CmdExecQuoteTest, QuotesOnlyWhenNeeded) {
     EXPECT_EQ(ovms::quote_cmd_arg("model/name"), "model/name");
+#ifdef _WIN32
+    // The Windows CRT needs an explicitly quoted token to represent argv[0] as empty.
+    EXPECT_EQ(ovms::quote_cmd_arg(""), "\"\"");
+#else
     EXPECT_EQ(ovms::quote_cmd_arg(""), "");
+#endif
     EXPECT_EQ(ovms::quote_cmd_arg("a b"), "\"a b\"");
     EXPECT_EQ(ovms::quote_cmd_arg("a\"b"), "\"a\\\"b\"");
 }
@@ -251,7 +221,6 @@ TEST(OciResolveOutputTest, RejectsJsonWithoutRequiredMembers) {
 
 class OciDownloaderPayload : public TestWithTempDir {
 public:
-    std::string optimumMockPath;
     std::string resolvedPath;
     ovms::HFSettingsImpl hfSettings;
     EnvGuard pathGuard;
@@ -261,11 +230,9 @@ public:
 #ifdef _WIN32
         const std::string mockBinary = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/llmman_mock.exe");
         const std::string mockName = "llmman.exe";
-        optimumMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli.exe");
 #else
         const std::string mockBinary = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/llmman_mock");
         const std::string mockName = "llmman";
-        optimumMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli");
 #endif
         // Keep the mock out of the test binary's directory: Windows searches
         // that directory before PATH when CreateProcessA runs "llmman".
@@ -331,17 +298,7 @@ TEST_F(OciDownloaderPayload, OpenVinoIrModelIsServedFromTheLlmmanStore) {
     EXPECT_TRUE(std::filesystem::is_directory(downloader.getGraphDirectory()));
 }
 
-TEST_F(OciDownloaderPayload, QuotedArgumentReachesTheProcessAsOneArgument) {
-    // The mock optimum-cli echoes every argv entry it receives.
-    const std::string tricky = "a  b \"c\" 'd' \\e";
-    int retCode = -1;
-    const std::string output = ovms::exec_cmd(optimumMockPath + " " + ovms::quote_cmd_arg(tricky), retCode);
-    EXPECT_EQ(retCode, 0);
-    EXPECT_THAT(output, HasSubstr("Number of arguments: 2"));
-    EXPECT_THAT(output, HasSubstr("Argument 1: " + tricky));
-}
-
-TEST_F(OciDownloaderPayload, SafetensorsCheckoutIsConvertedIntoTheGraphDirectory) {
+TEST_F(OciDownloaderPayload, SafetensorsCheckoutRequiringConversionIsRejected) {
     createFile(resolvedPath, "config.json", "{}");
     createFile(resolvedPath, "model.safetensors");
 
@@ -350,28 +307,8 @@ TEST_F(OciDownloaderPayload, SafetensorsCheckoutIsConvertedIntoTheGraphDirectory
     guard.set("LLMMAN_MOCK_FORMAT", "safetensors");
 
     TestOciDownloader downloader(hfSettings);
-    downloader.optimumMockPath = optimumMockPath;
-    ASSERT_EQ(downloader.downloadModel(), StatusCode::OK);
-    // The checkout is the export source and the graph directory the target,
-    // so graph.pbtxt keeps the default models_path.
-    EXPECT_THAT(downloader.recordedExportCmd, HasSubstr("--model " + resolvedPath + " "));
-    EXPECT_THAT(downloader.recordedExportCmd, EndsWith(downloader.getGraphDirectory()));
-    EXPECT_EQ(downloader.getModelPath(), "./");
+    EXPECT_EQ(downloader.downloadModel(), StatusCode::OCI_UNSUPPORTED_MODEL_FORMAT);
     EXPECT_FALSE(downloader.getGgufFilename().has_value());
-    EXPECT_TRUE(std::filesystem::is_directory(downloader.getGraphDirectory()));
-}
-
-TEST_F(OciDownloaderPayload, SafetensorsConversionFailureIsPropagated) {
-    createFile(resolvedPath, "config.json", "{}");
-    createFile(resolvedPath, "model.safetensors");
-
-    EnvGuard guard;
-    guard.set("LLMMAN_MOCK_PATH", resolvedPath);
-    guard.set("LLMMAN_MOCK_FORMAT", "safetensors");
-
-    TestOciDownloader downloader(hfSettings);
-    downloader.optimumMockPath = "NonExistingCommand33";
-    EXPECT_EQ(downloader.downloadModel(), StatusCode::HF_FAILED_TO_INIT_OPTIMUM_CLI);
 }
 
 TEST_F(OciDownloaderPayload, GgufModelIsSplitIntoDirectoryAndFilename) {
@@ -594,6 +531,7 @@ public:
     OciModelPackServerProcess ovmsProcess;
     EnvGuard llmmanStoreGuard;
     std::string llmmanStorePath;
+    std::string repositoryPath;
     bool modelPulled = false;
 
     void TearDown() override {
@@ -602,6 +540,11 @@ public:
             int retCode = -1;
             const std::string output = ovms::exec_cmd("llmman rm " + ovms::quote_cmd_arg(modelReference), retCode);
             EXPECT_EQ(retCode, 0) << "Failed to remove test OCI model from llmman's store: " << output;
+        }
+        std::error_code ec;
+        if (!repositoryPath.empty()) {
+            std::filesystem::remove_all(repositoryPath, ec);
+            EXPECT_FALSE(ec) << "Failed to remove OCI test repository " << repositoryPath << ": " << ec.message();
         }
         TestWithTempDir::TearDown();
     }
@@ -614,7 +557,18 @@ TEST_F(OciModelPackInferenceTest, PullSmallPublicModelAndRunInference) {
     SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
 #endif
     std::string sourceModel = "oci://" + modelReference;
-    std::string repositoryPath = std::filesystem::path(this->directoryPath).append("repository").string();
+#ifdef _WIN32
+    const unsigned long testProcessId = GetCurrentProcessId();
+#else
+    const unsigned long testProcessId = static_cast<unsigned long>(getpid());
+#endif
+    // Keep the model repository path short. The digest-based directory name
+    // plus the content-addressed GGUF filename otherwise exceeds MAX_PATH in
+    // the nested Jenkins test directory on Windows.
+    repositoryPath = (std::filesystem::temp_directory_path() / ("ovms-oci-" + std::to_string(testProcessId))).string();
+    std::error_code ec;
+    std::filesystem::remove_all(repositoryPath, ec);
+    ASSERT_FALSE(ec) << "Failed to clear OCI test repository " << repositoryPath << ": " << ec.message();
     llmmanStorePath = std::filesystem::path(this->directoryPath).append("llmman-store").string();
     llmmanStoreGuard.set("LLMMAN_MODELS", llmmanStorePath);
     std::string task = "text_generation";

@@ -64,7 +64,7 @@ spec:
         secretName: registry-auth
 ```
 
-The Secret must contain a `config.json` usable by llmman. As with a Docker bind mount, any credential helper it references must also be installed and usable in the pod. If you opt in to `--trust_remote_code` for safetensors conversion, model-supplied code runs as the OVMS user and can read mounted registry credentials; use narrowly scoped credentials and only trust reviewed artifacts.
+The Secret must contain a `config.json` usable by llmman. As with a Docker bind mount, any credential helper it references must also be installed and usable in the pod.
 
 ## Supported payloads
 
@@ -74,7 +74,7 @@ The Secret must contain a `config.json` usable by llmman. As with a Docker bind 
 |---|---|---|
 | OpenVINO IR (`openvino_model.xml` + `.bin`) | Serves it directly out of the `llmman` store; only `graph.pbtxt` is written to the model repository. `llmman resolve` only reports `gguf` and `safetensors`, so an IR-only image fails with `OCI_LLMMAN_RESOLVE_FAILED` for now. IR is used in place only when a `safetensors` image also carries IR files. | none |
 | GGUF | Serves the `.gguf` file directly out of the `llmman` store. | `--task text_generation` only |
-| Hugging Face safetensors | Converts to OpenVINO IR with `optimum-cli` into the model repository, honoring `--weight-format` and `--extra_quantization_params`. Remote model code is not trusted by default; pass `--trust_remote_code` only for a model you trust. | Python dependencies, see [pulling with conversion](./pull_optimum_cli.md) |
+| Hugging Face safetensors | Serves directly from the `llmman` store only when the payload already contains `openvino_model.xml` and `openvino_model.bin`. A checkpoint that needs conversion is rejected. | none |
 
 ## Examples
 
@@ -88,12 +88,6 @@ Pull and start in one step, overriding the served model name:
 
 ```text
 ovms --rest_port 8000 --source_model oci://docker.io/ai/qwen3.5:0.8b --model_repository_path /models --model_name qwen --task text_generation
-```
-
-Pull a safetensors ModelPack image and quantize it during the conversion:
-
-```text
-ovms --pull --source_model oci://ghcr.io/my-org/qwen3-8b:1.0 --model_repository_path /models --task text_generation --weight-format int4
 ```
 
 ## Naming and on-disk layout
