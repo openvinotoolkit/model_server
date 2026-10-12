@@ -367,6 +367,13 @@ TEST_F(HttpOpenAIHandlerTest, JsonBodyExceedsComplexityLimit) {
     std::string requestBody = R"({"a":[0]})";
     auto& config = const_cast<ovms::ServerSettingsImpl&>(ovms::Config::instance().getServerSettings());
     const auto previousMaxComplexity = config.jsonMaxComplexity;
+    struct JsonMaxComplexityGuard {
+        ovms::ServerSettingsImpl& config;
+        std::optional<size_t> previousMaxComplexity;
+        ~JsonMaxComplexityGuard() {
+            config.jsonMaxComplexity = previousMaxComplexity;
+        }
+    } restore{config, previousMaxComplexity};
     config.jsonMaxComplexity = 5;
 
     EXPECT_CALL(*writer, PartialReplyEnd()).Times(0);
@@ -376,8 +383,6 @@ TEST_F(HttpOpenAIHandlerTest, JsonBodyExceedsComplexityLimit) {
     auto status = handler->dispatchToProcessor("/v1/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::JSON_COMPLEXITY_EXCEEDED);
     ASSERT_EQ(status.string(), "JSON structure exceeds the allowed complexity - JSON body exceeds maximum complexity");
-
-    config.jsonMaxComplexity = previousMaxComplexity;
 }
 
 TEST_F(HttpOpenAIHandlerTest, GraphWithANameDoesNotExist) {

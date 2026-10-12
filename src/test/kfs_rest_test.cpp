@@ -1467,6 +1467,13 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsInvalidJson) {
 TEST_F(HttpRestApiHandlerTest, PrepareGrpcRequestRejectsExcessiveJsonComplexity) {
     auto& config = const_cast<ovms::ServerSettingsImpl&>(Config::instance().getServerSettings());
     const auto previousMaxComplexity = config.jsonMaxComplexity;
+    struct JsonMaxComplexityGuard {
+        ovms::ServerSettingsImpl& config;
+        std::optional<size_t> previousMaxComplexity;
+        ~JsonMaxComplexityGuard() {
+            config.jsonMaxComplexity = previousMaxComplexity;
+        }
+    } restore{config, previousMaxComplexity};
     config.jsonMaxComplexity = 5;
 
     std::string request_body = R"({"a":[0]})";
@@ -1476,8 +1483,6 @@ TEST_F(HttpRestApiHandlerTest, PrepareGrpcRequestRejectsExcessiveJsonComplexity)
 
     ASSERT_EQ(status.getCode(), ovms::StatusCode::JSON_COMPLEXITY_EXCEEDED);
     ASSERT_EQ(status.string(), "JSON structure exceeds the allowed complexity");
-
-    config.jsonMaxComplexity = previousMaxComplexity;
 }
 
 TEST_F(HttpRestApiHandlerWithStringModelTest, invalidPrecision) {

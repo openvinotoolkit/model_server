@@ -45,5 +45,5 @@ Status parseJsonWithDepthLimit(
     const char* json,
     std::size_t jsonLength,
     std::size_t maxDepth,
-    std::size_t maxComplexity = DEFAULT_MAX_JSON_COMPLEXITY);
+    std::size_t maxComplexity);
 }  // namespace ovms
