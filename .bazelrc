@@ -14,26 +14,6 @@
 # limitations under the License.
 #
 
-# Optimizations used for TF Serving release builds.
-build:release --copt=-mavx
-build:release --copt=-msse4.2
-
-# Options used to build with CUDA.
-build:cuda --crosstool_top=@local_config_cuda//crosstool:toolchain
-build:cuda --define=using_cuda=true --define=using_cuda_nvcc=true
-
-# Please note that MKL on MacOS or windows is still not supported.
-# If you would like to use a local MKL instead of downloading, please set the
-# environment variable "TF_MKL_ROOT" every time before build.
-build:mkl --define=build_with_mkl=true --define=enable_mkl=true
-build:mkl --define=tensorflow_mkldnn_contraction_kernel=0
-
-# This config option is used to enable MKL-DNN open source library only,
-# without depending on MKL binary version.
-build:mkl_open_source_only --define=build_with_mkl_dnn_only=true
-build:mkl_open_source_only --define=build_with_mkl=true --define=enable_mkl=true
-build:mkl_open_source_only --define=tensorflow_mkldnn_contraction_kernel=0
-
 # Processor native optimizations (depends on build host capabilities).
 build:nativeopt --copt=-march=native
 build:nativeopt --host_copt=-march=native
@@ -64,9 +44,6 @@ build -c opt
 # fixing debug builds with ignore warnings
 build --copt=-O2
 build --copt=-DGRPC_BAZEL_BUILD
-# Adding "--cxxopt=-D_GLIBCXX_USE_CXX11_ABI=0" creates parity with TF
-# compilation options. It also addresses memory use due to
-# copy-on-write semantics of std::strings of the older ABI.
 build --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=1
 
 build --enable_platform_specific_config
@@ -80,17 +57,23 @@ build --incompatible_strict_action_env
 build --cxxopt=-DOVMS_DUMP_TO_FILE=0
 build --remote_upload_local_results=true
 
+# Bzlmod must stay disabled: with it enabled Bazel resolves an extra
+# "protobuf" repo from the registry alongside the WORKSPACE-declared
+# "com_google_protobuf", causing ODR conflicts (e.g. duplicate/mismatched
+# FieldMask symbols in field_mask_util.cc).
+build --noenable_bzlmod
+
 build:avx_win --copt=/arch=AVX
 build:avx2_win --copt=/arch=AVX2
 
 # Linux settings #######################################################################################################
-# LLVM, MLIR and TF require C++14, we use C++17 in project
-build:linux --cxxopt=-std=c++17
-build:linux --host_cxxopt=-std=c++17
+# mediapipe upstream (api3, compile_time_string.h) now requires consteval/C++20 features.
+build:linux --cxxopt=-std=c++20
+build:linux --host_cxxopt=-std=c++20
 build:linux --action_env=HOME=/root
 build:linux --repo_env=HOME=/root
 
-# For Tensorflow building only
+# Python used by repository rules (pybind11, hermetic python)
 build:linux --action_env PYTHON_BIN_PATH="/usr/bin/python3"
 build:linux --define PYTHON_BIN_PATH=/usr/bin/python3
 build:linux --repo_env=HERMETIC_PYTHON_VERSION=3.12
@@ -130,19 +113,14 @@ build:coverity --disk_cache=
 # Configure short or long logs
 build:short_logs --output_filter=DONT_MATCH_ANYTHING
 build:verbose_logs --output_filter=
-# Options to build TensorFlow 1.x or 2.x.
-build:v1 --define=tf_api_version=1 --action_env=TF2_BEHAVIOR=0
-build:v2 --define=tf_api_version=2 --action_env=TF2_BEHAVIOR=1
 
-build:windows --host_cxxopt=/std:c++17
-build:windows --cxxopt=/std:c++17
-# TODO Windows: may impact python nodes execution
-build:windows --noenable_bzlmod
+build:windows --host_cxxopt=/std:c++20
+build:windows --cxxopt=/std:c++20
 
-# TF bazelrc settings
-# TensorFlow Bazel configuration file.
+# Consumed by protobuf python targets.
 build:windows --define=use_fast_cpp_protos=true
 build:windows --define=allow_oversize_protos=true
+build:windows --define=protobuf_allow_msvc=true
 
 # Make Bazel print out all options from rc files.
 build:windows --announce_rc
@@ -150,34 +128,13 @@ build:windows --announce_rc
 build:windows --noincompatible_remove_legacy_whole_archive
 build:windows --features=-force_no_whole_archive
 
-# Enable XLA support by default.
-build:windows --define=with_xla_support=true
-
-# TODO(mihaimaruseac): Document this option or remove if no longer needed
 build:windows --config=short_logs
-
-# TODO(mihaimaruseac): Document this option or remove if no longer needed
-build:windows --config=v2
-
-# Disable AWS/HDFS support by default
-build:windows --define=no_aws_support=true
-build:windows --define=no_hdfs_support=true
 
 # cc_shared_library ensures no library is linked statically more than once.
 build:windows --experimental_link_static_libraries_once=false
 
-# Prevent regressions on those two incompatible changes
-# TODO: remove those flags when they are flipped in the default Bazel version TF uses.
 build:windows --incompatible_enforce_config_setting_visibility
 
-# Config to use a mostly-static build and disable modular op registration
-# support (this will revert to loading TensorFlow with RTLD_GLOBAL in Python).
-# By default, TensorFlow will build with a dependence on
-# //tensorflow:libtensorflow_framework.so.
-build:monolithic --define framework_shared_object=false
-build:monolithic --define tsl_protobuf_header_only=false
-# On windows, we still link everything into a single DLL - required by TF
-build:windows --config=monolithic
 # Warnings are enabled in common_settings
 build:windows --copt=/W0 
 build:windows --host_copt=/W0
@@ -191,12 +148,11 @@ build:windows --host_copt=/external:W0
 build:windows --copt=/Zc:__cplusplus
 build:windows --host_copt=/Zc:__cplusplus
 
-# Tensorflow uses M_* math constants that only get defined by MSVC headers if
-# _USE_MATH_DEFINES is defined.
+# M_* math constants are only defined by MSVC headers if _USE_MATH_DEFINES is defined.
 build:windows --copt=/D_USE_MATH_DEFINES
 build:windows --host_copt=/D_USE_MATH_DEFINES
 
-# Windows has a relatively short command line limit, which TF has begun to hit.
+# Windows has a relatively short command line limit.
 # See https://docs.bazel.build/versions/main/windows.html
 build:windows --features=compiler_param_file
 build:windows --features=archive_param_file
@@ -232,10 +188,6 @@ build:windows --repo_env PYTHON_BIN_PATH=C:/opt/Python312/python.exe
 build:windows --python_path="C:/opt/Python312/python.exe"
 build:windows:opt --copt=/arch:AVX
 build:windows:opt --host_copt=/arch:AVX
-build:windows --define=override_eigen_strong_inline=true
-
-# Disable TFRT integration for now unless --config=tfrt is specified.
-build:windows --deleted_packages=tensorflow/core/tfrt/stubs,tensorflow/compiler/mlir/tfrt,tensorflow/compiler/mlir/tfrt/benchmarks,tensorflow/compiler/mlir/tfrt/ir,tensorflow/compiler/mlir/tfrt/ir/mlrt,tensorflow/compiler/mlir/tfrt/jit/python_binding,tensorflow/compiler/mlir/tfrt/jit/transforms,tensorflow/compiler/mlir/tfrt/python_tests,tensorflow/compiler/mlir/tfrt/tests,tensorflow/compiler/mlir/tfrt/tests/mlrt,tensorflow/compiler/mlir/tfrt/tests/ir,tensorflow/compiler/mlir/tfrt/tests/analysis,tensorflow/compiler/mlir/tfrt/tests/jit,tensorflow/compiler/mlir/tfrt/tests/lhlo_to_tfrt,tensorflow/compiler/mlir/tfrt/tests/lhlo_to_jitrt,tensorflow/compiler/mlir/tfrt/tests/tf_to_corert,tensorflow/compiler/mlir/tfrt/tests/tf_to_tfrt_data,tensorflow/compiler/mlir/tfrt/tests/saved_model,tensorflow/compiler/mlir/tfrt/transforms/lhlo_gpu_to_tfrt_gpu,tensorflow/compiler/mlir/tfrt/transforms/mlrt,tensorflow/core/runtime_fallback,tensorflow/core/runtime_fallback/conversion,tensorflow/core/runtime_fallback/kernel,tensorflow/core/runtime_fallback/opdefs,tensorflow/core/runtime_fallback/runtime,tensorflow/core/runtime_fallback/util,tensorflow/core/tfrt/mlrt,tensorflow/core/tfrt/mlrt/attribute,tensorflow/core/tfrt/mlrt/kernel,tensorflow/core/tfrt/mlrt/bytecode,tensorflow/core/tfrt/mlrt/interpreter,tensorflow/compiler/mlir/tfrt/translate/mlrt,tensorflow/compiler/mlir/tfrt/translate/mlrt/testdata,tensorflow/core/tfrt/gpu,tensorflow/core/tfrt/run_handler_thread_pool,tensorflow/core/tfrt/runtime,tensorflow/core/tfrt/saved_model,tensorflow/core/tfrt/graph_executor,tensorflow/core/tfrt/saved_model/tests,tensorflow/core/tfrt/tpu,tensorflow/core/tfrt/utils,tensorflow/core/tfrt/utils/debug,tensorflow/core/tfrt/saved_model/python,tensorflow/core/tfrt/graph_executor/python
 
 # Windows build ssl headers for GRPC workaround
 build:windows --override_repository="boringssl=C:\\opt\\boringSSL-SwiftPM"

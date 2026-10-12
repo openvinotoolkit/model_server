@@ -15,15 +15,13 @@ The picture below shows the execution flow in the graph.
 ```bash
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/python_demos/clip_image_classification/
-virtualenv .venv
-. .venv/bin/activate
 pip3 install -r requirements.txt
 ```
 
 ## Download and convert model
 
 ```bash
-pip3 install --pre --extra-index-url "https://download.pytorch.org/whl/cpu" --extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/nightly" "openvino==2026.1.*" "numpy<2.0" "pillow==12.2.0" "torch==2.8.0+cpu" "transformers<=4.53.0"
+pip3 install --extra-index-url "https://download.pytorch.org/whl/cpu" "openvino" "numpy<2.0" "pillow==12.2.0" "torch==2.8.0+cpu" "transformers<=4.53.0"
 ```
 
 ```bash

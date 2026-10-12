@@ -15,9 +15,9 @@ There are no extra steps needed to use structured output. Whole behavior is trig
 **Required:** Docker Engine installed
 
 ```bash
-mkdir models
+mkdir -p ${HOME}/models
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
-docker run  ${GPU_ARGS} --user $(id -u):$(id -g) -d --rm -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path /models --rest_port 8000
+docker run  ${GPU_ARGS} --user $(id -u):$(id -g) -d --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:latest-gpu --source_model OpenVINO/Mistral-7B-Instruct-v0.3-int4-cw-ov --model_repository_path /models --rest_port 8000
 ```
 :::
 :::{tab-item} On Baremetal Host Windows

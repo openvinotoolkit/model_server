@@ -23,13 +23,7 @@
 #include <pybind11/embed.h>  // everything needed for embedding
 #pragma warning(pop)
 
-#pragma warning(push)
-#pragma warning(disable : 4309 4005 6001 6011 6326 6385 6246 6386 6326 6011 4005 4456)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mediapipe/framework/calculator_graph.h"
-#pragma GCC diagnostic pop
-#pragma warning(pop)
+#include "python_node_config.hpp"
 
 namespace py = pybind11;
 
@@ -50,12 +44,12 @@ public:
     PythonNodeResources(PythonBackend* pythonBackend);
     ~PythonNodeResources();
 
-    static Status createPythonNodeResources(std::shared_ptr<PythonNodeResources>& nodeResources, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, PythonBackend* pythonBackend, std::string graphPath);
+    static Status createPythonNodeResources(std::shared_ptr<PythonNodeResources>& nodeResources, const PythonNodeConfig& nodeConfig, PythonBackend* pythonBackend);
 
     void finalize();
 
 private:
-    static py::dict preparePythonNodeInitializeArguments(const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, const std::string& basePath);
+    static py::dict preparePythonNodeInitializeArguments(const PythonNodeConfig& nodeConfig, const std::string& basePath);
 };
 using PythonNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>;
 }  // namespace ovms

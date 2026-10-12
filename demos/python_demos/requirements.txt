@@ -1,5 +1,5 @@
 --extra-index-url "https://download.pytorch.org/whl/cpu"
-optimum-intel@git+https://github.com/huggingface/optimum-intel.git
+optimum-intel
 pillow==12.3.0
 tritonclient[grpc]  # Required to use batch string serialization/deserialization (4byte length prepend)
 nncf>=2.11.0
