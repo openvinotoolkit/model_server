@@ -23,7 +23,8 @@
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246 6313)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mediapipe/framework/calculator_graph.h"
+#include "mediapipe/framework/calculator.pb.h"
+#include "mediapipe/framework/port/ret_check.h"
 #include <rapidjson/document.h>
 #include <rapidjson/prettywriter.h>
 #pragma GCC diagnostic pop
@@ -38,6 +39,7 @@
 #include "apis/openai_responses.hpp"
 #include "io_processing/generation_config_builder.hpp"
 #include "io_processing/input_processor.hpp"
+#include "llm_calculators_plugin_api.hpp"
 #include "ovms_text_streamer.hpp"
 #include "servable.hpp"
 #include "text_utils.hpp"
@@ -47,6 +49,10 @@ namespace ovms {
 
 double calculatePrefillSpeed(size_t inputTokenCount, double ttftMs) {
     return ttftMs > 0.0 ? (1000.0 * inputTokenCount) / ttftMs : 0.0;
+}
+
+std::shared_ptr<GenAiServableExecutionContext> createGenAiServableExecutionContext(GenAiServable& servable) {
+    return servable.createExecutionContext();
 }
 
 void GenAiServable::determineDecodingMethod() {
@@ -323,6 +329,16 @@ absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServabl
         }
     }
 
+    if (executionContext->perfMetrics) {
+        auto& perfMetrics = *executionContext->perfMetrics;
+        executionContext->apiHandler->setPromptTokensUsage(perfMetrics.get_num_input_tokens());
+        executionContext->apiHandler->setCachedPromptTokensUsage(perfMetrics.get_num_prefix_cache_hit_tokens());
+        // For beam search we do not rely on perfMetrics for completion tokens usage, as multiple beams may contribute.
+        if (numOutputs == 1 && executionContext->inputRequest.generationConfig.num_beams == 1) {
+            executionContext->apiHandler->setCompletionTokensUsage(perfMetrics.get_num_generated_tokens());
+        }
+    }
+
     if (hasLogprobs) {
         executionContext->response = executionContext->apiHandler->serializeUnaryResponse(
             allDeltas, finishReasons, logprobData);
@@ -351,6 +367,12 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
 
     ov::genai::GenerationFinishReason finishReason = generationOutput.finish_reason;
     const bool isFinishing = (finishReason != ov::genai::GenerationFinishReason::NONE);
+    if (isFinishing && executionContext->perfMetrics) {
+        auto& perfMetrics = *executionContext->perfMetrics;
+        executionContext->apiHandler->setPromptTokensUsage(perfMetrics.get_num_input_tokens());
+        executionContext->apiHandler->setCompletionTokensUsage(perfMetrics.get_num_generated_tokens());
+        executionContext->apiHandler->setCachedPromptTokensUsage(perfMetrics.get_num_prefix_cache_hit_tokens());
+    }
 
     // OVMSTextStreamer::write() fires the callback for each flush event, pushing
     // Documents into executionContext->deltaChannel.

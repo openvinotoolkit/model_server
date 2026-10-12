@@ -437,6 +437,10 @@ void OpenAIApiHandler::setCompletionTokensUsage(size_t completionTokens) {
     usage.completionTokens = completionTokens;
 }
 
+void OpenAIApiHandler::setCachedPromptTokensUsage(size_t cachedPromptTokens) {
+    usage.cachedPromptTokens = cachedPromptTokens;
+}
+
 void OpenAIApiHandler::incrementProcessedTokens(size_t numTokens) {
     usage.completionTokens += numTokens;
 }

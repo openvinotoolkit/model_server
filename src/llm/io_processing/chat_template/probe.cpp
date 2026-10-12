@@ -23,7 +23,6 @@
 #include <spdlog/spdlog.h>
 
 #include "../../../logging.hpp"
-#include "src/llm/py_jinja_template_processor.hpp"
 
 namespace ovms {
 
@@ -250,7 +249,7 @@ bool probeChatTemplateCapsMinja(ov::genai::Tokenizer& tokenizer, ChatTemplateCap
     return analyzeProbeToolArgumentResults(strOk, strOut, objOk, objOut, caps);
 }
 
-bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, ChatTemplateCaps& caps) {
+bool probeChatTemplateCapsJinja(const std::function<bool(const std::string&, std::string&)>& render, ChatTemplateCaps& caps) {
     // For now the capabilities are only related to tool calls, therefore we early exit here.
     // In the future, if we add more capabilities to probe, we will need to remove this early exit and probe for those capabilities as well.
     if (!caps.supportsToolCalls) {
@@ -266,14 +265,14 @@ bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, Cha
     bool strOk = false, objOk = false;
 
     try {
-        strOk = PyJinjaTemplateProcessor::applyChatTemplate(templateProcessor, strArgsJson, strOut);
+        strOk = render(strArgsJson, strOut);
     } catch (...) {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Dry-run probe: exception while applying chat template with string arguments");
         return false;
     }
 
     try {
-        objOk = PyJinjaTemplateProcessor::applyChatTemplate(templateProcessor, objArgsJson, objOut);
+        objOk = render(objArgsJson, objOut);
     } catch (...) {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Dry-run probe: exception while applying chat template with object arguments");
         return false;

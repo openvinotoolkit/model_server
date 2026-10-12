@@ -81,6 +81,7 @@ inline const char* responsesErrorCodeToString(ResponsesErrorCode code) {
 struct CompletionUsageStatistics {
     size_t promptTokens = 0;
     size_t completionTokens = 0;
+    size_t cachedPromptTokens = 0;
 
     size_t calculateTotalTokens() const {
         return promptTokens + completionTokens;
@@ -207,6 +208,7 @@ public:
     // Usage tracking
     void setPromptTokensUsage(size_t promptTokens);
     void setCompletionTokensUsage(size_t completionTokens);
+    void setCachedPromptTokensUsage(size_t cachedPromptTokens);
     virtual void incrementProcessedTokens(size_t numTokens = 1);
 
     // Serialization - pure virtual, each handler produces its own response format

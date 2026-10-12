@@ -84,7 +84,10 @@ curl http://localhost/v3/chat/completions \
   "usage": {
         "completion_tokens": 38,
         "prompt_tokens": 22,
-        "total_tokens": 60
+        "total_tokens": 60,
+        "prompt_tokens_details": {
+            "cached_tokens": 0
+        }
   }
 }
 ```
@@ -309,7 +312,7 @@ If any of those parameters is not specified and request is made to Prompt Lookup
 | created | ✅ | ✅ | string | The Unix timestamp (in seconds) of when the chat completion was created.  |
 | model | ✅ | ✅ | string | The model used for the chat completion. |
 | object | ✅ | ✅ | string | `chat.completion` for unary requests and `chat.completion.chunk` for streaming responses |
-| usage | ✅ | ✅ | object | Usage statistics for the completion request. Consists of three integer fields: `completion_tokens`, `prompt_tokens` and `total_tokens` that inform how many tokens have been generated in a completion, number of tokens in a prompt and the sum of both. Does not work for streaming on stateful endpoints. |
+| usage | ✅ | ✅ | object | Usage statistics for the completion request. Consists of three integer fields: `completion_tokens`, `prompt_tokens` and `total_tokens` that inform how many tokens have been generated in a completion, number of tokens in a prompt and the sum of both. Also includes `prompt_tokens_details.cached_tokens` - the number of prompt tokens reused from the prefix cache (a subset of `prompt_tokens`, always 0 when `enable_prefix_caching` is off). Does not work for streaming on stateful endpoints. |
 
 #### Unsupported params from OpenAI service:
 

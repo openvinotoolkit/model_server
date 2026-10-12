@@ -585,6 +585,37 @@ TEST(ImageGenCLILoraParsingTest, UrlLoraWithoutAlphaPreservesDefault) {
     EXPECT_FALSE(graphSettings.loraAdapters[0].alpha.has_value());
 }
 
+// A URL may carry an explicit port. Without an alpha suffix the port colon is the last
+// colon in the entry, so it must not be taken for an alpha delimiter.
+TEST(ImageGenCLILoraParsingTest, UrlLoraWithPortWithoutAlpha) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "pokemon=https://registry.internal:8080/loras/weights.safetensors";
+    ovms::ImageGenerationGraphCLIParser parser;
+    parser.prepare(serverSettings, hfSettings, "test_model");
+    auto& graphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
+    EXPECT_EQ(graphSettings.loraAdapters[0].sourceType, ovms::LoraSourceType::DIRECT_URL);
+    EXPECT_EQ(graphSettings.loraAdapters[0].sourceLora, "https://registry.internal:8080/loras/weights.safetensors");
+    EXPECT_EQ(graphSettings.loraAdapters[0].safetensorsFile.value(), "weights.safetensors");
+    EXPECT_FALSE(graphSettings.loraAdapters[0].alpha.has_value());
+}
+
+TEST(ImageGenCLILoraParsingTest, UrlLoraWithPortAndAlpha) {
+    ovms::ServerSettingsImpl serverSettings;
+    serverSettings.serverMode = ovms::HF_PULL_MODE;
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.sourceLoras = "pokemon=https://registry.internal:8080/loras/weights.safetensors:0.45";
+    ovms::ImageGenerationGraphCLIParser parser;
+    parser.prepare(serverSettings, hfSettings, "test_model");
+    auto& graphSettings = std::get<ovms::ImageGenerationGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_EQ(graphSettings.loraAdapters.size(), 1);
+    EXPECT_EQ(graphSettings.loraAdapters[0].sourceLora, "https://registry.internal:8080/loras/weights.safetensors");
+    ASSERT_TRUE(graphSettings.loraAdapters[0].alpha.has_value());
+    EXPECT_FLOAT_EQ(graphSettings.loraAdapters[0].alpha.value(), 0.45f);
+}
+
 TEST(ImageGenCLILoraParsingTest, NPURejectsMultiLoraWithoutComposites) {
     ovms::ServerSettingsImpl serverSettings;
     serverSettings.serverMode = ovms::HF_PULL_MODE;

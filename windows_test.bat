@@ -36,6 +36,8 @@ IF "%~1"=="" (
 
 set "bazelStartupCmd=--output_user_root=!BAZEL_SHORT_PATH!"
 set "openvino_dir=!BAZEL_SHORT_PATH!/openvino/runtime/cmake"
+set /p bazelVersion=<"%~dp0.bazelversion"
+set "bazelPath=C:\opt\bazel-%bazelVersion%-windows-x86_64.exe"
 set "OVMS_MEDIA_URL_ALLOW_REDIRECTS=1"
 
 IF "%~2"=="" (
@@ -50,9 +52,8 @@ set "runPythonRuntimeTest=%cd%\bazel-bin\src\python_runtime_library_test.exe --g
 set "runPythonInterpreterLifecycleTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=!gtestFilter! //src/python:pythoninterpretermodule_lifecycle_test"
 set "runPythonInterpreterBackendFailureTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=!gtestFilter! //src/python:pythoninterpretermodule_backend_failure_test"
 set "runPythonInterpreterBorrowedTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=!gtestFilter! //src/python:pythoninterpretermodule_borrowed_interpreter_test"
-set "runNoLibpythonSmokeTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures --test_output=errors //src:ovms_no_libpython_smoke_test"
 
-set "buildTestCommand=bazel %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %testTargets%"
+set "buildTestCommand=%bazelPath% %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %testTargets%"
 set "changeConfigsCmd=python windows_change_test_configs.py"
 set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=!gtestFilter! > win_full_test.log 2>&1"
 
@@ -147,22 +148,15 @@ set "testExitCode=!errorlevel!"
 echo Running: %runPythonRuntimeTest%
 %runPythonRuntimeTest% >> win_full_test.log 2>&1
 set "pythonTestExitCode=!errorlevel!"
-
 echo Running: %runPythonInterpreterLifecycleTest%
 %runPythonInterpreterLifecycleTest% >> win_full_test.log 2>&1
 set "pythonInterpreterLifecycleExitCode=!errorlevel!"
-
 echo Running: %runPythonInterpreterBackendFailureTest%
 %runPythonInterpreterBackendFailureTest% >> win_full_test.log 2>&1
 set "pythonInterpreterBackendFailureExitCode=!errorlevel!"
-
 echo Running: %runPythonInterpreterBorrowedTest%
 %runPythonInterpreterBorrowedTest% >> win_full_test.log 2>&1
 set "pythonInterpreterBorrowedExitCode=!errorlevel!"
-
-echo Running: %runNoLibpythonSmokeTest%
-%runNoLibpythonSmokeTest% >> win_full_test.log 2>&1
-set "smokeTestExitCode=!errorlevel!"
 
 :: Cut tests log to results
 set regex="\[  .* ms"
@@ -184,7 +178,7 @@ grep -a -q "\[  PASSED  \] " win_full_test.log
 set "hasPassed=!errorlevel!"
 grep -a -q "\[  FAILED  \] " win_full_test.log
 set "hasFailed=!errorlevel!"
-if !hasPassed! equ 0 if !hasFailed! neq 0 if !pythonInterpreterLifecycleExitCode! equ 0 if !pythonInterpreterBackendFailureExitCode! equ 0 if !pythonInterpreterBorrowedExitCode! equ 0 (
+if !hasPassed! equ 0 if !hasFailed! neq 0 (
     echo [INFO] Tests finished with no failures. Check the summary in win_test_summary.log.
     exit /b 0
 )

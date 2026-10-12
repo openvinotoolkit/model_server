@@ -29,8 +29,9 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "io_processing/delta.hpp"
+#include "openvino/genai/perf_metrics.hpp"
 #include "openvino/genai/text_streamer.hpp"
-#include "mediapipe/framework/calculator_graph.h"
+#include "mediapipe/framework/calculator.pb.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
@@ -41,10 +42,10 @@
 #include "io_processing/base_generation_config_builder.hpp"
 #include "io_processing/input_processor_context.hpp"
 #include "io_processing/input_request.hpp"
-#include "runtime_chat_template.hpp"
-#include "py_jinja_template_processor.hpp"
+#include "runtime_chat_template_runtime_loader.hpp"
 
 namespace ovms {
+
 // Some pipelines internals rely on request_id, so for now we provide increasing ID
 static std::atomic<uint64_t> currentRequestId = 0;
 
@@ -74,8 +75,7 @@ enum class GenerationPhase {
     OUTPUT_TOKEN_PROCESSING,
 };
 
-enum class ChatTemplateMode {
-    UNSET,
+enum class ChatTemplateEngine {
     MINJA,  // Use GenAI's apply_chat_template (minja-based)
     JINJA,  // Use Python Jinja2 module for chat template processing
 };
@@ -147,6 +147,7 @@ struct GenAiServableExecutionContext {
     InputRequest inputRequest;
     // Required for generating output and handle request on the calculator side
     std::vector<ov::genai::GenerationOutput> generationOutputs;
+    std::unique_ptr<ov::genai::PerfMetrics> perfMetrics;
     std::string response;
     std::shared_ptr<ov::genai::TextStreamer> textStreamer;
     bool sendLoopbackSignal = false;
@@ -177,16 +178,6 @@ struct LegacyServableExecutionContextBase : public GenAiServableExecutionContext
 // Defined in servable.cpp. Both Legacy servable overrides delegate here.
 absl::Status prepareLegacyPartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
-struct ExtraGenerationInfo {
-    std::string bosTokenFromTokenizer;
-    std::string bosTokenIdFromTokenizer;
-    std::string eosTokenFromTokenizer;
-    std::string eosTokenIdFromTokenizer;
-    std::string chatTemplateFromTokenizer;
-    std::string chatTemplateDirectory;
-    bool isGgufModel;
-};
-
 struct GenAiServableProperties {
     // General configuration
     std::string modelsPath;
@@ -197,7 +188,8 @@ struct GenAiServableProperties {
     ov::AnyMap pluginConfig;
     ov::AnyMap tokenizerPluginConfig;
     bool enableToolGuidedGeneration = false;
-    ChatTemplateMode chatTemplateMode = ChatTemplateMode::UNSET;
+    ChatTemplateEngine chatTemplateEngine = ChatTemplateEngine::JINJA;
+    bool chatTemplateEngineExplicit = false;
     // Chat template analysis
     ChatTemplateCaps chatTemplateCaps;
     // Sampling
@@ -217,17 +209,7 @@ struct GenAiServableProperties {
     // Controls which steps InputProcessor builds for this servable type.
     // Aggregated per-deployment context for InputProcessor.
     InputProcessorContext inputProcessorContext;
-    PreparedRuntimeChatTemplate preparedRuntimeChatTemplate;
-
-    PyJinjaTemplateProcessor templateProcessor;
-
-    bool hasPreparedPyTemplateProcessor() const {
-        return templateProcessor.chatTemplate != nullptr;
-    }
-
-    PyJinjaTemplateProcessor* getPreparedPyTemplateProcessorOrNull() {
-        return hasPreparedPyTemplateProcessor() ? &templateProcessor : nullptr;
-    }
+    PreparedChatTemplateRuntime preparedChatTemplate;
 };
 
 class GenAiServable {

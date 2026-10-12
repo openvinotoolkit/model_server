@@ -55,6 +55,9 @@ curl http://localhost/v3/responses \
   ],
   "usage": {
     "input_tokens": 5,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    },
     "output_tokens": 42,
     "total_tokens": 47
   }
@@ -181,7 +184,7 @@ Note that below parameters are valid only for prompt lookup pipeline. Add `"prom
 | output | ✅ | ✅ | array | A list of output items. May include items of type `message`, `function_call`, or `reasoning`. See [Output item types](#output-item-types) below. |
 | output[].content[].text | ✅ | ✅ | string | The generated text content (for `message` type items). |
 | output[].content[].annotations | ✅ | ✅ | array | Always an empty array (annotations not yet supported). |
-| usage | ✅ | ✅ | object | Usage statistics: `input_tokens`, `output_tokens`, `total_tokens`. |
+| usage | ✅ | ✅ | object | Usage statistics: `input_tokens`, `input_tokens_details.cached_tokens` (input tokens reused from the prefix cache, a subset of `input_tokens`), `output_tokens`, `total_tokens`. |
 | tool_choice | ✅ | ✅ | string or object | Echoed back from the request. |
 | tools | ✅ | ✅ | array | Echoed back from the request. |
 | max_output_tokens | ✅ | ✅ | integer | Echoed back from the request (if set). |

@@ -22,6 +22,7 @@
 #include <variant>
 
 #include "../../../logging.hpp"
+#include "../../runtime_chat_template_runtime_loader.hpp"
 
 namespace ovms {
 std::string ChatTemplateProcessor::serializeForJinja(const ov::genai::ChatHistory& chatHistory) {
@@ -41,11 +42,9 @@ std::string ChatTemplateProcessor::serializeForJinja(const ov::genai::ChatHistor
 }
 
 ChatTemplateProcessor::ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer,
-    bool useMinja,
-    const PreparedRuntimeChatTemplate* preparedRuntimeChatTemplate) :
+    PreparedChatTemplateRuntime* templateProcessor) :
     tokenizer(tokenizer),
-    useMinja(useMinja),
-    preparedRuntimeChatTemplate(preparedRuntimeChatTemplate) {}
+    templateProcessor(templateProcessor) {}
 
 absl::Status ChatTemplateProcessor::extractAddGenerationPrompt(const ov::genai::ChatHistory& chatHistory,
     ov::genai::JsonContainer& kwargs, bool& addGenerationPrompt) {
@@ -76,30 +75,12 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "chatTemplateKwargs: {}", chatHistory.get_extra_context().empty() ? std::string("<none>") : chatHistory.get_extra_context().to_json_string());
     }
 
-    const std::string jsonBody = serializeForJinja(chatHistory);
-
-    if (!useMinja) {
-        if (preparedRuntimeChatTemplate == nullptr || !preparedRuntimeChatTemplate->isPrepared()) {
-            return absl::Status(absl::StatusCode::kUnavailable,
-                "Jinja chat-template mode was selected, but the Python runtime is unavailable");
+    if (templateProcessor != nullptr) {
+        std::string jinjaOutput;
+        if (!templateProcessor->apply(serializeForJinja(chatHistory), jinjaOutput)) {
+            return absl::Status(absl::StatusCode::kInvalidArgument, jinjaOutput);
         }
-
-        std::string runtimeOutput;
-        RuntimeChatTemplateError runtimeError = RuntimeChatTemplateError::NONE;
-        auto runtimeStatus = tryApplyPreparedChatTemplateRuntime(
-            *preparedRuntimeChatTemplate,
-            jsonBody,
-            runtimeOutput,
-            &runtimeError);
-        if (runtimeStatus == RuntimeChatTemplateStatus::APPLIED) {
-            req.promptText = std::move(runtimeOutput);
-        } else if (runtimeStatus == RuntimeChatTemplateStatus::ERROR) {
-            (void)runtimeError;
-            return absl::Status(absl::StatusCode::kInvalidArgument, runtimeOutput);
-        } else {
-            return absl::Status(absl::StatusCode::kUnavailable,
-                "Jinja chat-template runtime is unavailable while processing the request");
-        }
+        req.promptText = std::move(jinjaOutput);
     } else {
         const auto& tools = chatHistory.get_tools();
         ov::genai::JsonContainer kwargs;
