@@ -138,28 +138,28 @@ void testNegativeDimensions(const std::string& dims) {
     EXPECT_EQ(std::get<absl::Status>(dimensions).code(), absl::StatusCode::kInvalidArgument) << dims;
 }
 
-void testMaxResolutionExceeded(std::optional<std::pair<unsigned int, unsigned int> > maxRes,const std::string& dims) {
+void testMaxResolutionExceeded(std::optional<std::pair<unsigned int, unsigned int>> maxRes, const std::string& dims) {
     // /create JSON
     ovms::HttpPayload payload;
     payload.parsedJson = std::make_shared<rapidjson::Document>();
     payload.parsedJson->Parse(dims.c_str());
     ovms::ImageGenPipelineArgs args = DEFAULTIMAGE_GEN_ARGS;
     args.maxResolution = maxRes.value_or(args.maxResolution);
-    std::variant<absl::Status, ov::AnyMap> requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args, true );
+    std::variant<absl::Status, ov::AnyMap> requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args, true);
 
     ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions)) << dims;
 
     EXPECT_EQ(std::get<absl::Status>(requestOptions).code(), absl::StatusCode::kInvalidArgument) << dims;
 }
 
-void testMaxResolutionNotExceeded(std::optional<std::pair<unsigned int, unsigned int> > maxRes,const std::string& dims) {
+void testMaxResolutionNotExceeded(std::optional<std::pair<unsigned int, unsigned int>> maxRes, const std::string& dims) {
     // /create JSON
     ovms::HttpPayload payload;
     payload.parsedJson = std::make_shared<rapidjson::Document>();
     payload.parsedJson->Parse(dims.c_str());
     ovms::ImageGenPipelineArgs args = DEFAULTIMAGE_GEN_ARGS;
     args.maxResolution = maxRes.value_or(args.maxResolution);
-    std::variant<absl::Status, ov::AnyMap> requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args, true );
+    std::variant<absl::Status, ov::AnyMap> requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args, true);
 
     ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(requestOptions)) << dims;
 }
@@ -1491,7 +1491,7 @@ TEST(Text2ImageTest, validateForStaticReshapeSettings_ExceedsDefaultMaxResolutio
 }
 
 TEST(Text2ImageTest, validateForStaticReshapeSettings_DoesntMatchResolution) {
-    ImageGenPipelineArgs args;
+    ImageGenPipelineArgs args = DEFAULTIMAGE_GEN_ARGS;
     args.modelsPath = "/ovms/src/test/dummy";
     args.device.push_back("NPU");
     args.defaultNumInferenceSteps = 10;
@@ -1513,7 +1513,7 @@ TEST(Text2ImageTest, validateForStaticReshapeSettings_DoesntMatchResolution) {
 }
 
 TEST(Text2ImageTest, validateForStaticReshapeSettings_NegativeStatic4ButRequested5NumImagesPerPrompt) {
-    ImageGenPipelineArgs args;
+    ImageGenPipelineArgs args = DEFAULTIMAGE_GEN_ARGS;
     args.modelsPath = "/ovms/src/test/dummy";
     args.device.push_back("NPU");
     args.defaultNumInferenceSteps = 10;
@@ -1536,7 +1536,7 @@ TEST(Text2ImageTest, validateForStaticReshapeSettings_NegativeStatic4ButRequeste
 
 
 TEST(Text2ImageTest, validateForStaticReshapeSettings_DoesntMatchGuidanceScale) {
-    ImageGenPipelineArgs args;
+    ImageGenPipelineArgs args = DEFAULTIMAGE_GEN_ARGS;
     args.modelsPath = "/ovms/src/test/dummy";
     args.device.push_back("NPU");
     args.defaultNumInferenceSteps = 10;
