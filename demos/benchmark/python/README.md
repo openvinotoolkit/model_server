@@ -58,8 +58,8 @@ workspace
 
 Let's start OVMS before building and running the benchmark client as follows (more deployment options described in [docs](../../../docs/home.md)):
 ```bash
-docker run -u $(id -u) -p 8120:8120 -d -v ${PWD}/workspace:/workspace mkulakow_tmp --model_path \
-                     workspace/resnet50-binary-0001 --model_name resnet --rest_port 8120 --log_level DEBUG
+docker run -u $(id -u) -p 9000:9000 -p 8000:8000 -d -v ${PWD}/workspace:/workspace openvino/model_server --model_path \
+                     /workspace/resnet50-binary-0001 --model_name resnet50-binary-0001 --port 9000 --rest_port 8000
 ```
 
 ## Selected Commands
