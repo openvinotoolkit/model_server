@@ -20,13 +20,14 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/kfs_python_tensor_bridge.hpp"
 #include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../stringutils.hpp"
 #include "mediapipe/framework/port/integral_types.h"
 #include "../mediapipe_internal/mediapipefactory.hpp"
@@ -120,7 +121,9 @@ public:
 
     void TearDown() {
         manager.reset();
-        pythonModule->reacquireGILForThisThread();
+        if (pythonModule->ownsPythonInterpreter()) {
+            pythonModule->reacquireGILForThisThread();
+        }
         pythonModule->shutdown();
         pythonModule.reset();
     }
@@ -511,7 +514,7 @@ TEST_F(StreamingWithOVMSCalculatorsCliTest, OVInferenceCalculatorWith2InputsSend
     SetUpServer(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/cli/subconfig").c_str(), "my_graph");
     const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
     ModelManager& manager = smm->getServableManager();
-    const MediapipeFactory& factory = manager.getMediapipeFactory();
+    const auto& factory = manager.getMediapipeFactory();
     auto definition = factory.findDefinitionByName(name);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);
@@ -549,7 +552,7 @@ TEST_F(StreamingWithOVMSCalculatorsTest, OVInferenceCalculatorWith2InputsSendSep
     SetUpServer(configFilePath.c_str());
     const ServableManagerModule* smm = dynamic_cast<const ServableManagerModule*>(server.getModule(SERVABLE_MANAGER_MODULE_NAME));
     ModelManager& manager = smm->getServableManager();
-    const MediapipeFactory& factory = manager.getMediapipeFactory();
+    const auto& factory = manager.getMediapipeFactory();
     auto definition = factory.findDefinitionByName(name);
     ASSERT_NE(nullptr, definition);
     ASSERT_EQ(definition->getStatus().getStateCode(), PipelineDefinitionStateCode::AVAILABLE);

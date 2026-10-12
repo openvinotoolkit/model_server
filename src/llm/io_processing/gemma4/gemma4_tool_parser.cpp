@@ -129,7 +129,7 @@ std::string Gemma4ToolParser::normalizeArgStr(const std::string& arg) {
     size_t errorOffset = tempDoc.GetErrorOffset();
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Failed to parse argument string as JSON, falling back to string value. Argument string: {}, Error: {} Offset: {}", normalized, errorMessage, errorOffset);
 
-    return escapeAsJsonString(arg);
+    return escapeAsJsonString(normalized);
 }
 
 void Gemma4ToolParser::writeArgumentToWriter(const std::string& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer) {

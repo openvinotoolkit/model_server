@@ -32,7 +32,7 @@
 
 #include "src/image_gen/imagegenutils.hpp"
 #include "src/image_gen/imagegen_init.hpp"
-#include "src/image_conversion.hpp"
+#include "src/image_utils/image_conversion.hpp"
 #include "src/config.hpp"
 #include "src/logging.hpp"
 #include "src/status.hpp"
@@ -1232,7 +1232,7 @@ TEST(ImageGenCalculatorOptionsTest, PositiveRelativePathToGraphPbtxt) {
     auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
 #ifdef _WIN32
     ASSERT_EQ(getGenericFullPathForSrcTest(imageGenArgs.modelsPath),
-        getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy\\.\\", false))
+        getGenericFullPathForSrcTest(std::filesystem::current_path().string() + "/src/test/dummy\\.\\", false))
         << imageGenArgs.modelsPath;
 #else
     ASSERT_EQ(imageGenArgs.modelsPath, "/ovms/src/test/dummy/./")

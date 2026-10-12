@@ -1,0 +1,41 @@
+Work around gcc 13.3 rejecting the constexpr nullptr comparison in
+absl::container_internal::hash_policy_traits::get_hash_slot_fn (raw_hash_set.h),
+and guard ABSL_RETURN_IF_ERROR / ABSL_ASSIGN_OR_RETURN definitions in
+absl/status/status_macros.h so mediapipe's identically-named macros do not
+trigger -Werror=macro-redefined when both headers land in the same TU.
+
+--- a/absl/container/internal/raw_hash_set.h
++++ b/absl/container/internal/raw_hash_set.h
+@@ -3860,7 +3860,7 @@
+                   size_t{(std::numeric_limits<uint32_t>::max)()});
+     static constexpr size_t kBackingArrayAlignment =
+         BackingArrayAlignment(alignof(slot_type));
+-    static constexpr PolicyFunctions value = {
++    static const PolicyFunctions value = {
+         static_cast<uint32_t>(sizeof(key_type)),
+         static_cast<uint32_t>(sizeof(value_type)),
+         static_cast<uint32_t>(sizeof(slot_type)),
+--- a/absl/status/status_macros.h
++++ b/absl/status/status_macros.h
+@@ -86,8 +86,10 @@
+ //     ABSL_RETURN_IF_ERROR(foo.Method(args...));
+ //     return absl::OkStatus();
+ //   }
++#ifndef ABSL_RETURN_IF_ERROR
+ #define ABSL_RETURN_IF_ERROR(expr) \
+   ABSL_INTERNAL_STATUS_MACROS_RETURN_IF_ERROR_IMPL_(return, expr)
++#endif
+ 
+ // Executes an expression `rexpr` that returns an `absl::StatusOr<T>`. On OK,
+ // moves its value into the variable defined by `lhs`, otherwise returns
+@@ -150,8 +152,10 @@
+ // Example: Logging the error on failure.
+ //   ABSL_ASSIGN_OR_RETURN(ValueType value, MaybeGetValue(query), _.LogError());
+ //
++#ifndef ABSL_ASSIGN_OR_RETURN
+ #define ABSL_ASSIGN_OR_RETURN(...) \
+   ABSL_INTERNAL_STATUS_MACROS_ASSIGN_OR_RETURN_IMPL_(return, __VA_ARGS__)
++#endif
+ 
+ // =================================================================
+ // == Implementation details, do not rely on anything below here. ==

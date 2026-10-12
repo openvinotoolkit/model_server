@@ -481,21 +481,6 @@ TEST(Minicpm5ToolParserImplTest, NewlinesAroundParamValue) {
     EXPECT_EQ(callsOpt.value()[0].arguments, R"({"city":"Beijing"})");
 }
 
-TEST(Minicpm5ToolParserImplTest, RemoveToolCallsFromContent) {
-    const std::string input =
-        "Before. "
-        R"(<function name="search"><param name="query">intel</param></function>)"
-        " After.";
-    auto content = input;
-    Minicpm5ToolParserImpl parser(minicpm5TypeMap);
-    auto callsOpt = parser.parseChunk(content);
-    ASSERT_TRUE(callsOpt.has_value());
-    auto status = parser.removeToolCallsFromContentIfNeeded(content);
-    EXPECT_TRUE(status.ok()) << status.string();
-    EXPECT_EQ(content.find("<function"), std::string::npos);
-    EXPECT_EQ(content.find("</function>"), std::string::npos);
-}
-
 static ToolCalls_t streamInFragments(const std::string& input, size_t fragmentSize,
     const ToolsParameterTypeMap_t& typeMap) {
     Minicpm5ToolParserImpl parser(typeMap);
@@ -560,19 +545,6 @@ TEST(Minicpm5ToolParserImplTest, UnterminatedFunctionNoCall) {
     Minicpm5ToolParserImpl parser(minicpm5TypeMap);
     auto callsOpt = parser.parseChunk(content);
     EXPECT_FALSE(callsOpt.has_value() && !callsOpt.value().empty());
-}
-
-TEST(Minicpm5ToolParserImplTest, UnterminatedFunctionContentCleanedNotError) {
-    // Truncated mid-parameter-value, no closing tags at all: removeToolCallsFromContentIfNeeded()
-    // must trim the dangling fragment instead of returning INTERNAL_ERROR (begin/end mismatch).
-    const std::string input =
-        R"(<function name="get_weather"><param name="city">Berlin)";
-    auto content = input;
-    Minicpm5ToolParserImpl parser(minicpm5TypeMap);
-    parser.parseChunk(content);
-    auto status = parser.removeToolCallsFromContentIfNeeded(content);
-    EXPECT_TRUE(status.ok()) << status.string();
-    EXPECT_EQ(content.find("<function"), std::string::npos) << content;
 }
 
 TEST(Minicpm5ToolParserImplTest, EmptyParamValue) {

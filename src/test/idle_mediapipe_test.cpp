@@ -21,7 +21,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/dags/pipelinedefinitionstatus.hpp"
+#include "src/mediapipe_internal/pipelinedefinitionstatus.hpp"
 #include "src/mediapipe_internal/mediapipegraphconfig.hpp"
 #include "src/mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "src/status.hpp"

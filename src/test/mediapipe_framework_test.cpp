@@ -27,7 +27,6 @@
 #include <openvino/openvino.hpp>
 
 #include "../config.hpp"
-#include "../dags/pipelinedefinition.hpp"
 #include "../grpcservermodule.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
@@ -45,7 +44,6 @@
 #include "../server.hpp"
 #include "../shape.hpp"
 #include "../stringutils.hpp"
-#include "src/tensorflow_type_utils.hpp"
 #include "src/timer.hpp"
 #include "constructor_enabled_model_manager.hpp"
 #include "c_api_test_utils.hpp"

@@ -37,7 +37,6 @@
 #include "../../llm/io_processing/chat_template/caps.hpp"
 #include "../../llm/io_processing/chat_template/probe.hpp"
 #include "../../llm/io_processing/input_processors/chat_template_adapter.hpp"
-#include "../../llm/py_jinja_template_processor.hpp"
 #include "../../utils/env_guard.hpp"
 #include "../../llm/language_model/continuous_batching/servable.hpp"
 #include "../../llm/servable_initializer.hpp"
@@ -64,7 +63,7 @@ protected:
         const char* prev = std::getenv("OPENVINO_LOG_LEVEL");
         savedLogLevel = prev ? prev : "";
         SetEnvironmentVar("OPENVINO_LOG_LEVEL", "0");
-        // Copy tokenizer model files to temp dir (required by PyJinjaTemplateProcessor)
+        // Copy tokenizer model files required by the prepared Python runtime.
         for (const auto& filename : {"openvino_tokenizer.xml", "openvino_tokenizer.bin",
                  "openvino_detokenizer.xml", "openvino_detokenizer.bin"}) {
             std::filesystem::copy_file(
@@ -115,9 +114,11 @@ protected:
         servable->getProperties()->modelsPath = directoryPath;
         servable->getProperties()->tokenizer = ov::genai::Tokenizer(directoryPath);
 
-        ExtraGenerationInfo extraGenInfo = GenAiServableInitializer::readExtraGenerationInfo(
-            servable->getProperties(), directoryPath);
-        GenAiServableInitializer::loadPyTemplateProcessor(servable->getProperties(), extraGenInfo);
+        auto& properties = *servable->getProperties();
+        std::string errorMessage;
+        ASSERT_TRUE(properties.preparedChatTemplate.prepare(directoryPath, chatTemplate,
+            properties.tokenizer.get_bos_token(), properties.tokenizer.get_eos_token(), errorMessage))
+            << errorMessage;
     }
 
     // Run the full Jinja pipeline: analyze → probe → workarounds → apply via Python Jinja
@@ -137,11 +138,14 @@ protected:
 
         // Step 2: Initialize Jinja processor (needed for probe and rendering)
         initJinjaProcessor();
-        ASSERT_NE(servable->getProperties()->templateProcessor.chatTemplate, nullptr)
+        ASSERT_TRUE(servable->getProperties()->preparedChatTemplate.isPrepared())
             << "Failed to load Python Jinja template processor";
 
         // Step 3a: Probe tool caps using Python Jinja (same function used in production)
-        if (!probeChatTemplateCapsJinja(servable->getProperties()->templateProcessor, caps)) {
+        if (!probeChatTemplateCapsJinja([& templateProcessor = servable->getProperties()->preparedChatTemplate](const std::string& body, std::string& output) {
+                return templateProcessor.apply(body, output);
+            },
+                caps)) {
             std::cout << "=== Jinja Probe FAILED: silent failure detected ===" << std::endl;
         }
 
@@ -164,9 +168,7 @@ protected:
         // Step 5: Serialize and render via Python Jinja (same as production ChatTemplateProcessor)
         std::string requestBody = "{\"messages\":" + chatHistory.get_messages().to_json_string() + "}";
         std::string renderOutput;
-        bool success = PyJinjaTemplateProcessor::applyChatTemplate(
-            servable->getProperties()->templateProcessor,
-            requestBody, renderOutput);
+        bool success = servable->getProperties()->preparedChatTemplate.apply(requestBody, renderOutput);
         exceptionThrownDuringApplication = !success;
         appliedOutput = renderOutput;
 

@@ -19,8 +19,6 @@
 #include <string>
 #include <utility>
 
-#include <curl/curl.h>
-
 #include "config.hpp"
 #include "http_server.hpp"
 #include "logging.hpp"
@@ -47,7 +45,6 @@ Status HTTPServerModule::start(const ovms::Config& config) {
         return status;
     }
 
-    curl_global_init(CURL_GLOBAL_ALL);
     state = ModuleState::INITIALIZED;
     SPDLOG_INFO("{} started", HTTP_SERVER_MODULE_NAME);
     SPDLOG_INFO("Started REST server at {}", server_address);
@@ -60,7 +57,6 @@ void HTTPServerModule::shutdown() {
     state = ModuleState::STARTED_SHUTDOWN;
     drogonServer->terminate();
     drogonServer.reset();
-    curl_global_cleanup();
     SPDLOG_INFO("Shutdown HTTP server");
     state = ModuleState::SHUTDOWN;
 }

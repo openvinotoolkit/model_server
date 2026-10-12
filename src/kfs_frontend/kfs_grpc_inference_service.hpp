@@ -75,9 +75,6 @@ protected:
     Status getModelInstance(const KFSRequest* request,
         std::shared_ptr<ovms::ModelInstance>& modelInstance,
         std::unique_ptr<ModelInstanceUnloadGuard>& modelInstanceUnloadGuardPtr);
-    Status getPipeline(const KFSRequest* request,
-        KFSResponse* response,
-        std::unique_ptr<ovms::Pipeline>& pipelinePtr);
 };
 
 }  // namespace ovms

@@ -16,10 +16,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../dags/pipelinedefinitionstatus.hpp"
+#include "../mediapipe_internal/pipelinedefinitionstatus.hpp"
 #include "../modelinstance.hpp"
 #include "../prediction_service_utils.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../timer.hpp"
 #include "test_utils.hpp"
 

@@ -13,16 +13,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <fstream>
 #include <string>
+#include <thread>
+#include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../http_rest_api_handler.hpp"
-#include "../server.hpp"
+#include "src/http_rest_api_handler.hpp"
+#include "src/server.hpp"
+#include "src/servable_management/modelmanager.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 #include "rapidjson/document.h"
 #include "test_http_utils.hpp"
 #include "test_utils.hpp"
+#include "test_with_temp_dir.hpp"
 #include "platform_utils.hpp"
 
 using namespace ovms;
@@ -177,4 +183,105 @@ TEST_F(ListModelsEndpointTest, simplePositiveRetrieveModelv1v3) {
     ASSERT_EQ(d["id"], "add");
     ASSERT_TRUE(d["created"].IsInt());
     ASSERT_EQ(d["owned_by"], "OVMS");
+}
+
+class ListModelsEndpointIdleManagementTest : public TestWithTempDir {
+protected:
+    std::unique_ptr<std::thread> t;
+    std::unique_ptr<ovms::HttpRestApiHandler> handler;
+    std::string configFilePath;
+    std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
+    const std::string listModelsEndpoint = "/v1/models";
+    std::shared_ptr<MockedServerRequestInterface> writer;
+    std::shared_ptr<MockedMultiPartParser> multiPartParser;
+
+    static std::string makeConfig(bool includeModel, bool includeMediapipe) {
+        std::string models;
+        if (includeModel) {
+            models = R"({"config": {"name": "dummy", "base_path": ")" + getGenericFullPathForSrcTest("/ovms/src/test/dummy") + R"("}})";
+        }
+        std::string graphs;
+        if (includeMediapipe) {
+            graphs = R"({"name": "passthroughGraph", "graph_path": ")" + getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/graphpassthrough.pbtxt") + R"("})";
+        }
+        return R"({"model_config_list": [)" + models + R"(], "mediapipe_config_list": [)" + graphs + "]}";
+    }
+
+    void writeConfig(const std::string& content) {
+        std::ofstream ofs(configFilePath);
+        ofs << content;
+    }
+
+    void SetUp() override {
+        TestWithTempDir::SetUp();
+        configFilePath = directoryPath + "/config.json";
+        const bool includeModel = true;
+        const bool includeMediapipe = true;
+        writeConfig(makeConfig(includeModel, includeMediapipe));
+        writer = std::make_shared<MockedServerRequestInterface>();
+        multiPartParser = std::make_shared<MockedMultiPartParser>();
+
+        ovms::Server& server = ovms::Server::instance();
+        std::string port = "9178";
+        ::SetUpServerWithExtraArgs(t, server, port, configFilePath.c_str(), {"--idle_unload_timeout_seconds", "30"});
+        handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
+    }
+
+    void TearDown() override {
+        handler.reset();
+        ovms::Server& server = ovms::Server::instance();
+        server.setShutdownRequest(1);
+        t->join();
+        server.setShutdownRequest(0);
+        TestWithTempDir::TearDown();
+    }
+
+    ovms::ModelManager& getManager() {
+        ovms::Server& server = ovms::Server::instance();
+        return dynamic_cast<const ovms::ServableManagerModule*>(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME))->getServableManager();
+    }
+
+    void reloadConfig(const std::string& content) {
+        writeConfig(content);
+        std::string response;
+        auto status = handler->processConfigReloadRequest(response, getManager());
+        ASSERT_TRUE(status.ok()) << status.string();
+    }
+
+    std::vector<std::string> listModelIds() {
+        ovms::HttpRequestComponents comp;
+        ovms::HttpResponseComponents responseComponents;
+        std::string response;
+        EXPECT_EQ(handler->parseRequestComponents(comp, "GET", listModelsEndpoint, headers), ovms::StatusCode::OK);
+        EXPECT_EQ(handler->dispatchToProcessor(listModelsEndpoint, "", &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
+        rapidjson::Document d;
+        d.Parse(response.c_str());
+        EXPECT_FALSE(d.HasParseError());
+        std::vector<std::string> ids;
+        if (d.HasParseError() || !d.HasMember("data") || !d["data"].IsArray()) {
+            return ids;
+        }
+        for (const auto& entry : d["data"].GetArray()) {
+            ids.emplace_back(entry["id"].GetString());
+        }
+        return ids;
+    }
+};
+
+TEST_F(ListModelsEndpointIdleManagementTest, EachServableListedOnce) {
+    EXPECT_THAT(listModelIds(), ::testing::UnorderedElementsAre("dummy", "passthroughGraph"));
+}
+
+TEST_F(ListModelsEndpointIdleManagementTest, RetiredModelNotListed) {
+    const bool includeModel = false;
+    const bool includeMediapipe = true;
+    reloadConfig(makeConfig(includeModel, includeMediapipe));
+    EXPECT_THAT(listModelIds(), ::testing::UnorderedElementsAre("passthroughGraph"));
+}
+
+TEST_F(ListModelsEndpointIdleManagementTest, RetiredMediapipeNotListed) {
+    const bool includeModel = true;
+    const bool includeMediapipe = false;
+    reloadConfig(makeConfig(includeModel, includeMediapipe));
+    EXPECT_THAT(listModelIds(), ::testing::UnorderedElementsAre("dummy"));
 }

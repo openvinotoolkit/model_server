@@ -28,21 +28,32 @@ class OvmsPythonModel:
         self.processor = CLIPProcessor.from_pretrained(model_id)
 
     def execute(self, inputs: list):
-        image = Image.open(BytesIO((deserialize_bytes_tensor(bytes(inputs[0]))[0])))
-        input_labels = deserialize_bytes_tensor(bytes(inputs[1]))[0].decode()
-        input_labels_split = input_labels.split(",")
+        image_raw = deserialize_bytes_tensor(bytes(inputs[0]))[0]
+        labels_raw = deserialize_bytes_tensor(bytes(inputs[1]))[0]
+        image = Image.open(BytesIO(image_raw))
+        input_labels = labels_raw.decode()
+        input_labels_split = [label.strip() for label in input_labels.split(",") if label.strip()]
+        if not input_labels_split:
+            input_labels_split = ["item"]
         text_descriptions = [f"This is a photo of a {label}" for label in input_labels_split]
 
-        model_inputs = self.processor(text=text_descriptions, images=[image], return_tensors="pt", padding=True)
+        # Split processing avoids combined CLIPProcessor batching edge-cases in runtime packaging.
+        text_inputs = self.processor.tokenizer(
+            text_descriptions,
+            return_tensors="np",
+            padding=True,
+            truncation=True,
+        )
+        image_inputs = self.processor.image_processor(images=image.convert("RGB"), return_tensors="np")
 
-        # dtype=np.dtype("q") must be used for correct mapping of struct format character to datatype
-        # using np.int64 sets format character to "l" which translates to INT32 in Tensor.datatype
-        input_ids = np.array(model_inputs["input_ids"], dtype=np.dtype("q"))
-        attention_mask = np.array(model_inputs["attention_mask"], dtype=np.dtype("q"))
+        # Explicit INT64 is required because on some platforms NumPy int64 can infer as "l" -> INT32 in pyovms.
+        input_ids = np.array(text_inputs["input_ids"], dtype=np.int64)
+        attention_mask = np.array(text_inputs["attention_mask"], dtype=np.int64)
+        pixel_values = np.array(image_inputs["pixel_values"], dtype=np.float32)
 
-        input_ids_py = Tensor("input_ids_py", input_ids)
-        attention_mask_py = Tensor("attention_mask_py", attention_mask)
-        pixel_values_py = Tensor("pixel_values_py", model_inputs["pixel_values"].numpy())
+        input_ids_py = Tensor("input_ids_py", input_ids, datatype="INT64")
+        attention_mask_py = Tensor("attention_mask_py", attention_mask, datatype="INT64")
+        pixel_values_py = Tensor("pixel_values_py", pixel_values, datatype="FP32")
 
         return [input_ids_py, attention_mask_py, pixel_values_py]
 

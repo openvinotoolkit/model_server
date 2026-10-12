@@ -56,7 +56,6 @@ Integrations <ovms_demos_integrations>
 | Demo | Description |
 |---|---|
 |[Image Classification](image_classification/python/README.md)|Run prediction on a JPEG image using image classification model via gRPC API.|
-|[Using ONNX Model](using_onnx_model/python/README.md)|Run prediction on a JPEG image using image classification ONNX model via gRPC API in two preprocessing variants. This demo uses [pipeline](../docs/dag_scheduler.md) with [image_transformation custom node](https://github.com/openvinotoolkit/model_server/tree/main/src/custom_nodes/image_transformation).|
 |[Using TensorFlow Model](image_classification_using_tf_model/python/README.md)|Run image classification using directly imported TensorFlow model.|
 |[Classification with PaddlePaddle](classification_using_paddlepaddle_model/python/README.md)|Perform classification on an image with a PaddlePaddle model.|
 |[Age gender recognition](age_gender_recognition/python/README.md)|Run prediction on a JPEG image using age gender recognition model via gRPC API.|
@@ -77,6 +76,7 @@ Integrations <ovms_demos_integrations>
 |[Image classification](./mediapipe/image_classification/README.md)|Basic example with a single inference node.|
 |[Chain of models](./mediapipe/multi_model_graph/README.md)|A chain of models in a graph.|
 |[CLIP image classification](python_demos/clip_image_classification/README.md)|Classify image according to provided labels using CLIP model embedded in a multi-node MediaPipe graph.|
+|[ByteTrack (preview)](./mediapipe/bytetrack/README.md)|Detect and track objects from a video source with YOLOX and ByteTrack.|
 
 ## Python Node
 | Demo | Description |
@@ -87,4 +87,6 @@ Integrations <ovms_demos_integrations>
 | Demo | Description |
 |---|---|
 |[Integration with Open WebUI](integration_with_OpenWebUI/README.md)|Using Open WebUI with OVMS as inference provider. Shows text and image generation as well as usage with RAG and tools.|
-|[Visual Studio Code assistant](./code_local_assistant/README.md)|Use Continue or Cline extension to Visual Studio Code with local OVMS serving.|
+|[Visual Studio Code assistant](./code_local_assistant/README.md)|Use Continue extension in Visual Studio Code with local OVMS serving.|
+|[Cline coding agent integration](./cline_integration/README.md)|Use the Cline coding agent in Visual Studio Code with local OVMS serving, including MCP, image input and reasoning_effort usage.|
+|[Integration with DeepAgents Code](integration_with_deepagents_code/README.md)|Using DeepAgents Code with OVMS as inference provider. Shows MCP server creation, subagent-based validation and tool use.|

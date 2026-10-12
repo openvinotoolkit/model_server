@@ -22,7 +22,7 @@
 
 #include "../logging.hpp"
 #include "../modelversion.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "inferenceparameter.hpp"
 #include "inferencetensor.hpp"
 

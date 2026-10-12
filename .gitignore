@@ -19,6 +19,7 @@ bazel-ovms-c
 bazel-testlogs
 __pycache__
 .workspace
+.gitconfig
 *user_config*
 *.swp
 dist/

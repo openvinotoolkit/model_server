@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -48,10 +49,11 @@ struct TokenizeRequest {
 class TokenizeParser {
 public:
     static constexpr const char* TOKENIZE_ENDPOINT_SUFFIX = "tokenize";
+    static constexpr size_t MAX_LENGTH_LIMIT = 1000000;
     static std::variant<TokenizeRequest::InputDataType, std::string> parseInput(rapidjson::Document& parsedJson, const std::string& field_name);
     static absl::Status parseTokenizeResponse(rapidjson::StringBuffer& buffer, const ov::genai::TokenizedInputs& tokens, const ov::AnyMap& parameters = {});
-    static absl::Status parseTokenizeRequest(rapidjson::Document& parsedJson, TokenizeRequest& request);
-    static std::variant<TokenizeRequest, std::string> validateTokenizeRequest(rapidjson::Document& parsedJson);
+    static absl::Status parseTokenizeRequest(rapidjson::Document& parsedJson, TokenizeRequest& request, std::optional<size_t> maxModelLength = std::nullopt);
+    static std::variant<TokenizeRequest, std::string> validateTokenizeRequest(rapidjson::Document& parsedJson, std::optional<size_t> maxModelLength = std::nullopt);
     static bool isTokenizeEndpoint(const std::string& uri);
 };
 }  // namespace ovms
