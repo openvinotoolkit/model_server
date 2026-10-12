@@ -132,6 +132,7 @@ struct TextGenGraphSettingsImpl {
     std::optional<std::string> pipelineType;
     std::optional<std::string> reasoningParser;
     std::optional<std::string> toolParser;
+    std::optional<std::string> chatTemplateEngine;
     std::string enableToolGuidedGeneration = "false";
     std::optional<uint64_t> cacheIntervalMultiplier;
 };

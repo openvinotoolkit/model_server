@@ -367,27 +367,20 @@ echo [INFO] BoringSSL installed: %boringssl_dir%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Install bazel
 echo [INFO] Installing bazel ...
-set "bazel_path=%opt_install_dir%\bazel.exe"
-set "bazel_file=bazel-6.4.0-windows-x86_64.exe"
+set /p bazel_version=<"%~dp0.bazelversion"
+set "bazel_file=bazel-%bazel_version%-windows-x86_64.exe"
+set "bazel_path=%opt_install_dir%\%bazel_file%"
+set "bazel_url=https://github.com/bazelbuild/bazel/releases/download/%bazel_version%/%bazel_file%"
 IF /I EXIST %bazel_path% (
     if %expunge% EQU 1 (
         del /S /Q %bazel_path%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        %wget_path% -P %opt_install_dir%\ https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-windows-x86_64.exe
-        if !errorlevel! neq 0 exit /b !errorlevel!
-        xcopy /Y /D /I %opt_install_dir%\%bazel_file% %bazel_path%*
-        if !errorlevel! neq 0 exit /b !errorlevel!
     ) else (
-        echo [INFO] ::::::::::::::::::::::: bazel already installed
+        echo [INFO] ::::::::::::::::::::::: Bazel %bazel_version% already installed
     )
-) ELSE (
-	IF /I EXIST %bazel_file% (
-		echo %bazel_file% exists
-	) ELSE (
-		%wget_path% -P %opt_install_dir%\ https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-windows-x86_64.exe
-	)
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    xcopy /Y /D /I %opt_install_dir%\%bazel_file% %bazel_path%*
+)
+IF /I NOT EXIST %bazel_path% (
+    %wget_path% -P %opt_install_dir%\ %bazel_url%
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 echo [INFO] Bazel installed: %bazel_file%
