@@ -694,7 +694,7 @@ Status HttpRestApiHandler::processOpenAI(const std::string_view uri, const HttpR
 
     if (streamFieldVal == false) {
         std::unique_ptr<MediapipeGraphExecutorInterface> executor;
-        status = this->modelManager.createPipelineHandle(executor, modelName);
+        status = this->modelManager.createPipeline(executor, modelName);
         if (!status.ok()) {
             SPDLOG_ERROR("MediaPipe executor creation failed for model: {} with error: {}", modelName, status.string());
             return status;
@@ -724,7 +724,7 @@ Status HttpRestApiHandler::processOpenAI(const std::string_view uri, const HttpR
             }
 
             std::unique_ptr<MediapipeGraphExecutorInterface> executor;
-            auto status = this->modelManager.createPipelineHandle(executor, modelName);
+            auto status = this->modelManager.createPipeline(executor, modelName);
             if (!status.ok()) {
                 rapidjson::StringBuffer buffer;
                 rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
