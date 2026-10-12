@@ -187,11 +187,17 @@ public:
         return true;
     }
 
-    void UsageObject(const CompletionUsageStatistics& usage) {
+    void UsageObject(const CompletionUsageStatistics& usage, bool includeCachedTokens) {
         StartObject("usage");
         Int("prompt_tokens", usage.promptTokens);
         Int("completion_tokens", usage.completionTokens);
         Int("total_tokens", usage.calculateTotalTokens());
+        if (includeCachedTokens) {
+            StartObject("prompt_tokens_details");
+            String("cached_tokens");
+            Writer<StringBuffer>::Uint64(static_cast<uint64_t>(usage.cachedPromptTokens));
+            Writer<StringBuffer>::EndObject();
+        }
         Writer<StringBuffer>::EndObject();
     }
 };

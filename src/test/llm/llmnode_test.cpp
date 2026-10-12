@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <atomic>
+#include <chrono>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -328,6 +329,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJson) {
         ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
         ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
         ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
+        EXPECT_FALSE(parsedResponse["usage"].HasMember("prompt_tokens_details"));
         EXPECT_STREQ(parsedResponse["model"].GetString(), params.modelName.c_str());
         EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
     } else {  // Completions endpoint not supported for VLM servable
@@ -1132,6 +1134,9 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJson) {
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
     ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
+    ASSERT_TRUE(parsedResponse["usage"]["prompt_tokens_details"].IsObject());
+    ASSERT_TRUE(parsedResponse["usage"]["prompt_tokens_details"]["cached_tokens"].IsUint64());
+    EXPECT_LE(parsedResponse["usage"]["prompt_tokens_details"]["cached_tokens"].GetUint64(), parsedResponse["usage"]["prompt_tokens"].GetUint64());
     EXPECT_STREQ(parsedResponse["model"].GetString(), params.modelName.c_str());
     EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
 }
@@ -2549,6 +2554,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsUsage) {
     ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos) << responses.back();  // ensure 5 - reaching max_tokens
     ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();        // this is always present and > 0, depends on pipeline type and underlying model
     ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();         // this is always present and > 0, depends on pipeline type and underlying model
+    ASSERT_TRUE(responses.back().find("\"prompt_tokens_details\":{\"cached_tokens\":") != std::string::npos) << responses.back();
     if (params.checkFinishReason) {
         ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
     }
@@ -2587,9 +2593,148 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsUsage) {
     ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos) << responses.back();  // ensure 5 - reaching max_tokens
     ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();        // this is always present and > 0, depends on pipeline type and underlying model
     ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();         // this is always present and > 0, depends on pipeline type and underlying model
+    ASSERT_EQ(responses.back().find("prompt_tokens_details"), std::string::npos) << responses.back();
     if (params.checkFinishReason) {
         ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
     }
+}
+
+// Unique leading nonce keeps the prompt out of the prefix cache filled by earlier runs (e.g. --gtest_repeat).
+static std::string uniquePrefixCachingPrompt() {
+    std::string prompt = "Request " + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + ".";
+    for (int i = 0; i < 16; ++i) {
+        prompt += " The quick brown fox jumps over the lazy dog.";
+    }
+    return prompt;
+}
+
+static std::string prefixCachingStreamChatRequest(const std::string& content) {
+    return R"({"model": "lm_cb_prefix_caching", "max_tokens": 5, "ignore_eos": true, "stream": true, "stream_options": {"include_usage": true}, "messages": [{"role": "user", "content": ")" +
+           content + R"("}]})";
+}
+
+static uint64_t extractUsageField(const std::string& response, const std::string& field) {
+    std::smatch match;
+    const std::regex pattern("\"" + field + "\":([0-9]+)");
+    if (!std::regex_search(response, match, pattern)) {
+        return std::numeric_limits<uint64_t>::max();
+    }
+    return std::stoull(match[1].str());
+}
+
+TEST_F(LLMFlowHttpTest, unaryChatCompletionsReportsPrefixCacheHit) {
+    const std::string content = uniquePrefixCachingPrompt();
+    const std::string unaryRequest = R"({"model": "lm_cb_prefix_caching", "max_tokens": 5, "ignore_eos": true, "messages": [{"role": "user", "content": ")" + content + R"("}]})";
+
+    ASSERT_EQ(handler->dispatchToProcessor(endpointChatCompletions, unaryRequest, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_FALSE(parsedResponse.HasParseError()) << response;
+    const uint64_t firstPromptTokens = parsedResponse["usage"]["prompt_tokens"].GetUint64();
+    EXPECT_EQ(parsedResponse["usage"]["prompt_tokens_details"]["cached_tokens"].GetUint64(), 0) << response;
+
+    response.clear();
+    ASSERT_EQ(handler->dispatchToProcessor(endpointChatCompletions, unaryRequest, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_FALSE(parsedResponse.HasParseError()) << response;
+    ASSERT_EQ(parsedResponse["usage"]["prompt_tokens"].GetUint64(), firstPromptTokens);
+    const uint64_t cachedTokens = parsedResponse["usage"]["prompt_tokens_details"]["cached_tokens"].GetUint64();
+    EXPECT_GT(cachedTokens, 0) << response;
+    EXPECT_LE(cachedTokens, firstPromptTokens) << response;
+    EXPECT_EQ(parsedResponse["usage"]["total_tokens"].GetUint64(), firstPromptTokens + 5) << response;
+}
+
+TEST_F(LLMFlowHttpTest, streamChatCompletionsReportsPrefixCacheHit) {
+    const std::string content = uniquePrefixCachingPrompt();
+    std::vector<std::string> responses;
+    EXPECT_CALL(*writer, PartialReply(::testing::_))
+        .WillRepeatedly([&responses](std::string response) {
+            responses.push_back(response);
+        });
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(2);
+
+    ASSERT_EQ(handler->dispatchToProcessor(endpointChatCompletions, prefixCachingStreamChatRequest(content), &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::PARTIAL_END);
+    ASSERT_FALSE(responses.empty());
+    const std::string firstUsageChunk = responses.back();
+    const uint64_t firstPromptTokens = extractUsageField(firstUsageChunk, "prompt_tokens");
+    ASSERT_NE(firstPromptTokens, std::numeric_limits<uint64_t>::max()) << firstUsageChunk;
+    EXPECT_EQ(extractUsageField(firstUsageChunk, "cached_tokens"), 0) << firstUsageChunk;
+
+    responses.clear();
+    ASSERT_EQ(handler->dispatchToProcessor(endpointChatCompletions, prefixCachingStreamChatRequest(content), &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::PARTIAL_END);
+    ASSERT_FALSE(responses.empty());
+    const std::string& usageChunk = responses.back();
+    ASSERT_EQ(extractUsageField(usageChunk, "prompt_tokens"), firstPromptTokens) << usageChunk;
+    const uint64_t cachedTokens = extractUsageField(usageChunk, "cached_tokens");
+    EXPECT_GT(cachedTokens, 0) << usageChunk;
+    EXPECT_LE(cachedTokens, firstPromptTokens) << usageChunk;
+    EXPECT_EQ(extractUsageField(usageChunk, "completion_tokens"), 5) << usageChunk;
+}
+
+static std::string prefixCachingResponsesRequest(const std::string& content, bool stream) {
+    return R"({"model": "lm_cb_prefix_caching", "max_output_tokens": 5, "ignore_eos": true, "stream": )" +
+           std::string(stream ? "true" : "false") + R"(, "input": ")" + content + R"("})";
+}
+
+// Earlier lifecycle events may carry an empty usage, so only the final one is relevant.
+static std::string lastUsageObject(const std::vector<std::string>& responses) {
+    std::string stream;
+    for (const auto& chunk : responses) {
+        stream += chunk;
+    }
+    const size_t pos = stream.rfind("\"usage\":{");
+    return pos == std::string::npos ? "" : stream.substr(pos);
+}
+
+TEST_F(LLMFlowHttpTest, unaryResponsesReportsPrefixCacheHit) {
+    const std::string endpointResponses = "/v1/responses";
+    ovms::HttpRequestComponents responsesComp;
+    ASSERT_EQ(handler->parseRequestComponents(responsesComp, "POST", endpointResponses, headers), ovms::StatusCode::OK);
+    const std::string request = prefixCachingResponsesRequest(uniquePrefixCachingPrompt(), false);
+
+    ASSERT_EQ(handler->dispatchToProcessor(endpointResponses, request, &response, responsesComp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_FALSE(parsedResponse.HasParseError()) << response;
+    const uint64_t firstInputTokens = parsedResponse["usage"]["input_tokens"].GetUint64();
+    EXPECT_EQ(parsedResponse["usage"]["input_tokens_details"]["cached_tokens"].GetUint64(), 0) << response;
+
+    response.clear();
+    ASSERT_EQ(handler->dispatchToProcessor(endpointResponses, request, &response, responsesComp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_FALSE(parsedResponse.HasParseError()) << response;
+    ASSERT_EQ(parsedResponse["usage"]["input_tokens"].GetUint64(), firstInputTokens);
+    const uint64_t cachedTokens = parsedResponse["usage"]["input_tokens_details"]["cached_tokens"].GetUint64();
+    EXPECT_GT(cachedTokens, 0) << response;
+    EXPECT_LE(cachedTokens, firstInputTokens) << response;
+    EXPECT_EQ(parsedResponse["usage"]["output_tokens"].GetUint64(), 5) << response;
+    EXPECT_EQ(parsedResponse["usage"]["total_tokens"].GetUint64(), firstInputTokens + 5) << response;
+}
+
+TEST_F(LLMFlowHttpTest, streamResponsesReportsPrefixCacheHit) {
+    const std::string endpointResponses = "/v1/responses";
+    ovms::HttpRequestComponents responsesComp;
+    ASSERT_EQ(handler->parseRequestComponents(responsesComp, "POST", endpointResponses, headers), ovms::StatusCode::OK);
+    const std::string request = prefixCachingResponsesRequest(uniquePrefixCachingPrompt(), true);
+    std::vector<std::string> responses;
+    EXPECT_CALL(*writer, PartialReply(::testing::_))
+        .WillRepeatedly([&responses](std::string response) {
+            responses.push_back(response);
+        });
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(2);
+
+    ASSERT_EQ(handler->dispatchToProcessor(endpointResponses, request, &response, responsesComp, responseComponents, writer, multiPartParser), ovms::StatusCode::PARTIAL_END);
+    const std::string firstUsage = lastUsageObject(responses);
+    const uint64_t firstInputTokens = extractUsageField(firstUsage, "input_tokens");
+    ASSERT_NE(firstInputTokens, std::numeric_limits<uint64_t>::max()) << firstUsage;
+    EXPECT_EQ(extractUsageField(firstUsage, "cached_tokens"), 0) << firstUsage;
+
+    responses.clear();
+    ASSERT_EQ(handler->dispatchToProcessor(endpointResponses, request, &response, responsesComp, responseComponents, writer, multiPartParser), ovms::StatusCode::PARTIAL_END);
+    const std::string usage = lastUsageObject(responses);
+    ASSERT_EQ(extractUsageField(usage, "input_tokens"), firstInputTokens) << usage;
+    const uint64_t cachedTokens = extractUsageField(usage, "cached_tokens");
+    EXPECT_GT(cachedTokens, 0) << usage;
+    EXPECT_LE(cachedTokens, firstInputTokens) << usage;
+    EXPECT_EQ(extractUsageField(usage, "output_tokens"), 5) << usage;
 }
 
 TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsBadStopStringType) {

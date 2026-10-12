@@ -17,10 +17,14 @@
 #pragma once
 
 namespace ovms {
+struct PythonCalculatorsPluginApi;
 
 // Dynamically loads the Python calculators plugin library if available
 // Returns true if plugin loaded successfully or was not needed
 // Returns false if plugin load failed
 bool loadPythonCalculatorsPlugin();
+
+// Returns nullptr until the plugin is loaded (or linked in-process).
+const PythonCalculatorsPluginApi* getPythonCalculatorsPluginApi();
 
 }  // namespace ovms
