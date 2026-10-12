@@ -18,7 +18,7 @@ curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.x
 docker run -d -u $(id -u) -v $PWD/model:/models -p 9000:9000 \
   openvino/model_server:latest \
   --model_path /models/resnet50.xml --model_name resnet \
-  --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NCHW" \
+  --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NCHW" --color_format "RGB:BGR" \
   --port 9000
 ```
 

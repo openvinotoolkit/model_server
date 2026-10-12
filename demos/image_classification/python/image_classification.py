@@ -91,10 +91,10 @@ for line in lines:
     start_time = datetime.datetime.now()
     result = client.infer(args.get('model_name'), [infer_input])
     end_time = datetime.datetime.now()
-    if args['output_name'] not in [output.name for output in result.get_output()]:
+    if result.get_output(args['output_name']) is None:
         print("Invalid output name", args['output_name'])
         print("Available outputs:")
-        for out in result.get_output():
+        for out in result.get_response().outputs:
             print(out.name)
         exit(1)
     duration = (end_time - start_time).total_seconds() * 1000
