@@ -142,7 +142,16 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   endif
 else ifeq ($(findstring redhat,$(BASE_OS)),redhat)
   TARGET_DISTRO_PARAMS = " --//:distro=redhat"
-  OV_USE_BINARY ?= 1
+OV_USE_BINARY ?= 1
+ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
+  TARGET_DISTRO_PARAMS = " --//:distro=ubuntu"
+  ifeq ($(findstring ubuntu22,$(BASE_OS)),ubuntu22)
+    ifeq ($(OV_USE_BINARY),0)
+      $(error OV_USE_BINARY = 0 not supported on Ubuntu22 OS)
+    endif
+  endif
+else ifeq ($(findstring redhat,$(BASE_OS)),redhat)
+  TARGET_DISTRO_PARAMS = " --//:distro=redhat"
 else
   $(error BASE_OS must be either ubuntu or redhat)
 endif
