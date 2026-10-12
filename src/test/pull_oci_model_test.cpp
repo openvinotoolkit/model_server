@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include <chrono>
 #include <cerrno>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -558,9 +559,9 @@ TEST_F(OciModelPackInferenceTest, PullSmallPublicModelAndRunInference) {
 #endif
     std::string sourceModel = "oci://" + modelReference;
 #ifdef _WIN32
-    const unsigned long testProcessId = GetCurrentProcessId();
+    const std::uint64_t testProcessId = static_cast<std::uint64_t>(GetCurrentProcessId());
 #else
-    const unsigned long testProcessId = static_cast<unsigned long>(getpid());
+    const std::uint64_t testProcessId = static_cast<std::uint64_t>(getpid());
 #endif
     // Keep the model repository path short. The digest-based directory name
     // plus the content-addressed GGUF filename otherwise exceeds MAX_PATH in
