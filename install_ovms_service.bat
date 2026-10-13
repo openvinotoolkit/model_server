@@ -44,6 +44,14 @@ if /I "%OVMS_SERVICE_ACCOUNT%"=="LocalService" (
     set "OVMS_SC_ACCOUNT_ARG=LocalService"
 )
 
+REM Recommended default: use a dedicated model repository such as C:\tmp\models and keep it writeable by the admin/user.
+REM The LocalService account should have read access only; it should not be granted write permissions on the model repository.
+if /I "%OVMS_SERVICE_ACCOUNT%"=="LocalService" (
+    echo [NOTE] Recommended model repository layout: use a dedicated directory such as C:\tmp\models.
+    echo [NOTE] Grant NT AUTHORITY\LocalService read-only access to the model repository and config.json.
+    echo [NOTE] Keep write access for the admin/user and leave the service account without write permission.
+)
+
 ::::::::::::::::::::::: Check directory
 if not exist "!OVMS_MODEL_REPOSITORY_PATH!\" (
     echo [INFO] Creating model repository path !OVMS_MODEL_REPOSITORY_PATH!
@@ -70,20 +78,6 @@ echo Using model repository path !OVMS_MODEL_REPOSITORY_PATH!
 echo Using service account !OVMS_SERVICE_ACCOUNT!
 
 set "OVMS_DIR=%~dp0"
-
-::::::::::::::::::::::: Harden ACLs for the model repository before starting the service
-REM Restrict writes to Administrators and the selected service account so non-admin users cannot replace config.json.
-if /I "%OVMS_SERVICE_ACCOUNT%"=="LocalService" (
-    icacls "!OVMS_MODEL_REPOSITORY_PATH!" /inheritance:r /grant "BUILTIN\Administrators:(OI)(CI)F" /grant "NT AUTHORITY\LocalService:(OI)(CI)M" >nul 2>&1
-    if !errorlevel! neq 0 (
-        echo [WARN] ACL hardening for model repository failed with !errorlevel!; verify the service account can still write to !OVMS_MODEL_REPOSITORY_PATH!
-    )
-) else (
-    icacls "!OVMS_MODEL_REPOSITORY_PATH!" /inheritance:r /grant "BUILTIN\Administrators:(OI)(CI)F" /grant "%OVMS_SERVICE_ACCOUNT%:(OI)(CI)M" >nul 2>&1
-    if !errorlevel! neq 0 (
-        echo [WARN] ACL hardening for model repository failed with !errorlevel!; verify the service account can still write to !OVMS_MODEL_REPOSITORY_PATH!
-    )
-)
 
 ::::::::::::::::::::::: Create the service
 REM Build binPath carefully to avoid quoting issues with delayed expansion

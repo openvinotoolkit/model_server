@@ -94,12 +94,16 @@ def _prepare_test_copy(tmp_path: Path) -> tuple[Path, Path, Path]:
     script_text = source.read_text(encoding="utf-8")
     # Skip service registration and ovms service-install call in unit tests.
     script_text = script_text.replace(
-        "sc create ovms binPath= \"!binPath_cmd!\" DisplayName= \"OpenVino Model Server\"",
-        "set \"SC_CREATE_ERROR=0\"\nREM [TEST] skipped sc create",
+        'sc create ovms binPath= "!binPath_cmd!" obj= LocalService DisplayName= "OpenVino Model Server"',
+        'set "SC_CREATE_ERROR=0"\nREM [TEST] skipped sc create',
     )
     script_text = script_text.replace(
-        "set \"SC_CREATE_ERROR=!errorlevel!\"",
-        "REM [TEST] skipped SC_CREATE_ERROR from sc create",
+        'sc create ovms binPath= "!binPath_cmd!" obj= %OVMS_SERVICE_ACCOUNT% DisplayName= "OpenVino Model Server"',
+        'set "SC_CREATE_ERROR=0"\nREM [TEST] skipped sc create',
+    )
+    script_text = script_text.replace(
+        'set "SC_CREATE_ERROR=!errorlevel!"',
+        'REM [TEST] skipped SC_CREATE_ERROR from sc create',
     )
     script_text = script_text.replace(
         '"!OVMS_DIR!\\ovms.exe" install',
@@ -124,11 +128,6 @@ def _parse_markers(output: str) -> dict[str, str]:
             markers[key.strip()] = value.strip()
     return markers
 
-
-def _read_acl(path: Path) -> str:
-    result = _run_cmd(f'icacls "{path}"')
-    assert result.returncode == 0, result.stdout + "\n" + result.stderr
-    return result.stdout
 
 
 def test_install_script_creates_repo_config_and_sets_current_session_env(tmp_path: Path, preserve_user_env):
@@ -288,12 +287,13 @@ def test_install_script_does_not_duplicate_path_entries(tmp_path: Path, preserve
     assert all_entries.count(scripts_norm) == 1, f"PYTHONHOME\\Scripts appears {all_entries.count(scripts_norm)} times in PATH"
 
 
-def test_install_script_hardens_model_repository_acl_for_localservice(tmp_path: Path, preserve_user_env):
+def test_install_script_recommends_read_only_localservice_access(tmp_path: Path, preserve_user_env):
     script_copy, _, models_dir = _prepare_test_copy(tmp_path)
 
     result = _run_cmd(f'call "{script_copy}" "{models_dir}" LocalService')
     assert result.returncode == 0, result.stdout + "\n" + result.stderr
 
-    acl_output = _read_acl(models_dir)
-    assert "BUILTIN\\Administrators" in acl_output, acl_output
-    assert "LocalService" in acl_output, acl_output
+    combined = "\n".join((result.stdout, result.stderr)).lower()
+    assert "recommended model repository layout" in combined
+    assert "read-only access" in combined
+    assert "without write permission" in combined
