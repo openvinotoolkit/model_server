@@ -250,6 +250,7 @@ class OvmsMessages:
     ERROR_BINARY_INPUTS_CONVERSION_FAILED = "Binary inputs conversion failed."
     ERROR_BINARY_INPUTS_NATIVE_FILE_FORMAT_CONVERSION = "Input native file format conversion failed"
     ERROR_BINARY_INPUTS_CORRUPT_JPEG_DATA = "Corrupt JPEG data"
+    ERROR_BINARY_INPUTS_DECODED_SIZE_ESTIMATION = "Decoded size could not be estimated for input"
 
     ERROR_INTERPOLATE_NODE_IS_NOT_SUPPORTED = "Interpolate node is not supported:"
 
@@ -357,8 +358,11 @@ class OvmsMessages:
         "Given filepath is not subpath of allowed_local_media_path"
     MEDIAPIPE_URL_DOES_NOT_MATCH_ALLOWED_DOMAIN = \
         "Given url does not match any allowed domain from allowed_media_domains"
+    MEDIAPIPE_LOADING_IMAGES_FROM_LOCAL_FILESYSTEM_DISABLED = "Loading images from local filesystem is disabled"
+    MEDIAPIPE_IMAGE_FORMAT_DECODED_SIZE_CANNOT_BE_VERIFIED = "Image format decoded size cannot be verified"
+    MEDIAPIPE_IMAGE_LOADING_FAILED = "Image loading failed"
 
-    PYTHON_NODE_HANDLER_PATH_NOT_EXISTS = "Python node handler_path: {} does not exist."
+    PYTHON_NODE_FILE_DOES_NOT_EXISTS = "The Python Node file path does not exist"
     PYTHON_NODE_FAILED_TO_PROCESS_GRAPH = "Failed to process python node graph python_model"
     PYTHON_NODE_FAILED_TO_EXECUTE_GRAPH = "Failed to execute mediapipe graph: python_model since it is not available"
     PYTHON_EXECUTOR_MISSING_REQUIRED_FIELDS = (
@@ -382,7 +386,7 @@ class OvmsMessages:
     PYTHON_NODE_FAILED_TO_PROCESS_FINALIZE_METHOD = "Failed to process python node finalize method. {}"
     PYTHON_NODE_NAME_MISSING_IN_GRAPH = "Python node name is missing in graph: {}"
     PYTHON_MEDIAPIPE_FAILED = "Mediapipe graph: {} initialization failed with message: {}"
-    PYTHON_INPUT_SIDE_PACKET_FAILED = "For input side packets ValidatePacketTypeSet failed"
+    PYTHON_INPUT_SIDE_PACKET_FAILED = "For input side packets of upper_text ValidatePacketTypeSet failed"
     PYTHON_FAILED_TO_GET_TAG = 'Failed to get tag "PYTHON_NODE_RESOURCES"'
     PYTHON_INPUTS_EMPTY = "!cc->Inputs().GetTags().empty()"
     PYTHON_OUTPUTS_EMPTY = "!cc->Outputs().GetTags().empty()"
