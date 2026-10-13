@@ -186,102 +186,102 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
 }
 
 Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
-        const bool shouldWarnOnEmptyTemplate = (properties->chatTemplateEngine == ChatTemplateEngine::MINJA);
-        if (shouldWarnOnEmptyTemplate) {
-            if (properties->tokenizer.get_chat_template().empty()) {
-                SPDLOG_LOGGER_DEBUG(modelmanager_logger, CHAT_TEMPLATE_WARNING_MESSAGE);
-            }
+    const bool shouldWarnOnEmptyTemplate = (properties->chatTemplateEngine == ChatTemplateEngine::MINJA);
+    if (shouldWarnOnEmptyTemplate) {
+        if (properties->tokenizer.get_chat_template().empty()) {
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, CHAT_TEMPLATE_WARNING_MESSAGE);
         }
+    }
 
-        // In some cases we apply chat template by python's jinja, but in all other cases, when GenAI applies chat template
-        // we ensure here that it is chat_template.jinja that is prioritized, rather than openvino_tokenizer.xml.
-        std::filesystem::path chatTemplateJinjaPath = std::filesystem::path(chatTemplateDirectory) / "chat_template.jinja";
-        if (std::filesystem::exists(chatTemplateJinjaPath)) {
-            std::ifstream chatTemplateFile(chatTemplateJinjaPath);
-            if (chatTemplateFile.is_open()) {
-                std::string chatTemplateContent((std::istreambuf_iterator<char>(chatTemplateFile)),
-                    std::istreambuf_iterator<char>());
-                if (!chatTemplateContent.empty()) {
-                    properties->tokenizer.set_chat_template(chatTemplateContent);
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Using the chat template from: {}", chatTemplateJinjaPath.string());
-                }
-            } else {
-                SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to open chat template file: {}", chatTemplateJinjaPath.string());
+    // In some cases we apply chat template by python's jinja, but in all other cases, when GenAI applies chat template
+    // we ensure here that it is chat_template.jinja that is prioritized, rather than openvino_tokenizer.xml.
+    std::filesystem::path chatTemplateJinjaPath = std::filesystem::path(chatTemplateDirectory) / "chat_template.jinja";
+    if (std::filesystem::exists(chatTemplateJinjaPath)) {
+        std::ifstream chatTemplateFile(chatTemplateJinjaPath);
+        if (chatTemplateFile.is_open()) {
+            std::string chatTemplateContent((std::istreambuf_iterator<char>(chatTemplateFile)),
+                std::istreambuf_iterator<char>());
+            if (!chatTemplateContent.empty()) {
+                properties->tokenizer.set_chat_template(chatTemplateContent);
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Using the chat template from: {}", chatTemplateJinjaPath.string());
             }
+        } else {
+            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to open chat template file: {}", chatTemplateJinjaPath.string());
         }
+    }
 
-        // Analyze the chat template to detect capabilities and model family
-        std::string templateSource = properties->tokenizer.get_chat_template();
-        if (templateSource.empty() && properties->chatTemplateEngine == ChatTemplateEngine::JINJA && properties->chatTemplateEngineExplicit) {
-            return Status(StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED, "chat_template_engine=JINJA requires a chat template");
+    // Analyze the chat template to detect capabilities and model family
+    std::string templateSource = properties->tokenizer.get_chat_template();
+    if (templateSource.empty() && properties->chatTemplateEngine == ChatTemplateEngine::JINJA && properties->chatTemplateEngineExplicit) {
+        return Status(StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED, "chat_template_engine=JINJA requires a chat template");
+    }
+    if (!templateSource.empty()) {
+        auto analysisResult = ChatTemplateAnalyzer::analyze(templateSource);
+        properties->chatTemplateCaps = analysisResult.caps;
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template capabilities: {}",
+            analysisResult.caps.toString());
+        // Auto-detect or report manually configured tool parser
+        if (isParserDisabled(properties->toolParserName)) {
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Tool parser explicitly disabled");
+            properties->toolParserName.clear();
+        } else if (!properties->toolParserName.empty()) {
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured tool_parser: {}", properties->toolParserName);
+        } else if (analysisResult.detectedToolParser.has_value()) {
+            properties->toolParserName = analysisResult.detectedToolParser.value();
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected tool_parser: {}", properties->toolParserName);
         }
-        if (!templateSource.empty()) {
-            auto analysisResult = ChatTemplateAnalyzer::analyze(templateSource);
-            properties->chatTemplateCaps = analysisResult.caps;
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template capabilities: {}",
-                analysisResult.caps.toString());
-            // Auto-detect or report manually configured tool parser
-            if (isParserDisabled(properties->toolParserName)) {
-                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Tool parser explicitly disabled");
-                properties->toolParserName.clear();
-            } else if (!properties->toolParserName.empty()) {
-                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured tool_parser: {}", properties->toolParserName);
-            } else if (analysisResult.detectedToolParser.has_value()) {
-                properties->toolParserName = analysisResult.detectedToolParser.value();
-                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected tool_parser: {}", properties->toolParserName);
-            }
-            // Auto-detect or report manually configured reasoning parser
-            if (isParserDisabled(properties->reasoningParserName)) {
-                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Reasoning parser explicitly disabled");
-                properties->reasoningParserName.clear();
-            } else if (!properties->reasoningParserName.empty()) {
-                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured reasoning_parser: {}", properties->reasoningParserName);
-            } else if (analysisResult.detectedReasoningParser.has_value()) {
-                properties->reasoningParserName = analysisResult.detectedReasoningParser.value();
-                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected reasoning_parser: {}", properties->reasoningParserName);
-            }
+        // Auto-detect or report manually configured reasoning parser
+        if (isParserDisabled(properties->reasoningParserName)) {
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Reasoning parser explicitly disabled");
+            properties->reasoningParserName.clear();
+        } else if (!properties->reasoningParserName.empty()) {
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured reasoning_parser: {}", properties->reasoningParserName);
+        } else if (analysisResult.detectedReasoningParser.has_value()) {
+            properties->reasoningParserName = analysisResult.detectedReasoningParser.value();
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected reasoning_parser: {}", properties->reasoningParserName);
         }
+    }
 
-        if (properties->chatTemplateEngine == ChatTemplateEngine::JINJA) {
-            std::string initializationError;
-            const bool pythonInitialized = ensurePythonRuntimeInitialized(initializationError);
-            if (pythonInitialized) {
-                std::string errorMessage;
-                const bool chatTemplatePrepared = properties->preparedChatTemplate.prepare(
-                    chatTemplateDirectory,
-                    properties->tokenizer.get_chat_template(),
-                    properties->tokenizer.get_bos_token(),
-                    properties->tokenizer.get_eos_token(),
-                    errorMessage);
-                if (!chatTemplatePrepared) {
-                    if (properties->chatTemplateEngineExplicit) {
-                        return Status(StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED,
-                            "Failed to prepare Jinja chat template: " + errorMessage);
-                    }
-                    SPDLOG_LOGGER_WARN(llm_calculator_logger,
-                        "Failed to prepare Jinja chat template; falling back to Minja: {}", errorMessage);
-                    properties->chatTemplateEngine = ChatTemplateEngine::MINJA;
-                }
-            } else {
+    if (properties->chatTemplateEngine == ChatTemplateEngine::JINJA) {
+        std::string initializationError;
+        const bool pythonInitialized = ensurePythonRuntimeInitialized(initializationError);
+        if (pythonInitialized) {
+            std::string errorMessage;
+            const bool chatTemplatePrepared = properties->preparedChatTemplate.prepare(
+                chatTemplateDirectory,
+                properties->tokenizer.get_chat_template(),
+                properties->tokenizer.get_bos_token(),
+                properties->tokenizer.get_eos_token(),
+                errorMessage);
+            if (!chatTemplatePrepared) {
                 if (properties->chatTemplateEngineExplicit) {
                     return Status(StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED,
-                        "Python is required for chat_template_engine=JINJA: " + initializationError);
+                        "Failed to prepare Jinja chat template: " + errorMessage);
                 }
                 SPDLOG_LOGGER_WARN(llm_calculator_logger,
-                    "Python interpreter initialization failed; falling back to Minja chat template rendering: {}",
-                    initializationError);
+                    "Failed to prepare Jinja chat template; falling back to Minja: {}", errorMessage);
                 properties->chatTemplateEngine = ChatTemplateEngine::MINJA;
             }
+        } else {
+            if (properties->chatTemplateEngineExplicit) {
+                return Status(StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED,
+                    "Python is required for chat_template_engine=JINJA: " + initializationError);
+            }
+            SPDLOG_LOGGER_WARN(llm_calculator_logger,
+                "Python interpreter initialization failed; falling back to Minja chat template rendering: {}",
+                initializationError);
+            properties->chatTemplateEngine = ChatTemplateEngine::MINJA;
         }
-        if (properties->chatTemplateEngine == ChatTemplateEngine::MINJA &&
-            !probeChatTemplateBasicRenderMinja(properties->tokenizer)) {
-            SPDLOG_LOGGER_ERROR(llm_calculator_logger,
-                "Chat template is not compatible with minja — basic rendering failed. "
-                "Disabling /chat/completions endpoint for this model.");
-            properties->tokenizer.set_chat_template("");
-            return StatusCode::OK;
-        }
-        probeServableChatTemplateCaps(properties);
+    }
+    if (properties->chatTemplateEngine == ChatTemplateEngine::MINJA &&
+        !probeChatTemplateBasicRenderMinja(properties->tokenizer)) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger,
+            "Chat template is not compatible with minja — basic rendering failed. "
+            "Disabling /chat/completions endpoint for this model.");
+        properties->tokenizer.set_chat_template("");
+        return StatusCode::OK;
+    }
+    probeServableChatTemplateCaps(properties);
 
     // Populate the InputProcessorContext from the now-fully-initialized properties.
     properties->inputProcessorContext.tokenizer = properties->tokenizer;

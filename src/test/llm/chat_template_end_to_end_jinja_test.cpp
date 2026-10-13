@@ -210,7 +210,8 @@ TEST_F(ChatTemplateEndToEndJinjaTest, RuntimeInitializationRendersOriginalTokeni
         originalTemplate,
         properties->tokenizer.get_bos_token(),
         properties->tokenizer.get_eos_token(),
-        prepareError)) << prepareError;
+        prepareError))
+        << prepareError;
 
     std::string expectedOutput;
     ASSERT_TRUE(expectedTemplate.apply(requestBody, expectedOutput)) << expectedOutput;
