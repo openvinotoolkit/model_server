@@ -714,9 +714,19 @@ private:
 
 class WakeUpBarrierGuard {
 public:
+    explicit WakeUpBarrierGuard(std::thread& worker) :
+        worker(worker) {}
+    // Release the barrier before joining so a blocked worker can finish; a joinable
+    // std::thread left by an early-returning assertion would otherwise std::terminate.
     ~WakeUpBarrierGuard() {
         WakeUpBarrier::releaseAndClearActive();
+        if (worker.joinable()) {
+            worker.join();
+        }
     }
+
+private:
+    std::thread& worker;
 };
 }  // namespace
 
@@ -754,7 +764,7 @@ protected:
     }
 
     virtual bool useMockGraphForTest() const {
-        return true;
+        return false;
     }
 
     virtual uint32_t idleUnloadTimeoutMicroseconds() const {
@@ -854,6 +864,10 @@ protected:
         return true;
     }
 
+    bool useMockGraphForTest() const override {
+        return true;
+    }
+
     uint32_t idleUnloadTimeoutMicroseconds() const override {
         return 10'000;
     }
@@ -873,10 +887,10 @@ TEST_F(LLMIdleGroupWakeUpDisconnectHttpTest, StreamingDisconnectDuringWakeUpStil
     auto barrier = std::make_shared<WakeUpBarrier>();
     auto wakeStarted = barrier->wakeStarted.get_future();
     WakeUpBarrier::setActive(barrier);
-    WakeUpBarrierGuard barrierGuard;
 
     std::atomic<bool> disconnected{false};
     std::thread streamingCallback;
+    WakeUpBarrierGuard barrierGuard(streamingCallback);
     ON_CALL(*writer, IsDisconnected()).WillByDefault(testing::Invoke([&disconnected]() {
         return disconnected.load(std::memory_order_relaxed);
     }));
