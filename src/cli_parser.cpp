@@ -607,7 +607,7 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
     serverSettings.filesystemPollWaitMilliseconds = result->operator[]("file_system_poll_wait_seconds").as<uint32_t>() * 1000;
     serverSettings.memoryTrimmingIntervalSeconds = result->operator[]("memory_trimming_interval_seconds").as<uint32_t>();
 
-    serverSettings.idleUnloadTimeoutSeconds = result->operator[]("idle_unload_timeout_seconds").as<uint32_t>();
+    serverSettings.idleUnloadTimeoutMicroseconds = static_cast<uint64_t>(result->operator[]("idle_unload_timeout_seconds").as<uint32_t>()) * 1'000'000ULL;
     serverSettings.grpcWorkers = result->operator[]("grpc_workers").as<uint32_t>();
 
     if (result->count("log_level"))
