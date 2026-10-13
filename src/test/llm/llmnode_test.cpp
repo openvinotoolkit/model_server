@@ -456,6 +456,36 @@ TEST_F(LLMFlowHttpQueueGraphTest, streamChatCompletionsQueueGraph) {
         ovms::StatusCode::PARTIAL_END);
 }
 
+TEST_F(LLMFlowHttpQueueGraphTest, tokenizeThenStreamChatQueueGraph) {
+    const std::string tokenizeEndpoint = "/v3/tokenize";
+    const std::string streamChatEndpoint = "/v3/chat/completions";
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", tokenizeEndpoint, headers), ovms::StatusCode::OK);
+    const std::string tokenizeRequest = R"({"model":"lm_cb_regular_queue","text":"hello"})";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(tokenizeEndpoint, tokenizeRequest, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_FALSE(parsedResponse.HasParseError());
+    ASSERT_TRUE(parsedResponse["tokens"].IsArray());
+    ASSERT_GT(parsedResponse["tokens"].Size(), 0);
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", streamChatEndpoint, headers), ovms::StatusCode::OK);
+    response.clear();
+    const std::string streamChatRequest = R"({
+        "model":"lm_cb_regular_queue",
+        "stream":true,
+        "seed":1,
+        "max_tokens":5,
+        "messages":[{"role":"user","content":"Say hello"}]
+    })";
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(::testing::AtLeast(1));
+    EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_)).Times(0);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(streamChatEndpoint, streamChatRequest, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
+}
+
 // Test that verifies graph reuse works correctly with queue size 1
 // Sends 2 sequential requests to ensure the same graph instance is reused
 TEST_F(LLMFlowHttpQueueGraphTest, queueGraphReuseTwoRequests) {
