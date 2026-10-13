@@ -167,24 +167,25 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
             },
                 properties->chatTemplateCaps)) {
             SPDLOG_LOGGER_WARN(llm_calculator_logger, "Jinja cannot render this template's tool calls correctly");
-            return;
         }
-
-        // Minja path — use the shared probe component
-        if (!probeChatTemplateCapsMinja(properties->tokenizer, properties->chatTemplateCaps)) {
-            SPDLOG_LOGGER_WARN(llm_calculator_logger, "Minja cannot render this template's tool calls correctly");
-        }
-
-        if (!properties->reasoningParserName.empty() && !probeChatTemplateReasoning(properties->tokenizer, properties->chatTemplateCaps)) {
-            SPDLOG_LOGGER_WARN(llm_calculator_logger, "Chat template does not support reasoning_content field");
-        }
-
-        if (!probeChatTemplateToolResponse(properties->tokenizer, properties->chatTemplateCaps)) {
-            SPDLOG_LOGGER_WARN(llm_calculator_logger, "Chat template does not support tool response field correctly");
-        }
+        return;
     }
 
-    Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
+    // Minja path — use the shared probe component
+    if (!probeChatTemplateCapsMinja(properties->tokenizer, properties->chatTemplateCaps)) {
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Minja cannot render this template's tool calls correctly");
+    }
+
+    if (!properties->reasoningParserName.empty() && !probeChatTemplateReasoning(properties->tokenizer, properties->chatTemplateCaps)) {
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Chat template does not support reasoning_content field");
+    }
+
+    if (!probeChatTemplateToolResponse(properties->tokenizer, properties->chatTemplateCaps)) {
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Chat template does not support tool response field correctly");
+    }
+}
+
+Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
         const bool shouldWarnOnEmptyTemplate = (properties->chatTemplateEngine == ChatTemplateEngine::MINJA);
         if (shouldWarnOnEmptyTemplate) {
             if (properties->tokenizer.get_chat_template().empty()) {
@@ -281,7 +282,6 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
             return StatusCode::OK;
         }
         probeServableChatTemplateCaps(properties);
-    }
 
     // Populate the InputProcessorContext from the now-fully-initialized properties.
     properties->inputProcessorContext.tokenizer = properties->tokenizer;

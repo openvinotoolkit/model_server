@@ -2092,8 +2092,6 @@ cc_test(
                 "test/pythonnode_test.cpp",
                 "test/llm/llmtemplate_test.cpp",
                 "test/llm/chat_template_end_to_end_jinja_test.cpp",
-                "test/llm/python_jinja_test_utils.cpp",
-                "test/llm/python_jinja_test_utils.hpp",
                 "test/multi_part_parser_drogon_test.cpp",
         ],
     data = [
@@ -2302,7 +2300,6 @@ cc_test(
             "//src/python:libovmspythonmodule",
             "//src/python:python_runtime_entry_static",
             "//src/python:python_calculators_host",
-            "//src/python:python_calculators_runtime_objects",
         ] + select({
             "//:not_disable_mediapipe": [
                 "//src/audio/speech_to_text:s2t_streaming_handler",

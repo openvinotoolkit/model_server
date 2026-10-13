@@ -182,13 +182,12 @@ protected:
 };
 
 TEST_F(ChatTemplateEndToEndJinjaTest, RuntimeInitializationRendersOriginalTokenizerTemplate) {
-    ASSERT_NE(getRuntimeChatTemplateRuntimeApi(), nullptr)
-        << "libovmspython is unavailable; Jinja tests require the Python runtime";
     ASSERT_FALSE(std::filesystem::exists(directoryPath + "/chat_template.jinja"));
 
     auto properties = std::make_shared<GenAiServableProperties>();
     properties->modelsPath = directoryPath;
-    properties->chatTemplateMode = ChatTemplateMode::JINJA;
+    properties->chatTemplateEngine = ChatTemplateEngine::JINJA;
+    properties->chatTemplateEngineExplicit = true;
     const std::string originalTemplateTokenizerPath = getGenericFullPathForSrcTest(
         "/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct", false);
     properties->tokenizer = ov::genai::Tokenizer(originalTemplateTokenizerPath);
@@ -196,30 +195,25 @@ TEST_F(ChatTemplateEndToEndJinjaTest, RuntimeInitializationRendersOriginalTokeni
     const std::string originalTemplate = properties->tokenizer.get_original_chat_template();
     ASSERT_FALSE(originalTemplate.empty()) << "Tokenizer fixture must provide an original chat template";
 
-    GenAiServableInitializer::loadChatTemplate(properties, directoryPath);
-    ASSERT_TRUE(properties->preparedRuntimeChatTemplate.isPrepared());
+    const auto loadStatus = GenAiServableInitializer::loadChatTemplate(properties, directoryPath);
+    ASSERT_TRUE(loadStatus.ok()) << loadStatus.string();
+    ASSERT_TRUE(properties->preparedChatTemplate.isPrepared());
 
     const std::string requestBody = R"({"messages":[{"role":"user","content":"Hello"}]})";
     std::string actualOutput;
-    ASSERT_EQ(tryApplyPreparedChatTemplateRuntime(
-                  properties->preparedRuntimeChatTemplate, requestBody, actualOutput),
-        RuntimeChatTemplateStatus::APPLIED);
+    ASSERT_TRUE(properties->preparedChatTemplate.apply(requestBody, actualOutput)) << actualOutput;
 
-    PreparedRuntimeChatTemplate expectedTemplate;
-    std::string runtimeOutput;
-    ASSERT_EQ(prepareRuntimeChatTemplate(
-                  directoryPath,
-                  originalTemplate,
-                  properties->tokenizer.get_bos_token(),
-                  properties->tokenizer.get_eos_token(),
-                  expectedTemplate,
-                  runtimeOutput),
-        RuntimeChatTemplatePrepareStatus::PREPARED)
-        << runtimeOutput;
+    PreparedChatTemplateRuntime expectedTemplate;
+    std::string prepareError;
+    ASSERT_TRUE(expectedTemplate.prepare(
+        directoryPath,
+        originalTemplate,
+        properties->tokenizer.get_bos_token(),
+        properties->tokenizer.get_eos_token(),
+        prepareError)) << prepareError;
 
     std::string expectedOutput;
-    ASSERT_EQ(tryApplyPreparedChatTemplateRuntime(expectedTemplate, requestBody, expectedOutput),
-        RuntimeChatTemplateStatus::APPLIED);
+    ASSERT_TRUE(expectedTemplate.apply(requestBody, expectedOutput)) << expectedOutput;
     EXPECT_EQ(actualOutput, expectedOutput);
 }
 

@@ -22,14 +22,9 @@
 #include <openvino/genai/tokenizer.hpp>
 #include <openvino/genai/continuous_batching_pipeline.hpp>
 #include <openvino/openvino.hpp>
-#pragma warning(push)
-#pragma warning(disable : 6326 28182 6011 28020)
-#include <pybind11/embed.h>
-#pragma warning(pop)
 #include <rapidjson/error/en.h>
 
 #include "src/filesystem/filesystem.hpp"
-#include "python_jinja_test_utils.hpp"
 #include "../../http_payload.hpp"
 #include "../../http_rest_api_handler.hpp"
 #include "../../httpservermodule.hpp"
