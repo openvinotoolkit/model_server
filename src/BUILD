@@ -1923,6 +1923,16 @@ cc_binary(
 )
 
 cc_binary(
+    name = "optimum-cli",
+    srcs = [
+        "test/optimum_cli_mock.cpp",
+    ],
+    linkopts = LINKOPTS_ADJUSTED,
+    copts = COMMON_STATIC_LIBS_COPTS,
+    deps = [],
+)
+
+cc_binary(
     name = "ovms",
     srcs = [
         "main.cpp",
@@ -2087,6 +2097,7 @@ cc_test(
             "test/multi_part_parser_drogon_test.cpp",
         ],
     data = [
+            "//src:optimum-cli",
         "test/add_two_inputs_model/1/add.xml",
         "test/add_two_inputs_model/1/add.bin",
         "test/binaryutils/grayscale.jpg",

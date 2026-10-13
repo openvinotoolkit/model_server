@@ -1968,9 +1968,9 @@ public:
         inHfSettings.task = ovms::TEXT_GENERATION_GRAPH;
         inHfSettings.downloadType = ovms::OPTIMUM_CLI_DOWNLOAD;
 #ifdef _WIN32
-        cliMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli.exe");
+    cliMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli.exe");
 #else
-        cliMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli");
+    cliMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli");
 #endif
     }
 };
@@ -2193,20 +2193,18 @@ TEST_F(TestOptimumDownloaderSetup, NegativeCheckConverterExistsCommandFailed) {
 
 TEST_F(TestOptimumDownloaderSetup, PositiveOptimumExistsCommandPassed) {
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
-    cliMockPath += " -h";
-    optimumDownloader->setExportCliCheckCommand(cliMockPath);
-    optimumDownloader->setConvertCliCheckCommand("echo ");
+    optimumDownloader->setExportCliCheckCommand(cliMockPath + " -h");
+    optimumDownloader->setConvertCliCheckCommand(cliMockPath + " -h");
     ASSERT_EQ(optimumDownloader->checkRequiredToolsArePresent(), ovms::StatusCode::OK);
 }
 
 TEST_F(TestOptimumDownloaderSetup, PositiveOptimumExportCommandPassed) {
     std::unique_ptr<TestOptimumDownloader> optimumDownloader = std::make_unique<TestOptimumDownloader>(inHfSettings);
-    std::string cliCheckCommand = cliMockPath += " -h";
+    const std::string cliCheckCommand = cliMockPath + " -h";
     optimumDownloader->setExportCliCheckCommand(cliCheckCommand);
-    optimumDownloader->setConvertCliCheckCommand("echo ");
-    cliMockPath += " export";
-    optimumDownloader->setExportCliExportCommand(cliMockPath);
-    optimumDownloader->setConvertCliExportCommand("echo ");
+    optimumDownloader->setConvertCliCheckCommand(cliCheckCommand);
+    optimumDownloader->setExportCliExportCommand(cliMockPath + " export ");
+    optimumDownloader->setConvertCliExportCommand(cliMockPath + " ");
     ASSERT_EQ(optimumDownloader->downloadModel(), ovms::StatusCode::OK);
 }
 
