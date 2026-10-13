@@ -233,6 +233,11 @@ ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& a
             throw std::runtime_error("Failed to determine model-native image generation resolution");
         }
         this->args.nativeResolution = resolution_t{nativeConfig.width, nativeConfig.height};
+        if (nativeConfig.width > args.maxResolution.first || nativeConfig.height > args.maxResolution.second) {
+        SPDLOG_WARN("Model-native image generation resolution ({}x{}) exceeds maxResolution ({}x{}); "
+                "requests using the native default resolution will be rejected",
+        nativeConfig.width, nativeConfig.height, args.maxResolution.first, args.maxResolution.second);
+        }
     }
 
     // InpaintingPipeline does not support clone(), so concurrent inpainting

@@ -61,6 +61,7 @@ struct ImageGenPipelineArgs {
     ov::AnyMap pluginConfig;
     resolution_t maxResolution;
     std::optional<resolution_t> defaultResolution;
+    std::optional<resolution_t> nativeResolution;
     std::optional<uint64_t> seed;
     uint64_t maxNumImagesPerPrompt;
     uint64_t defaultNumInferenceSteps;
@@ -73,6 +74,5 @@ struct ImageGenPipelineArgs {
     // the priority chain (request > composite > individual adapter) determines the effective value.
     using CompositeLoraMap = std::unordered_map<std::string, std::vector<std::pair<std::string, std::optional<float>>>>;
     CompositeLoraMap compositeLoraAdapters;
-    std::optional<resolution_t> nativeResolution;
 };
 }  // namespace ovms

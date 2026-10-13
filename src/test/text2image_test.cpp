@@ -61,6 +61,7 @@ ovms::ImageGenPipelineArgs DEFAULTIMAGE_GEN_ARGS{
     ov::AnyMap(),
     {4096, 4096},  // maxResolution
     std::nullopt,  // defaultResolution
+    std::nullopt,  // nativeResolution
     std::nullopt,  // seed
     10,  // maxNumImagesPerPrompt
     10,  // defaultNumInferenceSteps
@@ -700,6 +701,19 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsRejectsNativeResolutionAbov
     ovms::HttpPayload payload;
     payload.parsedJson = std::make_shared<rapidjson::Document>();
     payload.parsedJson->Parse(R"({"prompt":"test prompt","size":"auto"})");
+    auto args = DEFAULTIMAGE_GEN_ARGS;
+    args.maxResolution = {64, 64};
+    args.nativeResolution = std::make_pair(128, 64);
+
+    auto requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    EXPECT_THAT(std::get<absl::Status>(requestOptions).message(), ::testing::HasSubstr("width 128 exceeds maxResolution"));
+}
+
+TEST(Text2ImageTest, getImageGenerationRequestOptionsRejectsNativeResolutionAboveMaxWhenSizeIsMissing) {
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    payload.parsedJson->Parse(R"({"prompt":"test prompt"})");
     auto args = DEFAULTIMAGE_GEN_ARGS;
     args.maxResolution = {64, 64};
     args.nativeResolution = std::make_pair(128, 64);
