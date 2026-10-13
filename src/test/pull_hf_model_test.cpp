@@ -1968,9 +1968,9 @@ public:
         inHfSettings.task = ovms::TEXT_GENERATION_GRAPH;
         inHfSettings.downloadType = ovms::OPTIMUM_CLI_DOWNLOAD;
 #ifdef _WIN32
-    cliMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli.exe");
+        cliMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli.exe");
 #else
-    cliMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli");
+        cliMockPath = getGenericFullPathForBazelOut("/ovms/bazel-bin/src/optimum-cli");
 #endif
     }
 };
