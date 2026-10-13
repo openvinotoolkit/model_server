@@ -39,12 +39,12 @@ class GptOssContentParser final : public BaseOutputParser {
     StreamState streamState = StreamState::READING_HEADER;
     std::string pendingInput;
     std::size_t processedChunkSize = 0;
-    bool visibleMessage = false;
+    bool shouldEmitCurrentMessageBody = false;
 
     bool shouldEmitBody(const std::string& header) const;
     void appendNewChunk(const std::string& chunk);
     ParseProgress consumeHeader(std::string& content);
-    ParseProgress consumeBody(std::string& content, bool& consumedMessage);
+    ParseProgress consumeBody(std::string& content, bool& wasMessageConsumed);
 
 public:
     GptOssContentParser() = delete;

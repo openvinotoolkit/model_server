@@ -14,7 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <algorithm>
 #include <openvino/genai/tokenizer.hpp>
 #include <string>
 #include <vector>
@@ -23,6 +22,7 @@
 #include "../../../stringutils.hpp"
 #include "reasoning_parser.hpp"
 #include "harmony.hpp"
+#include "../utils.hpp"
 
 namespace ovms {
 
@@ -41,9 +41,8 @@ std::optional<Delta> GptOssReasoningParser::parseChunk(const std::string& newChu
         chunk = chunk.substr(startPos + parsingConfig.startTags[0].size());
     }
 
-    const std::size_t endPos = chunk.find(parsingConfig.endTags.front());
-    const std::size_t returnPos = chunk.find("<|return|>");
-    const std::size_t closingPos = std::min(endPos, returnPos);
+    const auto closingTag = findEarliestTag(chunk, parsingConfig.endTags);
+    const std::size_t closingPos = closingTag.has_value() ? closingTag->position : std::string::npos;
     if (closingPos != std::string::npos) {
         chunk = chunk.substr(0, closingPos);
     }

@@ -27,10 +27,6 @@
 
 namespace ovms {
 class GptOssToolParser : public BaseOutputParser {
-    // This is the same as reasoning parser start tag, however since reasoning is always checked before tool parser, it is not a problem.
-    static const std::string parsingStartTag;
-    static const std::string parsingEndTag;
-
     enum class StreamState : int {
         READING_HEADER,
         READING_CONSTRAIN,

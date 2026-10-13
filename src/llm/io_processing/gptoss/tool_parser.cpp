@@ -19,7 +19,6 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include <regex>
 
 #include "../../../logging.hpp"
 #include "../../../stringutils.hpp"
@@ -280,6 +279,4 @@ bool GptOssToolParser::closeMessage(std::string& chunk, std::optional<Delta>& re
     return false;
 }
 
-const std::string GptOssToolParser::parsingStartTag = "<|channel|>commentary to=";
-const std::string GptOssToolParser::parsingEndTag = "<|call|>";
 }  // namespace ovms

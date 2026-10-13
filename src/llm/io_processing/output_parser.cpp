@@ -19,6 +19,7 @@
 
 #include "src/logging.hpp"
 #include "src/stringutils.hpp"
+#include "utils.hpp"
 #include "output_parser.hpp"
 #include "parser_config_validation.hpp"
 #include "llama3/tool_parser.hpp"
@@ -43,30 +44,6 @@
 #include "minicpm5/minicpm5_reasoning_parser.hpp"
 
 namespace ovms {
-namespace {
-
-struct TagMatch {
-    std::size_t position = std::string::npos;
-    std::size_t length = 0;
-};
-
-TagMatch findEarliestTag(const std::string& buffer, const std::vector<std::string>& tags) {
-    TagMatch earliest;
-    for (const auto& tag : tags) {
-        if (tag.empty()) {
-            continue;
-        }
-        const std::size_t position = buffer.find(tag);
-        if (position != std::string::npos &&
-            (position < earliest.position || (position == earliest.position && tag.size() > earliest.length))) {
-            earliest = {position, tag.size()};
-        }
-    }
-    return earliest;
-}
-
-}  // namespace
-
 OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const std::string& tag) const {
     if (tag.empty()) {
         return TagLookupStatus::NOT_FOUND;
@@ -165,9 +142,9 @@ std::optional<Delta> OutputParser::parseToolCallChunk(const std::vector<int64_t>
     std::string remainder;
     const auto& endTags = toolParser->getParsingConfig().endTags;
     const std::string& buffer = streamOutputCache.getBuffer();
-    const TagMatch toolEndMatch = findEarliestTag(buffer, endTags);
-    if (toolEndMatch.position != std::string::npos) {
-        remainder = buffer.substr(toolEndMatch.position + toolEndMatch.length);
+    const auto toolEndMatch = findEarliestTag(buffer, endTags);
+    if (toolEndMatch.has_value()) {
+        remainder = buffer.substr(toolEndMatch->position + toolEndMatch->length);
     }
     std::optional<Delta> result;
     try {
@@ -191,9 +168,9 @@ std::optional<Delta> OutputParser::parseReasoningChunk(const std::vector<int64_t
     std::string remainder;
     const auto& endTags = reasoningParser->getParsingConfig().endTags;
     const std::string& buffer = streamOutputCache.getBuffer();
-    const TagMatch reasoningEndMatch = findEarliestTag(buffer, endTags);
-    if (reasoningEndMatch.position != std::string::npos) {
-        remainder = buffer.substr(reasoningEndMatch.position + reasoningEndMatch.length);
+    const auto reasoningEndMatch = findEarliestTag(buffer, endTags);
+    if (reasoningEndMatch.has_value()) {
+        remainder = buffer.substr(reasoningEndMatch->position + reasoningEndMatch->length);
     }
     std::optional<Delta> result;
     try {

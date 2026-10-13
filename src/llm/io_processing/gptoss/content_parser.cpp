@@ -15,6 +15,7 @@
 //****************************************************************************
 
 #include "content_parser.hpp"
+#include "../utils.hpp"
 
 #include <algorithm>
 #include <stdexcept>
@@ -29,23 +30,6 @@ const std::string MESSAGE_TAG = "<|message|>";
 const std::vector<std::string> MESSAGE_END_TAGS = {"<|end|>", "<|return|>", "<|call|>"};
 const std::string START_TAG = "<|start|>";
 const std::string CHANNEL_TAG = "<|channel|>";
-
-struct TagMatch {
-    std::size_t position = std::string::npos;
-    std::size_t length = 0;
-};
-
-TagMatch findEarliestTag(const std::string& text, const std::vector<std::string>& tags) {
-    TagMatch match;
-    for (const auto& tag : tags) {
-        const std::size_t position = text.find(tag);
-        if (position != std::string::npos &&
-            (position < match.position || (position == match.position && tag.size() > match.length))) {
-            match = {position, tag.size()};
-        }
-    }
-    return match;
-}
 
 std::size_t findPartialTagLength(const std::string& text, const std::vector<std::string>& tags) {
     std::size_t partialLength = 0;
@@ -85,7 +69,7 @@ void GptOssContentParser::resetState() {
     streamState = StreamState::READING_HEADER;
     pendingInput.clear();
     processedChunkSize = 0;
-    visibleMessage = false;
+    shouldEmitCurrentMessageBody = false;
 }
 
 bool GptOssContentParser::shouldEmitBody(const std::string& header) const {
@@ -135,29 +119,29 @@ GptOssContentParser::ParseProgress GptOssContentParser::consumeHeader(std::strin
     }
 
     const std::string header = pendingInput.substr(0, messagePos);
-    visibleMessage = shouldEmitBody(header);
+    shouldEmitCurrentMessageBody = shouldEmitBody(header);
     pendingInput.erase(0, messagePos + MESSAGE_TAG.size());
     streamState = StreamState::READING_BODY;
     return ParseProgress::ADVANCED;
 }
 
-GptOssContentParser::ParseProgress GptOssContentParser::consumeBody(std::string& content, bool& consumedMessage) {
-    const TagMatch endTag = findEarliestTag(pendingInput, MESSAGE_END_TAGS);
-    if (endTag.position != std::string::npos) {
-        const std::string body = pendingInput.substr(0, endTag.position);
-        if (visibleMessage && !body.empty()) {
+GptOssContentParser::ParseProgress GptOssContentParser::consumeBody(std::string& content, bool& wasMessageConsumed) {
+    const auto endTag = findEarliestTag(pendingInput, MESSAGE_END_TAGS);
+    if (endTag.has_value()) {
+        const std::string body = pendingInput.substr(0, endTag->position);
+        if (shouldEmitCurrentMessageBody && !body.empty()) {
             content += body;
         }
-        pendingInput.erase(0, endTag.position + endTag.length);
-        consumedMessage = true;
+        pendingInput.erase(0, endTag->position + endTag->length);
+        wasMessageConsumed = true;
         streamState = StreamState::READING_HEADER;
-        visibleMessage = false;
+        shouldEmitCurrentMessageBody = false;
         return ParseProgress::ADVANCED;
     }
 
     const std::size_t partialLength = findPartialTagLength(pendingInput, MESSAGE_END_TAGS);
     const std::size_t contentLength = pendingInput.size() - partialLength;
-    if (visibleMessage && contentLength > 0) {
+    if (shouldEmitCurrentMessageBody && contentLength > 0) {
         content.append(pendingInput, 0, contentLength);
     }
     pendingInput.erase(0, contentLength);
@@ -170,7 +154,7 @@ std::optional<Delta> GptOssContentParser::parseChunk(const std::string& chunk,
     appendNewChunk(chunk);
 
     std::string content;
-    bool consumedMessage = false;
+    bool wasMessageConsumed = false;
     while (!pendingInput.empty()) {
         ParseProgress progress;
         switch (streamState) {
@@ -178,7 +162,7 @@ std::optional<Delta> GptOssContentParser::parseChunk(const std::string& chunk,
             progress = consumeHeader(content);
             break;
         case StreamState::READING_BODY:
-            progress = consumeBody(content, consumedMessage);
+            progress = consumeBody(content, wasMessageConsumed);
             break;
         default:
             throw std::logic_error("Unexpected GPT-OSS content parser state");
@@ -188,7 +172,7 @@ std::optional<Delta> GptOssContentParser::parseChunk(const std::string& chunk,
         }
     }
 
-    if (!content.empty() || consumedMessage) {
+    if (!content.empty() || wasMessageConsumed) {
         processedChunkSize = 0;
         return ContentDelta{std::move(content)};
     }
