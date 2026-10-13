@@ -1,5 +1,5 @@
 //*****************************************************************************
-// Copyright 2025 Intel Corporation
+// Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,25 +13,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+
+// Test double for optimum-cli. Keep output deterministic and avoid invoking
+// Python, downloading a model, or running a real conversion.
 #include <iostream>
+#include <string>
 
 int main(int argc, char** argv) {
-    if (argc < 2)
-        return -1;
+    if (argc < 2) {
+        std::cerr << "usage: optimum-cli <command>" << std::endl;
+        return 1;
+    }
 
     std::cout << "Number of arguments: " << argc << std::endl;
     for (int i = 0; i < argc; ++i) {
         std::cout << "Argument " << i << ": " << argv[i] << std::endl;
     }
-    for (int i = 0; i < argc; ++i) {
-        if (i == 1 && argv[i][0] == '-') {
-            std::cout << "usage: optimum-cli" << std::endl;
-            return 0;
-        }
-        if (i == 1 && argv[i][0] == 'e') {
-            std::cout << "Applying Weight Compression" << std::endl;
-            return 0;
-        }
+
+    if (argv[1][0] == '-') {
+        std::cout << "usage: optimum-cli" << std::endl;
+    } else if (std::string(argv[1]) == "export") {
+        std::cout << "Applying Weight Compression" << std::endl;
     }
 
     return 0;

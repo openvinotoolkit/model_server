@@ -37,3 +37,8 @@ GENAI_PACKAGE_URL_WINDOWS ?= https://storage.openvinotoolkit.org/repositories/op
 # Third-party dependency versions (used for binary builds)
 OPENCV_VERSION ?= 4.14.0
 CURL_VERSION ?= 8.21.0_7
+
+# llmman CLI used for OCI ModelPack pulls in build and release images.
+LLMMAN_VERSION ?= 0.1.534
+LLMMAN_SHA256_X86_64 ?= 33801d30c3a6f4d6ac0b8b2bb18f63b7af6b67c0b3ef04ea443eeba4df0879b5
+LLMMAN_SHA256_X86_64_WINDOWS ?= 23a502ccf8b4facb37a1063cd13c6f15efe988386d39cc356ff9b5ebed4d0288

@@ -404,6 +404,8 @@ ovms_cc_library(
     srcs = ["default_task.cpp"],
     deps = [
         "libovms_default_task_detector",
+        "libovmslogging",
+        "libovms_server_settings",
         "libovmsstatus",
         "//src/pull_module:curl_downloader",
         "//src/pull_module:hf_env_vars",
@@ -1911,6 +1913,16 @@ cc_binary(
 )
 
 cc_binary(
+    name = "llmman_mock",
+    srcs = [
+        "test/llmman_mock.cpp",
+    ],
+    linkopts = LINKOPTS_ADJUSTED,
+    copts = COMMON_STATIC_LIBS_COPTS,
+    deps = [],
+)
+
+cc_binary(
     name = "optimum-cli",
     srcs = [
         "test/optimum_cli_mock.cpp",
@@ -1918,7 +1930,6 @@ cc_binary(
     linkopts = LINKOPTS_ADJUSTED,
     copts = COMMON_STATIC_LIBS_COPTS,
     deps = [],
-    # linkstatic = False,  # Use for dynamic linking when necessary
 )
 
 cc_binary(
@@ -2086,6 +2097,7 @@ cc_test(
             "test/multi_part_parser_drogon_test.cpp",
         ],
     data = [
+            "//src:optimum-cli",
         "test/add_two_inputs_model/1/add.xml",
         "test/add_two_inputs_model/1/add.bin",
         "test/binaryutils/grayscale.jpg",
@@ -2214,7 +2226,7 @@ cc_test(
         ],
     }),
     deps = [
-            "optimum-cli",
+            "llmman_mock",
             "//src:ovms_lib",
             "//src:libovms_default_task_detector",
             "//src/filesystem:libovmsfilesystemfactory",
@@ -2233,6 +2245,7 @@ cc_test(
             ":libgit2_test",
             ":pull_hf_model_test",
             ":pull_gguf_hf_model_test",
+            ":pull_oci_model_test",
             ":listdirectorymodels_test",
             ":graph_export_test",
             ":lora_graph_export_test",
@@ -2740,6 +2753,29 @@ cc_library(
         ":test_gguf_environment",
         "//src/utils:env_guard",
         "//src/pull_module:gguf_downloader",
+        "//src:ovms_lib",
+        "libovmsstring_utils",
+        "@com_google_googletest//:gtest",
+    ],
+    local_defines = COMMON_LOCAL_DEFINES,
+    copts = COPTS_TESTS,
+)
+cc_library(
+    name = "pull_oci_model_test",
+    linkstatic = 1,
+    alwayslink = True,
+    srcs = ["test/pull_oci_model_test.cpp"],
+    data = ["//src:ovms"],
+    linkopts = [],
+    deps = [
+        ":test_platform_utils",
+        ":test_utils",
+        ":test_test_with_temp_dir",
+        ":libtest_environment",
+        "//src/utils:env_guard",
+        "//src/pull_module:cmd_exec",
+        "//src/pull_module:oci_downloader",
+        "//src/pull_module:optimum_export",
         "//src:ovms_lib",
         "libovmsstring_utils",
         "@com_google_googletest//:gtest",
