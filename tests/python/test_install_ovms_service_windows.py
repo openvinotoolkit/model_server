@@ -125,6 +125,12 @@ def _parse_markers(output: str) -> dict[str, str]:
     return markers
 
 
+def _read_acl(path: Path) -> str:
+    result = _run_cmd(f'icacls "{path}"')
+    assert result.returncode == 0, result.stdout + "\n" + result.stderr
+    return result.stdout
+
+
 def test_install_script_creates_repo_config_and_sets_current_session_env(tmp_path: Path, preserve_user_env):
     script_copy, ovms_dir, models_dir = _prepare_test_copy(tmp_path)
 
@@ -280,3 +286,14 @@ def test_install_script_does_not_duplicate_path_entries(tmp_path: Path, preserve
     assert all_entries.count(ovms_dir_norm) == 1, f"OVMS_DIR appears {all_entries.count(ovms_dir_norm)} times in PATH"
     assert all_entries.count(pythonhome_norm) == 1, f"PYTHONHOME appears {all_entries.count(pythonhome_norm)} times in PATH"
     assert all_entries.count(scripts_norm) == 1, f"PYTHONHOME\\Scripts appears {all_entries.count(scripts_norm)} times in PATH"
+
+
+def test_install_script_hardens_model_repository_acl_for_localservice(tmp_path: Path, preserve_user_env):
+    script_copy, _, models_dir = _prepare_test_copy(tmp_path)
+
+    result = _run_cmd(f'call "{script_copy}" "{models_dir}" LocalService')
+    assert result.returncode == 0, result.stdout + "\n" + result.stderr
+
+    acl_output = _read_acl(models_dir)
+    assert "BUILTIN\\Administrators" in acl_output, acl_output
+    assert "LocalService" in acl_output, acl_output

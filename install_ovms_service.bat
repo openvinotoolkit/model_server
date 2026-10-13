@@ -16,11 +16,13 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 if "%~1"=="-h" (
-    echo Usage: install_ovms_service.bat [model_repository_path]
+    echo Usage: install_ovms_service.bat [model_repository_path] [service_account]
+    echo        service_account: LocalService ^(recommended^) or another Windows service account
     exit /b 0
 )
 if "%~1"=="/?" (
-    echo Usage: install_ovms_service.bat [model_repository_path]
+    echo Usage: install_ovms_service.bat [model_repository_path] [service_account]
+    echo        service_account: LocalService ^(recommended^) or another Windows service account
     exit /b 0
 )
 
@@ -28,6 +30,18 @@ IF "%~1"=="" (
     set /p "OVMS_MODEL_REPOSITORY_PATH=Enter the model repository absolute path: "
 ) ELSE (
     set "OVMS_MODEL_REPOSITORY_PATH=%~1"
+)
+
+IF "%~2"=="" (
+    set "OVMS_SERVICE_ACCOUNT=LocalService"
+) ELSE (
+    set "OVMS_SERVICE_ACCOUNT=%~2"
+)
+
+set "OVMS_SERVICE_ACCOUNT_IDENTITY=%OVMS_SERVICE_ACCOUNT%"
+set "OVMS_SC_ACCOUNT_ARG=%OVMS_SERVICE_ACCOUNT%"
+if /I "%OVMS_SERVICE_ACCOUNT%"=="LocalService" (
+    set "OVMS_SC_ACCOUNT_ARG=LocalService"
 )
 
 ::::::::::::::::::::::: Check directory
@@ -53,22 +67,42 @@ IF /I EXIST "!config_path!" (
 popd
 
 echo Using model repository path !OVMS_MODEL_REPOSITORY_PATH!
+echo Using service account !OVMS_SERVICE_ACCOUNT!
 
 set "OVMS_DIR=%~dp0"
+
+::::::::::::::::::::::: Harden ACLs for the model repository before starting the service
+REM Restrict writes to Administrators and the selected service account so non-admin users cannot replace config.json.
+if /I "%OVMS_SERVICE_ACCOUNT%"=="LocalService" (
+    icacls "!OVMS_MODEL_REPOSITORY_PATH!" /inheritance:r /grant "BUILTIN\Administrators:(OI)(CI)F" /grant "NT AUTHORITY\LocalService:(OI)(CI)M" >nul 2>&1
+    if !errorlevel! neq 0 (
+        echo [WARN] ACL hardening for model repository failed with !errorlevel!; verify the service account can still write to !OVMS_MODEL_REPOSITORY_PATH!
+    )
+) else (
+    icacls "!OVMS_MODEL_REPOSITORY_PATH!" /inheritance:r /grant "BUILTIN\Administrators:(OI)(CI)F" /grant "%OVMS_SERVICE_ACCOUNT%:(OI)(CI)M" >nul 2>&1
+    if !errorlevel! neq 0 (
+        echo [WARN] ACL hardening for model repository failed with !errorlevel!; verify the service account can still write to !OVMS_MODEL_REPOSITORY_PATH!
+    )
+)
 
 ::::::::::::::::::::::: Create the service
 REM Build binPath carefully to avoid quoting issues with delayed expansion
 set "binPath_cmd=\"!OVMS_DIR!ovms.exe\" --rest_port 8000 --config_path \"!config_path!\" --log_level INFO --log_path \"!OVMS_DIR!ovms_server.log\""
-sc create ovms binPath= "!binPath_cmd!" DisplayName= "OpenVino Model Server"
+if /I "%OVMS_SERVICE_ACCOUNT%"=="LocalService" (
+    sc create ovms binPath= "!binPath_cmd!" obj= LocalService DisplayName= "OpenVino Model Server"
+) else (
+    sc create ovms binPath= "!binPath_cmd!" obj= %OVMS_SERVICE_ACCOUNT% DisplayName= "OpenVino Model Server"
+)
 set "SC_CREATE_ERROR=!errorlevel!"
 if "!SC_CREATE_ERROR!"=="1073" (
     echo [INFO] Service ovms already exists. Updating service configuration.
-    sc config ovms binPath= "!binPath_cmd!" DisplayName= "OpenVino Model Server"
+    sc config ovms binPath= "!binPath_cmd!" obj= !OVMS_SC_ACCOUNT_ARG! DisplayName= "OpenVino Model Server"
     if !errorlevel! neq 0 (
         echo [ERROR] sc config ovms failed !errorlevel!
         exit /b !errorlevel!
     )
-) else if !SC_CREATE_ERROR! neq 0 (
+)
+if not "!SC_CREATE_ERROR!"=="1073" if !SC_CREATE_ERROR! neq 0 (
     echo [ERROR] sc create ovms failed !SC_CREATE_ERROR!
     exit /b !SC_CREATE_ERROR!
 )
