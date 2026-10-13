@@ -112,6 +112,16 @@ case $INSTALL_DRIVER_VERSION in \
 	curl -fL -O https://github.com/intel/compute-runtime/releases/download/26.31.39395.13/libze-intel-gpu1_26.31.39395.13-0_amd64.deb && \
 	dpkg -i ./*.deb && cd / && rm -Rf /tmp/gpu_deps ; \
 ;; \
+"26.35.39758") \
+	mkdir /tmp/gpu_deps && cd /tmp/gpu_deps && \
+	curl -fL -O https://github.com/intel/intel-graphics-compiler/releases/download/v2.41.5/intel-igc-core-2_2.41.5+22716_amd64.deb && \
+	curl -fL -O https://github.com/intel/intel-graphics-compiler/releases/download/v2.41.5/intel-igc-opencl-2_2.41.5+22716_amd64.deb && \
+	curl -fL -O https://github.com/intel/compute-runtime/releases/download/26.35.39758.10/intel-ocloc_26.35.39758.10-0_amd64.deb && \
+	curl -fL -O https://github.com/intel/compute-runtime/releases/download/26.35.39758.10/intel-opencl-icd_26.35.39758.10-0_amd64.deb && \
+	curl -fL -O https://github.com/intel/compute-runtime/releases/download/26.35.39758.10/libigdgmm12_22.10.0_amd64.deb && \
+	curl -fL -O https://github.com/intel/compute-runtime/releases/download/26.35.39758.10/libze-intel-gpu1_26.35.39758.10-0_amd64.deb && \
+	dpkg -i ./*.deb && cd / && rm -Rf /tmp/gpu_deps ; \
+;; \
 *) \
         dpkg -P intel-gmmlib intel-igc-core intel-igc-opencl intel-level-zero-gpu intel-ocloc intel-opencl intel-opencl-icd && \
         apt-get update && apt-get -y --no-install-recommends install dpkg-dev && rm -rf /var/lib/apt/lists/* && \
