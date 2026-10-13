@@ -320,7 +320,7 @@ public:
      */
     uint32_t memoryTrimmingIntervalSeconds() const;
 
-    uint32_t idleUnloadTimeoutSeconds() const;
+    uint64_t idleUnloadTimeoutMicroseconds() const;
 
     bool disableInputCountValidation() const;
     bool allowCredentials() const;
