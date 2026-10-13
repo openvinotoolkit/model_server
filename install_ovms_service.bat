@@ -44,10 +44,10 @@ if /I "%OVMS_SERVICE_ACCOUNT%"=="LocalService" (
     set "OVMS_SC_ACCOUNT_ARG=LocalService"
 )
 
-REM Recommended default: use a dedicated model repository such as C:\tmp\models and keep it writeable by the admin/user.
+REM Recommended default: use a dedicated model repository such as C:\temp\models and keep it writeable by the admin/user.
 REM The LocalService account should have read access only; it should not be granted write permissions on the model repository.
 if /I "%OVMS_SERVICE_ACCOUNT%"=="LocalService" (
-    echo [NOTE] Recommended model repository layout: use a dedicated directory such as C:\tmp\models.
+    echo [NOTE] Recommended model repository layout: use a dedicated directory such as C:\temp\models.
     echo [NOTE] Grant NT AUTHORITY\LocalService read-only access to the model repository and config.json.
     echo [NOTE] Keep write access for the admin/user and leave the service account without write permission.
 )
