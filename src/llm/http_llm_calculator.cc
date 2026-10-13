@@ -70,8 +70,7 @@ class HttpLLMCalculator : public CalculatorBase {
         ~TimestampAdvanceGuard() {
             if (!succeed)
                 return;
-            auto now = std::chrono::system_clock::now();
-            iterationBeginTimestamp = ::mediapipe::Timestamp(std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());
+            iterationBeginTimestamp = iterationBeginTimestamp.NextAllowedInStream();
         }
     };
 
