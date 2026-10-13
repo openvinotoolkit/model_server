@@ -204,7 +204,7 @@ bool Config::validate() {
                 return false;
             }
 
-            std::vector allowedTargetDevices = {"CPU", "GPU", "NPU", "AUTO"};
+            std::vector allowedTargetDevices = {"CPU", "GPU", "NPU", "AUTO", "TP_GPU"};
             bool validDeviceSelected = false;
             if (exportSettings.targetDevice.empty()) {
                 // Empty means auto-detect via recommendTargetDevice
@@ -222,7 +222,7 @@ bool Config::validate() {
             }
 
             if (!validDeviceSelected) {
-                std::cerr << "target_device: " << exportSettings.targetDevice << " is not allowed. Supported devices: CPU, GPU, NPU, HETERO, AUTO" << std::endl;
+                std::cerr << "target_device: " << exportSettings.targetDevice << " is not allowed. Supported devices: CPU, GPU, NPU, HETERO, AUTO, TP_GPU" << std::endl;
                 return false;
             }
 

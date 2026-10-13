@@ -1588,7 +1588,7 @@ TEST(OvmsGraphConfigTest, negativeTargetDevice) {
     };
 
     int arg_count = 10;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "target_device: INVALID is not allowed. Supported devices: CPU, GPU, NPU, HETERO");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "target_device: INVALID is not allowed. Supported devices: CPU, GPU, NPU, HETERO, AUTO, TP_GPU");
 }
 
 TEST(OvmsGraphConfigTest, negativeEnablePrefixCaching) {
