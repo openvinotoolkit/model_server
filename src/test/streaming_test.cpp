@@ -522,7 +522,7 @@ TEST_F(StreamingWithOVMSCalculatorsCliTest, OVInferenceCalculatorWith2InputsSend
     EXPECT_EQ(definition->getInputsInfo().count("in2"), 1);
     EXPECT_EQ(definition->getOutputsInfo().count("sum"), 1);
 
-    std::unique_ptr<MediapipeGraphExecutor> executor;
+    std::unique_ptr<MediapipeGraphExecutorInterface> executor;
     KFSRequest request;
     KFSResponse response;
     auto status = manager.createPipeline(executor, name);
@@ -559,7 +559,7 @@ TEST_F(StreamingWithOVMSCalculatorsTest, OVInferenceCalculatorWith2InputsSendSep
     EXPECT_EQ(definition->getInputsInfo().count("in"), 1);
     EXPECT_EQ(definition->getInputsInfo().count("in2"), 1);
 
-    std::unique_ptr<MediapipeGraphExecutor> executor;
+    std::unique_ptr<MediapipeGraphExecutorInterface> executor;
     KFSRequest request;
     KFSResponse response;
     auto status = manager.createPipeline(executor, name);
