@@ -479,7 +479,22 @@ TEST_F(LLMFlowHttpQueueGraphTest, tokenizeThenStreamChatQueueGraph) {
         "max_tokens":5,
         "messages":[{"role":"user","content":"Say hello"}]
     })";
-    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(::testing::AtLeast(1));
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(::testing::AtLeast(1)).WillOnce([](const std::string& chunk) {
+        const std::string dataPrefix = "data:";
+        ASSERT_EQ(chunk.compare(0, dataPrefix.size(), dataPrefix), 0);
+        const size_t newline = chunk.find('\n');
+        ASSERT_NE(newline, std::string::npos);
+        rapidjson::Document firstChunk;
+        firstChunk.Parse(chunk.substr(dataPrefix.size(), newline - dataPrefix.size()).c_str());
+        ASSERT_FALSE(firstChunk.HasParseError());
+        ASSERT_TRUE(firstChunk.IsObject());
+        ASSERT_TRUE(firstChunk.HasMember("object"));
+        ASSERT_TRUE(firstChunk["object"].IsString());
+        EXPECT_STREQ(firstChunk["object"].GetString(), "chat.completion.chunk");
+        ASSERT_TRUE(firstChunk.HasMember("choices"));
+        ASSERT_TRUE(firstChunk["choices"].IsArray());
+        EXPECT_GT(firstChunk["choices"].Size(), 0);
+    });
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_)).Times(0);
     ASSERT_EQ(
         handler->dispatchToProcessor(streamChatEndpoint, streamChatRequest, &response, comp, responseComponents, writer, multiPartParser),
