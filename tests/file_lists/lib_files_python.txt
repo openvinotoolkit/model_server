@@ -88,6 +88,7 @@ libopenvino_tensorflow_lite_frontend.so.2026.5.0
 libopenvino_tensorflow_lite_frontend.so.2650->libopenvino_tensorflow_lite_frontend.so.2026.5.0
 libopenvino_tokenizers.so
 libovms_llm_calculators.so
+libovms_mediapipe_runtime_shared.so
 libovmspython.so
 libpython_calculators.so
 libtbb.so->libtbb.so.12
