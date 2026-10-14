@@ -212,11 +212,55 @@ cc_library(
     linkstatic = 1,
     alwayslink = 1,
     srcs = ["gst_capi_inference_calculator.cc"],
-    hdrs = ["gst_video_frame_packet.hpp"],
+    hdrs = ["gst_video_frame_packet.hpp", "gst_detection_box.hpp"],
     copts = COPTS_ADJUSTED,
     visibility = ["//visibility:public"],
     deps = [
         "//src:ovms_lib",
+        "@mediapipe_calculators//:mediapipe_calculators",
+    ],
+    linkopts = LINKOPTS_ADJUSTED,
+)
+
+# P6a.1/P6a.2 detection-box overlay. One calculator draws into either a host NV12
+# frame (CPU plane draw, matches reference POC) or a GPU VA surface in place
+# (zero-copy). The VA path is compiled in only where libva is available: the
+# OVMS_ENABLE_VA_OVERLAY define and -lva link are gated by the same select used
+# elsewhere (off on redhat_build).
+cc_library(
+    name = "gst_detection_overlay_calculator",
+    linkstatic = 1,
+    alwayslink = 1,
+    srcs = ["gst_detection_overlay_calculator.cc"],
+    hdrs = ["gst_video_frame_packet.hpp", "gst_detection_box.hpp", "gst_nv12_overlay_draw.hpp"],
+    copts = COPTS_ADJUSTED,
+    local_defines = select({
+        "//:redhat_build": [],
+        "//conditions:default": ["OVMS_ENABLE_VA_OVERLAY"],
+    }),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/mpi:intel_mpi",
+        "@mediapipe_calculators//:mediapipe_calculators",
+    ],
+    linkopts = LINKOPTS_ADJUSTED + select({
+        "//:redhat_build": [],
+        "//conditions:default": ["-lva"],
+    }),
+)
+
+# Platform-neutral file-output sink: writes the native decoded frame stream to a
+# video file through imp_video_encoder_* (VA zero-copy on Linux, D3D11 on Windows).
+cc_library(
+    name = "gst_video_sink_calculator",
+    linkstatic = 1,
+    alwayslink = 1,
+    srcs = ["gst_video_sink_calculator.cc"],
+    hdrs = ["gst_video_frame_packet.hpp"],
+    copts = COPTS_ADJUSTED,
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/mpi:intel_mpi",
         "@mediapipe_calculators//:mediapipe_calculators",
     ],
     linkopts = LINKOPTS_ADJUSTED,

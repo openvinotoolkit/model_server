@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <vector>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -23,6 +25,7 @@
 #pragma GCC diagnostic pop
 
 #include "src/ovms.h"
+#include "src/test/mediapipe/calculators/gst_detection_box.hpp"
 #include "src/test/mediapipe/calculators/gst_video_frame_packet.hpp"
 
 namespace mediapipe {
@@ -34,6 +37,10 @@ constexpr char kServableVersionTag[] = "SERVABLE_VERSION";
 constexpr char kInputNameTag[] = "INPUT_NAME";
 constexpr char kServerTag[] = "SERVER";
 constexpr char kDetectionsTag[] = "DETECTIONS";
+constexpr char kDetectionBoxesTag[] = "DETECTION_BOXES";
+constexpr char kFullWidthTag[] = "FULL_WIDTH";
+constexpr char kFullHeightTag[] = "FULL_HEIGHT";
+constexpr float kFaceConfidenceThreshold = 0.5f;
 
 absl::Status checkCapiStatus(OVMS_Status* status, const char* operation) {
     if (!status)
@@ -58,6 +65,14 @@ class GstCapiInferenceCalculator : public CalculatorBase {
         cc->InputSidePackets().Tag(kInputNameTag).Set<std::string>();
         cc->InputSidePackets().Tag(kServerTag).Set<OVMS_Server*>();
         cc->Outputs().Tag(kDetectionsTag).Set<int>();
+        // Structured boxes (overlay path) and the full-res dims used to scale
+        // them are optional, so existing count-only graphs stay unchanged.
+        if (cc->Outputs().HasTag(kDetectionBoxesTag))
+            cc->Outputs().Tag(kDetectionBoxesTag).Set<GstDetectionBoxes>();
+        if (cc->InputSidePackets().HasTag(kFullWidthTag))
+            cc->InputSidePackets().Tag(kFullWidthTag).Set<int>();
+        if (cc->InputSidePackets().HasTag(kFullHeightTag))
+            cc->InputSidePackets().Tag(kFullHeightTag).Set<int>();
         return absl::OkStatus();
     }
 
@@ -67,6 +82,10 @@ class GstCapiInferenceCalculator : public CalculatorBase {
         input_name_ = cc->InputSidePackets().Tag(kInputNameTag).Get<std::string>();
         server_ = cc->InputSidePackets().Tag(kServerTag).Get<OVMS_Server*>();
         RET_CHECK(server_ != nullptr) << "missing started OVMS server";
+        if (cc->InputSidePackets().HasTag(kFullWidthTag))
+            full_width_ = cc->InputSidePackets().Tag(kFullWidthTag).Get<int>();
+        if (cc->InputSidePackets().HasTag(kFullHeightTag))
+            full_height_ = cc->InputSidePackets().Tag(kFullHeightTag).Get<int>();
         return absl::OkStatus();
     }
 
@@ -168,14 +187,37 @@ class GstCapiInferenceCalculator : public CalculatorBase {
 
         const auto* values = static_cast<const float*>(output_data);
         const size_t float_count = output_bytes / sizeof(float);
+
+        // Scale normalized boxes to full-res overlay pixels when full dims were
+        // provided; otherwise fall back to the model-res frame dimensions.
+        const float full_w = static_cast<float>(full_width_ > 0 ? full_width_ : frame.width);
+        const float full_h = static_cast<float>(full_height_ > 0 ? full_height_ : frame.height);
+
+        const bool emit_boxes = cc->Outputs().HasTag(kDetectionBoxesTag);
+        GstDetectionBoxes boxes;
         int detections = 0;
         for (size_t i = 0; i + 7 <= float_count; i += 7) {
-            if (values[i + 2] >= 0.5f)
-                ++detections;
+            const float score = values[i + 2];
+            if (score < kFaceConfidenceThreshold)
+                continue;
+            ++detections;
+            if (!emit_boxes)
+                continue;
+            GstDetectionBox box;
+            box.score = score;
+            box.xmin = std::clamp(values[i + 3] * full_w, 0.0f, full_w - 1.0f);
+            box.ymin = std::clamp(values[i + 4] * full_h, 0.0f, full_h - 1.0f);
+            box.xmax = std::clamp(values[i + 5] * full_w, 0.0f, full_w - 1.0f);
+            box.ymax = std::clamp(values[i + 6] * full_h, 0.0f, full_h - 1.0f);
+            boxes.push_back(box);
         }
         cc->Outputs()
             .Tag(kDetectionsTag)
             .AddPacket(MakePacket<int>(detections).At(cc->InputTimestamp()));
+        if (emit_boxes)
+            cc->Outputs()
+                .Tag(kDetectionBoxesTag)
+                .AddPacket(MakePacket<GstDetectionBoxes>(std::move(boxes)).At(cc->InputTimestamp()));
         return absl::OkStatus();
     }
 
@@ -184,6 +226,8 @@ class GstCapiInferenceCalculator : public CalculatorBase {
     std::string servable_name_;
     std::string input_name_;
     int servable_version_ = 1;
+    int full_width_ = 0;
+    int full_height_ = 0;
 };
 
 REGISTER_CALCULATOR(GstCapiInferenceCalculator);

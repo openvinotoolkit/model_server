@@ -21,6 +21,15 @@
 #include <memory>
 #include <variant>
 
+// Native frame handle owner. Opaque here; fully defined in src/mpi/intel_mpi.h.
+// Forward-declared so consumers that only retain ownership (e.g. the inference
+// calculator) don't pull in the whole C API. The source constructs the
+// shared_ptr with imp_tensor_release as its deleter, so an incomplete type is
+// sufficient everywhere the packet is used.
+extern "C" {
+typedef struct imp_tensor_s imp_tensor_t;
+}
+
 namespace mediapipe {
 
 struct VaSurfaceFrame {
@@ -41,10 +50,12 @@ struct CpuNv12Frame {
 
 using GstVideoFrameResource = std::variant<VaSurfaceFrame, D3D11Frame, CpuNv12Frame>;
 
-// The native frame resource stays alive through owner until all packet consumers finish.
+// The native frame resource stays alive through owner until all packet consumers
+// finish. owner holds the decoded imp_tensor_t so a sink can resubmit it to the
+// encoder (imp_video_encoder_write) without a host copy.
 struct GstVideoFramePacket {
     GstVideoFrameResource resource = VaSurfaceFrame{};
-    std::shared_ptr<void> owner;
+    std::shared_ptr<imp_tensor_t> owner;
     int width = 0;
     int height = 0;
 };

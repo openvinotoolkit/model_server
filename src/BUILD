@@ -2896,6 +2896,8 @@ cc_library(
         "//src/mpi:intel_mpi",
         "//src/test/mediapipe/calculators:gst_video_source_calculator",
         "//src/test/mediapipe/calculators:gst_capi_inference_calculator",
+        "//src/test/mediapipe/calculators:gst_video_sink_calculator",
+        "//src/test/mediapipe/calculators:gst_detection_overlay_calculator",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@mediapipe_calculators//:mediapipe_calculators",
         "@com_google_googletest//:gtest",

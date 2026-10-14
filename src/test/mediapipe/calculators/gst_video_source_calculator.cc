@@ -20,13 +20,30 @@
  * inference here — that is the downstream calculator's job. The packet carries
  * a backend-specific resource descriptor, not an OpenVINO tensor or context.
  *
- * Side packets:
- *   VIDEO_PATH : std::string — path to input video file.
- *   WIDTH      : int         — decode output width  (size to model input).
- *   HEIGHT     : int         — decode output height (size to model input).
+ * Two output modes, selected by which output tags the graph wires:
+ *   FRAME       — single model-res GPU surface stream (legacy P6a inference graph).
+ *   FRAME_INFER — same model-res GPU surface, for the overlay pipeline's
+ *                 zero-copy inference branch.
+ *   FRAME_FULL  — full-res frame for the overlay/encode branch. By default a
+ *                 host NV12 frame (IMP_MEM_SYSTEM) for a CPU plane overlay. If
+ *                 the FULL_VA_SURFACE side packet is true, it is instead a GPU
+ *                 VA surface so the overlay/encode branch stays zero-copy
+ *                 (P6a.2): the overlay draws by mapping the surface in place.
  *
- * Output stream:
- *   FRAME      : GstVideoFramePacket — one per decoded frame, timestamped by index.
+ * Because an imp_video_stream carries a single surface-memory mode for all its
+ * branches, the dual-resolution / dual-memory contract (VA surface + host NV12)
+ * is served by opening two streams on the same file: one VA-surface stream at
+ * model res, one host-NV12 stream at full res. Both are read in lockstep and
+ * emitted with identical Timestamp(frame_index) so the overlay can join them.
+ *
+ * Side packets:
+ *   VIDEO_PATH      : std::string — path to input video file.
+ *   WIDTH           : int         — model-res decode width  (inference surface).
+ *   HEIGHT          : int         — model-res decode height (inference surface).
+ *   FULL_WIDTH      : int (opt)   — full-res decode width  (overlay frame; 0 = source res).
+ *   FULL_HEIGHT     : int (opt)   — full-res decode height (overlay frame; 0 = source res).
+ *   FULL_VA_SURFACE : bool (opt)  — emit FRAME_FULL as a GPU VA surface (zero-copy overlay).
+ *   MAX_FRAMES      : int (opt)   — stop after N frames (0/absent = whole stream).
  */
 
 #include <memory>
@@ -48,8 +65,13 @@ namespace {
 constexpr char kVideoPathTag[] = "VIDEO_PATH";
 constexpr char kWidthTag[] = "WIDTH";
 constexpr char kHeightTag[] = "HEIGHT";
+constexpr char kFullWidthTag[] = "FULL_WIDTH";
+constexpr char kFullHeightTag[] = "FULL_HEIGHT";
+constexpr char kFullVaSurfaceTag[] = "FULL_VA_SURFACE";
+constexpr char kMaxFramesTag[] = "MAX_FRAMES";
 constexpr char kFrameTag[] = "FRAME";
-constexpr int64_t kMaxFrames = 4;
+constexpr char kFrameInferTag[] = "FRAME_INFER";
+constexpr char kFrameFullTag[] = "FRAME_FULL";
 }  // namespace
 
 class GstVideoSourceCalculator : public CalculatorBase {
@@ -58,7 +80,22 @@ class GstVideoSourceCalculator : public CalculatorBase {
         cc->InputSidePackets().Tag(kVideoPathTag).Set<std::string>();
         cc->InputSidePackets().Tag(kWidthTag).Set<int>();
         cc->InputSidePackets().Tag(kHeightTag).Set<int>();
-        cc->Outputs().Tag(kFrameTag).Set<GstVideoFramePacket>();
+        if (cc->InputSidePackets().HasTag(kFullWidthTag))
+            cc->InputSidePackets().Tag(kFullWidthTag).Set<int>();
+        if (cc->InputSidePackets().HasTag(kFullHeightTag))
+            cc->InputSidePackets().Tag(kFullHeightTag).Set<int>();
+        if (cc->InputSidePackets().HasTag(kFullVaSurfaceTag))
+            cc->InputSidePackets().Tag(kFullVaSurfaceTag).Set<bool>();
+        if (cc->InputSidePackets().HasTag(kMaxFramesTag))
+            cc->InputSidePackets().Tag(kMaxFramesTag).Set<int>();
+        if (cc->Outputs().HasTag(kFrameTag))
+            cc->Outputs().Tag(kFrameTag).Set<GstVideoFramePacket>();
+        if (cc->Outputs().HasTag(kFrameInferTag))
+            cc->Outputs().Tag(kFrameInferTag).Set<GstVideoFramePacket>();
+        if (cc->Outputs().HasTag(kFrameFullTag))
+            cc->Outputs().Tag(kFrameFullTag).Set<GstVideoFramePacket>();
+        RET_CHECK(cc->Outputs().HasTag(kFrameTag) || cc->Outputs().HasTag(kFrameInferTag))
+            << "GstVideoSourceCalculator needs a FRAME or FRAME_INFER output";
         return absl::OkStatus();
     }
 
@@ -66,6 +103,18 @@ class GstVideoSourceCalculator : public CalculatorBase {
         video_path_ = cc->InputSidePackets().Tag(kVideoPathTag).Get<std::string>();
         width_ = cc->InputSidePackets().Tag(kWidthTag).Get<int>();
         height_ = cc->InputSidePackets().Tag(kHeightTag).Get<int>();
+        if (cc->InputSidePackets().HasTag(kFullWidthTag))
+            full_width_ = cc->InputSidePackets().Tag(kFullWidthTag).Get<int>();
+        if (cc->InputSidePackets().HasTag(kFullHeightTag))
+            full_height_ = cc->InputSidePackets().Tag(kFullHeightTag).Get<int>();
+        if (cc->InputSidePackets().HasTag(kFullVaSurfaceTag))
+            full_va_surface_ = cc->InputSidePackets().Tag(kFullVaSurfaceTag).Get<bool>();
+        if (cc->InputSidePackets().HasTag(kMaxFramesTag))
+            max_frames_ = cc->InputSidePackets().Tag(kMaxFramesTag).Get<int>();
+
+        emit_frame_ = cc->Outputs().HasTag(kFrameTag);
+        emit_infer_ = cc->Outputs().HasTag(kFrameInferTag);
+        emit_full_ = cc->Outputs().HasTag(kFrameFullTag);
 
         // Pick the native GPU surface path available on this platform: D3D11 on
         // Windows, VA on Linux. Both emit a GstVideoFramePacket; only the tagged
@@ -74,49 +123,121 @@ class GstVideoSourceCalculator : public CalculatorBase {
         if (!use_d3d11_ && !imp_video_va_available())
             return absl::UnavailableError("GstVideoSourceCalculator: no GPU surface path (VA/D3D11) available");
 
-        if (imp_context_create(&ctx_, nullptr) != IMP_OK)
+        if (emit_frame_ || emit_infer_) {
+            const imp_tensor_memory_type_t expected =
+                use_d3d11_ ? IMP_MEM_D3D11_SURFACE : IMP_MEM_VA_SURFACE;
+            absl::Status st = openStream(&infer_ctx_, &infer_stream_, width_, height_,
+                                         /*va_surface=*/true, &pending_infer_, expected);
+            if (!st.ok())
+                return st;
+        }
+        if (emit_full_) {
+            // Overlay/encode branch. VA surface (zero-copy, P6a.2) if requested,
+            // otherwise an explicit host NV12 (GPU->CPU) frame.
+            const imp_tensor_memory_type_t expected_full =
+                full_va_surface_ ? (use_d3d11_ ? IMP_MEM_D3D11_SURFACE : IMP_MEM_VA_SURFACE)
+                                 : IMP_MEM_SYSTEM;
+            absl::Status st = openStream(&full_ctx_, &full_stream_, full_width_, full_height_,
+                                         /*va_surface=*/full_va_surface_, &pending_full_, expected_full);
+            if (!st.ok())
+                return st;
+        }
+        return absl::OkStatus();
+    }
+
+    absl::Status Process(CalculatorContext* cc) override {
+        if (max_frames_ > 0 && frame_index_ >= max_frames_)
+            return tool::StatusStop();
+
+        imp_tensor_t* infer_tensor = nullptr;
+        imp_tensor_t* full_tensor = nullptr;
+        if (emit_frame_ || emit_infer_) {
+            infer_tensor = nextFrame(infer_stream_, &pending_infer_);
+            if (!infer_tensor)
+                return tool::StatusStop();
+        }
+        if (emit_full_) {
+            full_tensor = nextFrame(full_stream_, &pending_full_);
+            if (!full_tensor) {
+                if (infer_tensor)
+                    imp_tensor_release(infer_tensor);
+                return tool::StatusStop();
+            }
+        }
+
+        const Timestamp ts(frame_index_);
+        if (infer_tensor) {
+            auto pkt = makeSurfacePacket(infer_tensor);
+            if (!pkt)
+                return absl::InternalError("GstVideoSourceCalculator: surface frame build failed");
+            if (emit_frame_)
+                cc->Outputs().Tag(kFrameTag).Add(pkt.release(), ts);
+            else
+                cc->Outputs().Tag(kFrameInferTag).Add(pkt.release(), ts);
+        }
+        if (full_tensor) {
+            auto pkt = full_va_surface_ ? makeSurfacePacket(full_tensor)
+                                        : makeHostNv12Packet(full_tensor);
+            if (!pkt)
+                return absl::InternalError("GstVideoSourceCalculator: full frame build failed");
+            cc->Outputs().Tag(kFrameFullTag).Add(pkt.release(), ts);
+        }
+        ++frame_index_;
+        return absl::OkStatus();
+    }
+
+    absl::Status Close(CalculatorContext* cc) override {
+        releaseStream(&infer_ctx_, &infer_stream_, &pending_infer_);
+        releaseStream(&full_ctx_, &full_stream_, &pending_full_);
+        return absl::OkStatus();
+    }
+
+ private:
+    absl::Status openStream(imp_context_t** ctx, imp_video_stream_t** stream,
+                            int w, int h, bool va_surface, imp_tensor_t** pending,
+                            imp_tensor_memory_type_t expected_first) {
+        if (imp_context_create(ctx, nullptr) != IMP_OK)
             return absl::InternalError("imp_context_create failed");
 
         imp_video_source_t* src = nullptr;
         imp_video_source_create(&src, IMP_SOURCE_FILE);
         imp_video_source_set(src, "path", video_path_.c_str());
-        imp_video_source_set(src, "width", std::to_string(width_).c_str());
-        imp_video_source_set(src, "height", std::to_string(height_).c_str());
+        if (w > 0)
+            imp_video_source_set(src, "width", std::to_string(w).c_str());
+        if (h > 0)
+            imp_video_source_set(src, "height", std::to_string(h).c_str());
 
         imp_video_decode_opts_t vopts{};
-        vopts.use_va_surface_memory = !use_d3d11_;
-        vopts.use_d3d11_surface_memory = use_d3d11_;
-        imp_status_t st = imp_video_open(&stream_, src, ctx_, &vopts);
+        vopts.use_va_surface_memory = va_surface && !use_d3d11_;
+        vopts.use_d3d11_surface_memory = va_surface && use_d3d11_;
+        imp_status_t st = imp_video_open(stream, src, *ctx, &vopts);
         imp_video_source_destroy(src);
         if (st != IMP_OK)
             return absl::InternalError(std::string("imp_video_open failed: ") +
-                                       imp_context_get_error(ctx_));
+                                       imp_context_get_error(*ctx));
 
-        // Keep the first frame to emit it on the first Process() call.
-        st = imp_video_read_frame(&pending_, stream_, 0);
-        if (st != IMP_OK || !pending_)
+        st = imp_video_read_frame(pending, *stream, 0);
+        if (st != IMP_OK || !*pending)
             return absl::InternalError("first frame read failed");
-
-        const imp_tensor_memory_type_t expected =
-            use_d3d11_ ? IMP_MEM_D3D11_SURFACE : IMP_MEM_VA_SURFACE;
-        if (imp_tensor_get_memory_type(pending_) != expected)
-            return absl::InternalError("expected a GPU surface from GStreamer");
+        if (imp_tensor_get_memory_type(*pending) != expected_first)
+            return absl::InternalError("unexpected frame memory type from GStreamer");
         return absl::OkStatus();
     }
 
-    absl::Status Process(CalculatorContext* cc) override {
-        if (frame_index_ >= kMaxFrames)
-            return tool::StatusStop();
-        imp_tensor_t* tensor = pending_;
-        pending_ = nullptr;
-        if (!tensor) {
-            imp_status_t st = imp_video_read_frame(&tensor, stream_, 0);
-            if (st == IMP_ERROR_STREAM_END)
-                return tool::StatusStop();
-            if (st != IMP_OK || !tensor)
-                return tool::StatusStop();
+    imp_tensor_t* nextFrame(imp_video_stream_t* stream, imp_tensor_t** pending) {
+        if (*pending) {
+            imp_tensor_t* t = *pending;
+            *pending = nullptr;
+            return t;
         }
+        imp_tensor_t* tensor = nullptr;
+        imp_status_t st = imp_video_read_frame(&tensor, stream, 0);
+        if (st != IMP_OK || !tensor)
+            return nullptr;
+        return tensor;
+    }
 
+    std::unique_ptr<GstVideoFramePacket> makeSurfacePacket(imp_tensor_t* tensor) {
         auto pkt = std::make_unique<GstVideoFramePacket>();
         if (use_d3d11_) {
             void* texture = nullptr;
@@ -125,7 +246,7 @@ class GstVideoSourceCalculator : public CalculatorBase {
             int fw = 0, fh = 0;
             if (imp_tensor_get_d3d11_texture(tensor, &texture, &device, &subresource, &fw, &fh) != IMP_OK) {
                 imp_tensor_release(tensor);
-                return absl::InternalError("tensor is not a D3D11 surface");
+                return nullptr;
             }
             pkt->resource = D3D11Frame{reinterpret_cast<uintptr_t>(texture), subresource};
             pkt->width = fw;
@@ -136,47 +257,67 @@ class GstVideoSourceCalculator : public CalculatorBase {
             int fw = 0, fh = 0;
             if (imp_tensor_get_va_surface(tensor, &surface_id, &disp, &fw, &fh) != IMP_OK) {
                 imp_tensor_release(tensor);
-                return absl::InternalError("tensor is not a VA surface");
+                return nullptr;
             }
             pkt->resource = VaSurfaceFrame{surface_id};
             pkt->width = fw;
             pkt->height = fh;
         }
         pkt->owner = std::shared_ptr<imp_tensor_t>(tensor, imp_tensor_release);
-
-        cc->Outputs()
-            .Tag(kFrameTag)
-            .Add(pkt.release(), Timestamp(frame_index_++));
-        return absl::OkStatus();
+        return pkt;
     }
 
-    absl::Status Close(CalculatorContext* cc) override {
-        if (pending_) {
-            imp_tensor_release(pending_);
-            pending_ = nullptr;
+    std::unique_ptr<GstVideoFramePacket> makeHostNv12Packet(imp_tensor_t* tensor) {
+        const uint8_t* y = nullptr;
+        const uint8_t* uv = nullptr;
+        int fw = 0, fh = 0;
+        if (imp_tensor_get_nv12_planes(tensor, &y, &uv, &fw, &fh) != IMP_OK) {
+            imp_tensor_release(tensor);
+            return nullptr;
         }
-        if (stream_) {
-            imp_video_close(stream_);
-            stream_ = nullptr;
-        }
-        if (ctx_) {
-            imp_context_destroy(ctx_);
-            ctx_ = nullptr;
-        }
-        return absl::OkStatus();
+        auto pkt = std::make_unique<GstVideoFramePacket>();
+        pkt->resource = CpuNv12Frame{y, uv, fw, fw};  // packed NV12: stride == width
+        pkt->width = fw;
+        pkt->height = fh;
+        pkt->owner = std::shared_ptr<imp_tensor_t>(tensor, imp_tensor_release);
+        return pkt;
     }
 
- private:
+    void releaseStream(imp_context_t** ctx, imp_video_stream_t** stream, imp_tensor_t** pending) {
+        if (*pending) {
+            imp_tensor_release(*pending);
+            *pending = nullptr;
+        }
+        if (*stream) {
+            imp_video_close(*stream);
+            *stream = nullptr;
+        }
+        if (*ctx) {
+            imp_context_destroy(*ctx);
+            *ctx = nullptr;
+        }
+    }
+
     std::string video_path_;
     int width_ = 0;
     int height_ = 0;
+    int full_width_ = 0;
+    int full_height_ = 0;
+    bool full_va_surface_ = false;
+    int64_t max_frames_ = 0;
     int64_t frame_index_ = 0;
     bool use_d3d11_ = false;
+    bool emit_frame_ = false;
+    bool emit_infer_ = false;
+    bool emit_full_ = false;
 
-    imp_context_t* ctx_ = nullptr;
-    imp_video_stream_t* stream_ = nullptr;
-    imp_tensor_t* pending_ = nullptr;  // first frame, emitted on first Process()
+    imp_context_t* infer_ctx_ = nullptr;
+    imp_video_stream_t* infer_stream_ = nullptr;
+    imp_tensor_t* pending_infer_ = nullptr;
 
+    imp_context_t* full_ctx_ = nullptr;
+    imp_video_stream_t* full_stream_ = nullptr;
+    imp_tensor_t* pending_full_ = nullptr;
 };
 
 REGISTER_CALCULATOR(GstVideoSourceCalculator);
