@@ -33,6 +33,7 @@
 #include "../http_payload.hpp"
 #include "../logging.hpp"
 #include "../mediapipe_internal/graph_side_packets.hpp"
+#include "../mediapipe_calculators/utils/timestamp_advance_guard.hpp"
 #include "../profiler.hpp"
 #include "apis/openai_completions.hpp"
 #include "servable.hpp"
@@ -54,25 +55,6 @@ class HttpLLMCalculator : public CalculatorBase {
     static const std::string LOOPBACK_TAG_NAME;
 
     mediapipe::Timestamp iterationBeginTimestamp{0};
-
-    class TimestampAdvanceGuard {
-        mediapipe::Timestamp& iterationBeginTimestamp;
-        bool succeed{false};
-
-    public:
-        explicit TimestampAdvanceGuard(mediapipe::Timestamp& timestamp) :
-            iterationBeginTimestamp(timestamp) {}
-
-        void markSucceeded() {
-            succeed = true;
-        }
-
-        ~TimestampAdvanceGuard() {
-            if (!succeed)
-                return;
-            iterationBeginTimestamp = iterationBeginTimestamp.NextAllowedInStream();
-        }
-    };
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
