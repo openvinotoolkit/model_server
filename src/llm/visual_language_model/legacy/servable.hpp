@@ -49,6 +49,7 @@ struct VisualLanguageModelLegacyServableExecutionContext : public LegacyServable
     void setLegacyUsage(OpenAIApiHandler& apiHandler) override {
         apiHandler.setPromptTokensUsage(results.perf_metrics.get_num_input_tokens());
         apiHandler.setCompletionTokensUsage(results.perf_metrics.get_num_generated_tokens());
+        apiHandler.setCachedPromptTokensUsage(results.perf_metrics.get_num_prefix_cache_hit_tokens());
     }
 };
 

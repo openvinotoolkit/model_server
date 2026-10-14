@@ -134,18 +134,15 @@ libraries = {
     OvmsBaseType.UBUNTU24: set(),
     OvmsBaseType.UBUNTU22_PYTHON: {
         'libovmspython.so',
-        'libovms_mediapipe_runtime_shared.so',
         'libpython_calculators.so',
     },
     OvmsBaseType.UBUNTU24_PYTHON: {
         'libovmspython.so',
-        'libovms_mediapipe_runtime_shared.so',
         'libpython_calculators.so',
     },
     OvmsBaseType.REDHAT: set(),
     OvmsBaseType.REDHAT_PYTHON: {
         'libovmspython.so',
-        'libovms_mediapipe_runtime_shared.so',
         'libpython_calculators.so',
     },
     OvmsBaseType.WINDOWS: {
@@ -176,7 +173,6 @@ libraries = {
         'openvino_tensorflow_frontend.dll',
         'openvino_tensorflow_lite_frontend.dll',
         'openvino_tokenizers.dll',
-        'ovms_mediapipe_runtime_shared.dll',
         'tbb12.dll',
     },
     OvmsBaseType.WINDOWS_PYTHON: {

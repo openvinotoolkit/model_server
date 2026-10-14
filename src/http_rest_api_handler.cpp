@@ -33,6 +33,9 @@
 #ifndef _WIN32
 #include <curl/curl.h>
 #endif
+
+#include "absl/status/status.h"
+
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 
@@ -229,7 +232,7 @@ Status HttpRestApiHandler::processServerMetadataKFSRequest(const HttpRequestComp
     }
     std::string output;
     google::protobuf::util::JsonPrintOptions opts;
-    google::protobuf::util::Status status = google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
+    absl::Status status = google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
     if (!status.ok()) {
         return StatusCode::INTERNAL_ERROR;
     }
@@ -581,25 +584,9 @@ void parseModel(rapidjson::Writer<rapidjson::StringBuffer>& writer, const std::s
 }
 
 Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, std::string& response) {
-    bool available = false;
+    const auto names = modelManager.getNamesOfAvailableServables();
+    const bool available = std::find(names.begin(), names.end(), name) != names.end();
 
-    // MediaPipe first, it is most likely that anyone will check llms
-#if (MEDIAPIPE_DISABLE == 0)
-    if (!available) {
-        auto names = modelManager.getNamesOfAvailableMediapipePipelines();
-        if (std::find(names.begin(), names.end(), name) != names.end()) {
-            available = true;
-        }
-    }
-#endif
-
-    // Single Model
-    if (!available) {
-        auto availableModelNames = modelManager.getNamesOfAvailableModels();
-        if (std::find(availableModelNames.begin(), availableModelNames.end(), name) != availableModelNames.end()) {
-            available = true;
-        }
-    }
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     if (!available) {
@@ -625,20 +612,9 @@ Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
     writer.StartObject();
     writer.String("data");
     writer.StartArray();
-
-    // Single Model
-    auto availableModelNames = modelManager.getNamesOfAvailableModels();
-    for (auto const& name : availableModelNames) {
+    for (auto const& name : modelManager.getNamesOfAvailableServables()) {
         parseModel(writer, name, timestamp);
     }
-
-    // MediaPipe
-#if (MEDIAPIPE_DISABLE == 0)
-    auto availableMediapipes = modelManager.getNamesOfAvailableMediapipePipelines();
-    for (auto const& graphName : availableMediapipes) {
-        parseModel(writer, graphName, timestamp);
-    }
-#endif
     writer.EndArray();
     writer.String("object");
     writer.String("list");
@@ -832,7 +808,7 @@ Status HttpRestApiHandler::processModelReadyKFSRequest(const HttpRequestComponen
 
 void HttpRestApiHandler::convertShapeType(Value& scope, Document& doc) {
     for (SizeType i = 0; i < scope.Size(); i++) {
-        Value data = scope[i].GetObject()["shape"].GetArray();
+        const auto data = scope[i].GetObject()["shape"].GetArray();
         Value shape(rapidjson::kArrayType);
         for (SizeType j = 0; j < data.Size(); j++) {
             shape.PushBack(atoi(data[j].GetString()), doc.GetAllocator());
@@ -881,9 +857,9 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
     }
     std::string output;
     google::protobuf::util::JsonPrintOptions opts;
-    // This parameter forces JSON writer to not omit empty shape in case of scalar tensor
-    opts.always_print_primitive_fields = true;
-    google::protobuf::util::Status status = google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
+    // Renamed from always_print_primitive_fields in protobuf 6.30.
+    opts.always_print_fields_with_no_presence = true;
+    absl::Status status = google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
     if (!status.ok()) {
         return StatusCode::JSON_SERIALIZATION_ERROR;
     }

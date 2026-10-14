@@ -14,6 +14,7 @@ libespeak-ng.so->libespeak-ng.so.1
 libespeak-ng.so.1->libespeak-ng.so.1.52.0.1
 libespeak-ng.so.1.52.0.1
 libgit2.so
+libjsoncpp.so
 libopencv_calib3d.so->libopencv_calib3d.so.414
 libopencv_calib3d.so.4.14.0
 libopencv_calib3d.so.414->libopencv_calib3d.so.4.14.0
@@ -86,6 +87,7 @@ libopenvino_tensorflow_lite_frontend.so->libopenvino_tensorflow_lite_frontend.so
 libopenvino_tensorflow_lite_frontend.so.2026.5.0
 libopenvino_tensorflow_lite_frontend.so.2650->libopenvino_tensorflow_lite_frontend.so.2026.5.0
 libopenvino_tokenizers.so
+libovms_llm_calculators.so
 libtbb.so->libtbb.so.12
 libtbb.so.12->libtbb.so.12.13
 libtbb.so.12.13

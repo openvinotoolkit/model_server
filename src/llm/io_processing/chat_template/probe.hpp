@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <functional>
 #include <string>
 
 #include "caps.hpp"
@@ -42,11 +43,7 @@ bool probeChatTemplateReasoning(ov::genai::Tokenizer& tokenizer, ChatTemplateCap
 
 bool probeChatTemplateToolResponse(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& caps);
 
-#if (PYTHON_DISABLE == 0)
-class PyJinjaTemplateProcessor;
-
 // The same, but for Jinja.
-bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, ChatTemplateCaps& caps);
-#endif
+bool probeChatTemplateCapsJinja(const std::function<bool(const std::string&, std::string&)>& render, ChatTemplateCaps& caps);
 
 }  // namespace ovms
