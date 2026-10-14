@@ -362,7 +362,7 @@ class OvmsMessages:
     MEDIAPIPE_IMAGE_FORMAT_DECODED_SIZE_CANNOT_BE_VERIFIED = "Image format decoded size cannot be verified"
     MEDIAPIPE_IMAGE_LOADING_FAILED = "Image loading failed"
 
-    PYTHON_NODE_FILE_DOES_NOT_EXISTS = "The Python Node file path does not exist"
+    PYTHON_NODE_FILE_DOES_NOT_EXIST = "The Python Node file path does not exist"
     PYTHON_NODE_FAILED_TO_PROCESS_GRAPH = "Failed to process python node graph python_model"
     PYTHON_NODE_FAILED_TO_EXECUTE_GRAPH = "Failed to execute mediapipe graph: python_model since it is not available"
     PYTHON_EXECUTOR_MISSING_REQUIRED_FIELDS = (
