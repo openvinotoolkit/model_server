@@ -11,17 +11,17 @@ Follow [deployment instructions](deploying_server_baremetal.md) for Windows OS.
 Use `LocalService` as the recommended service account. This keeps the service limited and avoids granting it write access to the model repository.
 
 ```bat
-mkdir c:\temp\models
-install_ovms_service.bat c:\temp\models LocalService
+mkdir c:\models
+install_ovms_service.bat c:\models LocalService
 sc start ovms
 ```
 Change the script parameter with the model repository path if needed. The service account can also be set to `LocalSystem` for legacy compatibility, but this is less restrictive and should only be used when the administrator explicitly accepts the wider privilege boundary.
 
 > **Security note:** The service reads and reloads `config.json` from the model repository directory automatically.
-> Use a dedicated repository such as `C:\temp\models` and keep the directory writeable by the admin/user, not by the service account.
+> Use a dedicated repository such as `C:\models` and keep the directory writeable by the admin/user, not by the service account.
 > `LocalService` should have read-only access to the model repository and `config.json`.
 > The installer does not modify ACLs on disk automatically; the administrator must ensure that the service account is read-only while the user retains write access.
-> Keep the log directory separate, for example `C:\Temp\ovms\logs`, and allow the service to write there.
+> Keep the log directory separate and allow the service to write there.
 > Do not point the service at a directory that non-administrator accounts can modify without a clear access model.
 
 During the installation, the model repository path will be set in the `OVMS_MODEL_REPOSITORY_PATH` environment variable, which defines the default parameters for the ovms CLI to interact with the service.

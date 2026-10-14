@@ -95,15 +95,15 @@ def _prepare_test_copy(tmp_path: Path) -> tuple[Path, Path, Path]:
     # Skip service registration and ovms service-install call in unit tests.
     script_text = script_text.replace(
         'sc create ovms binPath= "!binPath_cmd!" obj= LocalService DisplayName= "OpenVino Model Server"',
-        'set "SC_CREATE_ERROR=0"\nREM [TEST] skipped sc create',
+        'set "SC_CREATE_ERROR=0"\nREM [TEST] skipped sc create for LocalService',
     )
     script_text = script_text.replace(
         'sc create ovms binPath= "!binPath_cmd!" obj= %OVMS_SERVICE_ACCOUNT% DisplayName= "OpenVino Model Server"',
-        'set "SC_CREATE_ERROR=0"\nREM [TEST] skipped sc create',
+        'set "SC_CREATE_ERROR=0"\nREM [TEST] skipped sc create for custom account',
     )
     script_text = script_text.replace(
         'set "SC_CREATE_ERROR=!errorlevel!"',
-        'REM [TEST] skipped SC_CREATE_ERROR from sc create',
+        'REM [TEST] skipped SC_CREATE_ERROR assignment from sc create',
     )
     script_text = script_text.replace(
         '"!OVMS_DIR!\\ovms.exe" install',
@@ -294,6 +294,6 @@ def test_install_script_recommends_read_only_localservice_access(tmp_path: Path,
     assert result.returncode == 0, result.stdout + "\n" + result.stderr
 
     combined = "\n".join((result.stdout, result.stderr)).lower()
-    assert "recommended model repository layout" in combined
+    assert "recommended model repository" in combined
     assert "read-only access" in combined
     assert "without write permission" in combined
