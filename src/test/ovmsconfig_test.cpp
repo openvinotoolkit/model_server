@@ -949,7 +949,7 @@ TEST_F(OvmsConfigDeathTest, hfPullNoRepositoryPath) {
 }
 
 TEST_F(OvmsConfigDeathTest, ociPullWithGgufFilename) {
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
@@ -968,7 +968,7 @@ TEST_F(OvmsConfigDeathTest, ociPullWithGgufFilename) {
 TEST_F(OvmsConfigDeathTest, ociPullWithoutTask) {
     // The task cannot be inferred from a registry reference without pulling
     // the image, which must not happen while the CLI is still being parsed.
-    char* n_argv[] = {
+    const char* n_argv[] = {
         "ovms",
         "--pull",
         "--source_model",
