@@ -85,7 +85,7 @@ set "binPath_cmd=\"!OVMS_DIR!ovms.exe\" --rest_port 8000 --config_path \"!config
 if /I "%OVMS_SERVICE_ACCOUNT%"=="LocalService" (
     sc create ovms binPath= "!binPath_cmd!" obj= LocalService DisplayName= "OpenVino Model Server"
 ) else (
-    sc create ovms binPath= "!binPath_cmd!" obj= %OVMS_SERVICE_ACCOUNT% DisplayName= "OpenVino Model Server"
+    sc create ovms binPath= "!binPath_cmd!" obj= "!OVMS_SERVICE_ACCOUNT!" DisplayName= "OpenVino Model Server"
 )
 set "SC_CREATE_ERROR=!errorlevel!"
 if "!SC_CREATE_ERROR!"=="1073" (
