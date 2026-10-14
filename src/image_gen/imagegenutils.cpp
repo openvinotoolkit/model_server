@@ -262,31 +262,22 @@ absl::Status ensureCommonValidations(ov::AnyMap& requestOptions, const ovms::Ima
     // Basic sanity checks that apply to both static and dynamic modes
     auto it = requestOptions.find("width");
     if (it != requestOptions.end()) {
-        auto width = it->second.as<int>();
+        auto width = it->second.as<int64_t>();
         if (width <= 0) {
-            return absl::InvalidArgumentError(absl::StrCat("width must be higher than 0"));
+            return absl::InvalidArgumentError(absl::StrCat("requested width must be higher than 0, but got ", width));
+        }
+        if (width > args.maxResolution.first) {
+            return absl::InvalidArgumentError(absl::StrCat("requested width ", width, " exceeds maxResolution width: ", args.maxResolution.first));
         }
     }
     it = requestOptions.find("height");
     if (it != requestOptions.end()) {
         auto height = it->second.as<int>();
         if (height <= 0) {
-            return absl::InvalidArgumentError(absl::StrCat("height must be higher than 0"));
+            return absl::InvalidArgumentError(absl::StrCat("requested height must be higher than 0, but got ", height));
         }
-    }
-
-    auto widthIt = requestOptions.find("width");
-    if (widthIt != requestOptions.end()) {
-        auto width = widthIt->second.as<int64_t>();
-        if (width > args.maxResolution.first) {
-            return absl::InvalidArgumentError(absl::StrCat("width ", width, " exceeds maxResolution width: ", args.maxResolution.first));
-        }
-    }
-    auto heightIt = requestOptions.find("height");
-    if (heightIt != requestOptions.end()) {
-        auto height = heightIt->second.as<int64_t>();
         if (height > args.maxResolution.second) {
-            return absl::InvalidArgumentError(absl::StrCat("height ", height, " exceeds maxResolution height: ", args.maxResolution.second));
+            return absl::InvalidArgumentError(absl::StrCat("requested height ", height, " exceeds maxResolution height: ", args.maxResolution.second));
         }
     }
 

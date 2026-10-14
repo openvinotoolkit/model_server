@@ -512,7 +512,8 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsWidth0) {
     auto requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, DEFAULTIMAGE_GEN_ARGS);
     ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
     auto& err = std::get<absl::Status>(requestOptions);
-    EXPECT_EQ(err.message(), "width must be higher than 0");
+
+    EXPECT_THAT(err.message(), ::testing::HasSubstr("width must be higher than 0"));
 }
 TEST(Text2ImageTest, getImageGenerationRequestOptionsHeight0) {
     ovms::HttpPayload payload;
@@ -529,7 +530,7 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsHeight0) {
     auto requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, DEFAULTIMAGE_GEN_ARGS);
     ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
     auto& err = std::get<absl::Status>(requestOptions);
-    EXPECT_EQ(err.message(), "height must be higher than 0");
+    EXPECT_THAT(err.message(), ::testing::HasSubstr("height must be higher than 0"));
 }
 TEST(Text2ImageTest, getImageGenerationRequestOptionsN0) {
     ovms::HttpPayload payload;
