@@ -61,7 +61,7 @@ static InputRequest makeChatRequest(ov::genai::ChatHistory history) {
 }
 
 // ---------------------------------------------------------------------------
-// Fixture: SmolLM2-360M-Instruct (model WITH a chat template)
+// Fixture: mzeglars/dummy-cyclic-gpt2-ov (model WITH a chat template)
 // ---------------------------------------------------------------------------
 
 static std::unique_ptr<ov::genai::Tokenizer> sharedTokenizer;
@@ -70,7 +70,7 @@ class ChatTemplateProcessorTest : public ::testing::Test {
 protected:
     static void SetUpTestSuite() {
         sharedTokenizer = std::make_unique<ov::genai::Tokenizer>(getGenericFullPathForSrcTest(
-            "/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct"));
+            "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov"));
     }
 
     static void TearDownTestSuite() {

@@ -75,7 +75,7 @@ class InputProcessingIntegrationTest : public testing::TestWithParam<Endpoint> {
 protected:
     static void SetUpTestSuite() {
         sharedTokenizer = std::make_unique<ov::genai::Tokenizer>(getGenericFullPathForSrcTest(
-            "/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct"));
+            "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov"));
     }
 
     static void TearDownTestSuite() {
@@ -642,7 +642,7 @@ TEST_P(InputProcessingIntegrationTest, InvalidBase64VideoFrame_VideoDecodingFail
 
 TEST(InputProcessingEquivalenceTest, ChatAndResponsesProduceSamePromptAndImages) {
     const std::string tokPath = getGenericFullPathForSrcTest(
-        "/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct");
+        "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov");
     // The tokenizer is shared between both endpoint runs in this one test.
     ov::genai::Tokenizer tokenizer(tokPath);
 

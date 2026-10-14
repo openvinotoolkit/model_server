@@ -5879,7 +5879,7 @@ protected:
     // (TextGenerationDetector::scan in src/default_task_detector.cpp) only
     // recognizes architectures ending in ForCausalLM/ForConditionalGeneration;
     // the dummy model reports GPT2LMHeadModel, which isn't matched.
-    std::string srcModelDir = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct");
+    std::string srcModelDir = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov");
 #ifdef __linux__
     std::string tempDir;
     std::string modelDir;

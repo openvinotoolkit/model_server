@@ -30,7 +30,6 @@ IF /I EXIST c:\opt\llm_testing (
 
 set "EMBEDDING_MODEL=thenlper/gte-small"
 set "RERANK_MODEL=BAAI/bge-reranker-base"
-set "TEXT_GENERATION_MODEL=HuggingFaceTB/SmolLM2-360M-Instruct"
 set "FACEBOOK_MODEL=facebook/opt-125m"
 :: Dummy cyclic models used by LLM/VLM tests instead of real downloaded models;
 set "DUMMY_LLM_MODEL=mzeglars/dummy-cyclic-gpt2-ov"
