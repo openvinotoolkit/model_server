@@ -6,16 +6,13 @@ services:
     container_name: ovms-llm
     entrypoint: []
     user: "${HOST_UID}:${HOST_GID}"
-${OVMS_GPU_CONFIG}
+${GPU_ARGS}
     ports:
       - "${OVMS_REST_PORT:-8000}:8000"  # REST API
-      - "${OVMS_GRPC_PORT:-9000}:9000"  # gRPC API
     volumes:
       # Model cache directory - OVMS will materialize models here on --source_model pull
       # Defaults to ${HOME}/ovms-openhands/models if not set
       - ${MODEL_CACHE_DIR:-./docker/models}:/models:rw
-      # WSL library dependencies for GPU passthrough (harmless on native Linux)
-      - ${WSL_LIBS:-/.nonexistent:/.nonexistent:ro}
     environment:
       # Hugging Face token for gated models.
       HF_TOKEN: ${HF_TOKEN:-}
@@ -23,7 +20,6 @@ ${OVMS_GPU_CONFIG}
       MODEL_ID: ${MODEL_ID}
       LOCAL_NAME: ${LOCAL_NAME}
       TARGET_DEVICE: ${TARGET_DEVICE}
-      REASONING_PARSER: ${REASONING_PARSER}
       # Proxy configuration (forwarded from host if set)
       http_proxy: ${http_proxy:-}
       https_proxy: ${https_proxy:-}
@@ -32,22 +28,18 @@ ${OVMS_GPU_CONFIG}
       no_proxy: ${no_proxy:-}
       NO_PROXY: ${NO_PROXY:-}
     command:
-      - /bin/bash
-      - -c
-      - |
-        CMD_ARGS=(
-          --model_repository_path /models
-          --source_model "${MODEL_ID}"
-          --model_name "${LOCAL_NAME}"
-          --task text_generation
-          --target_device "${TARGET_DEVICE}"
-          --port "9000"
-          --rest_port "8000"
-        )
-        if [[ "${REASONING_PARSER}" != "none" ]]; then
-          CMD_ARGS+=(--reasoning_parser "${REASONING_PARSER}")
-        fi
-        exec ovms "$${CMD_ARGS[@]}"
+      - --model_repository_path
+      - /models
+      - --source_model
+      - "${MODEL_ID}"
+      - --model_name
+      - "${LOCAL_NAME}"
+      - --task
+      - text_generation
+      - --target_device
+      - "${TARGET_DEVICE}"
+      - --rest_port
+      - "8000"
     networks:
       - ovms-net
     restart: unless-stopped
@@ -71,17 +63,10 @@ ${OVMS_GPU_CONFIG}
       LLM_API_KEY: unused
       # Generation parameters
       LLM_TEMPERATURE: "0.0"
-      # Generation circuit breaker - prevents runaway agent loops.
-      # Increase for complex tasks, but keep conservative for stability.
       LLM_MAX_OUTPUT_TOKENS: "5000"
-      # Context window limit - adjust based on model's actual capacity.
-      # Some modern models support 32k+ tokens.
       LLM_MAX_INPUT_TOKENS: "4096"
-      # Request timeout in milliseconds. Increased from default to accommodate
-      # larger models, CPU inference, and first-token latency.
       LLM_TIMEOUT: "120000"
       # Memory limit for OpenHands runtime sandboxes (agent code execution).
-      # Adjust based on available host RAM.
       SANDBOX_DOCKER_ARGS: --memory=1536m --memory-swap=1536m
       # Proxy configuration (forwarded from host if set)
       http_proxy: ${http_proxy:-}
