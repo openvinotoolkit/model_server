@@ -94,6 +94,10 @@ def _prepare_test_copy(tmp_path: Path) -> tuple[Path, Path, Path]:
     script_text = source.read_text(encoding="utf-8")
     # Skip service registration and ovms service-install call in unit tests.
     script_text = script_text.replace(
+        'sc create ovms binPath= "!binPath_cmd!" obj= "!OVMS_SERVICE_ACCOUNT!" DisplayName= "OpenVino Model Server"',
+        'set "SC_CREATE_ERROR=0"\nREM [TEST] skipped sc create for configured account',
+    )
+    script_text = script_text.replace(
         'sc create ovms binPath= "!binPath_cmd!" obj= LocalService DisplayName= "OpenVino Model Server"',
         'set "SC_CREATE_ERROR=0"\nREM [TEST] skipped sc create for LocalService',
     )

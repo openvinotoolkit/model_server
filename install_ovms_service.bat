@@ -38,15 +38,19 @@ IF "%~2"=="" (
     set "OVMS_SERVICE_ACCOUNT=%~2"
 )
 
+set "OVMS_SERVICE_ACCOUNT_INPUT=%OVMS_SERVICE_ACCOUNT%"
+if /I "%OVMS_SERVICE_ACCOUNT_INPUT%"=="LocalService" (
+    set "OVMS_SERVICE_ACCOUNT=NT AUTHORITY\LocalService"
+)
+if /I "%OVMS_SERVICE_ACCOUNT_INPUT%"=="LocalSystem" (
+    set "OVMS_SERVICE_ACCOUNT=NT AUTHORITY\LocalSystem"
+)
 set "OVMS_SERVICE_ACCOUNT_IDENTITY=%OVMS_SERVICE_ACCOUNT%"
 set "OVMS_SC_ACCOUNT_ARG=%OVMS_SERVICE_ACCOUNT%"
-if /I "%OVMS_SERVICE_ACCOUNT%"=="LocalService" (
-    set "OVMS_SC_ACCOUNT_ARG=LocalService"
-)
 
 REM Recommended default: use a dedicated model repository such as C:\models and keep it writeable by the admin/user.
 REM The LocalService account should have read access only; it should not be granted write permissions on the model repository.
-if /I "%OVMS_SERVICE_ACCOUNT%"=="LocalService" (
+if /I "%OVMS_SERVICE_ACCOUNT_INPUT%"=="LocalService" (
     echo [NOTE] Recommended model repository: use a dedicated directory such as C:\models.
     echo [NOTE] Grant NT AUTHORITY\LocalService read-only access to the model repository and config.json.
     echo [NOTE] Keep write access for the admin/user and leave the service account without write permission.
@@ -82,15 +86,11 @@ set "OVMS_DIR=%~dp0"
 ::::::::::::::::::::::: Create the service
 REM Build binPath carefully to avoid quoting issues with delayed expansion
 set "binPath_cmd=\"!OVMS_DIR!ovms.exe\" --rest_port 8000 --config_path \"!config_path!\" --log_level INFO --log_path \"!OVMS_DIR!ovms_server.log\""
-if /I "%OVMS_SERVICE_ACCOUNT%"=="LocalService" (
-    sc create ovms binPath= "!binPath_cmd!" obj= LocalService DisplayName= "OpenVino Model Server"
-) else (
-    sc create ovms binPath= "!binPath_cmd!" obj= "!OVMS_SERVICE_ACCOUNT!" DisplayName= "OpenVino Model Server"
-)
+sc create ovms binPath= "!binPath_cmd!" obj= "!OVMS_SERVICE_ACCOUNT!" DisplayName= "OpenVino Model Server"
 set "SC_CREATE_ERROR=!errorlevel!"
 if "!SC_CREATE_ERROR!"=="1073" (
     echo [INFO] Service ovms already exists. Updating service configuration.
-    sc config ovms binPath= "!binPath_cmd!" obj= !OVMS_SC_ACCOUNT_ARG! DisplayName= "OpenVino Model Server"
+    sc config ovms binPath= "!binPath_cmd!" obj= "!OVMS_SC_ACCOUNT_ARG!" DisplayName= "OpenVino Model Server"
     if !errorlevel! neq 0 (
         echo [ERROR] sc config ovms failed !errorlevel!
         exit /b !errorlevel!
