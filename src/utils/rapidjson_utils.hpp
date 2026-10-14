@@ -26,7 +26,7 @@ void addJsonOrStringMember(rapidjson::Value& obj, const char* key, const std::st
 
 // Default maximum nesting depth allowed for incoming JSON request bodies.
 inline constexpr std::size_t DEFAULT_MAX_JSON_NESTING_DEPTH = 100;
-inline constexpr std::size_t DEFAULT_MAX_JSON_COMPLEXITY = 8ull * 1024 * 1024;
+inline constexpr std::size_t DEFAULT_MAX_JSON_COMPLEXITY = 128ull * 1024 * 1024;
 
 // Parses `json` into `doc` with iterative parsing and a nesting depth limit.
 // Pass 1: lightweight depth-only scan (no DOM allocation) — aborts early on

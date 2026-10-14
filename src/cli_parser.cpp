@@ -112,7 +112,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, const
                 cxxopts::value<size_t>(),
                 "GRPC_MEMORY_QUOTA")
             ("json_max_complexity",
-                "Maximum JSON SAX event count allowed before request parsing is rejected. Default value is 8388608.",
+                "Maximum JSON SAX event count allowed before request parsing is rejected. Default value is 134217728.",
                 cxxopts::value<size_t>(),
                 "JSON_MAX_COMPLEXITY")
             ("rest_workers",
