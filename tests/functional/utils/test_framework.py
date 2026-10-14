@@ -122,6 +122,11 @@ def skip_if_mediapipe_disabled():
     return skip_if(mediapipe_disable, msg=FrameworkMessages.MEDIAPIPE_DISABLED)
 
 
+def skip_if_python_disabled():
+    # Kept for external test suites; Python support is always enabled.
+    return pytest.mark.skipif(False, reason="Python support is always enabled")
+
+
 def skip_if_cliloader_disabled():
     return skip_if(not run_ovms_with_opencl_trace, msg=FrameworkMessages.CLILOADER_DISABLED)
 
