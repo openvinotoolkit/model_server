@@ -66,7 +66,7 @@ ESPEAK ?= 1
 BUILD_NGINX ?= 0
 MEDIAPIPE_DISABLE ?= 0
 FUZZER_BUILD ?= 0
-DOCKER_BUILDKIT ?= 1
+export DOCKER_BUILDKIT ?= 1
 BUILDX ?= $(if $(filter 1,$(DOCKER_BUILDKIT)),buildx,)
 KONFLUX ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
@@ -123,20 +123,17 @@ else
   OV_TRACING_PARAMS = ""
 endif
 
+OV_USE_BINARY ?= 1
+
 ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   TARGET_DISTRO_PARAMS = " --//:distro=ubuntu"
-  OV_USE_BINARY ?= 1
   ifeq ($(findstring ubuntu22,$(BASE_OS)),ubuntu22)
-	ifeq ($(OV_USE_BINARY),0)
-  		$(error OV_USE_BINARY = 0 not supported on Ubuntu22 OS)
-  	endif
+    ifeq ($(OV_USE_BINARY),0)
+      $(error OV_USE_BINARY = 0 not supported on Ubuntu22 OS)
+    endif
   endif
 else ifeq ($(findstring redhat,$(BASE_OS)),redhat)
   TARGET_DISTRO_PARAMS = " --//:distro=redhat"
-  OV_USE_BINARY ?= 0
-  ifeq ($(OV_USE_BINARY),1)
-  	$(error OV_USE_BINARY = 1 not supported on RHEL OS)
-  endif
 else
   $(error BASE_OS must be either ubuntu or redhat)
 endif

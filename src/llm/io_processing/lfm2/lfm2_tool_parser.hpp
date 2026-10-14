@@ -51,7 +51,7 @@ public:
         OutputParsingConfig cfg;
         cfg.startTags = {"<|tool_call_start|>"};
         cfg.tokenIdStartTags = {"<|tool_call_start|>"};
-        cfg.endTag = "<|tool_call_end|>";
+        cfg.endTags = {"<|tool_call_end|>"};
         cfg.needsSpecialTokens = true;
         return cfg;
     }

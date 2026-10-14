@@ -545,6 +545,103 @@ TEST_F(GptOssOutputStreamParserTest, HolisticStreamingReasoning) {
     }
 }
 
+TEST_F(GptOssOutputStreamParserTest, RepeatedAnalysisSegmentWithAssistantPrefix) {
+    test({
+        {"<|channel|>analysis<|message|>first<|end|>", ov::genai::GenerationFinishReason::NONE,
+            {R"({"delta":{"reasoning_content":"first"}})"}},
+        {"<|start|>assistant<|channel|>analysis<|message|>second<|end|>", ov::genai::GenerationFinishReason::NONE,
+            {R"({"delta":{"reasoning_content":"second"}})"}},
+    });
+}
+
+TEST_F(GptOssOutputStreamParserTest, ToolCallInAssistantRoleHeaderWithoutChannel) {
+    test({
+        {"<|start|>assistant to=functions.echo ", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|constrain|>", ov::genai::GenerationFinishReason::NONE,
+            {R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"echo"}}]}})"}},
+        {"json", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{\"value\":1}", ov::genai::GenerationFinishReason::NONE,
+            {R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"value\":1}"}}]}})"}},
+        {"<|call|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+    });
+}
+
+TEST_F(GptOssOutputStreamParserTest, CoalescedToolCallEmitsNameOnly) {
+    for (const auto& metadata : std::vector<std::string>{"", "<|constrain|>json"}) {
+        for (const auto& terminator : std::vector<std::string>{"", "<|call|>"}) {
+            test({
+                {"<|start|>assistant to=functions.echo " + metadata + "<|message|>{\"value\":1}" + terminator,
+                    ov::genai::GenerationFinishReason::NONE,
+                    {R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"echo"}}]}})"}},
+            });
+        }
+    }
+}
+
+TEST_F(GptOssOutputStreamParserTest, ToolCallSurvivesGarbledConstrainMetadata) {
+    for (const auto& constrainMetadata : std::vector<std::string>{"wcommentary json", "??commentary json"}) {
+        test({
+            {"<|start|>assistant to=functions.echo ", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+            {"<|constrain|>", ov::genai::GenerationFinishReason::NONE,
+                {R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"echo"}}]}})"}},
+            {constrainMetadata, ov::genai::GenerationFinishReason::NONE, std::nullopt},
+            {"<|message|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+            {"{\"value\":1}", ov::genai::GenerationFinishReason::NONE,
+                {R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"value\":1}"}}]}})"}},
+            {"<|call|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        });
+    }
+}
+
+TEST_F(GptOssOutputStreamParserTest, ToolResponseIsDiscardedBeforeFinalMessage) {
+    for (const auto& callTerminator : std::vector<std::string>{"<|call|>", "<|end|>", "<|return|>"}) {
+        test({
+            {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+            {"commentary to=functions.echo ", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+            {"<|message|>", ov::genai::GenerationFinishReason::NONE,
+                {R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"echo"}}]}})"}},
+            {"{}" + callTerminator, ov::genai::GenerationFinishReason::NONE,
+                {R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{}"}}]}})"}},
+            {"<|start|>functions.echo to=assistant<|message|>tool result<|end|><|start|>assistant<|channel|>final<|message|>do",
+                ov::genai::GenerationFinishReason::NONE,
+                {R"({"delta":{"content":"do"}})"}},
+            {"ne<|end|>", ov::genai::GenerationFinishReason::NONE,
+                {R"({"delta":{"content":"ne"}})"}},
+        });
+    }
+}
+
+TEST_F(GptOssOutputStreamParserTest, AssistantCommentaryAndFinalAfterToolResponse) {
+    test({
+        {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"commentary to=functions.echo ", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|message|>", ov::genai::GenerationFinishReason::NONE,
+            {R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"echo"}}]}})"}},
+        {"{}<|call|>", ov::genai::GenerationFinishReason::NONE,
+            {R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{}"}}]}})"}},
+        {"<|start|>functions.echo to=assistant<|message|>tool result<|end|><|start|>assistant<|channel|>commentary<|message|>Working.<|end|><|start|>assistant<|channel|>final<|message|>Done.<|end|>",
+            ov::genai::GenerationFinishReason::NONE,
+            {R"({"delta":{"content":"Working.Done."}})"}},
+    });
+}
+
+TEST_F(GptOssOutputStreamParserTest, ToolTerminatorPreservesPostCallSuffix) {
+    for (const auto& callTerminator : std::vector<std::string>{"<|call|>", "<|end|>", "<|return|>"}) {
+        test({
+            {"<|channel|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+            {"commentary to=functions.echo ", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+            {"<|message|>", ov::genai::GenerationFinishReason::NONE,
+                {R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"echo"}}]}})"}},
+            {"{}" + callTerminator + "<|start|>functions.echo to=assistant<|message|>tool result<|end|><|start|>assistant<|channel|>final<|message|>done<|end|>",
+                ov::genai::GenerationFinishReason::NONE,
+                {R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{}"}}]}})"}},
+            {"", ov::genai::GenerationFinishReason::NONE,
+                {R"({"delta":{"content":"done"}})"}},
+        });
+    }
+}
+
 TEST_F(GptOssOutputStreamParserTest, HolisticStreamingTools) {
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
         // Reasoning
