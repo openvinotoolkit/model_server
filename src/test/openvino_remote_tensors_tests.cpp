@@ -951,6 +951,18 @@ TEST_F(CAPINonCopy, GStreamerOverlayEncodePipeline) {
 // GPU VA surface end to end (FULL_VA_SURFACE=true). The overlay maps the surface
 // in place (no host NV12 branch, no full-frame download) and the sink encodes it
 // with the hardware encoder. Proves the annotated MP4 is still readable.
+//
+// KNOWN FAILURE (pre-existing, not a P6b regression): on the current GPU/VA host
+// this test fails at `graph.WaitUntilDone()` below — the hardware (vah264lpenc)
+// encode graph does not finalize. Verified it reproduces identically at commit
+// 032d40685 (the commit that FIRST introduced this test; it does not exist in
+// the parent, so it has never passed here) with NONE of the P6b/RTSP changes
+// present. The sibling SW-encode test (GStreamerOverlayEncodePipeline,
+// full_va_surface=false, openh264enc) finalizes fine, isolating the fault to the
+// VA hardware-encode path. Logs show inference + overlay run (frames produced),
+// then WaitUntilDone() returns a non-OK status with no explicit GStreamer error
+// surfaced (the status string is swallowed). Root cause of the vah264lpenc EOS
+// finalize is still open — tracked separately from the RTSP (P6b) work.
 TEST_F(CAPINonCopy, GStreamerOverlayEncodeVaPipeline) {
 #ifndef BUILD_VAAPITESTS
     GTEST_SKIP() << "Test not enabled on UBI images";
@@ -1027,6 +1039,10 @@ TEST_F(CAPINonCopy, GStreamerOverlayEncodeVaPipeline) {
         {"output_mode", mediapipe::MakePacket<std::string>("file")},
     };
     ASSERT_TRUE(graph.StartRun(sidePackets).ok());
+    // KNOWN PRE-EXISTING FAILURE on the current VA host: this returns non-OK
+    // because the vah264lpenc encode graph fails to finalize. Reproduces at
+    // 032d40685 (first commit with this test) without any P6b change. See the
+    // test header comment above for full context.
     ASSERT_TRUE(graph.WaitUntilDone().ok()) << "graph did not finalize (sink EOS failed?)";
 
     EXPECT_GT(graphFrames.load(), 0);
