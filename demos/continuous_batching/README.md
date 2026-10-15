@@ -8,7 +8,7 @@ That makes it easy to use and efficient especially on Intel® Xeon® processors 
 
 ## Prerequisites
 
-**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploy-and-operate/baremetal.md)
 
 **(Optional) Client**: Git and Python for using OpenAI client package and vLLM benchmark app
 
@@ -30,7 +30,7 @@ docker run -d ${GPU_ARGS} -p 8000:8000 --rm --user $(id -u):$(id -g) -v ${HOME}/
 
 **Binary package on Windows 11**
 
-After ovms is installed according to steps from [baremetal deployment guide](../../docs/deploying_server_baremetal.md), run the following command:
+After ovms is installed according to steps from [baremetal deployment guide](../../docs/deploy-and-operate/baremetal.md), run the following command:
 
 ```bat
 ovms.exe --model_repository_path c:\models --source_model OpenVINO/Qwen3-30B-A3B-Instruct-2507-int4-ov --rest_port 8000 --model_name Qwen3-30B-A3B-Instruct-2507-int4-ov
@@ -373,8 +373,8 @@ Check the [guide of using lm-evaluation-harness](./accuracy/README.md)
 - [Official OpenVINO LLM models in HuggingFace](https://huggingface.co/collections/OpenVINO/llm)
 - [Export models to OpenVINO format](../common/export_models/README.md)
 - [Supported LLM models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#large-language-models-llms)
-- [Chat Completions API](../../docs/model_server_rest_api_chat.md)
-- [Completions API](../../docs/model_server_rest_api_completions.md)
-- [Responses API](../../docs/model_server_rest_api_responses.md)
-- [Writing client code](../../docs/clients_genai.md)
-- [LLM calculator reference](../../docs/llm/reference.md)
+- [Chat Completions API](../../docs/using-the-models/rest-api-chat.md)
+- [Completions API](../../docs/using-the-models/rest-api-completions.md)
+- [Responses API](../../docs/using-the-models/rest-api-responses.md)
+- [Writing client code](../../docs/using-the-models/genai-api-index.md)
+- [LLM calculator reference](../../docs/serving-custom-pipelines/genai-pipeline-reference.md)

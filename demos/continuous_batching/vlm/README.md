@@ -7,7 +7,7 @@ Text generation use case is exposed via OpenAI API `chat/completions` and `respo
 
 ## Prerequisites
 
-**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploy-and-operate/baremetal.md)
 
 **(Optional) Client**: git and Python for using OpenAI client package and vLLM benchmark app
 
@@ -65,7 +65,7 @@ Let's send a request with text an image in the messages context.
 ![zebra](../../../demos/common/static/images/zebra.jpeg) 
 
 :::{dropdown} **Unary call with curl using image url**
-**Note**: using urls in request requires `--allowed_media_domains` parameter described [here](../../../docs/parameters.md)
+**Note**: using urls in request requires `--allowed_media_domains` parameter described [here](../../../docs/reference/parameters.md)
 
 ```bash
 curl http://localhost:8000/v1/chat/completions  -H "Content-Type: application/json" -d "{ \"model\": \"OpenVINO/Qwen3.6-35B-A3B-int4-ov\", \"messages\":[{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"Describe what is on the picture.\"},{\"type\": \"image_url\", \"image_url\": {\"url\": \"http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg\"}}]}], \"max_completion_tokens\": 100}"
@@ -96,7 +96,7 @@ curl http://localhost:8000/v1/chat/completions  -H "Content-Type: application/js
 :::
 
 :::{dropdown} **Unary call with cURL using Responses API**
-**Note**: Using urls in request requires `--allowed_media_domains` parameter described [here](../../../docs/parameters.md)
+**Note**: Using urls in request requires `--allowed_media_domains` parameter described [here](../../../docs/reference/parameters.md)
 
 ```bash
 curl http://localhost:8000/v1/responses \
@@ -309,7 +309,7 @@ Check the [guide of using lm-evaluation-harness](../accuracy/README.md)
 - [Official OpenVINO LLM models in HuggingFace](https://huggingface.co/collections/OpenVINO/llm)
 - [Supported VLM models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#visual-language-models-vlms)
 - [Export models to OpenVINO format](../../../demos/common/export_models/README.md)
-- [Chat Completions API](../../../docs/model_server_rest_api_chat.md)
-- [Responses API](../../../docs/model_server_rest_api_responses.md)
-- [Writing client code](../../../docs/clients_genai.md)
-- [LLM calculator reference](../../../docs/llm/reference.md)
+- [Chat Completions API](../../../docs/using-the-models/rest-api-chat.md)
+- [Responses API](../../../docs/using-the-models/rest-api-responses.md)
+- [Writing client code](../../../docs/using-the-models/genai-api-index.md)
+- [LLM calculator reference](../../../docs/serving-custom-pipelines/genai-pipeline-reference.md)

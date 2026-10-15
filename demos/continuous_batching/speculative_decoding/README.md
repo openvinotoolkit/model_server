@@ -17,7 +17,7 @@ All strategies share the same server API — only the generation parameters diff
 
 **Model preparation**: Python 3.9 or higher with pip and a Hugging Face account
 
-**Model Server deployment**: Docker Engine or the OVMS binary package installed according to the [bare-metal deployment guide](../../../docs/deploying_server_baremetal.md)
+**Model Server deployment**: Docker Engine or the OVMS binary package installed according to the [bare-metal deployment guide](../../../docs/deploy-and-operate/baremetal.md)
 
 # MTP (Multi-Token Prediction)
 
@@ -286,7 +286,7 @@ docker run -d ${GPU_ARGS} --user $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/
 
 :::{dropdown} **Deploying on Bare Metal**
 
-Install OVMS as described in the [deployment guide](../../../docs/deploying_server_baremetal.md).
+Install OVMS as described in the [deployment guide](../../../docs/deploy-and-operate/baremetal.md).
 
 ```text
 ovms --rest_port 8000 --model_path c:\models\Qwen\Qwen3-8B --model_name Qwen/Qwen3-8B

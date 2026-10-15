@@ -1,0 +1,8 @@
+{
+  "label": "Deploy and Operate",
+  "position": 4,
+  "link": {
+    "type": "doc",
+    "id": "ovms_docs_deploying_server"
+  }
+}

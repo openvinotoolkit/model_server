@@ -10,7 +10,7 @@ Check supported [Speech Recognition Models](https://openvinotoolkit.github.io/op
 
 **OVMS version 2026.3** This demo requires version 2026.3 or nightly release.
 
-**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploy-and-operate/baremetal.md)
 
 **Client**: curl or Python for using OpenAI client package
 
@@ -25,7 +25,7 @@ The model can be pulled directly by OVMS without any conversion step.
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before starting OVMS to connect to the HF Hub.
 > **Note:** Kokoro voices are loaded from the `voices/` directory in the model repository. OVMS loads each voice file under the filename without the extension, for example `af_alloy` for `af_alloy.bin`.
 
-See the [T2s calculator documentation](../../docs/speech_generation/reference.md) to learn more about configuration options and limitations.
+See the [T2s calculator documentation](../../docs/serving-custom-pipelines/speech-generation-pipeline-reference.md) to learn more about configuration options and limitations.
 
 ### Deployment
 
@@ -142,7 +142,7 @@ Wait for the model to load. You can check the status with a simple command:
 curl http://localhost:8000/v1/models
 ```
 
-The default configuration should work in most cases but the parameters can be tuned via OVMS arguments. See the [s2t calculator documentation](../../docs/speech_recognition/reference.md) to learn more about configuration options and limitations.
+The default configuration should work in most cases but the parameters can be tuned via OVMS arguments. See the [s2t calculator documentation](../../docs/serving-custom-pipelines/speech-recognition-pipeline-reference.md) to learn more about configuration options and limitations.
 
 ### Request Generation 
 Transcribe the speech.wav file generated in the [Speech generation](#speech-generation) section.

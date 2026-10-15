@@ -1,0 +1,30 @@
+---
+id: ovms_docs_online_config_changes
+sidebar_position: 10
+---
+
+# Online Configuration Updates
+
+### Updating Configuration File
+OpenVINO Model Server monitors changes to the configuration file and applies required modifications during runtime using two different methods:
+
+1. Automatically, with an interval defined by the parameter `--file_system_poll_wait_seconds`. (introduced in version 2021.1)
+
+2. On demand, using the Config Reload REST API endpoint `POST /v1/config/reload`. (introduced in version 2021.3)
+
+Configuration reload triggers the following operations:
+
+- new model(s) or [MediaPipe Graphs](../serving-custom-pipelines/mediapipe-graphs.md) are added to the configuration file, loaded and served.
+- changes to the configured model storage (e.g. new model version is added) are applied. 
+- changes to the configuration of deployed models and [MediaPipe Graphs](../serving-custom-pipelines/mediapipe-graphs.md) are applied.
+- all model versions will be reloaded when there is a change to the model configuration.
+- when a deployed model or [MediaPipe Graph](../serving-custom-pipelines/mediapipe-graphs.md) is deleted from `config.json`, it will be unloaded completely from the server after already running inference operations have been completed.
+- changes to [custom loaders](../serving-custom-pipelines/custom-model-loader.md) are applied.
+
+Model Server behavior in case of errors during configuration reloading:
+
+- if a new `config.json` is not compliant with JSON schema, no changes are applied to the served models.
+- if the new model, [MediaPipe Graph](../serving-custom-pipelines/mediapipe-graphs.md) or [custom loader](../serving-custom-pipelines/custom-model-loader.md) has an invalid configuration, it will be ignored until the next configuration reload.
+- an error occurs when a model, [MediaPipe Graph](../serving-custom-pipelines/mediapipe-graphs.md) or [custom loader](../serving-custom-pipelines/custom-model-loader.md) is reloading but does not prevent the reload of the remaining updated models.
+- errors from configuration reload are triggered internally and saved in the logs. If the Config Reload API is used, the response will also contain an error message.
+

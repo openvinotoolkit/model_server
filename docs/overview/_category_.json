@@ -1,0 +1,8 @@
+{
+  "label": "Overview",
+  "position": 1,
+  "link": {
+    "type": "doc",
+    "id": "ovms_what_is_openvino_model_server"
+  }
+}

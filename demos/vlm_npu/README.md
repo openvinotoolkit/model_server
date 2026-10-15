@@ -13,7 +13,7 @@ It is targeted on client machines equipped with NPU accelerator.
 
 **OVMS 2025.1 or higher**
 
-**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploy-and-operate/baremetal.md)
 
 **(Optional) Client**: git and Python for using OpenAI client package and vLLM benchmark app
 
@@ -26,7 +26,7 @@ Create directory for the model:
 mkdir -p models
 ```
 
-The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [LLM calculator documentation](../../docs/llm/reference.md) to learn more about configuration options.
+The default configuration should work in most cases but the parameters can be tuned via `export_model.py` script arguments. Run the script with `--help` argument to check available parameters and see the [LLM calculator documentation](../../docs/serving-custom-pipelines/genai-pipeline-reference.md) to learn more about configuration options.
 
 ## Server Deployment
 
@@ -46,7 +46,7 @@ Assuming you have unpacked model server package, make sure to:
 - **On Windows**: run `setupvars` script
 - **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
 
-as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+as mentioned in [deployment guide](../../docs/deploy-and-operate/baremetal.md), in every new shell that will start OpenVINO Model Server.
 
 ```bat
 ovms --rest_port 8000 --model_repository_path models --source_model OpenVINO/Phi-3.5-vision-instruct-fp16-ov  --task text_generation --target_device NPU
@@ -83,7 +83,7 @@ curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/m
 
 :::{dropdown} **Unary call with curl using image from local filesystem**
 
-Referring to local filesystem images in requests requires passing additional parameter `--allowed_local_media_path` (described in [Model Server Parameters](../../docs/parameters.md) section) when starting docker container: 
+Referring to local filesystem images in requests requires passing additional parameter `--allowed_local_media_path` (described in [Model Server Parameters](../../docs/reference/parameters.md) section) when starting docker container: 
 ```bash
 docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --model_repository_path /models --source_model OpenVINO/Phi-3.5-vision-instruct-fp16-ov  --task text_generation --target_device NPU  --allowed_local_media_path /images
 ```
@@ -249,7 +249,7 @@ Check the [guide of using lm-evaluation-harness](https://github.com/openvinotool
 - only a single response can be returned. Parameter `n` is not supported.
 
 ## References
-- [Chat Completions API](../../docs/model_server_rest_api_chat.md)
-- [Completions API](../../docs/model_server_rest_api_completions.md)
-- [Writing client code](../../docs/clients_genai.md)
-- [LLM calculator reference](../../docs/llm/reference.md)
+- [Chat Completions API](../../docs/using-the-models/rest-api-chat.md)
+- [Completions API](../../docs/using-the-models/rest-api-completions.md)
+- [Writing client code](../../docs/using-the-models/genai-api-index.md)
+- [LLM calculator reference](../../docs/serving-custom-pipelines/genai-pipeline-reference.md)

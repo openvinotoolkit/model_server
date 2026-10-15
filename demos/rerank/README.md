@@ -4,7 +4,7 @@
 
 **Model preparation**: Python 3.10 or higher with pip 
 
-**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploy-and-operate/baremetal.md)
 
 **(Optional) Client**: Python with pip
 
@@ -81,7 +81,7 @@ Assuming you have unpacked model server package, make sure to:
 - **On Windows**: run `setupvars` script
 - **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
 
-as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+as mentioned in [deployment guide](../../docs/deploy-and-operate/baremetal.md), in every new shell that will start OpenVINO Model Server.
 
 Depending on how you prepared models in the first step of this demo, they are deployed to either CPU or GPU (it's defined in `config.json`). If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
 

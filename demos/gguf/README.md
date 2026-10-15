@@ -81,5 +81,5 @@ Example response would be:
 }
 ```
 
-> **NOTE:** Model downloading feature is described in depth in separate documentation page: [Pulling HuggingFaces Models](../../docs/pull_hf_models.md).
+> **NOTE:** Model downloading feature is described in depth in separate documentation page: [Pulling HuggingFaces Models](../../docs/get-models/pull-from-huggingface.md).
 

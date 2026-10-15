@@ -1,0 +1,99 @@
+---
+id: ovms_docs_pull_optimum
+sidebar_position: 3
+---
+
+# OVMS Pull mode with optimum cli
+
+This document describes how to leverage OpenVINO Model Server (OVMS) pull feature to automate deployment of generative models from HF with conversion and quantization in runtime.
+
+You have to use docker image with optimum-cli `openvino/model_server:latest-py` or install additional python dependencies to the baremetal package. Follow the steps described below.
+
+> **Note:** This procedure might increase memory usage during the model conversion and requires downloading the original model. Expect memory usage at least to the level of original model size during the conversion.
+
+## Prepare models folder
+
+```console
+mkdir models
+```
+
+## Add optimum-cli to OVMS installation on windows
+
+```bat
+curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2026.4.0/ovms_windows_2026.4.0_python_on.zip -o ovms.zip
+tar -xf ovms.zip
+ovms\setupvars.bat
+ovms\python\python -m pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+```
+Then use the ovms cli commands described in `Pulling the models` section
+
+## Pulling the models
+
+Using `--pull` parameter, we can use OVMS to download the model, quantize and compress to required format. The model will be prepared to the deployment in the configured `--model_repository_path`. Without `--pull` parameter, OVMS will start serving immediately after the model is prepared.
+
+::::{tab-set}
+:::{tab-item} With Docker
+:sync: docker
+**Required:** Docker Engine installed
+
+```text
+docker run -u $(id -u):$(id -g) --rm -v <model_repository_path>:/models:rw openvino/model_server:latest-py --pull --source_model <model_name_in_HF> --model_repository_path /models --model_name <external_model_name> --target_device <DEVICE> --weight-format int8 --task <task> [TASK_SPECIFIC_PARAMETERS]
+```
+:::
+
+:::{tab-item} On Baremetal Host
+:sync: baremetal
+```text
+ovms --pull --source_model <model_name_in_HF> --model_repository_path <model_repository_path> --model_name <external_model_name> --target_device <DEVICE> --weight-format int8 --task <task> [TASK_SPECIFIC_PARAMETERS]
+```
+:::
+::::
+
+Example for pulling `Qwen/Qwen3-4B`:
+
+```bat
+ovms --pull --source_model "Qwen/Qwen3-4B" --model_repository_path /models --model_name Qwen3-4B --target_device CPU --task text_generation --weight-format int8 
+```
+::::{tab-set}
+:::{tab-item} With Docker
+:sync: docker
+**Required:** Docker Engine installed
+
+```bash
+mkdir -p models
+docker run -u $(id -u):$(id -g) -e HF_HOME=/tmp -e TORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor --rm -v $(pwd)/models:/models:rw openvino/model_server:latest-py --pull --source_model "Qwen/Qwen3-4B" --model_repository_path /models --model_name Qwen3-4B --task text_generation --weight-format int8
+```
+:::
+
+:::{tab-item} On Baremetal Host
+:sync: baremetal
+**Required:** OpenVINO Model Server package - see [deployment instructions](../deploy-and-operate/baremetal.md) for details.
+
+```bat
+ovms --pull --source_model "Qwen/Qwen3-4B" --model_repository_path /models --model_name Qwen3-4B --task text_generation --weight-format int8
+```
+:::
+::::
+
+
+Check [parameters page](../reference/parameters.md) for detailed descriptions of configuration options and parameter usage.
+
+
+## Additional considerations
+
+When using pull mode you need both read and write access rights to local models repository.
+
+You may need read permissions to the source model in Hugging Face Hub. Pass the access token via environment variable just like with hf_cli application.
+
+You can mount the HuggingFace cache to avoid downloading the original model in case it was pulled earlier.
+
+Below is an example pull command with optimum model cache directory sharing for model download:
+
+```bash
+docker run -e TORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor -e HF_HOME=/hf_home/cache --user $(id -u):$(id -g) --group-add=$(id -g) -v ${HOME}/.cache/huggingface/:/hf_home/cache -v $(pwd)/models:/models:rw openvino/model_server:latest-py --pull --model_repository_path /models --source_model meta-llama/Llama-3.2-1B-Instruct --task text_generation --weight-format int8
+```
+
+or deploy without caching the model files with passed HF_TOKEN for authorization:
+```bash
+docker run -p 8000:8000 -e HF_TOKEN=$HF_TOKEN openvino/model_server:latest-py --model_repository_path /tmp --source_model meta-llama/Llama-3.2-1B-Instruct --task text_generation --weight-format int8 --target_device CPU --rest_port 8000
+```

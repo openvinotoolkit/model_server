@@ -1,0 +1,170 @@
+---
+id: ovms_docs_build_from_source
+sidebar_position: 4
+---
+
+# Building from source
+
+This document gives information how to build docker images and the binary package from source with different variants.
+
+## Prerequisites
+
+1. [Docker Engine](https://docs.docker.com/engine/) with Buildx CLI plugin or Podman.
+1. Host with x86_64 architecture
+1. make
+1. bash
+
+ > **Note**: Building Windows Model Server is covered in [Developer Guide for Windows](../developer-and-contributor-documentation/windows-developer-guide.md).
+
+## Makefile and building
+
+Makefile located in root directory of this repository contains all targets needed to build docker images and binary packages. One of these targets is `release_image` which by default builds `openvino/model_server:latest` image.
+
+```bash
+git clone https://github.com/openvinotoolkit/model_server
+cd model_server
+make release_image GPU=1 NPU=1
+````
+
+To build the image with non default configuration, add parameters described below.
+
+## Building Options
+
+### `BASE_OS`
+
+Select base OS:
+- `ubuntu24` for Ubuntu 24.04 (default)
+- `redhat` for Red Hat UBI 9.7
+
+```text
+make release_image BASE_OS=redhat
+```
+
+<hr />
+
+Example:
+
+### `INSTALL_DRIVER_VERSION`
+
+Parameter used to control which GPU driver version will be installed. Supported versions are included in files model_server/install_ubuntu_gpu_drivers.sh and model_server/install_ubuntu_gpu_drivers.sh
+
+
+Example:
+```text
+make release_image BASE_OS=ubuntu INSTALL_DRIVER_VERSION=26.31.39395 GPU=1
+```
+
+<hr />
+
+### `DLDT_PACKAGE_URL`
+
+Parameter used to specify URL to the OpenVINO tar.gz archive, appropriate for the target OS. Here are the [latest public packages from master branch](https://storage.openvinotoolkit.org/repositories/openvino/packages/master/).
+Use this parameter together with `OV_USE_BINARY=1`.
+
+<hr />
+
+### `OV_USE_BINARY`
+
+By default set to `0`. With that setting, OpenVINO backend will be built from sources and `DLDT_PACKAGE_URL` will be omitted.
+Use `OV_SOURCE_BRANCH` and `OV_SOURCE_ORG` to select [OpenVINO repository](https://github.com/openvinotoolkit/openvino) branch and fork. By default the latest tested commit from `master` branch will be used and org `openvinotoolkit`.
+When `OV_USE_BINARY=1`, the OpenVINO backend will be installed from the binary archive set in `DLDT_PACKAGE_URL`.
+
+Example:
+```text
+make release_image OV_USE_BINARY=0 OV_SOURCE_BRANCH=master OV_SOURCE_ORG=openvinotoolkit
+```
+
+Running the unit tests will increase build time and consume more RAM
+
+### `JOBS`
+
+Number of compilation jobs. By default it is set to the number of CPU cores. On hosts with low RAM, this value can be reduced to avoid out of memory errors during the compilation.
+
+```text
+make release_image JOBS=2
+```
+<hr />
+
+### `PYTHON_DISABLE`
+
+When set to `0`, OpenVINO&trade Model Server will be built with [Python Nodes](../using-the-models/python-node-quickstart.md) support. Default value: `0`.
+
+Example:
+```text
+make release_image PYTHON_DISABLE=1
+```
+
+### `MEDIAPIPE_DISABLE`
+
+When set to `0`, OpenVINO&trade Model Server will be built with [MediaPipe](../serving-custom-pipelines/mediapipe-graphs.md) support. Default value: `0`.
+
+Example:
+```text
+make release_image MEDIAPIPE_DISABLE=1 PYTHON_DISABLE=1
+```
+
+ > **Note**: In order to build the image with python nodes support (PYTHON_DISABLE=0) mediapipe have to be enabled (MEDIAPIPE_DISABLE=0)
+
+### `GPU`
+
+When set to `1`, OpenVINO&trade Model Server will be built with the drivers required by [GPU plugin](https://docs.openvino.ai/2026/openvino-workflow/running-inference/inference-devices-and-modes/gpu-device.html) support. Default value: `0`.
+
+Example:
+```text
+make release_image GPU=1
+```
+
+### `TOKEN`
+
+GitHub Personal Access Token (PAT) used to run builds with an authenticated GitHub user when cloning source repositories. This serves as a workaround for GitHub connection stability issues and API rate limits during the build.
+
+Example:
+```text
+make release_image TOKEN=<your_github_token>
+```
+
+## Building Binary Package
+
+The binary packages includes the `ovms` executable and linked libraries for bare metal deployments. It includes also a shared library for the model server CAPI interface. Building `ovms.tar.gz` package is possible by using `targz_package` target:
+
+```text
+make targz_package
+tree dist/ubuntu24
+````
+
+```text
+dist/ubuntu24
+├── ovms.tar.gz
+└── ovms.tar.gz.sha256
+```
+
+### Optional `espeak-ng` for Speech Generation
+
+`espeak-ng` is optional in OVMS builds. It is used by Kokoro speech generation for:
+
+- non-English grapheme-to-phoneme conversion,
+- fallback phonemization of some out-of-vocabulary (OOV) English words.
+
+If you do not need Kokoro non-English support and can accept reduced English OOV fallback behavior, you can:
+
+- skip building `espeak-ng` during image/package build:
+
+```text
+make targz_package ESPEAK=0
+```
+
+- or remove it from an already prepared package by deleting:
+     - `libespeak-ng.so*` from the package `lib` directory
+     - `share/espeak-ng-data/`
+
+Consequences of removing or disabling `espeak-ng`:
+
+- Speech generation endpoint still works for Kokoro English usage.
+- Non-English Kokoro text normalization/phonemization paths that depend on `espeak-ng` are not available.
+- English OOV words no longer use `espeak-ng` fallback, so pronunciation quality/coverage for uncommon words may degrade.
+- In practice, treat Kokoro as English-focused (for example `en-us` and `en-gb`) when `espeak-ng` is not present.
+
+---
+
+Read more details about building and testing changes in [developer guide](../developer-and-contributor-documentation/developer-guide.md).
+
