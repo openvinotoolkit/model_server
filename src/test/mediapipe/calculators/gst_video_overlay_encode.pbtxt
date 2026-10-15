@@ -10,7 +10,8 @@
 # (P6a.2). GstDetectionOverlayCalculator auto-detects the frame memory type, so
 # one graph serves both paths.
 
-input_side_packet: "VIDEO_PATH:video_path"
+input_side_packet: "SOURCE_MODE:source_mode"
+input_side_packet: "SOURCE_URI:source_uri"
 input_side_packet: "WIDTH:width"
 input_side_packet: "HEIGHT:height"
 input_side_packet: "FULL_WIDTH:full_width"
@@ -29,7 +30,8 @@ output_stream: "DETECTION_BOXES:detection_boxes"
 
 node {
   calculator: "GstVideoSourceCalculator"
-  input_side_packet: "VIDEO_PATH:video_path"
+  input_side_packet: "SOURCE_MODE:source_mode"
+  input_side_packet: "SOURCE_URI:source_uri"
   input_side_packet: "WIDTH:width"
   input_side_packet: "HEIGHT:height"
   input_side_packet: "FULL_WIDTH:full_width"

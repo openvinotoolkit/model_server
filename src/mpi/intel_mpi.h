@@ -250,9 +250,9 @@ imp_status_t imp_video_source_create(imp_video_source_t** source,
  * 
  * Standard keys by source type:
  *   IMP_SOURCE_FILE:
- *     - "path": file path (required)
+ *     - "path": local file path (required)
  *   IMP_SOURCE_URL:
- *     - "url": stream URL (required)
+ *     - "url": network URI, including rtsp:// (required)
  *     - "transport": "tcp" or "udp" (RTSP only)
  *     - "username": auth username
  *     - "password": auth password

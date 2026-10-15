@@ -37,7 +37,9 @@
  * emitted with identical Timestamp(frame_index) so the overlay can join them.
  *
  * Side packets:
- *   VIDEO_PATH      : std::string — path to input video file.
+ *   VIDEO_PATH      : std::string — legacy path to input video file.
+ *   SOURCE_MODE     : std::string (opt) — "file" (default) or "rtsp".
+ *   SOURCE_URI      : std::string (opt) — file path or RTSP URI; overrides VIDEO_PATH.
  *   WIDTH           : int         — model-res decode width  (inference surface).
  *   HEIGHT          : int         — model-res decode height (inference surface).
  *   FULL_WIDTH      : int (opt)   — full-res decode width  (overlay frame; 0 = source res).
@@ -63,6 +65,8 @@ namespace mediapipe {
 
 namespace {
 constexpr char kVideoPathTag[] = "VIDEO_PATH";
+constexpr char kSourceModeTag[] = "SOURCE_MODE";
+constexpr char kSourceUriTag[] = "SOURCE_URI";
 constexpr char kWidthTag[] = "WIDTH";
 constexpr char kHeightTag[] = "HEIGHT";
 constexpr char kFullWidthTag[] = "FULL_WIDTH";
@@ -77,7 +81,15 @@ constexpr char kFrameFullTag[] = "FRAME_FULL";
 class GstVideoSourceCalculator : public CalculatorBase {
  public:
     static absl::Status GetContract(CalculatorContract* cc) {
-        cc->InputSidePackets().Tag(kVideoPathTag).Set<std::string>();
+        if (cc->InputSidePackets().HasTag(kVideoPathTag))
+            cc->InputSidePackets().Tag(kVideoPathTag).Set<std::string>();
+        if (cc->InputSidePackets().HasTag(kSourceModeTag))
+            cc->InputSidePackets().Tag(kSourceModeTag).Set<std::string>();
+        if (cc->InputSidePackets().HasTag(kSourceUriTag))
+            cc->InputSidePackets().Tag(kSourceUriTag).Set<std::string>();
+        RET_CHECK(cc->InputSidePackets().HasTag(kVideoPathTag) ||
+                  cc->InputSidePackets().HasTag(kSourceUriTag))
+            << "GstVideoSourceCalculator needs VIDEO_PATH or SOURCE_URI";
         cc->InputSidePackets().Tag(kWidthTag).Set<int>();
         cc->InputSidePackets().Tag(kHeightTag).Set<int>();
         if (cc->InputSidePackets().HasTag(kFullWidthTag))
@@ -100,7 +112,24 @@ class GstVideoSourceCalculator : public CalculatorBase {
     }
 
     absl::Status Open(CalculatorContext* cc) override {
-        video_path_ = cc->InputSidePackets().Tag(kVideoPathTag).Get<std::string>();
+        if (cc->InputSidePackets().HasTag(kVideoPathTag))
+            source_uri_ = cc->InputSidePackets().Tag(kVideoPathTag).Get<std::string>();
+        if (cc->InputSidePackets().HasTag(kSourceUriTag))
+            source_uri_ = cc->InputSidePackets().Tag(kSourceUriTag).Get<std::string>();
+        if (cc->InputSidePackets().HasTag(kSourceModeTag)) {
+            std::string mode = cc->InputSidePackets().Tag(kSourceModeTag).Get<std::string>();
+            std::transform(mode.begin(), mode.end(), mode.begin(),
+                           [](unsigned char c) { return std::tolower(c); });
+            if (mode == "file") {
+                source_type_ = IMP_SOURCE_FILE;
+            } else if (mode == "rtsp") {
+                source_type_ = IMP_SOURCE_URL;
+            } else {
+                return absl::InvalidArgumentError("GstVideoSourceCalculator: SOURCE_MODE must be 'file' or 'rtsp'");
+            }
+        }
+        if (source_uri_.empty())
+            return absl::InvalidArgumentError("GstVideoSourceCalculator: empty source URI");
         width_ = cc->InputSidePackets().Tag(kWidthTag).Get<int>();
         height_ = cc->InputSidePackets().Tag(kHeightTag).Get<int>();
         if (cc->InputSidePackets().HasTag(kFullWidthTag))
@@ -200,8 +229,9 @@ class GstVideoSourceCalculator : public CalculatorBase {
             return absl::InternalError("imp_context_create failed");
 
         imp_video_source_t* src = nullptr;
-        imp_video_source_create(&src, IMP_SOURCE_FILE);
-        imp_video_source_set(src, "path", video_path_.c_str());
+        imp_video_source_create(&src, source_type_);
+        imp_video_source_set(src, source_type_ == IMP_SOURCE_FILE ? "path" : "url",
+                     source_uri_.c_str());
         if (w > 0)
             imp_video_source_set(src, "width", std::to_string(w).c_str());
         if (h > 0)
@@ -298,7 +328,8 @@ class GstVideoSourceCalculator : public CalculatorBase {
         }
     }
 
-    std::string video_path_;
+    std::string source_uri_;
+    imp_source_type_t source_type_ = IMP_SOURCE_FILE;
     int width_ = 0;
     int height_ = 0;
     int full_width_ = 0;

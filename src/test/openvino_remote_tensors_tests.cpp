@@ -899,7 +899,8 @@ TEST_F(CAPINonCopy, GStreamerOverlayEncodePipeline) {
         [&](const mediapipe::Packet&) { return absl::OkStatus(); }).ok());
 
     std::map<std::string, mediapipe::Packet> sidePackets = {
-        {"video_path", mediapipe::MakePacket<std::string>(videoPath)},
+        {"source_mode", mediapipe::MakePacket<std::string>("file")},
+        {"source_uri", mediapipe::MakePacket<std::string>(videoPath)},
         {"width", mediapipe::MakePacket<int>(modelW)},
         {"height", mediapipe::MakePacket<int>(modelH)},
         {"full_width", mediapipe::MakePacket<int>(fullW)},
@@ -1023,7 +1024,8 @@ TEST_F(CAPINonCopy, GStreamerOverlayEncodeVaPipeline) {
         [&](const mediapipe::Packet&) { return absl::OkStatus(); }).ok());
 
     std::map<std::string, mediapipe::Packet> sidePackets = {
-        {"video_path", mediapipe::MakePacket<std::string>(videoPath)},
+        {"source_mode", mediapipe::MakePacket<std::string>("file")},
+        {"source_uri", mediapipe::MakePacket<std::string>(videoPath)},
         {"width", mediapipe::MakePacket<int>(modelW)},
         {"height", mediapipe::MakePacket<int>(modelH)},
         {"full_width", mediapipe::MakePacket<int>(fullW)},
@@ -1068,6 +1070,213 @@ TEST_F(CAPINonCopy, GStreamerOverlayEncodeVaPipeline) {
     imp_context_destroy(vctx);
     removeIfTemp(outPath);
 
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSetGlobalVADisplay(cserver, 0));
+    imp_video_set_va_display(nullptr);
+    OVMS_ServerDelete(cserver);
+#endif
+}
+
+// P6c RTSP source: a paced fixture publisher feeds /cam while the overlay graph
+// reads it as an RTSP URL and publishes annotated output to /annotated. Set
+// OVMS_EXTERNAL_RTSP_SOURCE to use an already-running external publisher; that
+// mode leaves MediaMTX and the publisher under the caller's control.
+TEST_F(CAPINonCopy, GStreamerRtspSourceOverlayPipeline) {
+#ifndef BUILD_VAAPITESTS
+    GTEST_SKIP() << "Test not enabled on UBI images";
+#else
+    if (std::getenv("RUN_GPU_TESTS") == nullptr)
+        GTEST_SKIP() << "set RUN_GPU_TESTS=1 to run the RTSP source test";
+    const char* externalSource = std::getenv("OVMS_EXTERNAL_RTSP_SOURCE");
+    const bool useExternalSource = externalSource != nullptr && externalSource[0] != '\0';
+    const std::string videoPath = "/ovms/recording_3_raw.avi";
+    if (!useExternalSource && !std::ifstream(videoPath).good())
+        GTEST_SKIP() << "test video not found: " << videoPath;
+    if (!imp_video_va_available())
+        GTEST_SKIP() << "VA/GPU surface sharing not available on this host";
+
+    const std::string mediamtxBin = "/usr/local/bin/mediamtx";
+    if (!useExternalSource && access(mediamtxBin.c_str(), X_OK) != 0)
+        GTEST_SKIP() << "mediamtx not found at " << mediamtxBin;
+    const std::string inputUrl = useExternalSource
+        ? externalSource : "rtsp://localhost:8554/cam";
+    const char* externalOutput = std::getenv("OVMS_EXTERNAL_RTSP_OUTPUT");
+    const std::string outputUrl = externalOutput != nullptr && externalOutput[0] != '\0'
+        ? externalOutput : "rtsp://localhost:8554/annotated";
+    const std::string pulledPath = "/tmp/pulled_rtsp_source.mp4";
+    const std::string mediamtxCfg = "/tmp/mediamtx_rtsp_source.yml";
+    const std::string publisherPid = "/tmp/gst_rtsp_source_publisher.pid";
+    std::remove(pulledPath.c_str());
+    const auto stopPublisher = [&publisherPid]() {
+        const std::string command =
+            "test ! -f " + publisherPid + " || kill $(cat " + publisherPid +
+            ") 2>/dev/null; rm -f " + publisherPid;
+        const int rc = std::system(command.c_str());
+        (void)rc;
+    };
+    const auto stopMediamtx = []() {
+        const int rc = std::system("pkill -9 -x mediamtx 2>/dev/null");
+        (void)rc;
+    };
+    if (!useExternalSource) {
+        std::remove(publisherPid.c_str());
+        {
+            std::ofstream cfg(mediamtxCfg);
+            cfg << "logLevel: error\n"
+                   "rtsp: yes\n"
+                   "rtspAddress: :8554\n"
+                   "rtmp: no\n"
+                   "hls: no\n"
+                   "webrtc: no\n"
+                   "srt: no\n"
+                   "protocols: [tcp]\n"
+                   "paths:\n"
+                   "  all_others:\n";
+        }
+        stopPublisher();
+        stopMediamtx();
+        const std::string startServer =
+            mediamtxBin + " " + mediamtxCfg + " >/tmp/mediamtx_rtsp_source.log 2>&1 &";
+        ASSERT_EQ(std::system(startServer.c_str()), 0) << "failed to start mediamtx";
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        if (std::system("timeout 2 bash -c 'echo >/dev/tcp/127.0.0.1/8554'") != 0) {
+            stopMediamtx();
+            FAIL() << "MediaMTX did not bind RTSP port 8554";
+        }
+
+        const std::string publisherCommand =
+            "bash -c 'export PATH=/opt/gstreamer/bin:$PATH; "
+            "export LD_LIBRARY_PATH=/opt/gstreamer/lib:/opt/gstreamer/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH; "
+            "export GST_PLUGIN_PATH=/opt/gstreamer/lib/gstreamer-1.0; "
+            "exec gst-launch-1.0 -e filesrc location=" + videoPath +
+            " ! decodebin ! videoconvert ! videorate ! video/x-raw,framerate=30/1 ! "
+            "identity sync=true ! openh264enc ! h264parse ! rtspclientsink location=" +
+            inputUrl + " protocols=tcp' >/tmp/gst_rtsp_source_publisher.log 2>&1 & echo $! > " +
+            publisherPid;
+        ASSERT_EQ(std::system(publisherCommand.c_str()), 0) << "failed to start RTSP input publisher";
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+
+    std::string port = "9000";
+    randomizeAndEnsureFree(port);
+    OVMS_ServerSettings* serverSettings = nullptr;
+    OVMS_ModelsSettings* modelsSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, FACE_DETECTION_ADAS_MODEL_CONFIG_JSON.c_str()));
+    OVMS_Server* cserver = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+
+    VAHelper vaHelper;
+    ASSERT_NE(vaHelper.getVADisplay(), nullptr);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSetGlobalVADisplay(cserver, vaHelper.getVADisplay()));
+    imp_video_set_va_display(vaHelper.getVADisplay());
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+
+    const std::string graphPath = "/ovms/src/test/mediapipe/calculators/gst_video_overlay_encode.pbtxt";
+    std::ifstream graphFile(graphPath);
+    ASSERT_TRUE(graphFile.good()) << "graph not found: " << graphPath;
+    std::stringstream graphText;
+    graphText << graphFile.rdbuf();
+    auto graphConfig = mediapipe::ParseTextProtoOrDie<mediapipe::CalculatorGraphConfig>(graphText.str());
+    mediapipe::CalculatorGraph graph;
+    ASSERT_TRUE(graph.Initialize(graphConfig).ok());
+
+    std::atomic<int> graphFrames{0};
+    std::atomic<int> totalBoxes{0};
+    ASSERT_TRUE(graph.ObserveOutputStream("detection_boxes",
+        [&](const mediapipe::Packet& packet) {
+            const auto& boxes = packet.Get<mediapipe::GstDetectionBoxes>();
+            ++graphFrames;
+            totalBoxes += static_cast<int>(boxes.size());
+            return absl::OkStatus();
+        }).ok());
+    ASSERT_TRUE(graph.ObserveOutputStream("detections",
+        [&](const mediapipe::Packet&) { return absl::OkStatus(); }).ok());
+
+    std::map<std::string, mediapipe::Packet> sidePackets = {
+        {"source_mode", mediapipe::MakePacket<std::string>("rtsp")},
+        {"source_uri", mediapipe::MakePacket<std::string>(inputUrl)},
+        {"width", mediapipe::MakePacket<int>(672)},
+        {"height", mediapipe::MakePacket<int>(384)},
+        {"full_width", mediapipe::MakePacket<int>(1280)},
+        {"full_height", mediapipe::MakePacket<int>(720)},
+        {"full_va_surface", mediapipe::MakePacket<bool>(false)},
+        {"servable_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_MODEL_NAME)},
+        {"servable_version", mediapipe::MakePacket<int>(1)},
+        {"input_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_INPUT_NAME)},
+        {"server", mediapipe::MakePacket<OVMS_Server*>(cserver)},
+        {"output_path", mediapipe::MakePacket<std::string>(outputUrl)},
+        {"output_mode", mediapipe::MakePacket<std::string>("rtsp")},
+        {"framerate", mediapipe::MakePacket<int>(30)},
+        {"max_frames", mediapipe::MakePacket<int>(0)},
+    };
+
+    std::future<int> puller;
+    if (!useExternalSource) {
+        const std::string pullCommand =
+            "bash -c 'export PATH=/opt/gstreamer/bin:$PATH; "
+            "export LD_LIBRARY_PATH=/opt/gstreamer/lib:/opt/gstreamer/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH; "
+            "export GST_PLUGIN_PATH=/opt/gstreamer/lib/gstreamer-1.0; "
+            "for i in $(seq 1 5); do "
+            "timeout -s INT 8 gst-launch-1.0 -e rtspsrc location=" + outputUrl +
+            " protocols=tcp latency=0 ! rtph264depay ! h264parse ! mp4mux ! "
+            "filesink location=" + pulledPath + " >/tmp/gst_rtsp_source_pull.log 2>&1; "
+            "test -s " + pulledPath + " && exit 0; rm -f " + pulledPath + "; "
+            "done; exit 1'";
+        puller = std::async(std::launch::async, [pullCommand]() {
+            return std::system(pullCommand.c_str());
+        });
+    }
+
+    std::atomic<bool> runOk{false};
+    std::atomic<bool> doneOk{false};
+    std::thread graphWorker([&]() {
+        if (!graph.StartRun(sidePackets).ok())
+            return;
+        runOk = true;
+        doneOk = graph.WaitUntilDone().ok();
+    });
+    graphWorker.join();
+    const int pullResult = useExternalSource ? 0 : puller.get();
+    if (!useExternalSource) {
+        stopPublisher();
+        stopMediamtx();
+    }
+
+    EXPECT_TRUE(runOk.load()) << "graph did not start";
+    EXPECT_TRUE(doneOk.load()) << "graph did not stop cleanly after source EOS";
+    EXPECT_GT(graphFrames.load(), 0);
+    EXPECT_GE(totalBoxes.load(), 1) << "expected at least one face detection";
+
+    if (!useExternalSource) {
+        EXPECT_EQ(pullResult, 0) << "failed to pull annotated RTSP output";
+        std::ifstream pulled(pulledPath, std::ios::binary | std::ios::ate);
+        const bool pulledReadable = pulled.good() && pulled.tellg() > 0;
+        EXPECT_TRUE(pulledReadable) << "puller did not capture annotated RTSP output";
+        if (pulledReadable) {
+        imp_context_t* vctx = nullptr;
+        ASSERT_EQ(imp_context_create(&vctx, nullptr), IMP_OK);
+        imp_video_source_t* vsrc = nullptr;
+        imp_video_source_create(&vsrc, IMP_SOURCE_FILE);
+        imp_video_source_set(vsrc, "path", pulledPath.c_str());
+        imp_video_decode_opts_t vopts{};
+        imp_video_stream_t* vstream = nullptr;
+        EXPECT_EQ(imp_video_open(&vstream, vsrc, vctx, &vopts), IMP_OK);
+        imp_video_source_destroy(vsrc);
+        if (vstream) {
+            imp_tensor_t* frame = nullptr;
+            EXPECT_EQ(imp_video_read_frame(&frame, vstream, 0), IMP_OK);
+            if (frame)
+                imp_tensor_release(frame);
+            imp_video_close(vstream);
+        }
+        imp_context_destroy(vctx);
+        }
+    }
+    std::remove(pulledPath.c_str());
+    if (!useExternalSource)
+        std::remove(mediamtxCfg.c_str());
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSetGlobalVADisplay(cserver, 0));
     imp_video_set_va_display(nullptr);
     OVMS_ServerDelete(cserver);
@@ -1176,7 +1385,8 @@ TEST_F(CAPINonCopy, GStreamerOverlayEncodeRtspPipeline) {
         [&](const mediapipe::Packet&) { return absl::OkStatus(); }).ok());
 
     std::map<std::string, mediapipe::Packet> sidePackets = {
-        {"video_path", mediapipe::MakePacket<std::string>(videoPath)},
+        {"source_mode", mediapipe::MakePacket<std::string>("file")},
+        {"source_uri", mediapipe::MakePacket<std::string>(videoPath)},
         {"width", mediapipe::MakePacket<int>(modelW)},
         {"height", mediapipe::MakePacket<int>(modelH)},
         {"full_width", mediapipe::MakePacket<int>(fullW)},

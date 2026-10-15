@@ -565,7 +565,8 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
     int src_w = (source->width  > 0) ? source->width  : 1280;
     int src_h = (source->height > 0) ? source->height : 720;
 
-    bool is_file = (source->type == IMP_SOURCE_FILE);
+    const bool is_file = (source->type == IMP_SOURCE_FILE);
+    const bool is_url = (source->type == IMP_SOURCE_URL);
 
     // Build branch list (single branch only for initial Linux impl)
     struct resolved_branch { int width; int height; std::string name; };
@@ -611,16 +612,21 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
     //   filesrc | decodebin | vapostproc | caps | appsink
     std::string pipeline_str;
 
-    if (!is_file) {
-        // Camera / live source not yet implemented on Linux
-        ctx->last_error = "Live camera source not yet supported on Linux";
+    if (!is_file && !is_url) {
+        ctx->last_error = "Only file and URL sources are supported on Linux";
         delete s;
         return IMP_ERROR_UNSUPPORTED_FORMAT;
+    }
+    if (source->path.empty()) {
+        ctx->last_error = is_file ? "File source path is empty" : "URL source URI is empty";
+        delete s;
+        return IMP_ERROR_INVALID_ARGUMENT;
     }
 
     // Normalize path (backslashes break gst_parse_launch)
     std::string path = source->path;
-    std::replace(path.begin(), path.end(), '\\', '/');
+    if (is_file)
+        std::replace(path.begin(), path.end(), '\\', '/');
 
     // Choose decode pipeline:
     //   VA surface (GPU, zero-copy): decodebin ! vapostproc ! video/x-raw(memory:VAMemory) ! appsink
@@ -634,6 +640,14 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
                                  && opts && opts->use_va_surface_memory;
     const bool use_va = s_va_available;
 
+    auto make_source_head = [&](const std::string& loc) -> std::string {
+        if (is_file)
+            return "filesrc location=\"" + loc + "\" ! decodebin ! ";
+        // TODO: add bounded reconnect handling for RTSP sources.
+        return "rtspsrc location=\"" + loc + "\" latency=0 protocols=tcp ! "
+               "rtph264depay ! h264parse ! decodebin ! ";
+    };
+
     auto make_branch_pipeline = [&](const std::string& loc,
                                      int w, int h,
                                      const std::string& sink_name,
@@ -643,8 +657,7 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
             std::string caps =
                 "video/x-raw(memory:VAMemory),format=NV12,width=" + std::to_string(w) +
                 ",height=" + std::to_string(h);
-            return "filesrc location=\"" + loc + "\" ! "
-                   "decodebin ! "
+                 return make_source_head(loc) +
                    "vapostproc ! "
                    + caps + " ! "
                    "appsink name=" + sink_name + " " + sp;
@@ -654,14 +667,12 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
             "video/x-raw,format=NV12,width=" + std::to_string(w) +
             ",height=" + std::to_string(h);
         if (use_va) {
-            return "filesrc location=\"" + loc + "\" ! "
-                   "decodebin ! "
+                 return make_source_head(loc) +
                    "vapostproc ! "
                    + caps + " ! "
                    "appsink name=" + sink_name + " " + sp;
         } else {
-            return "filesrc location=\"" + loc + "\" ! "
-                   "decodebin ! "
+                 return make_source_head(loc) +
                    "videoconvert ! "
                    "videoscale ! "
                    + caps + " ! "
@@ -683,10 +694,7 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
         } else {
             convert_scale = "videoconvert ! videoscale";
         }
-        pipeline_str =
-            "filesrc location=\"" + path + "\" ! "
-            "decodebin ! "
-            "tee name=t";
+        pipeline_str = make_source_head(path) + "tee name=t";
 
         for (size_t i = 0; i < resolved.size(); i++) {
             const auto& rb = resolved[i];
@@ -942,12 +950,14 @@ imp_status_t linux_video_encoder_create(imp_video_encoder_t** encoder,
             ",framerate=" + std::to_string(e->fps_num) + "/" + std::to_string(e->fps_den) + " ! "
             "vah264lpenc ! h264parse ! " + terminus;
     } else {
+        // TODO: expose source latency and encoder bitrate/complexity through
+        // graph configuration when the test harness gains a production lifecycle.
         pipeline =
             "appsrc name=src format=time do-timestamp=false is-live=false ! "
             "video/x-raw,format=NV12,width=" + std::to_string(width) +
             ",height=" + std::to_string(height) +
             ",framerate=" + std::to_string(e->fps_num) + "/" + std::to_string(e->fps_den) + " ! "
-            "videoconvert ! openh264enc ! h264parse ! " + terminus;
+            "videoconvert ! openh264enc bitrate=8000000 complexity=high ! h264parse ! " + terminus;
     }
 
     GError* error = nullptr;
