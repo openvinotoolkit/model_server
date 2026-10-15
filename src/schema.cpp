@@ -255,6 +255,15 @@ const std::string MODELS_CONFIG_SCHEMA = R"({
             "items": {
                 "$ref": "#/definitions/model_config"
             }
+        },
+        "va_display": {
+            "type": "object",
+            "required": ["target_device", "render_node"],
+            "properties": {
+                "target_device": {"type": "string"},
+                "render_node": {"type": "string"}
+            },
+            "additionalProperties": false
         })" + MEDIAPIPE_CONFIG_LIST_SCHEMA +
                                          R"(,
     "monitoring": {

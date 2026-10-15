@@ -198,6 +198,12 @@ namespace ovms {
 // TODO make it not global but per server/per model/mediapipe specific.
 #ifdef __linux__
 void* globalVaDisplay = nullptr;
+static std::string globalVaDisplayTargetDevice;
+
+void setGlobalVaDisplay(void* vaDisplay, const std::string& targetDevice) {
+    globalVaDisplay = vaDisplay;
+    globalVaDisplayTargetDevice = targetDevice;
+}
 #endif
 #ifdef _WIN32
 // TODO: Verify that a fully drained server teardown can safely replace this
@@ -984,6 +990,11 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
     if (startsWith(this->targetDevice, "GPU")) {
 #ifdef __linux__
         if (globalVaDisplay) {
+            if (!globalVaDisplayTargetDevice.empty() && this->targetDevice != globalVaDisplayTargetDevice) {
+                throw std::runtime_error("GPU model target device '" + this->targetDevice +
+                                         "' does not match configured va_display target_device '" +
+                                         globalVaDisplayTargetDevice + "'");
+            }
             OV_LOGGER("ov::intel_gpu::ocl::VAContext(core: {}, globalVaDisplay: {})", (void*)&this->ieCore, globalVaDisplay);
             this->vaContext = std::make_unique<ov::intel_gpu::ocl::VAContext>(this->ieCore, globalVaDisplay);
             OV_LOGGER("ov::Core: {} compile_model(model: {}, vaContext:{}, pluginConfig:{})", (void*)&this->ieCore, (void*)this->model.get(), (void*)this->vaContext.get(), (void*)&pluginConfig);

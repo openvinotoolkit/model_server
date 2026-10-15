@@ -1365,7 +1365,7 @@ DLL_PUBLIC OVMS_Status* OVMS_ServerSetGlobalVADisplay(OVMS_Server* server, void*
     // * keep globalVaDisplay as server not global variable
 // TODO: Windows
 #ifdef __linux__
-    ovms::globalVaDisplay = vaDisplay;
+    ovms::setGlobalVaDisplay(vaDisplay);
 #endif
     return nullptr;
 }

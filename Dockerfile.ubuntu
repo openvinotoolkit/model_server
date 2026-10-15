@@ -565,7 +565,7 @@ ARG INSTALL_DRIVER_VERSION="24.39.31294"
 COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
 # hadolint ignore=DL3003,SC2164
 RUN apt-get update ; \
-    apt-get install -y --no-install-recommends curl ca-certificates libxml2 || exit 1; \
+    apt-get install -y --no-install-recommends curl ca-certificates libxml2 libva2 libva-drm2 libdrm2 || exit 1; \
     # espeak-ng shared library + data are shipped inside /ovms by the Bazel
     # build (controlled via --//:espeak=on/off in debug_bazel_flags);
     # no system package is required at runtime.
@@ -593,6 +593,7 @@ RUN apt-get update ; \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
 COPY --from=pkg /ovms_release /ovms
+COPY --from=gstreamer-builder /opt/gstreamer /opt/gstreamer
 COPY --from=build /usr/local/lib/python3.*/dist-packages/numpy /ovms/python_deps/numpy/
 COPY --from=build /usr/local/lib/python3.*/dist-packages/numpy-*.dist-info /ovms/python_deps/
 COPY --from=build /usr/local/lib/python3.*/dist-packages/MarkupSafe-3.0.2.dist-info /ovms/python_deps/MarkupSafe-3.0.2.dist-info/
@@ -607,7 +608,8 @@ RUN if ! [[ $debug_bazel_flags == *"py_off"* ]]; then true ; else exit 0 ; fi ; 
     apt-get install libpython$python_version --no-install-recommends -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
-ENV LD_LIBRARY_PATH=/ovms/lib
+ENV LD_LIBRARY_PATH=/ovms/lib:/opt/gstreamer/lib
+ENV GST_PLUGIN_PATH=/opt/gstreamer/lib/gstreamer-1.0
 ENV PATH="$PATH:/ovms/bin"
 # When espeak-ng data is present in the package, point runtime to it.
 # Keep this conditional to avoid exporting a non-existent path when

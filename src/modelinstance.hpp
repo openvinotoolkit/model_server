@@ -74,6 +74,7 @@ template <typename T1, typename T2>
 struct RequestProcessor;
 
 extern void* globalVaDisplay;
+void setGlobalVaDisplay(void* vaDisplay, const std::string& targetDevice = {});
 // Windows D3D11 analog of globalVaDisplay: a server-owned ID3D11Device registered
 // before GPU models load, so they compile on a matching D3DContext. nullptr = off.
 extern void* globalD3D11Device;

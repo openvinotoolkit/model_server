@@ -24,7 +24,7 @@
 #include <cstdint>
 #include <cstring>
 
-#include "src/test/mediapipe/calculators/gst_detection_box.hpp"
+#include "src/mediapipe_gst_calculators/gst_detection_box.hpp"
 
 namespace mediapipe {
 namespace nv12overlay {

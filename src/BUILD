@@ -820,6 +820,26 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
+    name = "device_display_owner_module",
+    srcs = ["device_display_owner_module.cpp"],
+    hdrs = ["device_display_owner_module.hpp"],
+    deps = [
+        "libovms_config",
+        "libovms_module",
+        "libovmslogging",
+        "libovmsstatus",
+        "modelinstance",
+        "//src/mpi:intel_mpi",
+        "//src/port:rapidjson_istreamwrapper",
+        "@com_github_tencent_rapidjson//:rapidjson",
+    ],
+    additional_linkopts = select({
+        "//conditions:default": ["-lva", "-lva-drm"],
+        "//src:windows": [],
+    }),
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
     name = "ovms_lib",
     srcs = [
         "capi_frontend/capi.cpp",
@@ -863,6 +883,7 @@ ovms_cc_library(
             "modelconfig",
             "model",
             "modelinstance",
+            "device_display_owner_module",
             "libovmscapibuffer",
             "libovmscapi_utils",
             "capiinferenceparameter",
@@ -2872,6 +2893,7 @@ cc_library(
         "test/configs/config_standard_dummy.json",
         "test/configs/config_gpu_dummy.json",
         "test/configs/config_gpu_face_detection_adas.json",
+        "test/configs/config_gpu_face_detection_adas_va_display.json",
         "test/dummy/1/dummy.xml",
         "test/dummy/1/dummy.bin",
     ],
@@ -2894,10 +2916,10 @@ cc_library(
         "//src:ovms_lib",
 	":libovmsoclutils",
         "//src/mpi:intel_mpi",
-        "//src/test/mediapipe/calculators:gst_video_source_calculator",
-        "//src/test/mediapipe/calculators:gst_capi_inference_calculator",
-        "//src/test/mediapipe/calculators:gst_video_sink_calculator",
-        "//src/test/mediapipe/calculators:gst_detection_overlay_calculator",
+        "//src/mediapipe_gst_calculators:gst_video_source_calculator",
+        "//src/mediapipe_gst_calculators:gst_capi_inference_calculator",
+        "//src/mediapipe_gst_calculators:gst_video_sink_calculator",
+        "//src/mediapipe_gst_calculators:gst_detection_overlay_calculator",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@mediapipe_calculators//:mediapipe_calculators",
         "@com_google_googletest//:gtest",

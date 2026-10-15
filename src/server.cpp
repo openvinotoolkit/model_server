@@ -76,6 +76,7 @@
 #include "servables_config_manager_module/servablesconfigmanagermodule.hpp"
 #include "stringutils.hpp"
 #include "version.hpp"
+#include "device_display_owner_module.hpp"
 
 using grpc::ServerBuilder;
 
@@ -352,6 +353,8 @@ std::unique_ptr<Module> Server::createModule(const std::string& name) {
         return std::make_unique<HTTPServerModule>(*this);
     if (name == SERVABLE_MANAGER_MODULE_NAME)
         return std::make_unique<ServableManagerModule>(*this);
+    if (name == DEVICE_DISPLAY_OWNER_MODULE_NAME)
+        return std::make_unique<DeviceDisplayOwnerModule>();
 #if (PYTHON_DISABLE == 0)
     if (name == PYTHON_INTERPRETER_MODULE_NAME) {
         auto pythonModule = ensurePythonRuntimeLoaded();
@@ -503,6 +506,8 @@ Status Server::startModules(ovms::Config& config) {
         config.setInMemoryGraphPbtxt(std::move(pbtxt));
         SPDLOG_INFO("Graph config created in memory from model_path: {}", config.modelPath());
     }
+    INSERT_MODULE(DEVICE_DISPLAY_OWNER_MODULE_NAME, it);
+    START_MODULE(it);
     GET_MODULE(SERVABLE_MANAGER_MODULE_NAME, it);
     START_MODULE(it);
     return status;
@@ -551,6 +556,7 @@ void Server::shutdownModules() {
     ensureModuleShutdown(GRPC_SERVER_MODULE_NAME);
     ensureModuleShutdown(HTTP_SERVER_MODULE_NAME);
     ensureModuleShutdown(SERVABLE_MANAGER_MODULE_NAME);
+    ensureModuleShutdown(DEVICE_DISPLAY_OWNER_MODULE_NAME);
     ensureModuleShutdown(PROFILER_MODULE_NAME);
 #if (PYTHON_DISABLE == 0)
     if (ovms::Config::instance().getServerSettings().withPython) {
@@ -661,7 +667,11 @@ Status Server::startFromSettings(ServerSettingsImpl* serverSettings, ModelsSetti
         configure_logger(config.logLevel(), config.logPath());
         if (serverSettings->serverMode == HF_PULL_AND_START_MODE || serverSettings->serverMode == SERVING_MODELS_MODE)
             logConfig(config);
-        return this->startModules(config);
+        Status status = this->startModules(config);
+        if (!status.ok()) {
+            this->shutdownModules();
+        }
+        return status;
     } catch (std::exception& e) {
         SPDLOG_ERROR("Exception catch: {} - will now terminate.", e.what());
         return Status(StatusCode::INTERNAL_ERROR, e.what());

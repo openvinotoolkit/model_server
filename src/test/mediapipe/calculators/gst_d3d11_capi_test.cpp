@@ -411,7 +411,7 @@ TEST_F(D3D11ServerFixture, SplitGraphMultipleInFlight) {
     if (!ready)
         GTEST_SKIP() << "fixture not ready";
 
-    const std::string graphPath = repoRoot() + "\\src\\test\\mediapipe\\calculators\\gst_video_infer.pbtxt";
+    const std::string graphPath = repoRoot() + "\\src\\mediapipe_gst_calculators\\gst_video_infer.pbtxt";
     if (!fileExists(graphPath))
         GTEST_SKIP() << "graph not found: " << graphPath;
     std::ifstream gf(graphPath);

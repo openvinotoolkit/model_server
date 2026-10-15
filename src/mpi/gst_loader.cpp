@@ -113,11 +113,6 @@ struct GstFunctionTable {
     // gst_va_display_get_va_dpy returns native VADisplay from a GstVaDisplay
     void* (*gst_va_display_get_va_dpy)(void*);
 
-    // libva-drm / libva (VADisplay lifecycle)
-    void* (*vaGetDisplayDRM)(int);                          // returns VADisplay
-    int   (*vaInitialize)(void*, int*, int*);               // (VADisplay, &major, &minor)
-    int   (*vaTerminate)(void*);                            // (VADisplay)
-
     // libgstva-1.0 — external display injection (Option B: OVMS owns the VADisplay
     // and shares it with GStreamer so decode happens on the server's display).
     void* (*gst_va_display_wrapped_new)(void*);             // (VADisplay) -> GstVaDisplay*
@@ -137,9 +132,8 @@ static bool s_available             = false;
 static bool s_initialized           = false;
 static bool s_va_available          = false;  // true when vapostproc element found
 static bool s_va_surface_capable    = false;  // true when gst_va + libva dlopen succeeded
-static void* s_va_display           = nullptr; // process-wide VADisplay (valid for lifetime of loader)
+static void* s_va_display           = nullptr; // externally-owned VADisplay
 static void* s_injected_va_display  = nullptr; // external VADisplay to push into GStreamer (Option B)
-static int   s_drm_fd               = -1;      // /dev/dri/renderD128 fd (owned)
 
 // ============================================================================
 // Symbol loading helpers
@@ -210,10 +204,8 @@ static bool load_symbols(void* gst_h, void* app_h,
 
 static void try_load_va_symbols() {
     void* gstva_h   = dlopen("libgstva-1.0.so.0",  RTLD_LAZY | RTLD_GLOBAL);
-    void* vadrm_h   = dlopen("libva-drm.so.2",     RTLD_LAZY | RTLD_GLOBAL);
-    void* va_h      = dlopen("libva.so.2",          RTLD_LAZY | RTLD_GLOBAL);
 
-    if (!gstva_h || !vadrm_h || !va_h) return;
+    if (!gstva_h) return;
 
     auto* get_surf = reinterpret_cast<decltype(s_fns.gst_va_buffer_get_surface)>(
         dlsym(gstva_h, "gst_va_buffer_get_surface"));
@@ -221,22 +213,11 @@ static void try_load_va_symbols() {
         dlsym(gstva_h, "gst_va_buffer_peek_display"));
     auto* get_va_dpy = reinterpret_cast<decltype(s_fns.gst_va_display_get_va_dpy)>(
         dlsym(gstva_h, "gst_va_display_get_va_dpy"));
-    auto* get_drm_disp = reinterpret_cast<decltype(s_fns.vaGetDisplayDRM)>(
-        dlsym(vadrm_h, "vaGetDisplayDRM"));
-    auto* va_init  = reinterpret_cast<decltype(s_fns.vaInitialize)>(
-        dlsym(va_h, "vaInitialize"));
-    auto* va_term  = reinterpret_cast<decltype(s_fns.vaTerminate)>(
-        dlsym(va_h, "vaTerminate"));
-
-    if (!get_surf || !get_drm_disp || !va_init || !va_term) return;
+    if (!get_surf) return;
 
     s_fns.gst_va_buffer_get_surface  = get_surf;
     s_fns.gst_va_buffer_peek_display = peek_disp;  // may be null on older gst
     s_fns.gst_va_display_get_va_dpy  = get_va_dpy; // may be null on older gst
-    s_fns.vaGetDisplayDRM            = get_drm_disp;
-    s_fns.vaInitialize               = va_init;
-    s_fns.vaTerminate                = va_term;
-
     // Optional: symbols needed to push an externally-owned VADisplay into the
     // pipeline (Option B). Non-fatal when missing — injection simply stays off.
     s_fns.gst_va_display_wrapped_new = reinterpret_cast<decltype(s_fns.gst_va_display_wrapped_new)>(
@@ -244,22 +225,6 @@ static void try_load_va_symbols() {
     s_fns.gst_context_set_va_display = reinterpret_cast<decltype(s_fns.gst_context_set_va_display)>(
         dlsym(gstva_h, "gst_context_set_va_display"));
 
-    // Open DRM device and initialise a VADisplay for the lifetime of this process.
-    s_drm_fd = open("/dev/dri/renderD128", O_RDWR);
-    if (s_drm_fd < 0) return;
-
-    void* disp = get_drm_disp(s_drm_fd);
-    if (!disp) return;
-
-    int maj = 0, min = 0;
-    if (va_init(disp, &maj, &min) == 0 /* VA_STATUS_SUCCESS */) {
-        s_va_display        = disp;
-        s_va_surface_capable = true;
-        std::cerr << "[GstLoader] VA surface sharing enabled (VA-API "
-                  << maj << "." << min << ", DRM fd " << s_drm_fd << ").\n";
-    } else {
-        va_term(disp);
-    }
 }
 
 // ============================================================================

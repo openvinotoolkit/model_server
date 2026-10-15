@@ -41,7 +41,7 @@
 #pragma GCC diagnostic pop
 
 #include "src/mpi/intel_mpi.h"
-#include "src/test/mediapipe/calculators/gst_video_frame_packet.hpp"
+#include "src/mediapipe_gst_calculators/gst_video_frame_packet.hpp"
 
 namespace {
 

@@ -53,9 +53,9 @@
 #pragma GCC diagnostic pop
 
 #include "src/mpi/intel_mpi.h"
-#include "src/test/mediapipe/calculators/gst_detection_box.hpp"
-#include "src/test/mediapipe/calculators/gst_nv12_overlay_draw.hpp"
-#include "src/test/mediapipe/calculators/gst_video_frame_packet.hpp"
+#include "src/mediapipe_gst_calculators/gst_detection_box.hpp"
+#include "src/mediapipe_gst_calculators/gst_nv12_overlay_draw.hpp"
+#include "src/mediapipe_gst_calculators/gst_video_frame_packet.hpp"
 
 namespace mediapipe {
 
