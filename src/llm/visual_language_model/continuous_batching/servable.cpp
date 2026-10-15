@@ -30,7 +30,6 @@
 #include "../../../tokenize/tokenize_parser.hpp"
 #include "../../text_utils.hpp"
 #if (PYTHON_DISABLE == 0)
-#include "src/llm/py_jinja_template_processor.hpp"
 #endif
 
 namespace ovms {
@@ -61,6 +60,7 @@ absl::Status VisualLanguageModelServable::addRequestToPipeline(std::shared_ptr<C
     auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
     vlmExecutionContext->generationHandle = properties->pipeline->add_request(currentRequestId++,  // to be removed from API?
         vlmExecutionContext->inputRequest.promptText, vlmExecutionContext->inputRequest.inputImages,
+        vlmExecutionContext->inputRequest.inputVideos,
         vlmExecutionContext->inputRequest.generationConfig);
     return absl::OkStatus();
 }

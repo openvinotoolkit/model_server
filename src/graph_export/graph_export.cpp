@@ -186,6 +186,10 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
         oss << R"(
             tool_parser: ")" << graphSettings.toolParser.value() << R"(",)";
     }
+    if (graphSettings.chatTemplateEngine.has_value()) {
+        oss << R"(
+            chat_template_engine: )" << graphSettings.chatTemplateEngine.value() << R"(,)";
+    }
     if (graphSettings.enableToolGuidedGeneration == "true") {
         oss << R"(
             enable_tool_guided_generation: true,)";

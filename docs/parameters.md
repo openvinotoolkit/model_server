@@ -49,6 +49,7 @@ Configuration options for the server are defined only via command-line options a
 | `grpc_channel_arguments` | `string` |   A comma separated list of arguments to be passed to the grpc server. (e.g. grpc.max_connection_age_ms=2000) |
 | `grpc_max_threads` | `string` |   Maximum number of threads which can be used by the grpc server. Default value depends on number of CPUs. |
 | `grpc_memory_quota` | `string` |   GRPC server buffer memory quota. Default value set to 2147483648 (2GB). |
+| `json_max_complexity` | `integer` | Maximum number of JSON SAX events allowed in a request body before the request is rejected. Default value is 134217728. This guard rejects malformed, overly nested, or adversarial JSON payloads before the full DOM parse, helping reduce CPU and memory exhaustion risk from oversized or complex input documents. |
 | `help` | `NA` |  Shows help message and exit |
 | `version` | `NA` |  Shows binary version |
 | `allow_credentials` | `bool` (default: false) | Whether to allow credentials in CORS requests. |
@@ -168,6 +169,7 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--model_distribution_policy`         | `string`     | TENSOR_PARALLEL distributes tensor to multiple sockets/devices and processes it in parallel. PIPELINE_PARALLEL distributes different tensors to process by each device. Accepted values: `TENSOR_PARALLEL`, `PIPELINE_PARALLEL` or empty (default). |
 | `--reasoning_parser`                  | `string`     | Type of parser to use for reasoning content extraction from model output. Auto-detected from chat template if not specified. Use `none` to explicitly disable. Supported: [qwen3, gptoss, lfm2, gemma4, onyx]                     |
 | `--tool_parser`                       | `string`     | Type of parser to use for tool calls extraction from model output. Auto-detected from chat template if not specified. Use `none` to explicitly disable. Supported: [llama3, phi4, hermes3, mistral, qwen3coder, gptoss, devstral, lfm2, gemma4, onyx]            |
+| `--chat_template_engine` | `string` | Chat template renderer: `jinja` or `minja`. Defaults to Jinja when Python is available, otherwise Minja. Explicit Jinja requires Python; the alternate spelling is supported for compatibility. |
 | `--enable_tool_guided_generation`     | `bool`       | Enables enforcing tool schema during generation. Requires setting response parser. Default: false.                         |
 | `--cache_interval_multiplier`         | `integer`    | Multiplier for the KV cache block interval. Controls the granularity of cache allocation. Default: adaptive for the model.                  |
 

@@ -51,7 +51,7 @@ mediapipe_proto_library(
 cc_library(
     name = "kalman_matrices",
     hdrs = ["kalman_matrices.h"],
-    deps = ["@eigen_archive//:eigen3"],
+    deps = ["@eigen//:eigen3"],
     alwayslink = 1
 )
 
@@ -64,7 +64,7 @@ cc_library(
         "@mediapipe//mediapipe/framework/port:ret_check",
         "@mediapipe//mediapipe/framework/port:status",
         "@mediapipe//mediapipe/framework/port:statusor",
-        "@eigen_archive//:eigen3",
+        "@eigen//:eigen3",
     ],
     alwayslink = 1
 )
@@ -76,7 +76,7 @@ cc_library(
     deps = [
         ":kalman_matrices",
         "@mediapipe//mediapipe/framework/formats:detection_cc_proto",
-        "@eigen_archive//:eigen3",
+        "@eigen//:eigen3",
     ],
     alwayslink = 1
 )
@@ -98,7 +98,7 @@ cc_library(
         "@mediapipe//mediapipe/framework/port:status",
         "@mediapipe//mediapipe/framework/port:statusor",
         "@mediapipe//mediapipe/framework/formats:detection_cc_proto",
-        "@eigen_archive//:eigen3",
+        "@eigen//:eigen3",
     ],
     alwayslink = 1
 )
@@ -116,7 +116,7 @@ cc_library(
         ":strack",
         ":kalman_filter",
         ":kalman_matrices",
-         "@eigen_archive//:eigen3",
+         "@eigen//:eigen3",
     ],
     alwayslink = 1,
 )

@@ -24,7 +24,7 @@
 
 namespace ovms {
 
-const std::string UNAVAILABLE_PATH_ERROR = "Unable to access path: {}";
+inline constexpr std::string_view UNAVAILABLE_PATH_ERROR = "Unable to access path: {}";
 
 const std::string AzureStorageAdapter::extractAzureStorageExceptionMessage(const Azure::Storage::StorageException& e) {
     if (!e.Message.empty()) {

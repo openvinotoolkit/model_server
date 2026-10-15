@@ -1,5 +1,7 @@
 # ByteTrack Demo Setup
 
+> **Preview feature**
+
 End-to-end demo: video source (webcam / file) → OpenVINO Model Server (YOLOX Tiny + ByteTrack) → output (screen / file).
 
 ---
@@ -8,12 +10,11 @@ End-to-end demo: video source (webcam / file) → OpenVINO Model Server (YOLOX T
 
 ### 1. Clone the repository
 
-Clone the repository, switch to the `gsoc_bytetrack` branch, and move into the demo directory:
+Clone the repository and move into the demo directory:
 
 ```bash
-git clone https://github.com/Vishwa2684/model_server
+git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server
-git checkout gsoc_bytetrack
 cd demos/mediapipe/bytetrack
 ```
 

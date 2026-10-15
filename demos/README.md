@@ -76,6 +76,7 @@ Integrations <ovms_demos_integrations>
 |[Image classification](./mediapipe/image_classification/README.md)|Basic example with a single inference node.|
 |[Chain of models](./mediapipe/multi_model_graph/README.md)|A chain of models in a graph.|
 |[CLIP image classification](python_demos/clip_image_classification/README.md)|Classify image according to provided labels using CLIP model embedded in a multi-node MediaPipe graph.|
+|[ByteTrack (preview)](./mediapipe/bytetrack/README.md)|Detect and track objects from a video source with YOLOX and ByteTrack.|
 
 ## Python Node
 | Demo | Description |
@@ -89,3 +90,5 @@ Integrations <ovms_demos_integrations>
 |[Visual Studio Code assistant](./code_local_assistant/README.md)|Use Continue extension in Visual Studio Code with local OVMS serving.|
 |[Cline coding agent integration](./cline_integration/README.md)|Use the Cline coding agent in Visual Studio Code with local OVMS serving, including MCP, image input and reasoning_effort usage.|
 |[Integration with DeepAgents Code](integration_with_deepagents_code/README.md)|Using DeepAgents Code with OVMS as inference provider. Shows MCP server creation, subagent-based validation and tool use.|
+|[GitHub Copilot integration](./copilot_integration/README.md)|Use GitHub Copilot in Visual Studio Code with local OVMS serving via a custom endpoint model.|
+

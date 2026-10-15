@@ -15,10 +15,10 @@
 #
 
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
-load("//:common_settings.bzl", "ovms_cc_library", "PYBIND_DEPS", "PYBIND_HEADERS_ONLY")
+load("//:common_settings.bzl", "COMMON_LOCAL_DEFINES", "COMMON_STATIC_LIBS_LINKOPTS", "ovms_cc_library", "PYBIND_DEPS", "PYBIND_HEADERS_ONLY")
 
 ovms_cc_library(
-    name = "llmcalculator",
+    name = "llmcalculator_registration",
     srcs = ["http_llm_calculator.cc",
             "llm_node_initializer.cpp"],
     deps = select({
@@ -26,9 +26,11 @@ ovms_cc_library(
             "//:disable_python": []
         }) + [
         "//third_party:openvino",
-        "@mediapipe//mediapipe/framework:calculator_framework",
+            "@mediapipe//mediapipe/framework:calculator_framework",
+            "@mediapipe//mediapipe/framework:calculator_cc_proto",
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/mediapipe_internal:graph_side_packets",
+        "//src/mediapipe_calculators/utils:timestamp_advance_guard",
         "//src/kfserving_api:kfserving_api_cpp",
         "//src:libovmsprofiler",
         ":genai_servables",
@@ -41,6 +43,28 @@ ovms_cc_library(
     alwayslink = 1, # needed, so the calculator can be registered by MediaPipe
 )
 
+ovms_cc_library(
+    name = "llm_calculators_plugin_api",
+    hdrs = ["llm_calculators_plugin_api.hpp"],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "llm_calculators_plugin_src",
+    srcs = ["llm_calculators_plugin.cpp"],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "llm_calculators_plugin_loader",
+    hdrs = ["llm_calculators_plugin_loader.hpp"],
+    srcs = ["llm_calculators_plugin_loader.cpp"],
+    deps = [
+        "//src:libovmslogging",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 mediapipe_proto_library(
     name = "llmcalculator_proto", # llmcalculator_cc_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
     srcs = ["llm_calculator.proto"],
@@ -49,6 +73,24 @@ mediapipe_proto_library(
         "@mediapipe//mediapipe/framework:calculator_options_proto",
         "@mediapipe//mediapipe/framework:calculator_proto",
     ],
+)
+
+ovms_cc_library(
+    name = "llmcalculator_proto_owner",
+    srcs = ["llmcalculator_proto_owner.cpp"],
+    deps = [":llmcalculator_cc_proto"],
+    additional_copts = select({
+        "//conditions:default": ["-fvisibility=default"],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
+    }),
+    alwayslink = 1,
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "llmcalculator_proto_headers",
+    hdrs = [":llmcalculator_cc_proto"],
+    visibility = ["//visibility:public"],
 )
 
 ovms_cc_library(
@@ -88,6 +130,7 @@ ovms_cc_library(
         ":openai_request",
         ":output_parsers",
         ":io_processing_input_processor",
+        ":video_utils",
         "//third_party:genai",],
     visibility = ["//visibility:public"],
 )
@@ -119,7 +162,7 @@ ovms_cc_library(
             "io_processing/base_input_processor.hpp"],
     srcs = [],
     deps = [
-        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe//mediapipe/framework:calculator_cc_proto",
         "//third_party:genai",
     ],
     visibility = ["//visibility:public"],
@@ -130,12 +173,26 @@ ovms_cc_library(
     hdrs = ["io_processing/image_utils.hpp"],
     srcs = ["io_processing/image_utils.cpp"],
     deps = [
-        "@mediapipe//mediapipe/framework:calculator_framework",  # required for absl status
+        "@mediapipe//mediapipe/framework/port:status",
         "//third_party:curl",
         "//src/image_utils:image_conversion",
         "//src/image_utils:decoded_image_size",
         "//src:predict_request_validation_utils_impl",
         "//src/filesystem:libovmsfilesystem",
+        "//third_party:genai",
+        "//src:libovmslogging",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "video_utils",
+    hdrs = ["io_processing/video_utils.hpp"],
+    srcs = ["io_processing/video_utils.cpp"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_framework",  # required for absl status
+        ":image_utils",
+        "//src:predict_request_validation_utils_impl",
         "//third_party:genai",
         "//src:libovmslogging",
     ],
@@ -151,10 +208,7 @@ ovms_cc_library(
         ":io_processing_input_request",
         ":runtime_chat_template_loader",
         "//third_party:genai",
-    ] + select({
-        "//:disable_python": [],
-        "//:not_disable_python": [":py_jinja_template_processor"] + PYBIND_DEPS,
-    }),
+    ],
     visibility = ["//visibility:public"],
 )
 
@@ -162,6 +216,7 @@ ovms_cc_library(
     name = "io_processing_input_processors",
     hdrs = ["io_processing/input_processors/image_decoding_processor.hpp",
             "io_processing/input_processors/audio_decoding_processor.hpp",
+            "io_processing/input_processors/video_frames_processor.hpp",
             "io_processing/input_processors/chat_template_processor.hpp",
             "io_processing/input_processors/chat_template_adapter.hpp",
             "io_processing/chat_template/caps.hpp",
@@ -172,6 +227,7 @@ ovms_cc_library(
             "io_processing/input_processors/tokenization_processor.hpp"],
     srcs = ["io_processing/input_processors/image_decoding_processor.cpp",
             "io_processing/input_processors/audio_decoding_processor.cpp",
+            "io_processing/input_processors/video_frames_processor.cpp",
             "io_processing/input_processors/chat_template_processor.cpp",
             "io_processing/input_processors/chat_template_adapter.cpp",
             "io_processing/input_processors/empty_content_array_normalization_processor.cpp",
@@ -179,18 +235,16 @@ ovms_cc_library(
             "io_processing/input_processors/text_content_normalization_processor.cpp",
             "io_processing/input_processors/tokenization_processor.cpp"],
     deps = [
-        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe//mediapipe/framework:calculator_cc_proto",
         "//src:libovmsprofiler",
         ":image_utils",
+        ":video_utils",
         ":io_processing_input_request",
         ":runtime_chat_template_loader",
         "//third_party:genai",
         "//src:libovmslogging",
         "//src/audio:audio_utils",
-    ] + select({
-        "//:disable_python": [],
-        "//:not_disable_python": [":py_jinja_template_processor"] + PYBIND_DEPS,
-    }),
+    ],
     visibility = ["//visibility:public"],
 )
 
@@ -199,7 +253,7 @@ ovms_cc_library(
     hdrs = ["io_processing/input_processor.hpp"],
     srcs = ["io_processing/input_processor.cpp"],
     deps = [
-        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe//mediapipe/framework:calculator_cc_proto",
         ":io_processing_input_request",
         ":io_processing_input_processors",
         ":io_processing_input_processor_context",
@@ -246,10 +300,7 @@ ovms_cc_library(
     deps = [
         "//third_party:genai",
         "//src:libovmslogging",
-    ] + select({
-        "//:not_disable_python": [":py_jinja_template_processor"],
-        "//conditions:default": [],
-    }),
+    ],
     visibility = ["//visibility:public"],
 )
 
@@ -502,6 +553,7 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
             "io_processing/mistral/tool_parser.hpp",
             "io_processing/gptoss/reasoning_parser.hpp",
             "io_processing/gptoss/tool_parser.hpp",
+            "io_processing/gptoss/content_parser.hpp",
             "io_processing/gptoss/harmony.hpp",
             "io_processing/output_parser.hpp",
     ],
@@ -513,6 +565,7 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
             "io_processing/mistral/tool_parser.cpp",
             "io_processing/gptoss/reasoning_parser.cpp",
             "io_processing/gptoss/tool_parser.cpp",
+            "io_processing/gptoss/content_parser.cpp",
             "io_processing/gptoss/harmony.cpp",
             "io_processing/output_parser.cpp",
     ],
@@ -590,8 +643,9 @@ ovms_cc_library(
             "visual_language_model/legacy/legacy_executor.hpp",
             "omni_model/legacy/servable.hpp",
             "omni_model/legacy/servable_initializer.hpp",
-            "omni_model/legacy/legacy_executor.hpp",
-            "text_utils.hpp"],
+                "omni_model/legacy/legacy_executor.hpp",
+                "text_utils.hpp",
+                ":llmcalculator_proto_headers"],
     srcs = ["servable.cpp",
             "servable_initializer.cpp",
             "language_model/continuous_batching/servable.cpp",
@@ -611,7 +665,8 @@ ovms_cc_library(
                 "//:disable_python": []
         }) + [
         "//third_party:openvino",
-        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe//mediapipe/framework:calculator_cc_proto",
+        "@mediapipe//mediapipe/framework/port:ret_check",
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src:executor_base",
         "//src:libmodelconfigjsonparser",
@@ -622,7 +677,7 @@ ovms_cc_library(
         "//src:libovmsstring_utils",
         "//src/filesystem:libovmsfilesystem",
         "//src/tokenize:tokenize_parser",
-        "llmcalculator_cc_proto",
+        ":llmcalculator_proto_headers",
         ":text_streamer",
         ":openai_completions_api_handler",
         ":openai_responses_handler",
@@ -638,6 +693,7 @@ ovms_cc_library(
         "//src:libovms_ov_utils",
         "//third_party:genai",
         ":runtime_chat_template_loader",
+        ":llm_calculators_plugin_api",
     ],
     visibility = ["//visibility:public"],
 )
@@ -659,58 +715,53 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "execution_context_utils_no_python",
+    hdrs = ["execution_context_utils.hpp"],
+    srcs = ["execution_context_utils_no_python.cpp"],
+    deps = [
+        ":llm_calculators_plugin_loader",
+        "//src/mediapipe_internal:graph_side_packets",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# Windows DLLs cannot bind back to symbols exported by the host executable, so the
+# dlopen-based plugin split only works on Linux. Windows calls the servable directly.
+alias(
+    name = "execution_context_utils_runtime",
+    actual = select({
+        "//src:windows": ":execution_context_utils",
+        "//conditions:default": ":execution_context_utils_no_python",
+    }),
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "servable_interface",
     hdrs = ["servable.hpp"],
     deps = [
         "//third_party:openvino",
-        "@mediapipe//mediapipe/framework:calculator_graph",
+        "@mediapipe//mediapipe/framework:calculator_cc_proto",
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src:httppayload",
         "//src:sse_utils",
         ":openai_completions_api_handler",
         ":openai_responses_handler",
         ":generation_config_builders",
-        ":runtime_chat_template_loader",
     ],
     visibility = ["//visibility:public"],
 )
 
 ovms_cc_library(
     name = "runtime_chat_template_loader",
-    hdrs = [
-        "runtime_chat_template.hpp",
-        "runtime_chat_template_runtime_loader.hpp",
-    ],
-    srcs = [
-        "runtime_chat_template.cpp",
-        "runtime_chat_template_runtime_loader.cpp",
-    ],
+    hdrs = ["runtime_chat_template_runtime_loader.hpp"],
+    srcs = ["runtime_chat_template_runtime_loader.cpp"],
     deps = [
         "//src:libovmslogging",
     ],
     visibility = ["//visibility:public"],
 )
 
-ovms_cc_library(
-    name = "py_jinja_template_processor_header",
-    hdrs = ["py_jinja_template_processor.hpp"],
-    deps = select({
-            "//:not_disable_python": PYBIND_HEADERS_ONLY,
-            "//:disable_python": []
-        }) + [
-        "//src/python:python_headers_only",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-ovms_cc_library(
-    name = "py_jinja_template_processor",
-    hdrs = ["py_jinja_template_processor.hpp"],
-    srcs = ["py_jinja_template_processor.cpp"],
-    deps = [
-        "//src:libovmslogging",
-        "//src/python:utils",
-    ] + PYBIND_HEADERS_ONLY,
-    visibility = ["//visibility:public"],
-)
 

@@ -178,7 +178,6 @@ When `voice` is omitted, the model's default speaker is used.
 
 - **Speech generation starts after text generation** — not interleaved
 - **Performance** — it is still under ongoing development and may be slower than expected
-- **Audio is always placed at the beginning of the prompt** — the user-specified position of input_audio relative to text is not preserved, multi-turn applications are affected
 
 ## Demo Clients
 
