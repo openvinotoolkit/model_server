@@ -131,22 +131,6 @@ if [ ! -f /ovms_release/lib/libovmspython.so ] || [ ! -f /ovms_release/lib/libpy
 	exit 1
 fi
 
-if ! [[ $debug_bazel_flags == *"mp_off"* ]]; then
-	# Keep explicit copy for the OVMS MediaPipe runtime library.
-	OVMS_MP_RUNTIME_LIB=$(find /ovms/bazel-out/k8-*/bin -type f -name 'libovms_mediapipe_runtime_shared.so' | head -n 1 || true)
-	if [ -z "$OVMS_MP_RUNTIME_LIB" ]; then
-		echo "Missing OVMS MediaPipe runtime library in bazel outputs. Ensure //src:ovms_mediapipe_runtime_shared is built."
-		exit 1
-	fi
-	# --remove-destination overwrites any prior symlink staged by the generic *.so find above.
-	cp -vLf --remove-destination "$OVMS_MP_RUNTIME_LIB" /ovms_release/lib/
-	# Verify the copy landed in the staging directory.
-	if [ ! -f /ovms_release/lib/libovms_mediapipe_runtime_shared.so ]; then
-		echo "Missing libovms_mediapipe_runtime_shared.so in package staging after cp."
-		exit 1
-	fi
-fi
-
 cp -r /opt/intel/openvino/python /ovms_release/lib/python
 if [ "$FUZZER_BUILD" == "0" ]; then mv /ovms_release/lib/pyovms.so /ovms_release/lib/python ; fi
 mv /ovms_release/lib/python/bin/convert_tokenizer /ovms_release/bin/convert_tokenizer

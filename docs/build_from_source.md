@@ -85,7 +85,7 @@ make release_image JOBS=2
 When set to `0`, OpenVINO&trade Model Server will be built with [MediaPipe](mediapipe.md) support. Default value: `0`.
 
 Example:
-```bash
+```text
 make release_image MEDIAPIPE_DISABLE=1
 ```
 

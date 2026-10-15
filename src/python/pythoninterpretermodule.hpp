@@ -32,26 +32,15 @@ class Config;
 class PythonBackend;
 
 class PythonInterpreterModule : public Module, public PythonRuntimeModuleApi {
-#if defined(__cpp_lib_jthread) && __cpp_lib_jthread >= 201911L
     using LifecycleThread = std::jthread;
-#else
-    using LifecycleThread = std::thread;
-#endif
 
     std::unique_ptr<PythonBackend> pythonBackend;
     mutable std::unique_ptr<py::gil_scoped_release> GILScopedRelease;
-#if defined(__cpp_lib_jthread) && __cpp_lib_jthread >= 201911L
     std::condition_variable_any shutdownCondition;
-#else
-    std::condition_variable shutdownCondition;
-#endif
     std::mutex lifecycleMtx;
     std::mutex lifecycleControlMtx;
     LifecycleThread lifecycleThread;
     std::thread::id threadId;
-#if !defined(__cpp_lib_jthread) || __cpp_lib_jthread < 201911L
-    bool shutdownRequested = false;
-#endif
     bool startCalled = false;
     bool ownsInterpreter;
 

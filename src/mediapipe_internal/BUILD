@@ -41,17 +41,6 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
-    name = "pipelinedefinitionstatus",
-    hdrs = ["pipelinedefinitionstatus.hpp"],
-    srcs = ["pipelinedefinitionstatus.cpp"],
-    deps = [
-        "//src:libovmslogging",
-        "//src:libovmsmodelversionstatus",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-ovms_cc_library(
     name = "graph_side_packets",
     hdrs = [
         "graph_side_packets.hpp",
@@ -146,6 +135,17 @@ ovms_cc_library(
     ],
     implementation_deps = [
         "@mediapipe//mediapipe/framework:calculator_graph",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "pipelinedefinitionstatus",
+    hdrs = ["pipelinedefinitionstatus.hpp"],
+    srcs = ["pipelinedefinitionstatus.cpp"],
+    deps = [
+        "//src:libovmslogging",
+        "//src:libovmsmodelversionstatus",
     ],
     visibility = ["//visibility:public"],
 )
@@ -259,19 +259,6 @@ ovms_cc_library(
         "//src/audio/text_to_speech:t2s_calculator",
         "//src/yolox:ov_yolox_tensors_to_detections_calculator",
         "//src/bytetrack/calculators:bytetrack_calculators",
-    ],
-    visibility = ["//visibility:public"],
-    alwayslink = 1,
-)
-
-ovms_cc_library(
-    name = "libovms_mediapipe_runtime_owner",
-    deps = [
-        ":libovms_mediapipe_runtime_owner_no_python_calculators",
-        "//src/llm:execution_context_utils",
-        "//src/llm:llmcalculator_registration",
-        "//src/python:python_calculators_host",
-        "//src/python:python_calculators_runtime_objects",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,

@@ -106,11 +106,7 @@ Status PythonInterpreterModule::start(const ovms::Config&) {
             SPDLOG_ERROR("Cannot start {} - module lifecycle is already active", PYTHON_INTERPRETER_MODULE_NAME);
             return Status(StatusCode::INTERNAL_ERROR, "Python interpreter module lifecycle is already active");
         }
-#if defined(__cpp_lib_jthread) && __cpp_lib_jthread >= 201911L
         lifecycleThread = std::jthread([this, promise = std::move(initializationPromise)](std::stop_token stopToken) mutable {
-#else
-        lifecycleThread = std::thread([this, promise = std::move(initializationPromise)]() mutable {
-#endif
             Status status;
             try {
                 status = initialize();
@@ -128,11 +124,7 @@ Status PythonInterpreterModule::start(const ovms::Config&) {
             }
 
             std::unique_lock lock(lifecycleMtx);
-#if defined(__cpp_lib_jthread) && __cpp_lib_jthread >= 201911L
             shutdownCondition.wait(lock, stopToken, []() { return false; });
-#else
-            shutdownCondition.wait(lock, [this]() { return shutdownRequested; });
-#endif
             lock.unlock();
             shutdownOnLifecycleThread();
         });
@@ -163,15 +155,7 @@ void PythonInterpreterModule::shutdown() {
             return;
         }
 
-#if defined(__cpp_lib_jthread) && __cpp_lib_jthread >= 201911L
         lifecycleThread.request_stop();
-#else
-        {
-            std::lock_guard lifecycleLock(lifecycleMtx);
-            shutdownRequested = true;
-        }
-        shutdownCondition.notify_one();
-#endif
         if (std::this_thread::get_id() == lifecycleThread.get_id()) {
             return;
         }
