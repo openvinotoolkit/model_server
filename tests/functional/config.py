@@ -436,3 +436,9 @@ enable_task_detection = get_bool("TT_ENABLE_TASK_DETECTION", True)
 
 """ TT_ENABLE_POOLING_DETECTION - during embeddings model pull/export use pooling automatically detected by OVMS """
 enable_pooling_detection = get_bool("TT_ENABLE_POOLING_DETECTION", True)
+
+""" TT_ENABLE_TOOL_PARSER_DETECTION - OVMS detects tool_parser automatically """
+enable_tool_parser_detection = get_bool("TT_ENABLE_TOOL_PARSER_DETECTION", True)
+
+""" TT_ENABLE_REASONING_PARSER_DETECTION - OVMS detects reasoning_parser automatically """
+enable_reasoning_parser_detection = get_bool("TT_ENABLE_REASONING_PARSER_DETECTION", True)
