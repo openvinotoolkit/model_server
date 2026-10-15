@@ -144,50 +144,34 @@ bool loadPythonCalculatorsPlugin() {
         return true;
     }
 
+    if (activateInProcessPluginApi()) {
+        SPDLOG_TRACE("Python calculators plugin already present in the process, skipping plugin load");
+        return true;
+    }
+
 #ifdef __linux__
-    if (registerPythonCalculators != nullptr) {
-        registerPythonCalculatorsFn = registerPythonCalculators;
-        if (getKfsPyTensorBridgeVTable() == nullptr && OVMS_getKfsPyTensorBridgeVTable != nullptr) {
-            if (auto* vtable = OVMS_getKfsPyTensorBridgeVTable(); vtable != nullptr) {
-                activateKfsBridge(vtable, "in-process weak symbol");
-            }
-        }
-        if (getKfsPyTensorBridgeVTable() != nullptr) {
-            SPDLOG_TRACE("Python calculators plugin entry point already linked in-process, skipping plugin dlopen");
-            return true;
-        }
-        SPDLOG_WARN("Python calculators registration is available in-process but KFS Python tensor bridge is not initialized. Continuing without plugin dlopen; OVMS_PY_TENSOR bridge paths may be unavailable.");
-        return true;
+    constexpr const char* pluginName = "libpython_calculators.so";
+    SPDLOG_DEBUG("Attempting to load Python calculators plugin: {}", pluginName);
+    pythonCalculatorsHandle = dlopen(pluginName, RTLD_NOW | RTLD_LOCAL);
+    if (pythonCalculatorsHandle == nullptr) {
+        const char* errorMessage = dlerror();
+        SPDLOG_WARN("Python calculators plugin {} failed to load: {}. MediaPipe Python calculators will not be available.",
+            pluginName, errorMessage != nullptr ? errorMessage : "unknown error");
+        return false;
     }
 
-    auto* alreadyLoadedRegisterFn = reinterpret_cast<RegisterPythonCalculatorsFn>(dlsym(RTLD_DEFAULT, "registerPythonCalculators"));
-    if (alreadyLoadedRegisterFn != nullptr) {
-        registerPythonCalculatorsFn = alreadyLoadedRegisterFn;
-
-        auto* getKfsBridgeFn = reinterpret_cast<GetKfsPyTensorBridgeVTableFn>(dlsym(RTLD_DEFAULT, "OVMS_getKfsPyTensorBridgeVTable"));
-        if (getKfsBridgeFn != nullptr) {
-            if (auto* vtable = getKfsBridgeFn(); vtable != nullptr) {
-                activateKfsBridge(vtable, "already loaded python calculators plugin");
-            }
-        }
-
-        if (getKfsPyTensorBridgeVTable() != nullptr) {
-            SPDLOG_TRACE("Python calculators plugin already present in the process, skipping dlopen");
-            return true;
-        }
-        SPDLOG_WARN("Python calculators entry point is present in the process but KFS Python tensor bridge is not initialized. Continuing without plugin dlopen; OVMS_PY_TENSOR bridge paths may be unavailable.");
-        return true;
+    if (!activatePluginApi(reinterpret_cast<GetPythonCalculatorsPluginApiFn>(
+                               dlsym(pythonCalculatorsHandle, "OVMS_getPythonCalculatorsPluginApi")),
+            pluginName)) {
+        const char* errorMessage = dlerror();
+        SPDLOG_WARN("Python calculators plugin {} does not provide a usable OVMS_getPythonCalculatorsPluginApi: {}. MediaPipe Python calculators will not be available.",
+            pluginName, errorMessage != nullptr ? errorMessage : "unknown error");
+        dlclose(pythonCalculatorsHandle);
+        pythonCalculatorsHandle = nullptr;
+        return false;
     }
-
-    SPDLOG_DEBUG("Skipping libpython_calculators.so dlopen; using runtime-shared registrations.");
-    return true;
 
 #elif _WIN32
-    if (activateInProcessPluginApi()) {
-        SPDLOG_TRACE("Python calculators implementation already present in the process, skipping plugin load");
-        return true;
-    }
-
     constexpr const char* pluginName = "libpython_calculators.dll";
     SPDLOG_DEBUG("Attempting to load Python calculators plugin: {}", pluginName);
     pythonCalculatorsHandle = LoadLibraryA(pluginName);
