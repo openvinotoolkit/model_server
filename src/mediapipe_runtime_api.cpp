@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//*****************************************************************************
+//*****************************************************************************/
 
 #include "mediapipe_runtime_api.hpp"
 
@@ -30,7 +30,6 @@
 
 #include "config.hpp"
 #include "logging.hpp"
-#include "kfs_python_tensor_bridge.hpp"
 #include "mediapipe_internal/mediapipe_graph_executor_interface.hpp"
 #include "utils/newline_delimited.hpp"
 
@@ -62,7 +61,6 @@ extern "C" const char* OVMS_MPFactoryGetNames(void*, int) __attribute__((weak));
 extern "C" void* OVMS_MPFactoryFindServableDefinitionByName(void*, const char*) __attribute__((weak));
 extern "C" int OVMS_MPGraphExportCreateServableConfig(const char*, const ovms::HFSettingsImpl*) __attribute__((weak));
 extern "C" int OVMS_MPGraphExportCreateServableConfigInMemory(const char*, const ovms::HFSettingsImpl*, char**) __attribute__((weak));
-extern "C" const ovms::KfsPyTensorBridgeVTable* OVMS_getKfsPyTensorBridgeVTable() __attribute__((weak));
 extern "C" void OVMS_MPSetExternalServerHandle(void*) __attribute__((weak));
 extern "C" void OVMS_MPFactoryConfigureLogging(const char*, const char*) __attribute__((weak));
 #endif
@@ -75,7 +73,6 @@ struct MediapipeRuntimeApi::ApiSymbols {
 #elif _WIN32
     using LibraryHandle = HMODULE;
 #endif
-
     using CreateFn = void* (*)(void*);
     using DestroyFn = void (*)(void*);
     using LastErrorFn = const char* (*)();
@@ -98,9 +95,9 @@ struct MediapipeRuntimeApi::ApiSymbols {
     using CreateServableConfigInMemoryFn = int (*)(const char*, const HFSettingsImpl*, char**);
     using SetExternalServerHandleFn = void (*)(void*);
     using ConfigureLoggingFn = void (*)(const char*, const char*);
+
     LibraryHandle handle = nullptr;
     void* factoryHandle = nullptr;
-
     CreateFn create = nullptr;
     DestroyFn destroy = nullptr;
     LastErrorFn lastError = nullptr;
@@ -135,47 +132,8 @@ static void* resolveSymbol(HMODULE handle, const char* name) {
 }
 #endif
 
-namespace {
-void tryActivateKfsPythonTensorBridgeFromRuntimeSymbols(
-#ifdef __linux__
-    void* handle
-#elif _WIN32
-    HMODULE handle
-#endif
-) {
-    using GetKfsBridgeFn = const ovms::KfsPyTensorBridgeVTable* (*)();
-    using SetKfsBridgeFn = int (*)(const ovms::KfsPyTensorBridgeVTable*);
-
-    if (ovms::getKfsPyTensorBridgeVTable() != nullptr) {
-        return;
-    }
-
-#ifdef __linux__
-    auto* getBridgeFn = OVMS_getKfsPyTensorBridgeVTable != nullptr ? OVMS_getKfsPyTensorBridgeVTable : reinterpret_cast<GetKfsBridgeFn>(resolveSymbol(handle, "OVMS_getKfsPyTensorBridgeVTable"));
-    auto* setBridgeFn = reinterpret_cast<SetKfsBridgeFn>(resolveSymbol(handle, "OVMS_setKfsPyTensorBridgeVTable"));
-#elif _WIN32
-    auto* getBridgeFn = reinterpret_cast<GetKfsBridgeFn>(resolveSymbol(handle, "OVMS_getKfsPyTensorBridgeVTable"));
-    auto* setBridgeFn = reinterpret_cast<SetKfsBridgeFn>(resolveSymbol(handle, "OVMS_setKfsPyTensorBridgeVTable"));
-#endif
-    if (getBridgeFn == nullptr) {
-        return;
-    }
-
-    if (auto* bridge = getBridgeFn(); bridge != nullptr) {
-        if (setBridgeFn != nullptr) {
-            // Keep runtime-shared and main-process bridge state synchronized.
-            setBridgeFn(bridge);
-        }
-        ovms::setKfsPyTensorBridgeVTable(bridge);
-        SPDLOG_TRACE("KFS Python tensor bridge activated from MediaPipe runtime-shared symbols");
-    }
-}
-}  // namespace
-
 MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
     api(std::make_unique<ApiSymbols>()) {
-    bool loadedFromInProcessSymbols = false;
-
 #ifdef __linux__
     api->create = OVMS_MPFactoryCreate;
     api->destroy = OVMS_MPFactoryDestroy;
@@ -309,62 +267,44 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
         return;
     }
 
-    if (!loadedFromInProcessSymbols) {
-        api->create = reinterpret_cast<ApiSymbols::CreateFn>(resolveSymbol(api->handle, "OVMS_MPFactoryCreate"));
-        api->destroy = reinterpret_cast<ApiSymbols::DestroyFn>(resolveSymbol(api->handle, "OVMS_MPFactoryDestroy"));
-        api->lastError = reinterpret_cast<ApiSymbols::LastErrorFn>(resolveSymbol(api->handle, "OVMS_MPFactoryGetLastError"));
-        api->processConfig = reinterpret_cast<ApiSymbols::ProcessConfigFn>(resolveSymbol(api->handle, "OVMS_MPFactoryProcessConfig"));
-        api->createExecutor = reinterpret_cast<ApiSymbols::CreateExecutorFn>(resolveSymbol(api->handle, "OVMS_MPFactoryCreateExecutor"));
-        api->createExecutorHandle = reinterpret_cast<ApiSymbols::CreateExecutorHandleFn>(resolveSymbol(api->handle, "OVMS_MPFactoryCreateExecutorHandle"));
-        api->definitionExists = reinterpret_cast<ApiSymbols::DefinitionExistsFn>(resolveSymbol(api->handle, "OVMS_MPFactoryDefinitionExists"));
-        api->wakeUpDefinition = reinterpret_cast<ApiSymbols::WakeUpDefinitionFn>(resolveSymbol(api->handle, "OVMS_MPFactoryWakeUpDefinition"));
-        api->putToSleepDefinition = reinterpret_cast<ApiSymbols::PutToSleepDefinitionFn>(resolveSymbol(api->handle, "OVMS_MPFactoryPutToSleepDefinition"));
-        api->retireDefinition = reinterpret_cast<ApiSymbols::RetireDefinitionFn>(resolveSymbol(api->handle, "OVMS_MPFactoryRetireDefinition"));
-        api->isDefinitionRetired = reinterpret_cast<ApiSymbols::IsDefinitionRetiredFn>(resolveSymbol(api->handle, "OVMS_MPFactoryIsDefinitionRetired"));
-        api->isDefinitionAvailable = reinterpret_cast<ApiSymbols::IsDefinitionAvailableFn>(resolveSymbol(api->handle, "OVMS_MPFactoryIsDefinitionAvailable"));
-        api->shouldUnloadDefinitionDueToIdle = reinterpret_cast<ApiSymbols::ShouldUnloadDefinitionDueToIdleFn>(resolveSymbol(api->handle, "OVMS_MPFactoryShouldUnloadDefinitionDueToIdle"));
-        api->hasActiveInference = reinterpret_cast<ApiSymbols::HasActiveInferenceFn>(resolveSymbol(api->handle, "OVMS_MPFactoryHasActiveInference"));
-        api->getDefinitionGroupName = reinterpret_cast<ApiSymbols::GetDefinitionGroupNameFn>(resolveSymbol(api->handle, "OVMS_MPFactoryGetDefinitionGroupName"));
-        api->aliasesConflictExcluding = reinterpret_cast<ApiSymbols::AliasesConflictExcludingFn>(resolveSymbol(api->handle, "OVMS_MPFactoryAliasesConflictExcluding"));
-        api->getNames = reinterpret_cast<ApiSymbols::GetNamesFn>(resolveSymbol(api->handle, "OVMS_MPFactoryGetNames"));
-        api->findServableDefinition = reinterpret_cast<ApiSymbols::FindServableDefinitionFn>(resolveSymbol(api->handle, "OVMS_MPFactoryFindServableDefinitionByName"));
-        api->createServableConfig = reinterpret_cast<ApiSymbols::CreateServableConfigFn>(resolveSymbol(api->handle, "OVMS_MPGraphExportCreateServableConfig"));
-        api->createServableConfigInMemory = reinterpret_cast<ApiSymbols::CreateServableConfigInMemoryFn>(resolveSymbol(api->handle, "OVMS_MPGraphExportCreateServableConfigInMemory"));
-        api->setExternalServerHandle = reinterpret_cast<ApiSymbols::SetExternalServerHandleFn>(resolveSymbol(api->handle, "OVMS_MPSetExternalServerHandle"));
-        api->configureLogging = reinterpret_cast<ApiSymbols::ConfigureLoggingFn>(resolveSymbol(api->handle, "OVMS_MPFactoryConfigureLogging"));
-
-        tryActivateKfsPythonTensorBridgeFromRuntimeSymbols(api->handle);
-    }
-
-#ifdef __linux__
-    if (api->setExternalServerHandle == nullptr) {
-        api->setExternalServerHandle = OVMS_MPSetExternalServerHandle != nullptr ? OVMS_MPSetExternalServerHandle : reinterpret_cast<ApiSymbols::SetExternalServerHandleFn>(resolveSymbol(RTLD_DEFAULT, "OVMS_MPSetExternalServerHandle"));
-    }
 #endif
 
-    if (api->create == nullptr ||
-        api->destroy == nullptr ||
-        api->lastError == nullptr ||
-        api->processConfig == nullptr ||
-        api->createExecutor == nullptr ||
-        api->createExecutorHandle == nullptr ||
-        api->definitionExists == nullptr ||
-        api->wakeUpDefinition == nullptr ||
-        api->putToSleepDefinition == nullptr ||
-        api->retireDefinition == nullptr ||
-        api->isDefinitionRetired == nullptr ||
-        api->isDefinitionAvailable == nullptr ||
-        api->shouldUnloadDefinitionDueToIdle == nullptr ||
-        api->hasActiveInference == nullptr ||
-        api->getDefinitionGroupName == nullptr ||
-        api->aliasesConflictExcluding == nullptr ||
-        api->getNames == nullptr ||
-        api->findServableDefinition == nullptr ||
-        api->createServableConfig == nullptr ||
+    api->create = reinterpret_cast<ApiSymbols::CreateFn>(resolveSymbol(currentModule, "OVMS_MPFactoryCreate"));
+    api->destroy = reinterpret_cast<ApiSymbols::DestroyFn>(resolveSymbol(currentModule, "OVMS_MPFactoryDestroy"));
+    api->lastError = reinterpret_cast<ApiSymbols::LastErrorFn>(resolveSymbol(currentModule, "OVMS_MPFactoryGetLastError"));
+    api->processConfig = reinterpret_cast<ApiSymbols::ProcessConfigFn>(resolveSymbol(currentModule, "OVMS_MPFactoryProcessConfig"));
+    api->createExecutor = reinterpret_cast<ApiSymbols::CreateExecutorFn>(resolveSymbol(currentModule, "OVMS_MPFactoryCreateExecutor"));
+    api->createExecutorHandle = reinterpret_cast<ApiSymbols::CreateExecutorHandleFn>(resolveSymbol(currentModule, "OVMS_MPFactoryCreateExecutorHandle"));
+    api->definitionExists = reinterpret_cast<ApiSymbols::DefinitionExistsFn>(resolveSymbol(currentModule, "OVMS_MPFactoryDefinitionExists"));
+    api->wakeUpDefinition = reinterpret_cast<ApiSymbols::WakeUpDefinitionFn>(resolveSymbol(currentModule, "OVMS_MPFactoryWakeUpDefinition"));
+    api->putToSleepDefinition = reinterpret_cast<ApiSymbols::PutToSleepDefinitionFn>(resolveSymbol(currentModule, "OVMS_MPFactoryPutToSleepDefinition"));
+    api->retireDefinition = reinterpret_cast<ApiSymbols::RetireDefinitionFn>(resolveSymbol(currentModule, "OVMS_MPFactoryRetireDefinition"));
+    api->isDefinitionRetired = reinterpret_cast<ApiSymbols::IsDefinitionRetiredFn>(resolveSymbol(currentModule, "OVMS_MPFactoryIsDefinitionRetired"));
+    api->isDefinitionAvailable = reinterpret_cast<ApiSymbols::IsDefinitionAvailableFn>(resolveSymbol(currentModule, "OVMS_MPFactoryIsDefinitionAvailable"));
+    api->shouldUnloadDefinitionDueToIdle = reinterpret_cast<ApiSymbols::ShouldUnloadDefinitionDueToIdleFn>(resolveSymbol(currentModule, "OVMS_MPFactoryShouldUnloadDefinitionDueToIdle"));
+    api->hasActiveInference = reinterpret_cast<ApiSymbols::HasActiveInferenceFn>(resolveSymbol(currentModule, "OVMS_MPFactoryHasActiveInference"));
+    api->getDefinitionGroupName = reinterpret_cast<ApiSymbols::GetDefinitionGroupNameFn>(resolveSymbol(currentModule, "OVMS_MPFactoryGetDefinitionGroupName"));
+    api->aliasesConflictExcluding = reinterpret_cast<ApiSymbols::AliasesConflictExcludingFn>(resolveSymbol(currentModule, "OVMS_MPFactoryAliasesConflictExcluding"));
+    api->getNames = reinterpret_cast<ApiSymbols::GetNamesFn>(resolveSymbol(currentModule, "OVMS_MPFactoryGetNames"));
+    api->findServableDefinition = reinterpret_cast<ApiSymbols::FindServableDefinitionFn>(resolveSymbol(currentModule, "OVMS_MPFactoryFindServableDefinitionByName"));
+    api->createServableConfig = reinterpret_cast<ApiSymbols::CreateServableConfigFn>(resolveSymbol(currentModule, "OVMS_MPGraphExportCreateServableConfig"));
+    api->createServableConfigInMemory = reinterpret_cast<ApiSymbols::CreateServableConfigInMemoryFn>(resolveSymbol(currentModule, "OVMS_MPGraphExportCreateServableConfigInMemory"));
+    api->setExternalServerHandle = reinterpret_cast<ApiSymbols::SetExternalServerHandleFn>(resolveSymbol(currentModule, "OVMS_MPSetExternalServerHandle"));
+    api->configureLogging = reinterpret_cast<ApiSymbols::ConfigureLoggingFn>(resolveSymbol(currentModule, "OVMS_MPFactoryConfigureLogging"));
+
+    if (api->create == nullptr || api->destroy == nullptr || api->lastError == nullptr || api->processConfig == nullptr ||
+        api->createExecutor == nullptr || api->createExecutorHandle == nullptr || api->definitionExists == nullptr ||
+        api->wakeUpDefinition == nullptr || api->putToSleepDefinition == nullptr || api->retireDefinition == nullptr ||
+        api->isDefinitionRetired == nullptr || api->isDefinitionAvailable == nullptr ||
+        api->shouldUnloadDefinitionDueToIdle == nullptr || api->hasActiveInference == nullptr ||
+        api->getDefinitionGroupName == nullptr || api->aliasesConflictExcluding == nullptr || api->getNames == nullptr ||
+        api->findServableDefinition == nullptr || api->createServableConfig == nullptr ||
         api->createServableConfigInMemory == nullptr) {
-        SPDLOG_ERROR("MediaPipe runtime API symbols could not be resolved");
+        SPDLOG_ERROR("In-process MediaPipe runtime symbols are unavailable");
         return;
     }
+
+    SPDLOG_TRACE("MediaPipe runtime API resolved from in-process symbols");
 
     if (api->configureLogging != nullptr) {
         const auto& config = Config::instance();
@@ -382,7 +322,7 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
         auto* status = OVMS_ServerNew(&serverHandle);
         if (status != nullptr) {
             OVMS_StatusDelete(status);
-            SPDLOG_WARN("Failed to obtain OVMS server handle for MediaPipe runtime-shared");
+            SPDLOG_WARN("Failed to obtain OVMS server handle for MediaPipe runtime");
         } else {
             api->setExternalServerHandle(static_cast<void*>(serverHandle));
         }
@@ -393,22 +333,10 @@ MediapipeRuntimeApi::~MediapipeRuntimeApi() {
     if (api == nullptr) {
         return;
     }
-
     if (api->factoryHandle != nullptr && api->destroy != nullptr) {
         api->destroy(api->factoryHandle);
         api->factoryHandle = nullptr;
     }
-
-#ifdef __linux__
-    if (api->handle != nullptr) {
-        dlclose(api->handle);
-    }
-#elif _WIN32
-    if (api->handle != nullptr) {
-        FreeLibrary(api->handle);
-    }
-#endif
-    api->handle = nullptr;
 }
 
 bool MediapipeRuntimeApi::isLoaded() const {
@@ -465,10 +393,7 @@ Status MediapipeRuntimeApi::createHandle(std::unique_ptr<MediapipeGraphExecutorI
 }
 
 bool MediapipeRuntimeApi::definitionExists(const std::string& name) const {
-    if (!isLoaded()) {
-        return false;
-    }
-    return api->definitionExists(api->factoryHandle, name.c_str()) != 0;
+    return isLoaded() && api->definitionExists(api->factoryHandle, name.c_str()) != 0;
 }
 
 Status MediapipeRuntimeApi::wakeUpDefinition(const std::string& name, const ServableNameChecker& checker) const {
@@ -494,39 +419,26 @@ Status MediapipeRuntimeApi::putToSleepDefinition(const std::string& name) const 
 Status MediapipeRuntimeApi::retireDefinition(const std::string& name) const {
     OVMS_RETURN_IF_MEDIAPIPE_RUNTIME_NOT_LOADED();
     int code = api->retireDefinition(api->factoryHandle, name.c_str());
-    if (code == static_cast<int>(StatusCode::OK)) {
+    if (code == static_cast<int>(StatusCode::OK))
         return StatusCode::OK;
-    }
     const char* details = api->lastError();
     return details == nullptr ? Status(static_cast<StatusCode>(code), "MediaPipe runtime API error") : Status(static_cast<StatusCode>(code), details);
 }
 
 bool MediapipeRuntimeApi::isDefinitionRetired(const std::string& name) const {
-    if (!isLoaded()) {
-        return false;
-    }
-    return api->isDefinitionRetired(api->factoryHandle, name.c_str()) != 0;
+    return isLoaded() && api->isDefinitionRetired(api->factoryHandle, name.c_str()) != 0;
 }
 
 bool MediapipeRuntimeApi::isDefinitionAvailable(const std::string& name) const {
-    if (!isLoaded()) {
-        return false;
-    }
-    return api->isDefinitionAvailable(api->factoryHandle, name.c_str()) != 0;
+    return isLoaded() && api->isDefinitionAvailable(api->factoryHandle, name.c_str()) != 0;
 }
 
 bool MediapipeRuntimeApi::shouldUnloadDefinitionDueToIdle(const std::string& name) const {
-    if (!isLoaded()) {
-        return false;
-    }
-    return api->shouldUnloadDefinitionDueToIdle(api->factoryHandle, name.c_str()) != 0;
+    return isLoaded() && api->shouldUnloadDefinitionDueToIdle(api->factoryHandle, name.c_str()) != 0;
 }
 
 bool MediapipeRuntimeApi::hasActiveInference(const std::string& name) const {
-    if (!isLoaded()) {
-        return false;
-    }
-    return api->hasActiveInference(api->factoryHandle, name.c_str()) != 0;
+    return isLoaded() && api->hasActiveInference(api->factoryHandle, name.c_str()) != 0;
 }
 
 std::string MediapipeRuntimeApi::getDefinitionGroupName(const std::string& name) const {
@@ -550,10 +462,7 @@ const std::vector<std::string> MediapipeRuntimeApi::getMediapipePipelinesNames()
         return {};
     }
     const char* names = api->getNames(api->factoryHandle, 0);
-    if (names == nullptr) {
-        return {};
-    }
-    return splitNewlineDelimited(names);
+    return names == nullptr ? std::vector<std::string>{} : splitNewlineDelimited(names);
 }
 
 const std::vector<std::string> MediapipeRuntimeApi::getNamesOfAvailableMediapipePipelines() const {
@@ -561,10 +470,7 @@ const std::vector<std::string> MediapipeRuntimeApi::getNamesOfAvailableMediapipe
         return {};
     }
     const char* names = api->getNames(api->factoryHandle, 1);
-    if (names == nullptr) {
-        return {};
-    }
-    return splitNewlineDelimited(names);
+    return names == nullptr ? std::vector<std::string>{} : splitNewlineDelimited(names);
 }
 
 MediapipeGraphDefinition* MediapipeRuntimeApi::findDefinitionByName(const std::string& name) const {
@@ -578,21 +484,15 @@ ServableDefinition* MediapipeRuntimeApi::findServableDefinitionByName(const std:
     return reinterpret_cast<ServableDefinition*>(api->findServableDefinition(api->factoryHandle, name.c_str()));
 }
 
-Status MediapipeRuntimeApi::createServableConfig(const std::string& directoryPath,
-    const HFSettingsImpl& hfSettings) const {
-    // In-process runtime API mode intentionally has no dynamic library handle.
-    if (api == nullptr || api->createServableConfig == nullptr) {
+Status MediapipeRuntimeApi::createServableConfig(const std::string& directoryPath, const HFSettingsImpl& hfSettings) const {
+    if (api == nullptr || api->createServableConfig == nullptr)
         return StatusCode::INTERNAL_ERROR;
-    }
     int code = api->createServableConfig(directoryPath.c_str(), &hfSettings);
     if (code == static_cast<int>(StatusCode::OK)) {
         return StatusCode::OK;
     }
     const char* details = api->lastError ? api->lastError() : nullptr;
-    if (details == nullptr) {
-        return Status(static_cast<StatusCode>(code), "MediaPipe runtime API error");
-    }
-    return Status(static_cast<StatusCode>(code), details);
+    return details == nullptr ? Status(static_cast<StatusCode>(code), "MediaPipe runtime API error") : Status(static_cast<StatusCode>(code), details);
 }
 
 Status MediapipeRuntimeApi::createServableConfigInMemory(const std::string& directoryPath,
@@ -611,10 +511,7 @@ Status MediapipeRuntimeApi::createServableConfigInMemory(const std::string& dire
         return StatusCode::OK;
     }
     const char* details = api->lastError ? api->lastError() : nullptr;
-    if (details == nullptr) {
-        return Status(static_cast<StatusCode>(code), "MediaPipe runtime API error");
-    }
-    return Status(static_cast<StatusCode>(code), details);
+    return details == nullptr ? Status(static_cast<StatusCode>(code), "MediaPipe runtime API error") : Status(static_cast<StatusCode>(code), details);
 }
 
 }  // namespace ovms

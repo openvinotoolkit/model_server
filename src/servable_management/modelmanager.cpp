@@ -1625,11 +1625,21 @@ Status ModelManager::getModelInstance(const std::string& modelName,
     return modelInstance->waitForLoaded(waitForModelLoadedTimeoutMs, modelInstanceUnloadGuardPtr);
 }
 
-const std::vector<std::string> ModelManager::getNamesOfAvailableModels() const {
-    // In idle management mode, report all configured models as available
+const std::vector<std::string> ModelManager::getNamesOfAvailableServables() const {
+    // In idle management mode, report all configured servables as available
+    // TODO in separate PR - improve LoRA handling
     if (servableGroupManager && servableGroupManager->isEnabled()) {
         return servableGroupManager->getAllConfiguredServableNames();
     }
+    std::vector<std::string> names = getNamesOfAvailableModels();
+#if (MEDIAPIPE_DISABLE == 0)
+    const auto mediapipeNames = getNamesOfAvailableMediapipePipelines();
+    names.insert(names.end(), mediapipeNames.begin(), mediapipeNames.end());
+#endif
+    return names;
+}
+
+const std::vector<std::string> ModelManager::getNamesOfAvailableModels() const {
     std::vector<std::string> names;
     std::shared_lock lock(modelsMtx);
     for (auto& [name, model] : models) {
@@ -1648,7 +1658,7 @@ const std::vector<std::string> ModelManager::getNamesOfAvailableMediapipePipelin
 #endif
 
 #if (MEDIAPIPE_DISABLE == 0)
-Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
+Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutorInterface>& graph,
     const std::string& name) {
     if (servableGroupManager && servableGroupManager->isEnabled()) {
         // TODO current preview limitation -> we wait for whole group to load
@@ -1658,11 +1668,6 @@ Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutor>& gra
             return status;
         }
     }
-    return this->mediapipeFactory->create(graph, name);
-}
-
-Status ModelManager::createPipelineHandle(std::unique_ptr<MediapipeGraphExecutorInterface>& graph,
-    const std::string& name) {
     return this->mediapipeFactory->createHandle(graph, name);
 }
 #endif

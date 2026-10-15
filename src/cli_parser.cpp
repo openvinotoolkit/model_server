@@ -37,6 +37,7 @@
 #include "ovms_exit_codes.hpp"
 #include "filesystem/filesystem.hpp"
 #include "filesystem/localfilesystem.hpp"
+#include "ov_version.hpp"
 #include "version.hpp"
 
 namespace ovms {
@@ -68,7 +69,7 @@ std::string CLIParser::getEffectiveTaskParameter() const {
     throw std::logic_error("Could not infer model task - specify --task value explicitly");
 }
 
-std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char** argv) {
+std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, const char* const* argv) {
     std::stringstream ss;
     try {
         options = std::make_unique<cxxopts::Options>(argv[0], "OpenVINO Model Server");
@@ -110,6 +111,10 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "GRPC server buffer memory quota. Default value set to 2147483648 (2GB).",
                 cxxopts::value<size_t>(),
                 "GRPC_MEMORY_QUOTA")
+            ("json_max_complexity",
+                "Maximum JSON SAX event count allowed before request parsing is rejected. Default value is 134217728.",
+                cxxopts::value<size_t>(),
+                "JSON_MAX_COMPLEXITY")
             ("rest_workers",
                 "Number of worker threads in REST server - has no effect if rest_port is not set. Default value depends on number of CPUs. ",
                 cxxopts::value<uint32_t>(),
@@ -179,6 +184,19 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "Path to directory that contains multimedia files that can be used as input for LLMs.",
                 cxxopts::value<std::string>(),
                 "ALLOWED_LOCAL_MEDIA_PATH")
+            ("max_image_decode_pixels",
+                    "Maximum total number of decoded input-image pixels (the sum of width x height across all images in a request). "
+                    "Images that would make the request exceed this limit are rejected before decoding, guarding against decompression-bomb inputs. "
+                "Default matches OpenCV's OPENCV_IO_MAX_IMAGE_PIXELS. Note: this does not change OpenCV's own internal limit, "
+                "which is controlled separately by the OPENCV_IO_MAX_IMAGE_PIXELS environment variable read at startup.",
+                cxxopts::value<uint64_t>()->default_value(std::to_string(OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS)),
+                "MAX_IMAGE_DECODE_PIXELS")
+            ("allow_unestimatable_image_formats",
+                "Flag allowing input images whose decoded size cannot be estimated (formats OVMS cannot inspect the header of) "
+                "to be decoded anyway. Disabled by default, so such images are rejected. Enable only if you must accept formats "
+                "OVMS cannot pre-validate.",
+                cxxopts::value<bool>()->default_value("false"),
+                "ALLOW_UNESTIMATABLE_IMAGE_FORMATS")
             ("allow_credentials",
                 "Flag enabling credentials on the API.",
                 cxxopts::value<bool>()->default_value("false"),
@@ -517,14 +535,14 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
 #pragma warning(disable : 4129)
         if (result->count("version")) {
             std::string project_name(PROJECT_NAME);
-            std::string project_version(PROJECT_VERSION);
+            std::string project_version(ovms::getProjectVersion());
             ss << project_name + " " + project_version << std::endl;
             ss << "OpenVINO backend " << ovms::getOpenVINOVersion() << std::endl;
             const char* genaiVersion = ovms::getGenAIVersion();
             if (genaiVersion[0] != '\0') {
                 ss << "OpenVINO GenAI backend " << genaiVersion << std::endl;
             }
-            ss << "Bazel build flags: " << BAZEL_BUILD_FLAGS << std::endl;
+            ss << "Bazel build flags: " << ovms::getBazelBuildFlags() << std::endl;
 #pragma warning(pop)
             return std::make_pair(OVMS_EX_OK, ss.str());
         }
@@ -632,6 +650,11 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
 
     if (result->count("grpc_memory_quota"))
         serverSettings.grpcMemoryQuota = result->operator[]("grpc_memory_quota").as<size_t>();
+
+    serverSettings.maxImageDecodePixels = result->operator[]("max_image_decode_pixels").as<uint64_t>();
+    serverSettings.allowUnestimatableImageFormats = result->operator[]("allow_unestimatable_image_formats").as<bool>();
+    if (result->count("json_max_complexity"))
+        serverSettings.jsonMaxComplexity = result->operator[]("json_max_complexity").as<size_t>();
 
     if (result->count("rest_workers"))
         serverSettings.restWorkers = result->operator[]("rest_workers").as<uint32_t>();

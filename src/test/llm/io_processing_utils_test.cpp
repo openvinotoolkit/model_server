@@ -140,6 +140,53 @@ TEST(FindInStringTest, SingleQuoteClosedWithSpaceBeforeDelimiter) {
     EXPECT_EQ(input[pos], ',');
 }
 
+TEST(FindInStringTest, LeadingLetterApostropheValueDoesNotOpenOnClosingQuote) {
+    EXPECT_EQ(findInStringRespectingSpecialChars("ignitionMode:s'START'}", "}", 0), 21u);
+}
+
+TEST(FindInStringTest, EqualsSignOpensSingleQuote) {
+    // LFM2's key=value syntax: '=' must open a quote span too, so a comma inside the
+    // value isn't mistaken for the argument separator.
+    EXPECT_EQ(findInStringRespectingSpecialChars("location='Paris, France',unit='celsius'", ",", 0), 24u);
+}
+
+TEST(FindInStringTest, OpenParenOpensSingleQuoteFindsTrueBraceMatch) {
+    // '(' must open a quote span too (closing already accepts ')'), protecting a brace inside
+    // a function-call-style value so the true terminator - not the inner one - is found.
+    EXPECT_EQ(findInStringRespectingSpecialChars("code:fn('a}b')}", "}", 0), 14u);
+}
+
+TEST(FindInStringTest, BraceInsideDoubleQuotesDoesNotDesyncTracking) {
+    // A brace inside "..." must not affect braceDepth; comma after the closing quote is found.
+    EXPECT_EQ(findInStringRespectingSpecialChars(R"("a}b", c)", ",", 0), 5u);
+}
+
+TEST(FindInStringTest, DoubleQuoteInsideSingleQuoteDoesNotDesyncTracking) {
+    // A '"' inside a single-quoted value must not toggle quoteDepth; the true closing '}' is
+    // found, not the one hidden inside the embedded "..." text.
+    EXPECT_EQ(findInStringRespectingSpecialChars(R"(key:'say "hi}" now',next:1})", "}", 0), 26u);
+}
+
+TEST(FindInStringTest, WhitespacePrecedingSingleQuoteOpensSpan) {
+    // A single quote preceded by whitespace (not one of the explicit boundary chars) must
+    // still open - e.g. a Python code snippet's `return 'a,b'` - so the comma inside stays
+    // protected and only the true argument-separating comma after it is found.
+    EXPECT_EQ(findInStringRespectingSpecialChars("code:return 'a,b',next:1", ",", 0), 17u);
+}
+
+TEST(FindInStringTest, OperatorPrecedingSingleQuoteOpensSpan) {
+    // Any non-word predecessor opens the span, not just a fixed punctuation whitelist - e.g. a
+    // Python operator like '+' in x+'a,b' - so the comma inside stays protected.
+    EXPECT_EQ(findInStringRespectingSpecialChars("code:x+'a,b',next:1", ",", 0), 12u);
+}
+
+TEST(FindInStringTest, OperatorFollowingClosingSingleQuoteClosesSpan) {
+    // Any non-word follower closes the span, not just a fixed delimiter whitelist - e.g. a
+    // Python operator like '+' right after 'a,b' in 'a,b'+y - so the real separating comma
+    // after it is found, instead of the quote staying stuck open.
+    EXPECT_EQ(findInStringRespectingSpecialChars("code:x+'a,b'+y,next:1", ",", 0), 14u);
+}
+
 // ── trimSurroundingQuotes: tag-attribute quote normalization (issue #4487) ───
 
 TEST(TrimSurroundingQuotesTest, RemovesWrappingDoubleQuotes) {

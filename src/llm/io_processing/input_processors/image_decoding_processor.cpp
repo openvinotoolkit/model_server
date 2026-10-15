@@ -22,6 +22,7 @@
 
 #include "../../io_processing/image_utils.hpp"
 #include "../../../logging.hpp"
+#include "../../../predict_request_validation_utils_impl.hpp"
 
 namespace ovms {
 
@@ -60,6 +61,7 @@ absl::Status ImageDecodingProcessor::process(InputRequest& req) {
     }
 
     size_t imageIndex = 0;
+    size_t maxAllowedImagePixels = request_validation_utils::getMaxImageDecodePixels();
     for (size_t i = 0; i < chatHistory.size(); i++) {
         const auto content = chatHistory[i]["content"];
         if (!content.is_array()) {
@@ -75,7 +77,8 @@ absl::Status ImageDecodingProcessor::process(InputRequest& req) {
 
             if (type == "image_url") {
                 const auto url = part["image_url"]["url"].as_string().value_or("");
-                auto imageResult = loadImage(url, allowedLocalMediaPath, allowedMediaDomains);
+                auto imageResult = fetchAndDecodeImage(url, allowedLocalMediaPath, allowedMediaDomains,
+                    req.totalDecodedPixels, maxAllowedImagePixels);
                 if (!imageResult.ok()) {
                     return imageResult.status();
                 }

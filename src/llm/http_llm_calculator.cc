@@ -21,14 +21,19 @@
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 6246 4456 6246)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mediapipe/framework/calculator_framework.h"
+#include "mediapipe/framework/calculator_base.h"
+#include "mediapipe/framework/calculator_context.h"
+#include "mediapipe/framework/calculator_contract.h"
+#include "mediapipe/framework/calculator_registry.h"
 #include "mediapipe/framework/port/canonical_errors.h"
+#include "mediapipe/framework/timestamp.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
 #include "../http_payload.hpp"
 #include "../logging.hpp"
 #include "../mediapipe_internal/graph_side_packets.hpp"
+#include "../mediapipe_calculators/utils/timestamp_advance_guard.hpp"
 #include "../profiler.hpp"
 #include "apis/openai_completions.hpp"
 #include "servable.hpp"
@@ -93,13 +98,14 @@ public:
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator [Node: {}] Open end", cc->NodeName());
         return absl::OkStatus();
     }
-    absl::Status handleGenerationError(CalculatorContext* cc, const char* errorMessage) {
+    absl::Status handleGenerationError(CalculatorContext* cc, const char* errorMessage, TimestampAdvanceGuard& timestampAdvanceGuard) {
         if (executionContext->apiHandler && executionContext->apiHandler->isStream()) {
             std::string failedEvent = executionContext->apiHandler->serializeFailedEvent(errorMessage);
             if (!failedEvent.empty()) {
                 executionContext->response = wrapTextInServerSideEventMessage(failedEvent);
                 executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
                 cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(executionContext->response)}, iterationBeginTimestamp);
+                timestampAdvanceGuard.markSucceeded();
                 return absl::OkStatus();
             }
         }
@@ -121,6 +127,7 @@ public:
             return absl::OkStatus();
         }
 
+        TimestampAdvanceGuard timestampAdvanceGuard(iterationBeginTimestamp);
         executionContext->response = "";  // always enter new process with initialized, empty response
         try {
             // First iteration of Process()
@@ -140,6 +147,7 @@ public:
 
                     std::string& response = executionContext->response;
                     cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(response)}, iterationBeginTimestamp);
+                    timestampAdvanceGuard.markSucceeded();
                     return absl::OkStatus();
                 }
 
@@ -172,8 +180,8 @@ public:
                         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(executionContext->response)}, iterationBeginTimestamp);
                         executionContext->response = "";
                         cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, iterationBeginTimestamp);
-                        auto now = std::chrono::system_clock::now();
-                        iterationBeginTimestamp = ::mediapipe::Timestamp(std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());
+                        timestampAdvanceGuard.markSucceeded();
+                        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Process end", cc->NodeName());
                         return absl::OkStatus();
                     }
                 }
@@ -213,16 +221,15 @@ public:
             }
         } catch (ov::AssertFailure& e) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator [Node: {}] Response generation failed: {}", cc->NodeName(), e.what());
-            return handleGenerationError(cc, e.what());
+            return handleGenerationError(cc, e.what(), timestampAdvanceGuard);
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator [Node: {}] Response generation failed: {}", cc->NodeName(), e.what());
-            return handleGenerationError(cc, e.what());
+            return handleGenerationError(cc, e.what(), timestampAdvanceGuard);
         } catch (...) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator [Node: {}] Response generation failed due to unknown error", cc->NodeName());
-            return handleGenerationError(cc, "Response generation failed");
+            return handleGenerationError(cc, "Response generation failed", timestampAdvanceGuard);
         }
-        auto now = std::chrono::system_clock::now();
-        iterationBeginTimestamp = ::mediapipe::Timestamp(std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());
+        timestampAdvanceGuard.markSucceeded();
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Process end", cc->NodeName());
         return absl::OkStatus();
     }

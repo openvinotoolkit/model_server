@@ -62,7 +62,6 @@
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
 #include "metrics/metric_module.hpp"
-#include "src/servable_management/modelmanager.hpp"
 #include "ovms_exit_codes.hpp"
 #include "profiler.hpp"
 #include "profilermodule.hpp"
@@ -75,6 +74,7 @@
 #include "shutdown_state.hpp"
 #include "servables_config_manager_module/servablesconfigmanagermodule.hpp"
 #include "stringutils.hpp"
+#include "ov_version.hpp"
 #include "version.hpp"
 
 using grpc::ServerBuilder;
@@ -113,14 +113,14 @@ Server& Server::instance() {
 
 static void logConfig(const Config& config) {
     std::string project_name(PROJECT_NAME);
-    std::string project_version(PROJECT_VERSION);
+    std::string project_version(ovms::getProjectVersion());
     SPDLOG_INFO(project_name + " " + project_version);
     SPDLOG_INFO("OpenVINO backend {}", ovms::getOpenVINOVersion());
     const char* genaiVersion = ovms::getGenAIVersion();
     if (genaiVersion[0] != '\0') {
         SPDLOG_INFO("OpenVINO GenAI backend {}", genaiVersion);
     }
-    SPDLOG_DEBUG("Bazel build flags: {}", BAZEL_BUILD_FLAGS);
+    SPDLOG_DEBUG("Bazel build flags: {}", ovms::getBazelBuildFlags());
     SPDLOG_DEBUG("CLI parameters passed to ovms server");
     if (config.getServerSettings().serverMode == HF_PULL_MODE) {
         SPDLOG_DEBUG("source_model: {}", config.getServerSettings().hfSettings.sourceModel);

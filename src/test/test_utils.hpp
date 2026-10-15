@@ -64,6 +64,36 @@ void adjustConfigToAllowModelFileRemovalWhenLoaded(ovms::ModelConfig& modelConfi
 
 static const ovms::ExecutionContext DEFAULT_TEST_CONTEXT{ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::ModelInfer};
 
+class ScopedOVMSConfigGuard {
+public:
+    ScopedOVMSConfigGuard() :
+        serverSettings(ovms::Config::instance().getServerSettings()),
+        modelsSettings(ovms::Config::instance().getModelSettings()) {}
+
+    ScopedOVMSConfigGuard(const ScopedOVMSConfigGuard&) = delete;
+    ScopedOVMSConfigGuard& operator=(const ScopedOVMSConfigGuard&) = delete;
+
+    ~ScopedOVMSConfigGuard() {
+        parse(serverSettings, modelsSettings);
+    }
+
+    const ovms::ServerSettingsImpl& getServerSettings() const {
+        return serverSettings;
+    }
+
+    const ovms::ModelsSettingsImpl& getModelSettings() const {
+        return modelsSettings;
+    }
+
+    bool parse(ovms::ServerSettingsImpl& serverSettings, ovms::ModelsSettingsImpl& modelsSettings) {
+        return ovms::Config::instance().parse(&serverSettings, &modelsSettings);
+    }
+
+private:
+    ovms::ServerSettingsImpl serverSettings;
+    ovms::ModelsSettingsImpl modelsSettings;
+};
+
 using KFSInterface = std::pair<KFSRequest, KFSResponse>;
 using CAPIInterface = std::pair<ovms::InferenceRequest, ovms::InferenceResponse>;
 
@@ -719,6 +749,7 @@ void SetUpServerForDownloadAndStartWithLoras(std::unique_ptr<std::thread>& t, ov
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS, std::string apiKeyFile = "", bool withPython = true);
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName, int timeoutSeconds, const char* task);
+void SetUpServerWithExtraArgs(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, std::vector<std::string> extraArgs, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
 
 class ConstructorEnabledConfig : public ovms::Config {
 public:

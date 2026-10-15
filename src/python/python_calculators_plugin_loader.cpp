@@ -15,7 +15,7 @@
 //*****************************************************************************
 
 #include "python_calculators_plugin_loader.hpp"
-#include "src/kfs_python_tensor_bridge.hpp"
+#include "python_calculators_plugin_api.hpp"
 
 #include <cstdio>
 #include <memory>
@@ -33,11 +33,6 @@
 
 namespace ovms {
 
-#ifdef __linux__
-extern "C" void registerPythonCalculators() __attribute__((weak));
-extern "C" const KfsPyTensorBridgeVTable* OVMS_getKfsPyTensorBridgeVTable() __attribute__((weak));
-#endif
-
 namespace {
 
 #ifdef __linux__
@@ -46,19 +41,47 @@ using PluginHandle = void*;
 using PluginHandle = HMODULE;
 #endif
 
-using RegisterPythonCalculatorsFn = void (*)();
-using GetKfsPyTensorBridgeVTableFn = const KfsPyTensorBridgeVTable* (*)();
+using GetPythonCalculatorsPluginApiFn = const PythonCalculatorsPluginApi* (*)();
 
 static PluginHandle pythonCalculatorsHandle = nullptr;
-static RegisterPythonCalculatorsFn registerPythonCalculatorsFn = nullptr;
+static const PythonCalculatorsPluginApi* pythonCalculatorsPluginApi = nullptr;
 
-void activateKfsBridge(const KfsPyTensorBridgeVTable* vtable, const char* source) {
-    if (vtable == nullptr) {
-        return;
+bool activatePluginApi(GetPythonCalculatorsPluginApiFn getApi, const char* source) {
+    if (getApi == nullptr) {
+        return false;
     }
+    const PythonCalculatorsPluginApi* api = getApi();
+    if (api == nullptr || api->abiVersion != PYTHON_CALCULATORS_PLUGIN_ABI_VERSION) {
+        SPDLOG_ERROR("Python calculators plugin API from {} has incompatible ABI version: {}, expected: {}",
+            source, api == nullptr ? 0u : api->abiVersion, PYTHON_CALCULATORS_PLUGIN_ABI_VERSION);
+        return false;
+    }
+    pythonCalculatorsPluginApi = api;
+    SPDLOG_TRACE("Python calculators plugin API activated from {}", source);
+    return true;
+}
 
-    setKfsPyTensorBridgeVTable(vtable);
-    SPDLOG_TRACE("KFS Python tensor bridge activated from {}", source);
+bool activateInProcessPluginApi() {
+#ifdef __linux__
+    // Global scope lookup: the loader is linked into both ovms and libovmspython, and the plugin is dlopened RTLD_GLOBAL.
+    return activatePluginApi(reinterpret_cast<GetPythonCalculatorsPluginApiFn>(
+                                 dlsym(RTLD_DEFAULT, "OVMS_getPythonCalculatorsPluginApi")),
+        "process global scope");
+#elif _WIN32
+    // The loader is linked into both ovms.exe and libovmspython.dll; either may have loaded the plugin.
+    for (const char* moduleName : {static_cast<const char*>(nullptr), "libpython_calculators.dll"}) {
+        HMODULE module = GetModuleHandleA(moduleName);
+        if (module != nullptr &&
+            activatePluginApi(reinterpret_cast<GetPythonCalculatorsPluginApiFn>(
+                                  GetProcAddress(module, "OVMS_getPythonCalculatorsPluginApi")),
+                moduleName == nullptr ? "current process exports" : moduleName)) {
+            return true;
+        }
+    }
+    return false;
+#else
+    return false;
+#endif
 }
 
 #ifdef _WIN32
@@ -86,12 +109,11 @@ std::string formatWindowsErrorMessage(DWORD errorCode) {
 
 void logLikelyMissingWindowsDependencies() {
     const std::vector<std::string> likelyDependencies = {
-        "libpython_calculators.dll",          // The plugin itself
-        "ovms_mediapipe_runtime_shared.dll",  // OVMS MediaPipe runtime integration library
-        "libovmspython.dll",                  // Python runtime support
-        "python312.dll",                      // Python interpreter
-        "openvino.dll",                       // OpenVINO core
-        "openvino_genai.dll",                 // OpenVINO GenAI
+        "libpython_calculators.dll",  // The plugin itself
+        "libovmspython.dll",          // Python runtime support
+        "python312.dll",              // Python interpreter
+        "openvino.dll",               // OpenVINO core
+        "openvino_genai.dll",         // OpenVINO GenAI
     };
     for (const auto& dependency : likelyDependencies) {
         char resolvedPath[MAX_PATH] = {0};
@@ -108,13 +130,19 @@ void logLikelyMissingWindowsDependencies() {
 
 }  // namespace
 
+const PythonCalculatorsPluginApi* getPythonCalculatorsPluginApi() {
+    if (pythonCalculatorsPluginApi == nullptr) {
+        // Covers binaries linking the implementation in-process (e.g. ovms_test) before the plugin loader runs.
+        activateInProcessPluginApi();
+    }
+    return pythonCalculatorsPluginApi;
+}
+
 bool loadPythonCalculatorsPlugin() {
-    if (registerPythonCalculatorsFn != nullptr) {
+    if (pythonCalculatorsPluginApi != nullptr) {
         SPDLOG_DEBUG("Python calculators plugin already loaded");
         return true;
     }
-
-    bool hasInProcessKfsBridge = getKfsPyTensorBridgeVTable() != nullptr;
 
 #ifdef __linux__
     if (registerPythonCalculators != nullptr) {
@@ -155,24 +183,9 @@ bool loadPythonCalculatorsPlugin() {
     return true;
 
 #elif _WIN32
-    // Windows equivalent of Linux RTLD_DEFAULT lookup:
-    // if OVMS_getKfsPyTensorBridgeVTable is already linked into the current
-    // process (e.g. ovms_test with python bridge runtime), use it directly
-    // and avoid loading libpython_calculators.dll.
-    if (getKfsPyTensorBridgeVTable() == nullptr) {
-        HMODULE currentProcessModule = GetModuleHandleA(nullptr);
-        if (currentProcessModule != nullptr) {
-            auto* inProcessBridgeFn = reinterpret_cast<GetKfsPyTensorBridgeVTableFn>(
-                GetProcAddress(currentProcessModule, "OVMS_getKfsPyTensorBridgeVTable"));
-            if (inProcessBridgeFn != nullptr) {
-                if (auto* vtable = inProcessBridgeFn(); vtable != nullptr) {
-                    activateKfsBridge(vtable, "current process exports");
-                    hasInProcessKfsBridge = true;
-                }
-            }
-        }
-    } else {
-        hasInProcessKfsBridge = true;
+    if (activateInProcessPluginApi()) {
+        SPDLOG_TRACE("Python calculators implementation already present in the process, skipping plugin load");
+        return true;
     }
 
     constexpr const char* pluginName = "libpython_calculators.dll";
@@ -183,18 +196,18 @@ bool loadPythonCalculatorsPlugin() {
         DWORD error = GetLastError();
         logLikelyMissingWindowsDependencies();
         SPDLOG_WARN("Python calculators plugin libpython_calculators.dll failed to load: {} ({}). "
-                    "Possible causes: missing dependency (ovms_mediapipe_runtime_shared.dll, libovmspython.dll), "
+                    "Possible causes: missing dependency (libovmspython.dll), "
                     "incompatible architecture (32-bit vs 64-bit), or export symbol conflict. "
                     "MediaPipe Python calculators will not be available.",
             error, formatWindowsErrorMessage(error));
         return false;
     }
 
-    registerPythonCalculatorsFn = reinterpret_cast<RegisterPythonCalculatorsFn>(
-        GetProcAddress(pythonCalculatorsHandle, "registerPythonCalculators"));
-    if (registerPythonCalculatorsFn == nullptr) {
+    if (!activatePluginApi(reinterpret_cast<GetPythonCalculatorsPluginApiFn>(
+                               GetProcAddress(pythonCalculatorsHandle, "OVMS_getPythonCalculatorsPluginApi")),
+            "libpython_calculators.dll")) {
         DWORD error = GetLastError();
-        SPDLOG_WARN("Python calculators plugin libpython_calculators.dll missing symbol registerPythonCalculators: {} ({}). "
+        SPDLOG_WARN("Python calculators plugin libpython_calculators.dll does not provide a usable OVMS_getPythonCalculatorsPluginApi: {} ({}). "
                     "MediaPipe Python calculators will not be available.",
             error, std::system_category().message(error));
         FreeLibrary(pythonCalculatorsHandle);
@@ -203,29 +216,7 @@ bool loadPythonCalculatorsPlugin() {
     }
 #endif
 
-    registerPythonCalculatorsFn();
-
     SPDLOG_TRACE("Python calculators plugin loaded successfully");
-    // Also load the KFS Python tensor bridge vtable from the same plugin.
-    // This enables OVMS_PY_TENSOR deserialization/serialization in the KFS
-    // graph executor without linking pybind11 into the main binary.
-#ifdef __linux__
-    auto getKfsBridgeFn = reinterpret_cast<GetKfsPyTensorBridgeVTableFn>(
-        dlsym(pythonCalculatorsHandle, "OVMS_getKfsPyTensorBridgeVTable"));
-#elif _WIN32
-    auto getKfsBridgeFn = reinterpret_cast<GetKfsPyTensorBridgeVTableFn>(
-        GetProcAddress(pythonCalculatorsHandle, "OVMS_getKfsPyTensorBridgeVTable"));
-#endif
-    if (getKfsBridgeFn != nullptr) {
-        auto* vtable = getKfsBridgeFn();
-        if (vtable != nullptr) {
-            if (hasInProcessKfsBridge) {
-                SPDLOG_TRACE("KFS Python tensor bridge already active from in-process exports; keeping existing bridge and skipping plugin bridge override");
-            } else {
-                activateKfsBridge(vtable, "python calculators plugin");
-            }
-        }
-    }
     return true;
 }
 

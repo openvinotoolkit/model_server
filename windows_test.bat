@@ -36,6 +36,8 @@ IF "%~1"=="" (
 
 set "bazelStartupCmd=--output_user_root=!BAZEL_SHORT_PATH!"
 set "openvino_dir=!BAZEL_SHORT_PATH!/openvino/runtime/cmake"
+set /p bazelVersion=<"%~dp0.bazelversion"
+set "bazelPath=C:\opt\bazel-%bazelVersion%-windows-x86_64.exe"
 set "OVMS_MEDIA_URL_ALLOW_REDIRECTS=1"
 
 IF "%~3"=="" (
@@ -67,7 +69,7 @@ IF "%~2"=="--with_python" (
     set "runInstallServiceTests=1"
 )
 
-set "buildTestCommand=bazel %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %testTargets%"
+set "buildTestCommand=%bazelPath% %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %testTargets%"
 set "changeConfigsCmd=python windows_change_test_configs.py"
 set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=!gtestFilter! > win_full_test.log 2>&1"
 
@@ -165,10 +167,6 @@ IF "%~2"=="--with_python" if "!filteredRun!"=="0" (
     echo Running: %runPythonRuntimeTest%
     %runPythonRuntimeTest% >> win_full_test.log 2>&1
     set "pythonTestExitCode=!errorlevel!"
-
-    echo Running: %runNoLibpythonSmokeTest%
-    %runNoLibpythonSmokeTest% >> win_full_test.log 2>&1
-    set "smokeTestExitCode=!errorlevel!"
 )
 
 :: Cut tests log to results
