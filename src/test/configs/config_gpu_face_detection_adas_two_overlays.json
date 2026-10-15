@@ -1,0 +1,23 @@
+{
+  "va_display": {
+    "target_device": "GPU.0",
+    "render_node": "/dev/dri/renderD128"
+  },
+  "model_config_list": [
+    {"config": {
+      "name": "face_detection_adas",
+      "base_path": "/ovms/src/test/face_detection_adas",
+      "target_device": "GPU.0"
+    }}
+  ],
+  "mediapipe_config_list": [
+    {
+      "name": "gst_overlay_green",
+      "graph_path": "/ovms/src/mediapipe_gst_calculators/gst_video_overlay_green.pbtxt"
+    },
+    {
+      "name": "gst_overlay_red",
+      "graph_path": "/ovms/src/mediapipe_gst_calculators/gst_video_overlay_red.pbtxt"
+    }
+  ]
+}

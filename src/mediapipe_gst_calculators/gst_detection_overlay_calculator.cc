@@ -63,6 +63,23 @@ namespace {
 constexpr char kFrameFullTag[] = "FRAME_FULL";
 constexpr char kDetectionBoxesTag[] = "DETECTION_BOXES";
 constexpr char kFrameOverlaidTag[] = "FRAME_OVERLAID";
+constexpr char kColorRTag[] = "COLOR_R";
+constexpr char kColorGTag[] = "COLOR_G";
+constexpr char kColorBTag[] = "COLOR_B";
+
+uint8_t clampColorComponent(int value) {
+    return static_cast<uint8_t>(std::clamp(value, 0, 255));
+}
+
+nv12overlay::Color rgbToNv12(int red, int green, int blue) {
+    const float r = static_cast<float>(clampColorComponent(red));
+    const float g = static_cast<float>(clampColorComponent(green));
+    const float b = static_cast<float>(clampColorComponent(blue));
+    return {
+        static_cast<uint8_t>(0.299f * r + 0.587f * g + 0.114f * b),
+        static_cast<uint8_t>(-0.168736f * r - 0.331264f * g + 0.5f * b + 128.0f),
+        static_cast<uint8_t>(0.5f * r - 0.418688f * g - 0.081312f * b + 128.0f)};
+}
 }  // namespace
 
 class GstDetectionOverlayCalculator : public CalculatorBase {
@@ -71,6 +88,26 @@ class GstDetectionOverlayCalculator : public CalculatorBase {
         cc->Inputs().Tag(kFrameFullTag).Set<GstVideoFramePacket>();
         cc->Inputs().Tag(kDetectionBoxesTag).Set<GstDetectionBoxes>();
         cc->Outputs().Tag(kFrameOverlaidTag).Set<GstVideoFramePacket>();
+        if (cc->InputSidePackets().HasTag(kColorRTag))
+            cc->InputSidePackets().Tag(kColorRTag).Set<int>();
+        if (cc->InputSidePackets().HasTag(kColorGTag))
+            cc->InputSidePackets().Tag(kColorGTag).Set<int>();
+        if (cc->InputSidePackets().HasTag(kColorBTag))
+            cc->InputSidePackets().Tag(kColorBTag).Set<int>();
+        return absl::OkStatus();
+    }
+
+    absl::Status Open(CalculatorContext* cc) override {
+        const bool hasRed = cc->InputSidePackets().HasTag(kColorRTag);
+        const bool hasGreen = cc->InputSidePackets().HasTag(kColorGTag);
+        const bool hasBlue = cc->InputSidePackets().HasTag(kColorBTag);
+        RET_CHECK(hasRed == hasGreen && hasGreen == hasBlue)
+            << "COLOR_R, COLOR_G, and COLOR_B must be provided together";
+        if (hasRed) {
+            color_ = rgbToNv12(cc->InputSidePackets().Tag(kColorRTag).Get<int>(),
+                               cc->InputSidePackets().Tag(kColorGTag).Get<int>(),
+                               cc->InputSidePackets().Tag(kColorBTag).Get<int>());
+        }
         return absl::OkStatus();
     }
 
@@ -83,13 +120,13 @@ class GstDetectionOverlayCalculator : public CalculatorBase {
 
         const imp_tensor_memory_type_t mem = imp_tensor_get_memory_type(tensor);
         if (mem == IMP_MEM_SYSTEM) {
-            absl::Status st = drawOnHost(tensor, boxes);
+            absl::Status st = drawOnHost(tensor, boxes, color_);
             if (!st.ok())
                 return st;
         } else if (mem == IMP_MEM_VA_SURFACE) {
 #ifdef OVMS_ENABLE_VA_OVERLAY
             if (!boxes.empty()) {
-                absl::Status st = drawOnSurface(tensor, boxes);
+                absl::Status st = drawOnSurface(tensor, boxes, color_);
                 if (!st.ok())
                     return st;
             }
@@ -107,7 +144,8 @@ class GstDetectionOverlayCalculator : public CalculatorBase {
     }
 
  private:
-    static absl::Status drawOnHost(imp_tensor_t* tensor, const GstDetectionBoxes& boxes) {
+    static absl::Status drawOnHost(imp_tensor_t* tensor, const GstDetectionBoxes& boxes,
+                                   const nv12overlay::Color& color) {
         const uint8_t* y_const = nullptr;
         const uint8_t* uv_const = nullptr;
         int w = 0, h = 0;
@@ -120,12 +158,13 @@ class GstDetectionOverlayCalculator : public CalculatorBase {
         auto* uv = const_cast<uint8_t*>(uv_const);
 
         // Packed host NV12: both plane strides equal the width.
-        nv12overlay::drawDetections(y, w, uv, w, w, h, boxes);
+        nv12overlay::drawDetections(y, w, uv, w, w, h, boxes, color);
         return absl::OkStatus();
     }
 
 #ifdef OVMS_ENABLE_VA_OVERLAY
-    static absl::Status drawOnSurface(imp_tensor_t* tensor, const GstDetectionBoxes& boxes) {
+    static absl::Status drawOnSurface(imp_tensor_t* tensor, const GstDetectionBoxes& boxes,
+                                      const nv12overlay::Color& color) {
         uint32_t surface_id = 0;
         void* disp = nullptr;
         int w = 0, h = 0;
@@ -164,7 +203,7 @@ class GstDetectionOverlayCalculator : public CalculatorBase {
         auto* base = static_cast<uint8_t*>(buf);
         uint8_t* y = base + image.offsets[0];
         uint8_t* uv = base + image.offsets[1];
-        nv12overlay::drawDetections(y, image.pitches[0], uv, image.pitches[1], w, h, boxes);
+        nv12overlay::drawDetections(y, image.pitches[0], uv, image.pitches[1], w, h, boxes, color);
 
         vaUnmapBuffer(va, image.buf);
         if (!derived)
@@ -173,6 +212,7 @@ class GstDetectionOverlayCalculator : public CalculatorBase {
         return absl::OkStatus();
     }
 #endif
+    nv12overlay::Color color_ = nv12overlay::kGreen;
 };
 
 REGISTER_CALCULATOR(GstDetectionOverlayCalculator);

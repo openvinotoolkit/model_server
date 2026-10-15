@@ -63,7 +63,8 @@ class GstCapiInferenceCalculator : public CalculatorBase {
         cc->InputSidePackets().Tag(kServableNameTag).Set<std::string>();
         cc->InputSidePackets().Tag(kServableVersionTag).Set<int>();
         cc->InputSidePackets().Tag(kInputNameTag).Set<std::string>();
-        cc->InputSidePackets().Tag(kServerTag).Set<OVMS_Server*>();
+        if (cc->InputSidePackets().HasTag(kServerTag))
+            cc->InputSidePackets().Tag(kServerTag).Set<OVMS_Server*>();
         cc->Outputs().Tag(kDetectionsTag).Set<int>();
         // Structured boxes (overlay path) and the full-res dims used to scale
         // them are optional, so existing count-only graphs stay unchanged.
@@ -80,7 +81,13 @@ class GstCapiInferenceCalculator : public CalculatorBase {
         servable_name_ = cc->InputSidePackets().Tag(kServableNameTag).Get<std::string>();
         servable_version_ = cc->InputSidePackets().Tag(kServableVersionTag).Get<int>();
         input_name_ = cc->InputSidePackets().Tag(kInputNameTag).Get<std::string>();
-        server_ = cc->InputSidePackets().Tag(kServerTag).Get<OVMS_Server*>();
+        if (cc->InputSidePackets().HasTag(kServerTag)) {
+            server_ = cc->InputSidePackets().Tag(kServerTag).Get<OVMS_Server*>();
+        } else {
+            absl::Status status = checkCapiStatus(OVMS_ServerNew(&server_), "OVMS_ServerNew");
+            if (!status.ok())
+                return status;
+        }
         RET_CHECK(server_ != nullptr) << "missing started OVMS server";
         if (cc->InputSidePackets().HasTag(kFullWidthTag))
             full_width_ = cc->InputSidePackets().Tag(kFullWidthTag).Get<int>();

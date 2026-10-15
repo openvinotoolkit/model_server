@@ -36,10 +36,13 @@
 #include "../ov_utils.hpp"
 #include "../ovms.h"           // NOLINT
 #include "../ovms_internal.h"  // NOLINT
+#include "../grpcservermodule.hpp"
+#include "../server.hpp"
 #include "src/status.hpp"
 #include "c_api_test_utils.hpp"
 #include "gpuenvironment.hpp"
 #include "light_test_utils.hpp"
+#include "test_utils.hpp"
 #include "test_with_temp_dir.hpp"
 #include "src/mpi/intel_mpi.h"
 #include "src/mediapipe_gst_calculators/gst_detection_box.hpp"
@@ -354,6 +357,7 @@ const std::shared_ptr<ov::Model> preprocessModel(const std::shared_ptr<ov::Model
 
 const std::string FACE_DETECTION_ADAS_MODEL_CONFIG_JSON{"/ovms/src/test/configs/config_gpu_face_detection_adas.json"};
 const std::string FACE_DETECTION_ADAS_VA_DISPLAY_MODEL_CONFIG_JSON{"/ovms/src/test/configs/config_gpu_face_detection_adas_va_display.json"};
+const std::string FACE_DETECTION_ADAS_TWO_OVERLAYS_CONFIG_JSON{"/ovms/src/test/configs/config_gpu_face_detection_adas_two_overlays.json"};
 const std::string FACE_DETECTION_ADAS_MODEL_PATH{"/ovms/src/test/face_detection_adas/1/face-detection-adas-0001.xml"};
 const std::string FACE_DETECTION_ADAS_MODEL_NAME{"face_detection_adas"};
 const std::string FACE_DETECTION_ADAS_INPUT_NAME{"data"};
@@ -710,6 +714,103 @@ TEST_F(CAPINonCopy, DeployedGraphUsesModelManagerServable) {
     EXPECT_GE(graphDetections, 1) << "expected deployed graph inference through the ModelManager servable";
     ASSERT_TRUE(graph.WaitUntilDone().ok());
     OVMS_ServerDelete(cserver);
+#endif
+}
+
+TEST_F(CAPINonCopy, ConfiguredOverlayGraphsProduceIndependentOutputs) {
+#ifndef BUILD_VAAPITESTS
+    GTEST_SKIP() << "Test not enabled on UBI images";
+#else
+    if (std::getenv("RUN_GPU_TESTS") == nullptr || std::string(std::getenv("RUN_GPU_TESTS")) != "1")
+        GTEST_SKIP() << "set RUN_GPU_TESTS=1 to run the configured overlay graph test";
+    if (access("/dev/dri/renderD128", R_OK | W_OK) != 0)
+        GTEST_SKIP() << "configured render node is not usable";
+    if (!std::ifstream("/ovms/recording_3_raw.avi").good())
+        GTEST_SKIP() << "test video not found";
+    if (!imp_video_va_available())
+        GTEST_SKIP() << "VA/GPU surface sharing not available on this host";
+
+    struct OverlayGraph {
+        const char* name;
+        const char* outputPath;
+        uint8_t chromaU;
+        uint8_t chromaV;
+    };
+    const std::array<OverlayGraph, 2> graphs{{
+        {"gst_overlay_green", "/tmp/ovms_overlay_green.mp4", 44, 21},
+        {"gst_overlay_red", "/tmp/ovms_overlay_red.mp4", 84, 255},
+    }};
+    for (const auto& graph : graphs)
+        std::remove(graph.outputPath);
+
+    std::string port = "9000";
+    randomizeAndEnsureFree(port);
+    OVMS_ServerSettings* serverSettings = nullptr;
+    OVMS_ModelsSettings* modelsSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, FACE_DETECTION_ADAS_TWO_OVERLAYS_CONFIG_JSON.c_str()));
+    OVMS_Server* cserver = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+
+    for (const auto& graph : graphs) {
+        const auto* server = reinterpret_cast<ovms::Server*>(cserver);
+        const ovms::Module* grpcModule = server->getModule(ovms::GRPC_SERVER_MODULE_NAME);
+        auto& grpcService = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+        KFSRequest request;
+        KFSResponse response;
+        inputs_info_t inputs{{"trigger", {ovms::signed_shape_t{1}, ovms::Precision::FP32}}};
+        preparePredictRequest(request, inputs, std::vector<float>{1.0f});
+        request.mutable_model_name()->assign(graph.name);
+        ASSERT_EQ(grpcService.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+        EXPECT_TRUE(std::ifstream(graph.outputPath, std::ios::binary | std::ios::ate).good())
+            << "configured graph did not produce " << graph.outputPath;
+
+        imp_context_t* context = nullptr;
+        ASSERT_EQ(imp_context_create(&context, nullptr), IMP_OK);
+        imp_video_source_t* source = nullptr;
+        imp_video_source_create(&source, IMP_SOURCE_FILE);
+        imp_video_source_set(source, "path", graph.outputPath);
+        imp_video_decode_opts_t options{};
+        imp_video_stream_t* stream = nullptr;
+        imp_video_set_va_display(ovms::globalVaDisplay);
+        ASSERT_EQ(imp_video_open(&stream, source, context, &options), IMP_OK)
+            << imp_context_get_error(context);
+        imp_video_source_destroy(source);
+
+        bool foundColor = false;
+        for (int frameIndex = 0; frameIndex < 30 && !foundColor; ++frameIndex) {
+            imp_tensor_t* tensor = nullptr;
+            if (imp_video_read_frame(&tensor, stream, 0) != IMP_OK || tensor == nullptr)
+                break;
+            const uint8_t* y = nullptr;
+            const uint8_t* uv = nullptr;
+            int width = 0;
+            int height = 0;
+            if (imp_tensor_get_nv12_planes(tensor, &y, &uv, &width, &height) == IMP_OK) {
+                for (int row = 0; row < height / 2 && !foundColor; ++row) {
+                    for (int column = 0; column < width; column += 2) {
+                        const int u = uv[row * width + column];
+                        const int v = uv[row * width + column + 1];
+                        if (std::abs(u - graph.chromaU) <= 20 && std::abs(v - graph.chromaV) <= 20) {
+                            foundColor = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            imp_tensor_release(tensor);
+        }
+        imp_video_close(stream);
+        imp_context_destroy(context);
+        EXPECT_TRUE(foundColor) << "configured graph did not produce its expected overlay color";
+    }
+
+    OVMS_ServerDelete(cserver);
+    for (const auto& graph : graphs)
+        std::remove(graph.outputPath);
 #endif
 }
 

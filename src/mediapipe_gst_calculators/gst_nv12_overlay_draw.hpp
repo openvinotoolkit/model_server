@@ -29,8 +29,14 @@
 namespace mediapipe {
 namespace nv12overlay {
 
+struct Color {
+    uint8_t y;
+    uint8_t u;
+    uint8_t v;
+};
+
 // NV12 colours ported from the reference POC.
-constexpr uint8_t kGreenY = 150, kGreenU = 44, kGreenV = 21;
+constexpr Color kGreen{150, 44, 21};
 constexpr uint8_t kWhiteY = 235, kWhiteU = 128, kWhiteV = 128;
 constexpr int kBorderThickness = 3;
 
@@ -60,7 +66,8 @@ inline void fillRect(uint8_t* y, int y_stride, uint8_t* uv, int uv_stride,
 // Draw green box borders (thickness 3) for every detection plus a confidence
 // bar for the top box, matching the reference POC.
 inline void drawDetections(uint8_t* y, int y_stride, uint8_t* uv, int uv_stride,
-                           int w, int h, const GstDetectionBoxes& boxes) {
+                           int w, int h, const GstDetectionBoxes& boxes,
+                           const Color& color = kGreen) {
     if (boxes.empty())
         return;
     for (const auto& d : boxes) {
@@ -69,17 +76,17 @@ inline void drawDetections(uint8_t* y, int y_stride, uint8_t* uv, int uv_stride,
         const int x2 = std::clamp(static_cast<int>(d.xmax), 0, w - 1);
         const int y2 = std::clamp(static_cast<int>(d.ymax), 0, h - 1);
         const int t = kBorderThickness;
-        fillRect(y, y_stride, uv, uv_stride, w, h, x1, y1, x2, std::min(y1 + t - 1, h - 1), kGreenY, kGreenU, kGreenV);
-        fillRect(y, y_stride, uv, uv_stride, w, h, x1, std::max(y2 - t + 1, 0), x2, y2, kGreenY, kGreenU, kGreenV);
-        fillRect(y, y_stride, uv, uv_stride, w, h, x1, y1, std::min(x1 + t - 1, w - 1), y2, kGreenY, kGreenU, kGreenV);
-        fillRect(y, y_stride, uv, uv_stride, w, h, std::max(x2 - t + 1, 0), y1, x2, y2, kGreenY, kGreenU, kGreenV);
+        fillRect(y, y_stride, uv, uv_stride, w, h, x1, y1, x2, std::min(y1 + t - 1, h - 1), color.y, color.u, color.v);
+        fillRect(y, y_stride, uv, uv_stride, w, h, x1, std::max(y2 - t + 1, 0), x2, y2, color.y, color.u, color.v);
+        fillRect(y, y_stride, uv, uv_stride, w, h, x1, y1, std::min(x1 + t - 1, w - 1), y2, color.y, color.u, color.v);
+        fillRect(y, y_stride, uv, uv_stride, w, h, std::max(x2 - t + 1, 0), y1, x2, y2, color.y, color.u, color.v);
     }
 
     const float best = boxes.front().score;
     if (best > 0.1f) {
         const int bar_w = static_cast<int>(best * 200.0f);
         fillRect(y, y_stride, uv, uv_stride, w, h, 4, 4, 208, 16, 16, 128, 128);
-        fillRect(y, y_stride, uv, uv_stride, w, h, 4, 4, 4 + bar_w, 16, kGreenY, kGreenU, kGreenV);
+        fillRect(y, y_stride, uv, uv_stride, w, h, 4, 4, 4 + bar_w, 16, color.y, color.u, color.v);
         fillRect(y, y_stride, uv, uv_stride, w, h, 3, 3, 209, 3, kWhiteY, kWhiteU, kWhiteV);
         fillRect(y, y_stride, uv, uv_stride, w, h, 3, 17, 209, 17, kWhiteY, kWhiteU, kWhiteV);
         fillRect(y, y_stride, uv, uv_stride, w, h, 3, 3, 3, 17, kWhiteY, kWhiteU, kWhiteV);

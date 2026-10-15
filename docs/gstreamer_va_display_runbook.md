@@ -68,6 +68,30 @@ shared-display integration, but is not a client-invokable deployed graph. A
 production graph must use the OVMS MediaPipe session/inference path rather than
 the test-only server-pointer side packet.
 
+## Two Configured Overlay Graphs
+
+`src/test/configs/config_gpu_face_detection_adas_two_overlays.json` deploys two
+client-invokable GStreamer graphs in one OVMS process: `gst_overlay_green` and
+`gst_overlay_red`. They share the configured `GPU.0` VA display and the
+`face_detection_adas` model, while their graph-local side packets select the
+overlay color and output file.
+
+Invoke either graph through the KServe `ModelInfer` API with its `OVTENSOR`
+`trigger` input. The public response is the matching trigger tensor; the graph
+continues its configured finite source through encoder finalization before the
+request completes. This is the supported client path for deployed MediaPipe
+graphs; the C API inference API invokes models, not MediaPipe graph names.
+
+The focused integration test starts this single configuration, invokes both
+graph names, reopens both generated MP4 files, and verifies their respective
+green and red overlay chroma values:
+
+```bash
+docker exec -w /ovms ovms_gst_va2 bash -lc \
+  "RUN_GPU_TESTS=1 bazel test --config=linux --test_env=RUN_GPU_TESTS=1 \
+  --test_output=errors --test_filter='CAPINonCopy.ConfiguredOverlayGraphsProduceIndependentOutputs' //src:ovms_test"
+```
+
 The full MediaMTX publish/view procedure remains in
 [`current_task/P6b_RTSP_Testing_Procedure.md`](../current_task/P6b_RTSP_Testing_Procedure.md).
 
