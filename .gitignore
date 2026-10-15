@@ -8,6 +8,7 @@
 .gdb_history
 version
 __pycache__/
+config.json
 report.json
 trace.json
 bazel-bin
@@ -41,3 +42,4 @@ tmp/
 models
 genhtml
 .github/skills/
+nohup.out
