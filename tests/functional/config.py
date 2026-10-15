@@ -430,3 +430,9 @@ huggingface_token_file_path = get_path(
 
 """ TT_HUGGINGFACE_TOKEN - huggingface token value. Env var takes priority, then file. """
 huggingface_token = os.environ.get("TT_HUGGINGFACE_TOKEN") or get_token_value(huggingface_token_file_path, "")
+
+""" TT_ENABLE_TASK_DETECTION - during model pull/export use task automatically detected by OVMS """
+enable_task_detection = get_bool("TT_ENABLE_TASK_DETECTION", True)
+
+""" TT_ENABLE_POOLING_DETECTION - during embeddings model pull/export use pooling automatically detected by OVMS """
+enable_pooling_detection = get_bool("TT_ENABLE_POOLING_DETECTION", True)

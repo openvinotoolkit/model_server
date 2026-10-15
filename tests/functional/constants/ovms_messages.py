@@ -445,6 +445,8 @@ class OvmsMessages:
     ERROR_UNABLE_TO_CAST_PYTHON_INSTANCE = "Chat template loading failed with error: Unable to cast Python instance"
     ERROR_UNSUPPORTED_CHAT_TEMPLATE_FORMAT = "Unsupported chat_template format in file"
 
+    EMBEDDINGS_APPLYING_POOLING = "Applying {} pooling to embeddings output"
+
     EMPTY_RESPONSE_CONTENT = "Empty response content"
     FINISH_REASON_NULL = '"finish_reason":null'
 
