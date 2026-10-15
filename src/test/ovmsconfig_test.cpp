@@ -2578,7 +2578,7 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--json_max_complexity", "123456",
         "--config_path", "/config.json"};
 
-    int arg_count = 47;
+    int arg_count = 46;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
