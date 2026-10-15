@@ -143,25 +143,6 @@ ovms_cc_library(
     linkstatic = 1,
 )
 
-# DO NOT REMOVE: loaded at runtime by mediapipe_runtime_api and plugin loader.
-# This is the runtime boundary for MediaPipe factory symbols and registration.
-# Build OVMS MediaPipe integration as a shared runtime component to avoid
-# embedding calculator/extension registration directly into ovms executable.
-cc_binary(
-    name = "ovms_mediapipe_runtime_shared",
-    srcs = [],
-    deps = [
-        "//src/mediapipe_internal:libovms_mediapipe_runtime_owner",
-        "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
-        ":libovms_ov_version",
-    ],
-    linkopts = select({
-        "//conditions:default": ["-Wl,--allow-shlib-undefined"],
-        "//src:windows": ["/FORCE:UNRESOLVED"],
-    }),
-    linkshared = 1,
-    visibility = ["//visibility:public"],
-)
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
 
 mediapipe_proto_library(
