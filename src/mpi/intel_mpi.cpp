@@ -763,6 +763,7 @@ imp_status_t imp_video_encoder_create(imp_video_encoder_t** encoder,
 
     std::cout << "=== Opening GPU encoder: " << output_path << " ===" << std::endl;
 
+    // TODO(P6b): Windows RTSP publish (rtspclientsink terminus) — Linux-only for now.
     std::string pipeline =
         "appsrc name=src format=time is-live=true do-timestamp=true ! "
         "video/x-raw,format=NV12,width=" + std::to_string(width) +

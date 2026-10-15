@@ -368,6 +368,14 @@ typedef struct {
 } imp_image_encode_opts_t;
 
 /**
+ * Video output mode: where the encoded H.264 stream is sent.
+ */
+typedef enum {
+    IMP_OUTPUT_FILE = 0,                // Write a muxed file at output_path (default)
+    IMP_OUTPUT_RTSP = 1                 // Publish to an external RTSP server at output_path (rtsp:// URL)
+} imp_output_mode_t;
+
+/**
  * Video encode options
  */
 typedef struct {
@@ -376,7 +384,8 @@ typedef struct {
     uint32_t framerate;                 // Frames per second
     const char* input_device;           // Expected input tensor location: NULL = accept any, copy if needed
     const char* encode_device;          // Where encoding runs: "CPU", "GPU", "GPU.0", etc., NULL = match context
-    const char* output_path;            // Output file path (NULL for memory)
+    const char* output_path;            // FILE mode: output file path (NULL for memory). RTSP mode: rtsp:// URL to publish to.
+    imp_output_mode_t output_mode;      // Terminus selection (appended for ABI stability): FILE (default) or RTSP.
 } imp_video_encode_opts_t;
 
 //////////////////////////////////////////////////////////////////////////////

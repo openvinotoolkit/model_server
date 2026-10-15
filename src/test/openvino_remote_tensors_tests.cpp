@@ -21,6 +21,7 @@
 
 #include <atomic>
 #include <cstdio>
+#include <cstdlib>
 
 #include <CL/cl2.hpp>
 #include <gmock/gmock.h>
@@ -911,6 +912,7 @@ TEST_F(CAPINonCopy, GStreamerOverlayEncodePipeline) {
         {"output_path", mediapipe::MakePacket<std::string>(outPath)},
         {"framerate", mediapipe::MakePacket<int>(30)},
         {"max_frames", mediapipe::MakePacket<int>(maxFrames)},
+        {"output_mode", mediapipe::MakePacket<std::string>("file")},
     };
     ASSERT_TRUE(graph.StartRun(sidePackets).ok());
     // WaitUntilDone drives the sink's Close(): EOS + finalize the output file.
@@ -1022,6 +1024,7 @@ TEST_F(CAPINonCopy, GStreamerOverlayEncodeVaPipeline) {
         {"output_path", mediapipe::MakePacket<std::string>(outPath)},
         {"framerate", mediapipe::MakePacket<int>(30)},
         {"max_frames", mediapipe::MakePacket<int>(maxFrames)},
+        {"output_mode", mediapipe::MakePacket<std::string>("file")},
     };
     ASSERT_TRUE(graph.StartRun(sidePackets).ok());
     ASSERT_TRUE(graph.WaitUntilDone().ok()) << "graph did not finalize (sink EOS failed?)";
@@ -1049,6 +1052,197 @@ TEST_F(CAPINonCopy, GStreamerOverlayEncodeVaPipeline) {
     imp_context_destroy(vctx);
     removeIfTemp(outPath);
 
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSetGlobalVADisplay(cserver, 0));
+    imp_video_set_va_display(nullptr);
+    OVMS_ServerDelete(cserver);
+#endif
+}
+
+// P6b RTSP output: the overlay pipeline publishes its annotated H.264 stream to
+// an external RTSP server (MediaMTX) via rtspclientsink instead of writing a
+// file (OUTPUT_MODE=rtsp). OVMS is a pure producer. The graph publishes on a
+// worker thread (WaitUntilDone blocks until the clip ends); meanwhile a client
+// pulls the live stream to /tmp/pulled.mp4, which is reopened and decoded to
+// prove the published stream is readable H.264. A mid-publish client disconnect
+// must not crash the graph. The FILE path and all existing graphs are unchanged.
+TEST_F(CAPINonCopy, GStreamerOverlayEncodeRtspPipeline) {
+#ifndef BUILD_VAAPITESTS
+    GTEST_SKIP() << "Test not enabled on UBI images";
+#else
+    if (std::getenv("RUN_GPU_TESTS") == nullptr)
+        GTEST_SKIP() << "set RUN_GPU_TESTS=1 to run the RTSP publish test";
+    const std::string videoPath = "/ovms/recording_3_raw.avi";
+    if (!std::ifstream(videoPath).good())
+        GTEST_SKIP() << "test video not found: " << videoPath;
+    if (!imp_video_va_available())
+        GTEST_SKIP() << "VA/GPU surface sharing not available on this host";
+
+    // MediaMTX provides the external RTSP server (producer-only test fixture).
+    const std::string mediamtxBin = "/usr/local/bin/mediamtx";
+    if (access(mediamtxBin.c_str(), X_OK) != 0)
+        GTEST_SKIP() << "mediamtx not found at " << mediamtxBin;
+
+    const std::string rtspUrl = "rtsp://localhost:8554/test";
+    const std::string pulledPath = "/tmp/pulled.mp4";
+    const std::string mediamtxCfg = "/tmp/mediamtx_test.yml";
+    std::remove(pulledPath.c_str());
+
+    // Minimal MediaMTX config: RTSP on 8554, TCP only, auto-create paths.
+    {
+        std::ofstream cfg(mediamtxCfg);
+        cfg << "logLevel: error\n"
+               "rtsp: yes\n"
+               "rtspAddress: :8554\n"
+               "rtmp: no\n"
+               "hls: no\n"
+               "webrtc: no\n"
+               "srt: no\n"
+               "protocols: [tcp]\n"
+               "paths:\n"
+               "  all_others:\n";
+    }
+    // GStreamer env for the out-of-process puller (from-source build at /opt/gstreamer).
+    auto stopMediamtx = []() {
+        int rc = std::system("pkill -f 'mediamtx /tmp/mediamtx_test.yml' 2>/dev/null");
+        (void)rc;
+    };
+    stopMediamtx();  // clear any stale instance from a previous run
+    const std::string startCmd =
+        mediamtxBin + " " + mediamtxCfg + " >/tmp/mediamtx_test.log 2>&1 & echo started";
+    ASSERT_EQ(std::system(startCmd.c_str()), 0) << "failed to start mediamtx";
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    const int modelW = 672;
+    const int modelH = 384;
+    const int fullW = 1280;
+    const int fullH = 720;
+    const int maxFrames = 0;  // whole clip: keep publishing long enough for the puller to connect
+
+    std::string port = "9000";
+    randomizeAndEnsureFree(port);
+    OVMS_ServerSettings* serverSettings = nullptr;
+    OVMS_ModelsSettings* modelsSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, FACE_DETECTION_ADAS_MODEL_CONFIG_JSON.c_str()));
+    OVMS_Server* cserver = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+
+    VAHelper vaHelper;
+    ASSERT_NE(vaHelper.getVADisplay(), nullptr);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSetGlobalVADisplay(cserver, vaHelper.getVADisplay()));
+    imp_video_set_va_display(vaHelper.getVADisplay());
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+
+    const std::string graphPath = "/ovms/src/test/mediapipe/calculators/gst_video_overlay_encode.pbtxt";
+    std::ifstream graphFile(graphPath);
+    ASSERT_TRUE(graphFile.good()) << "graph not found: " << graphPath;
+    std::stringstream graphText;
+    graphText << graphFile.rdbuf();
+    auto graphConfig = mediapipe::ParseTextProtoOrDie<mediapipe::CalculatorGraphConfig>(graphText.str());
+    mediapipe::CalculatorGraph graph;
+    ASSERT_TRUE(graph.Initialize(graphConfig).ok());
+
+    std::atomic<int> graphFrames{0};
+    std::atomic<int> totalBoxes{0};
+    std::atomic<int> framesWithBoxes{0};
+    ASSERT_TRUE(graph.ObserveOutputStream("detection_boxes",
+        [&](const mediapipe::Packet& p) {
+            const auto& boxes = p.Get<mediapipe::GstDetectionBoxes>();
+            ++graphFrames;
+            totalBoxes += static_cast<int>(boxes.size());
+            if (!boxes.empty())
+                ++framesWithBoxes;
+            return absl::OkStatus();
+        }).ok());
+    ASSERT_TRUE(graph.ObserveOutputStream("detections",
+        [&](const mediapipe::Packet&) { return absl::OkStatus(); }).ok());
+
+    std::map<std::string, mediapipe::Packet> sidePackets = {
+        {"video_path", mediapipe::MakePacket<std::string>(videoPath)},
+        {"width", mediapipe::MakePacket<int>(modelW)},
+        {"height", mediapipe::MakePacket<int>(modelH)},
+        {"full_width", mediapipe::MakePacket<int>(fullW)},
+        {"full_height", mediapipe::MakePacket<int>(fullH)},
+        {"full_va_surface", mediapipe::MakePacket<bool>(false)},
+        {"servable_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_MODEL_NAME)},
+        {"servable_version", mediapipe::MakePacket<int>(1)},
+        {"input_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_INPUT_NAME)},
+        {"server", mediapipe::MakePacket<OVMS_Server*>(cserver)},
+        {"output_path", mediapipe::MakePacket<std::string>(rtspUrl)},
+        {"output_mode", mediapipe::MakePacket<std::string>("rtsp")},
+        {"framerate", mediapipe::MakePacket<int>(30)},
+        {"max_frames", mediapipe::MakePacket<int>(maxFrames)},
+    };
+
+    // The file encoder publishes as-fast-as-possible (no real-time pacing yet;
+    // see TODO in gst_loader.cpp / P6b pacing follow-up), so the whole clip is
+    // pushed in ~1-2s. To win the connect race deterministically, run a
+    // background retry-puller that keeps attempting rtspsrc until the publisher
+    // announces the path, then stays connected until publish EOS (which flushes
+    // mp4mux). Each pre-announce attempt 404-fails fast, so retries are cheap.
+    const std::string pullLoopCmd =
+        "bash -c 'export PATH=/opt/gstreamer/bin:$PATH; "
+        "export LD_LIBRARY_PATH=/opt/gstreamer/lib:/opt/gstreamer/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH; "
+        "export GST_PLUGIN_PATH=/opt/gstreamer/lib/gstreamer-1.0; "
+        "for i in $(seq 1 40); do "
+        "timeout -s INT 10 gst-launch-1.0 -e "
+        "rtspsrc location=" + rtspUrl + " protocols=tcp latency=0 ! "
+        "rtph264depay ! h264parse ! mp4mux ! filesink location=" + pulledPath +
+        " >/tmp/pull_test.log 2>&1; "
+        "if [ -s " + pulledPath + " ]; then break; fi; sleep 0.2; "
+        "done' >/tmp/pull_loop.log 2>&1 & echo started";
+    auto stopPuller = []() {
+        int rc = std::system("pkill -f 'rtspsrc location=rtsp://localhost:8554/test' 2>/dev/null; "
+                             "pkill -f 'seq 1 40' 2>/dev/null");
+        (void)rc;
+    };
+    ASSERT_EQ(std::system(pullLoopCmd.c_str()), 0) << "failed to start puller";
+
+    // Publish on a worker thread: WaitUntilDone() blocks until the whole clip is
+    // pushed to MediaMTX. A client disconnect mid-publish must not fail this.
+    std::atomic<bool> runOk{false};
+    std::atomic<bool> doneOk{false};
+    std::thread publisher([&]() {
+        if (!graph.StartRun(sidePackets).ok())
+            return;
+        runOk = true;
+        doneOk = graph.WaitUntilDone().ok();
+    });
+
+    publisher.join();
+    // Let a mid-publish puller finalize its MP4 after the publisher EOS'd.
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    stopPuller();
+
+    EXPECT_TRUE(runOk.load()) << "graph did not start";
+    EXPECT_TRUE(doneOk.load()) << "graph did not finalize (publish EOS failed?)";
+    EXPECT_GT(graphFrames.load(), 0);
+    EXPECT_GE(totalBoxes.load(), 1) << "expected at least one face detection across the clip";
+
+    // Prove the published stream is readable H.264: reopen the pulled MP4 and decode.
+    std::ifstream pulled(pulledPath, std::ios::binary | std::ios::ate);
+    ASSERT_TRUE(pulled.good() && pulled.tellg() > 0)
+        << "puller did not capture any data from " << rtspUrl;
+    imp_context_t* vctx = nullptr;
+    ASSERT_EQ(imp_context_create(&vctx, nullptr), IMP_OK);
+    imp_video_source_t* vsrc = nullptr;
+    imp_video_source_create(&vsrc, IMP_SOURCE_FILE);
+    imp_video_source_set(vsrc, "path", pulledPath.c_str());
+    imp_video_decode_opts_t vopts2{};
+    imp_video_stream_t* vstream = nullptr;
+    ASSERT_EQ(imp_video_open(&vstream, vsrc, vctx, &vopts2), IMP_OK) << "pulled stream not readable";
+    imp_video_source_destroy(vsrc);
+    imp_tensor_t* vt = nullptr;
+    EXPECT_EQ(imp_video_read_frame(&vt, vstream, 0), IMP_OK) << "no frame from pulled stream";
+    if (vt)
+        imp_tensor_release(vt);
+    imp_video_close(vstream);
+    imp_context_destroy(vctx);
+
+    std::remove(pulledPath.c_str());
+    stopMediamtx();
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSetGlobalVADisplay(cserver, 0));
     imp_video_set_va_display(nullptr);
     OVMS_ServerDelete(cserver);

@@ -918,6 +918,15 @@ imp_status_t linux_video_encoder_create(imp_video_encoder_t** encoder,
     const std::string output_path =
         (opts && opts->output_path) ? opts->output_path : "output.mp4";
 
+    // RTSP publish (producer only): swap the file terminus `mp4mux ! filesink`
+    // for `rtspclientsink` pushing to an external RTSP server (e.g. MediaMTX).
+    // rtspclientsink payloads H.264 internally, so h264parse stays and no
+    // rtph264pay is added. output_path carries the rtsp:// URL in this mode.
+    const bool rtsp = opts && opts->output_mode == IMP_OUTPUT_RTSP;
+    const std::string terminus =
+        rtsp ? ("rtspclientsink location=\"" + output_path + "\" protocols=tcp")
+             : ("mp4mux ! filesink location=\"" + output_path + "\"");
+
     // GPU (VA) zero-copy encode when requested: push the decoded VA surface's
     // own buffer straight into vah264lpenc — no host copy. Otherwise software
     // encode from host NV12 planes.
@@ -931,14 +940,14 @@ imp_status_t linux_video_encoder_create(imp_video_encoder_t** encoder,
             "video/x-raw(memory:VAMemory),format=NV12,width=" + std::to_string(width) +
             ",height=" + std::to_string(height) +
             ",framerate=" + std::to_string(e->fps_num) + "/" + std::to_string(e->fps_den) + " ! "
-            "vah264lpenc ! h264parse ! mp4mux ! filesink location=\"" + output_path + "\"";
+            "vah264lpenc ! h264parse ! " + terminus;
     } else {
         pipeline =
             "appsrc name=src format=time do-timestamp=false is-live=false ! "
             "video/x-raw,format=NV12,width=" + std::to_string(width) +
             ",height=" + std::to_string(height) +
             ",framerate=" + std::to_string(e->fps_num) + "/" + std::to_string(e->fps_den) + " ! "
-            "videoconvert ! openh264enc ! h264parse ! mp4mux ! filesink location=\"" + output_path + "\"";
+            "videoconvert ! openh264enc ! h264parse ! " + terminus;
     }
 
     GError* error = nullptr;
