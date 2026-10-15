@@ -22,9 +22,7 @@
 #include <utility>
 #include <vector>
 
-#ifdef __linux__
-#include <dlfcn.h>
-#elif _WIN32
+#ifdef _WIN32
 #include <windows.h>
 #endif
 
@@ -122,11 +120,7 @@ struct MediapipeRuntimeApi::ApiSymbols {
     ConfigureLoggingFn configureLogging = nullptr;
 };
 
-#ifdef __linux__
-static void* resolveSymbol(void* handle, const char* name) {
-    return dlsym(handle, name);
-}
-#elif _WIN32
+#ifdef _WIN32
 static void* resolveSymbol(HMODULE handle, const char* name) {
     return reinterpret_cast<void*>(GetProcAddress(handle, name));
 }
@@ -199,12 +193,6 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
         SPDLOG_ERROR("In-process MediaPipe runtime symbols are unavailable");
         return;
     }
-
-#ifdef __linux__
-    tryActivateKfsPythonTensorBridgeFromRuntimeSymbols(RTLD_DEFAULT);
-#elif _WIN32
-    tryActivateKfsPythonTensorBridgeFromRuntimeSymbols(currentModule);
-#endif
 
     SPDLOG_TRACE("MediaPipe runtime API resolved from in-process symbols");
 

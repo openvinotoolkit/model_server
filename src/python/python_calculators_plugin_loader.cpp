@@ -152,7 +152,7 @@ bool loadPythonCalculatorsPlugin() {
 #ifdef __linux__
     constexpr const char* pluginName = "libpython_calculators.so";
     SPDLOG_DEBUG("Attempting to load Python calculators plugin: {}", pluginName);
-    pythonCalculatorsHandle = dlopen(pluginName, RTLD_NOW | RTLD_LOCAL);
+    pythonCalculatorsHandle = dlopen(pluginName, RTLD_NOW | RTLD_GLOBAL);
     if (pythonCalculatorsHandle == nullptr) {
         const char* errorMessage = dlerror();
         SPDLOG_WARN("Python calculators plugin {} failed to load: {}. MediaPipe Python calculators will not be available.",
