@@ -4531,9 +4531,32 @@ INSTANTIATE_TEST_SUITE_P(
 // We could consider adding tests for non-CB path in the future in the separate test suite
 class LLMOptionsHttpTestPython : public ::testing::Test {};
 
-TEST(LLMChatTemplateEngine, DefaultsToJinjaWithPythonAlwaysEnabled) {
+TEST(LLMChatTemplateEngine, PropertiesStartUnset) {
     const GenAiServableProperties properties{};
-    EXPECT_EQ(properties.chatTemplateEngine, ChatTemplateEngine::JINJA);
+    EXPECT_EQ(properties.chatTemplateEngine, ChatTemplateEngine::NONE);
+}
+
+TEST(LLMChatTemplateEngine, UnsetSelectsJinjaWhenPythonRuntimeIsAvailable) {
+    const mediapipe::LLMCalculatorOptions nodeOptions;
+    EXPECT_EQ(GenAiServableInitializer::determineChatTemplateModeWithRuntimeContext(nodeOptions, true), ChatTemplateEngine::JINJA);
+}
+
+TEST(LLMChatTemplateEngine, UnsetSelectsMinjaWhenPythonRuntimeIsUnavailable) {
+    const mediapipe::LLMCalculatorOptions nodeOptions;
+    EXPECT_EQ(GenAiServableInitializer::determineChatTemplateModeWithRuntimeContext(nodeOptions, false), ChatTemplateEngine::MINJA);
+}
+
+TEST(LLMChatTemplateEngine, ExplicitMinjaDoesNotRequirePythonRuntime) {
+    mediapipe::LLMCalculatorOptions nodeOptions;
+    nodeOptions.set_chat_template_engine(mediapipe::LLMCalculatorOptions::MINJA);
+    EXPECT_EQ(GenAiServableInitializer::determineChatTemplateModeWithRuntimeContext(nodeOptions, false), ChatTemplateEngine::MINJA);
+}
+
+TEST(LLMChatTemplateEngine, ExplicitJinjaRequiresPythonRuntime) {
+    mediapipe::LLMCalculatorOptions nodeOptions;
+    nodeOptions.set_chat_template_engine(mediapipe::LLMCalculatorOptions::JINJA);
+    EXPECT_EQ(GenAiServableInitializer::determineChatTemplateModeWithRuntimeContext(nodeOptions, true), ChatTemplateEngine::JINJA);
+    EXPECT_THROW(GenAiServableInitializer::determineChatTemplateModeWithRuntimeContext(nodeOptions, false), std::runtime_error);
 }
 
 class LLMOptionsHttpTest : public LLMOptionsHttpTestPython {

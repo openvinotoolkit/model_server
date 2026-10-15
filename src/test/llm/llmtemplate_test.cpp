@@ -150,6 +150,8 @@ TEST_F(LLMChatTemplateTest, ImplicitJinjaFallsBackWhenUnavailable) {
     servable = std::make_shared<ContinuousBatchingServable>();
     auto properties = servable->getProperties();
     properties->tokenizer = ov::genai::Tokenizer(directoryPath);
+    properties->chatTemplateEngine = GenAiServableInitializer::determineChatTemplateEngine(
+        mediapipe::LLMCalculatorOptions{});
 
     auto status = GenAiServableInitializer::loadChatTemplate(properties, directoryPath);
     EXPECT_TRUE(status.ok()) << status.string();

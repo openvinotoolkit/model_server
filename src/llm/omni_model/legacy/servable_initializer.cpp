@@ -74,11 +74,12 @@ Status OmniModelLegacyServableInitializer::initialize(std::shared_ptr<GenAiServa
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
         }
     }
-    if (nodeOptions.has_chat_template_engine()) {
-        properties->chatTemplateEngineExplicit = true;
-        properties->chatTemplateEngine = (nodeOptions.chat_template_engine() == mediapipe::LLMCalculatorOptions::JINJA)
-                                             ? ChatTemplateEngine::JINJA
-                                             : ChatTemplateEngine::MINJA;
+    properties->chatTemplateEngineExplicit = nodeOptions.has_chat_template_engine();
+    try {
+        properties->chatTemplateEngine = determineChatTemplateEngine(nodeOptions);
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Failed to determine chat template engine: {}", e.what());
+        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
 
     properties->device = nodeOptions.device();

@@ -309,6 +309,28 @@ void GenAiServableInitializer::applyGlobalCacheDir(std::shared_ptr<GenAiServable
     }
 }
 
+ChatTemplateEngine GenAiServableInitializer::determineChatTemplateEngine(
+    const mediapipe::LLMCalculatorOptions& nodeOptions) {
+    std::string initializationError;
+    const bool pythonRuntimeAvailable = ensurePythonRuntimeInitialized(initializationError);
+    return determineChatTemplateModeWithRuntimeContext(nodeOptions, pythonRuntimeAvailable);
+}
+
+ChatTemplateEngine GenAiServableInitializer::determineChatTemplateModeWithRuntimeContext(
+    const mediapipe::LLMCalculatorOptions& nodeOptions,
+    bool pythonRuntimeAvailable) {
+    if (!nodeOptions.has_chat_template_engine()) {
+        return pythonRuntimeAvailable ? ChatTemplateEngine::JINJA : ChatTemplateEngine::MINJA;
+    }
+    if (nodeOptions.chat_template_engine() == mediapipe::LLMCalculatorOptions::JINJA) {
+        if (!pythonRuntimeAvailable) {
+            throw std::runtime_error("chat_template_engine=JINJA requires an available Python runtime");
+        }
+        return ChatTemplateEngine::JINJA;
+    }
+    return ChatTemplateEngine::MINJA;
+}
+
 Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string graphPath) {
     auto fsModelsPath = std::filesystem::path(modelsPath);
     if (fsModelsPath.is_relative()) {
