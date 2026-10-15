@@ -132,7 +132,7 @@ print("Top-1 class index:", int(np.argmax(output[0])))
 - [Dynamic input shapes](https://docs.openvino.ai/2026/model-server/ovms_docs_dynamic_input.html)
 
 ### Deployment & Integration
-- [Docker](docs/deploying_server_docker.md), [bare metal (Linux & Windows)](docs/deploying_server_baremetal.md), [Kubernetes / OpenShift](docs/deploying_server_kubernetes.md)
+- [Docker](docs/deploy-and-operate/docker.md), [bare metal (Linux & Windows)](docs/deploy-and-operate/baremetal.md), [Kubernetes / OpenShift](docs/deploy-and-operate/kubernetes.md)
 - [Model repository](https://docs.openvino.ai/2026/model-server/ovms_docs_models_repository.html): local storage, S3, GCS, Azure Blob, HuggingFace Hub
 - [Model versioning](https://docs.openvino.ai/2026/model-server/ovms_docs_model_version_policy.html) and [hot-reload](https://docs.openvino.ai/2026/model-server/ovms_docs_online_config_changes.html)
 - [Prometheus-compatible metrics](https://docs.openvino.ai/2026/model-server/ovms_docs_metrics.html)

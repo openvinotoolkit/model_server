@@ -68,7 +68,7 @@ Cline lets Plan mode and Act mode use different models/providers, so you can, fo
 You can set that checking **Use different models for Plan and Act modes**.
 
 Running two large models like these at the same time can exceed available RAM/VRAM, so configure OVMS's
-[idle servable management](../../docs/idle_servable_management.md) (preview feature) to keep only the model used by
+[idle servable management](../../docs/deploy-and-operate/idle-servable-management.md) (preview feature) to keep only the model used by
 the active mode loaded; switching modes in Cline then wakes up the other model on demand instead of requiring both
 to be resident at once.
 

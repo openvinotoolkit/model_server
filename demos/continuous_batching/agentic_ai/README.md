@@ -44,7 +44,7 @@ This deployment procedure assumes the model was pulled or exported using the pro
 
 ### Deploying on Windows
 Assuming you have unpacked model server package with python enabled version, make sure to run `setupvars` script
-as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+as mentioned in [deployment guide](../../../docs/deploy-and-operate/baremetal.md), in every new shell that will start OpenVINO Model Server.
 
 ::::{tab-set}
 :::{tab-item} Qwen3.5-9B
@@ -352,4 +352,4 @@ python llama_index_agent.py --query "What is the current weather in Tokyo?" --mo
 ### References
 - [Export models to OpenVINO format](../../common/export_models/README.md)
 - [Testing LLM and VLM serving accuracy](../accuracy/README.md)
-- [LLM calculator reference](../../../docs/llm/reference.md)
+- [LLM calculator reference](../../../docs/serving-custom-pipelines/genai-pipeline-reference.md)

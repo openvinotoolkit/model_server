@@ -1,0 +1,8 @@
+{
+  "label": "Get Models",
+  "position": 3,
+  "link": {
+    "type": "doc",
+    "id": "ovms_docs_models_repository"
+  }
+}

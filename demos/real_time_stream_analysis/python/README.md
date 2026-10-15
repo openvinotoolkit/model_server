@@ -6,7 +6,7 @@ In the video analysis we can deal with various form of the source content. Here,
 take the source of the video from a local USB camera, saved encoded video file and an encoded video stream.
 
 The client application is expected to read the video source and send for the analysis every frame to the OpenVINO Model Server via gRPC connection. The analysis can be fully delegated to the model server endpoint with the
-complete processing pipeline arranged via a [MediaPipe graph](../../../docs/mediapipe.md). The remote analysis can be also reduced just to inference execution but in such case the video frame preprocessing and the postprocessing of the results must be implemented on the client side.
+complete processing pipeline arranged via a [MediaPipe graph](../../../docs/serving-custom-pipelines/mediapipe-graphs.md). The remote analysis can be also reduced just to inference execution but in such case the video frame preprocessing and the postprocessing of the results must be implemented on the client side.
 
 In this demo, reading the video content from a local USB camera and encoded video file is straightforward using OpenCV library. The use case with encoded network stream might require more explanation.
 We will present using RTSP stream transferred by the server component and encoded using FFMPEG utility.
@@ -29,7 +29,7 @@ In the demo will be used two gRPC communication patterns which might be advantag
 
 ## gRPC streaming with MediaPipe graphs
 
-gRPC stream connection is allowed for served [MediaPipe graphs](../../../docs/mediapipe.md). It allows sending asynchronous calls to the endpoint all linked in a single session context. Responses are sent back via a stream and processed in the callback function.
+gRPC stream connection is allowed for served [MediaPipe graphs](../../../docs/serving-custom-pipelines/mediapipe-graphs.md). It allows sending asynchronous calls to the endpoint all linked in a single session context. Responses are sent back via a stream and processed in the callback function.
 The helper class [StreamClient](https://github.com/openvinotoolkit/model_server/blob/main/demos/common/stream_client/stream_client.py) provides a mechanism for flow control and tracking the sequence of the requests and responses. In the StreamClient initialization the streaming mode is set via the parameter `streaming_api=True`.
 
 Using the streaming API has the following advantages:
@@ -190,7 +190,7 @@ The key advantage of that mode is easier load balancing and scalability, because
 
 ## Metric integrations
 
-Following the steps from [metrics documentation](../../../docs/metrics.md#visualize-with-grafana) one can setup
+Following the steps from [metrics documentation](../../../docs/reference/metrics.md#visualize-with-grafana) one can setup
 visualisation of metrics using grafana.
 
 In OpenVINO Model Server repository one can find [grafana_mediapipe.json](../../../extras/grafana_mediapipe.json) that can be used to visualize 

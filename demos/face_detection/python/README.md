@@ -4,7 +4,7 @@
 
 **Model preparation**: Python 3.9 or higher with pip 
 
-**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploy-and-operate/baremetal.md)
 
 ## Overview
 
@@ -89,7 +89,7 @@ Assuming you have unpacked model server package, make sure to:
 - **On Windows**: run `setupvars` script
 - **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
 
-as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+as mentioned in [deployment guide](../../../docs/deploy-and-operate/baremetal.md), in every new shell that will start OpenVINO Model Server.
 ```bat
 ovms --model_path model --model_name face-detection --port 9000  --shape auto --target_device CPU
 ```

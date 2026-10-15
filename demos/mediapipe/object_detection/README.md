@@ -1,6 +1,6 @@
 # MediaPipe Object Detection Demo {#ovms_docs_demo_mediapipe_object_detection}
 
-This guide shows how to implement [MediaPipe](../../../docs/mediapipe.md) graph using OVMS.
+This guide shows how to implement [MediaPipe](../../../docs/serving-custom-pipelines/mediapipe-graphs.md) graph using OVMS.
 
 Example usage of graph that accepts Mediapipe::ImageFrame as a input:
 
@@ -8,7 +8,7 @@ Example usage of graph that accepts Mediapipe::ImageFrame as a input:
 
 **Model preparation**: Python 3.9 or higher with pip 
 
-**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploy-and-operate/baremetal.md)
 
 ## Prepare the repository
 
@@ -38,7 +38,7 @@ Assuming you have unpacked model server package, make sure to:
 - **On Windows**: run `setupvars` script
 - **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
 
-as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+as mentioned in [deployment guide](../../../docs/deploy-and-operate/baremetal.md), in every new shell that will start OpenVINO Model Server.
 ```bat
 ovms --config_path config.json --port 9000
 ```

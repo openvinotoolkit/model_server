@@ -23,14 +23,14 @@ Check [supported models](https://openvinotoolkit.github.io/openvino.genai/docs/s
 - preconfigured models from HuggingFaces directly in OpenVINO IR format, list of Intel uploaded models available [here](https://huggingface.co/collections/OpenVINO/image-generation-67697d9952fb1eee4a252aa8))
 - or Python 3.9+ with pip and HuggingFace account to download, convert and quantize manually using [Export Models Tool](../common/export_models/README.md)
 
-**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploying_server_baremetal.md)
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../docs/deploy-and-operate/baremetal.md)
 
 **Client**:  Python for using OpenAI client package and Pillow to save image or simply cURL
 
 
 ## Option 1. Downloading the models directly via OVMS
 
-> **NOTE:** Model downloading feature is described in depth in separate documentation page: [Pulling HuggingFaces Models](../../docs/pull_hf_models.md).
+> **NOTE:** Model downloading feature is described in depth in separate documentation page: [Pulling HuggingFaces Models](../../docs/get-models/pull-from-huggingface.md).
 
 This command pulls the `OpenVINO/stable-diffusion-v1-5-int8-ov` quantized model directly from HuggingFaces and starts the serving. If the model already exists locally, it will skip the downloading and immediately start the serving.
 
@@ -63,7 +63,7 @@ Assuming you have unpacked model server package, make sure to:
 - **On Windows**: run `setupvars` script
 - **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
 
-as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+as mentioned in [deployment guide](../../docs/deploy-and-operate/baremetal.md), in every new shell that will start OpenVINO Model Server.
 
 
 ```bat
@@ -246,7 +246,7 @@ ovms --rest_port 8000 ^
 
 ::::
 
-> **NOTE:** The `graph.pbtxt` configuration file is auto-generated at runtime when using `--task image_generation`. You can also customize it manually — see [Image Generation calculator reference](../../docs/image_generation/reference.md) for all available options.
+> **NOTE:** The `graph.pbtxt` configuration file is auto-generated at runtime when using `--task image_generation`. You can also customize it manually — see [Image Generation calculator reference](../../docs/serving-custom-pipelines/image-generation-pipeline-reference.md) for all available options.
 
 
 ## Readiness Check
@@ -832,11 +832,11 @@ response = client.images.generate(
 )
 ```
 
-> **Note:** For more details on LoRA adapter configuration, see the [Image Generation reference documentation](../../docs/image_generation/reference.md#lora-adapters).
+> **Note:** For more details on LoRA adapter configuration, see the [Image Generation reference documentation](../../docs/serving-custom-pipelines/image-generation-pipeline-reference.md#lora-adapters).
 
 ## References
-- [Image Generation API](../../docs/model_server_rest_api_image_generation.md)
-- [Image Edit API](../../docs/model_server_rest_api_image_edit.md)
-- [Writing client code](../../docs/clients_genai.md)
-- [Image Generation/Edit calculator reference](../../docs/image_generation/reference.md)
+- [Image Generation API](../../docs/using-the-models/rest-api-image-generation.md)
+- [Image Edit API](../../docs/using-the-models/rest-api-image-edit.md)
+- [Writing client code](../../docs/using-the-models/genai-api-index.md)
+- [Image Generation/Edit calculator reference](../../docs/serving-custom-pipelines/image-generation-pipeline-reference.md)
 - [Supported models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#image-generation-models)

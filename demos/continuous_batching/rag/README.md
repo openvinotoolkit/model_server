@@ -20,7 +20,7 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 :::
 
 :::{tab-item} On Baremetal Windows
-**Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
+**Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploy-and-operate/baremetal.md) for details.
 
 ```bat
 mkdir models
@@ -37,9 +37,9 @@ ovms --add_to_config --config_path models/config.json --model_name OpenVINO/bge-
 ::::
 
 
-> NOTE: If you want to deploy models in pytorch format you can use the built-in OVMS optimum-cli functionality of `openvino/model_server:latest-py` described in [pull mode with optimum cli](../../../docs/pull_optimum_cli.md)
+> NOTE: If you want to deploy models in pytorch format you can use the built-in OVMS optimum-cli functionality of `openvino/model_server:latest-py` described in [pull mode with optimum cli](../../../docs/get-models/export-with-optimum-cli.md)
 
-> NOTE: You can also use [the windows service](../../../docs/windows_service.md) setup for the ease of use and shorter commands - with default model_repository_path and config_path
+> NOTE: You can also use [the windows service](../../../docs/deploy-and-operate/windows-service.md) setup for the ease of use and shorter commands - with default model_repository_path and config_path
 
 ## Deploying the model server
 

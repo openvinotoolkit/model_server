@@ -42,7 +42,7 @@ Use example client to send requests containing images via KServ REST API:
 python image_classification_with_string_output.py --http_port 8000
 ```
 Request may be sent also using other APIs (KServe GRPC). In this section you can find short code samples how to do this:
-- [KServe API](../../docs/clients_kfs.md)
+- [KServe API](../../docs/using-the-models/kserve-api-index.md)
 
 
 ## Expected output

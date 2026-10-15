@@ -1,0 +1,8 @@
+{
+  "label": "Troubleshoot and Get Support",
+  "position": 10,
+  "link": {
+    "type": "doc",
+    "id": "ovms_docs_troubleshooting"
+  }
+}

@@ -56,7 +56,7 @@ workspace
         └── resnet50-binary-0001.xml
 ```
 
-Let's start OVMS before building and running the benchmark client as follows (more deployment options described in [docs](../../../docs/home.md)):
+Let's start OVMS before building and running the benchmark client as follows (more deployment options described in [docs](../../../docs/overview/index.md)):
 ```bash
 docker run -u $(id -u) -p 9000:9000 -p 8000:8000 -d -v ${PWD}/workspace:/workspace openvino/model_server --model_path \
                      /workspace/resnet50-binary-0001 --model_name resnet50-binary-0001 --port 9000 --rest_port 8000

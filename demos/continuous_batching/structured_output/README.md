@@ -21,7 +21,7 @@ docker run  ${GPU_ARGS} --user $(id -u):$(id -g) -d --rm -p 8000:8000 -v ${HOME}
 ```
 :::
 :::{tab-item} On Baremetal Host Windows
-**Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploying_server_baremetal.md) for details.
+**Required:** OpenVINO Model Server package - see [deployment instructions](../../../docs/deploy-and-operate/baremetal.md) for details.
 
 ```bat
 mkdir c:\models

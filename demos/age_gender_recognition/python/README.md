@@ -5,7 +5,7 @@ This article describes how to use OpenVINO&trade; Model Server to execute infere
 
 **Model preparation**: Python 3.9 or higher with pip 
 
-**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploy-and-operate/baremetal.md)
 
 ## Download the pretrained model for age and gender recognition
 Download both components of the model (xml and bin file) using curl in the `model` directory
@@ -28,7 +28,7 @@ Assuming you have unpacked model server package, make sure to:
 - **On Windows**: run `setupvars` script
 - **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
 
-as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+as mentioned in [deployment guide](../../../docs/deploy-and-operate/baremetal.md), in every new shell that will start OpenVINO Model Server.
 ```bat
 ovms --model_path model --model_name age_gender --port 9000 --rest_port 8000 --target_device CPU
 ```
