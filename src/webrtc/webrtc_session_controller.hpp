@@ -50,7 +50,8 @@ public:
     };
 
     explicit WebRtcSessionController(size_t maxSessions = 16, std::string omniModelPath = {},
-        std::string sttModelPath = {}, std::string sttDevice = "CPU", std::string voxtralModelPath = {});
+        std::string sttModelPath = {}, std::string sttDevice = "CPU", std::string voxtralModelPath = {},
+        std::string omniDevice = "CPU", std::string talkerDevice = "CPU", size_t audioChunkFrames = 0);
 
     bool createSession(const std::string& offerSdp, const std::string& offerType, OfferResult& result);
     bool addCandidate(const std::string& sessionId, const std::string& candidate, const std::string& mid);
@@ -88,6 +89,9 @@ private:
     std::string sttModelPath_;
     std::string sttDevice_;
     std::string voxtralModelPath_;
+    std::string omniDevice_;
+    std::string talkerDevice_;
+    size_t audioChunkFrames_;
     std::shared_ptr<OmniAudioAdapter> omniAdapter_;
     std::shared_ptr<SttAudioAdapter> sttAdapter_;
     std::shared_ptr<VoxtralAudioAdapter> voxtralAdapter_;

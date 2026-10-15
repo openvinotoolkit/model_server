@@ -203,12 +203,16 @@ AudioChunk WebRtcSessionController::Session::decodeAudioFrame(const rtc::binary&
 }
 
 WebRtcSessionController::WebRtcSessionController(size_t maxSessions, std::string omniModelPath,
-    std::string sttModelPath, std::string sttDevice, std::string voxtralModelPath) :
+    std::string sttModelPath, std::string sttDevice, std::string voxtralModelPath,
+    std::string omniDevice, std::string talkerDevice, size_t audioChunkFrames) :
     maxSessions_(maxSessions),
     omniModelPath_(std::move(omniModelPath)),
     sttModelPath_(std::move(sttModelPath)),
     sttDevice_(std::move(sttDevice)),
-    voxtralModelPath_(std::move(voxtralModelPath)) {
+    voxtralModelPath_(std::move(voxtralModelPath)),
+    omniDevice_(std::move(omniDevice)),
+    talkerDevice_(std::move(talkerDevice)),
+    audioChunkFrames_(audioChunkFrames) {
     if (!voxtralModelPath_.empty() && (!omniModelPath_.empty() || !sttModelPath_.empty()))
         throw std::invalid_argument("Voxtral WebRTC cannot be combined with Omni or Whisper STT");
 }
@@ -230,11 +234,9 @@ bool WebRtcSessionController::createSession(const std::string& offerSdp, const s
         }
         if (!omniModelPath_.empty() && !omniAdapter_) {
             try {
-                const char* configuredDevice = std::getenv("OVMS_WEBRTC_OMNI_DEVICE");
-                const std::string device = configuredDevice == nullptr || configuredDevice[0] == '\0' ? "CPU" : configuredDevice;
-                const char* configuredTalkerDevice = std::getenv("OVMS_WEBRTC_TALKER_DEVICE");
-                const std::string talkerDevice = configuredTalkerDevice == nullptr || configuredTalkerDevice[0] == '\0' ? device : configuredTalkerDevice;
-                const size_t audioChunkFrames = audioChunkFramesFromEnv();
+                const std::string device = omniDevice_;
+                const std::string talkerDevice = talkerDevice_;
+                const size_t audioChunkFrames = audioChunkFrames_ > 0 ? audioChunkFrames_ : audioChunkFramesFromEnv();
                 auto vlm = std::make_shared<ov::genai::VLMPipeline>(omniModelPath_, device, ov::AnyMap{});
                 auto talker = std::make_shared<ov::genai::Talker>(omniModelPath_, talkerDevice, ov::AnyMap{});
                 auto pipeline = std::make_shared<ov::genai::OmniPipeline>(std::move(vlm), std::move(talker));

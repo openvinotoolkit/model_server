@@ -110,6 +110,29 @@ std::string getWebRtcSttDevice() {
     const char* device = std::getenv("OVMS_WEBRTC_STT_DEVICE");
     return device == nullptr || device[0] == '\0' ? "CPU" : device;
 }
+
+std::string getWebRtcOmniDevice() {
+    const char* device = std::getenv("OVMS_WEBRTC_OMNI_DEVICE");
+    return device == nullptr || device[0] == '\0' ? "CPU" : device;
+}
+
+std::string getWebRtcTalkerDevice() {
+    const char* device = std::getenv("OVMS_WEBRTC_TALKER_DEVICE");
+    return device == nullptr || device[0] == '\0' ? "CPU" : device;
+}
+
+size_t getWebRtcOmniAudioChunkFrames() {
+    constexpr size_t defaultAudioChunkFrames = 4;
+    const char* value = std::getenv("OVMS_WEBRTC_OMNI_AUDIO_CHUNK_FRAMES");
+    if (value == nullptr || value[0] == '\0')
+        return defaultAudioChunkFrames;
+    char* end = nullptr;
+    const unsigned long parsed = std::strtoul(value, &end, 10);
+    if (*end != '\0' || parsed == 0) {
+        return defaultAudioChunkFrames;
+    }
+    return static_cast<size_t>(parsed);
+}
 }  // namespace
 
 namespace ovms {
@@ -165,7 +188,7 @@ HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_
     kfsGrpcImpl(dynamic_cast<const GRPCServerModule*>(this->ovmsServer.getModule(GRPC_SERVER_MODULE_NAME))->getKFSGrpcImpl()),
     modelManager(dynamic_cast<const ServableManagerModule*>(this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager()),
     webRtcSessionController(16, getWebRtcOmniModelPath(), getWebRtcSttModelPath(), getWebRtcSttDevice(),
-        getWebRtcVoxtralModelPath()) {
+        getWebRtcVoxtralModelPath(), getWebRtcOmniDevice(), getWebRtcTalkerDevice(), getWebRtcOmniAudioChunkFrames()) {
     if (nullptr == this->ovmsServer.getModule(GRPC_SERVER_MODULE_NAME))
         throw std::logic_error("Tried to create http rest api handler without grpc server module");
     if (nullptr == this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))

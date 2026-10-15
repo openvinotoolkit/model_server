@@ -30,6 +30,7 @@ std::shared_ptr<spdlog::logger> s3_logger = std::make_shared<spdlog::logger>("s3
 std::shared_ptr<spdlog::logger> modelmanager_logger = std::make_shared<spdlog::logger>("modelmanager");
 std::shared_ptr<spdlog::logger> dag_executor_logger = std::make_shared<spdlog::logger>("dag_executor");
 std::shared_ptr<spdlog::logger> capi_logger = std::make_shared<spdlog::logger>("C-API");
+std::shared_ptr<spdlog::logger> webrtc_logger = std::make_shared<spdlog::logger>("webrtc");
 #if (MEDIAPIPE_DISABLE == 0)
 std::shared_ptr<spdlog::logger> mediapipe_logger = std::make_shared<spdlog::logger>("mediapipe");
 std::shared_ptr<spdlog::logger> llm_executor_logger = std::make_shared<spdlog::logger>("llm_executor");
@@ -38,7 +39,6 @@ std::shared_ptr<spdlog::logger> s2t_calculator_logger = std::make_shared<spdlog:
 std::shared_ptr<spdlog::logger> t2s_calculator_logger = std::make_shared<spdlog::logger>("t2s_calculator");
 std::shared_ptr<spdlog::logger> embeddings_calculator_logger = std::make_shared<spdlog::logger>("embeddings_calculator");
 std::shared_ptr<spdlog::logger> rerank_calculator_logger = std::make_shared<spdlog::logger>("rerank_calculator");
-std::shared_ptr<spdlog::logger> webrtc_logger = std::make_shared<spdlog::logger>("webrtc");
 #endif
 #if (OV_TRACE == 1)
 std::shared_ptr<spdlog::logger> ov_logger = std::make_shared<spdlog::logger>("openvino");

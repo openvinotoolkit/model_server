@@ -3,6 +3,7 @@ CONTAINER=openvino/model_server-build:krz
 CONTAINER=docker.io/openvino/model_server-build:audio-placement
 mkdir -p /home/krz/.cache/ovms-bazel
 chmod a+rwx /home/krz/.cache/ovms-bazel
+docker stop ovms-build-krz
 docker rm ovms-build-krz
 docker run -it \
   --env-file /home/krz/.env \
