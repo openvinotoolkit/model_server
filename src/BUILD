@@ -1969,8 +1969,6 @@ cc_binary(
         "//src:ovms_lib",
         "//src/filesystem:libovmsfilesystemfactory",
         "//src:module_names",
-        "//src/mediapipe_internal:libovms_mediapipe_runtime_owner_no_python_calculators",
-        "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
         ":libovms_ov_version",
         "//src/llm:llmcalculator_proto_owner",
     ]
@@ -1978,9 +1976,12 @@ cc_binary(
             "//conditions:default": [],
             "//src:windows" : ["@winreg//:winreg"],
         })
-    + ["//src/python:python_calculators_host"]
      + select({
-            "//conditions:default": [],
+            "//:not_disable_mediapipe": [
+                "//src/mediapipe_internal:libovms_mediapipe_runtime_owner_no_python_calculators",
+                "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
+                "//src/python:python_calculators_host",
+            ],
             "//:disable_mediapipe" : [],
         }),
     data = select({
