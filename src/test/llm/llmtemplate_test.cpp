@@ -32,6 +32,9 @@
 #include "../../llm/language_model/continuous_batching/servable_initializer.hpp"
 #include "../../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../../server.hpp"
+#include "../../servable_management/modelmanager.hpp"
+#include "../../servable_management/servable_group_manager.hpp"
+#include "../../servable_management/servablemanagermodule.hpp"
 #include "../platform_utils.hpp"
 
 #pragma GCC diagnostic push
@@ -656,6 +659,66 @@ public:
 std::unique_ptr<std::thread> LLMChatTemplateHttpTest::t;
 
 std::string fullResponse;
+
+class LLMIdleGroupWakeUpHttpTest : public LLMChatTemplateHttpTest {
+protected:
+    static constexpr const char* kGraphName = "lm_cb_regular";
+    static constexpr const char* kGroupName = "lazy";
+
+    void SetUp() override {
+        writer = std::make_shared<MockedServerRequestInterface>();
+        multiPartParser = std::make_shared<MockedMultiPartParser>();
+        ON_CALL(*writer, PartialReplyBegin(::testing::_)).WillByDefault(testing::Invoke([](std::function<void()> fn) { fn(); }));
+        TestWithTempDir::SetUp();
+        ovmsConfigFilePath = directoryPath + "/ovms_config.json";
+        const std::string graphPath = getGenericFullPathForSrcTest("/ovms/src/test/llm/lm_cb_regular.pbtxt");
+
+        const std::string config = R"({
+            "model_config_list": [],
+            "mediapipe_config_list": [{
+                "name": "lm_cb_regular",
+                "graph_path": ")" + graphPath +
+                                   R"(",
+                "group_name": "lazy"
+            }]
+        })";
+        ASSERT_TRUE(createConfigFileWithContent(config, ovmsConfigFilePath));
+
+        std::string port = "9174";
+        ovms::Server& server = ovms::Server::instance();
+        ::SetUpServerWithExtraArgs(t, server, port, ovmsConfigFilePath.c_str(), {"--idle_unload_timeout_seconds", "30"});
+        handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
+        ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointChatCompletions, headers), ovms::StatusCode::OK);
+    }
+
+    ovms::ModelManager& manager() const {
+        ovms::Server& server = ovms::Server::instance();
+        return dynamic_cast<const ovms::ServableManagerModule*>(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME))->getServableManager();
+    }
+};
+
+TEST_F(LLMIdleGroupWakeUpHttpTest, V3UnaryRequestWakesSleepingGroupedGraph) {
+    auto* definition = manager().getMediapipeFactory().findDefinitionByName(kGraphName);
+    ASSERT_NE(definition, nullptr);
+    EXPECT_EQ(definition->getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+
+    auto* groupManager = manager().getGroupManager();
+    ASSERT_NE(groupManager, nullptr);
+    EXPECT_TRUE(groupManager->getActiveGroupName().empty());
+
+    std::string requestBody = R"(
+        {
+            "model": "lm_cb_regular",
+            "stream": false,
+            "max_tokens": 5,
+            "messages": [{"role": "user", "content": "Hi"}]
+        }
+    )";
+
+    const auto status = handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    EXPECT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_EQ(groupManager->getActiveGroupName(), kGroupName);
+}
 
 class LLMJinjaChatTemplateHttpTest : public LLMChatTemplateHttpTest {
 public:
