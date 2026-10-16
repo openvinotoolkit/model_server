@@ -142,12 +142,17 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             apt-get clean && \
             rm -rf /var/lib/apt/lists/*
 RUN if [ "$BASE_OS" == "ubuntu22" ] ; then apt-get update && \
-    apt-get install -y --no-install-recommends python3.10-dev python3.10-venv && \
+    apt-get install -y --no-install-recommends gpg-agent software-properties-common && \
+    add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends gcc-13 g++-13 python3.10-dev python3.10-venv && \
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100 && \
+    update-alternatives --set gcc /usr/bin/gcc-13 && \
+    update-alternatives --set g++ /usr/bin/g++-13 && \
+    test "$(gcc -dumpversion)" = "13" && test "$(g++ -dumpversion)" = "13" && \
     apt-get clean && rm -rf /var/lib/apt/lists/* ; fi
-# Note: espeak-ng is no longer installed from apt here; it is built from
-# source by Bazel (see third_party/espeak_ng) and bundled in the release.
 # on ubuntu 24.04 python3.12 and on ubuntu 26.04 python3.14 are used as default python
-# TF build needs python3.10 with numpy as it does not support python3.12
 RUN if [ "$BASE_OS" == "ubuntu22" ] ; then python3.10 -m pip install "numpy<2.0.0" "Jinja2==3.1.6" "MarkupSafe==3.0.2"  --no-cache-dir ; fi
 RUN if [ "$BASE_OS" == "ubuntu24" ] ; then apt-get update ; apt-get install python3.12-dev -y --no-install-recommends ; apt-get clean && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \

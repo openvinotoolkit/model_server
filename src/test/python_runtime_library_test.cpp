@@ -306,7 +306,7 @@ TEST(PythonRuntimeLibrary, ValidationSucceedsWithBindingOnPythonPath) {
     ASSERT_NE(validate, nullptr);
 
     const char* errorMessage = nullptr;
-    EXPECT_TRUE(validate(&errorMessage));
+    EXPECT_TRUE(validate(&errorMessage)) << (errorMessage == nullptr ? "No error message returned" : errorMessage);
     EXPECT_EQ(errorMessage, nullptr);
 }
 
