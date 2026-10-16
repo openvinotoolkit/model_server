@@ -34,10 +34,12 @@ docker pull registry.connect.redhat.com/intel/openvino-model-server:latest
 ##### 2.1 Start the container with the model
 
 ```bash
-wget https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.{xml,bin} -P models/resnet50/1
-docker run -u $(id -u) -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest \
---model_name resnet --model_path /models/resnet50 \
---layout NHWC:NCHW --port 9000
+mkdir -p ${HOME}/models
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o ${HOME}/models/resnet50.bin
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o ${HOME}/models/resnet50.xml
+docker run -u $(id -u) -v ${HOME}/models:/models -p 9000:9000 openvino/model_server:latest \
+--model_name resnet --model_path /models/resnet50.xml \
+--mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --port 9000
 ```
 
 ##### 2.2 Download input files: an image and a label mapping file

@@ -25,11 +25,11 @@ node {
     [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
         tag_to_input_tensor_names {
           key: "B"
-          value: "0"
+          value: "image"
         }
         tag_to_output_tensor_names {
           key: "A"
-          value: "1463"
+          value: "output"
         }
     }
   }
@@ -53,8 +53,8 @@ cd model_server/demos/mediapipe/image_classification
 ## Download ResNet50 model
 
 ```console
-curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -o resnetMediapipe/model/1/resnet50-binary-0001.bin
-curl --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o resnetMediapipe/model/1/resnet50-binary-0001.xml
+curl -L --create-dirs https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o resnetMediapipe/model/1/resnet50.bin
+curl -L --create-dirs https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o resnetMediapipe/model/1/resnet50.xml
 ```
 
 ## Server Deployment

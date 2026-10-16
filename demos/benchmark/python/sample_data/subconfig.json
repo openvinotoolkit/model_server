@@ -1,0 +1,13 @@
+{
+    "model_config_list": [
+        {"config": {
+                "name": "resnet50",
+                "base_path": "/workspace/resnet50",
+                "mean": "[123.675,116.28,103.53]",
+                "scale": "[58.395,57.12,57.375]",
+                "layout": "NCHW",
+                "plugin_config": {"PERFORMANCE_HINT": "LATENCY"}
+            }
+        }
+    ]
+}
