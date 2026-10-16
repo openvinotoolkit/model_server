@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-set -e
+
 if [ -z "$1" ]; then
   echo "Error: No directory specified."
   exit 1
@@ -22,7 +22,7 @@ fi
 
 TOKENIZER_FILE="openvino_tokenizer.bin"
 LEGACY_MODEL_FILE="1/model.bin"
-EMBEDDING_MODEL="thenlper/gte-small"
+EMBEDDING_MODEL="OpenVINO/bge-base-en-v1.5-int8-ov"
 RERANK_MODEL="OpenVINO/bge-reranker-base-int8-ov"
 TTS_MODEL="OpenVINO/Kokoro-82M-int8-ov"
 # Dummy cyclic models used by LLM/VLM tests instead of real downloaded models;
@@ -39,7 +39,7 @@ MISTRAL_MODEL="OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov"
 GPT_OSS_MODEL="OpenVINO/gpt-oss-20b-int4-ov"
 DEVSTRAL_MODEL="unsloth/Devstral-Small-2507"
 LFM2_MODEL="OpenVINO/LFM2-24B-A2B-int4-ov"
-LFM25_MODEL="OpenVINO/LFM2-8B-A1B-int4-ov"
+LFM25_MODEL="OpenVINO/LFM2.5-8B-A1B-int4-ov"
 GEMMA4_MODEL="OpenVINO/gemma-4-E4B-it-int4-ov"
 MINICPM5_MODEL="OpenVINO/MiniCPM5-1B-int4-ov"
 ONYX_MODEL="OpenVINO/Muse-Glimmer-30B-int4-ov"
@@ -50,12 +50,12 @@ echo "Downloading LLM testing models to directory $1"
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
 if [ "$2" = "docker" ]; then
     export PATH=$PATH:/opt/intel/openvino/python/bin
-    python3 -m pip install "optimum-intel"@git+https://github.com/huggingface/optimum-intel.git nncf sentence_transformers==5.3.0 sentencepiece requests protobuf==7.35.0 kokoro
+    python3 -m pip install nncf sentence_transformers==5.3.0 sentencepiece requests protobuf==7.35.0 kokoro
 else
     python3 -m venv .venv
     . .venv/bin/activate
     pip3 install -U pip
-    pip3 install -U -r demos/common/export_models/requirements.txt
+    pip3 install -U nncf sentence_transformers==5.3.0 sentencepiece requests protobuf==7.35.0 kokoro openvino-tokenizers
 fi
 mkdir -p $1
 
@@ -106,7 +106,7 @@ fi
 if [ -f "$1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" ]; then
   echo "Model file $1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE exists. Skipping downloading models."
 else
-  python3 demos/common/export_models/export_model.py embeddings_ov --source_model "$EMBEDDING_MODEL" --weight-format int8 --model_repository_path $1 --model_name $EMBEDDING_MODEL/ov
+  hf download "$EMBEDDING_MODEL" --local-dir "$1/$EMBEDDING_MODEL/ov"
 fi
 if [ ! -f "$1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" ]; then
   echo "[ERROR] Model file $1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE does not exist."
