@@ -26,7 +26,7 @@ from tests.functional.utils.logger import get_logger
 from tests.functional.constants.os_type import OsType
 from tests.functional.utils.process import Process
 
-from tests.functional.config import artifacts_dir
+from tests.functional.config import artifacts_dir, enable_pooling_detection
 from tests.functional.constants.core import CONTAINER_STATUS_EXITED, CONTAINER_STATUS_RUNNING
 from tests.functional.constants.ovms_binaries import get_ovms_binary_cmd_setup
 from tests.functional.constants.ovms_type import OvmsType
@@ -211,7 +211,7 @@ def start_binary_ovms(
             remove_from_config=remove_from_config,
             resolution=parameters.resolution,
             cache_size=parameters.cache_size,
-            pooling=model.pooling if model is not None else None,
+            pooling=None if enable_pooling_detection or model is None else model.pooling,
         )
 
     ovms_binary = OvmsBinary(
