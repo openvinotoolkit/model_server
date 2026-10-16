@@ -997,7 +997,7 @@ TEST_P(CAPIPredictValidationPrecision, ValidPrecisions) {
                 std::tuple<ovms::signed_shape_t, ovms::Precision>{{1, DUMMY_MODEL_INPUT_SIZE}, testedPrecision}},
         },
         requestData);
-    auto status = ovms::request_validation_utils::validate(request, mockedInputsInfo, mockedOutputsInfo, "dummy", ovms::model_version_t{1});
+    auto status = ovms::request_validation_utils::validate(request, mockedInputsInfo, mockedOutputsInfo, {}, createValidationModelConfig());
     EXPECT_EQ(status, ovms::StatusCode::OK) << "Precision validation failed:"
                                             << toString(testedPrecision)
                                             << " should pass validation";

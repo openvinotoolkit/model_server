@@ -20,8 +20,8 @@
 #include <string>
 #include <vector>
 
-#include "config.hpp"
 #include "logging.hpp"
+#include "modelconfig.hpp"
 #include "modelversion.hpp"
 #include "shape.hpp"
 #include "requesttensorextractor.hpp"
@@ -80,20 +80,18 @@ Status validate(
     const RequestType& request,
     const tensor_map_t& inputsInfo,
     const tensor_map_t& outputsInfo,
-    const std::string& servableName,
-    const model_version_t servableVersion,
-    const std::set<std::string>& optionalAllowedInputNames = {},
-    const Mode batchingMode = Mode::FIXED,
-    const shapes_info_map_t& shapeInfo = shapes_info_map_t());
+    const std::set<std::string>& optionalAllowedInputNames,
+    const ModelConfig& modelConfig);
 
 template <typename RequestType, typename InputTensorType, ValidationChoice choice, typename InputIterator, typename ShapeType>
 class RequestValidator {
     const RequestType& request;
     const tensor_map_t& inputsInfo;
     const tensor_map_t& outputsInfo;
+    const std::set<std::string>& optionalAllowedInputNames;
+    const ModelConfig& modelConfig;
     const std::string& servableName;
     const model_version_t servableVersion;
-    const std::set<std::string>& optionalAllowedInputNames;
     const Mode batchingMode;
     const shapes_info_map_t& shapeInfo;
 
@@ -109,16 +107,16 @@ class RequestValidator {
 public:
     RequestValidator(
         const RequestType& request, const tensor_map_t& inputsInfo, const tensor_map_t& outputsInfo,
-        const std::string& servableName, const model_version_t servableVersion, const std::set<std::string>& optionalAllowedInputNames,
-        const Mode batchingMode, const shapes_info_map_t& shapeInfo) :
+        const std::set<std::string>& optionalAllowedInputNames, const ModelConfig& modelConfig) :
         request(request),
         inputsInfo(inputsInfo),
         outputsInfo(outputsInfo),
-        servableName(servableName),
-        servableVersion(servableVersion),
         optionalAllowedInputNames(optionalAllowedInputNames),
-        batchingMode(batchingMode),
-        shapeInfo(shapeInfo) {}
+        modelConfig(modelConfig),
+        servableName(modelConfig.getName()),
+        servableVersion(modelConfig.getVersion()),
+        batchingMode(modelConfig.getBatchingMode()),
+        shapeInfo(modelConfig.getShapes()) {}
 
     Status validateInferenceTensorBufferType(const InputTensorType& it) const;
     Status validateNumberOfTensors() const;
@@ -300,7 +298,7 @@ Status RequestValidator<RequestType, InputTensorType, choice, IteratorType, Shap
         return StatusCode::NOT_IMPLEMENTED;
     }
     Status finalStatus = StatusCode::OK;
-    if (choice == ValidationChoice::INPUT && !ovms::Config::instance().disableInputCountValidation()) {
+    if (choice == ValidationChoice::INPUT && !modelConfig.isInputCountValidationDisabled()) {
         RETURN_IF_ERR(validateNumberOfTensors());
     }
     RETURN_IF_ERR(validateRequestCoherency());
