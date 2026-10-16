@@ -24,10 +24,12 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../config.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../filesystem/filesystem.hpp"
 #include "../llm/apis/openai_completions.hpp"
 #include "../llm/apis/openai_responses.hpp"
+#include "../llm/io_processing/video_utils.hpp"
 #include "../llm/io_processing/output_parser.hpp"
 #include "../llm/language_model/legacy/servable.hpp"
 #include "../llm/omni_model/legacy/servable.hpp"
@@ -37,6 +39,7 @@
 #include <openvino/genai/visual_language/pipeline.hpp>
 #include "../module_names.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
+#include "src/utils/rapidjson_utils.hpp"
 #include "../server.hpp"
 #include "environment.hpp"
 #include "src/utils/env_guard.hpp"
@@ -359,6 +362,28 @@ TEST_F(HttpOpenAIHandlerTest, JsonBodyExceedsNestingDepth_NestedArrays) {
     auto status = handler->dispatchToProcessor("/v1/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::JSON_INVALID);
     ASSERT_EQ(status.string(), "The file is not valid json - JSON body exceeds maximum nesting depth");
+}
+
+TEST_F(HttpOpenAIHandlerTest, JsonBodyExceedsComplexityLimit) {
+    std::string requestBody = R"({"a":[0]})";
+    auto& config = const_cast<ovms::ServerSettingsImpl&>(ovms::Config::instance().getServerSettings());
+    const auto previousMaxComplexity = config.jsonMaxComplexity;
+    struct JsonMaxComplexityGuard {
+        ovms::ServerSettingsImpl& config;
+        std::optional<size_t> previousMaxComplexity;
+        ~JsonMaxComplexityGuard() {
+            config.jsonMaxComplexity = previousMaxComplexity;
+        }
+    } restore{config, previousMaxComplexity};
+    config.jsonMaxComplexity = 5;
+
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(0);
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
+    EXPECT_CALL(*writer, IsDisconnected()).Times(0);
+
+    auto status = handler->dispatchToProcessor("/v1/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::JSON_COMPLEXITY_EXCEEDED);
+    ASSERT_EQ(status.string(), "JSON structure exceeds the allowed complexity - JSON body exceeds maximum complexity");
 }
 
 TEST_F(HttpOpenAIHandlerTest, GraphWithANameDoesNotExist) {
@@ -5706,6 +5731,31 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingInputAudioMissingDataFieldInChatComp
     auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
     EXPECT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt),
         absl::InvalidArgumentError("Invalid message structure - input_audio does not have a valid data field"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingVideoUrlEmptyFrameArrayInChatCompletionsFails) {
+    std::string json = R"({"model":"llama","messages":[{"role":"user","content":[{"type":"video_url","video_url":{"url":[]}}]}]})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
+    EXPECT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt),
+        absl::InvalidArgumentError("Invalid message structure - video_url url array cannot be empty"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingVideoUrlOversizedFrameArrayInChatCompletionsFails) {
+    // A frame array larger than the allowed maximum must be rejected during
+    // parsing, before the untrusted array is copied into the ChatHistory.
+    // The url entries can be short placeholders since the size check runs first.
+    std::string frames;
+    for (int64_t i = 0; i < ovms::MAX_VIDEO_FRAMES + 1; i++) {
+        frames += (i ? ",\"x\"" : "\"x\"");
+    }
+    std::string json = R"({"model":"llama","messages":[{"role":"user","content":[{"type":"video_url","video_url":{"url":[)" + frames + R"(]}}]}]})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
+    EXPECT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt),
+        absl::InvalidArgumentError("Invalid message structure - video_url url array exceeds the allowed maximum of " + std::to_string(ovms::MAX_VIDEO_FRAMES) + " frames"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingInputAudioInResponsesAPI) {

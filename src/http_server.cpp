@@ -84,6 +84,7 @@ static const ovms::HTTPStatusCode http(const ovms::Status& status) {
         {StatusCode::SERVER_NOT_READY, ovms::HTTPStatusCode::SERVICE_UNAV},
         {StatusCode::SERVER_SHUTTING_DOWN, ovms::HTTPStatusCode::SERVICE_UNAV},
         {StatusCode::JSON_INVALID, ovms::HTTPStatusCode::PRECOND_FAILED},
+        {StatusCode::JSON_COMPLEXITY_EXCEEDED, ovms::HTTPStatusCode::ENTITY_TOO_BIG},
         {StatusCode::MODELINSTANCE_NOT_FOUND, ovms::HTTPStatusCode::ERROR},
         {StatusCode::SHAPE_WRONG_FORMAT, ovms::HTTPStatusCode::ERROR},
         {StatusCode::PLUGIN_CONFIG_WRONG_FORMAT, ovms::HTTPStatusCode::ERROR},

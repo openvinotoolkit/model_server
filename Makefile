@@ -72,7 +72,7 @@ $(error PYTHON_DISABLE cannot be 0 when MEDIAPIPE_DISABLE is 1)
 endif
 endif
 FUZZER_BUILD ?= 0
-DOCKER_BUILDKIT ?= 1
+export DOCKER_BUILDKIT ?= 1
 KONFLUX ?= 0
 # NOTE: when changing any value below, you'll need to adjust WORKSPACE file by hand:
 #         - uncomment source build section, comment binary section
@@ -132,20 +132,17 @@ else
   OV_TRACING_PARAMS = ""
 endif
 
+OV_USE_BINARY ?= 1
+
 ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
   TARGET_DISTRO_PARAMS = " --//:distro=ubuntu"
-  OV_USE_BINARY ?= 1
   ifeq ($(findstring ubuntu22,$(BASE_OS)),ubuntu22)
-	ifeq ($(OV_USE_BINARY),0)
-  		$(error OV_USE_BINARY = 0 not supported on Ubuntu22 OS)
-  	endif
+    ifeq ($(OV_USE_BINARY),0)
+      $(error OV_USE_BINARY = 0 not supported on Ubuntu22 OS)
+    endif
   endif
 else ifeq ($(findstring redhat,$(BASE_OS)),redhat)
   TARGET_DISTRO_PARAMS = " --//:distro=redhat"
-  OV_USE_BINARY ?= 0
-  ifeq ($(OV_USE_BINARY),1)
-  	$(error OV_USE_BINARY = 1 not supported on RHEL OS)
-  endif
 else
   $(error BASE_OS must be either ubuntu or redhat)
 endif
@@ -217,7 +214,7 @@ VERBOSE_LOGS ?= OFF
 ifneq ($(TOKEN),)
 GIT_CONFIG_FILE := .gitconfig
 GIT_CONFIG_SECRET = --secret id=gitconfig,src=$(GIT_CONFIG_FILE)
-BUILDX = buildx
+BUILDX ?= buildx
 
 $(GIT_CONFIG_FILE):
 	@git config --file $@ url."https://x-access-token:$(TOKEN)@github.com/".insteadOf https://github.com/
