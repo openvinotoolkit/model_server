@@ -15,11 +15,8 @@
 //*****************************************************************************
 #include "python_runtime_loader.hpp"
 
-#include <cstdlib>
 #include <memory>
 #include <stdexcept>
-#include <string>
-#include <vector>
 
 #ifdef __linux__
 #include <dlfcn.h>
@@ -119,67 +116,8 @@ Module* ensurePythonRuntimeLoaded() {
         return createPythonInterpreterModuleFn();
     }
 
-    const bool preferInProcessPythonRuntime = []() {
-        const char* value = std::getenv("OVMS_TEST_PYTHON_RUNTIME_INPROCESS");
-        return value != nullptr && std::string(value) == "1";
-    }();
-
-    if (preferInProcessPythonRuntime) {
 #ifdef __linux__
-        createPythonInterpreterModuleFn = reinterpret_cast<CreatePythonInterpreterModuleFn>(dlsym(RTLD_DEFAULT, "OVMS_createPythonInterpreterModule"));
-        validatePythonEnvironmentFn = reinterpret_cast<ValidatePythonEnvironmentFn>(dlsym(RTLD_DEFAULT, "OVMS_validatePythonEnvironment"));
-        configureRuntimeLoggingFn = reinterpret_cast<ConfigureRuntimeLoggingFn>(dlsym(RTLD_DEFAULT, "OVMS_ConfigureRuntimeLogging"));
-        if (createPythonInterpreterModuleFn != nullptr && validatePythonEnvironmentFn != nullptr) {
-            applyConfiguredLoggingToRuntimeLibrary();
-            const char* pythonRuntimeValidationError = nullptr;
-            if (!validatePythonEnvironmentFn(&pythonRuntimeValidationError)) {
-                SPDLOG_WARN("In-process python runtime environment validation failed. Details: {}",
-                    pythonRuntimeValidationError != nullptr ? pythonRuntimeValidationError : "Unknown error");
-                createPythonInterpreterModuleFn = nullptr;
-                validatePythonEnvironmentFn = nullptr;
-                return nullptr;
-            }
-            SPDLOG_INFO("Python runtime entry points resolved from in-process symbols");
-            return new PythonRuntimeModuleProxy(createPythonInterpreterModuleFn());
-        }
-#elif _WIN32
-        HMODULE currentProcess = GetModuleHandleA(nullptr);
-        if (currentProcess != nullptr) {
-            createPythonInterpreterModuleFn = reinterpret_cast<CreatePythonInterpreterModuleFn>(GetProcAddress(currentProcess, "OVMS_createPythonInterpreterModule"));
-            validatePythonEnvironmentFn = reinterpret_cast<ValidatePythonEnvironmentFn>(GetProcAddress(currentProcess, "OVMS_validatePythonEnvironment"));
-            configureRuntimeLoggingFn = reinterpret_cast<ConfigureRuntimeLoggingFn>(GetProcAddress(currentProcess, "OVMS_ConfigureRuntimeLogging"));
-        }
-        if (createPythonInterpreterModuleFn != nullptr && validatePythonEnvironmentFn != nullptr) {
-            applyConfiguredLoggingToRuntimeLibrary();
-            const char* pythonRuntimeValidationError = nullptr;
-            if (!validatePythonEnvironmentFn(&pythonRuntimeValidationError)) {
-                SPDLOG_WARN("In-process python runtime environment validation failed. Details: {}",
-                    pythonRuntimeValidationError != nullptr ? pythonRuntimeValidationError : "Unknown error");
-                createPythonInterpreterModuleFn = nullptr;
-                validatePythonEnvironmentFn = nullptr;
-                return nullptr;
-            }
-            SPDLOG_INFO("Python runtime entry points resolved from in-process symbols");
-            return new PythonRuntimeModuleProxy(createPythonInterpreterModuleFn());
-        }
-#endif
-    }
-
-#ifdef __linux__
-    std::vector<std::string> candidates{
-        "libovmspython.so",
-        "./libovmspython.so",
-        "src/python/libovmspython.so",
-        "./src/python/libovmspython.so",
-        "bazel-bin/src/python/libovmspython.so",
-        "./bazel-bin/src/python/libovmspython.so"};
-
-    for (const auto& candidate : candidates) {
-        pythonRuntimeHandle = dlopen(candidate.c_str(), RTLD_NOW | RTLD_GLOBAL);
-        if (pythonRuntimeHandle != nullptr) {
-            break;
-        }
-    }
+    pythonRuntimeHandle = dlopen("libovmspython.so", RTLD_NOW | RTLD_GLOBAL);
 
     if (pythonRuntimeHandle == nullptr) {
         SPDLOG_WARN("Python runtime library libovmspython.so failed to load: {}", dlerror());
@@ -202,47 +140,7 @@ Module* ensurePythonRuntimeLoaded() {
     }
     configureRuntimeLoggingFn = reinterpret_cast<ConfigureRuntimeLoggingFn>(dlsym(pythonRuntimeHandle, "OVMS_ConfigureRuntimeLogging"));
 #elif _WIN32
-    std::vector<std::string> candidates{
-        "libovmspython.dll",
-        ".\\libovmspython.dll",
-        "src\\python\\libovmspython.dll",
-        ".\\src\\python\\libovmspython.dll",
-        "bazel-bin\\src\\python\\libovmspython.dll",
-        ".\\bazel-bin\\src\\python\\libovmspython.dll"};
-
-    char executablePath[MAX_PATH] = {0};
-    DWORD executablePathLength = GetModuleFileNameA(nullptr, executablePath, MAX_PATH);
-    if (executablePathLength > 0 && executablePathLength < MAX_PATH) {
-        std::string exePath(executablePath, executablePathLength);
-        std::string exeDir = ".";
-        size_t separatorPos = exePath.find_last_of("\\/");
-        if (separatorPos != std::string::npos) {
-            exeDir = exePath.substr(0, separatorPos);
-        }
-
-        std::vector<std::string> executableRelativeCandidates{
-            exeDir + "\\libovmspython.dll",
-            exeDir + "\\src\\python\\libovmspython.dll",
-            exeDir + "\\..\\src\\python\\libovmspython.dll",
-        };
-
-        std::string runfilesRoot = exePath + ".runfiles";
-        std::vector<std::string> runfilesCandidates{
-            runfilesRoot + "\\src\\python\\libovmspython.dll",
-            runfilesRoot + "\\_main\\src\\python\\libovmspython.dll",
-            runfilesRoot + "\\model_server\\src\\python\\libovmspython.dll",
-        };
-
-        candidates.insert(candidates.end(), executableRelativeCandidates.begin(), executableRelativeCandidates.end());
-        candidates.insert(candidates.end(), runfilesCandidates.begin(), runfilesCandidates.end());
-    }
-
-    for (const auto& candidate : candidates) {
-        pythonRuntimeHandle = LoadLibraryA(candidate.c_str());
-        if (pythonRuntimeHandle != nullptr) {
-            break;
-        }
-    }
+    pythonRuntimeHandle = LoadLibraryA("libovmspython.dll");
 
     if (pythonRuntimeHandle == nullptr) {
         DWORD error = GetLastError();

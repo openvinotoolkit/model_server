@@ -22,7 +22,7 @@ for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
     if "%%A"=="CURL_VERSION" if "!curl_version!"=="" set "curl_version=%%B"
 )
 :: Setting up default OVMS compilation environment variables
-set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-!curl_version!-win64-mingw\bin;%PATH%;"
+set "setPath=%cd%\bazel-out\x64_windows-opt\bin\src\python;%cd%\bazel-bin\src\python;C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-!curl_version!-win64-mingw\bin;%PATH%;"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 

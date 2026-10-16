@@ -143,25 +143,6 @@ ovms_cc_library(
     linkstatic = 1,
 )
 
-# DO NOT REMOVE: loaded at runtime by mediapipe_runtime_api and plugin loader.
-# This is the runtime boundary for MediaPipe factory symbols and registration.
-# Build OVMS MediaPipe integration as a shared runtime component to avoid
-# embedding calculator/extension registration directly into ovms executable.
-cc_binary(
-    name = "ovms_mediapipe_runtime_shared",
-    srcs = [],
-    deps = [
-        "//src/mediapipe_internal:libovms_mediapipe_runtime_owner",
-        "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
-        ":libovms_ov_version",
-    ],
-    linkopts = select({
-        "//conditions:default": ["-Wl,--allow-shlib-undefined"],
-        "//src:windows": ["/FORCE:UNRESOLVED"],
-    }),
-    linkshared = 1,
-    visibility = ["//visibility:public"],
-)
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
 
 mediapipe_proto_library(
@@ -1939,6 +1920,9 @@ cc_binary(
             # Export executable symbols to the dynamic symbol table so dlopen()
             # of dependent shared libraries can resolve them.
             "-Wl,--export-dynamic",
+            "-Wl,-rpath,$$ORIGIN/../lib",
+            "-Wl,-rpath,$$ORIGIN/ovms.runfiles/ovms/src",
+            "-Wl,-rpath,$$ORIGIN/ovms.runfiles/ovms/src/python",
             "-Wl,-rpath,$$ORIGIN/ovms.runfiles/ovms/external/azure/lib",
             "-Wl,-rpath,$$ORIGIN/ovms.runfiles/azure/lib",
         ],
@@ -2205,11 +2189,13 @@ cc_test(
         "//:disable_mediapipe": [],
     }) + select({
         "//:is_windows_and_python_is_enabled": [
+            "//src/python/binding:pyovms.pyd",
             "//src/python:libovmspython.dll",
             "//src/python:libpython_calculators",
         ],
         "//:disable_python": [],
         "//conditions:default": [
+            "//src/python/binding:pyovms.so",
             "//src/python:libovmspython.so",
             "//src/python:libpython_calculators.so",
         ],
@@ -2326,6 +2312,9 @@ cc_test(
     linkopts = LINKOPTS_ADJUSTED + select({
         "//conditions:default": [
             "-Wl,--export-dynamic",
+            "-Wl,-rpath,$$ORIGIN/../lib",
+            "-Wl,-rpath,$$ORIGIN/ovms_test.runfiles/ovms/src",
+            "-Wl,-rpath,$$ORIGIN/ovms_test.runfiles/ovms/src/python",
             "-Wl,-rpath,$$ORIGIN/ovms_test.runfiles/ovms/external/azure/lib",
             "-Wl,-rpath,$$ORIGIN/ovms_test.runfiles/azure/lib",
         ],
