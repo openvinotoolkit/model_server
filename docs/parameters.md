@@ -37,6 +37,10 @@ Configuration options for the server are defined only via command-line options a
 | `rest_port` | `integer` | Number of the port used by HTTP server (if not provided or set to 0, HTTP server will not be launched). |
 | `grpc_bind_address` | `string` | Comma separated list of ipv4/ipv6 network interface addresses or hostnames, to which gRPC server will bind to. Default: all interfaces: 0.0.0.0 |
 | `rest_bind_address` | `string` | Comma separated list of ipv4/ipv6 network interface addresses or hostnames, to which REST server will bind to. Default: all interfaces: 0.0.0.0 |
+| `grpc_certificate_path` | `string` | Path to a PEM server certificate to enable TLS on the gRPC endpoint. Must be set together with `grpc_key_path`. When unset, gRPC is served in plaintext. |
+| `grpc_key_path` | `string` | Path to the PEM private key matching `grpc_certificate_path`. Required to enable gRPC TLS. |
+| `grpc_ca_path` | `string` | Optional path to a PEM CA certificate. When set, enables mutual TLS (mTLS) on the gRPC endpoint — clients must present a certificate signed by this CA, which is required and verified. Requires `grpc_certificate_path` and `grpc_key_path`. |
+| `rest_certificate_path` / `rest_key_path` / `rest_ca_path` | `string` | TLS for the REST endpoint. **Note:** native REST HTTPS is not enabled in the current build (the bundled Drogon is built without OpenSSL); setting these parameters is rejected at startup to avoid silently serving plaintext. Use gRPC TLS, or terminate REST TLS with a reverse proxy. See [issue #2144](https://github.com/openvinotoolkit/model_server/issues/2144). |
 | `grpc_workers` | `integer` | Number of the gRPC server instances (must be from 1 to CPU core count). Default value is 1 and it's optimal for most use cases. Consider setting higher value while expecting heavy load. |
 | `rest_workers` | `integer` | Number of HTTP server threads. Effective when `rest_port` > 0. Default value is set based on the number of CPUs. |
 | `file_system_poll_wait_seconds` | `integer` | Time interval between config and model versions changes detection in seconds. Default value is 1. Zero value disables changes monitoring. |
