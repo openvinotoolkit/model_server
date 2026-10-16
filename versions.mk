@@ -29,6 +29,7 @@ OV_GENAI_ORG ?= openvinotoolkit
 OV_TOKENIZERS_ORG ?= openvinotoolkit	
 
 # Binary package URLs for each supported platform.
+DLDT_PACKAGE_URL_UBUNTU26 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.5.0.0.dev20261014/openvino_genai_ubuntu26_2026.5.0.0.dev20261014_x86_64.tar.gz
 DLDT_PACKAGE_URL_UBUNTU24 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.5.0.0.dev20261014/openvino_genai_ubuntu24_2026.5.0.0.dev20261014_x86_64.tar.gz
 DLDT_PACKAGE_URL_UBUNTU22 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.5.0.0.dev20261014/openvino_genai_ubuntu22_2026.5.0.0.dev20261014_x86_64.tar.gz
 DLDT_PACKAGE_URL_RHEL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.5.0.0.dev20261014/openvino_genai_rhel9_2026.5.0.0.dev20261014_x86_64.tar.gz
