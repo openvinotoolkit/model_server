@@ -22,7 +22,7 @@
 #include "src/port/rapidjson_writer.hpp"
 
 namespace ovms {
-absl::Status TokenizeParser::parseTokenizeResponse(rapidjson::StringBuffer& buffer, const ov::genai::TokenizedInputs& tokens, const ov::AnyMap& parameters) {
+absl::Status TokenizeParser::parseTokenizeResponse(rapidjson::StringBuffer& buffer, const ov::genai::TokenizedInputs& tokens, const ov::AnyMap& parameters, bool inputIsBatch) {
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
 
     writer.StartObject();
@@ -35,7 +35,9 @@ absl::Status TokenizeParser::parseTokenizeResponse(rapidjson::StringBuffer& buff
         return absl::InvalidArgumentError("Invalid input ids tensor shape");
     }
 
-    const bool isBatched = outputShape[0] > 1;
+    // The response follows the shape of the request: a list of strings always gets a list of token lists,
+    // including a list with a single string.
+    const bool isBatched = inputIsBatch || outputShape[0] > 1;
     if (isBatched) {
         writer.StartArray();
     }
@@ -75,6 +77,8 @@ std::variant<TokenizeRequest, std::string> TokenizeParser::validateTokenizeReque
         auto inputVariant = std::get<TokenizeRequest::InputDataType>(parsedInput);
         if (std::holds_alternative<std::vector<std::string>>(inputVariant)) {
             request.input = std::get<std::vector<std::string>>(inputVariant);
+            auto textIt = parsedJson.FindMember("text");
+            request.inputIsBatch = textIt != parsedJson.MemberEnd() && textIt->value.IsArray();
         } else {
             request.input = std::get<std::vector<std::vector<int64_t>>>(inputVariant);
         }

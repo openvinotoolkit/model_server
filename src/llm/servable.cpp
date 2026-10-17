@@ -132,7 +132,7 @@ absl::Status GenAiServable::processTokenizeRequest(std::shared_ptr<GenAiServable
     }
 
     StringBuffer responseBuffer;
-    auto responseStatus = ovms::TokenizeParser::parseTokenizeResponse(responseBuffer, tokens, tokenizeRequest.parameters);
+    auto responseStatus = ovms::TokenizeParser::parseTokenizeResponse(responseBuffer, tokens, tokenizeRequest.parameters, tokenizeRequest.inputIsBatch);
 
     if (!responseStatus.ok()) {
         return responseStatus;

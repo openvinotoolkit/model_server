@@ -44,6 +44,8 @@ struct TokenizeRequest {
     using InputDataType = std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>, std::vector<std::vector<std::string>>>;
     InputDataType input;
     ov::AnyMap parameters = {};
+    // True when "text" was given as an array of strings, even if the array holds a single string.
+    bool inputIsBatch = false;
 };
 
 class TokenizeParser {
@@ -51,7 +53,7 @@ public:
     static constexpr const char* TOKENIZE_ENDPOINT_SUFFIX = "tokenize";
     static constexpr size_t MAX_LENGTH_LIMIT = 1000000;
     static std::variant<TokenizeRequest::InputDataType, std::string> parseInput(rapidjson::Document& parsedJson, const std::string& field_name);
-    static absl::Status parseTokenizeResponse(rapidjson::StringBuffer& buffer, const ov::genai::TokenizedInputs& tokens, const ov::AnyMap& parameters = {});
+    static absl::Status parseTokenizeResponse(rapidjson::StringBuffer& buffer, const ov::genai::TokenizedInputs& tokens, const ov::AnyMap& parameters = {}, bool inputIsBatch = false);
     static absl::Status parseTokenizeRequest(rapidjson::Document& parsedJson, TokenizeRequest& request, std::optional<size_t> maxModelLength = std::nullopt);
     static std::variant<TokenizeRequest, std::string> validateTokenizeRequest(rapidjson::Document& parsedJson, std::optional<size_t> maxModelLength = std::nullopt);
     static bool isTokenizeEndpoint(const std::string& uri);
