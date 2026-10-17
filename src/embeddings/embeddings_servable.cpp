@@ -167,18 +167,18 @@ std::shared_ptr<op::Op> get_mean_pooling_op(const ov::Output<ov::Node>& last_hid
         std::make_shared<op::v1::Multiply>(last_hidden_state_node, input_mask_expanded_convert->outputs()[0]);
 
     auto axis_1 = std::make_shared<op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{1});
-    auto sum_hidden_state = std::make_shared<op::v1::ReduceSum>(last_hidden_node_with_applied_attention_mask, axis_1);
+    // Divide both reductions by the sequence length before forming their ratio.
+    // A sum can overflow an FP16 intermediate even when the masked mean is finite.
+    auto mean_hidden_state = std::make_shared<op::v1::ReduceMean>(last_hidden_node_with_applied_attention_mask, axis_1);
 
-    // f32 overflow possible
-    // ReduceMean might help with overflow but its precision diverges from LlamaIndex
-    auto sum_expanded_mask = std::make_shared<op::v1::ReduceSum>(input_mask_expanded_convert, axis_1);
+    auto mean_expanded_mask = std::make_shared<op::v1::ReduceMean>(input_mask_expanded_convert, axis_1);
 
     auto nearest_to_zero =
         std::make_shared<op::v0::Constant>(ov::element::f32, ov::Shape{1}, std::vector<float>{1e-12});
-    auto max_expanded_mask = std::make_shared<op::v1::Maximum>(sum_expanded_mask, nearest_to_zero);
+    auto max_expanded_mask = std::make_shared<op::v1::Maximum>(mean_expanded_mask, nearest_to_zero);
 
     // shape: [batch_size, hidden_state_size]
-    return std::make_shared<op::v1::Divide>(sum_hidden_state, max_expanded_mask);
+    return std::make_shared<op::v1::Divide>(mean_hidden_state, max_expanded_mask);
 }
 
 std::shared_ptr<op::Op> get_last_token_pooling_op(const ov::Output<ov::Node>& last_hidden_state_node,

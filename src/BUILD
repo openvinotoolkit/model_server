@@ -2045,6 +2045,7 @@ cc_test(
             })
         + select({
             "//:not_disable_mediapipe": [
+                "test/embeddings_pooling_test.cpp",
                 "test/embeddingsnode_test.cpp",
                 "test/listmodelsendpoint_test.cpp",
                 "test/mediapipeflow_test.cpp",
