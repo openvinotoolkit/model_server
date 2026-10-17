@@ -351,3 +351,60 @@ TEST(TokenizeDeserialization, positiveTokenizeMaxLengthWithSmallModelContext) {
     ASSERT_EQ(status, absl::OkStatus());
     ASSERT_EQ(request.parameters["max_length"].as<size_t>(), 1000000);
 }
+
+TEST(TokenizeDeserialization, singleStringIsNotABatch) {
+    rapidjson::Document d;
+    d.Parse(R"({"model": "embeddings", "text": "one"})");
+    ovms::TokenizeRequest request;
+    ASSERT_EQ(ovms::TokenizeParser::parseTokenizeRequest(d, request), absl::OkStatus());
+    EXPECT_FALSE(request.inputIsBatch);
+}
+
+TEST(TokenizeDeserialization, arrayWithOneStringIsABatch) {
+    rapidjson::Document d;
+    d.Parse(R"({"model": "embeddings", "text": ["one"]})");
+    ovms::TokenizeRequest request;
+    ASSERT_EQ(ovms::TokenizeParser::parseTokenizeRequest(d, request), absl::OkStatus());
+    EXPECT_TRUE(request.inputIsBatch);
+}
+
+TEST(TokenizeDeserialization, arrayWithManyStringsIsABatch) {
+    rapidjson::Document d;
+    d.Parse(R"({"model": "embeddings", "text": ["one", "two"]})");
+    ovms::TokenizeRequest request;
+    ASSERT_EQ(ovms::TokenizeParser::parseTokenizeRequest(d, request), absl::OkStatus());
+    EXPECT_TRUE(request.inputIsBatch);
+}
+
+namespace {
+// Tokenizer output for `rows` inputs of two tokens each: row i is [10 * i + 1, 10 * i + 2].
+ov::genai::TokenizedInputs twoTokensPerRow(size_t rows) {
+    ov::Tensor inputIds(ov::element::i64, ov::Shape{rows, 2});
+    ov::Tensor attentionMask(ov::element::i64, ov::Shape{rows, 2});
+    for (size_t row = 0; row < rows; row++) {
+        for (size_t column = 0; column < 2; column++) {
+            inputIds.data<int64_t>()[row * 2 + column] = 10 * row + column + 1;
+            attentionMask.data<int64_t>()[row * 2 + column] = 1;
+        }
+    }
+    return ov::genai::TokenizedInputs{inputIds, attentionMask};
+}
+
+std::string tokenizeResponse(size_t rows, bool inputIsBatch) {
+    rapidjson::StringBuffer buffer;
+    EXPECT_EQ(ovms::TokenizeParser::parseTokenizeResponse(buffer, twoTokensPerRow(rows), {}, inputIsBatch), absl::OkStatus());
+    return buffer.GetString();
+}
+}  // namespace
+
+TEST(TokenizeResponse, singleStringGivesFlatList) {
+    EXPECT_EQ(tokenizeResponse(1, false), R"({"tokens":[1,2]})");
+}
+
+TEST(TokenizeResponse, arrayWithOneStringGivesListOfLists) {
+    EXPECT_EQ(tokenizeResponse(1, true), R"({"tokens":[[1,2]]})");
+}
+
+TEST(TokenizeResponse, arrayWithManyStringsGivesListOfLists) {
+    EXPECT_EQ(tokenizeResponse(2, true), R"({"tokens":[[1,2],[11,12]]})");
+}
