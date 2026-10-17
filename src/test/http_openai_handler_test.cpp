@@ -501,6 +501,22 @@ protected:
         }
         return "{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"valid prompt\"}],\"skip_special_tokens\":" + rawValue + "}";
     }
+
+    std::string createRequestWithField(const std::string& name, const std::string& rawValue) const {
+        const std::string field = "\"" + name + "\":" + rawValue;
+        if (endpoint() == ovms::Endpoint::COMPLETIONS) {
+            return "{\"model\":\"llama\",\"prompt\":\"valid prompt\"," + field + "}";
+        }
+        if (endpoint() == ovms::Endpoint::RESPONSES) {
+            return "{\"model\":\"llama\",\"input\":\"valid prompt\"," + field + "}";
+        }
+        return "{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"valid prompt\"}]," + field + "}";
+    }
+
+    // The Responses API names its token limit max_output_tokens, the other endpoints max_tokens.
+    std::string tokenLimitFieldName() const {
+        return endpoint() == ovms::Endpoint::RESPONSES ? "max_output_tokens" : "max_tokens";
+    }
 };
 
 TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, StreamFieldNotABooleanFails) {
@@ -627,6 +643,62 @@ TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, ReasoningParserSpecialToken
     // gemma4 reasoning needs special tokens visible: still required even though the caller
     // asked for skip_special_tokens=true (userWantsSpecialTokens=false).
     EXPECT_TRUE(outputParser->needSpecialTokensForCurrentDecode(/*userWantsSpecialTokens=*/false));
+}
+
+// max_tokens_limit and best_of_limit are documented as the maximum accepted value, so a request that
+// asks for exactly the limit must be accepted and one above it rejected.
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, TokenLimitEqualToConfiguredLimitIsAccepted) {
+    std::string json = createRequestWithField(tokenLimitFieldName(), "100");
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::optional<uint32_t> maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = createHandler(endpoint());
+
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+}
+
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, TokenLimitAboveConfiguredLimitIsRejected) {
+    std::string json = createRequestWithField(tokenLimitFieldName(), "101");
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::optional<uint32_t> maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = createHandler(endpoint());
+
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength),
+        absl::InvalidArgumentError(tokenLimitFieldName() + " exceeds limit provided in graph config: 100"));
+}
+
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, BestOfEqualToConfiguredLimitIsAccepted) {
+    std::string json = createRequestWithField("best_of", "20");
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 20;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = createHandler(endpoint());
+
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+}
+
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, BestOfAboveConfiguredLimitIsRejected) {
+    std::string json = createRequestWithField("best_of", "21");
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 20;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = createHandler(endpoint());
+
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength),
+        absl::InvalidArgumentError("best_of exceeds limit provided in graph config: 20"));
 }
 
 TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensNotBoolFails) {
