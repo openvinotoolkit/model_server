@@ -20,6 +20,8 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -2137,7 +2139,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeFailedEventContainsCorrectStructur
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
-    std::string failedEvent = apiHandler->serializeFailedEvent("Something went wrong");
+    std::string failedEvent = apiHandler->serializeStreamingError("Something went wrong");
 
     // Should contain response.failed event type
     ASSERT_NE(failedEvent.find("\"type\":\"response.failed\""), std::string::npos) << failedEvent;
@@ -2163,6 +2165,34 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeFailedEventContainsCorrectStructur
     auto failedPos = failedEvent.find("\"type\":\"response.failed\"");
     auto responseSection = failedEvent.substr(failedPos);
     ASSERT_EQ(responseSection.find("\"completed_at\""), std::string::npos) << "Failed response should not have completed_at: " << responseSection;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, chatAndCompletionsFailedEventsAreEscapedOpenAiErrors) {
+    const std::string errorMessage = "quote: \" slash: \\ newline:\n";
+    const std::vector<std::pair<ovms::Endpoint, std::string>> requests{
+        {ovms::Endpoint::CHAT_COMPLETIONS, R"({"model":"llama","stream":true,"messages":[{"role":"user","content":"hello"}]})"},
+        {ovms::Endpoint::COMPLETIONS, R"({"model":"llama","stream":true,"prompt":"hello"})"}};
+
+    for (const auto& [endpoint, request] : requests) {
+        doc.Parse(request.c_str());
+        ASSERT_FALSE(doc.HasParseError());
+        auto apiHandler = createHandler(endpoint);
+        std::optional<uint32_t> maxTokensLimit;
+        uint32_t bestOfLimit = 0;
+        std::optional<uint32_t> maxModelLength;
+        ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+        rapidjson::Document error;
+        const std::string serialized = apiHandler->serializeStreamingError(errorMessage);
+        error.Parse(serialized.c_str());
+        ASSERT_FALSE(error.HasParseError()) << serialized;
+        ASSERT_TRUE(error["error"].IsObject());
+        EXPECT_STREQ(error["error"]["type"].GetString(), "server_error");
+        ASSERT_TRUE(error["error"]["code"].IsInt());
+        EXPECT_EQ(error["error"]["code"].GetInt(), 500);
+        ASSERT_TRUE(error["error"]["message"].IsString());
+        EXPECT_EQ(std::string(error["error"]["message"].GetString(), error["error"]["message"].GetStringLength()), errorMessage);
+    }
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, serializeFailedEventWithCustomErrorCode) {
@@ -5413,6 +5443,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, legacyServableParserExceptionCancelsGenerat
         ASSERT_NO_THROW(streamer->end());
     }
     ASSERT_TRUE(streamer->hadParserError());
+    ASSERT_FALSE(streamer->parserErrorMessage().empty());
     EXPECT_EQ(finalCallbackCount, 1);
 
     // Mirrors what LegacyExecutor::processRequest does with the streamer after pipe->generate() returns.

@@ -150,6 +150,8 @@ struct GenAiServableExecutionContext {
     std::unique_ptr<ov::genai::PerfMetrics> perfMetrics;
     std::string response;
     std::shared_ptr<ov::genai::TextStreamer> textStreamer;
+    // Loopback iterations can occur before the calculator emits its first frame.
+    bool streamFrameEmitted = false;
     bool sendLoopbackSignal = false;
     bool lifecyclePrimed = false;  // true once RESPONSES lifecycle events have been primed
     DeltaChannel deltaChannel;     // thread-safe delta queue used by all streaming paths
