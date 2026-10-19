@@ -37,38 +37,22 @@ Using the streaming API has the following advantages:
 - support for stateful pipelines like object tracking when the response is dependent on the sequence of requests
 
 
-### Preparing the model server for gRPC streaming with a Holistic graph
+### Preparing the model server for gRPC streaming with image classification
 
-The [holistic graph](https://github.com/openvinotoolkit/model_server/blob/main/demos/mediapipe/holistic_tracking/holistic_tracking.pbtxt) is expecting and IMAGE object on the input and returns an IMAGE on the output.
-As such it doesn't require any preprocessing and postprocessing. In this demo the returned stream will be just visualized or sent to the target sink.
+This demo uses the [MediaPipe ResNet image-classification graph](../../mediapipe/image_classification/README.md). The graph accepts a `FP32` tensor named `in` with shape `1x3x224x224` and returns the ResNet scores as `out`. The client resizes and preprocesses each video frame, selects the top ImageNet class, and draws its name on the original frame before writing the output stream.
 
-The model server with the holistic use case can be deployed using steps from [this](../../mediapipe/holistic_tracking/README.md#server-deployment) article.
-
-[Check more info about this use case](../../mediapipe/holistic_tracking/README.md)
-
-> **Note** All the graphs with an image on input and output can be applied here without any changes on the client application.
-
-Here is an example of the server deployment procedure:
+Download the ResNet model and start OVMS:
 ```console
-git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server/demos/mediapipe/holistic_tracking
-curl --create-dirs https://raw.githubusercontent.com/openvinotoolkit/mediapipe/v2023.3/mediapipe/modules/hand_landmark/handedness.txt -o mediapipe/modules/hand_landmark/handedness.txt 
-curl https://storage.googleapis.com/mediapipe-assets/face_detection_short_range.tflite -o face_detection_short_range/1/face_detection_short_range.tflite --create-dirs
-curl https://storage.googleapis.com/mediapipe-assets/face_landmark.tflite -o face_landmark/1/face_landmark.tflite --create-dirs
-curl https://storage.googleapis.com/mediapipe-assets/hand_landmark_full.tflite -o hand_landmark_full/1/hand_landmark_full.tflite --create-dirs
-curl https://storage.googleapis.com/mediapipe-assets/hand_recrop.tflite -o hand_recrop/1/hand_recrop.tflite --create-dirs
-curl https://storage.googleapis.com/mediapipe-assets/iris_landmark.tflite -o iris_landmark/1/iris_landmark.tflite --create-dirs
-curl https://storage.googleapis.com/mediapipe-assets/palm_detection_full.tflite -o palm_detection_full/1/palm_detection_full.tflite --create-dirs
-curl https://storage.googleapis.com/mediapipe-assets/pose_detection.tflite -o pose_detection/1/pose_detection.tflite --create-dirs
-curl https://storage.googleapis.com/mediapipe-assets/pose_landmark_full.tflite -o pose_landmark_full/1/pose_landmark_full.tflite --create-dirs
+cd model_server/demos/mediapipe/image_classification
+curl -L --create-dirs https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o resnetMediapipe/model/1/resnet50.bin
+curl -L --create-dirs https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o resnetMediapipe/model/1/resnet50.xml
+chmod -R 755 resnetMediapipe
 ```
 ```bash
-chmod -R 755 .
-docker run -d -v $PWD/mediapipe:/mediapipe -v $PWD:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config_holistic.json --port 9000
+docker run -d -v "$PWD":/mediapipe -p 9000:9000 openvino/model_server:latest --config_path /mediapipe/config.json --port 9000
 ```
-```bat
-ovms --config_path config_holistic.json --port 9000
-```
+For a bare-metal deployment, run `ovms --config_path config.json --port 9000` from the image-classification demo directory.
+
 ### Start the client with real time stream analysis
 
 Prepare the python environment from [model_server](https://github.com/openvinotoolkit/model_server) repo cloned in previous step and install required dependencies:
@@ -90,6 +74,7 @@ usage: client.py [-h] [--grpc_address GRPC_ADDRESS]
                       [--input_stream INPUT_STREAM]
                       [--output_stream OUTPUT_STREAM]
                       [--model_name MODEL_NAME] [--input_name INPUT_NAME]
+                      [--output_name OUTPUT_NAME]
                       [--verbose] [--benchmark]
                       [--limit_stream_duration LIMIT_STREAM_DURATION]
                       [--limit_frames LIMIT_FRAMES]
@@ -103,9 +88,11 @@ options:
   --output_stream OUTPUT_STREAM
                         Url of output rtsp stream
   --model_name MODEL_NAME
-                        Name of the model
+                        Name of the MediaPipe graph (default: resnetMediapipe)
   --input_name INPUT_NAME
-                        Name of the model's input
+                        Name of the graph input (default: in)
+  --output_name OUTPUT_NAME
+                        Name of the graph output (default: out)
   --verbose             Should client dump debug information
   --benchmark           Should client collect processing times
   --limit_stream_duration LIMIT_STREAM_DURATION
@@ -121,7 +108,7 @@ options:
 python client.py --grpc_address localhost:9000 --input_stream 0 --output_stream screen
 ```
 
-The parameter `--input_stream 0 ` indicates the camera ID `0`.
+The parameter `--input_stream 0` indicates camera ID `0`. The client displays each source frame with the predicted ImageNet class name overlaid.
 
 
 #### Reading from the encoded video file and saving results to a file
