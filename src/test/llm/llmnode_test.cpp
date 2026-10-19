@@ -44,8 +44,10 @@
 #include "../../llm/apis/openai_completions.hpp"
 #include "../../llm/apis/openai_json_response.hpp"
 #include "../../llm/io_processing/base_generation_config_builder.hpp"
+#include "../../llm/io_processing/output_parser.hpp"
 #include "../../llm/language_model/continuous_batching/llm_executor.hpp"
 #include "../../llm/language_model/continuous_batching/servable.hpp"
+#include "../../llm/ovms_text_streamer.hpp"
 #include "../../llm/servable.hpp"
 #include "../../llm/servable_initializer.hpp"
 #include "../../llm/text_utils.hpp"
@@ -1706,6 +1708,67 @@ TEST_P(LLMFlowHttpTestParameterized, unaryToolBadSchema) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
+}
+
+TEST_P(LLMFlowHttpTestParameterized, continuousBatchingParserFailureStopsGenerationHandle) {
+    const auto params = GetParam();
+    if (params.modelName != "lm_cb_regular") {
+        GTEST_SKIP();
+    }
+
+    config.max_new_tokens = 1024;
+    config.rng_seed = 1;
+    config.temperature = 0;
+    ov::genai::Tokenizer tokenizer = cbPipe->get_tokenizer();
+    const auto inputIds = tokenizer.encode("keep the request active", ov::genai::add_special_tokens(false)).input_ids;
+    auto generationHandle = cbPipe->add_request(currentRequestId++, inputIds, config);
+    ASSERT_NE(generationHandle, nullptr);
+
+    struct GenerationHandleCleanup {
+        ov::genai::GenerationHandle handle;
+        std::shared_ptr<LLMExecutorWrapper> executor;
+        ~GenerationHandleCleanup() {
+            handle->stop();
+            executor->notifyNewRequestArrived();
+        }
+    } cleanup{generationHandle, llmExecutorWrapper};
+    ASSERT_EQ(generationHandle->get_status(), ov::genai::GenerationStatus::RUNNING);
+
+    rapidjson::Document requestDocument;
+    requestDocument.Parse(R"({"model":"lm_cb_regular","stream":true,"messages":[{"role":"user","content":"hello"}]})");
+    ASSERT_FALSE(requestDocument.HasParseError());
+    auto apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(
+        requestDocument, Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, 0, std::nullopt), absl::OkStatus());
+
+    auto outputParser = std::make_shared<OutputParser>(tokenizer, "mistral", "", ToolsSchemas_t{});
+    auto executionContext = std::make_shared<ContinuousBatchingServableExecutionContext>();
+    executionContext->apiHandler = std::move(apiHandler);
+    executionContext->generationHandle = generationHandle;
+    auto* context = executionContext.get();
+    executionContext->textStreamer = std::make_shared<OVMSTextStreamer>(
+        tokenizer, outputParser, true,
+        [context](Delta delta, bool isLast) {
+            context->deltaChannel.push(std::move(delta), isLast);
+            return ov::genai::StreamingStatus::RUNNING;
+        },
+        ov::AnyMap{});
+
+    const std::string malformedToolCall = "[{\"arguments\": {\"x\": 1}, \"name\": \"foo\"}]";
+    const auto generatedIds = tokenizer.encode(malformedToolCall, ov::genai::add_special_tokens(false)).input_ids;
+    executionContext->generationOutputs.resize(1);
+    executionContext->generationOutputs[0].generated_ids.assign(
+        generatedIds.data<int64_t>(), generatedIds.data<int64_t>() + generatedIds.get_size());
+    executionContext->generationOutputs[0].finish_reason = ov::genai::GenerationFinishReason::STOP;
+
+    std::shared_ptr<GenAiServableExecutionContext> baseExecutionContext = executionContext;
+    ContinuousBatchingServable servable;
+    const absl::Status status = servable.preparePartialResponse(baseExecutionContext);
+
+    EXPECT_EQ(status.code(), absl::StatusCode::kInternal);
+    EXPECT_NE(status.message().find("Generated tool call structure is not valid"), std::string::npos) << status;
+    EXPECT_EQ(generationHandle->get_status(), ov::genai::GenerationStatus::STOP);
 }
 
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonLogprobs) {

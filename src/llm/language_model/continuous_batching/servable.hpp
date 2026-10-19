@@ -41,6 +41,7 @@ protected:
     std::shared_ptr<ContinuousBatchingServableProperties> properties;
     void notifyExecutorThread();
     void logPerfMetrics(ov::genai::PerfMetrics& perfMetrics);
+    void stopGenerationOnResponseError(const std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext);
 
 public:
     ContinuousBatchingServable() {
