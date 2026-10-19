@@ -240,21 +240,21 @@ public:
             }
         } catch (ov::AssertFailure& e) {
             if (postSchedulingPhase) {
-                return handlePostSchedulingError(cc, absl::InvalidArgumentError(e.what()), timestampAdvanceGuard);
+                return handlePostSchedulingError(cc, absl::InternalError(e.what()), timestampAdvanceGuard);
             } else {
-                return handlePreSchedulingError(cc, absl::InvalidArgumentError(e.what()));
+                return handlePreSchedulingError(cc, absl::InternalError(e.what()));
             }
         } catch (const std::exception& e) {
             if (postSchedulingPhase) {
-                return handlePostSchedulingError(cc, absl::InvalidArgumentError(e.what()), timestampAdvanceGuard);
+                return handlePostSchedulingError(cc, absl::InternalError(e.what()), timestampAdvanceGuard);
             } else {
-                return handlePreSchedulingError(cc, absl::InvalidArgumentError(e.what()));
+                return handlePreSchedulingError(cc, absl::InternalError(e.what()));
             }
         } catch (...) {
             if (postSchedulingPhase) {
-                return handlePostSchedulingError(cc, absl::InvalidArgumentError("Response generation failed"), timestampAdvanceGuard);
+                return handlePostSchedulingError(cc, absl::InternalError("Response generation failed"), timestampAdvanceGuard);
             } else {
-                return handlePreSchedulingError(cc, absl::InvalidArgumentError("Request processing failed"));
+                return handlePreSchedulingError(cc, absl::InternalError("Request processing failed"));
             }
         }
         timestampAdvanceGuard.markSucceeded();

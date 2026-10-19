@@ -30,7 +30,6 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "io_processing/delta.hpp"
 #include "openvino/genai/perf_metrics.hpp"
-#include "openvino/genai/text_streamer.hpp"
 #include "mediapipe/framework/calculator.pb.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
@@ -45,6 +44,7 @@
 #include "runtime_chat_template_runtime_loader.hpp"
 
 namespace ovms {
+class OVMSTextStreamer;
 
 // Some pipelines internals rely on request_id, so for now we provide increasing ID
 static std::atomic<uint64_t> currentRequestId = 0;
@@ -149,7 +149,7 @@ struct GenAiServableExecutionContext {
     std::vector<ov::genai::GenerationOutput> generationOutputs;
     std::unique_ptr<ov::genai::PerfMetrics> perfMetrics;
     std::string response;
-    std::shared_ptr<ov::genai::TextStreamer> textStreamer;
+    std::shared_ptr<OVMSTextStreamer> textStreamer;
     // Loopback iterations can occur before the calculator emits its first frame.
     bool streamFrameEmitted = false;
     bool sendLoopbackSignal = false;

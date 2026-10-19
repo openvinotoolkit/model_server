@@ -2186,12 +2186,19 @@ TEST_F(HttpOpenAIHandlerParsingTest, chatAndCompletionsFailedEventsAreEscapedOpe
         const std::string serialized = apiHandler->serializeStreamingError(errorMessage);
         error.Parse(serialized.c_str());
         ASSERT_FALSE(error.HasParseError()) << serialized;
-        ASSERT_TRUE(error["error"].IsObject());
-        EXPECT_STREQ(error["error"]["type"].GetString(), "server_error");
-        ASSERT_TRUE(error["error"]["code"].IsInt());
-        EXPECT_EQ(error["error"]["code"].GetInt(), 500);
-        ASSERT_TRUE(error["error"]["message"].IsString());
-        EXPECT_EQ(std::string(error["error"]["message"].GetString(), error["error"]["message"].GetStringLength()), errorMessage);
+        ASSERT_TRUE(error.IsObject()) << serialized;
+        ASSERT_TRUE(error.HasMember("error")) << serialized;
+        const rapidjson::Value& errorObject = error["error"];
+        ASSERT_TRUE(errorObject.IsObject()) << serialized;
+        ASSERT_TRUE(errorObject.HasMember("type")) << serialized;
+        ASSERT_TRUE(errorObject["type"].IsString()) << serialized;
+        EXPECT_STREQ(errorObject["type"].GetString(), "server_error");
+        ASSERT_TRUE(errorObject.HasMember("code")) << serialized;
+        ASSERT_TRUE(errorObject["code"].IsInt()) << serialized;
+        EXPECT_EQ(errorObject["code"].GetInt(), 500);
+        ASSERT_TRUE(errorObject.HasMember("message")) << serialized;
+        ASSERT_TRUE(errorObject["message"].IsString()) << serialized;
+        EXPECT_EQ(std::string(errorObject["message"].GetString(), errorObject["message"].GetStringLength()), errorMessage);
     }
 }
 
@@ -5275,6 +5282,15 @@ struct NeverDisconnectedClient : public ovms::ClientConnection {
 };
 }  // namespace
 
+static std::shared_ptr<ovms::OVMSTextStreamer> makeNoopTextStreamer(const ov::genai::Tokenizer& tokenizer) {
+    return std::make_shared<ovms::OVMSTextStreamer>(
+        tokenizer,
+        nullptr,
+        false,
+        [](ovms::Delta, bool) { return ov::genai::StreamingStatus::RUNNING; },
+        ov::AnyMap{});
+}
+
 static std::shared_ptr<ovms::LegacyServableExecutionContext> makeLegacyResponsesContext(
     const std::shared_ptr<ov::genai::Tokenizer>& tok,
     size_t numInputTokens, size_t numGeneratedTokens,
@@ -5306,8 +5322,7 @@ static std::shared_ptr<ovms::LegacyServableExecutionContext> makeLegacyResponses
     ctx->readySignal.set_value();
     ctx->deltaChannel.signalComplete();
 
-    ctx->textStreamer = std::make_shared<ov::genai::TextStreamer>(
-        *tok, [](std::string) { return ov::genai::StreamingStatus::RUNNING; });
+    ctx->textStreamer = makeNoopTextStreamer(*tok);
 
     return ctx;
 }
@@ -5481,8 +5496,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, vlmLegacyServablePreparePartialResponseResp
     ctx->success = true;
     ctx->readySignal.set_value();
     ctx->deltaChannel.signalComplete();
-    ctx->textStreamer = std::make_shared<ov::genai::TextStreamer>(
-        *tokenizer, [](std::string) { return ov::genai::StreamingStatus::RUNNING; });
+    ctx->textStreamer = makeNoopTextStreamer(*tokenizer);
 
     ovms::VisualLanguageModelLegacyServable servable;
     std::shared_ptr<ovms::GenAiServableExecutionContext> ctxBase = ctx;
@@ -5525,8 +5539,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, legacyServablePreparePartialResponseChatCom
     ctx->success = true;
     ctx->readySignal.set_value();
     ctx->deltaChannel.signalComplete();
-    ctx->textStreamer = std::make_shared<ov::genai::TextStreamer>(
-        *tokenizer, [](std::string) { return ov::genai::StreamingStatus::RUNNING; });
+    ctx->textStreamer = makeNoopTextStreamer(*tokenizer);
 
     ovms::LegacyServable servable;
     std::shared_ptr<ovms::GenAiServableExecutionContext> ctxBase = ctx;

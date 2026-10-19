@@ -380,19 +380,18 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
 
     // OVMSTextStreamer::write() fires the callback for each flush event, pushing
     // Documents into executionContext->deltaChannel.
-    auto* textStreamer = static_cast<OVMSTextStreamer*>(executionContext->textStreamer.get());
-    textStreamer->write(generationOutput.generated_ids);
-    if (textStreamer->hadParserError()) {
-        return absl::InvalidArgumentError(textStreamer->parserErrorMessage());
+    executionContext->textStreamer->write(generationOutput.generated_ids);
+    if (executionContext->textStreamer->hadParserError()) {
+        return absl::InternalError(executionContext->textStreamer->parserErrorMessage());
     }
 
     if (isFinishing) {
         OVMS_PROFILE_SCOPE("Generation of last streaming response");
         // end() flushes held-back tokens and calls parseChunk(STOP). Any resulting
         // Document is pushed into deltaChannel by the callback.
-        textStreamer->end();
-        if (textStreamer->hadParserError()) {
-            return absl::InvalidArgumentError(textStreamer->parserErrorMessage());
+        executionContext->textStreamer->end();
+        if (executionContext->textStreamer->hadParserError()) {
+            return absl::InternalError(executionContext->textStreamer->parserErrorMessage());
         }
     }
 
