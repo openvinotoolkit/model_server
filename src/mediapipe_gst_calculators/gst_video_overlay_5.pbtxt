@@ -1,4 +1,4 @@
-# Config-deployable GStreamer/VA graph with a red overlay.
+# Config-deployable GStreamer/VA graph with a green overlay.
 input_stream: "OVTENSOR:trigger"
 output_stream: "OVTENSOR:trigger_response"
 
@@ -37,13 +37,13 @@ node {
       packet { string_value: "face_detection_adas" }
       packet { int_value: 1 }
       packet { string_value: "data" }
-      packet { string_value: "/tmp/ovms_overlay_red.mp4" }
+      packet { string_value: "/tmp/ovms_overlay_5.mp4" }
       packet { string_value: "file" }
       packet { int_value: 30 }
       packet { int_value: 30 }
       packet { int_value: 255 }
       packet { int_value: 0 }
-      packet { int_value: 0 }
+      packet { int_value: 255 }
     }
   }
 }

@@ -1,0 +1,55 @@
+{
+  "va_display": {
+    "target_device": "GPU.0",
+    "render_node": "/dev/dri/renderD128"
+  },
+  "model_config_list": [
+    {"config": {
+      "name": "face_detection_adas",
+      "base_path": "/ovms/src/test/face_detection_adas",
+      "target_device": "GPU.0"
+    }}
+  ],
+  "mediapipe_config_list": [
+    {
+      "name": "gst_overlay_0",
+      "graph_path": "/ovms/src/mediapipe_gst_calculators/gst_video_overlay_0.pbtxt"
+    },
+    {
+      "name": "gst_overlay_1",
+      "graph_path": "/ovms/src/mediapipe_gst_calculators/gst_video_overlay_1.pbtxt"
+    },
+    {
+      "name": "gst_overlay_2",
+      "graph_path": "/ovms/src/mediapipe_gst_calculators/gst_video_overlay_2.pbtxt"
+    },
+    {
+      "name": "gst_overlay_3",
+      "graph_path": "/ovms/src/mediapipe_gst_calculators/gst_video_overlay_3.pbtxt"
+    },
+    {
+      "name": "gst_overlay_4",
+      "graph_path": "/ovms/src/mediapipe_gst_calculators/gst_video_overlay_4.pbtxt"
+    },
+    {
+      "name": "gst_overlay_5",
+      "graph_path": "/ovms/src/mediapipe_gst_calculators/gst_video_overlay_5.pbtxt"
+    },
+    {
+      "name": "gst_overlay_6",
+      "graph_path": "/ovms/src/mediapipe_gst_calculators/gst_video_overlay_6.pbtxt"
+    },
+    {
+      "name": "gst_overlay_7",
+      "graph_path": "/ovms/src/mediapipe_gst_calculators/gst_video_overlay_7.pbtxt"
+    },
+    {
+      "name": "gst_overlay_8",
+      "graph_path": "/ovms/src/mediapipe_gst_calculators/gst_video_overlay_8.pbtxt"
+    },
+    {
+      "name": "gst_overlay_9",
+      "graph_path": "/ovms/src/mediapipe_gst_calculators/gst_video_overlay_9.pbtxt"
+    }
+  ]
+}

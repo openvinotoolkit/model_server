@@ -610,7 +610,8 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
             return "filesrc location=\"" + loc + "\" ! decodebin ! ";
         // TODO: add bounded reconnect handling for RTSP sources.
         return "rtspsrc location=\"" + loc + "\" latency=0 protocols=tcp ! "
-               "rtph264depay ! h264parse ! decodebin ! ";
+               "rtph264depay ! h264parse ! " +
+               (want_va_surface ? "vah264dec ! " : "decodebin ! ");
     };
 
     auto make_branch_pipeline = [&](const std::string& loc,

@@ -51,6 +51,12 @@
 #include <memory>
 #include <string>
 
+#include <openvino/openvino.hpp>
+
+#ifndef _WIN32
+#include <dlfcn.h>
+#endif
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_framework.h"
@@ -76,6 +82,23 @@ constexpr char kMaxFramesTag[] = "MAX_FRAMES";
 constexpr char kFrameTag[] = "FRAME";
 constexpr char kFrameInferTag[] = "FRAME_INFER";
 constexpr char kFrameFullTag[] = "FRAME_FULL";
+constexpr char kCompletionTag[] = "COMPLETION";
+
+void* getServerOwnedVaDisplay() {
+#ifndef _WIN32
+    void* mainProcess = dlopen(nullptr, RTLD_NOW);
+    if (mainProcess == nullptr)
+        return nullptr;
+    using GetVaDisplay = void* (*)();
+    const auto getVaDisplay = reinterpret_cast<GetVaDisplay>(
+        dlsym(mainProcess, "ovms_get_global_va_display"));
+    void* vaDisplay = getVaDisplay ? getVaDisplay() : nullptr;
+    dlclose(mainProcess);
+    return vaDisplay;
+#else
+    return nullptr;
+#endif
+}
 }  // namespace
 
 class GstVideoSourceCalculator : public CalculatorBase {
@@ -106,6 +129,8 @@ class GstVideoSourceCalculator : public CalculatorBase {
             cc->Outputs().Tag(kFrameInferTag).Set<GstVideoFramePacket>();
         if (cc->Outputs().HasTag(kFrameFullTag))
             cc->Outputs().Tag(kFrameFullTag).Set<GstVideoFramePacket>();
+        if (cc->Outputs().HasTag(kCompletionTag))
+            cc->Outputs().Tag(kCompletionTag).Set<ov::Tensor>();
         RET_CHECK(cc->Outputs().HasTag(kFrameTag) || cc->Outputs().HasTag(kFrameInferTag))
             << "GstVideoSourceCalculator needs a FRAME or FRAME_INFER output";
         return absl::OkStatus();
@@ -151,6 +176,11 @@ class GstVideoSourceCalculator : public CalculatorBase {
         use_d3d11_ = imp_video_d3d11_available();
         if (!use_d3d11_ && !imp_video_va_available())
             return absl::UnavailableError("GstVideoSourceCalculator: no GPU surface path (VA/D3D11) available");
+        if (!use_d3d11_) {
+            void* vaDisplay = getServerOwnedVaDisplay();
+            if (vaDisplay != nullptr)
+                imp_video_set_va_display(vaDisplay);
+        }
 
         if (emit_frame_ || emit_infer_) {
             const imp_tensor_memory_type_t expected =
@@ -175,8 +205,15 @@ class GstVideoSourceCalculator : public CalculatorBase {
     }
 
     absl::Status Process(CalculatorContext* cc) override {
-        if (max_frames_ > 0 && frame_index_ >= max_frames_)
+        if (max_frames_ > 0 && frame_index_ >= max_frames_) {
+            if (cc->Outputs().HasTag(kCompletionTag)) {
+                ov::Tensor completion(ov::element::f32, {1});
+                completion.data<float>()[0] = 1.0f;
+                cc->Outputs().Tag(kCompletionTag).AddPacket(
+                    MakePacket<ov::Tensor>(std::move(completion)).At(Timestamp(frame_index_)));
+            }
             return tool::StatusStop();
+        }
 
         imp_tensor_t* infer_tensor = nullptr;
         imp_tensor_t* full_tensor = nullptr;

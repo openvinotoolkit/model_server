@@ -28,6 +28,8 @@
 #include "src/mediapipe_gst_calculators/gst_detection_box.hpp"
 #include "src/mediapipe_gst_calculators/gst_video_frame_packet.hpp"
 
+extern "C" void* OVMS_MPGetExternalServerHandle();
+
 namespace mediapipe {
 
 namespace {
@@ -84,9 +86,12 @@ class GstCapiInferenceCalculator : public CalculatorBase {
         if (cc->InputSidePackets().HasTag(kServerTag)) {
             server_ = cc->InputSidePackets().Tag(kServerTag).Get<OVMS_Server*>();
         } else {
-            absl::Status status = checkCapiStatus(OVMS_ServerNew(&server_), "OVMS_ServerNew");
-            if (!status.ok())
-                return status;
+            server_ = static_cast<OVMS_Server*>(OVMS_MPGetExternalServerHandle());
+            if (server_ == nullptr) {
+                absl::Status status = checkCapiStatus(OVMS_ServerNew(&server_), "OVMS_ServerNew");
+                if (!status.ok())
+                    return status;
+            }
         }
         RET_CHECK(server_ != nullptr) << "missing started OVMS server";
         if (cc->InputSidePackets().HasTag(kFullWidthTag))

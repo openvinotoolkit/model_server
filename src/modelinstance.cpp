@@ -205,6 +205,14 @@ void setGlobalVaDisplay(void* vaDisplay, const std::string& targetDevice) {
     globalVaDisplayTargetDevice = targetDevice;
 }
 #endif
+
+extern "C" __attribute__((visibility("default"))) void* ovms_get_global_va_display() {
+#ifdef __linux__
+    return globalVaDisplay;
+#else
+    return nullptr;
+#endif
+}
 #ifdef _WIN32
 // TODO: Verify that a fully drained server teardown can safely replace this
 // process-global device after all GStreamer and OpenVINO resources are gone.
