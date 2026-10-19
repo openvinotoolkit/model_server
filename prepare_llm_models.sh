@@ -103,23 +103,23 @@ if [ ! -f "$1/$STT_MODEL/$TOKENIZER_FILE" ]; then
   echo "[ERROR] Model file $1/$STT_MODEL/$TOKENIZER_FILE does not exist."
   exit 1
 fi
-if [ -f "$1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" ]; then
-  echo "Model file $1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE exists. Skipping downloading models."
+if [ -f "$1/$EMBEDDING_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Model file $1/$EMBEDDING_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
 else
-  hf download "$EMBEDDING_MODEL" --local-dir "$1/$EMBEDDING_MODEL/ov"
+  hf download "$EMBEDDING_MODEL" --local-dir "$1/$EMBEDDING_MODEL"
 fi
-if [ ! -f "$1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE" ]; then
-  echo "[ERROR] Model file $1/$EMBEDDING_MODEL/ov/$TOKENIZER_FILE does not exist."
+if [ ! -f "$1/$EMBEDDING_MODEL/$TOKENIZER_FILE" ]; then
+  echo "[ERROR] Model file $1/$EMBEDDING_MODEL/$TOKENIZER_FILE does not exist."
   exit 1
 fi
 
-if [ -f "$1/$RERANK_MODEL/ov/$TOKENIZER_FILE" ]; then
-  echo "Model file $1/$RERANK_MODEL/ov/$TOKENIZER_FILE exists. Skipping downloading models."
+if [ -f "$1/$RERANK_MODEL/$TOKENIZER_FILE" ]; then
+  echo "Model file $1/$RERANK_MODEL/$TOKENIZER_FILE exists. Skipping downloading models."
 else
-  hf download "$RERANK_MODEL" --local-dir "$1/$RERANK_MODEL/ov"
+  hf download "$RERANK_MODEL" --local-dir "$1/$RERANK_MODEL"
 fi
-if [ ! -f "$1/$RERANK_MODEL/ov/$TOKENIZER_FILE" ]; then
-  echo "[ERROR] Model file $1/$RERANK_MODEL/ov/$TOKENIZER_FILE does not exist."
+if [ ! -f "$1/$RERANK_MODEL/$TOKENIZER_FILE" ]; then
+  echo "[ERROR] Model file $1/$RERANK_MODEL/$TOKENIZER_FILE does not exist."
   exit 1
 fi
 
