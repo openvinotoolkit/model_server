@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   ovms-llm:
-    image: ${OVMS_IMAGE}
+    image: ${OVMS_IMAGE:-openvino/model_server:latest-gpu}
     container_name: ovms-llm
     entrypoint: []
     user: "${HOST_UID}:${HOST_GID}"
@@ -28,18 +28,18 @@ ${GPU_ARGS}
       no_proxy: ${no_proxy:-}
       NO_PROXY: ${NO_PROXY:-}
     command:
-      - --model_repository_path
-      - /models
-      - --source_model
-      - "${MODEL_ID}"
-      - --model_name
-      - "${LOCAL_NAME}"
-      - --task
-      - text_generation
-      - --target_device
-      - "${TARGET_DEVICE}"
-      - --rest_port
-      - "8000"
+      - /bin/bash
+      - -c
+      - |
+        ARGS=(
+          --model_repository_path /models
+          --source_model "${MODEL_ID}"
+          --model_name "${LOCAL_NAME}"
+          --task text_generation
+          --rest_port 8000
+        )
+        [[ -n "${TARGET_DEVICE}" ]] && ARGS+=(--target_device "${TARGET_DEVICE}")
+        exec ovms "$${ARGS[@]}"
     networks:
       - ovms-net
     restart: unless-stopped
