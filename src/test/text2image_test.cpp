@@ -1737,15 +1737,23 @@ void testResponseFromOvTensorRGBA(size_t batchSize) {
     constexpr size_t height = 4;
     constexpr size_t width = 4;
     constexpr size_t channels = 4;
+    constexpr size_t alphaChannel = channels - 1;
+    constexpr size_t alphaValueCount = 3;
+    constexpr size_t byteValueRange = 256;
+    constexpr uint8_t transparentAlpha = 0;
+    constexpr uint8_t partialAlpha = 127;
+    constexpr uint8_t opaqueAlpha = 255;
+    constexpr uint8_t alphaValues[alphaValueCount] = {transparentAlpha, partialAlpha, opaqueAlpha};
     ov::Tensor tensor(ov::element::u8, ov::Shape{batchSize, height, width, channels});
     auto* imageData = tensor.data<uint8_t>();
+    size_t valueCounter = 0;
     for (size_t image = 0; image < batchSize; ++image) {
         for (size_t pixel = 0; pixel < height * width; ++pixel) {
-            const size_t offset = image * height * width * channels + pixel * channels;
-            imageData[offset] = static_cast<uint8_t>(pixel * 7 + image * 13);
-            imageData[offset + 1] = static_cast<uint8_t>(pixel * 11 + image * 17);
-            imageData[offset + 2] = static_cast<uint8_t>(pixel * 19 + image * 23);
-            imageData[offset + 3] = pixel % 3 == 0 ? 0 : pixel % 3 == 1 ? 127 : 255;
+            const size_t pixelOffset = (image * height * width + pixel) * channels;
+            for (size_t channel = 0; channel < alphaChannel; ++channel) {
+                imageData[pixelOffset + channel] = static_cast<uint8_t>(valueCounter++ % byteValueRange);
+            }
+            imageData[pixelOffset + alphaChannel] = alphaValues[pixel % alphaValueCount];
         }
     }
 
@@ -1779,9 +1787,11 @@ void testResponseFromOvTensorRGBA(size_t batchSize) {
         ASSERT_EQ(decodedHeight, height);
         const size_t imageSize = height * width * channels;
         const size_t imageOffset = image * imageSize;
-        EXPECT_EQ(decodedPixelsPtr.get()[3], 0);
-        EXPECT_EQ(decodedPixelsPtr.get()[7], 127);
-        EXPECT_EQ(decodedPixelsPtr.get()[11], 255);
+        for (size_t pixel = 0; pixel < height * width; ++pixel) {
+            const size_t alphaOffset = pixel * channels + alphaChannel;
+            EXPECT_EQ(decodedPixelsPtr.get()[alphaOffset], alphaValues[pixel % alphaValueCount])
+                << "Alpha mismatch for image " << image << ", pixel " << pixel;
+        }
         EXPECT_EQ(0, std::memcmp(decodedPixelsPtr.get(), imageData + imageOffset, imageSize))
             << "RGBA data mismatch for image " << image;
     }
