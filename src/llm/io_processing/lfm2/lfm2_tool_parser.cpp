@@ -298,7 +298,7 @@ void cutEOSFromContent(std::string& content) {
 
 bool Lfm2ToolParser::parseNewContent() {
     const std::string& startTag = parsingConfig.startTags[0];
-    const std::string& endTag = parsingConfig.endTag;
+    const std::string& endTag = parsingConfig.endTags.front();
     switch (this->currentState) {
     case Lfm2ParseState::Content:
         return parseInContentState(this->streamingContent, this->streamingPosition,

@@ -7,6 +7,8 @@ In scenario when OVMS is installed on a client platform, it might be common that
 
 While this tool was implemented for llama-cpp project, it can be easily enabled also for OpenVINO Model Server.
 
+For native OVMS unloading and reloading of inactive model and graph groups, see [Idle Servable Management (Preview)](../../docs/idle_servable_management.md).
+
 
 ## Prerequisites
 

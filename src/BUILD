@@ -383,6 +383,7 @@ ovms_cc_library(
         "libovms_cliparser",
         "libovms_systeminfo",
         "ovms_exit_codes",
+        "//src/utils:rapidjson_utils",
     ],
     visibility = ["//visibility:public",],
 )
@@ -2260,6 +2261,7 @@ cc_test(
                     ":config_export_full_test",
                 "//src/llm:genai_servables",
                 "//src/llm:output_parsers",
+                "//src/llm:video_utils",
                 ":test_llm_output_parser_tests",
                 "//src:libovms_mediapipe_http_executor",
                 "//src:kfs_graph_executor_impl",
@@ -3043,6 +3045,7 @@ cc_library(
         ":test_wav_utils",
         "//src/llm:image_utils",
         "//src/llm:io_processing_input_processors",
+        "//src/llm:video_utils",
     ],
     copts = COPTS_TESTS,
     local_defines = COMMON_LOCAL_DEFINES,

@@ -35,7 +35,7 @@
 
 #if (MEDIAPIPE_DISABLE == 0)
 template <>
-void mediaexec<KFSRequest, KFSResponse>(std::unique_ptr<MediapipeGraphExecutor>& executorPtr, ovms::ModelManager& manager, KFSRequest& request, KFSResponse& response, ovms::Status& status) {
+void mediaexec<KFSRequest, KFSResponse>(std::unique_ptr<MediapipeGraphExecutorInterface>& executorPtr, ovms::ModelManager& manager, KFSRequest& request, KFSResponse& response, ovms::Status& status) {
     status = executorPtr->infer(&request,
         &response,
         ovms::ExecutionContext(
@@ -44,7 +44,7 @@ void mediaexec<KFSRequest, KFSResponse>(std::unique_ptr<MediapipeGraphExecutor>&
 }
 
 template <>
-void mediacreate<KFSRequest, KFSResponse>(std::unique_ptr<MediapipeGraphExecutor>& executorPtr, ovms::ModelManager& manager, KFSRequest& request, KFSResponse& response, ovms::Status& status) {
+void mediacreate<KFSRequest, KFSResponse>(std::unique_ptr<MediapipeGraphExecutorInterface>& executorPtr, ovms::ModelManager& manager, KFSRequest& request, KFSResponse& response, ovms::Status& status) {
     status = manager.createPipeline(executorPtr, request.model_name());
 }
 #endif

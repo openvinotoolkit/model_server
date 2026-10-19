@@ -43,17 +43,21 @@ absl::Status AudioDecodingProcessor::process(InputRequest& req) {
 
     for (size_t i = 0; i < chatHistory.size(); i++) {
         const auto content = chatHistory[i]["content"];
+        if (content.as_string().value_or("").find("<ov_genai_audio_") != std::string::npos) {
+            return absl::InvalidArgumentError("Message contains restricted <ov_genai_audio> tag");
+        }
         if (!content.is_array()) {
             continue;
         }
 
-        bool hasAudio = false;
         for (size_t j = 0; j < content.size(); j++) {
             const auto part = content[j];
             const auto type = part["type"].as_string().value_or("");
+            if (type == "text" && part["text"].as_string().value_or("").find("<ov_genai_audio_") != std::string::npos) {
+                return absl::InvalidArgumentError("Message contains restricted <ov_genai_audio> tag");
+            }
 
             if (type == "input_audio") {
-                hasAudio = true;
                 const auto data = part["input_audio"]["data"].as_string().value_or("");
                 const auto format = part["input_audio"]["format"].as_string().value_or("wav");
 
@@ -74,27 +78,13 @@ absl::Status AudioDecodingProcessor::process(InputRequest& req) {
                     ov::Tensor audioTensor(ov::element::f32, ov::Shape{pcm.size()});
                     std::memcpy(audioTensor.data<float>(), pcm.data(), pcm.size() * sizeof(float));
                     req.inputAudios.push_back(std::move(audioTensor));
+                    const std::string tag = "<ov_genai_audio_" + std::to_string(req.inputAudios.size() - 1) + ">";
+                    content[j] = ov::genai::JsonContainer({{"type", "text"}, {"text", tag}});
                 } catch (const std::exception& e) {
                     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Audio decoding failed: {}", e.what());
                     return absl::InvalidArgumentError(std::string("Audio decoding failed: ") + e.what());
                 }
             }
-        }
-
-        // Remove input_audio parts from the content array after extracting tensor data.
-        // NOTE: Current GenAI limitation — audio is always placed at the beginning
-        // of the prompt regardless of where it appeared in the original message.
-        // The user-specified position of input_audio relative to text is not preserved.
-        if (hasAudio) {
-            auto newContent = ov::genai::JsonContainer::array();
-            for (size_t j = 0; j < content.size(); j++) {
-                const auto part = content[j];
-                const auto type = part["type"].as_string().value_or("");
-                if (type != "input_audio") {
-                    newContent.push_back(part);
-                }
-            }
-            chatHistory[i]["content"] = newContent;
         }
     }
 
