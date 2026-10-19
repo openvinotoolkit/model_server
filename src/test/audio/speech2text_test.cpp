@@ -149,7 +149,6 @@ TEST_P(SttServableParseMalformedTemperatureTest, malformedTemperatureRejected) {
     EXPECT_FALSE(config.do_sample);
 }
 
-// Each of these used to be accepted as a plausible temperature instead of being rejected.
 INSTANTIATE_TEST_SUITE_P(
     MalformedTemperatures,
     SttServableParseMalformedTemperatureTest,
