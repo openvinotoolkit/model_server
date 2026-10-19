@@ -56,9 +56,29 @@ else
     fi
 fi
 
+if env -u LD_LIBRARY_PATH /ovms/bin/ovms --version; then
+    printf -- "SUCCESS: OVMS starts without LD_LIBRARY_PATH.\n"
+else
+    printf -- "ERROR: OVMS failed to start without LD_LIBRARY_PATH.\n"
+    errors=$((errors+1))
+fi
+
+if dependency_paths=$(env -u LD_LIBRARY_PATH ldd /ovms/bin/ovms); then
+    tbb_path=$(awk '$1 ~ /^libtbb(_debug)?[.]so[.]/ {print $3}' <<< "$dependency_paths")
+    if [ -n "$tbb_path" ] && [ -f "$tbb_path" ] && [[ "$(realpath "$tbb_path")" == /ovms/lib/* ]]; then
+        printf -- "SUCCESS: OVMS resolves TBB from the package: %s.\n" "$tbb_path"
+    else
+        printf -- "ERROR: OVMS must resolve TBB from /ovms/lib, not system libraries: %s.\n" "$tbb_path"
+        errors=$((errors+1))
+    fi
+else
+    printf -- "ERROR: Failed to inspect OVMS shared library dependencies.\n"
+    errors=$((errors+1))
+fi
+
 # check for errors
 if [ "$errors" -ne "0" ]; then
-   printf -- "$errors error[s] in files list check. Please verify release image contents.\n"
+   printf -- "$errors error[s] in release package check. Please verify release image contents.\n"
    exit 1
 fi
 
