@@ -23,7 +23,7 @@ In the demo will be used two gRPC communication patterns which might be advantag
 
 
 ## Requirements
-- on the client side it could be Windows, Mac or Linux. FFMPEG should be preinstalled in order to follow the scenario with RTSP client. Python3.7+ is needed.
+- on the client side it could be Windows, Mac or Linux. FFMPEG should be preinstalled in order to follow the scenario with RTSP client. Python 3.10 or newer is needed.
 - the server can be deployed on Linux, MacOS (only with CPU execution on x86_64 arch) or on Windows operating system  (including inside WSL).
 - images sent over gRPC are not encoded, so there should be good network connectivity between the client and the server. At least 100Mb/s for real-time video analysis at high rate.
 
@@ -39,19 +39,25 @@ Using the streaming API has the following advantages:
 
 ### Preparing the model server for gRPC streaming with image classification
 
-This demo uses the [MediaPipe ResNet image-classification graph](../../mediapipe/image_classification/README.md). The graph accepts a `FP32` tensor named `in` with shape `1x3x224x224` and returns the ResNet scores as `out`. The client resizes and preprocesses each video frame, selects the top ImageNet class, and draws its name on the original frame before writing the output stream.
+This demo uses the [MediaPipe ResNet image-classification graph](../../mediapipe/image_classification/README.md). The graph accepts a `FP32` tensor named `in` with shape `1x3x224x224` and returns the ResNet scores as `out`. The client resizes each frame to `224x224` for inference, then draws the predicted class on the original frame. Therefore, the output video retains the input stream's resolution unless `--ffmpeg_output_width` or `--ffmpeg_output_height` is specified.
 
 Download the ResNet model and start OVMS:
 ```console
+git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/mediapipe/image_classification
 curl -L --create-dirs https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o resnetMediapipe/model/1/resnet50.bin
 curl -L --create-dirs https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o resnetMediapipe/model/1/resnet50.xml
+```
+```bash
 chmod -R 755 resnetMediapipe
 ```
 ```bash
 docker run -d -v "$PWD":/mediapipe -p 9000:9000 openvino/model_server:latest --config_path /mediapipe/config.json --port 9000
 ```
-For a bare-metal deployment, run `ovms --config_path config.json --port 9000` from the image-classification demo directory.
+For a bare-metal deployment, run this command from the image-classification demo directory.
+```bat
+ovms --config_path config.json --port 9000
+```
 
 ### Start the client with real time stream analysis
 
@@ -104,7 +110,7 @@ options:
 
 #### Reading from the local camera and visualization on the screen
 
-```
+```console
 python client.py --grpc_address localhost:9000 --input_stream 0 --output_stream screen
 ```
 
@@ -161,7 +167,7 @@ python client.py --grpc_address localhost:9000 --input_stream 'rtsp://localhost:
 The results can be examined with ffplay utility which reads and display the altered content.
 
 ```console
-ffplay -pixel_format yuv420p -video_size 704x704 -rtsp_transport tcp rtsp://localhost:8554/channel2
+ffplay -rtsp_transport tcp rtsp://localhost:8554/channel2
 ```
 
 
@@ -175,22 +181,6 @@ The key advantage of that mode is easier load balancing and scalability, because
 > **Note** Depending on the output format, there might be needed a custom postprocessing function implementation.
 
 
-## Metric integrations
+## Metrics
 
-Following the steps from [metrics documentation](../../../docs/metrics.md#visualize-with-grafana) one can setup
-visualisation of metrics using grafana.
-
-In OpenVINO Model Server repository one can find [grafana_mediapipe.json](../../../extras/grafana_mediapipe.json) that can be used to visualize 
-metrics about mediapipe graphs' status.
-
-Here are some exemplary visualisations included in above mentioned grafana dashboard:
-
-- Processing time metric is used to track the time a particular mediapipe graph is opened. In this case it can be used to represent how long it took to process single video.
-
-![processing_time_distr](assets/processing_time_distr.png)
-![processing_time](assets/processing_time.png)
-
-- Request latency metric shows the time difference between subsequent requests.
-
-![request_latency_distr](assets/request_latency_distr.png)
-![request_latency](assets/request_latency.png)
+For MediaPipe graph metric definitions and Grafana visualization, see the [metrics documentation](../../../docs/metrics.md#metrics-implementation-for-mediapipe-graphs).
