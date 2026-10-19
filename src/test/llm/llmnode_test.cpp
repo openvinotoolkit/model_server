@@ -1767,7 +1767,7 @@ TEST_P(LLMFlowHttpTestParameterized, continuousBatchingParserFailureStopsGenerat
     const absl::Status status = servable.preparePartialResponse(baseExecutionContext);
 
     EXPECT_EQ(status.code(), absl::StatusCode::kInternal);
-    EXPECT_NE(status.message().find("Generated tool call structure is not valid"), std::string::npos) << status;
+    EXPECT_NE(status.message().find("Tool call name is missing in generated output"), std::string::npos) << status;
     EXPECT_EQ(generationHandle->get_status(), ov::genai::GenerationStatus::STOP);
 }
 
@@ -2057,10 +2057,10 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStoppedByMaxModelLength
         GTEST_SKIP();
     }
     std::string prompt;
-    // 131066 "hello " words + the dummy chat template's ~5 tokens of literal overhead
-    // ("User"/":"/"\n"/"Assistant"/":") yields exactly 131071 prompt tokens - one under the
-    // dummy model's 131072 (128k) max length - leaving exactly 1 token of generation budget.
-    for (int i = 0; i < 131066; i++) {
+    // 131030 "hello " words yield exactly 131071 prompt tokens with the current
+    // chat template - one under the dummy model's 131072 (128k) max length,
+    // leaving exactly 1 token of generation budget.
+    for (int i = 0; i < 131030; i++) {
         prompt += "hello ";
     }
     std::string requestBody = R"(
