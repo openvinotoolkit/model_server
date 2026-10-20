@@ -23,37 +23,10 @@
 #include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "platform_utils.hpp"
+#include "test_http_utils.hpp"
 #include "test_utils.hpp"
 #include "light_test_utils.hpp"
 #include "test_with_temp_dir.hpp"
-
-TEST(WebRtcSpeechConfiguration, ResolvesDownloadedModelUsingSourceNotServingAlias) {
-    ovms::ServerSettingsImpl settings;
-    settings.serverMode = ovms::HF_PULL_AND_START_MODE;
-    settings.hfSettings.task = ovms::SPEECH_TO_TEXT_GRAPH;
-    settings.hfSettings.sourceModel = "OpenVINO/voxtral-realtime-2602";
-    settings.hfSettings.downloadPath = "/models";
-    settings.hfSettings.exportSettings.modelName = "voxtral-asr";
-    settings.hfSettings.exportSettings.targetDevice = "GPU.1";
-
-    const auto config = ovms::HttpRestApiHandler::speechToTextConfig(settings);
-    EXPECT_EQ(std::filesystem::path(config.modelPath), std::filesystem::path("/models/OpenVINO/voxtral-realtime-2602"));
-    EXPECT_EQ(config.device, "GPU.1");
-}
-
-TEST(WebRtcSpeechConfiguration, DoesNotEnableSpeechForOtherTasksOrPullOnly) {
-    ovms::ServerSettingsImpl settings;
-    settings.serverMode = ovms::HF_PULL_AND_START_MODE;
-    settings.hfSettings.sourceModel = "OpenVINO/model";
-    settings.hfSettings.downloadPath = "/models";
-    settings.hfSettings.exportSettings.targetDevice = "CPU";
-    settings.hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
-    EXPECT_TRUE(ovms::HttpRestApiHandler::speechToTextConfig(settings).modelPath.empty());
-
-    settings.hfSettings.task = ovms::SPEECH_TO_TEXT_GRAPH;
-    settings.serverMode = ovms::HF_PULL_MODE;
-    EXPECT_TRUE(ovms::HttpRestApiHandler::speechToTextConfig(settings).modelPath.empty());
-}
 
 static const char* configWith1Dummy = R"(
 {
@@ -1392,20 +1365,62 @@ TEST_F(ConfigStatus, WebRtcEndpointsRequireApiKey) {
         ovms::StatusCode::REST_NOT_FOUND);
 }
 
-TEST_F(ConfigStatus, WebRtcSessionRequiresSpeechModel) {
+TEST_F(ConfigStatus, WebRtcSessionRequiresServedSpeechModel) {
     ovms::Server& ovmsServer = ovms::Server::instance();
     std::string contents;
     auto fs = std::make_shared<ovms::LocalFileSystem>();
     fs->readTextFile(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_cpu_dummy.json"), &contents);
     TestHelper1 t(*this, contents.c_str());
     auto handler = ovms::HttpRestApiHandler(ovmsServer, 10);
-    for (const std::string path : {"/v1/webrtc/sessions", "/v1/realtime/calls"}) {
+    const std::string path = "/v1/webrtc/sessions";
+    const std::vector<std::pair<std::string, ovms::StatusCode>> requests = {
+        {R"({"sdp":"v=0\r\n","type":"offer"})", ovms::StatusCode::JSON_INVALID},
+        {R"({"sdp":"v=0\r\n","type":"offer","model":"dummy"})", ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING},
+        {R"({"sdp":"v=0\r\n","type":"offer","model":"missing"})", ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING}};
+    for (const auto& [body, expectedStatus] : requests) {
         ovms::HttpRequestComponents components;
-        ASSERT_EQ(handler.parseRequestComponents(components, "POST", path), ovms::StatusCode::OK) << path;
+        ASSERT_EQ(handler.parseRequestComponents(components, "POST", path), ovms::StatusCode::OK);
         std::string response;
         ovms::HttpResponseComponents responseComponents;
+        EXPECT_EQ(handler.dispatchToProcessor(path, body, &response, components, responseComponents, nullptr, nullptr),
+            expectedStatus)
+            << body;
+    }
+}
+
+TEST_F(ConfigStatus, RealtimeCallRequiresMultipartSessionModel) {
+    ovms::Server& ovmsServer = ovms::Server::instance();
+    std::string contents;
+    auto fs = std::make_shared<ovms::LocalFileSystem>();
+    fs->readTextFile(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_cpu_dummy.json"), &contents);
+    TestHelper1 t(*this, contents.c_str());
+    auto handler = ovms::HttpRestApiHandler(ovmsServer, 10);
+    const std::string path = "/v1/realtime/calls";
+    std::string response;
+    ovms::HttpResponseComponents responseComponents;
+    {
+        std::unordered_map<std::string, std::string> headers{{"content-type", "application/sdp"}};
+        ovms::HttpRequestComponents components;
+        ASSERT_EQ(handler.parseRequestComponents(components, "POST", path, headers), ovms::StatusCode::OK);
         EXPECT_EQ(handler.dispatchToProcessor(path, "v=0\r\n", &response, components, responseComponents, nullptr, nullptr),
-            ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING)
-            << path;
+            ovms::StatusCode::JSON_INVALID);
+        EXPECT_NE(response.find("multipart/form-data"), std::string::npos);
+    }
+    const std::vector<std::pair<std::string, ovms::StatusCode>> sessions = {
+        {"", ovms::StatusCode::JSON_INVALID},
+        {R"({"type":"transcription"})", ovms::StatusCode::JSON_INVALID},
+        {R"({"type":"transcription","audio":{"input":{"transcription":{"model":"missing"}}}})", ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING},
+        {R"({"type":"realtime","model":"dummy"})", ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING}};
+    for (const auto& [session, expectedStatus] : sessions) {
+        std::unordered_map<std::string, std::string> headers{{"content-type", "multipart/form-data; boundary=x"}};
+        ovms::HttpRequestComponents components;
+        ASSERT_EQ(handler.parseRequestComponents(components, "POST", path, headers), ovms::StatusCode::OK);
+        auto multiPartParser = std::make_shared<MockedMultiPartParser>();
+        EXPECT_CALL(*multiPartParser, parse()).WillOnce(::testing::Return(true));
+        EXPECT_CALL(*multiPartParser, getFieldByName("sdp")).WillOnce(::testing::Return("v=0\r\n"));
+        EXPECT_CALL(*multiPartParser, getFieldByName("session")).WillOnce(::testing::Return(session));
+        EXPECT_EQ(handler.dispatchToProcessor(path, "", &response, components, responseComponents, nullptr, multiPartParser),
+            expectedStatus)
+            << session;
     }
 }

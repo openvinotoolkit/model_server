@@ -37,7 +37,8 @@ public:
     using ErrorCallback = std::function<void(std::exception_ptr)>;
     using CompletionCallback = std::function<void(const std::string&)>;
 
-    SttAudioAdapter(std::string modelPath, std::string device);
+    /// Shares a served pipeline; pipelineMutex serializes generate() with other users of the pipeline.
+    SttAudioAdapter(std::shared_ptr<ov::genai::ASRPipeline> pipeline, std::shared_ptr<std::mutex> pipelineMutex);
     ~SttAudioAdapter();
 
     SttAudioAdapter(const SttAudioAdapter&) = delete;
@@ -60,6 +61,7 @@ private:
     void transcribe(Request& request);
 
     std::shared_ptr<ov::genai::ASRPipeline> pipeline_;
+    std::shared_ptr<std::mutex> pipelineMutex_;
     std::mutex mutex_;
     std::condition_variable condition_;
     std::queue<Request> requests_;

@@ -18,10 +18,12 @@
 Connection types covered:
   * OVMS WebRTC              - JSON signaling on /v1/webrtc/sessions, "transcript" data channel
   * OpenAI Realtime API      - SDP over https://api.openai.com/v1/realtime/calls, "oai-events" data channel
-  * OVMS OpenAI Compatible   - same protocol as OpenAI, served by OVMS on /v1/realtime/calls
+  * OVMS OpenAI Compatible   - same protocol as OpenAI, served by OVMS on /v1/realtime/calls; the SDP offer and
+                               the session naming the transcription model are sent as a multipart form
 
 Environment:
   OVMS_URL             OVMS REST base URL (default: http://localhost:9112)
+  OVMS_MODEL           served speech-to-text graph name (default: voxtral-asr)
   OVMS_ANNOUNCED_IP    optional; set to the OVMS_WEBRTC_ANNOUNCED_IP value the server runs with. OVMS candidates
                        with any other address are dropped, simulating a client on another machine that can
                        only reach the announced (1:1 NAT) address
@@ -49,6 +51,7 @@ from aiortc.sdp import candidate_from_sdp
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OVMS_URL = os.environ.get("OVMS_URL", "http://localhost:9112").rstrip("/")
+OVMS_MODEL = os.environ.get("OVMS_MODEL", "voxtral-asr")
 OVMS_ANNOUNCED_IP = os.environ.get("OVMS_ANNOUNCED_IP", "")
 OVMS_API_KEY = os.environ.get("OVMS_API_KEY", "")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
@@ -222,16 +225,32 @@ def assert_transcript(text, collector):
         f"Expected '{EXPECTED_KEYWORD}' in transcript {text!r}; received events: {collector.events}")
 
 
-async def run_openai_protocol(calls_url, auth_token, http_session, ovms_server=False):
-    """Shared flow of the OpenAI Realtime API and the OVMS OpenAI compatible endpoint."""
+def transcription_session(model):
+    return {
+        "type": "transcription",
+        "audio": {"input": {"transcription": {"model": model}, "turn_detection": None}},
+    }
+
+
+async def run_openai_protocol(calls_url, auth_token, http_session, ovms_server=False, session_config=None):
+    """Shared flow of the OpenAI Realtime API and the OVMS OpenAI compatible endpoint.
+
+    With session_config the offer is posted as the OpenAI unified multipart form (sdp + session fields),
+    otherwise as a plain application/sdp body configured by the ephemeral token.
+    """
     client = AudioClient("oai-events")
     try:
         offer_sdp = await client.create_offer()
-        headers = {"Content-Type": "application/sdp"}
+        headers = {}
+        form = None
+        if session_config is None:
+            headers["Content-Type"] = "application/sdp"
+        else:
+            form = {"sdp": (None, offer_sdp), "session": (None, json.dumps(session_config))}
         if auth_token:
             headers["Authorization"] = f"Bearer {auth_token}"
         response = await asyncio.to_thread(
-            http_session.post, calls_url, data=offer_sdp, headers=headers, timeout=30)
+            http_session.post, calls_url, data=None if form else offer_sdp, files=form, headers=headers, timeout=30)
         assert response.ok, f"Call request failed: {response.status_code} {response.text}"
         answer_sdp = response.text
         assert answer_sdp.startswith("v=0"), f"Expected SDP answer, got: {answer_sdp[:200]!r}"
@@ -264,7 +283,8 @@ async def test_ovms_webrtc_transcription():
     try:
         offer_sdp = await client.create_offer()
         response = await asyncio.to_thread(
-            http.post, f"{OVMS_URL}/v1/webrtc/sessions", json={"type": "offer", "sdp": offer_sdp}, timeout=30)
+            http.post, f"{OVMS_URL}/v1/webrtc/sessions", json={"type": "offer", "sdp": offer_sdp, "model": OVMS_MODEL},
+            timeout=30)
         assert response.ok, f"Session request failed: {response.status_code} {response.text}"
         answer = response.json()
         assert answer["type"] == "answer"
@@ -314,15 +334,7 @@ async def test_ovms_webrtc_transcription():
 async def test_openai_realtime_transcription():
     http = requests.Session()
     # Same ephemeral token request as references/openai_backend.py.
-    session_config = {
-        "type": "transcription",
-        "audio": {
-            "input": {
-                "transcription": {"model": os.environ.get("OPENAI_TRANSCRIPTION_MODEL", "gpt-live-transcribe")},
-                "turn_detection": None,
-            }
-        },
-    }
+    session_config = transcription_session(os.environ.get("OPENAI_TRANSCRIPTION_MODEL", "gpt-live-transcribe"))
     token_response = await asyncio.to_thread(
         http.post, OPENAI_CLIENT_SECRET_ENDPOINT,
         headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
@@ -337,7 +349,8 @@ async def test_openai_realtime_transcription():
 @requires_ovms
 @pytest.mark.asyncio
 async def test_ovms_openai_compatible_transcription():
-    collector = await run_openai_protocol(f"{OVMS_URL}/v1/realtime/calls", OVMS_API_KEY, ovms_http(), ovms_server=True)
+    collector = await run_openai_protocol(f"{OVMS_URL}/v1/realtime/calls", OVMS_API_KEY, ovms_http(), ovms_server=True,
+                                          session_config=transcription_session(OVMS_MODEL))
     item_ids = {event.get("item_id") for event in collector.events if event.get("type") == COMPLETED_EVENT}
     assert all(item_ids), f"Completed events must carry item_id: {collector.events}"
     location = collector.call_location

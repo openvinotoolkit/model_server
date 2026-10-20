@@ -487,6 +487,23 @@ Status MediapipeGraphDefinition::create(std::unique_ptr<MediapipeGraphExecutor>&
     return status;
 }
 
+Status MediapipeGraphDefinition::getSttServable(std::shared_ptr<SttServable>& servable) {
+    recordActivity();
+    std::unique_ptr<ServableDefinitionUnloadGuard> unloadGuard;
+    Status status = waitForLoaded(unloadGuard);
+    if (!status.ok()) {
+        SPDLOG_DEBUG("Failed to get speech-to-text servable of mediapipe graph: {} since it is not available", getName());
+        return status;
+    }
+    const auto& sttServableMap = this->sidePacketMaps->sttServableMap;
+    if (sttServableMap.empty()) {
+        SPDLOG_DEBUG("Mediapipe graph: {} has no speech-to-text node", getName());
+        return StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING;
+    }
+    servable = sttServableMap.begin()->second;
+    return StatusCode::OK;
+}
+
 Status MediapipeGraphDefinition::setStreamTypes() {
     this->inputTypes.clear();
     this->outputTypes.clear();

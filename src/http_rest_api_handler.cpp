@@ -38,7 +38,6 @@
 #include "src/port/rapidjson_writer.hpp"
 
 #include "config.hpp"
-#include "ov_utils.hpp"
 #include "dags/pipeline.hpp"
 #include "dags/pipeline_factory.hpp"
 #include "dags/pipelinedefinition.hpp"
@@ -65,6 +64,8 @@
 #include "src/logging.hpp"
 #include "status.hpp"
 #include "stringutils.hpp"
+#include "audio/speech_to_text/stt_pipeline_handle.hpp"
+#include "multi_part_parser.hpp"
 #include "timer.hpp"
 #include "utils/rapidjson_utils.hpp"
 
@@ -154,21 +155,12 @@ HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_
 
     kfsGrpcImpl(dynamic_cast<const GRPCServerModule*>(this->ovmsServer.getModule(GRPC_SERVER_MODULE_NAME))->getKFSGrpcImpl()),
     modelManager(dynamic_cast<const ServableManagerModule*>(this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager()),
-    webRtcSessionController(16, speechToTextConfig(Config::instance().getServerSettings()), getWebRtcAnnouncedIp()) {
+    webRtcSessionController(16, getWebRtcAnnouncedIp()) {
     if (nullptr == this->ovmsServer.getModule(GRPC_SERVER_MODULE_NAME))
         throw std::logic_error("Tried to create http rest api handler without grpc server module");
     if (nullptr == this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))
         throw std::logic_error("Tried to create http rest api handler without servable manager module");
     registerAll();
-}
-
-WebRtcSessionController::SpeechToTextConfig HttpRestApiHandler::speechToTextConfig(const ServerSettingsImpl& settings) {
-    const auto& hfSettings = settings.hfSettings;
-    if (settings.serverMode != HF_PULL_AND_START_MODE || hfSettings.task != SPEECH_TO_TEXT_GRAPH)
-        return {};
-    return {
-        FileSystem::joinPath({hfSettings.downloadPath, hfSettings.sourceModel}),
-        hfSettings.exportSettings.targetDevice.empty() ? recommendTargetDevice() : hfSettings.exportSettings.targetDevice};
 }
 
 Status HttpRestApiHandler::parseModelVersion(std::string& model_version_str, std::optional<int64_t>& model_version) {
@@ -251,7 +243,7 @@ void HttpRestApiHandler::registerAll() {
     registerHandler(WebRTC_RealtimeCall, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         if (!isWebRtcRequestAuthorized(request_components))
             return StatusCode::UNAUTHORIZED;
-        return processRealtimeCall(response, request_body, response_components);
+        return processRealtimeCall(request_components, response, multiPartParser, response_components);
     });
     registerHandler(WebRTC_RealtimeHangup, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         if (!isWebRtcRequestAuthorized(request_components))
@@ -1153,12 +1145,20 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
     return StatusCode::REST_INVALID_URL;
 }
 
+Status HttpRestApiHandler::getWebRtcSpeechModel(const std::string& modelName, SttPipelineHandle& speechModel) {
+#if (MEDIAPIPE_DISABLE == 0)
+    auto status = modelManager.getMediapipeFactory().getSttPipeline(modelName, speechModel);
+    if (!status.ok())
+        SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected WebRTC session, {} is not a served speech-to-text graph: {}", modelName, status.string());
+    return status;
+#else
+    SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected WebRTC session, speech-to-text graphs require MediaPipe");
+    return StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING;
+#endif
+}
+
 Status HttpRestApiHandler::processWebRtcCreateSession(std::string& response, const std::string& request_body) {
     SPDLOG_LOGGER_INFO(webrtc_logger, "Received WebRTC session creation request over REST");
-    if (!webRtcSessionController.hasSpeechModel()) {
-        SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected WebRTC session, no speech-to-text model is served");
-        return StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING;
-    }
     Document document;
     document.Parse(request_body.c_str());
     if (document.HasParseError() || !document.IsObject()) {
@@ -1167,13 +1167,19 @@ Status HttpRestApiHandler::processWebRtcCreateSession(std::string& response, con
     }
     const auto sdp = document.FindMember("sdp");
     const auto type = document.FindMember("type");
-    if (sdp == document.MemberEnd() || !sdp->value.IsString() || type == document.MemberEnd() || !type->value.IsString()) {
-        SPDLOG_LOGGER_WARN(webrtc_logger, "Missing sdp/type fields in WebRTC session creation request");
+    const auto model = document.FindMember("model");
+    if (sdp == document.MemberEnd() || !sdp->value.IsString() || type == document.MemberEnd() || !type->value.IsString() ||
+        model == document.MemberEnd() || !model->value.IsString()) {
+        SPDLOG_LOGGER_WARN(webrtc_logger, "Missing sdp/type/model fields in WebRTC session creation request");
         return StatusCode::JSON_INVALID;
     }
+    SttPipelineHandle speechModel;
+    auto status = getWebRtcSpeechModel(model->value.GetString(), speechModel);
+    if (!status.ok())
+        return status;
 
     WebRtcSessionController::OfferResult result;
-    if (!webRtcSessionController.createSession(sdp->value.GetString(), type->value.GetString(), result)) {
+    if (!webRtcSessionController.createSession(sdp->value.GetString(), type->value.GetString(), speechModel, result)) {
         SPDLOG_LOGGER_ERROR(webrtc_logger, "Failed to create WebRTC session");
         return StatusCode::INTERNAL_ERROR;
     }
@@ -1259,19 +1265,61 @@ Status HttpRestApiHandler::processWebRtcRemoveSession(const HttpRequestComponent
     return StatusCode::OK;
 }
 
-Status HttpRestApiHandler::processRealtimeCall(std::string& response, const std::string& request_body, HttpResponseComponents& response_components) {
-    SPDLOG_LOGGER_INFO(webrtc_logger, "Received realtime call request over REST");
-    if (!webRtcSessionController.hasSpeechModel()) {
-        SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected realtime call, no speech-to-text model is served");
-        return StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING;
+namespace {
+// OpenAI session configuration: the transcription model, or the session model when no transcription is configured.
+std::string getRealtimeSessionModel(const std::string& sessionJson) {
+    Document session;
+    session.Parse(sessionJson.c_str());
+    if (session.HasParseError() || !session.IsObject())
+        return {};
+    const rapidjson::Value* value = &session;
+    for (const char* key : {"audio", "input", "transcription", "model"}) {
+        if (!value->IsObject())
+            break;
+        const auto member = value->FindMember(key);
+        if (member == value->MemberEnd())
+            break;
+        value = &member->value;
     }
-    if (request_body.rfind("v=", 0) != 0) {
-        SPDLOG_LOGGER_WARN(webrtc_logger, "Realtime call request body is not an SDP offer");
-        response = "{\"error\":\"Request body must be an SDP offer (Content-Type: application/sdp)\"}";
+    if (value->IsString())
+        return value->GetString();
+    const auto model = session.FindMember("model");
+    if (model != session.MemberEnd() && model->value.IsString())
+        return model->value.GetString();
+    return {};
+}
+}  // namespace
+
+Status HttpRestApiHandler::processRealtimeCall(const HttpRequestComponents& request_components, std::string& response,
+    const std::shared_ptr<MultiPartParser>& multiPartParser, HttpResponseComponents& response_components) {
+    SPDLOG_LOGGER_INFO(webrtc_logger, "Received realtime call request over REST");
+    const auto contentType = request_components.headers.find("content-type");
+    const bool isMultiPart = contentType != request_components.headers.end() &&
+                             contentType->second.find("multipart/form-data") != std::string::npos;
+    if (!isMultiPart || multiPartParser == nullptr || !multiPartParser->parse()) {
+        SPDLOG_LOGGER_WARN(webrtc_logger, "Realtime call request is not a multipart form");
+        response = "{\"error\":\"Request must be multipart/form-data with an sdp offer and a session naming the transcription model\"}";
         return StatusCode::JSON_INVALID;
     }
+    const std::string offerSdp = multiPartParser->getFieldByName("sdp");
+    if (offerSdp.rfind("v=", 0) != 0) {
+        SPDLOG_LOGGER_WARN(webrtc_logger, "Realtime call sdp field is not an SDP offer");
+        response = "{\"error\":\"The sdp field must contain an SDP offer\"}";
+        return StatusCode::JSON_INVALID;
+    }
+    const std::string modelName = getRealtimeSessionModel(multiPartParser->getFieldByName("session"));
+    if (modelName.empty()) {
+        SPDLOG_LOGGER_WARN(webrtc_logger, "Realtime call session does not name a transcription model");
+        response = "{\"error\":\"The session field must set audio.input.transcription.model or model\"}";
+        return StatusCode::JSON_INVALID;
+    }
+    SttPipelineHandle speechModel;
+    auto status = getWebRtcSpeechModel(modelName, speechModel);
+    if (!status.ok())
+        return status;
+
     WebRtcSessionController::OfferResult result;
-    if (!webRtcSessionController.createRealtimeCall(request_body, result)) {
+    if (!webRtcSessionController.createRealtimeCall(offerSdp, speechModel, result)) {
         SPDLOG_LOGGER_ERROR(webrtc_logger, "Failed to create realtime call");
         return StatusCode::INTERNAL_ERROR;
     }

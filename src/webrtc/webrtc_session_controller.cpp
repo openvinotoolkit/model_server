@@ -32,6 +32,7 @@
 #include "src/port/rapidjson_istreamwrapper.hpp"
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
+#include "src/audio/speech_to_text/stt_pipeline_handle.hpp"
 #include "src/logging.hpp"
 
 namespace ovms {
@@ -510,10 +511,8 @@ AudioChunk WebRtcSessionController::Session::decodeAudioFrame(const rtc::binary&
     return AudioChunk{decoded, OpusAudioCodec::SampleRate, timestampUs, static_cast<uint32_t>(codec.channels())};
 }
 
-WebRtcSessionController::WebRtcSessionController(size_t maxSessions, SpeechToTextConfig speechToText, std::string announcedIp) :
+WebRtcSessionController::WebRtcSessionController(size_t maxSessions, std::string announcedIp) :
     maxSessions_(maxSessions),
-    sttModelPath_(std::move(speechToText.modelPath)),
-    sttDevice_(std::move(speechToText.device)),
     announcedIp_(std::move(announcedIp)) {
     if (!announcedIp_.empty() && !isIpLiteral(announcedIp_)) {
         SPDLOG_LOGGER_ERROR(webrtc_logger, "Ignoring invalid WebRTC announced IP '{}', expected an IPv4 or IPv6 address", announcedIp_);
@@ -549,10 +548,6 @@ std::string WebRtcSessionController::announceHostCandidate(const std::string& ca
     return rewritten;
 }
 
-bool WebRtcSessionController::hasSpeechModel() const {
-    return !sttModelPath_.empty();
-}
-
 bool WebRtcSessionController::isRealtimeSpeechModel(const std::string& modelPath) {
     const std::string configPath = modelPath + "/config.json";
     std::ifstream input(configPath);
@@ -569,14 +564,16 @@ bool WebRtcSessionController::isRealtimeSpeechModel(const std::string& modelPath
     return std::string(modelType->value.GetString()) == "voxtral_realtime";
 }
 
-bool WebRtcSessionController::createSession(const std::string& offerSdp, const std::string& offerType, OfferResult& result) {
-    return negotiateSession(offerSdp, offerType, Protocol::Ovms, result);
+bool WebRtcSessionController::createSession(const std::string& offerSdp, const std::string& offerType,
+    const SttPipelineHandle& speechModel, OfferResult& result) {
+    return negotiateSession(offerSdp, offerType, Protocol::Ovms, speechModel, result);
 }
 
-bool WebRtcSessionController::createRealtimeCall(const std::string& offerSdp, OfferResult& result) {
+bool WebRtcSessionController::createRealtimeCall(const std::string& offerSdp, const SttPipelineHandle& speechModel,
+    OfferResult& result) {
     // Realtime call clients never close sessions explicitly, so reclaim dead ones before admitting new calls.
     removeDisconnectedRealtimeCalls();
-    return negotiateSession(offerSdp, "offer", Protocol::OpenAiRealtime, result);
+    return negotiateSession(offerSdp, "offer", Protocol::OpenAiRealtime, speechModel, result);
 }
 
 void WebRtcSessionController::removeDisconnectedRealtimeCalls() {
@@ -598,7 +595,8 @@ void WebRtcSessionController::removeDisconnectedRealtimeCalls() {
     }
 }
 
-bool WebRtcSessionController::negotiateSession(const std::string& offerSdp, const std::string& offerType, Protocol protocol, OfferResult& result) {
+bool WebRtcSessionController::negotiateSession(const std::string& offerSdp, const std::string& offerType, Protocol protocol,
+    const SttPipelineHandle& speechModel, OfferResult& result) {
     if (offerSdp.empty() || offerType != "offer") {
         SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected session creation, invalid offer, type: {}", offerType);
         return false;
@@ -606,6 +604,19 @@ bool WebRtcSessionController::negotiateSession(const std::string& offerSdp, cons
 
     std::shared_ptr<SttAudioAdapter> sttAdapter;
     std::shared_ptr<VoxtralAudioAdapter> voxtralAdapter;
+    if (speechModel.pipeline) {
+        try {
+            if (isRealtimeSpeechModel(speechModel.modelsPath)) {
+                voxtralAdapter = std::make_shared<VoxtralAudioAdapter>(speechModel.pipeline);
+            } else {
+                sttAdapter = std::make_shared<SttAudioAdapter>(speechModel.pipeline, speechModel.pipelineMutex);
+            }
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_ERROR(webrtc_logger, "Could not use speech model at {} for WebRTC: {}", speechModel.modelsPath, e.what());
+            return false;
+        }
+    }
+
     std::string sessionId;
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -613,24 +624,6 @@ bool WebRtcSessionController::negotiateSession(const std::string& offerSdp, cons
             SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected session creation, session limit reached: {}", maxSessions_);
             return false;
         }
-        if (!sttModelPath_.empty() && !sttAdapter_ && !voxtralAdapter_) {
-            try {
-                if (isRealtimeSpeechModel(sttModelPath_)) {
-                    voxtralAdapter_ = std::make_shared<VoxtralAudioAdapter>(sttModelPath_, sttDevice_);
-                } else {
-                    sttAdapter_ = std::make_shared<SttAudioAdapter>(sttModelPath_, sttDevice_);
-                }
-                SPDLOG_LOGGER_INFO(webrtc_logger, "Initialized WebRTC STT model from {} on {}", sttModelPath_, sttDevice_);
-            } catch (const std::exception& e) {
-                SPDLOG_LOGGER_ERROR(webrtc_logger, "Could not initialize WebRTC STT model at {}: {}", sttModelPath_, e.what());
-                return false;
-            } catch (...) {
-                SPDLOG_LOGGER_ERROR(webrtc_logger, "Could not initialize WebRTC STT model at {}", sttModelPath_);
-                return false;
-            }
-        }
-        sttAdapter = sttAdapter_;
-        voxtralAdapter = voxtralAdapter_;
         sessionId = std::to_string(nextSessionId_++);
     }
 

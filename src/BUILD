@@ -865,6 +865,8 @@ ovms_cc_library(
             "libovms_cliparser",
             "libovms_config",
             "//src/webrtc:webrtc_session_controller",
+            "//src/audio/speech_to_text:stt_pipeline_handle",
+            "libmultipart_parser",
             "//src/dags:pipelinedefinitionstatus",
             "//src/dags:aliases",
             "//src/dags:pipeline",

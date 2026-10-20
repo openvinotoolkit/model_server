@@ -28,9 +28,13 @@ namespace {
 constexpr uint32_t SttSampleRate = 16000;
 }
 
-SttAudioAdapter::SttAudioAdapter(std::string modelPath, std::string device) :
-    pipeline_(std::make_shared<ov::genai::ASRPipeline>(modelPath, device, ov::AnyMap{})),
-    worker_(&SttAudioAdapter::run, this) {
+SttAudioAdapter::SttAudioAdapter(std::shared_ptr<ov::genai::ASRPipeline> pipeline,
+    std::shared_ptr<std::mutex> pipelineMutex) :
+    pipeline_(std::move(pipeline)),
+    pipelineMutex_(std::move(pipelineMutex)) {
+    if (!pipeline_ || !pipelineMutex_)
+        throw std::invalid_argument("Speech-to-text adapter requires a pipeline and its mutex");
+    worker_ = std::thread(&SttAudioAdapter::run, this);
 }
 
 SttAudioAdapter::~SttAudioAdapter() {
@@ -81,15 +85,19 @@ void SttAudioAdapter::transcribe(Request& request) {
     const auto audio = prepareAudio(request.utterance);
     SPDLOG_LOGGER_INFO(webrtc_logger, "Starting Whisper transcription: samples={}, length_ms={}",
         audio.size(), audio.size() * 1000 / SttSampleRate);
-    auto config = pipeline_->get_generation_config();
-    config.language = "<|en|>";
     auto textCallback = [callback = request.textCallback](std::string text) {
         if (callback)
             callback(text);
         return ov::genai::StreamingStatus::RUNNING;
     };
-    const ov::genai::ASRDecodedResults result = pipeline_->generate(audio, config, textCallback);
-    const std::string transcript = static_cast<std::string>(result);
+    std::string transcript;
+    {
+        std::lock_guard<std::mutex> pipelineLock(*pipelineMutex_);
+        auto config = pipeline_->get_generation_config();
+        config.language = "<|en|>";
+        const ov::genai::ASRDecodedResults result = pipeline_->generate(audio, config, textCallback);
+        transcript = static_cast<std::string>(result);
+    }
     SPDLOG_LOGGER_INFO(webrtc_logger, "Whisper transcription finished: \"{}\"", transcript);
     if (request.completionCallback)
         request.completionCallback(transcript);
@@ -108,7 +116,7 @@ std::vector<float> SttAudioAdapter::prepareAudio(const AudioChunk& utterance) {
         return monoAudio;
 
     const size_t outputSize = static_cast<size_t>(monoAudio.size() *
-        static_cast<double>(SttSampleRate) / utterance.sampleRate);
+                                                  static_cast<double>(SttSampleRate) / utterance.sampleRate);
     if (outputSize == 0)
         throw std::invalid_argument("Speech-to-text utterance is shorter than one output sample");
     std::vector<float> output(outputSize);

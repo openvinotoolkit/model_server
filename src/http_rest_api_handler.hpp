@@ -37,7 +37,8 @@ class ServableMetricReporter;
 class KFSInferenceServiceImpl;
 class Server;
 class ModelManager;
-struct ServerSettingsImpl;
+class MultiPartParser;
+struct SttPipelineHandle;
 
 // note since removal of TFS, V3 endpoints (from OpenAI) are will be also accepted as V1
 enum RequestType { ConfigReload,
@@ -127,9 +128,6 @@ public:
      */
     HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_ms, const std::string& apiKey = "");
 
-    /// Resolve WebRTC speech configuration from the serving CLI model and device settings.
-    static WebRtcSessionController::SpeechToTextConfig speechToTextConfig(const ServerSettingsImpl& settings);
-
     Status parseRequestComponents(HttpRequestComponents& components,
         const std::string_view http_method,
         const std::string& request_path,
@@ -181,12 +179,16 @@ public:
     Status processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::optional<int>& inferenceHeaderContentLength);
     Status processMetrics(const HttpRequestComponents& request_components, HttpResponseComponents& response_components, std::string& response, const std::string& request_body);
+    /// Legacy OVMS WebRTC signaling; the JSON offer names the served speech-to-text graph in "model".
     Status processWebRtcCreateSession(std::string& response, const std::string& request_body);
     Status processWebRtcAddCandidate(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processWebRtcGetCandidates(const HttpRequestComponents& request_components, std::string& response);
     Status processWebRtcRemoveSession(const HttpRequestComponents& request_components, std::string& response);
-    /// OpenAI Realtime API compatible WebRTC call: SDP offer in the body, SDP answer (with ICE candidates) returned.
-    Status processRealtimeCall(std::string& response, const std::string& request_body, HttpResponseComponents& response_components);
+    /// OpenAI Realtime API compatible WebRTC call: multipart "sdp" offer and "session" configuration naming the
+    /// served speech-to-text graph; the SDP answer (with ICE candidates) is returned.
+    Status processRealtimeCall(const HttpRequestComponents& request_components, std::string& response,
+        const std::shared_ptr<MultiPartParser>& multiPartParser, HttpResponseComponents& response_components);
+    Status getWebRtcSpeechModel(const std::string& modelName, SttPipelineHandle& speechModel);
     Status processRealtimeHangup(const HttpRequestComponents& request_components, std::string& response);
     Status processOptions(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 

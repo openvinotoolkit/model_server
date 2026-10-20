@@ -20,10 +20,13 @@
 #include <cstdlib>
 #include <cstring>
 #include <memory>
+#include <mutex>
 #include <set>
 #include <string>
 #include <vector>
 
+#include "../audio/speech_to_text/s2t_servable.hpp"
+#include "../audio/speech_to_text/stt_pipeline_handle.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 #include "../metrics/metric_provider.hpp"
 #include "../graph_export/graph_export.hpp"
@@ -278,6 +281,30 @@ extern "C" MEDIAPIPE_RUNTIME_EXPORT void* OVMS_MPFactoryFindServableDefinitionBy
 
     auto* factory = static_cast<ovms::MediapipeFactory*>(factoryHandle);
     return static_cast<void*>(factory->findDefinitionByName(name));
+}
+
+extern "C" MEDIAPIPE_RUNTIME_EXPORT int OVMS_MPFactoryGetSttPipeline(void* factoryHandle, const char* name,
+    ovms::SttPipelineHandle* handle) {
+    if (factoryHandle == nullptr || name == nullptr || handle == nullptr) {
+        gLastError = "Invalid arguments for OVMS_MPFactoryGetSttPipeline";
+        return static_cast<int>(ovms::StatusCode::INTERNAL_ERROR);
+    }
+    auto* factory = static_cast<ovms::MediapipeFactory*>(factoryHandle);
+    auto* definition = factory->findDefinitionByName(name);
+    if (definition == nullptr) {
+        return static_cast<int>(ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING);
+    }
+    std::shared_ptr<ovms::SttServable> servable;
+    auto status = definition->getSttServable(servable);
+    if (!status.ok()) {
+        gLastError = status.string();
+        return static_cast<int>(status.getCode());
+    }
+    handle->pipeline = servable->sttPipeline;
+    // Aliasing constructor: the mutex shares ownership of its servable.
+    handle->pipelineMutex = std::shared_ptr<std::mutex>(servable, &servable->sttPipelineMutex);
+    handle->modelsPath = servable->parsedModelsPath.string();
+    return static_cast<int>(ovms::StatusCode::OK);
 }
 
 extern "C" MEDIAPIPE_RUNTIME_EXPORT int OVMS_MPGraphExportCreateServableConfig(const char* directoryPath,

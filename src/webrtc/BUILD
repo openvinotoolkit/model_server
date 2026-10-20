@@ -96,6 +96,7 @@ ovms_cc_library(
         ":stt_audio_adapter",
         ":voxtral_audio_adapter",
         ":webrtc_peer_connection",
+        "//src/audio/speech_to_text:stt_pipeline_handle",
         "//src/port:rapidjson_document",
         "//src/port:rapidjson_istreamwrapper",
         "//src/port:rapidjson_stringbuffer",
@@ -137,6 +138,8 @@ cc_test(
     linkstatic = 1,
     deps = [
         "//src/audio:audio_utils",
+        "//src/audio/speech_to_text:stt_pipeline_handle",
+        "//third_party:genai",
         ":webrtc_session_controller",
         ":voxtral_audio_adapter",
         ":opus_audio_codec",

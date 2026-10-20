@@ -68,7 +68,8 @@ public:
         std::thread worker_;
     };
 
-    VoxtralAudioAdapter(std::string modelPath, std::string device);
+    /// Shares a served realtime pipeline; each stream owns its own inference state.
+    explicit VoxtralAudioAdapter(std::shared_ptr<ov::genai::ASRPipeline> pipeline);
 
     std::shared_ptr<Stream> createStream(TextCallback deltaCallback, TextCallback finalCallback,
         ErrorCallback errorCallback) const;

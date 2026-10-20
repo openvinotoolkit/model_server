@@ -30,14 +30,10 @@
 #include "voxtral_audio_adapter.hpp"
 
 namespace ovms {
+struct SttPipelineHandle;
 
 class WebRtcSessionController {
 public:
-    struct SpeechToTextConfig {
-        std::string modelPath;
-        std::string device;
-    };
-
     struct Candidate {
         std::string candidate;
         std::string mid;
@@ -50,11 +46,7 @@ public:
         std::vector<Candidate> candidates;
     };
 
-    explicit WebRtcSessionController(size_t maxSessions = 16, SpeechToTextConfig speechToText = {},
-        std::string announcedIp = {});
-
-    /// Without a speech model sessions still negotiate, but incoming audio is dropped.
-    bool hasSpeechModel() const;
+    explicit WebRtcSessionController(size_t maxSessions = 16, std::string announcedIp = {});
 
     /// Select streaming ASR from the exported model metadata, not its repository name.
     static bool isRealtimeSpeechModel(const std::string& modelPath);
@@ -64,10 +56,12 @@ public:
     static std::string announceHostCandidate(const std::string& candidate, const std::string& announcedIp);
 
     /// OVMS signaling: JSON offer/answer with trickled ICE candidates, legacy events on the "transcript" channel.
-    bool createSession(const std::string& offerSdp, const std::string& offerType, OfferResult& result);
+    /// The session transcribes with the served pipeline in speechModel; without a pipeline audio is dropped.
+    bool createSession(const std::string& offerSdp, const std::string& offerType, const SttPipelineHandle& speechModel,
+        OfferResult& result);
     /// OpenAI Realtime API compatible signaling (POST /v1/realtime/calls): the SDP answer embeds all
     /// server ICE candidates and OpenAI transcription events are exchanged on the "oai-events" channel.
-    bool createRealtimeCall(const std::string& offerSdp, OfferResult& result);
+    bool createRealtimeCall(const std::string& offerSdp, const SttPipelineHandle& speechModel, OfferResult& result);
     bool addCandidate(const std::string& sessionId, const std::string& candidate, const std::string& mid);
     bool getCandidates(const std::string& sessionId, std::vector<Candidate>& candidates) const;
     bool removeSession(const std::string& sessionId);
@@ -121,16 +115,13 @@ private:
         mutable std::mutex mutex;
     };
 
-    bool negotiateSession(const std::string& offerSdp, const std::string& offerType, Protocol protocol, OfferResult& result);
+    bool negotiateSession(const std::string& offerSdp, const std::string& offerType, Protocol protocol,
+        const SttPipelineHandle& speechModel, OfferResult& result);
     void removeDisconnectedRealtimeCalls();
 
     mutable std::mutex mutex_;
     size_t maxSessions_;
-    std::string sttModelPath_;
-    std::string sttDevice_;
     std::string announcedIp_;
-    std::shared_ptr<SttAudioAdapter> sttAdapter_;
-    std::shared_ptr<VoxtralAudioAdapter> voxtralAdapter_;
     uint64_t nextSessionId_ = 1;
     std::unordered_map<std::string, std::shared_ptr<Session>> sessions_;
 };

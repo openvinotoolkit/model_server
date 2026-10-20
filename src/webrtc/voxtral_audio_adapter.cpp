@@ -30,8 +30,11 @@ namespace {
 constexpr size_t MaxQueuedFrames = 1500;
 }
 
-VoxtralAudioAdapter::VoxtralAudioAdapter(std::string modelPath, std::string device) :
-    pipeline_(std::make_shared<ov::genai::ASRPipeline>(modelPath, device, ov::AnyMap{})) {}
+VoxtralAudioAdapter::VoxtralAudioAdapter(std::shared_ptr<ov::genai::ASRPipeline> pipeline) :
+    pipeline_(std::move(pipeline)) {
+    if (!pipeline_)
+        throw std::invalid_argument("Voxtral adapter requires a pipeline");
+}
 
 std::shared_ptr<VoxtralAudioAdapter::Stream> VoxtralAudioAdapter::createStream(
     TextCallback deltaCallback, TextCallback finalCallback, ErrorCallback errorCallback) const {
