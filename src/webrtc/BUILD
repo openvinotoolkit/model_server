@@ -134,6 +134,8 @@ ovms_cc_library(
         ":webrtc_peer_connection",
         "//src/port:rapidjson_document",
         "//src/port:rapidjson_istreamwrapper",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
         "//third_party:genai",
         "@libdatachannel//:libdatachannel",
     ],

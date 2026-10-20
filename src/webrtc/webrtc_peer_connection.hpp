@@ -40,6 +40,7 @@ public:
     using AudioTrackOpenCallback = std::function<void()>;
     using ProcessedAudioFrameCallback = std::function<void(rtc::binary data, rtc::FrameInfo info)>;
     using DataChannelCallback = std::function<void(std::shared_ptr<rtc::DataChannel> channel)>;
+    using GatheringCompleteCallback = std::function<void()>;
 
     explicit WebRtcPeerConnection(rtc::Configuration configuration);
 
@@ -52,7 +53,12 @@ public:
     void onAudioTrackOpen(AudioTrackOpenCallback callback);
     void onLocalAudioTrackOpen(AudioTrackOpenCallback callback);
     void onDataChannel(DataChannelCallback callback);
+    void onGatheringComplete(GatheringCompleteCallback callback);
     bool isLocalAudioTrackOpen() const;
+    // Current local SDP including every ICE candidate gathered so far; empty before a local description exists.
+    std::string localDescriptionSdp() const;
+    // Closes transports (releasing the UDP port) and drops all registered callbacks.
+    void close();
 
     // Adds a single Opus audio track (PT 111, the standard WebRTC dynamic payload type).
     void addAudioTrack(rtc::Description::Direction direction = rtc::Description::Direction::SendRecv);

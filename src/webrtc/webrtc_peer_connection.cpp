@@ -171,8 +171,26 @@ void WebRtcPeerConnection::onDataChannel(DataChannelCallback callback) {
     });
 }
 
+void WebRtcPeerConnection::onGatheringComplete(GatheringCompleteCallback callback) {
+    peerConnection_->onGatheringStateChange([callback](rtc::PeerConnection::GatheringState state) {
+        if (state == rtc::PeerConnection::GatheringState::Complete) {
+            SPDLOG_LOGGER_DEBUG(webrtc_logger, "Local ICE candidate gathering complete");
+            callback();
+        }
+    });
+}
+
 bool WebRtcPeerConnection::isLocalAudioTrackOpen() const {
     return audioTrack_ && audioTrack_->isOpen();
+}
+
+std::string WebRtcPeerConnection::localDescriptionSdp() const {
+    const auto description = peerConnection_->localDescription();
+    return description ? std::string(*description) : std::string{};
+}
+
+void WebRtcPeerConnection::close() {
+    peerConnection_->close();
 }
 
 void WebRtcPeerConnection::configureAudioTrackCallbacks() {
@@ -311,8 +329,14 @@ void WebRtcPeerConnection::createOffer() {
 }
 
 void WebRtcPeerConnection::createAnswer() {
+    // With auto-negotiation enabled libdatachannel already answers inside setRemoteDescription();
+    // calling setLocalDescription() again in Stable state would start an unwanted renegotiation offer.
+    if (peerConnection_->signalingState() != rtc::PeerConnection::SignalingState::HaveRemoteOffer) {
+        SPDLOG_LOGGER_DEBUG(webrtc_logger, "Local SDP answer already created");
+        return;
+    }
     SPDLOG_LOGGER_INFO(webrtc_logger, "Creating local SDP answer");
-    peerConnection_->setLocalDescription();
+    peerConnection_->setLocalDescription(rtc::Description::Type::Answer);
 }
 
 bool WebRtcPeerConnection::sendAudioFrame(rtc::binary data, rtc::FrameInfo info) {

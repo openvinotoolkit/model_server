@@ -56,6 +56,8 @@ enum RequestType { ConfigReload,
     WebRTC_AddCandidate,
     WebRTC_GetCandidates,
     WebRTC_RemoveSession,
+    WebRTC_RealtimeCall,
+    WebRTC_RealtimeHangup,
     Options };
 
 struct HttpRequestComponents {
@@ -73,12 +75,14 @@ struct HttpRequestComponents {
 
 enum class ContentType {
     JSON,
-    PLAIN_TEXT
+    PLAIN_TEXT,
+    SDP
 };
 
 struct HttpResponseComponents {
     std::optional<int> inferenceHeaderContentLength;
     ContentType contentType = ContentType::JSON;
+    std::optional<std::string> location;
 };
 
 using HandlerCallbackFn = std::function<Status(
@@ -105,6 +109,8 @@ public:
     static const std::string webrtcSessionRegexExp;
     static const std::string webrtcCandidatesRegexExp;
     static const std::string webrtcCloseRegexExp;
+    static const std::string realtimeCallsRegexExp;
+    static const std::string realtimeHangupRegexExp;
 
     static const std::string kfs_serverreadyRegexExp;
     static const std::string kfs_serverliveRegexExp;
@@ -179,6 +185,9 @@ public:
     Status processWebRtcAddCandidate(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processWebRtcGetCandidates(const HttpRequestComponents& request_components, std::string& response);
     Status processWebRtcRemoveSession(const HttpRequestComponents& request_components, std::string& response);
+    /// OpenAI Realtime API compatible WebRTC call: SDP offer in the body, SDP answer (with ICE candidates) returned.
+    Status processRealtimeCall(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components);
+    Status processRealtimeHangup(const HttpRequestComponents& request_components, std::string& response);
     Status processOptions(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
     Status processServerReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
@@ -211,6 +220,8 @@ private:
     const std::regex webrtcSessionRegex;
     const std::regex webrtcCandidatesRegex;
     const std::regex webrtcCloseRegex;
+    const std::regex realtimeCallsRegex;
+    const std::regex realtimeHangupRegex;
 
     std::map<RequestType, HandlerCallbackFn> handlers;
     int timeout_in_ms;

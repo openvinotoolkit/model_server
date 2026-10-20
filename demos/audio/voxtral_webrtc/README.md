@@ -18,6 +18,22 @@ docker run --rm --network host \
 
 Create a browser WebRTC offer with an Opus audio track and a data channel named `transcript`. POST `{"sdp":"...","type":"offer"}` to `/v1/webrtc/sessions`, set the returned answer as the remote description, and exchange ICE candidates through `/v1/webrtc/sessions/{session_id}/candidates`. The server uses UDP port 52000 for media. The data channel receives JSON messages of type `user_delta`, `user_final`, or `user_error`. Close the session with `/v1/webrtc/sessions/{session_id}/close` to flush the last audio chunk. Voxtral accepts 16 kHz mono audio internally; OVMS converts the incoming 48 kHz Opus frames.
 
+### OpenAI Realtime compatible signaling
+
+OVMS also accepts the OpenAI Realtime WebRTC flow used by OpenAI-compatible clients. POST the raw SDP offer with `Content-Type: application/sdp` to `/v1/realtime/calls`; the response body is the SDP answer (`application/sdp`) with all server ICE candidates embedded, so no candidate exchange is needed. Create the data channel with the label `oai-events`. After it opens, the server sends `session.created`. Stream audio and send `{"type":"input_audio_buffer.commit"}` to end an utterance. The server replies with `input_audio_buffer.committed`, then `conversation.item.input_audio_transcription.delta` events and a final `conversation.item.input_audio_transcription.completed` event that carries `item_id` and `transcript`. Audio sent after a commit starts a new item. The `Location` response header holds the call path (`/v1/realtime/calls/{call_id}`). End the call by closing the peer connection, or with `POST /v1/realtime/calls/{call_id}/hangup`. If OVMS runs with an API key, send it as `Authorization: Bearer <key>`. Session configuration events are ignored: the model is selected at server startup.
+
+The end-to-end tests in `tests/webrtc_e2e` exercise both signaling modes against a running server.
+
+### Connecting from another machine (Docker)
+
+Inside a container, OVMS only knows its bridge address (for example `172.17.0.8`), so the ICE candidates it advertises are unreachable for clients on other machines. Publish the media port 1:1 (`-p 52000:52000/udp`) and set `OVMS_WEBRTC_ANNOUNCED_IP` to the host's LAN or public IP address:
+
+```bash
+docker run ... -p 9112:9112 -p 52000:52000/udp -e OVMS_WEBRTC_ANNOUNCED_IP=192.168.1.50 ...
+```
+
+For every host ICE candidate, OVMS then also advertises a copy with the announced address and the same port. Both `/v1/webrtc/sessions` candidates and the `/v1/realtime/calls` SDP answer include it, and the original candidate is kept for clients on the same host. The value must be an IPv4 or IPv6 address of the same family as the container's candidates; invalid values are logged and ignored. Clients must be able to reach UDP port 52000 on that address; clients behind restrictive firewalls need a TURN relay.
+
 WebRTC speech recognition is configured automatically by `--source_model` with `--task speech2text`. It uses the downloaded model under `--model_repository_path` and the device specified by `--target_device` (or the normal recommended device when omitted). The exported `config.json` selects Voxtral Realtime streaming or utterance-based ASR such as Whisper; neither the repository name nor the serving alias controls backend selection. No WebRTC speech-model path or device environment variables are needed or read. Omni environment settings are ignored in this speech-only mode.
 
 Use `/v1/webrtc/sessions` for SDP signaling, not `/v3/audio/transcriptions` or another V3 inference endpoint. A signaling request does not need a `model` field: the speech model is selected at server startup.

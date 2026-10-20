@@ -15,6 +15,7 @@
 //*****************************************************************************/
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <chrono>
 #include <condition_variable>
 #include <cstdlib>
@@ -81,7 +82,7 @@ class WebRtcSpeechModelTest : public ::testing::Test {
 protected:
     void SetUp() override {
         directory = std::filesystem::temp_directory_path() /
-            ("ovms-webrtc-speech-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+                    ("ovms-webrtc-speech-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
         ASSERT_TRUE(std::filesystem::create_directory(directory));
     }
 
@@ -288,6 +289,110 @@ TEST(WebRtcSessionControllerTest, CreatesAndRemovesSession) {
     EXPECT_FALSE(controller.addCandidate("missing", "candidate", "0"));
     EXPECT_TRUE(controller.removeSession(result.sessionId));
     EXPECT_EQ(controller.sessionCount(), 0);
+}
+
+TEST(WebRtcSessionControllerTest, RejectsInvalidRealtimeCall) {
+    WebRtcSessionController controller;
+    WebRtcSessionController::OfferResult result;
+    EXPECT_FALSE(controller.createRealtimeCall("", result));
+    EXPECT_EQ(controller.sessionCount(), 0);
+}
+
+namespace {
+std::string createGatheredOffer(WebRtcPeerConnection& offerer) {
+    std::mutex mutex;
+    std::condition_variable condition;
+    bool gatheringComplete = false;
+    offerer.onGatheringComplete([&]() {
+        std::lock_guard<std::mutex> lock(mutex);
+        gatheringComplete = true;
+        condition.notify_all();
+    });
+    offerer.addAudioTrack(rtc::Description::Direction::SendRecv);
+    offerer.createOffer();
+    std::unique_lock<std::mutex> lock(mutex);
+    if (!condition.wait_for(lock, std::chrono::seconds(5), [&] { return gatheringComplete; }))
+        return {};
+    return offerer.localDescriptionSdp();
+}
+}  // namespace
+
+TEST(WebRtcSessionControllerTest, CreatesRealtimeCallWithCompleteAnswer) {
+    WebRtcSessionController controller;
+    WebRtcSessionController::OfferResult result;
+    WebRtcPeerConnection offerer(rtc::Configuration{});
+    const std::string offerSdp = createGatheredOffer(offerer);
+    ASSERT_FALSE(offerSdp.empty());
+
+    ASSERT_TRUE(controller.createRealtimeCall(offerSdp, result));
+    EXPECT_FALSE(result.sessionId.empty());
+    EXPECT_EQ(result.type, "answer");
+    // Non-trickle clients (OpenAI Realtime /v1/realtime/calls) need candidates inside the SDP answer.
+    EXPECT_NE(result.sdp.find("a=candidate:"), std::string::npos) << result.sdp;
+    // The answer must not be replaced by a renegotiation offer.
+    EXPECT_EQ(result.sdp.find("a=setup:actpass"), std::string::npos) << result.sdp;
+    EXPECT_EQ(controller.sessionCount(), 1);
+    EXPECT_TRUE(controller.removeSession(result.sessionId));
+    EXPECT_EQ(controller.sessionCount(), 0);
+}
+
+TEST(WebRtcSessionControllerTest, AnnouncesHostCandidateWithConfiguredIp) {
+    EXPECT_EQ(WebRtcSessionController::announceHostCandidate(
+                  "candidate:1 1 UDP 2114977791 172.17.0.8 52000 typ host", "10.91.240.7"),
+        "candidate:1 1 UDP 2114977791 10.91.240.7 52000 typ host");
+    EXPECT_EQ(WebRtcSessionController::announceHostCandidate(
+                  "a=candidate:1 1 UDP 2114977791 172.17.0.8 52000 typ host", "10.91.240.7"),
+        "a=candidate:1 1 UDP 2114977791 10.91.240.7 52000 typ host");
+    EXPECT_EQ(WebRtcSessionController::announceHostCandidate(
+                  "candidate:2 1 UDP 2114977535 fd00::8 52000 typ host", "2001:db8::1"),
+        "candidate:2 1 UDP 2114977535 2001:db8::1 52000 typ host");
+}
+
+TEST(WebRtcSessionControllerTest, DoesNotAnnounceUnsupportedCandidates) {
+    const std::string hostCandidate = "candidate:1 1 UDP 2114977791 172.17.0.8 52000 typ host";
+    EXPECT_TRUE(WebRtcSessionController::announceHostCandidate(hostCandidate, "").empty());
+    EXPECT_TRUE(WebRtcSessionController::announceHostCandidate(hostCandidate, "172.17.0.8").empty());
+    EXPECT_TRUE(WebRtcSessionController::announceHostCandidate(hostCandidate, "2001:db8::1").empty());
+    EXPECT_TRUE(WebRtcSessionController::announceHostCandidate(
+        "candidate:2 1 UDP 2114977535 fd00::8 52000 typ host", "10.91.240.7")
+                    .empty());
+    EXPECT_TRUE(WebRtcSessionController::announceHostCandidate(
+        "candidate:3 1 UDP 1677729535 34.1.2.3 52000 typ srflx raddr 172.17.0.8 rport 52000", "10.91.240.7")
+                    .empty());
+    EXPECT_TRUE(WebRtcSessionController::announceHostCandidate(
+        "candidate:4 1 UDP 2114977791 abc.local 52000 typ host", "10.91.240.7")
+                    .empty());
+    EXPECT_TRUE(WebRtcSessionController::announceHostCandidate("not a candidate", "10.91.240.7").empty());
+}
+
+TEST(WebRtcSessionControllerTest, RealtimeCallAnnouncesConfiguredIp) {
+    const std::string announcedIp = "10.91.240.7";
+    WebRtcSessionController controller(16, {}, {}, "CPU", "CPU", 0, announcedIp);
+    WebRtcSessionController::OfferResult result;
+    WebRtcPeerConnection offerer(rtc::Configuration{});
+    const std::string offerSdp = createGatheredOffer(offerer);
+    ASSERT_FALSE(offerSdp.empty());
+
+    ASSERT_TRUE(controller.createRealtimeCall(offerSdp, result));
+    EXPECT_NE(result.sdp.find(" " + announcedIp + " 52000 typ host"), std::string::npos) << result.sdp;
+    const bool announcedInCandidates = std::any_of(result.candidates.begin(), result.candidates.end(),
+        [&](const WebRtcSessionController::Candidate& candidate) {
+            return candidate.candidate.find(" " + announcedIp + " ") != std::string::npos;
+        });
+    EXPECT_TRUE(announcedInCandidates);
+    EXPECT_TRUE(controller.removeSession(result.sessionId));
+}
+
+TEST(WebRtcSessionControllerTest, IgnoresInvalidAnnouncedIp) {
+    WebRtcSessionController controller(16, {}, {}, "CPU", "CPU", 0, "not-an-ip");
+    WebRtcSessionController::OfferResult result;
+    WebRtcPeerConnection offerer(rtc::Configuration{});
+    const std::string offerSdp = createGatheredOffer(offerer);
+    ASSERT_FALSE(offerSdp.empty());
+
+    ASSERT_TRUE(controller.createRealtimeCall(offerSdp, result));
+    EXPECT_EQ(result.sdp.find("not-an-ip"), std::string::npos) << result.sdp;
+    EXPECT_TRUE(controller.removeSession(result.sessionId));
 }
 
 }  // namespace ovms
