@@ -20,6 +20,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <exception>
+#include <fstream>
 #include <sstream>
 #include <stdexcept>
 #include <utility>
@@ -29,6 +30,8 @@
 #include <openvino/genai/omni/talker.hpp>
 #include <openvino/genai/visual_language/pipeline.hpp>
 
+#include "src/port/rapidjson_document.hpp"
+#include "src/port/rapidjson_istreamwrapper.hpp"
 #include "src/logging.hpp"
 #include "omni_audio_adapter.hpp"
 
@@ -203,18 +206,33 @@ AudioChunk WebRtcSessionController::Session::decodeAudioFrame(const rtc::binary&
 }
 
 WebRtcSessionController::WebRtcSessionController(size_t maxSessions, std::string omniModelPath,
-    std::string sttModelPath, std::string sttDevice, std::string voxtralModelPath,
+    SpeechToTextConfig speechToText,
     std::string omniDevice, std::string talkerDevice, size_t audioChunkFrames) :
     maxSessions_(maxSessions),
     omniModelPath_(std::move(omniModelPath)),
-    sttModelPath_(std::move(sttModelPath)),
-    sttDevice_(std::move(sttDevice)),
-    voxtralModelPath_(std::move(voxtralModelPath)),
+    sttModelPath_(std::move(speechToText.modelPath)),
+    sttDevice_(std::move(speechToText.device)),
     omniDevice_(std::move(omniDevice)),
     talkerDevice_(std::move(talkerDevice)),
     audioChunkFrames_(audioChunkFrames) {
-    if (!voxtralModelPath_.empty() && (!omniModelPath_.empty() || !sttModelPath_.empty()))
-        throw std::invalid_argument("Voxtral WebRTC cannot be combined with Omni or Whisper STT");
+    if (!sttModelPath_.empty() && !omniModelPath_.empty())
+        throw std::invalid_argument("Speech-to-text WebRTC cannot be combined with Omni");
+}
+
+bool WebRtcSessionController::isRealtimeSpeechModel(const std::string& modelPath) {
+    const std::string configPath = modelPath + "/config.json";
+    std::ifstream input(configPath);
+    if (!input.is_open())
+        throw std::runtime_error("Cannot open speech model configuration: " + configPath);
+    rapidjson::IStreamWrapper stream(input);
+    rapidjson::Document config;
+    config.ParseStream(stream);
+    if (config.HasParseError() || !config.IsObject())
+        throw std::runtime_error("Invalid speech model configuration: " + configPath);
+    const auto modelType = config.FindMember("model_type");
+    if (modelType == config.MemberEnd() || !modelType->value.IsString())
+        throw std::runtime_error("Missing or invalid model_type in speech model configuration: " + configPath);
+    return std::string(modelType->value.GetString()) == "voxtral_realtime";
 }
 
 bool WebRtcSessionController::createSession(const std::string& offerSdp, const std::string& offerType, OfferResult& result) {
@@ -252,9 +270,13 @@ bool WebRtcSessionController::createSession(const std::string& offerSdp, const s
             }
         }
         omniAdapter = omniAdapter_;
-        if (!sttModelPath_.empty() && !sttAdapter_) {
+        if (!sttModelPath_.empty() && !sttAdapter_ && !voxtralAdapter_) {
             try {
-                sttAdapter_ = std::make_shared<SttAudioAdapter>(sttModelPath_, sttDevice_);
+                if (isRealtimeSpeechModel(sttModelPath_)) {
+                    voxtralAdapter_ = std::make_shared<VoxtralAudioAdapter>(sttModelPath_, sttDevice_);
+                } else {
+                    sttAdapter_ = std::make_shared<SttAudioAdapter>(sttModelPath_, sttDevice_);
+                }
                 SPDLOG_LOGGER_INFO(webrtc_logger, "Initialized WebRTC STT model from {} on {}", sttModelPath_, sttDevice_);
             } catch (const std::exception& e) {
                 SPDLOG_LOGGER_ERROR(webrtc_logger, "Could not initialize WebRTC STT model at {}: {}", sttModelPath_, e.what());
@@ -265,15 +287,6 @@ bool WebRtcSessionController::createSession(const std::string& offerSdp, const s
             }
         }
         sttAdapter = sttAdapter_;
-        if (!voxtralModelPath_.empty() && !voxtralAdapter_) {
-            try {
-                voxtralAdapter_ = std::make_shared<VoxtralAudioAdapter>(voxtralModelPath_, sttDevice_);
-                SPDLOG_LOGGER_INFO(webrtc_logger, "Initialized WebRTC Voxtral model from {} on {}", voxtralModelPath_, sttDevice_);
-            } catch (const std::exception& e) {
-                SPDLOG_LOGGER_ERROR(webrtc_logger, "Could not initialize WebRTC Voxtral model at {}: {}", voxtralModelPath_, e.what());
-                return false;
-            }
-        }
         voxtralAdapter = voxtralAdapter_;
     }
 

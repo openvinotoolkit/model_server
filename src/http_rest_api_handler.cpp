@@ -38,6 +38,7 @@
 #include "src/port/rapidjson_writer.hpp"
 
 #include "config.hpp"
+#include "ov_utils.hpp"
 #include "dags/pipeline.hpp"
 #include "dags/pipeline_factory.hpp"
 #include "dags/pipelinedefinition.hpp"
@@ -94,21 +95,6 @@ const std::string DEFAULT_VERSION = "DEFAULT";
 std::string getWebRtcOmniModelPath() {
     const char* modelPath = std::getenv("OVMS_WEBRTC_OMNI_MODEL_PATH");
     return modelPath == nullptr ? std::string{} : std::string(modelPath);
-}
-
-std::string getWebRtcSttModelPath() {
-    const char* modelPath = std::getenv("OVMS_WEBRTC_STT_MODEL_PATH");
-    return modelPath == nullptr ? std::string{} : std::string(modelPath);
-}
-
-std::string getWebRtcVoxtralModelPath() {
-    const char* modelPath = std::getenv("OVMS_WEBRTC_VOXTRAL_MODEL_PATH");
-    return modelPath == nullptr ? std::string{} : std::string(modelPath);
-}
-
-std::string getWebRtcSttDevice() {
-    const char* device = std::getenv("OVMS_WEBRTC_STT_DEVICE");
-    return device == nullptr || device[0] == '\0' ? "CPU" : device;
 }
 
 std::string getWebRtcOmniDevice() {
@@ -187,13 +173,23 @@ HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_
 
     kfsGrpcImpl(dynamic_cast<const GRPCServerModule*>(this->ovmsServer.getModule(GRPC_SERVER_MODULE_NAME))->getKFSGrpcImpl()),
     modelManager(dynamic_cast<const ServableManagerModule*>(this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager()),
-    webRtcSessionController(16, getWebRtcOmniModelPath(), getWebRtcSttModelPath(), getWebRtcSttDevice(),
-        getWebRtcVoxtralModelPath(), getWebRtcOmniDevice(), getWebRtcTalkerDevice(), getWebRtcOmniAudioChunkFrames()) {
+    webRtcSessionController(16, Config::instance().getServerSettings().hfSettings.task == SPEECH_TO_TEXT_GRAPH ? std::string{} : getWebRtcOmniModelPath(),
+        speechToTextConfig(Config::instance().getServerSettings()),
+        getWebRtcOmniDevice(), getWebRtcTalkerDevice(), getWebRtcOmniAudioChunkFrames()) {
     if (nullptr == this->ovmsServer.getModule(GRPC_SERVER_MODULE_NAME))
         throw std::logic_error("Tried to create http rest api handler without grpc server module");
     if (nullptr == this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))
         throw std::logic_error("Tried to create http rest api handler without servable manager module");
     registerAll();
+}
+
+WebRtcSessionController::SpeechToTextConfig HttpRestApiHandler::speechToTextConfig(const ServerSettingsImpl& settings) {
+    const auto& hfSettings = settings.hfSettings;
+    if (settings.serverMode != HF_PULL_AND_START_MODE || hfSettings.task != SPEECH_TO_TEXT_GRAPH)
+        return {};
+    return {
+        FileSystem::joinPath({hfSettings.downloadPath, hfSettings.sourceModel}),
+        hfSettings.exportSettings.targetDevice.empty() ? recommendTargetDevice() : hfSettings.exportSettings.targetDevice};
 }
 
 Status HttpRestApiHandler::parseModelVersion(std::string& model_version_str, std::optional<int64_t>& model_version) {

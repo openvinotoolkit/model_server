@@ -27,6 +27,34 @@
 #include "light_test_utils.hpp"
 #include "test_with_temp_dir.hpp"
 
+TEST(WebRtcSpeechConfiguration, ResolvesDownloadedModelUsingSourceNotServingAlias) {
+    ovms::ServerSettingsImpl settings;
+    settings.serverMode = ovms::HF_PULL_AND_START_MODE;
+    settings.hfSettings.task = ovms::SPEECH_TO_TEXT_GRAPH;
+    settings.hfSettings.sourceModel = "OpenVINO/voxtral-realtime-2602";
+    settings.hfSettings.downloadPath = "/models";
+    settings.hfSettings.exportSettings.modelName = "voxtral-asr";
+    settings.hfSettings.exportSettings.targetDevice = "GPU.1";
+
+    const auto config = ovms::HttpRestApiHandler::speechToTextConfig(settings);
+    EXPECT_EQ(std::filesystem::path(config.modelPath), std::filesystem::path("/models/OpenVINO/voxtral-realtime-2602"));
+    EXPECT_EQ(config.device, "GPU.1");
+}
+
+TEST(WebRtcSpeechConfiguration, DoesNotEnableSpeechForOtherTasksOrPullOnly) {
+    ovms::ServerSettingsImpl settings;
+    settings.serverMode = ovms::HF_PULL_AND_START_MODE;
+    settings.hfSettings.sourceModel = "OpenVINO/model";
+    settings.hfSettings.downloadPath = "/models";
+    settings.hfSettings.exportSettings.targetDevice = "CPU";
+    settings.hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
+    EXPECT_TRUE(ovms::HttpRestApiHandler::speechToTextConfig(settings).modelPath.empty());
+
+    settings.hfSettings.task = ovms::SPEECH_TO_TEXT_GRAPH;
+    settings.serverMode = ovms::HF_PULL_MODE;
+    EXPECT_TRUE(ovms::HttpRestApiHandler::speechToTextConfig(settings).modelPath.empty());
+}
+
 static const char* configWith1Dummy = R"(
 {
     "model_config_list": [

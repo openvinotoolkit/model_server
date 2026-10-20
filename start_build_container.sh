@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-CONTAINER=openvino/model_server-build:krz 
-CONTAINER=docker.io/openvino/model_server-build:audio-placement
+IMAGE=docker.io/openvino/model_server-build:audio-placement
+IMAGE=openvino/model_server-build:krz-local-genai-1792251046 
 mkdir -p /home/krz/.cache/ovms-bazel
 chmod a+rwx /home/krz/.cache/ovms-bazel
 docker stop ovms-build-krz
@@ -16,5 +16,5 @@ docker run -it \
   -v /home/krz/.gitconfig:/root/.gitconfig:ro \
   -v /usr/bin/gh:/usr/bin/gh:ro \
   -v /home/krz/.config/gh:/root/.config/gh:ro \
-  $CONTAINER \
+  $IMAGE \
   bash

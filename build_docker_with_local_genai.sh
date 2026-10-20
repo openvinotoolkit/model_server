@@ -10,6 +10,7 @@ set -a;
 source ~/.env; 
 set +a;
 
+export BAZEL_DEBUG_BUILD_FLAGS='" --output_filter=DONT_MATCH_ANYTHING_XYZ --define=CLOUD_DISABLE=1"'
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -38,7 +39,7 @@ Build OpenVINO Model Server with local OpenVINO GenAI branch.
 ARGUMENTS:
     BASE_OS      Base OS for build (default: ubuntu24)
                  Options: ubuntu24, ubuntu22, redhat
-    IMAGE_TAG    Docker image tag (default: local-genai-<timestamp>)
+    IMAGE_TAG    Docker image tag (default: krz-local-genai-<hash>-<subject>)
 
 EXAMPLES:
     $0                              # Build ubuntu24 with default tag
@@ -61,7 +62,13 @@ fi
 
 # Configuration with defaults
 BASE_OS="${1:-ubuntu24}"
-IMAGE_TAG="${2:-local-genai-$(date +%s)}"
+IMAGE_TAG="${2:-}"
+if [[ -z "$IMAGE_TAG" ]]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    COMMIT_HASH="$(git -C "$SCRIPT_DIR" rev-parse --short HEAD)"
+    COMMIT_SUBJECT="$(git -C "$SCRIPT_DIR" log -1 --format=%s | LC_ALL=C tr '[:upper:]' '[:lower:]' | LC_ALL=C sed -E 's/[^a-z0-9]+/-/g' | cut -c1-32 | sed -E 's/^-+//; s/-+$//')"
+    IMAGE_TAG="krz-local-genai-${COMMIT_HASH}${COMMIT_SUBJECT:+-$COMMIT_SUBJECT}"
+fi
 GENAI_PATH="../openvino.genai"
 
 # Verify OpenVINO GenAI repo exists
@@ -113,7 +120,8 @@ print_info "Full build output will be logged to: $BUILD_LOG"
 # embedded `"` characters (not real shell quoting) to keep it all one shell word. A plain
 # string with a leading space breaks that and leaks a stray word to the docker CLI, so this
 # value must itself start/end with a literal `"` character like the other *_PARAMS vars do.
-export BAZEL_DEBUG_BUILD_FLAGS='" --output_filter=DONT_MATCH_ANYTHING_XYZ"'
+# CLOUD_DISABLE=1 skips fetching aws-sdk-cpp/azure/google-cloud-cpp (no S3/GCS/Azure model paths).
+export BAZEL_DEBUG_BUILD_FLAGS='" --output_filter=DONT_MATCH_ANYTHING_XYZ --define=CLOUD_DISABLE=1"'
 export MEDIAPIPE_DISABLE=0
 
 

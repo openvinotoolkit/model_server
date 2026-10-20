@@ -82,31 +82,58 @@ void VoxtralAudioAdapter::Stream::close() {
 void VoxtralAudioAdapter::Stream::run() {
     try {
         auto stream = pipeline_->create_stream();
-        while (true) {
-            AudioChunk frame;
-            size_t queuedFrames = 0;
-            {
-                std::unique_lock<std::mutex> lock(mutex_);
-                condition_.wait(lock, [this] { return finishing_ || !frames_.empty(); });
-                if (frames_.empty())
-                    break;
-                frame = std::move(frames_.front());
-                frames_.pop();
-                queuedFrames = frames_.size();
+        std::exception_ptr inputError;
+        std::thread inputWorker([this, &stream, &inputError] {
+            try {
+                while (true) {
+                    AudioChunk frame;
+                    size_t queuedFrames = 0;
+                    {
+                        std::unique_lock<std::mutex> lock(mutex_);
+                        condition_.wait(lock, [this] { return finishing_ || !frames_.empty(); });
+                        if (frames_.empty())
+                            break;
+                        frame = std::move(frames_.front());
+                        frames_.pop();
+                        queuedFrames = frames_.size();
+                    }
+                    const auto start = std::chrono::steady_clock::now();
+                    const auto audio = SttAudioAdapter::prepareAudio(frame);
+                    stream.push_audio(audio);
+                    SPDLOG_LOGGER_TRACE(webrtc_logger, "Voxtral push_audio: samples={}, queued_frames={}, elapsed_ms={}",
+                        frame.samples.size(), queuedFrames,
+                        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count());
+                }
+                stream.end_audio();
+            } catch (...) {
+                inputError = std::current_exception();
+                try {
+                    stream.end_audio();
+                } catch (...) {
+                }
             }
-            const auto start = std::chrono::steady_clock::now();
-            const std::string delta = stream.push_audio(SttAudioAdapter::prepareAudio(frame));
-            SPDLOG_LOGGER_TRACE(webrtc_logger, "Voxtral push_audio: samples={}, queued_frames={}, elapsed_ms={}, delta_bytes={}",
-                frame.samples.size(), queuedFrames,
-                std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count(),
-                delta.size());
-            if (!delta.empty()) {
-                SPDLOG_LOGGER_INFO(webrtc_logger, "Voxtral transcript delta: {}", delta);
-            }
-            if (!delta.empty() && deltaCallback_)
-                deltaCallback_(delta);
+        });
+
+        std::string transcript;
+        std::exception_ptr generationError;
+        try {
+            const auto result = stream.generate([this](std::string delta) {
+                if (!delta.empty()) {
+                    SPDLOG_LOGGER_INFO(webrtc_logger, "Voxtral transcript delta: {}", delta);
+                    if (deltaCallback_)
+                        deltaCallback_(delta);
+                }
+                return ov::genai::StreamingStatus::RUNNING;
+            });
+            transcript = static_cast<std::string>(result);
+        } catch (...) {
+            generationError = std::current_exception();
         }
-        const std::string transcript = stream.finish();
+        inputWorker.join();
+        if (generationError)
+            std::rethrow_exception(generationError);
+        if (inputError)
+            std::rethrow_exception(inputError);
         SPDLOG_LOGGER_INFO(webrtc_logger, "Voxtral final transcript: {}", transcript);
         if (finalCallback_)
             finalCallback_(transcript);

@@ -132,6 +132,8 @@ ovms_cc_library(
         ":stt_audio_adapter",
         ":voxtral_audio_adapter",
         ":webrtc_peer_connection",
+        "//src/port:rapidjson_document",
+        "//src/port:rapidjson_istreamwrapper",
         "//third_party:genai",
         "@libdatachannel//:libdatachannel",
     ],
@@ -211,4 +213,3 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
-

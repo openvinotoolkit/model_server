@@ -18,6 +18,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <mutex>
@@ -64,17 +65,57 @@ TEST(WebRtcSessionControllerTest, RejectsSessionWhenConfiguredOmniModelCannotLoa
     EXPECT_EQ(controller.sessionCount(), 0);
 }
 
-TEST(WebRtcSessionControllerTest, RejectsSessionWhenConfiguredVoxtralModelCannotLoad) {
-    WebRtcSessionController controller(16, {}, {}, "CPU", "/missing/webrtc/voxtral/model");
+TEST(WebRtcSessionControllerTest, RejectsSessionWhenConfiguredSpeechModelCannotLoad) {
+    WebRtcSessionController controller(16, {}, {"/missing/webrtc/speech/model", "CPU"});
     WebRtcSessionController::OfferResult result;
 
     EXPECT_FALSE(controller.createSession("v=0\r\n", "offer", result));
     EXPECT_EQ(controller.sessionCount(), 0);
 }
 
-TEST(WebRtcSessionControllerTest, RejectsMixedVoxtralAndOmniConfiguration) {
-    EXPECT_THROW(WebRtcSessionController(16, "/omni", {}, "CPU", "/voxtral"), std::invalid_argument);
-    EXPECT_THROW(WebRtcSessionController(16, {}, "/whisper", "CPU", "/voxtral"), std::invalid_argument);
+TEST(WebRtcSessionControllerTest, RejectsMixedSpeechAndOmniConfiguration) {
+    EXPECT_THROW(WebRtcSessionController(16, "/omni", {"/speech", "CPU"}), std::invalid_argument);
+}
+
+class WebRtcSpeechModelTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        directory = std::filesystem::temp_directory_path() /
+            ("ovms-webrtc-speech-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+        ASSERT_TRUE(std::filesystem::create_directory(directory));
+    }
+
+    void TearDown() override {
+        std::filesystem::remove(directory / "config.json");
+        std::filesystem::remove(directory);
+    }
+
+    void writeConfig(const std::string& content) {
+        std::ofstream file(directory / "config.json");
+        ASSERT_TRUE(file.is_open());
+        file << content;
+        ASSERT_TRUE(file.good());
+    }
+
+    std::filesystem::path directory;
+};
+
+TEST_F(WebRtcSpeechModelTest, SelectsRealtimeFromMetadataRegardlessOfDirectoryName) {
+    writeConfig(R"({"model_type":"voxtral_realtime"})");
+    EXPECT_TRUE(WebRtcSessionController::isRealtimeSpeechModel(directory.string()));
+}
+
+TEST_F(WebRtcSpeechModelTest, SelectsWhisperFromMetadata) {
+    writeConfig(R"({"model_type":"whisper"})");
+    EXPECT_FALSE(WebRtcSessionController::isRealtimeSpeechModel(directory.string()));
+}
+
+TEST_F(WebRtcSpeechModelTest, RejectsMissingOrInvalidConfiguration) {
+    EXPECT_THROW(WebRtcSessionController::isRealtimeSpeechModel(directory.string()), std::runtime_error);
+    for (const std::string& content : {"invalid json", "[]", "{}", R"({"model_type":42})"}) {
+        writeConfig(content);
+        EXPECT_THROW(WebRtcSessionController::isRealtimeSpeechModel(directory.string()), std::runtime_error);
+    }
 }
 
 TEST(VoxtralAudioAdapterTest, EmitsTextBeforeInputEnds) {
@@ -120,7 +161,7 @@ TEST(WebRtcSessionControllerTest, VoxtralTranscribesWebRtcAudioWithoutSilenceDet
     const std::string wav{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
     const auto samples = audio_utils::readWav(wav, 48000);
 
-    WebRtcSessionController controller(16, {}, {}, "CPU", modelPath);
+    WebRtcSessionController controller(16, {}, {modelPath, "CPU"});
     rtc::Configuration configuration;
     configuration.portRangeBegin = 52001;
     configuration.portRangeEnd = 52001;

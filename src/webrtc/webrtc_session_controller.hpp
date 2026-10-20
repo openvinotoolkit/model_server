@@ -37,6 +37,11 @@ namespace ovms {
 
 class WebRtcSessionController {
 public:
+    struct SpeechToTextConfig {
+        std::string modelPath;
+        std::string device;
+    };
+
     struct Candidate {
         std::string candidate;
         std::string mid;
@@ -50,8 +55,11 @@ public:
     };
 
     explicit WebRtcSessionController(size_t maxSessions = 16, std::string omniModelPath = {},
-        std::string sttModelPath = {}, std::string sttDevice = "CPU", std::string voxtralModelPath = {},
+        SpeechToTextConfig speechToText = {},
         std::string omniDevice = "CPU", std::string talkerDevice = "CPU", size_t audioChunkFrames = 0);
+
+    /// Select streaming ASR from the exported model metadata, not its repository name.
+    static bool isRealtimeSpeechModel(const std::string& modelPath);
 
     bool createSession(const std::string& offerSdp, const std::string& offerType, OfferResult& result);
     bool addCandidate(const std::string& sessionId, const std::string& candidate, const std::string& mid);
@@ -88,7 +96,6 @@ private:
     std::string omniModelPath_;
     std::string sttModelPath_;
     std::string sttDevice_;
-    std::string voxtralModelPath_;
     std::string omniDevice_;
     std::string talkerDevice_;
     size_t audioChunkFrames_;

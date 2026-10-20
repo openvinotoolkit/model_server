@@ -37,6 +37,7 @@ class ServableMetricReporter;
 class KFSInferenceServiceImpl;
 class Server;
 class ModelManager;
+struct ServerSettingsImpl;
 
 // note since removal of TFS, V3 endpoints (from OpenAI) are will be also accepted as V1
 enum RequestType { ConfigReload,
@@ -119,6 +120,9 @@ public:
      * @param timeout_in_ms
      */
     HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_ms, const std::string& apiKey = "");
+
+    /// Resolve WebRTC speech configuration from the serving CLI model and device settings.
+    static WebRtcSessionController::SpeechToTextConfig speechToTextConfig(const ServerSettingsImpl& settings);
 
     Status parseRequestComponents(HttpRequestComponents& components,
         const std::string_view http_method,
