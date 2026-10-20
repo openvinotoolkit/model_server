@@ -17,6 +17,7 @@
 
 #include <cmath>
 #include <stdexcept>
+#include <utility>
 
 namespace ovms {
 
@@ -63,6 +64,16 @@ std::optional<AudioChunk> AudioUtteranceBuffer::push(const AudioChunk& frame) {
         return utterance;
     }
     return std::nullopt;
+}
+
+std::optional<AudioChunk> AudioUtteranceBuffer::flush() {
+    if (speechFrames_ == 0) {
+        reset();
+        return std::nullopt;
+    }
+    AudioChunk utterance{std::move(samples_), sampleRate_, startTimestampUs_, channels_};
+    reset();
+    return utterance;
 }
 
 void AudioUtteranceBuffer::reset() {

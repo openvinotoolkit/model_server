@@ -79,6 +79,10 @@ void VoxtralAudioAdapter::Stream::close() {
         worker_.join();
 }
 
+bool VoxtralAudioAdapter::Stream::isCompleted() const {
+    return completed_.load();
+}
+
 void VoxtralAudioAdapter::Stream::run() {
     try {
         auto stream = pipeline_->create_stream();
@@ -141,6 +145,7 @@ void VoxtralAudioAdapter::Stream::run() {
         if (errorCallback_)
             errorCallback_(std::current_exception());
     }
+    completed_ = true;
 }
 
 }  // namespace ovms

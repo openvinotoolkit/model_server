@@ -27,10 +27,4 @@ struct AudioChunk {
     uint32_t channels = 1;
 };
 
-class StreamingAudioModel {
-public:
-    virtual ~StreamingAudioModel() = default;
-    virtual AudioChunk process(const AudioChunk& input) = 0;
-};
-
 }  // namespace ovms

@@ -17,7 +17,6 @@
 
 #include <cstddef>
 #include <condition_variable>
-#include <deque>
 #include <mutex>
 #include <memory>
 #include <string>
@@ -26,11 +25,8 @@
 
 #include "webrtc_peer_connection.hpp"
 #include "audio_utterance_buffer.hpp"
-#include "mock_echo_streaming_audio_model.hpp"
-#include "omni_audio_adapter.hpp"
 #include "opus_audio_codec.hpp"
 #include "stt_audio_adapter.hpp"
-#include "streaming_audio_processor.hpp"
 #include "voxtral_audio_adapter.hpp"
 
 namespace ovms {
@@ -54,10 +50,11 @@ public:
         std::vector<Candidate> candidates;
     };
 
-    explicit WebRtcSessionController(size_t maxSessions = 16, std::string omniModelPath = {},
-        SpeechToTextConfig speechToText = {},
-        std::string omniDevice = "CPU", std::string talkerDevice = "CPU", size_t audioChunkFrames = 0,
+    explicit WebRtcSessionController(size_t maxSessions = 16, SpeechToTextConfig speechToText = {},
         std::string announcedIp = {});
+
+    /// Without a speech model sessions still negotiate, but incoming audio is dropped.
+    bool hasSpeechModel() const;
 
     /// Select streaming ASR from the exported model metadata, not its repository name.
     static bool isRealtimeSpeechModel(const std::string& modelPath);
@@ -84,7 +81,6 @@ private:
 
     struct Session : std::enable_shared_from_this<Session> {
         Session(rtc::Configuration configuration, Protocol protocol, std::string id);
-        void sendGeneratedAudio(const AudioChunk& audio, rtc::FrameInfo info, bool complete);
         void sendTranscript(const std::string& message);
         void sendUserDelta(const std::string& itemId, const std::string& text);
         void sendUserFinal(const std::string& itemId, const std::string& text);
@@ -95,6 +91,9 @@ private:
         void startVoxtralStream();
         std::shared_ptr<VoxtralAudioAdapter::Stream> currentVoxtralStream();
         void commitAudio();
+        // Utterance-based ASR (e.g. Whisper): buffers audio until silence or an explicit commit.
+        void pushUtteranceAudio(const AudioChunk& frame);
+        void transcribeUtterance(AudioChunk utterance);
         // Closes the peer connection (releasing its UDP port and callbacks) and all Voxtral streams.
         void shutdown();
         bool isDisconnected() const;
@@ -104,11 +103,8 @@ private:
         const std::string id;
         WebRtcPeerConnection peer;
         OpusAudioCodec codec;
-        MockEchoStreamingAudioModel model;
-        StreamingAudioProcessor processor;
+        std::shared_ptr<SttAudioAdapter> sttAdapter;
         AudioUtteranceBuffer utteranceBuffer;
-        std::deque<float> pendingOutputSamples;
-        OmniAudioAdapter::ConversationPtr conversation;
         std::shared_ptr<VoxtralAudioAdapter> voxtralAdapter;
         std::shared_ptr<VoxtralAudioAdapter::Stream> voxtralStream;
         // Streams finished by input_audio_buffer.commit that may still be producing their final transcript.
@@ -130,14 +126,9 @@ private:
 
     mutable std::mutex mutex_;
     size_t maxSessions_;
-    std::string omniModelPath_;
     std::string sttModelPath_;
     std::string sttDevice_;
-    std::string omniDevice_;
-    std::string talkerDevice_;
-    size_t audioChunkFrames_;
     std::string announcedIp_;
-    std::shared_ptr<OmniAudioAdapter> omniAdapter_;
     std::shared_ptr<SttAudioAdapter> sttAdapter_;
     std::shared_ptr<VoxtralAudioAdapter> voxtralAdapter_;
     uint64_t nextSessionId_ = 1;

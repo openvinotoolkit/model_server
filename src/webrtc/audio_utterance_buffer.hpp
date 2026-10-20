@@ -37,6 +37,8 @@ public:
     explicit AudioUtteranceBuffer(Config config);
 
     std::optional<AudioChunk> push(const AudioChunk& frame);
+    // Returns buffered speech without waiting for trailing silence, or nothing when no speech was detected.
+    std::optional<AudioChunk> flush();
     void reset();
 
 private:

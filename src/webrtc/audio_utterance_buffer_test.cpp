@@ -48,4 +48,20 @@ TEST(AudioUtteranceBufferTest, IgnoresSilenceBeforeSpeech) {
     EXPECT_EQ(utterance->timestampUs, speech.timestampUs);
 }
 
+TEST(AudioUtteranceBufferTest, FlushReturnsSpeechBeforeTrailingSilence) {
+    AudioUtteranceBuffer buffer({0.1f, 1, 40});
+    const AudioChunk silence{{0.0f, 0.0f}, 48000, 1000, 1};
+    const AudioChunk speech{{0.2f, 0.2f}, 48000, 2000, 1};
+
+    EXPECT_FALSE(buffer.push(silence).has_value());
+    EXPECT_FALSE(buffer.flush().has_value());
+    EXPECT_FALSE(buffer.push(speech).has_value());
+    EXPECT_FALSE(buffer.push(silence).has_value());
+    const auto utterance = buffer.flush();
+    ASSERT_TRUE(utterance.has_value());
+    EXPECT_EQ(utterance->samples, (std::vector<float>{0.2f, 0.2f, 0.0f, 0.0f}));
+    EXPECT_EQ(utterance->timestampUs, speech.timestampUs);
+    EXPECT_FALSE(buffer.flush().has_value());
+}
+
 }  // namespace ovms

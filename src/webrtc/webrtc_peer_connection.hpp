@@ -23,13 +23,10 @@
 
 #include <rtc/rtc.hpp>
 
-#include "streaming_audio_processor.hpp"
-
 namespace ovms {
 
-// POC scaffold: terminates a single WebRTC peer connection so the rest of the
-// signaling/media pipeline (audio track, echo effect) can be built on top of
-// a verified, working libdatachannel integration. No media handling yet.
+// Terminates a single WebRTC peer connection (libdatachannel): signaling callbacks,
+// a depacketized inbound audio track that can also send audio back, and data channels.
 class WebRtcPeerConnection {
 public:
     using DescriptionCallback = std::function<void(const std::string& sdp, const std::string& type)>;
@@ -38,7 +35,6 @@ public:
     using AudioFrameCallback = std::function<void(rtc::binary data, rtc::FrameInfo info)>;
     using AudioTrackCallback = std::function<void()>;
     using AudioTrackOpenCallback = std::function<void()>;
-    using ProcessedAudioFrameCallback = std::function<void(rtc::binary data, rtc::FrameInfo info)>;
     using DataChannelCallback = std::function<void(std::shared_ptr<rtc::DataChannel> channel)>;
     using GatheringCompleteCallback = std::function<void()>;
 
@@ -48,7 +44,6 @@ public:
     void onLocalCandidate(CandidateCallback callback);
     void onStateChange(StateCallback callback);
     void onAudioFrame(AudioFrameCallback callback);
-    void onProcessedAudioFrame(StreamingAudioProcessor& processor, ProcessedAudioFrameCallback callback);
     void onAudioTrack(AudioTrackCallback callback);
     void onAudioTrackOpen(AudioTrackOpenCallback callback);
     void onLocalAudioTrackOpen(AudioTrackOpenCallback callback);
@@ -82,8 +77,6 @@ private:
     std::vector<std::shared_ptr<rtc::Track>> remoteAudioTracks_;
     bool audioTrackCallbacksConfigured_ = false;
     AudioFrameCallback audioFrameCallback_;
-    StreamingAudioProcessor* audioProcessor_ = nullptr;
-    ProcessedAudioFrameCallback processedAudioFrameCallback_;
     AudioTrackCallback audioTrackCallback_;
     AudioTrackOpenCallback audioTrackOpenCallback_;
     AudioTrackOpenCallback localAudioTrackOpenCallback_;

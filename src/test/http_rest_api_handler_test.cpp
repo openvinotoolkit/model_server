@@ -1358,3 +1358,54 @@ TEST_F(ConfigStatus, isAuthorized) {
     headers = {{"X-CustomHeader", "12345"}};
     EXPECT_FALSE(handler.isAuthorized(headers, "any_key"));
 }
+
+TEST_F(ConfigStatus, WebRtcEndpointsRequireApiKey) {
+    ovms::Server& ovmsServer = ovms::Server::instance();
+    std::string contents;
+    auto fs = std::make_shared<ovms::LocalFileSystem>();
+    fs->readTextFile(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_cpu_dummy.json"), &contents);
+    TestHelper1 t(*this, contents.c_str());
+    auto handler = ovms::HttpRestApiHandler(ovmsServer, 10, "ABC");
+    const std::vector<std::pair<std::string, std::string>> endpoints = {
+        {"POST", "/v1/webrtc/sessions"},
+        {"POST", "/v1/webrtc/sessions/1/candidates"},
+        {"GET", "/v1/webrtc/sessions/1/candidates"},
+        {"POST", "/v1/webrtc/sessions/1/close"},
+        {"POST", "/v1/realtime/calls"},
+        {"POST", "/v1/realtime/calls/1/hangup"}};
+    for (const auto& [method, path] : endpoints) {
+        ovms::HttpRequestComponents components;
+        ASSERT_EQ(handler.parseRequestComponents(components, method, path), ovms::StatusCode::OK) << method << " " << path;
+        std::string response;
+        ovms::HttpResponseComponents responseComponents;
+        EXPECT_EQ(handler.dispatchToProcessor(path, "", &response, components, responseComponents, nullptr, nullptr),
+            ovms::StatusCode::UNAUTHORIZED)
+            << method << " " << path;
+    }
+
+    ovms::HttpRequestComponents components;
+    ASSERT_EQ(handler.parseRequestComponents(components, "POST", "/v1/realtime/calls/1/hangup"), ovms::StatusCode::OK);
+    components.headers = {{"Authorization", "Bearer ABC"}};
+    std::string response;
+    ovms::HttpResponseComponents responseComponents;
+    EXPECT_EQ(handler.dispatchToProcessor("/v1/realtime/calls/1/hangup", "", &response, components, responseComponents, nullptr, nullptr),
+        ovms::StatusCode::REST_NOT_FOUND);
+}
+
+TEST_F(ConfigStatus, WebRtcSessionRequiresSpeechModel) {
+    ovms::Server& ovmsServer = ovms::Server::instance();
+    std::string contents;
+    auto fs = std::make_shared<ovms::LocalFileSystem>();
+    fs->readTextFile(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_cpu_dummy.json"), &contents);
+    TestHelper1 t(*this, contents.c_str());
+    auto handler = ovms::HttpRestApiHandler(ovmsServer, 10);
+    for (const std::string path : {"/v1/webrtc/sessions", "/v1/realtime/calls"}) {
+        ovms::HttpRequestComponents components;
+        ASSERT_EQ(handler.parseRequestComponents(components, "POST", path), ovms::StatusCode::OK) << path;
+        std::string response;
+        ovms::HttpResponseComponents responseComponents;
+        EXPECT_EQ(handler.dispatchToProcessor(path, "v=0\r\n", &response, components, responseComponents, nullptr, nullptr),
+            ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING)
+            << path;
+    }
+}

@@ -18,26 +18,21 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
-#include <cmath>
-#include <cstdlib>
 #include <exception>
+#include <iterator>
 #include <fstream>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <utility>
 #include <variant>
 #include <vector>
 
-#include <openvino/genai/omni/pipeline.hpp>
-#include <openvino/genai/omni/talker.hpp>
-#include <openvino/genai/visual_language/pipeline.hpp>
-
 #include "src/port/rapidjson_document.hpp"
 #include "src/port/rapidjson_istreamwrapper.hpp"
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 #include "src/logging.hpp"
-#include "omni_audio_adapter.hpp"
 
 namespace ovms {
 
@@ -167,20 +162,6 @@ std::string errorEvent(const std::string& type, const std::string& message) {
     });
 }
 
-size_t audioChunkFramesFromEnv() {
-    constexpr size_t defaultAudioChunkFrames = 4;
-    const char* value = std::getenv("OVMS_WEBRTC_OMNI_AUDIO_CHUNK_FRAMES");
-    if (value == nullptr || value[0] == '\0')
-        return defaultAudioChunkFrames;
-    char* end = nullptr;
-    const unsigned long parsed = std::strtoul(value, &end, 10);
-    if (*end != '\0' || parsed == 0) {
-        SPDLOG_LOGGER_WARN(webrtc_logger, "Invalid OVMS_WEBRTC_OMNI_AUDIO_CHUNK_FRAMES value '{}', using {}", value, defaultAudioChunkFrames);
-        return defaultAudioChunkFrames;
-    }
-    return static_cast<size_t>(parsed);
-}
-
 bool isIpv4Literal(const std::string& address) {
     size_t octets = 0;
     size_t position = 0;
@@ -302,10 +283,7 @@ WebRtcSessionController::Session::Session(rtc::Configuration configuration, Prot
     protocol(protocol),
     id(std::move(id)),
     peer(std::move(configuration)),
-    codec(OpusAudioCodec::SampleRate, 2),
-    model(OpusAudioCodec::SampleRate),
-    processor(codec, model) {
-}
+    codec(OpusAudioCodec::SampleRate, 2) {}
 
 void WebRtcSessionController::Session::sendUserDelta(const std::string& itemId, const std::string& text) {
     sendTranscript(protocol == Protocol::OpenAiRealtime ? transcriptionDeltaEvent(itemId, text) : transcriptMessage("user_delta", text));
@@ -393,11 +371,20 @@ void WebRtcSessionController::Session::startVoxtralStream() {
                 SPDLOG_LOGGER_ERROR(webrtc_logger, "WebRTC Voxtral transcription failed with an unknown error");
             }
         });
-    std::lock_guard<std::mutex> lock(mutex);
-    if (voxtralStream)
-        committedVoxtralStreams.push_back(std::move(voxtralStream));
-    voxtralStream = std::move(stream);
-    currentItemId = std::move(itemId);
+    std::vector<std::shared_ptr<VoxtralAudioAdapter::Stream>> finishedStreams;
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        const auto firstFinished = std::stable_partition(committedVoxtralStreams.begin(), committedVoxtralStreams.end(),
+            [](const auto& committed) { return !committed->isCompleted(); });
+        std::move(firstFinished, committedVoxtralStreams.end(), std::back_inserter(finishedStreams));
+        committedVoxtralStreams.erase(firstFinished, committedVoxtralStreams.end());
+        if (voxtralStream)
+            committedVoxtralStreams.push_back(std::move(voxtralStream));
+        voxtralStream = std::move(stream);
+        currentItemId = std::move(itemId);
+    }
+    // Joining completed workers happens outside the session lock.
+    finishedStreams.clear();
 }
 
 std::shared_ptr<VoxtralAudioAdapter::Stream> WebRtcSessionController::Session::currentVoxtralStream() {
@@ -406,8 +393,21 @@ std::shared_ptr<VoxtralAudioAdapter::Stream> WebRtcSessionController::Session::c
 }
 
 void WebRtcSessionController::Session::commitAudio() {
+    if (sttAdapter) {
+        std::optional<AudioChunk> utterance;
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            utterance = utteranceBuffer.flush();
+        }
+        if (!utterance) {
+            sendTranscript(errorEvent("invalid_request_error", "Error committing input audio buffer: buffer is empty"));
+            return;
+        }
+        transcribeUtterance(std::move(*utterance));
+        return;
+    }
     if (!voxtralAdapter) {
-        sendTranscript(errorEvent("invalid_request_error", "input_audio_buffer.commit requires a realtime speech-to-text model"));
+        sendTranscript(errorEvent("invalid_request_error", "input_audio_buffer.commit requires a speech-to-text model"));
         return;
     }
     std::shared_ptr<VoxtralAudioAdapter::Stream> committedStream;
@@ -422,6 +422,47 @@ void WebRtcSessionController::Session::commitAudio() {
     startVoxtralStream();
     if (committedStream)
         committedStream->finish();
+}
+
+void WebRtcSessionController::Session::pushUtteranceAudio(const AudioChunk& frame) {
+    std::optional<AudioChunk> utterance;
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        utterance = utteranceBuffer.push(frame);
+    }
+    if (utterance)
+        transcribeUtterance(std::move(*utterance));
+}
+
+void WebRtcSessionController::Session::transcribeUtterance(AudioChunk utterance) {
+    const std::string itemId = nextItemId();
+    SPDLOG_LOGGER_DEBUG(webrtc_logger, "Transcribing utterance {}: length_ms={}", itemId,
+        utterance.samples.size() * 1000 / (static_cast<uint64_t>(utterance.sampleRate) * utterance.channels));
+    if (protocol == Protocol::OpenAiRealtime)
+        sendTranscript(audioCommittedEvent(itemId));
+    const std::weak_ptr<Session> weakSession = weak_from_this();
+    sttAdapter->submit(
+        std::move(utterance),
+        [weakSession, itemId](const std::string& text) {
+            if (const auto activeSession = weakSession.lock())
+                activeSession->sendUserDelta(itemId, text);
+        },
+        [weakSession](std::exception_ptr error) {
+            try {
+                if (error)
+                    std::rethrow_exception(error);
+            } catch (const std::exception& e) {
+                SPDLOG_LOGGER_ERROR(webrtc_logger, "WebRTC speech-to-text failed: {}", e.what());
+                if (const auto activeSession = weakSession.lock())
+                    activeSession->sendUserError(e.what());
+            } catch (...) {
+                SPDLOG_LOGGER_ERROR(webrtc_logger, "WebRTC speech-to-text failed with an unknown error");
+            }
+        },
+        [weakSession, itemId](const std::string& text) {
+            if (const auto activeSession = weakSession.lock())
+                activeSession->sendUserFinal(itemId, text);
+        });
 }
 
 void WebRtcSessionController::Session::shutdown() {
@@ -443,27 +484,6 @@ bool WebRtcSessionController::Session::isDisconnected() const {
     return state == rtc::PeerConnection::State::Disconnected ||
            state == rtc::PeerConnection::State::Failed ||
            state == rtc::PeerConnection::State::Closed;
-}
-
-void WebRtcSessionController::Session::sendGeneratedAudio(const AudioChunk& audio, rtc::FrameInfo info, bool complete) {
-    pendingOutputSamples.insert(pendingOutputSamples.end(), audio.samples.begin(), audio.samples.end());
-    while (pendingOutputSamples.size() >= OpusAudioCodec::FrameSamples || (complete && !pendingOutputSamples.empty())) {
-        const size_t channelCount = codec.channels();
-        std::vector<float> frame(OpusAudioCodec::FrameSamples * channelCount, 0.0f);
-        const size_t samplesToCopy = std::min(OpusAudioCodec::FrameSamples, pendingOutputSamples.size());
-        for (size_t index = 0; index < samplesToCopy; ++index) {
-            const float sample = pendingOutputSamples.front();
-            pendingOutputSamples.pop_front();
-            for (size_t channel = 0; channel < channelCount; ++channel)
-                frame[index * channelCount + channel] = sample;
-        }
-        const auto encoded = codec.encode(frame);
-        rtc::binary packet(encoded.size());
-        for (size_t index = 0; index < encoded.size(); ++index) {
-            packet[index] = static_cast<std::byte>(encoded[index]);
-        }
-        peer.sendAudioFrame(std::move(packet), info);
-    }
 }
 
 void WebRtcSessionController::Session::sendTranscript(const std::string& message) {
@@ -490,19 +510,11 @@ AudioChunk WebRtcSessionController::Session::decodeAudioFrame(const rtc::binary&
     return AudioChunk{decoded, OpusAudioCodec::SampleRate, timestampUs, static_cast<uint32_t>(codec.channels())};
 }
 
-WebRtcSessionController::WebRtcSessionController(size_t maxSessions, std::string omniModelPath,
-    SpeechToTextConfig speechToText,
-    std::string omniDevice, std::string talkerDevice, size_t audioChunkFrames, std::string announcedIp) :
+WebRtcSessionController::WebRtcSessionController(size_t maxSessions, SpeechToTextConfig speechToText, std::string announcedIp) :
     maxSessions_(maxSessions),
-    omniModelPath_(std::move(omniModelPath)),
     sttModelPath_(std::move(speechToText.modelPath)),
     sttDevice_(std::move(speechToText.device)),
-    omniDevice_(std::move(omniDevice)),
-    talkerDevice_(std::move(talkerDevice)),
-    audioChunkFrames_(audioChunkFrames),
     announcedIp_(std::move(announcedIp)) {
-    if (!sttModelPath_.empty() && !omniModelPath_.empty())
-        throw std::invalid_argument("Speech-to-text WebRTC cannot be combined with Omni");
     if (!announcedIp_.empty() && !isIpLiteral(announcedIp_)) {
         SPDLOG_LOGGER_ERROR(webrtc_logger, "Ignoring invalid WebRTC announced IP '{}', expected an IPv4 or IPv6 address", announcedIp_);
         announcedIp_.clear();
@@ -535,6 +547,10 @@ std::string WebRtcSessionController::announceHostCandidate(const std::string& ca
         rewritten += tokens[i];
     }
     return rewritten;
+}
+
+bool WebRtcSessionController::hasSpeechModel() const {
+    return !sttModelPath_.empty();
 }
 
 bool WebRtcSessionController::isRealtimeSpeechModel(const std::string& modelPath) {
@@ -588,7 +604,6 @@ bool WebRtcSessionController::negotiateSession(const std::string& offerSdp, cons
         return false;
     }
 
-    std::shared_ptr<OmniAudioAdapter> omniAdapter;
     std::shared_ptr<SttAudioAdapter> sttAdapter;
     std::shared_ptr<VoxtralAudioAdapter> voxtralAdapter;
     std::string sessionId;
@@ -598,26 +613,6 @@ bool WebRtcSessionController::negotiateSession(const std::string& offerSdp, cons
             SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected session creation, session limit reached: {}", maxSessions_);
             return false;
         }
-        if (!omniModelPath_.empty() && !omniAdapter_) {
-            try {
-                const std::string device = omniDevice_;
-                const std::string talkerDevice = talkerDevice_;
-                const size_t audioChunkFrames = audioChunkFrames_ > 0 ? audioChunkFrames_ : audioChunkFramesFromEnv();
-                auto vlm = std::make_shared<ov::genai::VLMPipeline>(omniModelPath_, device, ov::AnyMap{});
-                auto talker = std::make_shared<ov::genai::Talker>(omniModelPath_, talkerDevice, ov::AnyMap{});
-                auto pipeline = std::make_shared<ov::genai::OmniPipeline>(std::move(vlm), std::move(talker));
-                omniAdapter_ = std::make_shared<OmniAudioAdapter>(std::move(pipeline), audioChunkFrames);
-                SPDLOG_LOGGER_INFO(webrtc_logger, "Initialized WebRTC Omni pipeline from {}: text device={}, talker device={}, audio_chunk_frames={}",
-                    omniModelPath_, device, talkerDevice, audioChunkFrames);
-            } catch (const std::exception& e) {
-                SPDLOG_LOGGER_ERROR(webrtc_logger, "Could not initialize WebRTC Omni model at {}: {}", omniModelPath_, e.what());
-                return false;
-            } catch (...) {
-                SPDLOG_LOGGER_ERROR(webrtc_logger, "Could not initialize WebRTC Omni model at {}", omniModelPath_);
-                return false;
-            }
-        }
-        omniAdapter = omniAdapter_;
         if (!sttModelPath_.empty() && !sttAdapter_ && !voxtralAdapter_) {
             try {
                 if (isRealtimeSpeechModel(sttModelPath_)) {
@@ -719,89 +714,19 @@ bool WebRtcSessionController::negotiateSession(const std::string& offerSdp, cons
                 stream->finish();
             }
         });
-    } else if (omniAdapter) {
-        session->conversation = omniAdapter->createConversation();
+    } else if (sttAdapter) {
         const std::weak_ptr<Session> weakSession = session;
-        session->peer.onAudioFrame([weakSession, omniAdapter, sttAdapter, conversation = session->conversation](rtc::binary data, rtc::FrameInfo info) {
+        session->sttAdapter = sttAdapter;
+        session->peer.onAudioFrame([weakSession](rtc::binary data, rtc::FrameInfo info) {
             const auto currentSession = weakSession.lock();
             if (!currentSession)
                 return;
             try {
-                auto utterance = currentSession->utteranceBuffer.push(currentSession->decodeAudioFrame(data, info));
-                if (!utterance)
-                    return;
-
-                float maxVolume = 0.0f;
-                for (const float sample : utterance->samples)
-                    maxVolume = std::max(maxVolume, std::fabs(sample));
-                const size_t frameCount = utterance->samples.size() / std::max<uint32_t>(utterance->channels, 1);
-                SPDLOG_LOGGER_INFO(webrtc_logger,
-                    "Detected utterance after silence, sending to Omni: length_ms={}, samples={}, channels={}, sample_rate={}, max_volume={:.4f}",
-                    frameCount * 1000 / utterance->sampleRate, utterance->samples.size(), utterance->channels,
-                    utterance->sampleRate, maxVolume);
-
-                const std::weak_ptr<Session> outputSession = currentSession;
-                if (sttAdapter) {
-                    try {
-                        sttAdapter->submit(*utterance,
-                            [outputSession](const std::string& text) {
-                                if (const auto activeSession = outputSession.lock())
-                                    activeSession->sendTranscript(transcriptMessage("user_delta", text));
-                            },
-                            [outputSession](std::exception_ptr error) {
-                                try {
-                                    if (error)
-                                        std::rethrow_exception(error);
-                                } catch (const std::exception& e) {
-                                    SPDLOG_LOGGER_ERROR(webrtc_logger, "WebRTC STT generation failed: {}", e.what());
-                                    if (const auto activeSession = outputSession.lock())
-                                        activeSession->sendTranscript(transcriptMessage("user_error", e.what()));
-                                } catch (...) {
-                                    SPDLOG_LOGGER_ERROR(webrtc_logger, "WebRTC STT generation failed with an unknown error");
-                                }
-                            },
-                            [outputSession](const std::string& text) {
-                                if (const auto activeSession = outputSession.lock())
-                                    activeSession->sendTranscript(transcriptMessage("user_final", text));
-                            });
-                    } catch (const std::exception& e) {
-                        SPDLOG_LOGGER_ERROR(webrtc_logger, "Could not queue WebRTC STT request: {}", e.what());
-                        currentSession->sendTranscript(transcriptMessage("user_error", e.what()));
-                    }
-                }
-                omniAdapter->submit(conversation, std::move(*utterance),
-                    [outputSession, info](AudioChunk audio) {
-                        if (const auto activeSession = outputSession.lock())
-                            activeSession->sendGeneratedAudio(audio, info, false);
-                    },
-                    [outputSession](const std::string& token) {
-                        if (const auto activeSession = outputSession.lock())
-                            activeSession->sendTranscript(transcriptMessage("assistant_delta", token));
-                    },
-                    [](std::exception_ptr error) {
-                        try {
-                            if (error)
-                                std::rethrow_exception(error);
-                        } catch (const std::exception& e) {
-                            SPDLOG_LOGGER_ERROR(webrtc_logger, "WebRTC Omni generation failed: {}", e.what());
-                        } catch (...) {
-                            SPDLOG_LOGGER_ERROR(webrtc_logger, "WebRTC Omni generation failed with an unknown error");
-                        }
-                    },
-                    [outputSession, info](const std::string& text) {
-                        SPDLOG_LOGGER_INFO(webrtc_logger, "Omni response finished: \"{}\"", text);
-                        if (const auto activeSession = outputSession.lock()) {
-                            activeSession->sendTranscript(transcriptMessage("assistant_final", text));
-                            activeSession->sendGeneratedAudio(AudioChunk{{}, OpusAudioCodec::SampleRate, 0, 1}, info, true);
-                        }
-                    });
+                currentSession->pushUtteranceAudio(currentSession->decodeAudioFrame(data, info));
             } catch (const std::exception& e) {
-                SPDLOG_LOGGER_ERROR(webrtc_logger, "Failed to buffer WebRTC audio for Omni: {}", e.what());
+                SPDLOG_LOGGER_ERROR(webrtc_logger, "Failed to process WebRTC speech-to-text audio: {}", e.what());
+                currentSession->sendUserError(e.what());
             }
-        });
-    } else {
-        session->peer.onProcessedAudioFrame(session->processor, [session](rtc::binary data, rtc::FrameInfo info) {
-            session->peer.sendAudioFrame(std::move(data), info);
         });
     }
     try {

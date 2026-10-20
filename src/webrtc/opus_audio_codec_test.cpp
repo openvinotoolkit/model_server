@@ -13,20 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************/
+#include <algorithm>
 #include <cmath>
 #include <stdexcept>
 #include <vector>
 
 #include <gtest/gtest.h>
 
-#include "mock_echo_streaming_audio_model.hpp"
 #include "opus_audio_codec.hpp"
-#include "streaming_audio_processor.hpp"
 
-using ovms::AudioChunk;
-using ovms::MockEchoStreamingAudioModel;
 using ovms::OpusAudioCodec;
-using ovms::StreamingAudioProcessor;
 
 TEST(OpusAudioCodecTest, RejectsUnsupportedConfiguration) {
     EXPECT_THROW(OpusAudioCodec(16000, 1), std::invalid_argument);
@@ -61,18 +57,4 @@ TEST(OpusAudioCodecTest, EncodesAndDecodesTwentyMillisecondStereoFrame) {
 
     ASSERT_FALSE(encoded.empty());
     EXPECT_EQ(decoded.size(), input.size());
-}
-
-TEST(StreamingAudioProcessorTest, DecodesProcessesAndReencodesWithTimestamp) {
-    OpusAudioCodec codec(48000, 1);
-    MockEchoStreamingAudioModel model(48000);
-    StreamingAudioProcessor processor(codec, model);
-    std::vector<float> input(960, 0.25f);
-    const auto encodedInput = codec.encode(input);
-
-    const auto encodedOutput = processor.process(encodedInput, 123456);
-    const auto decodedOutput = codec.decode(encodedOutput);
-
-    ASSERT_EQ(decodedOutput.size(), input.size());
-    EXPECT_EQ(processor.lastTimestampUs(), 123456);
 }

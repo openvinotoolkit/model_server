@@ -18,6 +18,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -25,16 +26,12 @@
 #include <rtc/rtp.hpp>
 #include <rtc/rtppacketizer.hpp>
 
-#include "mock_echo_streaming_audio_model.hpp"
 #include "opus_audio_codec.hpp"
 #include "rtp_packetization_config_utils.hpp"
-#include "streaming_audio_processor.hpp"
 #include "webrtc_peer_connection.hpp"
 
-using ovms::WebRtcPeerConnection;
-using ovms::MockEchoStreamingAudioModel;
 using ovms::OpusAudioCodec;
-using ovms::StreamingAudioProcessor;
+using ovms::WebRtcPeerConnection;
 
 namespace {
 
@@ -437,8 +434,8 @@ TEST(WebRtcPeerConnectionTest, LocalPeersConnectAndExchangeAudioFrame) {
     std::unique_lock<std::mutex> lock(mutex);
     ASSERT_TRUE(condition.wait_for(lock, std::chrono::seconds(5), [&] {
         return offererConnected && answererConnected && answererAudioTrackReceived;
-    })) << "offererConnected=" << offererConnected << ", answererConnected=" << answererConnected
-         << ", answererAudioTrackReceived=" << answererAudioTrackReceived;
+    })) << "offererConnected="
+        << offererConnected << ", answererConnected=" << answererConnected << ", answererAudioTrackReceived=" << answererAudioTrackReceived;
     lock.unlock();
 
     rtc::FrameInfo frameInfo(0);
@@ -452,12 +449,10 @@ TEST(WebRtcPeerConnectionTest, LocalPeersConnectAndExchangeAudioFrame) {
     }));
 }
 
-TEST(WebRtcPeerConnectionTest, ProcessesIncomingOpusThroughStreamingModel) {
+TEST(WebRtcPeerConnectionTest, DeliversDecodableOpusFramesWithTimestamp) {
     WebRtcPeerConnection offerer(rtc::Configuration{});
     WebRtcPeerConnection answerer(rtc::Configuration{});
     OpusAudioCodec codec(48000, 1);
-    MockEchoStreamingAudioModel model(48000);
-    StreamingAudioProcessor processor(codec, model);
     std::mutex mutex;
     std::condition_variable condition;
     bool offererConnected = false;
@@ -481,7 +476,7 @@ TEST(WebRtcPeerConnectionTest, ProcessesIncomingOpusThroughStreamingModel) {
             condition.notify_all();
         }
     });
-    answerer.onProcessedAudioFrame(processor, [&](rtc::binary data, rtc::FrameInfo info) {
+    answerer.onAudioFrame([&](rtc::binary data, rtc::FrameInfo info) {
         std::lock_guard<std::mutex> lock(mutex);
         processedOutput = std::move(data);
         processedInfo = info;

@@ -16,6 +16,7 @@
 #include "webrtc_peer_connection.hpp"
 
 #include "src/logging.hpp"
+#include "opus_audio_codec.hpp"
 #include "rtp_packetization_config_utils.hpp"
 
 #include <chrono>
@@ -26,6 +27,7 @@
 #include <algorithm>
 #include <cctype>
 #include <optional>
+#include <utility>
 
 #include <rtc/rtpdepacketizer.hpp>
 #include <rtc/rtppacketizer.hpp>
@@ -138,12 +140,6 @@ void WebRtcPeerConnection::onAudioFrame(AudioFrameCallback callback) {
     configureAudioTrackCallbacks();
 }
 
-void WebRtcPeerConnection::onProcessedAudioFrame(StreamingAudioProcessor& processor, ProcessedAudioFrameCallback callback) {
-    audioProcessor_ = &processor;
-    processedAudioFrameCallback_ = std::move(callback);
-    configureAudioTrackCallbacks();
-}
-
 void WebRtcPeerConnection::onAudioTrackOpen(AudioTrackOpenCallback callback) {
     audioTrackOpenCallback_ = std::move(callback);
     configureAudioTrackCallbacks();
@@ -221,7 +217,7 @@ void WebRtcPeerConnection::configureAudioTrackCallbacks() {
         if (audioTrackCallback_) {
             audioTrackCallback_();
         }
-        if (audioFrameCallback_ || audioProcessor_) {
+        if (audioFrameCallback_) {
             // Chain a packetizer after the depacketizer so this same (sendrecv)
             // remote track can also be used to send processed audio back,
             // without adding a second local m-line via addAudioTrack().
@@ -259,36 +255,7 @@ void WebRtcPeerConnection::configureAudioTrackCallbacks() {
                     data.size(), info.timestamp,
                     info.timestampSeconds ? info.timestampSeconds->count() : -1);
                 if (audioFrameCallback_) {
-                    audioFrameCallback_(data, info);
-                }
-                if (audioProcessor_) {
-                    const uint64_t timestampUs = info.timestampSeconds ?
-                        static_cast<uint64_t>(info.timestampSeconds->count() * 1000000.0) :
-                        static_cast<uint64_t>((static_cast<uint64_t>(info.timestamp) * 1000000) /
-                            std::max<uint32_t>(outboundClockRate_, 1));
-                    std::vector<uint8_t> encoded(data.size());
-                    for (size_t index = 0; index < data.size(); ++index) {
-                        encoded[index] = std::to_integer<uint8_t>(data[index]);
-                    }
-                    try {
-                        const auto processed = audioProcessor_->process(encoded, timestampUs);
-                        SPDLOG_LOGGER_TRACE(webrtc_logger,
-                            "Processed audio packet: encoded_bytes_in={}, encoded_bytes_out={}, payload_type={}, "
-                            "rtp_timestamp={}, timestamp_us={}",
-                            encoded.size(), processed.size(), info.payloadType, info.timestamp, timestampUs);
-                        if (processedAudioFrameCallback_) {
-                            rtc::binary output(processed.size());
-                            for (size_t index = 0; index < processed.size(); ++index) {
-                                output[index] = static_cast<std::byte>(processed[index]);
-                            }
-                            processedAudioFrameCallback_(std::move(output), info);
-                        }
-                    } catch (const std::exception& e) {
-                        SPDLOG_LOGGER_ERROR(webrtc_logger,
-                            "Failed to decode/process incoming audio packet: bytes={}, payload_type={}, "
-                            "rtp_timestamp={}, error={}",
-                            data.size(), info.payloadType, info.timestamp, e.what());
-                    }
+                    audioFrameCallback_(std::move(data), info);
                 }
             });
         }

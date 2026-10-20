@@ -186,7 +186,7 @@ public:
     Status processWebRtcGetCandidates(const HttpRequestComponents& request_components, std::string& response);
     Status processWebRtcRemoveSession(const HttpRequestComponents& request_components, std::string& response);
     /// OpenAI Realtime API compatible WebRTC call: SDP offer in the body, SDP answer (with ICE candidates) returned.
-    Status processRealtimeCall(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components);
+    Status processRealtimeCall(std::string& response, const std::string& request_body, HttpResponseComponents& response_components);
     Status processRealtimeHangup(const HttpRequestComponents& request_components, std::string& response);
     Status processOptions(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
@@ -198,6 +198,7 @@ public:
     Status processListModelsRequest(std::string& response);
     Status processRetrieveModelRequest(const std::string& name, std::string& response);
     bool isAuthorized(const std::unordered_map<std::string, std::string>& headers, const std::string& apiKey);
+    bool isWebRtcRequestAuthorized(const HttpRequestComponents& request_components);
     const std::string apiKey;
 
 private:

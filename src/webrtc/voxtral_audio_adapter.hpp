@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <atomic>
 #include <condition_variable>
 #include <exception>
 #include <functional>
@@ -49,6 +50,8 @@ public:
         void push(AudioChunk frame);
         void finish();
         void close();
+        // True once the final transcript or error callback has been delivered.
+        bool isCompleted() const;
 
     private:
         void run();
@@ -61,6 +64,7 @@ public:
         std::mutex mutex_;
         std::condition_variable condition_;
         bool finishing_ = false;
+        std::atomic<bool> completed_{false};
         std::thread worker_;
     };
 

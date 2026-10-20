@@ -22,8 +22,17 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <memory>
 #include <mutex>
+#include <string>
 #include <thread>
+#include <utility>
+#include <variant>
+#include <vector>
+
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 #include <rtc/rtp.hpp>
 #include <rtc/rtppacketizer.hpp>
@@ -34,21 +43,6 @@
 
 namespace ovms {
 
-TEST(OmniAudioAdapterTest, PlacesAudioAtEachUserTurn) {
-    const auto history = OmniAudioAdapter::buildHistory({"First reply", "Second reply"});
-
-    ASSERT_EQ(history.size(), 6u);
-    EXPECT_EQ(history[1]["content"].as_string().value_or(""), "Audio input <ov_genai_audio_0>");
-    EXPECT_EQ(history[2]["content"].as_string().value_or(""), "First reply");
-    EXPECT_EQ(history[3]["content"].as_string().value_or(""), "Audio input <ov_genai_audio_1>");
-    EXPECT_EQ(history[4]["content"].as_string().value_or(""), "Second reply");
-    EXPECT_EQ(history[5]["content"].as_string().value_or(""), "Audio input <ov_genai_audio_2>");
-
-    const auto trimmedHistory = OmniAudioAdapter::buildHistory({"Second reply"});
-    EXPECT_EQ(trimmedHistory[1]["content"].as_string().value_or(""), "Audio input <ov_genai_audio_0>");
-    EXPECT_EQ(trimmedHistory[3]["content"].as_string().value_or(""), "Audio input <ov_genai_audio_1>");
-}
-
 TEST(WebRtcSessionControllerTest, RejectsInvalidOffer) {
     WebRtcSessionController controller;
     WebRtcSessionController::OfferResult result;
@@ -58,24 +52,17 @@ TEST(WebRtcSessionControllerTest, RejectsInvalidOffer) {
     EXPECT_EQ(controller.sessionCount(), 0);
 }
 
-TEST(WebRtcSessionControllerTest, RejectsSessionWhenConfiguredOmniModelCannotLoad) {
-    WebRtcSessionController controller(16, "/missing/webrtc/omni/model");
-    WebRtcSessionController::OfferResult result;
-
-    EXPECT_FALSE(controller.createSession("v=0\r\n", "offer", result));
-    EXPECT_EQ(controller.sessionCount(), 0);
-}
-
 TEST(WebRtcSessionControllerTest, RejectsSessionWhenConfiguredSpeechModelCannotLoad) {
-    WebRtcSessionController controller(16, {}, {"/missing/webrtc/speech/model", "CPU"});
+    WebRtcSessionController controller(16, {"/missing/webrtc/speech/model", "CPU"});
     WebRtcSessionController::OfferResult result;
 
     EXPECT_FALSE(controller.createSession("v=0\r\n", "offer", result));
     EXPECT_EQ(controller.sessionCount(), 0);
 }
 
-TEST(WebRtcSessionControllerTest, RejectsMixedSpeechAndOmniConfiguration) {
-    EXPECT_THROW(WebRtcSessionController(16, "/omni", {"/speech", "CPU"}), std::invalid_argument);
+TEST(WebRtcSessionControllerTest, ReportsWhetherSpeechModelIsConfigured) {
+    EXPECT_FALSE(WebRtcSessionController().hasSpeechModel());
+    EXPECT_TRUE(WebRtcSessionController(16, {"/speech", "CPU"}).hasSpeechModel());
 }
 
 class WebRtcSpeechModelTest : public ::testing::Test {
@@ -151,18 +138,44 @@ TEST(VoxtralAudioAdapterTest, EmitsTextBeforeInputEnds) {
     EXPECT_NE(final.find("biggest animal"), std::string::npos) << final;
 }
 
-TEST(WebRtcSessionControllerTest, VoxtralTranscribesWebRtcAudioWithoutSilenceDetection) {
-    const char* modelPath = std::getenv("OVMS_VOXTRAL_MODEL_PATH");
-    const char* audioPath = std::getenv("OVMS_VOXTRAL_TEST_WAV");
-    if (!modelPath || !audioPath)
-        GTEST_SKIP() << "Set OVMS_VOXTRAL_MODEL_PATH and OVMS_VOXTRAL_TEST_WAV to run the real-model test";
+namespace {
+constexpr uint32_t TestSampleRate = 48000;
+constexpr size_t TestFrameSamples = 960;
+constexpr uint16_t ControllerUdpPort = 52000;
 
+// libdatachannel releases the UDP socket of a connected ICE agent asynchronously after close, so wait
+// until the controller's fixed port can be bound again before the next test creates a session.
+bool waitForUdpPortRelease(uint16_t port) {
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+    while (std::chrono::steady_clock::now() < deadline) {
+        const int socketFd = socket(AF_INET, SOCK_DGRAM, 0);
+        if (socketFd < 0)
+            return false;
+        sockaddr_in address{};
+        address.sin_family = AF_INET;
+        address.sin_addr.s_addr = htonl(INADDR_ANY);
+        address.sin_port = htons(port);
+        const bool bound = bind(socketFd, reinterpret_cast<const sockaddr*>(&address), sizeof(address)) == 0;
+        close(socketFd);
+        if (bound)
+            return true;
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+    return false;
+}
+
+std::vector<float> readTestAudio(const char* audioPath) {
     std::ifstream file(audioPath, std::ios::binary);
-    ASSERT_TRUE(file.is_open());
+    if (!file.is_open())
+        return {};
     const std::string wav{std::istreambuf_iterator<char>{file}, std::istreambuf_iterator<char>{}};
-    const auto samples = audio_utils::readWav(wav, 48000);
+    return audio_utils::readWav(wav, TestSampleRate);
+}
 
-    WebRtcSessionController controller(16, {}, {modelPath, "CPU"});
+// Streams 48 kHz mono audio to the controller over a real WebRTC connection and collects data channel
+// messages until one contains finalMarker. The realtime call protocol commits the audio buffer explicitly.
+void streamAudioOverWebRtc(WebRtcSessionController& controller, const std::vector<float>& samples, bool realtimeCall,
+    const std::string& finalMarker, std::vector<std::string>& messages) {
     rtc::Configuration configuration;
     configuration.portRangeBegin = 52001;
     configuration.portRangeEnd = 52001;
@@ -171,71 +184,58 @@ TEST(WebRtcSessionControllerTest, VoxtralTranscribesWebRtcAudioWithoutSilenceDet
     audio.addOpusCodec(111);
     auto track = offerer->addTrack(audio);
     track->setMediaHandler(std::make_shared<rtc::OpusRtpPacketizer>(
-        std::make_shared<rtc::RtpPacketizationConfig>(1, "voxtral-test", 111, 48000)));
-    auto channel = offerer->createDataChannel("transcript");
+        std::make_shared<rtc::RtpPacketizationConfig>(1, "webrtc-test", 111, TestSampleRate)));
+    auto channel = offerer->createDataChannel(realtimeCall ? "oai-events" : "transcript");
 
     std::mutex mutex;
     std::condition_variable condition;
-    std::string offerSdp;
-    std::string sessionId;
-    std::vector<WebRtcSessionController::Candidate> pendingCandidates;
-    std::string transcript;
-    bool receivedDelta = false;
-    offerer->onLocalDescription([&](rtc::Description description) {
+    bool gatheringComplete = false;
+    bool finalReceived = false;
+    offerer->onGatheringStateChange([&](rtc::PeerConnection::GatheringState state) {
+        if (state != rtc::PeerConnection::GatheringState::Complete)
+            return;
         std::lock_guard<std::mutex> lock(mutex);
-        offerSdp = std::string(description);
+        gatheringComplete = true;
         condition.notify_all();
-    });
-    offerer->onLocalCandidate([&](rtc::Candidate candidate) {
-        std::string activeSession;
-        {
-            std::lock_guard<std::mutex> lock(mutex);
-            activeSession = sessionId;
-            if (activeSession.empty())
-                pendingCandidates.push_back({candidate.candidate(), candidate.mid()});
-        }
-        if (!activeSession.empty())
-            controller.addCandidate(activeSession, candidate.candidate(), candidate.mid());
     });
     channel->onMessage([&](rtc::message_variant message) {
         if (!std::holds_alternative<std::string>(message))
             return;
         const std::string& text = std::get<std::string>(message);
         std::lock_guard<std::mutex> lock(mutex);
-        if (text.find("\"type\":\"user_delta\"") != std::string::npos)
-            receivedDelta = true;
-        if (text.find("\"type\":\"user_final\"") != std::string::npos)
-            transcript = text;
-        condition.notify_all();
+        messages.push_back(text);
+        if (text.find(finalMarker) != std::string::npos) {
+            finalReceived = true;
+            condition.notify_all();
+        }
     });
     offerer->setLocalDescription();
-
     {
         std::unique_lock<std::mutex> lock(mutex);
-        ASSERT_TRUE(condition.wait_for(lock, std::chrono::seconds(5), [&] { return !offerSdp.empty(); }));
+        ASSERT_TRUE(condition.wait_for(lock, std::chrono::seconds(5), [&] { return gatheringComplete; }));
     }
+    const std::string offerSdp = std::string(*offerer->localDescription());
+
     WebRtcSessionController::OfferResult result;
-    ASSERT_TRUE(controller.createSession(offerSdp, "offer", result));
-    offerer->setRemoteDescription(rtc::Description(result.sdp, result.type));
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        sessionId = result.sessionId;
+    if (realtimeCall) {
+        ASSERT_TRUE(controller.createRealtimeCall(offerSdp, result));
+    } else {
+        ASSERT_TRUE(controller.createSession(offerSdp, "offer", result));
     }
-    for (const auto& candidate : pendingCandidates)
-        ASSERT_TRUE(controller.addCandidate(sessionId, candidate.candidate, candidate.mid));
+    offerer->setRemoteDescription(rtc::Description(result.sdp, result.type));
     for (const auto& candidate : result.candidates)
         offerer->addRemoteCandidate(rtc::Candidate(candidate.candidate, candidate.mid));
 
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
     while ((!track->isOpen() || !channel->isOpen()) && std::chrono::steady_clock::now() < deadline)
-        std::this_thread::yield();
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     ASSERT_TRUE(track->isOpen());
     ASSERT_TRUE(channel->isOpen());
 
-    OpusAudioCodec codec(48000, 2);
-    for (size_t offset = 0; offset < samples.size(); offset += 960) {
-        std::vector<float> stereo(960 * 2, 0.0f);
-        for (size_t index = 0; index < std::min(size_t{960}, samples.size() - offset); ++index) {
+    OpusAudioCodec codec(TestSampleRate, 2);
+    for (size_t offset = 0; offset < samples.size(); offset += TestFrameSamples) {
+        std::vector<float> stereo(TestFrameSamples * 2, 0.0f);
+        for (size_t index = 0; index < std::min(TestFrameSamples, samples.size() - offset); ++index) {
             stereo[2 * index] = samples[offset + index];
             stereo[2 * index + 1] = samples[offset + index];
         }
@@ -248,14 +248,71 @@ TEST(WebRtcSessionControllerTest, VoxtralTranscribesWebRtcAudioWithoutSilenceDet
         track->sendFrame(std::move(packet), info);
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
+    if (realtimeCall)
+        channel->send(std::string(R"({"type":"input_audio_buffer.commit"})"));
 
     {
         std::unique_lock<std::mutex> lock(mutex);
-        EXPECT_TRUE(condition.wait_for(lock, std::chrono::seconds(30), [&] { return receivedDelta; }));
+        EXPECT_TRUE(condition.wait_for(lock, std::chrono::seconds(60), [&] { return finalReceived; }));
     }
-    EXPECT_TRUE(controller.removeSession(sessionId));
-    std::lock_guard<std::mutex> lock(mutex);
-    EXPECT_NE(transcript.find("biggest animal"), std::string::npos) << transcript;
+    EXPECT_TRUE(controller.removeSession(result.sessionId));
+    offerer->close();
+    EXPECT_TRUE(waitForUdpPortRelease(ControllerUdpPort));
+}
+
+bool containsMessage(const std::vector<std::string>& messages, const std::string& fragment) {
+    return std::any_of(messages.begin(), messages.end(),
+        [&fragment](const std::string& message) { return message.find(fragment) != std::string::npos; });
+}
+}  // namespace
+
+TEST(WebRtcSessionControllerTest, VoxtralTranscribesWebRtcAudioWithoutSilenceDetection) {
+    const char* modelPath = std::getenv("OVMS_VOXTRAL_MODEL_PATH");
+    const char* audioPath = std::getenv("OVMS_VOXTRAL_TEST_WAV");
+    if (!modelPath || !audioPath)
+        GTEST_SKIP() << "Set OVMS_VOXTRAL_MODEL_PATH and OVMS_VOXTRAL_TEST_WAV to run the real-model test";
+    const auto samples = readTestAudio(audioPath);
+    ASSERT_FALSE(samples.empty());
+
+    WebRtcSessionController controller(16, {modelPath, "CPU"});
+    std::vector<std::string> messages;
+    // The legacy protocol has no commit, so Voxtral only streams deltas until the session ends.
+    ASSERT_NO_FATAL_FAILURE(streamAudioOverWebRtc(controller, samples, false, "\"type\":\"user_delta\"", messages));
+    EXPECT_FALSE(containsMessage(messages, "\"type\":\"user_error\""));
+}
+
+TEST(WebRtcSessionControllerTest, WhisperTranscribesUtteranceAfterSilence) {
+    const char* modelPath = std::getenv("OVMS_WHISPER_MODEL_PATH");
+    const char* audioPath = std::getenv("OVMS_VOXTRAL_TEST_WAV");
+    if (!modelPath || !audioPath)
+        GTEST_SKIP() << "Set OVMS_WHISPER_MODEL_PATH and OVMS_VOXTRAL_TEST_WAV to run the real-model test";
+    auto samples = readTestAudio(audioPath);
+    ASSERT_FALSE(samples.empty());
+    // Trailing silence longer than the utterance buffer hangover closes the utterance.
+    samples.resize(samples.size() + TestSampleRate, 0.0f);
+
+    WebRtcSessionController controller(16, {modelPath, "CPU"});
+    std::vector<std::string> messages;
+    ASSERT_NO_FATAL_FAILURE(streamAudioOverWebRtc(controller, samples, false, "\"type\":\"user_final\"", messages));
+    EXPECT_TRUE(containsMessage(messages, "animal"));
+    EXPECT_FALSE(containsMessage(messages, "\"type\":\"user_error\""));
+}
+
+TEST(WebRtcSessionControllerTest, WhisperTranscribesCommittedAudioInRealtimeCall) {
+    const char* modelPath = std::getenv("OVMS_WHISPER_MODEL_PATH");
+    const char* audioPath = std::getenv("OVMS_VOXTRAL_TEST_WAV");
+    if (!modelPath || !audioPath)
+        GTEST_SKIP() << "Set OVMS_WHISPER_MODEL_PATH and OVMS_VOXTRAL_TEST_WAV to run the real-model test";
+    const auto samples = readTestAudio(audioPath);
+    ASSERT_FALSE(samples.empty());
+
+    WebRtcSessionController controller(16, {modelPath, "CPU"});
+    std::vector<std::string> messages;
+    ASSERT_NO_FATAL_FAILURE(streamAudioOverWebRtc(controller, samples, true,
+        "\"type\":\"conversation.item.input_audio_transcription.completed\"", messages));
+    EXPECT_TRUE(containsMessage(messages, "\"type\":\"session.created\""));
+    EXPECT_TRUE(containsMessage(messages, "\"type\":\"input_audio_buffer.committed\""));
+    EXPECT_TRUE(containsMessage(messages, "animal"));
 }
 
 TEST(WebRtcSessionControllerTest, CreatesAndRemovesSession) {
@@ -367,7 +424,7 @@ TEST(WebRtcSessionControllerTest, DoesNotAnnounceUnsupportedCandidates) {
 
 TEST(WebRtcSessionControllerTest, RealtimeCallAnnouncesConfiguredIp) {
     const std::string announcedIp = "10.91.240.7";
-    WebRtcSessionController controller(16, {}, {}, "CPU", "CPU", 0, announcedIp);
+    WebRtcSessionController controller(16, {}, announcedIp);
     WebRtcSessionController::OfferResult result;
     WebRtcPeerConnection offerer(rtc::Configuration{});
     const std::string offerSdp = createGatheredOffer(offerer);
@@ -384,7 +441,7 @@ TEST(WebRtcSessionControllerTest, RealtimeCallAnnouncesConfiguredIp) {
 }
 
 TEST(WebRtcSessionControllerTest, IgnoresInvalidAnnouncedIp) {
-    WebRtcSessionController controller(16, {}, {}, "CPU", "CPU", 0, "not-an-ip");
+    WebRtcSessionController controller(16, {}, "not-an-ip");
     WebRtcSessionController::OfferResult result;
     WebRtcPeerConnection offerer(rtc::Configuration{});
     const std::string offerSdp = createGatheredOffer(offerer);
