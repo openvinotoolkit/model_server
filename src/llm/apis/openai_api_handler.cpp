@@ -100,6 +100,10 @@ std::string OpenAIApiHandler::serializeFailedEvent(const std::string& errorMessa
     return "";
 }
 
+std::string OpenAIApiHandler::serializeStreamingError(const std::string& errorMessage) {
+    return serializeFailedEvent(errorMessage);
+}
+
 absl::Status OpenAIApiHandler::parseResponseFormat() {
     auto it = doc.FindMember("response_format");
     if (it != doc.MemberEnd()) {
