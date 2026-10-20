@@ -1332,7 +1332,7 @@ TEST_F(ConfigStatus, isAuthorized) {
     EXPECT_FALSE(handler.isAuthorized(headers, "any_key"));
 }
 
-TEST_F(ConfigStatus, WebRtcEndpointsRequireApiKey) {
+TEST_F(ConfigStatus, RealtimeCallEndpointsRequireApiKey) {
     ovms::Server& ovmsServer = ovms::Server::instance();
     std::string contents;
     auto fs = std::make_shared<ovms::LocalFileSystem>();
@@ -1340,10 +1340,6 @@ TEST_F(ConfigStatus, WebRtcEndpointsRequireApiKey) {
     TestHelper1 t(*this, contents.c_str());
     auto handler = ovms::HttpRestApiHandler(ovmsServer, 10, "ABC");
     const std::vector<std::pair<std::string, std::string>> endpoints = {
-        {"POST", "/v1/webrtc/sessions"},
-        {"POST", "/v1/webrtc/sessions/1/candidates"},
-        {"GET", "/v1/webrtc/sessions/1/candidates"},
-        {"POST", "/v1/webrtc/sessions/1/close"},
         {"POST", "/v1/realtime/calls"},
         {"POST", "/v1/realtime/calls/1/hangup"}};
     for (const auto& [method, path] : endpoints) {
@@ -1363,29 +1359,6 @@ TEST_F(ConfigStatus, WebRtcEndpointsRequireApiKey) {
     ovms::HttpResponseComponents responseComponents;
     EXPECT_EQ(handler.dispatchToProcessor("/v1/realtime/calls/1/hangup", "", &response, components, responseComponents, nullptr, nullptr),
         ovms::StatusCode::REST_NOT_FOUND);
-}
-
-TEST_F(ConfigStatus, WebRtcSessionRequiresServedSpeechModel) {
-    ovms::Server& ovmsServer = ovms::Server::instance();
-    std::string contents;
-    auto fs = std::make_shared<ovms::LocalFileSystem>();
-    fs->readTextFile(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_cpu_dummy.json"), &contents);
-    TestHelper1 t(*this, contents.c_str());
-    auto handler = ovms::HttpRestApiHandler(ovmsServer, 10);
-    const std::string path = "/v1/webrtc/sessions";
-    const std::vector<std::pair<std::string, ovms::StatusCode>> requests = {
-        {R"({"sdp":"v=0\r\n","type":"offer"})", ovms::StatusCode::JSON_INVALID},
-        {R"({"sdp":"v=0\r\n","type":"offer","model":"dummy"})", ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING},
-        {R"({"sdp":"v=0\r\n","type":"offer","model":"missing"})", ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING}};
-    for (const auto& [body, expectedStatus] : requests) {
-        ovms::HttpRequestComponents components;
-        ASSERT_EQ(handler.parseRequestComponents(components, "POST", path), ovms::StatusCode::OK);
-        std::string response;
-        ovms::HttpResponseComponents responseComponents;
-        EXPECT_EQ(handler.dispatchToProcessor(path, body, &response, components, responseComponents, nullptr, nullptr),
-            expectedStatus)
-            << body;
-    }
 }
 
 TEST_F(ConfigStatus, RealtimeCallRequiresMultipartSessionModel) {

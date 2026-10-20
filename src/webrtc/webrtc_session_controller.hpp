@@ -55,27 +55,16 @@ public:
     /// candidate is not a host candidate of the same IP family or already uses announcedIp.
     static std::string announceHostCandidate(const std::string& candidate, const std::string& announcedIp);
 
-    /// OVMS signaling: JSON offer/answer with trickled ICE candidates, legacy events on the "transcript" channel.
-    /// The session transcribes with the served pipeline in speechModel; without a pipeline audio is dropped.
-    bool createSession(const std::string& offerSdp, const std::string& offerType, const SttPipelineHandle& speechModel,
-        OfferResult& result);
     /// OpenAI Realtime API compatible signaling (POST /v1/realtime/calls): the SDP answer embeds all
     /// server ICE candidates and OpenAI transcription events are exchanged on the "oai-events" channel.
     bool createRealtimeCall(const std::string& offerSdp, const SttPipelineHandle& speechModel, OfferResult& result);
-    bool addCandidate(const std::string& sessionId, const std::string& candidate, const std::string& mid);
-    bool getCandidates(const std::string& sessionId, std::vector<Candidate>& candidates) const;
     bool removeSession(const std::string& sessionId);
     size_t sessionCount() const;
 
 private:
-    enum class Protocol {
-        Ovms,
-        OpenAiRealtime
-    };
-
     struct Session : std::enable_shared_from_this<Session> {
-        Session(rtc::Configuration configuration, Protocol protocol, std::string id);
-        void sendTranscript(const std::string& message);
+        Session(rtc::Configuration configuration, std::string id);
+        void sendEvent(const std::string& message);
         void sendUserDelta(const std::string& itemId, const std::string& text);
         void sendUserFinal(const std::string& itemId, const std::string& text);
         void sendUserError(const std::string& text);
@@ -93,7 +82,6 @@ private:
         bool isDisconnected() const;
         AudioChunk decodeAudioFrame(const rtc::binary& data, const rtc::FrameInfo& info);
 
-        const Protocol protocol;
         const std::string id;
         WebRtcPeerConnection peer;
         OpusAudioCodec codec;
@@ -115,8 +103,7 @@ private:
         mutable std::mutex mutex;
     };
 
-    bool negotiateSession(const std::string& offerSdp, const std::string& offerType, Protocol protocol,
-        const SttPipelineHandle& speechModel, OfferResult& result);
+    bool negotiateSession(const std::string& offerSdp, const SttPipelineHandle& speechModel, OfferResult& result);
     void removeDisconnectedRealtimeCalls();
 
     mutable std::mutex mutex_;

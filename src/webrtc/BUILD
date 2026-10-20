@@ -17,13 +17,6 @@
 load("//:common_settings.bzl", "ovms_cc_library")
 
 ovms_cc_library(
-    name = "webrtc_signaling_session",
-    srcs = ["webrtc_signaling_session.cpp"],
-    hdrs = ["webrtc_signaling_session.hpp"],
-    visibility = ["//visibility:public"],
-)
-
-ovms_cc_library(
     name = "streaming_audio_model",
     hdrs = ["streaming_audio_model.hpp"],
     visibility = ["//visibility:public"],
@@ -118,16 +111,6 @@ cc_test(
     deps = [
         ":opus_audio_codec",
         ":webrtc_peer_connection",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
-
-cc_test(
-    name = "webrtc_signaling_session_test",
-    srcs = ["webrtc_signaling_session_test.cpp"],
-    linkstatic = 1,
-    deps = [
-        ":webrtc_signaling_session",
         "@com_google_googletest//:gtest_main",
     ],
 )

@@ -13,13 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""End-to-end WebRTC transcription tests mirroring references/index.html.
+"""End-to-end WebRTC transcription tests for OpenAI Realtime signaling.
 
 Connection types covered:
-  * OVMS WebRTC              - JSON signaling on /v1/webrtc/sessions, "transcript" data channel
   * OpenAI Realtime API      - SDP over https://api.openai.com/v1/realtime/calls, "oai-events" data channel
-  * OVMS OpenAI Compatible   - same protocol as OpenAI, served by OVMS on /v1/realtime/calls; the SDP offer and
-                               the session naming the transcription model are sent as a multipart form
+  * OVMS OpenAI Compatible   - same protocol as OpenAI, served by OVMS on /v1/realtime/calls
 
 Environment:
   OVMS_URL             OVMS REST base URL (default: http://localhost:9112)
@@ -47,7 +45,6 @@ import pytest
 import requests
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaPlayer
-from aiortc.sdp import candidate_from_sdp
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OVMS_URL = os.environ.get("OVMS_URL", "http://localhost:9112").rstrip("/")
@@ -85,13 +82,12 @@ requires_ovms = pytest.mark.skipif(not ovms_ready(), reason=f"OVMS is not reacha
 
 
 class TranscriptCollector:
-    """Accumulates data channel events from either the legacy OVMS or the OpenAI protocol."""
+    """Accumulates OpenAI Realtime transcription events from the data channel."""
 
     def __init__(self):
         self.events = []
         self.deltas = []
         self.completed = []
-        self.legacy_finals = []
         self.errors = []
         self.call_location = None
         self.updated = asyncio.Event()
@@ -109,11 +105,7 @@ class TranscriptCollector:
             self.deltas.append(message.get("delta", ""))
         elif event_type == COMPLETED_EVENT:
             self.completed.append(message.get("transcript", ""))
-        elif event_type == "user_delta":
-            self.deltas.append(message.get("text", ""))
-        elif event_type == "user_final":
-            self.legacy_finals.append(message.get("text", ""))
-        elif event_type in ("error", "user_error"):
+        elif event_type == "error":
             self.errors.append(message)
         self.updated.set()
 
@@ -168,16 +160,6 @@ class AudioClient:
 
     async def apply_answer(self, sdp):
         await self.pc.setRemoteDescription(RTCSessionDescription(sdp=sdp, type="answer"))
-
-    async def add_remote_candidate(self, candidate, mid):
-        """Adds an OVMS candidate; returns False when it is dropped by the OVMS_ANNOUNCED_IP filter."""
-        fields = candidate_fields(candidate)
-        if not is_reachable_ovms_candidate(fields):
-            return False
-        ice_candidate = candidate_from_sdp(fields)
-        ice_candidate.sdpMid = mid
-        await self.pc.addIceCandidate(ice_candidate)
-        return True
 
     async def wait_connected(self):
         await asyncio.wait_for(self.channel_open.wait(), timeout=CONNECT_TIMEOUT_S)
@@ -271,61 +253,6 @@ async def run_openai_protocol(calls_url, auth_token, http_session, ovms_server=F
         assert_transcript(" ".join(client.collector.completed), client.collector)
         return client.collector
     finally:
-        await client.close()
-
-
-@requires_ovms
-@pytest.mark.asyncio
-async def test_ovms_webrtc_transcription():
-    http = ovms_http()
-    client = AudioClient("transcript")
-    session_id = None
-    try:
-        offer_sdp = await client.create_offer()
-        response = await asyncio.to_thread(
-            http.post, f"{OVMS_URL}/v1/webrtc/sessions", json={"type": "offer", "sdp": offer_sdp, "model": OVMS_MODEL},
-            timeout=30)
-        assert response.ok, f"Session request failed: {response.status_code} {response.text}"
-        answer = response.json()
-        assert answer["type"] == "answer"
-        session_id = answer["session_id"]
-        await client.apply_answer(answer["sdp"])
-
-        known = set()
-        added = 0
-
-        async def add_candidates(candidates):
-            nonlocal added
-            for candidate in candidates:
-                key = (candidate["candidate"], candidate["mid"])
-                if key not in known:
-                    known.add(key)
-                    if await client.add_remote_candidate(candidate["candidate"], candidate["mid"]):
-                        added += 1
-
-        await add_candidates(answer.get("candidates", []))
-        deadline = time.monotonic() + CONNECT_TIMEOUT_S
-        while not client.channel_open.is_set() and time.monotonic() < deadline:
-            polled = await asyncio.to_thread(
-                http.get, f"{OVMS_URL}/v1/webrtc/sessions/{session_id}/candidates", timeout=5)
-            assert polled.ok, polled.text
-            await add_candidates(polled.json().get("candidates", []))
-            try:
-                await asyncio.wait_for(client.channel_open.wait(), timeout=1)
-            except asyncio.TimeoutError:
-                pass
-        assert added, f"No OVMS candidate with announced IP {OVMS_ANNOUNCED_IP}; received: {sorted(known)}"
-        await client.wait_connected()
-
-        await client.wait_audio_sent()
-        # Voxtral streams deltas while audio flows; wait until the keyword shows up.
-        await client.collector.wait_for(
-            lambda: EXPECTED_KEYWORD in client.collector.delta_text().lower() or client.collector.errors,
-            TRANSCRIPT_TIMEOUT_S)
-        assert_transcript(client.collector.delta_text(), client.collector)
-    finally:
-        if session_id is not None:
-            await asyncio.to_thread(http.post, f"{OVMS_URL}/v1/webrtc/sessions/{session_id}/close", timeout=60)
         await client.close()
 
 

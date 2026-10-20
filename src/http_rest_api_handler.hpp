@@ -53,10 +53,6 @@ enum RequestType { ConfigReload,
     V3_RetrieveModel,
     V3,
     Metrics,
-    WebRTC_CreateSession,
-    WebRTC_AddCandidate,
-    WebRTC_GetCandidates,
-    WebRTC_RemoveSession,
     WebRTC_RealtimeCall,
     WebRTC_RealtimeHangup,
     Options };
@@ -69,7 +65,7 @@ struct HttpRequestComponents {
     std::optional<std::string_view> model_version_label;
     std::string processing_method;
     std::string model_subresource;
-    std::string webrtc_session_id;
+    std::string realtime_call_id;
     std::optional<int> inferenceHeaderContentLength;
     std::unordered_map<std::string, std::string> headers;
 };
@@ -107,9 +103,6 @@ public:
     static const std::string kfs_inferRegexExp;
 
     static const std::string metricsRegexExp;
-    static const std::string webrtcSessionRegexExp;
-    static const std::string webrtcCandidatesRegexExp;
-    static const std::string webrtcCloseRegexExp;
     static const std::string realtimeCallsRegexExp;
     static const std::string realtimeHangupRegexExp;
 
@@ -179,16 +172,11 @@ public:
     Status processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::optional<int>& inferenceHeaderContentLength);
     Status processMetrics(const HttpRequestComponents& request_components, HttpResponseComponents& response_components, std::string& response, const std::string& request_body);
-    /// Legacy OVMS WebRTC signaling; the JSON offer names the served speech-to-text graph in "model".
-    Status processWebRtcCreateSession(std::string& response, const std::string& request_body);
-    Status processWebRtcAddCandidate(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
-    Status processWebRtcGetCandidates(const HttpRequestComponents& request_components, std::string& response);
-    Status processWebRtcRemoveSession(const HttpRequestComponents& request_components, std::string& response);
     /// OpenAI Realtime API compatible WebRTC call: multipart "sdp" offer and "session" configuration naming the
     /// served speech-to-text graph; the SDP answer (with ICE candidates) is returned.
     Status processRealtimeCall(const HttpRequestComponents& request_components, std::string& response,
         const std::shared_ptr<MultiPartParser>& multiPartParser, HttpResponseComponents& response_components);
-    Status getWebRtcSpeechModel(const std::string& modelName, SttPipelineHandle& speechModel);
+    Status getRealtimeCallSpeechModel(const std::string& modelName, SttPipelineHandle& speechModel);
     Status processRealtimeHangup(const HttpRequestComponents& request_components, std::string& response);
     Status processOptions(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
@@ -220,9 +208,6 @@ private:
     const std::regex v3_Regex;
 
     const std::regex metricsRegex;
-    const std::regex webrtcSessionRegex;
-    const std::regex webrtcCandidatesRegex;
-    const std::regex webrtcCloseRegex;
     const std::regex realtimeCallsRegex;
     const std::regex realtimeHangupRegex;
 

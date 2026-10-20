@@ -46,12 +46,11 @@
 
 namespace ovms {
 
-TEST(WebRtcSessionControllerTest, RejectsInvalidOffer) {
+TEST(WebRtcSessionControllerTest, RejectsEmptyOffer) {
     WebRtcSessionController controller;
     WebRtcSessionController::OfferResult result;
 
-    EXPECT_FALSE(controller.createSession("", "offer", {}, result));
-    EXPECT_FALSE(controller.createSession("v=0", "answer", {}, result));
+    EXPECT_FALSE(controller.createRealtimeCall("", {}, result));
     EXPECT_EQ(controller.sessionCount(), 0);
 }
 
@@ -164,14 +163,14 @@ std::vector<float> readTestAudio(const char* audioPath) {
 }
 
 // Streams 48 kHz mono audio to the controller over a real WebRTC connection and collects data channel
-// messages until one contains finalMarker. The realtime call protocol commits the audio buffer explicitly.
+// messages until one contains finalMarker. Set commitAudio to exercise explicit Realtime commits.
 SttPipelineHandle loadSpeechModel(const std::string& modelPath) {
     return SttPipelineHandle{std::make_shared<ov::genai::ASRPipeline>(modelPath, "CPU", ov::AnyMap{}),
         std::make_shared<std::mutex>(), modelPath};
 }
 
 void streamAudioOverWebRtc(WebRtcSessionController& controller, const SttPipelineHandle& speechModel,
-    const std::vector<float>& samples, bool realtimeCall, const std::string& finalMarker,
+    const std::vector<float>& samples, bool commitAudio, const std::string& finalMarker,
     std::vector<std::string>& messages) {
     rtc::Configuration configuration;
     configuration.portRangeBegin = ClientUdpPort;
@@ -182,7 +181,7 @@ void streamAudioOverWebRtc(WebRtcSessionController& controller, const SttPipelin
     auto track = offerer->addTrack(audio);
     track->setMediaHandler(std::make_shared<rtc::OpusRtpPacketizer>(
         std::make_shared<rtc::RtpPacketizationConfig>(1, "webrtc-test", 111, TestSampleRate)));
-    auto channel = offerer->createDataChannel(realtimeCall ? "oai-events" : "transcript");
+    auto channel = offerer->createDataChannel("oai-events");
 
     std::mutex mutex;
     std::condition_variable condition;
@@ -214,11 +213,7 @@ void streamAudioOverWebRtc(WebRtcSessionController& controller, const SttPipelin
     const std::string offerSdp = std::string(*offerer->localDescription());
 
     WebRtcSessionController::OfferResult result;
-    if (realtimeCall) {
-        ASSERT_TRUE(controller.createRealtimeCall(offerSdp, speechModel, result));
-    } else {
-        ASSERT_TRUE(controller.createSession(offerSdp, "offer", speechModel, result));
-    }
+    ASSERT_TRUE(controller.createRealtimeCall(offerSdp, speechModel, result));
     offerer->setRemoteDescription(rtc::Description(result.sdp, result.type));
     for (const auto& candidate : result.candidates)
         offerer->addRemoteCandidate(rtc::Candidate(candidate.candidate, candidate.mid));
@@ -245,7 +240,7 @@ void streamAudioOverWebRtc(WebRtcSessionController& controller, const SttPipelin
         track->sendFrame(std::move(packet), info);
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
-    if (realtimeCall)
+    if (commitAudio)
         channel->send(std::string(R"({"type":"input_audio_buffer.commit"})"));
 
     {
@@ -274,9 +269,9 @@ TEST(WebRtcSessionControllerTest, VoxtralTranscribesWebRtcAudioWithoutSilenceDet
 
     WebRtcSessionController controller;
     std::vector<std::string> messages;
-    // The legacy protocol has no commit, so Voxtral only streams deltas until the session ends.
-    ASSERT_NO_FATAL_FAILURE(streamAudioOverWebRtc(controller, loadSpeechModel(modelPath), samples, false, "\"type\":\"user_delta\"", messages));
-    EXPECT_FALSE(containsMessage(messages, "\"type\":\"user_error\""));
+    ASSERT_NO_FATAL_FAILURE(streamAudioOverWebRtc(controller, loadSpeechModel(modelPath), samples, false,
+        "\"type\":\"conversation.item.input_audio_transcription.delta\"", messages));
+    EXPECT_FALSE(containsMessage(messages, "\"type\":\"error\""));
 }
 
 TEST(WebRtcSessionControllerTest, WhisperTranscribesUtteranceAfterSilence) {
@@ -291,9 +286,10 @@ TEST(WebRtcSessionControllerTest, WhisperTranscribesUtteranceAfterSilence) {
 
     WebRtcSessionController controller;
     std::vector<std::string> messages;
-    ASSERT_NO_FATAL_FAILURE(streamAudioOverWebRtc(controller, loadSpeechModel(modelPath), samples, false, "\"type\":\"user_final\"", messages));
+    ASSERT_NO_FATAL_FAILURE(streamAudioOverWebRtc(controller, loadSpeechModel(modelPath), samples, false,
+        "\"type\":\"conversation.item.input_audio_transcription.completed\"", messages));
     EXPECT_TRUE(containsMessage(messages, "animal"));
-    EXPECT_FALSE(containsMessage(messages, "\"type\":\"user_error\""));
+    EXPECT_FALSE(containsMessage(messages, "\"type\":\"error\""));
 }
 
 TEST(WebRtcSessionControllerTest, WhisperTranscribesCommittedAudioInRealtimeCall) {
@@ -311,46 +307,6 @@ TEST(WebRtcSessionControllerTest, WhisperTranscribesCommittedAudioInRealtimeCall
     EXPECT_TRUE(containsMessage(messages, "\"type\":\"session.created\""));
     EXPECT_TRUE(containsMessage(messages, "\"type\":\"input_audio_buffer.committed\""));
     EXPECT_TRUE(containsMessage(messages, "animal"));
-}
-
-TEST(WebRtcSessionControllerTest, CreatesAndRemovesSession) {
-    WebRtcSessionController controller;
-    WebRtcSessionController::OfferResult result;
-    WebRtcPeerConnection offerer(rtc::Configuration{});
-    std::mutex mutex;
-    std::condition_variable condition;
-    std::string offerSdp;
-    std::string offerType;
-    offerer.onLocalDescription([&](const std::string& sdp, const std::string& type) {
-        std::lock_guard<std::mutex> lock(mutex);
-        offerSdp = sdp;
-        offerType = type;
-        condition.notify_all();
-    });
-    offerer.addAudioTrack(rtc::Description::Direction::SendOnly);
-    offerer.createOffer();
-
-    std::unique_lock<std::mutex> lock(mutex);
-    ASSERT_TRUE(condition.wait_for(lock, std::chrono::seconds(5), [&] {
-        return !offerSdp.empty();
-    }));
-    lock.unlock();
-
-    ASSERT_TRUE(controller.createSession(offerSdp, offerType, {}, result));
-    EXPECT_FALSE(result.sessionId.empty());
-    EXPECT_EQ(result.type, "answer");
-    EXPECT_FALSE(result.sdp.empty());
-    EXPECT_EQ(controller.sessionCount(), 1);
-    EXPECT_FALSE(controller.addCandidate("missing", "candidate", "0"));
-    EXPECT_TRUE(controller.removeSession(result.sessionId));
-    EXPECT_EQ(controller.sessionCount(), 0);
-}
-
-TEST(WebRtcSessionControllerTest, RejectsInvalidRealtimeCall) {
-    WebRtcSessionController controller;
-    WebRtcSessionController::OfferResult result;
-    EXPECT_FALSE(controller.createRealtimeCall("", {}, result));
-    EXPECT_EQ(controller.sessionCount(), 0);
 }
 
 namespace {

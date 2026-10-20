@@ -39,51 +39,6 @@ namespace ovms {
 
 namespace {
 
-std::string escapeJson(const std::string& value) {
-    std::string escaped;
-    escaped.reserve(value.size());
-    for (const unsigned char character : value) {
-        switch (character) {
-        case '"':
-            escaped += "\\\"";
-            break;
-        case '\\':
-            escaped += "\\\\";
-            break;
-        case '\b':
-            escaped += "\\b";
-            break;
-        case '\f':
-            escaped += "\\f";
-            break;
-        case '\n':
-            escaped += "\\n";
-            break;
-        case '\r':
-            escaped += "\\r";
-            break;
-        case '\t':
-            escaped += "\\t";
-            break;
-        default:
-            if (character < 0x20) {
-                constexpr char hex[] = "0123456789abcdef";
-                escaped += "\\u00";
-                escaped += hex[character >> 4];
-                escaped += hex[character & 0x0f];
-            } else {
-                escaped += static_cast<char>(character);
-            }
-        }
-    }
-    return escaped;
-}
-
-std::string transcriptMessage(const std::string& type, const std::string& text) {
-    return "{\"type\":\"" + escapeJson(type) + "\",\"text\":\"" + escapeJson(text) + "\"}";
-}
-
-constexpr char OvmsTranscriptChannelLabel[] = "transcript";
 constexpr char OpenAiEventsChannelLabel[] = "oai-events";
 
 std::string nextEventId() {
@@ -280,57 +235,52 @@ std::string preferOpusAudioCodec(const std::string& offerSdp) {
 
 }  // namespace
 
-WebRtcSessionController::Session::Session(rtc::Configuration configuration, Protocol protocol, std::string id) :
-    protocol(protocol),
+WebRtcSessionController::Session::Session(rtc::Configuration configuration, std::string id) :
     id(std::move(id)),
     peer(std::move(configuration)),
     codec(OpusAudioCodec::SampleRate, 2) {}
 
 void WebRtcSessionController::Session::sendUserDelta(const std::string& itemId, const std::string& text) {
-    sendTranscript(protocol == Protocol::OpenAiRealtime ? transcriptionDeltaEvent(itemId, text) : transcriptMessage("user_delta", text));
+    sendEvent(transcriptionDeltaEvent(itemId, text));
 }
 
 void WebRtcSessionController::Session::sendUserFinal(const std::string& itemId, const std::string& text) {
-    sendTranscript(protocol == Protocol::OpenAiRealtime ? transcriptionCompletedEvent(itemId, text) : transcriptMessage("user_final", text));
+    sendEvent(transcriptionCompletedEvent(itemId, text));
 }
 
 void WebRtcSessionController::Session::sendUserError(const std::string& text) {
-    sendTranscript(protocol == Protocol::OpenAiRealtime ? errorEvent("server_error", text) : transcriptMessage("user_error", text));
+    sendEvent(errorEvent("server_error", text));
 }
 
 void WebRtcSessionController::Session::attachDataChannel(std::shared_ptr<rtc::DataChannel> channel) {
-    const char* expectedLabel = protocol == Protocol::OpenAiRealtime ? OpenAiEventsChannelLabel : OvmsTranscriptChannelLabel;
-    if (channel->label() != expectedLabel) {
-        SPDLOG_LOGGER_DEBUG(webrtc_logger, "Ignoring data channel with label '{}', expected '{}'", channel->label(), expectedLabel);
+    if (channel->label() != OpenAiEventsChannelLabel) {
+        SPDLOG_LOGGER_DEBUG(webrtc_logger, "Ignoring data channel with label '{}', expected '{}'", channel->label(), OpenAiEventsChannelLabel);
         return;
     }
-    if (protocol == Protocol::OpenAiRealtime) {
-        const std::weak_ptr<Session> weakSession = weak_from_this();
-        channel->onMessage([weakSession](rtc::message_variant message) {
-            if (!std::holds_alternative<std::string>(message))
-                return;
-            if (const auto session = weakSession.lock())
-                session->handleClientEvent(std::get<std::string>(message));
-        });
-    }
+    const std::weak_ptr<Session> weakSession = weak_from_this();
+    channel->onMessage([weakSession](rtc::message_variant message) {
+        if (!std::holds_alternative<std::string>(message))
+            return;
+        if (const auto session = weakSession.lock())
+            session->handleClientEvent(std::get<std::string>(message));
+    });
     {
         std::lock_guard<std::mutex> lock(mutex);
         transcriptChannel = std::move(channel);
     }
-    if (protocol == Protocol::OpenAiRealtime)
-        sendTranscript(sessionCreatedEvent(id));
+    sendEvent(sessionCreatedEvent(id));
 }
 
 void WebRtcSessionController::Session::handleClientEvent(const std::string& message) {
     rapidjson::Document event;
     event.Parse(message.c_str(), message.size());
     if (event.HasParseError() || !event.IsObject()) {
-        sendTranscript(errorEvent("invalid_request_error", "Client event is not a valid JSON object"));
+        sendEvent(errorEvent("invalid_request_error", "Client event is not a valid JSON object"));
         return;
     }
     const auto type = event.FindMember("type");
     if (type == event.MemberEnd() || !type->value.IsString()) {
-        sendTranscript(errorEvent("invalid_request_error", "Client event is missing the 'type' field"));
+        sendEvent(errorEvent("invalid_request_error", "Client event is missing the 'type' field"));
         return;
     }
     const std::string eventType = type->value.GetString();
@@ -401,14 +351,14 @@ void WebRtcSessionController::Session::commitAudio() {
             utterance = utteranceBuffer.flush();
         }
         if (!utterance) {
-            sendTranscript(errorEvent("invalid_request_error", "Error committing input audio buffer: buffer is empty"));
+            sendEvent(errorEvent("invalid_request_error", "Error committing input audio buffer: buffer is empty"));
             return;
         }
         transcribeUtterance(std::move(*utterance));
         return;
     }
     if (!voxtralAdapter) {
-        sendTranscript(errorEvent("invalid_request_error", "input_audio_buffer.commit requires a speech-to-text model"));
+        sendEvent(errorEvent("invalid_request_error", "input_audio_buffer.commit requires a speech-to-text model"));
         return;
     }
     std::shared_ptr<VoxtralAudioAdapter::Stream> committedStream;
@@ -418,7 +368,7 @@ void WebRtcSessionController::Session::commitAudio() {
         committedStream = voxtralStream;
         committedItemId = currentItemId;
     }
-    sendTranscript(audioCommittedEvent(committedItemId));
+    sendEvent(audioCommittedEvent(committedItemId));
     // New audio goes to a fresh item while the committed stream drains and emits its completed event.
     startVoxtralStream();
     if (committedStream)
@@ -439,8 +389,7 @@ void WebRtcSessionController::Session::transcribeUtterance(AudioChunk utterance)
     const std::string itemId = nextItemId();
     SPDLOG_LOGGER_DEBUG(webrtc_logger, "Transcribing utterance {}: length_ms={}", itemId,
         utterance.samples.size() * 1000 / (static_cast<uint64_t>(utterance.sampleRate) * utterance.channels));
-    if (protocol == Protocol::OpenAiRealtime)
-        sendTranscript(audioCommittedEvent(itemId));
+    sendEvent(audioCommittedEvent(itemId));
     const std::weak_ptr<Session> weakSession = weak_from_this();
     sttAdapter->submit(
         std::move(utterance),
@@ -487,7 +436,7 @@ bool WebRtcSessionController::Session::isDisconnected() const {
            state == rtc::PeerConnection::State::Closed;
 }
 
-void WebRtcSessionController::Session::sendTranscript(const std::string& message) {
+void WebRtcSessionController::Session::sendEvent(const std::string& message) {
     std::lock_guard<std::mutex> sendLock(transcriptSendMutex);
     std::shared_ptr<rtc::DataChannel> channel;
     {
@@ -564,16 +513,11 @@ bool WebRtcSessionController::isRealtimeSpeechModel(const std::string& modelPath
     return std::string(modelType->value.GetString()) == "voxtral_realtime";
 }
 
-bool WebRtcSessionController::createSession(const std::string& offerSdp, const std::string& offerType,
-    const SttPipelineHandle& speechModel, OfferResult& result) {
-    return negotiateSession(offerSdp, offerType, Protocol::Ovms, speechModel, result);
-}
-
 bool WebRtcSessionController::createRealtimeCall(const std::string& offerSdp, const SttPipelineHandle& speechModel,
     OfferResult& result) {
     // Realtime call clients never close sessions explicitly, so reclaim dead ones before admitting new calls.
     removeDisconnectedRealtimeCalls();
-    return negotiateSession(offerSdp, "offer", Protocol::OpenAiRealtime, speechModel, result);
+    return negotiateSession(offerSdp, speechModel, result);
 }
 
 void WebRtcSessionController::removeDisconnectedRealtimeCalls() {
@@ -581,7 +525,7 @@ void WebRtcSessionController::removeDisconnectedRealtimeCalls() {
     {
         std::lock_guard<std::mutex> lock(mutex_);
         for (auto it = sessions_.begin(); it != sessions_.end();) {
-            if (it->second->protocol == Protocol::OpenAiRealtime && it->second->isDisconnected()) {
+            if (it->second->isDisconnected()) {
                 disconnected.emplace_back(it->first, std::move(it->second));
                 it = sessions_.erase(it);
             } else {
@@ -595,10 +539,9 @@ void WebRtcSessionController::removeDisconnectedRealtimeCalls() {
     }
 }
 
-bool WebRtcSessionController::negotiateSession(const std::string& offerSdp, const std::string& offerType, Protocol protocol,
-    const SttPipelineHandle& speechModel, OfferResult& result) {
-    if (offerSdp.empty() || offerType != "offer") {
-        SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected session creation, invalid offer, type: {}", offerType);
+bool WebRtcSessionController::negotiateSession(const std::string& offerSdp, const SttPipelineHandle& speechModel, OfferResult& result) {
+    if (offerSdp.empty()) {
+        SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected realtime call creation, offer is empty");
         return false;
     }
 
@@ -627,13 +570,12 @@ bool WebRtcSessionController::negotiateSession(const std::string& offerSdp, cons
         sessionId = std::to_string(nextSessionId_++);
     }
 
-    SPDLOG_LOGGER_INFO(webrtc_logger, "Creating WebRTC session {} from browser offer, protocol: {}", sessionId,
-        protocol == Protocol::OpenAiRealtime ? "openai-realtime" : "ovms");
+    SPDLOG_LOGGER_INFO(webrtc_logger, "Creating realtime call {} from browser offer", sessionId);
     rtc::Configuration configuration;
     // One fixed POC port lets a UDP relay forward browser media to the container.
     configuration.portRangeBegin = 52000;
     configuration.portRangeEnd = 52000;
-    auto session = std::make_shared<Session>(std::move(configuration), protocol, sessionId);
+    auto session = std::make_shared<Session>(std::move(configuration), sessionId);
     session->peer.onStateChange([session](rtc::PeerConnection::State state) {
         if (state == rtc::PeerConnection::State::Disconnected ||
             state == rtc::PeerConnection::State::Failed || state == rtc::PeerConnection::State::Closed) {
@@ -678,18 +620,16 @@ bool WebRtcSessionController::negotiateSession(const std::string& offerSdp, cons
         if (const auto activeSession = weakSession.lock())
             activeSession->attachDataChannel(std::move(channel));
     });
-    if (protocol == Protocol::OpenAiRealtime) {
-        session->peer.onGatheringComplete([weakSession = std::weak_ptr<Session>(session)] {
-            const auto activeSession = weakSession.lock();
-            if (!activeSession)
-                return;
-            {
-                std::lock_guard<std::mutex> lock(activeSession->mutex);
-                activeSession->gatheringComplete = true;
-            }
-            activeSession->descriptionReady.notify_all();
-        });
-    }
+    session->peer.onGatheringComplete([weakSession = std::weak_ptr<Session>(session)] {
+        const auto activeSession = weakSession.lock();
+        if (!activeSession)
+            return;
+        {
+            std::lock_guard<std::mutex> lock(activeSession->mutex);
+            activeSession->gatheringComplete = true;
+        }
+        activeSession->descriptionReady.notify_all();
+    });
     if (voxtralAdapter) {
         const std::weak_ptr<Session> weakSession = session;
         session->voxtralAdapter = voxtralAdapter;
@@ -727,7 +667,7 @@ bool WebRtcSessionController::negotiateSession(const std::string& offerSdp, cons
         // calling addAudioTrack(), which would add a second, unmatched m-line
         // and make libdatachannel emit a renegotiation offer instead of an answer.
         const auto opusPreferredOffer = preferOpusAudioCodec(offerSdp);
-        session->peer.setRemoteDescription(opusPreferredOffer, offerType);
+        session->peer.setRemoteDescription(opusPreferredOffer, "offer");
         session->peer.createAnswer();
     } catch (const std::exception& e) {
         SPDLOG_LOGGER_ERROR(webrtc_logger, "Failed to negotiate WebRTC session: {}", e.what());
@@ -748,19 +688,17 @@ bool WebRtcSessionController::negotiateSession(const std::string& offerSdp, cons
     result.type = session->localType;
     result.sdp = session->localSdp;
     result.candidates = session->localCandidates;
-    if (protocol == Protocol::OpenAiRealtime) {
-        // Realtime call clients do not trickle ICE, so the answer must carry every server candidate.
-        if (!session->descriptionReady.wait_for(lock, std::chrono::seconds(5), [&session] {
-                return session->gatheringComplete;
-            })) {
-            SPDLOG_LOGGER_WARN(webrtc_logger, "Timed out waiting for ICE gathering, answering with {} candidates",
-                session->localCandidates.size());
-        }
-        lock.unlock();
-        result.sdp = addAnnouncedSdpCandidates(session->peer.localDescriptionSdp(), announcedIp_);
-        lock.lock();
-        result.candidates = session->localCandidates;
+    // Realtime call clients do not trickle ICE, so the answer must carry every server candidate.
+    if (!session->descriptionReady.wait_for(lock, std::chrono::seconds(5), [&session] {
+            return session->gatheringComplete;
+        })) {
+        SPDLOG_LOGGER_WARN(webrtc_logger, "Timed out waiting for ICE gathering, answering with {} candidates",
+            session->localCandidates.size());
     }
+    lock.unlock();
+    result.sdp = addAnnouncedSdpCandidates(session->peer.localDescriptionSdp(), announcedIp_);
+    lock.lock();
+    result.candidates = session->localCandidates;
     lock.unlock();
 
     std::lock_guard<std::mutex> sessionsLock(mutex_);
@@ -772,43 +710,6 @@ bool WebRtcSessionController::negotiateSession(const std::string& offerSdp, cons
     result.sessionId = sessionId;
     SPDLOG_LOGGER_INFO(webrtc_logger, "WebRTC session {} created, answer type: {}, local candidates: {}", result.sessionId, result.type, result.candidates.size());
     sessions_.emplace(result.sessionId, std::move(session));
-    return true;
-}
-
-bool WebRtcSessionController::addCandidate(const std::string& sessionId, const std::string& candidate, const std::string& mid) {
-    std::shared_ptr<Session> session;
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        const auto it = sessions_.find(sessionId);
-        if (it == sessions_.end()) {
-            SPDLOG_LOGGER_WARN(webrtc_logger, "Cannot add ICE candidate, unknown session: {}", sessionId);
-            return false;
-        }
-        session = it->second;
-    }
-    if (candidate.empty() || mid.empty()) {
-        SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected empty ICE candidate for session: {}", sessionId);
-        return false;
-    }
-    SPDLOG_LOGGER_DEBUG(webrtc_logger, "Adding remote ICE candidate for session: {}", sessionId);
-    session->peer.addRemoteCandidate(candidate, mid);
-    SPDLOG_LOGGER_DEBUG(webrtc_logger,
-        "Accepted remote ICE candidate for session {}: mid={}, candidate={}", sessionId, mid, candidate);
-    return true;
-}
-
-bool WebRtcSessionController::getCandidates(const std::string& sessionId, std::vector<Candidate>& candidates) const {
-    std::shared_ptr<Session> session;
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        const auto it = sessions_.find(sessionId);
-        if (it == sessions_.end()) {
-            return false;
-        }
-        session = it->second;
-    }
-    std::lock_guard<std::mutex> lock(session->mutex);
-    candidates = session->localCandidates;
     return true;
 }
 
