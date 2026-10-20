@@ -8,14 +8,14 @@
 **Required:** Docker Engine installed
 
 ```bash
-mkdir $(HOME)/models
-docker run --user $(id -u):$(id -g) --rm -v $(HOME)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation
-docker run --user $(id -u):$(id -g) --rm -v $(HOME)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-fp16-ov --task embeddings
-docker run --user $(id -u):$(id -g) --rm -v $(HOME)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-reranker-base-fp16-ov --task rerank
+mkdir -p "${HOME}/models"
+docker run --user $(id -u):$(id -g) --rm -v "${HOME}/models:/models:rw" openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/Qwen3-8B-int4-ov --task text_generation
+docker run --user $(id -u):$(id -g) --rm -v "${HOME}/models:/models:rw" openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-fp16-ov --task embeddings
+docker run --user $(id -u):$(id -g) --rm -v "${HOME}/models:/models:rw" openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-reranker-base-fp16-ov --task rerank
 
-docker run --user $(id -u):$(id -g) --rm -v $(HOME)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
-docker run --user $(id -u):$(id -g) --rm -v $(HOME)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/bge-base-en-v1.5-fp16-ov --model_path OpenVINO/bge-base-en-v1.5-fp16-ov
-docker run --user $(id -u):$(id -g) --rm -v $(HOME)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/bge-reranker-base-fp16-ov --model_path OpenVINO/bge-reranker-base-fp16-ov
+docker run --user $(id -u):$(id -g) --rm -v "${HOME}/models:/models:rw" openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/Qwen3-8B-int4-ov --model_path OpenVINO/Qwen3-8B-int4-ov
+docker run --user $(id -u):$(id -g) --rm -v "${HOME}/models:/models:rw" openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/bge-base-en-v1.5-fp16-ov --model_path OpenVINO/bge-base-en-v1.5-fp16-ov
+docker run --user $(id -u):$(id -g) --rm -v "${HOME}/models:/models:rw" openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name OpenVINO/bge-reranker-base-fp16-ov --model_path OpenVINO/bge-reranker-base-fp16-ov
 ```
 :::
 
@@ -47,13 +47,13 @@ ovms --add_to_config --config_path c:\models/config.json --model_name OpenVINO/b
 
 :::{tab-item} With Docker
 ```bash
-docker run -d --rm -p 8000:8000 -v $(HOME)/models:/workspace:ro openvino/model_server:latest --rest_port 8000 --config_path /workspace/config.json
+docker run -d --rm -p 8000:8000 -v "${HOME}/models:/workspace:ro" openvino/model_server:latest --rest_port 8000 --config_path /workspace/config.json
 ```
 :::
 
 :::{tab-item} On Baremetal Windows
 ```bat
-ovms --rest_port 8000 --config_path models\config.json
+ovms --rest_port 8000 --config_path c:\models\config.json
 ```
 :::
 ::::

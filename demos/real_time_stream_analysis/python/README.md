@@ -52,7 +52,7 @@ curl -L --create-dirs https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/m
 chmod -R 755 resnetMediapipe
 ```
 ```bash
-docker run -d -v "$PWD":/mediapipe -p 9000:9000 openvino/model_server:latest --config_path /mediapipe/config.json --port 9000
+docker run -d -v ${PWD}:/mediapipe -p 9000:9000 openvino/model_server:latest --config_path /mediapipe/config.json --port 9000
 ```
 For a bare-metal deployment, run this command from the image-classification demo directory.
 ```bat
@@ -110,7 +110,7 @@ options:
 
 #### Reading from the local camera and visualization on the screen
 
-```console
+```text
 python client.py --grpc_address localhost:9000 --input_stream 0 --output_stream screen
 ```
 
