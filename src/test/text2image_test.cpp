@@ -1734,26 +1734,26 @@ TEST(Text2ImageTest, ResponseFromOvTensorBatch3) {
 }
 
 void testResponseFromOvTensorRGBA(size_t batchSize) {
-    constexpr size_t height = 4;
-    constexpr size_t width = 4;
-    constexpr size_t channels = 4;
-    constexpr size_t alphaChannel = channels - 1;
-    constexpr size_t alphaValueCount = 3;
-    constexpr size_t byteValueRange = 256;
-    constexpr uint8_t transparentAlpha = 0;
-    constexpr uint8_t partialAlpha = 127;
-    constexpr uint8_t opaqueAlpha = 255;
-    constexpr uint8_t alphaValues[alphaValueCount] = {transparentAlpha, partialAlpha, opaqueAlpha};
-    ov::Tensor tensor(ov::element::u8, ov::Shape{batchSize, height, width, channels});
+    constexpr size_t HEIGHT = 4;
+    constexpr size_t WIDTH = 4;
+    constexpr size_t CHANNELS = 4;
+    constexpr size_t ALPHA_CHANNEL = CHANNELS - 1;
+    constexpr size_t ALPHA_VALUE_COUNT = 3;
+    constexpr size_t BYTE_VALUE_RANGE = 256;
+    constexpr uint8_t TRANSPARENT_ALPHA = 0;
+    constexpr uint8_t PARTIAL_ALPHA = 127;
+    constexpr uint8_t OPAQUE_ALPHA = 255;
+    constexpr uint8_t ALPHA_VALUES[ALPHA_VALUE_COUNT] = {TRANSPARENT_ALPHA, PARTIAL_ALPHA, OPAQUE_ALPHA};
+    ov::Tensor tensor(ov::element::u8, ov::Shape{batchSize, HEIGHT, WIDTH, CHANNELS});
     auto* imageData = tensor.data<uint8_t>();
     size_t valueCounter = 0;
     for (size_t image = 0; image < batchSize; ++image) {
-        for (size_t pixel = 0; pixel < height * width; ++pixel) {
-            const size_t pixelOffset = (image * height * width + pixel) * channels;
-            for (size_t channel = 0; channel < alphaChannel; ++channel) {
-                imageData[pixelOffset + channel] = static_cast<uint8_t>(valueCounter++ % byteValueRange);
+        for (size_t pixel = 0; pixel < HEIGHT * WIDTH; ++pixel) {
+            const size_t pixelOffset = (image * HEIGHT * WIDTH + pixel) * CHANNELS;
+            for (size_t channel = 0; channel < ALPHA_CHANNEL; ++channel) {
+                imageData[pixelOffset + channel] = static_cast<uint8_t>(valueCounter++ % BYTE_VALUE_RANGE);
             }
-            imageData[pixelOffset + alphaChannel] = alphaValues[pixel % alphaValueCount];
+            imageData[pixelOffset + ALPHA_CHANNEL] = ALPHA_VALUES[pixel % ALPHA_VALUE_COUNT];
         }
     }
 
@@ -1782,14 +1782,14 @@ void testResponseFromOvTensorRGBA(size_t batchSize) {
         ASSERT_NE(decodedPixels, nullptr) << stbi_failure_reason();
         std::unique_ptr<unsigned char, decltype(&stbi_image_free)> decodedPixelsPtr(decodedPixels, stbi_image_free);
 
-        ASSERT_EQ(decodedChannels, channels);
-        ASSERT_EQ(decodedWidth, width);
-        ASSERT_EQ(decodedHeight, height);
-        const size_t imageSize = height * width * channels;
+        ASSERT_EQ(decodedChannels, CHANNELS);
+        ASSERT_EQ(decodedWidth, WIDTH);
+        ASSERT_EQ(decodedHeight, HEIGHT);
+        const size_t imageSize = HEIGHT * WIDTH * CHANNELS;
         const size_t imageOffset = image * imageSize;
-        for (size_t pixel = 0; pixel < height * width; ++pixel) {
-            const size_t alphaOffset = pixel * channels + alphaChannel;
-            EXPECT_EQ(decodedPixelsPtr.get()[alphaOffset], alphaValues[pixel % alphaValueCount])
+        for (size_t pixel = 0; pixel < HEIGHT * WIDTH; ++pixel) {
+            const size_t alphaOffset = pixel * CHANNELS + ALPHA_CHANNEL;
+            EXPECT_EQ(decodedPixelsPtr.get()[alphaOffset], ALPHA_VALUES[pixel % ALPHA_VALUE_COUNT])
                 << "Alpha mismatch for image " << image << ", pixel " << pixel;
         }
         EXPECT_EQ(0, std::memcmp(decodedPixelsPtr.get(), imageData + imageOffset, imageSize))
