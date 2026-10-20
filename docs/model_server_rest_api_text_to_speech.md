@@ -10,6 +10,15 @@ The endpoint is exposed via a path:
 
 Request body must be in JSON format, and the request must have `Content-Type: application/json` header.
 
+### Qwen3 TTS compatibility
+
+OVMS supports the Qwen3 TTS variants that fit the OpenAI-compatible request schema used by `/v3/audio/speech`:
+
+- `Qwen3-TTS-*-CustomVoice`: supported via `voice` and optional `instructions`
+- `Qwen3-TTS-*-VoiceDesign`: supported via `instructions`
+
+`Qwen3-TTS-*-Base` is not currently supported through this endpoint, because it requires reference-audio inputs such as `ref_audio` and optionally `ref_text`, which are outside the standard OpenAI `audio/speech` request shape.
+
 ### Example request
 
 ```
@@ -48,9 +57,9 @@ If `language` is omitted, OVMS defaults to `en-us`. For non-English text, set `l
 |-----|----------|----------|---------|-----|
 | model | ✅ | ✅ | string (required) | Name of the model to use. Name assigned to a MediaPipe graph configured to schedule generation using desired embedding model. **Note**: This can also be omitted to fall back to URI based routing. Read more on routing topic **TODO** |
 | input | ✅ | ✅ | string (required) | The text to generate audio for. |
-| voice | ❌ | ✅ | string | The voice to use when generating the audio. If not provided, model default voice will be used. |
+| voice | ✅ | ✅ | string | The voice to use when generating the audio. OVMS first checks graph-configured or model-local voice embeddings, then forwards the value as a model-native speaker name when the backend supports it. If not provided, model default voice will be used. |
 | language | ✅ | ❌ | string | Optional phonemization language passed to the OpenVINO GenAI speech generation pipeline. Supported values for Kokoro are `en-us`, `en-gb`, `es`, `fr-fr`, `it`, `pt-br`, `hi`. Defaults to `en-us`. |
-| instructions | ❌ | ✅ | string | Control the voice of your generated audio with additional instructions. |
+| instructions | ✅ | ✅ | string | Additional generation instructions forwarded to the OpenVINO GenAI speech generation pipeline for models that support prompt-based voice control. |
 | response_format | ❌ | ✅ | string | The format to audio in. |
 | speed | ❌ | ✅ | number | The speed of the generated audio. |
 | stream_format | ❌ | ✅ | string | The format to stream the audio in. |

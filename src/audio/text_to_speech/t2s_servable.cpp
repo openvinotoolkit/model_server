@@ -16,6 +16,7 @@
 
 #include <memory>
 #include <algorithm>
+#include <cctype>
 #include <string>
 #include <fstream>
 #include <sstream>
@@ -24,6 +25,7 @@
 #include <vector>
 
 #include "openvino/genai/speech_generation/text2speech_pipeline.hpp"
+#include "rapidjson/document.h"
 #include "src/audio/text_to_speech/t2s_calculator.pb.h"
 #include "src/status.hpp"
 #include "src/logging.hpp"
@@ -35,6 +37,14 @@
 namespace ovms {
 
 static constexpr const char* VOICES_DIR_NAME = "voices";
+
+static std::string toLowerCopy(const std::string& value) {
+    std::string lowered = value;
+    std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char ch) {
+        return static_cast<char>(std::tolower(ch));
+    });
+    return lowered;
+}
 
 static size_t getShapeElementsCount(const ov::Shape& shape) {
     size_t elementsCount = 1;
@@ -121,6 +131,42 @@ static ov::Tensor readSpeakerEmbedding(const std::filesystem::path& filePath, co
     return floatsTensor;
 }
 
+std::unordered_map<std::string, std::string> TtsServable::loadBuiltinSpeakerAliases(const std::filesystem::path& configPath) {
+    std::unordered_map<std::string, std::string> aliases;
+    std::ifstream input(configPath);
+    if (!input.is_open()) {
+        return aliases;
+    }
+
+    std::stringstream buffer;
+    buffer << input.rdbuf();
+
+    rapidjson::Document config;
+    if (config.Parse(buffer.str().c_str()).HasParseError() || !config.IsObject()) {
+        SPDLOG_DEBUG("Failed to parse TTS config for builtin speakers: {}", configPath.string());
+        return aliases;
+    }
+
+    auto talkerConfigIt = config.FindMember("talker_config");
+    if (talkerConfigIt == config.MemberEnd() || !talkerConfigIt->value.IsObject()) {
+        return aliases;
+    }
+    auto spkIdIt = talkerConfigIt->value.FindMember("spk_id");
+    if (spkIdIt == talkerConfigIt->value.MemberEnd() || !spkIdIt->value.IsObject()) {
+        return aliases;
+    }
+
+    for (auto it = spkIdIt->value.MemberBegin(); it != spkIdIt->value.MemberEnd(); ++it) {
+        if (!it->name.IsString()) {
+            continue;
+        }
+        const std::string speakerName = it->name.GetString();
+        aliases.insert_or_assign(speakerName, speakerName);
+        aliases.insert_or_assign(toLowerCopy(speakerName), speakerName);
+    }
+    return aliases;
+}
+
 TtsServable::TtsServable(const std::string& modelDir, const std::string& targetDevice, const google::protobuf::RepeatedPtrField<mediapipe::T2sCalculatorOptions_SpeakerEmbeddings>& graphVoices, const std::string& pluginConfig, const std::string& graphPath) {
     const std::filesystem::path graphDir = std::filesystem::path(graphPath).parent_path();
     auto fsModelsPath = std::filesystem::path(modelDir);
@@ -143,6 +189,7 @@ TtsServable::TtsServable(const std::string& modelDir, const std::string& targetD
         throw std::runtime_error("Error during plugin_config option parsing");
     }
     applyGlobalCacheDirFallback(config);
+    builtinSpeakerAliases = loadBuiltinSpeakerAliases(parsedModelsPath / "config.json");
     ttsPipeline = std::make_shared<ov::genai::Text2SpeechPipeline>(parsedModelsPath.string(), device, config);
     const ov::Shape speakerEmbeddingShape = ttsPipeline->get_speaker_embedding_shape();
     const std::filesystem::path voicesDir = parsedModelsPath / VOICES_DIR_NAME;

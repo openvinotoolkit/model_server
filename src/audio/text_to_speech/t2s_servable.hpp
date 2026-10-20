@@ -35,10 +35,13 @@ class TtsServable {
 public:
     std::shared_ptr<ov::genai::Text2SpeechPipeline> ttsPipeline;
     std::unordered_map<std::string, ov::Tensor> voices;
+    std::unordered_map<std::string, std::string> builtinSpeakerAliases;
     std::mutex ttsPipelineMutex;
     std::filesystem::path parsedModelsPath;
 
     TtsServable(const std::string& modelDir, const std::string& targetDevice, const google::protobuf::RepeatedPtrField<mediapipe::T2sCalculatorOptions_SpeakerEmbeddings>& graphVoices, const std::string& pluginConfig, const std::string& graphPath);
+
+    static std::unordered_map<std::string, std::string> loadBuiltinSpeakerAliases(const std::filesystem::path& configPath);
 };
 
 using TtsServableMap = std::unordered_map<std::string, std::shared_ptr<TtsServable>>;

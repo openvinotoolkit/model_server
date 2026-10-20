@@ -155,6 +155,18 @@ bool Text2SpeechDetector::scan(const ModelCatalogContext& ctx) const {
     if (!config || !config->IsObject() || !config->HasMember("architectures"))
         return false;
 
+    if (config->HasMember("tts_model_type") && (*config)["tts_model_type"].IsString()) {
+        const std::string ttsModelType = (*config)["tts_model_type"].GetString();
+        if (ttsModelType == "custom_voice" || ttsModelType == "voice_design") {
+            return anyArchitecture(*config, [](const std::string& arch) {
+                return arch == "Qwen3TTSForConditionalGeneration";
+            });
+        }
+        if (ttsModelType == "base") {
+            return false;
+        }
+    }
+
     const auto& archs = (*config)["architectures"];
 
     // Special case: null architectures with n_mels field (e.g. Kokoro TTS)
