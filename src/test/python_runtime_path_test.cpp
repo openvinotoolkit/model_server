@@ -32,7 +32,7 @@ class PythonRuntimePath : public ::testing::Test {
 protected:
     py::scoped_interpreter interpreter;
     const std::filesystem::path packageRoot = std::filesystem::temp_directory_path() /
-        ("ovms_python_path_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+                                              ("ovms_python_path_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     const std::filesystem::path executablePath = packageRoot / "bin/ovms";
     const std::filesystem::path pythonDirectory = packageRoot / "lib/python";
 
