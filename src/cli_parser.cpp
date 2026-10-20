@@ -451,8 +451,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                         break;
                     }
                     default: {
-                        ss << "error parsing options - --task parameter unsupported value: " << taskValue
-                           << ". Supported values: text_generation, rerank, embeddings, image_generation, text2speech, speech2text";
+                        ss << "error parsing options - --task parameter unsupported value: " + taskValue;
                         return std::make_pair(OVMS_EX_USAGE, ss.str());
                     }
                 }
@@ -650,7 +649,6 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
     serverSettings.allowedOrigins = result->operator[]("allowed_origins").as<std::string>();
     serverSettings.allowedMethods = result->operator[]("allowed_methods").as<std::string>();
     serverSettings.allowedHeaders = result->operator[]("allowed_headers").as<std::string>();
-
     std::filesystem::path apiKeyFile = result->operator[]("api_key_file").as<std::string>();
     serverSettings.apiKey = "";
     if (!apiKeyFile.empty()) {
@@ -914,8 +912,7 @@ void CLIParser::prepareGraph(ServerSettingsImpl& serverSettings, HFSettingsImpl&
                     break;
                 }
                 case UNKNOWN_GRAPH: {
-                    throw std::logic_error("Error: --task parameter unsupported value: " + taskValue
-                        + ". Supported values: text_generation, rerank, embeddings, image_generation, text2speech, speech2text");
+                    throw std::logic_error("Error: --task parameter unsupported value: " + taskValue);
                     break;
                 }
             }

@@ -536,6 +536,9 @@ load("@google_cloud_cpp//bazel:workspace5.bzl", "gl_cpp_workspace5")
 gl_cpp_workspace5()
 
 # grpc
+
+load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
+grpc_deps()
 http_archive( # 1.74.1
     name = "com_github_grpc_grpc",
     urls = [
@@ -543,9 +546,6 @@ http_archive( # 1.74.1
     ],
     strip_prefix = "grpc-893bdadd56dbb75fb156175afdaa2b0d47e1c15b",
 )
-
-load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
-grpc_deps()
 
 # cxxopts
 http_archive(

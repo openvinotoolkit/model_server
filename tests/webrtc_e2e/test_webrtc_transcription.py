@@ -32,7 +32,7 @@ Environment:
   WEBRTC_AUDIO_FILE    audio file to stream (default: references/SayLargestAnimal.webm)
   EXPECTED_KEYWORD     word expected in the transcript (default: animal)
 
-Run (OVMS started e.g. with run_voxtral.sh):
+Run (OVMS serving a speech2text model, e.g. `ovms --rest_port 9112 --source_model OpenVINO/voxtral-realtime-2602 --model_repository_path models --model_name voxtral-asr --task speech2text`):
   pip install -r tests/webrtc_e2e/requirements.txt
   pytest -v tests/webrtc_e2e
 """
