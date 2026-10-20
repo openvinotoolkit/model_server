@@ -2902,6 +2902,7 @@ cc_library(
         "//src:test_platform_utils",
         "//src/image_gen:imagegenutils",
         "//src/image_gen:imagegen_init",
+        "@stb//:image",
     ],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
