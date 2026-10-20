@@ -446,6 +446,8 @@ class OvmsMessages:
     ERROR_UNSUPPORTED_CHAT_TEMPLATE_FORMAT = "Unsupported chat_template format in file"
 
     EMBEDDINGS_APPLYING_POOLING = "Applying {} pooling to embeddings output"
+    AUTO_DETECTED_TOOL_PARSER = "Auto-detected tool_parser: {}"
+    AUTO_DETECTED_REASONING_PARSER = "Auto-detected reasoning_parser: {}"
 
     EMPTY_RESPONSE_CONTENT = "Empty response content"
     FINISH_REASON_NULL = '"finish_reason":null'
