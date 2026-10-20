@@ -20,6 +20,8 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -2137,7 +2139,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeFailedEventContainsCorrectStructur
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
-    std::string failedEvent = apiHandler->serializeFailedEvent("Something went wrong");
+    std::string failedEvent = apiHandler->serializeStreamingError("Something went wrong");
 
     // Should contain response.failed event type
     ASSERT_NE(failedEvent.find("\"type\":\"response.failed\""), std::string::npos) << failedEvent;
@@ -2163,6 +2165,41 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeFailedEventContainsCorrectStructur
     auto failedPos = failedEvent.find("\"type\":\"response.failed\"");
     auto responseSection = failedEvent.substr(failedPos);
     ASSERT_EQ(responseSection.find("\"completed_at\""), std::string::npos) << "Failed response should not have completed_at: " << responseSection;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, chatAndCompletionsFailedEventsAreEscapedOpenAiErrors) {
+    const std::string errorMessage = "quote: \" slash: \\ newline:\n";
+    const std::vector<std::pair<ovms::Endpoint, std::string>> requests{
+        {ovms::Endpoint::CHAT_COMPLETIONS, R"({"model":"llama","stream":true,"messages":[{"role":"user","content":"hello"}]})"},
+        {ovms::Endpoint::COMPLETIONS, R"({"model":"llama","stream":true,"prompt":"hello"})"}};
+
+    for (const auto& [endpoint, request] : requests) {
+        doc.Parse(request.c_str());
+        ASSERT_FALSE(doc.HasParseError());
+        auto apiHandler = createHandler(endpoint);
+        std::optional<uint32_t> maxTokensLimit;
+        uint32_t bestOfLimit = 0;
+        std::optional<uint32_t> maxModelLength;
+        ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+        rapidjson::Document error;
+        const std::string serialized = apiHandler->serializeStreamingError(errorMessage);
+        error.Parse(serialized.c_str());
+        ASSERT_FALSE(error.HasParseError()) << serialized;
+        ASSERT_TRUE(error.IsObject()) << serialized;
+        ASSERT_TRUE(error.HasMember("error")) << serialized;
+        const rapidjson::Value& errorObject = error["error"];
+        ASSERT_TRUE(errorObject.IsObject()) << serialized;
+        ASSERT_TRUE(errorObject.HasMember("type")) << serialized;
+        ASSERT_TRUE(errorObject["type"].IsString()) << serialized;
+        EXPECT_STREQ(errorObject["type"].GetString(), "server_error");
+        ASSERT_TRUE(errorObject.HasMember("code")) << serialized;
+        ASSERT_TRUE(errorObject["code"].IsInt()) << serialized;
+        EXPECT_EQ(errorObject["code"].GetInt(), 500);
+        ASSERT_TRUE(errorObject.HasMember("message")) << serialized;
+        ASSERT_TRUE(errorObject["message"].IsString()) << serialized;
+        EXPECT_EQ(std::string(errorObject["message"].GetString(), errorObject["message"].GetStringLength()), errorMessage);
+    }
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, serializeFailedEventWithCustomErrorCode) {
@@ -5245,6 +5282,15 @@ struct NeverDisconnectedClient : public ovms::ClientConnection {
 };
 }  // namespace
 
+static std::shared_ptr<ovms::OVMSTextStreamer> makeNoopTextStreamer(const ov::genai::Tokenizer& tokenizer) {
+    return std::make_shared<ovms::OVMSTextStreamer>(
+        tokenizer,
+        nullptr,
+        false,
+        [](ovms::Delta, bool) { return ov::genai::StreamingStatus::RUNNING; },
+        ov::AnyMap{});
+}
+
 static std::shared_ptr<ovms::LegacyServableExecutionContext> makeLegacyResponsesContext(
     const std::shared_ptr<ov::genai::Tokenizer>& tok,
     size_t numInputTokens, size_t numGeneratedTokens,
@@ -5276,8 +5322,7 @@ static std::shared_ptr<ovms::LegacyServableExecutionContext> makeLegacyResponses
     ctx->readySignal.set_value();
     ctx->deltaChannel.signalComplete();
 
-    ctx->textStreamer = std::make_shared<ov::genai::TextStreamer>(
-        *tok, [](std::string) { return ov::genai::StreamingStatus::RUNNING; });
+    ctx->textStreamer = makeNoopTextStreamer(*tok);
 
     return ctx;
 }
@@ -5413,6 +5458,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, legacyServableParserExceptionCancelsGenerat
         ASSERT_NO_THROW(streamer->end());
     }
     ASSERT_TRUE(streamer->hadParserError());
+    ASSERT_FALSE(streamer->parserErrorMessage().empty());
     EXPECT_EQ(finalCallbackCount, 1);
 
     // Mirrors what LegacyExecutor::processRequest does with the streamer after pipe->generate() returns.
@@ -5450,8 +5496,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, vlmLegacyServablePreparePartialResponseResp
     ctx->success = true;
     ctx->readySignal.set_value();
     ctx->deltaChannel.signalComplete();
-    ctx->textStreamer = std::make_shared<ov::genai::TextStreamer>(
-        *tokenizer, [](std::string) { return ov::genai::StreamingStatus::RUNNING; });
+    ctx->textStreamer = makeNoopTextStreamer(*tokenizer);
 
     ovms::VisualLanguageModelLegacyServable servable;
     std::shared_ptr<ovms::GenAiServableExecutionContext> ctxBase = ctx;
@@ -5494,8 +5539,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, legacyServablePreparePartialResponseChatCom
     ctx->success = true;
     ctx->readySignal.set_value();
     ctx->deltaChannel.signalComplete();
-    ctx->textStreamer = std::make_shared<ov::genai::TextStreamer>(
-        *tokenizer, [](std::string) { return ov::genai::StreamingStatus::RUNNING; });
+    ctx->textStreamer = makeNoopTextStreamer(*tokenizer);
 
     ovms::LegacyServable servable;
     std::shared_ptr<ovms::GenAiServableExecutionContext> ctxBase = ctx;

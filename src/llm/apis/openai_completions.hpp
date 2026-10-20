@@ -47,6 +47,7 @@ public:
     std::string serializeStreamingChunk(Delta delta, ov::genai::GenerationFinishReason finishReason) override;
     std::string serializeStreamingUsageChunk() override;
     std::string serializeStreamingHandshakeChunk() override;
+    std::string serializeStreamingError(const std::string& errorMessage) override;
     void incrementProcessedTokens(size_t numTokens = 1) override;
 };
 }  // namespace ovms
