@@ -2744,9 +2744,33 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsUsage) {
     }
 }
 
-// Unique leading nonce keeps the prompt out of the prefix cache filled by earlier runs (e.g. --gtest_repeat).
-static std::string uniquePrefixCachingPrompt() {
-    std::string prompt = "Request " + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + ".";
+class LLMPrefixCachingHttpTest : public LLMFlowHttpTest {
+    std::unique_ptr<std::thread> serverThread;
+
+public:
+    static void SetUpTestSuite() {}
+    static void TearDownTestSuite() {}
+
+    void SetUp() override {
+        std::string port = "9173";
+        ovms::Server& server = ovms::Server::instance();
+        ::SetUpServer(serverThread, server, port, getGenericFullPathForSrcTest("/ovms/src/test/llm/config.json").c_str(), 60);
+        LLMFlowHttpTest::SetUp();
+    }
+
+    void TearDown() override {
+        LLMFlowHttpTest::TearDown();
+        ovms::Server& server = ovms::Server::instance();
+        server.setShutdownRequest(1);
+        if (serverThread && serverThread->joinable()) {
+            serverThread->join();
+        }
+        server.setShutdownRequest(0);
+    }
+};
+
+static std::string prefixCachingPrompt() {
+    std::string prompt = "Request.";
     for (int i = 0; i < 16; ++i) {
         prompt += " The quick brown fox jumps over the lazy dog.";
     }
@@ -2767,8 +2791,8 @@ static uint64_t extractUsageField(const std::string& response, const std::string
     return std::stoull(match[1].str());
 }
 
-TEST_F(LLMFlowHttpTest, unaryChatCompletionsReportsPrefixCacheHit) {
-    const std::string content = uniquePrefixCachingPrompt();
+TEST_F(LLMPrefixCachingHttpTest, unaryChatCompletionsReportsPrefixCacheHit) {
+    const std::string content = prefixCachingPrompt();
     const std::string unaryRequest = R"({"model": "lm_cb_prefix_caching", "max_tokens": 5, "ignore_eos": true, "messages": [{"role": "user", "content": ")" + content + R"("}]})";
 
     ASSERT_EQ(handler->dispatchToProcessor(endpointChatCompletions, unaryRequest, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
@@ -2788,8 +2812,8 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsReportsPrefixCacheHit) {
     EXPECT_EQ(parsedResponse["usage"]["total_tokens"].GetUint64(), firstPromptTokens + 5) << response;
 }
 
-TEST_F(LLMFlowHttpTest, streamChatCompletionsReportsPrefixCacheHit) {
-    const std::string content = uniquePrefixCachingPrompt();
+TEST_F(LLMPrefixCachingHttpTest, streamChatCompletionsReportsPrefixCacheHit) {
+    const std::string content = prefixCachingPrompt();
     std::vector<std::string> responses;
     EXPECT_CALL(*writer, PartialReply(::testing::_))
         .WillRepeatedly([&responses](std::string response) {
@@ -2830,11 +2854,11 @@ static std::string lastUsageObject(const std::vector<std::string>& responses) {
     return pos == std::string::npos ? "" : stream.substr(pos);
 }
 
-TEST_F(LLMFlowHttpTest, unaryResponsesReportsPrefixCacheHit) {
+TEST_F(LLMPrefixCachingHttpTest, unaryResponsesReportsPrefixCacheHit) {
     const std::string endpointResponses = "/v1/responses";
     ovms::HttpRequestComponents responsesComp;
     ASSERT_EQ(handler->parseRequestComponents(responsesComp, "POST", endpointResponses, headers), ovms::StatusCode::OK);
-    const std::string request = prefixCachingResponsesRequest(uniquePrefixCachingPrompt(), false);
+    const std::string request = prefixCachingResponsesRequest(prefixCachingPrompt(), false);
 
     ASSERT_EQ(handler->dispatchToProcessor(endpointResponses, request, &response, responsesComp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
@@ -2854,11 +2878,11 @@ TEST_F(LLMFlowHttpTest, unaryResponsesReportsPrefixCacheHit) {
     EXPECT_EQ(parsedResponse["usage"]["total_tokens"].GetUint64(), firstInputTokens + 5) << response;
 }
 
-TEST_F(LLMFlowHttpTest, streamResponsesReportsPrefixCacheHit) {
+TEST_F(LLMPrefixCachingHttpTest, streamResponsesReportsPrefixCacheHit) {
     const std::string endpointResponses = "/v1/responses";
     ovms::HttpRequestComponents responsesComp;
     ASSERT_EQ(handler->parseRequestComponents(responsesComp, "POST", endpointResponses, headers), ovms::StatusCode::OK);
-    const std::string request = prefixCachingResponsesRequest(uniquePrefixCachingPrompt(), true);
+    const std::string request = prefixCachingResponsesRequest(prefixCachingPrompt(), true);
     std::vector<std::string> responses;
     EXPECT_CALL(*writer, PartialReply(::testing::_))
         .WillRepeatedly([&responses](std::string response) {
