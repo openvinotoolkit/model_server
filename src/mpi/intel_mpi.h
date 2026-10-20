@@ -311,6 +311,7 @@ typedef struct {
     uint32_t height;                    // Output height (0 = deduce from model, or source res)
     imp_pixel_format_t format;          // Output format (default: NV12)
     const char* name;                   // Optional branch name (for imp_video_read_frame_by_name)
+    bool use_system_memory;            // Windows: explicitly download this branch even when D3D11 surfaces are enabled
 } imp_video_branch_t;
 
 /**
@@ -372,7 +373,8 @@ typedef struct {
  */
 typedef enum {
     IMP_OUTPUT_FILE = 0,                // Write a muxed file at output_path (default)
-    IMP_OUTPUT_RTSP = 1                 // Publish to an external RTSP server at output_path (rtsp:// URL)
+    IMP_OUTPUT_RTSP = 1,                // Publish to an external RTSP server at output_path (rtsp:// URL)
+    IMP_OUTPUT_PREVIEW = 2              // Windows: display host NV12 frames in a D3D11 video window
 } imp_output_mode_t;
 
 /**
@@ -385,7 +387,7 @@ typedef struct {
     const char* input_device;           // Expected input tensor location: NULL = accept any, copy if needed
     const char* encode_device;          // Where encoding runs: "CPU", "GPU", "GPU.0", etc., NULL = match context
     const char* output_path;            // FILE mode: output file path (NULL for memory). RTSP mode: rtsp:// URL to publish to.
-    imp_output_mode_t output_mode;      // Terminus selection (appended for ABI stability): FILE (default) or RTSP.
+    imp_output_mode_t output_mode;      // Terminus selection (appended for ABI stability): FILE (default), RTSP or PREVIEW.
 } imp_video_encode_opts_t;
 
 //////////////////////////////////////////////////////////////////////////////

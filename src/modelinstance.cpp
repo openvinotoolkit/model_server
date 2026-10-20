@@ -34,6 +34,7 @@
 #endif
 #include <malloc.h>
 #include <openvino/core/layout.hpp>
+#include <openvino/core/preprocess/pre_post_process.hpp>
 #include <openvino/runtime/compiled_model.hpp>
 // TODO windows
 #ifdef __linux__
@@ -206,18 +207,28 @@ void setGlobalVaDisplay(void* vaDisplay, const std::string& targetDevice) {
 }
 #endif
 
-extern "C" __attribute__((visibility("default"))) void* ovms_get_global_va_display() {
 #ifdef __linux__
+extern "C" __attribute__((visibility("default"))) void* ovms_get_global_va_display() {
     return globalVaDisplay;
-#else
-    return nullptr;
-#endif
 }
+#else
+extern "C" void* ovms_get_global_va_display() {
+    return nullptr;
+}
+#endif
 #ifdef _WIN32
 // TODO: Verify that a fully drained server teardown can safely replace this
 // process-global device after all GStreamer and OpenVINO resources are gone.
 void* globalD3D11Device = nullptr;
 #endif
+
+void setGlobalD3D11Device(void* device) {
+#ifdef _WIN32
+    globalD3D11Device = device;
+#else
+    (void)device;
+#endif
+}
 
 const uint32_t MAX_NIREQ_COUNT = 100000;
 const uint32_t UNLOAD_AVAILABILITY_CHECKING_INTERVAL_MILLISECONDS = 10;
@@ -773,6 +784,18 @@ Status ModelInstance::loadInputTensorsImpl(const ModelConfig& config, const Dyna
         ppp.input().model().set_layout("NCHW");
         this->model = ppp.build();
     }
+#else
+    if (globalD3D11Device) {
+        ov::preprocess::PrePostProcessor ppp(this->model);
+        ppp.input()
+            .tensor()
+            .set_element_type(ov::element::u8)
+            .set_color_format(ov::preprocess::ColorFormat::NV12_TWO_PLANES, {"y", "uv"})
+            .set_memory_type(ov::intel_gpu::memory_type::surface);
+        ppp.input().preprocess().convert_color(ov::preprocess::ColorFormat::BGR);
+        ppp.input().model().set_layout("NCHW");
+        this->model = ppp.build();
+    }
 #endif
     OV_LOGGER("ov::Model: {}, model->inputs()", reinterpret_cast<void*>(model.get()));
     for (const ov::Output<ov::Node>& input : this->model->inputs()) {
@@ -925,6 +948,19 @@ uint32_t ModelInstance::getNumOfParallelInferRequests(const ModelConfig& modelCo
 std::shared_ptr<ov::Model> ModelInstance::loadOVModelPtr(const std::string& modelFile) {
     OV_LOGGER("ov::Core: {}, model = ieCore.read_model(\"{}\")", reinterpret_cast<const void*>(&this->ieCore), modelFile);
     plugin_config_t pluginConfig = prepareDefaultPluginConfig(this->config);
+#ifdef _WIN32
+    // On Windows, read_model memory-maps the IR weights (.bin) by default (ENABLE_MMAP=YES).
+    // When the NV12 two-plane preprocessing is applied in-memory and the resulting model is
+    // compiled on an ov::intel_gpu::ocl::D3DContext, the GPU plugin's fp16 weight-compression
+    // kernel reads the memory-mapped Constant data at a point where the mapping is no longer
+    // valid, causing an access violation. Disabling mmap makes the weights heap-resident and
+    // avoids the crash. The Linux VA path (VAContext) is unaffected, so this is scoped to the
+    // Windows D3D11 path only.
+    if (globalD3D11Device && pluginConfig.count("ENABLE_MMAP") == 0) {
+        pluginConfig["ENABLE_MMAP"] = "NO";
+        SPDLOG_INFO("Windows D3D11 GPU path: forcing ENABLE_MMAP=NO for model {} to avoid D3DContext weight-compression crash", getName());
+    }
+#endif
     return this->ieCore.read_model(modelFile, {}, pluginConfig);
 }
 

@@ -71,6 +71,12 @@ uint8_t clampColorComponent(int value) {
     return static_cast<uint8_t>(std::clamp(value, 0, 255));
 }
 
+int readColorComponent(const Packet& packet) {
+    if (packet.ValidateAsType<int64_t>().ok())
+        return static_cast<int>(std::clamp<int64_t>(packet.Get<int64_t>(), 0, 255));
+    return packet.Get<int>();
+}
+
 nv12overlay::Color rgbToNv12(int red, int green, int blue) {
     const float r = static_cast<float>(clampColorComponent(red));
     const float g = static_cast<float>(clampColorComponent(green));
@@ -89,11 +95,11 @@ class GstDetectionOverlayCalculator : public CalculatorBase {
         cc->Inputs().Tag(kDetectionBoxesTag).Set<GstDetectionBoxes>();
         cc->Outputs().Tag(kFrameOverlaidTag).Set<GstVideoFramePacket>();
         if (cc->InputSidePackets().HasTag(kColorRTag))
-            cc->InputSidePackets().Tag(kColorRTag).Set<int>();
+            cc->InputSidePackets().Tag(kColorRTag).SetOneOf<int, int64_t>();
         if (cc->InputSidePackets().HasTag(kColorGTag))
-            cc->InputSidePackets().Tag(kColorGTag).Set<int>();
+            cc->InputSidePackets().Tag(kColorGTag).SetOneOf<int, int64_t>();
         if (cc->InputSidePackets().HasTag(kColorBTag))
-            cc->InputSidePackets().Tag(kColorBTag).Set<int>();
+            cc->InputSidePackets().Tag(kColorBTag).SetOneOf<int, int64_t>();
         return absl::OkStatus();
     }
 
@@ -104,9 +110,9 @@ class GstDetectionOverlayCalculator : public CalculatorBase {
         RET_CHECK(hasRed == hasGreen && hasGreen == hasBlue)
             << "COLOR_R, COLOR_G, and COLOR_B must be provided together";
         if (hasRed) {
-            color_ = rgbToNv12(cc->InputSidePackets().Tag(kColorRTag).Get<int>(),
-                               cc->InputSidePackets().Tag(kColorGTag).Get<int>(),
-                               cc->InputSidePackets().Tag(kColorBTag).Get<int>());
+            color_ = rgbToNv12(readColorComponent(cc->InputSidePackets().Tag(kColorRTag)),
+                               readColorComponent(cc->InputSidePackets().Tag(kColorGTag)),
+                               readColorComponent(cc->InputSidePackets().Tag(kColorBTag)));
         }
         return absl::OkStatus();
     }

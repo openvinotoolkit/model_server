@@ -18,8 +18,8 @@
 #include <fstream>
 #include <string>
 
-#include <rapidjson/document.h>
-#include <rapidjson/istreamwrapper.h>
+#include "port/rapidjson_document.hpp"
+#include "port/rapidjson_istreamwrapper.hpp"
 
 #ifdef __linux__
 #include <fcntl.h>
@@ -33,6 +33,19 @@
 #include "modelinstance.hpp"
 #include "mpi/intel_mpi.h"
 #include "status.hpp"
+
+#ifdef _WIN32
+// Included last: windows.h defines macros (e.g. interface) that corrupt the
+// OVMS headers above if included before them.
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#include <d3d11.h>
+#endif
 
 namespace ovms {
 namespace {
@@ -72,9 +85,80 @@ Status parseVaDisplayConfig(const Config& config, std::string& targetDevice, std
     return StatusCode::OK;
 }
 
+#ifdef _WIN32
+// Windows D3D11 analog of parseVaDisplayConfig. An optional "d3d11_device" config
+// object enables server-owned D3D11 device ownership; its "target_device" (default
+// "GPU") must be a GPU device. Absence leaves Windows D3D11 ownership disabled.
+Status parseD3D11DeviceConfig(const Config& config, bool& enabled, std::string& targetDevice) {
+    enabled = false;
+    targetDevice = "GPU";
+    if (config.configPath().empty()) {
+        return StatusCode::OK;
+    }
+    std::ifstream configFile(config.configPath());
+    if (!configFile.good()) {
+        return Status(StatusCode::JSON_INVALID, "Cannot open config file for d3d11_device");
+    }
+    rapidjson::IStreamWrapper stream(configFile);
+    rapidjson::Document document;
+    if (document.ParseStream(stream).HasParseError()) {
+        return Status(StatusCode::JSON_INVALID, "Cannot parse config file for d3d11_device");
+    }
+    const auto member = document.FindMember("d3d11_device");
+    if (member == document.MemberEnd()) {
+        return StatusCode::OK;
+    }
+    if (!member->value.IsObject()) {
+        return Status(StatusCode::JSON_INVALID, "d3d11_device must be an object");
+    }
+    const auto targetDeviceMember = member->value.FindMember("target_device");
+    if (targetDeviceMember != member->value.MemberEnd()) {
+        if (!targetDeviceMember->value.IsString()) {
+            return Status(StatusCode::JSON_INVALID, "d3d11_device target_device must be a string");
+        }
+        targetDevice = targetDeviceMember->value.GetString();
+        if (targetDevice.rfind("GPU", 0) != 0) {
+            return Status(StatusCode::JSON_INVALID, "d3d11_device target_device must be a GPU device");
+        }
+    }
+    enabled = true;
+    return StatusCode::OK;
+}
+#endif
+
 }  // namespace
 
 Status DeviceDisplayOwnerModule::start(const Config& config) {
+#ifdef _WIN32
+    bool d3d11Enabled = false;
+    std::string d3d11TargetDevice;
+    Status d3d11Status = parseD3D11DeviceConfig(config, d3d11Enabled, d3d11TargetDevice);
+    if (!d3d11Status.ok()) {
+        return d3d11Status;
+    }
+    if (!d3d11Enabled) {
+        state = ModuleState::INITIALIZED;
+        return StatusCode::OK;
+    }
+    // Create one server-owned ID3D11Device (video-capable) before GPU models
+    // load, so ModelManager compiles them on a matching D3DContext and GStreamer
+    // decodes onto the same device. The device outlives models and graphs; it is
+    // released in shutdown() after the servable manager has stopped.
+    ID3D11Device* device = nullptr;
+    D3D_FEATURE_LEVEL featureLevel{};
+    HRESULT hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
+                                   D3D11_CREATE_DEVICE_VIDEO_SUPPORT, nullptr, 0,
+                                   D3D11_SDK_VERSION, &device, &featureLevel, nullptr);
+    if (FAILED(hr) || device == nullptr) {
+        return Status(StatusCode::INTERNAL_ERROR, "Cannot create server-owned D3D11 device for d3d11_device");
+    }
+    d3d11Device = device;
+    setGlobalD3D11Device(device);
+    imp_video_set_d3d11_device(device);
+    SPDLOG_INFO("D3D11 device owner started for target device {}", d3d11TargetDevice);
+    state = ModuleState::INITIALIZED;
+    return StatusCode::OK;
+#else
     std::string targetDevice;
     std::string renderNode;
     Status status = parseVaDisplayConfig(config, targetDevice, renderNode);
@@ -114,12 +198,21 @@ Status DeviceDisplayOwnerModule::start(const Config& config) {
 #else
     return Status(StatusCode::NOT_IMPLEMENTED, "va_display is only supported on Linux");
 #endif
+#endif
 }
 
 void DeviceDisplayOwnerModule::shutdown() {
     if (state == ModuleState::SHUTDOWN) {
         return;
     }
+#ifdef _WIN32
+    imp_video_set_d3d11_device(nullptr);
+    setGlobalD3D11Device(nullptr);
+    if (d3d11Device != nullptr) {
+        reinterpret_cast<ID3D11Device*>(d3d11Device)->Release();
+        d3d11Device = nullptr;
+    }
+#endif
 #ifdef __linux__
     imp_video_set_va_display(nullptr);
     setGlobalVaDisplay(nullptr);

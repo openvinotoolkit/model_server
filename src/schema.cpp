@@ -264,6 +264,14 @@ const std::string MODELS_CONFIG_SCHEMA = R"({
                 "render_node": {"type": "string"}
             },
             "additionalProperties": false
+        },
+        "d3d11_device": {
+            "type": "object",
+            "required": ["target_device"],
+            "properties": {
+                "target_device": {"type": "string"}
+            },
+            "additionalProperties": false
         })" + MEDIAPIPE_CONFIG_LIST_SCHEMA +
                                          R"(,
     "monitoring": {

@@ -258,3 +258,28 @@ cc_test(
     }),
 )
 
+# P9 Windows live-streaming tests. Self-contained: drives intel_mpi + the OVMS
+# C-API directly (no MediaPipe graph), so it avoids the graph-executor deps.
+cc_test(
+    name = "gst_d3d11_p9_test",
+    srcs = select({
+        "//src:windows": ["gst_d3d11_p9_test.cpp"],
+        "//conditions:default": [],
+    }),
+    copts = COPTS_ADJUSTED,
+    linkstatic = 1,
+    target_compatible_with = select({
+        "//src:windows": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//src/mpi:intel_mpi",
+        "//src:ovms_lib",
+        "@com_google_googletest//:gtest_main",
+    ],
+    linkopts = LINKOPTS_ADJUSTED + select({
+        "//src:windows": ["d3d11.lib", "dxgi.lib"],
+        "//conditions:default": [],
+    }),
+)
+

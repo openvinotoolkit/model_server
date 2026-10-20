@@ -28,6 +28,7 @@ class DeviceDisplayOwnerModule : public Module {
  private:
     int renderNodeFd = -1;
     void* vaDisplay = nullptr;
+    void* d3d11Device = nullptr;  // Windows: server-owned ID3D11Device (as void*).
 };
 
 }  // namespace ovms

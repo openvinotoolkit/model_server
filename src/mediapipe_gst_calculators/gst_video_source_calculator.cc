@@ -38,8 +38,10 @@
  *
  * Side packets:
  *   VIDEO_PATH      : std::string — legacy path to input video file.
- *   SOURCE_MODE     : std::string (opt) — "file" (default) or "rtsp".
+ *   SOURCE_MODE     : std::string (opt) — "file" (default), "camera", or "rtsp".
  *   SOURCE_URI      : std::string (opt) — file path or RTSP URI; overrides VIDEO_PATH.
+ *   CAMERA_DEVICE   : std::string (opt) — camera identifier for SOURCE_MODE=camera
+ *                     (device index, device path, or human-readable device name).
  *   WIDTH           : int         — model-res decode width  (inference surface).
  *   HEIGHT          : int         — model-res decode height (inference surface).
  *   FULL_WIDTH      : int (opt)   — full-res decode width  (overlay frame; 0 = source res).
@@ -48,6 +50,7 @@
  *   MAX_FRAMES      : int (opt)   — stop after N frames (0/absent = whole stream).
  */
 
+#include <cstdint>
 #include <memory>
 #include <string>
 
@@ -73,6 +76,7 @@ namespace {
 constexpr char kVideoPathTag[] = "VIDEO_PATH";
 constexpr char kSourceModeTag[] = "SOURCE_MODE";
 constexpr char kSourceUriTag[] = "SOURCE_URI";
+constexpr char kCameraDeviceTag[] = "CAMERA_DEVICE";
 constexpr char kWidthTag[] = "WIDTH";
 constexpr char kHeightTag[] = "HEIGHT";
 constexpr char kFullWidthTag[] = "FULL_WIDTH";
@@ -110,9 +114,12 @@ class GstVideoSourceCalculator : public CalculatorBase {
             cc->InputSidePackets().Tag(kSourceModeTag).Set<std::string>();
         if (cc->InputSidePackets().HasTag(kSourceUriTag))
             cc->InputSidePackets().Tag(kSourceUriTag).Set<std::string>();
+        if (cc->InputSidePackets().HasTag(kCameraDeviceTag))
+            cc->InputSidePackets().Tag(kCameraDeviceTag).Set<std::string>();
         RET_CHECK(cc->InputSidePackets().HasTag(kVideoPathTag) ||
-                  cc->InputSidePackets().HasTag(kSourceUriTag))
-            << "GstVideoSourceCalculator needs VIDEO_PATH or SOURCE_URI";
+                  cc->InputSidePackets().HasTag(kSourceUriTag) ||
+                  cc->InputSidePackets().HasTag(kSourceModeTag))
+            << "GstVideoSourceCalculator needs VIDEO_PATH, SOURCE_URI, or SOURCE_MODE";
         cc->InputSidePackets().Tag(kWidthTag).Set<int>();
         cc->InputSidePackets().Tag(kHeightTag).Set<int>();
         if (cc->InputSidePackets().HasTag(kFullWidthTag))
@@ -122,7 +129,7 @@ class GstVideoSourceCalculator : public CalculatorBase {
         if (cc->InputSidePackets().HasTag(kFullVaSurfaceTag))
             cc->InputSidePackets().Tag(kFullVaSurfaceTag).Set<bool>();
         if (cc->InputSidePackets().HasTag(kMaxFramesTag))
-            cc->InputSidePackets().Tag(kMaxFramesTag).Set<int>();
+            cc->InputSidePackets().Tag(kMaxFramesTag).SetOneOf<int, int64_t>();
         if (cc->Outputs().HasTag(kFrameTag))
             cc->Outputs().Tag(kFrameTag).Set<GstVideoFramePacket>();
         if (cc->Outputs().HasTag(kFrameInferTag))
@@ -141,19 +148,23 @@ class GstVideoSourceCalculator : public CalculatorBase {
             source_uri_ = cc->InputSidePackets().Tag(kVideoPathTag).Get<std::string>();
         if (cc->InputSidePackets().HasTag(kSourceUriTag))
             source_uri_ = cc->InputSidePackets().Tag(kSourceUriTag).Get<std::string>();
+        if (cc->InputSidePackets().HasTag(kCameraDeviceTag))
+            camera_device_ = cc->InputSidePackets().Tag(kCameraDeviceTag).Get<std::string>();
         if (cc->InputSidePackets().HasTag(kSourceModeTag)) {
             std::string mode = cc->InputSidePackets().Tag(kSourceModeTag).Get<std::string>();
             std::transform(mode.begin(), mode.end(), mode.begin(),
                            [](unsigned char c) { return std::tolower(c); });
             if (mode == "file") {
                 source_type_ = IMP_SOURCE_FILE;
+            } else if (mode == "camera") {
+                source_type_ = IMP_SOURCE_CAMERA;
             } else if (mode == "rtsp") {
                 source_type_ = IMP_SOURCE_URL;
             } else {
-                return absl::InvalidArgumentError("GstVideoSourceCalculator: SOURCE_MODE must be 'file' or 'rtsp'");
+                return absl::InvalidArgumentError("GstVideoSourceCalculator: SOURCE_MODE must be 'file', 'camera', or 'rtsp'");
             }
         }
-        if (source_uri_.empty())
+        if (source_type_ != IMP_SOURCE_CAMERA && source_uri_.empty())
             return absl::InvalidArgumentError("GstVideoSourceCalculator: empty source URI");
         width_ = cc->InputSidePackets().Tag(kWidthTag).Get<int>();
         height_ = cc->InputSidePackets().Tag(kHeightTag).Get<int>();
@@ -163,8 +174,10 @@ class GstVideoSourceCalculator : public CalculatorBase {
             full_height_ = cc->InputSidePackets().Tag(kFullHeightTag).Get<int>();
         if (cc->InputSidePackets().HasTag(kFullVaSurfaceTag))
             full_va_surface_ = cc->InputSidePackets().Tag(kFullVaSurfaceTag).Get<bool>();
-        if (cc->InputSidePackets().HasTag(kMaxFramesTag))
-            max_frames_ = cc->InputSidePackets().Tag(kMaxFramesTag).Get<int>();
+        if (cc->InputSidePackets().HasTag(kMaxFramesTag)) {
+            const auto& limit = cc->InputSidePackets().Tag(kMaxFramesTag);
+            max_frames_ = limit.ValidateAsType<int64_t>().ok() ? limit.Get<int64_t>() : limit.Get<int>();
+        }
 
         emit_frame_ = cc->Outputs().HasTag(kFrameTag);
         emit_infer_ = cc->Outputs().HasTag(kFrameInferTag);
@@ -182,6 +195,26 @@ class GstVideoSourceCalculator : public CalculatorBase {
                 imp_video_set_va_display(vaDisplay);
         }
 
+#ifdef _WIN32
+        if (use_d3d11_ && source_type_ == IMP_SOURCE_CAMERA && emit_full_) {
+            imp_video_branch_t branches[2]{};
+            branches[0].width = width_;
+            branches[0].height = height_;
+            branches[0].name = "inference";
+            branches[1].width = full_width_;
+            branches[1].height = full_height_;
+            branches[1].name = "overlay";
+            branches[1].use_system_memory = !full_va_surface_;
+            absl::Status status = openStream(&infer_ctx_, &infer_stream_, full_width_, full_height_,
+                true, &pending_infer_, IMP_MEM_D3D11_SURFACE, branches, 2);
+            if (!status.ok())
+                return status;
+            shared_camera_stream_ = true;
+            if (imp_video_read_frame(&pending_full_, infer_stream_, 1) != IMP_OK || !pending_full_)
+                return absl::InternalError("first camera overlay frame read failed");
+            return absl::OkStatus();
+        }
+#endif
         if (emit_frame_ || emit_infer_) {
             const imp_tensor_memory_type_t expected =
                 use_d3d11_ ? IMP_MEM_D3D11_SURFACE : IMP_MEM_VA_SURFACE;
@@ -223,7 +256,8 @@ class GstVideoSourceCalculator : public CalculatorBase {
                 return tool::StatusStop();
         }
         if (emit_full_) {
-            full_tensor = nextFrame(full_stream_, &pending_full_);
+            full_tensor = nextFrame(shared_camera_stream_ ? infer_stream_ : full_stream_,
+                                   &pending_full_, shared_camera_stream_ ? 1 : 0);
             if (!full_tensor) {
                 if (infer_tensor)
                     imp_tensor_release(infer_tensor);
@@ -261,20 +295,28 @@ class GstVideoSourceCalculator : public CalculatorBase {
  private:
     absl::Status openStream(imp_context_t** ctx, imp_video_stream_t** stream,
                             int w, int h, bool va_surface, imp_tensor_t** pending,
-                            imp_tensor_memory_type_t expected_first) {
+                            imp_tensor_memory_type_t expected_first,
+                            const imp_video_branch_t* branches = nullptr, uint32_t branch_count = 0) {
         if (imp_context_create(ctx, nullptr) != IMP_OK)
             return absl::InternalError("imp_context_create failed");
 
         imp_video_source_t* src = nullptr;
         imp_video_source_create(&src, source_type_);
-        imp_video_source_set(src, source_type_ == IMP_SOURCE_FILE ? "path" : "url",
-                     source_uri_.c_str());
+        if (source_type_ == IMP_SOURCE_CAMERA) {
+            if (!camera_device_.empty())
+                imp_video_source_set(src, "device", camera_device_.c_str());
+        } else {
+            imp_video_source_set(src, source_type_ == IMP_SOURCE_FILE ? "path" : "url",
+                         source_uri_.c_str());
+        }
         if (w > 0)
             imp_video_source_set(src, "width", std::to_string(w).c_str());
         if (h > 0)
             imp_video_source_set(src, "height", std::to_string(h).c_str());
 
         imp_video_decode_opts_t vopts{};
+        vopts.branches = branches;
+        vopts.branch_count = branch_count;
         vopts.use_va_surface_memory = va_surface && !use_d3d11_;
         vopts.use_d3d11_surface_memory = va_surface && use_d3d11_;
         imp_status_t st = imp_video_open(stream, src, *ctx, &vopts);
@@ -291,14 +333,14 @@ class GstVideoSourceCalculator : public CalculatorBase {
         return absl::OkStatus();
     }
 
-    imp_tensor_t* nextFrame(imp_video_stream_t* stream, imp_tensor_t** pending) {
+    imp_tensor_t* nextFrame(imp_video_stream_t* stream, imp_tensor_t** pending, uint32_t branch = 0) {
         if (*pending) {
             imp_tensor_t* t = *pending;
             *pending = nullptr;
             return t;
         }
         imp_tensor_t* tensor = nullptr;
-        imp_status_t st = imp_video_read_frame(&tensor, stream, 0);
+        imp_status_t st = imp_video_read_frame(&tensor, stream, branch);
         if (st != IMP_OK || !tensor)
             return nullptr;
         return tensor;
@@ -366,6 +408,7 @@ class GstVideoSourceCalculator : public CalculatorBase {
     }
 
     std::string source_uri_;
+    std::string camera_device_;
     imp_source_type_t source_type_ = IMP_SOURCE_FILE;
     int width_ = 0;
     int height_ = 0;
@@ -378,6 +421,7 @@ class GstVideoSourceCalculator : public CalculatorBase {
     bool emit_frame_ = false;
     bool emit_infer_ = false;
     bool emit_full_ = false;
+    bool shared_camera_stream_ = false;
 
     imp_context_t* infer_ctx_ = nullptr;
     imp_video_stream_t* infer_stream_ = nullptr;

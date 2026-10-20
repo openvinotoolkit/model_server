@@ -78,6 +78,7 @@ void setGlobalVaDisplay(void* vaDisplay, const std::string& targetDevice = {});
 // Windows D3D11 analog of globalVaDisplay: a server-owned ID3D11Device registered
 // before GPU models load, so they compile on a matching D3DContext. nullptr = off.
 extern void* globalD3D11Device;
+void setGlobalD3D11Device(void* device);
 
 class DynamicModelParameter {
 public:

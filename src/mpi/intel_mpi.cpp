@@ -30,6 +30,10 @@
 
 #include "imp_mpi_impl.h"  // same directory
 
+#ifdef _WIN32
+#include <d3d11_4.h>
+#endif
+
 #ifndef _WIN32
 #include "gst_loader.h"
 #endif
@@ -267,6 +271,7 @@ static bool read_frame_d3d11_surface(imp_branch_info_t& branch,
     if (SUCCEEDED(createResult)) {
         ID3D11DeviceContext* deviceContext = gst_d3d11_device_get_device_context_handle(dmem->device);
         deviceContext->CopyResource(importTexture, sourceTexture);
+        deviceContext->Flush();
     }
     gst_d3d11_device_unlock(dmem->device);
     if (FAILED(createResult)) {
@@ -387,6 +392,7 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
         int width;
         int height;
         std::string name;
+        bool use_system_memory = false;
     };
     std::vector<resolved_branch> resolved;
 
@@ -410,6 +416,7 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
 
             rb.name = opts->branches[i].name ? opts->branches[i].name
                                              : ("branch_" + std::to_string(i));
+            rb.use_system_memory = opts->branches[i].use_system_memory;
             resolved.push_back(rb);
         }
     } else {
@@ -452,27 +459,55 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
                      std::to_string(d) + " drop=false";
     }
 
-    // Source + decode + NV12 convert
+    // Common D3D11 NV12 conversion tail: upload to D3D11, convert/scale to the
+    // requested source resolution as an NV12 texture on the injected device.
+    const std::string d3d11_nv12_tail =
+        " ! d3d11upload ! d3d11convert ! "
+        "video/x-raw(memory:D3D11Memory),format=NV12,"
+        "width=" + std::to_string(src_w) + ",height=" + std::to_string(src_h);
+
+    // Source + decode + NV12 convert. Three explicit heads, no silent fallback:
+    //   FILE   : filesrc ! decodebin (GPU decode auto-plugged onto injected device)
+    //   CAMERA : mfvideosrc (Media Foundation capture) with device selection
+    //   URL    : rtspsrc over TCP ! rtph264depay ! h264parse ! decodebin
     if (is_file) {
         // gst_parse_launch treats '\' as an escape; use forward slashes so
         // Windows paths like C:\dir\file.avi survive parsing (filesrc accepts them).
         std::string gst_path = source->path;
         std::replace(gst_path.begin(), gst_path.end(), '\\', '/');
         pipeline_str =
-            "filesrc location=\"" + gst_path + "\" ! "
-            "decodebin ! "
-            "d3d11upload ! "
-            "d3d11convert ! "
-            "video/x-raw(memory:D3D11Memory),format=NV12,"
-            "width=" + std::to_string(src_w) + ",height=" + std::to_string(src_h);
-    } else {
+            "filesrc location=\"" + gst_path + "\" ! decodebin" + d3d11_nv12_tail;
+    } else if (is_camera) {
+        // mfvideosrc is the maintained Media Foundation capture source in this
+        // GStreamer build. The camera identifier (source->device) selects the
+        // device: a pure integer -> device-index, a device path -> device-path,
+        // otherwise a human-readable device-name.
+        std::string cam_prop;
+        const std::string& dev = source->device;
+        if (!dev.empty()) {
+            const bool allDigits = dev.find_first_not_of("0123456789") == std::string::npos;
+            if (allDigits)
+                cam_prop = " device-index=" + dev;
+            else if (dev.rfind("\\\\?\\", 0) == 0 || dev.find("usb#") != std::string::npos)
+                cam_prop = " device-path=\"" + dev + "\"";
+            else
+                cam_prop = " device-name=\"" + dev + "\"";
+        }
+        const int src_fps = (source->framerate > 0) ? source->framerate : 30;
+        // Do not constrain capture width/height: cameras only emit their own
+        // supported resolutions (e.g. 640x360, 1280x720). Let mfvideosrc
+        // negotiate a native NV12 resolution; the d3d11convert tail scales it
+        // to the requested src_w/src_h, exactly as the file/URL heads do.
         pipeline_str =
-            "mfvideosrc ! "
-            "video/x-raw,width=" + std::to_string(src_w) + ",height=" + std::to_string(src_h) + " ! "
-            "d3d11upload ! "
-            "d3d11convert ! "
-            "video/x-raw(memory:D3D11Memory),format=NV12,"
-            "width=" + std::to_string(src_w) + ",height=" + std::to_string(src_h);
+            "mfvideosrc" + cam_prop + " ! "
+            "video/x-raw,format=NV12,framerate=" + std::to_string(src_fps) + "/1" +
+            d3d11_nv12_tail;
+    } else {
+        // IMP_SOURCE_URL — RTSP ingest over TCP (explicit, matching the Linux
+        // source-mode contract). Decode explicitly on the D3D11 device.
+        pipeline_str =
+            "rtspsrc location=\"" + source->path + "\" protocols=tcp latency=200 ! "
+            "rtph264depay ! h264parse ! d3d11h264dec" + d3d11_nv12_tail;
     }
 
     if (needs_tee) {
@@ -492,7 +527,7 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
                     "width=" + std::to_string(rb.width) + ",height=" + std::to_string(rb.height) + " ! ";
             }
 
-            if (d3d11_surface) {
+            if (d3d11_surface && !rb.use_system_memory) {
                 // Buffers are already D3D11 NV12 from convert/scale above; feed
                 // the texture straight to appsink (no download, no extra caps).
                 pipeline_str +=
@@ -516,7 +551,7 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
                 "width=" + std::to_string(rb.width) + ",height=" + std::to_string(rb.height);
         }
 
-        if (d3d11_surface) {
+        if (d3d11_surface && !rb.use_system_memory) {
             // Buffers are already D3D11 NV12 from convert/scale above; feed the
             // texture straight to appsink (no download, no extra caps filter).
             pipeline_str +=
@@ -571,6 +606,7 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
         s->branches[i].width  = resolved[i].width;
         s->branches[i].height = resolved[i].height;
         s->branches[i].name   = resolved[i].name;
+        s->branches[i].use_system_memory = resolved[i].use_system_memory;
         s->branches[i].frame.allocate(resolved[i].width, resolved[i].height);
     }
 
@@ -649,7 +685,7 @@ imp_status_t imp_video_read_frame(imp_tensor_t** tensor,
     // Zero-copy D3D11 surface path: heap-allocate a per-frame tensor that owns
     // its GstSample (texture), so N in-flight frames keep distinct, valid
     // textures until each is released (VA path parity).
-    if (stream->use_d3d11_surface_memory) {
+    if (stream->use_d3d11_surface_memory && !branch.use_system_memory) {
         auto* t = new imp_tensor_s();
         bool ok = read_frame_d3d11_surface(
             branch, *t, branch.total_decode_ms, branch.total_decode_pull_ms);
@@ -662,25 +698,24 @@ imp_status_t imp_video_read_frame(imp_tensor_t** tensor,
         return IMP_OK;
     }
 
+    imp_nv12_frame_t frame;
     bool ok = read_nv12_from_appsink(
-        branch.appsink, &branch.frame,
+        branch.appsink, &frame,
         branch.total_decode_ms,
         branch.total_decode_pull_ms,
         branch.total_decode_copy_ms);
 
     if (!ok) return IMP_ERROR_STREAM_END;
 
-    // Fill tensor wrapper pointing to the branch's frame data
-    branch.tensor_cache.y_data  = branch.frame.y_plane.data();
-    branch.tensor_cache.uv_data = branch.frame.uv_plane.data();
-    branch.tensor_cache.width   = branch.frame.width;
-    branch.tensor_cache.height  = branch.frame.height;
-    branch.tensor_cache.format  = IMP_FORMAT_NV12;
-    branch.tensor_cache.valid   = true;
-    branch.tensor_cache.device_type = IMP_DEVICE_CPU;
-    branch.tensor_cache.heap_owned = false;  // reusable cache; not owned by caller
-
-    if (tensor) *tensor = &branch.tensor_cache;
+    auto* hostTensor = new imp_tensor_s();
+    hostTensor->owned_y = std::move(frame.y_plane);
+    hostTensor->owned_uv = std::move(frame.uv_plane);
+    hostTensor->y_data = hostTensor->owned_y.data();
+    hostTensor->uv_data = hostTensor->owned_uv.data();
+    hostTensor->width = frame.width;
+    hostTensor->height = frame.height;
+    hostTensor->valid = true;
+    if (tensor) *tensor = hostTensor;
     return IMP_OK;
 
 #else  // Linux
@@ -763,13 +798,29 @@ imp_status_t imp_video_encoder_create(imp_video_encoder_t** encoder,
 
     std::cout << "=== Opening GPU encoder: " << output_path << " ===" << std::endl;
 
-    // TODO(P6b): Windows RTSP publish (rtspclientsink terminus) — Linux-only for now.
+    // RTSP publish (producer only): swap the file terminus `mp4mux ! filesink`
+    // for `rtspclientsink` pushing to an external RTSP server (e.g. MediaMTX)
+    // over TCP. rtspclientsink payloads H.264 internally, so h264parse stays and
+    // no rtph264pay is added. output_path carries the rtsp:// URL in this mode.
+    // FILE mode is preserved byte-for-byte.
+    const bool rtsp = opts && opts->output_mode == IMP_OUTPUT_RTSP;
+    const bool preview = opts && opts->output_mode == IMP_OUTPUT_PREVIEW;
+    // gst_parse_launch treats '\' as an escape; use forward slashes so Windows
+    // file paths survive parsing (filesink accepts them). RTSP URLs already use
+    // forward slashes and must not be altered.
+    std::string terminus_path = output_path;
+    if (!rtsp)
+        std::replace(terminus_path.begin(), terminus_path.end(), '\\', '/');
+    const std::string terminus =
+        rtsp ? ("rtspclientsink location=\"" + terminus_path + "\" protocols=tcp")
+             : ("mp4mux ! filesink location=\"" + terminus_path + "\"");
+
     std::string pipeline =
         "appsrc name=src format=time is-live=true do-timestamp=true ! "
         "video/x-raw,format=NV12,width=" + std::to_string(width) +
         ",height=" + std::to_string(height) +
         ",framerate=" + std::to_string(e->fps_num) + "/" + std::to_string(e->fps_den) + " ! "
-        "mfh264enc ! h264parse ! mp4mux ! filesink location=\"" + output_path + "\"";
+        + (preview ? "d3d11upload ! d3d11videosink sync=false" : "mfh264enc ! h264parse ! " + terminus);
 
     GError* error = nullptr;
     e->pipeline = gst_parse_launch(pipeline.c_str(), &error);
@@ -798,11 +849,11 @@ imp_status_t imp_video_encoder_create(imp_video_encoder_t** encoder,
     }
     gst_element_get_state(e->pipeline, nullptr, nullptr, 500 * GST_MSECOND);
 
-    e->encoder_name    = "mfh264enc";
+    e->encoder_name    = preview ? "d3d11videosink" : "mfh264enc";
     e->is_gpu_encoder  = true;
     e->initialized     = true;
 
-    std::cout << "GPU encoder opened: mfh264enc" << std::endl;
+    std::cout << "GPU encoder opened: " << e->encoder_name << std::endl;
 
     *encoder = e;
     return IMP_OK;
@@ -1076,6 +1127,17 @@ void imp_video_set_va_display(void* /*va_display*/) {}
 bool imp_video_d3d11_available(void) { return true; }
 void imp_video_set_d3d11_device(void* d3d11_device) {
     s_injected_d3d11_device = static_cast<ID3D11Device*>(d3d11_device);
+    if (s_injected_d3d11_device) {
+        ID3D11DeviceContext* deviceContext = nullptr;
+        s_injected_d3d11_device->GetImmediateContext(&deviceContext);
+        ID3D11Multithread* multithread = nullptr;
+        if (SUCCEEDED(deviceContext->QueryInterface(__uuidof(ID3D11Multithread),
+                reinterpret_cast<void**>(&multithread)))) {
+            multithread->SetMultithreadProtected(TRUE);
+            multithread->Release();
+        }
+        deviceContext->Release();
+    }
 }
 #else
 bool imp_video_d3d11_available(void) { return false; }

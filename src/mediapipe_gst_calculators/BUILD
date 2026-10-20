@@ -15,9 +15,21 @@
 #
 load("//:common_settings.bzl", "LINUX_COMMON_STATIC_LIBS_COPTS", "COMMON_FUZZER_LINKOPTS", "ovms_cc_library")
 
+# MSVC warnings promoted to errors inside mediapipe/glog/absl headers. Mirrors
+# the suppressions in src/python/BUILD so these calculators compile on Windows.
+MEDIAPIPE_WIN_COPTS = [
+    "/wd4005",  # macro redefinition (GLOG_NO_ABBREVIATED_SEVERITIES from mediapipe/glog)
+    "/wd4309",  # truncation of constant value (mediapipe circular_buffer.h)
+    "/wd4456",  # declaration hides previous local declaration (mediapipe graph_profiler.h)
+    "/wd6001",  # uninitialized memory (absl/strings and mediapipe)
+    "/wd6246",  # local declaration hides previous declaration (mediapipe graph_profiler.h)
+    "/wd6386",  # buffer overrun (absl cord_rep_flat.h)
+    "/wd6011",  # NULL pointer dereference (mediapipe packet.h)
+]
+
 COPTS_ADJUSTED = select({
     "//conditions:default": LINUX_COMMON_STATIC_LIBS_COPTS,
-    "//src:windows": [],
+    "//src:windows": MEDIAPIPE_WIN_COPTS,
 })
 
 LINKOPTS_ADJUSTED = select({
@@ -61,6 +73,7 @@ ovms_cc_library(
     additional_copts = COPTS_ADJUSTED,
     local_defines = select({
         "//:redhat_build": [],
+        "//src:windows": [],
         "//conditions:default": ["OVMS_ENABLE_VA_OVERLAY"],
     }),
     alwayslink = 1,
@@ -71,6 +84,7 @@ ovms_cc_library(
     ],
     additional_linkopts = LINKOPTS_ADJUSTED + select({
         "//:redhat_build": [],
+        "//src:windows": [],
         "//conditions:default": ["-lva"],
     }),
 )

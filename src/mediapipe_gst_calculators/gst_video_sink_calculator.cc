@@ -26,7 +26,7 @@
  * Side packets:
  *   OUTPUT_PATH : std::string — destination: file path (FILE) or rtsp:// URL (RTSP).
  *   FRAMERATE   : int         — encode framerate (fps).
- *   OUTPUT_MODE : std::string ("file"/"rtsp") or bool — optional terminus select
+ *   OUTPUT_MODE : std::string ("file"/"rtsp"/"preview") or bool — optional terminus select
  *                 (default FILE when absent, keeping existing graphs unchanged).
  *
  * Input stream:
@@ -60,7 +60,8 @@ class GstVideoSinkCalculator : public CalculatorBase {
  public:
     static absl::Status GetContract(CalculatorContract* cc) {
         cc->Inputs().Tag(kFrameTag).Set<GstVideoFramePacket>();
-        cc->InputSidePackets().Tag(kOutputPathTag).Set<std::string>();
+        if (cc->InputSidePackets().HasTag(kOutputPathTag))
+            cc->InputSidePackets().Tag(kOutputPathTag).Set<std::string>();
         cc->InputSidePackets().Tag(kFramerateTag).Set<int>();
         // OUTPUT_MODE is optional (string "file"/"rtsp" or bool); omitting it keeps FILE.
         if (cc->InputSidePackets().HasTag(kOutputModeTag))
@@ -69,26 +70,36 @@ class GstVideoSinkCalculator : public CalculatorBase {
     }
 
     absl::Status Open(CalculatorContext* cc) override {
-        output_path_ = cc->InputSidePackets().Tag(kOutputPathTag).Get<std::string>();
+        if (cc->InputSidePackets().HasTag(kOutputPathTag))
+            output_path_ = cc->InputSidePackets().Tag(kOutputPathTag).Get<std::string>();
         framerate_ = cc->InputSidePackets().Tag(kFramerateTag).Get<int>();
         if (cc->InputSidePackets().HasTag(kOutputModeTag)) {
             const mediapipe::Packet& mode = cc->InputSidePackets().Tag(kOutputModeTag);
             if (!mode.IsEmpty()) {
                 if (mode.ValidateAsType<bool>().ok()) {
-                    rtsp_ = mode.Get<bool>();
+                    output_mode_ = mode.Get<bool>() ? IMP_OUTPUT_RTSP : IMP_OUTPUT_FILE;
                 } else if (mode.ValidateAsType<std::string>().ok()) {
                     std::string m = mode.Get<std::string>();
                     std::transform(m.begin(), m.end(), m.begin(),
                                    [](unsigned char c) { return std::tolower(c); });
-                    if (m != "file" && m != "rtsp")
-                        return absl::InvalidArgumentError("GstVideoSinkCalculator: OUTPUT_MODE must be 'file' or 'rtsp'");
-                    rtsp_ = (m == "rtsp");
+                    if (m == "file")
+                        output_mode_ = IMP_OUTPUT_FILE;
+                    else if (m == "rtsp")
+                        output_mode_ = IMP_OUTPUT_RTSP;
+                    else if (m == "preview")
+                        output_mode_ = IMP_OUTPUT_PREVIEW;
+                    else
+                        return absl::InvalidArgumentError("GstVideoSinkCalculator: OUTPUT_MODE must be 'file', 'rtsp' or 'preview'");
                 } else {
                     return absl::InvalidArgumentError("GstVideoSinkCalculator: OUTPUT_MODE must be std::string or bool");
                 }
             }
         }
-        if (output_path_.empty())
+    #ifndef _WIN32
+        if (output_mode_ == IMP_OUTPUT_PREVIEW)
+            return absl::InvalidArgumentError("GstVideoSinkCalculator: preview output requires Windows");
+    #endif
+        if (output_mode_ != IMP_OUTPUT_PREVIEW && output_path_.empty())
             return absl::InvalidArgumentError("GstVideoSinkCalculator: empty OUTPUT_PATH");
         if (framerate_ <= 0)
             return absl::InvalidArgumentError("GstVideoSinkCalculator: FRAMERATE must be positive");
@@ -116,7 +127,7 @@ class GstVideoSinkCalculator : public CalculatorBase {
             eopts.framerate = static_cast<uint32_t>(framerate_);
             eopts.encode_device = native_surface ? "GPU" : nullptr;  // VA/D3D11 zero-copy vs host
             eopts.output_path = output_path_.c_str();
-            eopts.output_mode = rtsp_ ? IMP_OUTPUT_RTSP : IMP_OUTPUT_FILE;
+            eopts.output_mode = output_mode_;
             if (imp_video_encoder_create(&encoder_, static_cast<uint32_t>(frame.width),
                                          static_cast<uint32_t>(frame.height), ctx_, &eopts) != IMP_OK)
                 return absl::InternalError(std::string("imp_video_encoder_create failed: ") +
@@ -143,7 +154,7 @@ class GstVideoSinkCalculator : public CalculatorBase {
         if (frames_written_ == 0)
             return absl::InternalError("GstVideoSinkCalculator: no frames were encoded");
         // RTSP publishes over the network — there is no local file to finalize.
-        if (rtsp_)
+        if (output_mode_ != IMP_OUTPUT_FILE)
             return absl::OkStatus();
         std::ifstream out(output_path_, std::ios::binary | std::ios::ate);
         if (!out.good() || out.tellg() <= 0)
@@ -155,7 +166,7 @@ class GstVideoSinkCalculator : public CalculatorBase {
  private:
     std::string output_path_;
     int framerate_ = 0;
-    bool rtsp_ = false;
+    imp_output_mode_t output_mode_ = IMP_OUTPUT_FILE;
     int64_t frames_written_ = 0;
 
     imp_context_t* ctx_ = nullptr;

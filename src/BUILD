@@ -830,12 +830,13 @@ ovms_cc_library(
         "libovmsstatus",
         "modelinstance",
         "//src/mpi:intel_mpi",
+        "//src/port:rapidjson_document",
         "//src/port:rapidjson_istreamwrapper",
         "@com_github_tencent_rapidjson//:rapidjson",
     ],
     additional_linkopts = select({
         "//conditions:default": ["-lva", "-lva-drm"],
-        "//src:windows": [],
+        "//src:windows": ["d3d11.lib", "dxgi.lib"],
     }),
     visibility = ["//visibility:public"],
 )

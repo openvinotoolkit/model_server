@@ -192,6 +192,7 @@ struct imp_branch_info_t {
     int              width   = 0;
     int              height  = 0;
     std::string      name;
+    bool use_system_memory = false;
     imp_nv12_frame_t frame;             // fallback compact-copy buffer (stride ≠ width)
     imp_tensor_s     tensor_cache;      // reusable tensor wrapper
 
