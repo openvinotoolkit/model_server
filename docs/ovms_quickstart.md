@@ -86,12 +86,12 @@ is required.
 
 On Linux:
 ```sh
-./ovms/bin/ovms --model_name faster_rcnn --model_path model --port 9000
+ovms --model_name faster_rcnn --model_path model --port 9000
 ```
 
 On Windows:
 ```bat
-.\ovms\ovms.exe --model_name faster_rcnn --model_path model --port 9000
+ovms.exe --model_name faster_rcnn --model_path model --port 9000
 ```
 :::
 ### Step 5: Prepare the Example Client Components

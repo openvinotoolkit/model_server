@@ -77,8 +77,8 @@ Install system dependencies, then download, extract, and verify the package:
 
 ```sh
 sudo dnf install -y curl ca-certificates libxml2
-curl -fLO https://storage.openvinotoolkit.org/repositories/openvino_model_server/packages/weekly/latest/ovms_rh9.tar.gz
-tar -xzf ovms_rh9.tar.gz
+curl -fLO https://storage.openvinotoolkit.org/repositories/openvino_model_server/packages/weekly/latest/ovms_redhat9.tar.gz
+tar -xzf ovms_redhat9.tar.gz
 ./ovms/bin/ovms --version
 ```
 

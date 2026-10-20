@@ -17,6 +17,7 @@
 #include "../module.hpp"
 #include "pythoninterpretermodule.hpp"
 #include "python_runtime_env.hpp"
+#include "python_runtime_path.hpp"
 
 #include <cstdlib>
 #include <filesystem>
@@ -75,13 +76,12 @@ bool ensureInterpreterInitialized(std::string& details) {
     if (!validateEnvPaths(details)) {
         return false;
     }
-    if (Py_IsInitialized()) {
-        return true;
-    }
-
     try {
-        py::initialize_interpreter();
-        PyEval_SaveThread();
+        if (!Py_IsInitialized()) {
+            py::initialize_interpreter();
+            PyEval_SaveThread();
+        }
+        ovms::addPackagedPythonPath();
         return true;
     } catch (const py::error_already_set& e) {
         details = e.what();
@@ -208,6 +208,7 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_validatePythonEnvironment(const char*
         }
         {
             py::gil_scoped_acquire acquire;
+            ovms::addPackagedPythonPath();
             // Validate that OVMS Python bindings are importable and executable.
             py::module_::import("pyovms");
         }
