@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <cstddef>
 #include <optional>
 #include <string>
 #include <vector>
@@ -26,6 +27,27 @@
 #pragma warning(pop)
 
 namespace ovms {
+struct TagMatch {
+    std::size_t position;
+    std::size_t length;
+};
+
+inline std::optional<TagMatch> findEarliestTag(const std::string& text, const std::vector<std::string>& tags) {
+    std::optional<TagMatch> earliest;
+    for (const auto& tag : tags) {
+        if (tag.empty()) {
+            continue;
+        }
+        const std::size_t position = text.find(tag);
+        if (position != std::string::npos &&
+            (!earliest.has_value() || position < earliest->position ||
+                (position == earliest->position && tag.size() > earliest->length))) {
+            earliest = TagMatch{position, tag.size()};
+        }
+    }
+    return earliest;
+}
+
 // Generates random alphanumeric string of length 9 for tool call ID
 std::string generateRandomId();
 

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2023-2026 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -94,6 +94,7 @@ libraries = {
         'libazure-storage-files-shares.so',
         'libespeak-ng.so',
         'libgit2.so',
+        'libjsoncpp.so',
         'libOpenCL.so',
         'libopencv_calib3d.so',
         'libopencv_core.so',
@@ -115,6 +116,7 @@ libraries = {
         'libopenvino_hetero_plugin.so',
         'libopenvino_intel_cpu_plugin.so',
         'libopenvino_intel_gpu_plugin.so',
+        'libopenvino_intel_npu_plugin.so',
         'libopenvino_ir_frontend.so',
         'libopenvino_onnx_frontend.so',
         'libopenvino_paddle_frontend.so',
@@ -122,12 +124,12 @@ libraries = {
         'libopenvino_tensorflow_frontend.so',
         'libopenvino_tensorflow_lite_frontend.so',
         'libopenvino_tokenizers.so',
+        'libovms_llm_calculators.so',
         'libtbb.so',
     },
     OvmsBaseType.UBUNTU: {
         'libopenvino_intel_npu_compiler.so',
         'libopenvino_intel_npu_compiler_loader.so',
-        'libopenvino_intel_npu_plugin.so',
         'libopenvino_intel_npu_vm_runtime.so',
     },
     OvmsBaseType.UBUNTU22: set(),

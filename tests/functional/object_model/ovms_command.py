@@ -72,6 +72,7 @@ def create_ovms_command(
         "base_os": base_os,
         "allowed_local_media_path": parameters.allowed_local_media_path,
         "allowed_media_domains": parameters.allowed_media_domains,
+        "max_image_decode_pixels": parameters.max_image_decode_pixels,
         "pooling": pooling,
     }
     pull_parameters = {
@@ -142,6 +143,7 @@ class OvmsCommand(object):
     base_os: str = None
     allowed_local_media_path: str = None
     allowed_media_domains: str = None
+    max_image_decode_pixels: int = None
     pull: bool = False
     source_model: str = None
     gguf_filename: str = None
@@ -263,6 +265,10 @@ class OvmsCommand(object):
             if self.allowed_media_domains is not None:
                 command_parts.append("--allowed_media_domains")
                 command_parts.append(self.allowed_media_domains)
+
+            if self.max_image_decode_pixels is not None:
+                command_parts.append("--max_image_decode_pixels")
+                command_parts.append(str(self.max_image_decode_pixels))
 
             if self.plugin_config is not None:
                 command_parts.append("--plugin_config")
