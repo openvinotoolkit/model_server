@@ -352,6 +352,35 @@ TEST(TokenizeDeserialization, positiveTokenizeMaxLengthWithSmallModelContext) {
     ASSERT_EQ(request.parameters["max_length"].as<size_t>(), 1000000);
 }
 
+TEST(TokenizeParseInput, plainStringIsReturnedAsUnbatched) {
+    rapidjson::Document d;
+    d.Parse(R"({"text": "one"})");
+    auto input = ovms::TokenizeParser::parseInput(d, "text");
+    ASSERT_TRUE(input.ok());
+    auto* text = std::get_if<std::string>(&input.value());
+    ASSERT_NE(text, nullptr);
+    EXPECT_EQ(*text, "one");
+}
+
+TEST(TokenizeParseInput, arrayWithOneStringIsReturnedAsBatch) {
+    rapidjson::Document d;
+    d.Parse(R"({"text": ["one"]})");
+    auto input = ovms::TokenizeParser::parseInput(d, "text");
+    ASSERT_TRUE(input.ok());
+    auto* texts = std::get_if<std::vector<std::string>>(&input.value());
+    ASSERT_NE(texts, nullptr);
+    ASSERT_EQ(texts->size(), 1);
+    EXPECT_EQ(texts->at(0), "one");
+}
+
+TEST(TokenizeParseInput, invalidInputReturnsErrorStatus) {
+    rapidjson::Document d;
+    d.Parse(R"({"text": []})");
+    auto input = ovms::TokenizeParser::parseInput(d, "text");
+    ASSERT_FALSE(input.ok());
+    EXPECT_EQ(input.status().message(), "text array should not be empty");
+}
+
 TEST(TokenizeDeserialization, singleStringIsNotABatch) {
     rapidjson::Document d;
     d.Parse(R"({"model": "embeddings", "text": "one"})");
