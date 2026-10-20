@@ -57,7 +57,7 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional string device` - device to load models to. Supported values: "CPU", "GPU", "NPU" [default = "CPU"] or mixed - space separated. Example: `CPU GPU NPU` equals to `text_encode=CPU denoise=GPU vae=NPU`
 -    `optional string plugin_config` - [OpenVINO device plugin configuration](https://docs.openvino.ai/2026/openvino-workflow/running-inference/inference-devices-and-modes.html) and additional pipeline options. Should be provided in the same format for regular [models configuration](../parameters.md#model-configuration-options). The config is used for all models in the pipeline except for tokenizers (text encoders/decoders, unet, vae) [default = "{}"]
 -    `optional string max_resolution` - maximum resolution allowed for generation. Requests exceeding this value will be rejected. [default = "4096x4096"];
--    `optional string default_resolution` - default resolution used for generation. If omitted, the model-native resolution is used when it can be determined; this option is required otherwise.
+-    `optional string default_resolution` - default resolution used for generation. Required, if model-native resolution could not be determined.
 -    `optional uint64 max_num_images_per_prompt` - maximum number of images generated per prompt. Requests exceeding this value will be rejected. [default = 10];
 -    `optional uint64 default_num_inference_steps` - default number of inference steps used for generation, if not specified by the request [default = 50];
 -    `optional uint64 max_num_inference_steps` - maximum number of inference steps allowed for generation. Requests exceeding this value will be rejected. [default = 100];
