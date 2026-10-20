@@ -75,7 +75,7 @@ public:
     static OutputParsingConfig defaultParsingConfig() {
         OutputParsingConfig cfg;
         cfg.startTags = {"<tool_call>"};
-        cfg.endTag = "</tool_call>";
+        cfg.endTags = {"</tool_call>"};
         return cfg;
     }
 

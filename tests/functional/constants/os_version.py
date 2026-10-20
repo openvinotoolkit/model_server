@@ -20,17 +20,20 @@ REDHAT_MINIMAL_BASE_IMAGE = "registry.access.redhat.com/ubi9/ubi-minimal:9.7"
 REDHAT_COMMON_BASE_IMAGE = "registry.access.redhat.com/ubi9/ubi:9.7"
 UBUNTU_22_BASE_IMAGE = "ubuntu:22.04"
 UBUNTU_24_BASE_IMAGE = "ubuntu:24.04"
+UBUNTU_26_BASE_IMAGE = "ubuntu:26.04"
 
 os_type_to_base_image = {
     OsType.Redhat: REDHAT_COMMON_BASE_IMAGE,
     OsType.Ubuntu22: UBUNTU_22_BASE_IMAGE,
     OsType.Ubuntu24: UBUNTU_24_BASE_IMAGE,
+    OsType.Ubuntu26: UBUNTU_26_BASE_IMAGE,
 }
 
 os_type_to_base_image_binary_docker = {
     OsType.Redhat: REDHAT_COMMON_BASE_IMAGE,
     OsType.Ubuntu22: UBUNTU_22_BASE_IMAGE,
-    OsType.Ubuntu24: UBUNTU_24_BASE_IMAGE
+    OsType.Ubuntu24: UBUNTU_24_BASE_IMAGE,
+    OsType.Ubuntu26: UBUNTU_26_BASE_IMAGE,
 }
 
 OPENVINO_UBUNTU_20_DEV_IMAGE = "openvino/ubuntu20_dev:2024.6.0"
