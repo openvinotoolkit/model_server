@@ -28,6 +28,7 @@
 
 #include "../../llm/io_processing/chat_template/analyzer.hpp"
 #include "../../llm/io_processing/chat_template/caps.hpp"
+#include "../../llm/io_processing/chat_template/adjuster.hpp"
 #include "../../llm/io_processing/chat_template/probe.hpp"
 #include "../../llm/io_processing/input_processors/chat_template_adapter.hpp"
 #include "../../utils/env_guard.hpp"
@@ -87,6 +88,7 @@ protected:
         // Step 1: Static analysis
         analysisResult = ChatTemplateAnalyzer::analyze(chatTemplate);
         caps = analysisResult.caps;
+        ChatTemplateAdjuster::adjust(chatTemplate, ChatTemplateAdjusterConfig::forMinja());
 
         std::cout << "=== Analysis ===" << std::endl;
         std::cout << "  toolParser: " << analysisResult.detectedToolParser.value_or("(none)") << std::endl;
@@ -260,11 +262,6 @@ What's the weather in Paris?<turn|>
     EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
-// =============================================================================
-// This test is running against chat template which contains our patch with `from_json` filter.
-// This filter is unsupported by minja, therefore the test is expected to fail.
-// Model stays unsupported with minja chat template mode.
-// =============================================================================
 TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3Coder_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen3coder_instruct.jinja");
     ASSERT_FALSE(chatTemplate.empty()) << "Failed to load qwen3 coder instruct template";
@@ -276,18 +273,33 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3Coder_ToolCallWithStringArgs) {
 
     run(true);
 
-    // No exception is thrown by minja even though there is unsupported filter
     ASSERT_FALSE(exceptionThrownDuringApplication);
-    // Basic probing does not reach the unsupported filter, so it is ok to use it without agentic capabilities
     ASSERT_TRUE(basicRenderOk);
 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "qwen3coder");
     ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
 
-    EXPECT_FALSE(caps.supportsToolCalls);
-    EXPECT_FALSE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_TRUE(caps.missnamedReasoningField.empty());
+
+    std::string expectedOutput = R"(<|im_start|>user
+What's the weather in Paris?<|im_end|>
+<|im_start|>assistant
+<tool_call>
+<function=get_weather>
+<parameter=location>
+Paris
+</parameter>
+<parameter=unit>
+celsius
+</parameter>
+</function>
+</tool_call><|im_end|>
+<|im_start|>assistant
+)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
 TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3CoderNext_ToolCallWithStringArgs) {
@@ -623,7 +635,7 @@ What's the weather in Paris?<|im_end|>
     EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
-TEST_F(ChatTemplateEndToEndMinjaTest, MiniCPM5_ToolCallWithStringArgsExpectedToFailMinjaDontSupportThisTemplate) {
+TEST_F(ChatTemplateEndToEndMinjaTest, MiniCPM5_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_minicpm5.jinja");
     ASSERT_FALSE(chatTemplate.empty()) << "Failed to load minicpm5 template";
 
@@ -642,9 +654,18 @@ TEST_F(ChatTemplateEndToEndMinjaTest, MiniCPM5_ToolCallWithStringArgsExpectedToF
     ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
     EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "minicpm5");
 
-    EXPECT_FALSE(caps.supportsToolCalls);
-    EXPECT_FALSE(caps.requiresObjectArguments);
+    
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_TRUE(caps.missnamedReasoningField.empty());
+
+    std::string expectedOutput = R"(</s><|im_start|>user
+What's the weather in Paris?<|im_end|>
+<|im_start|>assistant
+<function name="get_weather"><param name="location">Paris</param><param name="unit">celsius</param></function><|im_end|>
+<|im_start|>assistant
+)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
 TEST_F(ChatTemplateEndToEndMinjaTest, Onyx_ToolCallWithStringArgs) {

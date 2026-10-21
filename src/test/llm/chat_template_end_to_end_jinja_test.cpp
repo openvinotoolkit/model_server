@@ -35,6 +35,7 @@
 
 #include "../../llm/io_processing/chat_template/analyzer.hpp"
 #include "../../llm/io_processing/chat_template/caps.hpp"
+#include "src/llm/io_processing/chat_template/adjuster.hpp"
 #include "../../llm/io_processing/chat_template/probe.hpp"
 #include "../../llm/io_processing/input_processors/chat_template_adapter.hpp"
 #include "../../utils/env_guard.hpp"
@@ -129,6 +130,7 @@ protected:
         // Step 1: Static analysis
         analysisResult = ChatTemplateAnalyzer::analyze(chatTemplate);
         caps = analysisResult.caps;
+        ChatTemplateAdjuster::adjust(chatTemplate, ChatTemplateAdjusterConfig::forJinja());
 
         std::cout << "=== Analysis (Jinja) ===" << std::endl;
         std::cout << "  toolParser: " << analysisResult.detectedToolParser.value_or("(none)") << std::endl;
