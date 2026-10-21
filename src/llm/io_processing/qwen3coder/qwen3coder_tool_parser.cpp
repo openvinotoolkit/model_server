@@ -108,7 +108,7 @@ void Qwen3CoderToolParserImpl::addParameterToCurrentFunctionDoc(std::string& par
         if (paramIt != this->toolsParametersTypeMap.end()) {
             auto paramJt = paramIt->second.find(currentParameterName);
             if (paramJt != paramIt->second.end() && (paramJt->second == ParameterType::STRING)) {
-                enforceStringValue(valueCopy, allocator);
+                enforceStringValue(valueCopy, parameterValueAsString, allocator);
             }
         }
         // Add or overwrite key in the main document

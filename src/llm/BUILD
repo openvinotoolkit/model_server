@@ -30,6 +30,7 @@ ovms_cc_library(
             "@mediapipe//mediapipe/framework:calculator_cc_proto",
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/mediapipe_internal:graph_side_packets",
+        "//src/mediapipe_calculators/utils:timestamp_advance_guard",
         "//src/kfserving_api:kfserving_api_cpp",
         "//src:libovmsprofiler",
         ":genai_servables",
@@ -129,6 +130,7 @@ ovms_cc_library(
         ":openai_request",
         ":output_parsers",
         ":io_processing_input_processor",
+        ":video_utils",
         "//third_party:genai",],
     visibility = ["//visibility:public"],
 )
@@ -184,6 +186,20 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "video_utils",
+    hdrs = ["io_processing/video_utils.hpp"],
+    srcs = ["io_processing/video_utils.cpp"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_framework",  # required for absl status
+        ":image_utils",
+        "//src:predict_request_validation_utils_impl",
+        "//third_party:genai",
+        "//src:libovmslogging",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "io_processing_input_processor_context",
     hdrs = ["io_processing/input_processor_context.hpp",
             "io_processing/chat_template/caps.hpp"],
@@ -200,6 +216,7 @@ ovms_cc_library(
     name = "io_processing_input_processors",
     hdrs = ["io_processing/input_processors/image_decoding_processor.hpp",
             "io_processing/input_processors/audio_decoding_processor.hpp",
+            "io_processing/input_processors/video_frames_processor.hpp",
             "io_processing/input_processors/chat_template_processor.hpp",
             "io_processing/input_processors/chat_template_adapter.hpp",
             "io_processing/chat_template/caps.hpp",
@@ -210,6 +227,7 @@ ovms_cc_library(
             "io_processing/input_processors/tokenization_processor.hpp"],
     srcs = ["io_processing/input_processors/image_decoding_processor.cpp",
             "io_processing/input_processors/audio_decoding_processor.cpp",
+            "io_processing/input_processors/video_frames_processor.cpp",
             "io_processing/input_processors/chat_template_processor.cpp",
             "io_processing/input_processors/chat_template_adapter.cpp",
             "io_processing/input_processors/empty_content_array_normalization_processor.cpp",
@@ -220,6 +238,7 @@ ovms_cc_library(
         "@mediapipe//mediapipe/framework:calculator_cc_proto",
         "//src:libovmsprofiler",
         ":image_utils",
+        ":video_utils",
         ":io_processing_input_request",
         ":runtime_chat_template_loader",
         "//third_party:genai",
@@ -534,6 +553,7 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
             "io_processing/mistral/tool_parser.hpp",
             "io_processing/gptoss/reasoning_parser.hpp",
             "io_processing/gptoss/tool_parser.hpp",
+            "io_processing/gptoss/content_parser.hpp",
             "io_processing/gptoss/harmony.hpp",
             "io_processing/output_parser.hpp",
     ],
@@ -545,6 +565,7 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
             "io_processing/mistral/tool_parser.cpp",
             "io_processing/gptoss/reasoning_parser.cpp",
             "io_processing/gptoss/tool_parser.cpp",
+            "io_processing/gptoss/content_parser.cpp",
             "io_processing/gptoss/harmony.cpp",
             "io_processing/output_parser.cpp",
     ],
