@@ -1,0 +1,33 @@
+# Routed Experts, NVMe offload, Strata, Xe2 и CPU experts
+
+**Research packet — 21 October 2026 · documentation only**
+
+Target: GEMMAMONSTER / OpenVINO Model Server. Platforms: Intel Arc 140V + Core Ultra 7 258V (32 GiB unified memory), AVX2 Ryzen, Xeon Scalable 2nd generation and newer, including dual Xeon Gold 6242.
+
+## Contents and provenance
+
+| File | Contents | Provenance | Status |
+| --- | --- | --- | --- |
+| [01-ARC-140V-research-20261006.md](01-ARC-140V-research-20261006.md) | Earlier investigation: OVMS, Arc 140V, MoE disk offload, runtime choices | Existing research document of 2026-10-06; publication copy changes one example machine-specific path to `<MODEL_REPOSITORY>` | Historical, unchanged technical conclusions |
+| [02-Xe2-CPU-DeepSeek-addendum-20261021.md](02-Xe2-CPU-DeepSeek-addendum-20261021.md) | KV U4, XMX numerical formats, DeepSeek disk loading, AVX2/AVX-512/AMX, expert kernels | Original previously generated Markdown addendum | Add-only |
+| [03-Strata-source-audit-20261021.md](03-Strata-source-audit-20261021.md) | Intel SYCL support limitations and portable architectural mechanisms | Newly assembled source-based companion | Add-only |
+| [04-OVMS-integration-research-notes.md](04-OVMS-integration-research-notes.md) | Evidence-oriented proposal, implementation seams, experiment matrix and gates | New synthesis of known findings, **not** claimed to be original Deep Research text | Add-only |
+| [05-SOURCES-AND-GAPS.md](05-SOURCES-AND-GAPS.md) | Sources, known limitations, original-report availability and missing evidence | Package provenance/manifest | Add-only |
+
+### Important: missing full original Deep Research export
+
+The primary long-form Deep Research report, **«Интеграция Routed Experts и механизмов GLM-Flash-Lite с NVMe в ОВМС на Intel Arc 140V»** (21 October 2026), was produced in the research app, but its *complete, exact text was not available as an exportable file* in the present GitHub publishing context. Consequently, **this package does not claim to contain an unmodified copy**. Its known conclusions are represented only as newly authored research notes where explicitly marked. The original is **not deleted, shortened, replaced, or silently reconstructed**. See [05-SOURCES-AND-GAPS.md](05-SOURCES-AND-GAPS.md).
+
+### Hardware and correctness baselines
+
+- **Arc 140V KV U4** is user-established, repeatedly validated and preferable to U8. Preserve U4 as baseline. Prefix cache and scheduler are separate axes.
+- Xe2 XMX supports low-bit integer matrix modes and BF16/FP16, but the *actual winner* requires per-shape, per-kernel benchmarks; do not infer performance solely from peak operations.
+- Treat CPU expert execution as a candidate parallel lane, not an established win on unified-memory Lunar Lake.
+- The dual Xeon Gold 6242 machine has AVX-512 VNNI but neither native AMX nor AVX512_BF16; it needs its own NUMA-aware tests.
+- All public sources should be interpreted at **their actual model version, hardware and operating system**.
+
+### Isolation
+
+This documentation branch contains no runtime, parser, scheduler, tokenizer, XGrammar or dependency-lock modifications. The mainline C6, staged runtime and accepted dependency lock remain untouched.
+
+**Publication rules:** no local machine directory map, local secrets, credentials, private IP addresses, or local absolute checkout paths. Use placeholders in commands.
