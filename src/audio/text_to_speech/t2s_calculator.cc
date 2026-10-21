@@ -74,6 +74,19 @@ static std::string resolveBuiltinSpeakerName(const ovms::TtsServable& pipe, cons
     return voiceName;
 }
 
+static bool isKnownVoice(const ovms::TtsServable& pipe, const std::string& voiceName) {
+    if (pipe.voices.find(voiceName) != pipe.voices.end()) {
+        return true;
+    }
+    if (pipe.builtinSpeakerAliases.find(voiceName) != pipe.builtinSpeakerAliases.end()) {
+        return true;
+    }
+    if (pipe.builtinSpeakerAliases.find(toLowerCopy(voiceName)) != pipe.builtinSpeakerAliases.end()) {
+        return true;
+    }
+    return false;
+}
+
 static absl::Status checkClientDisconnected(const ovms::HttpPayload& payload, const std::string& nodeName, const char* context) {
     if (payload.client && payload.client->isDisconnected()) {
         SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "Client disconnected {} [Node: {}]", context, nodeName);
@@ -200,6 +213,9 @@ public:
                     if (speakerIt != pipe->voices.end()) {
                         speakerEmbedding = &speakerIt->second;
                     } else {
+                        if (!isKnownVoice(*pipe, voiceName.value())) {
+                            return absl::InvalidArgumentError(absl::StrCat("Requested voice '", voiceName.value(), "' not found in available voices"));
+                        }
                         properties["speaker"] = resolveBuiltinSpeakerName(*pipe, voiceName.value());
                     }
                 }
