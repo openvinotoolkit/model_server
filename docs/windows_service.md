@@ -23,7 +23,7 @@ Change the script parameter with the model repository path if needed. The servic
 > The installer does not modify ACLs on disk automatically; the administrator must ensure adequate permissions on the models repository.
 Some models or custom graphs might be able to execute arbitrary code defined by custom graph nodes. It will be executed with the credential of ovms service account.
 > Keep the log directory separate and allow the service to write there.
-> Do not point the service at a directory that non-administrator accounts can modify without a clear access model.
+> Do not point the model repository at a directory that non-authorized accounts can modify.
 
 During the installation, the model repository path will be set in the `OVMS_MODEL_REPOSITORY_PATH` environment variable, which defines the default parameters for the ovms CLI to interact with the service.
 
