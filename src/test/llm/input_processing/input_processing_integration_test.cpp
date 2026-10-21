@@ -447,6 +447,37 @@ static std::string toBase64(const std::string& raw) {
     return absl::Base64Escape(raw);
 }
 
+TEST_P(InputProcessingIntegrationTest, VlmAudioInput_DecodesWithoutOmni) {
+    const std::string audioB64 = toBase64(buildWavBuffer(160));
+    const std::string json = (GetParam() == Endpoint::CHAT_COMPLETIONS)
+        ? R"({"model":"m","messages":[{"role":"user","content":[{"type":"text","text":"Describe this audio."},{"type":"input_audio","input_audio":{"data":")" +
+            audioB64 + R"(","format":"wav"}}]}]})"
+        : R"({"model":"m","input":[{"type":"message","role":"user","content":[{"type":"input_text","text":"Describe this audio."},{"type":"input_audio","input_audio":{"data":")" +
+            audioB64 + R"(","format":"wav"}}]}]})";
+
+    auto result = runPipeline(json, /*isVLM=*/true, /*isOmni=*/false);
+    ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
+    ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
+    ASSERT_EQ(result.req.inputAudios.size(), 1u);
+    EXPECT_EQ(result.req.inputAudios[0].get_shape()[0], 160u);
+    EXPECT_NE(result.req.promptText.find("<ov_genai_audio_0>"), std::string::npos);
+}
+
+TEST_P(InputProcessingIntegrationTest, VlmAudioInput_ResamplesTo16Khz) {
+    const std::string audioB64 = toBase64(buildWavBuffer(240, /*sampleRate=*/24000));
+    const std::string json = (GetParam() == Endpoint::CHAT_COMPLETIONS)
+        ? R"({"model":"m","messages":[{"role":"user","content":[{"type":"input_audio","input_audio":{"data":")" +
+            audioB64 + R"(","format":"wav"}}]}]})"
+        : R"({"model":"m","input":[{"type":"message","role":"user","content":[{"type":"input_audio","input_audio":{"data":")" +
+            audioB64 + R"(","format":"wav"}}]}]})";
+
+    auto result = runPipeline(json, /*isVLM=*/true, /*isOmni=*/false);
+    ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
+    ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
+    ASSERT_EQ(result.req.inputAudios.size(), 1u);
+    EXPECT_EQ(result.req.inputAudios[0].get_shape()[0], 160u);
+}
+
 TEST_P(InputProcessingIntegrationTest, TextImageAudio_AllModalitiesDecoded) {
     // Build a request with text + image + audio in a single message.
     const std::string audioB64 = toBase64(buildWavBuffer(160));

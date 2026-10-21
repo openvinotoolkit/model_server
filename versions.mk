@@ -21,7 +21,7 @@
 # Source repository git commits / branches (used for source builds)
 OV_SOURCE_BRANCH ?= 732b0665f49bddbaf62990ae2940bbf3adf95abd
 OV_TOKENIZERS_BRANCH ?= d73028e255ddc279483fbc6e8ea90dc802e820f5
-OV_GENAI_BRANCH ?= 033f42271a2a396d7116bbfff0d45445a74e1b3f
+OV_GENAI_BRANCH ?= b74adf8fd9002479f90465d23fa162bd42b956d4
 
 # Source repository organizations
 OV_SOURCE_ORG ?= openvinotoolkit
