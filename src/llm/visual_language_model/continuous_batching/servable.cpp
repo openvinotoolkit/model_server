@@ -19,6 +19,8 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "src/port/rapidjson_document.hpp"
@@ -31,6 +33,51 @@
 #include "../../text_utils.hpp"
 
 namespace ovms {
+namespace {
+
+template <typename Pipeline, typename = void>
+struct SupportsAudioAddRequest : std::false_type {};
+
+template <typename Pipeline>
+struct SupportsAudioAddRequest<Pipeline, std::void_t<decltype(std::declval<Pipeline&>().add_request(
+                                           std::declval<uint64_t>(),
+                                           std::declval<const std::string&>(),
+                                           std::declval<const std::vector<ov::Tensor>&>(),
+                                           std::declval<const std::vector<ov::Tensor>&>(),
+                                           std::declval<const std::vector<ov::Tensor>&>(),
+                                           std::declval<const ov::genai::GenerationConfig&>()))>> : std::true_type {};
+
+template <typename Pipeline, typename GenerationHandle>
+absl::Status addVlmRequest(Pipeline& pipeline,
+    GenerationHandle& generationHandle,
+    uint64_t requestId,
+    const InputRequest& inputRequest) {
+    if constexpr (SupportsAudioAddRequest<Pipeline>::value) {
+        generationHandle = pipeline.add_request(
+            requestId,
+            inputRequest.promptText,
+            inputRequest.inputImages,
+            inputRequest.inputVideos,
+            inputRequest.inputAudios,
+            inputRequest.generationConfig);
+        return absl::OkStatus();
+    }
+
+    if (!inputRequest.inputAudios.empty()) {
+        return absl::UnimplementedError(
+            "Audio input with VLM continuous batching requires an OpenVINO GenAI version that supports audio in add_request().");
+    }
+
+    generationHandle = pipeline.add_request(
+        requestId,
+        inputRequest.promptText,
+        inputRequest.inputImages,
+        inputRequest.inputVideos,
+        inputRequest.generationConfig);
+    return absl::OkStatus();
+}
+
+}  // namespace
 
 void VisualLanguageModelServable::logPerfMetrics(ov::genai::VLMPerfMetrics& perfMetrics) {
     const size_t inputTokenCount = perfMetrics.get_num_input_tokens();
@@ -56,11 +103,11 @@ void VisualLanguageModelServable::logPerfMetrics(ov::genai::VLMPerfMetrics& perf
 
 absl::Status VisualLanguageModelServable::addRequestToPipeline(std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext) {
     auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
-    vlmExecutionContext->generationHandle = properties->pipeline->add_request(currentRequestId++,  // to be removed from API?
-        vlmExecutionContext->inputRequest.promptText, vlmExecutionContext->inputRequest.inputImages,
-        vlmExecutionContext->inputRequest.inputVideos,
-        vlmExecutionContext->inputRequest.generationConfig);
-    return absl::OkStatus();
+    return addVlmRequest(
+        *properties->pipeline,
+        vlmExecutionContext->generationHandle,
+        currentRequestId++,  // to be removed from API?
+        vlmExecutionContext->inputRequest);
 }
 
 absl::Status VisualLanguageModelServable::validateEndpoint(Endpoint endpoint) const {

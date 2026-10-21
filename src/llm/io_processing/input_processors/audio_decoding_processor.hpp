@@ -21,7 +21,7 @@ namespace ovms {
 
 // Decodes input_audio content entries from ChatHistory messages into ov::Tensor
 // and populates InputRequest::inputAudios.
-// Active when: config.isOmni && input is ChatHistory variant.
+// Active when: config.isVLM (including Omni) && input is ChatHistory variant.
 class AudioDecodingProcessor : public BaseInputProcessor {
 public:
     absl::Status process(InputRequest& req) override;

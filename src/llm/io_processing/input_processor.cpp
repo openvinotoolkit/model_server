@@ -56,9 +56,6 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
             processors.emplace_back(std::make_unique<VideoFramesProcessor>(
                 settings.allowedLocalMediaPath,
                 settings.allowedMediaDomains));
-        }
-
-        if (context.config.isOmni) {
             processors.emplace_back(std::make_unique<AudioDecodingProcessor>());
         }
 
