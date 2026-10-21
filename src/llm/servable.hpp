@@ -145,6 +145,9 @@ struct GenAiServableExecutionContext {
     std::shared_ptr<OpenAIApiHandler> apiHandler;
     // Populated in parseRequest(); carries all GenAI inputs including the generation config.
     InputRequest inputRequest;
+    // Decisions endpoint only: one InputRequest per question (per-question prompt +
+    // per-question label token ids). Empty for every other endpoint.
+    std::vector<InputRequest> decisionsInputRequests;
     // Required for generating output and handle request on the calculator side
     std::vector<ov::genai::GenerationOutput> generationOutputs;
     std::unique_ptr<ov::genai::PerfMetrics> perfMetrics;
@@ -249,7 +252,9 @@ public:
     // Override to reject endpoints not supported by this servable.
     // Called after endpoint is determined. Return non-OK to reject.
     virtual absl::Status validateEndpoint(Endpoint endpoint) const {
-        (void)endpoint;
+        if (endpoint == Endpoint::DECISIONS) {
+            return absl::UnimplementedError("/v1/decisions requires a continuous batching servable");
+        }
         return absl::OkStatus();
     }
 

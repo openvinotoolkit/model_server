@@ -28,6 +28,9 @@ class LLMExecutorWrapper;
 
 struct ContinuousBatchingServableExecutionContext : public GenAiServableExecutionContext {
     ov::genai::GenerationHandle generationHandle;
+    // Decisions endpoint only: one pipeline handle per question. Empty for every
+    // other endpoint (which uses the singular generationHandle).
+    std::vector<ov::genai::GenerationHandle> decisionsGenerationHandles;
 };
 
 struct ContinuousBatchingServableProperties : public GenAiServableProperties {
@@ -42,6 +45,10 @@ protected:
     void notifyExecutorThread();
     void logPerfMetrics(ov::genai::PerfMetrics& perfMetrics);
     void stopGenerationOnResponseError(const std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext);
+    // /v1/decisions reads per-position requested-token logprobs, which only a plain autoregressive
+    // continuous batching pipeline fills; speculative decoding (draft model) and prompt lookup
+    // decoding pipelines do not.
+    absl::Status validateDecisionsSupport() const;
 
 public:
     ContinuousBatchingServable() {
@@ -55,6 +62,7 @@ public:
     // Interface methods
     std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() override;
     std::shared_ptr<GenAiServableProperties> getProperties() override;
+    absl::Status validateEndpoint(Endpoint endpoint) const override;
     absl::Status scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status readCompleteExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status readPartialExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;

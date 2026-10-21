@@ -70,9 +70,27 @@ void ContinuousBatchingServable::stopGenerationOnResponseError(const std::shared
     if (executionContext->generationHandle) {
         executionContext->generationHandle->stop();
     }
+    for (const auto& handle : executionContext->decisionsGenerationHandles) {
+        handle->stop();
+    }
 }
 
 absl::Status ContinuousBatchingServable::addRequestToPipeline(std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext) {
+    // Decisions: one pipeline request per question, each with its own input ids and
+    // label token ids. currentRequestId is a process-wide atomic, so the N requests
+    // get unique ids without coordination.
+    if (!executionContext->decisionsInputRequests.empty()) {
+        for (const auto& req : executionContext->decisionsInputRequests) {
+            if (req.inputIds.get_size() > properties->schedulerConfig.max_num_batched_tokens && properties->schedulerConfig.dynamic_split_fuse == false) {
+                return absl::InvalidArgumentError("Input length exceeds pipeline capabilities: " + std::to_string(req.inputIds.get_size()) +
+                                                  " > " + std::to_string(properties->schedulerConfig.max_num_batched_tokens));
+            }
+            executionContext->decisionsGenerationHandles.push_back(
+                properties->pipeline->add_request(currentRequestId++, req.inputIds, req.generationConfig));
+        }
+        return absl::OkStatus();
+    }
+
     // Additional validation for big prompt and setting without dynamic split fuse (GenAI checks it during scheduling which is too late for us)
     if (executionContext->inputRequest.inputIds.get_size() > properties->schedulerConfig.max_num_batched_tokens && properties->schedulerConfig.dynamic_split_fuse == false) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Received request with more tokens than max_num_batch_tokens {} > {}. Without dynamic split fuse on, such request is invalid",
@@ -95,6 +113,27 @@ std::shared_ptr<GenAiServableProperties> ContinuousBatchingServable::getProperti
     return properties;
 }
 
+absl::Status ContinuousBatchingServable::validateDecisionsSupport() const {
+    const auto& pluginConfig = properties->pluginConfig;
+    const bool hasDraftModel = pluginConfig.find("draft_model") != pluginConfig.end();
+    const auto promptLookupIt = pluginConfig.find("prompt_lookup");
+    const bool hasPromptLookup = promptLookupIt != pluginConfig.end() && promptLookupIt->second.as<bool>() == true;
+    if (hasDraftModel || hasPromptLookup) {
+        return absl::UnimplementedError(
+            "/v1/decisions is not supported on servables with speculative decoding or prompt lookup decoding: "
+            "requested-token logprobs are only available from plain continuous batching pipelines.");
+    }
+    return absl::OkStatus();
+}
+
+absl::Status ContinuousBatchingServable::validateEndpoint(Endpoint endpoint) const {
+    if (endpoint == Endpoint::DECISIONS) {
+        return validateDecisionsSupport();
+    }
+    // Continuous batching servables support all endpoints, including /v1/decisions
+    return absl::OkStatus();
+}
+
 absl::Status ContinuousBatchingServable::scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto cbExecutionContext = std::static_pointer_cast<ContinuousBatchingServableExecutionContext>(executionContext);
     if (cbExecutionContext->payload.client->isDisconnected()) {
@@ -106,9 +145,18 @@ absl::Status ContinuousBatchingServable::scheduleExecution(std::shared_ptr<GenAi
         return status;
     }
 
-    cbExecutionContext->payload.client->registerDisconnectionCallback([genHandle = cbExecutionContext->generationHandle]() {
-        genHandle->stop();
-    });
+    if (cbExecutionContext->decisionsGenerationHandles.empty()) {
+        cbExecutionContext->payload.client->registerDisconnectionCallback([genHandle = cbExecutionContext->generationHandle]() {
+            genHandle->stop();
+        });
+    } else {
+        auto handles = cbExecutionContext->decisionsGenerationHandles;
+        cbExecutionContext->payload.client->registerDisconnectionCallback([handles]() {
+            for (const auto& handle : handles) {
+                handle->stop();
+            }
+        });
+    }
     notifyExecutorThread();
 
     return absl::OkStatus();
@@ -128,6 +176,33 @@ absl::Status ContinuousBatchingServable::readCompleteExecutionResults(std::share
     auto cbExecutionContext = std::static_pointer_cast<ContinuousBatchingServableExecutionContext>(executionContext);
     if (cbExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();
+    }
+
+    // Decisions: one handle per question. Read each (one sequence per handle, since
+    // num_return_sequences is forced to 1) and concatenate, preserving question order.
+    if (!cbExecutionContext->decisionsGenerationHandles.empty()) {
+        std::vector<ov::genai::GenerationOutput> outputs;
+        for (const auto& handle : cbExecutionContext->decisionsGenerationHandles) {
+            auto handleOutputs = handle->read_all();
+            if (handle->get_status() == ov::genai::GenerationStatus::STOP) {
+                return absl::CancelledError();
+            }
+            // num_return_sequences is forced to 1, so each question yields exactly one output.
+            // Zero outputs means the result was lost (e.g. IGNORED/OOM); more than one breaks the
+            // invariant the serializer relies on (logprobData[i] is question i's result).
+            if (handleOutputs.size() != 1) {
+                return absl::InternalError("/v1/decisions: missing result for a question");
+            }
+            outputs.push_back(std::move(handleOutputs.front()));
+        }
+        cbExecutionContext->generationOutputs = std::move(outputs);
+        // Aggregate the metrics across all question handles (they share one pipeline, so
+        // operator+= does not trip its same-load_time assert). Used for usage accounting and the debug log.
+        auto metrics = cbExecutionContext->decisionsGenerationHandles.front()->get_perf_metrics();
+        for (size_t i = 1; i < cbExecutionContext->decisionsGenerationHandles.size(); ++i)
+            metrics += cbExecutionContext->decisionsGenerationHandles[i]->get_perf_metrics();
+        executionContext->perfMetrics = std::make_unique<ov::genai::PerfMetrics>(std::move(metrics));
+        return absl::OkStatus();
     }
 
     cbExecutionContext->generationOutputs = cbExecutionContext->generationHandle->read_all();
