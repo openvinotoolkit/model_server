@@ -224,6 +224,7 @@ http_archive(
         "@ovms//third_party/mediapipe:ovms_calculator_graph_visibility.diff",
         "@ovms//third_party/mediapipe:ovms_constinit_definition.diff",
         "@ovms//third_party/mediapipe:ovms_msvc_api3_calculator_context.diff",
+        "@ovms//third_party/mediapipe:ovms_plugin_type_identity.diff",
     ],
     patch_args = ["-p1"],
     patch_tool = "patch",
@@ -644,4 +645,3 @@ cc_library(
 )
 """,
 )
-

@@ -51,6 +51,7 @@
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
+#include "../mediapipe_internal/opencv_calculators_plugin_loader.hpp"
 #include "src/metrics/metric_config.hpp"
 #include "src/metrics/metric_module.hpp"
 #include "../model.hpp"
@@ -3805,6 +3806,9 @@ TEST(WhitelistRegistered, InputStreamHandlers) {
 }
 
 TEST(WhitelistRegistered, MediapipeCalculatorsList) {
+#ifdef __linux__
+    ASSERT_TRUE(ovms::loadOpenCvCalculatorsPlugin());
+#endif
     std::unordered_set<std::string> expected({
 #if (PYTHON_DISABLE == 0)
         // Expected when building with python
@@ -3935,6 +3939,15 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "WarpAffineCalculator",
         "WarpAffineCalculatorCpu" });
 
+#ifndef __linux__
+    for (const char* calculator : {"AnnotationOverlayCalculator", "ColorConvertCalculator",
+             "ImageCroppingCalculator", "ImageToTensorCalculator", "ImageTransformationCalculator",
+             "OpenCvEncodedImageToImageFrameCalculator", "OpenCvImageEncoderCalculator",
+             "OpenCvPutTextCalculator", "SegmentationSmoothingCalculator", "WarpAffineCalculator",
+             "WarpAffineCalculatorCpu"}) {
+        expected.erase(calculator);
+    }
+#endif
     ASSERT_THAT(mediapipe::CalculatorBaseRegistry::GetRegisteredNames(), UnorderedElementsAreArray(expected)) << readableSetError(mediapipe::CalculatorBaseRegistry::GetRegisteredNames(), expected);
 }
 

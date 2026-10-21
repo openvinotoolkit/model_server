@@ -39,7 +39,6 @@ cc_library(
         "@com_github_gabime_spdlog//:spdlog",
         "@com_github_jarro2783_cxxopts//:cxxopts",
         "//third_party:openvino",
-        "//third_party:opencv",
         "//third_party:curl",
         "@com_github_jupp0r_prometheus_cpp//core",
         ] + select({
@@ -49,11 +48,6 @@ cc_library(
                 "@azure//:storage",
                 "@google_cloud_cpp//:storage",],
             "//:disable_cloud": []
-            })
-         + select({
-            "//:not_disable_mediapipe": [
-                "@model_api//:model_api",],
-            "//:disable_mediapipe": []
             })
          + select({
             "//:not_disable_python": [],

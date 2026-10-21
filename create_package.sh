@@ -171,6 +171,14 @@ if [ "$FUZZER_BUILD" == "0" ]; then
 		echo "OVMS binary must not link directly against libpython."
 		exit 1
 	fi
+	if echo "$ovms_needed" | grep -Eiq '[(]NEEDED[)].*opencv'; then
+		echo "OVMS binary must not link directly against OpenCV; use optional runtime plugins."
+		exit 1
+	fi
+	if [ ! -f ../lib/libovms_opencv_image_decoder.so ]; then
+		echo "Missing optional OpenCV image decoder plugin in package staging."
+		exit 1
+	fi
 	if [[ "$debug_bazel_flags" != *"mp_off"* && "$debug_bazel_flags" != *"disable_mediapipe"* ]]; then
 		if ! command -v nm >/dev/null 2>&1; then
 			echo "Cannot verify OVMS MediaPipe symbols: nm is unavailable."
@@ -205,7 +213,7 @@ if [ "$FUZZER_BUILD" == "0" ]; then
 			fi
 		done
 
-		registration_artifacts=(./ovms ../lib/libovms_llm_calculators.so)
+		registration_artifacts=(./ovms ../lib/libovms_llm_calculators.so ../lib/libovms_opencv_calculators.so)
 		if [[ "$debug_bazel_flags" != *"_py_off"* ]]; then
 			registration_artifacts+=(../lib/libovmspython.so ../lib/libpython_calculators.so)
 		fi
@@ -275,4 +283,3 @@ cd /ovms_pkg/${BASE_OS}
 tar cf ovms.tar --transform 's/ovms_release/ovms/' /ovms_release/
 cd /ovms_release
 ls -l
-

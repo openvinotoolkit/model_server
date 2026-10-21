@@ -27,6 +27,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ARG BASE_IMAGE
 RUN apt-get update && apt-get install --no-install-recommends -y \
             build-essential \
+            nasm \
             make \
             cmake \
             automake \
@@ -377,7 +378,7 @@ ARG CAPI_FLAGS="--strip=always --config mp_off_py_off --//:distro=ubuntu"
 ARG JOBS=40
 ARG FUZZER_BUILD=0
 WORKDIR /ovms
-RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared //src:ovms_optional_plugins
 
 # C-API benchmark app
 RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy"; fi;

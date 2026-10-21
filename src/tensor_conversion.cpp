@@ -24,20 +24,11 @@
 #include <openvino/openvino.hpp>
 #include "predict_request_validation_utils_impl.hpp"
 #include "logging.hpp"
-#pragma warning(push)
-#pragma warning(disable : 6269 6294 6201)
-#include "opencv2/opencv.hpp"
-#pragma warning(pop)
 #include "profiler.hpp"
 #include "status.hpp"
 
 namespace ovms {
 namespace tensor_conversion {
-Status resizeMat(const cv::Mat& src, cv::Mat& dst, const dimension_value_t height, const dimension_value_t width) {
-    OVMS_PROFILE_FUNCTION();
-    cv::resize(src, dst, cv::Size(width, height));
-    return StatusCode::OK;
-}
 Status getInputs(const std::string* buffer, std::vector<std::string>& inputs) {
     if (buffer == nullptr) {
         return StatusCode::OK;
@@ -57,20 +48,20 @@ Status getInputs(const std::string* buffer, std::vector<std::string>& inputs) {
     return StatusCode::OK;
 }
 
-shape_t getShapeFromImages(const std::vector<cv::Mat>& images, const TensorInfo& tensorInfo) {
+static shape_t getShapeFromImages(const std::vector<ov::Tensor>& images, const TensorInfo& tensorInfo) {
     OVMS_PROFILE_FUNCTION();
     shape_t dims;
     dims.push_back(images.size());
     if (tensorInfo.isInfluencedByDemultiplexer()) {
         dims.push_back(1);
     }
-    dims.push_back(images[0].rows);
-    dims.push_back(images[0].cols);
-    dims.push_back(images[0].channels());
+    dims.push_back(images[0].get_shape()[1]);
+    dims.push_back(images[0].get_shape()[2]);
+    dims.push_back(images[0].get_shape()[3]);
     return dims;
 }
 
-ov::Tensor createTensorFromMats(const std::vector<cv::Mat>& images, const TensorInfo& tensorInfo) {
+ov::Tensor createTensorFromImages(const std::vector<ov::Tensor>& images, const TensorInfo& tensorInfo) {
     OVMS_PROFILE_FUNCTION();
     if (images.empty()) {
         return ov::Tensor();
@@ -79,49 +70,28 @@ ov::Tensor createTensorFromMats(const std::vector<cv::Mat>& images, const Tensor
     ov::element::Type precision = tensorInfo.getOvPrecision();
     ov::Tensor tensor(precision, shape);
     char* ptr = (char*)tensor.data();
-    const size_t firstImageSizeBytes = images[0].total() * images[0].elemSize();
+    const size_t firstImageSizeBytes = images[0].get_byte_size();
     for (const auto& image : images) {
-        const size_t imageSizeBytes = image.total() * image.elemSize();
+        const size_t imageSizeBytes = image.get_byte_size();
         if (imageSizeBytes != firstImageSizeBytes) {
             SPDLOG_DEBUG("Image conversion failed due to inconsistent image size in one batch. Expected bytes: {} current bytes: {}",
                 firstImageSizeBytes,
                 imageSizeBytes);
             return ov::Tensor();
         }
-        memcpy(ptr, (char*)image.data, imageSizeBytes);
+        memcpy(ptr, image.data(), imageSizeBytes);
         ptr += imageSizeBytes;
     }
     return tensor;
 }
 
-ov::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const TensorInfo& tensorInfo) {
+Status validateResolutionAgainstFirstBatchImage(const ov::Tensor& input, const ov::Tensor* firstBatchImage) {
     OVMS_PROFILE_FUNCTION();
-    switch (tensorInfo.getPrecision()) {
-    case ovms::Precision::FP32:
-    case ovms::Precision::I32:
-    case ovms::Precision::FP64:
-    case ovms::Precision::I8:
-    case ovms::Precision::U8:
-    case ovms::Precision::FP16:
-    case ovms::Precision::U16:
-    case ovms::Precision::I16:
-        return createTensorFromMats(images, tensorInfo);
-    case ovms::Precision::MIXED:
-    case ovms::Precision::Q78:
-    case ovms::Precision::BIN:
-    case ovms::Precision::BOOL:
-    case ovms::Precision::CUSTOM:
-    default:
-        return ov::Tensor();
-    }
-}
-Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::Mat* firstBatchImage) {
-    OVMS_PROFILE_FUNCTION();
-    if (input.cols == firstBatchImage->cols && input.rows == firstBatchImage->rows) {
+    if (input.get_shape()[2] == firstBatchImage->get_shape()[2] && input.get_shape()[1] == firstBatchImage->get_shape()[1]) {
         return StatusCode::OK;
     }
     SPDLOG_DEBUG("Each binary image in request needs to have resolution matched. First cols: {}, rows: {}, current cols: {}, rows: {}",
-        firstBatchImage->cols, firstBatchImage->rows, input.cols, input.rows);
+        firstBatchImage->get_shape()[2], firstBatchImage->get_shape()[1], input.get_shape()[2], input.get_shape()[1]);
     return StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH;
 }
 }  // namespace tensor_conversion

@@ -20,6 +20,37 @@
 # In is useful for libs loaded dynamically 
 
 load("//:common_settings.bzl", "COMMON_LOCAL_DEFINES", "COMMON_STATIC_LIBS_LINKOPTS")
+load("//src/mediapipe_internal:runtime_plugin.bzl", "runtime_plugin_deps")
+
+# Resolve common framework, protobuf and registry references against the host.
+# Do not statically embed a second copy of any of their registration objects.
+runtime_plugin_deps(
+    name = "opencv_calculators_plugin_deps",
+    deps = ["@mediapipe_calculators//:opencv_calculators"],
+    provided_by = [
+        "//src:ovms_lib",
+        "//src/mediapipe_internal:libovms_mediapipe_runtime_owner_no_python_calculators",
+        "//src/llm:llmcalculator_proto_owner",
+    ],
+)
+
+cc_binary(
+    name = "ovms_opencv_calculators",
+    srcs = ["//src/mediapipe_internal:opencv_calculators_plugin_src"],
+    deps = [":opencv_calculators_plugin_deps"],
+    linkopts = [
+        "-Wl,--allow-shlib-undefined",
+        "-Wl,-rpath,$$ORIGIN",
+    ],
+    linkshared = True,
+    linkstatic = True,
+    copts = ["-Wno-deprecated-declarations"],
+    target_compatible_with = select({
+        "//src:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:public"],
+)
 
 cc_binary(
     name = "ovms_llm_calculators",

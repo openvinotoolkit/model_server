@@ -16,6 +16,106 @@
 
 load("//:common_settings.bzl", "ovms_cc_library")
 
+cc_binary(
+    name = "image_decode_benchmark",
+    srcs = ["image_decode_benchmark.cpp"],
+    deps = [
+        "@stb//:image",
+        "//third_party:opencv",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "kserve_image_conversion",
+    hdrs = ["kserve_image_conversion.hpp"],
+    srcs = ["kserve_image_conversion.cpp", "opencv_decoder_api.hpp"],
+    deps = [
+        ":image_conversion",
+        "@stb//:image",
+        "//third_party:openvino",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_binary(
+    name = "libovms_opencv_image_decoder.so",
+    srcs = ["opencv_decoder.cpp", "opencv_decoder_api.hpp"],
+    deps = [
+        "//third_party:openvino",
+        "//third_party:opencv",
+    ],
+    linkshared = True,
+    visibility = ["//visibility:public"],
+)
+
+cc_binary(
+    name = "ovms_opencv_image_decoder.dll",
+    srcs = ["opencv_decoder.cpp", "opencv_decoder_api.hpp"],
+    deps = [
+        "//third_party:openvino",
+        "//third_party:opencv",
+    ],
+    linkshared = True,
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "opencv_image_decoder",
+    srcs = select({
+        "//src:windows": [":ovms_opencv_image_decoder.dll"],
+        "//conditions:default": [":libovms_opencv_image_decoder.so"],
+    }),
+    visibility = ["//visibility:public"],
+)
+
+cc_test(
+    name = "kserve_image_conversion_test",
+    linkstatic = True,
+    srcs = ["//src:test/kserve_image_conversion_test.cpp"],
+    deps = [
+        ":kserve_image_conversion",
+        "//src:libovmsstatus",
+        "//third_party:openvino",
+        "@stb//:image",
+        "@com_google_googletest//:gtest_main",
+    ],
+    data = ["//src:test/images/gray16.png"],
+)
+
+cc_binary(
+    name = "libno_opencv_audit.so",
+    visibility = ["//src:__pkg__"],
+    srcs = ["//src:test/no_opencv_audit.c"],
+    testonly = True,
+    linkshared = True,
+    target_compatible_with = select({
+        "//src:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
+sh_test(
+    name = "no_opencv_runtime_test",
+    srcs = ["//src:test/no_opencv_runtime_test.sh"],
+    data = [
+        ":libno_opencv_audit.so",
+        ":kserve_image_conversion_test",
+        ":libovms_opencv_image_decoder.so",
+        "//src:ovms",
+        "//src:test/no_opencv_server_test.py",
+        "//src:test/dummy/1/dummy.xml",
+        "//src:test/dummy/1/dummy.bin",
+        "//src:test/images/rgb.jpg",
+    ],
+    target_compatible_with = select({
+        "//src:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
 ovms_cc_library(
     name = "image_conversion",
     hdrs = [
