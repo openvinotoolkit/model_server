@@ -35,7 +35,7 @@
 
 #include "../../llm/io_processing/chat_template/analyzer.hpp"
 #include "../../llm/io_processing/chat_template/caps.hpp"
-#include "src/llm/io_processing/chat_template/adjuster.hpp"
+#include "../../llm/io_processing/chat_template/adjuster.hpp"
 #include "../../llm/io_processing/chat_template/probe.hpp"
 #include "../../llm/io_processing/input_processors/chat_template_adapter.hpp"
 #include "../../utils/env_guard.hpp"
@@ -130,7 +130,7 @@ protected:
         // Step 1: Static analysis
         analysisResult = ChatTemplateAnalyzer::analyze(chatTemplate);
         caps = analysisResult.caps;
-        ChatTemplateAdjuster::adjust(chatTemplate, ChatTemplateAdjusterConfig::forJinja());
+        ChatTemplateAdjuster(ChatTemplateAdjusterConfig::forJinja()).adjust(chatTemplate);
 
         std::cout << "=== Analysis (Jinja) ===" << std::endl;
         std::cout << "  toolParser: " << analysisResult.detectedToolParser.value_or("(none)") << std::endl;
@@ -722,10 +722,6 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Onyx_ToolCallWithRecipientField) {
     EXPECT_NE(appliedOutput.find(expectedOutput), std::string::npos) << appliedOutput;
 }
 
-// =============================================================================
-// MiniCPM5 uses <function name="..."><param name="...">...</param></function> format.
-// Template uses from_json filter which is supported by Jinja.
-// =============================================================================
 TEST_F(ChatTemplateEndToEndJinjaTest, MiniCPM5_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_minicpm5.jinja");
     ASSERT_FALSE(chatTemplate.empty());

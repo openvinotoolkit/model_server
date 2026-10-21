@@ -15,23 +15,42 @@
 //*****************************************************************************
 #pragma once
 
+#include <memory>
 #include <string>
 #include <vector>
 
 namespace ovms {
 
 struct ChatTemplateAdjusterConfig {
-    std::vector<std::string> removeFunctionsParams;
     std::vector<std::string> removeFunctions;
 
     static ChatTemplateAdjusterConfig forMinja();
     static ChatTemplateAdjusterConfig forJinja();
 };
 
+class BaseChatTemplateAdjustment {
+public:
+    virtual ~BaseChatTemplateAdjustment() = default;
+    virtual void apply(std::string& templateSource) const = 0;
+};
+
+class RemoveFiltersAdjustment : public BaseChatTemplateAdjustment {
+public:
+    explicit RemoveFiltersAdjustment(std::vector<std::string> functions);
+    void apply(std::string& templateSource) const override;
+
+private:
+    std::vector<std::string> functions;
+};
+
 class ChatTemplateAdjuster {
 public:
-    // Apply only the supplied adjustments without modifying the configuration.
-    static void adjust(std::string& templateSource, const ChatTemplateAdjusterConfig& config);
+    explicit ChatTemplateAdjuster(const ChatTemplateAdjusterConfig& config);
+
+    void adjust(std::string& templateSource) const;
+
+private:
+    std::vector<std::unique_ptr<BaseChatTemplateAdjustment>> adjustments;
 };
 
 }  // namespace ovms

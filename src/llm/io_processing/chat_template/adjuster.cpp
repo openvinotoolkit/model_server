@@ -17,6 +17,7 @@
 
 #include <cctype>
 #include <string>
+#include <utility>
 
 namespace ovms {
 namespace {
@@ -45,82 +46,45 @@ bool findFilter(const std::string& source, const std::string& function,
     return false;
 }
 
-size_t findClosingParenthesis(const std::string& source, size_t openPosition) {
-    size_t depth = 0;
-    char quote = '\0';
-    bool escaped = false;
-    for (size_t position = openPosition; position < source.size(); ++position) {
-        const char value = source[position];
-        if (quote != '\0') {
-            if (escaped) {
-                escaped = false;
-            } else if (value == '\\') {
-                escaped = true;
-            } else if (value == quote) {
-                quote = '\0';
-            }
-            continue;
-        }
-        if (value == '\'' || value == '"') {
-            quote = value;
-        } else if (value == '(') {
-            ++depth;
-        } else if (value == ')' && --depth == 0) {
-            return position;
-        }
-    }
-    return std::string::npos;
-}
-
-std::string preprocess(const std::string& templateSource, const ChatTemplateAdjusterConfig& config) {
-    std::string processed = templateSource;
-    for (const auto& function : config.removeFunctionsParams) {
-        size_t searchFrom = 0;
-        size_t pipePosition = 0;
-        size_t functionEnd = 0;
-        while (findFilter(processed, function, searchFrom, pipePosition, functionEnd)) {
-            size_t openPosition = functionEnd;
-            while (openPosition < processed.size() && std::isspace(static_cast<unsigned char>(processed[openPosition]))) {
-                ++openPosition;
-            }
-            if (openPosition >= processed.size() || processed[openPosition] != '(') {
-                searchFrom = functionEnd;
-                continue;
-            }
-            const size_t closePosition = findClosingParenthesis(processed, openPosition);
-            if (closePosition == std::string::npos) {
-                searchFrom = openPosition + 1;
-                continue;
-            }
-            processed.erase(openPosition, closePosition - openPosition + 1);
-            searchFrom = openPosition;
-        }
-    }
-
-    for (const auto& function : config.removeFunctions) {
-        size_t searchFrom = 0;
-        size_t pipePosition = 0;
-        size_t functionEnd = 0;
-        while (findFilter(processed, function, searchFrom, pipePosition, functionEnd)) {
-            processed.erase(pipePosition, functionEnd - pipePosition);
-            searchFrom = pipePosition;
-        }
-    }
-    return processed;
-}
-
 }  // namespace
 
+RemoveFiltersAdjustment::RemoveFiltersAdjustment(std::vector<std::string> functions) :
+    functions(std::move(functions)) {}
+
+void RemoveFiltersAdjustment::apply(std::string& processed) const {
+    for (const auto& function : functions) {
+        size_t searchFrom = 0;
+        size_t pipePosition = 0;
+        size_t functionEnd = 0;
+        while (findFilter(processed, function, searchFrom, pipePosition, functionEnd)) {
+            size_t removalStart = pipePosition;
+            while (removalStart > 0 && (processed[removalStart - 1] == ' ' || processed[removalStart - 1] == '\t')) {
+                --removalStart;
+            }
+            processed.erase(removalStart, functionEnd - removalStart);
+            searchFrom = removalStart;
+        }
+    }
+}
+
 ChatTemplateAdjusterConfig ChatTemplateAdjusterConfig::forMinja() {
-    return {{"tojson"}, {"min", "from_json"}};
+    return {{"min", "from_json"}};
 }
 
 ChatTemplateAdjusterConfig ChatTemplateAdjusterConfig::forJinja() {
     return {};
 }
 
-void ChatTemplateAdjuster::adjust(std::string& templateSource, const ChatTemplateAdjusterConfig& config) {
-    templateSource = preprocess(templateSource, config);
+ChatTemplateAdjuster::ChatTemplateAdjuster(const ChatTemplateAdjusterConfig& config) {
+    if (!config.removeFunctions.empty()) {
+        adjustments.emplace_back(std::make_unique<RemoveFiltersAdjustment>(config.removeFunctions));
+    }
+}
+
+void ChatTemplateAdjuster::adjust(std::string& templateSource) const {
+    for (const auto& adjustment : adjustments) {
+        adjustment->apply(templateSource);
+    }
 }
 
 }  // namespace ovms

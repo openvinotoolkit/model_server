@@ -247,7 +247,7 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
 #if (PYTHON_DISABLE == 0)
         if (properties->chatTemplateEngine == ChatTemplateEngine::JINJA) {
             std::string jinjaTemplateSource = templateSource;
-            ChatTemplateAdjuster::adjust(jinjaTemplateSource, ChatTemplateAdjusterConfig::forJinja());
+            ChatTemplateAdjuster(ChatTemplateAdjusterConfig::forJinja()).adjust(jinjaTemplateSource);
             properties->tokenizer.set_chat_template(jinjaTemplateSource);
             std::string initializationError;
             const bool pythonInitialized = ensurePythonRuntimeInitialized(initializationError);
@@ -277,7 +277,7 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
         }
 #endif
     if (properties->chatTemplateEngine == ChatTemplateEngine::MINJA) {
-        ChatTemplateAdjuster::adjust(templateSource, ChatTemplateAdjusterConfig::forMinja());
+        ChatTemplateAdjuster(ChatTemplateAdjusterConfig::forMinja()).adjust(templateSource);
         properties->tokenizer.set_chat_template(templateSource);
     }
         if (properties->chatTemplateEngine == ChatTemplateEngine::MINJA && !probeChatTemplateBasicRenderMinja(properties->tokenizer)) {

@@ -26,30 +26,31 @@ using namespace ovms;
 TEST(ChatTemplateAdjusterTest, probesAndRemovesFilters) {
     std::string tmpl = R"({{ value | tojson(ensure_ascii=False) }} {{ values | min }} {{ data | from_json }})";
     ChatTemplateAdjusterConfig config;
-    config.removeFunctionsParams = {"tojson", "missing_params"};
     config.removeFunctions = {"min", "from_json", "missing_filter"};
 
-    ChatTemplateAdjuster::adjust(tmpl, config);
+    const ChatTemplateAdjuster adjuster(config);
+    adjuster.adjust(tmpl);
 
-    EXPECT_EQ(config.removeFunctionsParams, (std::vector<std::string>{"tojson", "missing_params"}));
     EXPECT_EQ(config.removeFunctions, (std::vector<std::string>{"min", "from_json", "missing_filter"}));
-    EXPECT_EQ(tmpl, "{{ value | tojson }} {{ values  }} {{ data  }}");
+    EXPECT_EQ(tmpl, "{{ value | tojson(ensure_ascii=False) }} {{ values }} {{ data }}");
 }
 
 TEST(ChatTemplateAdjusterTest, usesMinjaConfiguration) {
     std::string tmpl = R"({{ value | tojson(ensure_ascii=False) }} {{ values | min }} {{ data | from_json }})";
 
-    ChatTemplateAdjuster::adjust(tmpl, ChatTemplateAdjusterConfig::forMinja());
+    const ChatTemplateAdjuster adjuster(ChatTemplateAdjusterConfig::forMinja());
+    adjuster.adjust(tmpl);
 
-    EXPECT_EQ(tmpl, "{{ value | tojson }} {{ values  }} {{ data  }}");
+    EXPECT_EQ(tmpl, "{{ value | tojson(ensure_ascii=False) }} {{ values }} {{ data }}");
 }
 
 TEST(ChatTemplateAdjusterTest, emptyConfigurationPreservesSource) {
     const std::string original = R"({{ value | tojson(ensure_ascii=False) }} {{ values | min }} {{ data | from_json }})";
     std::string tmpl = original;
-    const ChatTemplateAdjusterConfig config{{}, {}};
+    const ChatTemplateAdjusterConfig config{{}};
 
-    ChatTemplateAdjuster::adjust(tmpl, config);
+    const ChatTemplateAdjuster adjuster(config);
+    adjuster.adjust(tmpl);
 
     EXPECT_EQ(tmpl, original);
 }
@@ -58,7 +59,68 @@ TEST(ChatTemplateAdjusterTest, jinjaConfigurationPreservesSource) {
     const std::string original = R"({{ value | tojson(ensure_ascii=False) }} {{ values | min }} {{ data | from_json }})";
     std::string tmpl = original;
 
-    ChatTemplateAdjuster::adjust(tmpl, ChatTemplateAdjusterConfig::forJinja());
+    const ChatTemplateAdjuster adjuster(ChatTemplateAdjusterConfig::forJinja());
+    adjuster.adjust(tmpl);
 
     EXPECT_EQ(tmpl, original);
+}
+
+TEST(ChatTemplateAdjusterTest, removesFiltersIndependently) {
+    std::string tmpl = "{{ value | min | minimum }}";
+    const RemoveFiltersAdjustment adjustment({"min"});
+
+    adjustment.apply(tmpl);
+
+    EXPECT_EQ(tmpl, "{{ value | minimum }}");
+}
+
+TEST(ChatTemplateAdjusterTest, removesConfiguredFilter) {
+    std::string tmpl = "{{ value | tojson }}";
+    const ChatTemplateAdjuster adjuster({{"tojson"}});
+
+    adjuster.adjust(tmpl);
+
+    EXPECT_EQ(tmpl, "{{ value }}");
+}
+
+TEST(ChatTemplateAdjusterTest, ownsConfigurationAndCanBeReused) {
+    ChatTemplateAdjusterConfig config{{"min"}};
+    const ChatTemplateAdjuster adjuster(config);
+    config.removeFunctions.clear();
+    const std::string original = "{{ value | tojson(indent=2) | min }}";
+    std::string first = original;
+    std::string second = original;
+
+    adjuster.adjust(first);
+    adjuster.adjust(second);
+
+    EXPECT_EQ(first, "{{ value | tojson(indent=2) }}");
+    EXPECT_EQ(second, first);
+}
+
+TEST(ChatTemplateAdjusterTest, removesLeadingSpacesAndTabsWithConsecutiveFilters) {
+    std::string tmpl = "{{ value \t  | min \t | from_json | minimum }}";
+    const ChatTemplateAdjuster adjuster(ChatTemplateAdjusterConfig::forMinja());
+
+    adjuster.adjust(tmpl);
+
+    EXPECT_EQ(tmpl, "{{ value | minimum }}");
+}
+
+TEST(ChatTemplateAdjusterTest, preservesLineBreaksAndSurroundingText) {
+    std::string tmpl = "Before  {{ value\n\t | min\n }}  After";
+    const RemoveFiltersAdjustment adjustment({"min"});
+
+    adjustment.apply(tmpl);
+
+    EXPECT_EQ(tmpl, "Before  {{ value\n\n }}  After");
+}
+
+TEST(ChatTemplateAdjusterTest, removesCompactFilterWithoutAddingWhitespace) {
+    std::string tmpl = "{{value|min}}";
+    const RemoveFiltersAdjustment adjustment({"min"});
+
+    adjustment.apply(tmpl);
+
+    EXPECT_EQ(tmpl, "{{value}}");
 }
