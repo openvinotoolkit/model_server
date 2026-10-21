@@ -120,7 +120,7 @@ make release_image TOKEN=<your_github_token>
 
 ## Building minimal image
 
-To omit optional GPU drivers and MediaPipe support while retaining Python support:
+To omit optional GPU drivers and MediaPipe support. Python runtime artifacts may still be packaged, but Python nodes and MediaPipe-based LLM endpoints are unavailable in this build only classic models serving:
 
 ```bash
 make release_image GPU=0 MEDIAPIPE_DISABLE=1

@@ -122,7 +122,9 @@ public:
     }
 };
 
-TEST_F(PythonStreamingTest, RepeatedStartIsRejected) {
+class PythonModuleTest : public PythonStreamingTest {};
+
+TEST_F(PythonModuleTest, RepeatedStartIsRejected) {
     EXPECT_EQ(pythonModule->start(ovms::Config::instance()), StatusCode::INTERNAL_ERROR);
 }
 
