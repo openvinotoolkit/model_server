@@ -28,8 +28,10 @@ To build the image with non default configuration, add parameters described belo
 ### `BASE_OS`
 
 Select base OS:
+- `ubuntu22` for Ubuntu 22.04
 - `ubuntu24` for Ubuntu 24.04 (default)
-- `redhat` for Red Hat UBI 9.7
+- `ubuntu26` for Ubuntu 26.04
+- `redhat` for Red Hat UBI 9.8
 
 ```text
 make release_image BASE_OS=redhat
@@ -41,7 +43,16 @@ Example:
 
 ### `INSTALL_DRIVER_VERSION`
 
-Parameter used to control which GPU driver version will be installed. Supported versions are included in files model_server/install_ubuntu_gpu_drivers.sh and model_server/install_ubuntu_gpu_drivers.sh
+`INSTALL_DRIVER_VERSION` selects the GPU driver version. The Makefile defaults are:
+
+| Base OS | Default version |
+|---|---|
+| Ubuntu 22.04 | `24.39.31294` |
+| Ubuntu 24.04 | `26.31.39395` |
+| Ubuntu 26.04 | `26.31.39395` |
+| Red Hat | `25.18.33578` |
+
+See [install_ubuntu_gpu_drivers.sh](../install_ubuntu_gpu_drivers.sh) and [install_redhat_gpu_drivers.sh](../install_redhat_gpu_drivers.sh) for the installer cases.
 
 
 Example:

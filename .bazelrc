@@ -75,7 +75,6 @@ build:linux --repo_env=HOME=/root
 # Python used by repository rules (pybind11, hermetic python)
 build:linux --action_env PYTHON_BIN_PATH="/usr/bin/python3"
 build:linux --define PYTHON_BIN_PATH=/usr/bin/python3
-build:linux --repo_env=HERMETIC_PYTHON_VERSION=3.12
 
 # Security options ######################################################################################################
 # TODO: Add equivalent windows flag

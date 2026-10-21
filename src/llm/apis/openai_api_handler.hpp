@@ -233,6 +233,10 @@ public:
     virtual std::string serializeStreamingCreatedEvent();
     virtual std::string serializeStreamingInProgressEvent();
     virtual std::string serializeFailedEvent(const std::string& errorMessage, ResponsesErrorCode errorCode = ResponsesErrorCode::SERVER_ERROR);
+
+    // Endpoint-specific error payload for a streaming generation failure.
+    // The default preserves lifecycle-based Responses API failure serialization.
+    virtual std::string serializeStreamingError(const std::string& errorMessage);
 };
 
 // Free functions shared across handlers
