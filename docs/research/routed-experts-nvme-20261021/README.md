@@ -31,3 +31,9 @@ The primary long-form Deep Research report, **«Интеграция Routed Expe
 This documentation branch contains no runtime, parser, scheduler, tokenizer, XGrammar or dependency-lock modifications. The mainline C6, staged runtime and accepted dependency lock remain untouched.
 
 **Publication rules:** no local machine directory map, local secrets, credentials, private IP addresses, or local absolute checkout paths. Use placeholders in commands.
+
+## Update: exact original export is now available
+
+On 2026-10-21 the complete original Deep Research export was added manually as [`routed-experts-research-original.md`](../../../routed-experts-research-original.md), commit `118148ce450cb9805eb2a193113b6fa77a87b563`. The earlier "missing original" statements above record the publishing state *before* that manual export; **the gap is now resolved**. The original is kept at its manually committed location, unmodified.
+
+**Implementation planning:** [`06-IMPLEMENTATION-ROADMAP.md`](06-IMPLEMENTATION-ROADMAP.md). This supersedes earlier assumptions that a new Expert Residency Manager/LRU must be implemented from scratch: OpenVINO 2026.4.0 already has those components. Runtime C6 stays pinned.

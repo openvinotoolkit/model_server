@@ -31,3 +31,9 @@ A Strata-specific addition was requested during Deep Research; the exact final g
 - [llama.cpp](https://github.com/ggml-org/llama.cpp) (MIT)
 
 Research ideas are not equivalent to permission to transplant all implementation code without reviewing the full upstream license and dependencies.
+
+## Provenance update after manual export (2026-10-21)
+
+**RESOLVED:** The exact comprehensive original is now present at repository-root [`routed-experts-research-original.md`](../../../routed-experts-research-original.md) on this docs branch, commit `118148ce450cb9805eb2a193113b6fa77a87b563` (1,266 lines). All statements above saying the complete original was not available describe the earlier, pre-export state only. The original is **not replaced or edited** here.
+
+**NEW:** `06-IMPLEMENTATION-ROADMAP.md` records a future implementation plan based on both the manual original and a direct OpenVINO 2026.4.0 source audit. It is not a tested feature or permission to modify accepted C6.
