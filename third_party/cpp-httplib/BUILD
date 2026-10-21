@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
 visibility = ["//visibility:public"]
 load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")

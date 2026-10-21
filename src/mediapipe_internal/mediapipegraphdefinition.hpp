@@ -25,7 +25,7 @@
 #include <utility>
 #include <vector>
 
-#include "../dags/pipelinedefinitionstatus.hpp"
+#include "pipelinedefinitionstatus.hpp"
 #include "src/metrics/metric.hpp"
 #include "src/time_utils.hpp"
 #include "../model_metric_reporter.hpp"

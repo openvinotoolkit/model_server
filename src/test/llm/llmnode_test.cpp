@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <atomic>
+#include <chrono>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -43,8 +44,10 @@
 #include "../../llm/apis/openai_completions.hpp"
 #include "../../llm/apis/openai_json_response.hpp"
 #include "../../llm/io_processing/base_generation_config_builder.hpp"
+#include "../../llm/io_processing/output_parser.hpp"
 #include "../../llm/language_model/continuous_batching/llm_executor.hpp"
 #include "../../llm/language_model/continuous_batching/servable.hpp"
+#include "../../llm/ovms_text_streamer.hpp"
 #include "../../llm/servable.hpp"
 #include "../../llm/servable_initializer.hpp"
 #include "../../llm/text_utils.hpp"
@@ -328,6 +331,7 @@ TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJson) {
         ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
         ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
         ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
+        EXPECT_FALSE(parsedResponse["usage"].HasMember("prompt_tokens_details"));
         EXPECT_STREQ(parsedResponse["model"].GetString(), params.modelName.c_str());
         EXPECT_STREQ(parsedResponse["object"].GetString(), "text_completion");
     } else {  // Completions endpoint not supported for VLM servable
@@ -451,6 +455,51 @@ TEST_F(LLMFlowHttpQueueGraphTest, streamChatCompletionsQueueGraph) {
     });
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
+}
+
+TEST_F(LLMFlowHttpQueueGraphTest, tokenizeThenStreamChatQueueGraph) {
+    const std::string tokenizeEndpoint = "/v3/tokenize";
+    const std::string streamChatEndpoint = "/v3/chat/completions";
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", tokenizeEndpoint, headers), ovms::StatusCode::OK);
+    const std::string tokenizeRequest = R"({"model":"lm_cb_regular_queue","text":"hello"})";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(tokenizeEndpoint, tokenizeRequest, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_FALSE(parsedResponse.HasParseError());
+    ASSERT_TRUE(parsedResponse["tokens"].IsArray());
+    ASSERT_GT(parsedResponse["tokens"].Size(), 0);
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", streamChatEndpoint, headers), ovms::StatusCode::OK);
+    response.clear();
+    const std::string streamChatRequest = R"({
+        "model":"lm_cb_regular_queue",
+        "stream":true,
+        "seed":1,
+        "max_tokens":5,
+        "messages":[{"role":"user","content":"Say hello"}]
+    })";
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(::testing::AtLeast(1)).WillOnce([](const std::string& chunk) {
+        const std::string dataPrefix = "data:";
+        ASSERT_EQ(chunk.compare(0, dataPrefix.size(), dataPrefix), 0);
+        const size_t newline = chunk.find('\n');
+        ASSERT_NE(newline, std::string::npos);
+        rapidjson::Document firstChunk;
+        firstChunk.Parse(chunk.substr(dataPrefix.size(), newline - dataPrefix.size()).c_str());
+        ASSERT_FALSE(firstChunk.HasParseError());
+        ASSERT_TRUE(firstChunk.IsObject());
+        ASSERT_TRUE(firstChunk.HasMember("object"));
+        ASSERT_TRUE(firstChunk["object"].IsString());
+        EXPECT_STREQ(firstChunk["object"].GetString(), "chat.completion.chunk");
+        ASSERT_TRUE(firstChunk.HasMember("choices"));
+        ASSERT_TRUE(firstChunk["choices"].IsArray());
+        EXPECT_GT(firstChunk["choices"].Size(), 0);
+    });
+    EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_)).Times(0);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(streamChatEndpoint, streamChatRequest, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::PARTIAL_END);
 }
 
@@ -1132,6 +1181,9 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJson) {
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["completion_tokens"].IsInt());
     ASSERT_TRUE(parsedResponse["usage"].GetObject()["total_tokens"].IsInt());
     ASSERT_EQ(parsedResponse["usage"].GetObject()["completion_tokens"].GetInt(), 5 /* max_tokens */);
+    ASSERT_TRUE(parsedResponse["usage"]["prompt_tokens_details"].IsObject());
+    ASSERT_TRUE(parsedResponse["usage"]["prompt_tokens_details"]["cached_tokens"].IsUint64());
+    EXPECT_LE(parsedResponse["usage"]["prompt_tokens_details"]["cached_tokens"].GetUint64(), parsedResponse["usage"]["prompt_tokens"].GetUint64());
     EXPECT_STREQ(parsedResponse["model"].GetString(), params.modelName.c_str());
     EXPECT_STREQ(parsedResponse["object"].GetString(), "chat.completion");
 }
@@ -1314,6 +1366,43 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsNonVlmWithImageRejecte
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
         .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
             ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: This servable supports only text input, but image_url has been provided\"}");
+            rapidjson::Document d;
+            rapidjson::ParseResult ok = d.Parse(response.c_str());
+            ASSERT_EQ(ok.Code(), 0);
+            ASSERT_EQ(code, ovms::HTTPStatusCode::BAD_REQUEST);
+        });
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
+}
+
+// Non-VLM (text-only) servables reject requests that contain video_url content at
+// the servable level, before any processor runs.
+// Verify that the error propagates all the way to an HTTP 400 response.
+TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsNonVlmWithVideoRejected) {
+    auto params = GetParam();
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();  // video rejection check runs only for non-VLM servables
+    }
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": true,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": [{"type": "text", "text": "What is this?"}, {"type": "video_url", "video_url": {"url": ["data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg=="]}}]
+            }
+            ]
+        }
+    )";
+
+    EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
+        .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: This servable supports only text input, but video_url has been provided\"}");
             rapidjson::Document d;
             rapidjson::ParseResult ok = d.Parse(response.c_str());
             ASSERT_EQ(ok.Code(), 0);
@@ -1621,6 +1710,67 @@ TEST_P(LLMFlowHttpTestParameterized, unaryToolBadSchema) {
         ovms::StatusCode::OK);
 }
 
+TEST_P(LLMFlowHttpTestParameterized, continuousBatchingParserFailureStopsGenerationHandle) {
+    const auto params = GetParam();
+    if (params.modelName != "lm_cb_regular") {
+        GTEST_SKIP();
+    }
+
+    config.max_new_tokens = 1024;
+    config.rng_seed = 1;
+    config.temperature = 0;
+    ov::genai::Tokenizer tokenizer = cbPipe->get_tokenizer();
+    const auto inputIds = tokenizer.encode("keep the request active", ov::genai::add_special_tokens(false)).input_ids;
+    auto generationHandle = cbPipe->add_request(currentRequestId++, inputIds, config);
+    ASSERT_NE(generationHandle, nullptr);
+
+    struct GenerationHandleCleanup {
+        ov::genai::GenerationHandle handle;
+        std::shared_ptr<LLMExecutorWrapper> executor;
+        ~GenerationHandleCleanup() {
+            handle->stop();
+            executor->notifyNewRequestArrived();
+        }
+    } cleanup{generationHandle, llmExecutorWrapper};
+    ASSERT_EQ(generationHandle->get_status(), ov::genai::GenerationStatus::RUNNING);
+
+    rapidjson::Document requestDocument;
+    requestDocument.Parse(R"({"model":"lm_cb_regular","stream":true,"messages":[{"role":"user","content":"hello"}]})");
+    ASSERT_FALSE(requestDocument.HasParseError());
+    auto apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(
+        requestDocument, Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, 0, std::nullopt), absl::OkStatus());
+
+    auto outputParser = std::make_shared<OutputParser>(tokenizer, "mistral", "", ToolsSchemas_t{});
+    auto executionContext = std::make_shared<ContinuousBatchingServableExecutionContext>();
+    executionContext->apiHandler = std::move(apiHandler);
+    executionContext->generationHandle = generationHandle;
+    auto* context = executionContext.get();
+    executionContext->textStreamer = std::make_shared<OVMSTextStreamer>(
+        tokenizer, outputParser, true,
+        [context](Delta delta, bool isLast) {
+            context->deltaChannel.push(std::move(delta), isLast);
+            return ov::genai::StreamingStatus::RUNNING;
+        },
+        ov::AnyMap{});
+
+    const std::string malformedToolCall = "[{\"arguments\": {\"x\": 1}, \"name\": \"foo\"}]";
+    const auto generatedIds = tokenizer.encode(malformedToolCall, ov::genai::add_special_tokens(false)).input_ids;
+    executionContext->generationOutputs.resize(1);
+    executionContext->generationOutputs[0].generated_ids.assign(
+        generatedIds.data<int64_t>(), generatedIds.data<int64_t>() + generatedIds.get_size());
+    executionContext->generationOutputs[0].finish_reason = ov::genai::GenerationFinishReason::STOP;
+
+    std::shared_ptr<GenAiServableExecutionContext> baseExecutionContext = executionContext;
+    ContinuousBatchingServable servable;
+    const absl::Status status = servable.preparePartialResponse(baseExecutionContext);
+
+    EXPECT_EQ(status.code(), absl::StatusCode::kInternal);
+    EXPECT_NE(status.message().find("Tool call name is missing in generated output"), std::string::npos) << status;
+    EXPECT_EQ(generationHandle->get_status(), ov::genai::GenerationStatus::STOP);
+}
+
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonLogprobs) {
     auto params = GetParam();
     // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
@@ -1907,10 +2057,10 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStoppedByMaxModelLength
         GTEST_SKIP();
     }
     std::string prompt;
-    // 131066 "hello " words + the dummy chat template's ~5 tokens of literal overhead
-    // ("User"/":"/"\n"/"Assistant"/":") yields exactly 131071 prompt tokens - one under the
-    // dummy model's 131072 (128k) max length - leaving exactly 1 token of generation budget.
-    for (int i = 0; i < 131066; i++) {
+    // 131030 "hello " words yield exactly 131071 prompt tokens with the current
+    // chat template - one under the dummy model's 131072 (128k) max length,
+    // leaving exactly 1 token of generation budget.
+    for (int i = 0; i < 131030; i++) {
         prompt += "hello ";
     }
     std::string requestBody = R"(
@@ -2549,6 +2699,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsUsage) {
     ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos) << responses.back();  // ensure 5 - reaching max_tokens
     ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();        // this is always present and > 0, depends on pipeline type and underlying model
     ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();         // this is always present and > 0, depends on pipeline type and underlying model
+    ASSERT_TRUE(responses.back().find("\"prompt_tokens_details\":{\"cached_tokens\":") != std::string::npos) << responses.back();
     if (params.checkFinishReason) {
         ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
     }
@@ -2587,9 +2738,172 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsUsage) {
     ASSERT_TRUE(responses.back().find("\"completion_tokens\":5") != std::string::npos) << responses.back();  // ensure 5 - reaching max_tokens
     ASSERT_TRUE(responses.back().find("\"prompt_tokens\"") != std::string::npos) << responses.back();        // this is always present and > 0, depends on pipeline type and underlying model
     ASSERT_TRUE(responses.back().find("\"total_tokens\"") != std::string::npos) << responses.back();         // this is always present and > 0, depends on pipeline type and underlying model
+    ASSERT_EQ(responses.back().find("prompt_tokens_details"), std::string::npos) << responses.back();
     if (params.checkFinishReason) {
         ASSERT_TRUE(responses.back().find("\"finish_reason\":\"length\"") != std::string::npos) << responses.back();
     }
+}
+
+class LLMPrefixCachingHttpTest : public LLMFlowHttpTest {
+    std::unique_ptr<std::thread> serverThread;
+
+public:
+    static void SetUpTestSuite() {}
+    static void TearDownTestSuite() {}
+
+    void SetUp() override {
+        std::string port = "9173";
+        ovms::Server& server = ovms::Server::instance();
+        ::SetUpServer(serverThread, server, port, getGenericFullPathForSrcTest("/ovms/src/test/llm/config.json").c_str(), 60);
+        LLMFlowHttpTest::SetUp();
+    }
+
+    void TearDown() override {
+        LLMFlowHttpTest::TearDown();
+        ovms::Server& server = ovms::Server::instance();
+        server.setShutdownRequest(1);
+        if (serverThread && serverThread->joinable()) {
+            serverThread->join();
+        }
+        server.setShutdownRequest(0);
+    }
+};
+
+static std::string prefixCachingPrompt() {
+    std::string prompt = "Request.";
+    for (int i = 0; i < 16; ++i) {
+        prompt += " The quick brown fox jumps over the lazy dog.";
+    }
+    return prompt;
+}
+
+static std::string prefixCachingStreamChatRequest(const std::string& content) {
+    return R"({"model": "lm_cb_prefix_caching", "max_tokens": 5, "ignore_eos": true, "stream": true, "stream_options": {"include_usage": true}, "messages": [{"role": "user", "content": ")" +
+           content + R"("}]})";
+}
+
+static uint64_t extractUsageField(const std::string& response, const std::string& field) {
+    std::smatch match;
+    const std::regex pattern("\"" + field + "\":([0-9]+)");
+    if (!std::regex_search(response, match, pattern)) {
+        return std::numeric_limits<uint64_t>::max();
+    }
+    return std::stoull(match[1].str());
+}
+
+TEST_F(LLMPrefixCachingHttpTest, unaryChatCompletionsReportsPrefixCacheHit) {
+    const std::string content = prefixCachingPrompt();
+    const std::string unaryRequest = R"({"model": "lm_cb_prefix_caching", "max_tokens": 5, "ignore_eos": true, "messages": [{"role": "user", "content": ")" + content + R"("}]})";
+
+    ASSERT_EQ(handler->dispatchToProcessor(endpointChatCompletions, unaryRequest, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_FALSE(parsedResponse.HasParseError()) << response;
+    const uint64_t firstPromptTokens = parsedResponse["usage"]["prompt_tokens"].GetUint64();
+    EXPECT_EQ(parsedResponse["usage"]["prompt_tokens_details"]["cached_tokens"].GetUint64(), 0) << response;
+
+    response.clear();
+    ASSERT_EQ(handler->dispatchToProcessor(endpointChatCompletions, unaryRequest, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_FALSE(parsedResponse.HasParseError()) << response;
+    ASSERT_EQ(parsedResponse["usage"]["prompt_tokens"].GetUint64(), firstPromptTokens);
+    const uint64_t cachedTokens = parsedResponse["usage"]["prompt_tokens_details"]["cached_tokens"].GetUint64();
+    EXPECT_GT(cachedTokens, 0) << response;
+    EXPECT_LE(cachedTokens, firstPromptTokens) << response;
+    EXPECT_EQ(parsedResponse["usage"]["total_tokens"].GetUint64(), firstPromptTokens + 5) << response;
+}
+
+TEST_F(LLMPrefixCachingHttpTest, streamChatCompletionsReportsPrefixCacheHit) {
+    const std::string content = prefixCachingPrompt();
+    std::vector<std::string> responses;
+    EXPECT_CALL(*writer, PartialReply(::testing::_))
+        .WillRepeatedly([&responses](std::string response) {
+            responses.push_back(response);
+        });
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(2);
+
+    ASSERT_EQ(handler->dispatchToProcessor(endpointChatCompletions, prefixCachingStreamChatRequest(content), &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::PARTIAL_END);
+    ASSERT_FALSE(responses.empty());
+    const std::string firstUsageChunk = responses.back();
+    const uint64_t firstPromptTokens = extractUsageField(firstUsageChunk, "prompt_tokens");
+    ASSERT_NE(firstPromptTokens, std::numeric_limits<uint64_t>::max()) << firstUsageChunk;
+    EXPECT_EQ(extractUsageField(firstUsageChunk, "cached_tokens"), 0) << firstUsageChunk;
+
+    responses.clear();
+    ASSERT_EQ(handler->dispatchToProcessor(endpointChatCompletions, prefixCachingStreamChatRequest(content), &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::PARTIAL_END);
+    ASSERT_FALSE(responses.empty());
+    const std::string& usageChunk = responses.back();
+    ASSERT_EQ(extractUsageField(usageChunk, "prompt_tokens"), firstPromptTokens) << usageChunk;
+    const uint64_t cachedTokens = extractUsageField(usageChunk, "cached_tokens");
+    EXPECT_GT(cachedTokens, 0) << usageChunk;
+    EXPECT_LE(cachedTokens, firstPromptTokens) << usageChunk;
+    EXPECT_EQ(extractUsageField(usageChunk, "completion_tokens"), 5) << usageChunk;
+}
+
+static std::string prefixCachingResponsesRequest(const std::string& content, bool stream) {
+    return R"({"model": "lm_cb_prefix_caching", "max_output_tokens": 5, "ignore_eos": true, "stream": )" +
+           std::string(stream ? "true" : "false") + R"(, "input": ")" + content + R"("})";
+}
+
+// Earlier lifecycle events may carry an empty usage, so only the final one is relevant.
+static std::string lastUsageObject(const std::vector<std::string>& responses) {
+    std::string stream;
+    for (const auto& chunk : responses) {
+        stream += chunk;
+    }
+    const size_t pos = stream.rfind("\"usage\":{");
+    return pos == std::string::npos ? "" : stream.substr(pos);
+}
+
+TEST_F(LLMPrefixCachingHttpTest, unaryResponsesReportsPrefixCacheHit) {
+    const std::string endpointResponses = "/v1/responses";
+    ovms::HttpRequestComponents responsesComp;
+    ASSERT_EQ(handler->parseRequestComponents(responsesComp, "POST", endpointResponses, headers), ovms::StatusCode::OK);
+    const std::string request = prefixCachingResponsesRequest(prefixCachingPrompt(), false);
+
+    ASSERT_EQ(handler->dispatchToProcessor(endpointResponses, request, &response, responsesComp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_FALSE(parsedResponse.HasParseError()) << response;
+    const uint64_t firstInputTokens = parsedResponse["usage"]["input_tokens"].GetUint64();
+    EXPECT_EQ(parsedResponse["usage"]["input_tokens_details"]["cached_tokens"].GetUint64(), 0) << response;
+
+    response.clear();
+    ASSERT_EQ(handler->dispatchToProcessor(endpointResponses, request, &response, responsesComp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_FALSE(parsedResponse.HasParseError()) << response;
+    ASSERT_EQ(parsedResponse["usage"]["input_tokens"].GetUint64(), firstInputTokens);
+    const uint64_t cachedTokens = parsedResponse["usage"]["input_tokens_details"]["cached_tokens"].GetUint64();
+    EXPECT_GT(cachedTokens, 0) << response;
+    EXPECT_LE(cachedTokens, firstInputTokens) << response;
+    EXPECT_EQ(parsedResponse["usage"]["output_tokens"].GetUint64(), 5) << response;
+    EXPECT_EQ(parsedResponse["usage"]["total_tokens"].GetUint64(), firstInputTokens + 5) << response;
+}
+
+TEST_F(LLMPrefixCachingHttpTest, streamResponsesReportsPrefixCacheHit) {
+    const std::string endpointResponses = "/v1/responses";
+    ovms::HttpRequestComponents responsesComp;
+    ASSERT_EQ(handler->parseRequestComponents(responsesComp, "POST", endpointResponses, headers), ovms::StatusCode::OK);
+    const std::string request = prefixCachingResponsesRequest(prefixCachingPrompt(), true);
+    std::vector<std::string> responses;
+    EXPECT_CALL(*writer, PartialReply(::testing::_))
+        .WillRepeatedly([&responses](std::string response) {
+            responses.push_back(response);
+        });
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(2);
+
+    ASSERT_EQ(handler->dispatchToProcessor(endpointResponses, request, &response, responsesComp, responseComponents, writer, multiPartParser), ovms::StatusCode::PARTIAL_END);
+    const std::string firstUsage = lastUsageObject(responses);
+    const uint64_t firstInputTokens = extractUsageField(firstUsage, "input_tokens");
+    ASSERT_NE(firstInputTokens, std::numeric_limits<uint64_t>::max()) << firstUsage;
+    EXPECT_EQ(extractUsageField(firstUsage, "cached_tokens"), 0) << firstUsage;
+
+    responses.clear();
+    ASSERT_EQ(handler->dispatchToProcessor(endpointResponses, request, &response, responsesComp, responseComponents, writer, multiPartParser), ovms::StatusCode::PARTIAL_END);
+    const std::string usage = lastUsageObject(responses);
+    ASSERT_EQ(extractUsageField(usage, "input_tokens"), firstInputTokens) << usage;
+    const uint64_t cachedTokens = extractUsageField(usage, "cached_tokens");
+    EXPECT_GT(cachedTokens, 0) << usage;
+    EXPECT_LE(cachedTokens, firstInputTokens) << usage;
+    EXPECT_EQ(extractUsageField(usage, "output_tokens"), 5) << usage;
 }
 
 TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsBadStopStringType) {

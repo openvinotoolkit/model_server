@@ -84,7 +84,10 @@ curl http://localhost/v3/chat/completions \
   "usage": {
         "completion_tokens": 38,
         "prompt_tokens": 22,
-        "total_tokens": 60
+        "total_tokens": 60,
+        "prompt_tokens_details": {
+            "cached_tokens": 0
+        }
   }
 }
 ```
@@ -194,6 +197,41 @@ curl http://localhost/v3/chat/completions \
 }'
 ```
 **Note**: check `--allowed_local_media_path` parameter described [here](parameters.md)
+
+In case of VLM models that support video understanding (e.g. Qwen3-VL), a video can be sent as a `video_url` content part. Because the server does not decode compressed video containers (mp4 etc.), the client is responsible for extracting frames from the source video and sending them as an **array of already-decoded frames**. Each element of the `url` array is a single frame in the same formats accepted by `image_url` (base64 data URI, HTTP(S) URL, or local filesystem path). Frames are sent in the order given, so extract them in temporal order:
+
+```
+curl http://localhost/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "qwen3-vl",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "Describe this video."
+                },
+                {
+                    "type": "video_url",
+                    "video_url": {
+                        "url": [
+                            "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBD ...",
+                            "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBD ...",
+                            "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBD ..."
+                        ]
+                    }
+                }
+            ]
+        }
+    ],
+    "temperature": 0.0,
+    "max_completion_tokens": 128
+}'
+```
+
+**Note**: Unlike `image_url.url`, which is a single string, `video_url.url` is an **array of 1 to 1024 strings** (one per frame). All frames of a single video must share the same height, width and channel count. Decoded frame pixels count toward the request-wide `--max_image_decode_pixels` budget shared by all `image_url` and `video_url` parts. The same `--allowed_media_domains` / `--allowed_local_media_path` restrictions apply to each frame reference. Multiple `video_url` parts, and mixing `image_url` and `video_url` in one message, are supported.
 
 ### Request
 
@@ -309,7 +347,7 @@ If any of those parameters is not specified and request is made to Prompt Lookup
 | created | ✅ | ✅ | string | The Unix timestamp (in seconds) of when the chat completion was created.  |
 | model | ✅ | ✅ | string | The model used for the chat completion. |
 | object | ✅ | ✅ | string | `chat.completion` for unary requests and `chat.completion.chunk` for streaming responses |
-| usage | ✅ | ✅ | object | Usage statistics for the completion request. Consists of three integer fields: `completion_tokens`, `prompt_tokens` and `total_tokens` that inform how many tokens have been generated in a completion, number of tokens in a prompt and the sum of both. Does not work for streaming on stateful endpoints. |
+| usage | ✅ | ✅ | object | Usage statistics for the completion request. Consists of three integer fields: `completion_tokens`, `prompt_tokens` and `total_tokens` that inform how many tokens have been generated in a completion, number of tokens in a prompt and the sum of both. Also includes `prompt_tokens_details.cached_tokens` - the number of prompt tokens reused from the prefix cache (a subset of `prompt_tokens`, always 0 when `enable_prefix_caching` is off). Does not work for streaming on stateful endpoints. |
 
 #### Unsupported params from OpenAI service:
 

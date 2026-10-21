@@ -15,6 +15,7 @@
 //*****************************************************************************
 
 #include "legacy_executor.hpp"
+#include "../../ovms_text_streamer.hpp"
 #include "servable.hpp"
 #include <vector>
 
@@ -40,7 +41,10 @@ void VisualLanguageModelLegacyExecutor::processRequest() {
     } else {
         SPDLOG_LOGGER_TRACE(llm_executor_logger, "Generation started");
         try {
-            requestExecutionContext->results = pipe->generate(requestExecutionContext->inputRequest.promptText, requestExecutionContext->inputRequest.inputImages, requestExecutionContext->inputRequest.generationConfig, requestExecutionContext->textStreamer);
+            requestExecutionContext->results = pipe->generate(requestExecutionContext->inputRequest.promptText, requestExecutionContext->inputRequest.inputImages, requestExecutionContext->inputRequest.inputVideos, requestExecutionContext->inputRequest.generationConfig, requestExecutionContext->textStreamer);
+            if (requestExecutionContext->textStreamer && requestExecutionContext->textStreamer->hadParserError()) {
+                requestExecutionContext->success = false;
+            }
         } catch (std::exception& e) {
             requestExecutionContext->success = false;
             SPDLOG_LOGGER_ERROR(llm_executor_logger, "VLM pipeline generation failed: {}.", e.what());

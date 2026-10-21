@@ -16,6 +16,7 @@ ovms_docs_shape_batch_layout
 ovms_docs_dynamic_input
 ovms_docs_online_config_changes
 ovms_docs_model_version_policy
+ovms_docs_idle_servable_management
 ovms_docs_metrics
 ovms_docs_c_api
 ovms_docs_advanced
@@ -38,12 +39,6 @@ Create [MediaPipe](https://developers.google.com/mediapipe/framework/framework_c
 
 [Learn more](mediapipe.md)
 
-## Serving Pipelines of Models
-Connect multiple models in a pipeline and reduce data transfer overhead with Directed Acyclic Graph (DAG) Scheduler.
-Implement model inference and data transformations using a custom node C/C++ dynamic library.
-
-[Learn more](dag_scheduler.md)
-
 ## Processing Raw Data
 Send data in JPEG or PNG formats to reduce traffic and offload data pre-processing to the server.
 
@@ -65,6 +60,11 @@ OpenVINO Model Server regularly checks for changes to the configuration file and
 (for example, change the device where a model is served), add a new model or completely remove one that is no longer needed. These changes will be applied without any disruption to the service.
 
 [Learn more](online_config_changes.md)
+
+## Idle Servable Management (Preview)
+Unload inactive model and graph groups, then load them with the next inference request. Reduce CPU and GPU memory needed to serve multiple large models.
+
+[Learn more](./idle_servable_management.md)
 
 ## Metrics
 Use the metrics endpoint compatible with the Prometheus to access performance and utilization statistics.

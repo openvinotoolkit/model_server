@@ -36,7 +36,6 @@
 #include "../capi_frontend/inferencerequest.hpp"
 #include "../capi_frontend/inferenceresponse.hpp"
 #include "../config.hpp"
-#include "../dags/node_library.hpp"
 #include "src/execution_context.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "../kfs_frontend/kfs_utils.hpp"
@@ -64,6 +63,36 @@ using inputs_info_t = std::map<std::string, std::tuple<ovms::signed_shape_t, ovm
 void adjustConfigToAllowModelFileRemovalWhenLoaded(ovms::ModelConfig& modelConfig);
 
 static const ovms::ExecutionContext DEFAULT_TEST_CONTEXT{ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::ModelInfer};
+
+class ScopedOVMSConfigGuard {
+public:
+    ScopedOVMSConfigGuard() :
+        serverSettings(ovms::Config::instance().getServerSettings()),
+        modelsSettings(ovms::Config::instance().getModelSettings()) {}
+
+    ScopedOVMSConfigGuard(const ScopedOVMSConfigGuard&) = delete;
+    ScopedOVMSConfigGuard& operator=(const ScopedOVMSConfigGuard&) = delete;
+
+    ~ScopedOVMSConfigGuard() {
+        parse(serverSettings, modelsSettings);
+    }
+
+    const ovms::ServerSettingsImpl& getServerSettings() const {
+        return serverSettings;
+    }
+
+    const ovms::ModelsSettingsImpl& getModelSettings() const {
+        return modelsSettings;
+    }
+
+    bool parse(ovms::ServerSettingsImpl& serverSettings, ovms::ModelsSettingsImpl& modelsSettings) {
+        return ovms::Config::instance().parse(&serverSettings, &modelsSettings);
+    }
+
+private:
+    ovms::ServerSettingsImpl serverSettings;
+    ovms::ModelsSettingsImpl modelsSettings;
+};
 
 using KFSInterface = std::pair<KFSRequest, KFSResponse>;
 using CAPIInterface = std::pair<ovms::InferenceRequest, ovms::InferenceResponse>;
@@ -469,17 +498,6 @@ void SetReadonlyFileAttributeFromDir(std::string& directoryPath);
 void waitForOVMSConfigReload(ovms::ModelManager& manager);
 void waitForOVMSResourcesCleanup(ovms::ModelManager& manager);
 
-template <typename T>
-static ovms::NodeLibrary createLibraryMock() {
-    return ovms::NodeLibrary{
-        T::initialize,
-        T::deinitialize,
-        T::execute,
-        T::getInputsInfo,
-        T::getOutputsInfo,
-        T::release};
-}
-
 bool isShapeTheSame(const KFSShapeType&, const std::vector<int64_t>&&);
 
 void readRgbJpg(size_t& filesize, std::unique_ptr<char[]>& image_bytes);
@@ -731,6 +749,7 @@ void SetUpServerForDownloadAndStartWithLoras(std::unique_ptr<std::thread>& t, ov
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS, std::string apiKeyFile = "", bool withPython = true);
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName, int timeoutSeconds, const char* task);
+void SetUpServerWithExtraArgs(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, std::vector<std::string> extraArgs, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
 
 class ConstructorEnabledConfig : public ovms::Config {
 public:

@@ -16,30 +16,28 @@
 
 #pragma once
 
+#include <string>
+
 namespace ovms {
 
-struct RuntimeChatTemplateRuntimeApi {
-    using CreatePreparedChatTemplateRuntimeFn = bool (*)(
-        const char* modelsPath,
-        const char* chatTemplate,
-        const char* bosToken,
-        const char* eosToken,
-        void** preparedHandle,
-        const char** output);
+bool ensurePythonRuntimeInitialized(std::string& errorMessage);
 
-    using ApplyPreparedChatTemplateRuntimeFn = bool (*)(
-        void* preparedHandle,
-        const char* requestBody,
-        const char** output);
+class PreparedChatTemplateRuntime {
+public:
+    PreparedChatTemplateRuntime() = default;
+    PreparedChatTemplateRuntime(const PreparedChatTemplateRuntime&) = delete;
+    PreparedChatTemplateRuntime& operator=(const PreparedChatTemplateRuntime&) = delete;
+    ~PreparedChatTemplateRuntime();
 
-    using DestroyPreparedChatTemplateRuntimeFn = void (*)(void* preparedHandle);
+    bool prepare(const std::string& modelsPath, const std::string& chatTemplate,
+        const std::string& bosToken, const std::string& eosToken, std::string& errorMessage);
+    bool apply(const std::string& requestBody, std::string& output) const;
+    bool isPrepared() const { return handle != nullptr; }
 
-    CreatePreparedChatTemplateRuntimeFn createPreparedFn = nullptr;
-    ApplyPreparedChatTemplateRuntimeFn applyPreparedFn = nullptr;
-    DestroyPreparedChatTemplateRuntimeFn destroyPreparedFn = nullptr;
+private:
+    void* handle = nullptr;
+    void (*destroy)(void*) = nullptr;
+    bool (*render)(void*, const char*, const char**) = nullptr;
 };
-
-// Returns nullptr when runtime library or required symbols are unavailable.
-const RuntimeChatTemplateRuntimeApi* getRuntimeChatTemplateRuntimeApi();
 
 }  // namespace ovms

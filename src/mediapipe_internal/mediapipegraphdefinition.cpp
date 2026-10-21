@@ -28,6 +28,7 @@
 
 #include "src/execution_context.hpp"
 #include "../config.hpp"
+#include "../llm/llm_calculators_plugin_loader.hpp"
 #include "src/utils/env_guard.hpp"
 #include "src/filesystem/filesystem.hpp"
 #include "src/metrics/metric.hpp"
@@ -203,6 +204,10 @@ Status MediapipeGraphDefinition::validateForConfigLoadableness() {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Trying to parse empty mediapipe graph definition: {} failed", this->getName(), this->chosenConfig);
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
+    if (this->chosenConfig.find("HttpLLMCalculator") != std::string::npos ||
+        this->chosenConfig.find("LLMCalculatorOptions") != std::string::npos) {
+        loadLlmCalculatorsPlugin();
+    }
     SPDLOG_TRACE("Will try to load pbtxt config: {}", this->chosenConfig);
     bool success = ::google::protobuf::TextFormat::ParseFromString(this->chosenConfig, &this->config);
     if (!success) {
@@ -213,6 +218,14 @@ Status MediapipeGraphDefinition::validateForConfigLoadableness() {
 }
 
 Status MediapipeGraphDefinition::validateReferencedNodesRegistered() {
+    for (const auto& node : this->config.node()) {
+        const auto& nodeName = node.calculator();
+        if (nodeName == "HttpLLMCalculator" || endsWith(nodeName, "LLMCalculator")) {
+            loadLlmCalculatorsPlugin();
+            break;
+        }
+    }
+
     const auto& registeredCalculators = mediapipe::CalculatorBaseRegistry::GetRegisteredNames();
     const auto& registeredSubgraphs = mediapipe::SubgraphRegistry::GetRegisteredNames();
 
@@ -272,11 +285,6 @@ Status MediapipeGraphDefinition::dryInitializeTest() {
 Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Started validation of mediapipe: {}", getName());
     SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Validation context for mediapipe: {} graph_path: {} subconfig_path: {}", getName(), this->mgconfig.getGraphPath(), this->mgconfig.getSubconfigPath());
-#if defined(OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME) && OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Build flag OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME is enabled for mediapipe: {}", getName());
-#else
-    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Build flag OVMS_MEDIAPIPE_DISABLE_TF_TENSOR_RUNTIME is disabled for mediapipe: {}", getName());
-#endif
     if (!this->sidePacketMaps->empty()) {
         SPDLOG_ERROR("Internal Error: MediaPipe definition is in unexpected state.");
         return StatusCode::INTERNAL_ERROR;

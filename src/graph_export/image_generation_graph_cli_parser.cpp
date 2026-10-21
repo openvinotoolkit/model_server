@@ -230,19 +230,22 @@ void ImageGenerationGraphCLIParser::prepare(ServerSettingsImpl& serverSettings, 
 
             LoraAdapterSettings adapter;
             adapter.alias = alias;
-            // Parse optional :alpha suffix
+            // Parse optional :alpha suffix. Only a colon in the final path segment can be an
+            // alpha delimiter, which keeps the scheme colon of "https://...", the port colon of
+            // "https://host:8080/file.safetensors" and a Windows drive letter ("C:\\...") from
+            // being misread as one. A "//" check is no longer needed: everything after the last
+            // separator is free of path separators, so alphaStr can never start with one.
+            const size_t lastSeparator = source.find_last_of("/\\");
+            const size_t segmentStart = (lastSeparator == std::string::npos) ? 0 : lastSeparator + 1;
             auto lastColon = source.rfind(':');
-            if (lastColon != std::string::npos && lastColon > 1) {
+            if (lastColon != std::string::npos && lastColon > 1 && lastColon >= segmentStart) {
                 std::string alphaStr = source.substr(lastColon + 1);
-                // Skip protocol colons (https:// or http://)
-                if (alphaStr.substr(0, 2) != "//") {
-                    auto alpha = ovms::stof(alphaStr);
-                    if (!alpha.has_value()) {
-                        throw std::invalid_argument("Invalid alpha value '" + alphaStr + "' in --source_loras entry: '" + entry + "'");
-                    }
-                    adapter.alpha = alpha.value();
-                    source = source.substr(0, lastColon);
+                auto alpha = ovms::stof(alphaStr);
+                if (!alpha.has_value()) {
+                    throw std::invalid_argument("Invalid alpha value '" + alphaStr + "' in --source_loras entry: '" + entry + "'");
                 }
+                adapter.alpha = alpha.value();
+                source = source.substr(0, lastColon);
             }
             // Detect source type
             if (source.substr(0, 8) == "https://" || source.substr(0, 7) == "http://") {

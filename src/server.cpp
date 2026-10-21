@@ -55,13 +55,13 @@
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
 #include "config.hpp"
+#include "curl_global_initializer.hpp"
 #include "grpcservermodule.hpp"
 #include "http_server.hpp"
 #include "httpservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "logging.hpp"
 #include "metrics/metric_module.hpp"
-#include "src/servable_management/modelmanager.hpp"
 #include "ovms_exit_codes.hpp"
 #include "profiler.hpp"
 #include "profilermodule.hpp"
@@ -74,6 +74,7 @@
 #include "shutdown_state.hpp"
 #include "servables_config_manager_module/servablesconfigmanagermodule.hpp"
 #include "stringutils.hpp"
+#include "ov_version.hpp"
 #include "version.hpp"
 
 using grpc::ServerBuilder;
@@ -112,14 +113,14 @@ Server& Server::instance() {
 
 static void logConfig(const Config& config) {
     std::string project_name(PROJECT_NAME);
-    std::string project_version(PROJECT_VERSION);
+    std::string project_version(ovms::getProjectVersion());
     SPDLOG_INFO(project_name + " " + project_version);
     SPDLOG_INFO("OpenVINO backend {}", ovms::getOpenVINOVersion());
     const char* genaiVersion = ovms::getGenAIVersion();
     if (genaiVersion[0] != '\0') {
         SPDLOG_INFO("OpenVINO GenAI backend {}", genaiVersion);
     }
-    SPDLOG_DEBUG("Bazel build flags: {}", BAZEL_BUILD_FLAGS);
+    SPDLOG_DEBUG("Bazel build flags: {}", ovms::getBazelBuildFlags());
     SPDLOG_DEBUG("CLI parameters passed to ovms server");
     if (config.getServerSettings().serverMode == HF_PULL_MODE) {
         SPDLOG_DEBUG("source_model: {}", config.getServerSettings().hfSettings.sourceModel);
@@ -328,6 +329,16 @@ void Server::setExitStatus(int i) {
 
 Server::~Server() {
     this->shutdownModules();
+    if (curlGlobalInitialized) {
+        cleanupCurlGlobal();
+    }
+}
+
+Status Server::ensureGlobalInit() {
+    std::call_once(globalInitFlag, [this]() {
+        curlGlobalInitialized = initializeCurlGlobal().ok();
+    });
+    return curlGlobalInitialized ? StatusCode::OK : StatusCode::INTERNAL_ERROR;
 }
 
 std::unique_ptr<Module> Server::createModule(const std::string& name) {
@@ -564,6 +575,10 @@ static int statusToExitCode(const Status& status) {
 
 std::variant<std::pair<ServerSettingsImpl, ModelsSettingsImpl>, std::pair<int, std::string>> Server::parseArgs(int argc, char** argv) {
     try {
+        auto globalInitStatus = Server::instance().ensureGlobalInit();
+        if (!globalInitStatus.ok()) {
+            return std::make_pair(OVMS_EX_FAILURE, globalInitStatus.string());
+        }
         CLIParser parser;
         ServerSettingsImpl serverSettings;
         ModelsSettingsImpl modelsSettings;
@@ -629,6 +644,10 @@ Status Server::startFromSettings(ServerSettingsImpl* serverSettings, ModelsSetti
         if (!locked) {
             SPDLOG_ERROR("Cannot start OVMS - server is already starting");
             return StatusCode::SERVER_ALREADY_STARTING;
+        }
+        auto globalInitStatus = ensureGlobalInit();
+        if (!globalInitStatus.ok()) {
+            return globalInitStatus;
         }
         std::unique_lock lockModules(modulesMtx);
         if (!modules.empty()) {

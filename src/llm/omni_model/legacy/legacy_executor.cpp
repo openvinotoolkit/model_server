@@ -20,6 +20,7 @@
 #include <utility>
 #include <vector>
 
+#include "../../ovms_text_streamer.hpp"
 #include "servable.hpp"
 
 namespace ovms {
@@ -55,6 +56,9 @@ void OmniModelLegacyExecutor::processRequest() {
                 requestExecutionContext->speechConfig,
                 requestExecutionContext->textStreamer,
                 requestExecutionContext->speechStreamer);
+            if (requestExecutionContext->textStreamer && requestExecutionContext->textStreamer->hadParserError()) {
+                requestExecutionContext->success = false;
+            }
         } catch (std::exception& e) {
             requestExecutionContext->success = false;
             SPDLOG_LOGGER_ERROR(llm_executor_logger, "Omni pipeline generation failed: {}.", e.what());

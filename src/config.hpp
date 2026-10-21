@@ -78,7 +78,7 @@ public:
          * @param argv 
          * @return Config& 
          */
-    Config& parse(int argc, char** argv);
+    Config& parse(int argc, const char* const* argv);
     bool parse(ServerSettingsImpl*, ModelsSettingsImpl*);
 
     /**
@@ -164,6 +164,13 @@ public:
          * @return uint
          */
     size_t grpcMemoryQuota() const;
+
+    /**
+         * @brief Gets the maximum allowed JSON complexity for request parsing
+         *
+         * @return size_t
+         */
+    size_t jsonMaxComplexity() const;
 
     /**
          * @brief Gets the rest workers count
@@ -318,12 +325,14 @@ public:
      * 
      * @return uint32_t
      */
-    uint32_t resourcesCleanerPollWaitSeconds() const;
+    uint32_t memoryTrimmingIntervalSeconds() const;
 
     uint32_t idleUnloadTimeoutSeconds() const;
 
     bool disableInputCountValidation() const;
     bool allowCredentials() const;
+    uint64_t maxImageDecodePixels() const;
+    bool allowUnestimatableImageFormats() const;
     const std::string& allowedOrigins() const;
     const std::string& allowedMethods() const;
     const std::string& allowedHeaders() const;

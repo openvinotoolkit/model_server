@@ -41,7 +41,6 @@
 
 #include "../../../llm/io_processing/input_processors/chat_template_processor.hpp"
 #include "../../../llm/io_processing/input_request.hpp"
-#include "../../../llm/runtime_chat_template.hpp"
 #include "../../../llm/runtime_chat_template_runtime_loader.hpp"
 #include "../../platform_utils.hpp"
 
@@ -90,7 +89,7 @@ TEST_F(ChatTemplateProcessorTest, TextMessage_DefaultSystemInjected_GenerationPr
     history.push_back({{"role", "user"}, {"content", "What is OpenVINO?"}});
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(*sharedTokenizer, true, nullptr);
+    ChatTemplateProcessor processor(*sharedTokenizer);
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok()) << status.message();
@@ -110,7 +109,7 @@ TEST_F(ChatTemplateProcessorTest, ExplicitSystemMessage_SuppressesDefaultSystemI
     history.push_back({{"role", "user"}, {"content", "Hello."}});
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(*sharedTokenizer, true, nullptr);
+    ChatTemplateProcessor processor(*sharedTokenizer);
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok()) << status.message();
@@ -133,7 +132,7 @@ TEST_F(ChatTemplateProcessorTest, MultiTurnConversation_AllTurnsRendered) {
     history.push_back({{"role", "user"}, {"content", "Second question."}});
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(*sharedTokenizer, true, nullptr);
+    ChatTemplateProcessor processor(*sharedTokenizer);
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok()) << status.message();
@@ -155,7 +154,7 @@ TEST_F(ChatTemplateProcessorTest, AddGenerationPromptFalse_OmitsGenerationPrompt
     history.set_extra_context(ov::genai::JsonContainer::from_json_string(R"({"add_generation_prompt": false})"));
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(*sharedTokenizer, true, nullptr);
+    ChatTemplateProcessor processor(*sharedTokenizer);
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok()) << status.message();
@@ -176,7 +175,7 @@ TEST_F(ChatTemplateProcessorTest, AddGenerationPromptNonBoolean_ReturnsInvalidAr
     history.set_extra_context(ov::genai::JsonContainer::from_json_string(R"({"add_generation_prompt": "yes"})"));
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(*sharedTokenizer, true, nullptr);
+    ChatTemplateProcessor processor(*sharedTokenizer);
     const auto status = processor.process(req);
 
     ASSERT_FALSE(status.ok());
@@ -191,7 +190,7 @@ TEST_F(ChatTemplateProcessorTest, PromptTextPopulated_ChatHistoryVariantPreserve
     history.push_back({{"role", "user"}, {"content", "Hi."}});
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(*sharedTokenizer, true, nullptr);
+    ChatTemplateProcessor processor(*sharedTokenizer);
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok()) << status.message();
@@ -208,7 +207,7 @@ TEST_F(ChatTemplateProcessorTest, EmptyStringContent_TemplateStillProducesOutput
     history.push_back({{"role", "user"}, {"content", ""}});
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(*sharedTokenizer, true, nullptr);
+    ChatTemplateProcessor processor(*sharedTokenizer);
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok()) << status.message();
@@ -230,7 +229,7 @@ TEST(ChatTemplateProcessorNoChatTemplateTest, TokenizerWithoutChatTemplate_Retur
     history.push_back({{"role", "user"}, {"content", "Hello."}});
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(tokenizer, true, nullptr);
+    ChatTemplateProcessor processor(tokenizer);
     const auto status = processor.process(req);
 
     EXPECT_FALSE(status.ok());
@@ -241,75 +240,47 @@ TEST(ChatTemplateProcessorNoChatTemplateTest, TokenizerWithoutChatTemplate_Retur
 }
 
 // ---------------------------------------------------------------------------
-// Fixture: SmolLM2-360M-Instruct via the runtime PyJinja path (useMinja=false)
+// Fixture: a custom template rendered through the Python Jinja runtime.
 //
-// This exercises the same tokenizer/template through the prepared runtime
-// chat-template API (dlopen'd from libovmspython), which routes through
-// standard Python Jinja2 instead of GenAI's embedded minja.
-//
-// The unit-test binary is built with libovmspython alongside. The global
-// PythonEnvironment (see gtest_main.cpp) initializes the interpreter for
-// the whole process, so this fixture only prepares the tokenizer and the
-// runtime chat template. If either preparation step fails, the tests fail
-// loudly (they do not silently skip).
-//
-// Rendering asserts are token-substring based rather than exact-string, because
-// PyJinja and minja can differ in incidental whitespace even when driven by the
-// same chat template.
 // ---------------------------------------------------------------------------
 
 #if (PYTHON_DISABLE == 0)
 static std::unique_ptr<ov::genai::Tokenizer> pyJinjaTokenizer;
-static std::unique_ptr<PreparedRuntimeChatTemplate> sharedPreparedRuntimeTemplate;
+static std::unique_ptr<PreparedChatTemplateRuntime> sharedPreparedChatTemplateRuntime;
 
 class ChatTemplateProcessorPyJinjaTest : public ::testing::Test {
 protected:
     static void SetUpTestSuite() {
-        ASSERT_NE(getRuntimeChatTemplateRuntimeApi(), nullptr)
-            << "libovmspython is not loadable — the unit-test binary is expected to be built "
-               "alongside //src/python:libovmspython.so.";
-
         const std::string modelsPath = getGenericFullPathForSrcTest(
-            "/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct");
-        pyJinjaTokenizer = std::make_unique<ov::genai::Tokenizer>(modelsPath);
-
-        auto prepared = std::make_unique<PreparedRuntimeChatTemplate>();
-        std::string runtimeOutput;
-        RuntimeChatTemplateError runtimeError = RuntimeChatTemplateError::NONE;
-        const auto status = prepareRuntimeChatTemplate(
-            modelsPath,
-            pyJinjaTokenizer->get_chat_template(),
-            pyJinjaTokenizer->get_bos_token(),
-            pyJinjaTokenizer->get_eos_token(),
-            *prepared,
-            runtimeOutput,
-            &runtimeError);
-        ASSERT_EQ(status, RuntimeChatTemplatePrepareStatus::PREPARED)
-            << "prepareRuntimeChatTemplate failed (error=" << static_cast<int>(runtimeError)
-            << "): " << runtimeOutput;
-        sharedPreparedRuntimeTemplate = std::move(prepared);
+            "/ovms/src/test/dummy/1");
+        pyJinjaTokenizer = std::make_unique<ov::genai::Tokenizer>();
+        sharedPreparedChatTemplateRuntime = std::make_unique<PreparedChatTemplateRuntime>();
+        const std::string chatTemplate =
+            "{% for message in messages %}[{{ message.role }}]{{ message.content }}{% endfor %}"
+            "{% if add_generation_prompt %}[assistant]{% endif %}";
+        std::string errorMessage;
+        ASSERT_TRUE(sharedPreparedChatTemplateRuntime->prepare(modelsPath, chatTemplate, "", "", errorMessage))
+            << errorMessage;
     }
 
     static void TearDownTestSuite() {
-        sharedPreparedRuntimeTemplate.reset();
+        sharedPreparedChatTemplateRuntime.reset();
         pyJinjaTokenizer.reset();
     }
 };
 
-TEST_F(ChatTemplateProcessorPyJinjaTest, TextMessage_DefaultSystemInjected_GenerationPromptAppended) {
+TEST_F(ChatTemplateProcessorPyJinjaTest, TextMessage_CustomTemplate_GenerationPromptAppended) {
     ov::genai::ChatHistory history;
     history.push_back({{"role", "user"}, {"content", "What is OpenVINO?"}});
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(*pyJinjaTokenizer, /*useMinja=*/false, sharedPreparedRuntimeTemplate.get());
+    ChatTemplateProcessor processor(*pyJinjaTokenizer, sharedPreparedChatTemplateRuntime.get());
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok()) << status.message();
-    EXPECT_NE(req.promptText.find("SmolLM"), std::string::npos)
-        << "Default system injection expected in: " << req.promptText;
-    EXPECT_NE(req.promptText.find("<|im_start|>user"), std::string::npos) << req.promptText;
+    EXPECT_NE(req.promptText.find("[user]"), std::string::npos) << req.promptText;
     EXPECT_NE(req.promptText.find("What is OpenVINO?"), std::string::npos) << req.promptText;
-    EXPECT_NE(req.promptText.find("<|im_start|>assistant"), std::string::npos)
+    EXPECT_NE(req.promptText.find("[assistant]"), std::string::npos)
         << "Trailing generation prompt expected in: " << req.promptText;
 }
 
@@ -319,7 +290,7 @@ TEST_F(ChatTemplateProcessorPyJinjaTest, ExplicitSystemMessage_SuppressesDefault
     history.push_back({{"role", "user"}, {"content", "Hello."}});
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(*pyJinjaTokenizer, /*useMinja=*/false, sharedPreparedRuntimeTemplate.get());
+    ChatTemplateProcessor processor(*pyJinjaTokenizer, sharedPreparedChatTemplateRuntime.get());
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok()) << status.message();
@@ -337,7 +308,7 @@ TEST_F(ChatTemplateProcessorPyJinjaTest, MultiTurnConversation_AllTurnsRendered)
     history.push_back({{"role", "user"}, {"content", "Second question."}});
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(*pyJinjaTokenizer, /*useMinja=*/false, sharedPreparedRuntimeTemplate.get());
+    ChatTemplateProcessor processor(*pyJinjaTokenizer, sharedPreparedChatTemplateRuntime.get());
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok()) << status.message();
@@ -360,12 +331,12 @@ TEST_F(ChatTemplateProcessorPyJinjaTest, AddGenerationPromptFalse_OmitsGeneratio
     history.set_extra_context(ov::genai::JsonContainer::from_json_string(R"({"add_generation_prompt": false})"));
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(*pyJinjaTokenizer, /*useMinja=*/false, sharedPreparedRuntimeTemplate.get());
+    ChatTemplateProcessor processor(*pyJinjaTokenizer, sharedPreparedChatTemplateRuntime.get());
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok()) << status.message();
     EXPECT_NE(req.promptText.find("What is OpenVINO?"), std::string::npos) << req.promptText;
-    EXPECT_EQ(req.promptText.find("<|im_start|>assistant"), std::string::npos)
+    EXPECT_EQ(req.promptText.find("[assistant]"), std::string::npos)
         << "add_generation_prompt=false must omit the trailing generation prompt: " << req.promptText;
 }
 
@@ -374,7 +345,7 @@ TEST_F(ChatTemplateProcessorPyJinjaTest, EmptyStringContent_TemplateStillProduce
     history.push_back({{"role", "user"}, {"content", ""}});
 
     InputRequest req = makeChatRequest(std::move(history));
-    ChatTemplateProcessor processor(*pyJinjaTokenizer, /*useMinja=*/false, sharedPreparedRuntimeTemplate.get());
+    ChatTemplateProcessor processor(*pyJinjaTokenizer, sharedPreparedChatTemplateRuntime.get());
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok()) << status.message();

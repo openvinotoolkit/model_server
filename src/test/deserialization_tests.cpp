@@ -109,7 +109,7 @@ const std::string CAPIPredictRequest::DATA{1 * sizeof(float) * DUMMY_MODEL_INPUT
 // dispose connection to CAPI Predict
 TEST_F(CAPIPredictRequest, ShouldSuccessForSupportedPrecision) {
     ov::Core ieCore;
-    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().string() + "/src/test/dummy/1/dummy.xml");
     ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
     ov::InferRequest inferRequest = compiledModel.create_infer_request();
     InputSink<ov::InferRequest&> inputSink(inferRequest);
@@ -329,7 +329,7 @@ public:
 
 TEST_F(KserveGRPCPredictRequest, ShouldSuccessForSupportedPrecision) {
     ov::Core ieCore;
-    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().string() + "/src/test/dummy/1/dummy.xml");
     ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
     ov::InferRequest inferRequest = compiledModel.create_infer_request();
     InputSink<ov::InferRequest&> inputSink(inferRequest);
