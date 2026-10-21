@@ -19,7 +19,7 @@ Change the script parameter with the model repository path if needed. The servic
 
 > **Security note:** The service reads and reloads `config.json` from the model repository directory automatically.
 > Use a dedicated repository such as `C:\models` and keep the directory writeable by the admin/user expected to manage the models and their configuration.
-> `LocalService` should have read-only access to the model repository and `config.json`.
+> `LocalService` needs read-only access to the model repository and `config.json`. Models are managed with the user permissions running ovms CLI.
 > The installer does not modify ACLs on disk automatically; the administrator must ensure adequate permissions on the models repository.
 Some models or custom graphs might be able to execute arbitrary code defined by custom graph nodes. It will be executed with the credential of ovms service account.
 > Keep the log directory separate and allow the service to write there.
