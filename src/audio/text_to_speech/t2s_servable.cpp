@@ -38,14 +38,6 @@ namespace ovms {
 
 static constexpr const char* VOICES_DIR_NAME = "voices";
 
-static std::string toLowerCopy(const std::string& value) {
-    std::string lowered = value;
-    std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char ch) {
-        return static_cast<char>(std::tolower(ch));
-    });
-    return lowered;
-}
-
 static size_t getShapeElementsCount(const ov::Shape& shape) {
     size_t elementsCount = 1;
     for (const auto dim : shape) {

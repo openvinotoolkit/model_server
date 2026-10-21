@@ -12,7 +12,7 @@ Request body must be in JSON format, and the request must have `Content-Type: ap
 
 ### Qwen3 TTS compatibility
 
-OVMS supports the Qwen3 TTS variants that fit the OpenAI-compatible request schema used by `/v3/audio/speech`:
+OVMS supports the Qwen3 TTS variants that fit the OpenAI-compatible request schema used by `/v1/audio/speech`:
 
 - `Qwen3-TTS-*-CustomVoice`: supported via `voice` and optional `instructions`
 - `Qwen3-TTS-*-VoiceDesign`: supported via `instructions`

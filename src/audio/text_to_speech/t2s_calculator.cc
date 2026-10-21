@@ -54,34 +54,26 @@ namespace mediapipe {
 
 const std::string TTS_SESSION_SIDE_PACKET_TAG = "TTS_NODE_RESOURCES";
 
-static std::string toLowerCopy(const std::string& value) {
-    std::string lowered = value;
-    std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char ch) {
-        return static_cast<char>(std::tolower(ch));
-    });
-    return lowered;
-}
-
-static std::string resolveBuiltinSpeakerName(const ovms::TtsServable& pipe, const std::string& voiceName) {
-    auto speakerIt = pipe.builtinSpeakerAliases.find(voiceName);
-    if (speakerIt != pipe.builtinSpeakerAliases.end()) {
+static std::string resolveBuiltinSpeakerName(const ovms::TtsServable& servable, const std::string& voiceName) {
+    auto speakerIt = servable.builtinSpeakerAliases.find(voiceName);
+    if (speakerIt != servable.builtinSpeakerAliases.end()) {
         return speakerIt->second;
     }
-    speakerIt = pipe.builtinSpeakerAliases.find(toLowerCopy(voiceName));
-    if (speakerIt != pipe.builtinSpeakerAliases.end()) {
+    speakerIt = servable.builtinSpeakerAliases.find(ovms::toLowerCopy(voiceName));
+    if (speakerIt != servable.builtinSpeakerAliases.end()) {
         return speakerIt->second;
     }
     return voiceName;
 }
 
-static bool isKnownVoice(const ovms::TtsServable& pipe, const std::string& voiceName) {
-    if (pipe.voices.find(voiceName) != pipe.voices.end()) {
+static bool isKnownVoice(const ovms::TtsServable& servable, const std::string& voiceName) {
+    if (servable.voices.find(voiceName) != servable.voices.end()) {
         return true;
     }
-    if (pipe.builtinSpeakerAliases.find(voiceName) != pipe.builtinSpeakerAliases.end()) {
+    if (servable.builtinSpeakerAliases.find(voiceName) != servable.builtinSpeakerAliases.end()) {
         return true;
     }
-    if (pipe.builtinSpeakerAliases.find(toLowerCopy(voiceName)) != pipe.builtinSpeakerAliases.end()) {
+    if (servable.builtinSpeakerAliases.find(ovms::toLowerCopy(voiceName)) != servable.builtinSpeakerAliases.end()) {
         return true;
     }
     return false;
@@ -166,7 +158,7 @@ public:
                 }
                 std::optional<std::string> instructions;
                 auto instructionsIt = payload.parsedJson->FindMember("instructions");
-                if (instructionsIt != payload.parsedJson->MemberEnd()) {
+                if (instructionsIt != payload.parsedJson->MemberEnd() && !instructionsIt->value.IsNull()) {
                     if (!instructionsIt->value.IsString()) {
                         return absl::InvalidArgumentError("instructions field is not a string");
                     }
