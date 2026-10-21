@@ -18,7 +18,7 @@ sc start ovms
 Change the script parameter with the model repository path if needed. The service account can also be set to `LocalSystem` for legacy compatibility, but this is less restrictive and should only be used when the administrator explicitly accepts the wider privilege boundary.
 
 > **Security note:** The service reads and reloads `config.json` from the model repository directory automatically.
-> Use a dedicated repository such as `C:\models` and keep the directory writeable by the admin/user, not by the service account.
+> Use a dedicated repository such as `C:\models` and keep the directory writeable by the admin/user expected to manage the models and their configuration.
 > `LocalService` should have read-only access to the model repository and `config.json`.
 > The installer does not modify ACLs on disk automatically; the administrator must ensure that the service account is read-only while the user retains write access.
 > Keep the log directory separate and allow the service to write there.
