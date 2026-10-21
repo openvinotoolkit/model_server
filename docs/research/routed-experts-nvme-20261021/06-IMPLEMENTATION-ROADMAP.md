@@ -5,6 +5,24 @@
 **Primary source:** [manual original research export](../../../routed-experts-research-original.md) (1,266 lines; commit `118148ce`).  
 **Additional evidence:** `02-Xe2-CPU-DeepSeek-addendum-20261021.md`, `03-Strata-source-audit-20261021.md`, upstream OpenVINO v2026.4.0 sources.
 
+## Current acceptance baselines (supersedes the older Qwen3-30B reference-model recommendation)
+
+This is a **material correction** to the roadmap, not to the manually exported historical research or the known-good runtime.
+
+| Model / deployment | Role | What it must prove | Speculative modes |
+| --- | --- | --- | --- |
+| **Gemma 4 26B-A4B**, GEMMAMONSTER C6 heretic | **Protocol and serving gold baseline** | Mature tool calling, named/required/auto/parallel, multi-turn agent loops, OVMS multi-slot concurrency, latency stability | Current known-good first; candidate drafter only after identity/export verified |
+| **Qwen3.6-35B-A3B** | **Primary agentic model / OTD target** | Real coding-agent loops, long context, throughput and expert residency under concurrency | Plain verification baseline **plus available native MTP**, and DFlash if converted/validated |
+| **AEON Ornith-1.0-35B** | **Primary agentic second target**, a separately pinned checkpoint | Tool loops, quality, expert-route drift, multi-slot performance, different routing distribution after post-training | Plain + **AEON DFlash** (already published). Grafted base-Qwen MTP is **unverified** per quantized checkpoint |
+| **Qwen3.8-Flash-Next** | **MTP / mixed-precision / large-MoE architectural reference**, separate feasibility track | Draft/verify overlap, layer-specific quantizations, SSD-per-accepted-token, KV/head/memory pressure | Embedded MTP, different expert precision per layer; Strata comparisons |
+| **Qwen3-30B-A3B** | **Legacy diagnostic control only** | Quickly isolate an OTD kernel/regression if new models hit unsupported graph paths | Does **not** set product acceptance or model-selection priorities |
+
+The model name in older notes should be read as **Gemma 4 26B-A4B**, not “Gemma 3 26B-A4B”. Keep the actual C6 model/quant/export identity and tokenizer digest pinned in test evidence.
+
+**Critical gate:** upstream `MOECompressed` + `OFFLOAD_RATIO` support for a legacy Qwen3 model does **not** establish compatibility with Qwen3.6, Ornith or Gemma 4. Inspect the actual graph/operator lowering *before* claiming OTD is enabled. If native OTD is missing on a priority model, that is a first-class P0 result and a specific compatibility work item, not a reason to substitute the legacy Qwen3 as the primary benchmark.
+
+**Speculative decoding is part of cache architecture, not a later performance garnish.** Every primary target must be tested with and without its supported drafter. A cache policy must be evaluated against expert routes for attempted, accepted and rejected speculative tokens, not only committed output tokens. Separate drafter state and target verifier state, and measure memory competition with KV U4, prefix caching and parallel slots. See [`07-MODEL-AND-DRAFTER-BASELINES.md`](07-MODEL-AND-DRAFTER-BASELINES.md) and [`08-SPECULATIVE-EXPERT-CACHE-RESEARCH.md`](08-SPECULATIVE-EXPERT-CACHE-RESEARCH.md).
+
 ## 0. Architectural decision
 
 **Build on native OpenVINO GPU Offload-to-Disk (OTD). Do not implement an independent pager unless measurements and APIs require one.**
@@ -36,14 +54,14 @@ Verified in **OpenVINO 2026.4.0**, not only moving `master`:
 
 | Stage | Scope | Deliverable | Gate / go-no-go |
 |---|---|---|---|
-| **P0. Pin + capability audit** | Exact C6 binary/OVMS/OpenVINO/GenAI/GPU driver/model/quantizer SHA; inspect `MOECompressed` eligibility and `OFFLOAD_RATIO` exposure on actual builds | Reproducibility manifest; support matrix for Gemma4, Qwen3-30B-A3B and later Qwen3.6/3.8 | OTD is confirmed by runtime counters; if unsupported, document the precise missing graph/kernel |
-| **P1. Native OTD benchmark** | Qwen3-30B-A3B INT4; resident (if fits) vs ratio 20/40/60/80; C1/C2/C4, prompt 1K/8K/32K, 128/512 output, hot/cold; KV U4 fixed | Baseline JSON/CSV + graphs + exact log/metric provenance | Stable inference, no OOM, no swap storm, no protocol failures |
+| **P0. Pin + capability audit** | Exact C6/OVMS/OpenVINO/GenAI/driver/checkpoint/quant SHA; inspect `MOECompressed` and `OFFLOAD_RATIO` for **Gemma4 26B-A4B, Qwen3.6-35B-A3B, AEON Ornith**; identify MTP/DFlash artifacts and export support; Qwen3.8 reference track | Model/drafter capability matrix and independently reproducible manifests | No presumed OTD/MTP compatibility; each target has verified graph/operator and drafter strategy |
+| **P1. Product-model baseline** | **Gemma4 known-good protocol/concurrency**, **Qwen3.6 and AEON Ornith agentic + OTD** where supported; plain/MTP/DFlash as applicable; resident (if fits) vs ratio 20/40/60/80; C1/C2/C4, cold/warm, KV U4 | Model/drafter-aware benchmark evidence, protocol and agent-loop fixtures; Qwen3-30B only diagnostic fallback | Product models meet correctness and multi-slot gates; missing OTD recorded rather than hidden |
 | **P2. Observability only** | Existing OTD perf counters, host I/O, kernel/profiler timings, GPU use, memory, request TTFT/TPOT; separate warm/cold and read vs transpose vs copy | Per-run OTD dashboard and timeline | Reconcile physical bytes, cache hit rate, storage waits, total end-to-end latency |
-| **P3. Real router traces + offline policy simulator** | Record exact (layer, routed expert, token position, request id / batch boundary), no prompt content; replay actual LRU vs CLOCK/2Q/weighted-CLOCK across bounded arena sizes | Trace format, replay tool, deterministic reference fixtures | Candidate must reduce **miss bytes/critical-path stalls**, not only increase raw hit % |
+| **P3. Real router traces + speculative-aware offline simulator** | Record exact model/layer/expert IDs per **draft and verify** attempt, accepted/rejected position, committed token, session, cache-slot and batch boundaries; no prompt content; replay LRU/CLOCK/2Q/weighted-CLOCK | Versioned trace format, deterministic replay and per-accepted-token traffic accounting | Candidate reduces **bytes / committed token and stall time** in plain, MTP, DFlash, C1/C2/C4 without quality drift |
 | **P4. First low-risk optimization** | Evaluate pre-packed weight/scales/ZP layout vs current runtime transpose + nine-input loading; bounded buffers; optional path, parity reference | Data-layout prototype and A/B artifact | No wrong bytes, reduced wall cost in measured bottleneck, clean fallback |
 | **P5. Policy and I/O experiments** | Candidate cache policy after P3, demand-first read scheduling, single-flight misses, bounded prefetch/staging, Windows overlapped I/O / Linux io_uring or positional fallback | Experimental GPU-plugin implementation with feature flags | P95/P99 latency not worse, read amplification bounded, no starved demand reads |
 | **P6. CPU Experts separately** | Model-matched SIMD kernels on Ryzen AVX2, Xeon 6242 AVX-512 VNNI and Core Ultra 258V AVX2; NUMA + CPU/GPU overlap | Isolated kernel bench and quality report, no OVMS dependency | Admit CPU lane only if latency/energy or capacity actually improves |
-| **P7. C6 candidate integration + reliability** | Use **separate, SHA-pinned OpenVINO candidate build** in an isolated runner; same OVMS API/harness; stage only after gates | Reproducible integration report / reversible feature flags | 30–60 min soak, integrity/fault tests, no Gemma/Qwen tool-call regression |
+| **P7. C6 candidate integration + reliability** | Separate SHA-pinned OpenVINO candidate; preserve canonical Gemma4 tool/protocol, Qwen3.6/Ornith agent loops, multi-slot scheduling; test plain/MTP/DFlash candidates | Reproducible report, reversible flags, drafter compatibility manifest | 30–60 min soak, integrity/fault tests, **no concurrency/tool-call/speculative regression** |
 | **P8. Larger model feasibility** | 50–100B and later Qwen3.6/3.8/GLM variants only if architecture and memory budgets permit | Feasibility matrix, not a promise of TPS | Measured dense/KV footprint and SSD bytes/token within acceptable budget |
 
 **P2 should precede any code that changes cache behavior.** P3 replay must precede P5 policy changes. P6 may run in parallel after P0.
@@ -75,10 +93,10 @@ Source for AVX2 operations: [`ft_n135.h`](https://github.com/sybil-solutions/glm
 ## 5. Test design and mandatory evidence
 
 **Dimensions** (freeze all but one per A/B):
-- Primary checkpoint: Qwen3-30B-A3B INT4 OpenVINO; record exact architecture, weights and plugin version. Gemma4 26B-A4B only after kernel eligibility is checked; Qwen3.6/3.8 is follow-on.
+- **Primary checkpoints:** Qwen3.6-35B-A3B and AEON Ornith for agentic OTD, Gemma 4 26B-A4B for protocol and OVMS slots. Pin each exact quant/export/tokenizer and kernel eligibility. Qwen3.8-Flash-Next tests MTP/mixed-precision behavior; Qwen3-30B-A3B only diagnostic comparator.
 - `OFFLOAD_RATIO`: 0 if resident fits, then 20/40/60/80; never 100; model must genuinely execute OTD.
 - KV: **U4 fixed**; prefix cache enabled as a stable, measured configuration; evaluate scheduler/cache budgets in separate series.
-- Workload: C1/C2/C4; prompt 1K/8K/32K, then larger context when safe; output 128/512; warm/cold; long agent tool-loop fixtures.
+- Workload: C1/C2/C4 (C8 only if memory gate); prompt 1K/8K/32K then larger context when safe; output 128/512; warm/cold; **agent tool-loops**; all supported plain/MTP/DFlash and MTP-batched variants. Include single-slot vs multi-slot efficacy.
 - At least 3 measured repetitions after warmup for screening; for borderline results repeat enough samples for confidence intervals. Pair prompts/seeds/context.
 - Soak: 30–60 minutes; include warm-cache saturation and adversarial expert working sets.
 
@@ -88,10 +106,10 @@ run_id, runtime_sha, openvino_sha, gpu_driver, model_sha, quant
 offload_ratio, context_length, concurrent_requests, prompt_tokens, output_tokens
 ttft_ms, tpot_mean_ms, tpot_p50_ms, tpot_p95_ms, tpot_p99_ms
 prefill_tps, decode_tps, total_tps, max_ram_bytes, swap_bytes
-expert_unique_per_token, expert_cache_hits, expert_cache_misses, evictions
+expert_unique_per_committed_token, draft_expert_accesses, verify_expert_accesses, expert_cache_hits, expert_cache_misses, evictions
 disk_read_bytes, disk_reads, disk_read_p50_us, disk_read_p95_us
 transpose_us, gpu_copy_us, gpu_stall_us, cpu_busy, gpu_busy
-prefix_cache_hit_tokens, io_queue_depth, prefetch_precision
+prefix_cache_hit_tokens, io_queue_depth, prefetch_precision, proposed_tokens, accepted_tokens, rejected_tokens, accepted_per_verify_round, drafter_ms, verifier_ms, nvme_bytes_per_committed_token, drafter_kv_bytes, verifier_kv_bytes
 logits_error_max, kl_divergence, top1_agreement, tool_loop_status
 ```
 Tag unavailable fields as `NOT_EXPOSED`; never fake per-request measurements by scaling global exit-time counters.
@@ -99,7 +117,7 @@ Tag unavailable fields as `NOT_EXPOSED`; never fake per-request measurements by 
 **Quality gates**:
 - Exact top-k/router decisions and tensor checksums, no stale-generation expert.
 - Numerical equivalence to same-kernel resident path within documented tolerance; approximate CPU execution has separate threshold and opt-in.
-- Named/required/auto/parallel tool calls and multi-turn reasoning transitions retain C6 acceptance behavior.
+- Gemma4 named/required/auto/parallel tool calls and multi-turn reasoning transitions retain C6 acceptance behavior; Qwen3.6/Ornith must pass agentic tool loops under plain and supported speculative modes.
 - No OOM, swap storm, missing experts, deadlocks, double-loading, or use-after-eviction.
 - New path passes independent benchmark; production admission requires meaningful end-to-end benefit, not just improvement in a synthetic microbenchmark.
 
@@ -127,11 +145,11 @@ research/cpu-expert-simd-2026                   AVX2/VNNI proof of concept
 integration/c6-otd-candidate-2026               optional last-stage isolated candidate
 ```
 
-**First operational request for a local agent:** produce read-only P0/P1 setup, source/build manifest and run matrix. It must **not** modify C6 or dependencies, must not push local absolute paths, and must not create a new pager before confirming the native OTD behavior.
+**First operational request for a local agent:** produce read-only P0/P1 setup and **Gemma4 + Qwen3.6 + Ornith** model/drafter source/build manifest with test matrix, using Qwen3-30B only as a legacy OTD control. It must **not** modify C6 or dependencies, must not push local absolute paths, and must not create a new pager before confirming the native OTD behavior.
 
 ## 7. Decision record: do not build until the evidence supports it
 
-- If native OTD with safe KV U4 + prefix caching meets capacity and latency goals, **stop at native path** and deliver a deployable profile.
+- If native OTD with safe KV U4 + prefix caching meets **Qwen3.6/Ornith agentic** capacity, latency and concurrency goals, **stop at native path** and deliver a deployable profile; preserve Gemma4 serving/protocol acceptance.
 - If misses dominate, prioritize cache policy + prefetch; if conversion/copy dominates, prioritize packed expert layout; if storage contention dominates, investigate async I/O.
 - If kernel execution dominates, optimize Xe2 compute precision/shape, not disk tier.
 - If CPU overlap is positive on the P720 but not the 258V, expose CPU lane **only** on suitable hardware, not as universal dispatch.

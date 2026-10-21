@@ -37,3 +37,13 @@ This documentation branch contains no runtime, parser, scheduler, tokenizer, XGr
 On 2026-10-21 the complete original Deep Research export was added manually as [`routed-experts-research-original.md`](../../../routed-experts-research-original.md), commit `118148ce450cb9805eb2a193113b6fa77a87b563`. The earlier "missing original" statements above record the publishing state *before* that manual export; **the gap is now resolved**. The original is kept at its manually committed location, unmodified.
 
 **Implementation planning:** [`06-IMPLEMENTATION-ROADMAP.md`](06-IMPLEMENTATION-ROADMAP.md). This supersedes earlier assumptions that a new Expert Residency Manager/LRU must be implemented from scratch: OpenVINO 2026.4.0 already has those components. Runtime C6 stays pinned.
+
+## Model/drafter priority correction (2026-10-21)
+
+**Golden baseline is not old Qwen3-30B-A3B:** use **Gemma 4 26B-A4B** for accepted GEMMAMONSTER protocol, slots and tool calling, **Qwen3.6-35B-A3B plus AEON Ornith** for real agentic model and NVMe OTD, and **Qwen3.8-Flash-Next** for MTP and per-layer mixed-quant memory pressure. The older Qwen3-30B-A3B is a diagnostic reference only.
+
+Available draft candidates are now identified, not hypothetical: [Unsloth Qwen3.6 MTP GGUF](https://huggingface.co/unsloth/Qwen3.6-35B-A3B-MTP-GGUF), [AEON DFlash for Qwen3.6 and Ornith](https://huggingface.co/AEON-7/AEON-DFlash-Qwen3.6-35B-A3B), native Qwen3.8 MTP. C6 recognizes OpenVINO MTP and DFlash formats but cannot directly load an arbitrary GGUF drafter without compatible export. Fine-tune-specific draft acceptance must be measured.
+
+- [07 — Model and drafter baselines](07-MODEL-AND-DRAFTER-BASELINES.md)
+- [08 — Speculative Expert Cache and NVMe study](08-SPECULATIVE-EXPERT-CACHE-RESEARCH.md)
+- [06 — Revised implementation roadmap](06-IMPLEMENTATION-ROADMAP.md)
