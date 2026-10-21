@@ -75,30 +75,28 @@ docker build ../../common/stream_client/ -t rtsp_client
 
 Client parameters:
 ```console
-python client.py --help
-usage: client.py [-h] [--grpc_address GRPC_ADDRESS]
-                      [--input_stream INPUT_STREAM]
-                      [--output_stream OUTPUT_STREAM]
-                      [--model_name MODEL_NAME] [--input_name INPUT_NAME]
-                      [--output_name OUTPUT_NAME]
-                      [--verbose] [--benchmark]
-                      [--limit_stream_duration LIMIT_STREAM_DURATION]
-                      [--limit_frames LIMIT_FRAMES]
+python3 client.py --help
+usage: client.py [-h] [--grpc_address GRPC_ADDRESS] [--ffmpeg_output_width FFMPEG_OUTPUT_WIDTH] [--ffmpeg_output_height FFMPEG_OUTPUT_HEIGHT] [--input_stream INPUT_STREAM] [--output_stream OUTPUT_STREAM]
+                 [--model_name MODEL_NAME] [--input_name INPUT_NAME] [--output_name OUTPUT_NAME] [--verbose] [--benchmark] [--limit_stream_duration LIMIT_STREAM_DURATION] [--limit_frames LIMIT_FRAMES]
 
 options:
   -h, --help            show this help message and exit
   --grpc_address GRPC_ADDRESS
                         Specify url to grpc service
+  --ffmpeg_output_width FFMPEG_OUTPUT_WIDTH
+                        Width of the output video
+  --ffmpeg_output_height FFMPEG_OUTPUT_HEIGHT
+                        Height of the output video
   --input_stream INPUT_STREAM
                         Url of input rtsp stream
   --output_stream OUTPUT_STREAM
                         Url of output rtsp stream
   --model_name MODEL_NAME
-                        Name of the MediaPipe graph (default: resnetMediapipe)
+                        Name of the MediaPipe graph
   --input_name INPUT_NAME
-                        Name of the graph input (default: in)
+                        Name of the graph input
   --output_name OUTPUT_NAME
-                        Name of the graph output (default: out)
+                        Name of the graph output
   --verbose             Should client dump debug information
   --benchmark           Should client collect processing times
   --limit_stream_duration LIMIT_STREAM_DURATION
