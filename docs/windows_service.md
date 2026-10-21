@@ -30,12 +30,6 @@ During the installation, the model repository path will be set in the `OVMS_MODE
 To override the service account explicitly:
 
 ```bat
-install_ovms_service.bat c:\models LocalSystem
-```
-
-or keep the secure default:
-
-```bat
 install_ovms_service.bat c:\models LocalService
 ```
 
