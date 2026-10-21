@@ -17,11 +17,14 @@
 #include <cmath>
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include <gtest/gtest.h>
 #include <openvino/openvino.hpp>
 #include <openvino/opsets/opset1.hpp>
+
+#include "src/embeddings/embeddings_servable.hpp"
 
 namespace ovms {
 // Internal graph builder implemented in embeddings_servable.cpp.
@@ -94,6 +97,69 @@ TEST_P(EmbeddingsMeanPoolingTest, HandlesPaddingAndFullyMaskedRowsWithFp16Interm
 
 INSTANTIATE_TEST_SUITE_P(SequenceLengths, EmbeddingsMeanPoolingTest,
     ::testing::Values(1, 7, 128, 8192));
+
+class TestableEmbeddingsServable : public ovms::EmbeddingsServable {
+public:
+    using EmbeddingsServable::applyPrePostProcessing;
+    using EmbeddingsServable::EmbeddingsServable;
+};
+
+class EmbeddingsStaticMeanPoolingTest : public ::testing::TestWithParam<std::string> {};
+
+TEST_P(EmbeddingsStaticMeanPoolingTest, HandlesPaddingAndFullyMaskedRowsWithFp16Intermediates) {
+    constexpr size_t batchSize = 4;
+    constexpr size_t sequenceLength = 8192;
+    constexpr size_t hiddenSize = 4;
+    const auto& device = GetParam();
+    TestableEmbeddingsServable servable("", device, "{}", "",
+        mediapipe::EmbeddingsCalculatorOVOptions_Pooling_MEAN, false);
+    // SidepacketServable::initialize normally sets this before preprocessing.
+    servable.targetDevice = device;
+
+    auto hidden = std::make_shared<ov::op::v0::Parameter>(ov::element::f32,
+        ov::Shape{batchSize, sequenceLength, hiddenSize});
+    auto mask = std::make_shared<ov::op::v0::Parameter>(ov::element::i64,
+        ov::Shape{batchSize, sequenceLength});
+    mask->output(0).get_tensor().set_names({"attention_mask"});
+    auto model = std::make_shared<ov::Model>(ov::OutputVector{hidden}, ov::ParameterVector{hidden, mask});
+    ASSERT_FALSE(model->is_dynamic());
+
+    ov::Core core;
+    ov::AnyMap properties;
+    model = servable.applyPrePostProcessing(core, model, properties);
+    EXPECT_FALSE(servable.isNpuPostprocessingRequired());
+    ASSERT_EQ(model->output().get_shape(), (ov::Shape{batchSize, hiddenSize}));
+    roundReductionOutputsToFp16(model);
+
+    ov::Tensor hiddenTensor(ov::element::f32, ov::Shape{batchSize, sequenceLength, hiddenSize});
+    ov::Tensor maskTensor(ov::element::i64, ov::Shape{batchSize, sequenceLength});
+    const std::vector<float> values{80.0f, -96.0f, 3.0f, 0.125f};
+    for (size_t batch = 0; batch < batchSize; ++batch) {
+        for (size_t token = 0; token < sequenceLength; ++token) {
+            const bool valid = batch == 0 || (batch == 1 && token < sequenceLength / 2) ||
+                               (batch == 2 && token >= sequenceLength / 2);
+            maskTensor.data<int64_t>()[batch * sequenceLength + token] = valid;
+            for (size_t dim = 0; dim < hiddenSize; ++dim) {
+                hiddenTensor.data<float>()[(batch * sequenceLength + token) * hiddenSize + dim] =
+                    valid ? values[dim] : 3000.0f;
+            }
+        }
+    }
+
+    ov::TensorVector outputs{ov::Tensor(ov::element::f32, ov::Shape{batchSize, hiddenSize})};
+    // Evaluate the graph directly: GPU/NPU plugins are not needed for this regression.
+    ASSERT_TRUE(model->evaluate(outputs, ov::TensorVector{hiddenTensor, maskTensor}));
+    for (size_t batch = 0; batch < batchSize; ++batch) {
+        for (size_t dim = 0; dim < hiddenSize; ++dim) {
+            const float actual = outputs[0].data<float>()[batch * hiddenSize + dim];
+            EXPECT_TRUE(std::isfinite(actual));
+            EXPECT_NEAR(actual, batch == 3 ? 0.0f : values[dim], 0.1f);
+        }
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(Devices, EmbeddingsStaticMeanPoolingTest,
+    ::testing::Values("CPU", "GPU", "NPU"));
 
 TEST(EmbeddingsMeanPooling, MatchesDoublePrecisionMaskedReference) {
     constexpr size_t batchSize = 3;
