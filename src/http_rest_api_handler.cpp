@@ -1064,7 +1064,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
 
 Status HttpRestApiHandler::getRealtimeCallSpeechModel(const std::string& modelName, SttPipelineHandle& speechModel) {
 #if (MEDIAPIPE_DISABLE == 0)
-    auto status = modelManager.getMediapipeFactory().getSttPipeline(modelName, speechModel);
+    auto status = modelManager.getSttPipeline(modelName, speechModel);
     if (!status.ok())
         SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected realtime call, {} is not a served speech-to-text graph: {}", modelName, status.string());
     return status;
