@@ -161,6 +161,26 @@ TEST(VoxtralAudioAdapterTest, ReportsGenerationFailureWithoutFinalCallback) {
     EXPECT_TRUE(stream->isCompleted());
 }
 
+TEST(VoxtralAudioAdapterTest, ContainsExceptionsFromErrorCallback) {
+    auto state = std::make_shared<FakeInferenceState>();
+    auto adapter = createAdapter(state);
+    size_t errorCallbackCount = 0;
+    auto stream = adapter.createStream({},
+        [](const std::string&) {
+            throw std::runtime_error("Transcript transport disconnected");
+        },
+        [&errorCallbackCount](std::exception_ptr error) {
+            ++errorCallbackCount;
+            EXPECT_THROW(std::rethrow_exception(error), std::runtime_error);
+            throw std::runtime_error("Error transport disconnected");
+        });
+
+    stream->close();
+
+    EXPECT_EQ(errorCallbackCount, 1u);
+    EXPECT_TRUE(stream->isCompleted());
+}
+
 TEST(VoxtralAudioAdapterTest, RejectsFramesWhenQueueIsFull) {
     constexpr size_t maxQueuedFrames = 1500;
     auto state = std::make_shared<FakeInferenceState>();

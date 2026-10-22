@@ -190,8 +190,15 @@ void VoxtralAudioAdapter::Stream::run() {
         if (finalCallback_)
             finalCallback_(transcript);
     } catch (...) {
-        if (errorCallback_)
-            errorCallback_(std::current_exception());
+        if (errorCallback_) {
+            try {
+                errorCallback_(std::current_exception());
+            } catch (const std::exception& e) {
+                SPDLOG_LOGGER_ERROR(webrtc_logger, "Voxtral error callback failed: {}", e.what());
+            } catch (...) {
+                SPDLOG_LOGGER_ERROR(webrtc_logger, "Voxtral error callback failed with an unknown exception");
+            }
+        }
     }
     completed_ = true;
 }

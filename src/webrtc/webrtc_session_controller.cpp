@@ -420,6 +420,11 @@ void WebRtcSessionController::Session::transcribeUtterance(AudioChunk utterance)
 }
 
 void WebRtcSessionController::Session::shutdown() {
+    {
+        std::lock_guard<std::mutex> sendLock(transcriptSendMutex);
+        std::lock_guard<std::mutex> lock(mutex);
+        transcriptChannel.reset();
+    }
     peer.close();
     std::vector<std::shared_ptr<VoxtralAudioAdapter::Stream>> streams;
     {
@@ -452,7 +457,12 @@ void WebRtcSessionController::Session::sendEvent(const std::string& message) {
         return;
     }
     SPDLOG_LOGGER_DEBUG(webrtc_logger, "Sending transcript message: {}", message);
-    channel->send(message);
+    try {
+        // The transport can disconnect after isOpen() has been checked.
+        channel->send(message);
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_ERROR(webrtc_logger, "Failed to send realtime event for session {}: {}", id, e.what());
+    }
 }
 
 AudioChunk WebRtcSessionController::Session::decodeAudioFrame(const rtc::binary& data, const rtc::FrameInfo& info) {
