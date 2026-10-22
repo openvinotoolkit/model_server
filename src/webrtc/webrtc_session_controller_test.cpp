@@ -171,7 +171,7 @@ SttPipelineHandle loadSpeechModel(const std::string& modelPath) {
 
 void streamAudioOverWebRtc(WebRtcSessionController& controller, const SttPipelineHandle& speechModel,
     const std::vector<float>& samples, bool commitAudio, const std::string& finalMarker,
-    std::vector<std::string>& messages) {
+    std::vector<std::string>& messages, size_t commitCount = 1) {
     rtc::Configuration configuration;
     configuration.portRangeBegin = ClientUdpPort;
     configuration.portRangeEnd = ClientUdpPort;
@@ -186,7 +186,7 @@ void streamAudioOverWebRtc(WebRtcSessionController& controller, const SttPipelin
     std::mutex mutex;
     std::condition_variable condition;
     bool gatheringComplete = false;
-    bool finalReceived = false;
+    size_t finalReceivedCount = 0;
     offerer->onGatheringStateChange([&](rtc::PeerConnection::GatheringState state) {
         if (state != rtc::PeerConnection::GatheringState::Complete)
             return;
@@ -201,7 +201,7 @@ void streamAudioOverWebRtc(WebRtcSessionController& controller, const SttPipelin
         std::lock_guard<std::mutex> lock(mutex);
         messages.push_back(text);
         if (text.find(finalMarker) != std::string::npos) {
-            finalReceived = true;
+            ++finalReceivedCount;
             condition.notify_all();
         }
     });
@@ -225,27 +225,33 @@ void streamAudioOverWebRtc(WebRtcSessionController& controller, const SttPipelin
     ASSERT_TRUE(channel->isOpen());
 
     OpusAudioCodec codec(TestSampleRate, 2);
-    for (size_t offset = 0; offset < samples.size(); offset += TestFrameSamples) {
-        std::vector<float> stereo(TestFrameSamples * 2, 0.0f);
-        for (size_t index = 0; index < std::min(TestFrameSamples, samples.size() - offset); ++index) {
-            stereo[2 * index] = samples[offset + index];
-            stereo[2 * index + 1] = samples[offset + index];
+    const size_t audioPasses = commitAudio ? commitCount : 1;
+    for (size_t pass = 0; pass < audioPasses; ++pass) {
+        for (size_t offset = 0; offset < samples.size(); offset += TestFrameSamples) {
+            std::vector<float> stereo(TestFrameSamples * 2, 0.0f);
+            for (size_t index = 0; index < std::min(TestFrameSamples, samples.size() - offset); ++index) {
+                stereo[2 * index] = samples[offset + index];
+                stereo[2 * index + 1] = samples[offset + index];
+            }
+            const auto encoded = codec.encode(stereo);
+            rtc::binary packet(encoded.size());
+            for (size_t index = 0; index < encoded.size(); ++index)
+                packet[index] = static_cast<std::byte>(encoded[index]);
+            rtc::FrameInfo info(static_cast<uint32_t>(pass * samples.size() + offset));
+            info.payloadType = 111;
+            track->sendFrame(std::move(packet), info);
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
         }
-        const auto encoded = codec.encode(stereo);
-        rtc::binary packet(encoded.size());
-        for (size_t index = 0; index < encoded.size(); ++index)
-            packet[index] = static_cast<std::byte>(encoded[index]);
-        rtc::FrameInfo info(static_cast<uint32_t>(offset));
-        info.payloadType = 111;
-        track->sendFrame(std::move(packet), info);
-        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        if (commitAudio)
+            channel->send(std::string(R"({"type":"input_audio_buffer.commit"})"));
     }
-    if (commitAudio)
-        channel->send(std::string(R"({"type":"input_audio_buffer.commit"})"));
 
     {
         std::unique_lock<std::mutex> lock(mutex);
-        EXPECT_TRUE(condition.wait_for(lock, std::chrono::seconds(60), [&] { return finalReceived; }));
+        const size_t expectedFinals = commitAudio ? commitCount : 1;
+        EXPECT_TRUE(condition.wait_for(lock, std::chrono::seconds(60), [&] {
+            return finalReceivedCount >= expectedFinals;
+        }));
     }
     EXPECT_TRUE(controller.removeSession(result.sessionId));
     offerer->close();
@@ -271,6 +277,48 @@ TEST(WebRtcSessionControllerTest, VoxtralTranscribesWebRtcAudioWithoutSilenceDet
     std::vector<std::string> messages;
     ASSERT_NO_FATAL_FAILURE(streamAudioOverWebRtc(controller, loadSpeechModel(modelPath), samples, false,
         "\"type\":\"conversation.item.input_audio_transcription.delta\"", messages));
+    EXPECT_FALSE(containsMessage(messages, "\"type\":\"error\""));
+}
+
+TEST(WebRtcSessionControllerTest, VoxtralCommitCreatesIndependentTranscriptItems) {
+    const char* modelPath = std::getenv("OVMS_VOXTRAL_MODEL_PATH");
+    const char* audioPath = std::getenv("OVMS_VOXTRAL_TEST_WAV");
+    if (!modelPath || !audioPath)
+        GTEST_SKIP() << "Set OVMS_VOXTRAL_MODEL_PATH and OVMS_VOXTRAL_TEST_WAV to run the real-model test";
+    const auto samples = readTestAudio(audioPath);
+    ASSERT_FALSE(samples.empty());
+
+    WebRtcSessionController controller;
+    std::vector<std::string> messages;
+    ASSERT_NO_FATAL_FAILURE(streamAudioOverWebRtc(controller, loadSpeechModel(modelPath), samples, true,
+        "\"type\":\"conversation.item.input_audio_transcription.completed\"", messages, 2));
+
+    std::vector<std::string> completedItemIds;
+    size_t committedCount = 0;
+    for (const auto& message : messages) {
+        if (message.find("\"type\":\"input_audio_buffer.committed\"") != std::string::npos)
+            ++committedCount;
+        if (message.find("\"type\":\"conversation.item.input_audio_transcription.completed\"") == std::string::npos)
+            continue;
+        const std::string key = "\"item_id\":\"";
+        const size_t itemStart = message.find(key);
+        ASSERT_NE(itemStart, std::string::npos) << message;
+        const size_t valueStart = itemStart + key.size();
+        const size_t valueEnd = message.find('"', valueStart);
+        ASSERT_NE(valueEnd, std::string::npos) << message;
+        completedItemIds.push_back(message.substr(valueStart, valueEnd - valueStart));
+    }
+    EXPECT_GE(committedCount, 2u);
+    ASSERT_EQ(completedItemIds.size(), 2u);
+    EXPECT_NE(completedItemIds[0], completedItemIds[1]);
+    for (const auto& itemId : completedItemIds) {
+        const std::string itemIdField = "\"item_id\":\"" + itemId + "\"";
+        EXPECT_TRUE(std::any_of(messages.begin(), messages.end(), [&itemIdField](const std::string& message) {
+            return message.find("\"type\":\"conversation.item.input_audio_transcription.delta\"") != std::string::npos &&
+                   message.find(itemIdField) != std::string::npos;
+        })) << "No delta belonged to completed item " << itemId;
+    }
+    EXPECT_TRUE(containsMessage(messages, "\"type\":\"session.created\""));
     EXPECT_FALSE(containsMessage(messages, "\"type\":\"error\""));
 }
 

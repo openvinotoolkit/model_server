@@ -368,6 +368,10 @@ void WebRtcSessionController::Session::commitAudio() {
         committedStream = voxtralStream;
         committedItemId = currentItemId;
     }
+    if (!committedStream || !committedStream->hasAudio()) {
+        sendEvent(errorEvent("invalid_request_error", "Error committing input audio buffer: buffer is empty"));
+        return;
+    }
     sendEvent(audioCommittedEvent(committedItemId));
     // New audio goes to a fresh item while the committed stream drains and emits its completed event.
     startVoxtralStream();

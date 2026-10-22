@@ -17,6 +17,7 @@
 
 #include "../config.hpp"
 #include "../http_rest_api_handler.hpp"
+#include "../audio/speech_to_text/stt_pipeline_handle.hpp"
 #include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
 #include "src/servable_management/modelmanager.hpp"
@@ -898,8 +899,9 @@ TEST_F(ConfigStatus, RealtimeCallEndpointsRequireApiKey) {
     }
 
     ovms::HttpRequestComponents components;
-    ASSERT_EQ(handler.parseRequestComponents(components, "POST", "/v1/realtime/calls/1/hangup"), ovms::StatusCode::OK);
-    components.headers = {{"Authorization", "Bearer ABC"}};
+    ASSERT_EQ(handler.parseRequestComponents(components, "POST", "/v1/realtime/calls/1/hangup",
+                  {{"Authorization", "Bearer ABC"}}),
+        ovms::StatusCode::OK);
     std::string response;
     ovms::HttpResponseComponents responseComponents;
     EXPECT_EQ(handler.dispatchToProcessor("/v1/realtime/calls/1/hangup", "", &response, components, responseComponents, nullptr, nullptr),
@@ -921,12 +923,15 @@ TEST_F(ConfigStatus, RealtimeCallRequiresMultipartSessionModel) {
         ovms::HttpRequestComponents components;
         ASSERT_EQ(handler.parseRequestComponents(components, "POST", path, headers), ovms::StatusCode::OK);
         EXPECT_EQ(handler.dispatchToProcessor(path, "v=0\r\n", &response, components, responseComponents, nullptr, nullptr),
-            ovms::StatusCode::JSON_INVALID);
-        EXPECT_NE(response.find("multipart/form-data"), std::string::npos);
+            ovms::StatusCode::REST_INVALID_REQUEST);
     }
     const std::vector<std::pair<std::string, ovms::StatusCode>> sessions = {
-        {"", ovms::StatusCode::JSON_INVALID},
-        {R"({"type":"transcription"})", ovms::StatusCode::JSON_INVALID},
+        {"", ovms::StatusCode::REST_INVALID_REQUEST},
+        {"not JSON", ovms::StatusCode::REST_INVALID_REQUEST},
+        {"[]", ovms::StatusCode::REST_INVALID_REQUEST},
+        {R"({"type":"transcription"})", ovms::StatusCode::REST_INVALID_REQUEST},
+        {R"({"model":42})", ovms::StatusCode::REST_INVALID_REQUEST},
+        {R"({"audio":{"input":{"transcription":{"model":""}}},"model":"dummy"})", ovms::StatusCode::REST_INVALID_REQUEST},
         {R"({"type":"transcription","audio":{"input":{"transcription":{"model":"missing"}}}})", ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING},
         {R"({"type":"realtime","model":"dummy"})", ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING}};
     for (const auto& [session, expectedStatus] : sessions) {
@@ -942,3 +947,123 @@ TEST_F(ConfigStatus, RealtimeCallRequiresMultipartSessionModel) {
             << session;
     }
 }
+
+TEST_F(ConfigStatus, RealtimeCallValidatesSignaling) {
+    TestHelper1 t(*this, R"({"model_config_list":[]})");
+    auto handler = ovms::HttpRestApiHandler(ovms::Server::instance(), 10);
+    const std::string path = "/v1/realtime/calls";
+    for (const std::string contentType : {"", "application/json", "application/sdp-invalid", "text/plain"}) {
+        SCOPED_TRACE(contentType);
+        std::unordered_map<std::string, std::string> headers{{"content-type", contentType}};
+        ovms::HttpRequestComponents components;
+        ASSERT_EQ(handler.parseRequestComponents(components, "POST", path, headers), ovms::StatusCode::OK);
+        std::string response;
+        ovms::HttpResponseComponents responseComponents;
+        auto status = handler.dispatchToProcessor(path, "v=0\r\n", &response, components, responseComponents, nullptr, nullptr);
+        EXPECT_EQ(status, ovms::StatusCode::REST_INVALID_REQUEST);
+        EXPECT_NE(status.string().find("Content-Type"), std::string::npos);
+        EXPECT_EQ(responseComponents.contentType, ovms::ContentType::JSON);
+        EXPECT_FALSE(responseComponents.location.has_value());
+    }
+    for (const std::string contentType : {"application/sdp", "Application/SDP; charset=utf-8", " application/sdp \t; charset=utf-8"}) {
+        for (const std::string body : {"", "not SDP", "{\"sdp\":\"v=0\"}"}) {
+            SCOPED_TRACE(contentType + ": " + body);
+            std::unordered_map<std::string, std::string> headers{{"content-type", contentType}};
+            ovms::HttpRequestComponents components;
+            ASSERT_EQ(handler.parseRequestComponents(components, "POST", path, headers), ovms::StatusCode::OK);
+            std::string response;
+            ovms::HttpResponseComponents responseComponents;
+            auto status = handler.dispatchToProcessor(path, body, &response, components, responseComponents, nullptr, nullptr);
+            EXPECT_EQ(status, ovms::StatusCode::REST_INVALID_REQUEST);
+            EXPECT_NE(status.string().find("SDP offer"), std::string::npos);
+        }
+    }
+
+    std::unordered_map<std::string, std::string> headers{{"content-type", "multipart/form-data; boundary=x"}};
+    ovms::HttpRequestComponents components;
+    ASSERT_EQ(handler.parseRequestComponents(components, "POST", path, headers), ovms::StatusCode::OK);
+    std::string response;
+    ovms::HttpResponseComponents responseComponents;
+    EXPECT_EQ(handler.dispatchToProcessor(path, "", &response, components, responseComponents, nullptr, nullptr),
+        ovms::StatusCode::REST_INVALID_REQUEST);
+    auto parser = std::make_shared<MockedMultiPartParser>();
+    EXPECT_CALL(*parser, parse()).WillOnce(::testing::Return(false));
+    EXPECT_EQ(handler.dispatchToProcessor(path, "", &response, components, responseComponents, nullptr, parser),
+        ovms::StatusCode::REST_INVALID_REQUEST);
+    EXPECT_CALL(*parser, parse()).WillOnce(::testing::Return(true));
+    EXPECT_CALL(*parser, getFieldByName("sdp")).WillOnce(::testing::Return("not SDP"));
+    auto status = handler.dispatchToProcessor(path, "", &response, components, responseComponents, nullptr, parser);
+    EXPECT_EQ(status, ovms::StatusCode::REST_INVALID_REQUEST);
+    EXPECT_NE(status.string().find("SDP offer"), std::string::npos);
+}
+
+TEST_F(ConfigStatus, RealtimeCallPlainSdpAuthentication) {
+    TestHelper1 t(*this, R"({"model_config_list":[]})");
+    auto handler = ovms::HttpRestApiHandler(ovms::Server::instance(), 10, "ABC");
+    const std::string path = "/v1/realtime/calls";
+    for (const std::string token : {"", "Bearer wrong", "Bearer ABC"}) {
+        std::unordered_map<std::string, std::string> headers{{"content-type", "application/sdp"}, {"authorization", token}};
+        ovms::HttpRequestComponents components;
+        ASSERT_EQ(handler.parseRequestComponents(components, "POST", path, headers), ovms::StatusCode::OK);
+        std::string response;
+        ovms::HttpResponseComponents responseComponents;
+        auto status = handler.dispatchToProcessor(path, "v=0\r\n", &response, components, responseComponents, nullptr, nullptr);
+        EXPECT_EQ(status, token == "Bearer ABC" ? ovms::StatusCode::REST_INVALID_REQUEST : ovms::StatusCode::UNAUTHORIZED);
+        if (token == "Bearer ABC") {
+            EXPECT_NE(status.string().find("No speech-to-text graph"), std::string::npos);
+        }
+    }
+}
+
+#if (MEDIAPIPE_DISABLE == 0)
+TEST_F(ConfigStatus, RealtimeCallIgnoresNonSttGraphs) {
+    std::string contents;
+    auto fs = std::make_shared<ovms::LocalFileSystem>();
+    ASSERT_EQ(fs->readTextFile(getGenericFullPathForSrcTest("/ovms/src/test/mediapipe/config_mediapipe_add_adapter_full.json"), &contents),
+        ovms::StatusCode::OK);
+    TestHelper1 t(*this, contents.c_str());
+    auto handler = ovms::HttpRestApiHandler(ovms::Server::instance(), 10);
+    ovms::SttPipelineHandle speechModel;
+    auto status = handler.getRealtimeCallSpeechModel("", speechModel);
+    EXPECT_EQ(status, ovms::StatusCode::REST_INVALID_REQUEST);
+    EXPECT_NE(status.string().find("No speech-to-text graph"), std::string::npos);
+    EXPECT_FALSE(speechModel.pipeline);
+}
+
+TEST_F(ConfigStatus, RealtimeCallSelectsSoleAvailableSttGraph) {
+    const char* config = R"({
+        "model_config_list": [],
+        "mediapipe_config_list": [{
+            "name": "speech2text",
+            "base_path": "/ovms/src/test/audio/",
+            "graph_path": "/ovms/src/test/audio/graph_stt.pbtxt"
+        }]
+    })";
+    TestHelper1 t(*this, config);
+    auto handler = ovms::HttpRestApiHandler(ovms::Server::instance(), 10);
+    ovms::SttPipelineHandle namedModel;
+    ASSERT_EQ(handler.getRealtimeCallSpeechModel("speech2text", namedModel), ovms::StatusCode::OK);
+    ASSERT_TRUE(namedModel.pipeline);
+    ovms::SttPipelineHandle selectedModel;
+    ASSERT_EQ(handler.getRealtimeCallSpeechModel("", selectedModel), ovms::StatusCode::OK);
+    EXPECT_EQ(selectedModel.pipeline, namedModel.pipeline);
+    EXPECT_EQ(selectedModel.pipelineMutex, namedModel.pipelineMutex);
+    EXPECT_EQ(selectedModel.modelsPath, namedModel.modelsPath);
+}
+
+TEST_F(ConfigStatus, RealtimeCallRejectsAmbiguousSttGraphs) {
+    std::string contents;
+    auto fs = std::make_shared<ovms::LocalFileSystem>();
+    ASSERT_EQ(fs->readTextFile(getGenericFullPathForSrcTest("/ovms/src/test/audio/config_stt.json"), &contents),
+        ovms::StatusCode::OK);
+    TestHelper1 t(*this, contents.c_str());
+    auto handler = ovms::HttpRestApiHandler(ovms::Server::instance(), 10);
+    ovms::SttPipelineHandle speechModel;
+    ASSERT_EQ(handler.getRealtimeCallSpeechModel("speech2text", speechModel), ovms::StatusCode::OK);
+    ASSERT_EQ(handler.getRealtimeCallSpeechModel("speech2textWordTimestamps", speechModel), ovms::StatusCode::OK);
+    auto status = handler.getRealtimeCallSpeechModel("", speechModel);
+    EXPECT_EQ(status, ovms::StatusCode::REST_INVALID_REQUEST);
+    EXPECT_NE(status.string().find("Multiple speech-to-text graphs"), std::string::npos);
+    EXPECT_NE(status.string().find("multipart/form-data"), std::string::npos);
+}
+#endif

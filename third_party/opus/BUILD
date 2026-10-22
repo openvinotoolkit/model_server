@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+load("@bazel_skylib//rules:select_file.bzl", "select_file")
 load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
 
 package(default_visibility = ["//visibility:public"])
@@ -37,13 +38,23 @@ cmake(
         "OPUS_INSTALL_CMAKE_CONFIG_MODULE": "OFF",
         "OPUS_ENABLE_FLOAT_API": "ON",
     },
-    out_static_libs = ["libopus.a"],
+    out_static_libs = ["libopus.pic.a"],
+    # rules_foreign_cc identifies PIC archives by their .pic.a suffix.
+    postfix_script = 'mv "$$INSTALLDIR$$/lib/libopus.a" "$$INSTALLDIR$$/lib/libopus.pic.a"',
     out_include_dir = "include",
     tags = ["requires-network"],
 )
 
+select_file(
+    name = "opus_archive",
+    srcs = ":opus_cmake",
+    subpath = "lib/libopus.pic.a",
+)
+
 cc_library(
     name = "libopus",
+    # Native ownership keeps this archive in cc_shared_library's link graph.
+    srcs = [":opus_archive"],
     deps = [":opus_cmake"],
     linkopts = ["-lm"],
 )

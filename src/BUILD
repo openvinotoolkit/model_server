@@ -60,6 +60,8 @@ cc_shared_library(
         "@com_github_google_crc32c//:__subpackages__",
         "@com_github_googleapis_google_cloud_cpp_common//:__subpackages__",
         "@com_github_libevent_libevent//:__subpackages__",
+        "@libdatachannel//:__subpackages__",
+        "@libopus//:__subpackages__",
         "@com_google_protobuf//:__subpackages__",
         "@com_github_tencent_rapidjson//:__subpackages__",
         "@com_google_absl//:__subpackages__",

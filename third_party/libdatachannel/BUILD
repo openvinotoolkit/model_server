@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+load("@bazel_skylib//rules:select_file.bzl", "select_file")
 load("@rules_foreign_cc//foreign_cc:cmake.bzl", "cmake")
 
 package(default_visibility = ["//visibility:public"])
@@ -42,17 +43,39 @@ cmake(
         "NO_TESTS": "ON",
     },
     out_static_libs = [
-        "libdatachannel.a",
-        "libusrsctp.a",
-        "libjuice.a",
-        "libsrtp2.a",
+        "libdatachannel.pic.a",
+        "libusrsctp.pic.a",
+        "libjuice.pic.a",
+        "libsrtp2.pic.a",
     ],
+    # rules_foreign_cc identifies PIC archives by their .pic.a suffix.
+    postfix_script = """
+        for lib in datachannel usrsctp juice srtp2; do
+            mv "$$INSTALLDIR$$/lib/lib$lib.a" "$$INSTALLDIR$$/lib/lib$lib.pic.a"
+        done
+    """,
     out_include_dir = "include",
     tags = ["requires-network"],
 )
 
+[
+    select_file(
+        name = lib + "_archive",
+        srcs = ":libdatachannel_cmake",
+        subpath = "lib/lib" + lib + ".pic.a",
+    )
+    for lib in ["datachannel", "usrsctp", "juice", "srtp2"]
+]
+
 cc_library(
     name = "libdatachannel",
+    # Native ownership keeps these archives in cc_shared_library's link graph.
+    srcs = [
+        ":datachannel_archive",
+        ":usrsctp_archive",
+        ":juice_archive",
+        ":srtp2_archive",
+    ],
     deps = [":libdatachannel_cmake"],
     linkopts = [
         "-lssl",

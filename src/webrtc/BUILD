@@ -132,6 +132,16 @@ cc_test(
 )
 
 cc_test(
+    name = "voxtral_audio_adapter_test",
+    srcs = ["voxtral_audio_adapter_test.cpp"],
+    linkstatic = 1,
+    deps = [
+        ":voxtral_audio_adapter",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "audio_utterance_buffer_test",
     srcs = ["audio_utterance_buffer_test.cpp"],
     linkstatic = 1,

@@ -172,10 +172,11 @@ public:
     Status processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::optional<int>& inferenceHeaderContentLength);
     Status processMetrics(const HttpRequestComponents& request_components, HttpResponseComponents& response_components, std::string& response, const std::string& request_body);
-    /// OpenAI Realtime API compatible WebRTC call: multipart "sdp" offer and "session" configuration naming the
-    /// served speech-to-text graph; the SDP answer (with ICE candidates) is returned.
-    Status processRealtimeCall(const HttpRequestComponents& request_components, std::string& response,
+    /// OpenAI Realtime WebRTC call: multipart "sdp" and "session" naming the speech-to-text graph,
+    /// or application/sdp using the sole available speech-to-text graph. Returns an SDP answer with ICE candidates.
+    Status processRealtimeCall(const HttpRequestComponents& request_components, const std::string& request_body, std::string& response,
         const std::shared_ptr<MultiPartParser>& multiPartParser, HttpResponseComponents& response_components);
+    /// Resolves a named speech-to-text graph, or the sole available one when modelName is empty.
     Status getRealtimeCallSpeechModel(const std::string& modelName, SttPipelineHandle& speechModel);
     Status processRealtimeHangup(const HttpRequestComponents& request_components, std::string& response);
     Status processOptions(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);

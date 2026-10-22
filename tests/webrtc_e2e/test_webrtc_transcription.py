@@ -174,6 +174,28 @@ class AudioClient:
         await self.pc.close()
 
 
+class ControlClient:
+    """WebRTC peer with a negotiated audio section but no media source."""
+
+    def __init__(self):
+        self.pc = RTCPeerConnection()
+        self.pc.addTransceiver("audio", direction="sendonly")
+        self.channel = self.pc.createDataChannel("oai-events")
+        self.channel_open = asyncio.Event()
+        self.collector = TranscriptCollector()
+
+        @self.channel.on("open")
+        def _on_open():
+            self.channel_open.set()
+
+        @self.channel.on("message")
+        def _on_message(message):
+            self.collector.on_message(message)
+
+    async def close(self):
+        await self.pc.close()
+
+
 def candidate_fields(candidate):
     fields = candidate.strip()
     if fields.startswith("a="):
@@ -218,7 +240,7 @@ async def run_openai_protocol(calls_url, auth_token, http_session, ovms_server=F
     """Shared flow of the OpenAI Realtime API and the OVMS OpenAI compatible endpoint.
 
     With session_config the offer is posted as the OpenAI unified multipart form (sdp + session fields),
-    otherwise as a plain application/sdp body configured by the ephemeral token.
+    otherwise as a plain application/sdp body (OpenAI uses an ephemeral token; OVMS selects its sole STT graph).
     """
     client = AudioClient("oai-events")
     try:
@@ -234,6 +256,7 @@ async def run_openai_protocol(calls_url, auth_token, http_session, ovms_server=F
         response = await asyncio.to_thread(
             http_session.post, calls_url, data=None if form else offer_sdp, files=form, headers=headers, timeout=30)
         assert response.ok, f"Call request failed: {response.status_code} {response.text}"
+        assert response.headers["Content-Type"].split(";")[0] == "application/sdp"
         answer_sdp = response.text
         assert answer_sdp.startswith("v=0"), f"Expected SDP answer, got: {answer_sdp[:200]!r}"
         assert "a=candidate:" in answer_sdp, "SDP answer must embed ICE candidates (client does not trickle)"
@@ -252,6 +275,39 @@ async def run_openai_protocol(calls_url, auth_token, http_session, ovms_server=F
         assert completed, f"No '{COMPLETED_EVENT}' received; events: {client.collector.events}"
         assert_transcript(" ".join(client.collector.completed), client.collector)
         return client.collector
+    finally:
+        await client.close()
+
+
+async def create_ovms_control_call():
+    client = ControlClient()
+    try:
+        await client.pc.setLocalDescription(await client.pc.createOffer())
+        form = {
+            "sdp": (None, client.pc.localDescription.sdp),
+            "session": (None, json.dumps(transcription_session(OVMS_MODEL))),
+        }
+        headers = {"Authorization": f"******"} if OVMS_API_KEY else {}
+        response = await asyncio.to_thread(
+            ovms_http().post, f"{OVMS_URL}/v1/realtime/calls", files=form, headers=headers, timeout=30)
+        assert response.ok, f"Call request failed: {response.status_code} {response.text}"
+        client.collector.call_location = response.headers.get("Location")
+        await client.pc.setRemoteDescription(RTCSessionDescription(sdp=response.text, type="answer"))
+        await asyncio.wait_for(client.channel_open.wait(), timeout=CONNECT_TIMEOUT_S)
+        return client
+    except Exception:
+        await client.close()
+        raise
+
+
+async def close_ovms_control_call(client):
+    try:
+        location = client.collector.call_location
+        if location:
+            headers = {"Authorization": f"******"} if OVMS_API_KEY else {}
+            response = await asyncio.to_thread(
+                ovms_http().post, f"{OVMS_URL}{location}/hangup", headers=headers, timeout=30)
+            assert response.ok, f"Hangup failed: {response.status_code} {response.text}"
     finally:
         await client.close()
 
@@ -275,12 +331,94 @@ async def test_openai_realtime_transcription():
 
 @requires_ovms
 @pytest.mark.asyncio
-async def test_ovms_openai_compatible_transcription():
+@pytest.mark.parametrize("signaling", ["multipart", "plain_sdp"])
+async def test_ovms_openai_compatible_transcription(signaling):
     collector = await run_openai_protocol(f"{OVMS_URL}/v1/realtime/calls", OVMS_API_KEY, ovms_http(), ovms_server=True,
-                                          session_config=transcription_session(OVMS_MODEL))
+                                          session_config=transcription_session(OVMS_MODEL) if signaling == "multipart" else None)
     item_ids = {event.get("item_id") for event in collector.events if event.get("type") == COMPLETED_EVENT}
     assert all(item_ids), f"Completed events must carry item_id: {collector.events}"
+    delta_events = [event for event in collector.events if event.get("type") == DELTA_EVENT]
+    committed_events = [event for event in collector.events if event.get("type") == "input_audio_buffer.committed"]
+    assert any(event.get("type") == "session.created" for event in collector.events), collector.events
+    assert delta_events, f"No transcription delta received: {collector.events}"
+    assert committed_events, f"No input_audio_buffer.committed received: {collector.events}"
+    completed_item_ids = {event.get("item_id") for event in collector.events if event.get("type") == COMPLETED_EVENT}
+    delta_item_ids = {event.get("item_id") for event in delta_events}
+    committed_item_ids = {event.get("item_id") for event in committed_events}
+    assert completed_item_ids == delta_item_ids == committed_item_ids, (
+        f"Transcription events refer to different items: {collector.events}")
     location = collector.call_location
     assert location and location.startswith("/v1/realtime/calls/"), f"Unexpected Location header: {location!r}"
-    hangup = await asyncio.to_thread(ovms_http().post, f"{OVMS_URL}{location}/hangup", timeout=30)
+    headers = {"Authorization": f"Bearer {OVMS_API_KEY}"} if OVMS_API_KEY else {}
+    hangup = await asyncio.to_thread(ovms_http().post, f"{OVMS_URL}{location}/hangup", headers=headers, timeout=30)
     assert hangup.ok, f"Hangup failed: {hangup.status_code} {hangup.text}"
+
+
+@requires_ovms
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("raw_event", "expected_message"), [
+    ("{", "valid JSON object"),
+    ('{"event":"input_audio_buffer.commit"}', "'type' field"),
+])
+async def test_ovms_realtime_rejects_invalid_client_events(raw_event, expected_message):
+    client = await create_ovms_control_call()
+    try:
+        client.channel.send(raw_event)
+        received = await client.collector.wait_for(lambda: bool(client.collector.errors), 10)
+        assert received, f"No error event received: {client.collector.events}"
+        assert expected_message in client.collector.errors[0]["error"]["message"]
+    finally:
+        await close_ovms_control_call(client)
+
+
+@requires_ovms
+@pytest.mark.asyncio
+async def test_ovms_realtime_rejects_empty_audio_commit():
+    client = await create_ovms_control_call()
+    try:
+        client.channel.send(json.dumps({"type": "input_audio_buffer.commit"}))
+        received = await client.collector.wait_for(lambda: bool(client.collector.errors), 10)
+        assert received, f"No error event received: {client.collector.events}"
+        assert "buffer is empty" in client.collector.errors[0]["error"]["message"]
+    finally:
+        await close_ovms_control_call(client)
+
+
+@requires_ovms
+@pytest.mark.asyncio
+async def test_ovms_realtime_ignores_session_update():
+    client = await create_ovms_control_call()
+    try:
+        client.channel.send(json.dumps({"type": "session.update", "session": {"model": "other-model"}}))
+        await asyncio.sleep(0.5)
+        assert not client.collector.errors, f"Unexpected error for ignored session.update: {client.collector.events}"
+    finally:
+        await close_ovms_control_call(client)
+
+
+@requires_ovms
+@pytest.mark.parametrize(("content_type", "body", "expected_error"), [
+    ("application/json", "{}", "Content-Type"),
+    ("application/sdp-invalid", "v=0\r\n", "Content-Type"),
+    ("application/sdp", "", "SDP offer"),
+    ("application/sdp", "not SDP", "SDP offer"),
+    ("multipart/form-data; boundary=x", "not a multipart form", "SDP offer"),
+])
+def test_ovms_realtime_invalid_signaling(content_type, body, expected_error):
+    headers = {"Content-Type": content_type}
+    if OVMS_API_KEY:
+        headers["Authorization"] = f"Bearer {OVMS_API_KEY}"
+    response = ovms_http().post(f"{OVMS_URL}/v1/realtime/calls", data=body, headers=headers, timeout=10)
+    assert response.status_code == 400, response.text
+    assert response.headers["Content-Type"].split(";")[0] == "application/json"
+    assert expected_error in response.json()["error"]
+    assert "Location" not in response.headers
+
+
+@requires_ovms
+@pytest.mark.skipif(not OVMS_API_KEY, reason="OVMS_API_KEY is not set")
+@pytest.mark.parametrize("path", ["/v1/realtime/calls", "/v1/realtime/calls/missing/hangup"])
+def test_ovms_realtime_requires_authentication(path):
+    response = ovms_http().post(f"{OVMS_URL}{path}", data="v=0\r\n",
+                                headers={"Content-Type": "application/sdp"}, timeout=10)
+    assert response.status_code == 401, response.text

@@ -71,6 +71,7 @@
 
 #if (MEDIAPIPE_DISABLE == 0)
 #include "copyable_object_wrapper.hpp"
+#include "mediapipe_runtime_api.hpp"
 #include "http_payload.hpp"
 #include "http_frontend/http_client_connection.hpp"
 #endif
@@ -217,7 +218,7 @@ void HttpRestApiHandler::registerAll() {
     registerHandler(WebRTC_RealtimeCall, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         if (!isWebRtcRequestAuthorized(request_components))
             return StatusCode::UNAUTHORIZED;
-        return processRealtimeCall(request_components, response, multiPartParser, response_components);
+        return processRealtimeCall(request_components, request_body, response, multiPartParser, response_components);
     });
     registerHandler(WebRTC_RealtimeHangup, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         if (!isWebRtcRequestAuthorized(request_components))
@@ -954,6 +955,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
         if (std::regex_match(request_path, sm, realtimeHangupRegex)) {
             requestComponents.type = WebRTC_RealtimeHangup;
             requestComponents.realtime_call_id = urlDecode(sm[1]);
+            requestComponents.headers = headers;
             return StatusCode::OK;
         }
         if (std::regex_match(request_path, sm, realtimeCallsRegex)) {
@@ -1064,12 +1066,43 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
 
 Status HttpRestApiHandler::getRealtimeCallSpeechModel(const std::string& modelName, SttPipelineHandle& speechModel) {
 #if (MEDIAPIPE_DISABLE == 0)
+    if (modelName.empty()) {
+        bool found = false;
+        for (const auto& name : modelManager.getMediapipeFactory().getNamesOfAvailableMediapipePipelines()) {
+            SttPipelineHandle candidate;
+            auto status = modelManager.getSttPipeline(name, candidate);
+            if (status == StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING ||
+                status == StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET ||
+                status == StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE) {
+                SPDLOG_LOGGER_DEBUG(webrtc_logger, "Skipping graph {} for realtime call: {}", name, status.string());
+                continue;
+            }
+            if (!status.ok()) {
+                SPDLOG_LOGGER_ERROR(webrtc_logger, "Failed to inspect speech-to-text graph {}: {}", name, status.string());
+                return status;
+            }
+            if (found) {
+                SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected raw SDP realtime call: multiple available speech-to-text graphs");
+                return Status(StatusCode::REST_INVALID_REQUEST,
+                    "Multiple speech-to-text graphs are available; use multipart/form-data with a session naming the model");
+            }
+            speechModel = std::move(candidate);
+            found = true;
+        }
+        if (!found) {
+            SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected raw SDP realtime call: no available speech-to-text graph");
+            return Status(StatusCode::REST_INVALID_REQUEST, "No speech-to-text graph is available for a raw SDP realtime call");
+        }
+        return StatusCode::OK;
+    }
     auto status = modelManager.getSttPipeline(modelName, speechModel);
     if (!status.ok())
         SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected realtime call, {} is not a served speech-to-text graph: {}", modelName, status.string());
     return status;
 #else
     SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected realtime call, speech-to-text graphs require MediaPipe");
+    if (modelName.empty())
+        return Status(StatusCode::REST_INVALID_REQUEST, "No speech-to-text graph is available; speech-to-text graphs require MediaPipe");
     return StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING;
 #endif
 }
@@ -1099,28 +1132,37 @@ std::string getRealtimeSessionModel(const std::string& sessionJson) {
 }
 }  // namespace
 
-Status HttpRestApiHandler::processRealtimeCall(const HttpRequestComponents& request_components, std::string& response,
+Status HttpRestApiHandler::processRealtimeCall(const HttpRequestComponents& request_components, const std::string& request_body, std::string& response,
     const std::shared_ptr<MultiPartParser>& multiPartParser, HttpResponseComponents& response_components) {
     SPDLOG_LOGGER_INFO(webrtc_logger, "Received realtime call request over REST");
     const auto contentType = request_components.headers.find("content-type");
-    const bool isMultiPart = contentType != request_components.headers.end() &&
-                             contentType->second.find("multipart/form-data") != std::string::npos;
-    if (!isMultiPart || multiPartParser == nullptr || !multiPartParser->parse()) {
-        SPDLOG_LOGGER_WARN(webrtc_logger, "Realtime call request is not a multipart form");
-        response = "{\"error\":\"Request must be multipart/form-data with an sdp offer and a session naming the transcription model\"}";
-        return StatusCode::JSON_INVALID;
+    std::string mediaType = contentType == request_components.headers.end() ? "" : contentType->second.substr(0, contentType->second.find(';'));
+    trim(mediaType);
+    mediaType = toLower(mediaType);
+    const bool isMultiPart = mediaType == "multipart/form-data";
+    std::string multipartSdp;
+    std::string modelName;
+    if (isMultiPart) {
+        if (multiPartParser == nullptr || !multiPartParser->parse()) {
+            SPDLOG_LOGGER_WARN(webrtc_logger, "Realtime call multipart form could not be parsed");
+            return Status(StatusCode::REST_INVALID_REQUEST, "Request must be a valid multipart/form-data form with sdp and session fields");
+        }
+        multipartSdp = multiPartParser->getFieldByName("sdp");
+    } else if (mediaType != "application/sdp") {
+        SPDLOG_LOGGER_WARN(webrtc_logger, "Realtime call request has an unsupported Content-Type");
+        return Status(StatusCode::REST_INVALID_REQUEST, "Content-Type must be application/sdp or multipart/form-data");
     }
-    const std::string offerSdp = multiPartParser->getFieldByName("sdp");
+    const std::string& offerSdp = isMultiPart ? multipartSdp : request_body;
     if (offerSdp.rfind("v=", 0) != 0) {
         SPDLOG_LOGGER_WARN(webrtc_logger, "Realtime call sdp field is not an SDP offer");
-        response = "{\"error\":\"The sdp field must contain an SDP offer\"}";
-        return StatusCode::JSON_INVALID;
+        return Status(StatusCode::REST_INVALID_REQUEST, "The SDP offer must start with v=");
     }
-    const std::string modelName = getRealtimeSessionModel(multiPartParser->getFieldByName("session"));
-    if (modelName.empty()) {
-        SPDLOG_LOGGER_WARN(webrtc_logger, "Realtime call session does not name a transcription model");
-        response = "{\"error\":\"The session field must set audio.input.transcription.model or model\"}";
-        return StatusCode::JSON_INVALID;
+    if (isMultiPart) {
+        modelName = getRealtimeSessionModel(multiPartParser->getFieldByName("session"));
+        if (modelName.empty()) {
+            SPDLOG_LOGGER_WARN(webrtc_logger, "Realtime call session does not name a transcription model");
+            return Status(StatusCode::REST_INVALID_REQUEST, "The session field must be a JSON object setting audio.input.transcription.model or model");
+        }
     }
     SttPipelineHandle speechModel;
     auto status = getRealtimeCallSpeechModel(modelName, speechModel);

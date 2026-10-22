@@ -28,23 +28,63 @@ namespace ovms {
 
 namespace {
 constexpr size_t MaxQueuedFrames = 1500;
+
+template <typename GenAiStream>
+class GenAiInferenceStream : public VoxtralAudioAdapter::InferenceStream {
+public:
+    explicit GenAiInferenceStream(GenAiStream stream) :
+        stream_(std::move(stream)) {}
+
+    void pushAudio(const std::vector<float>& audio) override {
+        stream_.push_audio(audio);
+    }
+
+    void endAudio() override {
+        stream_.end_audio();
+    }
+
+    std::string generate(VoxtralAudioAdapter::TextCallback deltaCallback) override {
+        const auto result = stream_.generate([deltaCallback = std::move(deltaCallback)](std::string delta) {
+            if (deltaCallback)
+                deltaCallback(delta);
+            return ov::genai::StreamingStatus::RUNNING;
+        });
+        return static_cast<std::string>(result);
+    }
+
+private:
+    GenAiStream stream_;
+};
+
+VoxtralAudioAdapter::StreamFactory makeGenAiStreamFactory(
+    std::shared_ptr<ov::genai::ASRPipeline> pipeline) {
+    if (!pipeline)
+        throw std::invalid_argument("Voxtral adapter requires a pipeline");
+    return [pipeline = std::move(pipeline)]() -> std::unique_ptr<VoxtralAudioAdapter::InferenceStream> {
+        auto stream = pipeline->create_stream();
+        return std::make_unique<GenAiInferenceStream<decltype(stream)>>(std::move(stream));
+    };
+}
 }
 
 VoxtralAudioAdapter::VoxtralAudioAdapter(std::shared_ptr<ov::genai::ASRPipeline> pipeline) :
-    pipeline_(std::move(pipeline)) {
-    if (!pipeline_)
-        throw std::invalid_argument("Voxtral adapter requires a pipeline");
+    VoxtralAudioAdapter(makeGenAiStreamFactory(std::move(pipeline))) {}
+
+VoxtralAudioAdapter::VoxtralAudioAdapter(StreamFactory streamFactory) :
+    streamFactory_(std::move(streamFactory)) {
+    if (!streamFactory_)
+        throw std::invalid_argument("Voxtral adapter requires a stream factory");
 }
 
 std::shared_ptr<VoxtralAudioAdapter::Stream> VoxtralAudioAdapter::createStream(
     TextCallback deltaCallback, TextCallback finalCallback, ErrorCallback errorCallback) const {
-    return std::make_shared<Stream>(pipeline_, std::move(deltaCallback), std::move(finalCallback),
+    return std::make_shared<Stream>(streamFactory_, std::move(deltaCallback), std::move(finalCallback),
         std::move(errorCallback));
 }
 
-VoxtralAudioAdapter::Stream::Stream(std::shared_ptr<ov::genai::ASRPipeline> pipeline,
+VoxtralAudioAdapter::Stream::Stream(StreamFactory streamFactory,
     TextCallback deltaCallback, TextCallback finalCallback, ErrorCallback errorCallback) :
-    pipeline_(std::move(pipeline)),
+    streamFactory_(std::move(streamFactory)),
     deltaCallback_(std::move(deltaCallback)),
     finalCallback_(std::move(finalCallback)),
     errorCallback_(std::move(errorCallback)),
@@ -65,6 +105,7 @@ void VoxtralAudioAdapter::Stream::push(AudioChunk frame) {
     if (frames_.size() >= MaxQueuedFrames)
         throw std::runtime_error("Voxtral audio queue is full");
     frames_.push(std::move(frame));
+    hasAudio_ = true;
     condition_.notify_one();
 }
 
@@ -86,9 +127,15 @@ bool VoxtralAudioAdapter::Stream::isCompleted() const {
     return completed_.load();
 }
 
+bool VoxtralAudioAdapter::Stream::hasAudio() const {
+    return hasAudio_.load();
+}
+
 void VoxtralAudioAdapter::Stream::run() {
     try {
-        auto stream = pipeline_->create_stream();
+        auto stream = streamFactory_();
+        if (!stream)
+            throw std::runtime_error("Voxtral stream factory returned an empty stream");
         std::exception_ptr inputError;
         std::thread inputWorker([this, &stream, &inputError] {
             try {
@@ -106,16 +153,16 @@ void VoxtralAudioAdapter::Stream::run() {
                     }
                     const auto start = std::chrono::steady_clock::now();
                     const auto audio = SttAudioAdapter::prepareAudio(frame);
-                    stream.push_audio(audio);
+                    stream->pushAudio(audio);
                     SPDLOG_LOGGER_TRACE(webrtc_logger, "Voxtral push_audio: samples={}, queued_frames={}, elapsed_ms={}",
                         frame.samples.size(), queuedFrames,
                         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count());
                 }
-                stream.end_audio();
+                stream->endAudio();
             } catch (...) {
                 inputError = std::current_exception();
                 try {
-                    stream.end_audio();
+                    stream->endAudio();
                 } catch (...) {
                 }
             }
@@ -124,15 +171,13 @@ void VoxtralAudioAdapter::Stream::run() {
         std::string transcript;
         std::exception_ptr generationError;
         try {
-            const auto result = stream.generate([this](std::string delta) {
+            transcript = stream->generate([this](const std::string& delta) {
                 if (!delta.empty()) {
                     SPDLOG_LOGGER_INFO(webrtc_logger, "Voxtral transcript delta: {}", delta);
                     if (deltaCallback_)
                         deltaCallback_(delta);
                 }
-                return ov::genai::StreamingStatus::RUNNING;
             });
-            transcript = static_cast<std::string>(result);
         } catch (...) {
             generationError = std::current_exception();
         }

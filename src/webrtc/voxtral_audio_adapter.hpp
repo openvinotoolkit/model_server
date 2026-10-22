@@ -24,6 +24,7 @@
 #include <queue>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include "streaming_audio_model.hpp"
 
@@ -38,9 +39,19 @@ public:
     using TextCallback = std::function<void(const std::string&)>;
     using ErrorCallback = std::function<void(std::exception_ptr)>;
 
+    class InferenceStream {
+    public:
+        virtual ~InferenceStream() = default;
+        virtual void pushAudio(const std::vector<float>& audio) = 0;
+        virtual void endAudio() = 0;
+        virtual std::string generate(TextCallback deltaCallback) = 0;
+    };
+
+    using StreamFactory = std::function<std::unique_ptr<InferenceStream>()>;
+
     class Stream {
     public:
-        Stream(std::shared_ptr<ov::genai::ASRPipeline> pipeline, TextCallback deltaCallback,
+        Stream(StreamFactory streamFactory, TextCallback deltaCallback,
             TextCallback finalCallback, ErrorCallback errorCallback);
         ~Stream();
 
@@ -52,11 +63,12 @@ public:
         void close();
         // True once the final transcript or error callback has been delivered.
         bool isCompleted() const;
+        bool hasAudio() const;
 
     private:
         void run();
 
-        std::shared_ptr<ov::genai::ASRPipeline> pipeline_;
+        StreamFactory streamFactory_;
         TextCallback deltaCallback_;
         TextCallback finalCallback_;
         ErrorCallback errorCallback_;
@@ -64,18 +76,20 @@ public:
         std::mutex mutex_;
         std::condition_variable condition_;
         bool finishing_ = false;
+        std::atomic<bool> hasAudio_{false};
         std::atomic<bool> completed_{false};
         std::thread worker_;
     };
 
     /// Shares a served realtime pipeline; each stream owns its own inference state.
     explicit VoxtralAudioAdapter(std::shared_ptr<ov::genai::ASRPipeline> pipeline);
+    explicit VoxtralAudioAdapter(StreamFactory streamFactory);
 
     std::shared_ptr<Stream> createStream(TextCallback deltaCallback, TextCallback finalCallback,
         ErrorCallback errorCallback) const;
 
 private:
-    std::shared_ptr<ov::genai::ASRPipeline> pipeline_;
+    StreamFactory streamFactory_;
 };
 
 }  // namespace ovms
