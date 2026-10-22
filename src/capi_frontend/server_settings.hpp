@@ -254,7 +254,7 @@ struct ServerSettingsImpl {
     std::string grpcChannelArguments;
     uint32_t filesystemPollWaitMilliseconds = 1000;
     uint32_t memoryTrimmingIntervalSeconds = 300;
-    uint32_t idleUnloadTimeoutSeconds = 0;
+    uint64_t idleUnloadTimeoutMicroseconds = 0;
     std::string cacheDir;
     bool withPython = false;
     bool startedWithCLI = false;

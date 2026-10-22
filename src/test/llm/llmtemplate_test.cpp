@@ -14,8 +14,15 @@
 // limitations under the License.
 //*****************************************************************************
 #include <fstream>
+#include <atomic>
+#include <chrono>
+#include <future>
 #include <memory>
+#include <mutex>
+#include <sstream>
 #include <string>
+#include <thread>
+#include <variant>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -587,6 +594,8 @@ protected:
     std::string jinjaConfigFilePath;
     std::string ovmsConfigFilePath;
     std::string graphConfigFilePath;
+    ovms::ServerSettingsImpl serverSettings;
+    ovms::ModelsSettingsImpl modelsSettings;
 
     static std::string GetFileNameFromPath(const std::string& parentDir, const std::string& fullPath) {
         std::string fileName = fullPath;
@@ -664,10 +673,107 @@ std::unique_ptr<std::thread> LLMChatTemplateHttpTest::t;
 
 std::string fullResponse;
 
+namespace {
+struct WakeUpBarrier {
+    std::promise<void> wakeStarted;
+    std::promise<void> continueWake;
+    std::shared_future<void> continueWakeFuture{continueWake.get_future().share()};
+    std::atomic<bool> released{false};
+
+    static void setActive(const std::shared_ptr<WakeUpBarrier>& barrier) {
+        std::lock_guard<std::mutex> lock(activeBarrierMtx);
+        activeBarrier = barrier;
+    }
+
+    static std::shared_ptr<WakeUpBarrier> getActive() {
+        std::lock_guard<std::mutex> lock(activeBarrierMtx);
+        return activeBarrier;
+    }
+
+    static void releaseAndClearActive() {
+        std::shared_ptr<WakeUpBarrier> barrier;
+        {
+            std::lock_guard<std::mutex> lock(activeBarrierMtx);
+            barrier = std::move(activeBarrier);
+        }
+        if (barrier) {
+            barrier->release();
+        }
+    }
+
+    void release() {
+        if (!released.exchange(true, std::memory_order_relaxed)) {
+            continueWake.set_value();
+        }
+    }
+
+private:
+    inline static std::mutex activeBarrierMtx;
+    inline static std::shared_ptr<WakeUpBarrier> activeBarrier;
+};
+
+class WakeUpBarrierGuard {
+public:
+    explicit WakeUpBarrierGuard(std::thread& worker) :
+        worker(worker) {}
+    // Release the barrier before joining so a blocked worker can finish; a joinable
+    // std::thread left by an early-returning assertion would otherwise std::terminate.
+    ~WakeUpBarrierGuard() {
+        WakeUpBarrier::releaseAndClearActive();
+        if (worker.joinable()) {
+            worker.join();
+        }
+    }
+
+private:
+    std::thread& worker;
+};
+}  // namespace
+
+namespace mediapipe {
+class LLMWakeUpBarrierCalculator : public CalculatorBase {
+public:
+    static absl::Status GetContract(CalculatorContract*) {
+        auto barrier = WakeUpBarrier::getActive();
+        if (!barrier) {
+            return absl::FailedPreconditionError("Wake-up barrier is not active");
+        }
+        barrier->wakeStarted.set_value();
+        barrier->continueWakeFuture.wait();
+        return absl::OkStatus();
+    }
+
+    absl::Status Open(CalculatorContext*) final {
+        return absl::OkStatus();
+    }
+
+    absl::Status Process(CalculatorContext*) final {
+        return absl::OkStatus();
+    }
+};
+REGISTER_CALCULATOR(LLMWakeUpBarrierCalculator);
+}  // namespace mediapipe
+
 class LLMIdleGroupWakeUpHttpTest : public LLMChatTemplateHttpTest {
 protected:
     static constexpr const char* kGraphName = "lm_cb_regular";
     static constexpr const char* kGroupName = "lazy";
+
+    virtual bool delayWakeUpForTest() const {
+        return false;
+    }
+
+    virtual bool useMockGraphForTest() const {
+        return false;
+    }
+
+    virtual uint32_t idleUnloadTimeoutMicroseconds() const {
+        return 30'000'000;
+    }
+
+    virtual uint32_t filesystemPollWaitMilliseconds() const {
+        return 1'000;
+    }
 
     void SetUp() override {
         writer = std::make_shared<MockedServerRequestInterface>();
@@ -675,7 +781,18 @@ protected:
         ON_CALL(*writer, PartialReplyBegin(::testing::_)).WillByDefault(testing::Invoke([](std::function<void()> fn) { fn(); }));
         TestWithTempDir::SetUp();
         ovmsConfigFilePath = directoryPath + "/ovms_config.json";
-        const std::string graphPath = getGenericFullPathForSrcTest("/ovms/src/test/llm/lm_cb_regular.pbtxt");
+        const std::string sourceGraphPath = getGenericFullPathForSrcTest(
+            useMockGraphForTest() ? "/ovms/src/test/mediapipe/graph_gpt.pbtxt" : "/ovms/src/test/llm/lm_cb_regular.pbtxt");
+        std::string graphPath = sourceGraphPath;
+        if (delayWakeUpForTest()) {
+            std::ifstream sourceGraph(sourceGraphPath);
+            ASSERT_TRUE(sourceGraph.is_open());
+            std::stringstream graphContents;
+            graphContents << "node { calculator: \"LLMWakeUpBarrierCalculator\" }\n"
+                          << sourceGraph.rdbuf();
+            graphPath = directoryPath + "/graph.pbtxt";
+            ASSERT_TRUE(createConfigFileWithContent(graphContents.str(), graphPath));
+        }
 
         const std::string config = R"({
             "model_config_list": [],
@@ -689,8 +806,25 @@ protected:
         ASSERT_TRUE(createConfigFileWithContent(config, ovmsConfigFilePath));
 
         std::string port = "9174";
+        randomizeAndEnsureFree(port);
+        std::vector<std::string> args = {"ovms", "--config_path", ovmsConfigFilePath, "--port", port};
+        std::vector<char*> argv;
+        argv.reserve(args.size());
+        for (auto& arg : args) {
+            argv.push_back(const_cast<char*>(arg.c_str()));
+        }
+        auto parsed = ovms::Server::parseArgs(static_cast<int>(argv.size()), argv.data());
+        using ParsedSettings = std::pair<ovms::ServerSettingsImpl, ovms::ModelsSettingsImpl>;
+        ASSERT_TRUE(std::holds_alternative<ParsedSettings>(parsed));
+        std::tie(serverSettings, modelsSettings) = std::move(std::get<ParsedSettings>(parsed));
+        serverSettings.idleUnloadTimeoutMicroseconds = idleUnloadTimeoutMicroseconds();
+        serverSettings.filesystemPollWaitMilliseconds = filesystemPollWaitMilliseconds();
+
         ovms::Server& server = ovms::Server::instance();
-        ::SetUpServerWithExtraArgs(t, server, port, ovmsConfigFilePath.c_str(), {"--idle_unload_timeout_seconds", "30"});
+        t = std::make_unique<std::thread>([this, &server]() {
+            EXPECT_EQ(server.startServerFromSettings(serverSettings, modelsSettings), EXIT_SUCCESS);
+        });
+        EnsureServerStartedWithTimeout(server, SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
         handler = std::make_unique<ovms::HttpRestApiHandler>(server, 5);
         ASSERT_EQ(handler->parseRequestComponents(comp, "POST", endpointChatCompletions, headers), ovms::StatusCode::OK);
     }
@@ -722,6 +856,78 @@ TEST_F(LLMIdleGroupWakeUpHttpTest, V3UnaryRequestWakesSleepingGroupedGraph) {
     const auto status = handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     EXPECT_EQ(status, ovms::StatusCode::OK);
     EXPECT_EQ(groupManager->getActiveGroupName(), kGroupName);
+}
+
+class LLMIdleGroupWakeUpDisconnectHttpTest : public LLMIdleGroupWakeUpHttpTest {
+protected:
+    bool delayWakeUpForTest() const override {
+        return true;
+    }
+
+    bool useMockGraphForTest() const override {
+        return true;
+    }
+
+    uint32_t idleUnloadTimeoutMicroseconds() const override {
+        return 10'000;
+    }
+
+    uint32_t filesystemPollWaitMilliseconds() const override {
+        return 1;
+    }
+};
+
+TEST_F(LLMIdleGroupWakeUpDisconnectHttpTest, StreamingDisconnectDuringWakeUpStillIdleUnloads) {
+    auto* definition = manager().getMediapipeFactory().findDefinitionByName(kGraphName);
+    ASSERT_NE(definition, nullptr);
+    ASSERT_EQ(definition->getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+
+    auto* groupManager = manager().getGroupManager();
+    ASSERT_NE(groupManager, nullptr);
+    auto barrier = std::make_shared<WakeUpBarrier>();
+    auto wakeStarted = barrier->wakeStarted.get_future();
+    WakeUpBarrier::setActive(barrier);
+
+    std::atomic<bool> disconnected{false};
+    std::thread streamingCallback;
+    WakeUpBarrierGuard barrierGuard(streamingCallback);
+    ON_CALL(*writer, IsDisconnected()).WillByDefault(testing::Invoke([&disconnected]() {
+        return disconnected.load(std::memory_order_relaxed);
+    }));
+    // imitate drogon worker pool
+    ON_CALL(*writer, PartialReplyBegin(::testing::_)).WillByDefault(testing::Invoke([&streamingCallback](std::function<void()> callback) {
+        streamingCallback = std::thread(std::move(callback));
+    }));
+
+    std::string requestBody = R"(
+        {
+            "model": "lm_cb_regular",
+            "stream": true,
+            "max_tokens": 5,
+            "messages": [{"role": "user", "content": "Hi"}]
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
+    ASSERT_EQ(wakeStarted.wait_for(std::chrono::seconds(5)), std::future_status::ready);
+    ASSERT_EQ(definition->getStateCode(), ovms::PipelineDefinitionStateCode::RELOADING);
+
+    disconnected.store(true, std::memory_order_relaxed);
+    barrier->release();
+    ASSERT_TRUE(streamingCallback.joinable());
+    streamingCallback.join();
+    EXPECT_EQ(groupManager->getActiveGroupName(), kGroupName);
+
+    // The group is idle after 10ms and the watcher polls every 1ms. Allow 50ms
+    // for scheduler jitter while still requiring prompt idle unload.
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(50);
+    while (!groupManager->getActiveGroupName().empty() && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    EXPECT_TRUE(groupManager->getActiveGroupName().empty());
+    EXPECT_EQ(definition->getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
 }
 
 class LLMJinjaChatTemplateHttpTest : public LLMChatTemplateHttpTest {

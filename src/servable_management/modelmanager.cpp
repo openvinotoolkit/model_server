@@ -258,9 +258,9 @@ Status ModelManager::start(const Config& config) {
     this->startedWithConfigFile = (config.configPath() != "");
 
     // Initialize model group manager if idle unload is enabled and using config file
-    if (this->startedWithConfigFile && config.idleUnloadTimeoutSeconds() > 0) {
-        servableGroupManager = std::make_unique<ServableGroupManager>(static_cast<uint64_t>(config.idleUnloadTimeoutSeconds()) * 1'000'000ULL);
-        SPDLOG_INFO("Model group idle management enabled with {}s timeout", config.idleUnloadTimeoutSeconds());
+    if (this->startedWithConfigFile && config.idleUnloadTimeoutMicroseconds() > 0) {
+        servableGroupManager = std::make_unique<ServableGroupManager>(config.idleUnloadTimeoutMicroseconds());
+        SPDLOG_INFO("Model group idle management enabled with {}us timeout", config.idleUnloadTimeoutMicroseconds());
     }
 
     if (isStartedWithConfigFile()) {
