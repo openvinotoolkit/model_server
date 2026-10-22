@@ -136,12 +136,6 @@ start_container_command = os.environ.get("START_CONTAINER_COMMAND", "")
 """OVMS_BINARY_PATH - path to ovms binary file; when specified, tests are executed against provided binary."""
 ovms_binary_path = os.environ.get("OVMS_BINARY_PATH", None)
 
-""" TT_MINIO_IMAGE_NAME - Docker image for Minio"""
-minio_image = os.environ.get(
-    "TT_MINIO_IMAGE_NAME",
-    f"{docker_registry}/minio/minio:latest" if docker_registry is not None else "minio/minio:latest",
-)
-
 """ TT_TARGET_DEVICE - list of devices separated by a comma "CPU,GPU,NPU" """
 target_devices = get_target_devices()
 

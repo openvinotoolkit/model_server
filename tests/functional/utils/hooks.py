@@ -470,7 +470,6 @@ def download_models():
 
 
 def get_docker_images(images_to_download):
-    images_to_download.add(config.minio_image)
     for target_device, base_os in itertools.product(config.target_devices, config.base_os):
         ovms_image = calculate_ovms_image_name(target_device, base_os)
         if config.ovms_image_local:
