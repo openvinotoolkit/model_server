@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <cstddef>
 #include <optional>
 #include <string>
 #include <vector>
@@ -26,6 +27,27 @@
 #pragma warning(pop)
 
 namespace ovms {
+struct TagMatch {
+    std::size_t position;
+    std::size_t length;
+};
+
+inline std::optional<TagMatch> findEarliestTag(const std::string& text, const std::vector<std::string>& tags) {
+    std::optional<TagMatch> earliest;
+    for (const auto& tag : tags) {
+        if (tag.empty()) {
+            continue;
+        }
+        const std::size_t position = text.find(tag);
+        if (position != std::string::npos &&
+            (!earliest.has_value() || position < earliest->position ||
+                (position == earliest->position && tag.size() > earliest->length))) {
+            earliest = TagMatch{position, tag.size()};
+        }
+    }
+    return earliest;
+}
+
 // Generates random alphanumeric string of length 9 for tool call ID
 std::string generateRandomId();
 
@@ -46,8 +68,9 @@ void trimSurroundingQuotes(std::string& str);
 // Returns a human-readable name of the JSON value type (for tracing).
 const char* jsonTypeOf(const rapidjson::Value& val);
 
-// Re-serializes a JSON value and stores it back as a JSON string value.
-void enforceStringValue(rapidjson::Value& v, rapidjson::Document::AllocatorType& alloc);
+// Makes v a JSON string for a parameter declared as a string. A value already parsed as a JSON string
+// is kept; anything else is replaced with rawText, the value exactly as the model wrote it.
+void enforceStringValue(rapidjson::Value& v, const std::string& rawText, rapidjson::Document::AllocatorType& alloc);
 
 // Normalizes Python-style booleans ("True"/"TRUE" -> "true", "False"/"FALSE" -> "false") in place.
 void normalizeBooleanString(std::string& value);

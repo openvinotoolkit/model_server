@@ -31,6 +31,7 @@ Default metrics
 | gauge      | ovms_streams | name,version | Number of OpenVINO execution streams. |
 | gauge      | ovms_current_requests | name,version | Number of requests being currently processed by the model server. |
 | gauge      | ovms_current_graphs | name | Number of MediaPipe graphs in process. |
+| gauge      | ovms_graph_loaded | name | Whether MediaPipe graph resources are loaded (`1`) or idle-unloaded (`0`). |
 | counter      | ovms_requests_success | api,interface,method,name,version | Number of successful requests to a model or a DAG. |
 | counter      | ovms_requests_fail | api,interface,method,name,version | Number of failed requests to a model or a DAG. |
 | counter      | ovms_requests_accepted | api,interface,method,name | Number of accepted requests which ended up inserting packet(s) into a MediaPipe graph. |

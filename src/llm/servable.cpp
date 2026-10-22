@@ -211,8 +211,12 @@ absl::Status GenAiServable::validateInputCompatibility(std::shared_ptr<GenAiServ
             const auto content = ch[i]["content"];
             if (content.is_array()) {
                 for (size_t j = 0; j < content.size(); j++) {
-                    if (content[j]["type"].as_string().value_or("") == "image_url") {
+                    const auto type = content[j]["type"].as_string().value_or("");
+                    if (type == "image_url") {
                         return absl::Status(absl::StatusCode::kInvalidArgument, "This servable supports only text input, but image_url has been provided");
+                    }
+                    if (type == "video_url") {
+                        return absl::Status(absl::StatusCode::kInvalidArgument, "This servable supports only text input, but video_url has been provided");
                     }
                 }
             }
@@ -377,12 +381,18 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     // OVMSTextStreamer::write() fires the callback for each flush event, pushing
     // Documents into executionContext->deltaChannel.
     executionContext->textStreamer->write(generationOutput.generated_ids);
+    if (executionContext->textStreamer->hadParserError()) {
+        return absl::InternalError(executionContext->textStreamer->parserErrorMessage());
+    }
 
     if (isFinishing) {
         OVMS_PROFILE_SCOPE("Generation of last streaming response");
         // end() flushes held-back tokens and calls parseChunk(STOP). Any resulting
         // Document is pushed into deltaChannel by the callback.
         executionContext->textStreamer->end();
+        if (executionContext->textStreamer->hadParserError()) {
+            return absl::InternalError(executionContext->textStreamer->parserErrorMessage());
+        }
     }
 
     // Drain all deltas accumulated during this write()/end() cycle.

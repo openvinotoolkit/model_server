@@ -227,6 +227,22 @@ ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& a
         throw std::runtime_error("Failed to create any image generation pipeline from: " + args.modelsPath);
     }
 
+    if (text2ImagePipeline && !args.defaultResolution.has_value()) {
+        const auto nativeConfig = text2ImagePipeline->get_generation_config();
+        if (nativeConfig.width <= 0 || nativeConfig.height <= 0) {
+            SPDLOG_ERROR("Failed to determine model-native image generation resolution for model at '{}'; "
+                         "start the model server with --default_resolution WIDTHxHEIGHT",
+                args.modelsPath);
+            throw std::runtime_error("Failed to determine model-native image generation resolution");
+        }
+        this->args.nativeResolution = resolution_t{nativeConfig.width, nativeConfig.height};
+        if (nativeConfig.width > args.maxResolution.first || nativeConfig.height > args.maxResolution.second) {
+            SPDLOG_WARN("Model-native image generation resolution ({}x{}) exceeds maxResolution ({}x{}); "
+                        "requests using the native default resolution will be rejected",
+                nativeConfig.width, nativeConfig.height, args.maxResolution.first, args.maxResolution.second);
+        }
+    }
+
     // InpaintingPipeline does not support clone(), so concurrent inpainting
     // requests must be serialized
     if (inpaintingPipeline) {
