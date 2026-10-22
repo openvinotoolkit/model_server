@@ -1,0 +1,37 @@
+flowchart TD
+    A[OVMS scheduler C1/C2/C4] --> B[Draft: MTP / DFlash]
+    B --> C[Candidate window]
+    C --> D[Target verify]
+    D --> E[Router per layer]
+
+    E --> F{Expert resident?}
+
+    F -->|Protected hit| G[Xe2 INT4 / INT8]
+    F -->|Probation hit| G
+    F -->|Miss| H[Routing-aware prefetch queue]
+
+    H --> I{Source}
+    I -->|NVMe| J[Async aligned read]
+    I -->|staging/USM| K[Resident staging]
+
+    J --> K
+
+    K --> L{Execution policy}
+    L -->|GPU wins| M[Load/admit to Xe2 cache]
+    L -->|CPU overlap wins| N[AVX2 / AVX-512 expert]
+
+    M --> G
+    G --> O[Combine experts]
+    N --> O
+
+    O --> P[Verify logits]
+    P --> Q{Draft accepted?}
+
+    Q -->|yes| R[Promote expert hotness]
+    Q -->|no| S[Keep speculative loads in probation]
+
+    R --> T[Commit accepted tokens]
+    S --> T
+
+    T --> U[KV U4 + prefix cache]
+    U --> B
