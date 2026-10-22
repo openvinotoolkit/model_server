@@ -98,7 +98,8 @@ list this information by specifying the `--list_models` switch (also a short
 form `-l` is available):
 ```bash
 docker run --network host benchmark_client -a localhost -r 8000 --list_models
-
+```
+```
 Client 2.7
 NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 8000 --list_models
           XW worker: Finished execution. If you want to run inference remove --list_models.
@@ -116,7 +117,8 @@ line. The option `-i` is used only to add a prefix to the standard output with a
 of an application instance. For example:
 ```bash
 docker run --network host benchmark_client -a localhost -r 8000 -l -m resnet -p 9000 -i id
-
+```
+```
 Client 2.7
 NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 8000 -l -m resnet -p 9000 -i id
           XW id: Finished execution. If you want to run inference remove --list_models.
@@ -158,7 +160,8 @@ The workload can be generated only if its length is specified by iteration numbe
 will be generated as follows (remember to add `--print_all` to show metrics in stdout):
 ```bash
 docker run --network host benchmark_client -a localhost -r 8000 -m resnet -p 9000 -n 8 --report_warmup --print_all
-
+```
+```
 Client 2.7
 NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 8000 -m resnet -p 9000 -n 8 --report_warmup --print_all
           XI worker: request for metadata of model resnet...
@@ -403,6 +406,8 @@ docker run -u $(id -u) -p 9000:9000 -p 8000:8000 -d -v ${PWD}/workspace:/workspa
 To generate request with specified shape, it is necessary to set input shape explicitly. It is done by specifying `-s` or `--shape` parameter, followed by desired numbers.
 ```bash
 docker run --network host benchmark_client -a localhost -r 8000 -m face-detection-retail-0005 -p 9000 -n 8 -s 1 3 300 300 --print_all
+```
+```
 Client 2.7
 NO_PROXY=localhost no_proxy=localhost python3 /ovms_benchmark_client/main.py -a localhost -r 8000 -m face-detection-retail-0005 -p 9000 -n 8 -s 1 3 300 300 --print_all
           XI worker: request for metadata of model face-detection-retail-0005...
