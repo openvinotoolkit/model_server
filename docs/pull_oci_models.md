@@ -52,34 +52,6 @@ docker run --mount type=bind,src="$HOME/.docker",dst=/home/ovms/.docker,readonly
 
 If the Docker config uses a credential helper (`credsStore` or `credHelpers`), that helper and any service it depends on must also be available inside the container. Alternatively, configure credentials in a mounted Docker config that does not rely on an unavailable helper. Do not bake registry credentials into the image.
 
-In Kubernetes, store the Docker config in a Secret and mount it into the OVMS pod. For example, create a Secret from a Docker config file:
-
-```text
-kubectl create secret generic registry-auth --from-file=config.json="$HOME/.docker/config.json"
-```
-
-Mount the Secret read-only and set `DOCKER_CONFIG` to the mount directory in the OVMS container spec:
-
-```yaml
-spec:
-  containers:
-    - name: ovms
-      image: openvino/model_server:latest
-      env:
-        - name: DOCKER_CONFIG
-          value: /var/run/registry-auth
-      volumeMounts:
-        - name: registry-auth
-          mountPath: /var/run/registry-auth
-          readOnly: true
-  volumes:
-    - name: registry-auth
-      secret:
-        secretName: registry-auth
-```
-
-The Secret must contain a `config.json` usable by llmman. As with a Docker bind mount, any credential helper it references must also be installed and usable in the pod.
-
 ## Supported payloads
 
 `llmman resolve` reports the format of the layers in the image, and OVMS reacts to it:
