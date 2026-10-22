@@ -168,6 +168,7 @@ def check_dir(start_dir):
         'ovms_calculator_graph_visibility.diff',
         'model_api_json_archive.patch',
         'com_google_protobuf_fixes.diff',
+        'ovms_plugin_type_identity.diff',
         'ovms_no_litert.diff',
         'ovms_strip.diff',
         ]
