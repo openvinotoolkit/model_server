@@ -3042,6 +3042,9 @@ cc_library(
     ),
     deps = [
         "@com_google_googletest//:gtest",
+        "@com_google_absl//absl/strings",
+        "@zlib//:zlib",
+        ":libtest_environment",
         ":test_platform_utils",
         ":test_wav_utils",
         "//src/llm:image_utils",
