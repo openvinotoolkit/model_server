@@ -19,9 +19,6 @@
 #include <string>
 
 #include "src/logging.hpp"
-#include "src/utils/env_guard.hpp"
-#include "mediapipe/framework/calculator_base.h"
-#include "mediapipe/framework/subgraph.h"
 
 #ifdef __linux__
 #include <array>
@@ -31,6 +28,10 @@
 
 #include <dlfcn.h>
 #include <unistd.h>
+
+#include "mediapipe/framework/calculator_base.h"
+#include "mediapipe/framework/subgraph.h"
+#include "src/utils/env_guard.hpp"
 #endif
 
 namespace ovms {

@@ -26,11 +26,15 @@ ovms_cc_library(
     hdrs = ["opencv_calculators_plugin_loader.hpp"],
     srcs = ["opencv_calculators_plugin_loader.cpp"],
     deps = [
-        "@mediapipe//mediapipe/framework:calculator_framework",
-        "@mediapipe//mediapipe/framework:subgraph",
         "//src:libovmslogging",
-        "//src/utils:env_guard",
-    ],
+    ] + select({
+        "//src:windows": [],
+        "//conditions:default": [
+            "@mediapipe//mediapipe/framework:calculator_framework",
+            "@mediapipe//mediapipe/framework:subgraph",
+            "//src/utils:env_guard",
+        ],
+    }),
     visibility = ["//visibility:public"],
 )
 
