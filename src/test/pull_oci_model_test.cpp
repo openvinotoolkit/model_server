@@ -323,13 +323,53 @@ TEST_F(OciDownloaderPayload, GgufModelIsSplitIntoDirectoryAndFilename) {
     TestOciDownloader downloader(hfSettings);
     ASSERT_EQ(downloader.downloadModel(), StatusCode::OK);
     // The graph exporter joins these two back together into models_path.
-    EXPECT_EQ(std::filesystem::path(downloader.getModelPath()).generic_string(), resolvedPath);
+    EXPECT_EQ(downloader.getModelPath(), ".");
     ASSERT_TRUE(downloader.getGgufFilename().has_value());
     EXPECT_EQ(downloader.getGgufFilename().value(), "model-Q4_K_M.gguf");
 
     downloader.onDownloadComplete(hfSettings);
     EXPECT_EQ(hfSettings.exportSettings.modelPath, downloader.getModelPath());
     EXPECT_EQ(hfSettings.ggufFilename, downloader.getGgufFilename());
+}
+
+TEST_F(OciDownloaderPayload, GgufModelInsideGraphDirectoryUsesRelativeModelPath) {
+    const std::string nestedDirectory = std::filesystem::path(hfSettings.downloadPath).append("nested").generic_string();
+    std::filesystem::create_directories(nestedDirectory);
+    const std::string ggufPath = std::filesystem::path(nestedDirectory).append("model.gguf").generic_string();
+    createFile(nestedDirectory, "model.gguf");
+
+    EnvGuard guard;
+    guard.set("LLMMAN_MOCK_PATH", ggufPath);
+    guard.set("LLMMAN_MOCK_FORMAT", "gguf");
+
+    TestOciDownloader downloader(hfSettings);
+    ASSERT_EQ(downloader.downloadModel(), StatusCode::OK);
+    EXPECT_EQ(downloader.getModelPath(), "nested");
+    ASSERT_TRUE(downloader.getGgufFilename().has_value());
+    EXPECT_EQ(downloader.getGgufFilename().value(), "model.gguf");
+}
+
+TEST_F(OciDownloaderPayload, GgufModelResolvedRelativeToGraphDirectoryUsesDotModelPath) {
+    const std::string originalCwd = std::filesystem::current_path().generic_string();
+    const std::filesystem::path tempDir = std::filesystem::path(this->directoryPath);
+    ASSERT_TRUE(std::filesystem::create_directories(tempDir / "models" / "docker.io" / "ai"));
+    ASSERT_TRUE(std::filesystem::create_directories(tempDir / "models" / "docker.io" / "ai" / "qwen3.5+0.8b"));
+    const std::string relativeModelPath = "models/docker.io/ai/qwen3.5+0.8b/model.gguf";
+    const std::string graphDirectory = (tempDir / "models" / "docker.io" / "ai" / "qwen3.5+0.8b").generic_string();
+    createFile(graphDirectory, "model.gguf");
+
+    std::filesystem::current_path(tempDir);
+    hfSettings.downloadPath = std::filesystem::path("models/docker.io/ai/qwen3.5+0.8b").generic_string();
+    EnvGuard guard;
+    guard.set("LLMMAN_MOCK_PATH", relativeModelPath);
+    guard.set("LLMMAN_MOCK_FORMAT", "gguf");
+
+    TestOciDownloader downloader(hfSettings);
+    ASSERT_EQ(downloader.downloadModel(), StatusCode::OK);
+    EXPECT_EQ(downloader.getModelPath(), ".");
+    EXPECT_EQ(downloader.getGgufFilename().value(), "model.gguf");
+
+    std::filesystem::current_path(originalCwd);
 }
 
 TEST_F(OciDownloaderPayload, ContentAddressedGgufBlobGetsUsableExtensionWithoutCopying) {
@@ -342,7 +382,7 @@ TEST_F(OciDownloaderPayload, ContentAddressedGgufBlobGetsUsableExtensionWithoutC
 
     TestOciDownloader downloader(hfSettings);
     ASSERT_EQ(downloader.downloadModel(), StatusCode::OK);
-    ASSERT_EQ(downloader.getModelPath(), downloader.getGraphDirectory());
+    EXPECT_EQ(downloader.getModelPath(), ".");
     ASSERT_TRUE(downloader.getGgufFilename().has_value());
     EXPECT_EQ(downloader.getGgufFilename().value(), "sha256-digest.gguf");
 

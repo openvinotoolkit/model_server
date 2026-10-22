@@ -143,8 +143,35 @@ bool OciDownloader::containsOpenVinoIr(const std::string& directory) {
 
 Status OciDownloader::prepareGgufPath(const std::string& resolvedPath) {
     const std::filesystem::path ggufPath(resolvedPath);
+    const std::filesystem::path graphDirectory(this->downloadPath);
+    const std::filesystem::path ggufParent = ggufPath.parent_path().lexically_normal();
+    const std::filesystem::path absoluteGraphDirectory = std::filesystem::absolute(graphDirectory);
+    const std::filesystem::path absoluteGgufParent = std::filesystem::absolute(ggufParent);
     if (ggufPath.extension() == ".gguf") {
-        this->modelPath = ggufPath.parent_path().string();
+        // If the resolved GGUF sits in the same graph directory that will host
+        // graph.pbtxt, keep the model path relative to that directory. Otherwise,
+        // the generated models_path would repeat the normalized OCI repo path
+        // (for example: .../models/docker.io/.../models/docker.io/.../file.gguf).
+        // Use absolute paths for the comparison so relative and absolute inputs
+        // behave identically when the process is started from a different cwd.
+        std::error_code ec;
+        const bool sameDirectory = std::filesystem::equivalent(absoluteGraphDirectory, absoluteGgufParent, ec) ||
+                                   (ec == std::errc::no_such_file_or_directory && absoluteGraphDirectory == absoluteGgufParent);
+        if (sameDirectory) {
+            this->modelPath = ".";
+        } else {
+            try {
+                const std::filesystem::path relativeParent = std::filesystem::relative(absoluteGgufParent, absoluteGraphDirectory);
+                const std::string relativeParentStr = relativeParent.lexically_normal().generic_string();
+                if (!relativeParentStr.empty() && relativeParentStr != ".." && relativeParentStr.rfind("../", 0) != 0) {
+                    this->modelPath = relativeParentStr;
+                } else {
+                    this->modelPath = ggufParent.string();
+                }
+            } catch (const std::filesystem::filesystem_error&) {
+                this->modelPath = ggufParent.string();
+            }
+        }
         this->ggufFilename = ggufPath.filename().string();
         return StatusCode::OK;
     }
@@ -184,7 +211,9 @@ Status OciDownloader::prepareGgufPath(const std::string& resolvedPath) {
         return StatusCode::INTERNAL_ERROR;
     }
 
-    this->modelPath = this->downloadPath;
+    // The linked GGUF is created inside the graph directory, so the model path
+    // must stay relative to graph.pbtxt to avoid reusing the OCI repo name twice.
+    this->modelPath = ".";
     this->ggufFilename = filename;
     return StatusCode::OK;
 }
