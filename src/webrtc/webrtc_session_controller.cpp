@@ -197,7 +197,7 @@ std::string preferOpusAudioCodec(const std::string& offerSdp) {
     }
 
     if (opusPayloadType.empty() || audioSectionStart >= lines.size()) {
-        return offerSdp;
+        throw std::invalid_argument("The SDP offer must contain an Opus audio codec");
     }
     std::istringstream audioLine(lines[audioSectionStart]);
     std::vector<std::string> fields;
