@@ -74,19 +74,12 @@ Status OmniModelLegacyServableInitializer::initialize(std::shared_ptr<GenAiServa
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
         }
     }
-    if (nodeOptions.has_chat_template_engine()) {
-#if (PYTHON_DISABLE == 0)
-        properties->chatTemplateEngineExplicit = true;
-        properties->chatTemplateEngine = (nodeOptions.chat_template_engine() == mediapipe::LLMCalculatorOptions::JINJA)
-                                             ? ChatTemplateEngine::JINJA
-                                             : ChatTemplateEngine::MINJA;
-#else
-        if (nodeOptions.chat_template_engine() == mediapipe::LLMCalculatorOptions::JINJA) {
-            SPDLOG_ERROR("chat_template_engine=JINJA requires Python support.");
-            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
-        }
-        properties->chatTemplateEngine = ChatTemplateEngine::MINJA;
-#endif
+    properties->chatTemplateEngineExplicit = nodeOptions.has_chat_template_engine();
+    try {
+        properties->chatTemplateEngine = determineChatTemplateEngine(nodeOptions);
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Failed to determine chat template engine: {}", e.what());
+        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
 
     properties->device = nodeOptions.device();
