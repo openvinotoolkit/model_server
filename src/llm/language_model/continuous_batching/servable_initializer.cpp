@@ -161,7 +161,6 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
         }
     }
-    properties->chatTemplateEngineExplicit = nodeOptions.has_chat_template_engine();
     try {
         properties->chatTemplateEngine = determineChatTemplateEngine(nodeOptions);
     } catch (const std::exception& e) {

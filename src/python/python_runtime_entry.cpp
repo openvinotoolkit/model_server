@@ -250,6 +250,28 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_ensurePythonInterpreterInitialized(co
     return false;
 }
 
+extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_ensureChatTemplateRuntimeInitialized(const char** errorMessage) {
+    if (!OVMS_ensurePythonInterpreterInitialized(errorMessage)) {
+        return false;
+    }
+
+    py::gil_scoped_acquire acquire;
+    try {
+        py::module_::import("json");
+        py::module_::import("pathlib");
+        py::module_::import("datetime");
+        py::module_::import("jinja2");
+        py::module_::import("jinja2.sandbox");
+        py::module_::import("jinja2.ext");
+        return true;
+    } catch (const std::exception& error) {
+        setRuntimeOutput(error.what(), errorMessage);
+    } catch (...) {
+        setRuntimeOutput("Failed to initialize Python chat template dependencies", errorMessage);
+    }
+    return false;
+}
+
 extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_createPreparedChatTemplateRuntime(
     const char* modelsPath,
     const char* chatTemplate,
