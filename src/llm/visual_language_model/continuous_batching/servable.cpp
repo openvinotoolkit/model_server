@@ -29,8 +29,6 @@
 #include "../../../logging.hpp"
 #include "../../../tokenize/tokenize_parser.hpp"
 #include "../../text_utils.hpp"
-#if (PYTHON_DISABLE == 0)
-#endif
 
 namespace ovms {
 
@@ -60,6 +58,7 @@ absl::Status VisualLanguageModelServable::addRequestToPipeline(std::shared_ptr<C
     auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
     vlmExecutionContext->generationHandle = properties->pipeline->add_request(currentRequestId++,  // to be removed from API?
         vlmExecutionContext->inputRequest.promptText, vlmExecutionContext->inputRequest.inputImages,
+        vlmExecutionContext->inputRequest.inputVideos,
         vlmExecutionContext->inputRequest.generationConfig);
     return absl::OkStatus();
 }
@@ -91,6 +90,10 @@ absl::Status VisualLanguageModelServable::prepareCompleteResponse(std::shared_pt
 
 absl::Status VisualLanguageModelServable::preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto status = GenAiServable::preparePartialResponse(executionContext);
+    if (!status.ok()) {
+        stopGenerationOnResponseError(std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext));
+        return status;
+    }
     if (status.ok() &&
         !executionContext->sendLoopbackSignal &&
         llm_calculator_logger->should_log(spdlog::level::debug)) {

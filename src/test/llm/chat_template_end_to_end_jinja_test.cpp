@@ -181,6 +181,43 @@ protected:
     }
 };
 
+TEST_F(ChatTemplateEndToEndJinjaTest, RuntimeInitializationRendersOriginalTokenizerTemplate) {
+    ASSERT_FALSE(std::filesystem::exists(directoryPath + "/chat_template.jinja"));
+
+    auto properties = std::make_shared<GenAiServableProperties>();
+    properties->modelsPath = directoryPath;
+    properties->chatTemplateEngine = ChatTemplateEngine::JINJA;
+    properties->chatTemplateEngineExplicit = true;
+    const std::string originalTemplateTokenizerPath = getGenericFullPathForSrcTest(
+        "/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct", false);
+    properties->tokenizer = ov::genai::Tokenizer(originalTemplateTokenizerPath);
+
+    const std::string originalTemplate = properties->tokenizer.get_original_chat_template();
+    ASSERT_FALSE(originalTemplate.empty()) << "Tokenizer fixture must provide an original chat template";
+
+    const auto loadStatus = GenAiServableInitializer::loadChatTemplate(properties, directoryPath);
+    ASSERT_TRUE(loadStatus.ok()) << loadStatus.string();
+    ASSERT_TRUE(properties->preparedChatTemplate.isPrepared());
+
+    const std::string requestBody = R"({"messages":[{"role":"user","content":"Hello"}]})";
+    std::string actualOutput;
+    ASSERT_TRUE(properties->preparedChatTemplate.apply(requestBody, actualOutput)) << actualOutput;
+
+    PreparedChatTemplateRuntime expectedTemplate;
+    std::string prepareError;
+    ASSERT_TRUE(expectedTemplate.prepare(
+        directoryPath,
+        originalTemplate,
+        properties->tokenizer.get_bos_token(),
+        properties->tokenizer.get_eos_token(),
+        prepareError))
+        << prepareError;
+
+    std::string expectedOutput;
+    ASSERT_TRUE(expectedTemplate.apply(requestBody, expectedOutput)) << expectedOutput;
+    EXPECT_EQ(actualOutput, expectedOutput);
+}
+
 // =============================================================================
 // The chat template we use here contains multiple patches, including one that relates to `string2obj`.
 // Without the workaround, it translates to {"key":"val"}.
@@ -751,6 +788,51 @@ What's the weather in Paris?<|im_end|>
 <|im_start|>assistant
 <function name="get_weather"><param name="location">Paris</param><param name="unit">celsius</param></function><|im_end|>
 <|im_start|>assistant
+)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
+}
+
+TEST_F(ChatTemplateEndToEndJinjaTest, MiniCPM_V_47_ToolCallWithStringArgs) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_minicpm_v_47.jinja");
+    ASSERT_FALSE(chatTemplate.empty());
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
+
+    run();
+
+    ASSERT_FALSE(exceptionThrownDuringApplication);
+
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "qwen3coder");
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "qwen3");
+
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
+
+    std::string expectedOutput = R"(<|im_start|>user
+What's the weather in Paris?<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+<tool_call>
+<function=get_weather>
+<parameter=location>
+Paris
+</parameter>
+<parameter=unit>
+celsius
+</parameter>
+</function>
+</tool_call><|im_end|>
+<|im_start|>assistant
+<think>
 )";
     EXPECT_EQ(appliedOutput, expectedOutput);
 }

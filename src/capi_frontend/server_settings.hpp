@@ -256,12 +256,12 @@ struct ServerSettingsImpl {
     std::string tracePath;
 #endif
     std::optional<size_t> grpcMemoryQuota;
+    std::optional<size_t> jsonMaxComplexity;
     std::string grpcChannelArguments;
     uint32_t filesystemPollWaitMilliseconds = 1000;
     uint32_t memoryTrimmingIntervalSeconds = 300;
     uint32_t idleUnloadTimeoutSeconds = 0;
     std::string cacheDir;
-    bool withPython = false;
     bool startedWithCLI = false;
     ConfigExportType exportConfigType = UNKNOWN_MODEL;
     HFSettingsImpl hfSettings;

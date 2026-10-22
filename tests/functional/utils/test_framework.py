@@ -37,7 +37,6 @@ from tests.functional.config import (
     language_models_enabled,
     machine_is_reserved_for_test_session,
     mediapipe_disable,
-    python_disable,
     run_ovms_with_opencl_trace,
     run_ovms_with_valgrind,
     windows_python_version,
@@ -70,7 +69,6 @@ class FrameworkMessages:
     STRACE_IMAGE_NOT_BUILD = "STRACE IMAGE NOT BUILD"
     LANGUAGE_MODELS_DISABLED = "LANGUAGE MODELS DISABLED"
     MEDIAPIPE_DISABLED = "MEDIAPIPE DISABLED"
-    PYTHON_DISABLED = "PYTHON DISABLED"
     BUILD_AND_VERIFY_PACKAGE_DISABLED = "BUILD_AND_VERIFY_PACKAGE_DISABLED"
     VLLM_TESTS_NOT_ENABLED = "vLLM TESTS NOT ENABLED"
     NGINX_IMAGE_NOT_SUPPORTED = "NGINX IMAGE NOT SUPPORTED"
@@ -125,7 +123,8 @@ def skip_if_mediapipe_disabled():
 
 
 def skip_if_python_disabled():
-    return skip_if(python_disable, msg=FrameworkMessages.PYTHON_DISABLED)
+    # Kept for external test suites; Python support is always enabled.
+    return pytest.mark.skipif(False, reason="Python support is always enabled")
 
 
 def skip_if_cliloader_disabled():

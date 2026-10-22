@@ -73,19 +73,12 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
         }
     }
-    if (nodeOptions.has_chat_template_engine()) {
-        properties->chatTemplateEngineExplicit = true;
-#if (PYTHON_DISABLE == 0)
-        properties->chatTemplateEngine = (nodeOptions.chat_template_engine() == mediapipe::LLMCalculatorOptions::JINJA)
-                                             ? ChatTemplateEngine::JINJA
-                                             : ChatTemplateEngine::MINJA;
-#else
-        if (nodeOptions.chat_template_engine() == mediapipe::LLMCalculatorOptions::JINJA) {
-            SPDLOG_ERROR("chat_template_engine=JINJA requires Python support.");
-            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
-        }
-        properties->chatTemplateEngine = ChatTemplateEngine::MINJA;
-#endif
+    properties->chatTemplateEngineExplicit = nodeOptions.has_chat_template_engine();
+    try {
+        properties->chatTemplateEngine = determineChatTemplateEngine(nodeOptions);
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Failed to determine chat template engine: {}", e.what());
+        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
     properties->schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();
     properties->schedulerConfig.cache_size = nodeOptions.cache_size();
