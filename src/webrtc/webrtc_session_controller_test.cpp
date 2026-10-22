@@ -24,6 +24,7 @@
 #include <iterator>
 #include <memory>
 #include <mutex>
+#include <sstream>
 #include <string>
 #include <thread>
 #include <utility>
@@ -41,6 +42,7 @@
 
 #include "src/audio/audio_utils.hpp"
 #include "src/audio/speech_to_text/stt_pipeline_handle.hpp"
+#include "src/utils/env_guard.hpp"
 #include "webrtc_session_controller.hpp"
 #include "webrtc_peer_connection.hpp"
 
@@ -377,6 +379,8 @@ std::string createGatheredOffer(WebRtcPeerConnection& offerer) {
 }  // namespace
 
 TEST(WebRtcSessionControllerTest, CreatesRealtimeCallWithCompleteAnswer) {
+    EnvGuard environment;
+    environment.unset("OVMS_WEBRTC_PORT_RANGE");
     WebRtcSessionController controller;
     WebRtcSessionController::OfferResult result;
     WebRtcPeerConnection offerer(rtc::Configuration{});
@@ -388,11 +392,59 @@ TEST(WebRtcSessionControllerTest, CreatesRealtimeCallWithCompleteAnswer) {
     EXPECT_EQ(result.type, "answer");
     // Non-trickle clients (OpenAI Realtime /v1/realtime/calls) need candidates inside the SDP answer.
     EXPECT_NE(result.sdp.find("a=candidate:"), std::string::npos) << result.sdp;
+    ASSERT_FALSE(result.candidates.empty());
+    for (const auto& candidate : result.candidates) {
+        std::istringstream fields(candidate.candidate);
+        std::string field;
+        for (int i = 0; i < 5; ++i)
+            ASSERT_TRUE(static_cast<bool>(fields >> field));
+        unsigned int port = 0;
+        ASSERT_TRUE(static_cast<bool>(fields >> port));
+        EXPECT_GE(port, 52000u);
+        EXPECT_LE(port, 52100u);
+    }
     // The answer must not be replaced by a renegotiation offer.
     EXPECT_EQ(result.sdp.find("a=setup:actpass"), std::string::npos) << result.sdp;
     EXPECT_EQ(controller.sessionCount(), 1);
     EXPECT_TRUE(controller.removeSession(result.sessionId));
     EXPECT_EQ(controller.sessionCount(), 0);
+}
+
+TEST(WebRtcSessionControllerTest, UsesConfiguredUdpPortRange) {
+    EnvGuard environment;
+    environment.set("OVMS_WEBRTC_PORT_RANGE", "52200-52210");
+    WebRtcSessionController controller;
+    WebRtcSessionController::OfferResult result;
+    WebRtcPeerConnection offerer(rtc::Configuration{});
+    const std::string offerSdp = createGatheredOffer(offerer);
+    ASSERT_FALSE(offerSdp.empty());
+
+    ASSERT_TRUE(controller.createRealtimeCall(offerSdp, {}, result));
+    ASSERT_FALSE(result.candidates.empty());
+    for (const auto& candidate : result.candidates) {
+        std::istringstream fields(candidate.candidate);
+        std::string field;
+        for (int i = 0; i < 5; ++i)
+            ASSERT_TRUE(static_cast<bool>(fields >> field));
+        unsigned int port = 0;
+        ASSERT_TRUE(static_cast<bool>(fields >> port));
+        EXPECT_GE(port, 52200u);
+        EXPECT_LE(port, 52210u);
+    }
+    EXPECT_TRUE(controller.removeSession(result.sessionId));
+}
+
+TEST(WebRtcSessionControllerTest, RejectsInvalidUdpPortRange) {
+    EnvGuard environment;
+    for (const std::string range : {"", "52000", "0-52100", "52000-65536", "52100-52000",
+             "-1-52100", "52000-", "52000-52100extra", "52000-52100-52200", " 52000-52100"}) {
+        SCOPED_TRACE(range);
+        environment.set("OVMS_WEBRTC_PORT_RANGE", range);
+        WebRtcSessionController controller;
+        WebRtcSessionController::OfferResult result;
+        EXPECT_FALSE(controller.createRealtimeCall("offer", {}, result));
+        EXPECT_EQ(controller.sessionCount(), 0);
+    }
 }
 
 TEST(WebRtcSessionControllerTest, AnnouncesHostCandidateWithConfiguredIp) {
@@ -425,6 +477,8 @@ TEST(WebRtcSessionControllerTest, DoesNotAnnounceUnsupportedCandidates) {
 }
 
 TEST(WebRtcSessionControllerTest, RealtimeCallAnnouncesConfiguredIp) {
+    EnvGuard environment;
+    environment.set("OVMS_WEBRTC_PORT_RANGE", "52000-52000");
     const std::string announcedIp = "10.91.240.7";
     WebRtcSessionController controller(16, announcedIp);
     WebRtcSessionController::OfferResult result;

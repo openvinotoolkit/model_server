@@ -17,13 +17,16 @@
 
 #include <algorithm>
 #include <atomic>
+#include <charconv>
 #include <chrono>
+#include <cstdlib>
 #include <exception>
 #include <iterator>
 #include <fstream>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
+#include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -586,9 +589,26 @@ bool WebRtcSessionController::negotiateSession(const std::string& offerSdp, cons
 
     SPDLOG_LOGGER_INFO(webrtc_logger, "Creating realtime call {} from browser offer", sessionId);
     rtc::Configuration configuration;
-    // One fixed POC port lets a UDP relay forward browser media to the container.
     configuration.portRangeBegin = 52000;
-    configuration.portRangeEnd = 52000;
+    configuration.portRangeEnd = 52100;
+    if (const char* value = std::getenv("OVMS_WEBRTC_PORT_RANGE")) {
+        const std::string_view range(value);
+        const size_t separator = range.find('-');
+        const auto parsePort = [](std::string_view text, uint16_t& port) {
+            if (text.empty())
+                return false;
+            const auto result = std::from_chars(text.data(), text.data() + text.size(), port);
+            return result.ec == std::errc{} && result.ptr == text.data() + text.size() && port != 0;
+        };
+        if (separator == std::string_view::npos ||
+            !parsePort(range.substr(0, separator), configuration.portRangeBegin) ||
+            !parsePort(range.substr(separator + 1), configuration.portRangeEnd) ||
+            configuration.portRangeBegin > configuration.portRangeEnd) {
+            SPDLOG_LOGGER_ERROR(webrtc_logger,
+                "Invalid OVMS_WEBRTC_PORT_RANGE '{}': expected start-end with 1 <= start <= end <= 65535", value);
+            return false;
+        }
+    }
     auto session = std::make_shared<Session>(std::move(configuration), sessionId);
     session->peer.onStateChange([session](rtc::PeerConnection::State state) {
         if (state == rtc::PeerConnection::State::Disconnected ||

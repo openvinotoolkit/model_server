@@ -13,7 +13,7 @@ docker run --rm --network host \
   -v "$HOME/models:/models" \
   -w /ovms --entrypoint /bin/bash \
   openvino/model_server-build:voxtral-local-20261006 \
-  -c 'exec "$(bazel --output_user_root=/root/.cache/bazel/bazel info bazel-bin)/src/ovms" --rest_port 19112 --source_model OpenVINO/voxtral-realtime-2602 --model_repository_path /models --model_name voxtral-asr --task speech2text --target_device CPU'
+  -c 'exec "$(bazel --output_user_root=/root/.cache/bazel/bazel info bazel-bin)/src/ovms" --rest_port 8080 --source_model OpenVINO/voxtral-realtime-2602 --model_repository_path /models --model_name voxtral-asr --task speech2text --target_device CPU'
 ```
 
 ## OpenAI Realtime compatible signaling
@@ -28,13 +28,15 @@ The model-backed Voxtral cases in the controller test require `OVMS_VOXTRAL_MODE
 
 ## Connecting from another machine (Docker)
 
-Inside a container, OVMS only knows its bridge address (for example `172.17.0.8`), so the ICE candidates it advertises are unreachable for clients on other machines. Publish the media port 1:1 (`-p 52000:52000/udp`) and set `OVMS_WEBRTC_ANNOUNCED_IP` to the host's LAN or public IP address:
+WebRTC uses the inclusive UDP port range `52000-52100` by default. Set `OVMS_WEBRTC_PORT_RANGE=start-end` to override it, for example `OVMS_WEBRTC_PORT_RANGE=53000-53100`. Both ports must be between 1 and 65535, with start no greater than end. A single port can be selected with `52000-52000`. Invalid values are logged and call creation is rejected.
+
+Inside a container, OVMS only knows its bridge address (for example `172.17.0.8`), so the ICE candidates it advertises are unreachable for clients on other machines. Publish the configured media port range 1:1 and set `OVMS_WEBRTC_ANNOUNCED_IP` to the host's LAN or public IP address:
 
 ```bash
-docker run ... -p 9112:9112 -p 52000:52000/udp -e OVMS_WEBRTC_ANNOUNCED_IP=192.168.1.50 ...
+docker run ... -p 8080:8080 -p 52000-52100:52000-52100/udp -e OVMS_WEBRTC_ANNOUNCED_IP=192.168.1.50 ...
 ```
 
-For every host ICE candidate, OVMS also advertises a copy with the announced address and the same port in the `/v1/realtime/calls` SDP answer; the original candidate is kept for clients on the same host. The value must be an IPv4 or IPv6 address of the same family as the container's candidates; invalid values are logged and ignored. Clients must be able to reach UDP port 52000 on that address; clients behind restrictive firewalls need a TURN relay.
+For every host ICE candidate, OVMS also advertises a copy with the announced address and the same port in the `/v1/realtime/calls` SDP answer; the original candidate is kept for clients on the same host. The value must be an IPv4 or IPv6 address of the same family as the container's candidates; invalid values are logged and ignored. Clients must be able to reach the configured UDP port range on that address; clients behind restrictive firewalls need a TURN relay.
 
 WebRTC calls use the pipeline of a served speech-to-text graph (`--task speech2text`, or a graph with an `S2tCalculator` node in the configuration file), so no second copy of the model is loaded and the device is the one the graph was deployed with. The exported `config.json` selects Voxtral Realtime streaming or utterance-based ASR such as Whisper; neither the repository name nor the serving alias controls backend selection. Every Voxtral call opens its own stream; Whisper transcriptions share the pipeline with `/v3/audio/transcriptions` and run one at a time.
 

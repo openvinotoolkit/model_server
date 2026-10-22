@@ -120,6 +120,7 @@ cc_test(
     srcs = ["webrtc_session_controller_test.cpp"],
     linkstatic = 1,
     deps = [
+        "//src/utils:env_guard",
         "//src/audio:audio_utils",
         "//src/audio/speech_to_text:stt_pipeline_handle",
         "//third_party:genai",
