@@ -28,6 +28,20 @@ For other operating systems and architectures, select the corresponding asset fr
 
 OVMS reports an error when `llmman` is not available on `PATH`.
 
+### Installing in a running OVMS container
+
+Release images do not include `llmman`; build images do. For a running Linux x86-64 OVMS release container, first install the verified binary on the host using the commands above, then copy it into the container (replace `ovms-container` with its name):
+
+```sh
+docker cp "$HOME/.local/bin/llmman" ovms-container:/usr/local/bin/llmman
+docker exec --user 0 ovms-container chmod 0755 /usr/local/bin/llmman
+docker exec ovms-container llmman --version
+```
+
+This requires a writable container filesystem. The installation persists across restarts of that container, but must be repeated if the container is recreated.
+
+### Registry authentication
+
 Public registries can be used without credentials. For a private registry, authenticate with `llmman login <registry>` and make the resulting Docker-compatible credential configuration available to the user running OVMS. `llmman` reads credentials from the Docker credential configuration; it does not use `HF_TOKEN` for OCI registry authentication.
 
 In a container, logging in on the host alone is not sufficient because the container does not automatically see the host's credentials. Mount the Docker config directory read-only and point `DOCKER_CONFIG` at it. For example:
