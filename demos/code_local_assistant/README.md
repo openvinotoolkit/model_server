@@ -347,7 +347,7 @@ context:
 
 
 ## AI Agents in action
-Continue.dev plugin is shipped with multiple built-in tools. For full list please [visit Continue documentation](https://docs.continue.dev/features/agent/how-it-works#what-tools-are-available-in-plan-mode-read-only).
+Continue.dev plugin is shipped with multiple built-in tools. For full list please [visit Continue documentation](https://docs.continue.dev/ide-extensions/agent/how-it-works#what-tools-are-available-in-plan-mode-read-only).
 
 To use them, select Agent Mode:
 
