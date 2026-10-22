@@ -105,12 +105,18 @@ std::vector<float> readWav(const std::string_view& wavData, uint32_t targetSampl
         drwav_uninit(&wav);
         throw std::runtime_error("WAV file header claims more frames than possible from data chunk size");
     }
-    // Validate decoded buffer size before resampling (float32 mono output)
-    if (targetSampleRate > 0) {
-        validateAudioFileSize(wav.totalPCMFrameCount, wav.sampleRate, targetSampleRate, /*will be downmixed to mono*/ 1, sizeof(float));
-    }
-
+    // Validate decoded buffer size before any large allocations.
     const uint64_t n = wav.totalPCMFrameCount;
+    size_t decodedSamples = static_cast<size_t>(n);
+    if (decodedSamples > std::numeric_limits<size_t>::max() / sizeof(float)) {
+        drwav_uninit(&wav);
+        throw std::overflow_error("Decoded audio buffer size overflow");
+    }
+    if (targetSampleRate > 0) {
+        validateAudioFileSize(n, wav.sampleRate, targetSampleRate, /*will be downmixed to mono*/ 1, sizeof(float));
+    } else {
+        validateAudioFileSizeAgainstMaxValue(decodedSamples * sizeof(float));
+    }
     std::vector<int16_t> pcm16;
     if (n > AUDIO_BUFFER_SIZE_LIMIT / wav.channels) {
         drwav_uninit(&wav);

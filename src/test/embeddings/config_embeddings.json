@@ -25,6 +25,11 @@
         "name":"embeddings_ov_pooling_last",
         "base_path":"/ovms/src/test/embeddings/",
         "graph_path":"/ovms/src/test/embeddings/graph_ov_pooling_last.pbtxt"
+    },
+    {
+        "name":"embeddings_ov_max_length",
+        "base_path":"/ovms/src/test/embeddings/",
+        "graph_path":"/ovms/src/test/embeddings/graph_ov_max_length.pbtxt"
     }
     ]
 }

@@ -84,7 +84,10 @@ curl http://localhost/v3/chat/completions \
   "usage": {
         "completion_tokens": 38,
         "prompt_tokens": 22,
-        "total_tokens": 60
+        "total_tokens": 60,
+        "prompt_tokens_details": {
+            "cached_tokens": 0
+        }
   }
 }
 ```
@@ -195,6 +198,41 @@ curl http://localhost/v3/chat/completions \
 ```
 **Note**: check `--allowed_local_media_path` parameter described [here](parameters.md)
 
+In case of VLM models that support video understanding (e.g. Qwen3-VL), a video can be sent as a `video_url` content part. Because the server does not decode compressed video containers (mp4 etc.), the client is responsible for extracting frames from the source video and sending them as an **array of already-decoded frames**. Each element of the `url` array is a single frame in the same formats accepted by `image_url` (base64 data URI, HTTP(S) URL, or local filesystem path). Frames are sent in the order given, so extract them in temporal order:
+
+```
+curl http://localhost/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "qwen3-vl",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "Describe this video."
+                },
+                {
+                    "type": "video_url",
+                    "video_url": {
+                        "url": [
+                            "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBD ...",
+                            "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBD ...",
+                            "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBD ..."
+                        ]
+                    }
+                }
+            ]
+        }
+    ],
+    "temperature": 0.0,
+    "max_completion_tokens": 128
+}'
+```
+
+**Note**: Unlike `image_url.url`, which is a single string, `video_url.url` is an **array of 1 to 1024 strings** (one per frame). All frames of a single video must share the same height, width and channel count. Decoded frame pixels count toward the request-wide `--max_image_decode_pixels` budget shared by all `image_url` and `video_url` parts. The same `--allowed_media_domains` / `--allowed_local_media_path` restrictions apply to each frame reference. Multiple `video_url` parts, and mixing `image_url` and `video_url` in one message, are supported.
+
 ### Request
 
 Below we listed request parameters specified in the body as defined in OpenAI API specification. 
@@ -221,7 +259,9 @@ Some parameters, especially related to sampling (like `temperature`, `top_p` etc
 | tool_choice | ✅ | ✅ | ✅ | string or object | Controls which (if any) tool is called by the model. `none` means the model will not call any tool and instead generates a message. `auto` means the model can pick between generating a message or calling one or more tools. `required` means that model should call at least one tool. Specifying a particular tool via `{"type": "function", "function": {"name": "my_function"}}` forces the model to call that tool. See [OpenAI API reference](https://platform.openai.com/docs/api-reference/chat/create#chat-create-tool_choice) for more details. |
 | response_format | ✅ | ✅ | ✅ | object | An object specifying the format that the model must output. Setting to `{ "type": "json_schema", "json_schema": {...} }` enables Structured Outputs which ensures the model will match your supplied JSON schema according to [OpenAI reference](https://platform.openai.com/docs/api-reference/chat/create#chat-create-response_format). Learn more in the [Structured Outputs demo](../demos/continuous_batching/structured_output/README.md). Additionally, `response_format` can accept [XGrammar structural tags format](https://github.com/mlc-ai/xgrammar/blob/v0.1.26/docs/tutorials/structural_tag.md#format-types) (not part of OpenAI API). For example: `{ "type": "const_string", "value": "Hello World!" }`. **Note** that if model server fails to process the format, the request will still be processed, but the format will not be imposed. |
 | chat_template_kwargs | ✅ | ❌ | ✅ |  object | Enables passing additional parameters to chat template engine. Example `{"enable_thinking": false}`. Note that values like `messages`, `eos_token`, `bos_token` etc. are provided natively to the template engine, so including them in `chat_template_kwargs` will cause error. Also accepts `add_generation_prompt` (bool, default: `true`) — whether to append the chat template's generation prompt (the marker that signals the model to start a new assistant turn). Set to `false` to render the conversation without a trailing generation prompt, e.g. `{"add_generation_prompt": false}` — useful for assistant prefill where the final `assistant` message should be continued rather than treated as a completed turn. Applies to both the Python-Jinja and MINJA chat template paths. |
+| reasoning_effort | ✅ | ✅ | ✅ | string (optional) | Constrains effort on reasoning for reasoning models. One of `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`. Injects `reasoning_effort` (the literal value) and `enable_thinking` (`false` only for `none`, `true` otherwise) into `chat_template_kwargs`. Also injects `reasoning_strength`, mapped onto `low`/`medium`/`high`/`xhigh` for templates (e.g. Muse/Onyx) that only understand that reduced set (`none`/`minimal` → `low`, `max` → `xhigh`). None of these are injected if the request already sets the corresponding key explicitly in `chat_template_kwargs` — explicit `chat_template_kwargs` keys always take precedence. See [OpenAI API reference](https://platform.openai.com/docs/api-reference/chat/create#chat-create-reasoning_effort) for more details. |
 | skip_special_tokens | ✅ | ❌ | ✅ | bool (default: `true`) | Whether to remove special tokens (e.g. `<\|endoftext\|>`, `<\|im_end\|>`) from the generated output. Set to `false` to include them, which is useful when the model uses special tokens to encode structured information (e.g. bounding boxes, reasoning markers). When `false`, any tool or reasoning parser configured on the endpoint is silently disabled for the request, so the raw token stream is returned. This option works with most detokenizers exported with OpenVINO Tokenizers 2024.5 or later, unless they are based on custom ops. |
+
 
 #### Beam search sampling specific
 | Param | OpenVINO Model Server | OpenAI /chat/completions API | vLLM Serving Sampling Params | Type | Description |
@@ -307,7 +347,7 @@ If any of those parameters is not specified and request is made to Prompt Lookup
 | created | ✅ | ✅ | string | The Unix timestamp (in seconds) of when the chat completion was created.  |
 | model | ✅ | ✅ | string | The model used for the chat completion. |
 | object | ✅ | ✅ | string | `chat.completion` for unary requests and `chat.completion.chunk` for streaming responses |
-| usage | ✅ | ✅ | object | Usage statistics for the completion request. Consists of three integer fields: `completion_tokens`, `prompt_tokens` and `total_tokens` that inform how many tokens have been generated in a completion, number of tokens in a prompt and the sum of both. Does not work for streaming on stateful endpoints. |
+| usage | ✅ | ✅ | object | Usage statistics for the completion request. Consists of three integer fields: `completion_tokens`, `prompt_tokens` and `total_tokens` that inform how many tokens have been generated in a completion, number of tokens in a prompt and the sum of both. Also includes `prompt_tokens_details.cached_tokens` - the number of prompt tokens reused from the prefix cache (a subset of `prompt_tokens`, always 0 when `enable_prefix_caching` is off). Does not work for streaming on stateful endpoints. |
 
 #### Unsupported params from OpenAI service:
 

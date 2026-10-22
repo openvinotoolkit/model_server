@@ -61,6 +61,7 @@ struct ImageGenPipelineArgs {
     ov::AnyMap pluginConfig;
     resolution_t maxResolution;
     std::optional<resolution_t> defaultResolution;
+    std::optional<resolution_t> nativeResolution;
     std::optional<uint64_t> seed;
     uint64_t maxNumImagesPerPrompt;
     uint64_t defaultNumInferenceSteps;

@@ -21,7 +21,7 @@
 #include <utility>
 
 #include "../logging.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "buffer.hpp"
 #include "inferencerequest.hpp"
 #include "inferenceresponse.hpp"

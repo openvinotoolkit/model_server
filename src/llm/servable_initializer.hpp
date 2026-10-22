@@ -22,10 +22,11 @@
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mediapipe/framework/calculator_graph.h"
+#include "mediapipe/framework/calculator.pb.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 #include "src/llm/llm_calculator.pb.h"
+#include "src/llm/servable.hpp"
 
 namespace ovms {
 
@@ -43,22 +44,16 @@ enum class PipelineType {
 class Status;
 class GenAiServable;
 struct GenAiServableProperties;
-struct ExtraGenerationInfo;
 
 class GenAiServableInitializer {
 public:
     virtual ~GenAiServableInitializer() = default;
-    static void loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
+    static Status loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
     // Propagates the global --cache_dir (ServerSettings) into the pipeline plugin config
     // when the node did not set an explicit CACHE_DIR. Shared by every GenAI initializer
     // (continuous batching and legacy, LM and VLM) since they all construct GenAI pipelines
     // directly and would otherwise never apply the server-level cache_dir.
     static void applyGlobalCacheDir(std::shared_ptr<GenAiServableProperties> properties);
-#if (PYTHON_DISABLE == 0)
-    // Use Python Jinja module for template processing
-    static void loadPyTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, const ExtraGenerationInfo& extraGenInfo);
-    static ExtraGenerationInfo readExtraGenerationInfo(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
-#endif
     /*
     initialize method implementation MUST fill servable with all required properties i.e. pipeline, tokenizer, configs etc. based on mediapipe node options.
     It is strictly connected with the servable, so implementation of this method in a derived class should be aware of the specific servable class structure
@@ -68,6 +63,12 @@ public:
 };
 Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string graphPath);
 std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath);
+// Detects draft model strategy from model artifacts without a full model load.
+// Scans the tail of the draft model XML (walking backward in bounded chunks/lines, up to a line cap)
+// to find eagle3/dflash rt_info markers; MTP is detected separately via file presence.
+// DFlash takes priority over EAGLE3 when both markers are present (matches GenAI's strategy selection order).
+// Throws std::runtime_error if the XML is missing or cannot be opened/read.
+GenAiServableProperties::DraftModelStrategy detectDraftModelStrategy(const std::string& draftPath);
 Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath);
 Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath);
 }  // namespace ovms

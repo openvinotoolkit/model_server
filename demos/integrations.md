@@ -1,0 +1,16 @@
+# OpenAI API Integrations {#ovms_demos_integrations}
+
+```{toctree}
+---
+maxdepth: 1
+---
+
+OpenWebUI <ovms_demos_integration_with_open_webui>
+VSC Continue dev <ovms_demos_code_completion_vsc>
+Cline demo <ovms_demos_cline_integration>
+DeepAgents Code <ovms_demos_integration_with_deepagents_code>
+GitHub Copilot demo <ovms_demos_copilot_integration>
+```
+
+
+

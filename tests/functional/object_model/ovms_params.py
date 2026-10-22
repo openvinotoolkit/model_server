@@ -68,6 +68,7 @@ class OvmsParams:
     single_mediapipe_model_mode: bool = False
     allowed_local_media_path: str = None
     allowed_media_domains: str = None
+    max_image_decode_pixels: int = None
     pull: bool = None
     source_model: str = None
     gguf_filename: str = None

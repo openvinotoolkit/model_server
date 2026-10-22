@@ -173,6 +173,145 @@ TEST_F(Gemma4OutputParserTest, ParseReasoningWithoutToolCall) {
     }
 }
 
+TEST_F(Gemma4OutputParserTest, ParseReasoningWithThoughtKeywordEmbeddedInSentence) {
+    // NOTE: For the case "<channel|>thought\n ..." in the output we re-enter reasoning due to getting to UNKNOWN phase
+    // in the main OutputParser where preable is honoured again. Changing that is a OutputParser level behavioral change.
+    std::string input = "<|channel>I thought\nabout this for a while<channel|>Here's my thought\n and SOME CONTENT WITHOUT TOOL CALL";
+
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "Here's my thought\n and SOME CONTENT WITHOUT TOOL CALL");
+    EXPECT_EQ(parsedOutput.reasoning, "I thought\nabout this for a while");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
+TEST_F(Gemma4OutputParserTest, ParseReasoningWithCorruptedKeyword) {
+    std::string input = "<|channel>_thought\nSome reasoning content<channel|>SOME CONTENT WITHOUT TOOL CALL";
+
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "SOME CONTENT WITHOUT TOOL CALL");
+    EXPECT_EQ(parsedOutput.reasoning, "Some reasoning content");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
+TEST_F(Gemma4OutputParserTest, ParseReasoningWithDegenerateKeyword) {
+    std::string input = "<|channel>works\n<channel|>SOME CONTENT WITHOUT TOOL CALL";
+
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "SOME CONTENT WITHOUT TOOL CALL");
+    EXPECT_EQ(parsedOutput.reasoning, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
+TEST_F(Gemma4OutputParserTest, ParseReasoningWithSkippedKeywordLeavesEmptyHeaderLine) {
+    std::string input = "<|channel>\nSome reasoning content<channel|>SOME CONTENT WITHOUT TOOL CALL";
+
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "SOME CONTENT WITHOUT TOOL CALL");
+    EXPECT_EQ(parsedOutput.reasoning, "Some reasoning content");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
+TEST_F(Gemma4OutputParserTest, ParseReasoningDoesNotTreatContentNewlineAsHeaderBoundary) {
+    std::string input = "<|channel>reasoning<channel|>first content line\nsecond line";
+
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.reasoning, "reasoning");
+    EXPECT_EQ(parsedOutput.content, "first content line\nsecond line");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
+TEST_F(Gemma4OutputParserTest, ParseReasoningWithOpenerFollowedByNoKeyword) {
+    std::string input = "<|channel> way of thinking about this is very mature and thorough.<channel|>SOME CONTENT WITHOUT TOOL CALL";
+
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.reasoning, " way of thinking about this is very mature and thorough.");
+    EXPECT_EQ(parsedOutput.content, "SOME CONTENT WITHOUT TOOL CALL");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
+TEST_F(Gemma4OutputParserTest, ParseReasoningWithNoKeywordPreservesMultilineFirstLine) {
+    std::string input = "<|channel>first line\nsecond line<channel|>SOME CONTENT WITHOUT TOOL CALL";
+
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.reasoning, "first line\nsecond line");
+    EXPECT_EQ(parsedOutput.content, "SOME CONTENT WITHOUT TOOL CALL");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
+TEST_F(Gemma4OutputParserTest, ParseReasoningWithDuplicatedEndTagDoesNotEmitInterveningTextTwice) {
+    std::string chunk = "<|channel>thought\nSome reasoning<channel|>Oops<channel|>Final content";
+
+    auto doc1 = outputParserWithRegularToolParsing->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
+    assertChunkEqual(doc1, R"({"delta":{"reasoning_content":"Some reasoning"}})", chunk);
+
+    auto doc2 = outputParserWithRegularToolParsing->parseChunk("", {}, true, ov::genai::GenerationFinishReason::NONE);
+    assertChunkEqual(doc2, R"({"delta":{"reasoning_content":"Oops"}})", "");
+
+    auto doc3 = outputParserWithRegularToolParsing->parseChunk("", {}, true, ov::genai::GenerationFinishReason::STOP);
+    assertChunkEqual(doc3, R"({"delta":{"content":"Final content"}})", "");
+}
+
+TEST_F(Gemma4OutputParserTest, ParseReasoningWithOpenerFollowedBySpaceThenKeywordNewline) {
+    std::string input = "<|channel> thought\nSome reasoning content<channel|>SOME CONTENT WITHOUT TOOL CALL";
+
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.reasoning, "Some reasoning content");
+    EXPECT_EQ(parsedOutput.content, "SOME CONTENT WITHOUT TOOL CALL");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
+TEST_F(Gemma4OutputParserTest, ImplicitStartStillConsumesGeneratedChannelHeader) {
+    outputParserWithRegularToolParsing->detectAndSetImplicitReasoningStart("<|turn>model\n<|channel>");
+    std::vector<std::pair<std::string, std::optional<std::string>>> chunks{
+        {"thought\n", std::nullopt},
+        {"Some reasoning content", R"({"delta":{"reasoning_content":"Some reasoning content"}})"},
+        {"<channel|>", std::nullopt},
+        {"Final answer", R"({"delta":{"content":"Final answer"}})"},
+    };
+    for (const auto& [chunk, expected] : chunks) {
+        auto doc = outputParserWithRegularToolParsing->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
+        assertChunkEqual(doc, expected, chunk);
+    }
+}
+
+TEST_F(Gemma4OutputParserTest, ParseReasoningWithMissingOpenerTag) {
+    std::string input = "thought\nSome reasoning content<channel|>SOME CONTENT WITHOUT TOOL CALL";
+
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "SOME CONTENT WITHOUT TOOL CALL");
+    EXPECT_EQ(parsedOutput.reasoning, "Some reasoning content");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
+TEST_F(Gemma4OutputParserTest, ParseReasoningWithNoKeywordLineAtAll) {
+    std::string input = "<|channel>Acquired information: the door is now unlocked.<channel|>SOME CONTENT WITHOUT TOOL CALL";
+
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "SOME CONTENT WITHOUT TOOL CALL");
+    EXPECT_EQ(parsedOutput.reasoning, "Acquired information: the door is now unlocked.");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+}
+
 TEST_F(Gemma4OutputParserTest, ParseToolCallOutputWithNoToolsInTheRequest) {
     std::string inputWithProperClosure = "<|tool_call>call:example_tool{arg1:<|\"|>value1<|\"|>,arg2:42}<tool_call|>";
     std::string inputWithoutSpecialTokens = "call:example_tool{arg1:value1,arg2:42}";
@@ -298,6 +437,99 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithArrayArguments) {
         EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"array\":[42,17,89,5,33],\"order\":\"descending\"}");
         EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
     }
+}
+
+TEST_F(Gemma4OutputParserTest, ParseToolCallWithArrayOfObjectsArguments) {
+    std::string input = R"(<|tool_call>call:read_files{files:[{path:<|"|>c:\opt\demo\hello_world_project\hello.py<|"|>},{path:<|"|>c:\opt\demo\hello_world_project\README.md<|"|>}]}<tool_call|>)";
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "read_files");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments,
+        R"({"files":[{"path":"c:\\opt\\demo\\hello_world_project\\hello.py"},{"path":"c:\\opt\\demo\\hello_world_project\\README.md"}]})");
+    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
+}
+
+TEST_F(Gemma4OutputParserTest, ParseToolCallWithArrayOfObjectsWithMixedValueTypes) {
+    std::string input = R"(<|tool_call>call:batch{items:[{name:<|"|>a<|"|>,count:2,tags:[<|"|>x<|"|>,<|"|>y<|"|>]},{name:<|"|>b<|"|>,count:3,tags:[]}],dry_run:false}<tool_call|>)";
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "batch");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments,
+        R"({"items":[{"name":"a","count":2,"tags":["x","y"]},{"name":"b","count":3,"tags":[]}],"dry_run":false})");
+}
+
+TEST_F(Gemma4OutputParserTest, ParseToolCallWithNestedArrayOfArrays) {
+    std::string input = R"(<|tool_call>call:matrix{rows:[[1,2],[3,4]],labels:[[<|"|>a<|"|>],[<|"|>b<|"|>]]}<tool_call|>)";
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "matrix");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"rows":[[1,2],[3,4]],"labels":[["a"],["b"]]})");
+}
+
+TEST_F(Gemma4OutputParserTest, ParseToolCallWithNestedArrayOfStringWithMaskedValues) {
+    std::string input = R"(<|tool_call>call:sort{strings:[[<|"|>a,b<|"|>, <|"|>c<|"|>], [<|"|>d,e<|"|>, <|"|>e,f<|"|>]]}<tool_call|>)";
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "sort");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"strings":[["a,b","c"],["d,e","e,f"]]})");
+}
+
+TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringWithMaskedValues) {
+    std::string input = R"(<|tool_call>call:rename{old_name:<|"|>a,b<|"|>, new_name:<|"|>c,d<|"|>}<tool_call|>)";
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "rename");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"old_name":"a,b","new_name":"c,d"})");
+}
+
+TEST_F(Gemma4OutputParserTest, ParseToolCallWithThoughtPreamble) {
+    std::string input = "thought\n<channel|>"
+                        R"(<|tool_call>call:rename{old_name:<|"|>a,b<|"|>, new_name:<|"|>c,d<|"|>}<tool_call|>)";
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "rename");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"old_name":"a,b","new_name":"c,d"})");
+}
+
+TEST_F(Gemma4OutputParserTest, ParseToolCallWithArrayOfObjectsArgumentsStreaming) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"<|tool_call>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"call:", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"read_files", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{files", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"read_files"}}]}})"},
+        {":[", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{path", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {":<|\"|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {R"(c:\opt\demo\hello_world_project)", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {R"(\hello.py)", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|\"|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"},", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{path:<|\"|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {R"(c:\opt\demo\hello_world_project\README.md)", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|\"|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"}]}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"files\":[{\"path\":\"c:\\\\opt\\\\demo\\\\hello_world_project\\\\hello.py\"},{\"path\":\"c:\\\\opt\\\\demo\\\\hello_world_project\\\\README.md\"}]}"}}]}})"},
+        {"<tool_call|>", ov::genai::GenerationFinishReason::STOP, std::nullopt},
+    };
+
+    assertStreamingVec(chunkToDeltaVec);
 }
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallOutputWithThreeToolCalls) {
@@ -427,6 +659,58 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithMultipleUtfCharsStreaming) {
         {"#currenttrend", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"<|\"|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
         {"]}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"content\":\"Check out the sorted report! 🚀 We've made improvements to the content. Tagging @currenttech and mentioning Julia for our insightful team. #currenttech #trend\",\"mentions\":[\"@currenttech\",\"Julia\"],\"tags\":[\"#currenttrend\"]}"}}]}})"},
+        {"<tool_call|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+    };
+
+    assertStreamingVec(chunkToDeltaVec);
+}
+
+TEST_F(Gemma4OutputParserTest, ParseToolCallArgumentValueContainingComma) {
+    // Comma embedded inside a string value (e.g. generated code) must
+    // not be mistaken for the separator between arguments.
+    std::string input =
+        "<|tool_call>call:editor{new_text:<|\"|>print(\"Hello, World!\")\n"
+        "<|\"|>,path:<|\"|>/home/user/demos/hello_world_python/hello.py<|\"|>}<tool_call|>";
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "editor");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments,
+        "{\"new_text\":\"print(\\\"Hello, World!\\\")\\n\",\"path\":\"/home/user/demos/hello_world_python/hello.py\"}");
+}
+
+TEST_F(Gemma4OutputParserTest, ParseToolCallArgumentValueContainingBracesAndBrackets) {
+    // Literal '{', '}', '[', ']' inside a string value must not be mistaken
+    // for nested object/array structure or for the tool call's own top-level closing brace.
+    std::string input =
+        "<|tool_call>call:editor{new_text:<|\"|>numbers = [1, 2, 3] and config = {a: 1, b: 2}<|\"|>,"
+        "path:<|\"|>file.txt<|\"|>}<tool_call|>";
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "editor");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments,
+        "{\"new_text\":\"numbers = [1, 2, 3] and config = {a: 1, b: 2}\",\"path\":\"file.txt\"}");
+}
+
+TEST_F(Gemma4OutputParserTest, ParseToolCallArgumentValueWithUnclosedQuoteAndBraceMidStream) {
+    // While a string value is still streaming (its closing <|"|> hasn't
+    // arrived yet), an internal '"' followed by a '}' inside the already-received partial
+    // value must not be mistaken for the tool call's own closing brace.
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"<|tool_call>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"call:", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"editor", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{new_text", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"editor"}}]}})"},
+        {":<|\"|>say ", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"\"hi}", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {" keep going", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"<|\"|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"new_text\":\"say \\\"hi} keep going\"}"}}]}})"},
         {"<tool_call|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
     };
 
@@ -601,6 +885,23 @@ TEST_F(Gemma4OutputParserTest, StreamingWithToolResponseTokenAtTheEndOfGeneratio
     assertStreamingVec(chunkToDeltaVec);
 }
 
+// Model omits the "<tool_call|>" end tag entirely and jumps straight to a stray
+// "<|tool_response>" before stopping. Arguments must be emitted exactly once
+// (regression test: the finish-flush fallback used to blindly re-emit them).
+TEST_F(Gemma4OutputParserTest, StreamingWithMissingEndTagBeforeStop) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"<|tool_call>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"call:", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"ls", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"{a:", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"ls"}}]}})"},
+        {"true}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"a\":true}"}}]}})"},
+        {"<|tool_response>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"", ov::genai::GenerationFinishReason::STOP, std::nullopt},
+    };
+
+    assertStreamingVec(chunkToDeltaVec);
+}
+
 TEST_F(Gemma4OutputParserTest, StreamingContentWithTurnTokenAtTheEndOfGeneration) {
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
         {"This is", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"This is"}})"},
@@ -755,6 +1056,37 @@ TEST_F(Gemma4OutputParserTest, ParseToolCallWithStringArgumentsContainingNestedJ
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "send");
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"payload":"{'key': 'value', 'count': 42}","endpoint":"api"})");
+}
+
+TEST_F(Gemma4OutputParserTest, ParseToolCallWithPythonReprArtifactInValue) {
+    std::string input = "<|tool_call>call:startEngine{ignitionMode:s'START'}<tool_call|>";
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "startEngine");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"ignitionMode":"s'START'"})");
+}
+
+TEST_F(Gemma4OutputParserTest, ParseToolCallWithUnwrappedValueLeadingSpace) {
+    std::string input = R"(<|tool_call>call:cp{destination:<|"|>backup_tests<|"|>,source: raw_value<|"|>rest<|"|>}<tool_call|>)";
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "cp");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"({"destination":"backup_tests","source":"raw_value<|\"|>rest<|\"|>"})");
+}
+
+TEST_F(Gemma4OutputParserTest, ParseToolCallWithParenthesizedSingleQuotedValueContainingBrace) {
+    std::string input = "<|tool_call>call:exec{code:fn('a}b')}<tool_call|>";
+    auto generatedTensor = gemma4Tokenizer->encode(input).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*gemma4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "exec");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"x({"code":"fn('a}b')"})x");
 }
 
 TEST_F(Gemma4OutputParserTest, ParseToolCallWithEmptyStringArgument) {

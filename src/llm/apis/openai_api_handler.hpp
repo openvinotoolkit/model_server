@@ -81,6 +81,7 @@ inline const char* responsesErrorCodeToString(ResponsesErrorCode code) {
 struct CompletionUsageStatistics {
     size_t promptTokens = 0;
     size_t completionTokens = 0;
+    size_t cachedPromptTokens = 0;
 
     size_t calculateTotalTokens() const {
         return promptTokens + completionTokens;
@@ -128,6 +129,11 @@ protected:
     // Shared parsing helpers
     absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
     absl::Status parseResponseFormat();
+    // Validates effort against the OpenAI reasoning_effort enum and merges its chat-template
+    // representation (reasoning_effort, reasoning_strength mapped onto low/medium/high/xhigh,
+    // enable_thinking) into doc's chat_template_kwargs, without overwriting keys the request
+    // already set explicitly.
+    absl::Status applyReasoningEffort(const std::string& effort);
     absl::Status ensureArgumentsInToolCalls(Value& messageObj);
     void initOutputParser();
     // Assemble a ParsedOutput from a sequence of streaming Delta variants produced by OVMSTextStreamer.
@@ -202,6 +208,7 @@ public:
     // Usage tracking
     void setPromptTokensUsage(size_t promptTokens);
     void setCompletionTokensUsage(size_t completionTokens);
+    void setCachedPromptTokensUsage(size_t cachedPromptTokens);
     virtual void incrementProcessedTokens(size_t numTokens = 1);
 
     // Serialization - pure virtual, each handler produces its own response format
@@ -226,6 +233,10 @@ public:
     virtual std::string serializeStreamingCreatedEvent();
     virtual std::string serializeStreamingInProgressEvent();
     virtual std::string serializeFailedEvent(const std::string& errorMessage, ResponsesErrorCode errorCode = ResponsesErrorCode::SERVER_ERROR);
+
+    // Endpoint-specific error payload for a streaming generation failure.
+    // The default preserves lifecycle-based Responses API failure serialization.
+    virtual std::string serializeStreamingError(const std::string& errorMessage);
 };
 
 // Free functions shared across handlers

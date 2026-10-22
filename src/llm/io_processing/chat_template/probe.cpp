@@ -23,9 +23,6 @@
 #include <spdlog/spdlog.h>
 
 #include "../../../logging.hpp"
-#if (PYTHON_DISABLE == 0)
-#include "../../py_jinja_template_processor.hpp"
-#endif
 
 namespace ovms {
 
@@ -184,6 +181,37 @@ bool probeChatTemplateReasoning(ov::genai::Tokenizer& tokenizer, ChatTemplateCap
     return false;
 }
 
+bool probeChatTemplateToolResponse(ov::genai::Tokenizer& tokenizer, ChatTemplateCaps& caps) {
+    if (tokenizer.get_chat_template().empty()) {
+        return true;
+    }
+
+    try {
+        const std::string toolDefinitions = R"([{"type": "function", "function": {"name": "cat", "description": "This tool belongs to the Gorilla file system...", "parameters": {"type": "object", "properties": {"file_name": {"type": "string", "description": "The name of the file from current directory to display. No path is allowed. "}}, "required": ["file_name"]}, "response": {"type": "dict", "properties": {")" + PROBE_NEEDLE + R"(": {"type": "string", "description": "The content of the file."}}}}}])";
+
+        ov::genai::ChatHistory history;
+        history.set_tools(ov::genai::JsonContainer::from_json_string(toolDefinitions));
+        history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":"Hello"})"));
+        history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"assistant","content":"Hello"})"));
+
+        std::string output = tokenizer.apply_chat_template(history, true);
+
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Tool result probe: output '{}'", output);
+
+        if (output.find(PROBE_NEEDLE) != std::string::npos) {
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Tool result probe: response field is rendered setting supportsResponseFieldInToolDefinition to true");
+            caps.supportsResponseFieldInToolDefinition = true;
+        } else {
+            SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Tool result probe: response field is not rendered setting supportsResponseFieldInToolDefinition to false");
+            caps.supportsResponseFieldInToolDefinition = false;
+        }
+    } catch (...) {
+        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Tool result probe: not supported");
+        return false;
+    }
+    return true;
+}
+
 static std::pair<bool, std::string> renderProbeMessage(ov::genai::Tokenizer& tokenizer, const std::string& assistantMsg) {
     try {
         ov::genai::ChatHistory history;
@@ -221,9 +249,7 @@ bool probeChatTemplateCapsMinja(ov::genai::Tokenizer& tokenizer, ChatTemplateCap
     return analyzeProbeToolArgumentResults(strOk, strOut, objOk, objOut, caps);
 }
 
-#if (PYTHON_DISABLE == 0)
-
-bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, ChatTemplateCaps& caps) {
+bool probeChatTemplateCapsJinja(const std::function<bool(const std::string&, std::string&)>& render, ChatTemplateCaps& caps) {
     // For now the capabilities are only related to tool calls, therefore we early exit here.
     // In the future, if we add more capabilities to probe, we will need to remove this early exit and probe for those capabilities as well.
     if (!caps.supportsToolCalls) {
@@ -239,14 +265,14 @@ bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, Cha
     bool strOk = false, objOk = false;
 
     try {
-        strOk = PyJinjaTemplateProcessor::applyChatTemplate(templateProcessor, strArgsJson, strOut);
+        strOk = render(strArgsJson, strOut);
     } catch (...) {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Dry-run probe: exception while applying chat template with string arguments");
         return false;
     }
 
     try {
-        objOk = PyJinjaTemplateProcessor::applyChatTemplate(templateProcessor, objArgsJson, objOut);
+        objOk = render(objArgsJson, objOut);
     } catch (...) {
         SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Dry-run probe: exception while applying chat template with object arguments");
         return false;
@@ -254,6 +280,5 @@ bool probeChatTemplateCapsJinja(PyJinjaTemplateProcessor& templateProcessor, Cha
 
     return analyzeProbeToolArgumentResults(strOk, strOut, objOk, objOut, caps);
 }
-#endif
 
 }  // namespace ovms

@@ -289,6 +289,7 @@ class SimpleGenerativeNode(SimplePythonCustomNodeMediaPipe):
             "plugin_config", {GenerativeAIPluginConfig.KV_CACHE_PRECISION: config.kv_cache_precision_value}
         )
         enable_tool_guided_generation = kwargs.get("enable_tool_guided_generation", False)
+        enable_word_timestamps = kwargs.get("enable_word_timestamps", False)
         self.calculators = [
             self.calculator_class(
                 models_path=models_path,
@@ -301,6 +302,7 @@ class SimpleGenerativeNode(SimplePythonCustomNodeMediaPipe):
                 plugin_config=plugin_config,
                 device=self.target_device,
                 enable_tool_guided_generation=enable_tool_guided_generation,
+                enable_word_timestamps=enable_word_timestamps,
             )
         ]
         self.name = self.calculators[0].model.name

@@ -115,6 +115,10 @@ bool ModelConfig::isReloadRequired(const ModelConfig& rhs) const {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to plugin config mismatch", this->name);
         return true;
     }
+    if (this->groupName != rhs.groupName) {
+        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to group name mismatch", this->name);
+        return true;
+    }
     if (!isLayoutConfigurationEqual(rhs)) {
         SPDLOG_LOGGER_DEBUG(modelmanager_logger, "ModelConfig {} reload required due to named layout mismatch", this->name);
         return true;
@@ -719,6 +723,14 @@ Status ModelConfig::parseNode(const rapidjson::Value& v) {
         setAllowCache(v["allow_cache"].GetBool());
         SPDLOG_DEBUG("allow_cache: {}", v["allow_cache"].GetBool());
     }
+
+    // Group name for idle model management
+    if (v.HasMember("group_name")) {
+        setGroupName(v["group_name"].GetString());
+    } else {
+        setGroupName(getName());
+    }
+    SPDLOG_DEBUG("group_name: {}", getGroupName());
 
     // if the config has models which require custom loader to be used, then load the same here
     if (v.HasMember("custom_loader_options")) {

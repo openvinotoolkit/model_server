@@ -298,7 +298,7 @@ void cutEOSFromContent(std::string& content) {
 
 bool Lfm2ToolParser::parseNewContent() {
     const std::string& startTag = parsingConfig.startTags[0];
-    const std::string& endTag = parsingConfig.endTag;
+    const std::string& endTag = parsingConfig.endTags.front();
     switch (this->currentState) {
     case Lfm2ParseState::Content:
         return parseInContentState(this->streamingContent, this->streamingPosition,
@@ -339,7 +339,9 @@ std::optional<Delta> Lfm2ToolParser::parseChunk(const std::string& chunk,
             return ToolCallDelta{this->toolCallIndex, generateRandomId(), this->toolCall.name, ""};
         }
         if (this->currentState == Lfm2ParseState::ToolCallEnded) {
-            return wrapDeltaArgs(this->toolCall.arguments, this->toolCallIndex);
+            auto delta = wrapDeltaArgs(this->toolCall.arguments, this->toolCallIndex);
+            this->toolCall = ToolCall{};
+            return delta;
         }
         if (this->currentState == Lfm2ParseState::Content) {
             const std::string& startTag = parsingConfig.startTags[0];

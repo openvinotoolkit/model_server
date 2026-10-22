@@ -16,6 +16,7 @@
 #include "graph_cli_parser.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <iostream>
 #include <optional>
 #include <stdexcept>
@@ -26,7 +27,7 @@
 #include "../capi_frontend/server_settings.hpp"
 #include "../llm/io_processing/parser_config_validation.hpp"
 #include "../ovms_exit_codes.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 
 namespace ovms {
 
@@ -65,8 +66,16 @@ void GraphCLIParser::createOptions() {
             "HF model name or path to the local folder with PyTorch or OpenVINO draft model.",
             cxxopts::value<std::string>(),
             "DRAFT_SOURCE_MODEL")
+        ("draft_model_path",
+            "Absolute path to an already-exported OpenVINO draft model directory (use instead of --draft_source_model for local models).",
+            cxxopts::value<std::string>(),
+            "DRAFT_MODEL_PATH")
+        ("draft_device",
+            "Device to run the draft model on. Defaults to the same device as the main model.",
+            cxxopts::value<std::string>(),
+            "DRAFT_DEVICE")
         ("draft_eagle3_mode",
-            "Enable EAGLE3 speculative decoding mode for the draft model.",
+            "[Deprecated] Draft model strategy is now auto-detected from model artifacts; this flag is accepted but ignored.",
             cxxopts::value<bool>()->default_value("false")->implicit_value("true"),
             "DRAFT_EAGLE3_MODE")
         ("dynamic_split_fuse",
@@ -81,6 +90,10 @@ void GraphCLIParser::createOptions() {
             "Tool parser",
             cxxopts::value<std::string>(),
             "TOOL_PARSER")
+        ("chat_template_engine",
+            "Chat template engine: jinja or minja. Defaults to jinja when Python is available.",
+            cxxopts::value<std::string>(),
+            "CHAT_TEMPLATE_ENGINE")
         ("enable_tool_guided_generation",
             "Enables enforcing tool schema during generation. Requires setting tool parser. Default: false.",
             cxxopts::value<std::string>()->default_value("false"),
@@ -152,8 +165,16 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
         if (result->count("draft_source_model")) {
             graphSettings.draftModelDirName = result->operator[]("draft_source_model").as<std::string>();
         }
-        if (result->count("draft_eagle3_mode")) {
-            graphSettings.draftEagle3Mode = result->operator[]("draft_eagle3_mode").as<bool>();
+        if (result->count("draft_model_path")) {
+            if (result->count("draft_source_model"))
+                throw std::invalid_argument("--draft_model_path and --draft_source_model are mutually exclusive");
+            graphSettings.draftModelPath = result->operator[]("draft_model_path").as<std::string>();
+        }
+        if (result->count("draft_device")) {
+            graphSettings.draftDevice = result->operator[]("draft_device").as<std::string>();
+        }
+        if (result->count("draft_eagle3_mode") && result->operator[]("draft_eagle3_mode").as<bool>()) {
+            std::cerr << "[WARNING] --draft_eagle3_mode is deprecated; draft model strategy is now auto-detected from model artifacts and this flag has no effect." << std::endl;
         }
         if (result->count("pipeline_type")) {
             graphSettings.pipelineType = result->operator[]("pipeline_type").as<std::string>();
@@ -175,6 +196,19 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
                 throw std::invalid_argument("Unsupported tool_parser: \"" + graphSettings.toolParser.value() +
                                             "\". Supported tool parsers are: " + getSupportedToolParserNamesAsString());
             }
+        }
+        if (result->count("chat_template_engine")) {
+            std::string engine = result->operator[]("chat_template_engine").as<std::string>();
+            std::transform(engine.begin(), engine.end(), engine.begin(), [](unsigned char ch) { return std::toupper(ch); });
+            if (engine != "JINJA" && engine != "MINJA") {
+                throw std::invalid_argument("Unsupported chat template engine: \"" + engine + "\". Supported engines are: jinja, minja");
+            }
+#if (PYTHON_DISABLE == 1)
+            if (engine == "JINJA") {
+                throw std::invalid_argument("chat_template_engine=jinja requires Python support");
+            }
+#endif
+            graphSettings.chatTemplateEngine = std::move(engine);
         }
         graphSettings.enableToolGuidedGeneration = result->operator[]("enable_tool_guided_generation").as<std::string>();
         if (result->count("cache_interval_multiplier")) {

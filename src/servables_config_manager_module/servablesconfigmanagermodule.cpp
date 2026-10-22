@@ -24,7 +24,7 @@
 #include "../config.hpp"
 #include "../logging.hpp"
 #include "../module_names.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../stringutils.hpp"
 #include "listmodels.hpp"
 

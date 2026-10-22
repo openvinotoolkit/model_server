@@ -16,6 +16,16 @@
 load("//:common_settings.bzl", "ovms_cc_library")
 
 ovms_cc_library(
+    name = "mediapipe_executor_interface",
+    hdrs = ["mediapipe_graph_executor_interface.hpp"],
+    deps = [
+        "//src:libovms_execution_context",
+        "//src:libovmsstatus",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "node_initializer",
     srcs = [
         "node_initializer.cpp",
@@ -58,6 +68,8 @@ ovms_cc_library(
         "//src:libovmsprofiler",
         "//src:libovmsstatus",
         "//src:libovmstimer",
+    ],
+    implementation_deps = [
         "@mediapipe//mediapipe/framework:calculator_graph",
     ],
     visibility = ["//visibility:public"],
@@ -71,12 +83,7 @@ ovms_cc_library(
     srcs = [
         "graphqueue.cpp",
     ],
-    deps = select({
-            "//:not_disable_python": [
-                "//src/python:libovmspythonmodule",
-            ],
-            "//:disable_python": []
-        }) + [
+    deps = [
         ":graph_executor_constants",
         ":graph_side_packets",
         ":mediapipe_utils",
@@ -90,6 +97,8 @@ ovms_cc_library(
         "//src:model_metric_reporter",
         "//src:libovmsprofiler",
         "//third_party:openvino",
+    ],
+    implementation_deps = [
         "@mediapipe//mediapipe/framework:calculator_graph",
     ],
     visibility = ["//visibility:public"],
@@ -123,7 +132,20 @@ ovms_cc_library(
     deps = [
         ":graph_executor_constants",
         ":graph_side_packets",
+    ],
+    implementation_deps = [
         "@mediapipe//mediapipe/framework:calculator_graph",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "pipelinedefinitionstatus",
+    hdrs = ["pipelinedefinitionstatus.hpp"],
+    srcs = ["pipelinedefinitionstatus.cpp"],
+    deps = [
+        "//src:libovmslogging",
+        "//src:libovmsmodelversionstatus",
     ],
     visibility = ["//visibility:public"],
 )
@@ -139,10 +161,33 @@ ovms_cc_library(
     deps = [
         "//src/filesystem:libovmsfilesystem",
         "//src:libovmsstatus",
-        "//src/graph_export:graph_export",
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/port:rapidjson_stringbuffer",
         "//src/port:rapidjson_writer",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "mediapipegraphexecutor_h",
+    hdrs = [
+        "mediapipegraphexecutor.hpp",
+    ],
+    deps = [
+        "//src:mediapipe_executor_interface",
+        ":graph_executor_constants",
+        ":graph_side_packets",
+        ":graphqueue",
+        ":mediapipe_utils",
+        ":side_packet_builder",
+        "//src/llm:execution_context_utils_runtime",
+        "//src:model_metric_reporter",
+        "//src:libovms_execution_context",
+        "//src:libovmsprofiler",
+        "//src:libovmsstatus",
+        "//src:libovmstimer",
+        "@mediapipe//mediapipe/framework:calculator_graph",
+        "@mediapipe//mediapipe/framework/port:status",
     ],
     visibility = ["//visibility:public"],
 )
@@ -157,18 +202,13 @@ ovms_cc_library(
         "mediapipegraphexecutor.cpp",
         "mediapipegraphexecutor.hpp",
     ],
-    deps = select({
-            "//:not_disable_python": [
-                "//src/python:libovmspythonmodule",
-            ],
-            "//:disable_python": []
-        }) + [
+    deps = [
         ":graphqueue",
         ":mediapipegraphconfig",
         ":node_initializer",
         ":mediapipe_utils",
         ":side_packet_builder",
-        "//src/dags:pipelinedefinitionstatus",
+        "//src:mediapipe_executor_interface",
         "//src:libovms_single_version_servable_definition",
         "//src:libovms_tensorinfo",
         "//src:libovmslogging",
@@ -182,14 +222,69 @@ ovms_cc_library(
         "//src/metrics:libovms_metric_provider",
         "//src/filesystem:libovmsfilesystem",
         "//src/graph_export:graph_export",
+        "//src/llm:llm_calculators_plugin_loader",
         "//src:libovms_version",
         "//src:libovms_execution_context",
         "//src:libovmstimer",
+        "//src:libovms_time_utils",
         "//src:libovmsprofiler",
-        "//src/llm:execution_context_utils",
+        "//src/llm:execution_context_utils_runtime",
         "//src/utils:env_guard",
+    ],
+    implementation_deps = [
         "@mediapipe//mediapipe/framework:calculator_graph",
         "@mediapipe//mediapipe/framework/port:parse_text_proto",
+        "@mediapipe//mediapipe/framework/stream_handler:sync_set_input_stream_handler_cc_proto",
+        "@mediapipe//mediapipe/framework/stream_handler:sync_set_input_stream_handler",
+    ],
+    additional_copts = select({
+        "//conditions:default": ["-fvisibility=default"],
+        "//src:windows": [],
+    }),
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "libovms_mediapipe_runtime_owner_no_python_calculators",
+    deps = [
+        ":libovms_mediapipe",
+        "//src/mediapipe_calculators/ovms:ovms_calculator",
+        "//src/llm:llmcalculator_registration",
+        "//src:kfs_graph_executor_impl",
+        "//src:libovms_mediapipe_http_executor",
+        "//src/embeddings:embeddingscalculator_ov",
+        "//src/rerank:rerankcalculator_ov",
+        "//src/image_gen:image_gen_calculator",
+        "//src/audio/speech_to_text:s2t_calculator",
+        "//src/audio/text_to_speech:t2s_calculator",
+        "//src/yolox:ov_yolox_tensors_to_detections_calculator",
+        "//src/bytetrack/calculators:bytetrack_calculators",
+    ],
+    visibility = ["//visibility:public"],
+    alwayslink = 1,
+)
+
+ovms_cc_library(
+    name = "libovms_mediapipe_runtime_owner",
+    deps = [
+        ":libovms_mediapipe_runtime_owner_no_python_calculators",
+        "//src/llm:execution_context_utils",
+        "//src/llm:llmcalculator_registration",
+        "//src/python:python_calculators_host",
+        "//src/python:python_calculators_runtime_objects",
+    ],
+    visibility = ["//visibility:public"],
+    alwayslink = 1,
+)
+
+ovms_cc_library(
+    name = "libovms_mediapipe_runtime_c_api_exports",
+    srcs = [
+        "mediapipe_runtime_c_api.cpp",
+    ],
+    deps = [
+        ":libovms_mediapipe",
+        "//src/utils:newline_delimited",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,

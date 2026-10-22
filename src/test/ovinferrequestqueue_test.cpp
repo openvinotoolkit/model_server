@@ -30,7 +30,7 @@
 
 using namespace testing;
 
-const std::string DUMMY_MODEL_PATH = std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml";
+const std::string DUMMY_MODEL_PATH = std::filesystem::current_path().string() + "/src/test/dummy/1/dummy.xml";
 
 TEST(OVInferRequestQueue, ShortQueue) {
     ov::Core ieCore;

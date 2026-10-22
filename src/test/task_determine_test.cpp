@@ -157,6 +157,10 @@ TEST(TaskDetectorTest, Text2SpeechDetectsNullArchWithNMels) {
     auto ctx = makeCtx("kokoro", R"({"architectures":null,"n_mels":80})");
     EXPECT_TRUE(ovms::Text2SpeechDetector{}.scan(ctx));
 }
+TEST(TaskDetectorTest, Text2SpeechDetectsKModelArch) {
+    auto ctx = makeCtx("kokoro", R"({"architectures":["KModel"],"n_mels":80})");
+    EXPECT_TRUE(ovms::Text2SpeechDetector{}.scan(ctx));
+}
 TEST(TaskDetectorTest, Text2SpeechDoesNotMatchNullArchWithoutNMels) {
     auto ctx = makeCtx("unknown", R"({"architectures":null})");
     EXPECT_FALSE(ovms::Text2SpeechDetector{}.scan(ctx));

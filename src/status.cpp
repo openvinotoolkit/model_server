@@ -31,6 +31,7 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::MODEL_NOT_LOADED, "Error while loading a model"},
     {StatusCode::JSON_INVALID, "The file is not valid json"},
     {StatusCode::JSON_NESTING_DEPTH_EXCEEDED, "JSON nesting depth exceeds the allowed limit"},
+    {StatusCode::JSON_COMPLEXITY_EXCEEDED, "JSON structure exceeds the allowed complexity"},
     {StatusCode::JSON_SERIALIZATION_ERROR, "Data serialization to json format failed"},
     {StatusCode::MODELINSTANCE_NOT_FOUND, "ModelInstance not found"},
     {StatusCode::SHAPE_WRONG_FORMAT, "The provided shape is in wrong format"},
@@ -92,6 +93,7 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::INVALID_DEVICE_ID, "Invalid input buffer device id"},
     {StatusCode::INVALID_STRING_INPUT, "Invalid string input"},
     {StatusCode::INVALID_STRING_MAX_SIZE_EXCEEDED, "Maximum 2D array after string conversion exceeded 1GB"},
+    {StatusCode::INVALID_IMAGE_MAX_SIZE_EXCEEDED, "Image exceeds maximum decoded size"},
     {StatusCode::INVALID_INPUT_FORMAT, "Inputs inside buffer does not match expected format."},
     {StatusCode::INVALID_PRECISION, "Invalid input precision"},
     {StatusCode::INVALID_VALUE_COUNT, "Invalid number of values in tensor proto container"},
@@ -213,6 +215,9 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_NAME, "Subsequent request with incorrect servable name"},
     {StatusCode::MEDIAPIPE_INCORRECT_SERVABLE_VERSION, "Subsequent request with incorrect servable version"},
     {StatusCode::MEDIAPIPE_PRECONDITION_FAILED, "Mediapipe graph precondition failed"},
+    {StatusCode::MEDIAPIPE_PUT_TO_SLEEP_STATE_NOT_AVAILABLE, "Cannot put mediapipe graph to sleep: state is not AVAILABLE"},
+    {StatusCode::MEDIAPIPE_PUT_TO_SLEEP_REQUESTS_IN_FLIGHT, "Cannot put mediapipe graph to sleep: requests are in flight"},
+    {StatusCode::MEDIAPIPE_PUT_TO_SLEEP_ACTIVE_INFERENCES, "Cannot put mediapipe graph to sleep: active inferences in progress"},
 
     // Python Nodes
     {StatusCode::PYTHON_NODE_NAME_ALREADY_EXISTS, "The Python Node name is already present in nodes list"},
@@ -220,6 +225,10 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED, "The Python Node state initialization failed"},
     {StatusCode::PYTHON_NODE_MISSING_OPTIONS, "The Python Node is missing options definition"},
     {StatusCode::PYTHON_NODE_MISSING_NAME, "The Python Node is missing name definition"},
+
+    // Python Runtime Initialization
+    {StatusCode::PYTHON_INTERPRETER_INITIALIZATION_FAILED, "Failed to initialize Python interpreter."},
+    {StatusCode::PYTHON_BACKEND_CREATION_FAILED, "Failed to create Python backend."},
 
     // LLM Nodes
     {StatusCode::LLM_NODE_NAME_ALREADY_EXISTS, "The LLM Node name is already present in nodes list"},
@@ -318,6 +327,7 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::NONEXISTENT_LOG_LEVEL, "Tried to use nonexisting log level"},
     {StatusCode::NONEXISTENT_PTR, "Tried to use nonexisting pointer"},
     {StatusCode::SERVER_NOT_READY, "Server is not ready"},
+    {StatusCode::SERVER_SHUTTING_DOWN, "Server is shutting down"},
 
     // Server Start errors
     {StatusCode::OPTIONS_USAGE_ERROR, "options validation error"},
@@ -346,5 +356,8 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     {StatusCode::DEVICE_WRONG_FORMAT, "Device is in wrong format"},
     {StatusCode::SHAPE_DYNAMIC_BUT_NPU_USED, "Shape is dynamic but NPU is used"},
     {StatusCode::STATIC_RESOLUTION_MISUSE, "Wrong usage of static resolution"},
+
+    {StatusCode::GROUP_LOAD_FAILED, "Model group failed to load"},
+    {StatusCode::GROUP_UNLOAD_BLOCKED, "Cannot unload model group due to active requests"},
 };
 }  // namespace ovms

@@ -465,7 +465,7 @@ speech_file_path = Path(__file__).parent / "speech.wav"
 client = OpenAI(base_url=url, api_key="not_used")
 
 with client.audio.speech.with_streaming_response.create(
-  model="Kokoro-82M-OpenVINO-FP16-OVMS",
+  model="Kokoro-82M-int8-ov",
   voice="af_alloy",
   input=prompt
 ) as response:
@@ -477,7 +477,7 @@ with client.audio.speech.with_streaming_response.create(
 ```text
 curl http://localhost:8000/v3/audio/speech \
   -H "Content-Type: application/json" \
-  -d "{\"model\": \"Kokoro-82M-OpenVINO-FP16-OVMS\", \"voice\": \"af_alloy\", \"input\": \"The quick brown fox jumped over the lazy dog\"}" \
+  -d "{\"model\": \"Kokoro-82M-int8-ov\", \"voice\": \"af_alloy\", \"input\": \"The quick brown fox jumped over the lazy dog\"}" \
   -o speech.wav
 ```
 :::

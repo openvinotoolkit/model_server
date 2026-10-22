@@ -33,13 +33,13 @@
 #ifndef _WIN32
 #include <curl/curl.h>
 #endif
+
+#include "absl/status/status.h"
+
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 
 #include "config.hpp"
-#include "dags/pipeline.hpp"
-#include "dags/pipeline_factory.hpp"
-#include "dags/pipelinedefinition.hpp"
 #include "servable_definition_unload_guard.hpp"
 #include "execution_context.hpp"
 #include "filesystem/filesystem.hpp"
@@ -47,17 +47,18 @@
 #include "grpcservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
+#include "mediapipe_internal/mediapipe_graph_executor_interface.hpp"
 #include "metrics/metric_config.hpp"
 #include "metrics/metric_module.hpp"
 #include "metrics/metric_registry.hpp"
 #include "model_metric_reporter.hpp"
 #include "modelinstance.hpp"
 #include "modelinstanceunloadguard.hpp"
-#include "modelmanager.hpp"
+#include "src/servable_management/modelmanager.hpp"
 #include "profiler.hpp"
 #include "rest_parser.hpp"
 #include "rest_utils.hpp"
-#include "servablemanagermodule.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 #include "server.hpp"
 #include "status.hpp"
 #include "stringutils.hpp"
@@ -68,11 +69,9 @@
 #include "copyable_object_wrapper.hpp"
 #include "http_payload.hpp"
 #include "http_frontend/http_client_connection.hpp"
-#include "http_frontend/http_graph_executor_impl.hpp"
-#include "mediapipe_internal/mediapipefactory.hpp"
-#include "mediapipe_internal/mediapipegraphexecutor.hpp"
 #endif
 
+#include "src/servable_management/servable_group_manager.hpp"
 #include "kfs_frontend/kfs_request_utils.hpp"
 #include "predict_request_validation_utils.hpp"
 #include "deserialization_main.hpp"
@@ -233,7 +232,7 @@ Status HttpRestApiHandler::processServerMetadataKFSRequest(const HttpRequestComp
     }
     std::string output;
     google::protobuf::util::JsonPrintOptions opts;
-    google::protobuf::util::Status status = google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
+    absl::Status status = google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
     if (!status.ok()) {
         return StatusCode::INTERNAL_ERROR;
     }
@@ -351,7 +350,7 @@ Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const
         SPDLOG_DEBUG("Inference header content length exceeded JSON size");
         return StatusCode::REST_INFERENCE_HEADER_CONTENT_LENGTH_EXCEEDED;
     }
-    auto status = requestParser.parse(request_body.substr(0, endOfJson).c_str());
+    auto status = requestParser.parse(request_body.data(), endOfJson);
     if (!status.ok()) {
         SPDLOG_DEBUG("Parsing http request failed");
         return status;
@@ -506,11 +505,14 @@ static Status createV3HttpPayload(
     } else if (isApplicationJson) {
         {
             OVMS_PROFILE_SCOPE("rapidjson parse");
-            auto status = parseJsonWithDepthLimit(*parsedJson, request_body.c_str());
+            auto status = parseJsonWithDepthLimit(*parsedJson, request_body.data(), request_body.size(), DEFAULT_MAX_JSON_NESTING_DEPTH, Config::instance().jsonMaxComplexity());
             if (!status.ok()) {
                 ensureJsonParserInErrorState(parsedJson);
                 if (status == StatusCode::JSON_NESTING_DEPTH_EXCEEDED) {
                     return Status(StatusCode::JSON_INVALID, "JSON body exceeds maximum nesting depth");
+                }
+                if (status == StatusCode::JSON_COMPLEXITY_EXCEEDED) {
+                    return Status(StatusCode::JSON_COMPLEXITY_EXCEEDED, "JSON body exceeds maximum complexity");
                 }
                 return Status(StatusCode::JSON_INVALID, "Cannot parse JSON body");
             }
@@ -585,32 +587,8 @@ void parseModel(rapidjson::Writer<rapidjson::StringBuffer>& writer, const std::s
 }
 
 Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, std::string& response) {
-    bool available = false;
-
-    // MediaPipe first, it is most likely that anyone will check llms
-#if (MEDIAPIPE_DISABLE == 0)
-    if (!available) {
-        auto names = modelManager.getMediapipeFactory().getNamesOfAvailableMediapipePipelines();
-        if (std::find(names.begin(), names.end(), name) != names.end()) {
-            available = true;
-        }
-    }
-#endif
-
-    // Single Model
-    if (!available) {
-        auto availableModelNames = modelManager.getNamesOfAvailableModels();
-        if (std::find(availableModelNames.begin(), availableModelNames.end(), name) != availableModelNames.end()) {
-            available = true;
-        }
-    }
-    // DAG (deprecated)
-    if (!available) {
-        auto availableDagNames = modelManager.getPipelineFactory().getNamesOfAvailablePipelines();
-        if (std::find(availableDagNames.begin(), availableDagNames.end(), name) != availableDagNames.end()) {
-            available = true;
-        }
-    }
+    const auto names = modelManager.getNamesOfAvailableServables();
+    const bool available = std::find(names.begin(), names.end(), name) != names.end();
 
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
@@ -637,26 +615,9 @@ Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
     writer.StartObject();
     writer.String("data");
     writer.StartArray();
-
-    // Single Model
-    auto availableModelNames = modelManager.getNamesOfAvailableModels();
-    for (auto const& name : availableModelNames) {
+    for (auto const& name : modelManager.getNamesOfAvailableServables()) {
         parseModel(writer, name, timestamp);
     }
-
-    // DAG
-    auto availableModels = modelManager.getPipelineFactory().getNamesOfAvailablePipelines();
-    for (auto const& name : availableModels) {
-        parseModel(writer, name, timestamp);
-    }
-
-    // MediaPipe
-#if (MEDIAPIPE_DISABLE == 0)
-    auto availableMediapipes = modelManager.getMediapipeFactory().getNamesOfAvailableMediapipePipelines();
-    for (auto const& graphName : availableMediapipes) {
-        parseModel(writer, graphName, timestamp);
-    }
-#endif
     writer.EndArray();
     writer.String("object");
     writer.String("list");
@@ -685,7 +646,6 @@ bool HttpRestApiHandler::isAuthorized(const std::unordered_map<std::string, std:
 
 #if (MEDIAPIPE_DISABLE == 0)
 struct V3StreamCallbackResourceGuard {
-    CopyableObjectWrapper<MediapipeGraphExecutor>& executorWrapper;
     CopyableObjectWrapper<HttpPayload>& requestWrapper;
     std::shared_ptr<HttpAsyncWriter>& serverReaderWriter;
 
@@ -696,16 +656,12 @@ struct V3StreamCallbackResourceGuard {
     V3StreamCallbackResourceGuard(V3StreamCallbackResourceGuard&&) = delete;
 
     V3StreamCallbackResourceGuard(
-        CopyableObjectWrapper<MediapipeGraphExecutor>& executorWrapper,
         CopyableObjectWrapper<HttpPayload>& requestWrapper,
         std::shared_ptr<HttpAsyncWriter>& serverReaderWriter) :
-        executorWrapper(executorWrapper),
         requestWrapper(requestWrapper),
         serverReaderWriter(serverReaderWriter) {}
 
     ~V3StreamCallbackResourceGuard() {
-        auto& executor = executorWrapper.getObjectHolder()->get();
-        executor.reset();
         if (serverReaderWriter) {
             // This part must execute before request cleanup as request holds the client connection
             serverReaderWriter->PartialReplyEnd();
@@ -739,19 +695,13 @@ Status HttpRestApiHandler::processOpenAI(const std::string_view uri, const HttpR
         return status;
     }
 
-    CopyableObjectWrapper<MediapipeGraphExecutor> executorWrapper;
-    auto& executor = executorWrapper.getObjectHolder()->get();
-    status = this->modelManager.createPipeline(executor, modelName);
-    if (!status.ok()) {
-        return status;
-    }
-
-    if (!executorWrapper.getObjectHolder()->valid()) {
-        SPDLOG_ERROR("Failed to acquire MediaPipe graph executor for model: {}", modelName);
-        return StatusCode::INTERNAL_ERROR;
-    }
-
     if (streamFieldVal == false) {
+        std::unique_ptr<MediapipeGraphExecutorInterface> executor;
+        status = this->modelManager.createPipeline(executor, modelName);
+        if (!status.ok()) {
+            SPDLOG_ERROR("MediaPipe executor creation failed for model: {} with error: {}", modelName, status.string());
+            return status;
+        }
         ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Unary};
         return executor->infer(request.get(), &response, executionContext);
     } else {
@@ -759,11 +709,11 @@ Status HttpRestApiHandler::processOpenAI(const std::string_view uri, const HttpR
         serverReaderWriter->OverwriteResponseHeader("Cache-Control", "no-cache");
         serverReaderWriter->OverwriteResponseHeader("Connection", "keep-alive");
 
-        serverReaderWriter->PartialReplyBegin([executorWrapper = executorWrapper, weakWriter = std::weak_ptr<HttpAsyncWriter>(serverReaderWriter), requestWrapper = requestWrapper]() mutable {
+        serverReaderWriter->PartialReplyBegin([this, modelName, weakWriter = std::weak_ptr<HttpAsyncWriter>(serverReaderWriter), requestWrapper = requestWrapper]() mutable {
             // Lock the weak_ptr to get shared_ptr - this keeps the object alive during execution
             auto serverReaderWriter = weakWriter.lock();
             // Create guard to clean up resources after streaming is done
-            auto resourceGuard = V3StreamCallbackResourceGuard(executorWrapper, requestWrapper, serverReaderWriter);
+            auto resourceGuard = V3StreamCallbackResourceGuard(requestWrapper, serverReaderWriter);
 
             if (!serverReaderWriter) {
                 SPDLOG_DEBUG("Connection was closed before streaming could begin");
@@ -771,14 +721,27 @@ Status HttpRestApiHandler::processOpenAI(const std::string_view uri, const HttpR
             }
 
             auto& request = requestWrapper.getObjectHolder()->get();
-            auto& executor = executorWrapper.getObjectHolder()->get();
 
-            if (request == nullptr || executor == nullptr) {  // should not happen
+            if (request == nullptr) {  // should not happen
                 throw std::runtime_error("Not all resources for streaming inference have been properly initialized");
             }
 
+            std::unique_ptr<MediapipeGraphExecutorInterface> executor;
+            auto status = this->modelManager.createPipeline(executor, modelName);
+            if (!status.ok()) {
+                rapidjson::StringBuffer buffer;
+                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                writer.StartObject();
+                writer.String("error");
+                writer.String(status.string().c_str());
+                writer.EndObject();
+                const auto httpStatus = status.getCode() == StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE ? HTTPStatusCode::NOT_FOUND : HTTPStatusCode::BAD_REQUEST;
+                serverReaderWriter->PartialReplyWithStatus(buffer.GetString(), httpStatus);
+                return;
+            }
+
             ExecutionContext executionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::V3Stream};
-            auto status = executor->inferStream(*request, *serverReaderWriter, executionContext);
+            status = executor->inferStream(*request, *serverReaderWriter, executionContext);
 
             if (!status.ok()) {
                 rapidjson::StringBuffer buffer;
@@ -787,7 +750,8 @@ Status HttpRestApiHandler::processOpenAI(const std::string_view uri, const HttpR
                 writer.String("error");
                 writer.String(status.string().c_str());
                 writer.EndObject();
-                serverReaderWriter->PartialReplyWithStatus(buffer.GetString(), HTTPStatusCode::BAD_REQUEST);
+                const auto httpStatus = status.getCode() == StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE ? HTTPStatusCode::NOT_FOUND : HTTPStatusCode::BAD_REQUEST;
+                serverReaderWriter->PartialReplyWithStatus(buffer.GetString(), httpStatus);
             }
         });
         return StatusCode::PARTIAL_END;
@@ -847,7 +811,7 @@ Status HttpRestApiHandler::processModelReadyKFSRequest(const HttpRequestComponen
 
 void HttpRestApiHandler::convertShapeType(Value& scope, Document& doc) {
     for (SizeType i = 0; i < scope.Size(); i++) {
-        Value data = scope[i].GetObject()["shape"].GetArray();
+        const auto data = scope[i].GetObject()["shape"].GetArray();
         Value shape(rapidjson::kArrayType);
         for (SizeType j = 0; j < data.Size(); j++) {
             shape.PushBack(atoi(data[j].GetString()), doc.GetAllocator());
@@ -896,9 +860,9 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
     }
     std::string output;
     google::protobuf::util::JsonPrintOptions opts;
-    // This parameter forces JSON writer to not omit empty shape in case of scalar tensor
-    opts.always_print_primitive_fields = true;
-    google::protobuf::util::Status status = google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
+    // Renamed from always_print_primitive_fields in protobuf 6.30.
+    opts.always_print_fields_with_no_presence = true;
+    absl::Status status = google::protobuf::util::MessageToJsonString(grpc_response, &output, opts);
     if (!status.ok()) {
         return StatusCode::JSON_SERIALIZATION_ERROR;
     }
@@ -1204,32 +1168,12 @@ Status HttpRestApiHandler::getReporter(const HttpRequestComponents& components, 
         modelInstance,
         modelInstanceUnloadGuard);
     if (status == StatusCode::MODEL_NAME_MISSING) {
-        auto pipelineDefinition = this->modelManager.getPipelineFactory().findDefinitionByName(components.model_name);
-        if (!pipelineDefinition) {
-            return StatusCode::MODEL_MISSING;
-        }
-        reporter = &pipelineDefinition->getMetricReporter();
-        return StatusCode::OK;
+        return StatusCode::MODEL_MISSING;
     }
     if (!status.ok()) {
         return StatusCode::MODEL_MISSING;
     }
     reporter = &modelInstance->getMetricReporter();
-    return StatusCode::OK;
-}
-
-Status HttpRestApiHandler::getPipelineInputsAndReporter(const std::string& modelName, ovms::tensor_map_t& inputs, ovms::ServableMetricReporter*& reporter) {
-    auto pipelineDefinition = this->modelManager.getPipelineFactory().findDefinitionByName(modelName);
-    if (!pipelineDefinition) {
-        return StatusCode::MODEL_MISSING;
-    }
-    std::unique_ptr<ServableDefinitionUnloadGuard> unloadGuard;
-    Status status = pipelineDefinition->waitForLoaded(unloadGuard);
-    if (!status.ok()) {
-        return status;
-    }
-    reporter = &pipelineDefinition->getMetricReporter();
-    inputs = pipelineDefinition->getInputsInfo();
     return StatusCode::OK;
 }
 

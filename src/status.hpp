@@ -35,6 +35,7 @@ enum class StatusCode {
     MODEL_NOT_LOADED,
     JSON_INVALID,                /*!< The file/content is not valid json */
     JSON_NESTING_DEPTH_EXCEEDED, /*!< JSON nesting depth exceeds the allowed limit */
+    JSON_COMPLEXITY_EXCEEDED,    /*!< JSON structure exceeds the allowed complexity */
     JSON_SERIALIZATION_ERROR,    /*!< Data serialization to json format failed */
     MODELINSTANCE_NOT_FOUND,
     SHAPE_WRONG_FORMAT,                   /*!< The provided shape param is in wrong format */
@@ -97,6 +98,7 @@ enum class StatusCode {
     INVALID_STRING_INPUT,             /*!< Invalid string input */
     INVALID_INPUT_FORMAT,             /*!< Invalid format of the input inside buffer */
     INVALID_STRING_MAX_SIZE_EXCEEDED, /*!< Maximum 2D array after string conversion exceeded 1GB */
+    INVALID_IMAGE_MAX_SIZE_EXCEEDED,  /*!< Image binary payload size exceeds maximum allowed limit */
 
     // Deserialization
     OV_UNSUPPORTED_DESERIALIZATION_PRECISION, /*!< Unsupported deserialization precision, theoretically should never be returned since ModelInstance::validation checks against model precision */
@@ -259,6 +261,9 @@ enum class StatusCode {
     MEDIAPIPE_INCORRECT_SERVABLE_NAME,
     MEDIAPIPE_INCORRECT_SERVABLE_VERSION,
     MEDIAPIPE_PRECONDITION_FAILED,
+    MEDIAPIPE_PUT_TO_SLEEP_STATE_NOT_AVAILABLE,
+    MEDIAPIPE_PUT_TO_SLEEP_REQUESTS_IN_FLIGHT,
+    MEDIAPIPE_PUT_TO_SLEEP_ACTIVE_INFERENCES,
 
     // Python Nodes
     PYTHON_NODE_NAME_ALREADY_EXISTS,
@@ -266,6 +271,10 @@ enum class StatusCode {
     PYTHON_NODE_FILE_STATE_INITIALIZATION_FAILED,
     PYTHON_NODE_MISSING_OPTIONS,
     PYTHON_NODE_MISSING_NAME,
+
+    // Python Runtime Initialization
+    PYTHON_INTERPRETER_INITIALIZATION_FAILED, /*!< Python interpreter failed to initialize (libpython.so missing) */
+    PYTHON_BACKEND_CREATION_FAILED,           /*!< Python backend creation failed (pyovms module missing/broken) */
 
     // LLM Nodes
     LLM_NODE_NAME_ALREADY_EXISTS,
@@ -330,6 +339,7 @@ enum class StatusCode {
     NONEXISTENT_LOG_LEVEL,
     NONEXISTENT_PTR,
     SERVER_NOT_READY,
+    SERVER_SHUTTING_DOWN,
 
     // Server Start errors
     OPTIONS_USAGE_ERROR,
@@ -358,6 +368,10 @@ enum class StatusCode {
     DEVICE_WRONG_FORMAT,
     SHAPE_DYNAMIC_BUT_NPU_USED,
     STATIC_RESOLUTION_MISUSE,
+
+    // Model Group Management
+    GROUP_LOAD_FAILED,
+    GROUP_UNLOAD_BLOCKED,
 
     STATUS_CODE_END
 };

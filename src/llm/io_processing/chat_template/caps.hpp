@@ -27,14 +27,17 @@ struct ChatTemplateCaps {
 
     std::string missnamedReasoningField = "";
 
+    bool supportsResponseFieldInToolDefinition = false;
+
     bool needsWorkarounds() const {
-        return requiresObjectArguments || !missnamedReasoningField.empty();
+        return requiresObjectArguments || !missnamedReasoningField.empty() || supportsResponseFieldInToolDefinition;
     }
 
     std::string toString() const {
         return std::string("supportsToolCalls=") + (supportsToolCalls ? "true" : "false") +
                ", requiresObjectArguments=" + (requiresObjectArguments ? "true" : "false") +
-               ", missnamedReasoningField=" + missnamedReasoningField;
+               ", missnamedReasoningField=" + missnamedReasoningField +
+               ", supportsResponseFieldInToolDefinition=" + (supportsResponseFieldInToolDefinition ? "true" : "false");
     }
 };
 

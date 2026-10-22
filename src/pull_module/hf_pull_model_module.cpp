@@ -30,11 +30,12 @@
 #include "optimum_export.hpp"
 #include "curl_downloader.hpp"
 #include "gguf_downloader.hpp"
+#include "../graph_export/graph_export_paths.hpp"
 #include "hf_env_vars.hpp"
-#include "../graph_export/graph_export.hpp"
 #include "../logging.hpp"
+#include "../mediapipe_runtime_api.hpp"
 #include "../module_names.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "../stringutils.hpp"
 
 namespace ovms {
@@ -50,9 +51,9 @@ static std::string getEnvReturnOrDefaultIfNotSet(const std::string& envName, con
     const char* envValue = std::getenv(envName.c_str());
     if (envValue) {
         value = std::string(envValue);
-        SPDLOG_DEBUG("{} environment variable set. Using value: {};", envName, value);
+        SPDLOG_DEBUG("{} environment variable set.", envName);
     } else {
-        SPDLOG_DEBUG("{} environment variable not set. Using default value: {};", envName, defaultValue);
+        SPDLOG_DEBUG("{} environment variable not set. Using default value.", envName);
     }
     return value;
 }
@@ -244,7 +245,7 @@ Status HfPullModelModule::clone() {
             return std::get<Status>(guardOrError);
         }
 
-        downloader = std::make_unique<HfDownloader>(this->hfSettings.sourceModel, IModelDownloader::getGraphDirectory(this->hfSettings.downloadPath, this->hfSettings.sourceModel), this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy(), this->hfSettings.overwriteModels);
+        downloader = std::make_unique<HfDownloader>(this->hfSettings.sourceModel, IModelDownloader::getGraphDirectory(this->hfSettings.downloadPath, this->hfSettings.sourceModel), this->GetHfEndpoint(), this->GetProxy(), this->hfSettings.overwriteModels);
     } else if (this->hfSettings.downloadType == OPTIMUM_CLI_DOWNLOAD) {
         downloader = std::make_unique<OptimumDownloader>(this->hfSettings.exportSettings, this->hfSettings.task, this->hfSettings.sourceModel, IModelDownloader::getGraphDirectory(this->hfSettings.downloadPath, this->hfSettings.sourceModel), this->hfSettings.overwriteModels);
     } else if (this->hfSettings.downloadType == GGUF_DOWNLOAD) {
@@ -265,13 +266,13 @@ Status HfPullModelModule::clone() {
     if (std::holds_alternative<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings) && std::get<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings).draftModelDirName.has_value()) {
         auto& graphSettings = std::get<TextGenGraphSettingsImpl>(this->hfSettings.graphSettings);
         std::unique_ptr<IModelDownloader> draftModelDownloader;
-        draftModelDownloader = std::make_unique<HfDownloader>(graphSettings.draftModelDirName.value(), GraphExport::getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()), this->GetHfEndpoint(), this->GetHfToken(), this->GetProxy(), this->hfSettings.overwriteModels);
+        draftModelDownloader = std::make_unique<HfDownloader>(graphSettings.draftModelDirName.value(), getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()), this->GetHfEndpoint(), this->GetProxy(), this->hfSettings.overwriteModels);
         status = draftModelDownloader->downloadModel();
         if (!status.ok()) {
             return status;
         }
 
-        std::cout << "Draft model: " << GraphExport::getDraftModelDirectoryName(graphSettings.draftModelDirName.value()) << " downloaded to: " << GraphExport::getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()) << std::endl;
+        std::cout << "Draft model: " << getDraftModelDirectoryName(graphSettings.draftModelDirName.value()) << " downloaded to: " << getDraftModelDirectoryPath(graphDirectory, graphSettings.draftModelDirName.value()) << std::endl;
     }
 
     // Image gen with LoRA adapters case - resolve filenames and download safetensors files
@@ -280,8 +281,9 @@ Status HfPullModelModule::clone() {
         return status;
     }
 
-    GraphExport graphExporter;
-    status = graphExporter.createServableConfig(graphDirectory, this->hfSettings, true);  // when downloading from HF we always create config file, but when using local model with --task we create config in memory without writing to file
+    PythonBackend* pythonBackend = nullptr;
+    MediapipeRuntimeApi runtimeApi(pythonBackend);
+    status = runtimeApi.createServableConfig(graphDirectory, this->hfSettings);  // when downloading from HF we always create the config file on disk; the in-memory variant is used only in IN_MEMORY_GRAPH_MODE (local model with --task).
     if (!status.ok()) {
         return status;
     }

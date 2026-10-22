@@ -40,7 +40,7 @@ Configuration options for the server are defined only via command-line options a
 | `grpc_workers` | `integer` | Number of the gRPC server instances (must be from 1 to CPU core count). Default value is 1 and it's optimal for most use cases. Consider setting higher value while expecting heavy load. |
 | `rest_workers` | `integer` | Number of HTTP server threads. Effective when `rest_port` > 0. Default value is set based on the number of CPUs. |
 | `file_system_poll_wait_seconds` | `integer` | Time interval between config and model versions changes detection in seconds. Default value is 1. Zero value disables changes monitoring. |
-| `custom_node_resources_cleaner_interval_seconds` | `integer` | Time interval (in seconds) between two consecutive resources cleanup scans. Default is 1. Must be greater than 0. See [custom node development](custom_node_development.md). |
+| `memory_trimming_interval_seconds` | `integer` | Time interval (in seconds) between periodic process-memory trimming. Default is 300. Zero disables periodic trimming. |
 | `cpu_extension` | `string` | Optional path to a library with [custom layers implementation](https://docs.openvino.ai/2026/documentation/openvino-extensibility.html). |
 | `log_level` | `"DEBUG"/"INFO"/"ERROR"` | Serving logging level |
 | `log_path` | `string` | Optional path to the log file. |
@@ -48,6 +48,7 @@ Configuration options for the server are defined only via command-line options a
 | `grpc_channel_arguments` | `string` |   A comma separated list of arguments to be passed to the grpc server. (e.g. grpc.max_connection_age_ms=2000) |
 | `grpc_max_threads` | `string` |   Maximum number of threads which can be used by the grpc server. Default value depends on number of CPUs. |
 | `grpc_memory_quota` | `string` |   GRPC server buffer memory quota. Default value set to 2147483648 (2GB). |
+| `json_max_complexity` | `integer` | Maximum number of JSON SAX events allowed in a request body before the request is rejected. Default value is 134217728. This guard rejects malformed, overly nested, or adversarial JSON payloads before the full DOM parse, helping reduce CPU and memory exhaustion risk from oversized or complex input documents. |
 | `help` | `NA` |  Shows help message and exit |
 | `version` | `NA` |  Shows binary version |
 | `allow_credentials` | `bool` (default: false) | Whether to allow credentials in CORS requests. |
@@ -58,6 +59,17 @@ Configuration options for the server are defined only via command-line options a
 | `allowed_local_media_path` | `string` | Path to the directory containing images to include in requests. If unset, local filesystem images in requests are not supported.|
 | `allowed_media_domains` | `string` | Comma separated list of media domains from which URLs can be used as input for LLMs. Set to \"all\" to disable this restrictions. If unset, URLs in requests are not supported."
 | `verbose_response` | `NA` | When enabled, responses include an extra `__verbose` object with additional debug information. Applies for text generation models |
+| `disable_input_count_validation` | `bool` (default: false) | Disables enforcement for the KServe requests to match all the model inputs. It ignores all inputs which are not used in the model. Not recommended for performance reasons but in some cases might simplify the client. |
+| `idle_unload_timeout_seconds` | `integer` (default: 0) | Unloads servable resources after this many seconds with no inference requests, freeing GPU/CPU memory. Resources are reloaded automatically on the next request. Set to `0` to disable the feature. See [Idle servable unload](#idle-servable-unload). |
+
+### Idle servable unload
+
+When `idle_unload_timeout_seconds` is set to a positive value, the model server unloads the active servable group's heavy resources after the configured period without any inference requests. The first request after an unload transparently reloads the requested servable and is served once it is ready, so the GPU can be used by other workloads while a servable is idle.
+
+Notes:
+- Only inference requests reset the idle timer; status, metrics, and health endpoints do not keep a servable loaded.
+- The first request after an idle unload pays the reload latency. Combine with [model caching](model_cache.md) (`--cache_dir`) so the reload is a fast cache import rather than a full recompile.
+- The servable reports as `AVAILABLE` while idle-unloaded and reloads on demand. The `ovms_graph_loaded` metric reports `1` when loaded and `0` when idle-unloaded.
 
 ## Config management mode options
 
@@ -147,13 +159,17 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--enable_prefix_caching`             | `bool`       | Enables algorithm to cache the prompt tokens. Default: true.                                                               |
 | `--max_num_batched_tokens`            | `integer`    | The maximum number of tokens that can be batched together.                                                                 |
 | `--cache_size`                        | `integer`    | KV Cache size in GB. Default: 0 which is a dynamic allocation.                              |
-| `--draft_source_model`                | `string`     | HF model name or path to the local folder with PyTorch or OpenVINO draft model.                                            |
+| `--draft_source_model`                | `string`     | HF model name or path to the local folder with PyTorch or OpenVINO draft model. Mutually exclusive with `--draft_model_path`.  |
+| `--draft_model_path`                  | `string`     | Absolute path to an already-exported OpenVINO draft model directory. Use for local models instead of `--draft_source_model`.   |
+| `--draft_eagle3_mode`                 | `bool`       | **Deprecated.** Draft model strategy (EAGLE3, DFlash, MTP, Fast Draft) is now auto-detected from model artifacts. This flag is accepted but has no effect.  |
+| `--draft_device`                      | `string`     | Device to run the draft model on. Defaults to the same device as the main model.                                              |
 | `--dynamic_split_fuse`                | `bool`       | Enables dynamic split fuse algorithm. Default: true.                                                                       |
 | `--max_prompt_len`                    | `integer`    | Sets NPU specific property for maximum number of tokens in the prompt.                                                     |
 | `--kv_cache_precision`                | `string`     | Reduced kv cache precision to `u8` lowers the cache size consumption. Accepted values: `u8` or empty (default).            |
 | `--model_distribution_policy`         | `string`     | TENSOR_PARALLEL distributes tensor to multiple sockets/devices and processes it in parallel. PIPELINE_PARALLEL distributes different tensors to process by each device. Accepted values: `TENSOR_PARALLEL`, `PIPELINE_PARALLEL` or empty (default). |
 | `--reasoning_parser`                  | `string`     | Type of parser to use for reasoning content extraction from model output. Auto-detected from chat template if not specified. Use `none` to explicitly disable. Supported: [qwen3, gptoss, lfm2, gemma4, onyx]                     |
 | `--tool_parser`                       | `string`     | Type of parser to use for tool calls extraction from model output. Auto-detected from chat template if not specified. Use `none` to explicitly disable. Supported: [llama3, phi4, hermes3, mistral, qwen3coder, gptoss, devstral, lfm2, gemma4, onyx]            |
+| `--chat_template_engine` | `string` | Chat template renderer: `jinja` or `minja`. Defaults to Jinja when Python is available, otherwise Minja. Explicit Jinja requires Python; the alternate spelling is supported for compatibility. |
 | `--enable_tool_guided_generation`     | `bool`       | Enables enforcing tool schema during generation. Requires setting response parser. Default: false.                         |
 | `--cache_interval_multiplier`         | `integer`    | Multiplier for the KV cache block interval. Controls the granularity of cache allocation. Default: adaptive for the model.                  |
 
@@ -162,7 +178,7 @@ Task specific parameters for different tasks (text generation/image generation/e
 |-----------------------------------|--------------|---------------------------------------------------------------------------------------------------------------------|
 | `--resolution`                | `string`     | Allowed resolutions in a format list of `WxH`; `W`=width `H`=height - space separated. If not specified, inherited from model. If only one is specified, the pipeline will be reshaped to static. Static shape is required for NPU device. |
 | `--max_resolution`                | `string`     | Maximum allowed resolution in the format `WxH` (W = width, H = height). If not specified, inherited from the model. |
-| `--default_resolution`            | `string`     | Default resolution in the format `WxH` when not specified by the client. If not specified, inherited from the model.|
+| `--default_resolution`            | `string`     | Default resolution in the format `WxH` when not specified by the client. Required, if model-native resolution could not be determined.
 | `--max_num_images_per_prompt`     | `integer`    | Maximum number of images a client can request per prompt in a single request. In 2025.2 release only 1 image generation per request is supported. |
 | `--num_images_per_prompt`                | `integer`     | Number of images client is allowed to request. Can only be used when resolution parameter is specified and static. By default, inherited from GenAI (1). For dynamic pipelines, by default only `max_num_images_per_prompt` limits the batch size.  |
 | `--guidance_scale`                | `integer`     | Guidance scale used for static pipeline reshape. Can only be used when resolution parameter is specified and static. By default, inherited from GenAI (7.5)  |
@@ -178,6 +194,8 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--normalize`             | `bool`       | Normalize the embeddings. Default: true.                                       |
 | `--truncate`              | `bool`       | Truncate input when it exceeds model context length. Default: false            |
 | `--pooling`          | `string`       | Pooling option. One of: CLS, LAST, MEAN. Default: CLS.                                           |
+| `--max_legth`        | `integer`      | Maximum input length in tokens. If omitted, OVMS will detect it from the model's config.json.            |
+| `--max_batch_size`   | `integer`      | Maximum batch size allowed for embeddings endpoint. Default: 1024 | 
 
 ### Rerank
 | option                    | Value format | Description                                                                    |
@@ -222,3 +240,15 @@ The `--target_device` option defaults to auto-detected based on available GPU de
 - Falls back to `CPU` if no suitable GPU is found.
 
 > **Note:** Auto-detection does not select `NPU`. To use NPU, set `--target_device NPU` explicitly.
+
+## Image input decode protection
+
+Binary image inputs (KServe infer requests and multimodal `/v1` or `/v3` requests) are decoded before inference. A small compressed image can decode into a far larger raw buffer, and for vision language models even a "reasonable" ~1 GB image can amplify further inside the vision encoder. The server therefore bounds the decoded image size by pixel count (width × height) before decoding.
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `--max_image_decode_pixels` | CLI parameter | `67108864` | OVMS in-process pixel budget, read **per request**. Images whose header-declared pixel count exceeds this limit are rejected before decoding, and the total pixels across all images in a request are bounded too. Applies on the OVMS decode pre-check (stb + OpenCV paths) on every deployment. The default matches `OPENCV_IO_MAX_IMAGE_PIXELS`. |
+| `--allow_unestimatable_image_formats` | CLI parameter | `false` | When `false`, images whose decoded pixel count cannot be estimated (formats OVMS cannot inspect the header of) are rejected. Set to `true` only if you must accept such formats. |
+| `OPENCV_IO_MAX_IMAGE_PIXELS` | Environment variable | `67108864` (set in the provided container images) | OpenCV's own guard, read **once at process startup**, so it must be set before OVMS launches. It is separate from `--max_image_decode_pixels`: changing the CLI parameter does not change OpenCV's internal limit. OpenCV rejects images whose header-declared pixel count exceeds this limit, before allocating the decode buffer. The provided container images set it by default; on bare-metal deployments export it yourself before starting OVMS (or, for the container, override it with `docker run -e OPENCV_IO_MAX_IMAGE_PIXELS=<value>`). This is only relevant when `--allow_unestimatable_image_formats` is `true` (see below); otherwise it is defense-in-depth. |
+
+With default settings you do not depend on `OPENCV_IO_MAX_IMAGE_PIXELS`. By default `--allow_unestimatable_image_formats` is `false`, so images OVMS cannot estimate (formats stb cannot read the header of, e.g. TIFF) are rejected before reaching OpenCV, and images OVMS can estimate are already bounded by `--max_image_decode_pixels`. The OpenCV variable only becomes the active guard if an admin sets `--allow_unestimatable_image_formats=true`, which lets unestimatable formats fall through to OpenCV's `cv::imdecode` — there `OPENCV_IO_MAX_IMAGE_PIXELS` is the remaining pixel cap. Note the VLM (stb) decode path does not use OpenCV at all, so it is unaffected by this variable. Keep both limits at the same value if you change either.

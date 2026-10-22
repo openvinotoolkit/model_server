@@ -20,7 +20,7 @@
 
 #include "../logging.hpp"
 #include "../ovms.h"  // NOLINT
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "buffer.hpp"
 
 namespace ovms {

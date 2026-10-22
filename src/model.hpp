@@ -90,7 +90,7 @@ protected:
          *
          * @return status
          */
-    virtual Status addVersion(const ModelConfig& config, ov::Core& ieCore, MetricRegistry* registry = nullptr, const MetricConfig* metricConfig = nullptr);
+    virtual Status addVersion(const ModelConfig& config, ov::Core& ieCore, MetricRegistry* registry = nullptr, const MetricConfig* metricConfig = nullptr, bool lazyLoad = false);
 
     /**
          * @brief ModelInstances factory
@@ -161,6 +161,8 @@ public:
          */
     const std::shared_ptr<ModelInstance> getModelInstanceByVersion(const model_version_t& version) const;
 
+    Status wakeUpIfSleeping();
+
     /**
          * @brief Adds new versions of ModelInstance
          *
@@ -168,7 +170,7 @@ public:
          *
          * @return status
          */
-    Status addVersions(std::shared_ptr<model_versions_t>& versions, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, ov::Core& ieCore, std::shared_ptr<model_versions_t>& versionsFailed, MetricRegistry* registry = nullptr, const MetricConfig* metricConfig = nullptr);
+    Status addVersions(std::shared_ptr<model_versions_t>& versions, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, ov::Core& ieCore, std::shared_ptr<model_versions_t>& versionsFailed, MetricRegistry* registry = nullptr, const MetricConfig* metricConfig = nullptr, bool lazyLoad = false);
 
     /**
          * @brief Retires versions of Model
@@ -192,6 +194,8 @@ public:
          * @brief Retires all versions of Model
          */
     void retireAllVersions();
+
+    void putToSleepAllVersions();
 
     /**
          * @brief Cleans up all versions of Model

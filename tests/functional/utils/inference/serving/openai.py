@@ -378,6 +378,8 @@ class OpenAIEmbeddingsRequestParams(OpenAIRequestParams):
 
 @dataclass
 class OpenAIAudioSpeechRequestParams(OpenAIRequestParams):
+    voice: str = None
+    extra_body: dict = None
 
     def set_default_values(self, **kwargs):
         # No defaults needed for TTS; kept for interface compatibility
@@ -392,7 +394,6 @@ class OpenAIAudioTranscriptionsRequestParams(OpenAIRequestParams):
     stream: bool = None
 
     def set_default_values(self, **kwargs):
-        self.language = "en"
         self.temperature = 0.0
         self.timestamp_granularities = ["segment"]
         self.stream = kwargs.get("stream", None)
@@ -401,8 +402,6 @@ class OpenAIAudioTranscriptionsRequestParams(OpenAIRequestParams):
 @dataclass
 class OpenAIAudioTranslationsRequestParams(OpenAIRequestParams):
     temperature: float = None
-    stream: bool = None
 
     def set_default_values(self, **kwargs):
         self.temperature = 0.0
-        self.stream = kwargs.get("stream", None)

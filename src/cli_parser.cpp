@@ -37,6 +37,7 @@
 #include "ovms_exit_codes.hpp"
 #include "filesystem/filesystem.hpp"
 #include "filesystem/localfilesystem.hpp"
+#include "ov_version.hpp"
 #include "version.hpp"
 
 namespace ovms {
@@ -68,11 +69,11 @@ std::string CLIParser::getEffectiveTaskParameter() const {
     throw std::logic_error("Could not infer model task - specify --task value explicitly");
 }
 
-std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char** argv) {
+std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, const char* const* argv) {
     std::stringstream ss;
     try {
         options = std::make_unique<cxxopts::Options>(argv[0], "OpenVINO Model Server");
-        auto configOptions = std::make_unique<cxxopts::Options>("ovms --add_to_config --config_path <CONFIG_PATH> --model_name <MODEL_NAME> --model_repository_path <MODEL_REPO_PATH> \n  ovms --add_to_config --config_path <CONFIG_PATH> --model_path <MODEL_PATH> --model_name <MODEL_NAME>  \n  ovms --remove_from_config --config_path <CONFIG_PATH> --model_name <MODEL_NAME>", "config management commands:");
+        auto configOptions = std::make_unique<cxxopts::Options>("ovms --add_to_config --config_path <CONFIG_PATH> --model_name <MODEL_NAME> --model_repository_path <MODEL_REPO_PATH> \n  ovms --add_to_config --config_path <CONFIG_PATH> --model_path <MODEL_PATH> --model_name <MODEL_NAME> --group_name <GROUP> \n  ovms --remove_from_config --config_path <CONFIG_PATH> --model_name <MODEL_NAME>", "config management commands:");
         // Adding this option to parse unrecognised options in another parser
         options->allow_unrecognised_options();
 
@@ -110,6 +111,10 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "GRPC server buffer memory quota. Default value set to 2147483648 (2GB).",
                 cxxopts::value<size_t>(),
                 "GRPC_MEMORY_QUOTA")
+            ("json_max_complexity",
+                "Maximum JSON SAX event count allowed before request parsing is rejected. Default value is 134217728.",
+                cxxopts::value<size_t>(),
+                "JSON_MAX_COMPLEXITY")
             ("rest_workers",
                 "Number of worker threads in REST server - has no effect if rest_port is not set. Default value depends on number of CPUs. ",
                 cxxopts::value<uint32_t>(),
@@ -125,6 +130,10 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "\"__verbose\" object with additional debug information.",
                 cxxopts::value<bool>()->default_value("false"),
                 "VERBOSE_RESPONSE")
+            ("disable_input_count_validation",
+                "When enabled, OVMS allows inference requests to include additional, unrecognized inputs beyond the model/pipeline signature (extra inputs are ignored). Required inputs must still be present, and shape/precision validation is still performed for recognized inputs. Default: false (extra inputs cause the request to be rejected).",
+                cxxopts::value<bool>()->default_value("false"),
+                "DISABLE_INPUT_COUNT_VALIDATION")
 #ifdef MTR_ENABLED
             ("trace_path",
                 "Path to the trace file",
@@ -137,10 +146,14 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "Time interval between config and model versions changes detection. Default is 1. Zero or negative value disables changes monitoring.",
                 cxxopts::value<uint32_t>()->default_value("1"),
                 "FILE_SYSTEM_POLL_WAIT_SECONDS")
-            ("custom_node_resources_cleaner_interval_seconds",
-                "Time interval between two consecutive resources cleanup scans. Default is 300. Zero value disables resources cleaner.",
+            ("memory_trimming_interval_seconds",
+                "Time interval between memory trimming cycles. Default is 300.",
                 cxxopts::value<uint32_t>()->default_value("300"),
-                "CUSTOM_NODE_RESOURCES_CLEANER_INTERVAL_SECONDS")
+                "MEMORY_TRIMMING_INTERVAL_SECONDS")
+            ("idle_unload_timeout_seconds",
+                "Idle timeout in seconds for model group unloading. When > 0, models not in the 'permanent' group are loaded on demand and unloaded after this idle period. Only effective with config.json multi-model setup. Default is 0 (disabled).",
+                cxxopts::value<uint32_t>()->default_value("0"),
+                "IDLE_UNLOAD_TIMEOUT_SECONDS")
             ("cache_dir",
                 "Overrides model cache directory. By default cache files are saved into"
 #ifdef __linux__
@@ -171,6 +184,19 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "Path to directory that contains multimedia files that can be used as input for LLMs.",
                 cxxopts::value<std::string>(),
                 "ALLOWED_LOCAL_MEDIA_PATH")
+            ("max_image_decode_pixels",
+                    "Maximum total number of decoded input-image pixels (the sum of width x height across all images in a request). "
+                    "Images that would make the request exceed this limit are rejected before decoding, guarding against decompression-bomb inputs. "
+                "Default matches OpenCV's OPENCV_IO_MAX_IMAGE_PIXELS. Note: this does not change OpenCV's own internal limit, "
+                "which is controlled separately by the OPENCV_IO_MAX_IMAGE_PIXELS environment variable read at startup.",
+                cxxopts::value<uint64_t>()->default_value(std::to_string(OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS)),
+                "MAX_IMAGE_DECODE_PIXELS")
+            ("allow_unestimatable_image_formats",
+                "Flag allowing input images whose decoded size cannot be estimated (formats OVMS cannot inspect the header of) "
+                "to be decoded anyway. Disabled by default, so such images are rejected. Enable only if you must accept formats "
+                "OVMS cannot pre-validate.",
+                cxxopts::value<bool>()->default_value("false"),
+                "ALLOW_UNESTIMATABLE_IMAGE_FORMATS")
             ("allow_credentials",
                 "Flag enabling credentials on the API.",
                 cxxopts::value<bool>()->default_value("false"),
@@ -192,6 +218,14 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 cxxopts::value<std::string>()->default_value(""),
                 "API_KEY");
 
+#if (PYTHON_DISABLE == 0)
+        options->add_options()
+            ("with_python",
+                "Enable Python runtime support",
+                cxxopts::value<bool>()->default_value("true"),
+                "WITH_PYTHON");
+#endif
+
         options->add_options("multi model")
             ("config_path",
                 "Absolute path to json configuration file",
@@ -209,7 +243,11 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
             ("remove_from_config",
                 "Directive to remove a model from configuration file. This parameter should be executed with --config_path and --model_name to specify which model to remove.",
                 cxxopts::value<bool>()->default_value("false"),
-                "REMOVE_FROM_CONFIG");
+                "REMOVE_FROM_CONFIG")
+            ("group_name",
+                "Optional group name for idle model group management. Used with --add_to_config.",
+                cxxopts::value<std::string>(),
+                "GROUP_NAME");
 
         // Set default value for model_repository_path from environment variable if it exists and is not empty
         std::string defaultModelRepoPath = "";
@@ -343,6 +381,10 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
                 "Name of the model",
                 cxxopts::value<std::string>(),
                 "MODEL_NAME")
+            ("group_name",
+                "Optional group name for idle model group management",
+                cxxopts::value<std::string>(),
+                "GROUP_NAME")
             ("config_path",
                 "Path to json configuration file",
                 cxxopts::value<std::string>()->default_value(defaultConfigPath),
@@ -493,14 +535,14 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, char*
 #pragma warning(disable : 4129)
         if (result->count("version")) {
             std::string project_name(PROJECT_NAME);
-            std::string project_version(PROJECT_VERSION);
+            std::string project_version(ovms::getProjectVersion());
             ss << project_name + " " + project_version << std::endl;
             ss << "OpenVINO backend " << ovms::getOpenVINOVersion() << std::endl;
             const char* genaiVersion = ovms::getGenAIVersion();
             if (genaiVersion[0] != '\0') {
                 ss << "OpenVINO GenAI backend " << genaiVersion << std::endl;
             }
-            ss << "Bazel build flags: " << BAZEL_BUILD_FLAGS << std::endl;
+            ss << "Bazel build flags: " << ovms::getBazelBuildFlags() << std::endl;
 #pragma warning(pop)
             return std::make_pair(OVMS_EX_OK, ss.str());
         }
@@ -567,8 +609,9 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
     serverSettings.metricsEnabled = result->operator[]("metrics_enable").as<bool>();
     serverSettings.metricsList = result->operator[]("metrics_list").as<std::string>();
     serverSettings.filesystemPollWaitMilliseconds = result->operator[]("file_system_poll_wait_seconds").as<uint32_t>() * 1000;
+    serverSettings.memoryTrimmingIntervalSeconds = result->operator[]("memory_trimming_interval_seconds").as<uint32_t>();
 
-    serverSettings.resourcesCleanerPollWaitSeconds = result->operator[]("custom_node_resources_cleaner_interval_seconds").as<uint32_t>();
+    serverSettings.idleUnloadTimeoutSeconds = result->operator[]("idle_unload_timeout_seconds").as<uint32_t>();
     serverSettings.grpcWorkers = result->operator[]("grpc_workers").as<uint32_t>();
 
     if (result->count("log_level"))
@@ -577,6 +620,8 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
         serverSettings.logPath = result->operator[]("log_path").as<std::string>();
     if (result->count("verbose_response"))
         serverSettings.verboseResponse = result->operator[]("verbose_response").as<bool>();
+    if (result->count("disable_input_count_validation"))
+        serverSettings.disableInputCountValidation = result->operator[]("disable_input_count_validation").as<bool>();
 
     if (result->count("grpc_channel_arguments"))
         serverSettings.grpcChannelArguments = result->operator[]("grpc_channel_arguments").as<std::string>();
@@ -606,11 +651,16 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
     if (result->count("grpc_memory_quota"))
         serverSettings.grpcMemoryQuota = result->operator[]("grpc_memory_quota").as<size_t>();
 
+    serverSettings.maxImageDecodePixels = result->operator[]("max_image_decode_pixels").as<uint64_t>();
+    serverSettings.allowUnestimatableImageFormats = result->operator[]("allow_unestimatable_image_formats").as<bool>();
+    if (result->count("json_max_complexity"))
+        serverSettings.jsonMaxComplexity = result->operator[]("json_max_complexity").as<size_t>();
+
     if (result->count("rest_workers"))
         serverSettings.restWorkers = result->operator[]("rest_workers").as<uint32_t>();
 
 #if (PYTHON_DISABLE == 0)
-        serverSettings.withPython = true;
+    serverSettings.withPython = result->operator[]("with_python").as<bool>();
 #endif
 
 #ifdef MTR_ENABLED
@@ -920,6 +970,10 @@ void CLIParser::prepareConfigExport(ModelsSettingsImpl& modelsSettings) {
         modelsSettings.modelPath = result->operator[]("model_path").as<std::string>();
     } else if (!result->operator[]("model_repository_path").as<std::string>().empty() && result->count("model_name")) {
         modelsSettings.modelPath = FileSystem::joinPath({result->operator[]("model_repository_path").as<std::string>(), modelsSettings.modelName});
+    }
+    if (result->count("group_name")) {
+        modelsSettings.groupName = result->operator[]("group_name").as<std::string>();
+        modelsSettings.userSetSingleModelArguments.push_back("group_name");
     }
     std::string defaultConfigPath = "";
     const char* envModelRepoPath = std::getenv("OVMS_MODEL_REPOSITORY_PATH");

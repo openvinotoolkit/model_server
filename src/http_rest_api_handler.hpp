@@ -200,7 +200,6 @@ private:
     ovms::ModelManager& modelManager;
 
     Status getReporter(const HttpRequestComponents& components, ovms::ServableMetricReporter*& reporter);
-    Status getPipelineInputsAndReporter(const std::string& modelName, ovms::tensor_map_t& inputs, ovms::ServableMetricReporter*& reporter);
 };
 
 }  // namespace ovms

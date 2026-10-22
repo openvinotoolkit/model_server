@@ -23,17 +23,16 @@
 #include <httplib.h>
 
 #include "../cleaner_utils.hpp"
-#include "../dags/node_library.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
 #include "../model.hpp"
 #include "../modelinstanceunloadguard.hpp"
-#include "../modelmanager.hpp"
+#include "src/servable_management/modelmanager.hpp"
 #include "../module_names.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../prediction_service_utils.hpp"
-#include "../servablemanagermodule.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
 #include "../version.hpp"
 #include "c_api_test_utils.hpp"
@@ -114,7 +113,7 @@ public:
         auto status = stub_->ServerMetadata(&context, request, &response);
         ASSERT_EQ(status.error_code(), expectedStatus);
         EXPECT_EQ(response.name(), PROJECT_NAME);
-        EXPECT_EQ(response.version(), PROJECT_VERSION);
+        EXPECT_EQ(response.version(), ovms::getProjectVersion());
         EXPECT_EQ(response.extensions().size(), 0);
     }
 };

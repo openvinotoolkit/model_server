@@ -26,7 +26,7 @@
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mediapipe/framework/calculator_graph.h"
+#include "mediapipe/framework/calculator.pb.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
@@ -38,6 +38,7 @@
 #include "../../io_processing/parser_config_validation.hpp"
 #include "servable.hpp"
 #include "servable_initializer.hpp"
+#include "../../servable_initializer.hpp"
 
 namespace ovms {
 Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) {
@@ -73,10 +74,19 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
         }
     }
-    if (nodeOptions.has_chat_template_mode()) {
-        properties->chatTemplateMode = (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::JINJA)
-                                           ? ChatTemplateMode::JINJA
-                                           : ChatTemplateMode::MINJA;
+    if (nodeOptions.has_chat_template_engine()) {
+        properties->chatTemplateEngineExplicit = true;
+#if (PYTHON_DISABLE == 0)
+        properties->chatTemplateEngine = (nodeOptions.chat_template_engine() == mediapipe::LLMCalculatorOptions::JINJA)
+                                             ? ChatTemplateEngine::JINJA
+                                             : ChatTemplateEngine::MINJA;
+#else
+        if (nodeOptions.chat_template_engine() == mediapipe::LLMCalculatorOptions::JINJA) {
+            SPDLOG_ERROR("chat_template_engine=JINJA requires Python support.");
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
+        properties->chatTemplateEngine = ChatTemplateEngine::MINJA;
+#endif
     }
 
     properties->schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();
@@ -97,7 +107,8 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
                                             ? (std::filesystem::path(graphPath) / fsDraftModelsPath).string()
                                             : fsDraftModelsPath.string();
         try {
-            auto draftPipeline = ov::genai::draft_model(draftPipelinePath, nodeOptions.draft_device());
+            const std::string draftDevice = nodeOptions.draft_device().empty() ? properties->device : nodeOptions.draft_device();
+            auto draftPipeline = ov::genai::draft_model(draftPipelinePath, draftDevice);
             properties->pluginConfig.insert(draftPipeline);
         } catch (const std::exception& e) {
             SPDLOG_ERROR("Error during draft model initialization for draft_models_path: {} exception: {}", draftPipelinePath, e.what());
@@ -106,7 +117,27 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
             SPDLOG_ERROR("Error during draft model initialization for draft_models_path: {}", draftPipelinePath);
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
         }
-        properties->eagle3Mode = nodeOptions.draft_eagle3_mode();
+        try {
+            properties->draftModelStrategy = detectDraftModelStrategy(draftPipelinePath);
+        } catch (const std::exception& e) {
+            SPDLOG_ERROR("Failed to detect draft model strategy for {}: {}", draftPipelinePath, e.what());
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
+        using DS = GenAiServableProperties::DraftModelStrategy;
+        switch (properties->draftModelStrategy) {
+        case DS::EAGLE3:
+            SPDLOG_INFO("Draft model strategy: EAGLE3");
+            break;
+        case DS::DFLASH:
+            SPDLOG_INFO("Draft model strategy: DFlash");
+            break;
+        case DS::MTP:
+            SPDLOG_INFO("Draft model strategy: MTP (Multi-Token Prediction)");
+            break;
+        case DS::FAST_DRAFT:
+            SPDLOG_INFO("Draft model strategy: Fast Draft");
+            break;
+        }
     }
 
     status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), properties->pluginConfig);
@@ -142,7 +173,10 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
         SPDLOG_ERROR("Error during llm node initialization for models_path: {}", parsedModelsPath);
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
-    loadChatTemplate(properties, parsedModelsPath);
+    status = loadChatTemplate(properties, parsedModelsPath);
+    if (!status.ok()) {
+        return status;
+    }
     properties->legacyExecutor = std::make_shared<LegacyExecutorWrapper>(properties->pipeline);
     if (nodeOptions.has_max_tokens_limit()) {
         properties->maxTokensLimit = nodeOptions.max_tokens_limit();

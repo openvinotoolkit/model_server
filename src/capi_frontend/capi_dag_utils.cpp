@@ -21,7 +21,7 @@
 
 #include "capi_utils.hpp"
 #include "../logging.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
 #include "buffer.hpp"
 #include "inferencetensor.hpp"
 #include "inferenceresponse.hpp"
@@ -41,7 +41,9 @@ OVMS_ServableState convertToServableState(ovms::PipelineDefinitionStateCode code
     case ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED:
     case ovms::PipelineDefinitionStateCode::LOADING_PRECONDITION_FAILED_REQUIRED_REVALIDATION:
         return OVMS_ServableState::OVMS_STATE_LOADING_FAILED;
-    }
+    case ovms::PipelineDefinitionStateCode::SLEEPING:
+        return OVMS_ServableState::OVMS_STATE_AVAILABLE;
+    }  // TODO #atobiszei idle management C-API change - new value in enum?
     throw new std::exception();
 }
 

@@ -512,6 +512,22 @@ TEST_F(LFM2OutputParserTest, StreamingWithToolCallAndFinishReason) {
     assertStreamingVec(chunkToDeltaVec);
 }
 
+// Model never emits "]", a separator, or "<|tool_call_end|>" before stopping.
+// Arguments must be emitted exactly once (regression test: the finish-flush
+// fallback used to blindly re-emit them).
+TEST_F(LFM2OutputParserTest, StreamingWithMissingEndTagBeforeStop) {
+    std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
+        {"<|tool_call_start|>", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"[", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"dummy", ov::genai::GenerationFinishReason::NONE, std::nullopt},
+        {"(a", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"id":"XXXXXXXXX","type":"function","index":0,"function":{"name":"dummy"}}]}})"},
+        {"=true)", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"a\":true}"}}]}})"},
+        {"", ov::genai::GenerationFinishReason::STOP, std::nullopt},
+    };
+
+    assertStreamingVec(chunkToDeltaVec);
+}
+
 TEST_F(LFM2OutputParserTest, StreamingWithToolCallAndEOSToken) {
     std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>> chunkToDeltaVec{
         {"JUST_SOME_STRING_BEFORE_SPECIAL_STARTING_TAG", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"content":"JUST_SOME_STRING_BEFORE_SPECIAL_STARTING_TAG"}})"},

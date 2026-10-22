@@ -26,9 +26,10 @@
 #include "../grpcservermodule.hpp"
 #include "../http_async_writer_interface.hpp"
 #include "../http_rest_api_handler.hpp"
-#include "../servablemanagermodule.hpp"
+#include "src/servable_management/servablemanagermodule.hpp"
 #include "../server.hpp"
-#include "../status.hpp"
+#include "src/status.hpp"
+#include "src/utils/rapidjson_utils.hpp"
 #include "../version.hpp"
 #include "test_utils.hpp"
 #include "platform_utils.hpp"
@@ -202,7 +203,12 @@ static void testInference(int headerLength, std::string& request_body, std::uniq
     ovms::HttpResponseComponents responseComponents;
     std::shared_ptr<ovms::HttpAsyncWriter> writer{nullptr};
     std::shared_ptr<ovms::MultiPartParser> multiPartParser{nullptr};
-    ASSERT_EQ(handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
+    auto dispatchStatus = handler->dispatchToProcessor("", request_body, &response, comp, responseComponents, writer, multiPartParser);
+    if (dispatchStatus != ovms::StatusCode::OK) {
+        std::cerr << "dispatchToProcessor failed: code=" << static_cast<int>(dispatchStatus.getCode())
+                  << ", details=" << dispatchStatus.string() << ", response=" << response << std::endl;
+    }
+    ASSERT_EQ(dispatchStatus, ovms::StatusCode::OK);
 
     rapidjson::Document doc;
     doc.Parse(response.c_str());
@@ -1458,6 +1464,27 @@ TEST_F(HttpRestApiHandlerTest, binaryInputsInvalidJson) {
     ASSERT_EQ(status.string(), "The file is not valid json - Error: Invalid value. Offset: 12");
 }
 
+TEST_F(HttpRestApiHandlerTest, PrepareGrpcRequestRejectsExcessiveJsonComplexity) {
+    auto& config = const_cast<ovms::ServerSettingsImpl&>(Config::instance().getServerSettings());
+    const auto previousMaxComplexity = config.jsonMaxComplexity;
+    struct JsonMaxComplexityGuard {
+        ovms::ServerSettingsImpl& config;
+        std::optional<size_t> previousMaxComplexity;
+        ~JsonMaxComplexityGuard() {
+            config.jsonMaxComplexity = previousMaxComplexity;
+        }
+    } restore{config, previousMaxComplexity};
+    config.jsonMaxComplexity = 5;
+
+    std::string request_body = R"({"a":[0]})";
+
+    ::KFSRequest grpc_request;
+    auto status = HttpRestApiHandler::prepareGrpcRequest(modelName, modelVersion, request_body, grpc_request);
+
+    ASSERT_EQ(status.getCode(), ovms::StatusCode::JSON_COMPLEXITY_EXCEEDED);
+    ASSERT_EQ(status.string(), "JSON structure exceeds the allowed complexity");
+}
+
 TEST_F(HttpRestApiHandlerWithStringModelTest, invalidPrecision) {
     std::string request = "/v2/models/string/versions/1/infer";
     std::string request_body = "{\"inputs\":[{\"name\":\"my_name\",\"shape\":[2],\"datatype\":\"FP32\",\"data\":[\"Hello\", \"World\"]}], \"id\":\"1\"}";
@@ -1672,7 +1699,7 @@ TEST_F(HttpRestApiHandlerTest, serverMetadata) {
     rapidjson::Document doc;
     doc.Parse(response.c_str());
     ASSERT_EQ(std::string(doc["name"].GetString()), PROJECT_NAME);
-    ASSERT_EQ(std::string(doc["version"].GetString()), PROJECT_VERSION);
+    ASSERT_EQ(std::string(doc["version"].GetString()), ovms::getProjectVersion());
 }
 
 // binary_data_size=-1 must be rejected. Without a sign check the int64_t value

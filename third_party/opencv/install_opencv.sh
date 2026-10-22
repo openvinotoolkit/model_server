@@ -29,13 +29,11 @@ SDL_OPS="-Wl,-z,relro,-z,now,-z,noexecstack -Wall -Wextra -Wimplicit-fallthrough
 
 if [ "$os" == "auto" ] ; then
     os=$( . /etc/os-release ; echo "${ID}${VERSION_ID}" )
-    if [[ "$os" =~ "rhel8".* ]] ; then
-      os="rhel8"
-    elif [[ "$os" =~ "rhel9".* ]] ; then
+    if [[ "$os" =~ "rhel9".* ]] ; then
       os="rhel9"
     fi
     case $os in
-        rhel8|rhel9|ubuntu18.04|ubuntu20.04|ubuntu22.04|ubuntu24.04) [ -z "$print" ] && echo "Detected OS: ${os}" ;;
+        rhel9|ubuntu22.04|ubuntu24.04|ubuntu26.04) [ -z "$print" ] && echo "Detected OS: ${os}" ;;
         *) echo "Unsupported OS: ${os:-detection failed}" >&2 ; exit 1 ;;
     esac
 fi
@@ -43,7 +41,7 @@ fi
 #===================================================================================================
 # OpenCV installation
 
-if [ "$os" == "ubuntu20.04" ] || [ "$os" == "ubuntu24.04" ] || [ "$os" == "ubuntu22.04" ] ; then
+if [ "$os" == "ubuntu20.04" ] || [ "$os" == "ubuntu22.04" ] || [ "$os" == "ubuntu24.04" ] || [ "$os" == "ubuntu26.04" ] ; then
     export DEBIAN_FRONTEND=noninteractive
     apt update && apt install -y build-essential git cmake \
         && rm -rf /var/lib/apt/lists/*
@@ -56,11 +54,11 @@ fi
 
 current_working_dir=$(pwd)
 
-cd $work_dir
-rm -rf $opencv_branch $work_dir/opencv_repo
-rm -rf $opencv_branch $work_dir/opencv_contrib_repo
-git clone https://github.com/opencv/opencv.git --depth 1 -b $opencv_branch $work_dir/opencv_repo
-git clone https://github.com/opencv/opencv_contrib.git --depth 1 -b $opencv_branch $work_dir/opencv_contrib_repo
+cd "$work_dir"
+rm -rf "$work_dir/opencv_repo" "$work_dir/opencv_contrib_repo"
+mkdir -p "$work_dir/opencv_repo" "$work_dir/opencv_contrib_repo"
+curl -fLsS "https://github.com/opencv/opencv/archive/refs/tags/${opencv_branch}.tar.gz" | tar -xz --strip-components=1 -C "$work_dir/opencv_repo"
+curl -fLsS "https://github.com/opencv/opencv_contrib/archive/refs/tags/${opencv_branch}.tar.gz" | tar -xz --strip-components=1 -C "$work_dir/opencv_contrib_repo"
 cd $work_dir/opencv_repo
 mkdir -p $work_dir/opencv_repo/build
 cd $work_dir/opencv_repo/build

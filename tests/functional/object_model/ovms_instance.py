@@ -396,7 +396,7 @@ class OvmsInstance(ABC):
         raise NotImplementedError(f"Unknown signal: {terminate_signal_type}")
 
     def filter_unexpected_messages(self, unexpected_messages):
-        for msg in unexpected_messages:
+        for msg in list(unexpected_messages):
             # 1) This message is expected in OV tests with batch_size=0
             # 2) This message can happen in Cython instances that use threading # CVS-165321
             if all([
@@ -405,7 +405,7 @@ class OvmsInstance(ABC):
             ]) or all([
                 OvmsMessages.ERROR_TERMINATE_CALLED in msg,
                 OvmsMessages.STD_SYSTEM_ERROR in msg,
-                hasattr(self, "cmd") and self.cmd is not None and "OvmsCapiInstance" in self.cmd.__str__,
+                hasattr(self, "cmd") and self.cmd is not None and "OvmsCapiInstance" in str(self.cmd),
             ]):
                 unexpected_messages.remove(msg)
         return unexpected_messages

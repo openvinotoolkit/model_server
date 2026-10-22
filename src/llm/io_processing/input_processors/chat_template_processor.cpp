@@ -22,21 +22,11 @@
 #include <variant>
 
 #include "../../../logging.hpp"
+#include "../../runtime_chat_template_runtime_loader.hpp"
 
 namespace ovms {
-
-#if (PYTHON_DISABLE == 0)
-ChatTemplateProcessor::ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer,
-    PyJinjaTemplateProcessor& templateProcessor) :
-    tokenizer(tokenizer),
-    templateProcessor(templateProcessor) {}
-
-ChatTemplateProcessor::ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer) :
-    tokenizer(tokenizer),
-    templateProcessor(std::nullopt) {}
-
-std::string ChatTemplateProcessor::serializeForPyJinja(const ov::genai::ChatHistory& chatHistory) {
-    // Build the minimal JSON object that PyJinjaTemplateProcessor::applyChatTemplate expects:
+std::string ChatTemplateProcessor::serializeForJinja(const ov::genai::ChatHistory& chatHistory) {
+    // Build the minimal JSON object expected by Jinja runtime/in-process handlers:
     // {"messages":[...], "tools":[...], "chat_template_kwargs":{...}}
     std::string json = "{\"messages\":" + chatHistory.get_messages().to_json_string();
     const auto& tools = chatHistory.get_tools();
@@ -51,10 +41,10 @@ std::string ChatTemplateProcessor::serializeForPyJinja(const ov::genai::ChatHist
     return json;
 }
 
-#else
-ChatTemplateProcessor::ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer) :
-    tokenizer(tokenizer) {}
-#endif
+ChatTemplateProcessor::ChatTemplateProcessor(ov::genai::Tokenizer& tokenizer,
+    PreparedChatTemplateRuntime* templateProcessor) :
+    tokenizer(tokenizer),
+    templateProcessor(templateProcessor) {}
 
 absl::Status ChatTemplateProcessor::extractAddGenerationPrompt(const ov::genai::ChatHistory& chatHistory,
     ov::genai::JsonContainer& kwargs, bool& addGenerationPrompt) {
@@ -85,18 +75,13 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "chatTemplateKwargs: {}", chatHistory.get_extra_context().empty() ? std::string("<none>") : chatHistory.get_extra_context().to_json_string());
     }
 
-#if (PYTHON_DISABLE == 0)
-    if (templateProcessor.has_value()) {
-        const std::string jsonBody = serializeForPyJinja(chatHistory);
-        std::string promptText;
-        const bool success = PyJinjaTemplateProcessor::applyChatTemplate(
-            templateProcessor.value().get(), jsonBody, promptText);
-        if (!success) {
-            return absl::Status(absl::StatusCode::kInvalidArgument, promptText);
+    if (templateProcessor != nullptr) {
+        std::string jinjaOutput;
+        if (!templateProcessor->apply(serializeForJinja(chatHistory), jinjaOutput)) {
+            return absl::Status(absl::StatusCode::kInvalidArgument, jinjaOutput);
         }
-        req.promptText = std::move(promptText);
+        req.promptText = std::move(jinjaOutput);
     } else {
-#endif
         const auto& tools = chatHistory.get_tools();
         ov::genai::JsonContainer kwargs;
         bool addGenerationPrompt = true;
@@ -116,9 +101,7 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
             return absl::Status(absl::StatusCode::kInvalidArgument,
                 "Failed to apply chat template. The model either does not have chat template or has an invalid one.");
         }
-#if (PYTHON_DISABLE == 0)
     }
-#endif
 
     if (req.promptText.empty()) {
         return absl::Status(absl::StatusCode::kInvalidArgument,
