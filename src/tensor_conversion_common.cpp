@@ -144,7 +144,7 @@ void updateTargetResolution(Dimension& height, Dimension& width, const ov::Tenso
         if (height.match(shape[1])) {
             height = shape[1];
         } else {
-            if (shape[1] > height.getMaxValue()) {
+            if (shape[1] > static_cast<uint64_t>(height.getMaxValue())) {
                 height = height.getMaxValue();
             } else {
                 height = height.getMinValue();
@@ -157,7 +157,7 @@ void updateTargetResolution(Dimension& height, Dimension& width, const ov::Tenso
         if (width.match(shape[2])) {
             width = shape[2];
         } else {
-            if (shape[2] > width.getMaxValue()) {
+            if (shape[2] > static_cast<uint64_t>(width.getMaxValue())) {
                 width = width.getMaxValue();
             } else {
                 width = width.getMinValue();
