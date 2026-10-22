@@ -1,0 +1,74 @@
+flowchart TD
+    %% GEMMAMONSTER architecture plan v2, 2026-10-22.
+    %% Solid: current serving contract or source-confirmed native capability (model eligibility still gated).
+    %% Dashed: proposed/conditional experiments. This is not a deployed runtime diagram.
+
+    subgraph OVMS["OVMS / canonical C6 serving contract"]
+        API["OpenAI API, tool schemas, XGrammar and exact tool calls"]
+        SLOTS["Scheduler: C1 / C2 / C4, fairness and request lifecycle"]
+        ADMIT{"Proposed memory and mode admission"}
+        API --> SLOTS --> ADMIT
+    end
+
+    subgraph GENAI["OpenVINO GenAI / checkpoint-specific decoding"]
+        GATE{"Drafter IR, tokenizer, model and slot compatibility proven?"}
+        PLAIN["Plain target decode"]
+        DRAFT["MTP or DFlash drafter; separate state and memory"]
+        WINDOW["Proposal window"]
+        VERIFY["Target decode / verify"]
+        RESOLVE{"Speculative round?"}
+        FIX["Accepted prefix; target correction on rejection; rollback or sync"]
+        SINGLE["Commit target token"]
+        COMMIT["Commit actual output tokens"]
+        KV["KV U4, prefix and per-slot state"]
+        GATE -->|no, or plain selected| PLAIN --> VERIFY
+        GATE -->|yes, gated| DRAFT --> WINDOW --> VERIFY
+        RESOLVE -->|no| SINGLE --> COMMIT
+        RESOLVE -->|yes| FIX --> COMMIT
+        COMMIT --> KV
+    end
+
+    subgraph GPU["OpenVINO Intel GPU plugin / native MoE OTD if graph eligible"]
+        ROUTER["Exact per-layer router top-k"]
+        ELIG{"Compressed MoE OTD graph eligible?"}
+        LOOKUP{"Expert resident?"}
+        RESIDENT["Resident-only execution if memory fits"]
+        DEMAND["Target demand miss: never a prefetch"]
+        OTD["Native OTD provider, LRU, positional reads, transforms and copy"]
+        KERNEL["Verified GPU expert kernel and weighted combine"]
+        ROUTER --> ELIG
+        ELIG -->|yes| LOOKUP
+        ELIG -->|no| RESIDENT --> KERNEL
+        LOOKUP -->|hit| KERNEL
+        LOOKUP -->|miss| DEMAND --> OTD --> KERNEL
+    end
+
+    subgraph CANDIDATES["Research-only extensions; disabled until gates pass"]
+        PREFETCH["Bounded speculative prefetch, lower priority"]
+        POLICY["Trace-driven CLOCK / 2Q / routing-aware policy"]
+        CPU["Optional CPU expert lane, SIMD and parity gate"]
+    end
+
+    subgraph MEMORY["258V / Arc 140V: one 32 GiB physical LPDDR UMA"]
+        LEDGER["OS reserve + pinned non-expert + hot experts + KV + draft + staging"]
+    end
+    subgraph STORAGE["Separate physical NVMe"]
+        NVME["Immutable packed expert store"]
+    end
+
+    ADMIT --> LEDGER
+    ADMIT --> GATE
+    VERIFY --> ROUTER
+    KERNEL --> RESOLVE
+    KV --> SLOTS
+    NVME --> OTD
+    PREFETCH -.->|only after replay and priority gate| OTD
+    POLICY -.->|optional provider experiment| LOOKUP
+    CPU -.->|optional alternative execution, never assumed| KERNEL
+
+    classDef native fill:#e9f3ff,stroke:#376ca8,color:#10283f
+    classDef conditional fill:#fff1d7,stroke:#ad7822,color:#3c2b10,stroke-dasharray:5 4
+    classDef storage fill:#e8f3e8,stroke:#42764a,color:#173b1d
+    class API,SLOTS,PLAIN,VERIFY,RESOLVE,SINGLE,COMMIT,KV,ROUTER,ELIG,LOOKUP,RESIDENT,DEMAND,OTD,KERNEL native
+    class ADMIT,GATE,DRAFT,WINDOW,FIX,PREFETCH,POLICY,CPU conditional
+    class LEDGER,NVME storage
