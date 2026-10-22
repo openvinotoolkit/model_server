@@ -155,11 +155,6 @@ bool Text2SpeechDetector::scan(const ModelCatalogContext& ctx) const {
     if (!config || !config->IsObject() || !config->HasMember("architectures"))
         return false;
 
-    std::optional<std::string> ttsModelType;
-    if (config->HasMember("tts_model_type") && (*config)["tts_model_type"].IsString()) {
-        ttsModelType = (*config)["tts_model_type"].GetString();
-    }
-
     const auto& archs = (*config)["architectures"];
 
     // Special case: null architectures with n_mels field (e.g. Kokoro TTS)
@@ -177,6 +172,10 @@ bool Text2SpeechDetector::scan(const ModelCatalogContext& ctx) const {
         const std::string arch = a.GetString();
 
         if (arch == "Qwen3TTSForConditionalGeneration") {
+            std::optional<std::string> ttsModelType;
+            if (config->HasMember("tts_model_type") && (*config)["tts_model_type"].IsString()) {
+                ttsModelType = (*config)["tts_model_type"].GetString();
+            }
             if (ttsModelType && *ttsModelType == "base") {
                 return false;
             }
