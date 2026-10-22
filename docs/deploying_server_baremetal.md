@@ -26,7 +26,7 @@ Install the [Microsoft Visual C++ Redistributable (x64)](https://aka.ms/vs/17/re
 Download, extract, and verify the package in Command Prompt or PowerShell:
 
 ```bat
-curl.exe -fL https://storage.openvinotoolkit.org/repositories/openvino_model_server/packages/weekly/latest/ovms_windows.zip -o ovms_windows.zip
+curl.exe -fL http://ov-share-13.sclab.intel.com/cv_bench_cache/OVMS_do_not_remove/ovms_artefacts/2026.5.0/test/ovms_windows_2026.5.0.zip -o ovms_windows.zip
 tar -xf ovms_windows.zip
 .\ovms\ovms.exe --version
 ```
@@ -50,8 +50,8 @@ Install system dependencies, then download, extract, and verify the package:
 ```sh
 sudo apt update
 sudo apt install -y curl ca-certificates libxml2
-curl -fLO https://storage.openvinotoolkit.org/repositories/openvino_model_server/packages/weekly/latest/ovms_ubuntu24.tar.gz
-tar -xzf ovms_ubuntu24.tar.gz
+curl -fLO http://ov-share-13.sclab.intel.com/cv_bench_cache/OVMS_do_not_remove/ovms_artefacts/2026.5.0/test/ovms_ubuntu24_2026.5.0_test.tar.gz
+tar -xzf ovms_ubuntu24_2026.5.0_test.tar.gz
 ./ovms/bin/ovms --version
 ```
 
@@ -64,8 +64,8 @@ Install system dependencies, then download, extract, and verify the package:
 ```sh
 sudo apt update
 sudo apt install -y curl ca-certificates libxml2-16
-curl -fLO https://storage.openvinotoolkit.org/repositories/openvino_model_server/packages/weekly/latest/ovms_ubuntu26.tar.gz
-tar -xzf ovms_ubuntu26.tar.gz
+curl -fLO http://ov-share-13.sclab.intel.com/cv_bench_cache/OVMS_do_not_remove/ovms_artefacts/2026.5.0/test/ovms_ubuntu26_2026.5.0_test.tar.gz
+tar -xzf ovms_ubuntu26_2026.5.0_test.tar.gz
 ./ovms/bin/ovms --version
 ```
 
@@ -77,8 +77,8 @@ Install system dependencies, then download, extract, and verify the package:
 
 ```sh
 sudo dnf install -y curl ca-certificates libxml2
-curl -fLO https://storage.openvinotoolkit.org/repositories/openvino_model_server/packages/weekly/latest/ovms_redhat9.tar.gz
-tar -xzf ovms_redhat9.tar.gz
+curl -fLO http://ov-share-13.sclab.intel.com/cv_bench_cache/OVMS_do_not_remove/ovms_artefacts/2026.5.0/test/ovms_redhat_2026.5.0_test.tar.gz
+tar -xzf ovms_redhat_2026.5.0_test.tar.gz
 ./ovms/bin/ovms --version
 ```
 
