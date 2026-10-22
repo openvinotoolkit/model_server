@@ -1,0 +1,57 @@
+flowchart LR
+    %% Cache/memory layout v2. Logical tiers share one physical UMA budget.
+    subgraph UMA["ONE physical 32 GiB LPDDR pool: Core Ultra 7 258V + Arc 140V"]
+        PIN["Pinned if budget permits: embedding, attention, router, shared/dense, head"]
+        HOT["Hot per-layer expert arena: GPU-readable, native OTD LRU"]
+        WARM["Warm: host DRAM / OS page cache; NOT extra RAM"]
+        STAGE["Bounded staging / USM / transform buffers"]
+        KV["KV U4 + prefix pages + C1/C2/C4 slot state"]
+        DRAFT["MTP or DFlash draft weights and state, only when enabled"]
+        OS["OS, runtime, activations and safety headroom"]
+    end
+
+    subgraph BACKING["Separate physical NVMe storage"]
+        STORE["Cold immutable packed expert weights, checksums and offsets"]
+    end
+
+    subgraph ACCESS["Native OTD baseline; experimental scheduling is gated"]
+        TARGET["Target verifier demand, highest priority"]
+        DREQ["Drafter demand if its own MoE backend uses OTD"]
+        PF["Speculative prefetch, bounded, proposed"]
+        READ["Positional read, scale/ZP transforms and GPU copy"]
+        KEY["Residency key: checkpoint, layer, expert, projection, quant profile"]
+        EXEC["Actual supported GPU kernel"]
+    end
+
+    subgraph CONTROL["Admission and accounting"]
+        BUDGET["Unique physical bytes: OS + pinned + hot + warm + staging + KV + draft + margin"]
+        SHRINK["On pressure: shrink draft window, cache or slots; then plain; never OS thrash"]
+        TRACE["Trace: route, hit/miss, IO bytes, accepted/committed, p95 TTFT/TPOT"]
+    end
+
+    STORE --> READ
+    TARGET --> READ
+    DREQ --> READ
+    PF -.->|only after priority and cancellation gate| READ
+    READ --> STAGE --> HOT
+    WARM -.->|optional page-cache reuse, no guaranteed hit| STAGE
+    KEY --> HOT --> EXEC
+    PIN --> EXEC
+    KV --> BUDGET
+    DRAFT --> BUDGET
+    HOT --> BUDGET
+    WARM --> BUDGET
+    STAGE --> BUDGET
+    PIN --> BUDGET
+    OS --> BUDGET
+    BUDGET -->|insufficient headroom| SHRINK
+    EXEC --> TRACE
+    READ --> TRACE
+    SHRINK --> TRACE
+
+    classDef native fill:#e9f3ff,stroke:#376ca8,color:#10283f
+    classDef proposed fill:#fff1d7,stroke:#ad7822,color:#3c2b10,stroke-dasharray:5 4
+    classDef memory fill:#e8f3e8,stroke:#42764a,color:#173b1d
+    class TARGET,READ,EXEC native
+    class DREQ,PF,KEY,BUDGET,SHRINK,TRACE proposed
+    class PIN,HOT,WARM,STAGE,KV,DRAFT,OS,STORE memory

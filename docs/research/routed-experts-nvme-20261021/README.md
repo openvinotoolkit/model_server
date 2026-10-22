@@ -47,3 +47,13 @@ Available draft candidates are now identified, not hypothetical: [Unsloth Qwen3.
 - [07 — Model and drafter baselines](07-MODEL-AND-DRAFTER-BASELINES.md)
 - [08 — Speculative Expert Cache and NVMe study](08-SPECULATIVE-EXPERT-CACHE-RESEARCH.md)
 - [06 — Revised implementation roadmap](06-IMPLEMENTATION-ROADMAP.md)
+
+## Architecture plan v2 (2026-10-22, docs-only)
+
+**New architecture entry point:** [09 — GEMMAMONSTER architecture plan v2](09-ARCHITECTURE-PLAN-V2.md). Includes source-grounded OVMS/GenAI/GPU ownership, hot/warm/cold per-layer expert layout, UMA ledger, plain vs checkpoint-gated MTP/DFlash, target-demand-first OTD, native LRU vs proposed cache/CPU experiments, v1-to-v2 migration and coding-agent P0–P8 acceptance gates.
+
+- [Root architecture flowchart v2](../../../architecture_flowchart_v2.mermaid) — serving, draft/verify, OTD and conditional extensions.
+- [10 — Cache and physical-memory layout v2](10-CACHE-MEMORY-LAYOUT-V2.mermaid) — pinned non-expert, hot per-layer routed experts, warm host/page cache (same LPDDR), cold NVMe, KV U4 and slot admission.
+- [Original root flowchart v1](../../../architecture_flowchart_graph.mermaid) remains unchanged for provenance.
+
+**Evidence boundary:** v2 synthesizes the research already published in this branch through commit `d2954601`. The newly requested Deep Research hot/cold architecture synthesis was started but its final report was not available as an export at publication time; do not attribute v2 text to that unreceived report. Future research arrivals should be added as dated supplements, not overwrite the manual original or stable C6.
