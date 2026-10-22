@@ -58,8 +58,9 @@ struct DecoderPlugin {
         HMODULE module = nullptr;
         if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
                 reinterpret_cast<LPCSTR>(&openCvImageDecoderUnavailableReason), &module)) {
-            std::array<char, 32768> path{};
-            const DWORD size = GetModuleFileNameA(module, path.data(), path.size());
+            constexpr DWORD pathCapacity = 32768;
+            std::vector<char> path(pathCapacity);
+            const DWORD size = GetModuleFileNameA(module, path.data(), pathCapacity);
             if (size > 0 && size < path.size())
                 directory = std::filesystem::path(path.data()).parent_path();
         }
