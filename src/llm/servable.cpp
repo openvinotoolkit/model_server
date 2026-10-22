@@ -207,13 +207,14 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
     if (!inputRequestsResult.ok()) {
         return inputRequestsResult.status();
     }
-    // Single request (every non-decisions endpoint) keeps the historical inputRequest
-    // field; the decisions endpoint emits one request per question.
+    // Decisions always uses the per-question path (even with one question) so the
+    // per-question result validation in readCompleteExecutionResults applies uniformly;
+    // every non-decisions endpoint keeps the historical single inputRequest field.
     auto& inputRequests = *inputRequestsResult;
-    if (inputRequests.size() == 1) {
-        executionContext->inputRequest = std::move(inputRequests.front());
-    } else {
+    if (executionContext->endpoint == Endpoint::DECISIONS) {
         executionContext->decisionsInputRequests = std::move(inputRequests);
+    } else {
+        executionContext->inputRequest = std::move(inputRequests.front());
     }
     return absl::OkStatus();
 }

@@ -20,6 +20,7 @@
 #include <cmath>
 #include <limits>
 #include <set>
+#include <unordered_map>
 
 #include "openai_json_response.hpp"
 
@@ -297,9 +298,17 @@ absl::Status OpenAIDecisionsHandler::encodeLabels() {
     // Labels are the generated single tokens (A..Z / 0..9 / "yes","no"), which are
     // single tokens in standard BPE tokenizers. The check is a safety net; it is on
     // the generated labels (not the user values), so multi-word choice values work.
+    // There are at most 38 distinct labels, so encode each one once per request and
+    // reuse the token id for the rest.
+    std::unordered_map<std::string, int64_t> labelTokenCache;
     for (auto& question : questions) {
         question.labelTokenIds.reserve(question.labels.size());
         for (const auto& label : question.labels) {
+            auto cached = labelTokenCache.find(label);
+            if (cached != labelTokenCache.end()) {
+                question.labelTokenIds.push_back(cached->second);
+                continue;
+            }
             ov::genai::TokenizedInputs tokens;
             try {
                 tokens = tokenizer.encode(label, {ov::genai::add_special_tokens(false)});
@@ -308,7 +317,9 @@ absl::Status OpenAIDecisionsHandler::encodeLabels() {
             }
             if (tokens.input_ids.get_size() != 1)
                 return absl::InvalidArgumentError(absl::StrCat("label '", label, "' is not a single token"));
-            question.labelTokenIds.push_back(tokens.input_ids.data<int64_t>()[0]);
+            const int64_t tokenId = tokens.input_ids.data<int64_t>()[0];
+            labelTokenCache.emplace(label, tokenId);
+            question.labelTokenIds.push_back(tokenId);
         }
     }
     return absl::OkStatus();
