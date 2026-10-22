@@ -184,7 +184,6 @@ TEST(ChatTemplateAdjusterTest, concatenatesMultiLineStrings) {
     EXPECT_EQ(tmpl, "\"line1line2line3\"");
 }
 
-
 TEST(ChatTemplateAdjusterTest, concatenatesTwoLineStrings) {
     std::string tmpl = "\"line1\"\n\"line2\"";
     const ConcatMultiLineStringAdjustment adjustment;
@@ -202,7 +201,6 @@ TEST(ChatTemplateAdjusterTest, concatenatesTwoLineEmptyStrings) {
 
     EXPECT_EQ(tmpl, "\"\"");
 }
-
 
 TEST(ChatTemplateAdjusterTest, concatenatesMultilineWithIndentAndSpaces) {
     std::string tmpl = "\"line1\"\n\t\t\t\t\t\"line2\"\n\t\t\t\t\"line3\"";

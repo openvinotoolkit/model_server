@@ -276,10 +276,10 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
             }
         }
 #endif
-    if (properties->chatTemplateEngine == ChatTemplateEngine::MINJA) {
-        ChatTemplateAdjuster(ChatTemplateAdjusterConfig::forMinja()).adjust(templateSource);
-        properties->tokenizer.set_chat_template(templateSource);
-    }
+        if (properties->chatTemplateEngine == ChatTemplateEngine::MINJA) {
+            ChatTemplateAdjuster(ChatTemplateAdjusterConfig::forMinja()).adjust(templateSource);
+            properties->tokenizer.set_chat_template(templateSource);
+        }
         if (properties->chatTemplateEngine == ChatTemplateEngine::MINJA && !probeChatTemplateBasicRenderMinja(properties->tokenizer)) {
             SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Chat template is not compatible with minja — basic rendering failed. "
                                                        "Disabling /chat/completions endpoint for this model.");
