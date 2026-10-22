@@ -12,7 +12,7 @@ def agent_name_linux = ""
 def test_agent_linux = "ovms_ptl"
 def disable_doc_tests_linux = false
 def disable_doc_tests_windows = false
-def validation_branch = "develop"
+def validation_branch = "baremetal_demo_test_update"
 
 def withGithubStageStatus = { String context, String stageName, Closure body ->
   if (env.CHANGE_ID) {
