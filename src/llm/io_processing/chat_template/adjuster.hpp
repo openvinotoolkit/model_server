@@ -24,6 +24,7 @@ namespace ovms {
 struct ChatTemplateAdjusterConfig {
     std::vector<std::string> removeFunctions;
     bool concatMultiLineStrings = false;
+    std::vector<std::string> removeFunctionsParams;
 
     static ChatTemplateAdjusterConfig forMinja();
     static ChatTemplateAdjusterConfig forJinja();
@@ -33,6 +34,15 @@ class BaseChatTemplateAdjustment {
 public:
     virtual ~BaseChatTemplateAdjustment() = default;
     virtual void apply(std::string& templateSource) const = 0;
+};
+
+class RemoveFunctionParamsAdjustment : public BaseChatTemplateAdjustment {
+public:
+    explicit RemoveFunctionParamsAdjustment(std::vector<std::string> functions);
+    void apply(std::string& templateSource) const override;
+
+private:
+    std::vector<std::string> functions;
 };
 
 class RemoveFiltersAdjustment : public BaseChatTemplateAdjustment {

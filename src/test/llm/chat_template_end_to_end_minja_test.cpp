@@ -150,11 +150,20 @@ protected:
     }
 };
 
-// =============================================================================
-// The chat template we use here contains multiple patches, including one that relates to `string2obj`.
-// Without the workaround, it translates to {"key":"val"}.
-// With, it would translate to {'key': 'val'} which is not correct.
-// =============================================================================
+TEST_F(ChatTemplateEndToEndMinjaTest, TojsonWithEnsureAsciiRendersAfterAdjustment) {
+    chatTemplate = "{% for message in messages %}{{ message.content | tojson(ensure_ascii=False) }}{% endfor %}";
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"Hi"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"Hello"})"));
+
+    run(false);
+
+    ASSERT_TRUE(basicRenderOk);
+    ASSERT_FALSE(exceptionThrownDuringApplication);
+    EXPECT_EQ(appliedOutput, "\"Hi\"\"Hello\"");
+}
+
 TEST_F(ChatTemplateEndToEndMinjaTest, GptOss_ToolCallWithStringArgs) {
     // Load the real gpt-oss chat template
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_gpt_oss.jinja");

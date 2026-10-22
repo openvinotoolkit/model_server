@@ -41,7 +41,57 @@ TEST(ChatTemplateAdjusterTest, usesMinjaConfiguration) {
     const ChatTemplateAdjuster adjuster(ChatTemplateAdjusterConfig::forMinja());
     adjuster.adjust(tmpl);
 
-    EXPECT_EQ(tmpl, "{{ value | tojson(ensure_ascii=False) }} {{ values }} {{ data }}");
+    EXPECT_EQ(tmpl, "{{ value | tojson }} {{ values }} {{ data }}");
+}
+
+TEST(ChatTemplateAdjusterTest, removesFunctionParamsWithoutRemovingFilter) {
+    std::string tmpl = "{{ tool | tojson(ensure_ascii=False) }} {{ tool | tojson(indent=2) }}";
+    const RemoveFunctionParamsAdjustment adjustment({"tojson"});
+
+    adjustment.apply(tmpl);
+
+    EXPECT_EQ(tmpl, "{{ tool | tojson }} {{ tool | tojson }}");
+}
+
+TEST(ChatTemplateAdjusterTest, removesNestedParamsWithQuotedParentheses) {
+    std::string tmpl = R"({{ tool | tojson(option=nested(')', "("), indent=2) | other }})";
+    const RemoveFunctionParamsAdjustment adjustment({"tojson"});
+
+    adjustment.apply(tmpl);
+
+    EXPECT_EQ(tmpl, "{{ tool | tojson | other }}");
+}
+
+TEST(ChatTemplateAdjusterTest, paramRemovalPreservesUnconfiguredAndBareFilters) {
+    const std::string original = "{{ tool | tojson }} {{ tool | tojson_extra(indent=2) }} {{ tool | other(indent=2) }}";
+    std::string tmpl = original;
+    const RemoveFunctionParamsAdjustment adjustment({"tojson"});
+
+    adjustment.apply(tmpl);
+
+    EXPECT_EQ(tmpl, original);
+}
+
+TEST(ChatTemplateAdjusterTest, paramRemovalPreservesUnclosedArgumentList) {
+    const std::string original = "{{ tool | tojson(indent=2 }}";
+    std::string tmpl = original;
+    const RemoveFunctionParamsAdjustment adjustment({"tojson"});
+
+    adjustment.apply(tmpl);
+
+    EXPECT_EQ(tmpl, original);
+}
+
+TEST(ChatTemplateAdjusterTest, removesParamsBeforeRemovingFilter) {
+    std::string tmpl = "{{ tool | tojson(ensure_ascii=False) }}";
+    ChatTemplateAdjusterConfig config;
+    config.removeFunctions = {"tojson"};
+    config.removeFunctionsParams = {"tojson"};
+    const ChatTemplateAdjuster adjuster(config);
+
+    adjuster.adjust(tmpl);
+
+    EXPECT_EQ(tmpl, "{{ tool }}");
 }
 
 TEST(ChatTemplateAdjusterTest, emptyConfigurationPreservesSource) {

@@ -47,7 +47,59 @@ bool findFilter(const std::string& source, const std::string& function,
     return false;
 }
 
+size_t findClosingParenthesis(const std::string& source, size_t openPosition) {
+    size_t depth = 0;
+    char quote = '\0';
+    bool escaped = false;
+    for (size_t position = openPosition; position < source.size(); ++position) {
+        const char value = source[position];
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (value == '\\') {
+                escaped = true;
+            } else if (value == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (value == '\'' || value == '"') {
+            quote = value;
+        } else if (value == '(') {
+            ++depth;
+        } else if (value == ')' && --depth == 0) {
+            return position;
+        }
+    }
+    return std::string::npos;
+}
+
 }  // namespace
+
+RemoveFunctionParamsAdjustment::RemoveFunctionParamsAdjustment(std::vector<std::string> functions) :
+    functions(std::move(functions)) {}
+
+void RemoveFunctionParamsAdjustment::apply(std::string& processed) const {
+    for (const auto& function : functions) {
+        size_t searchFrom = 0;
+        size_t pipePosition = 0;
+        size_t functionEnd = 0;
+        while (findFilter(processed, function, searchFrom, pipePosition, functionEnd)) {
+            size_t openPosition = functionEnd;
+            while (openPosition < processed.size() && std::isspace(static_cast<unsigned char>(processed[openPosition]))) {
+                ++openPosition;
+            }
+            searchFrom = functionEnd;
+            if (openPosition >= processed.size() || processed[openPosition] != '(') {
+                continue;
+            }
+            const size_t closePosition = findClosingParenthesis(processed, openPosition);
+            if (closePosition != std::string::npos) {
+                processed.erase(openPosition, closePosition - openPosition + 1);
+            }
+        }
+    }
+}
 
 RemoveFiltersAdjustment::RemoveFiltersAdjustment(std::vector<std::string> functions) :
     functions(std::move(functions)) {}
@@ -97,7 +149,7 @@ void ConcatMultiLineStringAdjustment::apply(std::string& processed) const {
 }
 
 ChatTemplateAdjusterConfig ChatTemplateAdjusterConfig::forMinja() {
-    return {{"min", "from_json"}, true};
+    return {{"min", "from_json"}, true, {"tojson"}};
 }
 
 ChatTemplateAdjusterConfig ChatTemplateAdjusterConfig::forJinja() {
@@ -105,6 +157,9 @@ ChatTemplateAdjusterConfig ChatTemplateAdjusterConfig::forJinja() {
 }
 
 ChatTemplateAdjuster::ChatTemplateAdjuster(const ChatTemplateAdjusterConfig& config) {
+    if (!config.removeFunctionsParams.empty()) {
+        adjustments.emplace_back(std::make_unique<RemoveFunctionParamsAdjustment>(config.removeFunctionsParams));
+    }
     if (!config.removeFunctions.empty()) {
         adjustments.emplace_back(std::make_unique<RemoveFiltersAdjustment>(config.removeFunctions));
     }
