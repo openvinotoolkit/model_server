@@ -261,8 +261,11 @@ Status OciDownloader::downloadModel() {
             return StatusCode::OCI_LLMMAN_RESOLVE_OUTPUT_INVALID;
         }
         if (containsOpenVinoIr(resolvedPath)) {
-            // Already an OpenVINO IR ModelPack - serve it straight from
-            // llmman's store, no conversion and no second copy on disk.
+            // Current llmman releases do not resolve OpenVINO IR as a format;
+            // this path is only reachable when IR files accompany a safetensors
+            // payload. Keep serving from the store for now. If llmman adds IR
+            // support, make the repository self-contained by copying the model
+            // here and using a path relative to the graph directory.
             this->modelPath = resolvedPath;
         } else {
             SPDLOG_ERROR("OCI safetensors model {} requires optimum-cli conversion, which is not supported for OCI ModelPacks. "

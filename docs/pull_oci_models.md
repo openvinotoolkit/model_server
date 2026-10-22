@@ -106,7 +106,7 @@ Inside `--model_repository_path` the reference additionally has `:` replaced wit
 <model_repository_path>/ghcr.io/my-org/model+1.0/graph.pbtxt
 ```
 
-For OpenVINO IR and GGUF payloads that directory holds only `graph.pbtxt` — the weights stay in `llmman`'s content-addressed store and are referenced by absolute path, so pulling the same image for several servables does not duplicate them on disk. Removing a model therefore takes two steps: delete the directory from the model repository, and reclaim the blobs with `llmman rm <reference>`.
+For OpenVINO IR and GGUF payloads that directory holds only `graph.pbtxt` — the weights stay in `llmman`'s content-addressed store and are referenced by absolute path, so pulling the same image for several servables does not duplicate them on disk. This means the model repository alone is not self-contained: if it is moved or mounted in another container, the llmman cache must also be available at the same path, and its blobs must not be removed. Removing a model therefore takes two steps: delete the directory from the model repository, and reclaim the blobs with `llmman rm <reference>`.
 
 ## Limitations
 
