@@ -71,10 +71,7 @@ class ModelsLibrary:
 
     @property
     def various_rerank_models(self):
-        return [
-            mg.Qwen3Reranker06BFp16OvHf,
-            mg.Qwen3Reranker06BSeqClsFp16OvHf,
-        ]
+        return [mg.Qwen3Reranker06BSeqClsFp16OvHf]
 
 
 ModelsLib = ModelsLibrary()     # pylint: disable=invalid-name

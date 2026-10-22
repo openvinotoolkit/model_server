@@ -1054,6 +1054,18 @@ def generic_test_deselect(item):
     return False
 
 
+# Check which of test_runners would be used.
+RUN_TYPE_ENABLED = [
+    (MarkRunType.TEST_MARK_ON_COMMIT, config.run_on_commit_tests),
+    (MarkRunType.TEST_MARK_REGRESSION, config.run_regression_tests),
+]
+
+
+def mark_type_test_deselected(item, run_type_enabled_dict):
+    _type_mark = MarkRunType.get_test_type_mark(item)
+    return any(_type_mark == run_type and not enabled for run_type, enabled in run_type_enabled_dict)
+
+
 def deselect(item, test_type, required_marker_ids, excluded_marker_ids):
     # Validate different scenarios where test should be deselected from execution during `collect` stage.
     if isinstance(item, Function):
@@ -1061,6 +1073,9 @@ def deselect(item, test_type, required_marker_ids, excluded_marker_ids):
             raise RuntimeError("Test do not have test_type: " + item.name)
 
         if generic_test_deselect(item):
+            return True
+
+        if mark_type_test_deselected(item, RUN_TYPE_ENABLED):
             return True
 
         if required_marker_ids:

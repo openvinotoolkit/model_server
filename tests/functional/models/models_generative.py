@@ -242,13 +242,6 @@ class Qwen3Embedding06BFp16OvHf(GenerativeModelHuggingFace, FeatureExtractionMod
 
 
 @dataclass
-class Qwen3Reranker06BFp16OvHf(GenerativeModelHuggingFace, RerankModel):
-    name: str = "OpenVINO/Qwen3-Reranker-0.6B-fp16-ov"
-    precision: str = "FP16"
-    is_local: bool = True
-
-
-@dataclass
 class Qwen3Reranker06BSeqClsFp16OvHf(GenerativeModelHuggingFace, RerankModel):
     name: str = "OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov"
     precision: str = "FP16"
