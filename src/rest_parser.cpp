@@ -126,7 +126,7 @@ Status KFSRestParser::parseData(rapidjson::Value& node, ::KFSRequest::InferInput
     if (input.datatype() == "FP32") {
         HANDLE_VALUE(mutable_fp32_contents, GetFloat, IsNumber)
     } else if (input.datatype() == "INT64") {
-        HANDLE_VALUE(mutable_int64_contents, GetInt64, IsInt)
+        HANDLE_VALUE(mutable_int64_contents, GetInt64, IsInt64)
     } else if (input.datatype() == "INT32") {
         HANDLE_VALUE(mutable_int_contents, GetInt, IsInt)
     } else if (input.datatype() == "INT16") {
@@ -134,7 +134,7 @@ Status KFSRestParser::parseData(rapidjson::Value& node, ::KFSRequest::InferInput
     } else if (input.datatype() == "INT8") {
         HANDLE_VALUE(mutable_int_contents, GetInt, IsInt)
     } else if (input.datatype() == "UINT64") {
-        HANDLE_VALUE(mutable_uint64_contents, GetUint64, IsUint)
+        HANDLE_VALUE(mutable_uint64_contents, GetUint64, IsUint64)
     } else if (input.datatype() == "UINT32") {
         HANDLE_VALUE(mutable_uint_contents, GetUint, IsUint)
     } else if (input.datatype() == "UINT16") {
