@@ -166,6 +166,34 @@ TEST(ChatTemplateAdjusterTest, preservesLineBreaksAndSurroundingText) {
     EXPECT_EQ(tmpl, "Before  {{ value\n\n }}  After");
 }
 
+TEST(ChatTemplateAdjusterTest, removesBracketsWhenRemovingFunction) {
+    std::string tmpl = "{{ value | min() }}";
+    const RemoveFiltersAdjustment adjustment({"min"});
+
+    adjustment.apply(tmpl);
+
+    EXPECT_EQ(tmpl, "{{ value }}");
+}
+
+TEST(ChatTemplateAdjusterTest, removesFunctionWithArguments) {
+    std::string tmpl = "{{ value | min(some_param=42) }}";
+    const RemoveFiltersAdjustment adjustment({"min"});
+
+    adjustment.apply(tmpl);
+
+    EXPECT_EQ(tmpl, "{{ value }}");
+}
+
+TEST(ChatTemplateAdjusterTest, notRemovesFunctionFromString) {
+    std::string tmpl = "{{ \"Use | min went you want to have lowest number from an array.\" }}";
+    const RemoveFiltersAdjustment adjustment({"min"});
+    std::string original = tmpl;
+
+    adjustment.apply(tmpl);
+
+    EXPECT_EQ(original, tmpl);
+}
+
 TEST(ChatTemplateAdjusterTest, removesCompactFilterWithoutAddingWhitespace) {
     std::string tmpl = "{{value|min}}";
     const RemoveFiltersAdjustment adjustment({"min"});
