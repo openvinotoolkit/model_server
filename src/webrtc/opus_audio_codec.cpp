@@ -77,8 +77,9 @@ std::vector<float> OpusAudioCodec::decode(const std::vector<uint8_t>& encoded) c
         throw std::invalid_argument("Opus input packet is empty");
     }
 
-    std::vector<float> decoded(FrameSamples * channels_);
-    const int decodedSamples = opus_decode_float(decoder_.get(), encoded.data(), encoded.size(), decoded.data(), static_cast<int>(FrameSamples), 0);
+    const size_t frameSamples = encodedFrameSamples(encoded);
+    std::vector<float> decoded(frameSamples * channels_);
+    const int decodedSamples = opus_decode_float(decoder_.get(), encoded.data(), encoded.size(), decoded.data(), static_cast<int>(frameSamples), 0);
     if (decodedSamples < 0) {
         throw std::runtime_error("Opus decoding failed");
     }
