@@ -47,7 +47,7 @@ Optionally, install OVMS as a [Windows service](windows_service.md):
 
 Install system dependencies, then download, extract, and verify the package:
 
-```sh
+```bash
 sudo apt update
 sudo apt install -y curl ca-certificates libxml2
 curl -fLO http://ov-share-13.sclab.intel.com/cv_bench_cache/OVMS_do_not_remove/ovms_artefacts/2026.5.0/test/ovms_ubuntu24_2026.5.0_test.tar.gz
@@ -61,7 +61,7 @@ tar -xzf ovms_ubuntu24_2026.5.0_test.tar.gz
 
 Install system dependencies, then download, extract, and verify the package:
 
-```sh
+```bash
 sudo apt update
 sudo apt install -y curl ca-certificates libxml2-16
 curl -fLO http://ov-share-13.sclab.intel.com/cv_bench_cache/OVMS_do_not_remove/ovms_artefacts/2026.5.0/test/ovms_ubuntu26_2026.5.0_test.tar.gz
@@ -75,7 +75,7 @@ tar -xzf ovms_ubuntu26_2026.5.0_test.tar.gz
 
 Install system dependencies, then download, extract, and verify the package:
 
-```sh
+```bash
 sudo dnf install -y curl ca-certificates libxml2
 curl -fLO http://ov-share-13.sclab.intel.com/cv_bench_cache/OVMS_do_not_remove/ovms_artefacts/2026.5.0/test/ovms_redhat_2026.5.0_test.tar.gz
 tar -xzf ovms_redhat_2026.5.0_test.tar.gz
@@ -116,7 +116,7 @@ when using either Python feature; delete it only if neither feature is needed.
 
 Install Python 3.12, its shared library, and Jinja2 from the system packages:
 
-```sh
+```bash
 sudo apt install -y python3 libpython3.12 python3-jinja2
 ```
 
@@ -126,7 +126,7 @@ sudo apt install -y python3 libpython3.12 python3-jinja2
 
 Install Python 3.14, its shared library, and Jinja2 from the system packages:
 
-```sh
+```bash
 sudo apt install -y python3 libpython3.14 python3-jinja2
 ```
 
@@ -136,7 +136,7 @@ sudo apt install -y python3 libpython3.14 python3-jinja2
 
 Install Python 3.12 and pip, then install Jinja2 for the current user:
 
-```sh
+```bash
 sudo dnf install -y python3.12 python3.12-libs python3.12-pip
 python3.12 -m pip install --user Jinja2
 ```
@@ -165,28 +165,21 @@ For runtime diagnostics, see [Python Runtime Setup and Troubleshooting](python_r
 
 Download a ResNet50 model (use `curl.exe` instead of `curl` in Windows PowerShell):
 
-```sh
-curl -fL --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet50/1/model.xml
-curl -fL --create-dirs https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -o models/resnet50/1/model.bin
+```console
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -O
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -O
 ```
 
-Start the server on Linux:
+Start the server:
 
-```sh
-./ovms/bin/ovms --port 9000 --model_name resnet --model_path models/resnet50
-```
+```console
+ovms --model_name resnet --model_path resnet50.xml --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --port 9000
 
-Or on Windows:
-
-```bat
-.\ovms\ovms.exe --port 9000 --model_name resnet --model_path models/resnet50
 ```
 
 You can also run the server as a background process, a system service on Linux,
 or a Windows service, depending on your hosting requirements.
 
-Most Model Server documentation demonstrates container usage, but the same
-features are available with the binary package.
 Learn more about Model Server [starting parameters](parameters.md).
 
 > **NOTE**:

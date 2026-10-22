@@ -66,6 +66,12 @@ void ContinuousBatchingServable::notifyExecutorThread() {
     properties->llmExecutorWrapper->notifyNewRequestArrived();
 }
 
+void ContinuousBatchingServable::stopGenerationOnResponseError(const std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext) {
+    if (executionContext->generationHandle) {
+        executionContext->generationHandle->stop();
+    }
+}
+
 absl::Status ContinuousBatchingServable::addRequestToPipeline(std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext) {
     // Additional validation for big prompt and setting without dynamic split fuse (GenAI checks it during scheduling which is too late for us)
     if (executionContext->inputRequest.inputIds.get_size() > properties->schedulerConfig.max_num_batched_tokens && properties->schedulerConfig.dynamic_split_fuse == false) {
@@ -173,6 +179,10 @@ absl::Status ContinuousBatchingServable::prepareCompleteResponse(std::shared_ptr
 
 absl::Status ContinuousBatchingServable::preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto status = GenAiServable::preparePartialResponse(executionContext);
+    if (!status.ok()) {
+        stopGenerationOnResponseError(std::static_pointer_cast<ContinuousBatchingServableExecutionContext>(executionContext));
+        return status;
+    }
     if (status.ok() &&
         !executionContext->sendLoopbackSignal &&
         executionContext->perfMetrics &&
