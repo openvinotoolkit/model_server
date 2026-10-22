@@ -6,8 +6,10 @@ This demo presents [OpenVINO Model Server (OVMS)](https://github.com/openvinotoo
 
 ### How it fits together
 
-```text
-frontend (dcode)  ──OpenAI API──▶  OVMS  ──▶  OpenVINO model (GPU / CPU / NPU)
+```mermaid
+flowchart LR
+    A["dcode frontend"] -->|"OpenAI-compatible API"| B["OVMS"]
+    B --> C["OpenVINO model\nGPU / CPU / NPU"]
 ```
 
 - **OVMS** runs the model locally and exposes `http://localhost:8000/v1` (OpenAI-compatible).
@@ -116,7 +118,6 @@ The only line that actually connects `dcode` to OVMS is `OPENAI_BASE_URL=http://
 ```bash
 export OPENAI_API_KEY=not_used
 export OPENAI_BASE_URL=http://localhost:8000/v1
-export TAVILY_API_KEY=not_used
 export DEEPAGENTS_CODE_PRICES_AUTO_UPDATE=0
 export DEMO_DIR="$PWD"
 ```
@@ -126,7 +127,6 @@ export DEMO_DIR="$PWD"
 ```bat
 set OPENAI_API_KEY=not_used
 set OPENAI_BASE_URL=http://localhost:8000/v1
-set TAVILY_API_KEY=not_used
 set DEEPAGENTS_CODE_PRICES_AUTO_UPDATE=0
 set DEMO_DIR=%CD%
 ```
@@ -141,7 +141,6 @@ dcode --default-model openai:OpenVINO/Qwen3.8-27B-int4-ov
 
 - **`OPENAI_BASE_URL`**: points dcode at the OVMS endpoint. 
 - **`OPENAI_API_KEY=not_used`**: OVMS does not require a key for local serving, but the OpenAI client library expects the variable to be set.
-- **`TAVILY_API_KEY=not_used`**: silences the web-search key warning; the demo never invokes web search, so the placeholder is inert.
 - **`DEEPAGENTS_CODE_PRICES_AUTO_UPDATE=0`**: avoids external pricing refresh.
 - **`DEMO_DIR`**: expanded inside [`.deepagents/.mcp.json`](https://github.com/openvinotoolkit/model_server/blob/main/demos/integration_with_deepagents_code/.deepagents/.mcp.json) so the MCP server script is located reliably.
 

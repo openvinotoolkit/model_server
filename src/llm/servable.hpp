@@ -30,7 +30,6 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "io_processing/delta.hpp"
 #include "openvino/genai/perf_metrics.hpp"
-#include "openvino/genai/text_streamer.hpp"
 #include "mediapipe/framework/calculator.pb.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
@@ -45,6 +44,7 @@
 #include "runtime_chat_template_runtime_loader.hpp"
 
 namespace ovms {
+class OVMSTextStreamer;
 
 // Some pipelines internals rely on request_id, so for now we provide increasing ID
 static std::atomic<uint64_t> currentRequestId = 0;
@@ -76,6 +76,7 @@ enum class GenerationPhase {
 };
 
 enum class ChatTemplateEngine {
+    NONE,
     MINJA,  // Use GenAI's apply_chat_template (minja-based)
     JINJA,  // Use Python Jinja2 module for chat template processing
 };
@@ -149,7 +150,9 @@ struct GenAiServableExecutionContext {
     std::vector<ov::genai::GenerationOutput> generationOutputs;
     std::unique_ptr<ov::genai::PerfMetrics> perfMetrics;
     std::string response;
-    std::shared_ptr<ov::genai::TextStreamer> textStreamer;
+    std::shared_ptr<OVMSTextStreamer> textStreamer;
+    // Loopback iterations can occur before the calculator emits its first frame.
+    bool streamFrameEmitted = false;
     bool sendLoopbackSignal = false;
     bool lifecyclePrimed = false;  // true once RESPONSES lifecycle events have been primed
     DeltaChannel deltaChannel;     // thread-safe delta queue used by all streaming paths
@@ -188,11 +191,7 @@ struct GenAiServableProperties {
     ov::AnyMap pluginConfig;
     ov::AnyMap tokenizerPluginConfig;
     bool enableToolGuidedGeneration = false;
-#if (PYTHON_DISABLE == 0)
-    ChatTemplateEngine chatTemplateEngine = ChatTemplateEngine::JINJA;
-#else
-    ChatTemplateEngine chatTemplateEngine = ChatTemplateEngine::MINJA;
-#endif
+    ChatTemplateEngine chatTemplateEngine = ChatTemplateEngine::NONE;
     bool chatTemplateEngineExplicit = false;
     // Chat template analysis
     ChatTemplateCaps chatTemplateCaps;
