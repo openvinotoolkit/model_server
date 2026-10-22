@@ -161,7 +161,6 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
         return;
     }
 
-#if (PYTHON_DISABLE == 0)
     if (properties->chatTemplateEngine == ChatTemplateEngine::JINJA && properties->preparedChatTemplate.isPrepared()) {
         if (!probeChatTemplateCapsJinja([& templateProcessor = properties->preparedChatTemplate](const std::string& body, std::string& output) {
                 return templateProcessor.apply(body, output);
@@ -171,7 +170,6 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
         }
         return;
     }
-#endif
 
     // Minja path — use the shared probe component
     if (!probeChatTemplateCapsMinja(properties->tokenizer, properties->chatTemplateCaps)) {
@@ -242,44 +240,48 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
             properties->reasoningParserName = analysisResult.detectedReasoningParser.value();
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected reasoning_parser: {}", properties->reasoningParserName);
         }
+    }
 
-#if (PYTHON_DISABLE == 0)
-        if (properties->chatTemplateEngine == ChatTemplateEngine::JINJA) {
-            std::string initializationError;
-            const bool pythonInitialized = ensurePythonRuntimeInitialized(initializationError);
-            if (pythonInitialized) {
-                std::string errorMessage;
-                const bool chatTemplatePrepared = properties->preparedChatTemplate.prepare(
-                    chatTemplateDirectory,
-                    properties->tokenizer.get_chat_template(),
-                    properties->tokenizer.get_bos_token(),
-                    properties->tokenizer.get_eos_token(),
-                    errorMessage);
-                if (!chatTemplatePrepared) {
-                    if (properties->chatTemplateEngineExplicit) {
-                        return Status(StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED, "Failed to prepare Jinja chat template: " + errorMessage);
-                    }
-                    SPDLOG_LOGGER_WARN(llm_calculator_logger, "Failed to prepare Jinja chat template; falling back to Minja: {}", errorMessage);
-                    properties->chatTemplateEngine = ChatTemplateEngine::MINJA;
-                }
-            } else {
+    if (properties->chatTemplateEngine == ChatTemplateEngine::JINJA) {
+        std::string initializationError;
+        const bool pythonInitialized = ensurePythonRuntimeInitialized(initializationError);
+        if (pythonInitialized) {
+            std::string errorMessage;
+            const bool chatTemplatePrepared = properties->preparedChatTemplate.prepare(
+                chatTemplateDirectory,
+                properties->tokenizer.get_chat_template(),
+                properties->tokenizer.get_bos_token(),
+                properties->tokenizer.get_eos_token(),
+                errorMessage);
+            if (!chatTemplatePrepared) {
                 if (properties->chatTemplateEngineExplicit) {
-                    return Status(StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED, "Python is required for chat_template_engine=JINJA: " + initializationError);
+                    return Status(StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED,
+                        "Failed to prepare Jinja chat template: " + errorMessage);
                 }
                 SPDLOG_LOGGER_WARN(llm_calculator_logger,
-                    "Python interpreter initialization failed; falling back to Minja chat template rendering: {}", initializationError);
+                    "Failed to prepare Jinja chat template; falling back to Minja: {}", errorMessage);
                 properties->chatTemplateEngine = ChatTemplateEngine::MINJA;
             }
+        } else {
+            if (properties->chatTemplateEngineExplicit) {
+                return Status(StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED,
+                    "Python is required for chat_template_engine=JINJA: " + initializationError);
+            }
+            SPDLOG_LOGGER_WARN(llm_calculator_logger,
+                "Python interpreter initialization failed; falling back to Minja chat template rendering: {}",
+                initializationError);
+            properties->chatTemplateEngine = ChatTemplateEngine::MINJA;
         }
-#endif
-        if (properties->chatTemplateEngine == ChatTemplateEngine::MINJA && !probeChatTemplateBasicRenderMinja(properties->tokenizer)) {
-            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Chat template is not compatible with minja — basic rendering failed. "
-                                                       "Disabling /chat/completions endpoint for this model.");
-            properties->tokenizer.set_chat_template("");
-            return StatusCode::OK;
-        }
-        probeServableChatTemplateCaps(properties);
     }
+    if (properties->chatTemplateEngine == ChatTemplateEngine::MINJA &&
+        !probeChatTemplateBasicRenderMinja(properties->tokenizer)) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger,
+            "Chat template is not compatible with minja — basic rendering failed. "
+            "Disabling /chat/completions endpoint for this model.");
+        properties->tokenizer.set_chat_template("");
+        return StatusCode::OK;
+    }
+    probeServableChatTemplateCaps(properties);
 
     // Populate the InputProcessorContext from the now-fully-initialized properties.
     properties->inputProcessorContext.tokenizer = properties->tokenizer;
@@ -305,6 +307,28 @@ void GenAiServableInitializer::applyGlobalCacheDir(std::shared_ptr<GenAiServable
     } else {
         SPDLOG_DEBUG("CACHE_DIR set explicitly in node plugin_config; keeping user value over global cache_dir");
     }
+}
+
+ChatTemplateEngine GenAiServableInitializer::determineChatTemplateEngine(
+    const mediapipe::LLMCalculatorOptions& nodeOptions) {
+    std::string initializationError;
+    const bool pythonRuntimeAvailable = ensurePythonRuntimeInitialized(initializationError);
+    return determineChatTemplateModeWithRuntimeContext(nodeOptions, pythonRuntimeAvailable);
+}
+
+ChatTemplateEngine GenAiServableInitializer::determineChatTemplateModeWithRuntimeContext(
+    const mediapipe::LLMCalculatorOptions& nodeOptions,
+    bool pythonRuntimeAvailable) {
+    if (!nodeOptions.has_chat_template_engine()) {
+        return pythonRuntimeAvailable ? ChatTemplateEngine::JINJA : ChatTemplateEngine::MINJA;
+    }
+    if (nodeOptions.chat_template_engine() == mediapipe::LLMCalculatorOptions::JINJA) {
+        if (!pythonRuntimeAvailable) {
+            throw std::runtime_error("chat_template_engine=JINJA requires an available Python runtime");
+        }
+        return ChatTemplateEngine::JINJA;
+    }
+    return ChatTemplateEngine::MINJA;
 }
 
 Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string graphPath) {

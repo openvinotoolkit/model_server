@@ -527,9 +527,9 @@ grpc_extra_deps()
 # cxxopts
 http_archive(
     name = "com_github_jarro2783_cxxopts",
-    url = "https://github.com/jarro2783/cxxopts/archive/v3.1.1.zip",
-    sha256 = "25b644a2bfa9c6704d723be51b026bc02420dfdee1277a49bfe5df3f19b0eaa4",
-    strip_prefix = "cxxopts-3.1.1",
+    url = "https://github.com/jarro2783/cxxopts/archive/v3.3.1.zip",
+    sha256 = "f35f27daa5f6fab84e4fffd02fc171cae085b14647e19687357394c1fe90ce6a",
+    strip_prefix = "cxxopts-3.3.1",
     build_file = "@//third_party/cxxopts:BUILD",
 )
 
