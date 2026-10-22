@@ -22,6 +22,8 @@ Connection types covered:
 Environment:
   OVMS_URL             OVMS REST base URL (default: http://localhost:9112)
   OVMS_MODEL           served speech-to-text graph name (default: voxtral-asr)
+  OVMS_REALTIME_MODEL  served Voxtral Realtime graph name for live-delta testing
+                       (defaults to OVMS_MODEL only when it is voxtral-asr)
   OVMS_ANNOUNCED_IP    optional; set to the OVMS_WEBRTC_ANNOUNCED_IP value the server runs with. OVMS candidates
                        with any other address are dropped, simulating a client on another machine that can
                        only reach the announced (1:1 NAT) address
@@ -49,6 +51,8 @@ from aiortc.contrib.media import MediaPlayer
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OVMS_URL = os.environ.get("OVMS_URL", "http://localhost:9112").rstrip("/")
 OVMS_MODEL = os.environ.get("OVMS_MODEL", "voxtral-asr")
+OVMS_REALTIME_MODEL = os.environ.get(
+    "OVMS_REALTIME_MODEL", OVMS_MODEL if OVMS_MODEL == "voxtral-asr" else "")
 OVMS_ANNOUNCED_IP = os.environ.get("OVMS_ANNOUNCED_IP", "")
 OVMS_API_KEY = os.environ.get("OVMS_API_KEY", "")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
@@ -62,6 +66,7 @@ TRANSCRIPT_TIMEOUT_S = 90
 
 DELTA_EVENT = "conversation.item.input_audio_transcription.delta"
 COMPLETED_EVENT = "conversation.item.input_audio_transcription.completed"
+COMMITTED_EVENT = "input_audio_buffer.committed"
 
 
 def ovms_http():
@@ -79,6 +84,10 @@ def ovms_ready():
 
 
 requires_ovms = pytest.mark.skipif(not ovms_ready(), reason=f"OVMS is not reachable at {OVMS_URL}")
+requires_realtime_model = pytest.mark.skipif(
+    not OVMS_REALTIME_MODEL,
+    reason="Set OVMS_REALTIME_MODEL to a served Voxtral Realtime graph to run live-delta coverage",
+)
 
 
 class TranscriptCollector:
@@ -89,6 +98,7 @@ class TranscriptCollector:
         self.deltas = []
         self.completed = []
         self.errors = []
+        self.invalid_messages = []
         self.call_location = None
         self.updated = asyncio.Event()
 
@@ -98,6 +108,12 @@ class TranscriptCollector:
         try:
             message = json.loads(raw)
         except json.JSONDecodeError:
+            self.invalid_messages.append(raw)
+            self.updated.set()
+            return
+        if not isinstance(message, dict):
+            self.invalid_messages.append(raw)
+            self.updated.set()
             return
         self.events.append(message)
         event_type = message.get("type")
@@ -119,6 +135,8 @@ class TranscriptCollector:
             if remaining <= 0:
                 return False
             self.updated.clear()
+            if predicate():
+                return True
             try:
                 await asyncio.wait_for(self.updated.wait(), timeout=remaining)
             except asyncio.TimeoutError:
@@ -192,6 +210,16 @@ class ControlClient:
         def _on_message(message):
             self.collector.on_message(message)
 
+    async def create_offer(self):
+        await self.pc.setLocalDescription(await self.pc.createOffer())
+        return self.pc.localDescription.sdp
+
+    async def apply_answer(self, sdp):
+        await self.pc.setRemoteDescription(RTCSessionDescription(sdp=sdp, type="answer"))
+
+    async def wait_connected(self):
+        await asyncio.wait_for(self.channel_open.wait(), timeout=CONNECT_TIMEOUT_S)
+
     async def close(self):
         await self.pc.close()
 
@@ -229,11 +257,95 @@ def assert_transcript(text, collector):
         f"Expected '{EXPECTED_KEYWORD}' in transcript {text!r}; received events: {collector.events}")
 
 
+def assert_event_envelope(event, expected_type):
+    assert event.get("type") == expected_type, event
+    assert isinstance(event.get("event_id"), str) and event["event_id"], event
+
+
+def assert_transcription_event_contract(events, expected_items=None):
+    assert not events.invalid_messages, f"Non-JSON data-channel messages: {events.invalid_messages}"
+    assert not events.errors, f"Server reported errors: {events.errors}"
+
+    committed = [event for event in events.events if event.get("type") == COMMITTED_EVENT]
+    deltas = [event for event in events.events if event.get("type") == DELTA_EVENT]
+    completed = [event for event in events.events if event.get("type") == COMPLETED_EVENT]
+    assert committed, f"No committed-item event received: {events.events}"
+    assert completed, f"No completed-transcription event received: {events.events}"
+
+    for event in committed:
+        assert_event_envelope(event, COMMITTED_EVENT)
+        assert isinstance(event.get("item_id"), str) and event["item_id"], event
+        assert "previous_item_id" in event, event
+        assert event["previous_item_id"] is None or isinstance(event["previous_item_id"], str), event
+    for event in deltas:
+        assert_event_envelope(event, DELTA_EVENT)
+        assert isinstance(event.get("item_id"), str) and event["item_id"], event
+        assert isinstance(event.get("content_index"), int) and event["content_index"] >= 0, event
+        assert isinstance(event.get("delta"), str) and event["delta"], event
+    for event in completed:
+        assert_event_envelope(event, COMPLETED_EVENT)
+        assert isinstance(event.get("item_id"), str) and event["item_id"], event
+        assert isinstance(event.get("content_index"), int) and event["content_index"] >= 0, event
+        assert isinstance(event.get("transcript"), str), event
+
+    committed_ids = {event["item_id"] for event in committed}
+    completed_ids = {event["item_id"] for event in completed}
+    delta_ids = {event["item_id"] for event in deltas}
+    expected_ids = set(expected_items) if expected_items is not None else committed_ids
+    assert expected_ids <= committed_ids, f"Missing committed item IDs: {events.events}"
+    assert completed_ids == expected_ids, f"Committed/completed item mismatch: {events.events}"
+    assert len(completed) == len(expected_ids), f"Expected one completion per item: {events.events}"
+    assert delta_ids <= committed_ids, f"Delta refers to an uncommitted item: {events.events}"
+    return committed, deltas, completed
+
+
+def assert_protocol_error(event):
+    assert_event_envelope(event, "error")
+    error = event.get("error")
+    assert isinstance(error, dict), event
+    assert isinstance(error.get("type"), str) and error["type"], event
+    assert isinstance(error.get("message"), str) and error["message"], event
+
+
 def transcription_session(model):
     return {
         "type": "transcription",
         "audio": {"input": {"transcription": {"model": model}, "turn_detection": None}},
     }
+
+
+async def connect_ovms_client(client, session_config=None):
+    offer_sdp = await client.create_offer()
+    form = {"sdp": (None, offer_sdp)}
+    if session_config is not None:
+        form["session"] = (None, json.dumps(session_config))
+    headers = {"Authorization": f"******"} if OVMS_API_KEY else {}
+    response = await asyncio.to_thread(
+        ovms_http().post, f"{OVMS_URL}/v1/realtime/calls", files=form, headers=headers, timeout=30)
+    assert response.ok, f"Call request failed: {response.status_code} {response.text}"
+    assert response.headers["Content-Type"].split(";")[0] == "application/sdp"
+    assert response.text.startswith("v=0"), f"Expected SDP answer, got: {response.text[:200]!r}"
+    assert "a=candidate:" in response.text, "SDP answer must embed ICE candidates (client does not trickle)"
+    client.collector.call_location = response.headers.get("Location")
+    answer_sdp = response.text
+    if OVMS_ANNOUNCED_IP:
+        answer_sdp, kept = keep_reachable_sdp_candidates(answer_sdp)
+        assert kept, f"SDP answer has no candidate with announced IP {OVMS_ANNOUNCED_IP}"
+    await client.apply_answer(answer_sdp)
+    await client.wait_connected()
+    return client
+
+
+async def hangup_ovms_client(client):
+    try:
+        location = client.collector.call_location
+        if location:
+            headers = {"Authorization": f"******"} if OVMS_API_KEY else {}
+            response = await asyncio.to_thread(
+                ovms_http().post, f"{OVMS_URL}{location}/hangup", headers=headers, timeout=30)
+            assert response.ok, f"Hangup failed: {response.status_code} {response.text}"
+    finally:
+        await client.close()
 
 
 async def run_openai_protocol(calls_url, auth_token, http_session, ovms_server=False, session_config=None):
@@ -282,34 +394,14 @@ async def run_openai_protocol(calls_url, auth_token, http_session, ovms_server=F
 async def create_ovms_control_call():
     client = ControlClient()
     try:
-        await client.pc.setLocalDescription(await client.pc.createOffer())
-        form = {
-            "sdp": (None, client.pc.localDescription.sdp),
-            "session": (None, json.dumps(transcription_session(OVMS_MODEL))),
-        }
-        headers = {"Authorization": f"******"} if OVMS_API_KEY else {}
-        response = await asyncio.to_thread(
-            ovms_http().post, f"{OVMS_URL}/v1/realtime/calls", files=form, headers=headers, timeout=30)
-        assert response.ok, f"Call request failed: {response.status_code} {response.text}"
-        client.collector.call_location = response.headers.get("Location")
-        await client.pc.setRemoteDescription(RTCSessionDescription(sdp=response.text, type="answer"))
-        await asyncio.wait_for(client.channel_open.wait(), timeout=CONNECT_TIMEOUT_S)
-        return client
+        return await connect_ovms_client(client, transcription_session(OVMS_MODEL))
     except Exception:
         await client.close()
         raise
 
 
 async def close_ovms_control_call(client):
-    try:
-        location = client.collector.call_location
-        if location:
-            headers = {"Authorization": f"******"} if OVMS_API_KEY else {}
-            response = await asyncio.to_thread(
-                ovms_http().post, f"{OVMS_URL}{location}/hangup", headers=headers, timeout=30)
-            assert response.ok, f"Hangup failed: {response.status_code} {response.text}"
-    finally:
-        await client.close()
+    await hangup_ovms_client(client)
 
 
 @pytest.mark.skipif(not OPENAI_API_KEY, reason="OPENAI_API_KEY is not set")
@@ -338,15 +430,9 @@ async def test_ovms_openai_compatible_transcription(signaling):
     item_ids = {event.get("item_id") for event in collector.events if event.get("type") == COMPLETED_EVENT}
     assert all(item_ids), f"Completed events must carry item_id: {collector.events}"
     delta_events = [event for event in collector.events if event.get("type") == DELTA_EVENT]
-    committed_events = [event for event in collector.events if event.get("type") == "input_audio_buffer.committed"]
     assert any(event.get("type") == "session.created" for event in collector.events), collector.events
+    assert_transcription_event_contract(collector)
     assert delta_events, f"No transcription delta received: {collector.events}"
-    assert committed_events, f"No input_audio_buffer.committed received: {collector.events}"
-    completed_item_ids = {event.get("item_id") for event in collector.events if event.get("type") == COMPLETED_EVENT}
-    delta_item_ids = {event.get("item_id") for event in delta_events}
-    committed_item_ids = {event.get("item_id") for event in committed_events}
-    assert completed_item_ids == delta_item_ids == committed_item_ids, (
-        f"Transcription events refer to different items: {collector.events}")
     location = collector.call_location
     assert location and location.startswith("/v1/realtime/calls/"), f"Unexpected Location header: {location!r}"
     headers = {"Authorization": f"Bearer {OVMS_API_KEY}"} if OVMS_API_KEY else {}
@@ -356,17 +442,93 @@ async def test_ovms_openai_compatible_transcription(signaling):
 
 @requires_ovms
 @pytest.mark.asyncio
-@pytest.mark.parametrize(("raw_event", "expected_message"), [
-    ("{", "valid JSON object"),
-    ('{"event":"input_audio_buffer.commit"}', "'type' field"),
+@requires_realtime_model
+async def test_ovms_realtime_emits_delta_before_audio_is_committed():
+    client = AudioClient("oai-events")
+    try:
+        await connect_ovms_client(client, transcription_session(OVMS_REALTIME_MODEL))
+        got_delta = await client.collector.wait_for(
+            lambda: bool(client.collector.deltas) or bool(client.collector.errors),
+            TRANSCRIPT_TIMEOUT_S,
+        )
+        assert got_delta, f"No transcription delta while audio was streaming: {client.collector.events}"
+        assert not client.collector.errors, f"Server reported errors: {client.collector.errors}"
+        assert client.collector.deltas, f"No delta received before commit: {client.collector.events}"
+        assert not client.audio_ended.is_set(), (
+            "Audio ended before the first delta; this test requires a live Voxtral Realtime model "
+            "and an audio fixture long enough to observe incremental output"
+        )
+
+        await client.wait_audio_sent()
+        client.send_event({"type": "input_audio_buffer.commit"})
+        await client.collector.wait_for(
+            lambda: bool(client.collector.completed) or bool(client.collector.errors),
+            TRANSCRIPT_TIMEOUT_S,
+        )
+        assert_transcription_event_contract(client.collector)
+    finally:
+        await hangup_ovms_client(client)
+
+
+@requires_ovms
+@pytest.mark.asyncio
+@requires_realtime_model
+async def test_ovms_realtime_associates_multiple_committed_turns():
+    client = AudioClient("oai-events")
+    try:
+        await connect_ovms_client(client, transcription_session(OVMS_REALTIME_MODEL))
+        delta_received = await client.collector.wait_for(
+            lambda: bool(client.collector.deltas) or bool(client.collector.errors),
+            TRANSCRIPT_TIMEOUT_S,
+        )
+        assert delta_received, f"No live delta before the first commit: {client.collector.events}"
+        assert not client.collector.errors, f"Server reported errors: {client.collector.errors}"
+        assert not client.audio_ended.is_set(), (
+            "Audio ended before a live delta arrived; use a longer fixture or a faster Voxtral Realtime setup"
+        )
+        client.send_event({"type": "input_audio_buffer.commit"})
+        first_commit_received = await client.collector.wait_for(
+            lambda: sum(event.get("type") == COMMITTED_EVENT for event in client.collector.events) >= 1,
+            10,
+        )
+        assert first_commit_received, f"No first committed event: {client.collector.events}"
+
+        await client.wait_audio_sent()
+        client.send_event({"type": "input_audio_buffer.commit"})
+        completed_twice = await client.collector.wait_for(
+            lambda: sum(event.get("type") == COMPLETED_EVENT for event in client.collector.events) >= 2
+            or bool(client.collector.errors),
+            TRANSCRIPT_TIMEOUT_S,
+        )
+        assert completed_twice, f"Did not complete both turns: {client.collector.events}"
+        committed, _, completed = assert_transcription_event_contract(client.collector)
+        assert len(committed) == 2, f"Expected two committed turns: {client.collector.events}"
+        assert len(completed) == 2, f"Expected two completed turns: {client.collector.events}"
+        assert len({event["item_id"] for event in committed}) == 2, client.collector.events
+    finally:
+        await hangup_ovms_client(client)
+
+
+@requires_ovms
+@pytest.mark.asyncio
+@pytest.mark.parametrize("raw_event", [
+    "{",
+    '{"event":"input_audio_buffer.commit"}',
+    '{"type":42}',
+    '{"type":"client.event.not_supported"}',
 ])
-async def test_ovms_realtime_rejects_invalid_client_events(raw_event, expected_message):
+async def test_ovms_realtime_returns_protocol_error_for_invalid_client_events(raw_event):
     client = await create_ovms_control_call()
     try:
         client.channel.send(raw_event)
-        received = await client.collector.wait_for(lambda: bool(client.collector.errors), 10)
-        assert received, f"No error event received: {client.collector.events}"
-        assert expected_message in client.collector.errors[0]["error"]["message"]
+        received = await client.collector.wait_for(
+            lambda: bool(client.collector.errors) or bool(client.collector.invalid_messages), 10)
+        assert received, f"No protocol response received: {client.collector.events}"
+        assert not client.collector.invalid_messages, (
+            f"Server sent malformed JSON instead of a protocol error: {client.collector.invalid_messages}"
+        )
+        assert client.collector.errors, f"No structured protocol error received: {client.collector.events}"
+        assert_protocol_error(client.collector.errors[0])
     finally:
         await close_ovms_control_call(client)
 
@@ -379,21 +541,75 @@ async def test_ovms_realtime_rejects_empty_audio_commit():
         client.channel.send(json.dumps({"type": "input_audio_buffer.commit"}))
         received = await client.collector.wait_for(lambda: bool(client.collector.errors), 10)
         assert received, f"No error event received: {client.collector.events}"
-        assert "buffer is empty" in client.collector.errors[0]["error"]["message"]
+        assert_protocol_error(client.collector.errors[0])
     finally:
         await close_ovms_control_call(client)
 
 
 @requires_ovms
 @pytest.mark.asyncio
-async def test_ovms_realtime_ignores_session_update():
+async def test_ovms_realtime_acknowledges_transcription_session_update():
     client = await create_ovms_control_call()
     try:
-        client.channel.send(json.dumps({"type": "session.update", "session": {"model": "other-model"}}))
-        await asyncio.sleep(0.5)
-        assert not client.collector.errors, f"Unexpected error for ignored session.update: {client.collector.events}"
+        prompt = "Transcribe this as a customer support call."
+        client.channel.send(json.dumps({
+            "type": "session.update",
+            "session": {"audio": {"input": {"transcription": {"prompt": prompt}}}},
+        }))
+        received = await client.collector.wait_for(
+            lambda: any(event.get("type") in ("session.updated", "error") for event in client.collector.events),
+            10,
+        )
+        assert received, f"No response to session.update: {client.collector.events}"
+        assert not client.collector.errors, f"Valid transcription update was rejected: {client.collector.errors}"
+        updated = next(event for event in client.collector.events if event.get("type") == "session.updated")
+        assert_event_envelope(updated, "session.updated")
+        session = updated.get("session")
+        assert isinstance(session, dict), updated
+        transcription = session.get("audio", {}).get("input", {}).get("transcription", {})
+        assert transcription.get("prompt") == prompt, updated
     finally:
         await close_ovms_control_call(client)
+
+
+@requires_ovms
+@pytest.mark.asyncio
+async def test_ovms_realtime_rejects_update_to_unserved_model():
+    client = AudioClient("oai-events")
+    try:
+        await connect_ovms_client(client, transcription_session(OVMS_MODEL))
+        client.channel.send(json.dumps({
+            "type": "session.update",
+            "session": {"audio": {"input": {"transcription": {"model": "model-not-served"}}}},
+        }))
+        received = await client.collector.wait_for(
+            lambda: any(event.get("type") in ("session.updated", "error") for event in client.collector.events),
+            10,
+        )
+        assert received, f"No response to unsupported model update: {client.collector.events}"
+        assert client.collector.errors, (
+            "An update requesting an unserved model must not be silently accepted or ignored: "
+            f"{client.collector.events}"
+        )
+        assert_protocol_error(client.collector.errors[0])
+        assert not any(event.get("type") == "session.updated" for event in client.collector.events), (
+            f"Unsupported model update was acknowledged: {client.collector.events}"
+        )
+        await client.wait_audio_sent()
+        client.send_event({"type": "input_audio_buffer.commit"})
+        completed = await client.collector.wait_for(
+            lambda: bool(client.collector.completed) or len(client.collector.errors) > 1,
+            TRANSCRIPT_TIMEOUT_S,
+        )
+        assert completed, f"Call did not continue after rejecting the model update: {client.collector.events}"
+        assert len(client.collector.errors) == 1, (
+            f"Unexpected errors after rejecting the model update: {client.collector.errors}"
+        )
+        assert any(event.get("type") == COMPLETED_EVENT for event in client.collector.events), (
+            f"Previously selected model did not continue transcribing: {client.collector.events}"
+        )
+    finally:
+        await hangup_ovms_client(client)
 
 
 @requires_ovms
