@@ -155,16 +155,9 @@ bool Text2SpeechDetector::scan(const ModelCatalogContext& ctx) const {
     if (!config || !config->IsObject() || !config->HasMember("architectures"))
         return false;
 
+    std::optional<std::string> ttsModelType;
     if (config->HasMember("tts_model_type") && (*config)["tts_model_type"].IsString()) {
-        const std::string ttsModelType = (*config)["tts_model_type"].GetString();
-        if (ttsModelType == "custom_voice" || ttsModelType == "voice_design") {
-            return anyArchitecture(*config, [](const std::string& arch) {
-                return arch == "Qwen3TTSForConditionalGeneration";
-            });
-        }
-        if (ttsModelType == "base") {
-            return false;
-        }
+        ttsModelType = (*config)["tts_model_type"].GetString();
     }
 
     const auto& archs = (*config)["architectures"];
@@ -176,10 +169,22 @@ bool Text2SpeechDetector::scan(const ModelCatalogContext& ctx) const {
 
     if (!archs.IsArray())
         return false;
+
     for (const auto& a : archs.GetArray()) {
         if (!a.IsString())
             continue;
+
         const std::string arch = a.GetString();
+
+        if (arch == "Qwen3TTSForConditionalGeneration") {
+            if (ttsModelType && *ttsModelType == "base") {
+                return false;
+            }
+            if (!ttsModelType || *ttsModelType == "custom_voice" || *ttsModelType == "voice_design") {
+                return true;
+            }
+        }
+
         if (arch == "ParlerTTSForConditionalGeneration" ||
             arch == "SpeechT5ForTextToSpeech" ||
             arch == "KModel" ||  // Kokoro TTS
