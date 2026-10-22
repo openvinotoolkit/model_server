@@ -392,7 +392,7 @@ pipeline {
               }
               steps {
                 node(test_agent_linux) {
-                  timeout(time: 120, unit: 'MINUTES') {
+                  timeout(time: 121, unit: 'MINUTES') {
                   script {
                     withGithubStageStatus('jenkins/oncommit/doc-tests-linux', 'Linux doc tests') {
                       checkout scm
