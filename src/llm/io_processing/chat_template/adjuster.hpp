@@ -23,6 +23,7 @@ namespace ovms {
 
 struct ChatTemplateAdjusterConfig {
     std::vector<std::string> removeFunctions;
+    bool concatMultiLineStrings = false;
 
     static ChatTemplateAdjusterConfig forMinja();
     static ChatTemplateAdjusterConfig forJinja();
@@ -41,6 +42,12 @@ public:
 
 private:
     std::vector<std::string> functions;
+};
+
+class ConcatMultiLineStringAdjustment : public BaseChatTemplateAdjustment {
+public:
+    ConcatMultiLineStringAdjustment();
+    void apply(std::string& templateSource) const override;
 };
 
 class ChatTemplateAdjuster {

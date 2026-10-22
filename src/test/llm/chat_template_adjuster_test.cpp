@@ -124,3 +124,81 @@ TEST(ChatTemplateAdjusterTest, removesCompactFilterWithoutAddingWhitespace) {
 
     EXPECT_EQ(tmpl, "{{value}}");
 }
+
+TEST(ChatTemplateAdjusterTest, concatenatesMultiLineStrings) {
+    std::string tmpl = "\"line1\"\n\"line2\"\n\"line3\"";
+    const ConcatMultiLineStringAdjustment adjustment;
+
+    adjustment.apply(tmpl);
+
+    EXPECT_EQ(tmpl, "\"line1line2line3\"");
+}
+
+
+TEST(ChatTemplateAdjusterTest, concatenatesTwoLineStrings) {
+    std::string tmpl = "\"line1\"\n\"line2\"";
+    const ConcatMultiLineStringAdjustment adjustment;
+
+    adjustment.apply(tmpl);
+
+    EXPECT_EQ(tmpl, "\"line1line2\"");
+}
+
+TEST(ChatTemplateAdjusterTest, concatenatesTwoLineEmptyStrings) {
+    std::string tmpl = "\"\"\n\"\"";
+    const ConcatMultiLineStringAdjustment adjustment;
+
+    adjustment.apply(tmpl);
+
+    EXPECT_EQ(tmpl, "\"\"");
+}
+
+
+TEST(ChatTemplateAdjusterTest, concatenatesMultilineWithIndentAndSpaces) {
+    std::string tmpl = "\"line1\"\n\t\t\t\t\t\"line2\"\n\t\t\t\t\"line3\"";
+    const ConcatMultiLineStringAdjustment adjustment;
+
+    adjustment.apply(tmpl);
+
+    EXPECT_EQ(tmpl, "\"line1line2line3\"");
+}
+
+TEST(ChatTemplateAdjusterTest, concatenatesAdjacentStringsAcrossMixedWhitespace) {
+    std::string tmpl = "\"line1\" \t\n  \"line2\"";
+    const ConcatMultiLineStringAdjustment adjustment;
+
+    adjustment.apply(tmpl);
+
+    EXPECT_EQ(tmpl, "\"line1line2\"");
+}
+
+TEST(ChatTemplateAdjusterTest, omitsEmptyStrings) {
+    std::string tmpl = "{%- set emptyString = \"\" -%}";
+    const ConcatMultiLineStringAdjustment adjustment;
+
+    adjustment.apply(tmpl);
+
+    EXPECT_EQ(tmpl, "{%- set emptyString = \"\" -%}");
+}
+
+TEST(ChatTemplateAdjusterTest, preservesEmptyAssignmentBetweenStringExpressions) {
+    const std::string original = R"({{ "header" }}
+{%- set developer_message = "" %}
+{{ "tail" }})";
+    std::string tmpl = original;
+    const ConcatMultiLineStringAdjustment adjustment;
+
+    adjustment.apply(tmpl);
+
+    EXPECT_EQ(tmpl, original);
+}
+
+TEST(ChatTemplateAdjusterTest, preservesDoubleQuotesInsideSingleQuotedLiteral) {
+    const std::string original = R"({{ '"first" "second"' }})";
+    std::string tmpl = original;
+    const ConcatMultiLineStringAdjustment adjustment;
+
+    adjustment.apply(tmpl);
+
+    EXPECT_EQ(tmpl, original);
+}
