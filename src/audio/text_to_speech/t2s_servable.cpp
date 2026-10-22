@@ -25,12 +25,12 @@
 #include <vector>
 
 #include "openvino/genai/speech_generation/text2speech_pipeline.hpp"
-#include "rapidjson/document.h"
 #include "src/audio/text_to_speech/t2s_calculator.pb.h"
-#include "src/status.hpp"
 #include "src/logging.hpp"
 #include "src/json_parser.hpp"
 #include "src/ov_utils.hpp"
+#include "src/port/rapidjson_document.hpp"
+#include "src/status.hpp"
 
 #include "src/audio/text_to_speech/t2s_servable.hpp"
 
