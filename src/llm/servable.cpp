@@ -278,7 +278,15 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     // token count is the sum across questions.
     if (!executionContext->decisionsInputRequests.empty()) {
         size_t totalPromptTokens = 0;
-        for (auto& req : executionContext->decisionsInputRequests) {
+        // The question blocks only append a text part, so every per-question copy carries
+        // the same media parts in the same order: decode the media once (first question)
+        // and reuse the ref-counted tensors for the rest.
+        for (size_t i = 0; i < executionContext->decisionsInputRequests.size(); ++i) {
+            auto& req = executionContext->decisionsInputRequests[i];
+            if (i > 0) {
+                req.preDecodedImages = executionContext->decisionsInputRequests[0].inputImages;
+                req.preDecodedVideos = executionContext->decisionsInputRequests[0].inputVideos;
+            }
             InputProcessor processor(getProperties()->inputProcessorContext, req);
             status = processor.process(req);
             if (!status.ok()) {

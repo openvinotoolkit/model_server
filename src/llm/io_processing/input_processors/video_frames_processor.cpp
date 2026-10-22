@@ -67,21 +67,27 @@ absl::Status VideoFramesProcessor::process(InputRequest& req) {
         for (size_t j = 0; j < content.size(); j++) {
             const auto part = content[j];
             if (part["type"].as_string().value_or("") == "video_url") {
-                const auto urls = part["video_url"]["url"];
-                // Reject oversized frame arrays before allocating from an untrusted length.
-                if (static_cast<int64_t>(urls.size()) > MAX_VIDEO_FRAMES) {
-                    return absl::InvalidArgumentError("Number of video frames exceeds the allowed maximum of " + std::to_string(MAX_VIDEO_FRAMES));
+                if (videoIndex < req.preDecodedVideos.size()) {
+                    // Decisions: the frames were already loaded for the first question; reuse
+                    // the ref-counted tensor instead of decoding them again.
+                    req.inputVideos.push_back(req.preDecodedVideos[videoIndex]);
+                } else {
+                    const auto urls = part["video_url"]["url"];
+                    // Reject oversized frame arrays before allocating from an untrusted length.
+                    if (static_cast<int64_t>(urls.size()) > MAX_VIDEO_FRAMES) {
+                        return absl::InvalidArgumentError("Number of video frames exceeds the allowed maximum of " + std::to_string(MAX_VIDEO_FRAMES));
+                    }
+                    std::vector<std::string> frameSources;
+                    frameSources.reserve(urls.size());
+                    for (size_t k = 0; k < urls.size(); k++) {
+                        frameSources.push_back(urls[k].as_string().value_or(""));
+                    }
+                    auto videoResult = loadVideoFrames(frameSources, allowedLocalMediaPath, allowedMediaDomains, req.totalDecodedPixels);
+                    if (!videoResult.ok()) {
+                        return videoResult.status();
+                    }
+                    req.inputVideos.push_back(std::move(videoResult).value());
                 }
-                std::vector<std::string> frameSources;
-                frameSources.reserve(urls.size());
-                for (size_t k = 0; k < urls.size(); k++) {
-                    frameSources.push_back(urls[k].as_string().value_or(""));
-                }
-                auto videoResult = loadVideoFrames(frameSources, allowedLocalMediaPath, allowedMediaDomains, req.totalDecodedPixels);
-                if (!videoResult.ok()) {
-                    return videoResult.status();
-                }
-                req.inputVideos.push_back(std::move(videoResult).value());
                 std::string tag = std::string(VIDEO_TAG_PREFIX) + std::to_string(videoIndex++) + ">";
                 ov::genai::JsonContainer textEntry({{"type", "text"}, {"text", tag}});
                 content[j] = textEntry;

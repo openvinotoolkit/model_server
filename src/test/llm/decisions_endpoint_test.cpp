@@ -392,6 +392,43 @@ TEST_F(LLMHttpDecisionsTest, decisionsVlmStringInput) {
     ASSERT_GT(parsedResponse["usage"]["prompt_tokens"].GetInt(), 0);
 }
 
+// Two questions sharing an image on a VLM servable: the media is decoded once for the
+// first question and the ref-counted tensors are reused for the second, so the request
+// must be answered without re-fetching/re-decoding the image per question.
+TEST_F(LLMHttpDecisionsTest, decisionsVlmSharedImageTwoQuestions) {
+    std::string requestBody = R"({
+        "model": "vlm_cb_regular",
+        "input": [
+            {"role": "user", "content": [
+                {"type": "text", "text": "What is in the image?"},
+                {"type": "image_url", "image_url": {"url": "base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg=="}}
+            ]}
+        ],
+        "questions": [
+            {"type": "predicate", "instructions": "Is the main subject an animal?", "name": "is_animal"},
+            {"type": "predicate", "instructions": "Is the main subject a vehicle?", "name": "is_vehicle"}
+        ]
+    })";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointDecisions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK)
+        << response;
+    parsedResponse.Parse(response.c_str());
+    ASSERT_FALSE(parsedResponse.HasParseError());
+    const auto& answers = parsedResponse["answers"];
+    ASSERT_TRUE(answers.IsArray());
+    ASSERT_EQ(answers.Size(), 2);
+    for (rapidjson::SizeType i = 0; i < answers.Size(); ++i) {
+        ASSERT_TRUE(answers[i]["answer"].IsString());
+        ASSERT_TRUE(answers[i]["confidence"].IsNumber());
+        ASSERT_TRUE(answers[i]["probabilities"].IsObject());
+        ASSERT_EQ(answers[i]["probabilities"].MemberCount(), 2);
+        ASSERT_STREQ(answers[i]["name"].GetString(), i == 0 ? "is_animal" : "is_vehicle");
+    }
+    ASSERT_EQ(parsedResponse["usage"]["completion_tokens"].GetInt(), 2);
+}
+
 // Two predicate questions in one request are each answered from their own forward pass
 // (per-question prompt), not a shared first-token distribution. The dummy model is
 // deterministic, so we assert both are answered independently with valid structure and
