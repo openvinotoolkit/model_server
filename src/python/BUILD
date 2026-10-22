@@ -296,6 +296,7 @@ cc_test(
     copts = COPTS_TESTS,
     deps = PYBIND_DEPS + [
         ":pythonbackend",
+        ":python_runtime_path",
         "//src:cpp_headers",
         "//src:libovmslogging",
         "//src:libovmsstatus",
@@ -322,6 +323,7 @@ cc_test(
     copts = COPTS_TESTS,
     deps = PYBIND_DEPS + [
         ":pythonbackend",
+        ":python_runtime_path",
         "//src:cpp_headers",
         "//src:libovmslogging",
         "//src:libovmsstatus",
@@ -345,6 +347,7 @@ cc_test(
     copts = COPTS_TESTS,
     deps = PYBIND_DEPS + [
         ":pythonbackend",
+        ":python_runtime_path",
         "//src:cpp_headers",
         "//src:libovmslogging",
         "//src:libovmsstatus",
