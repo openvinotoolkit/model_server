@@ -230,6 +230,9 @@ ImageGenerationPipelines::ImageGenerationPipelines(const ImageGenPipelineArgs& a
     if (text2ImagePipeline && !args.defaultResolution.has_value()) {
         const auto nativeConfig = text2ImagePipeline->get_generation_config();
         if (nativeConfig.width <= 0 || nativeConfig.height <= 0) {
+            SPDLOG_ERROR("Failed to determine model-native image generation resolution for model at '{}'; "
+                         "start the model server with --default_resolution WIDTHxHEIGHT",
+                args.modelsPath);
             throw std::runtime_error("Failed to determine model-native image generation resolution");
         }
         this->args.nativeResolution = resolution_t{nativeConfig.width, nativeConfig.height};
