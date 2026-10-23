@@ -22,9 +22,11 @@
 #include <utility>
 #include <vector>
 #include <iterator>
+#include <optional>
 
 #include <spdlog/spdlog.h>
 
+#include <rapidjson/document.h>
 #include <openvino/runtime/properties.hpp>
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
@@ -146,7 +148,7 @@ GenAiServableProperties::DraftModelStrategy detectDraftModelStrategy(const std::
     return DS::FAST_DRAFT;
 }
 
-static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template has not been loaded properly. Servable will not respond to /chat/completions endpoint.";
+static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Chat template is unavailable. Servable will not respond to /chat/completions endpoint.";
 
 // Dry-run probes: render the chat template with synthetic inputs to empirically
 // detect what the template requires. This is model-agnostic and tests actual
@@ -154,7 +156,7 @@ static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template
 // Probes for:
 //   - requiresObjectArguments (workaround: string→object conversion of tool_call arguments)
 static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServableProperties> properties) {
-    if (properties->tokenizer.get_chat_template().empty()) {
+    if (properties->chatTemplateStatus != ChatTemplateStatus::AVAILABLE) {
         return;
     }
     if (!properties->chatTemplateCaps.supportsToolCalls) {
@@ -186,36 +188,108 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
 }
 
 Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
-    const bool shouldWarnOnEmptyTemplate = (properties->chatTemplateEngine == ChatTemplateEngine::MINJA);
-    if (shouldWarnOnEmptyTemplate) {
-        if (properties->tokenizer.get_chat_template().empty()) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, CHAT_TEMPLATE_WARNING_MESSAGE);
+    properties->chatTemplateStatus = ChatTemplateStatus::NOT_CHECKED;
+    properties->chatTemplateSource = ChatTemplateSource::NONE;
+
+    const std::string genAiResolvedTemplate = properties->chatTemplateEngine == ChatTemplateEngine::JINJA ? properties->tokenizer.get_original_chat_template() : properties->tokenizer.get_chat_template();
+    // Phase 1: choose exactly one source. GenAI has already resolved tokenizer/model metadata.
+    std::string templateSource;
+    std::string templateLoadError;
+    ChatTemplateSource selectedSource = ChatTemplateSource::NONE;
+    bool templateSourceReadFailed = false;
+    const std::filesystem::path chatTemplateJinjaPath = std::filesystem::path(chatTemplateDirectory) / "chat_template.jinja";
+    SPDLOG_LOGGER_INFO(llm_calculator_logger, "Checking chat template override: {}", chatTemplateJinjaPath.string());
+    std::error_code fileStatusError;
+    const bool fileExists = std::filesystem::exists(chatTemplateJinjaPath, fileStatusError);
+    if (fileStatusError) {
+        templateSourceReadFailed = true;
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to inspect chat template file {}: {}",
+            chatTemplateJinjaPath.string(), fileStatusError.message());
+    } else if (fileExists) {
+        std::ifstream chatTemplateFile(chatTemplateJinjaPath);
+        if (!chatTemplateFile.is_open()) {
+            templateSourceReadFailed = true;
+            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to open chat template file: {}", chatTemplateJinjaPath.string());
+        } else {
+            templateSource.assign(std::istreambuf_iterator<char>(chatTemplateFile), std::istreambuf_iterator<char>());
+            if (chatTemplateFile.bad()) {
+                templateSource.clear();
+                templateSourceReadFailed = true;
+                SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed while reading chat template file: {}", chatTemplateJinjaPath.string());
+            } else if (templateSource.empty()) {
+                SPDLOG_LOGGER_WARN(llm_calculator_logger, "Chat template file is empty; trying GenAI's resolved template");
+            } else {
+                selectedSource = ChatTemplateSource::CHAT_TEMPLATE_JINJA;
+            }
+        }
+    } else {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template file not found: {}", chatTemplateJinjaPath.string());
+    }
+
+    if (selectedSource == ChatTemplateSource::NONE) {
+        templateSource = genAiResolvedTemplate;
+        if (!templateSource.empty()) {
+            selectedSource = ChatTemplateSource::GENAI_TOKENIZER;
         }
     }
 
-    // In some cases we apply chat template by python's jinja, but in all other cases, when GenAI applies chat template
-    // we ensure here that it is chat_template.jinja that is prioritized, rather than openvino_tokenizer.xml.
-    std::filesystem::path chatTemplateJinjaPath = std::filesystem::path(chatTemplateDirectory) / "chat_template.jinja";
-    if (std::filesystem::exists(chatTemplateJinjaPath)) {
-        std::ifstream chatTemplateFile(chatTemplateJinjaPath);
-        if (chatTemplateFile.is_open()) {
-            std::string chatTemplateContent((std::istreambuf_iterator<char>(chatTemplateFile)),
-                std::istreambuf_iterator<char>());
-            if (!chatTemplateContent.empty()) {
-                properties->tokenizer.set_chat_template(chatTemplateContent);
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Using the chat template from: {}", chatTemplateJinjaPath.string());
+    if (selectedSource != ChatTemplateSource::NONE) {
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Selected chat template source: {}",
+            selectedSource == ChatTemplateSource::CHAT_TEMPLATE_JINJA ? "chat_template.jinja" : "GenAI tokenizer/model");
+    }
+
+    // Phase 2: load the chosen source with the selected engine.
+    if (selectedSource != ChatTemplateSource::NONE) {
+        if (properties->chatTemplateEngine == ChatTemplateEngine::JINJA) {
+            std::string errorMessage;
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Preparing selected chat template with Python Jinja");
+            if (properties->preparedChatTemplate.prepare(
+                    chatTemplateDirectory,
+                    templateSource,
+                    properties->tokenizer.get_bos_token(),
+                    properties->tokenizer.get_eos_token(),
+                    errorMessage)) {
+                properties->chatTemplateStatus = ChatTemplateStatus::AVAILABLE;
+            } else {
+                properties->chatTemplateStatus = ChatTemplateStatus::LOAD_FAILED;
+                templateLoadError = errorMessage;
             }
         } else {
-            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to open chat template file: {}", chatTemplateJinjaPath.string());
+            if (selectedSource == ChatTemplateSource::CHAT_TEMPLATE_JINJA) {
+                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Setting selected chat template on tokenizer for Minja");
+                properties->tokenizer.set_chat_template(templateSource);
+                templateSource = properties->tokenizer.get_chat_template();
+            } else {
+                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using GenAI-resolved chat template already set on tokenizer for Minja");
+            }
+            properties->chatTemplateStatus = probeChatTemplateBasicRenderMinja(properties->tokenizer) ? ChatTemplateStatus::AVAILABLE : ChatTemplateStatus::INCOMPATIBLE;
         }
+
+        if (properties->chatTemplateStatus == ChatTemplateStatus::AVAILABLE) {
+            properties->chatTemplateSource = selectedSource;
+        }
+    } else {
+        properties->chatTemplateStatus = templateSourceReadFailed ? ChatTemplateStatus::LOAD_FAILED : ChatTemplateStatus::MISSING;
     }
 
-    // Analyze the chat template to detect capabilities and model family
-    const std::string templateSource = properties->chatTemplateEngine == ChatTemplateEngine::JINJA ? properties->tokenizer.get_original_chat_template() : properties->tokenizer.get_chat_template();
-    if (templateSource.empty() && properties->chatTemplateEngine == ChatTemplateEngine::JINJA) {
-        return Status(StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED, "chat_template_engine=JINJA requires a chat template");
+    if (properties->chatTemplateStatus != ChatTemplateStatus::AVAILABLE) {
+        if (properties->chatTemplateStatus == ChatTemplateStatus::MISSING) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "{} No configured template source was found.", CHAT_TEMPLATE_WARNING_MESSAGE);
+        } else if (properties->chatTemplateStatus == ChatTemplateStatus::LOAD_FAILED) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger,
+                "{} Selected template source failed to load. Error: {}",
+                CHAT_TEMPLATE_WARNING_MESSAGE, templateLoadError.empty() ? "source could not be read" : templateLoadError);
+        } else {
+            SPDLOG_LOGGER_WARN(llm_calculator_logger,
+                "Selected template source is incompatible with Minja; disabling /chat/completions endpoint.");
+        }
+        properties->tokenizer.set_chat_template("");
+        templateSource.clear();
+        selectedSource = ChatTemplateSource::NONE;
     }
-    if (!templateSource.empty()) {
+
+    // Analyze the selected template to detect capabilities and model family.
+    if (selectedSource != ChatTemplateSource::NONE) {
         auto analysisResult = ChatTemplateAnalyzer::analyze(templateSource);
         properties->chatTemplateCaps = analysisResult.caps;
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template capabilities: {}",
@@ -242,34 +316,37 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
         }
     }
 
-    if (properties->chatTemplateEngine == ChatTemplateEngine::JINJA) {
-        std::string errorMessage;
-        const bool chatTemplatePrepared = properties->preparedChatTemplate.prepare(
-            chatTemplateDirectory,
-            templateSource,
-            properties->tokenizer.get_bos_token(),
-            properties->tokenizer.get_eos_token(),
-            errorMessage);
-        if (!chatTemplatePrepared) {
-            return Status(StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED,
-                "Failed to prepare Jinja chat template: " + errorMessage);
-        }
-    }
-    if (properties->chatTemplateEngine == ChatTemplateEngine::MINJA &&
-        !probeChatTemplateBasicRenderMinja(properties->tokenizer)) {
-        SPDLOG_LOGGER_ERROR(llm_calculator_logger,
-            "Chat template is not compatible with minja — basic rendering failed. "
-            "Disabling /chat/completions endpoint for this model.");
-        properties->tokenizer.set_chat_template("");
-        return StatusCode::OK;
-    }
     probeServableChatTemplateCaps(properties);
+
+    if (properties->chatTemplateStatus == ChatTemplateStatus::AVAILABLE) {
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Chat template loaded successfully. Engine: {}, Source: {}",
+            properties->chatTemplateEngine == ChatTemplateEngine::JINJA ? "JINJA" : "MINJA",
+            properties->chatTemplateSource == ChatTemplateSource::CHAT_TEMPLATE_JINJA ? "chat_template.jinja" : "GenAI-resolved tokenizer/model template");
+    }
 
     // Populate the InputProcessorContext from the now-fully-initialized properties.
     properties->inputProcessorContext.tokenizer = properties->tokenizer;
     properties->inputProcessorContext.chatTemplateCaps = properties->chatTemplateCaps;
     properties->inputProcessorContext.templateProcessor =
         properties->preparedChatTemplate.isPrepared() ? &properties->preparedChatTemplate : nullptr;
+    return StatusCode::OK;
+}
+
+Status GenAiServableInitializer::validateChatTemplateAvailability(
+    const std::shared_ptr<GenAiServableProperties>& properties,
+    bool chatTemplateEngineExplicit) {
+    if (chatTemplateEngineExplicit && properties->chatTemplateStatus != ChatTemplateStatus::AVAILABLE) {
+        const char* failureReason = "template availability could not be determined";
+        if (properties->chatTemplateStatus == ChatTemplateStatus::LOAD_FAILED) {
+            failureReason = "the selected template could not be loaded";
+        } else if (properties->chatTemplateStatus == ChatTemplateStatus::INCOMPATIBLE) {
+            failureReason = "the selected template is incompatible with the configured engine";
+        } else if (properties->chatTemplateStatus == ChatTemplateStatus::MISSING) {
+            failureReason = "no chat template was found";
+        }
+        return Status(StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED,
+            "Explicit chat_template_engine requires a compatible chat template, but " + std::string(failureReason) + ".");
+    }
     return StatusCode::OK;
 }
 

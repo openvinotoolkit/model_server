@@ -49,6 +49,7 @@ class GenAiServableInitializer {
 public:
     virtual ~GenAiServableInitializer() = default;
     static Status loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
+    static Status validateChatTemplateAvailability(const std::shared_ptr<GenAiServableProperties>& properties, bool chatTemplateEngineExplicit);
     // Propagates the global --cache_dir (ServerSettings) into the pipeline plugin config
     // when the node did not set an explicit CACHE_DIR. Shared by every GenAI initializer
     // (continuous batching and legacy, LM and VLM) since they all construct GenAI pipelines

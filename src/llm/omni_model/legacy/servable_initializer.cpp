@@ -109,6 +109,10 @@ Status OmniModelLegacyServableInitializer::initialize(std::shared_ptr<GenAiServa
     if (!status.ok()) {
         return status;
     }
+    status = validateChatTemplateAvailability(properties, nodeOptions.has_chat_template_engine());
+    if (!status.ok()) {
+        return status;
+    }
     properties->legacyExecutor = std::make_shared<OmniModelLegacyExecutorWrapper>(properties->pipeline);
     if (nodeOptions.has_max_tokens_limit()) {
         properties->maxTokensLimit = nodeOptions.max_tokens_limit();

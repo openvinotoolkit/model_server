@@ -75,12 +75,6 @@ enum class GenerationPhase {
     OUTPUT_TOKEN_PROCESSING,
 };
 
-enum class ChatTemplateEngine {
-    NONE,
-    MINJA,  // Use GenAI's apply_chat_template (minja-based)
-    JINJA,  // Use Python Jinja2 module for chat template processing
-};
-
 // Thread-safe channel for parsed streaming deltas.
 // The producer (OVMSTextStreamer callback, possibly on a background executor thread)
 // calls push(); the consumer (preparePartialResponse, always on the calculator thread)
@@ -181,6 +175,26 @@ struct LegacyServableExecutionContextBase : public GenAiServableExecutionContext
 // Defined in servable.cpp. Both Legacy servable overrides delegate here.
 absl::Status prepareLegacyPartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
+enum class ChatTemplateEngine {
+    NONE,
+    MINJA,  // Use GenAI's apply_chat_template (minja-based)
+    JINJA,  // Use Python Jinja2 module for chat template processing
+};
+
+enum class ChatTemplateStatus {
+    NOT_CHECKED,
+    AVAILABLE,
+    MISSING,
+    LOAD_FAILED,
+    INCOMPATIBLE,
+};
+
+enum class ChatTemplateSource {
+    NONE,
+    CHAT_TEMPLATE_JINJA,
+    GENAI_TOKENIZER,
+};
+
 struct GenAiServableProperties {
     // General configuration
     std::string modelsPath;
@@ -192,6 +206,8 @@ struct GenAiServableProperties {
     ov::AnyMap tokenizerPluginConfig;
     bool enableToolGuidedGeneration = false;
     ChatTemplateEngine chatTemplateEngine = ChatTemplateEngine::NONE;
+    ChatTemplateStatus chatTemplateStatus = ChatTemplateStatus::NOT_CHECKED;
+    ChatTemplateSource chatTemplateSource = ChatTemplateSource::NONE;
     // Chat template analysis
     ChatTemplateCaps chatTemplateCaps;
     // Sampling
