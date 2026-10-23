@@ -415,6 +415,18 @@ absl::StatusOr<InputRequest> OpenAIApiHandler::extractInputRequest(GenerationCon
     return req;
 }
 
+absl::StatusOr<std::vector<InputRequest>> OpenAIApiHandler::extractInputRequests(GenerationConfigBuilder& configBuilder) {
+    auto inputRequest = extractInputRequest(configBuilder);
+    if (!inputRequest.ok()) {
+        return inputRequest.status();
+    }
+    // push_back moves; a braced-initializer would copy the element (it is copied from the
+    // temporary initializer_list), and this is on the hot path of every endpoint.
+    std::vector<InputRequest> requests;
+    requests.push_back(std::move(*inputRequest));
+    return requests;
+}
+
 std::optional<int> OpenAIApiHandler::getMaxTokens() const {
     return request.maxTokens;
 }

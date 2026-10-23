@@ -56,6 +56,16 @@ void VisualLanguageModelServable::logPerfMetrics(ov::genai::VLMPerfMetrics& perf
 
 absl::Status VisualLanguageModelServable::addRequestToPipeline(std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext) {
     auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
+    // Decisions: one pipeline request per question. Each carries its own prompt text
+    // (shared input + question block) and the shared decoded images/videos.
+    if (!vlmExecutionContext->decisionsInputRequests.empty()) {
+        for (const auto& req : vlmExecutionContext->decisionsInputRequests) {
+            vlmExecutionContext->decisionsGenerationHandles.push_back(
+                properties->pipeline->add_request(currentRequestId++,
+                    req.promptText, req.inputImages, req.inputVideos, req.generationConfig));
+        }
+        return absl::OkStatus();
+    }
     vlmExecutionContext->generationHandle = properties->pipeline->add_request(currentRequestId++,  // to be removed from API?
         vlmExecutionContext->inputRequest.promptText, vlmExecutionContext->inputRequest.inputImages,
         vlmExecutionContext->inputRequest.inputVideos,
@@ -66,6 +76,9 @@ absl::Status VisualLanguageModelServable::addRequestToPipeline(std::shared_ptr<C
 absl::Status VisualLanguageModelServable::validateEndpoint(Endpoint endpoint) const {
     if (endpoint == Endpoint::COMPLETIONS) {
         return absl::InvalidArgumentError("VLM Servable does not support the /completions endpoint. Use /chat/completions or /responses.");
+    }
+    if (endpoint == Endpoint::DECISIONS) {
+        return validateDecisionsSupport();
     }
     return absl::OkStatus();
 }
@@ -82,8 +95,12 @@ absl::Status VisualLanguageModelServable::prepareCompleteResponse(std::shared_pt
     auto status = GenAiServable::prepareCompleteResponse(executionContext);
     if (status.ok() && llm_calculator_logger->should_log(spdlog::level::debug)) {
         auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
-        auto perfMetrics = vlmExecutionContext->generationHandle->get_vlm_perf_metrics();
-        logPerfMetrics(perfMetrics);
+        // The singular handle is null for the decisions endpoint (which uses
+        // decisionsGenerationHandles); its perf metrics are not surfaced.
+        if (vlmExecutionContext->generationHandle) {
+            auto perfMetrics = vlmExecutionContext->generationHandle->get_vlm_perf_metrics();
+            logPerfMetrics(perfMetrics);
+        }
     }
     return status;
 }
@@ -98,8 +115,11 @@ absl::Status VisualLanguageModelServable::preparePartialResponse(std::shared_ptr
         !executionContext->sendLoopbackSignal &&
         llm_calculator_logger->should_log(spdlog::level::debug)) {
         auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
-        auto perfMetrics = vlmExecutionContext->generationHandle->get_vlm_perf_metrics();
-        logPerfMetrics(perfMetrics);
+        // The singular handle is null for the decisions endpoint; guard against it.
+        if (vlmExecutionContext->generationHandle) {
+            auto perfMetrics = vlmExecutionContext->generationHandle->get_vlm_perf_metrics();
+            logPerfMetrics(perfMetrics);
+        }
     }
     return status;
 }
