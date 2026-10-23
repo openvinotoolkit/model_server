@@ -42,6 +42,7 @@
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "src/status.hpp"
 #include "io_processing/chat_template/analyzer.hpp"
+#include "io_processing/chat_template/adjuster.hpp"
 #include "io_processing/chat_template/probe.hpp"
 #include "io_processing/parser_config_validation.hpp"
 #include "runtime_chat_template_runtime_loader.hpp"
@@ -193,20 +194,20 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
         }
     }
 
-    // In some cases we apply chat template by python's jinja, but in all other cases, when GenAI applies chat template
-    // we ensure here that it is chat_template.jinja that is prioritized, rather than openvino_tokenizer.xml.
-    std::filesystem::path chatTemplateJinjaPath = std::filesystem::path(chatTemplateDirectory) / "chat_template.jinja";
-    if (std::filesystem::exists(chatTemplateJinjaPath)) {
-        std::ifstream chatTemplateFile(chatTemplateJinjaPath);
-        if (chatTemplateFile.is_open()) {
-            std::string chatTemplateContent((std::istreambuf_iterator<char>(chatTemplateFile)),
-                std::istreambuf_iterator<char>());
-            if (!chatTemplateContent.empty()) {
-                properties->tokenizer.set_chat_template(chatTemplateContent);
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Using the chat template from: {}", chatTemplateJinjaPath.string());
+    if (properties->chatTemplateEngine == ChatTemplateEngine::JINJA) {
+        std::filesystem::path chatTemplateJinjaPath = std::filesystem::path(chatTemplateDirectory) / "chat_template.jinja";
+        if (std::filesystem::exists(chatTemplateJinjaPath)) {
+            std::ifstream chatTemplateFile(chatTemplateJinjaPath);
+            if (chatTemplateFile.is_open()) {
+                std::string chatTemplateContent((std::istreambuf_iterator<char>(chatTemplateFile)),
+                    std::istreambuf_iterator<char>());
+                if (!chatTemplateContent.empty()) {
+                    properties->tokenizer.set_chat_template2(chatTemplateContent);
+                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Using the chat template from: {}", chatTemplateJinjaPath.string());
+                }
+            } else {
+                SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to open chat template file: {}", chatTemplateJinjaPath.string());
             }
-        } else {
-            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to open chat template file: {}", chatTemplateJinjaPath.string());
         }
     }
 
@@ -219,7 +220,7 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
         auto analysisResult = ChatTemplateAnalyzer::analyze(templateSource);
         properties->chatTemplateCaps = analysisResult.caps;
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template capabilities: {}",
-            analysisResult.caps.toString());
+            properties->chatTemplateCaps.toString());
         // Auto-detect or report manually configured tool parser
         if (isParserDisabled(properties->toolParserName)) {
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Tool parser explicitly disabled");
@@ -243,6 +244,10 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
     }
 
     if (properties->chatTemplateEngine == ChatTemplateEngine::JINJA) {
+        std::string jinjaTemplateSource = templateSource;
+        ChatTemplateAdjuster(ChatTemplateAdjusterConfig::forJinja()).adjust(jinjaTemplateSource);
+        properties->tokenizer.set_chat_template(jinjaTemplateSource);
+      
         std::string initializationError;
         const bool pythonInitialized = ensurePythonRuntimeInitialized(initializationError);
         if (pythonInitialized) {
@@ -278,6 +283,18 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
         SPDLOG_LOGGER_ERROR(llm_calculator_logger,
             "Chat template is not compatible with minja — basic rendering failed. "
             "Disabling /chat/completions endpoint for this model.");
+        properties->tokenizer.set_chat_template("");
+        return StatusCode::OK;
+    }
+    probeServableChatTemplateCaps(properties);
+
+    if (properties->chatTemplateEngine == ChatTemplateEngine::MINJA) {
+        ChatTemplateAdjuster(ChatTemplateAdjusterConfig::forMinja()).adjust(templateSource);
+        properties->tokenizer.set_chat_template(templateSource);
+    }
+    if (properties->chatTemplateEngine == ChatTemplateEngine::MINJA && !probeChatTemplateBasicRenderMinja(properties->tokenizer)) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Chat template is not compatible with minja — basic rendering failed. "
+                                                    "Disabling /chat/completions endpoint for this model.");
         properties->tokenizer.set_chat_template("");
         return StatusCode::OK;
     }
