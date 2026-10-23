@@ -74,7 +74,6 @@ Status OmniModelLegacyServableInitializer::initialize(std::shared_ptr<GenAiServa
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
         }
     }
-    properties->chatTemplateEngineExplicit = nodeOptions.has_chat_template_engine();
     try {
         properties->chatTemplateEngine = determineChatTemplateEngine(nodeOptions);
     } catch (const std::exception& e) {
@@ -109,6 +108,16 @@ Status OmniModelLegacyServableInitializer::initialize(std::shared_ptr<GenAiServa
     status = loadChatTemplate(properties, parsedModelsPath);
     if (!status.ok()) {
         return status;
+    }
+    if (properties->chatTemplateStatus == ChatTemplateStatus::AVAILABLE) {
+        analyzeChatTemplate(properties);
+    }
+    clearDisabledParserNames(properties);
+    if (nodeOptions.has_chat_template_engine()) {
+        status = validateChatTemplateAvailability(properties);
+        if (!status.ok()) {
+            return status;
+        }
     }
     properties->legacyExecutor = std::make_shared<OmniModelLegacyExecutorWrapper>(properties->pipeline);
     if (nodeOptions.has_max_tokens_limit()) {

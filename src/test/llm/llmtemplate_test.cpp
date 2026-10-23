@@ -28,6 +28,7 @@
 #include "../../http_payload.hpp"
 #include "../../http_rest_api_handler.hpp"
 #include "../../httpservermodule.hpp"
+#include "../../llm/io_processing/output_parser.hpp"
 #include "../../llm/language_model/continuous_batching/servable.hpp"
 #include "../../llm/language_model/continuous_batching/servable_initializer.hpp"
 #include "../../mediapipe_internal/mediapipegraphdefinition.hpp"
@@ -63,10 +64,12 @@ protected:
         std::cout << "Chat template to be used: \n"
                   << servable->getProperties()->tokenizer.get_original_chat_template() << std::endl;
         auto& properties = *servable->getProperties();
-        std::string errorMessage;
-        ASSERT_TRUE(properties.preparedChatTemplate.prepare(directoryPath, properties.tokenizer.get_chat_template(),
-            properties.tokenizer.get_bos_token(), properties.tokenizer.get_eos_token(), errorMessage))
-            << errorMessage;
+        properties.chatTemplateEngine = ChatTemplateEngine::JINJA;
+        const auto status = GenAiServableInitializer::loadChatTemplate(servable->getProperties(), directoryPath);
+        ASSERT_TRUE(status.ok()) << status.string();
+        ASSERT_EQ(properties.chatTemplateStatus, ChatTemplateStatus::AVAILABLE);
+        GenAiServableInitializer::analyzeChatTemplate(servable->getProperties());
+        ASSERT_TRUE(properties.preparedChatTemplate.isPrepared());
     }
 
     bool render(const std::string& body, std::string& output) {
@@ -134,17 +137,91 @@ TEST_F(LLMChatTemplateTest, ExplicitJinjaRejectsInvalidTemplate) {
     servable = std::make_shared<ContinuousBatchingServable>();
     auto properties = servable->getProperties();
     properties->tokenizer = ov::genai::Tokenizer(directoryPath);
-    properties->chatTemplateEngine = ChatTemplateEngine::JINJA;
-    properties->chatTemplateEngineExplicit = true;
+    mediapipe::LLMCalculatorOptions nodeOptions;
+    nodeOptions.set_chat_template_engine(mediapipe::LLMCalculatorOptions::JINJA);
+    properties->chatTemplateEngine = GenAiServableInitializer::determineChatTemplateEngine(nodeOptions);
 
     auto status = GenAiServableInitializer::loadChatTemplate(properties, directoryPath);
-    EXPECT_FALSE(status.ok());
-    EXPECT_NE(status.string().find("Failed to prepare Jinja chat template"), std::string::npos);
+    ASSERT_TRUE(status.ok()) << status.string();
     EXPECT_EQ(properties->chatTemplateEngine, ChatTemplateEngine::JINJA);
+    EXPECT_EQ(properties->chatTemplateStatus, ChatTemplateStatus::LOAD_FAILED);
+    EXPECT_EQ(properties->chatTemplateSource, ChatTemplateSource::NONE);
     EXPECT_FALSE(properties->preparedChatTemplate.isPrepared());
+    const auto validationStatus = GenAiServableInitializer::validateChatTemplateAvailability(properties);
+    EXPECT_FALSE(validationStatus.ok());
+    EXPECT_NE(validationStatus.string().find("could not be loaded"), std::string::npos);
 }
 
-TEST_F(LLMChatTemplateTest, ImplicitJinjaFallsBackWhenUnavailable) {
+TEST_F(LLMChatTemplateTest, EmptyJinjaFileFallsBackToGenAiTokenizerTemplate) {
+    std::string emptyJinja;
+    ASSERT_TRUE(CreateJinjaConfig(emptyJinja));
+    std::filesystem::resize_file(jinjaConfigFilePath, 0);
+    servable = std::make_shared<ContinuousBatchingServable>();
+    auto properties = servable->getProperties();
+    properties->tokenizer = ov::genai::Tokenizer(directoryPath);
+    properties->tokenizer.set_chat_template("{{ messages[0]['content'] }}");
+    properties->chatTemplateEngine = ChatTemplateEngine::JINJA;
+
+    const auto status = GenAiServableInitializer::loadChatTemplate(properties, directoryPath);
+    ASSERT_TRUE(status.ok()) << status.string();
+    EXPECT_EQ(properties->chatTemplateStatus, ChatTemplateStatus::AVAILABLE);
+    EXPECT_EQ(properties->chatTemplateSource, ChatTemplateSource::GENAI_TOKENIZER);
+    EXPECT_TRUE(properties->preparedChatTemplate.isPrepared());
+}
+
+TEST_F(LLMChatTemplateTest, JinjaReadFailureFallsBackToGenAiTokenizerTemplate) {
+    servable = std::make_shared<ContinuousBatchingServable>();
+    auto properties = servable->getProperties();
+    properties->tokenizer = ov::genai::Tokenizer(directoryPath);
+    properties->tokenizer.set_chat_template("{{ messages[0]['content'] }}");
+    properties->chatTemplateEngine = ChatTemplateEngine::JINJA;
+    ASSERT_TRUE(std::filesystem::create_directory(jinjaConfigFilePath));
+
+    const auto status = GenAiServableInitializer::loadChatTemplate(properties, directoryPath);
+    ASSERT_TRUE(status.ok()) << status.string();
+    EXPECT_EQ(properties->chatTemplateStatus, ChatTemplateStatus::AVAILABLE);
+    EXPECT_EQ(properties->chatTemplateSource, ChatTemplateSource::GENAI_TOKENIZER);
+    EXPECT_TRUE(properties->preparedChatTemplate.isPrepared());
+}
+
+TEST_F(LLMChatTemplateTest, JinjaFileWinsOverTokenizerConfigTemplate) {
+    std::string fileTemplate = "file:{{ messages[0]['content'] }}";
+    ASSERT_TRUE(CreateJinjaConfig(fileTemplate));
+    std::string tokenizerConfig = R"({"chat_template":"config:{{ messages[0]['content'] }}"})";
+    ASSERT_TRUE(CreateTokenizerConfig(tokenizerConfig));
+    servable = std::make_shared<ContinuousBatchingServable>();
+    auto properties = servable->getProperties();
+    properties->tokenizer = ov::genai::Tokenizer(directoryPath);
+    properties->chatTemplateEngine = ChatTemplateEngine::JINJA;
+
+    const auto status = GenAiServableInitializer::loadChatTemplate(properties, directoryPath);
+    ASSERT_TRUE(status.ok()) << status.string();
+    EXPECT_EQ(properties->chatTemplateStatus, ChatTemplateStatus::AVAILABLE);
+    EXPECT_EQ(properties->chatTemplateSource, ChatTemplateSource::CHAT_TEMPLATE_JINJA);
+
+    std::string output;
+    ASSERT_TRUE(properties->preparedChatTemplate.apply(R"({"messages":[{"content":"selected"}]})", output)) << output;
+    EXPECT_EQ(output, "file:selected");
+}
+
+TEST_F(LLMChatTemplateTest, MinjaUsesChatTemplateJinjaSource) {
+    std::string fileTemplate = "{% for message in messages %}{{ message['content'] }}{% endfor %}";
+    ASSERT_TRUE(CreateJinjaConfig(fileTemplate));
+    servable = std::make_shared<ContinuousBatchingServable>();
+    auto properties = servable->getProperties();
+    properties->tokenizer = ov::genai::Tokenizer(directoryPath);
+    properties->chatTemplateEngine = ChatTemplateEngine::MINJA;
+
+    const auto status = GenAiServableInitializer::loadChatTemplate(properties, directoryPath);
+    ASSERT_TRUE(status.ok()) << status.string();
+    GenAiServableInitializer::analyzeChatTemplate(properties);
+    EXPECT_EQ(properties->chatTemplateStatus, ChatTemplateStatus::AVAILABLE);
+    EXPECT_EQ(properties->chatTemplateSource, ChatTemplateSource::CHAT_TEMPLATE_JINJA);
+    // CreateJinjaConfig adds newline at the end. To consider if this behavior is expected in all cases.
+    EXPECT_EQ(properties->tokenizer.get_chat_template(), fileTemplate + "\n");
+}
+
+TEST_F(LLMChatTemplateTest, ImplicitJinjaLoadFailureKeepsServableAvailable) {
     std::string invalidJinja = "{% invalid_tag %}";
     ASSERT_TRUE(CreateJinjaConfig(invalidJinja));
     servable = std::make_shared<ContinuousBatchingServable>();
@@ -152,10 +229,101 @@ TEST_F(LLMChatTemplateTest, ImplicitJinjaFallsBackWhenUnavailable) {
     properties->tokenizer = ov::genai::Tokenizer(directoryPath);
     properties->chatTemplateEngine = GenAiServableInitializer::determineChatTemplateEngine(
         mediapipe::LLMCalculatorOptions{});
+    ASSERT_EQ(properties->chatTemplateEngine, ChatTemplateEngine::JINJA);
 
     auto status = GenAiServableInitializer::loadChatTemplate(properties, directoryPath);
     EXPECT_TRUE(status.ok()) << status.string();
-    EXPECT_EQ(properties->chatTemplateEngine, ChatTemplateEngine::MINJA);
+    EXPECT_EQ(properties->chatTemplateEngine, ChatTemplateEngine::JINJA);
+    EXPECT_EQ(properties->chatTemplateStatus, ChatTemplateStatus::LOAD_FAILED);
+    EXPECT_FALSE(properties->preparedChatTemplate.isPrepared());
+}
+
+TEST_F(LLMChatTemplateTest, MissingTemplateDisablesChatUnlessEngineWasExplicit) {
+    for (const bool pythonRuntimeAvailable : {true, false}) {
+        const mediapipe::LLMCalculatorOptions nodeOptions;
+        servable = std::make_shared<ContinuousBatchingServable>();
+        auto properties = servable->getProperties();
+        properties->tokenizer = ov::genai::Tokenizer(directoryPath);
+        properties->tokenizer.set_chat_template("");
+        properties->chatTemplateEngine = GenAiServableInitializer::determineChatTemplateModeWithRuntimeContext(
+            nodeOptions, pythonRuntimeAvailable);
+
+        const auto loadStatus = GenAiServableInitializer::loadChatTemplate(properties, directoryPath);
+        ASSERT_TRUE(loadStatus.ok()) << loadStatus.string();
+        EXPECT_EQ(properties->chatTemplateStatus, ChatTemplateStatus::MISSING);
+        EXPECT_FALSE(properties->preparedChatTemplate.isPrepared());
+    }
+
+    for (const auto engine : {mediapipe::LLMCalculatorOptions::JINJA, mediapipe::LLMCalculatorOptions::MINJA}) {
+        servable = std::make_shared<ContinuousBatchingServable>();
+        auto properties = servable->getProperties();
+        properties->tokenizer = ov::genai::Tokenizer(directoryPath);
+        properties->tokenizer.set_chat_template("");
+        properties->chatTemplateEngine = engine == mediapipe::LLMCalculatorOptions::JINJA ? ChatTemplateEngine::JINJA : ChatTemplateEngine::MINJA;
+
+        const auto loadStatus = GenAiServableInitializer::loadChatTemplate(properties, directoryPath);
+        ASSERT_TRUE(loadStatus.ok()) << loadStatus.string();
+        EXPECT_EQ(properties->chatTemplateStatus, ChatTemplateStatus::MISSING);
+        const auto validationStatus = GenAiServableInitializer::validateChatTemplateAvailability(properties);
+        EXPECT_FALSE(validationStatus.ok());
+        EXPECT_NE(validationStatus.string().find("Explicit chat_template_engine"), std::string::npos);
+    }
+}
+
+TEST_F(LLMChatTemplateTest, MissingTemplateRejectsChatInputButAllowsCompletionInput) {
+    servable = std::make_shared<ContinuousBatchingServable>();
+    servable->getProperties()->chatTemplateStatus = ChatTemplateStatus::MISSING;
+
+    auto chatContext = servable->createExecutionContext();
+    ov::genai::ChatHistory history;
+    history.push_back({{"role", "user"}, {"content", "Hello"}});
+    chatContext->inputRequest.input = std::move(history);
+    const auto chatStatus = servable->validateInputCompatibility(chatContext);
+    EXPECT_EQ(chatStatus.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_EQ(chatStatus.message(), "This servable supports only /v1/completions endpoint.");
+
+    auto completionContext = servable->createExecutionContext();
+    completionContext->inputRequest.input = std::string("Hello");
+    EXPECT_TRUE(servable->validateInputCompatibility(completionContext).ok());
+}
+
+TEST_F(LLMChatTemplateTest, MissingTemplateClearsDisabledParsers) {
+    servable = std::make_shared<ContinuousBatchingServable>();
+    auto properties = servable->getProperties();
+    properties->tokenizer = ov::genai::Tokenizer(directoryPath);
+    properties->chatTemplateEngine = ChatTemplateEngine::MINJA;
+    properties->toolParserName = "none";
+    properties->reasoningParserName = "none";
+
+    const auto status = GenAiServableInitializer::loadChatTemplate(properties, directoryPath);
+    ASSERT_TRUE(status.ok()) << status.string();
+    EXPECT_EQ(properties->chatTemplateStatus, ChatTemplateStatus::MISSING);
+    EXPECT_EQ(properties->toolParserName, "none");
+    EXPECT_EQ(properties->reasoningParserName, "none");
+
+    GenAiServableInitializer::clearDisabledParserNames(properties);
+    EXPECT_TRUE(properties->toolParserName.empty());
+    EXPECT_TRUE(properties->reasoningParserName.empty());
+
+    const ToolsSchemas_t toolSchemas;
+    OutputParser outputParser(properties->tokenizer, properties->toolParserName, properties->reasoningParserName, toolSchemas);
+    EXPECT_FALSE(outputParser.isToolParserAvailable());
+    EXPECT_FALSE(outputParser.isReasoningParserAvailable());
+}
+
+TEST_F(LLMChatTemplateTest, MinjaIncompatibilityIsRecordedAsUnavailable) {
+    std::string invalidTemplate = "{% invalid_tag %}";
+    ASSERT_TRUE(CreateJinjaConfig(invalidTemplate));
+    servable = std::make_shared<ContinuousBatchingServable>();
+    auto properties = servable->getProperties();
+    properties->tokenizer = ov::genai::Tokenizer(directoryPath);
+    properties->chatTemplateEngine = ChatTemplateEngine::MINJA;
+
+    const auto status = GenAiServableInitializer::loadChatTemplate(properties, directoryPath);
+    ASSERT_TRUE(status.ok()) << status.string();
+    EXPECT_EQ(properties->chatTemplateStatus, ChatTemplateStatus::INCOMPATIBLE);
+    EXPECT_EQ(properties->chatTemplateSource, ChatTemplateSource::NONE);
+    EXPECT_FALSE(GenAiServableInitializer::validateChatTemplateAvailability(properties).ok());
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateEmptyMessage) {
