@@ -55,7 +55,7 @@ public:
         OutputParsingConfig cfg;
         cfg.startTags = {"<|channel|>commentary to=",
             "<|channel|>analysis to="};
-        cfg.endTag = "<|call|>";
+        cfg.endTags = {"<|call|>"};
         cfg.needsSpecialTokens = true;
         cfg.defaultDecodingWithSpecialTokens = true;
         return cfg;

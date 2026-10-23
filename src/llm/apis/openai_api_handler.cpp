@@ -142,6 +142,23 @@ absl::Status OpenAIApiHandler::ensureArgumentsInToolCalls(Value& messageObj) {
 }
 
 absl::Status OpenAIApiHandler::parseTools() {
+    auto parallelToolCallsIt = doc.FindMember("parallel_tool_calls");
+    if (parallelToolCallsIt != doc.MemberEnd() && !parallelToolCallsIt->value.IsNull()) {
+        if (!parallelToolCallsIt->value.IsBool())
+            return absl::InvalidArgumentError("parallel_tool_calls is not a boolean");
+        request.parallelToolCalls = parallelToolCallsIt->value.GetBool();
+    } else {
+        request.parallelToolCalls = true;
+    }
+    // Only a JSON bool is a policy signal. A missing field keeps the Qwen default
+    // (open think) and must not fail the request.
+    request.enableThinking = std::nullopt;
+    auto chatTemplateKwargsIt = doc.FindMember("chat_template_kwargs");
+    if (chatTemplateKwargsIt != doc.MemberEnd() && chatTemplateKwargsIt->value.IsObject()) {
+        auto enableThinkingIt = chatTemplateKwargsIt->value.FindMember("enable_thinking");
+        if (enableThinkingIt != chatTemplateKwargsIt->value.MemberEnd() && enableThinkingIt->value.IsBool())
+            request.enableThinking = enableThinkingIt->value.GetBool();
+    }
     auto toolChoiceIt = doc.FindMember("tool_choice");
     std::string toolChoice{"auto"};
     if (toolChoiceIt != doc.MemberEnd() && !toolChoiceIt->value.IsNull()) {

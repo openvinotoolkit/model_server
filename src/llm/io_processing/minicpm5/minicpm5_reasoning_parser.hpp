@@ -32,7 +32,7 @@ public:
         OutputParsingConfig cfg;
         cfg.startTags = {"<think>"};
         cfg.tokenIdStartTags = {"<think>"};
-        cfg.endTag = "</think>";
+        cfg.endTags = {"</think>"};
         cfg.needsSpecialTokens = true;
         cfg.defaultDecodingWithSpecialTokens = true;
         return cfg;

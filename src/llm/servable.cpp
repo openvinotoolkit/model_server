@@ -254,6 +254,23 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     return absl::OkStatus();
 }
 
+namespace {
+absl::Status streamerStatus(ov::genai::StreamingStatus status) {
+    if (status == ov::genai::StreamingStatus::RUNNING)
+        return absl::OkStatus();
+    return absl::CancelledError("OVMSTextStreamer aborted");
+}
+
+absl::Status finishConcreteStreamer(
+    const std::shared_ptr<ov::genai::TextStreamer>& streamer,
+    ov::genai::GenerationFinishReason reason) {
+    auto concrete = std::dynamic_pointer_cast<OVMSTextStreamer>(streamer);
+    if (!concrete)
+        return absl::InternalError("completion requires OVMSTextStreamer");
+    return streamerStatus(concrete->finish(reason));
+}
+}  // namespace
+
 absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     const bool hasLogprobs = executionContext->apiHandler->getRequest().logprobschat ||
                              executionContext->apiHandler->getRequest().logprobs;
@@ -282,8 +299,10 @@ absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServabl
         std::vector<Delta> localDeltas;
         if (numOutputs == 1) {
             // Single sequence: reuse the OVMSTextStreamer and deltaChannel built in parseRequest.
-            executionContext->textStreamer->write(output.generated_ids);
-            executionContext->textStreamer->end();
+            if (auto status = streamerStatus(executionContext->textStreamer->write(output.generated_ids)); !status.ok())
+                return status;
+            if (auto status = finishConcreteStreamer(executionContext->textStreamer, output.finish_reason); !status.ok())
+                return status;
             localDeltas = executionContext->deltaChannel.drain();
         } else {
             // Multiple sequences: each beam requires its own independent stateful streamer
@@ -302,8 +321,10 @@ absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServabl
                 executionContext->apiHandler->areToolsAvailable(),
                 std::move(cb),
                 streamerConfig);
-            tempStreamer->write(output.generated_ids);
-            tempStreamer->end();
+            if (auto status = streamerStatus(tempStreamer->write(output.generated_ids)); !status.ok())
+                return status;
+            if (auto status = streamerStatus(tempStreamer->finish(output.finish_reason)); !status.ok())
+                return status;
         }
 
         allDeltas.push_back(std::move(localDeltas));
@@ -344,13 +365,13 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
 
     // OVMSTextStreamer::write() fires the callback for each flush event, pushing
     // Documents into executionContext->deltaChannel.
-    executionContext->textStreamer->write(generationOutput.generated_ids);
+    if (auto status = streamerStatus(executionContext->textStreamer->write(generationOutput.generated_ids)); !status.ok())
+        return status;
 
     if (isFinishing) {
         OVMS_PROFILE_SCOPE("Generation of last streaming response");
-        // end() flushes held-back tokens and calls parseChunk(STOP). Any resulting
-        // Document is pushed into deltaChannel by the callback.
-        executionContext->textStreamer->end();
+        if (auto status = finishConcreteStreamer(executionContext->textStreamer, finishReason); !status.ok())
+            return status;
     }
 
     // Drain all deltas accumulated during this write()/end() cycle.

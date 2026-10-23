@@ -21,6 +21,7 @@
 #include <openvino/genai/generation_config.hpp>
 #include <openvino/genai/tokenizer.hpp>
 #include "base_generation_config_builder.hpp"
+#include "qwen3coder/generation_config_builder.hpp"
 #include "phi4/generation_config_builder.hpp"
 #include "llama3/generation_config_builder.hpp"
 #include "hermes3/generation_config_builder.hpp"
@@ -41,6 +42,8 @@ public:
         } else if (toolParserName == "qwen3") {
             // Qwen3 and Hermes3 share the same mechanism for generating tool calls, so we can use Hermes3GenerationConfigBuilder
             builder_impl = std::make_unique<Hermes3GenerationConfigBuilder>(baseConfig, enableToolGuidedGeneration, decodingMethod);
+        } else if (toolParserName == "qwen3coder") {
+            builder_impl = std::make_unique<Qwen3CoderGenerationConfigBuilder>(baseConfig, enableToolGuidedGeneration, decodingMethod);
         } else if (toolParserName == "hermes3") {
             builder_impl = std::make_unique<Hermes3GenerationConfigBuilder>(baseConfig, enableToolGuidedGeneration, decodingMethod);
         } else if (toolParserName == "phi4") {
@@ -69,6 +72,10 @@ public:
 
     void unsetStructuredOutputConfig() {
         builder_impl->unsetStructuredOutputConfig();
+    }
+
+    bool requiresValidStructuredOutput() const {
+        return builder_impl->requiresValidStructuredOutput();
     }
 
     void parseConfigFromRequest(const OpenAIRequest& request) {

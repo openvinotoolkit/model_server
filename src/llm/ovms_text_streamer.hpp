@@ -83,8 +83,17 @@ public:
     ov::genai::StreamingStatus write(int64_t token) override;
     ov::genai::StreamingStatus write(const std::vector<int64_t>& tokens) override;
     void end() override;
+    // Explicit continuous-batching completion. Legacy end() stays the STOP compatibility entry.
+    ov::genai::StreamingStatus finish(ov::genai::GenerationFinishReason reason);
+    bool hadParserError() const { return m_had_parser_error; }
 
 private:
+    enum class CompletionState { Open, Finished, Aborted };
+    CompletionState m_completion = CompletionState::Open;
+    bool m_had_parser_error = false;
+    std::optional<ov::genai::GenerationFinishReason> m_finished_reason;
+    ov::genai::StreamingStatus m_abort_status = ov::genai::StreamingStatus::CANCEL;
+
     std::shared_ptr<OutputParser> m_output_parser;
     bool m_tools_available;
     Callback m_callback;
@@ -108,6 +117,10 @@ private:
         const std::string& text,
         size_t print_until,
         ov::genai::GenerationFinishReason finish_reason);
+
+    ov::genai::StreamingStatus observe(ov::genai::StreamingStatus status);
+    ov::genai::StreamingStatus drain_terminal(ov::genai::GenerationFinishReason reason);
+    void latch_failure();
 
     // All token IDs received by write() in order, used for end() trace logging.
     std::vector<int64_t> m_all_tokens;

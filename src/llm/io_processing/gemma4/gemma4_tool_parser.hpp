@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 #include <utility>
+#include <unordered_set>
 
 #include "src/llm/io_processing/base_output_parser.hpp"
 #include "src/port/rapidjson_stringbuffer.hpp"
@@ -43,8 +44,8 @@ protected:
 
     enum class State {
         Content,             // Content -> ToolCallStarted (on TOOL_CALL_START_TAG)
-        ToolCallStarted,     // ToolCallStarted -> ToolCallParameters (on TOOL_ARGS_START_INDICATOR, emits name)
-        ToolCallParameters,  // ToolCallParameters -> ToolCallEnded (on TOOL_ARGS_END_INDICATOR, emits args)
+        ToolCallStarted,     // ToolCallStarted -> ToolCallParameters (on TOOL_ARGS_START_INDICATOR; name is recorded, not published)
+        ToolCallParameters,  // ToolCallParameters -> ToolCallEnded (on unmasked TOOL_ARGS_END_INDICATOR, emits one full call)
         ToolCallEnded,       // ToolCallEnded -> ToolCallStarted (on TOOL_CALL_NAME_PREFIX) | AfterToolCall (on end tag)
         AfterToolCall        // AfterToolCall -> Content
     };
@@ -56,7 +57,7 @@ public:
         OutputParsingConfig cfg;
         cfg.startTags = {"<|tool_call>"};
         cfg.tokenIdStartTags = {"<|tool_call>"};
-        cfg.endTag = "<tool_call|>";
+        cfg.endTags = {"<tool_call|>"};
         cfg.needsSpecialTokens = true;
         return cfg;
     }
@@ -66,21 +67,47 @@ public:
         BaseOutputParser(tokenizer,
             configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
 
+    Gemma4ToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolsSchemas) :
+        Gemma4ToolParser(tokenizer) {
+        for (const auto& [name, schema] : toolsSchemas) {
+            (void)schema;
+            allowedToolNames.insert(name);
+        }
+        enforceToolRegistry = !toolsSchemas.empty();
+        for (const auto& name : allowedToolNames) {
+            parsingConfig.preambleStartTags.push_back(TOOL_CALL_NAME_PREFIX + name + "{");
+            parsingConfig.preambleStartTags.push_back(TOOL_CALL_NAME_PREFIX + name + "(");
+        }
+    }
+
     void resetState() override {
         streamingContent.clear();
         streamingPosition = 0;
         currentState = State::Content;
         toolCall = {};
         toolCallIndex = -1;
+        rejectedCandidate = false;
+        argsOpen = '{';
     }
 
     std::optional<Delta> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
+
+    std::optional<Delta> drainPendingDelta() override {
+        return parseChunk("", {}, ov::genai::GenerationFinishReason::NONE);
+    }
 
     static std::string normalizeArgStr(const std::string& arg);
     static std::string parseArrayParameter(const std::string& argumentStr);
     static std::string parseObjectParameter(const std::string& argumentStr);
 
 private:
+    static std::optional<std::string> parseNativeArgumentsBody(const std::string& body);
+    static std::optional<size_t> findMatchingContainerEnd(const std::string& text,
+        size_t openPos, char openChar, char closeChar, size_t& malformedEndTag, bool& candidateLimitExceeded);
+    bool enforceToolRegistry{false};
+    bool rejectedCandidate{false};
+    char argsOpen{'{'};
+    std::unordered_set<std::string> allowedToolNames;
     void writeArgumentToWriter(const std::string& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer);
 
     std::pair<std::string, std::string> parseSingleArgument(const std::string& argumentStr);
@@ -94,7 +121,7 @@ private:
     bool parseInToolCallEndedState();
 
     std::optional<Delta> wrapDeltaContent(const std::string& content);
-    ToolCallDelta wrapDeltaArgs(const std::string& argsStr, int toolCallIndex);
+    ToolCallDelta wrapCompletedToolCall();
 
     std::string streamingContent;
     size_t streamingPosition{0};

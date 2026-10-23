@@ -61,6 +61,8 @@ OVMSTextStreamer::OVMSTextStreamer(
         } catch (...) {
         }
     }
+    if (m_output_parser)
+        m_output_parser->setContentSpecialTokensVisible(m_user_wants_special);
     // Sync m_additional_detokenization_params with the parser's initial phase requirements.
     apply_decode_params(m_output_parser
                             ? m_output_parser->needSpecialTokensForCurrentDecode(m_user_wants_special)
@@ -123,7 +125,32 @@ std::optional<ov::genai::StreamingStatus> OVMSTextStreamer::handle_decoding_para
     return std::nullopt;
 }
 
+void OVMSTextStreamer::latch_failure() {
+    m_completion = CompletionState::Aborted;
+    m_abort_status = ov::genai::StreamingStatus::CANCEL;
+    m_tokens_cache.clear();
+    m_decoded_lengths.clear();
+    m_printed_len = 0;
+}
+
+ov::genai::StreamingStatus OVMSTextStreamer::observe(ov::genai::StreamingStatus status) {
+    if (m_completion == CompletionState::Aborted)
+        return m_abort_status;
+    if (status == ov::genai::StreamingStatus::RUNNING)
+        return status;
+    m_completion = CompletionState::Aborted;
+    m_abort_status = status;
+    m_tokens_cache.clear();
+    m_decoded_lengths.clear();
+    m_printed_len = 0;
+    return m_abort_status;
+}
+
 ov::genai::StreamingStatus OVMSTextStreamer::write(int64_t token) {
+    if (m_completion == CompletionState::Aborted)
+        return m_abort_status;
+    if (m_completion == CompletionState::Finished)
+        return ov::genai::StreamingStatus::CANCEL;
     if (llm_calculator_logger->should_log(spdlog::level::trace))
         m_all_tokens.push_back(token);
 
@@ -190,7 +217,7 @@ ov::genai::StreamingStatus OVMSTextStreamer::write(int64_t token, bool immediate
         ov::genai::GenerationFinishReason::NONE);
 }
 
-void OVMSTextStreamer::end() {
+ov::genai::StreamingStatus OVMSTextStreamer::drain_terminal(ov::genai::GenerationFinishReason reason) {
     if (llm_calculator_logger->should_log(spdlog::level::trace) && !m_all_tokens.empty()) {
         const ov::AnyMap no_skip_params{{ov::genai::skip_special_tokens.name(), false}};
         const std::string full_decode = m_tokenizer.decode(m_all_tokens, no_skip_params);
@@ -232,22 +259,59 @@ void OVMSTextStreamer::end() {
 
     for (const int64_t token : unprinted) {
         const auto status = write(token, /*immediate_flush=*/true);
-        if (status != ov::genai::StreamingStatus::RUNNING) {
-            break;  // cancelled mid-drain; still deliver the STOP signal below
-        }
+        if (status != ov::genai::StreamingStatus::RUNNING)
+            return observe(status);
     }
 
-    // Always deliver the STOP signal so parsers that rely on finishReason==STOP
-    // for cleanup receive it (e.g. hasPendingState flush in Lfm2ToolParser,
-    // argument string finalisation in Hermes3ToolParser).
     const std::string final_text = m_tokens_cache.empty()
                                        ? std::string{}
                                        : m_tokenizer.decode(m_tokens_cache, m_additional_detokenization_params);
-    flush_chunk(final_text, m_printed_len, ov::genai::GenerationFinishReason::STOP);
-
+    const auto status = flush_chunk(final_text, m_printed_len, reason);
+    if (status != ov::genai::StreamingStatus::RUNNING)
+        return status;
     m_tokens_cache.clear();
     m_decoded_lengths.clear();
     m_printed_len = 0;
+    return status;
+}
+
+namespace {
+bool is_explicit_finish_reason(ov::genai::GenerationFinishReason reason) {
+    return reason == ov::genai::GenerationFinishReason::STOP ||
+           reason == ov::genai::GenerationFinishReason::LENGTH ||
+           reason == ov::genai::GenerationFinishReason::TOOL_CALL;
+}
+}  // namespace
+
+void OVMSTextStreamer::end() {
+    if (m_completion != CompletionState::Open)
+        return;
+    try {
+        drain_terminal(ov::genai::GenerationFinishReason::STOP);
+    } catch (...) {
+        latch_failure();
+        throw;
+    }
+}
+
+ov::genai::StreamingStatus OVMSTextStreamer::finish(ov::genai::GenerationFinishReason reason) {
+    if (m_completion == CompletionState::Aborted)
+        return m_abort_status;
+    if (!is_explicit_finish_reason(reason))
+        return ov::genai::StreamingStatus::CANCEL;
+    if (m_completion == CompletionState::Finished)
+        return m_finished_reason == reason ? ov::genai::StreamingStatus::RUNNING : ov::genai::StreamingStatus::CANCEL;
+    try {
+        const auto status = drain_terminal(reason);
+        if (status != ov::genai::StreamingStatus::RUNNING)
+            return status;
+        m_completion = CompletionState::Finished;
+        m_finished_reason = reason;
+        return ov::genai::StreamingStatus::RUNNING;
+    } catch (...) {
+        latch_failure();
+        throw;
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -288,21 +352,45 @@ ov::genai::StreamingStatus OVMSTextStreamer::flush_chunk(
     m_printed_len = print_until;
 
     std::optional<Delta> delta;
-    if (m_output_parser != nullptr) {
-        delta = m_output_parser->parseChunk(chunk, tokens, m_tools_available, finish_reason);
-    } else if (!chunk.empty()) {
-        delta = ContentDelta{chunk};
+    try {
+        if (m_output_parser != nullptr) {
+            delta = m_output_parser->parseChunk(chunk, tokens, m_tools_available, finish_reason);
+        } else if (!chunk.empty()) {
+            delta = ContentDelta{chunk};
+        }
+    } catch (...) {
+        m_had_parser_error = true;
+        latch_failure();
+        throw;
+    }
+
+    if (m_output_parser) {
+        for (;;) {
+            std::optional<Delta> next;
+            try {
+                next = m_output_parser->drainPendingDelta();
+            } catch (...) {
+                m_had_parser_error = true;
+                latch_failure();
+                throw;
+            }
+            if (!next)
+                break;
+            if (delta) {
+                const auto status = observe(m_callback(std::move(*delta), false));
+                if (status != ov::genai::StreamingStatus::RUNNING)
+                    return status;
+            }
+            delta = std::move(next);
+        }
     }
 
     const bool isLast = (finish_reason != ov::genai::GenerationFinishReason::NONE);
     if (delta.has_value()) {
-        return m_callback(std::move(*delta), isLast);
+        return observe(m_callback(std::move(*delta), isLast));
     }
     if (isLast) {
-        // Parser produced no delta for the final flush (e.g. generation ended on a
-        // special token the parser absorbed). Fire the callback with FinishDelta so
-        // the caller can emit the finish_reason chunk.
-        return m_callback(FinishDelta{}, true);
+        return observe(m_callback(FinishDelta{}, true));
     }
     return ov::genai::StreamingStatus::RUNNING;
 }

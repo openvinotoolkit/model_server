@@ -1,0 +1,41 @@
+{
+  "name": "qwm-semantic-refit-2026.4-rc1",
+  "kind": "release-candidate",
+  "accepted": false,
+  "parent": "530dc63f816507d18bc14629e8cffeb55e3985e6",
+  "parent_subject": "update ov to 2026.4.0 rc1 (#4491)",
+  "branch": "semantic-refit-2026.4",
+  "fork": "https://github.com/DassaultFalconKing/gemmamonster_model_server_OVMS.git",
+  "source_commit": "the commit that adds this file; read it from tag qwm-semantic-refit-2026.4-rc1",
+  "build": {
+    "config": "win_mp_on_py_off",
+    "output_user_root": "C:\\r20264",
+    "bazel": "6.4.0",
+    "sdk": "openvino_genai_windows_2026.4.0.0rc1_x86_64 isolated package",
+    "gpu_plugin": "stock SDK GPU, not custom moe38545 21a2fd9f"
+  },
+  "binaries": [
+    {
+      "path": "bazel-bin/src/ovms.exe",
+      "bytes": 22548480,
+      "sha256": "7d1374bd6aa85da78a6d5e1429b30b4768358e29d9c52706d6f735de830b2c3b",
+      "built_local": "2026-10-23T07:01:37"
+    },
+    {
+      "path": "bazel-bin/src/ovms_test.exe",
+      "bytes": 40473088,
+      "sha256": "bf47e2a85323408063bfa75a1a2496aea7db9e74bd47c10f274d07b08390119e",
+      "built_local": "2026-10-23T06:32:20"
+    }
+  ],
+  "live": {
+    "qwen36_thinking_required": "finish tool_calls, get_weather Berlin, reasoning prose without tool XML, 268 completion tokens",
+    "ornith_thinking_required": "finish tool_calls, get_weather Berlin, reasoning prose without tool XML, 102 completion tokens"
+  },
+  "not_accepted": [
+    "full ovms_test suite",
+    "live 100/100 and 20-loop gates",
+    "Gemma JSONSchema(schema, 2)",
+    "Gemma4OutputParserTest.ParseTenAlternatingThoughtAndToolCalls"
+  ]
+}

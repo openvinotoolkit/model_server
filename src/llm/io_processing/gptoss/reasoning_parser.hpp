@@ -47,7 +47,7 @@ public:
     static OutputParsingConfig defaultParsingConfig() {
         OutputParsingConfig cfg;
         cfg.startTags = {"<|channel|>analysis<|message|>"};
-        cfg.endTag = "<|end|>";
+        cfg.endTags = {"<|end|>"};
         cfg.needsSpecialTokens = true;
         cfg.defaultDecodingWithSpecialTokens = true;
         return cfg;

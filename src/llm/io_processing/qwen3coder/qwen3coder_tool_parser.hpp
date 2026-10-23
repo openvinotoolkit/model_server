@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <deque>
 #include <map>
 #include <optional>
 #include <set>
@@ -38,8 +39,10 @@ namespace ovms {
 using ParametersValues_t = std::map<std::string, std::string>;
 struct Functool {
     std::string name;
+    bool invalidTypedArgument = false;
     void clear() {
         name.clear();
+        invalidTypedArgument = false;
         argumentsAsDocument.SetObject();
     }
     rapidjson::Document argumentsAsDocument;
@@ -86,14 +89,14 @@ C->ITC->IFN->IF->IPN->IP->AF->C
      * that were not returned before
      */
     std::optional<ToolCalls_t> parseChunk(const std::string& chunk);
+    // Called only at natural STOP: recovers a complete </function> that is missing only
+    // its outer </tool_call>. Open parameter values, partial names, or missing
+    // </function> are deliberately not executable and are dropped.
+    std::optional<ToolCalls_t> finalizeOnGenerationEnd();
     std::optional<std::string> getCurrentFunctionName() const;
     Status removeToolCallsFromContentIfNeeded(std::string& outContent);
     void reset() {
-        currentState = State::Content;
-        currentFunction.clear();
-        currentParameterName.clear();
-        streamContent.clear();
-        lastProcessedPosition = 0;
+        resetParsingState();
         toolCallPositions = ToolCallPositions{};
     }
     State getCurrentState() const {
@@ -106,6 +109,15 @@ C->ITC->IFN->IF->IPN->IP->AF->C
 private:
     const ToolsParameterTypeMap_t& toolsParametersTypeMap;
     const bool removeNewlineAroundParameters = true;
+    // Resets everything except toolCallPositions, which removeToolCallsFromContentIfNeeded()
+    // still needs to consult after generation ends.
+    void resetParsingState() {
+        currentState = State::Content;
+        currentFunction.clear();
+        currentParameterName.clear();
+        streamContent.clear();
+        lastProcessedPosition = 0;
+    }
     State currentState = State::Content;
     Functool currentFunction;
     std::string currentParameterName;
@@ -143,9 +155,8 @@ private:
     // for streaming parsing we need to keep parser as a member
     Qwen3CoderToolParserImpl streamParser;
     int toolCallIndex{-1};
-    ToolCalls_t currentToolCalls;
-    std::set<int> returnedFirstDeltas;
-    std::set<int> returnedCompleteDeltas;
+    std::deque<Delta> pendingDeltas;
+    std::unordered_set<std::string> publishedCallIds;
 
 public:
     Qwen3CoderToolParser() = delete;
@@ -154,14 +165,17 @@ public:
     void resetState() override {
         streamParser.reset();
         toolCallIndex = -1;
-        returnedFirstDeltas.clear();
-        returnedCompleteDeltas.clear();
+        pendingDeltas.clear();
+        publishedCallIds.clear();
     }
     std::optional<Delta> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
+    std::optional<Delta> drainPendingDelta() override;
 
 private:
-    std::optional<Delta> sendFirstDeltaIfNeeded(const std::string& currentFunctionName);
-    std::optional<Delta> sendFullDelta(const ToolCalls_t& toolCalls);
+    bool isRegisteredToolName(const std::string& name) const;
+    bool hasValidArguments(const ToolCall& toolCall) const;
+    void queueFullDeltas(const ToolCalls_t& toolCalls);
+    std::optional<Delta> takeQueuedDelta();
 };
 }  // namespace ovms
 template <>

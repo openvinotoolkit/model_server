@@ -2077,6 +2077,7 @@ cc_test(
                 "test/llm/tokenize_endpoint_test.cpp",
                 "test/llm/max_model_length_test.cpp",
                 "test/llm/text_streamer_test.cpp",
+                "test/llm/qwenmonster_generation_policy_test.cpp",
                 "test/llm/visual_language_model/complete_flow_test.cpp",
                 "test/llm/visual_language_model/initialization_test.cpp",
                 "test/audio/text2speech_test.cpp",

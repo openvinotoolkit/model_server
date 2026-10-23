@@ -16,6 +16,7 @@
 
 #include <openvino/genai/tokenizer.hpp>
 #include <algorithm>
+#include <cstring>
 #include <string>
 #include <stack>
 #include <vector>
@@ -26,6 +27,7 @@
 #include "src/logging.hpp"
 #include "src/utils/rapidjson_utils.hpp"
 #include "qwen3coder_tool_parser.hpp"
+#include "tool_schema_profile.hpp"
 
 namespace ovms {
 const std::string Qwen3CoderToolParser::TOOL_START_TAG = "<tool_call>";
@@ -37,6 +39,19 @@ const std::string Qwen3CoderToolParser::FUNCTION_END_TAG = "</function>";
 const std::string Qwen3CoderToolParser::TOOL_END_TAG = "</tool_call>";
 
 Status Qwen3CoderToolParserImpl::removeToolCallsFromContentIfNeeded(std::string& outContent) {
+    // Generation can be truncated mid-tool-call (max_tokens hit, or eos suppressed) so an opening
+    // "<tool_call>"/"<function=" is recorded with no matching close. That leaves begin with more
+    // entries than end. The unterminated call is always the most recent one (top of the begin
+    // stack), so drop it -- erasing from its start to end-of-content -- rather than bailing and
+    // leaving every (including completed) block in the content returned to the user.
+    while (toolCallPositions.begin.size() > toolCallPositions.end.size()) {
+        auto posBegin = toolCallPositions.begin.top();
+        toolCallPositions.begin.pop();
+        if (posBegin <= outContent.size()) {
+            SPDLOG_TRACE("Removing unterminated tool call from outContent begin:{} to end", posBegin);
+            outContent.erase(posBegin);
+        }
+    }
     if (toolCallPositions.begin.size() != toolCallPositions.end.size()) {
         SPDLOG_DEBUG("Mismatched tool tags, begin: {}, end: {}", toolCallPositions.begin.size(), toolCallPositions.end.size());
         return Status(StatusCode::INTERNAL_ERROR, "Mismatched tool tags");
@@ -67,6 +82,15 @@ void Qwen3CoderToolParserImpl::addParameterToCurrentFunctionDoc(std::string& par
     auto& currentFunctionArgsDoc = this->currentFunction.argumentsAsDocument;
     auto& allocator = currentFunctionArgsDoc.GetAllocator();
     auto& key = this->currentParameterName;
+    if (key.find('\0') != std::string::npos || parameterValueAsString.find('\0') != std::string::npos) {
+        currentFunction.invalidTypedArgument = true;
+        return;
+    }
+    if (currentFunctionArgsDoc.HasMember(key.c_str())) {
+        // Duplicate XML arguments have no unambiguous executable meaning.
+        currentFunction.invalidTypedArgument = true;
+        return;
+    }
     rapidjson::Value keyVal(key.c_str(), allocator);
     rapidjson::Document temp;
     if (paramIt != this->toolsParametersTypeMap.end()) {
@@ -76,6 +100,32 @@ void Qwen3CoderToolParserImpl::addParameterToCurrentFunctionDoc(std::string& par
         }
     }
     temp.Parse(parameterValueAsString.c_str());
+    // Known non-string JSON types must never silently degrade to strings: an
+    // integer argument containing a half-written number is not an executable call.
+    ParameterType expectedType = ParameterType::UNKNOWN;
+    if (paramIt != this->toolsParametersTypeMap.end()) {
+        const auto p = paramIt->second.find(currentParameterName);
+        if (p != paramIt->second.end()) {
+            expectedType = p->second;
+        }
+    }
+    const bool typedValue = expectedType == ParameterType::NUMBER ||
+                            expectedType == ParameterType::BOOLEAN ||
+                            expectedType == ParameterType::ARRAY ||
+                            expectedType == ParameterType::OBJECT;
+    if (typedValue) {
+        const bool matches = !temp.HasParseError() &&
+            ((expectedType == ParameterType::NUMBER && temp.IsNumber()) ||
+             (expectedType == ParameterType::BOOLEAN && temp.IsBool()) ||
+             (expectedType == ParameterType::ARRAY && temp.IsArray()) ||
+             (expectedType == ParameterType::OBJECT && temp.IsObject()));
+        if (!matches) {
+            SPDLOG_WARN("Dropping Qwen tool call with invalid typed argument: function={} parameter={}",
+                currentFunction.name, currentParameterName);
+            currentFunction.invalidTypedArgument = true;
+            return;
+        }
+    }
     if (temp.HasParseError()) {
         rapidjson::ParseErrorCode errorCode = temp.GetParseError();
         size_t errorOffset = temp.GetErrorOffset();
@@ -95,7 +145,7 @@ void Qwen3CoderToolParserImpl::addParameterToCurrentFunctionDoc(std::string& par
         if (paramIt != this->toolsParametersTypeMap.end()) {
             auto paramJt = paramIt->second.find(currentParameterName);
             if (paramJt != paramIt->second.end() && (paramJt->second == ParameterType::STRING)) {
-                enforceStringValue(valueCopy, allocator);
+                enforceStringValue(valueCopy, parameterValueAsString, allocator);
             }
         }
         // Add or overwrite key in the main document
@@ -111,6 +161,34 @@ void Qwen3CoderToolParserImpl::addParameterToCurrentFunctionDoc(std::string& par
 bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
     SPDLOG_TRACE("State: {}", this->currentState);
     auto previousState = this->currentState;
+    if (currentState != State::Content) {
+        const auto find = [&](const std::string& tag) { return streamContent.find(tag, lastProcessedPosition); };
+        size_t expected = std::string::npos;
+        switch (currentState) {
+        case State::InsideToolCall: expected = find(Qwen3CoderToolParser::FUNCTION_NAME_TAG); break;
+        case State::InsideFunctionName:
+        case State::InsideParameterName: expected = find(Qwen3CoderToolParser::XML_TAG_END); break;
+        case State::InsideFunction:
+            expected = std::min(find(Qwen3CoderToolParser::PARAMETER_NAME_TAG), find(Qwen3CoderToolParser::FUNCTION_END_TAG));
+            break;
+        case State::InsideParameter: expected = find(Qwen3CoderToolParser::PARAMETER_END_TAG); break;
+        case State::AfterFunction: expected = find(Qwen3CoderToolParser::TOOL_END_TAG); break;
+        case State::Content: break;
+        }
+        const auto close = find(Qwen3CoderToolParser::TOOL_END_TAG);
+        const auto open = find(Qwen3CoderToolParser::TOOL_START_TAG);
+        // Transport markers are reserved boundaries, including inside malformed
+        // names/values. No state may borrow a later envelope's delimiter.
+        if ((close != std::string::npos && close < expected) ||
+            (open != std::string::npos && open < expected)) {
+            lastProcessedPosition = close < open ? close + Qwen3CoderToolParser::TOOL_END_TAG.size() : open;
+            toolCallPositions.end.push(lastProcessedPosition);
+            currentFunction.clear();
+            currentParameterName.clear();
+            currentState = State::Content;
+            return true;
+        }
+    }
     switch (this->currentState) {
     case State::Content: {
         // normally we expect <tool_call> tag but we observed that sometimes model generates <function=...> directly
@@ -142,6 +220,8 @@ bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
     case State::InsideFunctionName: {
         DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(Qwen3CoderToolParser::XML_TAG_END);
         this->currentFunction.name = streamContent.substr(this->lastProcessedPosition, pos - this->lastProcessedPosition);
+        // Some models quote the tag attribute (<function="name">); the quotes are delimiters, not part of the name.
+        trimSurroundingQuotes(this->currentFunction.name);
         this->lastProcessedPosition = pos + Qwen3CoderToolParser::XML_TAG_END.length();
         this->currentState = State::InsideFunction;
         break;
@@ -162,6 +242,8 @@ bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
     case State::InsideParameterName: {
         DEFINE_TAG_POSITION_AND_BREAK_IF_NOT_FOUND(Qwen3CoderToolParser::XML_TAG_END);
         this->currentParameterName = streamContent.substr(this->lastProcessedPosition, pos - this->lastProcessedPosition);
+        // Some models quote the tag attribute (<parameter="name">); the quotes are delimiters, not part of the name.
+        trimSurroundingQuotes(this->currentParameterName);
         this->lastProcessedPosition = pos + Qwen3CoderToolParser::XML_TAG_END.length();
         this->currentState = State::InsideParameter;
         break;
@@ -185,9 +267,11 @@ bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
             this->currentFunction.argumentsAsDocument.Accept(writer);
             argumentsAsString = buffer.GetString();
         }
-        ToolCall toolCall{generateRandomId(), this->currentFunction.name, argumentsAsString};
-        SPDLOG_TRACE("Adding tool call: id={}, name={}, params={}", toolCall.id, toolCall.name, toolCall.arguments);
-        toolCalls.emplace_back(std::move(toolCall));
+        if (!this->currentFunction.invalidTypedArgument) {
+            ToolCall toolCall{generateRandomId(), this->currentFunction.name, argumentsAsString};
+            SPDLOG_TRACE("Adding tool call: id={}, name={}, params={}", toolCall.id, toolCall.name, toolCall.arguments);
+            toolCalls.emplace_back(std::move(toolCall));
+        }
         this->currentFunction.clear();
         this->toolCallPositions.end.push(this->lastProcessedPosition);
         break;
@@ -213,6 +297,28 @@ std::optional<ToolCalls_t> Qwen3CoderToolParserImpl::parseChunk(const std::strin
     return std::nullopt;
 }
 
+std::optional<ToolCalls_t> Qwen3CoderToolParserImpl::finalizeOnGenerationEnd() {
+    // The closing </function> is the only reliable evidence that the model has
+    // finished all argument values.  STOP alone does not establish the boundary:
+    // an open <parameter> may still contain a truncated path, command or JSON.
+    if (currentState != State::AfterFunction) {
+        resetParsingState();
+        return std::nullopt;
+    }
+    // The complete function and its parameters are already parsed; only the
+    // outer transport envelope is missing.  Recover exactly that closing tag.
+    streamContent += Qwen3CoderToolParser::TOOL_END_TAG;
+    ToolCalls_t recovered;
+    while (parseUntilStateChange(recovered)) {
+    }
+    // Keep toolCallPositions for unary cleanup, as on the normal completion path.
+    resetParsingState();
+    if (recovered.empty()) {
+        return std::nullopt;
+    }
+    return recovered;
+}
+
 Qwen3CoderToolParser::Qwen3CoderToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas,
     std::optional<OutputParsingConfig> configOverride) :
     BaseOutputParser(tokenizer, [&]() {
@@ -233,47 +339,70 @@ std::optional<std::string> Qwen3CoderToolParserImpl::getCurrentFunctionName() co
     }
     return this->currentFunction.name;
 }
-std::optional<Delta> Qwen3CoderToolParser::sendFullDelta(const ToolCalls_t& toolCalls) {
-    if (toolCalls.size() != 1) {
-        SPDLOG_ERROR("For streaming we expected one tool call, got: {}", toolCalls.size());
-        throw std::runtime_error("For streaming we expected one tool call");
-    }
-    auto& toolCall = toolCalls[0];
-    this->returnedCompleteDeltas.insert(this->toolCallIndex);
-    SPDLOG_TRACE("Tool call arguments string: {}", toolCall.arguments);
-    SPDLOG_DEBUG("Full delta: index={} arguments={}", this->toolCallIndex, toolCall.arguments);
-    return ToolCallDelta{this->toolCallIndex, std::nullopt, std::nullopt, toolCall.arguments};
+bool Qwen3CoderToolParser::isRegisteredToolName(const std::string& name) const {
+    return toolSchemas.find(name) != toolSchemas.end();
 }
 
-std::optional<Delta> Qwen3CoderToolParser::sendFirstDeltaIfNeeded(const std::string& toolCallName) {
-    if (this->returnedFirstDeltas.size() == (this->returnedCompleteDeltas.size() + 1)) {
-        SPDLOG_TRACE("Skipping first delta, already sent for current function, returnedFirstDeltas.size(): {} returnedCompleteDeltas.size(): {}", returnedFirstDeltas.size(), returnedCompleteDeltas.size());
+bool Qwen3CoderToolParser::hasValidArguments(const ToolCall& toolCall) const {
+    const auto it = toolSchemas.find(toolCall.name);
+    return it != toolSchemas.end() &&
+           validateQwenXmlToolArguments(it->second.stringRepr, toolCall.arguments);
+}
+
+void Qwen3CoderToolParser::queueFullDeltas(const ToolCalls_t& toolCalls) {
+    // The low-level parser may complete more than one envelope at once.
+    // Queue name/id and full arguments separately for each in original order.
+    for (const auto& toolCall : toolCalls) {
+        if (!isRegisteredToolName(toolCall.name)) {
+            SPDLOG_WARN("Ignoring completed Qwen call to undeclared tool: {}", toolCall.name);
+            continue;
+        }
+        if (!hasValidArguments(toolCall)) {
+            SPDLOG_WARN("Ignoring Qwen tool call with invalid schema or arguments: {}", toolCall.name);
+            continue;
+        }
+        // OpenAI SSE has no retraction event. Allocate a public identity only
+        // after validation, then queue its header and arguments atomically.
+        const int index = ++toolCallIndex;
+        std::string id = toolCall.id;
+        while (!publishedCallIds.insert(id).second)
+            id = generateRandomId();
+        pendingDeltas.emplace_back(ToolCallDelta{index, std::move(id), toolCall.name, ""});
+        SPDLOG_DEBUG("Complete Qwen delta: index={} arguments={}", index, toolCall.arguments);
+        pendingDeltas.emplace_back(ToolCallDelta{index, std::nullopt, std::nullopt, toolCall.arguments});
+    }
+}
+
+std::optional<Delta> Qwen3CoderToolParser::takeQueuedDelta() {
+    if (pendingDeltas.empty()) {
         return std::nullopt;
     }
-    int toolCallId = ++this->toolCallIndex;
-    this->returnedFirstDeltas.insert(toolCallId);
-    SPDLOG_DEBUG("First delta: name={} index={}", toolCallName, toolCallId);
-    return ToolCallDelta{toolCallId, generateRandomId(), toolCallName, ""};
+    Delta result = std::move(pendingDeltas.front());
+    pendingDeltas.pop_front();
+    return result;
+}
+
+std::optional<Delta> Qwen3CoderToolParser::drainPendingDelta() {
+    return takeQueuedDelta();
 }
 
 std::optional<Delta> Qwen3CoderToolParser::parseChunk(const std::string& newChunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
-    // streamParser will return optional toolCalls when a tool call is completed
-    // if toolCalls is returned, we need to wrap it in the required JSON structure and return it
-    // if toolCalls is not returned, but we are insideFunction state, we need to return the first delta with function name once
-    // otherwise nullopt
     SPDLOG_DEBUG("Chunk: '{}', finishReason: {}", newChunk, static_cast<int>(finishReason));
-    if (newChunk.empty()) {
-        return std::nullopt;
+    if (!newChunk.empty()) {
+        if (auto completed = streamParser.parseChunk(newChunk)) {
+            queueFullDeltas(*completed);
+        }
     }
-    auto toolCallsOpt = this->streamParser.parseChunk(newChunk);
-    if (toolCallsOpt.has_value()) {
-        return this->sendFullDelta(toolCallsOpt.value());
+
+    // Only natural STOP may justify bounded recovery; LENGTH, cancellation and other
+    // finish reasons must never turn an incomplete argument into an executable call.
+    if (finishReason == ov::genai::GenerationFinishReason::STOP) {
+        if (auto recovered = streamParser.finalizeOnGenerationEnd()) {
+            queueFullDeltas(*recovered);
+        }
     }
-    auto functionNameOpt = this->streamParser.getCurrentFunctionName();
-    if (functionNameOpt.has_value()) {
-        return this->sendFirstDeltaIfNeeded(functionNameOpt.value());
-    }
-    return std::nullopt;
+
+    return takeQueuedDelta();
 }
 Qwen3CoderToolParserImpl::Qwen3CoderToolParserImpl(const ToolsParameterTypeMap_t& toolsParametersTypeMap) :
     toolsParametersTypeMap(toolsParametersTypeMap) {}

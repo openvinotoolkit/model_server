@@ -34,8 +34,8 @@ namespace ovms {
 //                        receives the expected boundary string.
 //   preambleStartTags  — text-based tags checked only in the UNKNOWN (preamble) phase.
 //                        These are alternative entry points that cannot appear mid-stream.
-//   endTag             — text-based end-boundary string (checked in TOOL_CALLS_PROCESSING_TOOL
-//                        and REASONING phases).
+//   endTags            — text-based end-boundary strings (checked in TOOL_CALLS_PROCESSING_TOOL
+//                        and REASONING phases; the earliest matching boundary ends the phase).
 //   stringsToErase     — strings stripped from this parser's output before emission
 //                        (e.g. BOS/EOS tokens that leak due to special-token decode mode,
 //                        or chat-template structural markers).
@@ -63,7 +63,7 @@ struct OutputParsingConfig {
     std::vector<std::string> startTags;
     std::vector<std::string> tokenIdStartTags;
     std::vector<std::string> preambleStartTags;
-    std::string endTag;
+    std::vector<std::string> endTags;
     std::vector<std::string> stringsToErase;
 
     bool needsSpecialTokens = false;

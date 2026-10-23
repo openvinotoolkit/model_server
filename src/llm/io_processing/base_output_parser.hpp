@@ -121,5 +121,9 @@ public:
     // --- Specialized output parsers interface ---
 
     virtual std::optional<Delta> parseChunk(const std::string& chunkResponse, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) = 0;
+
+    // Opt-in drain of already buffered output, without another finish notification.
+    // Each returned delta must consume buffered input; nullopt ends the drain.
+    virtual std::optional<Delta> drainPendingDelta() { return std::nullopt; }
 };
 }  // namespace ovms

@@ -96,6 +96,10 @@ public:
      * If extended, model specific implementation should call base class method first to fill in common configuration
      * and then set model specific parameters.
      */
+    virtual bool requiresValidStructuredOutput() const {
+        return false;
+    }
+
     virtual void parseConfigFromRequest(const OpenAIRequest& request);
 };
 }  // namespace ovms

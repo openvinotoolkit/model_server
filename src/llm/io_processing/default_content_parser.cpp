@@ -33,14 +33,14 @@ DefaultContentParser::DefaultContentParser(ov::genai::Tokenizer& tokenizer,
 std::optional<Delta> DefaultContentParser::parseChunk(
     const std::string& buf,
     const std::vector<int64_t>& /*tokens*/,
-    ov::genai::GenerationFinishReason /*finishReason*/) {
+    ov::genai::GenerationFinishReason finishReason) {
 
     bool anyComplete = false;
     for (const auto& tag : parsingConfig.stringsToErase) {
         if (buf.find(tag) != std::string::npos)
             anyComplete = true;
     }
-    if (!anyComplete) {
+    if (!anyComplete && finishReason == ov::genai::GenerationFinishReason::NONE) {
         for (const auto& tag : parsingConfig.stringsToErase) {
             if (stringsOverlap(buf, tag))
                 return std::nullopt;  // partial match — hold

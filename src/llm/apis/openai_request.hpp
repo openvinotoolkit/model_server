@@ -81,6 +81,11 @@ struct OpenAIRequest {
     ToolsSchemas_t toolNameSchemaMap;
     // Holds value for tool_choice field as described in https://platform.openai.com/docs/api-reference/chat/create#chat_create-tool_choice
     std::string toolChoice;
+    // Omitted or null preserves the OpenAI default.
+    bool parallelToolCalls{true};
+    // Absent or true: the Qwen template leaves <think> open. Explicit false means
+    // the template already wrote the closed think block into the prompt.
+    std::optional<bool> enableThinking;
 
     bool skipSpecialTokens{true};
 

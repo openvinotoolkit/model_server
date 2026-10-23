@@ -55,6 +55,7 @@ namespace ovms {
 // format.  All format-specific behaviour must be encapsulated in the parser subclasses
 // and expressed through their configuration and parseChunk() implementations.
 class OutputParser {
+    friend class OutputParserTestPeer;
     // Public types and enums
 public:
     enum TagLookupStatus {
@@ -92,6 +93,16 @@ private:
     ProcessingPhase processingPhase = UNKNOWN;
     StreamOutputCache streamOutputCache;
     bool implicitReasoningStart = false;
+    bool gemma4ToolHandoff = false;
+    bool pendingGemma4ToolHandoff = false;
+    bool toolsEnabledForChunk = false;
+    bool gemma4LogicalBoundary = true;
+    bool gemma4ReasoningClosed = false;
+    bool contentSpecialTokensVisible = true;
+    std::vector<std::string> contentTokensToHide;
+    // Content can trail a closed phase in the final flush. Remember completion
+    // for those drains without notifying a tool/reasoning parser twice.
+    ov::genai::GenerationFinishReason terminalContentFinish = ov::genai::GenerationFinishReason::NONE;
 
     // Baseline decode mode for content/unknown phases — true when the model/output format
     // needs special tokens visible before any parser-owned phase becomes active.
@@ -100,8 +111,8 @@ private:
 
     // Parsing methods below read chunks from streamOutputCache hence no string argument is needed
 
-    // Regular content parsing method does not require finishReason as content is always parsed
-    std::optional<Delta> parseContentChunk(ProcessingPhase newPhase = CONTENT);
+    // Finish releases a partial optional content marker that cannot complete.
+    std::optional<Delta> parseContentChunk(ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase = CONTENT);
 
     std::optional<Delta> parseToolCallChunk(const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase = TOOL_CALLS_PROCESSING_TOOL);
     std::optional<Delta> parseReasoningChunk(const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase = REASONING);
@@ -137,8 +148,9 @@ public:
     //     No content is ever discarded at a phase transition — "nothing properly parsed is lost".
     //   - Correctness requires at least one subsequent call after every phase transition.
     //     The caller must provide a final call with finishReason != NONE (typically an empty
-    //     chunk) so the buffer is fully drained.  If that call is missing, any buffered
-    //     remainder from the last transition will be silently dropped.
+    //     chunk), followed by drainPendingDelta() until nullopt. Each drain call emits
+    //     one parser-owned delta or advances one ready phase already closed in the cache.
+    //     If the final call is missing, buffered remainders may be dropped.
     //   - Known limitation: if finishReason != NONE arrives while a start tag is only
     //     partially matched (FOUND_INCOMPLETE), the partial text is flushed as content rather
     //     than held for completion — this is unavoidable without more tokens.
@@ -151,11 +163,19 @@ public:
     // token-ID-based phase-start detection in OVMSTextStreamer).
     std::optional<Delta> parseChunk(const std::string& chunkResponse, const std::vector<int64_t>& tokens, const bool toolsAvailable, ov::genai::GenerationFinishReason finishReason);
 
+    // Drain parser-owned buffered deltas after the final parseChunk. Does not
+    // advance phases or repeat the finish notification for any parser.
+    std::optional<Delta> drainPendingDelta();
+
     // Decide decode mode dynamically based on parser phase and user preference.
     // Content/unknown phases use defaultDecodingWithSpecialTokens OR user preference.
     // Reasoning/tool phases are driven solely by the active parser's needsSpecialTokens flag;
     // user preference does not override parser correctness requirements in those phases.
     bool needSpecialTokensForCurrentDecode(bool userWantsSpecialTokens = false) const;
+
+    // Internal structural decoding is independent of what the caller wants to
+    // see in content. Direct decoded-text callers retain their input by default.
+    void setContentSpecialTokensVisible(bool visible) { contentSpecialTokensVisible = visible; }
 
     // If `tokenId` is a phase-start token, returns the corresponding tag string
     // (taken directly from resolvedStartTokenToTag — no tokenizer decode needed).

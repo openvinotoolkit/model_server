@@ -39,10 +39,10 @@ std::optional<Delta> GptOssReasoningParser::parseChunk(const std::string& newChu
     if (startsWith(chunk, parsingConfig.startTags[0])) {
         state = StreamState::READING_REASONING;
         chunk = chunk.substr(parsingConfig.startTags[0].size());
-    } else if (endsWith(chunk, parsingConfig.endTag)) {
+    } else if (!parsingConfig.endTags.empty() && endsWith(chunk, parsingConfig.endTags.front())) {
         // End
         state = StreamState::UNKNOWN;
-        chunk = chunk.substr(0, chunk.size() - parsingConfig.endTag.size());
+        chunk = chunk.substr(0, chunk.size() - parsingConfig.endTags.front().size());
     } else if (endsWith(chunk, "<|return|>")) {
         // End
         state = StreamState::UNKNOWN;
