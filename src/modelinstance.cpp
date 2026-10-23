@@ -1575,11 +1575,6 @@ void ModelInstance::unloadModelComponents() {
     trimProcessMemory();
 }
 
-const std::set<std::string>& ModelInstance::getOptionalInputNames() {
-    static const std::set<std::string> optionalInputNames = {};
-    return optionalInputNames;
-}
-
 Status ModelInstance::performInference(ov::InferRequest& inferRequest) {
     OVMS_PROFILE_FUNCTION();
     try {

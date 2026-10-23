@@ -65,6 +65,8 @@ public:
     }
 };
 
+// ServerShutdownGuard guard must be armed before any check that can throw, otherwise a failed/partial
+// startModules() leaves Server::modules non-empty forever, wedging every later test.
 class ConfigApi : public TestWithTempDir {
     std::string configFilePath;
     std::string modelPath;
@@ -119,10 +121,10 @@ public:
 
             auto& config = ovms::Config::instance();
             auto retCode = ovmsServer.startModules(config);
+            serverGuard = std::make_unique<ServerShutdownGuard>(ovmsServer);
             EXPECT_TRUE(retCode.ok()) << retCode.string();
             if (!retCode.ok())
                 throw std::runtime_error("Failed to start modules");
-            serverGuard = std::make_unique<ServerShutdownGuard>(ovmsServer);
             auto modulePtr = ovmsServer.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME);
             EXPECT_NE(nullptr, modulePtr);
             if (!modulePtr)
