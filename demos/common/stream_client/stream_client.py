@@ -256,22 +256,29 @@ class StreamClient:
                 first_frame = None
                 if frame is None:
                     frame = self.grab_frame()
+                    if frame is None:
+                        self.req_s.release()
+                        break
                 if frame is not None:
                     inference_frame = self.preprocess_frame(frame)
                     np_frame = np.array([inference_frame], dtype=datatype.dtype()) if batch else np.array(inference_frame, dtype=datatype.dtype())
                     inputs=[grpcclient.InferInput(input_name, np_frame.shape, datatype.string())]
                     inputs[0].set_data_from_numpy(np_frame)
                     if streaming_api:
-                        request_id = str(frame_number)
+                        if frame_number == 0:
+                            request_timestamp = time.time_ns() // 1000
+                        else:
+                            request_timestamp = max(request_timestamp + 1, time.time_ns() // 1000)
+                        request_id = str(request_timestamp)
                         with self.pending_frames_lock:
                             if len(self.pending_frames) >= self.max_inflight_packets:
                                 self.pending_frames.pop(next(iter(self.pending_frames)))
-                            self.pending_frames[frame_number] = frame
+                            self.pending_frames[request_timestamp] = frame
                         triton_client.async_stream_infer(
                             model_name=model_name,
                             inputs=inputs,
                             request_id=request_id,
-                            parameters={"OVMS_MP_TIMESTAMP": frame_number})
+                            parameters={"OVMS_MP_TIMESTAMP": request_timestamp})
                     else:
                         triton_client.async_infer(
                             model_name=model_name,
