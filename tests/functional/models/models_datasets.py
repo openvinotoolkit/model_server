@@ -138,7 +138,7 @@ class VisionLanguageModelImageDataset(ZebraImageDataset):
 class VisionLanguageModelDataset(LargeLanguageModelDataset):
     image_datasets = [ZebraImageDataset]
     user_content_text = "Describe what is in the picture."
-    user_content_image_url = {"url": f"data:image/jpeg;base64,CONVERT_IMAGE_0"}
+    user_content_image_url = {"url": "data:image/jpeg;base64,CONVERT_IMAGE_0"}
     user_content = [
         {
             ChatCompletionsApi.CONTENT_TYPE: ChatCompletionsApi.CONTENT_TYPE_TEXT,

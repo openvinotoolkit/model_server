@@ -135,8 +135,7 @@ class LargeLanguageModel(GenerativeModel):
 class VisionLanguageModel(GenerativeModel):
     is_vision_language: bool = True
 
-    @staticmethod
-    def get_default_dataset():
+    def get_default_dataset(self):
         return VisionLanguageModelDataset
 
 
