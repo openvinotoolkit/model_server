@@ -228,6 +228,41 @@ Generation policy:
 - `requiresValidStructuredOutput()` is true for that hard policy.
 - Test: `QwenmonsterGenerationPolicy.ParserFamilyIsolation`.
 
+### How the Gemma4 retainer works
+
+The reference is the existing native path in `src/llm/io_processing/gemma4/gemma4_tool_parser.cpp` and its header, read without modification. The production constructor receives tool schemas and enables `enforceToolRegistry` when the registry is nonempty. The description below concerns that registry-enabled path; the older constructor/compatibility path must not be assumed to have all of its checks.
+
+1. **Route by the native channel.** The generic `OutputParser` recognizes Gemma's reasoning channel and hands a native tool span to `Gemma4ToolParser`. A call may start before the reasoning closer. The retainer recognizes `<|tool_call>`, `call:NAME`, the argument container and `<tool_call|>`; registered `call:NAME{` / `call:NAME(` preambles also have explicit boundary handling.
+2. **Retain a candidate until its payload is complete.** The FSM records the name internally, then waits for the matching argument-container close. `findMatchingContainerEnd` tracks nested closers and skips both native `<|"|>`-delimited strings and JSON-quoted strings. A brace or marker occurring inside a string is not sufficient evidence of a container boundary. The registry-enabled scanner has a 64 KiB candidate-span limit and a container-depth limit of 64; rejected candidates are discarded/resynchronized rather than completed by guessing.
+3. **Translate native values into JSON without losing their meaning.** `NativeValueParser` recursively handles objects, arrays and scalars. For a native string, `<|"|>` is the delimiter: its interior is literal model text, encoded once by `escapeAsJsonString`. A backslash followed by `t` stays those two characters. Ordinary JSON-quoted strings are a separate syntax branch and follow JSON escape semantics; do not confuse that branch with the literal native-string contract.
+4. **Keep numeric tokens out of a floating-point round trip.** Gemma's anonymous-namespace `normalizeJsonLosslessly` uses `kParseNumbersAsStringsFlag`; its `NumberPreservingWriter::RawNumber` writes `RawValue(..., kNumberType)`. `writeJsonScalar` inserts that validated text into the output. Thus `1.10`, `1e3` and all digits of a long integer survive, including when the scalar is nested in a native container.
+5. **Publish a completed call once and drain the rest.** The argument-container closer establishes payload completion; publication can occur before the outer `<tool_call|>` arrives. A name alone or an open value does not produce a call. `wrapCompletedToolCall` emits name/id/full arguments together, the stored call is cleared, and `drainPendingDelta` advances through any further buffered calls. Terminal handling may flush an already completed payload; it is not the Qwen-specific STOP repair described in A3.1.
+
+The Gemma registry-enabled parser checks native structure, parseability and allowed tool names. It does **not** invoke Qwen's `validateQwenXmlToolArguments` full-argument schema validator. Do not turn the A3.1 target contract into a claim that every existing Gemma path already has Qwen's schema-publication checks. Gemma's hard generation grammar is a separate layer and must retain its own evidence. These are current-source descriptions, not newly executed Gemma tests or renewed acceptance.
+
+### How the Gemma principle was adapted to Qwen3Coder
+
+The transfer was semantic: **retain the model's argument text through validation and publication**. Gemma's parser, tokens, channel handoff and code were not transplanted into Qwen. The implementation checkpoint is `5af105a04904713b58b13bbd82a421c6f15844fa`.
+
+| Mechanism | Gemma4 reference | Qwen3Coder adaptation |
+| --- | --- | --- |
+| Native envelope | `<\|tool_call>call:NAME{...}<tool_call\|>` and supported native variants | `<tool_call><function=NAME><parameter=KEY>VALUE</parameter>...</function></tool_call>`; keep the existing Qwen FSM |
+| Reasoning boundary | Native tool opener can hand off from an open thought | Qwen tool text inside an open `<think>` remains reasoning; executable calls follow `</think>` |
+| Literal strings | The `<\|"\|>` interior is encoded once | Schema `string` selects literal parameter bytes; remove only a clean wrapping quote pair, then `SetString` and JSON-encode once; never JSON-unescape that interior |
+| Numeric/container retention | Local SAX number-preserving normalization inside the native value parser | A separate `utils.cpp` SAX helper uses the same number-preserving technique for the whole number/array/object value; retain the validated compact JSON in `Functool::exactJsonMembers` |
+| Final argument writer | Write validated scalar text while traversing native containers | Keep DOM member placeholders for ordering/duplicate detection; in `State::AfterFunction`, write retained values with `RawValue`, and ordinary values with the usual writer; clear the map in `Functool::clear()` |
+| Completeness and publication | Complete native argument container, then one full delta | Complete Qwen function/envelope, registered tool and supported-schema validation, then queued header and full-argument deltas; only STOP can recover the missing outer envelope after `</function>` |
+
+For example, these native forms can represent the same retained arguments when Qwen's schema declares `arg1` as `string` and `amount` as `number`:
+
+```text
+Gemma4: <|tool_call>call:tool{arg1:<|"|>C:\test<|"|>,amount:1.10}<tool_call|>
+Qwen:   <tool_call><function=tool><parameter=arg1>"C:\test"</parameter><parameter=amount>1.10</parameter></function></tool_call>
+JSON:   {"arg1":"C:\\test","amount":1.10}
+```
+
+The example illustrates retention, not a new live-model receipt. The Qwen adaptation also preserves valid numeric/container text in the compatible `UNKNOWN` branch, but explicit schema strings are what give hashes, paths and other text their literal-string contract. Do not use that fallback to claim type inference from arbitrary model text. The Gemma scanner's limits, marker rules, constructor modes and completion tolerances were not added to Qwen by this lossless change.
+
 ## Argument retention across families
 
 String tool arguments are the model's bytes, encoded once. Do not JSON-unescape them: `\t` stays a backslash and a `t`, and `\\` stays two backslashes. A clean wrapping quote pair is only a delimiter. Integers and floats keep the spelling the model wrote, including trailing zeros, exponent form, and every digit of an integer wider than 2^53. Numbers nested in an object or array argument keep that spelling too. Structural whitespace inside those containers may be compacted. `true`, `false` and `null` are JSON literals; Python `True` and `False` are normalized to them. Hashes, paths and snapshot tags are strings, so they follow the string rule.
