@@ -21,10 +21,7 @@ ovms_cc_library(
     name = "llmcalculator_registration",
     srcs = ["http_llm_calculator.cc",
             "llm_node_initializer.cpp"],
-    deps = select({
-            "//:not_disable_python": [],
-            "//:disable_python": []
-        }) + [
+    deps = [
         "//third_party:openvino",
             "@mediapipe//mediapipe/framework:calculator_framework",
             "@mediapipe//mediapipe/framework:calculator_cc_proto",
@@ -630,7 +627,7 @@ ovms_cc_library(
 ovms_cc_library(
     name = "genai_servables",
     hdrs = ["servable.hpp",
-            "servable_initializer.hpp", 
+            "servable_initializer.hpp",
             "language_model/continuous_batching/servable.hpp",
             "language_model/continuous_batching/llm_executor.hpp",
             "language_model/continuous_batching/servable_initializer.hpp",
@@ -660,10 +657,7 @@ ovms_cc_library(
             "omni_model/legacy/servable.cpp",
             "omni_model/legacy/servable_initializer.cpp",
             "omni_model/legacy/legacy_executor.cpp"],
-    deps = select({
-                "//:not_disable_python": [],
-                "//:disable_python": []
-        }) + [
+    deps = [
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_cc_proto",
         "@mediapipe//mediapipe/framework/port:ret_check",
@@ -702,10 +696,7 @@ ovms_cc_library(
     name = "execution_context_utils",
     hdrs = ["execution_context_utils.hpp"],
     srcs = ["execution_context_utils.cpp"],
-    deps = select({
-            "//:not_disable_python": [],
-            "//:disable_python": []
-        }) + [
+    deps = [
         ":servable_interface",
         "//src/mediapipe_internal:graph_side_packets",
         "//src:libovmslogging",

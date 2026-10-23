@@ -40,32 +40,6 @@ Check also a guide about [handling long context requests](../demos/continuous_ba
 
 The following sections focus on classic model serving scenarios (for example, image classification and detection models) and are not specific to LLM continuous batching.
 
-### Image decoder microbenchmark
-
-Build and run inside the OVMS builder container:
-
-```bash
-bazel build --config=mp_on_py_on //src/image_utils:image_decode_benchmark
-bazel-bin/src/image_utils/image_decode_benchmark \
-    src/test/images/rgb.jpg src/test/images/rgb8.png \
-    src/test/images/rgba8.png src/test/images/gray16.png \
-    demos/common/static/images/coco.jpg \
-    demos/common/static/images/golden_retriever.jpeg \
-    demos/common/static/images/cars/road1.jpg
-```
-
-The C++ benchmark reads encoded bytes before timing, warms each decoder, and interleaves 200 measurements per backend. It includes allocation, deallocation, and stb RGB-to-BGR normalization without copying the decoded buffer. It reports median/p95 microseconds, images/s, and the maximum absolute pixel difference. OpenCV uses one thread. The current copy-heavy OVMS OpenCV wrapper is reported separately from a direct memory decode.
-
-An initial single-worker run with OpenCV 4.14.0 (libjpeg-turbo 3.1.2) and the repository-pinned stb produced:
-
-| JPEG fixture | Resolution | OpenCV median | stb median | OpenCV speedup |
-|---|---|---|---|---|
-| coco | 577 x 577 | 1.806 ms | 3.827 ms | 2.12x |
-| golden retriever | 227 x 222 | 0.124 ms | 0.399 ms | 3.22x |
-| road | 960 x 638 | 8.113 ms | 12.865 ms | 1.59x |
-
-The small PNG fixtures were also faster with OpenCV (approximately 1.2-1.3x). PNG outputs matched exactly; photographic JPEG outputs differed by up to 3 intensity levels. These measurements justify preferring OpenCV on this build, not a universal performance claim. Repeat on the target hardware and representative images. This is a decoder benchmark, not an end-to-end inference or concurrency benchmark; OpenVINO preprocessing, first-use graph compilation, request creation, and batching are outside its timing.
-
 ### Performance Hints
 The `PERFORMANCE_HINT` plugin config property enables you to specify a performance mode for the plugin to be more efficient for particular use cases.
 
