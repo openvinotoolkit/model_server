@@ -24,6 +24,7 @@
 #include "../../../llm/io_processing/image_utils.hpp"
 #include "../../../llm/io_processing/input_request.hpp"
 #include "src/config.hpp"
+#include "src/utils/env_guard.hpp"
 
 using namespace ovms;
 
@@ -222,6 +223,26 @@ TEST(ImageDecodingProcessorTest, ImageDownloadAtLimitAccepted) {
     EXPECT_EQ(image, "1234567890");
     EXPECT_EQ(context.bytesReceived, 10);
     EXPECT_FALSE(context.sizeLimitExceeded);
+}
+
+TEST(MediaDownloadTimeoutTest, DefaultsWhenEnvironmentVariableNotSet) {
+    EnvGuard guard;
+    guard.unset("OVMS_MEDIA_URL_TIMEOUT_SECONDS");
+    EXPECT_EQ(getMediaDownloadTimeoutSeconds(), 120u);
+}
+
+TEST(MediaDownloadTimeoutTest, EnvironmentVariableOverridesDefault) {
+    EnvGuard guard;
+    guard.set("OVMS_MEDIA_URL_TIMEOUT_SECONDS", "5");
+    EXPECT_EQ(getMediaDownloadTimeoutSeconds(), 5u);
+}
+
+TEST(MediaDownloadTimeoutTest, InvalidEnvironmentVariableFallsBackToDefault) {
+    EnvGuard guard;
+    for (const char* invalid : {"0", "-3", "abc", "5s", ""}) {
+        guard.set("OVMS_MEDIA_URL_TIMEOUT_SECONDS", invalid);
+        EXPECT_EQ(getMediaDownloadTimeoutSeconds(), 120u) << "value: '" << invalid << "'";
+    }
 }
 
 TEST(ImageDecodingProcessorTest, LocalFilesystemDisabledRejected) {

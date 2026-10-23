@@ -28,6 +28,7 @@
 
 #include "src/logging.hpp"
 #include "src/filesystem/filesystem.hpp"
+#include "src/stringutils.hpp"
 #include "src/image_utils/decoded_image_size.hpp"
 #include "src/image_utils/image_conversion.hpp"
 #include "src/predict_request_validation_utils_impl.hpp"
@@ -59,6 +60,23 @@ size_t ImageDownloadContext::append(const void* downloadedChunk, size_t size, si
         return 0;
     }
     return realsize;
+}
+
+constexpr uint32_t DEFAULT_MEDIA_DOWNLOAD_TIMEOUT_SECONDS = 120;
+constexpr uint32_t MEDIA_DOWNLOAD_CONNECT_TIMEOUT_SECONDS = 30;
+
+uint32_t getMediaDownloadTimeoutSeconds() {
+    const char* envTimeout = std::getenv("OVMS_MEDIA_URL_TIMEOUT_SECONDS");
+    if (envTimeout == nullptr) {
+        return DEFAULT_MEDIA_DOWNLOAD_TIMEOUT_SECONDS;
+    }
+    const auto parsed = stou32(envTimeout);
+    if (!parsed.has_value() || parsed.value() == 0) {
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Ignoring invalid OVMS_MEDIA_URL_TIMEOUT_SECONDS value: {}. Using {} seconds",
+            envTimeout, DEFAULT_MEDIA_DOWNLOAD_TIMEOUT_SECONDS);
+        return DEFAULT_MEDIA_DOWNLOAD_TIMEOUT_SECONDS;
+    }
+    return parsed.value();
 }
 
 namespace {
@@ -102,6 +120,11 @@ absl::Status downloadImage(const char* url, std::string& image, const int64_t& s
         CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L))
     }
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_MAXFILESIZE_LARGE, static_cast<curl_off_t>(sizeLimit)))
+    // Without these libcurl waits up to 300 s to connect and has no limit on the transfer, so a host that
+    // accepts the connection and then sends nothing, or a trickle, would hold the request indefinitely.
+    const long totalTimeoutSeconds = static_cast<long>(getMediaDownloadTimeoutSeconds());
+    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_CONNECTTIMEOUT, std::min<long>(totalTimeoutSeconds, MEDIA_DOWNLOAD_CONNECT_TIMEOUT_SECONDS)))
+    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, totalTimeoutSeconds))
 
     if (status != CURLE_OK) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Setting curl opts failed: {}", curl_easy_strerror(status));
@@ -113,6 +136,10 @@ absl::Status downloadImage(const char* url, std::string& image, const int64_t& s
         if (downloadContext.sizeLimitExceeded || status == CURLE_FILESIZE_EXCEEDED) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloaded image exceeds the size limit of {} bytes", sizeLimit);
             return absl::InvalidArgumentError("Downloaded image exceeds the size limit");
+        }
+        if (status == CURLE_OPERATION_TIMEDOUT) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloading image timed out after {} seconds", totalTimeoutSeconds);
+            return absl::InvalidArgumentError("Image downloading timed out");
         }
         if (downloadContext.allocationFailed) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Memory allocation failed while downloading image");
