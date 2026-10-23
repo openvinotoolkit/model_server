@@ -51,7 +51,7 @@ Install system dependencies, then download, extract, and verify the package:
 sudo apt update
 sudo apt install -y curl ca-certificates libxml2
 curl -fLO http://ov-share-13.sclab.intel.com/cv_bench_cache/OVMS_do_not_remove/ovms_artefacts/2026.5.0/test/ovms_ubuntu24_2026.5.0_weekly.tar.gz
-tar -xzf ovms_ubuntu24_2026.5.0_test.tar.gz
+tar -xzf ovms_ubuntu24_2026.5.0_weekly.tar.gz
 ./ovms/bin/ovms --version
 ```
 
@@ -65,7 +65,7 @@ Install system dependencies, then download, extract, and verify the package:
 sudo apt update
 sudo apt install -y curl ca-certificates libxml2-16
 curl -fLO http://ov-share-13.sclab.intel.com/cv_bench_cache/OVMS_do_not_remove/ovms_artefacts/2026.5.0/test/ovms_ubuntu26_2026.5.0_weekly.tar.gz
-tar -xzf ovms_ubuntu26_2026.5.0_test.tar.gz
+tar -xzf ovms_ubuntu26_2026.5.0_weekly.tar.gz
 ./ovms/bin/ovms --version
 ```
 
@@ -78,7 +78,7 @@ Install system dependencies, then download, extract, and verify the package:
 ```bash
 sudo dnf install -y curl ca-certificates libxml2
 curl -fLO http://ov-share-13.sclab.intel.com/cv_bench_cache/OVMS_do_not_remove/ovms_artefacts/2026.5.0/test/ovms_redhat_2026.5.0_weekly.tar.gz
-tar -xzf ovms_redhat_2026.5.0_test.tar.gz
+tar -xzf ovms_redhat_2026.5.0_weekly.tar.gz
 ./ovms/bin/ovms --version
 ```
 
@@ -170,11 +170,16 @@ curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.b
 curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -O
 ```
 
-Start the server:
+Start the server on Linux:
 
 ```bash
 ./ovms/bin/ovms --model_name resnet --model_path resnet50.xml --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --port 9000
 
+```
+or on Windows:
+
+```bat
+.\ovms\ovms.exe --model_name resnet --model_path resnet50.xml --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --port 9000
 ```
 
 You can also run the server as a background process, a system service on Linux,
