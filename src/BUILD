@@ -1978,25 +1978,18 @@ cc_binary(
             ],
             "//:disable_mediapipe" : [],
         })
-     + select({
-            "//:not_disable_python": ["//src/python:python_calculators_host"],
-            "//:disable_python": [],
-        }),
+     + ["//src/python:python_calculators_host"],
     data = [":ovms_optional_plugins"] + select({
-        "//:is_windows_and_python_is_enabled": [
+        "//src:windows": [
             "//src/python/binding:pyovms.pyd",
         ],
-        "//:disable_python": [],
         "//conditions:default": [
             "//src/python/binding:pyovms.so",
         ],
-    }) + select({
-        "//:not_disable_python": [
+    }) + [
             "//src/python:libovmspython",
             "//src/python:libpython_calculators",
-        ],
-        "//:disable_python": [],
-    }) + select({
+    ] + select({
         "//:not_disable_mediapipe": [
             "//src/lib:ovms_llm_calculators",
         ],
@@ -2218,11 +2211,10 @@ cc_test(
         ],
         "//:disable_mediapipe": [],
     }) + [":ovms_optional_plugins"] + select({
-        "//:is_windows_and_python_is_enabled": [
+        "//src:windows": [
             "//src/python:copy_libovmspython",
             "//src/python:libpython_calculators",
         ],
-        "//:disable_python": [],
         "//conditions:default": [
             "//src/python:libovmspython.so",
             "//src/python:libpython_calculators.so",

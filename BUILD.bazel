@@ -49,10 +49,6 @@ cc_library(
             "//:disable_cloud": []
             })
          + select({
-            "//:not_disable_python": [],
-            "//:disable_python": []
-            })
-         + select({
             "//:not_disable_mediapipe": [
                 "@model_api//:model_api",],
             "//:disable_mediapipe": []
