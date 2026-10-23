@@ -183,6 +183,43 @@ protected:
     }
 };
 
+TEST_F(ChatTemplateEndToEndJinjaTest, RuntimeInitializationRendersOriginalTokenizerTemplate) {
+    ASSERT_FALSE(std::filesystem::exists(directoryPath + "/chat_template.jinja"));
+
+    auto properties = std::make_shared<GenAiServableProperties>();
+    properties->modelsPath = directoryPath;
+    properties->chatTemplateEngine = ChatTemplateEngine::JINJA;
+    properties->chatTemplateEngineExplicit = true;
+    const std::string originalTemplateTokenizerPath = getGenericFullPathForSrcTest(
+        "/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct", false);
+    properties->tokenizer = ov::genai::Tokenizer(originalTemplateTokenizerPath);
+
+    const std::string originalTemplate = properties->tokenizer.get_original_chat_template();
+    ASSERT_FALSE(originalTemplate.empty()) << "Tokenizer fixture must provide an original chat template";
+
+    const auto loadStatus = GenAiServableInitializer::loadChatTemplate(properties, directoryPath);
+    ASSERT_TRUE(loadStatus.ok()) << loadStatus.string();
+    ASSERT_TRUE(properties->preparedChatTemplate.isPrepared());
+
+    const std::string requestBody = R"({"messages":[{"role":"user","content":"Hello"}]})";
+    std::string actualOutput;
+    ASSERT_TRUE(properties->preparedChatTemplate.apply(requestBody, actualOutput)) << actualOutput;
+
+    PreparedChatTemplateRuntime expectedTemplate;
+    std::string prepareError;
+    ASSERT_TRUE(expectedTemplate.prepare(
+        directoryPath,
+        originalTemplate,
+        properties->tokenizer.get_bos_token(),
+        properties->tokenizer.get_eos_token(),
+        prepareError))
+        << prepareError;
+
+    std::string expectedOutput;
+    ASSERT_TRUE(expectedTemplate.apply(requestBody, expectedOutput)) << expectedOutput;
+    EXPECT_EQ(actualOutput, expectedOutput);
+}
+
 // =============================================================================
 // The chat template we use here contains multiple patches, including one that relates to `string2obj`.
 // Without the workaround, it translates to {"key":"val"}.

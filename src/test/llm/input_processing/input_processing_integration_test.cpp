@@ -45,6 +45,7 @@
 #include "../../../llm/io_processing/input_processor.hpp"
 #include "../../../llm/io_processing/input_processor_context.hpp"
 #include "../../../llm/io_processing/input_request.hpp"
+#include "../../../llm/runtime_chat_template_runtime_loader.hpp"
 #include "../../platform_utils.hpp"
 #include "../../wav_test_utils.hpp"
 
@@ -70,15 +71,32 @@ constexpr const char* TINY_PNG =
 // ---------------------------------------------------------------------------
 
 static std::unique_ptr<ov::genai::Tokenizer> sharedTokenizer;
+static std::unique_ptr<PreparedChatTemplateRuntime> sharedPreparedRuntimeTemplate;
 
 class InputProcessingIntegrationTest : public testing::TestWithParam<Endpoint> {
 protected:
     static void SetUpTestSuite() {
-        sharedTokenizer = std::make_unique<ov::genai::Tokenizer>(getGenericFullPathForSrcTest(
-            "/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct"));
+        std::string initializationError;
+        ASSERT_TRUE(ensurePythonRuntimeInitialized(initializationError)) << initializationError;
+
+        const std::string modelsPath = getGenericFullPathForSrcTest(
+            "/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct");
+        sharedTokenizer = std::make_unique<ov::genai::Tokenizer>(modelsPath);
+
+        auto prepared = std::make_unique<PreparedChatTemplateRuntime>();
+        std::string errorMessage;
+        const bool preparedSuccessfully = prepared->prepare(
+            modelsPath,
+            sharedTokenizer->get_chat_template(),
+            sharedTokenizer->get_bos_token(),
+            sharedTokenizer->get_eos_token(),
+            errorMessage);
+        ASSERT_TRUE(preparedSuccessfully) << errorMessage;
+        sharedPreparedRuntimeTemplate = std::move(prepared);
     }
 
     static void TearDownTestSuite() {
+        sharedPreparedRuntimeTemplate.reset();
         sharedTokenizer.reset();
     }
 
@@ -135,6 +153,7 @@ protected:
         ctx.config.isVLM = isVLM;
         ctx.config.isOmni = isOmni;
         ctx.tokenizer = *sharedTokenizer;
+        ctx.templateProcessor = sharedPreparedRuntimeTemplate.get();
 
         InputProcessor processor(ctx, result.req);
         result.processStatus = processor.process(result.req);
@@ -645,6 +664,17 @@ TEST(InputProcessingEquivalenceTest, ChatAndResponsesProduceSamePromptAndImages)
         "/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct");
     // The tokenizer is shared between both endpoint runs in this one test.
     ov::genai::Tokenizer tokenizer(tokPath);
+    std::string initializationError;
+    ASSERT_TRUE(ensurePythonRuntimeInitialized(initializationError)) << initializationError;
+    PreparedChatTemplateRuntime preparedRuntimeTemplate;
+    std::string errorMessage;
+    const bool preparedSuccessfully = preparedRuntimeTemplate.prepare(
+        tokPath,
+        tokenizer.get_chat_template(),
+        tokenizer.get_bos_token(),
+        tokenizer.get_eos_token(),
+        errorMessage);
+    ASSERT_TRUE(preparedSuccessfully) << errorMessage;
 
     const auto run = [&](Endpoint ep) -> std::pair<std::string, size_t> {
         const std::string chatJson =
@@ -680,6 +710,7 @@ TEST(InputProcessingEquivalenceTest, ChatAndResponsesProduceSamePromptAndImages)
         InputProcessorContext ctx;
         ctx.config.isVLM = true;
         ctx.tokenizer = tokenizer;
+        ctx.templateProcessor = &preparedRuntimeTemplate;
 
         InputProcessor processor(ctx, req);
         EXPECT_TRUE(processor.process(req).ok());

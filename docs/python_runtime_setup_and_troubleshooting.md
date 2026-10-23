@@ -12,21 +12,6 @@ Use this guide when:
 
 For installation steps of baremetal packages, see [Deploying Model Server on Baremetal](deploying_server_baremetal.md).
 
-## Python Support Modes
-
-Model Server supports two deployment configurations:
-
-**With Python Support** (`PYTHON_DISABLE=0`, default):
-- Python nodes are available.
-- LLM chat-template handling has broader feature coverage.
-- Runtime Python libraries must be available.
-
-**Without Python Support** (`PYTHON_DISABLE=1`):
-- Lightweight deployment for C++ models only.
-- Python nodes cannot be used.
-- LLM template rendering has limitations.
-- No Python runtime dependencies are required.
-
 ## Graceful Degradation
 
 With Python support enabled, OVMS can continue serving requests when some Python dependencies are missing.

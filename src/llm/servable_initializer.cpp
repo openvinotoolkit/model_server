@@ -247,6 +247,7 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
         std::string jinjaTemplateSource = templateSource;
         ChatTemplateAdjuster(ChatTemplateAdjusterConfig::forJinja()).adjust(jinjaTemplateSource);
         properties->tokenizer.set_chat_template(jinjaTemplateSource);
+      
         std::string initializationError;
         const bool pythonInitialized = ensurePythonRuntimeInitialized(initializationError);
         if (pythonInitialized) {
@@ -277,6 +278,15 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
             properties->chatTemplateEngine = ChatTemplateEngine::MINJA;
         }
     }
+    if (properties->chatTemplateEngine == ChatTemplateEngine::MINJA &&
+        !probeChatTemplateBasicRenderMinja(properties->tokenizer)) {
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger,
+            "Chat template is not compatible with minja — basic rendering failed. "
+            "Disabling /chat/completions endpoint for this model.");
+        properties->tokenizer.set_chat_template("");
+        return StatusCode::OK;
+    }
+    probeServableChatTemplateCaps(properties);
 
     if (properties->chatTemplateEngine == ChatTemplateEngine::MINJA) {
         ChatTemplateAdjuster(ChatTemplateAdjusterConfig::forMinja()).adjust(templateSource);
