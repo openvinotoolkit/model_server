@@ -323,6 +323,10 @@ bool TextGenerationDetector::scan(const ModelCatalogContext& ctx) const {
     const auto* config = ctx.json("config.json");
     if (!config)
         return false;
+    if (anyArchitecture(*config, [](const std::string& arch) {
+            return arch == "Qwen3TTSForConditionalGeneration";
+        }))
+        return false;
     // Note: if we reach this detector, all higher-priority detectors have
     // already returned false, so ForCausalLM / ForConditionalGeneration
     // architectures are safe to claim here (including Qwen3ForCausalLM when
