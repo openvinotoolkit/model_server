@@ -476,6 +476,14 @@ libgit2_engine()
 load("@ovms//third_party/drogon:drogon.bzl", "drogon_cpp")
 drogon_cpp()
 
+### libdatachannel (WebRTC data channels + media transport)
+load("@ovms//third_party/libdatachannel:libdatachannel.bzl", "libdatachannel_repository")
+libdatachannel_repository()
+
+### libopus codec
+load("@ovms//third_party/opus:opus.bzl", "opus_repository")
+opus_repository()
+
 ### espeak-ng (built from source via Bazel; gated by --//:espeak flag)
 load("@ovms//third_party/espeak_ng:espeak_ng.bzl", "espeak_ng")
 espeak_ng()

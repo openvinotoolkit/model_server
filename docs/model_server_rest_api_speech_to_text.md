@@ -76,6 +76,38 @@ curl -X POST http://localhost:8000/v3/audio/translations \
 Endpoint can raise an error related to incorrect request in the following conditions:
 - Incorrect format of any of the fields based on the schema
 
+## Realtime WebRTC transcription
+
+`POST /v1/realtime/calls` accepts either of the OpenAI Realtime signaling formats:
+
+- `Content-Type: application/sdp`: the request body is the SDP offer. OVMS selects
+  the sole available speech-to-text graph; non-STT graphs are ignored. If no STT
+  graph or multiple STT graphs are available, the request returns HTTP 400 with a
+  descriptive JSON error. Use multipart signaling to select a model explicitly.
+- `Content-Type: multipart/form-data`: the `sdp` field contains the offer and the
+  `session` field contains a JSON object with `audio.input.transcription.model`
+  (or top-level `model` as a fallback) naming the served STT graph.
+
+Both formats return an `application/sdp` answer with embedded ICE candidates and
+a `Location: /v1/realtime/calls/<id>` header. To end the call, send
+`POST /v1/realtime/calls/<id>/hangup`. Transcription events use the `oai-events`
+WebRTC data channel.
+
+When API-key authentication is enabled, both call creation and hangup require
+`Authorization: Bearer <configured-api-key>`. OVMS does not issue OpenAI ephemeral
+tokens or implement `/v1/realtime/client_secrets`; plain SDP uses the configured
+API key, not a token carrying session configuration. No model query parameter or
+custom header is required.
+
+```bash
+curl http://localhost:8000/v1/realtime/calls \
+  -H 'Content-Type: application/sdp' \
+  --data-binary @offer.sdp
+```
+
+Malformed signaling requests return HTTP 400 with a descriptive JSON error,
+rather than a JSON-file parsing error.
+
 ## References
 
 [End to end demo with transcription endpoint](../demos/audio/README.md#transcription)

@@ -18,6 +18,12 @@ load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_prot
 load("//:common_settings.bzl", "ovms_cc_library")
 
 ovms_cc_library(
+    name = "stt_pipeline_handle",
+    hdrs = ["stt_pipeline_handle.hpp"],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "s2t_servable",
     srcs = ["s2t_servable.cpp"],
     hdrs = [
