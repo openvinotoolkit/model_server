@@ -182,7 +182,12 @@ if [ "$FUZZER_BUILD" == "0" ]; then
 			echo "Cannot verify OVMS MediaPipe symbols: nm is unavailable."
 			exit 1
 		fi
-		exported_symbols=$(nm -D ./ovms | awk '$2 ~ /^[A-TV-Z]$/ { print $3 }')
+		runtime_library=../lib/libovms_mediapipe_runtime_shared.so
+		if [ ! -f "$runtime_library" ]; then
+			echo "Missing MediaPipe runtime shared library: $runtime_library."
+			exit 1
+		fi
+		exported_symbols=$(nm -D "$runtime_library" | awk '$2 ~ /^[A-TV-Z]$/ { print $3 }')
 		for symbol in \
 			OVMS_MPFactoryCreate \
 			OVMS_MPFactoryDestroy \
@@ -211,7 +216,7 @@ if [ "$FUZZER_BUILD" == "0" ]; then
 			fi
 		done
 
-		registration_artifacts=(./ovms ../lib/libovms_llm_calculators.so ../lib/libovms_opencv_calculators.so ../lib/libovmspython.so ../lib/libpython_calculators.so)
+		registration_artifacts=(./ovms ../lib/libovms_mediapipe_runtime_shared.so ../lib/libovms_llm_calculators.so ../lib/libovms_opencv_calculators.so ../lib/libovmspython.so ../lib/libpython_calculators.so)
 		registration_symbol_sets=()
 		for artifact in "${registration_artifacts[@]}"; do
 			if [ ! -f "$artifact" ]; then

@@ -1972,11 +1972,11 @@ cc_binary(
             "//src:windows" : ["@winreg//:winreg"],
         })
      + select({
-            "//:not_disable_mediapipe": [
+            "//src:windows": [
                 "//src/mediapipe_internal:libovms_mediapipe_runtime_owner_no_python_calculators",
                 "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
             ],
-            "//:disable_mediapipe" : [],
+            "//conditions:default": [],
         })
      + ["//src/python:python_calculators_host"],
     data = [":ovms_optional_plugins"] + select({
@@ -1990,6 +1990,9 @@ cc_binary(
             "//src/python:libovmspython",
             "//src/python:libpython_calculators",
     ] + select({
+        "//:not_disable_mediapipe": [":ovms_mediapipe_runtime_shared"],
+        "//:disable_mediapipe": [],
+    }) + select({
         "//:not_disable_mediapipe": [
             "//src/lib:ovms_llm_calculators",
         ],

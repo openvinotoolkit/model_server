@@ -17,6 +17,7 @@
 #include "mediapipe_runtime_api.hpp"
 
 #include <cstdlib>
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <utility>
@@ -126,6 +127,32 @@ struct MediapipeRuntimeApi::ApiSymbols {
 static void* resolveSymbol(void* handle, const char* name) {
     return dlsym(handle, name);
 }
+
+static void* loadMediapipeRuntimeLibrary() {
+    constexpr const char* libraryName = "libovms_mediapipe_runtime_shared.so";
+    std::vector<std::string> candidates;
+    if (const char* runfilesDirectory = std::getenv("RUNFILES_DIR")) {
+        candidates.push_back((std::filesystem::path(runfilesDirectory) / "ovms/src" / libraryName).string());
+    }
+
+    Dl_info moduleInfo{};
+    if (dladdr(reinterpret_cast<const void*>(&resolveSymbol), &moduleInfo) != 0 && moduleInfo.dli_fname != nullptr) {
+        const std::filesystem::path modulePath(moduleInfo.dli_fname);
+        candidates.push_back((modulePath.parent_path().parent_path() / "lib" / libraryName).string());
+        candidates.push_back((modulePath.parent_path() /
+                              (modulePath.filename().string() + ".runfiles/ovms/src/" + libraryName))
+                                 .string());
+    }
+    candidates.emplace_back(libraryName);
+
+    for (const auto& candidate : candidates) {
+        if (void* handle = dlopen(candidate.c_str(), RTLD_NOW | RTLD_GLOBAL)) {
+            SPDLOG_INFO("Loaded MediaPipe runtime from: {}", candidate);
+            return handle;
+        }
+    }
+    return nullptr;
+}
 #elif _WIN32
 static void* resolveSymbol(HMODULE handle, const char* name) {
     return reinterpret_cast<void*>(GetProcAddress(handle, name));
@@ -135,7 +162,8 @@ static void* resolveSymbol(HMODULE handle, const char* name) {
 MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
     api(std::make_unique<ApiSymbols>()) {
 #ifdef __linux__
-    void* currentModule = RTLD_DEFAULT;
+    api->handle = loadMediapipeRuntimeLibrary();
+    void* currentModule = api->handle != nullptr ? api->handle : RTLD_DEFAULT;
 #elif _WIN32
     HMODULE currentModule = GetModuleHandleA(nullptr);
     if (currentModule == nullptr) {
@@ -212,6 +240,12 @@ MediapipeRuntimeApi::~MediapipeRuntimeApi() {
         api->destroy(api->factoryHandle);
         api->factoryHandle = nullptr;
     }
+#ifdef __linux__
+    if (api->handle != nullptr) {
+        dlclose(api->handle);
+        api->handle = nullptr;
+    }
+#endif
 }
 
 bool MediapipeRuntimeApi::isLoaded() const {
