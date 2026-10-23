@@ -23,6 +23,7 @@ from typing import Callable
 
 import docker
 
+from tests.functional.config import enable_pooling_detection
 from tests.functional.utils.context import Context
 from tests.functional.utils.inference.communication import REST
 from tests.functional.utils.logger import get_logger
@@ -372,7 +373,7 @@ class OvmsDockerLauncher(object):
                 remove_from_config=remove_from_config,
                 resolution=resolution,
                 cache_size=cache_size,
-                pooling=model.pooling if model is not None else None,
+                pooling=None if enable_pooling_detection or model is None else model.pooling,
                 single_mediapipe_model_mode=parameters.single_mediapipe_model_mode,
             )
         else:

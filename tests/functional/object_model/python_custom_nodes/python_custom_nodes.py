@@ -289,6 +289,8 @@ class SimpleGenerativeNode(SimplePythonCustomNodeMediaPipe):
         )
         enable_tool_guided_generation = kwargs.get("enable_tool_guided_generation", False)
         enable_word_timestamps = kwargs.get("enable_word_timestamps", False)
+        tool_parser = kwargs.get("tool_parser", None)
+        reasoning_parser = kwargs.get("reasoning_parser", None)
         self.calculators = [
             self.calculator_class(
                 models_path=models_path,
@@ -302,6 +304,8 @@ class SimpleGenerativeNode(SimplePythonCustomNodeMediaPipe):
                 device=self.target_device,
                 enable_tool_guided_generation=enable_tool_guided_generation,
                 enable_word_timestamps=enable_word_timestamps,
+                tool_parser=tool_parser,
+                reasoning_parser=reasoning_parser,
             )
         ]
         self.name = self.calculators[0].model.name
