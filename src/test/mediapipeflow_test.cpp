@@ -3929,7 +3929,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "StringToUintCalculator",
         "TwoInputCalculator",
         "WarpAffineCalculator",
-        "WarpAffineCalculatorCpu"});
+        "WarpAffineCalculatorCpu" });
 
 #ifndef __linux__
     for (const char* calculator : {"AnnotationOverlayCalculator", "ColorConvertCalculator",
