@@ -68,10 +68,6 @@ pip install -r ../../common/stream_client/requirements.txt
 ```
 For the use case with RTSP client, install also FFMPEG component on the host.
 
-Alternatively build a docker image with the client with the following command:
-```bash
-docker build ../../common/stream_client/ -t rtsp_client
-```
 
 Client parameters:
 ```console
