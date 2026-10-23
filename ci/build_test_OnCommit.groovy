@@ -376,7 +376,7 @@ pipeline {
                       checkout scmGit(branches: [[name: validation_branch]], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
                       sh "pwd"
                       def pwd = sh(returnStdout:true, script: "pwd").strip()
-                      def cmd_venv = "make create-venv"
+                      def cmd_venv = "make create-venv TT_OVMS_C_REPO_PATH=../"
                       def cmd_links = "rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional"
                       def cmd_export = "TT_OVMS_C_REPO_PATH=../ TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10"
                       def cmd_run_tests = "make tests"
@@ -411,7 +411,7 @@ pipeline {
                         def pwd = sh(returnStdout:true, script: "pwd").strip()
                         def ovms_c_repo_path = sh(returnStdout:true, script: "cd .. && pwd").strip()
                         def test_doc_files_str = test_doc_files_linux.split('\n').collect { 'U-' + it }.join(' or ')
-                        sh "make create-venv && rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional"
+                        sh "make create-venv TT_OVMS_C_REPO_PATH=${ovms_c_repo_path} && rm -f tests/functional && ln -s ${ovms_c_repo_path}/tests/functional tests/functional"
                         def cmd_venv_activate = ". .venv/bin/activate"
                         def cmd_export = "export TT_OVMS_C_REPO_PATH=../ && export TT_RUN_REGRESSION_TESTS=True && export TT_REGRESSION_WEEKLY_TESTS=True && export TT_TARGET_DEVICE=CPU,GPU,NPU && export TT_ENABLE_UAT_TESTS=True && export TT_ENABLE_SMOKE_TESTS=False && export TT_OVMS_C_REPO_PATH=${ovms_c_repo_path} && export TT_LOGGING_LEVEL_OVMS=DEBUG && export TT_WAIT_FOR_MESSAGES_TIMEOUT=1500 && export CORE_BRANCH=${env.CHANGE_BRANCH ?: 'main'}"
                         def cmd_pytest = "pytest tests/non_functional/documentation -k 'test_links_ovms or ${test_doc_files_str}' -n 0 --dist loadgroup"

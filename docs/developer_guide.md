@@ -186,7 +186,7 @@ make test_functional
 2. Add any configuration variables to the command line in this format :
 
 ```bash
-export IMAGE="openvino/model_server:latest"
+export TT_OVMS_IMAGE_NAME="openvino/model_server:latest"
 ```
 
 3. To make command repetition easier, create and store the configuration options in a file named `user_config.py`. Put this file in the main project directory.
@@ -194,7 +194,7 @@ export IMAGE="openvino/model_server:latest"
 - Example:
 
 ```python
-os.environ["IMAGE"] = "openvino/model_server"
+os.environ["TT_OVMS_IMAGE_NAME"] = "openvino/model_server:latest"
 ```
 </details>
 

@@ -41,14 +41,26 @@ class OVHfDownloader:
         else:
             self.model_local_path = os.path.join(model_base_path, self.model.name)
 
+    def find_missing_or_incomplete(self, repo_info):
+        missing_or_incomplete = []
+        for sibling in repo_info.siblings or []:
+            path = os.path.join(self.model_local_path, sibling.rfilename)
+            if not os.path.isfile(path) or os.path.getsize(path) != sibling.size:
+                missing_or_incomplete.append(sibling.rfilename)
+        return missing_or_incomplete
+
     def check_and_update_hf_model(self):
-        repo_info = self.api.repo_info(self.model_name)
+        repo_info = self.api.model_info(self.model_name, files_metadata=True)
         local_latest_mtime = get_dir_latest_mtime(self.model_local_path)
         local_latest_dt = datetime.fromtimestamp(local_latest_mtime, tz=timezone.utc) if local_latest_mtime else None
+        bad_files = self.find_missing_or_incomplete(repo_info)
 
-        if local_latest_dt and repo_info.last_modified <= local_latest_dt:
+        if local_latest_dt and repo_info.last_modified <= local_latest_dt and not bad_files:
             print(f"No files to update for model: {self.model_name}")
             return False
+
+        if bad_files:
+            print(f"Missing or incomplete files for model {self.model_name}: {bad_files}")
 
         print(f"Download OpenVINO HuggingFace model: {self.model_name}")
         staging_path = self.model_local_path + "_staging"

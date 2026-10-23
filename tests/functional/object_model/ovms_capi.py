@@ -197,10 +197,6 @@ class OvmsCapiInstance(OvmsBinary):
         cmd = "self.running = False"
         return self.send_command_to_process(cmd)
 
-    def send_terminate_command(self):
-        cmd = "self.running = False"
-        return self.send_command_to_process(cmd)
-
     def send_get_model_meta_command(self, model_name, model_version):
         cmd = "self.capi.get_model_meta()"
         cmd_kwargs = {"servableName": model_name, "servableVersion": model_version}

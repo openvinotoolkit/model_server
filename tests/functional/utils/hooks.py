@@ -463,11 +463,16 @@ def get_models_to_download():
 
 def download_models():
     models_to_download = get_models_to_download()
-    for model_type in models_to_download:
-        if model_type.is_local:
-            ov_hf_downloader = OVHfDownloader(model_type)
-            ov_hf_downloader.check_and_update_hf_model()
-
+    try:
+        for model_type in models_to_download:
+            if model_type.is_local:
+                ov_hf_downloader = OVHfDownloader(model_type)
+                ov_hf_downloader.check_and_update_hf_model()
+    except Exception as e:
+        logger.exception(str(e))
+        msg = "Failed to download required models."
+        logger.error(msg)
+        pytest.exit(msg, returncode=-1)
 
 def get_docker_images(images_to_download):
     for target_device, base_os in itertools.product(config.target_devices, config.base_os):
