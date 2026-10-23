@@ -203,11 +203,10 @@ Use the canonical Qwen3.6 chat template.
 
 Ornith's own template is not canonical. It dropped the `last_query_index` guard and re-injects `<think>` on every past assistant turn.
 
-- Broken original md5 `fa5eb1eee497fc8f3bccc3fcf60d1a51`.
-- Local Ornith file `C:\llm\models\ornith-35b-ov\chat_template.jinja` is already the canonical template.
-- The broken original is `C:\llm\models\ornith-35b-ov\chat_template.jinja.backup-20261021-034305`.
-
-A visually similar Jinja file is not token-equivalent. Pin the hash before calling a template port done.
+- Broken original md5 `fa5eb1eee497fc8f3bccc3fcf60d1a51`, sha256 `182e77dd83bd8e9ca818b240b82e28f243762cd5dda32e6eef327df7b1cd107e`, 7536 bytes.
+- Live Ornith file `C:\llm\models\ornith-35b-ov\chat_template.jinja` starts from that canonical template and adds one boundary: a `role=tool` message sets `last_query_index`, so thoughts from assistant turns before the tool result are left out. `preserve_thinking` still keeps them. md5 `c9dd16f696ca20e66578498b5500c88e`, sha256 `173b4cb55af687f861b7ca0ea571805093876c4fb140e1f7d64dcc0b54f9ca0b`, 8147 bytes.
+- The broken original stays only as `C:\llm\models\ornith-35b-ov\chat_template.jinja.backup-20261021-034305`. Do not copy it back over the live file.
+- Repo pin: `docs/qwenmonster/chat-templates/ornith/chat_template.jinja` and `docs/qwenmonster/chat-templates/ornith/CHAT-TEMPLATE-PIN.json`. The installed copy is `C:\llm\models\ornith-35b-ov\chat_template.jinja`, and that file is read-only. Do not substitute either copy. A visually similar file is not token-equivalent.
 
 ## Current application
 

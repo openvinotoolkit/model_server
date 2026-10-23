@@ -1,0 +1,24 @@
+{
+  "model_dir": "C:\\llm\\models\\ornith-35b-ov",
+  "file": "chat_template.jinja",
+  "status": "PINNED",
+  "do_not_replace": true,
+  "source": "Qwen/Qwen3.6-35B-A3B canonical chat template, plus a tool-result boundary so prior assistant thoughts are not replayed after a tool result",
+  "bytes": 8147,
+  "md5": "c9dd16f696ca20e66578498b5500c88e",
+  "sha256": "173b4cb55af687f861b7ca0ea571805093876c4fb140e1f7d64dcc0b54f9ca0b",
+  "rule": "The live chat_template.jinja must stay this file. A different Jinja is not token-equivalent.",
+  "canonical_parent": {
+    "bytes": 7764,
+    "md5": "52b6d51ae5b203cb67e64b648494dad2",
+    "sha256": "e84f32a23fdda27689f868aa4a1a5621f41133e51a48d7f3efcbea2839574259",
+    "delta": "A role=tool message sets last_query_index, so assistant thoughts before that tool result are omitted. preserve_thinking still keeps them."
+  },
+  "forbidden_substitute": {
+    "file": "chat_template.jinja.backup-20261021-034305",
+    "bytes": 7536,
+    "md5": "fa5eb1eee497fc8f3bccc3fcf60d1a51",
+    "sha256": "182e77dd83bd8e9ca818b240b82e28f243762cd5dda32e6eef327df7b1cd107e",
+    "defect": "Reinjects <think> and the old reasoning onto every past assistant turn, with no last_query_index guard."
+  }
+}
