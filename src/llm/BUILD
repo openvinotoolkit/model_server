@@ -556,6 +556,7 @@ ovms_cc_library(
             "io_processing/hermes3/generation_config_builder.hpp",
             "io_processing/devstral/generation_config_builder.hpp",
             "io_processing/qwen3coder/generation_config_builder.hpp",
+            "io_processing/gemma4/generation_config_builder.hpp",
             "io_processing/generation_config_builder.hpp"],
     srcs = ["io_processing/base_generation_config_builder.cpp",
             "io_processing/phi4/generation_config_builder.cpp",

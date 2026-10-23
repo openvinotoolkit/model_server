@@ -22,6 +22,7 @@
 #include <openvino/genai/tokenizer.hpp>
 #include "base_generation_config_builder.hpp"
 #include "qwen3coder/generation_config_builder.hpp"
+#include "gemma4/generation_config_builder.hpp"
 #include "phi4/generation_config_builder.hpp"
 #include "llama3/generation_config_builder.hpp"
 #include "hermes3/generation_config_builder.hpp"
@@ -50,6 +51,8 @@ public:
             builder_impl = std::make_unique<Phi4GenerationConfigBuilder>(baseConfig, enableToolGuidedGeneration, decodingMethod);
         } else if (toolParserName == "devstral") {
             builder_impl = std::make_unique<DevstralGenerationConfigBuilder>(baseConfig, enableToolGuidedGeneration, decodingMethod);
+        } else if (toolParserName == "gemma4") {
+            builder_impl = std::make_unique<Gemma4GenerationConfigBuilder>(baseConfig, enableToolGuidedGeneration, decodingMethod);
         } else {
             if (enableToolGuidedGeneration) {
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Option enable_tool_guided_generation is set, but will not be effective since no valid tool parser has been provided.");

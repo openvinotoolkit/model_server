@@ -618,6 +618,23 @@ std::optional<Delta> OutputParser::parseChunk(const std::string& chunkResponse, 
         }
         return parseToolCallChunk(tokens, finishReason);
     } else if (processingPhase == TOOL_CALLS_WAITING_FOR_TOOL) {
+        // The parser-green Gemma router stops after one thought. A later
+        // <|channel> is another reasoning span, not content and not a tool call.
+        if (gemma4ToolHandoff && reasoningParser) {
+            const TagLookupStatus reasoningStartTagStatus = streamOutputCache.lookupTags(reasoningParser->getParsingConfig().startTags);
+            if (reasoningStartTagStatus == TagLookupStatus::FOUND_COMPLETE) {
+                gemma4ReasoningClosed = false;
+                reasoningParser->resetState();
+                const TagLookupStatus endTagStatus = streamOutputCache.lookupTags(reasoningParser->getParsingConfig().endTags);
+                if (endTagStatus == TagLookupStatus::FOUND_COMPLETE)
+                    return parseReasoningChunk(tokens, finishReason, UNKNOWN);
+                if (endTagStatus == TagLookupStatus::FOUND_INCOMPLETE && finishReason == ov::genai::GenerationFinishReason::NONE)
+                    return std::nullopt;
+                return parseReasoningChunk(tokens, finishReason);
+            }
+            if (reasoningStartTagStatus == TagLookupStatus::FOUND_INCOMPLETE && finishReason == ov::genai::GenerationFinishReason::NONE)
+                return std::nullopt;
+        }
         TagLookupStatus toolStartTagStatus = streamOutputCache.lookupTags(toolParser->getParsingConfig().startTags);
         if (toolStartTagStatus == TagLookupStatus::FOUND_COMPLETE) {
             return parseToolCallChunk(tokens, finishReason, TOOL_CALLS_PROCESSING_TOOL);

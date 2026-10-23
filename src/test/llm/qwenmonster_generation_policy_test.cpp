@@ -212,9 +212,17 @@ TEST(QwenmonsterGenerationPolicy, ParserFamilyIsolation) {
     EXPECT_FALSE(generic.requiresValidStructuredOutput());
     GenerationConfigBuilder hermes({}, "hermes3", false, DecodingMethod::STANDARD);
     EXPECT_NO_THROW(hermes.parseConfigFromRequest(req));
-    // Gemma's two-argument JSONSchema is not in the official 2026.4 GenAI header.
-    // Until that builder is ported, gemma4 must not pretend to install a hard policy.
     GenerationConfigBuilder gemma({}, "gemma4", false, DecodingMethod::STANDARD);
     EXPECT_NO_THROW(gemma.parseConfigFromRequest(req));
-    EXPECT_FALSE(gemma.requiresValidStructuredOutput());
+    EXPECT_TRUE(gemma.requiresValidStructuredOutput());
+    const auto* g = tag(gemma.getConfig());
+    ASSERT_NE(g, nullptr);
+    const auto* list = std::get_if<std::shared_ptr<Structured::TagsWithSeparator>>(g);
+    ASSERT_NE(list, nullptr);
+    ASSERT_TRUE(*list);
+    EXPECT_TRUE((*list)->at_least_one);
+    const std::string json = (*list)->to_json();
+    EXPECT_NE(json.find("\"max_whitespace_cnt\": 2"), std::string::npos);
+    EXPECT_NE(json.find("<|tool_call>call:weather"), std::string::npos);
+    EXPECT_NE(json.find("<|tool_call>call:clock"), std::string::npos);
 }

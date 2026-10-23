@@ -213,4 +213,4 @@ A visually similar Jinja file is not token-equivalent. Pin the hash before calli
 
 Snapshot at distillation (2026-10-21): A0 partially proven (C6 SHA), A1/official template token-level pin pending, A2 sourced and documented, A3 applied, A4 source patches only, A5 builder candidate, A6–A8 not yet run. No ACCEPTED status.
 
-Semantic refit 2026.4 (2026-10-23): the Qwen3.6 policy above is implemented for tool parser `qwen3coder` with reasoning parser `qwen3`. The Gemma4 hard policy is an explicit non-port because of the one-argument `JSONSchema` header. The Gemma4 ten-cycle reasoning re-entry remains a red known gap. No ACCEPTED status. This supplement does not change parser code.
+Semantic refit 2026.4 (2026-10-23): the Qwen3.6 policy above is implemented for tool parser `qwen3coder` with reasoning parser `qwen3`. Gemma4 hard policy uses a local crutch that emits `max_whitespace_cnt` 2 because the 2026.4 `JSONSchema` constructor has one argument. Gemma4 reasoning may open again after a tool envelope; the parser-green router did not do that. LFM2.5-24B-A2B and the experimental GLM notes are consciously deferred. No ACCEPTED status.

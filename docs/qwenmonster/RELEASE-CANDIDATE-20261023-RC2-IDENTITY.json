@@ -1,0 +1,45 @@
+{
+  "name": "qwm-semantic-refit-2026.4-rc2",
+  "kind": "release-candidate",
+  "accepted": false,
+  "parent": "5a305b584d031e41fcdd043dedb4fd3027d8d07b",
+  "parent_subject": "Pin the 2026.4 semantic refit as an own-fork release candidate.",
+  "branch": "semantic-refit-2026.4",
+  "fork": "https://github.com/DassaultFalconKing/gemmamonster_model_server_OVMS.git",
+  "source_commit": "the commit that adds this file; read it from tag qwm-semantic-refit-2026.4-rc2",
+  "build": {
+    "config": "win_mp_on_py_off",
+    "output_user_root": "C:\\r20264",
+    "bazel": "6.4.0",
+    "sdk": "openvino_genai_windows_2026.4.0.0rc1_x86_64 isolated package",
+    "gpu_plugin": "stock SDK GPU, not custom moe38545 21a2fd9f"
+  },
+  "binaries": [
+    {
+      "path": "bazel-bin/src/ovms.exe",
+      "bytes": 22554112,
+      "sha256": "b84451984d938077e75ed11f5b68eabee1b8200159ea41b74fa77f6a4ed00466",
+      "built_local": "2026-10-23T08:18:25"
+    },
+    {
+      "path": "bazel-bin/src/ovms_test.exe",
+      "bytes": 40491520,
+      "sha256": "71798438b99e153e4bad47055ed2a5077fa2f0c7932255a5c6a3a23a478f0a0f",
+      "built_local": "2026-10-23T08:08:26"
+    }
+  ],
+  "delta": {
+    "gemma_reasoning_reentry": "After TOOL_CALLS_WAITING_FOR_TOOL, a new <|channel> resets the Gemma4 reasoning parser and re-enters REASONING. The parser-green etalon did not do this.",
+    "json_schema_crutch": "2026.4 JSONSchema has one argument. gemma4JsonSchemaWithWhitespaceBound emits {\"type\":\"json_schema\",\"json_schema\":<schema>,\"max_whitespace_cnt\":2} as a raw structural-tag string."
+  },
+  "deferred": "LFM2.5 and experimental GLM remain consciously deferred.",
+  "tests": {
+    "filter": "QwenmonsterGenerationPolicy.*:Gemma4OutputParserTest.*:Qwen3CoderOutputParserTest.OpenThinkDraftToolCallRemainsReasoning",
+    "passed": 92
+  },
+  "not_accepted": [
+    "full ovms_test",
+    "live 100/100",
+    "20-loop"
+  ]
+}

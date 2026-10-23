@@ -1,6 +1,6 @@
 # OVMS family-port theory — LFM2.5-24B-A2B and experimental GLM
 
-Status: **THEORY ONLY**. Checklist answers for a later porter. No parser port, no generation-policy code, no acceptance claim.
+Status: **CONSCIOUSLY DEFERRED** on 2026-10-23. Checklist answers for a later porter. No parser port, no generation-policy code, no acceptance claim. Do not start this work while the 2026.4 semantic-refit release candidate is the active line.
 
 Companion to `OVMS-MODEL-FAMILY-ADAPTATION-PROTOCOL.md` (semantic-refit 2026.4, supplemented 2026-10-23). This note answers that protocol's seven-point pre-code list. It does not update A0 pins, `STATE.md`, or the acceptance ladder. Nothing here is `ACCEPTED`.
 
@@ -8,7 +8,7 @@ Sources read for this note: the official Hugging Face files named under each fam
 
 ## Gemma lesson (applies to both families)
 
-`OutputParser` leaves `REASONING` only on the reasoning closer, except the Gemma4 handoff. That handoff, on `<|tool_call>` before `<channel|>`, closes the **current** reasoning segment and gives the tail to the tool parser. It does not open a new reasoning segment after the tool envelope. Ten alternating thought+tool cycles stay red (`Gemma4OutputParserTest.ParseTenAlternatingThoughtAndToolCalls`): calls parse, later thoughts leak, phase stays `TOOL_CALLS_WAITING_FOR_TOOL`.
+`OutputParser` leaves `REASONING` only on the reasoning closer, except the Gemma4 handoff. That handoff, on `<|tool_call>` before `<channel|>`, closes the **current** reasoning segment and gives the tail to the tool parser. The parser-green router did not open a later thought after the tool envelope. The 2026.4 refit repairs that as a new gap: `TOOL_CALLS_WAITING_FOR_TOOL` re-enters reasoning when a new `<|channel>` arrives. Copying only the original handoff does not install that rule. A tool tag inside a still-open reasoning span stays reasoning, unless that family's own format starts the call before the closer.
 
 `TOOL_CALLS_WAITING_FOR_TOOL` looks for another tool start, or for content-turn start tags. It does not look for a new reasoning open. A family that emits think, then a call, then think, then a call **inside one generation** needs a phase rule that re-enters `REASONING` after the envelope. Copying the Gemma handoff does not install that rule. A tool tag inside a still-open reasoning span stays reasoning, unless that family's own format starts the call before the closer.
 
