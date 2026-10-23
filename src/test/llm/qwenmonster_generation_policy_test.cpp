@@ -222,7 +222,8 @@ TEST(QwenmonsterGenerationPolicy, ParserFamilyIsolation) {
     ASSERT_TRUE(*list);
     EXPECT_TRUE((*list)->at_least_one);
     const std::string json = (*list)->to_json();
-    EXPECT_NE(json.find("\"max_whitespace_cnt\": 2"), std::string::npos);
+    EXPECT_NE(json.find("\"type\": \"json_schema\""), std::string::npos);
+    EXPECT_EQ(json.find("max_whitespace_cnt"), std::string::npos);
     EXPECT_NE(json.find("<|tool_call>call:weather"), std::string::npos);
     EXPECT_NE(json.find("<|tool_call>call:clock"), std::string::npos);
 }

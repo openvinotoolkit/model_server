@@ -1,0 +1,44 @@
+{
+  "name": "qwm-semantic-refit-2026.4-rc3",
+  "kind": "release-candidate",
+  "accepted": false,
+  "parent_tag": "qwm-semantic-refit-2026.4-rc2",
+  "parent": "cfd46a5d5eeb6bb6c0a1bcd2e55e8f1e22551cec",
+  "branch": "semantic-refit-2026.4",
+  "fork": "https://github.com/DassaultFalconKing/gemmamonster_model_server_OVMS.git",
+  "source_commit": "the commit that adds this file; read it from tag qwm-semantic-refit-2026.4-rc3",
+  "delta": "Gemma tool arguments use the one-argument JSONSchema the 2026.4 runtime applies. A raw max_whitespace_cnt string was not applied and left auto calls open on newlines.",
+  "build": {
+    "config": "win_mp_on_py_off",
+    "output_user_root": "C:\\r20264",
+    "sdk": "openvino_genai_windows_2026.4.0.0rc1_x86_64 isolated package",
+    "gpu_plugin": "stock SDK GPU, not custom moe38545 21a2fd9f"
+  },
+  "binaries": [
+    {
+      "path": "bazel-bin/src/ovms.exe",
+      "bytes": 22552064,
+      "sha256": "fe32944ff5059fbde49aa73ff52ee98d9122bdde3758186f09a166d748eec008",
+      "built_local": "2026-10-23T08:34:28"
+    },
+    {
+      "path": "bazel-bin/src/ovms_test.exe",
+      "bytes": 40490496,
+      "sha256": "d33dfd65dd341d38ad6544afbe2805a81d4eea688265af9ffa0154e41537a41c",
+      "built_local": "2026-10-23T08:33:57"
+    }
+  ],
+  "live": {
+    "gemma26_auto": "finish tool_calls, get_weather Berlin, 22 completion tokens",
+    "gemma26_required_then_tool_result": "finish stop, sentence uses rain, 28 km/h, and the closed Spree path",
+    "gemma26_decode": "prompt 1772, completion 128, ttft 1.599 s, decode 27.52 tok/s, prefill NOT_AVAILABLE",
+    "qwen36_thinking_required": "finish tool_calls, reasoning prose without tool XML, get_weather Berlin, 268 completion tokens",
+    "qwen36_decode": "prompt 1788, completion 128, ttft 2.12 s, decode 36.16 tok/s, prefill NOT_AVAILABLE",
+    "ornith_thinking_required": "finish tool_calls, reasoning prose without tool XML, get_weather Berlin, 102 completion tokens",
+    "ornith_decode": "prompt 1788, completion 128, ttft 2.113 s, decode 33.6 tok/s, prefill NOT_AVAILABLE"
+  },
+  "not_accepted": [
+    "full ovms_test suite",
+    "live 100/100 and 20-loop gates"
+  ]
+}

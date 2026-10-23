@@ -13,14 +13,6 @@
 #include "../base_generation_config_builder.hpp"
 
 namespace ovms {
-// 2026.4 JSONSchema has one constructor argument. The etalon passes a whitespace
-// bound of 2 as the second argument and emits max_whitespace_cnt. This string is
-// that same JSON object, stored as a raw structural tag.
-inline std::string gemma4JsonSchemaWithWhitespaceBound(const std::string& schema, int whitespaceBound) {
-    return std::string("{\"type\": \"json_schema\", \"json_schema\": ") + schema +
-           ", \"max_whitespace_cnt\": " + std::to_string(whitespaceBound) + "}";
-}
-
 class Gemma4GenerationConfigBuilder : public BaseGenerationConfigBuilder {
     bool hardToolPolicy = false;
 
@@ -48,7 +40,10 @@ class Gemma4GenerationConfigBuilder : public BaseGenerationConfigBuilder {
             throw std::invalid_argument("Gemma4 guided tool schema for '" + toolName + "' is empty");
         ov::genai::StructuredOutputConfig::Tag tag;
         tag.begin = "<|tool_call>call:" + toolName;
-        tag.content = gemma4JsonSchemaWithWhitespaceBound(toolSchemaWrapper.stringRepr, 2);
+        // 2026.4 JSONSchema takes the schema only. A hand-built
+        // max_whitespace_cnt string is not applied, so the model can fill the
+        // open call with newlines until max_tokens and the parser publishes nothing.
+        tag.content = ov::genai::StructuredOutputConfig::JSONSchema(toolSchemaWrapper.stringRepr);
         tag.end = "<tool_call|>";
         return tag;
     }

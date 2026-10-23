@@ -94,9 +94,9 @@ Build a new family-specific builder only when its native wire differs. Explicit 
 6. `API GREEN`: unary + SSE + Responses if applicable, correct finish/IDs/deltas.
 7. `RUNTIME GREEN`: actual model/device/lane on identical pinned candidate.
 8. `AGENTIC GREEN`: repeated multi-turn tool loops, no silent drops, no cross-session contamination.
-9. `ACCEPTED`: all gates and Gemma/no-change negative controls, evidence paths and owner signoff.
+9. `ACCEPTED`: all gates and Gemma/no-change negative controls, evidence paths and owner signoff. A live model run of this candidate binary is required. Unit green, a successful build, and a release-candidate tag do not substitute for it.
 
-A null/empty evidence file never counts as PASS. A patch from one model must not be promoted using another model's successful run. A red test that documents a known gap is not a pass, and the gap is not supported behavior.
+A null/empty evidence file never counts as PASS. A patch from one model must not be promoted using another model's successful run. A red test that documents a known gap is not a pass, and the gap is not supported behavior. A live run counts only when the candidate binary actually generates and the saved response shows the behavior under acceptance: finish reason plus content, reasoning, or tool calls. An empty message, a unit test, or a tag by itself is not that run.
 
 ## A9. Release and upstream contribution
 
@@ -213,4 +213,4 @@ A visually similar Jinja file is not token-equivalent. Pin the hash before calli
 
 Snapshot at distillation (2026-10-21): A0 partially proven (C6 SHA), A1/official template token-level pin pending, A2 sourced and documented, A3 applied, A4 source patches only, A5 builder candidate, A6–A8 not yet run. No ACCEPTED status.
 
-Semantic refit 2026.4 (2026-10-23): the Qwen3.6 policy above is implemented for tool parser `qwen3coder` with reasoning parser `qwen3`. Gemma4 hard policy uses a local crutch that emits `max_whitespace_cnt` 2 because the 2026.4 `JSONSchema` constructor has one argument. Gemma4 reasoning may open again after a tool envelope; the parser-green router did not do that. LFM2.5-24B-A2B and the experimental GLM notes are consciously deferred. No ACCEPTED status.
+Semantic refit 2026.4 (2026-10-23): the Qwen3.6 policy above is implemented for tool parser `qwen3coder` with reasoning parser `qwen3`. Gemma4 hard policy uses the one-argument `JSONSchema` the 2026.4 header actually applies. A raw `max_whitespace_cnt` string is not applied by that runtime and leaves the tool call open. Gemma4 reasoning may open again after a tool envelope. LFM2.5-24B-A2B and the experimental GLM notes are consciously deferred. `ACCEPTED` requires a live model run of the candidate binary. No ACCEPTED status.
