@@ -128,7 +128,7 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 
-# P0: monolithic decode+infer calculator using the GPU VA zero-copy path.
+# Monolithic decode+infer calculator using the GPU VA zero-copy path.
 cc_library(
     name = "video_decode_infer_va_calculator",
     linkstatic = 1,
@@ -144,7 +144,7 @@ cc_library(
     linkopts = LINKOPTS_ADJUSTED,
 )
 
-# P0 graph test. Needs GPU + GStreamer + test assets; skips otherwise.
+# Monolithic graph test. Needs GPU + GStreamer + test assets; skips otherwise.
 # Run with:
 #   bazel run //src/test/mediapipe/calculators:video_decode_infer_va_test
 cc_test(
@@ -167,7 +167,7 @@ cc_test(
     }),
 )
 
-# P2 graph test: proves per-packet surface ownership (N in-flight distinct
+# Graph test proving per-packet surface ownership (N in-flight distinct
 # surfaces). Needs GPU + GStreamer + test video; skips otherwise.
 cc_test(
     name = "gst_video_source_test",
@@ -203,7 +203,7 @@ cc_test(
     linkopts = LINKOPTS_ADJUSTED,
 )
 
-# P5 Windows test A: decoded D3D11 texture uses the injected server-owned device.
+# Windows test: decoded D3D11 texture uses the injected server-owned device.
 # Windows + Intel GPU + GStreamer D3D11 + test video; skips otherwise.
 cc_test(
     name = "gst_d3d11_surface_test",
@@ -227,7 +227,7 @@ cc_test(
     }),
 )
 
-# P5 Windows tests B and C (C-API inference + split graph). Standalone cc_test
+# Windows C-API inference and split-graph tests. Standalone cc_test
 # depending on ovms_lib for the C-API/servable path. Windows-only (skips without
 # GPU/fixtures); kept out of the aggregate ovms_test to avoid unrelated py_off
 # breakage in other LLM translation units.
@@ -258,12 +258,12 @@ cc_test(
     }),
 )
 
-# P9 Windows live-streaming tests. Self-contained: drives intel_mpi + the OVMS
-# C-API directly (no MediaPipe graph), so it avoids the graph-executor deps.
+# Windows D3D11 remote-tensor performance tests. Includes direct OpenVINO/C-API
+# cases and an in-process source-to-inference MediaPipe graph case.
 cc_test(
-    name = "gst_d3d11_p9_test",
+    name = "remote_tensor_performance_test",
     srcs = select({
-        "//src:windows": ["gst_d3d11_p9_test.cpp"],
+        "//src:windows": ["remote_tensor_performance_test.cpp"],
         "//conditions:default": [],
     }),
     copts = COPTS_ADJUSTED,
@@ -274,8 +274,17 @@ cc_test(
     }),
     deps = [
         "//src/mpi:intel_mpi",
+        "//src/mediapipe_gst_calculators:gst_capi_inference_calculator",
+        "//src/mediapipe_gst_calculators:gst_openvino_inference_calculator",
+        "//src/mediapipe_gst_calculators:gst_video_capi_inference_calculator",
+        "//src/mediapipe_gst_calculators:gst_video_openvino_inference_calculator",
+        "//src/mediapipe_gst_calculators:gst_video_source_calculator",
         "//src:ovms_lib",
         "@com_google_googletest//:gtest_main",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe_calculators//:mediapipe_calculators",
+        "@windows_opencl//:opencl",
+        "@windows_opencl2//:opencl2",
     ],
     linkopts = LINKOPTS_ADJUSTED + select({
         "//src:windows": ["d3d11.lib", "dxgi.lib"],

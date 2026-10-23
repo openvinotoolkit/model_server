@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_proto_library")
 load("//:common_settings.bzl", "LINUX_COMMON_STATIC_LIBS_COPTS", "COMMON_FUZZER_LINKOPTS", "ovms_cc_library")
 
 # MSVC warnings promoted to errors inside mediapipe/glog/absl headers. Mirrors
@@ -36,6 +37,16 @@ LINKOPTS_ADJUSTED = select({
     "//conditions:default": [],
     "//:fuzzer_build": COMMON_FUZZER_LINKOPTS,
 })
+
+mediapipe_proto_library(
+    name = "gst_openvino_inference_calculator_proto",
+    srcs = ["gst_openvino_inference_calculator.proto"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@mediapipe//mediapipe/framework:calculator_options_proto",
+        "@mediapipe//mediapipe/framework:calculator_proto",
+    ],
+)
 
 ovms_cc_library(
     name = "gst_video_source_calculator",
@@ -64,6 +75,56 @@ ovms_cc_library(
         "@mediapipe_calculators//:mediapipe_calculators",
     ],
     additional_linkopts = LINKOPTS_ADJUSTED,
+)
+
+ovms_cc_library(
+    name = "gst_video_capi_inference_calculator",
+    srcs = ["gst_video_capi_inference_calculator.cc"],
+    additional_copts = COPTS_ADJUSTED,
+    alwayslink = 1,
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/mpi:intel_mpi",
+        "//src:ovms_lib",
+        "@mediapipe_calculators//:mediapipe_calculators",
+    ],
+    additional_linkopts = LINKOPTS_ADJUSTED,
+)
+
+ovms_cc_library(
+    name = "gst_openvino_inference_calculator",
+    srcs = ["gst_openvino_inference_calculator.cc"],
+    hdrs = ["gst_video_frame_packet.hpp"],
+    additional_copts = COPTS_ADJUSTED,
+    alwayslink = 1,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":gst_openvino_inference_calculator_cc_proto",
+        "@mediapipe_calculators//:mediapipe_calculators",
+        "//third_party:openvino",
+    ],
+    additional_linkopts = LINKOPTS_ADJUSTED + select({
+        "//src:windows": ["d3d11.lib", "dxgi.lib"],
+        "//conditions:default": [],
+    }),
+)
+
+ovms_cc_library(
+    name = "gst_video_openvino_inference_calculator",
+    srcs = ["gst_video_openvino_inference_calculator.cc"],
+    additional_copts = COPTS_ADJUSTED,
+    alwayslink = 1,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":gst_openvino_inference_calculator_cc_proto",
+        "//src/mpi:intel_mpi",
+        "//third_party:openvino",
+        "@mediapipe_calculators//:mediapipe_calculators",
+    ],
+    additional_linkopts = LINKOPTS_ADJUSTED + select({
+        "//src:windows": ["d3d11.lib", "dxgi.lib"],
+        "//conditions:default": [],
+    }),
 )
 
 ovms_cc_library(
