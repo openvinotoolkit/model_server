@@ -241,6 +241,9 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
     // Phase 2: load the chosen source with the selected engine.
     if (selectedSource != ChatTemplateSource::NONE) {
         if (properties->chatTemplateEngine == ChatTemplateEngine::JINJA) {
+            if (selectedSource == ChatTemplateSource::CHAT_TEMPLATE_JINJA) {
+                properties->tokenizer.set_chat_template(templateSource);
+            }
             std::string errorMessage;
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Preparing selected chat template with Python Jinja");
             if (properties->preparedChatTemplate.prepare(
@@ -288,27 +291,30 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
         selectedSource = ChatTemplateSource::NONE;
     }
 
-    // Analyze the selected template to detect capabilities and model family.
-    if (selectedSource != ChatTemplateSource::NONE) {
-        auto analysisResult = ChatTemplateAnalyzer::analyze(templateSource);
-        properties->chatTemplateCaps = analysisResult.caps;
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template capabilities: {}",
-            analysisResult.caps.toString());
-        // Auto-detect or report manually configured tool parser
-        if (isParserDisabled(properties->toolParserName)) {
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Tool parser explicitly disabled");
-            properties->toolParserName.clear();
-        } else if (!properties->toolParserName.empty()) {
+    properties->inputProcessorContext.tokenizer = properties->tokenizer;
+    properties->inputProcessorContext.templateProcessor =
+        properties->preparedChatTemplate.isPrepared() ? &properties->preparedChatTemplate : nullptr;
+    return StatusCode::OK;
+}
+
+void GenAiServableInitializer::analyzeChatTemplate(std::shared_ptr<GenAiServableProperties> properties) {
+    const std::string templateSource = properties->chatTemplateEngine == ChatTemplateEngine::JINJA ? properties->tokenizer.get_original_chat_template() : properties->tokenizer.get_chat_template();
+    auto analysisResult = ChatTemplateAnalyzer::analyze(templateSource);
+    properties->chatTemplateCaps = analysisResult.caps;
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template capabilities: {}",
+        analysisResult.caps.toString());
+    // Auto-detect or report manually configured tool parser
+    if (!isParserDisabled(properties->toolParserName)) {
+        if (!properties->toolParserName.empty()) {
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured tool_parser: {}", properties->toolParserName);
         } else if (analysisResult.detectedToolParser.has_value()) {
             properties->toolParserName = analysisResult.detectedToolParser.value();
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected tool_parser: {}", properties->toolParserName);
         }
-        // Auto-detect or report manually configured reasoning parser
-        if (isParserDisabled(properties->reasoningParserName)) {
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Reasoning parser explicitly disabled");
-            properties->reasoningParserName.clear();
-        } else if (!properties->reasoningParserName.empty()) {
+    }
+    // Auto-detect or report manually configured reasoning parser
+    if (!isParserDisabled(properties->reasoningParserName)) {
+        if (!properties->reasoningParserName.empty()) {
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured reasoning_parser: {}", properties->reasoningParserName);
         } else if (analysisResult.detectedReasoningParser.has_value()) {
             properties->reasoningParserName = analysisResult.detectedReasoningParser.value();
@@ -317,25 +323,19 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
     }
 
     probeServableChatTemplateCaps(properties);
+    SPDLOG_LOGGER_INFO(llm_calculator_logger, "Chat template loaded successfully. Engine: {}, Source: {}",
+        properties->chatTemplateEngine == ChatTemplateEngine::JINJA ? "JINJA" : "MINJA",
+        properties->chatTemplateSource == ChatTemplateSource::CHAT_TEMPLATE_JINJA ? "chat_template.jinja" : "GenAI-resolved tokenizer/model template");
 
-    if (properties->chatTemplateStatus == ChatTemplateStatus::AVAILABLE) {
-        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Chat template loaded successfully. Engine: {}, Source: {}",
-            properties->chatTemplateEngine == ChatTemplateEngine::JINJA ? "JINJA" : "MINJA",
-            properties->chatTemplateSource == ChatTemplateSource::CHAT_TEMPLATE_JINJA ? "chat_template.jinja" : "GenAI-resolved tokenizer/model template");
-    }
-
-    // Populate the InputProcessorContext from the now-fully-initialized properties.
     properties->inputProcessorContext.tokenizer = properties->tokenizer;
     properties->inputProcessorContext.chatTemplateCaps = properties->chatTemplateCaps;
     properties->inputProcessorContext.templateProcessor =
         properties->preparedChatTemplate.isPrepared() ? &properties->preparedChatTemplate : nullptr;
-    return StatusCode::OK;
 }
 
 Status GenAiServableInitializer::validateChatTemplateAvailability(
-    const std::shared_ptr<GenAiServableProperties>& properties,
-    bool chatTemplateEngineExplicit) {
-    if (chatTemplateEngineExplicit && properties->chatTemplateStatus != ChatTemplateStatus::AVAILABLE) {
+    const std::shared_ptr<GenAiServableProperties>& properties) {
+    if (properties->chatTemplateStatus != ChatTemplateStatus::AVAILABLE) {
         const char* failureReason = "template availability could not be determined";
         if (properties->chatTemplateStatus == ChatTemplateStatus::LOAD_FAILED) {
             failureReason = "the selected template could not be loaded";
@@ -348,6 +348,18 @@ Status GenAiServableInitializer::validateChatTemplateAvailability(
             "Explicit chat_template_engine requires a compatible chat template, but " + std::string(failureReason) + ".");
     }
     return StatusCode::OK;
+}
+
+void GenAiServableInitializer::clearDisabledParserNames(
+    const std::shared_ptr<GenAiServableProperties>& properties) {
+    if (isParserDisabled(properties->toolParserName)) {
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Tool parser explicitly disabled");
+        properties->toolParserName.clear();
+    }
+    if (isParserDisabled(properties->reasoningParserName)) {
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Reasoning parser explicitly disabled");
+        properties->reasoningParserName.clear();
+    }
 }
 
 void GenAiServableInitializer::applyGlobalCacheDir(std::shared_ptr<GenAiServableProperties> properties) {

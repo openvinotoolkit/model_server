@@ -28,6 +28,7 @@
 #include "../../http_payload.hpp"
 #include "../../http_rest_api_handler.hpp"
 #include "../../httpservermodule.hpp"
+#include "../../llm/io_processing/output_parser.hpp"
 #include "../../llm/language_model/continuous_batching/servable.hpp"
 #include "../../llm/language_model/continuous_batching/servable_initializer.hpp"
 #include "../../mediapipe_internal/mediapipegraphdefinition.hpp"
@@ -63,10 +64,12 @@ protected:
         std::cout << "Chat template to be used: \n"
                   << servable->getProperties()->tokenizer.get_original_chat_template() << std::endl;
         auto& properties = *servable->getProperties();
-        std::string errorMessage;
-        ASSERT_TRUE(properties.preparedChatTemplate.prepare(directoryPath, properties.tokenizer.get_chat_template(),
-            properties.tokenizer.get_bos_token(), properties.tokenizer.get_eos_token(), errorMessage))
-            << errorMessage;
+        properties.chatTemplateEngine = ChatTemplateEngine::JINJA;
+        const auto status = GenAiServableInitializer::loadChatTemplate(servable->getProperties(), directoryPath);
+        ASSERT_TRUE(status.ok()) << status.string();
+        ASSERT_EQ(properties.chatTemplateStatus, ChatTemplateStatus::AVAILABLE);
+        GenAiServableInitializer::analyzeChatTemplate(servable->getProperties());
+        ASSERT_TRUE(properties.preparedChatTemplate.isPrepared());
     }
 
     bool render(const std::string& body, std::string& output) {
@@ -144,7 +147,7 @@ TEST_F(LLMChatTemplateTest, ExplicitJinjaRejectsInvalidTemplate) {
     EXPECT_EQ(properties->chatTemplateStatus, ChatTemplateStatus::LOAD_FAILED);
     EXPECT_EQ(properties->chatTemplateSource, ChatTemplateSource::NONE);
     EXPECT_FALSE(properties->preparedChatTemplate.isPrepared());
-    const auto validationStatus = GenAiServableInitializer::validateChatTemplateAvailability(properties, true);
+    const auto validationStatus = GenAiServableInitializer::validateChatTemplateAvailability(properties);
     EXPECT_FALSE(validationStatus.ok());
     EXPECT_NE(validationStatus.string().find("could not be loaded"), std::string::npos);
 }
@@ -196,6 +199,7 @@ TEST_F(LLMChatTemplateTest, MinjaUsesChatTemplateJinjaSource) {
 
     const auto status = GenAiServableInitializer::loadChatTemplate(properties, directoryPath);
     ASSERT_TRUE(status.ok()) << status.string();
+    GenAiServableInitializer::analyzeChatTemplate(properties);
     EXPECT_EQ(properties->chatTemplateStatus, ChatTemplateStatus::AVAILABLE);
     EXPECT_EQ(properties->chatTemplateSource, ChatTemplateSource::CHAT_TEMPLATE_JINJA);
     // CreateJinjaConfig adds newline at the end. To consider if this behavior is expected in all cases.
@@ -216,7 +220,6 @@ TEST_F(LLMChatTemplateTest, ImplicitJinjaLoadFailureKeepsServableAvailable) {
     EXPECT_TRUE(status.ok()) << status.string();
     EXPECT_EQ(properties->chatTemplateEngine, ChatTemplateEngine::JINJA);
     EXPECT_EQ(properties->chatTemplateStatus, ChatTemplateStatus::LOAD_FAILED);
-    EXPECT_TRUE(GenAiServableInitializer::validateChatTemplateAvailability(properties, false).ok());
     EXPECT_FALSE(properties->preparedChatTemplate.isPrepared());
 }
 
@@ -234,7 +237,6 @@ TEST_F(LLMChatTemplateTest, MissingTemplateDisablesChatUnlessEngineWasExplicit) 
         ASSERT_TRUE(loadStatus.ok()) << loadStatus.string();
         EXPECT_EQ(properties->chatTemplateStatus, ChatTemplateStatus::MISSING);
         EXPECT_FALSE(properties->preparedChatTemplate.isPrepared());
-        EXPECT_TRUE(GenAiServableInitializer::validateChatTemplateAvailability(properties, false).ok());
     }
 
     for (const auto engine : {mediapipe::LLMCalculatorOptions::JINJA, mediapipe::LLMCalculatorOptions::MINJA}) {
@@ -247,7 +249,7 @@ TEST_F(LLMChatTemplateTest, MissingTemplateDisablesChatUnlessEngineWasExplicit) 
         const auto loadStatus = GenAiServableInitializer::loadChatTemplate(properties, directoryPath);
         ASSERT_TRUE(loadStatus.ok()) << loadStatus.string();
         EXPECT_EQ(properties->chatTemplateStatus, ChatTemplateStatus::MISSING);
-        const auto validationStatus = GenAiServableInitializer::validateChatTemplateAvailability(properties, true);
+        const auto validationStatus = GenAiServableInitializer::validateChatTemplateAvailability(properties);
         EXPECT_FALSE(validationStatus.ok());
         EXPECT_NE(validationStatus.string().find("Explicit chat_template_engine"), std::string::npos);
     }
@@ -270,6 +272,30 @@ TEST_F(LLMChatTemplateTest, MissingTemplateRejectsChatInputButAllowsCompletionIn
     EXPECT_TRUE(servable->validateInputCompatibility(completionContext).ok());
 }
 
+TEST_F(LLMChatTemplateTest, MissingTemplateClearsDisabledParsers) {
+    servable = std::make_shared<ContinuousBatchingServable>();
+    auto properties = servable->getProperties();
+    properties->tokenizer = ov::genai::Tokenizer(directoryPath);
+    properties->chatTemplateEngine = ChatTemplateEngine::MINJA;
+    properties->toolParserName = "none";
+    properties->reasoningParserName = "none";
+
+    const auto status = GenAiServableInitializer::loadChatTemplate(properties, directoryPath);
+    ASSERT_TRUE(status.ok()) << status.string();
+    EXPECT_EQ(properties->chatTemplateStatus, ChatTemplateStatus::MISSING);
+    EXPECT_EQ(properties->toolParserName, "none");
+    EXPECT_EQ(properties->reasoningParserName, "none");
+
+    GenAiServableInitializer::clearDisabledParserNames(properties);
+    EXPECT_TRUE(properties->toolParserName.empty());
+    EXPECT_TRUE(properties->reasoningParserName.empty());
+
+    const ToolsSchemas_t toolSchemas;
+    OutputParser outputParser(properties->tokenizer, properties->toolParserName, properties->reasoningParserName, toolSchemas);
+    EXPECT_FALSE(outputParser.isToolParserAvailable());
+    EXPECT_FALSE(outputParser.isReasoningParserAvailable());
+}
+
 TEST_F(LLMChatTemplateTest, MinjaIncompatibilityIsRecordedAsUnavailable) {
     std::string invalidTemplate = "{% invalid_tag %}";
     ASSERT_TRUE(CreateJinjaConfig(invalidTemplate));
@@ -282,7 +308,7 @@ TEST_F(LLMChatTemplateTest, MinjaIncompatibilityIsRecordedAsUnavailable) {
     ASSERT_TRUE(status.ok()) << status.string();
     EXPECT_EQ(properties->chatTemplateStatus, ChatTemplateStatus::INCOMPATIBLE);
     EXPECT_EQ(properties->chatTemplateSource, ChatTemplateSource::NONE);
-    EXPECT_FALSE(GenAiServableInitializer::validateChatTemplateAvailability(properties, true).ok());
+    EXPECT_FALSE(GenAiServableInitializer::validateChatTemplateAvailability(properties).ok());
 }
 
 TEST_F(LLMChatTemplateTest, ChatTemplateEmptyMessage) {

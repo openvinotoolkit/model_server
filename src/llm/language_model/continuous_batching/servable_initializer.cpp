@@ -292,9 +292,16 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     if (!status.ok()) {
         return status;
     }
-    status = validateChatTemplateAvailability(properties, nodeOptions.has_chat_template_engine());
-    if (!status.ok()) {
-        return status;
+    if (properties->chatTemplateStatus == ChatTemplateStatus::AVAILABLE) {
+        analyzeChatTemplate(properties);
+    }
+    clearDisabledParserNames(properties);
+
+    if (nodeOptions.has_chat_template_engine()) {
+        status = validateChatTemplateAvailability(properties);
+        if (!status.ok()) {
+            return status;
+        }
     }
     if (nodeOptions.has_max_tokens_limit()) {
         properties->maxTokensLimit = nodeOptions.max_tokens_limit();

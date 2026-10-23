@@ -169,9 +169,15 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
     if (!status.ok()) {
         return status;
     }
-    status = validateChatTemplateAvailability(properties, nodeOptions.has_chat_template_engine());
-    if (!status.ok()) {
-        return status;
+    if (properties->chatTemplateStatus == ChatTemplateStatus::AVAILABLE) {
+        analyzeChatTemplate(properties);
+    }
+    clearDisabledParserNames(properties);
+    if (nodeOptions.has_chat_template_engine()) {
+        status = validateChatTemplateAvailability(properties);
+        if (!status.ok()) {
+            return status;
+        }
     }
     properties->legacyExecutor = std::make_shared<LegacyExecutorWrapper>(properties->pipeline);
     if (nodeOptions.has_max_tokens_limit()) {
