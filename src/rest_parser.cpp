@@ -142,7 +142,7 @@ Status KFSRestParser::parseData(rapidjson::Value& node, ::KFSRequest::InferInput
     } else if (input.datatype() == "UINT8") {
         HANDLE_VALUE(mutable_uint_contents, GetUint, IsUint)
     } else if (input.datatype() == "FP64") {
-        HANDLE_VALUE(mutable_fp64_contents, GetFloat, IsNumber)
+        HANDLE_VALUE(mutable_fp64_contents, GetDouble, IsNumber)
     } else if (input.datatype() == "BOOL") {
         HANDLE_VALUE(mutable_bool_contents, GetBool, IsBool)
     } else if (input.datatype() == "BYTES") {
