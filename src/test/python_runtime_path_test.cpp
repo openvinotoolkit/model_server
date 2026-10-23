@@ -33,8 +33,13 @@ protected:
     py::scoped_interpreter interpreter;
     const std::filesystem::path packageRoot = std::filesystem::temp_directory_path() /
                                               ("ovms_python_path_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+#ifdef _WIN32
+    const std::filesystem::path executablePath = packageRoot / "ovms.exe";
+    const std::filesystem::path pythonDirectory = packageRoot / "python";
+#else
     const std::filesystem::path executablePath = packageRoot / "bin/ovms";
     const std::filesystem::path pythonDirectory = packageRoot / "lib/python";
+#endif
 
     void TearDown() override {
         std::filesystem::remove_all(packageRoot);
