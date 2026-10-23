@@ -557,6 +557,7 @@ ovms_cc_library(
             "io_processing/devstral/generation_config_builder.hpp",
             "io_processing/qwen3coder/generation_config_builder.hpp",
             "io_processing/gemma4/generation_config_builder.hpp",
+            "io_processing/gemma4/bounded_json_grammar.hpp",
             "io_processing/generation_config_builder.hpp"],
     srcs = ["io_processing/base_generation_config_builder.cpp",
             "io_processing/phi4/generation_config_builder.cpp",
@@ -566,7 +567,8 @@ ovms_cc_library(
     deps = [
         ":openai_request",
         "//src:libovmslogging",
-        "//third_party:genai",],
+        "//third_party:genai",
+        "@com_github_tencent_rapidjson//:rapidjson",],
     visibility = ["//visibility:public"],
 )
 

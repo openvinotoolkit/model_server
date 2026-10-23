@@ -221,9 +221,14 @@ TEST(QwenmonsterGenerationPolicy, ParserFamilyIsolation) {
     ASSERT_NE(list, nullptr);
     ASSERT_TRUE(*list);
     EXPECT_TRUE((*list)->at_least_one);
+    ASSERT_FALSE((*list)->tags.empty());
+    const auto* grammar = std::get_if<Structured::EBNF>(&(*list)->tags[0].content);
+    ASSERT_NE(grammar, nullptr);
+    EXPECT_NE(grammar->value.find("[ \\n\\t]{0,2}"), std::string::npos);
+    EXPECT_EQ(grammar->value.find("[ \\n\\t]*"), std::string::npos);
+    EXPECT_EQ(grammar->value.find("max_whitespace_cnt"), std::string::npos);
     const std::string json = (*list)->to_json();
-    EXPECT_NE(json.find("\"type\": \"json_schema\""), std::string::npos);
-    EXPECT_EQ(json.find("max_whitespace_cnt"), std::string::npos);
+    EXPECT_EQ(json.find("\"type\": \"json_schema\""), std::string::npos);
     EXPECT_NE(json.find("<|tool_call>call:weather"), std::string::npos);
     EXPECT_NE(json.find("<|tool_call>call:clock"), std::string::npos);
 }

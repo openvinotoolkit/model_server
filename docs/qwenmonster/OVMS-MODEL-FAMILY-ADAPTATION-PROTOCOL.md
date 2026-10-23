@@ -188,9 +188,9 @@ Known gap, not supported behavior:
 
 Generation policy:
 
-- `JSONSchema(schema, 2)` is not ported. The official 2026.4 GenAI header has a one-argument `JSONSchema` only. That is the API gap for this family.
-- There is no `gemma4` branch in `GenerationConfigBuilder`. The request falls through to the base builder.
-- `gemma4` must not pretend to install a hard policy. `requiresValidStructuredOutput()` is false.
+- Hard `required` and named choices install `TagsWithSeparator` with `at_least_one`. `parallel_tool_calls=false` sets `stop_after_first`.
+- Tool arguments are an EBNF grammar with `[ \n\t]{0,2}` between JSON tokens. That is the G-JWS bound of `JSONSchema(schema, 2)`. The 2026.4 GenAI DLL does not read `max_whitespace_cnt` from a structural tag, so a one-argument `JSONSchema` or a raw field leaves the call open. Do not put Gemma arguments back on unbounded `JSONSchema`.
+- `requiresValidStructuredOutput()` is true for that hard policy.
 - Test: `QwenmonsterGenerationPolicy.ParserFamilyIsolation`.
 
 ## Chat templates
@@ -213,4 +213,4 @@ A visually similar Jinja file is not token-equivalent. Pin the hash before calli
 
 Snapshot at distillation (2026-10-21): A0 partially proven (C6 SHA), A1/official template token-level pin pending, A2 sourced and documented, A3 applied, A4 source patches only, A5 builder candidate, A6–A8 not yet run. No ACCEPTED status.
 
-Semantic refit 2026.4 (2026-10-23): the Qwen3.6 policy above is implemented for tool parser `qwen3coder` with reasoning parser `qwen3`. Gemma4 hard policy uses the one-argument `JSONSchema` the 2026.4 header actually applies. A raw `max_whitespace_cnt` string is not applied by that runtime and leaves the tool call open. Gemma4 reasoning may open again after a tool envelope. LFM2.5-24B-A2B and the experimental GLM notes are consciously deferred. `ACCEPTED` requires a live model run of the candidate binary. No ACCEPTED status.
+Semantic refit 2026.4 (2026-10-23): the Qwen3.6 policy above is implemented for tool parser `qwen3coder` with reasoning parser `qwen3`. Gemma4 hard policy uses an EBNF argument grammar with whitespace bound `{0,2}` because this GenAI DLL does not apply `max_whitespace_cnt`. A one-argument `JSONSchema` leaves the call open on newlines. Gemma4 reasoning may open again after a tool envelope. LFM2.5-24B-A2B and the experimental GLM notes are consciously deferred. `ACCEPTED` requires a live model run of the candidate binary. No ACCEPTED status.

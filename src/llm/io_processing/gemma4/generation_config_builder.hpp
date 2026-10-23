@@ -11,6 +11,7 @@
 #include <openvino/genai/generation_config.hpp>
 
 #include "../base_generation_config_builder.hpp"
+#include "bounded_json_grammar.hpp"
 
 namespace ovms {
 class Gemma4GenerationConfigBuilder : public BaseGenerationConfigBuilder {
@@ -40,10 +41,9 @@ class Gemma4GenerationConfigBuilder : public BaseGenerationConfigBuilder {
             throw std::invalid_argument("Gemma4 guided tool schema for '" + toolName + "' is empty");
         ov::genai::StructuredOutputConfig::Tag tag;
         tag.begin = "<|tool_call>call:" + toolName;
-        // 2026.4 JSONSchema takes the schema only. A hand-built
-        // max_whitespace_cnt string is not applied, so the model can fill the
-        // open call with newlines until max_tokens and the parser publishes nothing.
-        tag.content = ov::genai::StructuredOutputConfig::JSONSchema(toolSchemaWrapper.stringRepr);
+        // G-JWS. JSONSchema(schema, 2) is the historical bound. This GenAI DLL
+        // does not forward max_whitespace_cnt, so the bound lives in the EBNF.
+        tag.content = ov::genai::StructuredOutputConfig::EBNF(gemma4BoundedJsonGrammar(toolSchemaWrapper.stringRepr));
         tag.end = "<tool_call|>";
         return tag;
     }

@@ -1,0 +1,46 @@
+{
+  "name": "qwm-semantic-refit-2026.4-rc3b",
+  "kind": "release-candidate",
+  "accepted": false,
+  "parent_tag": "qwm-semantic-refit-2026.4-rc3",
+  "parent": "b12a913ba492b951eb3384583e46541ffe467763",
+  "branch": "semantic-refit-2026.4",
+  "fork": "https://github.com/DassaultFalconKing/gemmamonster_model_server_OVMS.git",
+  "source_commit": "the commit that adds this file; read it from tag qwm-semantic-refit-2026.4-rc3b",
+  "delta": "Gemma tool arguments are an EBNF grammar with whitespace bound {0,2}. The 2026.4 GenAI DLL does not apply max_whitespace_cnt, so one-argument JSONSchema left required calls open on newlines and tabs.",
+  "build": {
+    "config": "win_mp_on_py_off",
+    "output_user_root": "C:\\r20264",
+    "sdk": "openvino_genai_windows_2026.4.0.0rc1_x86_64 isolated package",
+    "gpu_plugin": "stock SDK GPU, not custom moe38545 21a2fd9f"
+  },
+  "binaries": [
+    {
+      "path": "bazel-bin/src/ovms.exe",
+      "bytes": 22589440,
+      "sha256": "2beed15ee7f6af9a2c45854005caff24886562c8da5586f052bd2133e3d671c2",
+      "built_local": "2026-10-23T09:52:32"
+    },
+    {
+      "path": "bazel-bin/src/ovms_test.exe",
+      "bytes": 40527872,
+      "sha256": "aacd1f136a0142ade962f24543a8f3c4fb69b111689b353be3e2b397bc122f2c",
+      "built_local": "2026-10-23T09:58:28"
+    }
+  ],
+  "live": {
+    "gemma_e4b_six_request": "6/6 PASS, guided on and off, max_tokens 2048",
+    "gemma26_six_request": "6/6 PASS, guided on and off, max_tokens 2048",
+    "gemma26_case6": "required, parallel_tool_calls false, finish tool_calls, one get_weather Berlin",
+    "ornith_six_request": "6/6 PASS, guided on and off, max_tokens 2048"
+  },
+  "unit": {
+    "QwenmonsterGenerationPolicy": "11/11 PASS",
+    "Gemma4OutputParserTest_and_repair_filter": "PASS",
+    "Qwen3CoderOutputParserTest": "PASS, process exit 0"
+  },
+  "not_accepted": [
+    "full ovms_test suite",
+    "owner signoff"
+  ]
+}
