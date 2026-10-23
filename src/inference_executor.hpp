@@ -63,7 +63,6 @@ Status modelInferAsync(ModelInstance& instance, const RequestType* request,
         *request,
         instance.getInputsInfo(),
         instance.getOutputsInfo(),
-        instance.getOptionalInputNames(),
         instance.getModelConfig());
     if (status.batchSizeChangeRequired() || status.reshapeRequired()) {
         // We are ensured that request shape is valid and convertible to model shape (non negative, non zero)
@@ -228,7 +227,6 @@ Status infer(ModelInstance& instance, const RequestType* requestProto,
         *requestProto,
         instance.getInputsInfo(),
         instance.getOutputsInfo(),
-        instance.getOptionalInputNames(),
         instance.getModelConfig());
     if (status.batchSizeChangeRequired() || status.reshapeRequired()) {
         // We are ensured that request shape is valid and convertible to model shape (non negative, non zero)

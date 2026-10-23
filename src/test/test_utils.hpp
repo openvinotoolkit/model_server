@@ -486,7 +486,6 @@ public:
             *request,
             this->getInputsInfo(),
             this->getOutputsInfo(),
-            this->getOptionalInputNames(),
             this->getModelConfig());
     }
 };

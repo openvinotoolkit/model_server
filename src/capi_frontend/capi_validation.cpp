@@ -320,12 +320,12 @@ const std::string* getRawInputContents(const ovms::InferenceRequest& request, si
     }
 
 template <>
-Status validate(const InferenceRequest& request, const tensor_map_t& inputsInfo, const tensor_map_t& outputsInfo, const std::set<std::string>& optionalAllowedInputNames, const ModelConfig& modelConfig) {
+Status validate(const InferenceRequest& request, const tensor_map_t& inputsInfo, const tensor_map_t& outputsInfo, const ModelConfig& modelConfig) {
     OVMS_PROFILE_FUNCTION();
-    auto inputValidationStatus = RequestValidator<InferenceRequest, InferenceTensor, ValidationChoice::INPUT, const InferenceTensor*, signed_shape_t>(request, inputsInfo, outputsInfo, optionalAllowedInputNames, modelConfig).validate();
+    auto inputValidationStatus = RequestValidator<InferenceRequest, InferenceTensor, ValidationChoice::INPUT, const InferenceTensor*, signed_shape_t>(request, inputsInfo, outputsInfo, modelConfig).validate();
     if (!inputValidationStatus.ok())
         return inputValidationStatus;
-    return RequestValidator<InferenceRequest, InferenceTensor, ValidationChoice::OUTPUT, const InferenceTensor*, signed_shape_t>(request, inputsInfo, outputsInfo, optionalAllowedInputNames, modelConfig).validate();
+    return RequestValidator<InferenceRequest, InferenceTensor, ValidationChoice::OUTPUT, const InferenceTensor*, signed_shape_t>(request, inputsInfo, outputsInfo, modelConfig).validate();
 }
 }  // namespace request_validation_utils
 }  // namespace ovms

@@ -80,7 +80,6 @@ Status validate(
     const RequestType& request,
     const tensor_map_t& inputsInfo,
     const tensor_map_t& outputsInfo,
-    const std::set<std::string>& optionalAllowedInputNames,
     const ModelConfig& modelConfig);
 
 template <typename RequestType, typename InputTensorType, ValidationChoice choice, typename InputIterator, typename ShapeType>
@@ -88,7 +87,6 @@ class RequestValidator {
     const RequestType& request;
     const tensor_map_t& inputsInfo;
     const tensor_map_t& outputsInfo;
-    const std::set<std::string>& optionalAllowedInputNames;
     const ModelConfig& modelConfig;
     const std::string& servableName;
     const model_version_t servableVersion;
@@ -107,11 +105,10 @@ class RequestValidator {
 public:
     RequestValidator(
         const RequestType& request, const tensor_map_t& inputsInfo, const tensor_map_t& outputsInfo,
-        const std::set<std::string>& optionalAllowedInputNames, const ModelConfig& modelConfig) :
+        const ModelConfig& modelConfig) :
         request(request),
         inputsInfo(inputsInfo),
         outputsInfo(outputsInfo),
-        optionalAllowedInputNames(optionalAllowedInputNames),
         modelConfig(modelConfig),
         servableName(modelConfig.getName()),
         servableVersion(modelConfig.getVersion()),
