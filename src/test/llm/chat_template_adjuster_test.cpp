@@ -168,18 +168,18 @@ TEST(ChatTemplateAdjusterTest, preservesLineBreaksAndSurroundingText) {
 
 TEST(ChatTemplateAdjusterTest, removesBracketsWhenRemovingFunction) {
     std::string tmpl = "{{ value | min() }}";
-    const RemoveFiltersAdjustment adjustment({"min"});
+    const ChatTemplateAdjuster adjuster({{"min"}});
 
-    adjustment.apply(tmpl);
+    adjuster.adjust(tmpl);
 
     EXPECT_EQ(tmpl, "{{ value }}");
 }
 
 TEST(ChatTemplateAdjusterTest, removesFunctionWithArguments) {
     std::string tmpl = "{{ value | min(some_param=42) }}";
-    const RemoveFiltersAdjustment adjustment({"min"});
+    const ChatTemplateAdjuster adjuster({{"min"}});
 
-    adjustment.apply(tmpl);
+    adjuster.adjust(tmpl);
 
     EXPECT_EQ(tmpl, "{{ value }}");
 }

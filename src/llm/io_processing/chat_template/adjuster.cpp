@@ -16,6 +16,7 @@
 #include "adjuster.hpp"
 
 #include <cctype>
+#include <iostream>
 #include <regex>
 #include <string>
 #include <utility>
@@ -29,7 +30,27 @@ bool isIdentifierChar(char value) {
 
 bool findFilter(const std::string& source, const std::string& function,
     size_t searchFrom, size_t& pipePosition, size_t& functionEnd) {
-    for (size_t pipe = source.find('|', searchFrom); pipe != std::string::npos; pipe = source.find('|', pipe + 1)) {
+    char quote = '\0';
+    bool escaped = false;
+    for (size_t pipe = 0; pipe < source.size(); ++pipe) {
+        const char value = source[pipe];
+        if (quote != '\0') {
+            if (escaped) {
+                escaped = false;
+            } else if (value == '\\') {
+                escaped = true;
+            } else if (value == quote) {
+                quote = '\0';
+            }
+            continue;
+        }
+        if (value == '\'' || value == '"') {
+            quote = value;
+            continue;
+        }
+        if (pipe < searchFrom || value != '|') {
+            continue;
+        }
         size_t functionStart = pipe + 1;
         while (functionStart < source.size() && std::isspace(static_cast<unsigned char>(source[functionStart]))) {
             ++functionStart;
@@ -157,8 +178,12 @@ ChatTemplateAdjusterConfig ChatTemplateAdjusterConfig::forJinja() {
 }
 
 ChatTemplateAdjuster::ChatTemplateAdjuster(const ChatTemplateAdjusterConfig& config) {
-    if (!config.removeFunctionsParams.empty()) {
-        adjustments.emplace_back(std::make_unique<RemoveFunctionParamsAdjustment>(config.removeFunctionsParams));
+    if (!config.removeFunctionsParams.empty() || !config.removeFunctions.empty()) {
+        std::vector<std::string> removeFunctionsParams = config.removeFunctionsParams;
+        removeFunctionsParams.emplace_back(config.removeFunctions.front());
+        if (!removeFunctionsParams.empty()) {
+            adjustments.emplace_back(std::make_unique<RemoveFunctionParamsAdjustment>(removeFunctionsParams));
+        }
     }
     if (!config.removeFunctions.empty()) {
         adjustments.emplace_back(std::make_unique<RemoveFiltersAdjustment>(config.removeFunctions));
