@@ -16,6 +16,7 @@
 
 #include <openvino/genai/tokenizer.hpp>
 #include <algorithm>
+#include <cctype>
 #include <cstring>
 #include <string>
 #include <stack>
@@ -92,6 +93,49 @@ void Qwen3CoderToolParserImpl::addParameterToCurrentFunctionDoc(std::string& par
         return;
     }
     rapidjson::Value keyVal(key.c_str(), allocator);
+    ParameterType expectedType = ParameterType::UNKNOWN;
+    if (paramIt != this->toolsParametersTypeMap.end()) {
+        const auto p = paramIt->second.find(currentParameterName);
+        if (p != paramIt->second.end())
+            expectedType = p->second;
+    }
+    if (expectedType == ParameterType::STRING) {
+        // Gemma encodes delimited argument bytes once. A JSON parse of the same
+        // text turns \t into a tab and \\ into one backslash. A string parameter
+        // is those bytes. A clean wrapping quote pair is only a delimiter.
+        std::string literal = parameterValueAsString;
+        trimSurroundingQuotes(literal);
+        rapidjson::Value literalValue;
+        literalValue.SetString(literal.c_str(), static_cast<rapidjson::SizeType>(literal.size()), allocator);
+        currentFunctionArgsDoc.AddMember(keyVal, literalValue, allocator);
+        return;
+    }
+    const bool losslessTypedValue = expectedType == ParameterType::NUMBER ||
+                                    expectedType == ParameterType::ARRAY || expectedType == ParameterType::OBJECT;
+    if (losslessTypedValue || expectedType == ParameterType::UNKNOWN) {
+        const auto exact = normalizeJsonLosslessly(parameterValueAsString);
+        const bool spellingOk = exact.has_value() && !exact->empty() &&
+            ((expectedType == ParameterType::NUMBER && ((*exact)[0] == '-' || std::isdigit(static_cast<unsigned char>((*exact)[0])))) ||
+             (expectedType == ParameterType::ARRAY && (*exact)[0] == '[') ||
+             (expectedType == ParameterType::OBJECT && (*exact)[0] == '{') ||
+             (expectedType == ParameterType::UNKNOWN &&
+                 ((*exact)[0] == '-' || std::isdigit(static_cast<unsigned char>((*exact)[0])) || (*exact)[0] == '[' || (*exact)[0] == '{')));
+        if (losslessTypedValue && !spellingOk) {
+            SPDLOG_WARN("Dropping Qwen tool call with invalid typed argument: function={} parameter={}",
+                currentFunction.name, currentParameterName);
+            currentFunction.invalidTypedArgument = true;
+            return;
+        }
+        if (spellingOk) {
+            // The SAX pass has validated the complete value. Keep only a member
+            // placeholder in the DOM: publication uses exactJsonMembers, so no
+            // numeric token needs to be converted through a DOM number type.
+            rapidjson::Value placeholder;
+            currentFunctionArgsDoc.AddMember(keyVal, placeholder, allocator);
+            currentFunction.exactJsonMembers.emplace(key, *exact);
+            return;
+        }
+    }
     rapidjson::Document temp;
     if (paramIt != this->toolsParametersTypeMap.end()) {
         auto paramJt = paramIt->second.find(currentParameterName);
@@ -102,13 +146,6 @@ void Qwen3CoderToolParserImpl::addParameterToCurrentFunctionDoc(std::string& par
     temp.Parse(parameterValueAsString.c_str());
     // Known non-string JSON types must never silently degrade to strings: an
     // integer argument containing a half-written number is not an executable call.
-    ParameterType expectedType = ParameterType::UNKNOWN;
-    if (paramIt != this->toolsParametersTypeMap.end()) {
-        const auto p = paramIt->second.find(currentParameterName);
-        if (p != paramIt->second.end()) {
-            expectedType = p->second;
-        }
-    }
     const bool typedValue = expectedType == ParameterType::NUMBER ||
                             expectedType == ParameterType::BOOLEAN ||
                             expectedType == ParameterType::ARRAY ||
@@ -142,12 +179,6 @@ void Qwen3CoderToolParserImpl::addParameterToCurrentFunctionDoc(std::string& par
     } else {
         rapidjson::Value valueCopy;
         valueCopy.CopyFrom(temp, allocator);
-        if (paramIt != this->toolsParametersTypeMap.end()) {
-            auto paramJt = paramIt->second.find(currentParameterName);
-            if (paramJt != paramIt->second.end() && (paramJt->second == ParameterType::STRING)) {
-                enforceStringValue(valueCopy, parameterValueAsString, allocator);
-            }
-        }
         // Add or overwrite key in the main document
         if (!currentFunctionArgsDoc.HasMember(keyVal)) {
             SPDLOG_TRACE("Will add key:{} val:{} type:{}", key, parameterValueAsString, jsonTypeOf(valueCopy));
@@ -264,7 +295,25 @@ bool Qwen3CoderToolParserImpl::parseUntilStateChange(ToolCalls_t& toolCalls) {
         {
             rapidjson::StringBuffer buffer;
             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            this->currentFunction.argumentsAsDocument.Accept(writer);
+            auto& doc = this->currentFunction.argumentsAsDocument;
+            auto& exact = this->currentFunction.exactJsonMembers;
+            writer.StartObject();
+            for (auto member = doc.MemberBegin(); member != doc.MemberEnd(); ++member) {
+                writer.Key(member->name.GetString(), member->name.GetStringLength());
+                const auto spelled = exact.find(member->name.GetString());
+                if (spelled != exact.end()) {
+                    const std::string& raw = spelled->second;
+                    rapidjson::Type type = rapidjson::kNumberType;
+                    if (!raw.empty() && raw.front() == '{')
+                        type = rapidjson::kObjectType;
+                    else if (!raw.empty() && raw.front() == '[')
+                        type = rapidjson::kArrayType;
+                    writer.RawValue(raw.data(), static_cast<rapidjson::SizeType>(raw.size()), type);
+                } else {
+                    member->value.Accept(writer);
+                }
+            }
+            writer.EndObject();
             argumentsAsString = buffer.GetString();
         }
         if (!this->currentFunction.invalidTypedArgument) {

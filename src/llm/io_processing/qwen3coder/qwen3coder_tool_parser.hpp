@@ -44,8 +44,12 @@ struct Functool {
         name.clear();
         invalidTypedArgument = false;
         argumentsAsDocument.SetObject();
+        exactJsonMembers.clear();
     }
     rapidjson::Document argumentsAsDocument;
+    // Original JSON text for numbers, arrays and objects. RapidJSON's DOM
+    // would rewrite 1.10, 1e3 and integers wider than 2^53.
+    std::map<std::string, std::string> exactJsonMembers;
     Functool() {
         argumentsAsDocument.SetObject();
     }

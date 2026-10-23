@@ -13,12 +13,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <optional>
 #include <random>
 #include <string>
 #include <cctype>
 
 #include "utils.hpp"
 #include "src/stringutils.hpp"
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 6313)
+#endif
+#include <rapidjson/reader.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 namespace ovms {
 std::string generateRandomId() {
@@ -236,6 +248,27 @@ std::string escapeAsJsonString(const std::string& rawValue) {
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     writer.String(rawValue.c_str(), static_cast<rapidjson::SizeType>(rawValue.size()));
     return buffer.GetString();
+}
+
+namespace {
+class NumberPreservingWriter : public rapidjson::Writer<rapidjson::StringBuffer> {
+public:
+    explicit NumberPreservingWriter(rapidjson::StringBuffer& buffer) :
+        rapidjson::Writer<rapidjson::StringBuffer>(buffer) {}
+    bool RawNumber(const char* value, rapidjson::SizeType length, bool) {
+        return RawValue(value, length, rapidjson::kNumberType);
+    }
+};
+}  // namespace
+
+std::optional<std::string> normalizeJsonLosslessly(const std::string& input) {
+    rapidjson::StringStream stream(input.c_str());
+    rapidjson::Reader reader;
+    rapidjson::StringBuffer buffer;
+    NumberPreservingWriter writer(buffer);
+    if (!reader.Parse<rapidjson::kParseNumbersAsStringsFlag>(stream, writer) || stream.Tell() != input.size())
+        return std::nullopt;
+    return std::string(buffer.GetString(), buffer.GetSize());
 }
 
 bool isWrappedByDelimiter(const std::string& value, const std::string& delimiter) {

@@ -1381,6 +1381,80 @@ TEST_F(Qwen3CoderOutputParserTest, QwenmonsterSchemaValidationBeforePublication)
 class Qwen3CoderOutputParserParametrizedTest : public Qwen3CoderOutputParserTest, public ::testing::WithParamInterface<std::tuple<std::string, std::string, std::string, std::string>> {
 };
 
+TEST_F(Qwen3CoderOutputParserTest, VariousArgumentTypesPreserveDeclaredSchemaBytes) {
+    const std::vector<std::tuple<std::string, std::string, std::string>> cases = {
+        {"number", "1.10", R"({"arg1":1.10})"},
+        {"number", "1e3", R"({"arg1":1e3})"},
+        {"integer", "9007199254740993", R"({"arg1":9007199254740993})"},
+        {"array", "[1.10, 1e3, 9007199254740993]", R"({"arg1":[1.10,1e3,9007199254740993]})"},
+        {"object", R"({"a":1.10, "b":[1e3,9007199254740993]})", R"({"arg1":{"a":1.10,"b":[1e3,9007199254740993]}})"},
+        {"string", R"("C:\test")", R"({"arg1":"C:\\test"})"},
+        {"string", R"(\\)", R"({"arg1":"\\\\"})"},
+        {"string", "#B4E8", R"({"arg1":"#B4E8"})"},
+        {"boolean", "True", R"({"arg1":true})"},
+        {"boolean", "False", R"({"arg1":false})"},
+        {"null", "null", R"({"arg1":null})"}};
+    for (const auto& [type, input, expected] : cases) {
+        SCOPED_TRACE(type + " " + input);
+        const std::string schemaText = R"({"type":"object","properties":{"arg1":{"type":")" + type + R"("}},"required":["arg1"]})";
+        rapidjson::Document schema;
+        schema.Parse(schemaText.c_str());
+        ToolsSchemas_t schemas{{"tool", ToolSchemaWrapper{&schema, schemaText}}};
+        Qwen3CoderToolParser parser(*qwen3Tokenizer, schemas);
+        const std::string envelope = "<tool_call><function=tool><parameter=arg1>" + input + "</parameter></function></tool_call>";
+        std::string arguments;
+        size_t headers = 0;
+        auto collect = [&](const Delta& delta) {
+            const auto& call = std::get<ToolCallDelta>(delta);
+            if (call.name.has_value()) {
+                EXPECT_EQ(*call.name, "tool");
+                ++headers;
+            }
+            arguments += call.arguments;
+        };
+        for (const char byte : envelope) {
+            if (auto delta = parser.parseChunk(std::string(1, byte), {}, ov::genai::GenerationFinishReason::NONE))
+                collect(*delta);
+            while (auto delta = parser.drainPendingDelta())
+                collect(*delta);
+        }
+        EXPECT_EQ(headers, 1);
+        EXPECT_EQ(arguments, expected);
+    }
+}
+
+TEST_F(Qwen3CoderOutputParserTest, VariousArgumentTypesRejectInvalidDeclaredJson) {
+    const std::vector<std::pair<std::string, std::string>> cases = {
+        {"number", "1e"}, {"number", "01"}, {"number", "1.10 trailing"},
+        {"number", "\"1.10\""}, {"array", "[1.10,"}, {"array", "{}"},
+        {"object", "{\"a\":1e}"}, {"object", "[]"}};
+    for (const auto& [type, input] : cases) {
+        SCOPED_TRACE(type + " " + input);
+        const std::string schemaText = R"({"type":"object","properties":{"arg1":{"type":")" + type + R"("}}})";
+        rapidjson::Document schema;
+        schema.Parse(schemaText.c_str());
+        ToolsSchemas_t schemas{{"tool", ToolSchemaWrapper{&schema, schemaText}}};
+        Qwen3CoderToolParser parser(*qwen3Tokenizer, schemas);
+        EXPECT_FALSE(parser.parseChunk("<tool_call><function=tool><parameter=arg1>" + input + "</parameter></function></tool_call>", {}, ov::genai::GenerationFinishReason::STOP).has_value());
+        EXPECT_FALSE(parser.drainPendingDelta().has_value());
+    }
+}
+
+TEST_F(Qwen3CoderOutputParserTest, VariousArgumentTypesClearExactMembersBetweenCalls) {
+    const ToolsParameterTypeMap_t types = {
+        {"number_tool", {{"arg1", ParameterType::NUMBER}}},
+        {"string_tool", {{"arg1", ParameterType::STRING}}}};
+    Qwen3CoderToolParserImpl parser(types);
+    const auto first = parser.parseChunk("<tool_call><function=number_tool><parameter=arg1>1.10</parameter></function></tool_call>");
+    ASSERT_TRUE(first.has_value());
+    ASSERT_EQ(first->size(), 1);
+    EXPECT_EQ(first->front().arguments, R"({"arg1":1.10})");
+    const auto second = parser.parseChunk("<tool_call><function=string_tool><parameter=arg1>text</parameter></function></tool_call>");
+    ASSERT_TRUE(second.has_value());
+    ASSERT_EQ(second->size(), 1);
+    EXPECT_EQ(second->front().arguments, R"({"arg1":"text"})");
+}
+
 TEST_P(Qwen3CoderOutputParserParametrizedTest, TestJustParserImplWithVariousArgumentTypes) {
     const std::string& toolName = std::get<0>(GetParam());
     const std::string& argName = std::get<1>(GetParam());
@@ -1426,7 +1500,14 @@ const std::vector<std::tuple<std::string, std::string, std::string, std::string>
     {"string_tool", "arg1", "1.10", "{\"arg1\":\"1.10\"}"},
     {"string_tool", "arg1", "1e3", "{\"arg1\":\"1e3\"}"},
     {"string_tool", "arg1", "[1, 2,   3]", "{\"arg1\":\"[1, 2,   3]\"}"},
-    {"string_tool", "arg1", "{\"a\": 1,  \"b\": 2}", "{\"arg1\":\"{\\\"a\\\": 1,  \\\"b\\\": 2}\"}"}};
+    {"string_tool", "arg1", "{\"a\": 1,  \"b\": 2}", "{\"arg1\":\"{\\\"a\\\": 1,  \\\"b\\\": 2}\"}"},
+    // A quoted string is literal bytes. JSON would turn \t into a tab.
+    {"string_tool", "arg1", "\"C:\\test\"", "{\"arg1\":\"C:\\\\test\"}"},
+    // Number spelling is part of the value. A DOM round trip would rewrite these.
+    {"float_tool", "arg1", "1.10", "{\"arg1\":1.10}"},
+    {"float_tool", "arg1", "1e3", "{\"arg1\":1e3}"},
+    {"int_tool", "arg1", "9007199254740993", "{\"arg1\":9007199254740993}"},
+    {"object_tool", "arg1", "{\"a\":1.10}", "{\"arg1\":{\"a\":1.10}}"}};
 
 INSTANTIATE_TEST_SUITE_P(
     Qwen3CoderOutputParserParametrizedTestInstance,

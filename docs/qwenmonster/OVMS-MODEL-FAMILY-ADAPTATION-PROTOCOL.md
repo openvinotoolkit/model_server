@@ -193,6 +193,10 @@ Generation policy:
 - `requiresValidStructuredOutput()` is true for that hard policy.
 - Test: `QwenmonsterGenerationPolicy.ParserFamilyIsolation`.
 
+String tool arguments are the model's bytes, encoded once. Do not JSON-unescape them: `\t` stays a backslash and a `t`, and `\\` stays two backslashes. A clean wrapping quote pair is only a delimiter. Integers and floats keep the spelling the model wrote, including trailing zeros, exponent form, and every digit of an integer wider than 2^53. Numbers nested in an object or array argument keep that spelling too. Structural whitespace inside those containers may be compacted. `true`, `false` and `null` are JSON literals; Python `True` and `False` are normalized to them. Hashes, paths and snapshot tags are strings, so they follow the string rule.
+
+Gemma already does this: delimited text goes through `escapeAsJsonString`, and JSON values go through its local `normalizeJsonLosslessly` (`kParseNumbersAsStringsFlag` plus a `RawNumber` that calls `RawValue(..., kNumberType)`). Qwen3Coder follows the same lossless approach for schema types `string`, `integer`, `number`, `array` and `object`: string bytes are encoded once, and validated JSON text is retained per parameter for publication. Gemma's implementation remains separate and is not edited or migrated to the Qwen helper. Hermes, Llama, Phi, Devstral, Onyx and MiniCPM still round-trip a parsed DOM and can change spelling. They need the same lossless JSON and literal string approach; implementing it for those families is outside this change.
+
 ## Chat templates
 
 Use the canonical Qwen3.6 chat template.

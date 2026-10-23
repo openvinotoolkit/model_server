@@ -85,6 +85,11 @@ std::string replaceSingleWithDoubleQuotes(const std::string& input);
 // escapes), otherwise takes it literally (e.g. Windows paths are not validly escaped JSON).
 std::string escapeAsJsonString(const std::string& rawValue);
 
+// Parses one JSON value and writes it back without changing number spelling.
+// 1.10 stays 1.10, 1e3 stays 1e3, and an integer wider than 2^53 keeps every digit.
+// Returns nullopt when input is not exactly one JSON value.
+std::optional<std::string> normalizeJsonLosslessly(const std::string& input);
+
 // Returns true if value is wrapped on both ends by delimiter (and long enough to hold two).
 bool isWrappedByDelimiter(const std::string& value, const std::string& delimiter);
 
