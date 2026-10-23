@@ -211,11 +211,22 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
             templateSourceReadFailed = true;
             SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to open chat template file: {}", chatTemplateJinjaPath.string());
         } else {
-            templateSource.assign(std::istreambuf_iterator<char>(chatTemplateFile), std::istreambuf_iterator<char>());
-            if (chatTemplateFile.bad()) {
+            bool fileReadFailed = false;
+            try {
+                templateSource.assign(std::istreambuf_iterator<char>(chatTemplateFile), std::istreambuf_iterator<char>());
+            } catch (const std::ios_base::failure& e) {
                 templateSource.clear();
-                templateSourceReadFailed = true;
+                fileReadFailed = true;
+                SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed while reading chat template file {}: {}",
+                    chatTemplateJinjaPath.string(), e.what());
+            }
+            if (!fileReadFailed && chatTemplateFile.bad()) {
+                templateSource.clear();
+                fileReadFailed = true;
                 SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed while reading chat template file: {}", chatTemplateJinjaPath.string());
+            }
+            if (fileReadFailed) {
+                templateSourceReadFailed = true;
             } else if (templateSource.empty()) {
                 SPDLOG_LOGGER_WARN(llm_calculator_logger, "Chat template file is empty; trying GenAI's resolved template");
             } else {

@@ -169,6 +169,21 @@ TEST_F(LLMChatTemplateTest, EmptyJinjaFileFallsBackToGenAiTokenizerTemplate) {
     EXPECT_TRUE(properties->preparedChatTemplate.isPrepared());
 }
 
+TEST_F(LLMChatTemplateTest, JinjaReadFailureFallsBackToGenAiTokenizerTemplate) {
+    servable = std::make_shared<ContinuousBatchingServable>();
+    auto properties = servable->getProperties();
+    properties->tokenizer = ov::genai::Tokenizer(directoryPath);
+    properties->tokenizer.set_chat_template("{{ messages[0]['content'] }}");
+    properties->chatTemplateEngine = ChatTemplateEngine::JINJA;
+    ASSERT_TRUE(std::filesystem::create_directory(jinjaConfigFilePath));
+
+    const auto status = GenAiServableInitializer::loadChatTemplate(properties, directoryPath);
+    ASSERT_TRUE(status.ok()) << status.string();
+    EXPECT_EQ(properties->chatTemplateStatus, ChatTemplateStatus::AVAILABLE);
+    EXPECT_EQ(properties->chatTemplateSource, ChatTemplateSource::GENAI_TOKENIZER);
+    EXPECT_TRUE(properties->preparedChatTemplate.isPrepared());
+}
+
 TEST_F(LLMChatTemplateTest, JinjaFileWinsOverTokenizerConfigTemplate) {
     std::string fileTemplate = "file:{{ messages[0]['content'] }}";
     ASSERT_TRUE(CreateJinjaConfig(fileTemplate));
