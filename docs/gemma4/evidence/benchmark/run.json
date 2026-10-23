@@ -1,0 +1,15 @@
+{
+  "timestamp_utc": "20260914T224446Z",
+  "endpoint": "http://127.0.0.1:18091/v3",
+  "requested_model": "gemma4-26-heretic",
+  "published_models": [
+    "gemma4-26-heretic"
+  ],
+  "sampling": {
+    "do_sample": true,
+    "temperature": 1.0,
+    "top_k": 64,
+    "top_p": 0.95
+  },
+  "throughput": "completion_tokens / client wall time seconds"
+}

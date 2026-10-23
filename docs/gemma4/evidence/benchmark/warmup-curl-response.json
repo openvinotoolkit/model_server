@@ -1,0 +1,1 @@
+{"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"message":{"content":"I am ready.","role":"assistant","tool_calls":[]}}],"created":1789425886,"model":"gemma4-26-heretic","object":"chat.completion","usage":{"prompt_tokens":21,"completion_tokens":5,"total_tokens":26}}

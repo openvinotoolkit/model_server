@@ -1,0 +1,1 @@
+{"model":"gemma4-26-heretic","messages":[{"role":"user","content":"Write a continuous detailed technical explanation of GPU transformer inference optimization. Do not use tools, headings, lists, or a conclusion. Keep expanding the explanation until the token limit."}],"max_tokens":512,"temperature":1.0,"top_k":64,"top_p":0.95,"seed":777}

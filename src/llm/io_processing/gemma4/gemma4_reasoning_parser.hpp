@@ -16,40 +16,51 @@
 #pragma once
 
 #include <openvino/genai/tokenizer.hpp>
-#include <vector>
+#include <optional>
 #include <string>
+#include <utility>
+#include <vector>
 
-#include "../qwen3/reasoning_parser.hpp"
+#include "../base_output_parser.hpp"
 
 namespace ovms {
-class Gemma4ReasoningParser : public Qwen3ReasoningParser {
-protected:
-    const int64_t channelStartTokenId = 100;  // <|channel>
-    const int64_t channelEndTokenId = 101;    // <channel|>
 
-    const std::string reasoningStrIndicator = "thought\n";
-    const std::string parsingStartTag = "<|channel>" + reasoningStrIndicator;
-    const std::string parsingEndTag = "<channel|>";
-
-    void skipToken(const std::vector<int64_t>& generatedTokens, size_t& pos, int64_t tokenId);
+class Gemma4ReasoningParser : public BaseOutputParser {
+    bool phaseEntryTagConsumed{false};
 
 public:
     Gemma4ReasoningParser() = delete;
+
+    static OutputParsingConfig defaultParsingConfig() {
+        OutputParsingConfig cfg;
+        cfg.startTags = {"<|channel>thought\n"};
+        // <|channel> is a single special token. The generic streamer can hold it
+        // until the following `thought\n` role label completes the semantic opener.
+        cfg.tokenIdStartTags = {"<|channel>"};
+        cfg.endTag = "<channel|>";
+        cfg.needsSpecialTokens = true;
+        // Google's canonical Gemma4 tool sequence explicitly closes the thought
+        // channel with <channel|> before <|tool_call>. Keep tool-start takeover as
+        // a tolerant recovery boundary only: if malformed/edge output or streaming
+        // state presents a complete native tool opener while reasoning still owns
+        // the stream, preserve the reasoning prefix and hand the opener intact to
+        // the tool parser instead of swallowing it as reasoning.
+        cfg.toolStartTerminatesReasoning = true;
+        return cfg;
+    }
+
     explicit Gemma4ReasoningParser(ov::genai::Tokenizer& tokenizer,
         std::optional<OutputParsingConfig> configOverride = std::nullopt) :
-        Qwen3ReasoningParser(tokenizer, [&]() -> std::optional<OutputParsingConfig> {
-            if (configOverride.has_value())
-                return configOverride;
-            OutputParsingConfig cfg;
-            cfg.startTags = {"<|channel>thought\n"};
-            cfg.preambleStartTags = {"thought\n"};
-            cfg.tokenIdStartTags = {"<|channel>"};
-            cfg.endTag = "<channel|>";
-            cfg.needsSpecialTokens = true;
-            return cfg;
-        }()) {
-        resolveSpecialTokenIds();
+        BaseOutputParser(tokenizer,
+            configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+
+    void resetState() override {
+        phaseEntryTagConsumed = false;
     }
-    std::optional<Delta> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
+
+    std::optional<Delta> parseChunk(const std::string& chunk,
+        const std::vector<int64_t>& tokens,
+        ov::genai::GenerationFinishReason finishReason) override;
 };
+
 }  // namespace ovms

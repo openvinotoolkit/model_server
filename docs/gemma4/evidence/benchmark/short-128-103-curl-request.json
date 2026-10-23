@@ -1,0 +1,1 @@
+{"model":"gemma4-26-heretic","messages":[{"role":"user","content":"Generate a continuous technical explanation of transformer inference performance. Do not use tools, headings, lists, or an early conclusion. Continue until the token limit."}],"max_tokens":128,"temperature":1.0,"top_k":64,"top_p":0.95,"seed":103}

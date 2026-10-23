@@ -1,0 +1,36 @@
+[
+  {
+    "case": "single",
+    "status": "PASS",
+    "http": 200,
+    "call_count": 1,
+    "finish_reason": "tool_calls",
+    "texts": [
+      "RC17064400-single"
+    ],
+    "elapsed_s": 1.884
+  },
+  {
+    "case": "parallel",
+    "status": "PASS",
+    "http": 200,
+    "call_count": 2,
+    "finish_reason": "tool_calls",
+    "texts": [
+      "RC17064400-first",
+      "RC17064400-second"
+    ],
+    "elapsed_s": 2.668
+  },
+  {
+    "case": "stream",
+    "status": "PASS",
+    "http": 200,
+    "call_count": 1,
+    "finish_reason": "tool_calls",
+    "texts": [
+      "RC17064400-single"
+    ],
+    "elapsed_s": 1.23
+  }
+]

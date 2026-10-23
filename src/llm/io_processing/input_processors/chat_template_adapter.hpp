@@ -29,6 +29,11 @@ namespace chat_template_adapter {
 // Models like Gemma require arguments as a dict/object, not a stringified JSON.
 void funcArgsToObjectHistory(ov::genai::ChatHistory& chatHistory);
 
+// Converts JSON-object strings in role:tool content to objects. Deliberately
+// limited to objects: arrays, scalars and non-JSON strings keep OpenAI content
+// semantics. Whether this is safe for a concrete template is decided by caps.
+void toolResponseJsonContentToObjectHistory(ov::genai::ChatHistory& chatHistory);
+
 // Apply all relevant adaptations to the ChatHistory based on detected capabilities.
 void applyToHistory(const ChatTemplateCaps& caps, ov::genai::ChatHistory& chatHistory);
 

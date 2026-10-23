@@ -73,6 +73,32 @@ void OVMSTextStreamer::apply_decode_params(bool decode_special_tokens) {
 }
 
 std::optional<ov::genai::StreamingStatus> OVMSTextStreamer::handle_decoding_params_change(int64_t token) {
+    // Reconcile the decode mode for the phase that was established by the
+    // previously flushed chunk before inspecting the current token. This matters
+    // at a reasoning/tool handoff: the previous phase may require visible special
+    // tokens while UNKNOWN/content returns to the user's skip_special_tokens=true
+    // baseline. The current token itself may already be the next phase opener.
+    if (m_output_parser) {
+        bool decode_with_special_tokens = m_output_parser->needSpecialTokensForCurrentDecode(m_user_wants_special);
+        if (decode_with_special_tokens != m_decode_special_tokens) {
+            if (!m_tokens_cache.empty()) {
+                const std::string text = m_tokenizer.decode(m_tokens_cache, m_additional_detokenization_params);
+                if (text.size() > m_printed_len) {
+                    const auto s = flush_chunk(text, text.size(), ov::genai::GenerationFinishReason::NONE);
+                    if (s != ov::genai::StreamingStatus::RUNNING)
+                        return s;
+                }
+            }
+            m_tokens_cache.clear();
+            m_decoded_lengths.clear();
+            m_printed_len = 0;
+            // Flushing can itself complete a parser phase. Re-read the desired
+            // mode so the setting reflects the phase that will consume `token`.
+            decode_with_special_tokens = m_output_parser->needSpecialTokensForCurrentDecode(m_user_wants_special);
+            apply_decode_params(decode_with_special_tokens);
+        }
+    }
+
     if (m_output_parser && !m_decode_special_tokens) {
         const std::string startTag = m_output_parser->getPhaseStartTagForToken(token, m_tools_available);
         if (!startTag.empty()) {
@@ -102,28 +128,11 @@ std::optional<ov::genai::StreamingStatus> OVMSTextStreamer::handle_decoding_para
         }
     }
 
-    if (m_output_parser) {
-        const bool decode_with_special_tokens = m_output_parser->needSpecialTokensForCurrentDecode(m_user_wants_special);
-        if (decode_with_special_tokens != m_decode_special_tokens) {
-            if (!m_tokens_cache.empty()) {
-                const std::string text = m_tokenizer.decode(m_tokens_cache, m_additional_detokenization_params);
-                if (text.size() > m_printed_len) {
-                    const auto s = flush_chunk(text, text.size(), ov::genai::GenerationFinishReason::NONE);
-                    if (s != ov::genai::StreamingStatus::RUNNING)
-                        return s;
-                }
-            }
-            m_tokens_cache.clear();
-            m_decoded_lengths.clear();
-            m_printed_len = 0;
-            apply_decode_params(decode_with_special_tokens);
-        }
-    }
-
     return std::nullopt;
 }
 
 ov::genai::StreamingStatus OVMSTextStreamer::write(int64_t token) {
+    ++m_generated_tokens;
     if (llm_calculator_logger->should_log(spdlog::level::trace))
         m_all_tokens.push_back(token);
 
@@ -191,6 +200,10 @@ ov::genai::StreamingStatus OVMSTextStreamer::write(int64_t token, bool immediate
 }
 
 void OVMSTextStreamer::end() {
+    end(ov::genai::GenerationFinishReason::STOP);
+}
+
+void OVMSTextStreamer::end(ov::genai::GenerationFinishReason finish_reason) {
     if (llm_calculator_logger->should_log(spdlog::level::trace) && !m_all_tokens.empty()) {
         const ov::AnyMap no_skip_params{{ov::genai::skip_special_tokens.name(), false}};
         const std::string full_decode = m_tokenizer.decode(m_all_tokens, no_skip_params);
@@ -233,21 +246,21 @@ void OVMSTextStreamer::end() {
     for (const int64_t token : unprinted) {
         const auto status = write(token, /*immediate_flush=*/true);
         if (status != ov::genai::StreamingStatus::RUNNING) {
-            break;  // cancelled mid-drain; still deliver the STOP signal below
+            break;  // cancelled mid-drain; still deliver the terminal reason below
         }
     }
 
-    // Always deliver the STOP signal so parsers that rely on finishReason==STOP
-    // for cleanup receive it (e.g. hasPendingState flush in Lfm2ToolParser,
-    // argument string finalisation in Hermes3ToolParser).
+    // Deliver the actual terminal reason. The legacy no-argument end() retains STOP.
     const std::string final_text = m_tokens_cache.empty()
                                        ? std::string{}
                                        : m_tokenizer.decode(m_tokens_cache, m_additional_detokenization_params);
-    flush_chunk(final_text, m_printed_len, ov::genai::GenerationFinishReason::STOP);
+    flush_chunk(final_text, m_printed_len, finish_reason);
 
     m_tokens_cache.clear();
     m_decoded_lengths.clear();
     m_printed_len = 0;
+    m_generated_tokens = 0;
+    m_all_tokens.clear();
 }
 
 // -----------------------------------------------------------------------------
@@ -295,6 +308,16 @@ ov::genai::StreamingStatus OVMSTextStreamer::flush_chunk(
     }
 
     const bool isLast = (finish_reason != ov::genai::GenerationFinishReason::NONE);
+    if (isLast && m_output_parser) {
+        if (const auto pending = m_output_parser->pendingToolFrameDiagnostic()) {
+            SPDLOG_LOGGER_WARN(llm_calculator_logger,
+                "Incomplete tool frame: parser_phase={} finish_reason={} pending_tool_frame=true buffered_bytes={} generated_tokens={} tool_name={}",
+                pending->phase,
+                finish_reason == ov::genai::GenerationFinishReason::LENGTH ? "LENGTH" :
+                    finish_reason == ov::genai::GenerationFinishReason::TOOL_CALL ? "TOOL_CALL" : "STOP",
+                pending->bufferedBytes, m_generated_tokens, pending->toolName);
+        }
+    }
     if (delta.has_value()) {
         return m_callback(std::move(*delta), isLast);
     }
