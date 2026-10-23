@@ -43,7 +43,7 @@ logger = get_logger(__name__)
 
 @pytest.mark.priority_high
 @pytest.mark.components(OvmsComponents.OVMS)
-@pytest.mark.reqids(Requirements.rerank_endpoint, Requirements.openai_api)
+@pytest.mark.reqids(Requirements.llm, Requirements.openai_api)
 @pytest.mark.ovms_types_supported_for_test(
     OvmsType.DOCKER,
     OvmsType.DOCKER_CMD_LINE,
