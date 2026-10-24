@@ -95,3 +95,7 @@ Binaries and Bazel output directories are not committed. The source commit plus 
 This is a future task requiring explicit model-start authorization. For both Qwen and Ornith, use the selected parser flags and record the complete binary/model/config/tokenizer and loaded-DLL provenance. Capture raw HTTP response bodies and reconstructed SSE `function.arguments` strings before any client JSON reserialization. Decoding and reserializing arguments in the test client can itself erase numeric spelling.
 
 Exercise `1.10`, `1e3`, the long integer, nested arrays/objects, quoted `C:\test`, double backslashes, and invalid typed values. Compare exact argument text for valid calls and require no published call for invalid ones. Record unary and streaming separately. Model compliance with a requested value and parser preservation are separate observations. Do not infer live model or agent readiness from the parser suite/build results.
+
+## Later evidence and fixed packaging reference (2026-10-24)
+
+The NOT RUN entries above describe this handoff's original pre-live checkpoint. A later read-only audit found Ornith unary/SSE spelling responses from 2026-10-23 13:53, and the user confirmed the local launch scripts. See [fixed Windows package runbook](FIXED-WINDOWS-PACKAGE-20261024.md) for their scope, incomplete historical module-hash attestation, current dependency paths/hashes, and the pinned packaging recipe. This addendum does not rerun a model or reopen Gemma acceptance. An assembled/extracted package is still NOT RUN.

@@ -1,0 +1,46 @@
+{
+  "captured_utc": "2026-10-24T16:46:55.701079+00:00",
+  "scope": "Read-only verifier checks; no package assembled or model started.",
+  "cases": [
+    {
+      "case": "current_inputs_match",
+      "status": "PASS",
+      "expected_exit": 0,
+      "actual": {
+        "status": "PASS",
+        "mode": "local-inputs",
+        "checks": 51,
+        "errors": [],
+        "scope": "Pinned file bytes/directory trees and saved static-import report; not a fresh PE scan, dynamic-load check or runtime acceptance."
+      }
+    },
+    {
+      "case": "modified_exe_hash_is_rejected",
+      "status": "PASS",
+      "expected_exit": 1,
+      "actual": {
+        "status": "FAIL",
+        "mode": "local-inputs",
+        "checks": 51,
+        "errors": [
+          "File mismatch: C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\bazel-bin\\src\\ovms.exe"
+        ],
+        "scope": "Pinned file bytes/directory trees and saved static-import report; not a fresh PE scan, dynamic-load check or runtime acceptance."
+      }
+    },
+    {
+      "case": "escaping_payload_path_is_rejected",
+      "status": "PASS",
+      "expected_exit": 1,
+      "actual": {
+        "status": "FAIL",
+        "mode": "payload",
+        "checks": 0,
+        "errors": [
+          "Unsafe payload destination: ../outside.exe"
+        ],
+        "scope": "Pinned file bytes/directory trees and saved static-import report; not a fresh PE scan, dynamic-load check or runtime acceptance."
+      }
+    }
+  ]
+}
