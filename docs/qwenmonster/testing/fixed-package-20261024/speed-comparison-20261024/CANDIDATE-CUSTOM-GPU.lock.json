@@ -2357,14 +2357,14 @@
     "benchmark_receipt": "RESULTS.json",
     "runtime_tested": {
       "Gemma26": "VLM/default compile threads",
-      "Ornith": "VLM/COMPILATION_NUM_THREADS=1"
+      "Ornith": "VLM/default concurrency after increased available RAM; also COMPILATION_NUM_THREADS=1 in both series"
     },
     "not_run": [
       "assembled/extracted package",
       "soak",
       "long-context headroom",
-      "agent loops",
-      "default-thread Ornith decode under current RAM conditions"
-    ]
+      "agent loops"
+    ],
+    "benchmark_follow_up": "DEFAULT-THREADS-FOLLOWUP.json"
   }
 }

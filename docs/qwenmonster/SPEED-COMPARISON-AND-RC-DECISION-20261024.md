@@ -2,6 +2,8 @@
 
 Date: 2026-10-24. **Decision: no performance-driven OVMS recompilation. Prepare a separate custom-GPU runtime candidate using the existing parser EXE; do not overwrite the original fixed lock or promote this benchmark to release acceptance.**
 
+**Follow-up after available RAM increased:** the four Ornith tuples also completed with default compilation concurrency at **32.07–32.24 tok/s**. The initial constrained-RAM results below remain intact; see the separate follow-up section and receipt before comparing absolute rates. The recommendation against a speed-driven EXE rebuild is unchanged.
+
 Evidence: [measured results, model hashes and loaded cohort hashes](testing/fixed-package-20261024/speed-comparison-20261024/RESULTS.json), [separate candidate lock](testing/fixed-package-20261024/speed-comparison-20261024/CANDIDATE-CUSTOM-GPU.lock.json), [post-benchmark parser XML](testing/fixed-package-20261024/speed-comparison-20261024/PARSER-POSTCHECK.xml). Full local requests, SSE bodies, server logs, command vectors, memory samples where captured, and loaded-module paths remain at `C:\gm\qwenmonster\benchmarks\speed-20261024`.
 
 ## Method and controls
@@ -59,10 +61,35 @@ Order was A/B/C/D, not randomized; thermal state and background desktop GPU acti
 - Original/default-concurrency Ornith attempts were stopped at 787 and 913 MiB available RAM, before successful measured decode. A `VLM_CB`/1 GiB-cache attempt was also stopped at 897 MiB. These are **resource-blocked speed tests**, not throughput measurements or proof the model cannot fit.
 - A preliminary `0.5` cache-size attempt was rejected by the stock integer CLI before model loading. It is an invalid-option control, not a model failure.
 - The first instrumentation attempt queried the model before graph readiness and received 404. Readiness was corrected to require the named model in `/v1/models`; that aborted attempt is preserved separately and excluded from speed results.
-- The completed Ornith series used one compilation thread, began with approximately 21.1–21.4 GiB available RAM, and observed minima of **1,041–1,155 MiB**. Gemma26 minima were **2,012–3,703 MiB**.
+- The initial completed Ornith series used one compilation thread, began with approximately 21.1–21.4 GiB available RAM, and observed minima of **1,041–1,155 MiB**. Gemma26 minima were **2,012–3,703 MiB**.
 - Both compilation concurrency and initial available RAM differed from the blocked startup attempts. The successful series establishes a usable tested profile under these conditions; it does **not** isolate one compilation thread as the sole cause of improved startup headroom.
 
-Ornith's measured headroom is too small to declare unattended/long-context readiness. A new EXE compilation would not itself resolve RAM pressure. Do not silently change the production pipeline or reduce model/KV settings on the basis of the aborted controls.
+The initial Ornith headroom was too small to declare unattended/long-context readiness. A new EXE compilation would not itself resolve RAM pressure. Do not silently change the production pipeline or reduce model/KV settings on the basis of the aborted controls.
+
+## Follow-up after increased available RAM: default compilation concurrency
+
+After the user offered to free memory, the host reported 23,083 MiB available before the repeat. Four additional runs used the same request, VLM profile, KV/batch CLI settings and INFO logging, **without** `COMPILATION_NUM_THREADS=1`. Each again had two warmups and three measured requests. [Separate follow-up receipt](testing/fixed-package-20261024/speed-comparison-20261024/DEFAULT-THREADS-FOLLOWUP.json) preserves these results without overwriting the original eight-run matrix.
+
+| Tuple | Ornith median tok/s, default compilation concurrency | Minimum observed free RAM, MiB |
+| --- | ---: | ---: |
+| A: stock EXE + custom GPU | 32.24 | 2,347 |
+| B: our fixed lock + stock GPU | 32.18 | 2,893 |
+| C: our EXE + custom GPU | 32.11 | 2,921 |
+| D: stock EXE + stock GPU | 32.07 | 2,916 |
+
+The entire spread of these medians is below 0.6%. On the same custom GPU, our EXE/helper cohort is about 0.4% below stock in this repeat. There is no observed large parser-EXE throughput regression here, and default compilation concurrency can complete when more RAM is available.
+
+An additional matched-setting control repeated tuple C with **one** compilation thread after memory was available. It reached **31.75 tok/s**, minimum free RAM **2,918 MiB**, compared with the earlier 27.33 tok/s and 1,128 MiB for the same tuple/setting. Thus the single-thread property alone cannot explain the earlier roughly 27 tok/s level. Available memory, background workload and time differed; this is evidence of condition sensitivity, not a randomized proof that RAM alone caused the change.
+
+All 15 timed requests in this follow-up (12 default-thread plus three control requests) used identical request JSON and generated the same text SHA256, matching the original Ornith text. Loaded EXE/Core/GenAI/Tokenizers/GPU/TBB paths and hashes were captured again. [Follow-up verification](testing/fixed-package-20261024/speed-comparison-20261024/FOLLOWUP-VERIFICATION.json) also rechecks the candidate inputs.
+
+Practical implication: retain the ordinary launch profile when adequate memory is available; do not make one compilation thread a mandatory throughput setting or describe it as a proven standalone memory fix. The generic 15,463 MiB startup floor is not a capacity guarantee for this model. The larger observed headroom is useful but still does not establish long-context, unattended or packaged-release acceptance. No binary or installed DLL was replaced for the repeat.
+
+For a new default-thread repeat, use the existing private harness with a fresh suffix, omitting the compilation override:
+
+```powershell
+rtk proxy C:\gm\qwenmonster\semantic-refit-2026.4-tools\py-nupkg\tools\python.exe -B -u C:\gm\qwenmonster\benchmarks\speed-20261024\run_ab.py --suffix default-repeat3
+```
 
 ## Parser/tool observations
 

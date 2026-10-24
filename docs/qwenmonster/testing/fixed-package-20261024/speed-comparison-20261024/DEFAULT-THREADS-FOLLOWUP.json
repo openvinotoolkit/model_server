@@ -1,0 +1,644 @@
+{
+  "schema": "qwm-ornith-after-ram-release-followup-v1",
+  "captured_utc": "2026-10-24T18:56:01.000506+00:00",
+  "scope": "Separate repeat after increased available host RAM; does not overwrite the earlier constrained-RAM series.",
+  "model": "ornith",
+  "model_identity_reference": "RESULTS.json#/model_files/ornith",
+  "method": {
+    "pipeline": "VLM",
+    "cache_size_cli": 2,
+    "batch_tokens_cli": 4096,
+    "max_num_seqs_cli": 1,
+    "prefix_cache_cli": false,
+    "temperature": 0,
+    "requested_max_tokens": 256,
+    "warmups": 2,
+    "measured_repeats": 3,
+    "log_level": "INFO",
+    "primary_series": "default compilation concurrency for all four tuples",
+    "additional_control": "tuple C with COMPILATION_NUM_THREADS=1 after RAM release",
+    "available_ram_and_background_workload_not_independently_randomized": true
+  },
+  "all_timed_requests_equal": true,
+  "all_15_text_hashes_equal": true,
+  "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8",
+  "request_sha256_canonical_json": "2cf93056cf621c6022a4af9bc29dcb784deba7affa615e7ac5814edd6cbcef21",
+  "rows": [
+    {
+      "tuple": "A-stock-custom",
+      "compile_threads": "default",
+      "created_utc": "2026-10-24T18:44:50.020661+00:00",
+      "ended_utc": "2026-10-24T18:46:17.101546+00:00",
+      "initial_free_mib": 23100.9453125,
+      "minimum_free_mib": 2347.3671875,
+      "startup_s": 30.943389299995033,
+      "warmups": [
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 2.6466064999985974,
+          "wall_s": 10.523610699994606,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 32.39017463488128,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        },
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 1.9215025000012247,
+          "wall_s": 9.79044860000431,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 32.41253391924351,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        }
+      ],
+      "measured": [
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 1.87190090000513,
+          "wall_s": 9.783437799997046,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 32.23836872842695,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        },
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 1.8923734999989392,
+          "wall_s": 9.852259499995853,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 32.04283153986816,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        },
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 1.8813532999920426,
+          "wall_s": 9.789097799992305,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 32.25432415695958,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        }
+      ],
+      "median_decode_tok_s": 32.23836872842695,
+      "median_ttft_s": 1.8813532999920426,
+      "tool_check": {
+        "finish": "tool_calls",
+        "calls": 1,
+        "arguments": "{\"ratio\":1.1,\"sci\":1000.0,\"big\":9007199254740993,\"path\":\"C:\\\\test\",\"tag\":\"#B4E8\"}",
+        "literal_presence": {
+          "1.10": false,
+          "1e3": false,
+          "9007199254740993": true,
+          "#B4E8": true
+        }
+      },
+      "loaded_cohort": [
+        {
+          "name": "ovms.exe",
+          "sha256": "073ed783610883f9060fe861736c683a7edff59937b25dbd18e1fdeea14007fc"
+        },
+        {
+          "name": "openvino_genai.dll",
+          "sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d"
+        },
+        {
+          "name": "tbb12.dll",
+          "sha256": "63cc8a5a9cee86e9d57967337053569df6335aca09d03f8657343633645d2727"
+        },
+        {
+          "name": "openvino.dll",
+          "sha256": "829c4642e287522f8a8e748a726d4ad3117a701e22ab46adc82771f98e5d2f7e"
+        },
+        {
+          "name": "openvino_tokenizers.dll",
+          "sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c"
+        },
+        {
+          "name": "openvino_intel_gpu_plugin.dll",
+          "sha256": "21a2fd9f5d856c297416059325832f0f902c84a4e78b840f859ca508f5aea66d"
+        }
+      ],
+      "status": "PASS"
+    },
+    {
+      "tuple": "B-fixed-stock",
+      "compile_threads": "default",
+      "created_utc": "2026-10-24T18:47:04.929096+00:00",
+      "ended_utc": "2026-10-24T18:48:33.808595+00:00",
+      "initial_free_mib": 23505.953125,
+      "minimum_free_mib": 2892.95703125,
+      "startup_s": 30.718173000001116,
+      "warmups": [
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 2.571031799991033,
+          "wall_s": 10.700542499995208,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 31.381755299690184,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        },
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 1.8727008999994723,
+          "wall_s": 9.79863839999598,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 32.179904596012754,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        }
+      ],
+      "measured": [
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 2.154019399997196,
+          "wall_s": 11.355173900010413,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 27.719863795659293,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        },
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 1.9360387999913655,
+          "wall_s": 9.86160679999739,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 32.18242056098252,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        },
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 1.8562549000052968,
+          "wall_s": 9.767573599994648,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 32.23882807030155,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        }
+      ],
+      "median_decode_tok_s": 32.18242056098252,
+      "median_ttft_s": 1.9360387999913655,
+      "tool_check": {
+        "finish": "tool_calls",
+        "calls": 1,
+        "arguments": "{\"ratio\":1.1,\"sci\":1e3,\"big\":9007199254740993,\"path\":\"C:\\\\test\",\"tag\":\"#B4E8\"}",
+        "literal_presence": {
+          "1.10": false,
+          "1e3": true,
+          "9007199254740993": true,
+          "#B4E8": true
+        }
+      },
+      "loaded_cohort": [
+        {
+          "name": "ovms.exe",
+          "sha256": "f472d619097b3d64c3899a4628f219381941e99bb388d9c9c8a1d84956475397"
+        },
+        {
+          "name": "openvino_genai.dll",
+          "sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d"
+        },
+        {
+          "name": "tbb12.dll",
+          "sha256": "63cc8a5a9cee86e9d57967337053569df6335aca09d03f8657343633645d2727"
+        },
+        {
+          "name": "openvino.dll",
+          "sha256": "829c4642e287522f8a8e748a726d4ad3117a701e22ab46adc82771f98e5d2f7e"
+        },
+        {
+          "name": "openvino_tokenizers.dll",
+          "sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c"
+        },
+        {
+          "name": "openvino_intel_gpu_plugin.dll",
+          "sha256": "b90b57aecb9d8bbb7b0a1e945e45a088e94ea7baf61eaf5dd7d8fe5e06c9e55d"
+        }
+      ],
+      "status": "PASS"
+    },
+    {
+      "tuple": "C-fixed-custom",
+      "compile_threads": "default",
+      "created_utc": "2026-10-24T18:48:35.235332+00:00",
+      "ended_utc": "2026-10-24T18:50:01.997641+00:00",
+      "initial_free_mib": 23596.78125,
+      "minimum_free_mib": 2921.203125,
+      "startup_s": 30.644920099992305,
+      "warmups": [
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 2.475904000006267,
+          "wall_s": 10.319063699993421,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 32.52939132563493,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        },
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 1.7916674000007333,
+          "wall_s": 9.773898399987957,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 31.952890763012846,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        }
+      ],
+      "measured": [
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 1.8076820999995107,
+          "wall_s": 9.720730400003958,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 32.23219517240194,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        },
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 1.7880204000102822,
+          "wall_s": 9.812328200001502,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 31.785734532421962,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        },
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 1.8495243000070332,
+          "wall_s": 9.79312000000209,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 32.10880993218935,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        }
+      ],
+      "median_decode_tok_s": 32.10880993218935,
+      "median_ttft_s": 1.8076820999995107,
+      "tool_check": {
+        "finish": "tool_calls",
+        "calls": 1,
+        "arguments": "{\"ratio\":1.1,\"sci\":1e3,\"big\":9007199254740993,\"path\":\"C:\\\\test\",\"tag\":\"#B4E8\"}",
+        "literal_presence": {
+          "1.10": false,
+          "1e3": true,
+          "9007199254740993": true,
+          "#B4E8": true
+        }
+      },
+      "loaded_cohort": [
+        {
+          "name": "ovms.exe",
+          "sha256": "f472d619097b3d64c3899a4628f219381941e99bb388d9c9c8a1d84956475397"
+        },
+        {
+          "name": "openvino.dll",
+          "sha256": "829c4642e287522f8a8e748a726d4ad3117a701e22ab46adc82771f98e5d2f7e"
+        },
+        {
+          "name": "openvino_genai.dll",
+          "sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d"
+        },
+        {
+          "name": "tbb12.dll",
+          "sha256": "63cc8a5a9cee86e9d57967337053569df6335aca09d03f8657343633645d2727"
+        },
+        {
+          "name": "openvino_tokenizers.dll",
+          "sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c"
+        },
+        {
+          "name": "openvino_intel_gpu_plugin.dll",
+          "sha256": "21a2fd9f5d856c297416059325832f0f902c84a4e78b840f859ca508f5aea66d"
+        }
+      ],
+      "status": "PASS"
+    },
+    {
+      "tuple": "C-fixed-custom",
+      "compile_threads": 1,
+      "created_utc": "2026-10-24T18:52:15.680612+00:00",
+      "ended_utc": "2026-10-24T18:53:45.098249+00:00",
+      "initial_free_mib": 23898.140625,
+      "minimum_free_mib": 2917.50390625,
+      "startup_s": 32.97069889999693,
+      "warmups": [
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 2.6699784999946132,
+          "wall_s": 10.49307399999816,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 32.604762650557056,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        },
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 1.8262426000001142,
+          "wall_s": 9.694052999999258,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 32.421822403963496,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        }
+      ],
+      "measured": [
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 1.8291712000063853,
+          "wall_s": 9.73644810001133,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 32.25550243773113,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        },
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 1.849175200011814,
+          "wall_s": 9.885038500011433,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 31.7402835244187,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        },
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 1.8391036999964854,
+          "wall_s": 9.873371900001075,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 31.7462194765417,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        }
+      ],
+      "median_decode_tok_s": 31.7462194765417,
+      "median_ttft_s": 1.8391036999964854,
+      "tool_check": {
+        "finish": "tool_calls",
+        "calls": 1,
+        "arguments": "{\"ratio\":1.1,\"sci\":1e3,\"big\":9007199254740993,\"path\":\"C:\\\\test\",\"tag\":\"#B4E8\"}",
+        "literal_presence": {
+          "1.10": false,
+          "1e3": true,
+          "9007199254740993": true,
+          "#B4E8": true
+        }
+      },
+      "loaded_cohort": [
+        {
+          "name": "ovms.exe",
+          "sha256": "f472d619097b3d64c3899a4628f219381941e99bb388d9c9c8a1d84956475397"
+        },
+        {
+          "name": "openvino_genai.dll",
+          "sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d"
+        },
+        {
+          "name": "tbb12.dll",
+          "sha256": "63cc8a5a9cee86e9d57967337053569df6335aca09d03f8657343633645d2727"
+        },
+        {
+          "name": "openvino.dll",
+          "sha256": "829c4642e287522f8a8e748a726d4ad3117a701e22ab46adc82771f98e5d2f7e"
+        },
+        {
+          "name": "openvino_tokenizers.dll",
+          "sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c"
+        },
+        {
+          "name": "openvino_intel_gpu_plugin.dll",
+          "sha256": "21a2fd9f5d856c297416059325832f0f902c84a4e78b840f859ca508f5aea66d"
+        }
+      ],
+      "status": "PASS"
+    },
+    {
+      "tuple": "D-stock-stock",
+      "compile_threads": "default",
+      "created_utc": "2026-10-24T18:50:03.022060+00:00",
+      "ended_utc": "2026-10-24T18:51:30.987601+00:00",
+      "initial_free_mib": 23748.015625,
+      "minimum_free_mib": 2916.38671875,
+      "startup_s": 31.73176510000485,
+      "warmups": [
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 2.5448625999997603,
+          "wall_s": 10.520527600005153,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 31.990276561688443,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        },
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 1.8548090000113007,
+          "wall_s": 9.78254710001056,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 32.17205382244176,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        }
+      ],
+      "measured": [
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 1.8613107999990461,
+          "wall_s": 9.82946800001082,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 32.00965581936636,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        },
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 1.8595582999987528,
+          "wall_s": 9.780812400000286,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 32.199573308945624,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        },
+        {
+          "usage": {
+            "prompt_tokens": 1788,
+            "completion_tokens": 256,
+            "total_tokens": 2044
+          },
+          "finish": "length",
+          "ttft_s": 1.8672019999939948,
+          "wall_s": 9.820313000003807,
+          "content_chunks": 235,
+          "first_chunk_chars": 2,
+          "decode_tok_s_estimate": 32.07040901087544,
+          "text_sha256": "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+        }
+      ],
+      "median_decode_tok_s": 32.07040901087544,
+      "median_ttft_s": 1.8613107999990461,
+      "tool_check": {
+        "finish": "tool_calls",
+        "calls": 1,
+        "arguments": "{\"ratio\":1.1,\"sci\":1000.0,\"big\":9007199254740993,\"path\":\"C:\\\\test\",\"tag\":\"#B4E8\"}",
+        "literal_presence": {
+          "1.10": false,
+          "1e3": false,
+          "9007199254740993": true,
+          "#B4E8": true
+        }
+      },
+      "loaded_cohort": [
+        {
+          "name": "ovms.exe",
+          "sha256": "073ed783610883f9060fe861736c683a7edff59937b25dbd18e1fdeea14007fc"
+        },
+        {
+          "name": "openvino_genai.dll",
+          "sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d"
+        },
+        {
+          "name": "tbb12.dll",
+          "sha256": "63cc8a5a9cee86e9d57967337053569df6335aca09d03f8657343633645d2727"
+        },
+        {
+          "name": "openvino.dll",
+          "sha256": "829c4642e287522f8a8e748a726d4ad3117a701e22ab46adc82771f98e5d2f7e"
+        },
+        {
+          "name": "openvino_tokenizers.dll",
+          "sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c"
+        },
+        {
+          "name": "openvino_intel_gpu_plugin.dll",
+          "sha256": "b90b57aecb9d8bbb7b0a1e945e45a088e94ea7baf61eaf5dd7d8fe5e06c9e55d"
+        }
+      ],
+      "status": "PASS"
+    }
+  ],
+  "release_accepted": false
+}

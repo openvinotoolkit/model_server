@@ -1,0 +1,15 @@
+{
+  "status": "PASS",
+  "completed_runs": 5,
+  "measured_requests": 15,
+  "all_timed_requests_equal": true,
+  "all_text_hashes_equal": true,
+  "candidate_inputs": {
+    "status": "PASS",
+    "mode": "local-inputs",
+    "checks": 51,
+    "errors": [],
+    "scope": "Pinned file bytes/directory trees and saved static-import report; not a fresh PE scan, dynamic-load check or runtime acceptance."
+  },
+  "scope": "Follow-up consistency/input verification; not package or full acceptance."
+}
