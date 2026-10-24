@@ -1,0 +1,107 @@
+[
+  {
+    "name": "ovms.exe",
+    "package_path": "ovms.exe",
+    "sha256": "f5eef01c9173d066ac25084b9f206dbf5d4ed00d695868e2f43d7d75e9de1acd"
+  },
+  {
+    "name": "git2.dll",
+    "package_path": "git2.dll",
+    "sha256": "7eb7ff327997dc19db29927153d54b1261df0888378f3c5d0ddf7c72f51998dd"
+  },
+  {
+    "name": "libcurl-x64.dll",
+    "package_path": "libcurl-x64.dll",
+    "sha256": "f31fa58061e162ff4702b37224404df210346df6dff4a49e92d07b8dd5217334"
+  },
+  {
+    "name": "openvino_genai.dll",
+    "package_path": "openvino_genai.dll",
+    "sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d"
+  },
+  {
+    "name": "opencv_world4140.dll",
+    "package_path": "opencv_world4140.dll",
+    "sha256": "a192cbf006faf48c054468fa2a2e56e3f680b401c23b8f7fb24373ff75654c46"
+  },
+  {
+    "name": "openvino.dll",
+    "package_path": "openvino.dll",
+    "sha256": "829c4642e287522f8a8e748a726d4ad3117a701e22ab46adc82771f98e5d2f7e"
+  },
+  {
+    "name": "tbb12.dll",
+    "package_path": "tbb12.dll",
+    "sha256": "63cc8a5a9cee86e9d57967337053569df6335aca09d03f8657343633645d2727"
+  },
+  {
+    "name": "tbbmalloc.dll",
+    "package_path": "tbbmalloc.dll",
+    "sha256": "06e72fd9ed67405efd411c33d8dfbe9bf21cb62ff8ef2ccb1003bb1bc32b2924"
+  },
+  {
+    "name": "openvino_tokenizers.dll",
+    "package_path": "openvino_tokenizers.dll",
+    "sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c"
+  },
+  {
+    "name": "openvino_auto_plugin.dll",
+    "package_path": "openvino_auto_plugin.dll",
+    "sha256": "ed1492fe3f901d2b882ea89c8909d8ce35eb52986a3559353a44917ee3fb3e47"
+  },
+  {
+    "name": "openvino_auto_batch_plugin.dll",
+    "package_path": "openvino_auto_batch_plugin.dll",
+    "sha256": "d21dc67bee39d3af3fbda6720198a6b025eda297680d5d747996730bc75496dd"
+  },
+  {
+    "name": "openvino_intel_cpu_plugin.dll",
+    "package_path": "openvino_intel_cpu_plugin.dll",
+    "sha256": "ce9c65b551e36139b62e28f2c8c7b9fc2a5c02c82e1dfd01e578dac30695e78b"
+  },
+  {
+    "name": "tbbbind_2_5.dll",
+    "package_path": "tbbbind_2_5.dll",
+    "sha256": "235047df3f97a6b94c3a5e70d93b892141e32ae27ef06f0c583667b417118b20"
+  },
+  {
+    "name": "openvino_intel_gpu_plugin.dll",
+    "package_path": "openvino_intel_gpu_plugin.dll",
+    "sha256": "21a2fd9f5d856c297416059325832f0f902c84a4e78b840f859ca508f5aea66d"
+  },
+  {
+    "name": "OpenCL.dll",
+    "resolution": "host GPU driver prerequisite",
+    "sha256": "35286e2b72698f87f592fefc85ad70c4fdf5e4ee56e985f14830c04f36e40c6f"
+  },
+  {
+    "name": "igdrcl64.dll",
+    "resolution": "host GPU driver prerequisite",
+    "sha256": "0ac5822e42cdc7642ea96ab99b35e3ff92254bccfe2e08f808914d425ac4def5"
+  },
+  {
+    "name": "openvino_hetero_plugin.dll",
+    "package_path": "openvino_hetero_plugin.dll",
+    "sha256": "c21be45cea174c79163394e4cfe3a782ebef7a7a64b4ee43dfcf3828d558de16"
+  },
+  {
+    "name": "openvino_intel_npu_plugin.dll",
+    "package_path": "openvino_intel_npu_plugin.dll",
+    "sha256": "e27a466c9690e079b82d453a93a583d9008cb08e9965a6f459c56bccde965198"
+  },
+  {
+    "name": "openvino_intel_npu_compiler_loader.dll",
+    "resolution": "host NPU DriverStore loader; original benchmark hash",
+    "sha256": "8df6d149c80841d6eaeb78acb526530823992f1fd7916451da40f480b9cb5162"
+  },
+  {
+    "name": "openvino_intel_npu_compiler_loader.dll",
+    "package_path": "openvino_intel_npu_compiler_loader.dll",
+    "sha256": "ea3a6b018a40e1a57c3d982a5e661ba12e6c3ada09ffe77a5eb9af58930f0fe1"
+  },
+  {
+    "name": "openvino_ir_frontend.dll",
+    "package_path": "openvino_ir_frontend.dll",
+    "sha256": "44604b39cbafcf4d8aa27697cee639038bdfcf24f5245f0be07abcf30609d4cd"
+  }
+]

@@ -74,6 +74,12 @@ Gemma4's local reference implementation treats native markers as structure and r
 
 ## Acceptance boundaries
 
+Recorded RC4 checks: Off **81/81** Qwen cases, On **82/82**; extracted package hashes and static imports; isolated version/help; embedded Python 3.12.10, Tensor binding and PythonExecutorCalculator HTTP round trip. Both extracted packages also passed a fresh Ornith GPU smoke with SSE text and a unary tool call retaining `C:\test` and `#B4E8`. Loaded Core/GenAI/Tokenizers/GPU/TBB/helpers were audited, including the selected GPU hash `21a2fd9f…`.
+
+The initial Ornith startup was resource-stopped by the owned 1024 MiB RAM guard before inference (minimum 916 MiB). After memory was freed, successful Off/On runs recorded minima of about 1420/2700 MiB. This is short-run evidence, not a long-context memory guarantee. The earlier attempt's raw receipt is retained privately and classified as a resource stop.
+
+This host also loads `openvino_intel_npu_compiler_loader.dll` from Windows DriverStore alongside the bundled SDK loader during the GPU process lifetime. The same DriverStore component appeared in the original successful tuple benchmarks: SHA256 `8df6d149c80841d6eaeb78acb526530823992f1fd7916451da40f480b9cb5162`, file version 2026.4.0.1. The audit allows only that basename under DriverStore with that exact hash as a host driver prerequisite. Core, GenAI, Tokenizers, GPU plugin, TBB and helpers must still come from the extracted package. A first overbroad audit assertion was corrected on this independent baseline evidence; it was not a runtime-library replacement.
+
 The original speed comparison applies to its recorded measured binaries, not automatically to these version-stamped rebuilds. RC4 package-specific receipts and per-file manifests are stored under [testing/rc4-release](testing/rc4-release). Full OVMS regression, long-context pressure, prolonged soak, agent loops and renewed Gemma parser acceptance are outside these focused release checks. Do not turn package smoke success into those acceptance claims.
 
 The previous RC3B release and measured original EXE are retained for recovery. Local obsolete branch/build labels are maintained in the private release directory; no research branch, dirty worktree or deployment installation is deleted.

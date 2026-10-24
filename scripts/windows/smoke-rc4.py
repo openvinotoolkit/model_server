@@ -149,8 +149,16 @@ def main():
                 capture_output=True, text=True, check=True, creationflags=subprocess.CREATE_NO_WINDOW)
             loaded = []
             for row in json.loads(result.stdout):
+                p = Path(row['FileName']).resolve()
+                if row['ModuleName'].lower() == 'openvino_intel_npu_compiler_loader.dll' and not p.is_relative_to(package.resolve()):
+                    driver_store = Path(os.environ['SystemRoot']) / 'System32/DriverStore/FileRepository'
+                    assert p.is_relative_to(driver_store.resolve()), 'NPU loader outside Windows DriverStore'
+                    digest = sha(p)
+                    # Same host driver component captured in the original successful tuple benchmarks.
+                    assert digest == '8df6d149c80841d6eaeb78acb526530823992f1fd7916451da40f480b9cb5162', 'Host NPU driver changed'
+                    loaded.append({'name': row['ModuleName'], 'resolution': 'host NPU DriverStore loader; original benchmark hash', 'sha256': digest})
+                    continue
                 if row['ModuleName'].lower().startswith(('ovms', 'openvino', 'tbb', 'python', 'git2', 'libcurl', 'opencv')):
-                    p = Path(row['FileName']).resolve()
                     assert p.is_relative_to(package.resolve()), 'External runtime DLL: ' + str(p)
                     loaded.append({'name': row['ModuleName'], 'package_path': p.relative_to(package).as_posix(), 'sha256': sha(p)})
                 elif row['ModuleName'].lower().startswith(('igdrcl', 'igc64', 'ze_intel_gpu')) or row['ModuleName'].lower() == 'opencl.dll':

@@ -1,0 +1,304 @@
+{
+  "release": "gemmamonster-2026.4-rc4",
+  "status": "PASS_FOCUSED_RC_CHECKS",
+  "variants": {
+    "off": {
+      "package": {
+        "status": "PASS",
+        "archive": "gemmamonster-2026.4-rc4-windows-x86_64-python_off.zip",
+        "sha256": "75d9b677d5b7435f3057f92cea5e9d0b79e99549df70a98358d50d09eff5246a",
+        "bytes": 121724251,
+        "files_verified": 142,
+        "checks": [
+          "ZIP CRC",
+          "extracted hashes",
+          "isolated PATH version/help",
+          "*Qwen3Coder*"
+        ],
+        "version": "OpenVINO Model Server 2026.4.0-rc4.b7812066a\nOpenVINO backend 2026.4.0-22930-61afcb26271-releases/2026/4\nOpenVINO GenAI backend 2026.4.0.0-3401-5f7f1278107\nBazel build flags: --config=win_mp_on_py_off\n",
+        "not_run": [
+          "full OVMS suite",
+          "long context",
+          "soak",
+          "agent loops"
+        ]
+      },
+      "live": {
+        "status": "PASS",
+        "python": "off",
+        "exe_sha256": "f5eef01c9173d066ac25084b9f206dbf5d4ed00d695868e2f43d7d75e9de1acd",
+        "started_utc": "2026-10-24T23:00:19.727111+00:00",
+        "initial_free_mib": 22184.828125,
+        "owned_pid": 5544,
+        "sse_text": "The moon is Earth's only natural satellite.",
+        "tool_arguments": "{\"path\":\"C:\\\\test\",\"tag\":\"#B4E8\"}",
+        "minimum_free_mib": 1419.6953125,
+        "finished_utc": "2026-10-24T23:00:57.462821+00:00"
+      },
+      "unit": {
+        "tests": 81,
+        "failures": 0,
+        "disabled": 0,
+        "errors": 0
+      },
+      "static_import_files": 29,
+      "build_source": "b7812066afb35377ec9da2f3bc06fb3f1d261460",
+      "config": "win_mp_on_py_off",
+      "ovms_exe_sha256": "f5eef01c9173d066ac25084b9f206dbf5d4ed00d695868e2f43d7d75e9de1acd",
+      "test_exe_sha256": "84ccc429c64a2cb4f3c5545dea028f860286deb9f018e8fabbc923656a5b4fe2"
+    },
+    "on": {
+      "package": {
+        "status": "PASS",
+        "archive": "gemmamonster-2026.4-rc4-windows-x86_64-python_on.zip",
+        "sha256": "3051e6eaa29ca951fda28a5b6c3cdefd17c47691df675f599b2a88a8e894ee6d",
+        "bytes": 136616999,
+        "files_verified": 1779,
+        "checks": [
+          "ZIP CRC",
+          "extracted hashes",
+          "isolated PATH version/help",
+          "*Qwen3Coder*",
+          "embedded Python pyovms Tensor",
+          "PythonExecutorCalculator HTTP round trip"
+        ],
+        "version": "OpenVINO Model Server 2026.4.0-rc4.b7812066a\nOpenVINO backend 2026.4.0-22930-61afcb26271-releases/2026/4\nOpenVINO GenAI backend 2026.4.0.0-3401-5f7f1278107\nBazel build flags: --config=win_mp_on_py_on\n",
+        "not_run": [
+          "full OVMS suite",
+          "long context",
+          "soak",
+          "agent loops"
+        ]
+      },
+      "live": {
+        "status": "PASS",
+        "python": "on",
+        "exe_sha256": "9d095c1e377cf5205dd2fbee491e0dbc55bc38fe4c8e8a3653eaef5c1be1b3f4",
+        "started_utc": "2026-10-24T23:00:59.072702+00:00",
+        "initial_free_mib": 22372.3125,
+        "owned_pid": 22500,
+        "sse_text": "The moon is Earth's only natural satellite.",
+        "tool_arguments": "{\"path\":\"C:\\\\test\",\"tag\":\"#B4E8\"}",
+        "minimum_free_mib": 2700.234375,
+        "finished_utc": "2026-10-24T23:01:36.102458+00:00"
+      },
+      "unit": {
+        "tests": 82,
+        "failures": 0,
+        "disabled": 0,
+        "errors": 0
+      },
+      "static_import_files": 79,
+      "build_source": "b7812066afb35377ec9da2f3bc06fb3f1d261460",
+      "config": "win_mp_on_py_on",
+      "ovms_exe_sha256": "9d095c1e377cf5205dd2fbee491e0dbc55bc38fe4c8e8a3653eaef5c1be1b3f4",
+      "test_exe_sha256": "82d6ff031dd5116b73bc9acdd1c5f9bcea891cd474f10cb2e717dd787e17e853"
+    }
+  },
+  "not_run": [
+    "full OVMS regression",
+    "Gemma parser reacceptance",
+    "long context",
+    "soak",
+    "agent loops"
+  ],
+  "performance": "Earlier speed receipts belong to their original EXE; rebuilt RC binaries have fresh smoke checks only",
+  "custom_gpu_source_attestation": "NOT_REESTABLISHED; measured protected binary retained",
+  "signing": "Unsigned community fork",
+  "python_backend": {
+    "status": "PASS",
+    "check": "PythonExecutorCalculator UINT8 HTTP round trip"
+  },
+  "test_fixture": {
+    "source": "facebook/opt-125m",
+    "revision": "27dcfa74d334bc871f3234de431e71c6eeba5dd6",
+    "openvino": "2026.3.1-22476-759c5a6ab8c-releases/2026/3",
+    "openvino_tokenizers": "2026.3.1.0-705-77e4637387c",
+    "transformers": "5.0.0",
+    "scope": "Tokenizer/detokenizer test fixture only; no weights loaded or shipped in runtime packages",
+    "files": [
+      {
+        "name": "openvino_detokenizer.bin",
+        "bytes": 723020,
+        "sha256": "50cd9af30112ff045bdd59615c0d9570a0686682d4b92b13792765b85896cfd3"
+      },
+      {
+        "name": "openvino_detokenizer.xml",
+        "bytes": 7701,
+        "sha256": "9089b92189a012a9764399c6ee124c21162350be4843ea5727c86858abec00ba"
+      },
+      {
+        "name": "openvino_tokenizer.bin",
+        "bytes": 1843744,
+        "sha256": "1584d4fab31ec7cedb209e9d09d4a078e0120af2e9c8ac5fb1908de72a1082cb"
+      },
+      {
+        "name": "openvino_tokenizer.xml",
+        "bytes": 24915,
+        "sha256": "b2f86feb70e6a08dbfc73fa35fb7191ba49ff8bb071f3ee926edeffa3474f307"
+      }
+    ]
+  },
+  "prior_resource_stop": {
+    "classification": "NEEDS_REVIEW_RESOURCE_STOP_BEFORE_INFERENCE",
+    "raw_status": "FAIL",
+    "memory_guard": true,
+    "minimum_free_mib": 915.6875
+  },
+  "host_npu_loader_policy": {
+    "basename": "openvino_intel_npu_compiler_loader.dll",
+    "origin": "Windows System32 DriverStore FileRepository",
+    "sha256": "8df6d149c80841d6eaeb78acb526530823992f1fd7916451da40f480b9cb5162",
+    "basis": "Same module hash in original successful stock/custom benchmark module captures"
+  },
+  "runtime_model": {
+    "model": "Ornith 35B local OpenVINO export",
+    "files": [
+      {
+        "name": "CHAT-TEMPLATE-PIN.json",
+        "bytes": 1224,
+        "sha256": "bc72b6eaa229f29c857168e63739cef1e8fc7e8539544b463ca66ecf5c66e811"
+      },
+      {
+        "name": "chat_template.jinja",
+        "bytes": 8147,
+        "sha256": "173b4cb55af687f861b7ca0ea571805093876c4fb140e1f7d64dcc0b54f9ca0b"
+      },
+      {
+        "name": "config.json",
+        "bytes": 3188,
+        "sha256": "a2f437dca9dbdf94133eebe54b4057790701ee6dc5a7fd892ee2bfea45445312"
+      },
+      {
+        "name": "generation_config.json",
+        "bytes": 213,
+        "sha256": "07f857aba5260b2ea2513f80de8062d086661f00eada0a3794964e665ba680f5"
+      },
+      {
+        "name": "openvino_config.json",
+        "bytes": 1212,
+        "sha256": "4207385cfd1f364713239986ddef36cb575018581f5136ee2b50451836fbfea2"
+      },
+      {
+        "name": "openvino_detokenizer.bin",
+        "bytes": 3828184,
+        "sha256": "48fc2c6a7a1056994982911eb9695826acef933c3d742364c56d16317a0b2a79"
+      },
+      {
+        "name": "openvino_detokenizer.xml",
+        "bytes": 15371,
+        "sha256": "dbba69f73e6bd4946eeacedfe8318308ad2ab3de34fe514f4ebed4d3939f3f43"
+      },
+      {
+        "name": "openvino_language_model.bin",
+        "bytes": 18646558250,
+        "sha256": "126b02c8379a78c09dc19dae36010f8f0c26b72975b420854e4046d1a6b18812"
+      },
+      {
+        "name": "openvino_language_model.xml",
+        "bytes": 7879887,
+        "sha256": "69a35f875e0d333fc5b884312225f3134ca6d04c0c1493d92f8232bc4f26b80c"
+      },
+      {
+        "name": "openvino_text_embeddings_model.bin",
+        "bytes": 509056004,
+        "sha256": "19a529477ab6f90072ca3c874ca68efb5278e9173c7192bf91d94c7271693a29"
+      },
+      {
+        "name": "openvino_text_embeddings_model.xml",
+        "bytes": 5903,
+        "sha256": "6844125b0c843b7fff0b0e905098b82a1195a518db2126fef39eb2406d2f1a1d"
+      },
+      {
+        "name": "openvino_tokenizer.bin",
+        "bytes": 9631143,
+        "sha256": "b829798d3e74080ff1c838a8308183daeffe4d8653b01ece2007f2ffe4b3a1c1"
+      },
+      {
+        "name": "openvino_tokenizer.xml",
+        "bytes": 32401,
+        "sha256": "d4ad56c420356e99491eb9c09a89cac2c524c6c412909fab4cca68ff16a35a62"
+      },
+      {
+        "name": "openvino_vision_embeddings_merger_model.bin",
+        "bytes": 443361892,
+        "sha256": "a995b0d1c23a3247d580f74b491e82fc6fc023238d1248bf9fd1baa12d41b578"
+      },
+      {
+        "name": "openvino_vision_embeddings_merger_model.xml",
+        "bytes": 1322496,
+        "sha256": "664d41ae6edd440b70e1a405aaadcf0983a5b4ee8d07253bbebcc970f04e7d71"
+      },
+      {
+        "name": "openvino_vision_embeddings_model.bin",
+        "bytes": 1776440,
+        "sha256": "22d5ef784a6235cb837763e77638e8ace72b2d6001dc6347a7300c8310bd0b48"
+      },
+      {
+        "name": "openvino_vision_embeddings_model.xml",
+        "bytes": 8642,
+        "sha256": "cad8ddd2a0d2c96aa6f2dded48c0e039c68941ac422e7dbea615a40ed04cb976"
+      },
+      {
+        "name": "openvino_vision_embeddings_pos_model.bin",
+        "bytes": 2658820,
+        "sha256": "261db08f77e8fe70b1624f2472433e90cfa04fd7e579abfca7febdfa8e236799"
+      },
+      {
+        "name": "openvino_vision_embeddings_pos_model.xml",
+        "bytes": 5873,
+        "sha256": "46d001ee196cc143e541fbdf92eb5d038fa5d07b2854b639d18254dd672e4a1b"
+      },
+      {
+        "name": "tokenizer.json",
+        "bytes": 19989492,
+        "sha256": "6f32ce20dc35f57a7f9ad1eac03525bd7d30f9df8cea6507e958279cc3657706"
+      },
+      {
+        "name": "tokenizer_config.json",
+        "bytes": 1272,
+        "sha256": "ea86adbad6aa3628fd04c56d3b5c01dc2d328e154e7bc4a3f04cbc3cffae55fc"
+      }
+    ]
+  },
+  "product_source_equals_parser_checkpoint": true,
+  "product_tree_pins": {
+    "src": "7974485a97a06d12352ca333d0b71ca90f49aa10",
+    "third_party": "3eecd69f7dbd7dbd1b2e927b3c69859e40409e89",
+    "WORKSPACE": "03569375ee5d8a4f7cf5d55e9e5cc090db6c4753",
+    "versions.mk": "e27f1280b0aa94e0632ca693f493a263676949c6",
+    ".bazelrc": "9af59d448ac19af55e4b435d3cb1844a191e558c",
+    "common_settings.bzl": "a52c940c3a98c1198d4c4013360454c6794ec56f"
+  },
+  "build_tools": [
+    {
+      "name": "cl.exe",
+      "bytes": 677736,
+      "sha256": "88c8344236a27a6e727e0a8edc49aaa2690bdc7a9464b9d18cc7abe70a9f1c0d"
+    },
+    {
+      "name": "link.exe",
+      "bytes": 3252576,
+      "sha256": "ca11e6c45debd34bf652dfe984c5360a531a005ed78bf72852330c9c2590cf0d"
+    },
+    {
+      "name": "bazel.exe",
+      "bytes": 49431296,
+      "sha256": "ff94279f7de7ec604c40b5d760f0dc10bdc880f07e915adced825f53e5f4fa1b"
+    }
+  ],
+  "host_gpu": [
+    {
+      "Name": "Intel(R) Arc(TM) 140V GPU (16GB)",
+      "DriverVersion": "32.0.101.9150"
+    },
+    {
+      "Name": "DisplayLink USB Device",
+      "DriverVersion": "11.2.3146.0"
+    },
+    {
+      "Name": "DisplayLink USB Device",
+      "DriverVersion": "11.2.3146.0"
+    }
+  ]
+}
