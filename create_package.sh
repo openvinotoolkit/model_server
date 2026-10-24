@@ -228,7 +228,8 @@ if [ "$FUZZER_BUILD" == "0" ]; then
 				exit 1
 			}
 			calculator_options=$(printf '%s\n' "$defined_symbols" \
-				| grep -oE '\b[A-Za-z_][A-Za-z0-9_]*CalculatorOptions\b' \
+				| grep -oE '\b[A-Za-z_][A-Za-z0-9_]*CalculatorOptions::ext$' \
+				| sed 's/::ext$//' \
 				| sort -u)
 			registration_symbol_sets+=("$calculator_options")
 		done

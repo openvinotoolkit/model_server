@@ -1975,10 +1975,10 @@ cc_binary(
             "//src:windows": [
                 "//src/mediapipe_internal:libovms_mediapipe_runtime_owner_no_python_calculators",
                 "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
+                "//src/python:python_calculators_host",
             ],
             "//conditions:default": [],
-        })
-     + ["//src/python:python_calculators_host"],
+        }),
     data = [":ovms_optional_plugins"] + select({
         "//src:windows": [
             "//src/python/binding:pyovms.pyd",
