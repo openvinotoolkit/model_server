@@ -1,0 +1,508 @@
+{
+  "schema": "qwm-fixed-vs-local-stock-installation-v1",
+  "captured_utc": "2026-10-24T17:53:50.740485+00:00",
+  "stock_root": "C:\\llm\\ovms",
+  "stock_version_stdout": "OpenVINO Model Server 2026.4.0.530dc63f\nOpenVINO backend 2026.4.0-22930-61afcb26271-releases/2026/4\nOpenVINO GenAI backend 2026.4.0.0-3401-5f7f1278107\nBazel build flags: --config=win_mp_on_py_on",
+  "fixed_lock": "LOCAL-INPUTS.lock.json",
+  "summary": {
+    "IDENTICAL": 21,
+    "DIFFERENT": 5,
+    "MISSING_IN_STOCK": 3
+  },
+  "comparison": [
+    {
+      "name": "ovms.exe",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\bazel-bin\\src\\ovms.exe",
+        "bytes": 22596608,
+        "sha256": "f472d619097b3d64c3899a4628f219381941e99bb388d9c9c8a1d84956475397"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\ovms.exe",
+        "bytes": 22731784,
+        "sha256": "073ed783610883f9060fe861736c683a7edff59937b25dbd18e1fdeea14007fc"
+      },
+      "status": "DIFFERENT"
+    },
+    {
+      "name": "openvino.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino.dll",
+        "bytes": 16465168,
+        "sha256": "829c4642e287522f8a8e748a726d4ad3117a701e22ab46adc82771f98e5d2f7e"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\openvino.dll",
+        "bytes": 16465168,
+        "sha256": "829c4642e287522f8a8e748a726d4ad3117a701e22ab46adc82771f98e5d2f7e"
+      },
+      "status": "IDENTICAL"
+    },
+    {
+      "name": "openvino_auto_batch_plugin.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_auto_batch_plugin.dll",
+        "bytes": 208144,
+        "sha256": "d21dc67bee39d3af3fbda6720198a6b025eda297680d5d747996730bc75496dd"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\openvino_auto_batch_plugin.dll",
+        "bytes": 208144,
+        "sha256": "d21dc67bee39d3af3fbda6720198a6b025eda297680d5d747996730bc75496dd"
+      },
+      "status": "IDENTICAL"
+    },
+    {
+      "name": "openvino_auto_plugin.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_auto_plugin.dll",
+        "bytes": 720656,
+        "sha256": "ed1492fe3f901d2b882ea89c8909d8ce35eb52986a3559353a44917ee3fb3e47"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\openvino_auto_plugin.dll",
+        "bytes": 720656,
+        "sha256": "ed1492fe3f901d2b882ea89c8909d8ce35eb52986a3559353a44917ee3fb3e47"
+      },
+      "status": "IDENTICAL"
+    },
+    {
+      "name": "openvino_c.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_c.dll",
+        "bytes": 234248,
+        "sha256": "8f89f65cb867d27d18607dad3ad5893df53561a809037a28c9c154b937976dfb"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\openvino_c.dll",
+        "bytes": 234248,
+        "sha256": "8f89f65cb867d27d18607dad3ad5893df53561a809037a28c9c154b937976dfb"
+      },
+      "status": "IDENTICAL"
+    },
+    {
+      "name": "openvino_genai.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_genai.dll",
+        "bytes": 7425808,
+        "sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\openvino_genai.dll",
+        "bytes": 7425808,
+        "sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d"
+      },
+      "status": "IDENTICAL"
+    },
+    {
+      "name": "openvino_genai_c.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_genai_c.dll",
+        "bytes": 178448,
+        "sha256": "0304bf893da72bbe4f31e41137a015e927ebc7fdfbb828236b6fa920310c8480"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\openvino_genai_c.dll",
+        "bytes": 178448,
+        "sha256": "0304bf893da72bbe4f31e41137a015e927ebc7fdfbb828236b6fa920310c8480"
+      },
+      "status": "IDENTICAL"
+    },
+    {
+      "name": "openvino_gguf_frontend.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_gguf_frontend.dll",
+        "bytes": 1322248,
+        "sha256": "c984068e1e521fc2cd3ee6211c67c0ea7a798b76ece9febbff0510c1280b38cf"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\openvino_gguf_frontend.dll",
+        "bytes": 1322248,
+        "sha256": "c984068e1e521fc2cd3ee6211c67c0ea7a798b76ece9febbff0510c1280b38cf"
+      },
+      "status": "IDENTICAL"
+    },
+    {
+      "name": "openvino_hetero_plugin.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_hetero_plugin.dll",
+        "bytes": 531728,
+        "sha256": "c21be45cea174c79163394e4cfe3a782ebef7a7a64b4ee43dfcf3828d558de16"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\openvino_hetero_plugin.dll",
+        "bytes": 531728,
+        "sha256": "c21be45cea174c79163394e4cfe3a782ebef7a7a64b4ee43dfcf3828d558de16"
+      },
+      "status": "IDENTICAL"
+    },
+    {
+      "name": "openvino_intel_cpu_plugin.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_intel_cpu_plugin.dll",
+        "bytes": 46222600,
+        "sha256": "ce9c65b551e36139b62e28f2c8c7b9fc2a5c02c82e1dfd01e578dac30695e78b"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\openvino_intel_cpu_plugin.dll",
+        "bytes": 46222600,
+        "sha256": "ce9c65b551e36139b62e28f2c8c7b9fc2a5c02c82e1dfd01e578dac30695e78b"
+      },
+      "status": "IDENTICAL"
+    },
+    {
+      "name": "openvino_intel_gpu_plugin.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_intel_gpu_plugin.dll",
+        "bytes": 34629896,
+        "sha256": "b90b57aecb9d8bbb7b0a1e945e45a088e94ea7baf61eaf5dd7d8fe5e06c9e55d"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\openvino_intel_gpu_plugin.dll",
+        "bytes": 33879040,
+        "sha256": "21a2fd9f5d856c297416059325832f0f902c84a4e78b840f859ca508f5aea66d"
+      },
+      "status": "DIFFERENT"
+    },
+    {
+      "name": "openvino_intel_npu_compiler.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_intel_npu_compiler.dll",
+        "bytes": 98174216,
+        "sha256": "c663f5c7649550359a373115be1946028a423fedf67e8893c46152323a65a06b"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\openvino_intel_npu_compiler.dll",
+        "bytes": 98174216,
+        "sha256": "c663f5c7649550359a373115be1946028a423fedf67e8893c46152323a65a06b"
+      },
+      "status": "IDENTICAL"
+    },
+    {
+      "name": "openvino_intel_npu_compiler_loader.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_intel_npu_compiler_loader.dll",
+        "bytes": 529672,
+        "sha256": "ea3a6b018a40e1a57c3d982a5e661ba12e6c3ada09ffe77a5eb9af58930f0fe1"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\openvino_intel_npu_compiler_loader.dll",
+        "bytes": 529672,
+        "sha256": "ea3a6b018a40e1a57c3d982a5e661ba12e6c3ada09ffe77a5eb9af58930f0fe1"
+      },
+      "status": "IDENTICAL"
+    },
+    {
+      "name": "openvino_intel_npu_plugin.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_intel_npu_plugin.dll",
+        "bytes": 7615752,
+        "sha256": "e27a466c9690e079b82d453a93a583d9008cb08e9965a6f459c56bccde965198"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\openvino_intel_npu_plugin.dll",
+        "bytes": 7615752,
+        "sha256": "e27a466c9690e079b82d453a93a583d9008cb08e9965a6f459c56bccde965198"
+      },
+      "status": "IDENTICAL"
+    },
+    {
+      "name": "openvino_intel_npu_vm_runtime.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_intel_npu_vm_runtime.dll",
+        "bytes": 485640,
+        "sha256": "b4ed9e64bcb6855b918c315614631d6bad2f506f56c18394e38d2ce6aed61b14"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\openvino_intel_npu_vm_runtime.dll",
+        "bytes": 485640,
+        "sha256": "b4ed9e64bcb6855b918c315614631d6bad2f506f56c18394e38d2ce6aed61b14"
+      },
+      "status": "IDENTICAL"
+    },
+    {
+      "name": "openvino_ir_frontend.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_ir_frontend.dll",
+        "bytes": 509192,
+        "sha256": "44604b39cbafcf4d8aa27697cee639038bdfcf24f5245f0be07abcf30609d4cd"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\openvino_ir_frontend.dll",
+        "bytes": 509192,
+        "sha256": "44604b39cbafcf4d8aa27697cee639038bdfcf24f5245f0be07abcf30609d4cd"
+      },
+      "status": "IDENTICAL"
+    },
+    {
+      "name": "openvino_onnx_frontend.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_onnx_frontend.dll",
+        "bytes": 5414160,
+        "sha256": "1554b14f226c3bcdf73362cd818c5137f6f80c1ef19e4850a8b4765b70dba0f4"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\openvino_onnx_frontend.dll",
+        "bytes": 5414160,
+        "sha256": "1554b14f226c3bcdf73362cd818c5137f6f80c1ef19e4850a8b4765b70dba0f4"
+      },
+      "status": "IDENTICAL"
+    },
+    {
+      "name": "openvino_paddle_frontend.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_paddle_frontend.dll",
+        "bytes": 1688848,
+        "sha256": "48b407390f572e20d557a8a5ba87f0ba42d4a224b92d7063332ddbbcc29c807c"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\openvino_paddle_frontend.dll",
+        "bytes": 1688848,
+        "sha256": "48b407390f572e20d557a8a5ba87f0ba42d4a224b92d7063332ddbbcc29c807c"
+      },
+      "status": "IDENTICAL"
+    },
+    {
+      "name": "openvino_pytorch_frontend.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_pytorch_frontend.dll",
+        "bytes": 2791176,
+        "sha256": "947363b58a525137487d4d3cac9f2d110c0ae1ae283ab27388c9d3d057ccecec"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\openvino_pytorch_frontend.dll",
+        "bytes": 2791176,
+        "sha256": "947363b58a525137487d4d3cac9f2d110c0ae1ae283ab27388c9d3d057ccecec"
+      },
+      "status": "IDENTICAL"
+    },
+    {
+      "name": "openvino_tensorflow_frontend.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_tensorflow_frontend.dll",
+        "bytes": 4128016,
+        "sha256": "b8c7cb549e942c3062b1e13d4aea34c87d497f10b9f4dcfacc6d8848223eeef3"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\openvino_tensorflow_frontend.dll",
+        "bytes": 4128016,
+        "sha256": "b8c7cb549e942c3062b1e13d4aea34c87d497f10b9f4dcfacc6d8848223eeef3"
+      },
+      "status": "IDENTICAL"
+    },
+    {
+      "name": "openvino_tensorflow_lite_frontend.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_tensorflow_lite_frontend.dll",
+        "bytes": 1263376,
+        "sha256": "0ded983534495e1c366fcb989fe1d63e226b12be73158000f2433e4278c06a5a"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\openvino_tensorflow_lite_frontend.dll",
+        "bytes": 1263376,
+        "sha256": "0ded983534495e1c366fcb989fe1d63e226b12be73158000f2433e4278c06a5a"
+      },
+      "status": "IDENTICAL"
+    },
+    {
+      "name": "openvino_tokenizers.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_tokenizers.dll",
+        "bytes": 3483912,
+        "sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\openvino_tokenizers.dll",
+        "bytes": 3483912,
+        "sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c"
+      },
+      "status": "IDENTICAL"
+    },
+    {
+      "name": "tbb12.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\3rdparty\\tbb\\bin\\tbb12.dll",
+        "bytes": 337160,
+        "sha256": "63cc8a5a9cee86e9d57967337053569df6335aca09d03f8657343633645d2727"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\tbb12.dll",
+        "bytes": 337160,
+        "sha256": "63cc8a5a9cee86e9d57967337053569df6335aca09d03f8657343633645d2727"
+      },
+      "status": "IDENTICAL"
+    },
+    {
+      "name": "tbbbind_2_5.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\3rdparty\\tbb\\bin\\tbbbind_2_5.dll",
+        "bytes": 209168,
+        "sha256": "235047df3f97a6b94c3a5e70d93b892141e32ae27ef06f0c583667b417118b20"
+      },
+      "stock_installation": null,
+      "status": "MISSING_IN_STOCK"
+    },
+    {
+      "name": "tbbmalloc.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\3rdparty\\tbb\\bin\\tbbmalloc.dll",
+        "bytes": 119056,
+        "sha256": "06e72fd9ed67405efd411c33d8dfbe9bf21cb62ff8ef2ccb1003bb1bc32b2924"
+      },
+      "stock_installation": null,
+      "status": "MISSING_IN_STOCK"
+    },
+    {
+      "name": "tbbmalloc_proxy.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\3rdparty\\tbb\\bin\\tbbmalloc_proxy.dll",
+        "bytes": 41736,
+        "sha256": "44b6e5017bd693da7feb3a226e6d8897387614e2fda9308d30c1ffc50875a320"
+      },
+      "stock_installation": null,
+      "status": "MISSING_IN_STOCK"
+    },
+    {
+      "name": "git2.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\bazel-bin\\src\\git2.dll",
+        "bytes": 1756160,
+        "sha256": "7eb7ff327997dc19db29927153d54b1261df0888378f3c5d0ddf7c72f51998dd"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\git2.dll",
+        "bytes": 1766920,
+        "sha256": "f5faca49993a93090f5d2b64db9aadc9d103f9ca30ee47e18408e3f1911de2a2"
+      },
+      "status": "DIFFERENT"
+    },
+    {
+      "name": "libcurl-x64.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\bazel-bin\\src\\libcurl-x64.dll",
+        "bytes": 3647080,
+        "sha256": "f31fa58061e162ff4702b37224404df210346df6dff4a49e92d07b8dd5217334"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\libcurl-x64.dll",
+        "bytes": 3622416,
+        "sha256": "08ca9a464f00e1ca29dd10d4770f98664b5dfc2f5f237eda942095b9546b11ef"
+      },
+      "status": "DIFFERENT"
+    },
+    {
+      "name": "opencv_world4140.dll",
+      "fixed": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\bazel-bin\\src\\opencv_world4140.dll",
+        "bytes": 79832576,
+        "sha256": "a192cbf006faf48c054468fa2a2e56e3f680b401c23b8f7fb24373ff75654c46"
+      },
+      "stock_installation": {
+        "path": "C:\\llm\\ovms\\opencv_world4140.dll",
+        "bytes": 51370000,
+        "sha256": "3c25b93a0dc1dc99f28ac57a2fee300ada5b6acae48f7cd502ffbec66b43783c"
+      },
+      "status": "DIFFERENT"
+    }
+  ],
+  "extra_root_dlls_in_stock": [
+    {
+      "path": "C:\\llm\\ovms\\espeak-ng.dll",
+      "bytes": 393744,
+      "sha256": "9871e0b4b9852ebd73f8ae73eeba95daeb123587f5887ad7625b435e44065225"
+    }
+  ],
+  "stock_plugin_backups": [
+    {
+      "path": "C:\\llm\\ovms\\plugin-backups\\openvino_intel_gpu_plugin.dll.stock-20261015074213",
+      "bytes": 34629896,
+      "sha256": "b90b57aecb9d8bbb7b0a1e945e45a088e94ea7baf61eaf5dd7d8fe5e06c9e55d"
+    }
+  ],
+  "stock_exe_imports": [
+    "ADVAPI32.dll",
+    "api-ms-win-crt-convert-l1-1-0.dll",
+    "api-ms-win-crt-environment-l1-1-0.dll",
+    "api-ms-win-crt-filesystem-l1-1-0.dll",
+    "api-ms-win-crt-heap-l1-1-0.dll",
+    "api-ms-win-crt-locale-l1-1-0.dll",
+    "api-ms-win-crt-math-l1-1-0.dll",
+    "api-ms-win-crt-runtime-l1-1-0.dll",
+    "api-ms-win-crt-stdio-l1-1-0.dll",
+    "api-ms-win-crt-string-l1-1-0.dll",
+    "api-ms-win-crt-time-l1-1-0.dll",
+    "api-ms-win-crt-utility-l1-1-0.dll",
+    "dbghelp.dll",
+    "git2.dll",
+    "KERNEL32.dll",
+    "libcurl-x64.dll",
+    "MSVCP140.dll",
+    "opencv_world4140.dll",
+    "openvino.dll",
+    "openvino_genai.dll",
+    "python312.dll",
+    "RPCRT4.dll",
+    "SHLWAPI.dll",
+    "VCRUNTIME140.dll",
+    "VCRUNTIME140_1.dll",
+    "WS2_32.dll"
+  ],
+  "fixed_exe_imports": [
+    "ADVAPI32.dll",
+    "api-ms-win-crt-convert-l1-1-0.dll",
+    "api-ms-win-crt-environment-l1-1-0.dll",
+    "api-ms-win-crt-filesystem-l1-1-0.dll",
+    "api-ms-win-crt-heap-l1-1-0.dll",
+    "api-ms-win-crt-locale-l1-1-0.dll",
+    "api-ms-win-crt-math-l1-1-0.dll",
+    "api-ms-win-crt-runtime-l1-1-0.dll",
+    "api-ms-win-crt-stdio-l1-1-0.dll",
+    "api-ms-win-crt-string-l1-1-0.dll",
+    "api-ms-win-crt-time-l1-1-0.dll",
+    "api-ms-win-crt-utility-l1-1-0.dll",
+    "dbghelp.dll",
+    "git2.dll",
+    "KERNEL32.dll",
+    "libcurl-x64.dll",
+    "MSVCP140.dll",
+    "opencv_world4140.dll",
+    "openvino.dll",
+    "openvino_genai.dll",
+    "RPCRT4.dll",
+    "SHLWAPI.dll",
+    "VCRUNTIME140.dll",
+    "VCRUNTIME140_1.dll",
+    "WS2_32.dll"
+  ],
+  "imports_only_in_stock": [
+    "python312.dll"
+  ],
+  "imports_only_in_fixed": [],
+  "python_observations": [
+    {
+      "root": "C:\\llm\\ovms\\python",
+      "files": 35971,
+      "bytes": 1484062436,
+      "python_exe": {
+        "path": "C:\\llm\\ovms\\python\\python.exe",
+        "bytes": 104952,
+        "sha256": "4d6f5f81a4bca11191c4c7c6b43632694d0a4ce74e068619d8fdc161d469859a"
+      }
+    },
+    {
+      "root": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-tools\\py-nupkg\\tools",
+      "files": 1323,
+      "bytes": 39284294,
+      "python_exe": {
+        "path": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-tools\\py-nupkg\\tools\\python.exe",
+        "bytes": 104952,
+        "sha256": "4d6f5f81a4bca11191c4c7c6b43632694d0a4ce74e068619d8fdc161d469859a"
+      }
+    }
+  ],
+  "limits": [
+    "Compared current installed bytes, not a pristine vendor ZIP.",
+    "No model started; --version and static PE inspection only.",
+    "No DLL or lock replaced. Static imports do not establish loaded modules."
+  ]
+}

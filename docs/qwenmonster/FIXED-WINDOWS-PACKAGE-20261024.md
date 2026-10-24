@@ -15,6 +15,8 @@ The goal is to preserve the existing EXE and its dependency bytes. Do not resolv
 
 The older `RELEASE-CANDIDATE-20261023-RC3B-IDENTITY.json` describes an earlier EXE with SHA256 beginning `2beed15e`; do not use that binary identity for this postfix build.
 
+The subsequent [comparison with local Stock `2026.4.0.530dc63f`](FIXED-VS-LOCAL-STOCK-20261024.md) found that `C:\llm\ovms` currently contains the custom GPU reference, whereas its stock-GPU backup matches the DLL pinned here. The fixed lock is unchanged; do not substitute that installation's active GPU or its Python-enabled EXE.
+
 On 2026-10-23, parser checks passed 34/34 and 81/81, and test/server builds completed. The original [testing handoff](QWEN3CODER-LOSSLESS-TESTING-HANDOFF.md) recorded live NOT RUN at that checkpoint. Later evidence exists:
 
 | Evidence | Established result |
