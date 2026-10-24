@@ -569,20 +569,76 @@ TEST_F(LLMHttpDecisionsTest, decisionsMissingInstructions) {
     ASSERT_NE(status.string().find("question.instructions is missing"), std::string::npos);
 }
 
-// /v1/decisions requires continuous batching; legacy servables reject it
-TEST_F(LLMHttpDecisionsTest, decisionsLegacyServableRejected) {
+// The legacy one-shot servable serves /v1/decisions: one greedy forward pass per
+// question, serialized from the requested-token logprobs.
+TEST_F(LLMHttpDecisionsTest, decisionsLegacyServableHappyPath) {
+    const std::string legacyModel = "lm_legacy_regular";
+    std::string requestBody = threeQuestionsBody(legacyModel);
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointDecisions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK)
+        << response;
+
+    parsedResponse.Parse(response.c_str());
+    ASSERT_FALSE(parsedResponse.HasParseError());
+    ASSERT_TRUE(parsedResponse.IsObject());
+    ASSERT_STREQ(parsedResponse["object"].GetString(), "decision");
+    ASSERT_STREQ(parsedResponse["model"].GetString(), legacyModel.c_str());
+    // Each question generates exactly one token, so completion = number of questions.
+    ASSERT_EQ(parsedResponse["usage"]["completion_tokens"].GetInt(), 3);
+    ASSERT_EQ(parsedResponse["usage"]["total_tokens"].GetInt(), parsedResponse["usage"]["prompt_tokens"].GetInt() + 3);
+
+    const auto& answers = parsedResponse["answers"];
+    ASSERT_TRUE(answers.IsArray());
+    ASSERT_EQ(answers.Size(), 3);
+    const auto& diagnostics = parsedResponse["diagnostics"];
+    ASSERT_TRUE(diagnostics.IsArray());
+    ASSERT_EQ(diagnostics.Size(), 3);
+
+    for (rapidjson::SizeType i = 0; i < answers.Size(); ++i) {
+        const auto& answer = answers[i];
+        ASSERT_TRUE(answer.IsObject());
+        ASSERT_TRUE(answer.HasMember("answer"));
+        ASSERT_TRUE(answer["answer"].IsString() || answer["answer"].IsNumber());
+        ASSERT_TRUE(answer.HasMember("probabilities"));
+        ASSERT_TRUE(answer["probabilities"].IsObject());
+        ASSERT_GE(answer["probabilities"].MemberCount(), 2);
+        ASSERT_TRUE(answer.HasMember("confidence"));
+        const double confidence = answer["confidence"].GetDouble();
+        ASSERT_GT(confidence, 0.0);
+        ASSERT_LE(confidence, 1.0 + 1e-6);
+    }
+}
+
+// Two named predicates on the legacy servable: per-question answers and usage.
+TEST_F(LLMHttpDecisionsTest, decisionsLegacyServableTwoQuestions) {
     std::string requestBody = R"({
         "model": "lm_legacy_regular",
         "input": "The sky is",
         "questions": [
-            {"type": "predicate", "instructions": "Is the statement true?"}
+            {"type": "predicate", "instructions": "Is the main subject an animal?", "name": "is_animal"},
+            {"type": "predicate", "instructions": "Is the main subject a vehicle?", "name": "is_vehicle"}
         ]
     })";
 
-    auto status = handler->dispatchToProcessor(endpointDecisions, requestBody, &response, comp, responseComponents, writer, multiPartParser);
-    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
-    ASSERT_NE(status.string().find("UNIMPLEMENTED"), std::string::npos);
-    ASSERT_NE(status.string().find("requires a continuous batching servable"), std::string::npos);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointDecisions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK)
+        << response;
+    parsedResponse.Parse(response.c_str());
+    ASSERT_FALSE(parsedResponse.HasParseError());
+    const auto& answers = parsedResponse["answers"];
+    ASSERT_TRUE(answers.IsArray());
+    ASSERT_EQ(answers.Size(), 2);
+    for (rapidjson::SizeType i = 0; i < answers.Size(); ++i) {
+        ASSERT_TRUE(answers[i]["answer"].IsString());
+        ASSERT_TRUE(answers[i]["confidence"].IsNumber());
+        ASSERT_TRUE(answers[i]["probabilities"].IsObject());
+        ASSERT_EQ(answers[i]["probabilities"].MemberCount(), 2);
+        ASSERT_STREQ(answers[i]["name"].GetString(), i == 0 ? "is_animal" : "is_vehicle");
+    }
+    ASSERT_EQ(parsedResponse["usage"]["completion_tokens"].GetInt(), 2);
 }
 
 // Assisted-decoding servables (speculative decoding / prompt lookup) reject /v1/decisions:

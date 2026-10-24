@@ -88,6 +88,12 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
     }
 
     legacyExecutionContext->baseGenerationConfig = properties->baseGenerationConfig;
+    if (legacyExecutionContext->endpoint == Endpoint::DECISIONS) {
+        // The base implementation creates the OpenAIDecisionsHandler and routes the
+        // per-question InputRequests into decisionsInputRequests; the executor and
+        // prepareCompleteResponse handle them on the one-shot pipeline.
+        return GenAiServable::parseRequest(executionContext);
+    }
     try {
         if (legacyExecutionContext->endpoint == Endpoint::RESPONSES) {
             legacyExecutionContext->apiHandler = std::make_shared<OpenAIResponsesHandler>(*legacyExecutionContext->payload.parsedJson,
@@ -153,8 +159,18 @@ absl::Status LegacyServable::prepareInputs(std::shared_ptr<GenAiServableExecutio
     if (!status.ok()) {
         return status;
     }
-    // Additional validation layer for NPU specific properties
-    status = validateInputComplianceWithProperties(executionContext->inputRequest.inputIds);
+    // Additional validation layer for NPU specific properties. Decisions carry one
+    // prompt per question (inputRequest stays empty), so check each of them.
+    if (!executionContext->decisionsInputRequests.empty()) {
+        for (const auto& req : executionContext->decisionsInputRequests) {
+            status = validateInputComplianceWithProperties(req.inputIds);
+            if (!status.ok()) {
+                return status;
+            }
+        }
+    } else {
+        status = validateInputComplianceWithProperties(executionContext->inputRequest.inputIds);
+    }
     return status;
 }
 
@@ -190,6 +206,33 @@ absl::Status LegacyServable::prepareCompleteResponse(std::shared_ptr<GenAiServab
     auto legacyExecutionContext = std::static_pointer_cast<LegacyServableExecutionContext>(executionContext);
     if (legacyExecutionContext->payload.client->isDisconnected()) {
         return absl::CancelledError();
+    }
+    if (!legacyExecutionContext->decisionsResults.empty()) {
+        // By the time prepareCompleteResponse is called, readCompleteExecutionResults has
+        // already waited on finished — the per-question results are fully populated.
+        // Aggregate the per-question metrics (same pipeline, so the load_time equality
+        // asserted by PerfMetrics::operator+ holds).
+        auto aggregatedMetrics = legacyExecutionContext->decisionsResults.front().perf_metrics;
+        for (size_t i = 1; i < legacyExecutionContext->decisionsResults.size(); ++i) {
+            aggregatedMetrics += legacyExecutionContext->decisionsResults[i].perf_metrics;
+        }
+        executionContext->apiHandler->setPromptTokensUsage(aggregatedMetrics.get_num_input_tokens());
+        executionContext->apiHandler->setCompletionTokensUsage(aggregatedMetrics.get_num_generated_tokens());
+        executionContext->apiHandler->setCachedPromptTokensUsage(aggregatedMetrics.get_num_prefix_cache_hit_tokens());
+
+        // The decisions serializer reads generatedIds.front() as the argmax token and
+        // requestedTokenLogprobs.front() as the per-label logprobs of that position;
+        // per-token logProbs are not used by this endpoint.
+        std::vector<UnaryChoiceLogprobs> logprobData;
+        logprobData.reserve(legacyExecutionContext->decisionsResults.size());
+        for (const auto& questionResults : legacyExecutionContext->decisionsResults) {
+            logprobData.push_back({questionResults.tokens.empty() ? std::vector<int64_t>{} : questionResults.tokens[0],
+                {},
+                questionResults.requested_token_logprobs.empty() ? std::vector<std::vector<std::pair<int64_t, float>>>{} : questionResults.requested_token_logprobs[0]});
+        }
+        executionContext->response = executionContext->apiHandler->serializeUnaryResponse({}, {}, logprobData);
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
+        return absl::OkStatus();
     }
     // By the time prepareCompleteResponse is called, readCompleteExecutionResults has
     // already waited on finished — results and perf_metrics are fully populated.
