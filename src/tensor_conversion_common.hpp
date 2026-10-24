@@ -21,7 +21,6 @@
 #include <vector>
 #include <string>
 
-#include "deps/opencv.hpp"
 #include "tensorinfo.hpp"
 
 namespace ovms {
@@ -30,27 +29,21 @@ namespace tensor_conversion {
 Status validateLayout(const TensorInfo& tensorInfo);
 int getNumberOfInputs(const std::string* buffer);
 bool checkBatchSizeMismatch(const TensorInfo& tensorInfo, const int batchSize);
-int getMatTypeFromTensorPrecision(ovms::Precision tensorPrecision);
-bool isPrecisionEqual(int matPrecision, ovms::Precision tensorPrecision);
-cv::Mat convertStringToMat(const std::string& image);
-Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const ovms::Precision requestedPrecision);
-Status validateLayout(const TensorInfo& tensorInfo);
-bool resizeNeeded(const cv::Mat& image, const dimension_value_t height, const dimension_value_t width);
-Status validateInput(const TensorInfo& tensorInfo, const cv::Mat input, cv::Mat* firstBatchImage, bool enforceResolutionAlignment);
-Status resizeMat(const cv::Mat& src, cv::Mat& dst, const dimension_value_t height, const dimension_value_t width);
+bool isSupportedImagePrecision(ovms::Precision tensorPrecision);
+Status validateInput(const TensorInfo& tensorInfo, const ov::Tensor& input, const ov::Tensor* firstBatchImage, bool enforceResolutionAlignment);
 Status validateNumberOfChannels(const TensorInfo& tensorInfo,
-    const cv::Mat input,
-    cv::Mat* firstBatchImage);
-Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::Mat* firstBatchImage);
+    const ov::Tensor& input,
+    const ov::Tensor* firstBatchImage);
+Status validateResolutionAgainstFirstBatchImage(const ov::Tensor& input, const ov::Tensor* firstBatchImage);
 Status checkEstimatedImageSize(std::string_view encodedImage, const std::string& inputName,
     size_t alreadyAllocatedPixels, size_t maxAllowedImagePixels);
-Status accumulateAndCheckDecodedImageSize(const cv::Mat& image, const TensorInfo& tensorInfo,
+Status accumulateAndCheckDecodedImageSize(const ov::Tensor& image, const TensorInfo& tensorInfo,
     size_t& totalAllocatedPixels, size_t maxAllowedImagePixels);
-}  // namespace tensor_conversion
 Dimension getTensorInfoHeightDim(const TensorInfo& tensorInfo);
-void updateTargetResolution(Dimension& height, Dimension& width, const cv::Mat& image);
+Dimension getTensorInfoWidthDim(const TensorInfo& tensorInfo);
+void updateTargetResolution(Dimension& height, Dimension& width, const ov::Tensor& image);
 bool isResizeSupported(const TensorInfo& tensorInfo);
-shape_t getShapeFromImages(const std::vector<cv::Mat>& images, const TensorInfo& tensorInfo);
-ov::Tensor createTensorFromMats(const std::vector<cv::Mat>& images, const TensorInfo& tensorInfo);
-ov::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const TensorInfo& tensorInfo);
+Status getInputs(const std::string* buffer, std::vector<std::string>& inputs);
+ov::Tensor createTensorFromImages(const std::vector<ov::Tensor>& images, const TensorInfo& tensorInfo);
+}  // namespace tensor_conversion
 }  // namespace ovms

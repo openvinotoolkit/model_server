@@ -76,7 +76,7 @@ ovms_cc_library(
     deps = [
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@com_github_tencent_rapidjson//:rapidjson",
-        "@model_api//:model_api",
+        "@model_api//:inference_adapter_headers",
         "//src:httppayload",
         "//src:libhttpclientconnection",
         "//src:libovmslogging",

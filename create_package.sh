@@ -169,12 +169,25 @@ if [ "$FUZZER_BUILD" == "0" ]; then
 		echo "OVMS binary must not link directly against libpython."
 		exit 1
 	fi
+	if echo "$ovms_needed" | grep -Eiq '[(]NEEDED[)].*opencv'; then
+		echo "OVMS binary must not link directly against OpenCV; use optional runtime plugins."
+		exit 1
+	fi
+	if [ ! -f ../lib/libovms_opencv_image_decoder.so ]; then
+		echo "Missing optional OpenCV image decoder plugin in package staging."
+		exit 1
+	fi
 	if [[ "$debug_bazel_flags" != *"mp_off"* && "$debug_bazel_flags" != *"disable_mediapipe"* ]]; then
 		if ! command -v nm >/dev/null 2>&1; then
 			echo "Cannot verify OVMS MediaPipe symbols: nm is unavailable."
 			exit 1
 		fi
-		exported_symbols=$(nm -D ./ovms | awk '$2 ~ /^[A-TV-Z]$/ { print $3 }')
+		runtime_library=../lib/libovms_mediapipe_runtime_shared.so
+		if [ ! -f "$runtime_library" ]; then
+			echo "Missing MediaPipe runtime shared library: $runtime_library."
+			exit 1
+		fi
+		exported_symbols=$(nm -D "$runtime_library" | awk '$2 ~ /^[A-TV-Z]$/ { print $3 }')
 		for symbol in \
 			OVMS_MPFactoryCreate \
 			OVMS_MPFactoryDestroy \
@@ -203,8 +216,7 @@ if [ "$FUZZER_BUILD" == "0" ]; then
 			fi
 		done
 
-		registration_artifacts=(./ovms ../lib/libovms_llm_calculators.so)
-		registration_artifacts+=(../lib/libovmspython.so ../lib/libpython_calculators.so)
+		registration_artifacts=(./ovms ../lib/libovms_mediapipe_runtime_shared.so ../lib/libovms_llm_calculators.so ../lib/libovms_opencv_calculators.so ../lib/libovmspython.so ../lib/libpython_calculators.so)
 		registration_symbol_sets=()
 		for artifact in "${registration_artifacts[@]}"; do
 			if [ ! -f "$artifact" ]; then
@@ -216,7 +228,8 @@ if [ "$FUZZER_BUILD" == "0" ]; then
 				exit 1
 			}
 			calculator_options=$(printf '%s\n' "$defined_symbols" \
-				| grep -oE '\b[A-Za-z_][A-Za-z0-9_]*CalculatorOptions\b' \
+				| grep -oE '\b[A-Za-z_][A-Za-z0-9_]*CalculatorOptions::ext$' \
+				| sed 's/::ext$//' \
 				| sort -u)
 			registration_symbol_sets+=("$calculator_options")
 		done
@@ -271,4 +284,3 @@ cd /ovms_pkg/${BASE_OS}
 tar cf ovms.tar --transform 's/ovms_release/ovms/' /ovms_release/
 cd /ovms_release
 ls -l
-

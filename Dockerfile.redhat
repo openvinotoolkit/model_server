@@ -44,6 +44,7 @@ RUN echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf && \
             libtool \
             libxml2-devel \
             make \
+            nasm \
             openssl-devel \
             patch \
             pkg-config \
@@ -372,7 +373,7 @@ ARG CAPI_FLAGS="--strip=always  --config=mp_off --//:distro=redhat"
 ARG JOBS=40
 ARG LTO_ENABLE=OFF
 WORKDIR /ovms
-RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false bazel build --jobs $JOBS ${CAPI_FLAGS} //src:ovms_shared
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false bazel build --jobs $JOBS ${CAPI_FLAGS} //src:ovms_shared //src:ovms_optional_plugins
 
 # C api app with bazel
 # hadolint ignore=DL3059

@@ -26,7 +26,6 @@
 
 #include "inferencetensor.hpp"
 #include "../logging.hpp"
-#include "../deps/opencv.hpp"
 #include "../profiler.hpp"
 #include "src/status.hpp"
 #include "../tensor_conversion_after.hpp"

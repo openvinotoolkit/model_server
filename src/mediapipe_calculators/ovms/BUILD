@@ -72,7 +72,7 @@ cc_library(
         "//src:ovms_header",
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework/port:logging",
-        "@model_api//:model_api",
+        "@model_api//:inference_adapter_headers",
     ],
 )
 

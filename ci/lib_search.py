@@ -168,6 +168,7 @@ def check_dir(start_dir):
         'ovms_calculator_graph_visibility.diff',
         'model_api_json_archive.patch',
         'com_google_protobuf_fixes.diff',
+        'ovms_plugin_type_identity.diff',
         'ovms_no_litert.diff',
         'ovms_strip.diff',
         ]
@@ -252,6 +253,7 @@ def check_func(start_dir):
         'partial_2.18.patch',
         'zlib.LICENSE.txt',
         'bazel_rules_apple.patch',
+        'vms_plugin_type_identity.diff',
         'yarn.lock',
         'BUILD.bazel',
         'package.json',

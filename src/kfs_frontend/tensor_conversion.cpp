@@ -27,7 +27,6 @@
 #include <openvino/openvino.hpp>
 
 #include "../logging.hpp"
-#include "../deps/opencv.hpp"
 #include "../profiler.hpp"
 #include "src/status.hpp"
 
