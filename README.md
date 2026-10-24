@@ -1,10 +1,12 @@
 # OpenVINO&trade; Model Server
 
+> **GEMMAMONSTER fork baseline:** [2026.4 RC4 Windows release and reproducible packaging](docs/qwenmonster/RC4-WINDOWS-RELEASE.md). Python On and Python Off use the OVMS Windows distribution protocol. Historical release branches and mutable local Bazel outputs are not the baseline for new work.
+
 **High-performance model serving for Generative AI and classic deep learning — powered by [OpenVINO](https://github.com/openvinotoolkit/openvino) and optimized for Intel hardware.**
 
 [![Apache License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](https://github.com/openvinotoolkit/model_server/blob/main/LICENSE)
 [![Docker Pulls](https://img.shields.io/docker/pulls/openvino/model_server.svg)](https://hub.docker.com/r/openvino/model_server)
-[![GitHub Release](https://img.shields.io/github/v/release/openvinotoolkit/model_server)](https://github.com/openvinotoolkit/model_server/releases)
+[![GEMMAMONSTER RC](https://img.shields.io/github/v/release/DassaultFalconKing/gemmamonster_model_server_OVMS?include_prereleases)](https://github.com/DassaultFalconKing/gemmamonster_model_server_OVMS/releases/tag/gemmamonster-2026.4-rc4)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-blue)](https://docs.openvino.ai/2026/model-server/ovms_docs_deploying_server.html)
 
 ---

@@ -9,6 +9,14 @@ $py = 'C:\gm\qwenmonster\semantic-refit-2026.4-tools\py-nupkg\tools'
 $sdk = 'C:/gm/qwenmonster/semantic-refit-2026.4-sdk/extracted/openvino_genai_windows_2026.4.0.0rc1_x86_64/runtime/cmake'
 $bazel = 'C:\gm\qwenmonster\semantic-refit-2026.4-tools\bazel.exe'
 $config = "win_mp_on_py_$Python"
+$candidate = Get-Content "$repo\docs\qwenmonster\testing\fixed-package-20261024\speed-comparison-20261024\CANDIDATE-CUSTOM-GPU.lock.json" -Raw | ConvertFrom-Json
+foreach ($name in @('openvino.dll','openvino_genai.dll','openvino_tokenizers.dll')) {
+    $expected = $candidate.payload_files | Where-Object { $_.destination -eq "bin/$name" }
+    $stream = [IO.File]::OpenRead("C:\opt\openvino\runtime\bin\intel64\Release\$name")
+    $hash = [Security.Cryptography.SHA256]::Create()
+    try { $actual = [BitConverter]::ToString($hash.ComputeHash($stream)).Replace('-','').ToLower() } finally { $stream.Dispose(); $hash.Dispose() }
+    if ($actual -ne $expected.sha256) { throw "Resolved WORKSPACE SDK drift: $name" }
+}
 $dest = Join-Path $Output "build-py_$Python"
 if (Test-Path "$dest\COMPLETE.json") { throw "Immutable build already exists: $dest" }
 New-Item -ItemType Directory -Force $dest | Out-Null

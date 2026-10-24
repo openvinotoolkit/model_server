@@ -1,0 +1,30 @@
+{
+  "source": "facebook/opt-125m",
+  "revision": "27dcfa74d334bc871f3234de431e71c6eeba5dd6",
+  "openvino": "2026.3.1-22476-759c5a6ab8c-releases/2026/3",
+  "openvino_tokenizers": "2026.3.1.0-705-77e4637387c",
+  "transformers": "5.0.0",
+  "scope": "Tokenizer/detokenizer test fixture only; no weights loaded or shipped in runtime packages",
+  "files": [
+    {
+      "name": "openvino_detokenizer.bin",
+      "bytes": 723020,
+      "sha256": "50cd9af30112ff045bdd59615c0d9570a0686682d4b92b13792765b85896cfd3"
+    },
+    {
+      "name": "openvino_detokenizer.xml",
+      "bytes": 7701,
+      "sha256": "9089b92189a012a9764399c6ee124c21162350be4843ea5727c86858abec00ba"
+    },
+    {
+      "name": "openvino_tokenizer.bin",
+      "bytes": 1843744,
+      "sha256": "1584d4fab31ec7cedb209e9d09d4a078e0120af2e9c8ac5fb1908de72a1082cb"
+    },
+    {
+      "name": "openvino_tokenizer.xml",
+      "bytes": 24915,
+      "sha256": "b2f86feb70e6a08dbfc73fa35fb7191ba49ff8bb071f3ee926edeffa3474f307"
+    }
+  ]
+}

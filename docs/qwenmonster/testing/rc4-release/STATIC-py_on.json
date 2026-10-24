@@ -1,0 +1,3413 @@
+{
+  "status": "PASS",
+  "files": [
+    {
+      "file": "git2.dll",
+      "dependencies": [
+        {
+          "name": "ADVAPI32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "CRYPT32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "RPCRT4.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "WINHTTP.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "WS2_32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "libcurl-x64.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "ole32.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "libcurl-x64.dll",
+      "dependencies": [
+        {
+          "name": "CRYPT32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "IPHLPAPI.DLL",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "Normaliz.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "Secur32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "USER32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "WLDAP32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "WS2_32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-private-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-utility-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "bcrypt.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "opencv_world4140.dll",
+      "dependencies": [
+        {
+          "name": "ADVAPI32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "COMDLG32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "CONCRT140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "GDI32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MF.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MFPlat.DLL",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MFReadWrite.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "OLEAUT32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "SHLWAPI.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "USER32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "WS2_32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-utility-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "d3d11.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "dxgi.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "ole32.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "openvino.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-utility-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "tbb12.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "openvino_auto_batch_plugin.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "openvino_auto_plugin.dll",
+      "dependencies": [
+        {
+          "name": "ADVAPI32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "CFGMGR32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "WINTRUST.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "tbb12.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "openvino_c.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "openvino_genai.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140_CODECVT_IDS.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "tbb12.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "openvino_genai_c.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "openvino_c.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "openvino_genai.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "openvino_gguf_frontend.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "tbb12.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "openvino_hetero_plugin.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "openvino_intel_cpu_plugin.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "tbb12.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "openvino_intel_gpu_plugin.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "OpenCL.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "SETUPAPI.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "tbb12.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "openvino_intel_npu_compiler.dll",
+      "dependencies": [
+        {
+          "name": "ADVAPI32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "SHELL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "WS2_32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-utility-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "ntdll.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "ole32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "tbb12.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "openvino_intel_npu_compiler_loader.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "SHELL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "ntdll.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "ole32.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "openvino_intel_npu_plugin.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "tbb12.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "openvino_intel_npu_vm_runtime.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "ze_loader.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "openvino_ir_frontend.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "openvino_onnx_frontend.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "dbghelp.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "openvino_paddle_frontend.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "dbghelp.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "openvino_pytorch_frontend.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "openvino_tensorflow_frontend.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "dbghelp.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "openvino_tensorflow_lite_frontend.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-utility-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "openvino_tokenizers.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "tbb12.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "ovms.exe",
+      "dependencies": [
+        {
+          "name": "ADVAPI32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "RPCRT4.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "SHLWAPI.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "WS2_32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-utility-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "dbghelp.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "git2.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "libcurl-x64.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "opencv_world4140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "openvino_genai.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/_asyncio.pyd",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/_bz2.pyd",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/_ctypes.pyd",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "OLEAUT32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "libffi-8.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "ole32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/_decimal.pyd",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/_elementtree.pyd",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/_hashlib.pyd",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "libcrypto-3.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/_lzma.pyd",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/_msi.pyd",
+      "dependencies": [
+        {
+          "name": "Cabinet.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "RPCRT4.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "msi.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/_multiprocessing.pyd",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "WS2_32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/_overlapped.pyd",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "WS2_32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/_queue.pyd",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/_socket.pyd",
+      "dependencies": [
+        {
+          "name": "IPHLPAPI.DLL",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "RPCRT4.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "WS2_32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/_sqlite3.pyd",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "sqlite3.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/_ssl.pyd",
+      "dependencies": [
+        {
+          "name": "CRYPT32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "WS2_32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "libcrypto-3.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "libssl-3.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/_uuid.pyd",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "RPCRT4.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/_wmi.pyd",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "OLEAUT32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "PROPSYS.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "ole32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/_zoneinfo.pyd",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/Lib/site-packages/markupsafe/_speedups.cp312-win_amd64.pyd",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/Lib/site-packages/pip/_vendor/distlib/t32.exe",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "SHLWAPI.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "python/Lib/site-packages/pip/_vendor/distlib/t64-arm.exe",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "SHLWAPI.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "python/Lib/site-packages/pip/_vendor/distlib/t64.exe",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "SHLWAPI.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "python/Lib/site-packages/pip/_vendor/distlib/w32.exe",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "SHLWAPI.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "USER32.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "python/Lib/site-packages/pip/_vendor/distlib/w64-arm.exe",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "SHLWAPI.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "USER32.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "python/Lib/site-packages/pip/_vendor/distlib/w64.exe",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "SHLWAPI.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "USER32.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "python/Lib/site-packages/setuptools/cli-32.exe",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-process-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "python/Lib/site-packages/setuptools/cli-64.exe",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-process-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "python/Lib/site-packages/setuptools/cli-arm64.exe",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-process-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "python/Lib/site-packages/setuptools/cli.exe",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-process-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "python/Lib/site-packages/setuptools/gui-32.exe",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-process-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "python/Lib/site-packages/setuptools/gui-64.exe",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-process-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "python/Lib/site-packages/setuptools/gui-arm64.exe",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-process-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "python/Lib/site-packages/setuptools/gui.exe",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-process-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "python/libcrypto-3.dll",
+      "dependencies": [
+        {
+          "name": "ADVAPI32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "USER32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "WS2_32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-utility-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "bcrypt.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "python/libffi-8.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "python/libssl-3.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-utility-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "libcrypto-3.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/pyexpat.pyd",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-utility-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/pyovms.pyd",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/python.exe",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/python3.dll",
+      "dependencies": []
+    },
+    {
+      "file": "python/python312.dll",
+      "dependencies": [
+        {
+          "name": "ADVAPI32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VERSION.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "WS2_32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-core-path-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-conio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-process-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "bcrypt.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "python/pythonw.exe",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/Scripts/pip.exe",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "SHLWAPI.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "python/Scripts/pip3.12.exe",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "SHLWAPI.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "python/Scripts/pip3.exe",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "SHLWAPI.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "python/select.pyd",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "WS2_32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/sqlite3.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-utility-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "python/unicodedata.pyd",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "python/vcruntime140.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "python/vcruntime140_1.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "python/winsound.pyd",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "USER32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "WINMM.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "python312.dll",
+          "resolution": "package"
+        }
+      ]
+    },
+    {
+      "file": "tbb12.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "tbbbind_2_5.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-utility-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "tbbmalloc.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "tbbmalloc_proxy.dll",
+      "dependencies": [
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "package"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "Windows host prerequisite"
+        },
+        {
+          "name": "tbbmalloc.dll",
+          "resolution": "package"
+        }
+      ]
+    }
+  ],
+  "unresolved": [],
+  "scope": "Static PE imports; dynamic loads checked separately"
+}

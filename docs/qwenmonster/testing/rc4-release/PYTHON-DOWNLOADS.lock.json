@@ -1,0 +1,27 @@
+﻿[
+    {
+        "name":  "jinja2-3.1.6-py3-none-any.whl",
+        "bytes":  134899,
+        "sha256":  "85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67"
+    },
+    {
+        "name":  "MarkupSafe-3.0.2-cp312-cp312-win_amd64.whl",
+        "bytes":  15601,
+        "sha256":  "8e06879fc22a25ca47312fbe7c8264eb0b662f6db27cb2d3bbbc74b1df4b9b87"
+    },
+    {
+        "name":  "pip-25.0.1-py3-none-any.whl",
+        "bytes":  1841526,
+        "sha256":  "c46efd13b6aa8279f33f2864459c8ce587ea6a1a59ee20de055868d8f7688f7f"
+    },
+    {
+        "name":  "python-3.12.10-embed-amd64.zip",
+        "bytes":  11133606,
+        "sha256":  "4acbed6dd1c744b0376e3b1cf57ce906f9dc9e95e68824584c8099a63025a3c3"
+    },
+    {
+        "name":  "setuptools-80.9.0-py3-none-any.whl",
+        "bytes":  1201486,
+        "sha256":  "062d34222ad13e0cc312a4c02d73f059e86a4acbfbdea8f8f76b28c99f306922"
+    }
+]

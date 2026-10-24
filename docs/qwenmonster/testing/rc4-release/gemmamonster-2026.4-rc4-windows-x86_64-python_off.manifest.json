@@ -1,0 +1,722 @@
+{
+  "release": "gemmamonster-2026.4-rc4",
+  "python": "off",
+  "source_commit": "b7812066afb35377ec9da2f3bc06fb3f1d261460",
+  "config": "win_mp_on_py_off",
+  "sdk_archive_sha256": "b74ee43a10bf4615b805b1bacb78f330faec9616309a86126493973ee278e1dc",
+  "helper_policy": "Frozen measured git2/curl/OpenCV cohort; copied from preserved original snapshot and hash-checked",
+  "custom_gpu_source_attestation": "NOT_REESTABLISHED; retained measured binary 21a2fd9f",
+  "signing": "Unsigned community fork package; upstream DLL signatures retained",
+  "files": [
+    {
+      "path": "git2.dll",
+      "bytes": 1756160,
+      "sha256": "7eb7ff327997dc19db29927153d54b1261df0888378f3c5d0ddf7c72f51998dd"
+    },
+    {
+      "path": "install_ovms_service.bat",
+      "bytes": 5941,
+      "sha256": "24f848b82930d694c051ee08b1fd5165aae3a1277d94f473cfabc2eecaf6662a"
+    },
+    {
+      "path": "libcurl-x64.dll",
+      "bytes": 3647080,
+      "sha256": "f31fa58061e162ff4702b37224404df210346df6dff4a49e92d07b8dd5217334"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 11558,
+      "sha256": "1eb85fc97224598dad1852b5d6483bbcf0aa8608790dcc657a5a2a761ae9c8c6"
+    },
+    {
+      "path": "opencv_world4140.dll",
+      "bytes": 79832576,
+      "sha256": "a192cbf006faf48c054468fa2a2e56e3f680b401c23b8f7fb24373ff75654c46"
+    },
+    {
+      "path": "openvino.dll",
+      "bytes": 16465168,
+      "sha256": "829c4642e287522f8a8e748a726d4ad3117a701e22ab46adc82771f98e5d2f7e"
+    },
+    {
+      "path": "openvino_auto_batch_plugin.dll",
+      "bytes": 208144,
+      "sha256": "d21dc67bee39d3af3fbda6720198a6b025eda297680d5d747996730bc75496dd"
+    },
+    {
+      "path": "openvino_auto_plugin.dll",
+      "bytes": 720656,
+      "sha256": "ed1492fe3f901d2b882ea89c8909d8ce35eb52986a3559353a44917ee3fb3e47"
+    },
+    {
+      "path": "openvino_c.dll",
+      "bytes": 234248,
+      "sha256": "8f89f65cb867d27d18607dad3ad5893df53561a809037a28c9c154b937976dfb"
+    },
+    {
+      "path": "openvino_genai.dll",
+      "bytes": 7425808,
+      "sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d"
+    },
+    {
+      "path": "openvino_genai_c.dll",
+      "bytes": 178448,
+      "sha256": "0304bf893da72bbe4f31e41137a015e927ebc7fdfbb828236b6fa920310c8480"
+    },
+    {
+      "path": "openvino_gguf_frontend.dll",
+      "bytes": 1322248,
+      "sha256": "c984068e1e521fc2cd3ee6211c67c0ea7a798b76ece9febbff0510c1280b38cf"
+    },
+    {
+      "path": "openvino_hetero_plugin.dll",
+      "bytes": 531728,
+      "sha256": "c21be45cea174c79163394e4cfe3a782ebef7a7a64b4ee43dfcf3828d558de16"
+    },
+    {
+      "path": "openvino_intel_cpu_plugin.dll",
+      "bytes": 46222600,
+      "sha256": "ce9c65b551e36139b62e28f2c8c7b9fc2a5c02c82e1dfd01e578dac30695e78b"
+    },
+    {
+      "path": "openvino_intel_gpu_plugin.dll",
+      "bytes": 33879040,
+      "sha256": "21a2fd9f5d856c297416059325832f0f902c84a4e78b840f859ca508f5aea66d"
+    },
+    {
+      "path": "openvino_intel_npu_compiler.dll",
+      "bytes": 98174216,
+      "sha256": "c663f5c7649550359a373115be1946028a423fedf67e8893c46152323a65a06b"
+    },
+    {
+      "path": "openvino_intel_npu_compiler_loader.dll",
+      "bytes": 529672,
+      "sha256": "ea3a6b018a40e1a57c3d982a5e661ba12e6c3ada09ffe77a5eb9af58930f0fe1"
+    },
+    {
+      "path": "openvino_intel_npu_plugin.dll",
+      "bytes": 7615752,
+      "sha256": "e27a466c9690e079b82d453a93a583d9008cb08e9965a6f459c56bccde965198"
+    },
+    {
+      "path": "openvino_intel_npu_vm_runtime.dll",
+      "bytes": 485640,
+      "sha256": "b4ed9e64bcb6855b918c315614631d6bad2f506f56c18394e38d2ce6aed61b14"
+    },
+    {
+      "path": "openvino_ir_frontend.dll",
+      "bytes": 509192,
+      "sha256": "44604b39cbafcf4d8aa27697cee639038bdfcf24f5245f0be07abcf30609d4cd"
+    },
+    {
+      "path": "openvino_onnx_frontend.dll",
+      "bytes": 5414160,
+      "sha256": "1554b14f226c3bcdf73362cd818c5137f6f80c1ef19e4850a8b4765b70dba0f4"
+    },
+    {
+      "path": "openvino_paddle_frontend.dll",
+      "bytes": 1688848,
+      "sha256": "48b407390f572e20d557a8a5ba87f0ba42d4a224b92d7063332ddbbcc29c807c"
+    },
+    {
+      "path": "openvino_pytorch_frontend.dll",
+      "bytes": 2791176,
+      "sha256": "947363b58a525137487d4d3cac9f2d110c0ae1ae283ab27388c9d3d057ccecec"
+    },
+    {
+      "path": "openvino_tensorflow_frontend.dll",
+      "bytes": 4128016,
+      "sha256": "b8c7cb549e942c3062b1e13d4aea34c87d497f10b9f4dcfacc6d8848223eeef3"
+    },
+    {
+      "path": "openvino_tensorflow_lite_frontend.dll",
+      "bytes": 1263376,
+      "sha256": "0ded983534495e1c366fcb989fe1d63e226b12be73158000f2433e4278c06a5a"
+    },
+    {
+      "path": "openvino_tokenizers.dll",
+      "bytes": 3483912,
+      "sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c"
+    },
+    {
+      "path": "ovms.exe",
+      "bytes": 22596608,
+      "sha256": "f5eef01c9173d066ac25084b9f206dbf5d4ed00d695868e2f43d7d75e9de1acd"
+    },
+    {
+      "path": "RELEASE-NOTES.txt",
+      "bytes": 560,
+      "sha256": "6666e1beb67543b3d62bc1c9b4f3d9fed613f12dbb77efdc649c83d103683b77"
+    },
+    {
+      "path": "setupvars.bat",
+      "bytes": 958,
+      "sha256": "803cea772aa4dcdfe774cd4fd05d37f3838635c0885f472e4bb0918e5e4b1f82"
+    },
+    {
+      "path": "setupvars.ps1",
+      "bytes": 1058,
+      "sha256": "79e3913d5a8c110b4c8d70ef2abb486d3f1e56d88ffd5bafa25d62ebc06ebcfa"
+    },
+    {
+      "path": "tbb12.dll",
+      "bytes": 337160,
+      "sha256": "63cc8a5a9cee86e9d57967337053569df6335aca09d03f8657343633645d2727"
+    },
+    {
+      "path": "tbbbind_2_5.dll",
+      "bytes": 209168,
+      "sha256": "235047df3f97a6b94c3a5e70d93b892141e32ae27ef06f0c583667b417118b20"
+    },
+    {
+      "path": "tbbmalloc.dll",
+      "bytes": 119056,
+      "sha256": "06e72fd9ed67405efd411c33d8dfbe9bf21cb62ff8ef2ccb1003bb1bc32b2924"
+    },
+    {
+      "path": "tbbmalloc_proxy.dll",
+      "bytes": 41736,
+      "sha256": "44b6e5017bd693da7feb3a226e6d8897387614e2fda9308d30c1ffc50875a320"
+    },
+    {
+      "path": "thirdparty-licenses/curl/COPYING.txt",
+      "bytes": 1088,
+      "sha256": "82f2f4427d6545ee5aaac4f0b80428da6cc8ba41c2cf5da3a03680ec327b9681"
+    },
+    {
+      "path": "thirdparty-licenses/curl/dep/brotli/LICENSE.txt",
+      "bytes": 1084,
+      "sha256": "3d180008e36922a4e8daec11c34c7af264fed5962d07924aea928c38e8663c94"
+    },
+    {
+      "path": "thirdparty-licenses/curl/dep/certdata/LICENSE.url",
+      "bytes": 73,
+      "sha256": "b9954f88a27e8457cefcebd076fa533d037711383f6b28ae489d063ef8c61f79"
+    },
+    {
+      "path": "thirdparty-licenses/curl/dep/libpsl/COPYING.txt",
+      "bytes": 1126,
+      "sha256": "e7c9f0d8498d28a360a7e8293ea70fd7bd952955b636938322c13d60a03b5a45"
+    },
+    {
+      "path": "thirdparty-licenses/curl/dep/libressl/COPYING.txt",
+      "bytes": 6492,
+      "sha256": "9853507b8821c3f277aa60bf554eade41441ef06b2df538d247183ad28789b7f"
+    },
+    {
+      "path": "thirdparty-licenses/curl/dep/libssh2/COPYING.txt",
+      "bytes": 1959,
+      "sha256": "f7f9633cf9ff2f1333f3d7ce46973a8716a4d2a2815ad56f30d437d5fea7bafe"
+    },
+    {
+      "path": "thirdparty-licenses/curl/dep/nghttp2/COPYING.txt",
+      "bytes": 1156,
+      "sha256": "6b94f3abc1aabd0c72a7c7d92a77f79dda7c8a0cb3df839a97890b4116a2de2a"
+    },
+    {
+      "path": "thirdparty-licenses/curl/dep/nghttp3/COPYING.txt",
+      "bytes": 1081,
+      "sha256": "58cc3fc8c6d6cb2485ab35eb5918e849b5bf1e56522974e106d7a39a88d61dcd"
+    },
+    {
+      "path": "thirdparty-licenses/curl/dep/ngtcp2/COPYING.txt",
+      "bytes": 1080,
+      "sha256": "542dd526d2ea23565f0571cc68df6f05ed11248a90ff0f32de19d8ba589db513"
+    },
+    {
+      "path": "thirdparty-licenses/curl/dep/zlibng/LICENSE.md",
+      "bytes": 867,
+      "sha256": "6c9f0d975b41afaa34d22f55bb8986ce69e5cb7ad327cb2b28820cd425edf5ee"
+    },
+    {
+      "path": "thirdparty-licenses/curl/dep/zstd/LICENSE.txt",
+      "bytes": 1549,
+      "sha256": "7055266497633c9025b777c78eb7235af13922117480ed5c674677adc381c9d8"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/ade-LICENSE",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/dlpack-LICENSE",
+      "bytes": 11546,
+      "sha256": "9bda2385fa325d1df6dc39772eba3cc6d07bdfaf2c656cd644cd29f7509514fd"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/features2d-LICENSE.AKAZE",
+      "bytes": 1577,
+      "sha256": "5e496490f0453c93ba1a021c9c3d6b9dc8c265f674968ac16ffbef98350759c4"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/features2d-LICENSE.KAZE",
+      "bytes": 1565,
+      "sha256": "6d66d0c283794e73e5909b7bc6dd1149edf2494ab49afeb0fb0fa6e57bbf3ff0"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/ffmpeg-license.txt",
+      "bytes": 27913,
+      "sha256": "1629ff18b1b89e918905e9e92bbad4606a491ad05779809be217cf0f2fa0d435"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/ffmpeg-readme.txt",
+      "bytes": 2504,
+      "sha256": "4f7f840358fae114d353337acd60ac99c88701b296cb92ef2fef513a2c494452"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/flatbuffers-LICENSE.txt",
+      "bytes": 11560,
+      "sha256": "3ddf9be5c28fe27dad143a5dc76eea25222ad1dd68934a047064e56ed2fa40c5"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/ippicv-EULA.rtf",
+      "bytes": 68409,
+      "sha256": "37f11c79f36fb5e1b00aca31c1234a7435c2929d83e181ee802a349ca8571749"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/ippicv-readme.htm",
+      "bytes": 6894,
+      "sha256": "2fbc6125275ebb4fe17dcbfdf987e8cac1694a15fd5d73aa8861b69015ae6ccf"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/ippicv-third-party-programs.txt",
+      "bytes": 284,
+      "sha256": "75b8e68f815cefc85d58b644ce9e868f5194ffe79901fd697768dce42c3ca6ce"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/ippiw-EULA.rtf",
+      "bytes": 68409,
+      "sha256": "37f11c79f36fb5e1b00aca31c1234a7435c2929d83e181ee802a349ca8571749"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/ippiw-support.txt",
+      "bytes": 362,
+      "sha256": "ec471506442b47935d267377debe0f4762116571c2fd1a8888ed1fa4532bb3a4"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/ippiw-third-party-programs.txt",
+      "bytes": 284,
+      "sha256": "75b8e68f815cefc85d58b644ce9e868f5194ffe79901fd697768dce42c3ca6ce"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/ittnotify-BSD-3-Clause.txt",
+      "bytes": 1493,
+      "sha256": "f48ca8b3e59598da8dbcabe6267d375014f9700a3e0c1513b5d7fbc1f53fa6af"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/ittnotify-GPL-2.0-only.txt",
+      "bytes": 17702,
+      "sha256": "48f45a2780683aa0b35b784974064a8d9274707f63ff714d04cd425d0f575801"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/libjpeg-turbo-LICENSE.md",
+      "bytes": 5755,
+      "sha256": "be2b2b5ab168bce87bc3e31f2a5c5adba4b7f6e9e51d618e958d1d46972ebd95"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/libjpeg-turbo-README.ijg",
+      "bytes": 13059,
+      "sha256": "db16a04128171879c60708d171b88d97345a2dd20f9bfc173680a4497c73f704"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/libjpeg-turbo-README.md",
+      "bytes": 18159,
+      "sha256": "7366abd364726a619dec4ccc9b6175621352d350993b356e909f0a074d7497d1"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/libopenjp2-LICENSE",
+      "bytes": 2151,
+      "sha256": "1203c08d905d7ea23de2efc40fbfb147d593c327cf72f0d55c1e13081798d48d"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/libopenjp2-README.md",
+      "bytes": 5485,
+      "sha256": "a82eefc115f4b6c2c3510651cc656f487f713edfca2be9332e5f55dc4017478b"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/libpng-LICENSE",
+      "bytes": 5479,
+      "sha256": "452390433ba0f88aa3e2b122c647741b72a0c117cd6ed7a329b49785aecb5511"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/libpng-README",
+      "bytes": 9669,
+      "sha256": "c05a3c74879af866e08715fbb169be42950665f4d8ed5b7fd5c604b4ec7bca71"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/libtiff-LICENSE.md",
+      "bytes": 2465,
+      "sha256": "d31876347c51d5777698b1e72414921c59344f20dc6f861ebf09403e2d4ea1df"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/mscr-chi_table_LICENSE.txt",
+      "bytes": 1587,
+      "sha256": "3562b309154acbd79175a8c9055897721c1a770f4f5208aa12d0e6284812c84d"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/opencl-headers-LICENSE.txt",
+      "bytes": 1334,
+      "sha256": "4ce57ae987c869f8d1c296cced11daa3121c1716c5e0ce3455cb9b4d4a41bcbf"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/openexr-AUTHORS.ilmbase",
+      "bytes": 357,
+      "sha256": "ce3d8791b21477bcfcce29301b7f378c188caecd9ca647ff91704e1736ff479a"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/openexr-AUTHORS.openexr",
+      "bytes": 1302,
+      "sha256": "202dd37f32d11914daae0e13258853aca67ea014a69a0d016cdce2c8239a919a"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/openexr-LICENSE",
+      "bytes": 1731,
+      "sha256": "f7f4a60d7b6da8787d30fc058701d91dcf67b148ef5f1f31be69d1bda8880f84"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/protobuf-LICENSE",
+      "bytes": 1764,
+      "sha256": "f4df8b2457697851385d9ebb93267832c1dfa24e0e61881952f6b0c452663dc9"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/protobuf-README.md",
+      "bytes": 137,
+      "sha256": "521eae82acd5726bfc6b45aef1f91288054a60111426158c625d75aa02c2ed0a"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/SoftFloat-COPYING.txt",
+      "bytes": 1768,
+      "sha256": "157c1095adca585146eef6b36f654daff6ade2b4b40dad49aa6cd6b0aaee80ef"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/vasot-LICENSE.txt",
+      "bytes": 1104,
+      "sha256": "1efc5b489dd9e7c3f9dff762bbd0c949b6ebdeea5f3fd535653a57026edcef21"
+    },
+    {
+      "path": "thirdparty-licenses/opencv/zlib-LICENSE",
+      "bytes": 1024,
+      "sha256": "439c75ab12b340c5362b9d4b08ff05ec3a4d0eb7667a6fff49a9b16d8795c78e"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/absl.LICENSE.txt",
+      "bytes": 11564,
+      "sha256": "f54fff0b905df5b3464527c652a30e903b172d6dcab4d89b5e6f105d5e4a4603"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/aws-c-common.LICENSE.txt",
+      "bytes": 11558,
+      "sha256": "49bbe9114e49214df2ccc324cb3ac8d1d1aa1c3a0947f94c286765e86647b32e"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/aws-c-event-stream.LICENSE.txt",
+      "bytes": 11558,
+      "sha256": "49bbe9114e49214df2ccc324cb3ac8d1d1aa1c3a0947f94c286765e86647b32e"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/aws-checksums.LICENSE.txt",
+      "bytes": 11556,
+      "sha256": "26730096c8817eef15dbf3885acecdc1fb114f96f9bbbf2b43cbca0c5b04eee9"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/aws-sdk-cpp.LICENSE.txt",
+      "bytes": 10855,
+      "sha256": "8cccc59a5666ada5d4f9fd40c454f588f7358f96dde5b667a25597a7706f634e"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/azure-storage-cpp.LICENSE.txt",
+      "bytes": 11563,
+      "sha256": "ac8793d277f1a08231d10e1b2ebaabb0598bd5561cfc21f97648656b416d901e"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/blingfire.LICENSE.txt",
+      "bytes": 1183,
+      "sha256": "dea9265341829002e2c23a7372393eb2ed6e26085fb623f38a4ba0af833f30a6"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/boost.LICENSE.txt",
+      "bytes": 1359,
+      "sha256": "36266a8fd073568394cb81cdb2b124f7fdae2c64c1a7ed09db34b4d22efa2951"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/boringssl.LICENSE.txt",
+      "bytes": 12766,
+      "sha256": "13ab92a9c88c6dbd949e08488fef4a86f33f933b7832771f3ae7030738296ca8"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/cpprestsdk.LICENSE.txt",
+      "bytes": 1143,
+      "sha256": "389d2569a64a6ab5512923d0dbb5072e2ba690def94066b2f4a393ce7fff2f62"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/curl.LICENSE.txt",
+      "bytes": 1108,
+      "sha256": "2b1680dca28251a96dbd0532b5e7d69a83a591a7d90a00de2f63988545764b72"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/cxxopts.LICENSE.txt",
+      "bytes": 1072,
+      "sha256": "79c3a650d0addb1c8defe984c53741c439cde6d616992dd6404a28fbd7231f3f"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/drogon.LICENSE.txt",
+      "bytes": 1089,
+      "sha256": "a4725796355661f62440734bc908f82295904c8f0407f128f0f271ed3c340f1c"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/farmhash.LICENSE.txt",
+      "bytes": 1127,
+      "sha256": "9e3f5264d06c1b26a3ad9e119b997b3f4ecc9a799b395a25c9226af9a66810d4"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/fmt.LICENSE.txt",
+      "bytes": 1456,
+      "sha256": "af6e1303faa35e3e6ee9eaa9958ac4eaf7b395441ebbdabd3d5508fe6a019f4f"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/fmtlib.LICENSE.txt",
+      "bytes": 1433,
+      "sha256": "f6c2f14f6fd90e91bf5516d9b943afcf3f2f759e2a097ffcd1d93d58b5f2870f"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/GENAI-third-party-programs.LICENSE.txt",
+      "bytes": 20630,
+      "sha256": "f4e640929797711ea7dc980a56ae4db10c21888ec0772db2af1dc284ab54721f"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/giflib.LICENSE.txt",
+      "bytes": 1084,
+      "sha256": "2fd63a598540caedbbfc11e5599a50e22f9f4f6f27698263bddf68c6bfd756f3"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/glog-LICENSE.txt",
+      "bytes": 10462,
+      "sha256": "667057cee07a5c94111a75ac0e3ec164d28f189f6f22be34ea3135b296979bf7"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/google-cloud-cpp.LICENSE.txt",
+      "bytes": 11556,
+      "sha256": "5ad8c213095c573921d7388edf93f6a9f54490b8ebf3b165ae8ef1947cf70846"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/googleapis.LICENSE.txt",
+      "bytes": 11556,
+      "sha256": "5ad8c213095c573921d7388edf93f6a9f54490b8ebf3b165ae8ef1947cf70846"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/grpcs.LICENSE.txt",
+      "bytes": 11558,
+      "sha256": "49bbe9114e49214df2ccc324cb3ac8d1d1aa1c3a0947f94c286765e86647b32e"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/highwayhash.LICENSE.txt",
+      "bytes": 11560,
+      "sha256": "3ddf9be5c28fe27dad143a5dc76eea25222ad1dd68934a047064e56ed2fa40c5"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/hwloc.LICENSE.txt",
+      "bytes": 2589,
+      "sha256": "af86e31866308812b8f9db2e571dbce2589af8e92b75bbb1e4b40da10d468fb8"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/icu.LICENSE.txt",
+      "bytes": 27027,
+      "sha256": "177bedb462a32b7a89f0a8bfa7af0df2ed347cd86fe2f37c45d1315857681ff0"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/libevent.LICENSE.txt",
+      "bytes": 6900,
+      "sha256": "eb62fa57204931d99e6f554f778ecb1b288ccaa8c7a813f4a87735afca9f8269"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/libgt2.LICENSE.txt",
+      "bytes": 71990,
+      "sha256": "018b5ce46bee37de39f3a20d19cc6032193519a1ccbe68696a017727b85a1356"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/libjpeg-turbo.LICENSE.txt",
+      "bytes": 5339,
+      "sha256": "a1930c87bc3c4220b49f5f8a6024fa6cded23b966129c407600d8bd7ebeac94c"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/libuuid.LICENSE.txt",
+      "bytes": 1414,
+      "sha256": "a535872116ddc3cb54ebb81da8f226ffabdcee22d5e8542cf6fecdb129a5addf"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/libwebp-COPYING.LICENSE.txt",
+      "bytes": 1526,
+      "sha256": "17c029a902ad45a199dfe8e3a1c39305ab28d302b0703360c4a27351a4673dcb"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/libxml2.LICENSE.txt",
+      "bytes": 1310,
+      "sha256": "b8c3ae79994c4fce6a3f99be88d5f43d5011037719bb754f7cdfa5d2195e93e1"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/minitrace.LICENSE.txt",
+      "bytes": 1101,
+      "sha256": "c10bccfaf4f1194c41888d3ac9835d19d532731257c491ebc12abe5cc86d40b7"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/mkl_dnn.LICENSE.txt",
+      "bytes": 11556,
+      "sha256": "26730096c8817eef15dbf3885acecdc1fb114f96f9bbbf2b43cbca0c5b04eee9"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/ngsolve.LICENSE.txt",
+      "bytes": 26932,
+      "sha256": "d1069e0f39ce6c87df7b7a93c340dce42a6abd8ff3f88719754944c4146615e1"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/nsync.LICENSE.txt",
+      "bytes": 11558,
+      "sha256": "49bbe9114e49214df2ccc324cb3ac8d1d1aa1c3a0947f94c286765e86647b32e"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/opencv.LICENSE.txt",
+      "bytes": 11558,
+      "sha256": "49bbe9114e49214df2ccc324cb3ac8d1d1aa1c3a0947f94c286765e86647b32e"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/openvino.LICENSE.txt",
+      "bytes": 7902,
+      "sha256": "92ac474492ed468e22807060199bb218fb93728d9e5d4050d34e4aa0e1b60e8e"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/prometheus-cpp.LICENSE.txt",
+      "bytes": 1223,
+      "sha256": "e350f061892ac854428c7c9a17cbb3bcf6d41e8c96b64257df55abf8b12ae906"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/protobuf.LICENSE.txt",
+      "bytes": 1762,
+      "sha256": "f44b4db9e8eaba1c9b1df8ca03941377c712d65a56ee95a4ac908a426ac557d0"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/rapidjson.LICENSE.txt",
+      "bytes": 5207,
+      "sha256": "520d0e2bf99bd2b17d5b54e8c69e513ef800195a0259d05d28134075cc869ef5"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/re2.LICENSE.txt",
+      "bytes": 1583,
+      "sha256": "1fdc367425e34a259aa8518690c0fdfacdaf9840348b5fe2f8527b6d563c22c5"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/snappy.LICENSE.txt",
+      "bytes": 2697,
+      "sha256": "41b00a6f9feb28878576544baf820c4f9f10329041c04483427d02c67a1008d0"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/spdlog.LICENSE.txt",
+      "bytes": 1346,
+      "sha256": "3f48c3a1153c0bd96b27a2dfc67e9bfc7ac3396cfc066fbe78daa631f09e4a3b"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/stbi.LICENSE.txt",
+      "bytes": 2547,
+      "sha256": "11dd149dbc50748419a22fcec275b5bcfb4c2d86d9fba8802e5c4ffd40c94609"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/TBB-LICENSE",
+      "bytes": 11558,
+      "sha256": "1eb85fc97224598dad1852b5d6483bbcf0aa8608790dcc657a5a2a761ae9c8c6"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/tensorflow-serving.LICENSE.txt",
+      "bytes": 11561,
+      "sha256": "ee17ac0839527a8e4668cb9abc78af8a73de07e8813d9f033b1255448175ccb8"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/tensorflow.LICENSE.txt",
+      "bytes": 11620,
+      "sha256": "2775a60698afd7068959c4a39e21ce1dd0dcb1c3ce5ad6dfd211abd37d480d09"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/triton-inference-server.LICENSE.txt",
+      "bytes": 1513,
+      "sha256": "51edcc4c555d30ff4c1290ea92c2fd00f2a751040ac9d53594a64626689eed96"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/winReg-LICENSE.txt",
+      "bytes": 1100,
+      "sha256": "8a6a965f89d89638049b7f7b52be1da74e80501dec897c4fc0328d27f24fae4a"
+    },
+    {
+      "path": "thirdparty-licenses/ovms-thirdparty/zlib.LICENSE.txt",
+      "bytes": 1539,
+      "sha256": "aa1e076ed81763e35050328e6ad22caf8ee286b565f8e1880a0e6a5f036e6b2e"
+    },
+    {
+      "path": "thirdparty-licenses/sdk/Apache_license.txt",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "thirdparty-licenses/sdk/documentation-third-party-programs.txt",
+      "bytes": 38807,
+      "sha256": "413561ece8a76b7ee9bb3f2f255589689c8615aead1dca9b6e9aaa6effd244b8"
+    },
+    {
+      "path": "thirdparty-licenses/sdk/EULA.htm",
+      "bytes": 9412,
+      "sha256": "e733f8ad078e6eefe5b9870d3914f6696327b373fd4b99df16c3fda8cb2e715d"
+    },
+    {
+      "path": "thirdparty-licenses/sdk/EULA.rtf",
+      "bytes": 9702,
+      "sha256": "0f85950202f88001daafe82234e57b78036e2e9d4bfd0eae568b2d0253c8185f"
+    },
+    {
+      "path": "thirdparty-licenses/sdk/EULA.txt",
+      "bytes": 7741,
+      "sha256": "2ef6a5d67fc91a095fe753745c02be03e91847816add25bf82a02752aa1be151"
+    },
+    {
+      "path": "thirdparty-licenses/sdk/LICENSE",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "thirdparty-licenses/sdk/LICENSE-GENAI",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "thirdparty-licenses/sdk/onednn_third-party-programs.txt",
+      "bytes": 28475,
+      "sha256": "f1b16991dfe8488f3f5f07cccba575c31c91175a9f2c8d9e1569665f86e0b2f6"
+    },
+    {
+      "path": "thirdparty-licenses/sdk/onetbb_third-party-programs.txt",
+      "bytes": 46979,
+      "sha256": "b10997cc50652ba6ab365e3bc43e13057681cd4a56533b46171529bd249749f3"
+    },
+    {
+      "path": "thirdparty-licenses/sdk/OpenVINOsupport.txt",
+      "bytes": 628,
+      "sha256": "a001e1e6b1f92fc9e04ebd6fd74b91195fb0773af61b85ddd0cd1f81772f764a"
+    },
+    {
+      "path": "thirdparty-licenses/sdk/readme.txt",
+      "bytes": 1957,
+      "sha256": "86ee3bb13c5781c3c245a8ac87b5e6c68434c77b0048599374bdfd4570c8de04"
+    },
+    {
+      "path": "thirdparty-licenses/sdk/redist.txt",
+      "bytes": 1808,
+      "sha256": "ee34242c138f42d2d24399c72212fb88be4dd46bee9f5845380acb6c19355d1d"
+    },
+    {
+      "path": "thirdparty-licenses/sdk/runtime-third-party-programs.txt",
+      "bytes": 118919,
+      "sha256": "21ccba6916a7f99278d7b111ce2ce448377750362341f638e24fc336aaf85806"
+    },
+    {
+      "path": "thirdparty-licenses/sdk/third-party-programs-genai.txt",
+      "bytes": 20742,
+      "sha256": "d9b815b6614fe936d53656b5e7a859ed38cf88646732ea739c121d82c074c4aa"
+    }
+  ]
+}

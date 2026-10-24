@@ -1,0 +1,22 @@
+{
+  "status": "PASS",
+  "archive": "gemmamonster-2026.4-rc4-windows-x86_64-python_on.zip",
+  "sha256": "3051e6eaa29ca951fda28a5b6c3cdefd17c47691df675f599b2a88a8e894ee6d",
+  "bytes": 136616999,
+  "files_verified": 1779,
+  "checks": [
+    "ZIP CRC",
+    "extracted hashes",
+    "isolated PATH version/help",
+    "*Qwen3Coder*",
+    "embedded Python pyovms Tensor",
+    "PythonExecutorCalculator HTTP round trip"
+  ],
+  "version": "OpenVINO Model Server 2026.4.0-rc4.b7812066a\nOpenVINO backend 2026.4.0-22930-61afcb26271-releases/2026/4\nOpenVINO GenAI backend 2026.4.0.0-3401-5f7f1278107\nBazel build flags: --config=win_mp_on_py_on\n",
+  "not_run": [
+    "full OVMS suite",
+    "long context",
+    "soak",
+    "agent loops"
+  ]
+}
