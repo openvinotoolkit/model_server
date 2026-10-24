@@ -2,7 +2,7 @@
 
 Prepared 2026-10-24. **Status: local inputs inventoried and verified; package assembly, extracted-package smoke tests and package live acceptance NOT RUN.** This is a packaging runbook, not a new acceptance receipt.
 
-The goal is to preserve the existing EXE and its dependency bytes. Do not resolve latest refs, rebuild C6, update the SDK, or replace the GPU plugin during packaging. C6 is the separate 2026.5 line. This package uses our patched OVMS with the stock 2026.4 RC1 runtime files identified below.
+The goal is to preserve the existing EXE and the selected lock's dependency bytes. Do not resolve latest refs, rebuild C6, update the SDK, or replace the selected GPU plugin ad hoc during packaging. C6 is the separate 2026.5 line. The baseline package below uses our patched OVMS with stock 2026.4 RC1 runtime files; the later custom-GPU candidate is explicitly identified by a separate lock.
 
 ## Fixed identity and evidence boundary
 
@@ -16,6 +16,8 @@ The goal is to preserve the existing EXE and its dependency bytes. Do not resolv
 The older `RELEASE-CANDIDATE-20261023-RC3B-IDENTITY.json` describes an earlier EXE with SHA256 beginning `2beed15e`; do not use that binary identity for this postfix build.
 
 The subsequent [comparison with local Stock `2026.4.0.530dc63f`](FIXED-VS-LOCAL-STOCK-20261024.md) found that `C:\llm\ovms` currently contains the custom GPU reference, whereas its stock-GPU backup matches the DLL pinned here. The fixed lock is unchanged; do not substitute that installation's active GPU or its Python-enabled EXE.
+
+Later benchmark decision: [speed comparison and next RC composition](SPEED-COMPARISON-AND-RC-DECISION-20261024.md) selects a **separate candidate** using the custom GPU binary with our existing EXE, for reference MoE-backport continuity rather than a claimed general speed gain. The original stock-SDK lock and the baseline commands in this runbook remain unchanged. To assemble the new candidate, explicitly select `testing/fixed-package-20261024/speed-comparison-20261024/CANDIDATE-CUSTOM-GPU.lock.json` as `$lockPath`, use a new stage/archive name containing `customgpu-candidate`, and pass `--lock $lockPath` on every pre-copy and staged verification call. Neither package has extracted-package/release acceptance from this benchmark.
 
 On 2026-10-23, parser checks passed 34/34 and 81/81, and test/server builds completed. The original [testing handoff](QWEN3CODER-LOSSLESS-TESTING-HANDOFF.md) recorded live NOT RUN at that checkpoint. Later evidence exists:
 
@@ -73,7 +75,8 @@ Verify the frozen local inputs (does not start OVMS or a model):
 $repo = 'C:\gm\qwenmonster\semantic-refit-2026.4-src'
 $python = 'C:\gm\qwenmonster\semantic-refit-2026.4-tools\py-nupkg\tools\python.exe'
 $reference = Join-Path $repo 'docs\qwenmonster\testing\fixed-package-20261024'
-rtk proxy $python -B (Join-Path $reference 'verify-inputs.py')
+$lockPath = Join-Path $reference 'LOCAL-INPUTS.lock.json'
+rtk proxy $python -B (Join-Path $reference 'verify-inputs.py') --lock $lockPath
 if ($LASTEXITCODE -ne 0) { throw 'Frozen inputs changed; stop packaging' }
 ```
 
@@ -94,7 +97,7 @@ $lockPath = Join-Path $reference 'LOCAL-INPUTS.lock.json'
 $lock = Get-Content -LiteralPath $lockPath -Raw | ConvertFrom-Json
 $stage = 'C:\gm\qwenmonster\packages\rc3b-parsers-eb76a74f-fixed-20261024\ovms'
 if (Test-Path -LiteralPath $stage) { throw 'Staging path already exists; choose a new name' }
-rtk proxy $python -B (Join-Path $reference 'verify-inputs.py')
+rtk proxy $python -B (Join-Path $reference 'verify-inputs.py') --lock $lockPath
 if ($LASTEXITCODE -ne 0) { throw 'Input verification failed' }
 New-Item -ItemType Directory -Path $stage | Out-Null
 
@@ -127,7 +130,7 @@ New-Item -ItemType Directory -Path (Join-Path $stage 'provenance') | Out-Null
 Copy-Item -LiteralPath $lockPath -Destination (Join-Path $stage 'provenance\LOCAL-INPUTS.lock.json')
 Copy-Item -LiteralPath (Join-Path $reference 'verify-inputs.py') -Destination (Join-Path $stage 'provenance\verify-inputs.py')
 Copy-Item -LiteralPath (Join-Path $repo 'docs\qwenmonster\FIXED-WINDOWS-PACKAGE-20261024.md') -Destination (Join-Path $stage 'provenance\RUNBOOK.md')
-rtk proxy $python -B (Join-Path $reference 'verify-inputs.py') --payload-root $stage
+rtk proxy $python -B (Join-Path $reference 'verify-inputs.py') --lock $lockPath --payload-root $stage
 if ($LASTEXITCODE -ne 0) { throw 'Staged payload differs from fixed inputs' }
 ```
 

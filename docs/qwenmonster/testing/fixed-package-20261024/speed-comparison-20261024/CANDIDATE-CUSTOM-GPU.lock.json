@@ -1,0 +1,2370 @@
+{
+  "schema": "qwm-fixed-package-local-inputs-v1",
+  "captured_utc": "2026-10-24T18:28:46.809994+00:00",
+  "status": "MEASURED_RUNTIME_CANDIDATE_PACKAGE_NOT_BUILT",
+  "source_commit": "eb76a74f7aa39573d452d95443e189b1f5f4d9e8",
+  "parser_commit": "5af105a04904713b58b13bbd82a421c6f15844fa",
+  "source_pin_scope": "Parser/product sources match 5af105a04; later frozen tip changes only documentation.",
+  "sdk_archive": {
+    "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\openvino_genai_windows_2026.4.0.0rc1_x86_64.zip",
+    "bytes": 276665191,
+    "sha256": "b74ee43a10bf4615b805b1bacb78f330faec9616309a86126493973ee278e1dc"
+  },
+  "payload_files": [
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\bazel-bin\\src\\ovms.exe",
+      "bytes": 22596608,
+      "sha256": "f472d619097b3d64c3899a4628f219381941e99bb388d9c9c8a1d84956475397",
+      "destination": "bin/ovms.exe"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino.dll",
+      "bytes": 16465168,
+      "sha256": "829c4642e287522f8a8e748a726d4ad3117a701e22ab46adc82771f98e5d2f7e",
+      "destination": "bin/openvino.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_auto_batch_plugin.dll",
+      "bytes": 208144,
+      "sha256": "d21dc67bee39d3af3fbda6720198a6b025eda297680d5d747996730bc75496dd",
+      "destination": "bin/openvino_auto_batch_plugin.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_auto_plugin.dll",
+      "bytes": 720656,
+      "sha256": "ed1492fe3f901d2b882ea89c8909d8ce35eb52986a3559353a44917ee3fb3e47",
+      "destination": "bin/openvino_auto_plugin.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_c.dll",
+      "bytes": 234248,
+      "sha256": "8f89f65cb867d27d18607dad3ad5893df53561a809037a28c9c154b937976dfb",
+      "destination": "bin/openvino_c.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_genai.dll",
+      "bytes": 7425808,
+      "sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d",
+      "destination": "bin/openvino_genai.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_genai_c.dll",
+      "bytes": 178448,
+      "sha256": "0304bf893da72bbe4f31e41137a015e927ebc7fdfbb828236b6fa920310c8480",
+      "destination": "bin/openvino_genai_c.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_gguf_frontend.dll",
+      "bytes": 1322248,
+      "sha256": "c984068e1e521fc2cd3ee6211c67c0ea7a798b76ece9febbff0510c1280b38cf",
+      "destination": "bin/openvino_gguf_frontend.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_hetero_plugin.dll",
+      "bytes": 531728,
+      "sha256": "c21be45cea174c79163394e4cfe3a782ebef7a7a64b4ee43dfcf3828d558de16",
+      "destination": "bin/openvino_hetero_plugin.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_intel_cpu_plugin.dll",
+      "bytes": 46222600,
+      "sha256": "ce9c65b551e36139b62e28f2c8c7b9fc2a5c02c82e1dfd01e578dac30695e78b",
+      "destination": "bin/openvino_intel_cpu_plugin.dll"
+    },
+    {
+      "source": "C:\\llm\\ovms\\openvino_intel_gpu_plugin.dll",
+      "bytes": 33879040,
+      "sha256": "21a2fd9f5d856c297416059325832f0f902c84a4e78b840f859ca508f5aea66d",
+      "destination": "bin/openvino_intel_gpu_plugin.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_intel_npu_compiler.dll",
+      "bytes": 98174216,
+      "sha256": "c663f5c7649550359a373115be1946028a423fedf67e8893c46152323a65a06b",
+      "destination": "bin/openvino_intel_npu_compiler.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_intel_npu_compiler_loader.dll",
+      "bytes": 529672,
+      "sha256": "ea3a6b018a40e1a57c3d982a5e661ba12e6c3ada09ffe77a5eb9af58930f0fe1",
+      "destination": "bin/openvino_intel_npu_compiler_loader.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_intel_npu_plugin.dll",
+      "bytes": 7615752,
+      "sha256": "e27a466c9690e079b82d453a93a583d9008cb08e9965a6f459c56bccde965198",
+      "destination": "bin/openvino_intel_npu_plugin.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_intel_npu_vm_runtime.dll",
+      "bytes": 485640,
+      "sha256": "b4ed9e64bcb6855b918c315614631d6bad2f506f56c18394e38d2ce6aed61b14",
+      "destination": "bin/openvino_intel_npu_vm_runtime.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_ir_frontend.dll",
+      "bytes": 509192,
+      "sha256": "44604b39cbafcf4d8aa27697cee639038bdfcf24f5245f0be07abcf30609d4cd",
+      "destination": "bin/openvino_ir_frontend.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_onnx_frontend.dll",
+      "bytes": 5414160,
+      "sha256": "1554b14f226c3bcdf73362cd818c5137f6f80c1ef19e4850a8b4765b70dba0f4",
+      "destination": "bin/openvino_onnx_frontend.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_paddle_frontend.dll",
+      "bytes": 1688848,
+      "sha256": "48b407390f572e20d557a8a5ba87f0ba42d4a224b92d7063332ddbbcc29c807c",
+      "destination": "bin/openvino_paddle_frontend.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_pytorch_frontend.dll",
+      "bytes": 2791176,
+      "sha256": "947363b58a525137487d4d3cac9f2d110c0ae1ae283ab27388c9d3d057ccecec",
+      "destination": "bin/openvino_pytorch_frontend.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_tensorflow_frontend.dll",
+      "bytes": 4128016,
+      "sha256": "b8c7cb549e942c3062b1e13d4aea34c87d497f10b9f4dcfacc6d8848223eeef3",
+      "destination": "bin/openvino_tensorflow_frontend.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_tensorflow_lite_frontend.dll",
+      "bytes": 1263376,
+      "sha256": "0ded983534495e1c366fcb989fe1d63e226b12be73158000f2433e4278c06a5a",
+      "destination": "bin/openvino_tensorflow_lite_frontend.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_tokenizers.dll",
+      "bytes": 3483912,
+      "sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c",
+      "destination": "bin/openvino_tokenizers.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\3rdparty\\tbb\\bin\\tbb12.dll",
+      "bytes": 337160,
+      "sha256": "63cc8a5a9cee86e9d57967337053569df6335aca09d03f8657343633645d2727",
+      "destination": "bin/tbb12.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\3rdparty\\tbb\\bin\\tbbbind_2_5.dll",
+      "bytes": 209168,
+      "sha256": "235047df3f97a6b94c3a5e70d93b892141e32ae27ef06f0c583667b417118b20",
+      "destination": "bin/tbbbind_2_5.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\3rdparty\\tbb\\bin\\tbbmalloc.dll",
+      "bytes": 119056,
+      "sha256": "06e72fd9ed67405efd411c33d8dfbe9bf21cb62ff8ef2ccb1003bb1bc32b2924",
+      "destination": "bin/tbbmalloc.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\3rdparty\\tbb\\bin\\tbbmalloc_proxy.dll",
+      "bytes": 41736,
+      "sha256": "44b6e5017bd693da7feb3a226e6d8897387614e2fda9308d30c1ffc50875a320",
+      "destination": "bin/tbbmalloc_proxy.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\bazel-bin\\src\\git2.dll",
+      "bytes": 1756160,
+      "sha256": "7eb7ff327997dc19db29927153d54b1261df0888378f3c5d0ddf7c72f51998dd",
+      "destination": "bin/git2.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\bazel-bin\\src\\libcurl-x64.dll",
+      "bytes": 3647080,
+      "sha256": "f31fa58061e162ff4702b37224404df210346df6dff4a49e92d07b8dd5217334",
+      "destination": "bin/libcurl-x64.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\bazel-bin\\src\\opencv_world4140.dll",
+      "bytes": 79832576,
+      "sha256": "a192cbf006faf48c054468fa2a2e56e3f680b401c23b8f7fb24373ff75654c46",
+      "destination": "bin/opencv_world4140.dll"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\release_files\\LICENSE",
+      "bytes": 11558,
+      "sha256": "1eb85fc97224598dad1852b5d6483bbcf0aa8608790dcc657a5a2a761ae9c8c6",
+      "destination": "LICENSE"
+    },
+    {
+      "source": "C:\\opt\\curl-8.22.0_2-win64-mingw\\COPYING.txt",
+      "bytes": 1088,
+      "sha256": "82f2f4427d6545ee5aaac4f0b80428da6cc8ba41c2cf5da3a03680ec327b9681",
+      "destination": "licenses/curl/COPYING.txt"
+    },
+    {
+      "source": "C:\\opt\\curl-8.22.0_2-win64-mingw\\dep\\brotli\\LICENSE.txt",
+      "bytes": 1084,
+      "sha256": "3d180008e36922a4e8daec11c34c7af264fed5962d07924aea928c38e8663c94",
+      "destination": "licenses/curl/dep/brotli/LICENSE.txt"
+    },
+    {
+      "source": "C:\\opt\\curl-8.22.0_2-win64-mingw\\dep\\certdata\\LICENSE.url",
+      "bytes": 73,
+      "sha256": "b9954f88a27e8457cefcebd076fa533d037711383f6b28ae489d063ef8c61f79",
+      "destination": "licenses/curl/dep/certdata/LICENSE.url"
+    },
+    {
+      "source": "C:\\opt\\curl-8.22.0_2-win64-mingw\\dep\\libpsl\\COPYING.txt",
+      "bytes": 1126,
+      "sha256": "e7c9f0d8498d28a360a7e8293ea70fd7bd952955b636938322c13d60a03b5a45",
+      "destination": "licenses/curl/dep/libpsl/COPYING.txt"
+    },
+    {
+      "source": "C:\\opt\\curl-8.22.0_2-win64-mingw\\dep\\libressl\\COPYING.txt",
+      "bytes": 6492,
+      "sha256": "9853507b8821c3f277aa60bf554eade41441ef06b2df538d247183ad28789b7f",
+      "destination": "licenses/curl/dep/libressl/COPYING.txt"
+    },
+    {
+      "source": "C:\\opt\\curl-8.22.0_2-win64-mingw\\dep\\libssh2\\COPYING.txt",
+      "bytes": 1959,
+      "sha256": "f7f9633cf9ff2f1333f3d7ce46973a8716a4d2a2815ad56f30d437d5fea7bafe",
+      "destination": "licenses/curl/dep/libssh2/COPYING.txt"
+    },
+    {
+      "source": "C:\\opt\\curl-8.22.0_2-win64-mingw\\dep\\nghttp2\\COPYING.txt",
+      "bytes": 1156,
+      "sha256": "6b94f3abc1aabd0c72a7c7d92a77f79dda7c8a0cb3df839a97890b4116a2de2a",
+      "destination": "licenses/curl/dep/nghttp2/COPYING.txt"
+    },
+    {
+      "source": "C:\\opt\\curl-8.22.0_2-win64-mingw\\dep\\nghttp3\\COPYING.txt",
+      "bytes": 1081,
+      "sha256": "58cc3fc8c6d6cb2485ab35eb5918e849b5bf1e56522974e106d7a39a88d61dcd",
+      "destination": "licenses/curl/dep/nghttp3/COPYING.txt"
+    },
+    {
+      "source": "C:\\opt\\curl-8.22.0_2-win64-mingw\\dep\\ngtcp2\\COPYING.txt",
+      "bytes": 1080,
+      "sha256": "542dd526d2ea23565f0571cc68df6f05ed11248a90ff0f32de19d8ba589db513",
+      "destination": "licenses/curl/dep/ngtcp2/COPYING.txt"
+    },
+    {
+      "source": "C:\\opt\\curl-8.22.0_2-win64-mingw\\dep\\zlibng\\LICENSE.md",
+      "bytes": 867,
+      "sha256": "6c9f0d975b41afaa34d22f55bb8986ce69e5cb7ad327cb2b28820cd425edf5ee",
+      "destination": "licenses/curl/dep/zlibng/LICENSE.md"
+    },
+    {
+      "source": "C:\\opt\\curl-8.22.0_2-win64-mingw\\dep\\zstd\\LICENSE.txt",
+      "bytes": 1549,
+      "sha256": "7055266497633c9025b777c78eb7235af13922117480ed5c674677adc381c9d8",
+      "destination": "licenses/curl/dep/zstd/LICENSE.txt"
+    }
+  ],
+  "payload_trees": [
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-tools\\py-nupkg\\tools",
+      "destination": "python",
+      "exclude": [
+        "__pycache__",
+        "*.pyc",
+        "*.pyo"
+      ],
+      "files": 1323,
+      "bytes": 39284294,
+      "tree_sha256": "c944e3b8758c8c3fb438198f2573dd633742def2a5b719e50623d4b3dbf862e4"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\release_files\\thirdparty-licenses",
+      "destination": "licenses/ovms-thirdparty",
+      "exclude": [
+        "__pycache__",
+        "*.pyc",
+        "*.pyo"
+      ],
+      "files": 50,
+      "bytes": 414754,
+      "tree_sha256": "94248c576c4ab61a1dd2544658f7d9cd46e8a21979e6ec425a0f0b87e9bdfee1"
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\docs\\licensing",
+      "destination": "licenses/sdk",
+      "exclude": [
+        "__pycache__",
+        "*.pyc",
+        "*.pyo"
+      ],
+      "files": 14,
+      "bytes": 319241,
+      "tree_sha256": "045766a426554334fe4ea750ca5876db040a41f462cb4df22885eba5b359a0d3"
+    },
+    {
+      "source": "C:\\opt\\opencv_4.14.0\\etc\\licenses",
+      "destination": "licenses/opencv",
+      "exclude": [
+        "__pycache__",
+        "*.pyc",
+        "*.pyo"
+      ],
+      "files": 33,
+      "bytes": 306190,
+      "tree_sha256": "35ba77eb8c2cee7ddf3f8899d2b7f149ead0251abff56d92682c47a1939971d9"
+    }
+  ],
+  "build_only": [
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-tools\\bazel.exe",
+      "bytes": 49431296,
+      "sha256": "ff94279f7de7ec604c40b5d760f0dc10bdc880f07e915adced825f53e5f4fa1b"
+    },
+    {
+      "source": "C:\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\dumpbin.exe",
+      "bytes": 23416,
+      "sha256": "12a1cd87238bd66dfdb788b4fcdcb91ce4b3f81236aab12a7a29e5ae1d85af50"
+    }
+  ],
+  "debug_test_artifact_not_shipped": {
+    "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\bazel-bin\\src\\ovms_test.exe",
+    "bytes": 40555520,
+    "sha256": "3ac79a92468f0de2582ae99133018c1d58eaa3f0584ef9184dabc13f93857df4"
+  },
+  "original_launchers": [
+    {
+      "source": "C:\\Users\\testc\\.omp\\agent\\start-ornith.ps1",
+      "bytes": 1043,
+      "sha256": "c9dd7ae200ad95ea33b54d78bb27175c9ea3b105ffd10e57bed331643da508ab"
+    },
+    {
+      "source": "C:\\Users\\testc\\.omp\\agent\\start-gemma26.ps1",
+      "bytes": 1120,
+      "sha256": "85feb2469746f7621346fa7079338d8717ea1582796e479d0af0c1f534796759"
+    }
+  ],
+  "host_system32_observations_not_payload": [
+    {
+      "source": "C:\\Windows\\System32\\ADVAPI32.dll",
+      "bytes": 795272,
+      "sha256": "b864e1468a01a44f1901e03c05c1029e71655dd9abddd6d840bcfff5e7227d44"
+    },
+    {
+      "source": "C:\\Windows\\System32\\dbghelp.dll",
+      "bytes": 2317640,
+      "sha256": "2d2ec94891162a61d86789133623b47d64d74c15d6be99473b25ad7a6468cf39"
+    },
+    {
+      "source": "C:\\Windows\\System32\\KERNEL32.dll",
+      "bytes": 861992,
+      "sha256": "e132eba4166256e2f414b91fe7d5386590bc5ea8626aee5af9c9738383cf2ae1"
+    },
+    {
+      "source": "C:\\Windows\\System32\\MSVCP140.dll",
+      "bytes": 642720,
+      "sha256": "639342ea9a67c0009122238ce070a8257e2e04d367d627509fec29f8442afb42"
+    },
+    {
+      "source": "C:\\Windows\\System32\\RPCRT4.dll",
+      "bytes": 1182976,
+      "sha256": "c060f02c11fb19c9c8a30b5077a87cdb17d4be40f08070a539ec73eb53402775"
+    },
+    {
+      "source": "C:\\Windows\\System32\\SHLWAPI.dll",
+      "bytes": 440968,
+      "sha256": "77b883ae848e1209b17ded14e6558656651f84d47cd656d1d3c118cc5409ed5b"
+    },
+    {
+      "source": "C:\\Windows\\System32\\VCRUNTIME140.dll",
+      "bytes": 178848,
+      "sha256": "19c293ac482fdb882cd29d2b0e6d807419efdcada04068f03e5723670895e17d"
+    },
+    {
+      "source": "C:\\Windows\\System32\\VCRUNTIME140_1.dll",
+      "bytes": 50256,
+      "sha256": "a253a12e4a8e9e23ebfe0ced829f7751e4f42c60066986bf20515ced8dcc68cd"
+    },
+    {
+      "source": "C:\\Windows\\System32\\WS2_32.dll",
+      "bytes": 553608,
+      "sha256": "b123b00c46c415d7baeaada58c29c3e6920895db836ee4c0cfee49d738af60ad"
+    },
+    {
+      "source": "C:\\Windows\\System32\\CFGMGR32.dll",
+      "bytes": 357640,
+      "sha256": "fea3f02ba1a9ac87f7ec53932a5821d3d894d70c828a441c8767059efa53f5c5"
+    },
+    {
+      "source": "C:\\Windows\\System32\\WINTRUST.dll",
+      "bytes": 557672,
+      "sha256": "a24ff2ace63b7facf6f62cd024a596083342eebc6a8d3748ff98938b6de93a0e"
+    },
+    {
+      "source": "C:\\Windows\\System32\\MSVCP140_CODECVT_IDS.dll",
+      "bytes": 31312,
+      "sha256": "f781e1e0133c397c3a2c73fd4dbcdb442378ba20fced56a2f7db5822436ddd2a"
+    },
+    {
+      "source": "C:\\Windows\\System32\\OpenCL.dll",
+      "bytes": 128896,
+      "sha256": "35286e2b72698f87f592fefc85ad70c4fdf5e4ee56e985f14830c04f36e40c6f"
+    },
+    {
+      "source": "C:\\Windows\\System32\\SETUPAPI.dll",
+      "bytes": 4842440,
+      "sha256": "9cca168a1a95fef4a69b8cb0f1e310b793563833658169cacaf3ad67382ba2c7"
+    },
+    {
+      "source": "C:\\Windows\\System32\\ntdll.dll",
+      "bytes": 2558392,
+      "sha256": "651ac9041af8e6b5ebd331d53163244c0a27d36d1433f0f15cac1f28c5f2e82c"
+    },
+    {
+      "source": "C:\\Windows\\System32\\ole32.dll",
+      "bytes": 1720576,
+      "sha256": "1053ffb858cddbe29eaaa6a5b0836b88c7cd11fbd58605288600e507c06db443"
+    },
+    {
+      "source": "C:\\Windows\\System32\\SHELL32.dll",
+      "bytes": 8101864,
+      "sha256": "c55a5f3b6ef059871fe2a0c8d82f086e0998d1154023e3ecf49698b97f9341f6"
+    },
+    {
+      "source": "C:\\Windows\\System32\\ze_loader.dll",
+      "bytes": 824176,
+      "sha256": "a56a109788c97ed42275803202e42a44c591a24064a038e6aa3cbc5908f98b4b"
+    },
+    {
+      "source": "C:\\Windows\\System32\\CRYPT32.dll",
+      "bytes": 1587168,
+      "sha256": "71da5f9806f7aaf9e081c1df28b13182d2643b7f3534173f868ba65287612bbb"
+    },
+    {
+      "source": "C:\\Windows\\System32\\WINHTTP.dll",
+      "bytes": 1253704,
+      "sha256": "2509edaea64d4ed9e9993b80fa370f431f37117401ef77cf367533a31b82c180"
+    },
+    {
+      "source": "C:\\Windows\\System32\\bcrypt.dll",
+      "bytes": 195128,
+      "sha256": "d0fc7863d7b034da33f34dc82b96a8604572598a217668a43fc9eca3a8e2a8e1"
+    },
+    {
+      "source": "C:\\Windows\\System32\\IPHLPAPI.DLL",
+      "bytes": 220528,
+      "sha256": "8521026d021cc5193a7cd7c0256bd14c7ab39738d22c019e6d544b37deee12c0"
+    },
+    {
+      "source": "C:\\Windows\\System32\\Normaliz.dll",
+      "bytes": 32768,
+      "sha256": "8a6ee80a338e6b090757a4a5bd217072c9d7e2aa3cf80f99428f9032d48f8057"
+    },
+    {
+      "source": "C:\\Windows\\System32\\Secur32.dll",
+      "bytes": 53248,
+      "sha256": "4050dfd0d4e04e8d013cb16c09d90c2177e2b7e4f102f5931187b2bd0c9d14fc"
+    },
+    {
+      "source": "C:\\Windows\\System32\\USER32.dll",
+      "bytes": 1974768,
+      "sha256": "f285937030bcb325cad39ee5be4818f6666241229adeadea4ff1ae469dfd7ef3"
+    },
+    {
+      "source": "C:\\Windows\\System32\\WLDAP32.dll",
+      "bytes": 471040,
+      "sha256": "ee80a890d23cdac19051f7f2ec06933a291ab7ccec618141e0a007533670f7e6"
+    },
+    {
+      "source": "C:\\Windows\\System32\\COMDLG32.dll",
+      "bytes": 983040,
+      "sha256": "7d87ea4e567e74005a7a0ffbb11707265962a24aeb73f909ba7f3d004b5925bf"
+    },
+    {
+      "source": "C:\\Windows\\System32\\CONCRT140.dll",
+      "bytes": 374352,
+      "sha256": "a5b9af428829ab7b61ceae9d88a37ce1053551379ee007d8df53a7ba4d33c251"
+    },
+    {
+      "source": "C:\\Windows\\System32\\d3d11.dll",
+      "bytes": 2537488,
+      "sha256": "c9aee071495039e820cd0be0afdeb927b9ad32edc1d0dae460b6d64064b524f6"
+    },
+    {
+      "source": "C:\\Windows\\System32\\dxgi.dll",
+      "bytes": 1316248,
+      "sha256": "4225e13f27a4f3a4a4738e64a57fa0949d8589f317fc6f8ec194b3a4d394a528"
+    },
+    {
+      "source": "C:\\Windows\\System32\\GDI32.dll",
+      "bytes": 187456,
+      "sha256": "772c73e294a4c5f5e0d4146288af95287a85c074d3aee3fa9f320dc010d7dbfe"
+    },
+    {
+      "source": "C:\\Windows\\System32\\MF.dll",
+      "bytes": 645176,
+      "sha256": "5ef1a13910169e20186f1c132fbad7985e14b5c00aeff36758f541c90a0a6cfc"
+    },
+    {
+      "source": "C:\\Windows\\System32\\MFPlat.DLL",
+      "bytes": 2304128,
+      "sha256": "149a947b90bfb98e21be5ac168b181543b4fb76c21b475f036dc1dc8bf2fcfe1"
+    },
+    {
+      "source": "C:\\Windows\\System32\\MFReadWrite.dll",
+      "bytes": 899480,
+      "sha256": "455041c27356ea8fd92bea211dcca7d8c47fc08ed9ac41fb6818344ab5f86cbe"
+    },
+    {
+      "source": "C:\\Windows\\System32\\OLEAUT32.dll",
+      "bytes": 916120,
+      "sha256": "e3fcdbbf040fd1e3c3504876cf060ac3908c134ac81b3d0c57f0f735769280ea"
+    }
+  ],
+  "comparison_checks": [
+    {
+      "name": "openvino_genai.dll",
+      "sdk_sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d",
+      "bazel_sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d"
+    },
+    {
+      "name": "openvino_tokenizers.dll",
+      "sdk_sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c",
+      "bazel_sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c"
+    },
+    {
+      "name": "libcurl-x64.dll",
+      "bazel_sha256": "f31fa58061e162ff4702b37224404df210346df6dff4a49e92d07b8dd5217334",
+      "path_8_22_sha256": "f31fa58061e162ff4702b37224404df210346df6dff4a49e92d07b8dd5217334",
+      "path_8_21_sha256": "f31fa58061e162ff4702b37224404df210346df6dff4a49e92d07b8dd5217334"
+    }
+  ],
+  "import_scan": [
+    {
+      "file": "bin/ovms.exe",
+      "dependencies": [
+        {
+          "name": "ADVAPI32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-utility-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "dbghelp.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "git2.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "libcurl-x64.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "opencv_world4140.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "openvino_genai.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "RPCRT4.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "SHLWAPI.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "WS2_32.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/openvino.dll",
+      "dependencies": [
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-utility-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "tbb12.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/openvino_auto_batch_plugin.dll",
+      "dependencies": [
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/openvino_auto_plugin.dll",
+      "dependencies": [
+        {
+          "name": "ADVAPI32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "CFGMGR32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "tbb12.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "WINTRUST.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/openvino_c.dll",
+      "dependencies": [
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/openvino_genai.dll",
+      "dependencies": [
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MSVCP140_CODECVT_IDS.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "tbb12.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/openvino_genai_c.dll",
+      "dependencies": [
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "openvino_c.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "openvino_genai.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/openvino_gguf_frontend.dll",
+      "dependencies": [
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "tbb12.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/openvino_hetero_plugin.dll",
+      "dependencies": [
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/openvino_intel_cpu_plugin.dll",
+      "dependencies": [
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "tbb12.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/openvino_intel_gpu_plugin.dll",
+      "dependencies": [
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "OpenCL.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "SETUPAPI.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "tbb12.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/openvino_intel_npu_compiler.dll",
+      "dependencies": [
+        {
+          "name": "ADVAPI32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-utility-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "ntdll.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "ole32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "SHELL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "tbb12.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "WS2_32.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/openvino_intel_npu_compiler_loader.dll",
+      "dependencies": [
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "ntdll.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "ole32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "SHELL32.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/openvino_intel_npu_plugin.dll",
+      "dependencies": [
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "tbb12.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/openvino_intel_npu_vm_runtime.dll",
+      "dependencies": [
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "ze_loader.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/openvino_ir_frontend.dll",
+      "dependencies": [
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/openvino_onnx_frontend.dll",
+      "dependencies": [
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "dbghelp.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/openvino_paddle_frontend.dll",
+      "dependencies": [
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "dbghelp.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/openvino_pytorch_frontend.dll",
+      "dependencies": [
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/openvino_tensorflow_frontend.dll",
+      "dependencies": [
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "dbghelp.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/openvino_tensorflow_lite_frontend.dll",
+      "dependencies": [
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-utility-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/openvino_tokenizers.dll",
+      "dependencies": [
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "openvino.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "tbb12.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/tbb12.dll",
+      "dependencies": [
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/tbbbind_2_5.dll",
+      "dependencies": [
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-utility-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/tbbmalloc.dll",
+      "dependencies": [
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/tbbmalloc_proxy.dll",
+      "dependencies": [
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "tbbmalloc.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/git2.dll",
+      "dependencies": [
+        {
+          "name": "ADVAPI32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "CRYPT32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "libcurl-x64.dll",
+          "resolution": "payload"
+        },
+        {
+          "name": "ole32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "RPCRT4.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "WINHTTP.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "WS2_32.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/libcurl-x64.dll",
+      "dependencies": [
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-private-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-utility-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "bcrypt.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "CRYPT32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "IPHLPAPI.DLL",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "Normaliz.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "Secur32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "USER32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "WLDAP32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "WS2_32.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    },
+    {
+      "file": "bin/opencv_world4140.dll",
+      "dependencies": [
+        {
+          "name": "ADVAPI32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "api-ms-win-crt-convert-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-environment-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-filesystem-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-heap-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-locale-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-math-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-runtime-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-stdio-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-string-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-time-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "api-ms-win-crt-utility-l1-1-0.dll",
+          "resolution": "windows-api-set"
+        },
+        {
+          "name": "COMDLG32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "CONCRT140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "d3d11.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "dxgi.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "GDI32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "KERNEL32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MF.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MFPlat.DLL",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MFReadWrite.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "MSVCP140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "ole32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "OLEAUT32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "SHLWAPI.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "USER32.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "VCRUNTIME140_1.dll",
+          "resolution": "host-system32-prerequisite"
+        },
+        {
+          "name": "WS2_32.dll",
+          "resolution": "host-system32-prerequisite"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Static-import inventory is not a complete dynamic-load audit.",
+    "Host system DLLs and API sets are prerequisites, not redistributable payload.",
+    "Historical 2026-10-23 module hashes were not captured; current benchmark module receipts are saved separately.",
+    "Short comparative model benchmarks completed; package assembly/extraction, soak and release acceptance remain NOT RUN.",
+    "Exact custom GPU source-to-binary build attestation was not reestablished."
+  ],
+  "release_accepted": false,
+  "candidate_delta": {
+    "base_lock": "../LOCAL-INPUTS.lock.json",
+    "changed_payload_entries": 1,
+    "replaced_gpu": {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_intel_gpu_plugin.dll",
+      "bytes": 34629896,
+      "sha256": "b90b57aecb9d8bbb7b0a1e945e45a088e94ea7baf61eaf5dd7d8fe5e06c9e55d",
+      "destination": "bin/openvino_intel_gpu_plugin.dll"
+    },
+    "reason": "Preserve custom MoE backport from protected local reference, not a demonstrated general acceleration.",
+    "gpu_source_to_binary_attestation": "NOT_REESTABLISHED; C07 identifies this exact hash as custom reference.",
+    "benchmark_receipt": "RESULTS.json",
+    "runtime_tested": {
+      "Gemma26": "VLM/default compile threads",
+      "Ornith": "VLM/COMPILATION_NUM_THREADS=1"
+    },
+    "not_run": [
+      "assembled/extracted package",
+      "soak",
+      "long-context headroom",
+      "agent loops",
+      "default-thread Ornith decode under current RAM conditions"
+    ]
+  }
+}

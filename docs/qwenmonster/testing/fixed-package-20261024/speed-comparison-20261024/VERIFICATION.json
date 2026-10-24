@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "changed_payload_entries": [
+    "bin/openvino_intel_gpu_plugin.dll"
+  ],
+  "completed_tuple_model_runs": 8,
+  "measured_requests": 24,
+  "same_text_per_model": true,
+  "candidate_inputs": {
+    "status": "PASS",
+    "mode": "local-inputs",
+    "checks": 51,
+    "errors": [],
+    "scope": "Pinned file bytes/directory trees and saved static-import report; not a fresh PE scan, dynamic-load check or runtime acceptance."
+  },
+  "scope": "Input/hash and result consistency checks only; not package or release acceptance."
+}

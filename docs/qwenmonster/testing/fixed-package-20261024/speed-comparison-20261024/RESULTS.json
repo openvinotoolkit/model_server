@@ -1,0 +1,875 @@
+{
+  "captured_utc": "2026-10-24T18:28:46.763569+00:00",
+  "scope": "Comparative warm text-decode measurements plus one synthetic unary tool probe per tuple; not release, soak or complete family acceptance.",
+  "method": {
+    "temperature": 0,
+    "requested_max_tokens": 256,
+    "warmups": 2,
+    "measured_repeats": 3,
+    "log_level": "INFO",
+    "target": "GPU",
+    "pipeline": "VLM",
+    "cache_size_cli": 2,
+    "batch_tokens_cli": 4096,
+    "max_num_seqs_cli": 1,
+    "prefix_cache_cli": false,
+    "ornith_compile_threads": 1,
+    "gemma26_compile_threads": "default",
+    "decode_rate": "(completion_tokens-1)/(last_text_event-first_text_event); SSE timing estimate",
+    "ttft": "first text event minus HTTP request start; not pure prefill",
+    "minimum_initial_free_mib": 15463,
+    "owned_server_low_memory_stop_mib": 1024,
+    "legacy_scheduler_caveat": "The source stores scheduler options but the legacy VLMPipeline constructor receives pluginConfig, not SchedulerConfig. CLI values are not proof of effective engine cache/batch settings."
+  },
+  "runs": [
+    {
+      "run": "gemma26/runs/A-stock-custom--r1",
+      "status": "PASS",
+      "model": "gemma26",
+      "pipeline": "VLM",
+      "cache_size": "2",
+      "initial_free_mib": 19072.24609375,
+      "minimum_free_mib": 2011.71875,
+      "memory_guard_triggered": false,
+      "exe_sha256": "073ed783610883f9060fe861736c683a7edff59937b25dbd18e1fdeea14007fc",
+      "n": 3,
+      "decode_median": 25.72884715271342,
+      "decode_min": 25.71755960043196,
+      "decode_max": 25.791673836337242,
+      "ttft_median_s": 0.3007227000052808,
+      "wall_median_s": 9.744768300006399,
+      "prompt_tokens": [
+        1772,
+        1772,
+        1772
+      ],
+      "completion_tokens": [
+        244,
+        244,
+        244
+      ],
+      "text_hashes": [
+        "6db4f2feff4fca4047ae6ea66dc03a647f6254ba0aed594fd73d3055b1150c9e"
+      ],
+      "tool_check": {
+        "finish": "tool_calls",
+        "calls": 1,
+        "arguments": "{\"big\":9007199254740993,\"path\":\"C:\\test\",\"ratio\":1.1,\"sci\":1000,\"tag\":\"#B4E8\"}",
+        "literal_presence": {
+          "1.10": false,
+          "1e3": false,
+          "9007199254740993": true,
+          "#B4E8": true
+        }
+      },
+      "loaded_gpu_sha256": "21a2fd9f5d856c297416059325832f0f902c84a4e78b840f859ca508f5aea66d",
+      "cohort": [
+        {
+          "name": "ovms.exe",
+          "sha256": "073ed783610883f9060fe861736c683a7edff59937b25dbd18e1fdeea14007fc"
+        },
+        {
+          "name": "openvino_genai.dll",
+          "sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d"
+        },
+        {
+          "name": "tbb12.dll",
+          "sha256": "63cc8a5a9cee86e9d57967337053569df6335aca09d03f8657343633645d2727"
+        },
+        {
+          "name": "openvino.dll",
+          "sha256": "829c4642e287522f8a8e748a726d4ad3117a701e22ab46adc82771f98e5d2f7e"
+        },
+        {
+          "name": "openvino_tokenizers.dll",
+          "sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c"
+        },
+        {
+          "name": "openvino_intel_gpu_plugin.dll",
+          "sha256": "21a2fd9f5d856c297416059325832f0f902c84a4e78b840f859ca508f5aea66d"
+        }
+      ]
+    },
+    {
+      "run": "gemma26/runs/B-fixed-stock--r1",
+      "status": "PASS",
+      "model": "gemma26",
+      "pipeline": "VLM",
+      "cache_size": "2",
+      "initial_free_mib": 19210.55078125,
+      "minimum_free_mib": 2112.62109375,
+      "memory_guard_triggered": false,
+      "exe_sha256": "f472d619097b3d64c3899a4628f219381941e99bb388d9c9c8a1d84956475397",
+      "n": 3,
+      "decode_median": 26.168500829072716,
+      "decode_min": 25.304145678157848,
+      "decode_max": 26.44688571814683,
+      "ttft_median_s": 0.301016500001424,
+      "wall_median_s": 9.595157000003383,
+      "prompt_tokens": [
+        1772,
+        1772,
+        1772
+      ],
+      "completion_tokens": [
+        244,
+        244,
+        244
+      ],
+      "text_hashes": [
+        "6db4f2feff4fca4047ae6ea66dc03a647f6254ba0aed594fd73d3055b1150c9e"
+      ],
+      "tool_check": {
+        "finish": "tool_calls",
+        "calls": 1,
+        "arguments": "{\"ratio\":1.1,\"sci\":1000.0,\"big\":9007199254740993,\"path\":\"C:\\\\test\",\"tag\":\"#B4E8\"}",
+        "literal_presence": {
+          "1.10": false,
+          "1e3": false,
+          "9007199254740993": true,
+          "#B4E8": true
+        }
+      },
+      "loaded_gpu_sha256": "b90b57aecb9d8bbb7b0a1e945e45a088e94ea7baf61eaf5dd7d8fe5e06c9e55d",
+      "cohort": [
+        {
+          "name": "ovms.exe",
+          "sha256": "f472d619097b3d64c3899a4628f219381941e99bb388d9c9c8a1d84956475397"
+        },
+        {
+          "name": "openvino.dll",
+          "sha256": "829c4642e287522f8a8e748a726d4ad3117a701e22ab46adc82771f98e5d2f7e"
+        },
+        {
+          "name": "tbb12.dll",
+          "sha256": "63cc8a5a9cee86e9d57967337053569df6335aca09d03f8657343633645d2727"
+        },
+        {
+          "name": "openvino_genai.dll",
+          "sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d"
+        },
+        {
+          "name": "openvino_tokenizers.dll",
+          "sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c"
+        },
+        {
+          "name": "openvino_intel_gpu_plugin.dll",
+          "sha256": "b90b57aecb9d8bbb7b0a1e945e45a088e94ea7baf61eaf5dd7d8fe5e06c9e55d"
+        }
+      ]
+    },
+    {
+      "run": "gemma26/runs/C-fixed-custom--r1",
+      "status": "PASS",
+      "model": "gemma26",
+      "pipeline": "VLM",
+      "cache_size": "2",
+      "initial_free_mib": 20792.765625,
+      "minimum_free_mib": 3703.26953125,
+      "memory_guard_triggered": false,
+      "exe_sha256": "f472d619097b3d64c3899a4628f219381941e99bb388d9c9c8a1d84956475397",
+      "n": 3,
+      "decode_median": 25.192010288613858,
+      "decode_min": 25.06490314271413,
+      "decode_max": 25.263594680762235,
+      "ttft_median_s": 0.2866680000006454,
+      "wall_median_s": 9.944768999994267,
+      "prompt_tokens": [
+        1772,
+        1772,
+        1772
+      ],
+      "completion_tokens": [
+        244,
+        244,
+        244
+      ],
+      "text_hashes": [
+        "6db4f2feff4fca4047ae6ea66dc03a647f6254ba0aed594fd73d3055b1150c9e"
+      ],
+      "tool_check": {
+        "finish": "tool_calls",
+        "calls": 1,
+        "arguments": "{\"ratio\":1.1,\"sci\":1000.0,\"big\":9007199254740993,\"path\":\"C:\\\\test\",\"tag\":\"#B4E8\"}",
+        "literal_presence": {
+          "1.10": false,
+          "1e3": false,
+          "9007199254740993": true,
+          "#B4E8": true
+        }
+      },
+      "loaded_gpu_sha256": "21a2fd9f5d856c297416059325832f0f902c84a4e78b840f859ca508f5aea66d",
+      "cohort": [
+        {
+          "name": "ovms.exe",
+          "sha256": "f472d619097b3d64c3899a4628f219381941e99bb388d9c9c8a1d84956475397"
+        },
+        {
+          "name": "openvino_genai.dll",
+          "sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d"
+        },
+        {
+          "name": "tbb12.dll",
+          "sha256": "63cc8a5a9cee86e9d57967337053569df6335aca09d03f8657343633645d2727"
+        },
+        {
+          "name": "openvino.dll",
+          "sha256": "829c4642e287522f8a8e748a726d4ad3117a701e22ab46adc82771f98e5d2f7e"
+        },
+        {
+          "name": "openvino_tokenizers.dll",
+          "sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c"
+        },
+        {
+          "name": "openvino_intel_gpu_plugin.dll",
+          "sha256": "21a2fd9f5d856c297416059325832f0f902c84a4e78b840f859ca508f5aea66d"
+        }
+      ]
+    },
+    {
+      "run": "gemma26/runs/D-stock-stock--r1",
+      "status": "PASS",
+      "model": "gemma26",
+      "pipeline": "VLM",
+      "cache_size": "2",
+      "initial_free_mib": 20769.0703125,
+      "minimum_free_mib": 3434.5859375,
+      "memory_guard_triggered": false,
+      "exe_sha256": "073ed783610883f9060fe861736c683a7edff59937b25dbd18e1fdeea14007fc",
+      "n": 3,
+      "decode_median": 26.05392439702827,
+      "decode_min": 23.37672165104334,
+      "decode_max": 26.142085029252968,
+      "ttft_median_s": 0.30182769999373704,
+      "wall_median_s": 9.618553600012092,
+      "prompt_tokens": [
+        1772,
+        1772,
+        1772
+      ],
+      "completion_tokens": [
+        244,
+        244,
+        244
+      ],
+      "text_hashes": [
+        "6db4f2feff4fca4047ae6ea66dc03a647f6254ba0aed594fd73d3055b1150c9e"
+      ],
+      "tool_check": {
+        "finish": "tool_calls",
+        "calls": 1,
+        "arguments": "{\"big\":9007199254740993,\"path\":\"C:\\test\",\"ratio\":1.1,\"sci\":1000,\"tag\":\"#B4E8\"}",
+        "literal_presence": {
+          "1.10": false,
+          "1e3": false,
+          "9007199254740993": true,
+          "#B4E8": true
+        }
+      },
+      "loaded_gpu_sha256": "b90b57aecb9d8bbb7b0a1e945e45a088e94ea7baf61eaf5dd7d8fe5e06c9e55d",
+      "cohort": [
+        {
+          "name": "ovms.exe",
+          "sha256": "073ed783610883f9060fe861736c683a7edff59937b25dbd18e1fdeea14007fc"
+        },
+        {
+          "name": "openvino_genai.dll",
+          "sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d"
+        },
+        {
+          "name": "tbb12.dll",
+          "sha256": "63cc8a5a9cee86e9d57967337053569df6335aca09d03f8657343633645d2727"
+        },
+        {
+          "name": "openvino.dll",
+          "sha256": "829c4642e287522f8a8e748a726d4ad3117a701e22ab46adc82771f98e5d2f7e"
+        },
+        {
+          "name": "openvino_tokenizers.dll",
+          "sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c"
+        },
+        {
+          "name": "openvino_intel_gpu_plugin.dll",
+          "sha256": "b90b57aecb9d8bbb7b0a1e945e45a088e94ea7baf61eaf5dd7d8fe5e06c9e55d"
+        }
+      ]
+    },
+    {
+      "run": "ornith-VLM-compile1/runs/A-stock-custom--compile1",
+      "status": "PASS",
+      "model": "ornith",
+      "pipeline": "VLM",
+      "cache_size": "2",
+      "initial_free_mib": 21589.078125,
+      "minimum_free_mib": 1096.74609375,
+      "memory_guard_triggered": false,
+      "exe_sha256": "073ed783610883f9060fe861736c683a7edff59937b25dbd18e1fdeea14007fc",
+      "n": 3,
+      "decode_median": 27.591454309819593,
+      "decode_min": 27.32592837108573,
+      "decode_max": 27.819717668928536,
+      "ttft_median_s": 1.942785899998853,
+      "wall_median_s": 11.226822099997662,
+      "prompt_tokens": [
+        1788,
+        1788,
+        1788
+      ],
+      "completion_tokens": [
+        256,
+        256,
+        256
+      ],
+      "text_hashes": [
+        "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+      ],
+      "tool_check": {
+        "finish": "tool_calls",
+        "calls": 1,
+        "arguments": "{\"ratio\":1.1,\"sci\":1000.0,\"big\":9007199254740993,\"path\":\"C:\\\\test\",\"tag\":\"#B4E8\"}",
+        "literal_presence": {
+          "1.10": false,
+          "1e3": false,
+          "9007199254740993": true,
+          "#B4E8": true
+        }
+      },
+      "loaded_gpu_sha256": "21a2fd9f5d856c297416059325832f0f902c84a4e78b840f859ca508f5aea66d",
+      "cohort": [
+        {
+          "name": "ovms.exe",
+          "sha256": "073ed783610883f9060fe861736c683a7edff59937b25dbd18e1fdeea14007fc"
+        },
+        {
+          "name": "openvino_genai.dll",
+          "sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d"
+        },
+        {
+          "name": "tbb12.dll",
+          "sha256": "63cc8a5a9cee86e9d57967337053569df6335aca09d03f8657343633645d2727"
+        },
+        {
+          "name": "openvino.dll",
+          "sha256": "829c4642e287522f8a8e748a726d4ad3117a701e22ab46adc82771f98e5d2f7e"
+        },
+        {
+          "name": "openvino_tokenizers.dll",
+          "sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c"
+        },
+        {
+          "name": "openvino_intel_gpu_plugin.dll",
+          "sha256": "21a2fd9f5d856c297416059325832f0f902c84a4e78b840f859ca508f5aea66d"
+        }
+      ]
+    },
+    {
+      "run": "ornith-VLM-compile1/runs/B-fixed-stock--compile1",
+      "status": "PASS",
+      "model": "ornith",
+      "pipeline": "VLM",
+      "cache_size": "2",
+      "initial_free_mib": 21610.83203125,
+      "minimum_free_mib": 1041.15625,
+      "memory_guard_triggered": false,
+      "exe_sha256": "f472d619097b3d64c3899a4628f219381941e99bb388d9c9c8a1d84956475397",
+      "n": 3,
+      "decode_median": 27.23580251554979,
+      "decode_min": 26.65126202817738,
+      "decode_max": 27.566303689798783,
+      "ttft_median_s": 1.9609392999991542,
+      "wall_median_s": 11.325395599997137,
+      "prompt_tokens": [
+        1788,
+        1788,
+        1788
+      ],
+      "completion_tokens": [
+        256,
+        256,
+        256
+      ],
+      "text_hashes": [
+        "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+      ],
+      "tool_check": {
+        "finish": "tool_calls",
+        "calls": 1,
+        "arguments": "{\"ratio\":1.1,\"sci\":1e3,\"big\":9007199254740993,\"path\":\"C:\\\\test\",\"tag\":\"#B4E8\"}",
+        "literal_presence": {
+          "1.10": false,
+          "1e3": true,
+          "9007199254740993": true,
+          "#B4E8": true
+        }
+      },
+      "loaded_gpu_sha256": "b90b57aecb9d8bbb7b0a1e945e45a088e94ea7baf61eaf5dd7d8fe5e06c9e55d",
+      "cohort": [
+        {
+          "name": "ovms.exe",
+          "sha256": "f472d619097b3d64c3899a4628f219381941e99bb388d9c9c8a1d84956475397"
+        },
+        {
+          "name": "openvino_genai.dll",
+          "sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d"
+        },
+        {
+          "name": "tbb12.dll",
+          "sha256": "63cc8a5a9cee86e9d57967337053569df6335aca09d03f8657343633645d2727"
+        },
+        {
+          "name": "openvino.dll",
+          "sha256": "829c4642e287522f8a8e748a726d4ad3117a701e22ab46adc82771f98e5d2f7e"
+        },
+        {
+          "name": "openvino_tokenizers.dll",
+          "sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c"
+        },
+        {
+          "name": "openvino_intel_gpu_plugin.dll",
+          "sha256": "b90b57aecb9d8bbb7b0a1e945e45a088e94ea7baf61eaf5dd7d8fe5e06c9e55d"
+        }
+      ]
+    },
+    {
+      "run": "ornith-VLM-compile1/runs/C-fixed-custom--compile1",
+      "status": "PASS",
+      "model": "ornith",
+      "pipeline": "VLM",
+      "cache_size": "2",
+      "initial_free_mib": 21819.30859375,
+      "minimum_free_mib": 1127.91015625,
+      "memory_guard_triggered": false,
+      "exe_sha256": "f472d619097b3d64c3899a4628f219381941e99bb388d9c9c8a1d84956475397",
+      "n": 3,
+      "decode_median": 27.32888652693464,
+      "decode_min": 26.945456974281573,
+      "decode_max": 27.5974635268812,
+      "ttft_median_s": 1.905958000003011,
+      "wall_median_s": 11.253112699996564,
+      "prompt_tokens": [
+        1788,
+        1788,
+        1788
+      ],
+      "completion_tokens": [
+        256,
+        256,
+        256
+      ],
+      "text_hashes": [
+        "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+      ],
+      "tool_check": {
+        "finish": "tool_calls",
+        "calls": 1,
+        "arguments": "{\"ratio\":1.1,\"sci\":1e3,\"big\":9007199254740993,\"path\":\"C:\\\\test\",\"tag\":\"#B4E8\"}",
+        "literal_presence": {
+          "1.10": false,
+          "1e3": true,
+          "9007199254740993": true,
+          "#B4E8": true
+        }
+      },
+      "loaded_gpu_sha256": "21a2fd9f5d856c297416059325832f0f902c84a4e78b840f859ca508f5aea66d",
+      "cohort": [
+        {
+          "name": "ovms.exe",
+          "sha256": "f472d619097b3d64c3899a4628f219381941e99bb388d9c9c8a1d84956475397"
+        },
+        {
+          "name": "openvino_genai.dll",
+          "sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d"
+        },
+        {
+          "name": "openvino.dll",
+          "sha256": "829c4642e287522f8a8e748a726d4ad3117a701e22ab46adc82771f98e5d2f7e"
+        },
+        {
+          "name": "tbb12.dll",
+          "sha256": "63cc8a5a9cee86e9d57967337053569df6335aca09d03f8657343633645d2727"
+        },
+        {
+          "name": "openvino_tokenizers.dll",
+          "sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c"
+        },
+        {
+          "name": "openvino_intel_gpu_plugin.dll",
+          "sha256": "21a2fd9f5d856c297416059325832f0f902c84a4e78b840f859ca508f5aea66d"
+        }
+      ]
+    },
+    {
+      "run": "ornith-VLM-compile1/runs/D-stock-stock--compile1",
+      "status": "PASS",
+      "model": "ornith",
+      "pipeline": "VLM",
+      "cache_size": "2",
+      "initial_free_mib": 21946.22265625,
+      "minimum_free_mib": 1155.3671875,
+      "memory_guard_triggered": false,
+      "exe_sha256": "073ed783610883f9060fe861736c683a7edff59937b25dbd18e1fdeea14007fc",
+      "n": 3,
+      "decode_median": 26.77594893966918,
+      "decode_min": 26.449650911293002,
+      "decode_max": 27.145686620647968,
+      "ttft_median_s": 2.033422500011511,
+      "wall_median_s": 11.559296700012055,
+      "prompt_tokens": [
+        1788,
+        1788,
+        1788
+      ],
+      "completion_tokens": [
+        256,
+        256,
+        256
+      ],
+      "text_hashes": [
+        "70b4c90ecbd463eaa3c6f49e187f9d5496268d3dbd9367949a44955401c091c8"
+      ],
+      "tool_check": {
+        "finish": "tool_calls",
+        "calls": 1,
+        "arguments": "{\"ratio\":1.1,\"sci\":1000.0,\"big\":9007199254740993,\"path\":\"C:\\\\test\",\"tag\":\"#B4E8\"}",
+        "literal_presence": {
+          "1.10": false,
+          "1e3": false,
+          "9007199254740993": true,
+          "#B4E8": true
+        }
+      },
+      "loaded_gpu_sha256": "b90b57aecb9d8bbb7b0a1e945e45a088e94ea7baf61eaf5dd7d8fe5e06c9e55d",
+      "cohort": [
+        {
+          "name": "ovms.exe",
+          "sha256": "073ed783610883f9060fe861736c683a7edff59937b25dbd18e1fdeea14007fc"
+        },
+        {
+          "name": "openvino_genai.dll",
+          "sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d"
+        },
+        {
+          "name": "openvino.dll",
+          "sha256": "829c4642e287522f8a8e748a726d4ad3117a701e22ab46adc82771f98e5d2f7e"
+        },
+        {
+          "name": "tbb12.dll",
+          "sha256": "63cc8a5a9cee86e9d57967337053569df6335aca09d03f8657343633645d2727"
+        },
+        {
+          "name": "openvino_tokenizers.dll",
+          "sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c"
+        },
+        {
+          "name": "openvino_intel_gpu_plugin.dll",
+          "sha256": "b90b57aecb9d8bbb7b0a1e945e45a088e94ea7baf61eaf5dd7d8fe5e06c9e55d"
+        }
+      ]
+    },
+    {
+      "run": "ornith-VLM_CB-kv0.5/runs/A-stock-custom--cb1",
+      "status": "FAIL",
+      "model": "ornith",
+      "pipeline": "VLM_CB",
+      "cache_size": "0.5",
+      "initial_free_mib": 21438.953125,
+      "minimum_free_mib": 21582.78125,
+      "memory_guard_triggered": false,
+      "exe_sha256": "073ed783610883f9060fe861736c683a7edff59937b25dbd18e1fdeea14007fc",
+      "interpretation": "HARNESS_CALIBRATION_OR_REJECTED_OPTION_NOT_A_SPEED_RESULT"
+    },
+    {
+      "run": "ornith-VLM_CB-kv1/runs/A-stock-custom--cb1",
+      "status": "FAIL",
+      "model": "ornith",
+      "pipeline": "VLM_CB",
+      "cache_size": "1",
+      "initial_free_mib": 21381.44140625,
+      "minimum_free_mib": 897.421875,
+      "memory_guard_triggered": true,
+      "exe_sha256": "073ed783610883f9060fe861736c683a7edff59937b25dbd18e1fdeea14007fc",
+      "interpretation": "BLOCKED_MEMORY_NOT_A_SPEED_RESULT"
+    },
+    {
+      "run": "runs/A-stock-custom",
+      "status": "FAIL",
+      "model": "ornith",
+      "pipeline": "VLM",
+      "cache_size": "2",
+      "initial_free_mib": 18340.9375,
+      "minimum_free_mib": 18320.8828125,
+      "memory_guard_triggered": false,
+      "exe_sha256": "073ed783610883f9060fe861736c683a7edff59937b25dbd18e1fdeea14007fc",
+      "interpretation": "HARNESS_CALIBRATION_OR_REJECTED_OPTION_NOT_A_SPEED_RESULT"
+    },
+    {
+      "run": "runs/A-stock-custom--r1",
+      "status": "FAIL",
+      "model": "ornith",
+      "pipeline": "VLM",
+      "cache_size": "2",
+      "initial_free_mib": 18552.19140625,
+      "minimum_free_mib": 787.29296875,
+      "memory_guard_triggered": true,
+      "exe_sha256": "073ed783610883f9060fe861736c683a7edff59937b25dbd18e1fdeea14007fc",
+      "interpretation": "BLOCKED_MEMORY_NOT_A_SPEED_RESULT"
+    },
+    {
+      "run": "runs/A-stock-custom--r2",
+      "status": "FAIL",
+      "model": "ornith",
+      "pipeline": "VLM",
+      "cache_size": "2",
+      "initial_free_mib": 20849.08203125,
+      "minimum_free_mib": 913.2890625,
+      "memory_guard_triggered": true,
+      "exe_sha256": "073ed783610883f9060fe861736c683a7edff59937b25dbd18e1fdeea14007fc",
+      "interpretation": "BLOCKED_MEMORY_NOT_A_SPEED_RESULT"
+    }
+  ],
+  "model_files": {
+    "ornith": [
+      {
+        "name": "CHAT-TEMPLATE-PIN.json",
+        "bytes": 1224,
+        "sha256": "bc72b6eaa229f29c857168e63739cef1e8fc7e8539544b463ca66ecf5c66e811"
+      },
+      {
+        "name": "chat_template.jinja",
+        "bytes": 8147,
+        "sha256": "173b4cb55af687f861b7ca0ea571805093876c4fb140e1f7d64dcc0b54f9ca0b"
+      },
+      {
+        "name": "config.json",
+        "bytes": 3188,
+        "sha256": "a2f437dca9dbdf94133eebe54b4057790701ee6dc5a7fd892ee2bfea45445312"
+      },
+      {
+        "name": "generation_config.json",
+        "bytes": 213,
+        "sha256": "07f857aba5260b2ea2513f80de8062d086661f00eada0a3794964e665ba680f5"
+      },
+      {
+        "name": "openvino_config.json",
+        "bytes": 1212,
+        "sha256": "4207385cfd1f364713239986ddef36cb575018581f5136ee2b50451836fbfea2"
+      },
+      {
+        "name": "openvino_detokenizer.bin",
+        "bytes": 3828184,
+        "sha256": "48fc2c6a7a1056994982911eb9695826acef933c3d742364c56d16317a0b2a79"
+      },
+      {
+        "name": "openvino_detokenizer.xml",
+        "bytes": 15371,
+        "sha256": "dbba69f73e6bd4946eeacedfe8318308ad2ab3de34fe514f4ebed4d3939f3f43"
+      },
+      {
+        "name": "openvino_language_model.bin",
+        "bytes": 18646558250,
+        "sha256": "126b02c8379a78c09dc19dae36010f8f0c26b72975b420854e4046d1a6b18812"
+      },
+      {
+        "name": "openvino_language_model.xml",
+        "bytes": 7879887,
+        "sha256": "69a35f875e0d333fc5b884312225f3134ca6d04c0c1493d92f8232bc4f26b80c"
+      },
+      {
+        "name": "openvino_text_embeddings_model.bin",
+        "bytes": 509056004,
+        "sha256": "19a529477ab6f90072ca3c874ca68efb5278e9173c7192bf91d94c7271693a29"
+      },
+      {
+        "name": "openvino_text_embeddings_model.xml",
+        "bytes": 5903,
+        "sha256": "6844125b0c843b7fff0b0e905098b82a1195a518db2126fef39eb2406d2f1a1d"
+      },
+      {
+        "name": "openvino_tokenizer.bin",
+        "bytes": 9631143,
+        "sha256": "b829798d3e74080ff1c838a8308183daeffe4d8653b01ece2007f2ffe4b3a1c1"
+      },
+      {
+        "name": "openvino_tokenizer.xml",
+        "bytes": 32401,
+        "sha256": "d4ad56c420356e99491eb9c09a89cac2c524c6c412909fab4cca68ff16a35a62"
+      },
+      {
+        "name": "openvino_vision_embeddings_merger_model.bin",
+        "bytes": 443361892,
+        "sha256": "a995b0d1c23a3247d580f74b491e82fc6fc023238d1248bf9fd1baa12d41b578"
+      },
+      {
+        "name": "openvino_vision_embeddings_merger_model.xml",
+        "bytes": 1322496,
+        "sha256": "664d41ae6edd440b70e1a405aaadcf0983a5b4ee8d07253bbebcc970f04e7d71"
+      },
+      {
+        "name": "openvino_vision_embeddings_model.bin",
+        "bytes": 1776440,
+        "sha256": "22d5ef784a6235cb837763e77638e8ace72b2d6001dc6347a7300c8310bd0b48"
+      },
+      {
+        "name": "openvino_vision_embeddings_model.xml",
+        "bytes": 8642,
+        "sha256": "cad8ddd2a0d2c96aa6f2dded48c0e039c68941ac422e7dbea615a40ed04cb976"
+      },
+      {
+        "name": "openvino_vision_embeddings_pos_model.bin",
+        "bytes": 2658820,
+        "sha256": "261db08f77e8fe70b1624f2472433e90cfa04fd7e579abfca7febdfa8e236799"
+      },
+      {
+        "name": "openvino_vision_embeddings_pos_model.xml",
+        "bytes": 5873,
+        "sha256": "46d001ee196cc143e541fbdf92eb5d038fa5d07b2854b639d18254dd672e4a1b"
+      },
+      {
+        "name": "tokenizer.json",
+        "bytes": 19989492,
+        "sha256": "6f32ce20dc35f57a7f9ad1eac03525bd7d30f9df8cea6507e958279cc3657706"
+      },
+      {
+        "name": "tokenizer_config.json",
+        "bytes": 1272,
+        "sha256": "ea86adbad6aa3628fd04c56d3b5c01dc2d328e154e7bc4a3f04cbc3cffae55fc"
+      }
+    ],
+    "gemma26": [
+      {
+        "name": "chat_template.jinja",
+        "bytes": 23077,
+        "sha256": "24d32be0f96bbea1b9e1afd89e19bd4a632ab567c90555c7284be65f5e7f7609"
+      },
+      {
+        "name": "config.json",
+        "bytes": 3810,
+        "sha256": "a62ff7eb0a97a7c6e83ba42edff8dc4118c109a7ededcd6d83cc08ffda6a7361"
+      },
+      {
+        "name": "generation_config.json",
+        "bytes": 203,
+        "sha256": "5439541d3bf0ba9ade7c1122dc14703f85f32a520150351b344b14f48c574cc2"
+      },
+      {
+        "name": "openvino_config.json",
+        "bytes": 1272,
+        "sha256": "7cbda792eb8fa65e8761801b0b9e18b354a574580ec5c253b230277ab654d8f6"
+      },
+      {
+        "name": "openvino_detokenizer.bin",
+        "bytes": 4413547,
+        "sha256": "461919bda7b546453e903052588c578e3e94e9e8215b7cec07cb00cb97459d13"
+      },
+      {
+        "name": "openvino_detokenizer.xml",
+        "bytes": 34535,
+        "sha256": "1320325cd46efae0783b6b140006021f6f1023d75f2d8a97719d75acc4984a53"
+      },
+      {
+        "name": "openvino_language_model.bin",
+        "bytes": 14788282880,
+        "sha256": "f2e504962d44e77858e8952274735e7c497d720fa18f7636fc9aaf31672c7676"
+      },
+      {
+        "name": "openvino_language_model.xml",
+        "bytes": 5365779,
+        "sha256": "392e9eefbefde3047438a462868c841227512ad8a5f8b452d8bfcdf63cc8ed12"
+      },
+      {
+        "name": "openvino_text_embeddings_model.bin",
+        "bytes": 738721800,
+        "sha256": "1808d6e3fbe2ae1179c22e20a8e5d2e2e68c74230b57a62ed9720932c0b1e7b0"
+      },
+      {
+        "name": "openvino_text_embeddings_model.xml",
+        "bytes": 7089,
+        "sha256": "7691e0b4aa243cf78809b3ad8799699045fee65b22a688b35982ce6ac8607cba"
+      },
+      {
+        "name": "openvino_text_embeddings_per_layer_model.bin",
+        "bytes": 20,
+        "sha256": "57fda7ab0340cda71819a3ecd5f9e52e346260fe840fddcc9c87d3614b5a815b"
+      },
+      {
+        "name": "openvino_text_embeddings_per_layer_model.xml",
+        "bytes": 4779,
+        "sha256": "716ea221d6666d0e57fd1c4d126a515e428aef413f250de6696b7f116ab67128"
+      },
+      {
+        "name": "openvino_tokenizer.bin",
+        "bytes": 17270329,
+        "sha256": "749e5bf254e1a7236b9c3cc5fe386963951b8879a4dc46d2749271dfdcf06fff"
+      },
+      {
+        "name": "openvino_tokenizer.xml",
+        "bytes": 49944,
+        "sha256": "a2f844d2457574390a081b98ee15cf5b557a37078e87ecfc71a77a4c2e9ee4b8"
+      },
+      {
+        "name": "openvino_vision_embeddings_model.bin",
+        "bytes": 573967772,
+        "sha256": "87a4b947fe95ae9148c53990cb7e417f1963c9149a2fc8107e38a2e1a8b1443f"
+      },
+      {
+        "name": "openvino_vision_embeddings_model.xml",
+        "bytes": 3217630,
+        "sha256": "5fdbf9ae7904ef6423baf8d09492629771dd70dcb8b67071e5948aef455fdc66"
+      },
+      {
+        "name": "tokenizer.json",
+        "bytes": 32169780,
+        "sha256": "a2619fe11b50dbed06ac443c51d757b354d0b62d64baa514404d4e84e6713519"
+      },
+      {
+        "name": "tokenizer_config.json",
+        "bytes": 2819,
+        "sha256": "f24fb2adfa622cf3a0c003d06f1b38c5d824fda7aebdf064c4d4d414590731a0"
+      }
+    ]
+  },
+  "host_context": {
+    "captured_utc": "2026-10-24T18:05:15.1895655Z",
+    "power_scheme": "Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)",
+    "battery": [
+      {
+        "BatteryStatus": 2,
+        "EstimatedChargeRemaining": 73
+      }
+    ],
+    "gpu": [
+      {
+        "Name": "Intel(R) Arc(TM) 140V GPU (16GB)",
+        "DriverVersion": "32.0.101.9150"
+      },
+      {
+        "Name": "DisplayLink USB Device",
+        "DriverVersion": "11.2.3146.0"
+      },
+      {
+        "Name": "DisplayLink USB Device",
+        "DriverVersion": "11.2.3146.0"
+      }
+    ],
+    "cpu": [
+      {
+        "Name": "Intel(R) Core(TM) Ultra 7 258V",
+        "NumberOfCores": 8,
+        "NumberOfLogicalProcessors": 8
+      }
+    ],
+    "os": {
+      "Caption": "Microsoft Windows 11 Home",
+      "Version": "10.0.26300",
+      "TotalVisibleMemorySize": 33072884,
+      "FreePhysicalMemory": 3344568
+    }
+  },
+  "decision": {
+    "recompile_ovms_for_speed": false,
+    "new_candidate": "existing fixed parser EXE + protected custom GPU 21a2fd9f, other fixed inputs unchanged",
+    "reason": "Preserve the known reference MoE-backport binary with the improved parser; no material general speed gain demonstrated.",
+    "release_accepted": false,
+    "stock_sdk_lock_unchanged": true
+  }
+}
