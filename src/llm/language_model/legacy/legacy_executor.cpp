@@ -41,6 +41,11 @@ void LegacyExecutor::processRequest() {
         try {
             requestExecutionContext->decisionsResults.reserve(requestExecutionContext->decisionsInputRequests.size());
             for (const auto& req : requestExecutionContext->decisionsInputRequests) {
+                // Stop burning forward passes if the client went away mid-batch; the
+                // response phase reports the cancellation either way.
+                if (requestExecutionContext->clientDisconnected) {
+                    break;
+                }
                 requestExecutionContext->decisionsResults.push_back(pipe->generate(req.inputIds, req.generationConfig));
             }
         } catch (std::exception& e) {

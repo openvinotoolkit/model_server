@@ -360,10 +360,14 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
 absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     const bool hasLogprobs = executionContext->apiHandler->requiresLogprobData();
     const size_t numOutputs = executionContext->generationOutputs.size();
+    // Decisions read only the requested-token logprobs: the serializer ignores text
+    // deltas, so skip detokenization and output parsing (and the per-sequence streamers)
+    // while keeping token-usage accounting and logprob collection.
+    const bool isDecisions = executionContext->endpoint == Endpoint::DECISIONS;
 
     // Build streamer config once; shared across all per-sequence streamers.
     ov::AnyMap streamerConfig;
-    if (!executionContext->apiHandler->getRequest().skipSpecialTokens) {
+    if (!isDecisions && !executionContext->apiHandler->getRequest().skipSpecialTokens) {
         streamerConfig.insert(ov::genai::skip_special_tokens(false));
     }
 
@@ -382,30 +386,32 @@ absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServabl
         executionContext->apiHandler->incrementProcessedTokens(output.generated_ids.size());
 
         std::vector<Delta> localDeltas;
-        if (numOutputs == 1) {
-            // Single sequence: reuse the OVMSTextStreamer and deltaChannel built in parseRequest.
-            executionContext->textStreamer->write(output.generated_ids);
-            executionContext->textStreamer->end();
-            localDeltas = executionContext->deltaChannel.drain();
-        } else {
-            // Multiple sequences: each beam requires its own independent stateful streamer
-            // (hold-back buffer, parser state are per-sequence).
-            auto cb = [&localDeltas](Delta delta, bool) -> ov::genai::StreamingStatus {
-                localDeltas.push_back(std::move(delta));
-                return ov::genai::StreamingStatus::RUNNING;
-            };
-            auto outputParser = executionContext->apiHandler->getOutputParser();
-            if (outputParser) {
-                outputParser->resetStreamingState();
+        if (!isDecisions) {
+            if (numOutputs == 1) {
+                // Single sequence: reuse the OVMSTextStreamer and deltaChannel built in parseRequest.
+                executionContext->textStreamer->write(output.generated_ids);
+                executionContext->textStreamer->end();
+                localDeltas = executionContext->deltaChannel.drain();
+            } else {
+                // Multiple sequences: each beam requires its own independent stateful streamer
+                // (hold-back buffer, parser state are per-sequence).
+                auto cb = [&localDeltas](Delta delta, bool) -> ov::genai::StreamingStatus {
+                    localDeltas.push_back(std::move(delta));
+                    return ov::genai::StreamingStatus::RUNNING;
+                };
+                auto outputParser = executionContext->apiHandler->getOutputParser();
+                if (outputParser) {
+                    outputParser->resetStreamingState();
+                }
+                auto tempStreamer = std::make_shared<OVMSTextStreamer>(
+                    getProperties()->tokenizer,
+                    outputParser,
+                    executionContext->apiHandler->areToolsAvailable(),
+                    std::move(cb),
+                    streamerConfig);
+                tempStreamer->write(output.generated_ids);
+                tempStreamer->end();
             }
-            auto tempStreamer = std::make_shared<OVMSTextStreamer>(
-                getProperties()->tokenizer,
-                outputParser,
-                executionContext->apiHandler->areToolsAvailable(),
-                std::move(cb),
-                streamerConfig);
-            tempStreamer->write(output.generated_ids);
-            tempStreamer->end();
         }
 
         allDeltas.push_back(std::move(localDeltas));
@@ -428,6 +434,13 @@ absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServabl
     }
 
     if (hasLogprobs) {
+        // Endpoint-specific validation: for decisions, incomplete logprob data (missing
+        // labels, all masked, result count mismatch) must surface as a non-OK status
+        // (HTTP 400) rather than a success response with an incomplete answer.
+        auto logprobStatus = executionContext->apiHandler->validateLogprobData(logprobData);
+        if (!logprobStatus.ok()) {
+            return logprobStatus;
+        }
         executionContext->response = executionContext->apiHandler->serializeUnaryResponse(
             allDeltas, finishReasons, logprobData);
     } else {

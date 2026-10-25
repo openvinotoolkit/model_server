@@ -13,7 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <chrono>
 #include <cmath>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -815,4 +817,188 @@ TEST_F(LLMHttpDecisionsAssistedTest, decisionsPromptLookupServableRejected) {
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
     ASSERT_NE(status.string().find("UNIMPLEMENTED"), std::string::npos);
     ASSERT_NE(status.string().find("speculative decoding or prompt lookup decoding"), std::string::npos);
+}
+
+// ---------------------------------------------------------------------------
+// Deterministic serializer tests: no HTTP, no model. The handler is constructed
+// directly and fed hand-built requested-token logprobs, so the exact reduction
+// math (label-normalized probabilities, full-vocabulary confidence, expected
+// score) is checked against precomputed constants. The HTTP e2e tests above only
+// verify the contract shape, so a uniform or label-normalized-confidence
+// implementation would have passed them.
+// ---------------------------------------------------------------------------
+class DecisionsSerializerTest : public ::testing::Test {
+protected:
+    rapidjson::Document doc;
+    // GPT-2 BPE: every decisions label (yes/no, A/B/C, 0/1/2) is a single token.
+    std::shared_ptr<ov::genai::Tokenizer> tokenizer =
+        std::make_shared<ov::genai::Tokenizer>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov"));
+
+    // Encodes a label the same way OpenAIDecisionsHandler::encodeLabels does.
+    int64_t encodeLabel(const std::string& label) {
+        auto tokens = tokenizer->encode(label, {ov::genai::add_special_tokens(false)});
+        EXPECT_EQ(tokens.input_ids.get_size(), 1) << "label '" << label << "' is not a single token";
+        if (tokens.input_ids.get_size() != 1)
+            return -1;
+        return tokens.input_ids.data<int64_t>()[0];
+    }
+
+    // Three questions covering all types: predicate, choice (3 options), score (3 levels).
+    std::unique_ptr<ovms::OpenAIDecisionsHandler> parseHandler() {
+        doc.Parse(R"({
+            "model": "dummy",
+            "input": "The sky is",
+            "questions": [
+                {"type": "predicate", "instructions": "Is the statement true?"},
+                {"type": "choice", "instructions": "Pick a color",
+                 "choices": [{"value": "red"}, {"value": "blue"}, {"value": "green"}]},
+                {"type": "score", "instructions": "Rate the statement",
+                 "levels": [{"label": "low"}, {"label": "mid"}, {"label": "high"}]}
+            ]
+        })");
+        if (doc.HasParseError()) {
+            ADD_FAILURE() << "test request doc failed to parse";
+            return nullptr;
+        }
+        auto handler = std::make_unique<ovms::OpenAIDecisionsHandler>(
+            doc, ovms::Endpoint::DECISIONS, std::chrono::system_clock::now(), *tokenizer);
+        auto status = handler->parseRequest(std::nullopt, 0, std::nullopt);
+        if (!status.ok()) {
+            ADD_FAILURE() << "parseRequest failed: " << status.message();
+            return nullptr;
+        }
+        return handler;
+    }
+
+    // One UnaryChoiceLogprobs entry: a single generated token + one position of
+    // requested-token logprobs (the label ids, plus a dominant non-label token).
+    ovms::UnaryChoiceLogprobs makeEntry(const std::vector<std::pair<int64_t, float>>& positionLogprobs) {
+        ovms::UnaryChoiceLogprobs entry;
+        entry.generatedIds = {positionLogprobs.front().first};
+        entry.requestedTokenLogprobs = {positionLogprobs};
+        return entry;
+    }
+};
+
+TEST_F(DecisionsSerializerTest, serializeUnaryResponseMath) {
+    auto handler = parseHandler();
+    ASSERT_NE(handler, nullptr);
+    const int64_t yesId = encodeLabel("yes"), noId = encodeLabel("no");
+    const int64_t aId = encodeLabel("A"), bId = encodeLabel("B"), cId = encodeLabel("C");
+    const int64_t zeroId = encodeLabel("0"), oneId = encodeLabel("1"), twoId = encodeLabel("2");
+    const int64_t nonLabelId = encodeLabel("the");
+    for (int64_t id : {yesId, noId, aId, bId, cId, zeroId, oneId, twoId})
+        EXPECT_NE(nonLabelId, id) << "the filler token must not collide with a label id";
+
+    // Non-uniform per-question label logprobs; the dominant non-label token makes
+    // the full-vocabulary confidence distinct from the label-normalized winner.
+    std::vector<ovms::UnaryChoiceLogprobs> logprobData = {
+        makeEntry({{yesId, -0.5f}, {noId, -2.0f}, {nonLabelId, -0.1f}}),
+        makeEntry({{aId, -1.0f}, {bId, -2.0f}, {cId, -3.0f}, {nonLabelId, -0.1f}}),
+        makeEntry({{zeroId, -3.0f}, {oneId, -1.0f}, {twoId, -2.0f}, {nonLabelId, -0.1f}})};
+
+    rapidjson::Document response;
+    response.Parse(handler->serializeUnaryResponse({}, {}, logprobData).c_str());
+    ASSERT_FALSE(response.HasParseError());
+    const auto& answers = response["answers"];
+    ASSERT_TRUE(answers.IsArray());
+    ASSERT_EQ(answers.Size(), 3);
+
+    // predicate: probability = P(yes) = exp(-0.5) / (exp(-0.5) + exp(-2.0))
+    ASSERT_STREQ(answers[0]["type"].GetString(), "predicate");
+    EXPECT_NEAR(answers[0]["probability"].GetDouble(), 0.8175744761936437, 1e-9);
+    ASSERT_FALSE(answers[0].HasMember("confidence"));
+
+    // choice: winner A ("red"); label-normalized probabilities, while confidence is
+    // the full-vocabulary probability of the winning label token, exp(-1.0).
+    ASSERT_STREQ(answers[1]["type"].GetString(), "choice");
+    ASSERT_STREQ(answers[1]["choice"].GetString(), "red");
+    const auto& choiceProbs = answers[1]["probabilities"];
+    ASSERT_TRUE(choiceProbs.IsArray());
+    ASSERT_EQ(choiceProbs.Size(), 3);
+    ASSERT_STREQ(choiceProbs[0]["value"].GetString(), "red");
+    EXPECT_NEAR(choiceProbs[0]["probability"].GetDouble(), 0.6652409557748218, 1e-9);
+    ASSERT_STREQ(choiceProbs[1]["value"].GetString(), "blue");
+    EXPECT_NEAR(choiceProbs[1]["probability"].GetDouble(), 0.24472847105479764, 1e-9);
+    ASSERT_STREQ(choiceProbs[2]["value"].GetString(), "green");
+    EXPECT_NEAR(choiceProbs[2]["probability"].GetDouble(), 0.09003057317038046, 1e-9);
+    EXPECT_NEAR(answers[1]["confidence"].GetDouble(), 0.36787944117144233, 1e-9);
+
+    // score: expected 0-indexed level = 1*p1 + 2*p2
+    ASSERT_STREQ(answers[2]["type"].GetString(), "score");
+    EXPECT_NEAR(answers[2]["score"].GetDouble(), 1.1546978978844171, 1e-9);
+    const auto& scoreProbs = answers[2]["probabilities"];
+    ASSERT_TRUE(scoreProbs.IsArray());
+    ASSERT_EQ(scoreProbs.Size(), 3);
+    ASSERT_EQ(scoreProbs[0]["value"].GetInt(), 0);
+    ASSERT_STREQ(scoreProbs[0]["label"].GetString(), "low");
+    EXPECT_NEAR(scoreProbs[0]["probability"].GetDouble(), 0.09003057317038046, 1e-9);
+    ASSERT_EQ(scoreProbs[1]["value"].GetInt(), 1);
+    ASSERT_STREQ(scoreProbs[1]["label"].GetString(), "mid");
+    EXPECT_NEAR(scoreProbs[1]["probability"].GetDouble(), 0.6652409557748218, 1e-9);
+    ASSERT_EQ(scoreProbs[2]["value"].GetInt(), 2);
+    ASSERT_STREQ(scoreProbs[2]["label"].GetString(), "high");
+    EXPECT_NEAR(scoreProbs[2]["probability"].GetDouble(), 0.24472847105479764, 1e-9);
+    EXPECT_NEAR(answers[2]["confidence"].GetDouble(), 0.36787944117144233, 1e-9);
+}
+
+TEST_F(DecisionsSerializerTest, serializeUnaryResponseClampsPositiveLogprob) {
+    auto handler = parseHandler();
+    ASSERT_NE(handler, nullptr);
+    const int64_t aId = encodeLabel("A"), bId = encodeLabel("B"), cId = encodeLabel("C");
+    const int64_t zeroId = encodeLabel("0"), oneId = encodeLabel("1"), twoId = encodeLabel("2");
+    // float32 rounding can yield a small positive logprob for a near-certain winner:
+    // exp(0.0001f) is 1.0001000049976403, so the confidence must be clamped to 1.0.
+    std::vector<ovms::UnaryChoiceLogprobs> logprobData = {
+        makeEntry({{encodeLabel("yes"), -1.0f}, {encodeLabel("no"), -2.0f}}),
+        makeEntry({{aId, 0.0001f}, {bId, -1.0f}, {cId, -2.0f}}),
+        makeEntry({{zeroId, -1.0f}, {oneId, -2.0f}, {twoId, -3.0f}})};
+
+    rapidjson::Document response;
+    response.Parse(handler->serializeUnaryResponse({}, {}, logprobData).c_str());
+    ASSERT_FALSE(response.HasParseError());
+    const auto& answers = response["answers"];
+    ASSERT_TRUE(answers.IsArray());
+    ASSERT_EQ(answers.Size(), 3);
+    EXPECT_DOUBLE_EQ(answers[1]["confidence"].GetDouble(), 1.0);
+    EXPECT_NEAR(answers[2]["confidence"].GetDouble(), 0.36787944117144233, 1e-9);
+}
+
+TEST_F(DecisionsSerializerTest, validateLogprobData) {
+    auto handler = parseHandler();
+    ASSERT_NE(handler, nullptr);
+    const int64_t yesId = encodeLabel("yes"), noId = encodeLabel("no");
+    const int64_t aId = encodeLabel("A"), bId = encodeLabel("B"), cId = encodeLabel("C");
+    const int64_t zeroId = encodeLabel("0"), oneId = encodeLabel("1"), twoId = encodeLabel("2");
+
+    auto completeData = [&]() {
+        return std::vector<ovms::UnaryChoiceLogprobs>{
+            makeEntry({{yesId, -0.5f}, {noId, -2.0f}}),
+            makeEntry({{aId, -1.0f}, {bId, -2.0f}, {cId, -3.0f}}),
+            makeEntry({{zeroId, -3.0f}, {oneId, -1.0f}, {twoId, -2.0f}})};
+    };
+
+    // Complete data passes.
+    EXPECT_TRUE(handler->validateLogprobData(completeData()).ok());
+
+    // Result count mismatch.
+    auto mismatched = completeData();
+    mismatched.pop_back();
+    EXPECT_FALSE(handler->validateLogprobData(mismatched).ok());
+
+    // A label token missing from the position logprobs.
+    auto missingLabel = completeData();
+    missingLabel[1].requestedTokenLogprobs.front() = {{aId, -1.0f}, {cId, -3.0f}};
+    EXPECT_FALSE(handler->validateLogprobData(missingLabel).ok());
+
+    // All labels masked with -inf.
+    auto allMasked = completeData();
+    const float negInf = -std::numeric_limits<float>::infinity();
+    allMasked[2].requestedTokenLogprobs.front() = {{zeroId, negInf}, {oneId, negInf}, {twoId, negInf}};
+    EXPECT_FALSE(handler->validateLogprobData(allMasked).ok());
+
+    // No token generated for the question.
+    auto emptyIds = completeData();
+    emptyIds[0].generatedIds.clear();
+    EXPECT_FALSE(handler->validateLogprobData(emptyIds).ok());
 }

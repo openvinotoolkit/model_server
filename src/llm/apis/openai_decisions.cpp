@@ -414,6 +414,38 @@ std::string OpenAIDecisionsHandler::serializeUnaryResponse(const std::vector<Del
     return serializeUnaryResponse({deltas}, {finishReason}, {});
 }
 
+absl::Status OpenAIDecisionsHandler::validateLogprobData(const std::vector<UnaryChoiceLogprobs>& logprobData) const {
+    if (logprobData.empty() || logprobData.size() != questions.size()) {
+        return absl::InternalError("/v1/decisions: incomplete requested-token logprobs for this request");
+    }
+    for (size_t qi = 0; qi < questions.size(); ++qi) {
+        const auto& entry = logprobData[qi];
+        if (entry.generatedIds.empty() || entry.requestedTokenLogprobs.empty()) {
+            return absl::InternalError(absl::StrCat("/v1/decisions: incomplete requested-token logprobs for question ", qi));
+        }
+        const auto& positionLogprobs = entry.requestedTokenLogprobs.front();
+        double maxLogprob = -std::numeric_limits<double>::infinity();
+        for (int64_t labelTokenId : questions[qi].labelTokenIds) {
+            bool found = false;
+            for (const auto& [tokenId, value] : positionLogprobs) {
+                if (tokenId == labelTokenId) {
+                    maxLogprob = std::max(maxLogprob, static_cast<double>(value));
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                return absl::InternalError(absl::StrCat("/v1/decisions: incomplete requested-token logprobs for question ", qi));
+            }
+        }
+        // All labels present but masked with -inf: the classification cannot be computed.
+        if (!std::isfinite(maxLogprob)) {
+            return absl::InternalError(absl::StrCat("/v1/decisions: incomplete requested-token logprobs for question ", qi));
+        }
+    }
+    return absl::OkStatus();
+}
+
 std::string OpenAIDecisionsHandler::serializeUnaryResponse(
     const std::vector<std::vector<Delta>>& allDeltas,
     const std::vector<ov::genai::GenerationFinishReason>& finishReasons,
@@ -428,9 +460,9 @@ std::string OpenAIDecisionsHandler::serializeUnaryResponse(
     jsonResponse.String("model", request.model);
 
     // One engine request per question: logprobData[i] is question i's result.
-    // Defensive only — unreachable: the servable rejects missing per-question results
-    // before serialization (readCompleteExecutionResults), and the serializer cannot
-    // return a status.
+    // Defensive only — unreachable via the HTTP paths: the servables call
+    // validateLogprobData before serialization and surface a non-OK status (HTTP 400)
+    // on incomplete data, and the serializer itself cannot return a status.
     if (logprobData.empty() || logprobData.size() != questions.size()) {
         jsonResponse.String("error", "requested token logprobs are not available for this request");
         jsonResponse.EndObject();
@@ -511,8 +543,11 @@ std::string OpenAIDecisionsHandler::serializeUnaryResponse(
         for (size_t i = 1; i < labelLogprobs.size(); ++i)
             if (labelLogprobs[i] > labelLogprobs[winnerIndex])
                 winnerIndex = i;
-        // Full-vocabulary probability of the winning label token (= vLLM probs[top] * label_mass)
-        const double confidence = std::exp(labelLogprobs[winnerIndex]);
+        // Full-vocabulary probability of the winning label token (= vLLM probs[top] * label_mass).
+        // Clamp the winner's logprob to at most zero: float32 rounding can yield a small
+        // positive logprob for near-certain predictions, which would leak confidence > 1
+        // (same treatment as LogprobValue in openai_json_response.hpp).
+        const double confidence = std::exp(std::min(labelLogprobs[winnerIndex], 0.0));
 
         if (question.type == QuestionType::PREDICATE) {
             // probability = P("yes"); "yes" is label index 0

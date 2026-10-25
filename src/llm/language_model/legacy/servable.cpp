@@ -230,6 +230,13 @@ absl::Status LegacyServable::prepareCompleteResponse(std::shared_ptr<GenAiServab
                 {},
                 questionResults.requested_token_logprobs.empty() ? std::vector<std::vector<std::pair<int64_t, float>>>{} : questionResults.requested_token_logprobs[0]});
         }
+        // Incomplete logprob data (missing labels, all masked, result count mismatch)
+        // cannot be classified: surface a non-OK status (HTTP 400) instead of a success
+        // response with an incomplete answer.
+        auto logprobStatus = executionContext->apiHandler->validateLogprobData(logprobData);
+        if (!logprobStatus.ok()) {
+            return logprobStatus;
+        }
         executionContext->response = executionContext->apiHandler->serializeUnaryResponse({}, {}, logprobData);
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Complete unary response: {}", executionContext->response);
         return absl::OkStatus();

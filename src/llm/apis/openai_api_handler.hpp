@@ -197,6 +197,10 @@ public:
     // Whether the complete unary response requires per-choice logprob data.
     virtual bool requiresLogprobData() const { return request.logprobschat || request.logprobs; }
 
+    // Endpoint-specific validation of the per-position logprob data before unary
+    // serialization. Default: nothing to validate.
+    virtual absl::Status validateLogprobData(const std::vector<UnaryChoiceLogprobs>& logprobData) const { return absl::OkStatus(); }
+
     // Verbose response configuration
     void enableVerboseResponse(const std::string& promptAfterTemplate) {
         verboseResponse = true;

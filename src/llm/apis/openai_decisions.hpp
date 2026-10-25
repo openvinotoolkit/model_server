@@ -78,6 +78,12 @@ public:
     // not gated on the logprobs request flags.
     bool requiresLogprobData() const override { return true; }
 
+    // Every question must carry complete requested-token logprobs for all of its
+    // labels, otherwise the classification cannot be computed: the servable paths
+    // call this before serialization and surface a non-OK status (HTTP 400) instead
+    // of a success response with an incomplete answer.
+    absl::Status validateLogprobData(const std::vector<UnaryChoiceLogprobs>& logprobData) const override;
+
     std::string serializeUnaryResponse(const std::vector<Delta>& deltas, ov::genai::GenerationFinishReason finishReason) override;
     std::string serializeUnaryResponse(const std::vector<std::vector<Delta>>& allDeltas,
         const std::vector<ov::genai::GenerationFinishReason>& finishReasons,
