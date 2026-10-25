@@ -96,9 +96,10 @@ std::string threeQuestionsBody(const std::string& model) {
 }  // namespace
 
 // One request with all three question types: the response must be structurally
-// consistent (probabilities form a distribution over the labels, confidence is a
-// raw probability bounded by the label mass). Numeric values are not asserted
-// against constants — the fixture model output is FP32 and platform-sensitive.
+// consistent with the strict vLLM/OpenAI contract ({model, answers, usage};
+// probabilities form a distribution over the labels, confidence is a raw
+// probability). Numeric values are not asserted against constants — the fixture
+// model output is FP32 and platform-sensitive.
 TEST_F(LLMHttpDecisionsTest, decisionsHappyPath) {
     std::string requestBody = threeQuestionsBody(modelName);
 
@@ -110,34 +111,34 @@ TEST_F(LLMHttpDecisionsTest, decisionsHappyPath) {
     parsedResponse.Parse(response.c_str());
     ASSERT_FALSE(parsedResponse.HasParseError());
     ASSERT_TRUE(parsedResponse.IsObject());
-    ASSERT_TRUE(parsedResponse.HasMember("object"));
-    ASSERT_STREQ(parsedResponse["object"].GetString(), "decision");
     ASSERT_TRUE(parsedResponse.HasMember("model"));
     ASSERT_STREQ(parsedResponse["model"].GetString(), modelName.c_str());
-    ASSERT_TRUE(parsedResponse.HasMember("created"));
-    ASSERT_TRUE(parsedResponse["created"].IsInt());
+    // The strict contract exposes exactly {model, answers, usage}
+    ASSERT_FALSE(parsedResponse.HasMember("id"));
+    ASSERT_FALSE(parsedResponse.HasMember("object"));
+    ASSERT_FALSE(parsedResponse.HasMember("created"));
+    ASSERT_FALSE(parsedResponse.HasMember("diagnostics"));
+
     ASSERT_TRUE(parsedResponse.HasMember("usage"));
-    // Each question generates exactly one token, so completion = number of questions.
-    ASSERT_EQ(parsedResponse["usage"]["completion_tokens"].GetInt(), 3);
-    ASSERT_EQ(parsedResponse["usage"]["total_tokens"].GetInt(), parsedResponse["usage"]["prompt_tokens"].GetInt() + 3);
+    // Each question generates exactly one token, so output = number of questions.
+    ASSERT_EQ(parsedResponse["usage"]["output_tokens"].GetInt(), 3);
+    ASSERT_EQ(parsedResponse["usage"]["total_tokens"].GetInt(), parsedResponse["usage"]["input_tokens"].GetInt() + 3);
+    ASSERT_GE(parsedResponse["usage"]["input_tokens_details"]["cached_tokens"].GetInt(), 0);
+    ASSERT_EQ(parsedResponse["usage"]["input_tokens_details"]["cache_write_tokens"].GetInt(), 0);
+    ASSERT_EQ(parsedResponse["usage"]["output_tokens_details"]["reasoning_tokens"].GetInt(), 0);
 
     ASSERT_TRUE(parsedResponse.HasMember("answers"));
     const auto& answers = parsedResponse["answers"];
     ASSERT_TRUE(answers.IsArray());
     ASSERT_EQ(answers.Size(), 3);
 
-    ASSERT_TRUE(parsedResponse.HasMember("diagnostics"));
-    const auto& diagnostics = parsedResponse["diagnostics"];
-    ASSERT_TRUE(diagnostics.IsArray());
-    ASSERT_EQ(diagnostics.Size(), 3);
-
     const std::vector<const char*> expectedTypes = {"predicate", "choice", "score"};
-    // Probability keys: choice is keyed by the option value, score/predicate by the
-    // label token read from the model.
-    const std::vector<std::vector<const char*>> expectedProbKeys = {
-        {"yes", "no"},
+    // Option values per question: the choice answer echoes one of them, the score
+    // probabilities carry the level labels.
+    const std::vector<std::vector<const char*>> expectedValues = {
+        {},
         {"red", "blue"},
-        {"0", "1", "2"},
+        {"low", "mid", "high"},
     };
 
     for (rapidjson::SizeType i = 0; i < answers.Size(); ++i) {
@@ -148,57 +149,71 @@ TEST_F(LLMHttpDecisionsTest, decisionsHappyPath) {
         ASSERT_TRUE(answer.HasMember("name"));
         ASSERT_TRUE(answer["name"].IsNull());
 
-        ASSERT_TRUE(answer.HasMember("answer"));
-        if (std::string(expectedTypes[i]) == "score") {
-            // Score answer is the expected level: a number in [0, numLevels).
-            ASSERT_TRUE(answer["answer"].IsNumber());
-            const double scoreValue = answer["answer"].GetDouble();
-            ASSERT_GE(scoreValue, -1e-9);
-            ASSERT_LE(scoreValue, static_cast<double>(expectedProbKeys[i].size() - 1) + 1e-9);
-            ASSERT_TRUE(answer.HasMember("legend"));
-            ASSERT_TRUE(answer["legend"].IsObject());
-            ASSERT_EQ(answer["legend"].MemberCount(), expectedProbKeys[i].size());
-        } else {
-            // choice/predicate answer is the winning option value / "yes" / "no".
-            ASSERT_TRUE(answer["answer"].IsString());
-            const std::string answerText = answer["answer"].GetString();
-            bool answerIsKey = false;
-            for (const char* key : expectedProbKeys[i])
-                if (answerText == key)
-                    answerIsKey = true;
-            ASSERT_TRUE(answerIsKey) << "answer '" << answerText << "' is not one of the option values of question " << i;
+        if (std::string(expectedTypes[i]) == "predicate") {
+            // probability = P("yes"), a normalized label probability
+            ASSERT_TRUE(answer.HasMember("probability"));
+            ASSERT_TRUE(answer["probability"].IsNumber());
+            const double probability = answer["probability"].GetDouble();
+            ASSERT_GT(probability, 0.0);
+            ASSERT_LE(probability, 1.0 + 1e-6);
+            ASSERT_FALSE(answer.HasMember("confidence"));
+            ASSERT_FALSE(answer.HasMember("probabilities"));
+            continue;
         }
-
-        ASSERT_TRUE(answer.HasMember("probabilities"));
-        const auto& probabilities = answer["probabilities"];
-        ASSERT_TRUE(probabilities.IsObject());
-        ASSERT_EQ(probabilities.MemberCount(), expectedProbKeys[i].size());
-        double probabilitySum = 0.0;
-        for (auto member = probabilities.MemberBegin(); member != probabilities.MemberEnd(); ++member) {
-            bool keyKnown = false;
-            for (const char* key : expectedProbKeys[i])
-                if (std::string(member->name.GetString()) == key)
-                    keyKnown = true;
-            ASSERT_TRUE(keyKnown) << "unexpected probability key '" << member->name.GetString() << "'";
-            ASSERT_TRUE(member->value.IsNumber());
-            ASSERT_GE(member->value.GetDouble(), 0.0);
-            probabilitySum += member->value.GetDouble();
-        }
-        ASSERT_NEAR(probabilitySum, 1.0, 1e-3);
 
         ASSERT_TRUE(answer.HasMember("confidence"));
         const double confidence = answer["confidence"].GetDouble();
         ASSERT_GT(confidence, 0.0);
         ASSERT_LE(confidence, 1.0 + 1e-6);
 
-        const auto& diagnostic = diagnostics[i];
-        ASSERT_TRUE(diagnostic.IsObject());
-        const double labelMass = diagnostic["label_mass"].GetDouble();
-        ASSERT_GT(labelMass, 0.0);
-        ASSERT_LE(labelMass, 1.0 + 1e-6);
-        // The winner's raw probability is one of the terms of the label mass sum
-        ASSERT_LE(confidence, labelMass + 1e-6);
-        ASSERT_TRUE(diagnostic["argmax_is_label"].IsBool());
+        ASSERT_TRUE(answer.HasMember("probabilities"));
+        const auto& probabilities = answer["probabilities"];
+        ASSERT_TRUE(probabilities.IsArray());
+        ASSERT_EQ(probabilities.Size(), expectedValues[i].size());
+        double probabilitySum = 0.0;
+        for (rapidjson::SizeType j = 0; j < probabilities.Size(); ++j) {
+            const auto& entry = probabilities[j];
+            ASSERT_TRUE(entry.IsObject());
+            ASSERT_TRUE(entry.HasMember("value"));
+            ASSERT_TRUE(entry.HasMember("probability"));
+            ASSERT_TRUE(entry["probability"].IsNumber());
+            ASSERT_GE(entry["probability"].GetDouble(), 0.0);
+            probabilitySum += entry["probability"].GetDouble();
+            if (std::string(expectedTypes[i]) == "choice") {
+                // value echoes the original option value
+                ASSERT_TRUE(entry["value"].IsString());
+                bool valueKnown = false;
+                for (const char* value : expectedValues[i])
+                    if (std::string(entry["value"].GetString()) == value)
+                        valueKnown = true;
+                ASSERT_TRUE(valueKnown) << "unexpected choice value '" << entry["value"].GetString() << "'";
+            } else {
+                // score: value is the 0-based level index, label is the level text
+                ASSERT_EQ(entry["value"].GetInt(), static_cast<int>(j));
+                ASSERT_TRUE(entry["label"].IsString());
+                ASSERT_STREQ(entry["label"].GetString(), expectedValues[i][j]);
+            }
+        }
+        ASSERT_NEAR(probabilitySum, 1.0, 1e-3);
+
+        if (std::string(expectedTypes[i]) == "score") {
+            // Score is the expected level: a number in [0, numLevels).
+            ASSERT_TRUE(answer.HasMember("score"));
+            ASSERT_TRUE(answer["score"].IsNumber());
+            const double scoreValue = answer["score"].GetDouble();
+            ASSERT_GE(scoreValue, -1e-9);
+            ASSERT_LE(scoreValue, static_cast<double>(expectedValues[i].size() - 1) + 1e-9);
+        } else {
+            // The choice answer echoes the winning option value
+            ASSERT_TRUE(answer.HasMember("choice"));
+            ASSERT_TRUE(answer["choice"].IsString());
+            const std::string choiceValue = answer["choice"].GetString();
+            bool choiceKnown = false;
+            for (const char* value : expectedValues[i])
+                if (choiceValue == value)
+                    choiceKnown = true;
+            ASSERT_TRUE(choiceKnown) << "choice '" << choiceValue << "' is not one of the option values";
+        }
     }
 }
 
@@ -222,16 +237,13 @@ TEST_F(LLMHttpDecisionsTest, decisionsMessagesInput) {
     parsedResponse.Parse(response.c_str());
     ASSERT_FALSE(parsedResponse.HasParseError());
     ASSERT_TRUE(parsedResponse.IsObject());
-    ASSERT_STREQ(parsedResponse["object"].GetString(), "decision");
     const auto& answers = parsedResponse["answers"];
     ASSERT_TRUE(answers.IsArray());
     ASSERT_EQ(answers.Size(), 1);
     ASSERT_STREQ(answers[0]["type"].GetString(), "predicate");
-    ASSERT_TRUE(answers[0]["probabilities"].IsObject());
-    ASSERT_EQ(answers[0]["probabilities"].MemberCount(), 2);
+    ASSERT_TRUE(answers[0]["probability"].IsNumber());
 
-    // A history that ends on an assistant turn: the question block cannot be folded into the
-    // assistant message, so a fresh user message is started. The request must still be answered.
+    // Only role "user" is accepted (vLLM/OpenAI contract): a non-user message is rejected.
     std::string trailingAssistantBody = R"({
         "model": ")" + modelName + R"(",
         "input": [
@@ -243,19 +255,10 @@ TEST_F(LLMHttpDecisionsTest, decisionsMessagesInput) {
         ]
     })";
     std::string trailingAssistantResponse;
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointDecisions, trailingAssistantBody, &trailingAssistantResponse, comp, responseComponents, writer, multiPartParser),
-        ovms::StatusCode::OK)
-        << trailingAssistantResponse;
-    rapidjson::Document trailingAssistant;
-    trailingAssistant.Parse(trailingAssistantResponse.c_str());
-    ASSERT_FALSE(trailingAssistant.HasParseError());
-    const auto& trailingAssistantAnswers = trailingAssistant["answers"];
-    ASSERT_TRUE(trailingAssistantAnswers.IsArray());
-    ASSERT_EQ(trailingAssistantAnswers.Size(), 1);
-    ASSERT_STREQ(trailingAssistantAnswers[0]["type"].GetString(), "predicate");
-    ASSERT_TRUE(trailingAssistantAnswers[0]["probabilities"].IsObject());
-    ASSERT_EQ(trailingAssistantAnswers[0]["probabilities"].MemberCount(), 2);
+    auto trailingAssistantStatus = handler->dispatchToProcessor(endpointDecisions, trailingAssistantBody, &trailingAssistantResponse, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(trailingAssistantStatus, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << trailingAssistantStatus.string();
+    ASSERT_NE(trailingAssistantStatus.string().find("INVALID_ARGUMENT"), std::string::npos);
+    ASSERT_NE(trailingAssistantStatus.string().find("input message role must be 'user'"), std::string::npos);
 }
 
 // Greedy single-token generation must be deterministic: identical requests yield
@@ -283,10 +286,9 @@ TEST_F(LLMHttpDecisionsTest, decisionsDeterministic) {
 
     ASSERT_EQ(first["answers"].Size(), second["answers"].Size());
     for (rapidjson::SizeType i = 0; i < first["answers"].Size(); ++i) {
-        // The score answer is a number, not a string, so compare values (operator== handles
-        // both); confidence stays a strict double comparison.
-        ASSERT_TRUE(first["answers"][i]["answer"] == second["answers"][i]["answer"]);
-        ASSERT_DOUBLE_EQ(first["answers"][i]["confidence"].GetDouble(), second["answers"][i]["confidence"].GetDouble());
+        // Greedy single-token reads are deterministic: the whole answer object
+        // (value fields + probabilities array) must be identical.
+        ASSERT_TRUE(first["answers"][i] == second["answers"][i]);
     }
 }
 
@@ -357,9 +359,9 @@ TEST_F(LLMHttpDecisionsTest, decisionsMaxScoreLevelsAccepted) {
     parsedResponse.Parse(response.c_str());
     ASSERT_FALSE(parsedResponse.HasParseError());
     const auto& answer = parsedResponse["answers"][0];
-    ASSERT_TRUE(answer["answer"].IsNumber());
-    ASSERT_TRUE(answer["probabilities"].IsObject());
-    ASSERT_EQ(answer["probabilities"].MemberCount(), 10);
+    ASSERT_TRUE(answer["score"].IsNumber());
+    ASSERT_TRUE(answer["probabilities"].IsArray());
+    ASSERT_EQ(answer["probabilities"].Size(), 10);
 }
 
 // A string input on a VLM servable is normalized to a chat message (not a raw prompt),
@@ -380,22 +382,19 @@ TEST_F(LLMHttpDecisionsTest, decisionsVlmStringInput) {
         << response;
     parsedResponse.Parse(response.c_str());
     ASSERT_FALSE(parsedResponse.HasParseError());
-    ASSERT_STREQ(parsedResponse["object"].GetString(), "decision");
     const auto& answers = parsedResponse["answers"];
     ASSERT_TRUE(answers.IsArray());
     ASSERT_EQ(answers.Size(), 1);
     ASSERT_STREQ(answers[0]["type"].GetString(), "predicate");
-    ASSERT_TRUE(answers[0]["probabilities"].IsObject());
-    ASSERT_EQ(answers[0]["probabilities"].MemberCount(), 2);
+    ASSERT_TRUE(answers[0]["probability"].IsNumber());
     // VLM prompt tokens come from the pipeline metrics (expanded visual tokens), not from
     // the text-only inputIds placeholders.
-    ASSERT_GT(parsedResponse["usage"]["prompt_tokens"].GetInt(), 0);
+    ASSERT_GT(parsedResponse["usage"]["input_tokens"].GetInt(), 0);
 }
 
-// Two questions sharing an image on a VLM servable: the media is decoded once for the
-// first question and the ref-counted tensors are reused for the second, so the request
-// must be answered without re-fetching/re-decoding the image per question.
-TEST_F(LLMHttpDecisionsTest, decisionsVlmSharedImageTwoQuestions) {
+// Media content parts are rejected: decisions input is text-only (vLLM/OpenAI contract),
+// even on a VLM servable.
+TEST_F(LLMHttpDecisionsTest, decisionsImageInputRejected) {
     std::string requestBody = R"({
         "model": "vlm_cb_regular",
         "input": [
@@ -405,28 +404,14 @@ TEST_F(LLMHttpDecisionsTest, decisionsVlmSharedImageTwoQuestions) {
             ]}
         ],
         "questions": [
-            {"type": "predicate", "instructions": "Is the main subject an animal?", "name": "is_animal"},
-            {"type": "predicate", "instructions": "Is the main subject a vehicle?", "name": "is_vehicle"}
+            {"type": "predicate", "instructions": "Is the main subject an animal?"}
         ]
     })";
 
-    ASSERT_EQ(
-        handler->dispatchToProcessor(endpointDecisions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
-        ovms::StatusCode::OK)
-        << response;
-    parsedResponse.Parse(response.c_str());
-    ASSERT_FALSE(parsedResponse.HasParseError());
-    const auto& answers = parsedResponse["answers"];
-    ASSERT_TRUE(answers.IsArray());
-    ASSERT_EQ(answers.Size(), 2);
-    for (rapidjson::SizeType i = 0; i < answers.Size(); ++i) {
-        ASSERT_TRUE(answers[i]["answer"].IsString());
-        ASSERT_TRUE(answers[i]["confidence"].IsNumber());
-        ASSERT_TRUE(answers[i]["probabilities"].IsObject());
-        ASSERT_EQ(answers[i]["probabilities"].MemberCount(), 2);
-        ASSERT_STREQ(answers[i]["name"].GetString(), i == 0 ? "is_animal" : "is_vehicle");
-    }
-    ASSERT_EQ(parsedResponse["usage"]["completion_tokens"].GetInt(), 2);
+    auto status = handler->dispatchToProcessor(endpointDecisions, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    ASSERT_NE(status.string().find("INVALID_ARGUMENT"), std::string::npos);
+    ASSERT_NE(status.string().find("Decisions supports text input only; images are not supported"), std::string::npos);
 }
 
 // Two predicate questions in one request are each answered from their own forward pass
@@ -453,14 +438,14 @@ TEST_F(LLMHttpDecisionsTest, decisionsOppositePredicates) {
     ASSERT_TRUE(answers.IsArray());
     ASSERT_EQ(answers.Size(), 2);
     for (rapidjson::SizeType i = 0; i < answers.Size(); ++i) {
-        ASSERT_TRUE(answers[i]["answer"].IsString());
-        ASSERT_TRUE(answers[i]["confidence"].IsNumber());
-        ASSERT_TRUE(answers[i]["probabilities"].IsObject());
-        ASSERT_EQ(answers[i]["probabilities"].MemberCount(), 2);
+        ASSERT_TRUE(answers[i]["probability"].IsNumber());
+        const double probability = answers[i]["probability"].GetDouble();
+        ASSERT_GT(probability, 0.0);
+        ASSERT_LE(probability, 1.0 + 1e-6);
         ASSERT_STREQ(answers[i]["name"].GetString(), i == 0 ? "is_animal" : "is_vehicle");
     }
-    // completion tokens = number of questions (each generates exactly one token)
-    ASSERT_EQ(parsedResponse["usage"]["completion_tokens"].GetInt(), 2);
+    // output tokens = number of questions (each generates exactly one token)
+    ASSERT_EQ(parsedResponse["usage"]["output_tokens"].GetInt(), 2);
 }
 
 // More than 64 questions is rejected
@@ -504,7 +489,7 @@ TEST_F(LLMHttpDecisionsTest, decisionsTooManyChoices) {
     ASSERT_NE(status.string().find("at most 26 choices"), std::string::npos);
 }
 
-// Streaming is not supported
+// Streaming is not supported: stream is not part of the decisions request contract
 TEST_F(LLMHttpDecisionsTest, decisionsStreamRejected) {
     std::string requestBody = R"({
         "model": ")" + modelName + R"(",
@@ -518,7 +503,7 @@ TEST_F(LLMHttpDecisionsTest, decisionsStreamRejected) {
     auto status = handler->dispatchToProcessor(endpointDecisions, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
     ASSERT_NE(status.string().find("INVALID_ARGUMENT"), std::string::npos);
-    ASSERT_NE(status.string().find("streaming is not supported"), std::string::npos);
+    ASSERT_NE(status.string().find("parameter 'stream' is not supported"), std::string::npos);
 }
 
 // Sampling parameters are forced by the endpoint and cannot be overridden
@@ -569,6 +554,125 @@ TEST_F(LLMHttpDecisionsTest, decisionsMissingInstructions) {
     ASSERT_NE(status.string().find("question.instructions is missing"), std::string::npos);
 }
 
+// Choice values may be JSON booleans: the winning value is echoed back as a JSON bool
+TEST_F(LLMHttpDecisionsTest, decisionsBoolChoiceValue) {
+    std::string requestBody = R"({
+        "model": ")" + modelName + R"(",
+        "input": "The sky is",
+        "questions": [
+            {"type": "choice", "instructions": "Pick one", "choices": [{"value": true}, {"value": false}]}
+        ]
+    })";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointDecisions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK)
+        << response;
+    parsedResponse.Parse(response.c_str());
+    ASSERT_FALSE(parsedResponse.HasParseError());
+    const auto& answer = parsedResponse["answers"][0];
+    ASSERT_TRUE(answer["choice"].IsBool());
+    ASSERT_TRUE(answer["probabilities"].IsArray());
+    ASSERT_EQ(answer["probabilities"].Size(), 2);
+    ASSERT_TRUE(answer["probabilities"][0]["value"].IsBool());
+    ASSERT_TRUE(answer["probabilities"][1]["value"].IsBool());
+}
+
+// Input messages accept the OpenAI "input_text" part type and an explicit "message" type tag
+TEST_F(LLMHttpDecisionsTest, decisionsInputTextParts) {
+    std::string requestBody = R"({
+        "model": ")" + modelName + R"(",
+        "input": [
+            {"role": "user", "type": "message", "content": [
+                {"type": "input_text", "text": "The sky is"}
+            ]}
+        ],
+        "questions": [
+            {"type": "predicate", "instructions": "Is the statement true?"}
+        ]
+    })";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointDecisions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK)
+        << response;
+    parsedResponse.Parse(response.c_str());
+    ASSERT_FALSE(parsedResponse.HasParseError());
+    const auto& answer = parsedResponse["answers"][0];
+    ASSERT_STREQ(answer["type"].GetString(), "predicate");
+    ASSERT_TRUE(answer["probability"].IsNumber());
+}
+
+// An explicit null name is rejected (vLLM: name must be a string when provided)
+TEST_F(LLMHttpDecisionsTest, decisionsNameNullRejected) {
+    std::string requestBody = R"({
+        "model": ")" + modelName + R"(",
+        "input": "The sky is",
+        "questions": [
+            {"type": "predicate", "instructions": "Is the statement true?", "name": null}
+        ]
+    })";
+
+    auto status = handler->dispatchToProcessor(endpointDecisions, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    ASSERT_NE(status.string().find("INVALID_ARGUMENT"), std::string::npos);
+    ASSERT_NE(status.string().find("question.name must be a string when provided"), std::string::npos);
+}
+
+// joint: true is diffusion-only in vLLM and rejected here
+TEST_F(LLMHttpDecisionsTest, decisionsJointTrueRejected) {
+    std::string requestBody = R"({
+        "model": ")" + modelName + R"(",
+        "joint": true,
+        "input": "The sky is",
+        "questions": [
+            {"type": "predicate", "instructions": "Is the statement true?"}
+        ]
+    })";
+
+    auto status = handler->dispatchToProcessor(endpointDecisions, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    ASSERT_NE(status.string().find("INVALID_ARGUMENT"), std::string::npos);
+    ASSERT_NE(status.string().find("joint reads are not supported"), std::string::npos);
+}
+
+// cache_salt and joint: false are accepted (for API compatibility, not used)
+TEST_F(LLMHttpDecisionsTest, decisionsCacheSaltAccepted) {
+    std::string requestBody = R"({
+        "model": ")" + modelName + R"(",
+        "cache_salt": "salt-1",
+        "joint": false,
+        "input": "The sky is",
+        "questions": [
+            {"type": "predicate", "instructions": "Is the statement true?"}
+        ]
+    })";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointDecisions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK)
+        << response;
+    parsedResponse.Parse(response.c_str());
+    ASSERT_FALSE(parsedResponse.HasParseError());
+    ASSERT_TRUE(parsedResponse["answers"][0]["probability"].IsNumber());
+}
+
+// Fewer than 2 choices is rejected (a single-option question has no decision to make)
+TEST_F(LLMHttpDecisionsTest, decisionsSingleChoiceRejected) {
+    std::string requestBody = R"({
+        "model": ")" + modelName + R"(",
+        "input": "The sky is",
+        "questions": [
+            {"type": "choice", "instructions": "Pick a letter", "choices": [{"value": "only"}]}
+        ]
+    })";
+
+    auto status = handler->dispatchToProcessor(endpointDecisions, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    ASSERT_NE(status.string().find("INVALID_ARGUMENT"), std::string::npos);
+    ASSERT_NE(status.string().find("at least 2 choices"), std::string::npos);
+}
+
 // The legacy one-shot servable serves /v1/decisions: one greedy forward pass per
 // question, serialized from the requested-token logprobs.
 TEST_F(LLMHttpDecisionsTest, decisionsLegacyServableHappyPath) {
@@ -583,32 +687,25 @@ TEST_F(LLMHttpDecisionsTest, decisionsLegacyServableHappyPath) {
     parsedResponse.Parse(response.c_str());
     ASSERT_FALSE(parsedResponse.HasParseError());
     ASSERT_TRUE(parsedResponse.IsObject());
-    ASSERT_STREQ(parsedResponse["object"].GetString(), "decision");
     ASSERT_STREQ(parsedResponse["model"].GetString(), legacyModel.c_str());
-    // Each question generates exactly one token, so completion = number of questions.
-    ASSERT_EQ(parsedResponse["usage"]["completion_tokens"].GetInt(), 3);
-    ASSERT_EQ(parsedResponse["usage"]["total_tokens"].GetInt(), parsedResponse["usage"]["prompt_tokens"].GetInt() + 3);
+    // Each question generates exactly one token, so output = number of questions.
+    ASSERT_EQ(parsedResponse["usage"]["output_tokens"].GetInt(), 3);
+    ASSERT_EQ(parsedResponse["usage"]["total_tokens"].GetInt(), parsedResponse["usage"]["input_tokens"].GetInt() + 3);
 
     const auto& answers = parsedResponse["answers"];
     ASSERT_TRUE(answers.IsArray());
     ASSERT_EQ(answers.Size(), 3);
-    const auto& diagnostics = parsedResponse["diagnostics"];
-    ASSERT_TRUE(diagnostics.IsArray());
-    ASSERT_EQ(diagnostics.Size(), 3);
 
-    for (rapidjson::SizeType i = 0; i < answers.Size(); ++i) {
-        const auto& answer = answers[i];
-        ASSERT_TRUE(answer.IsObject());
-        ASSERT_TRUE(answer.HasMember("answer"));
-        ASSERT_TRUE(answer["answer"].IsString() || answer["answer"].IsNumber());
-        ASSERT_TRUE(answer.HasMember("probabilities"));
-        ASSERT_TRUE(answer["probabilities"].IsObject());
-        ASSERT_GE(answer["probabilities"].MemberCount(), 2);
-        ASSERT_TRUE(answer.HasMember("confidence"));
-        const double confidence = answer["confidence"].GetDouble();
-        ASSERT_GT(confidence, 0.0);
-        ASSERT_LE(confidence, 1.0 + 1e-6);
-    }
+    // The strict contract shape per question type
+    ASSERT_TRUE(answers[0]["probability"].IsNumber());  // predicate
+    ASSERT_TRUE(answers[1]["choice"].IsString());       // choice
+    ASSERT_TRUE(answers[1]["probabilities"].IsArray());
+    ASSERT_EQ(answers[1]["probabilities"].Size(), 2);
+    ASSERT_TRUE(answers[1]["confidence"].IsNumber());
+    ASSERT_TRUE(answers[2]["score"].IsNumber());        // score
+    ASSERT_TRUE(answers[2]["probabilities"].IsArray());
+    ASSERT_EQ(answers[2]["probabilities"].Size(), 3);
+    ASSERT_TRUE(answers[2]["confidence"].IsNumber());
 }
 
 // Two named predicates on the legacy servable: per-question answers and usage.
@@ -632,13 +729,13 @@ TEST_F(LLMHttpDecisionsTest, decisionsLegacyServableTwoQuestions) {
     ASSERT_TRUE(answers.IsArray());
     ASSERT_EQ(answers.Size(), 2);
     for (rapidjson::SizeType i = 0; i < answers.Size(); ++i) {
-        ASSERT_TRUE(answers[i]["answer"].IsString());
-        ASSERT_TRUE(answers[i]["confidence"].IsNumber());
-        ASSERT_TRUE(answers[i]["probabilities"].IsObject());
-        ASSERT_EQ(answers[i]["probabilities"].MemberCount(), 2);
+        ASSERT_TRUE(answers[i]["probability"].IsNumber());
+        const double probability = answers[i]["probability"].GetDouble();
+        ASSERT_GT(probability, 0.0);
+        ASSERT_LE(probability, 1.0 + 1e-6);
         ASSERT_STREQ(answers[i]["name"].GetString(), i == 0 ? "is_animal" : "is_vehicle");
     }
-    ASSERT_EQ(parsedResponse["usage"]["completion_tokens"].GetInt(), 2);
+    ASSERT_EQ(parsedResponse["usage"]["output_tokens"].GetInt(), 2);
 }
 
 // Assisted-decoding servables (speculative decoding / prompt lookup) reject /v1/decisions:

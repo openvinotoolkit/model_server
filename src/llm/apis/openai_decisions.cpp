@@ -25,7 +25,6 @@
 #include "openai_json_response.hpp"
 
 #include "../../logging.hpp"
-#include "../io_processing/video_utils.hpp"
 #include "../../profiler.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
@@ -75,20 +74,12 @@ absl::Status OpenAIDecisionsHandler::parseRequestImpl(std::optional<uint32_t> ma
         return absl::InvalidArgumentError("model is not a string");
     request.model = it->value.GetString();
 
-    // stream: bool; only false is accepted
-    it = doc.FindMember("stream");
-    if (it != doc.MemberEnd() && !it->value.IsNull()) {
-        if (!it->value.IsBool())
-            return absl::InvalidArgumentError("stream is not a boolean");
-        if (it->value.GetBool())
-            return absl::InvalidArgumentError("streaming is not supported for /v1/decisions");
-    }
-
-    // vLLM contract: unknown top-level fields are rejected with 400. Sampling is forced by
-    // the endpoint (single greedy token) and cannot be overridden, so only the fields below
-    // are accepted; anything else (temperature, tools, logit_bias, ...) is rejected.
+    // vLLM/OpenAI contract: unknown top-level fields are rejected with 400. Sampling is
+    // forced by the endpoint (single greedy token) and cannot be overridden, so only the
+    // fields below are accepted; anything else (temperature, tools, logit_bias, stream,
+    // chat_template_kwargs, ...) is rejected.
     static const std::set<std::string> allowedParams = {
-        "model", "input", "questions", "stream", "safety_identifier", "chat_template_kwargs"};
+        "model", "input", "questions", "safety_identifier", "joint", "cache_salt"};
     for (auto m = doc.MemberBegin(); m != doc.MemberEnd(); ++m) {
         if (!allowedParams.count(m->name.GetString()))
             return absl::InvalidArgumentError(absl::StrCat("parameter '", m->name.GetString(), "' is not supported for /v1/decisions"));
@@ -106,6 +97,22 @@ absl::Status OpenAIDecisionsHandler::parseRequestImpl(std::optional<uint32_t> ma
     it = doc.FindMember("safety_identifier");
     if (it != doc.MemberEnd() && !it->value.IsNull() && !it->value.IsString())
         return absl::InvalidArgumentError("safety_identifier is not a string");
+
+    // joint: bool, default false (vLLM accepts the field; true is diffusion-only)
+    it = doc.FindMember("joint");
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        if (!it->value.IsBool())
+            return absl::InvalidArgumentError("joint is not a boolean");
+        if (it->value.GetBool())
+            return absl::InvalidArgumentError("joint reads are not supported for /v1/decisions");
+    }
+
+    // cache_salt: string 1-1024 (accepted for API compatibility, not used)
+    it = doc.FindMember("cache_salt");
+    if (it != doc.MemberEnd() && !it->value.IsNull()) {
+        if (!it->value.IsString() || it->value.GetStringLength() < 1 || it->value.GetStringLength() > 1024)
+            return absl::InvalidArgumentError("cache_salt must be a string of 1 to 1024 characters");
+    }
 
     // Each question generates exactly one token; setting maxTokens lets
     // prepareInputs run the prompt + maxTokens <= maxModelLength length check.
@@ -132,60 +139,49 @@ absl::Status OpenAIDecisionsHandler::parseInput() {
         return absl::InvalidArgumentError("input must be a string or an array of messages");
     if (it->value.Empty())
         return absl::InvalidArgumentError("input messages array cannot be empty");
+    // vLLM/OpenAI contract: every input message is a user message with text-only
+    // content (a string, or an array of text parts). Media parts are rejected.
     for (auto message = it->value.GetArray().Begin(); message != it->value.GetArray().End(); ++message) {
         if (!message->IsObject())
             return absl::InvalidArgumentError("input message is not a JSON object");
         bool hasRole = false;
         bool hasContent = false;
-        request.chatHistory.push_back({});
+        std::string content;
         for (auto field = message->MemberBegin(); field != message->MemberEnd(); ++field) {
             if (!field->name.IsString())
                 return absl::InvalidArgumentError("invalid input message structure");
             std::string fieldName = field->name.GetString();
-            if (fieldName == "role" && field->value.IsString() && field->value.GetStringLength() > 0) {
-                request.chatHistory.last()["role"] = field->value.GetString();
+            if (fieldName == "role") {
+                if (!field->value.IsString() || std::string(field->value.GetString()) != "user")
+                    return absl::InvalidArgumentError("input message role must be 'user'");
                 hasRole = true;
-            } else if (fieldName == "content" && field->value.IsString() && field->value.GetStringLength() > 0) {
-                request.chatHistory.last()["content"] = field->value.GetString();
-                hasContent = true;
-            } else if (fieldName == "content" && field->value.IsArray()) {
-                // Multimodal content (text / image_url / video_url parts); the raw array is
-                // preserved for the VLM input processors (ImageDecodingProcessor,
-                // VideoFramesProcessor), mirroring OpenAIChatCompletionsHandler::parseMessages.
-                for (const auto& part : field->value.GetArray()) {
-                    if (!part.IsObject())
-                        return absl::InvalidArgumentError("content array should contain objects");
-                    if (!part.HasMember("type") || !part["type"].IsString())
-                        return absl::InvalidArgumentError("content object type missing");
-                    const std::string partType = part["type"].GetString();
-                    if (partType == "text") {
-                        if (!part.HasMember("text") || !part["text"].IsString())
-                            return absl::InvalidArgumentError("content text missing");
-                    } else if (partType == "image_url") {
-                        if (!part.HasMember("image_url") || !part["image_url"].IsObject())
-                            return absl::InvalidArgumentError("content image_url missing");
-                        const auto imageUrl = part["image_url"].GetObject();
-                        if (!imageUrl.HasMember("url") || !imageUrl["url"].IsString())
-                            return absl::InvalidArgumentError("image_url does not have url field");
-                    } else if (partType == "video_url") {
-                        if (!part.HasMember("video_url") || !part["video_url"].IsObject())
-                            return absl::InvalidArgumentError("content video_url missing");
-                        const auto videoUrl = part["video_url"].GetObject();
-                        if (!videoUrl.HasMember("url") || !videoUrl["url"].IsArray())
-                            return absl::InvalidArgumentError("video_url does not have url array field");
-                        const auto frames = videoUrl["url"].GetArray();
-                        if (frames.Size() == 0)
-                            return absl::InvalidArgumentError("video_url url array cannot be empty");
-                        if (static_cast<int64_t>(frames.Size()) > MAX_VIDEO_FRAMES)
-                            return absl::InvalidArgumentError("video_url url array exceeds the allowed maximum of " + std::to_string(MAX_VIDEO_FRAMES) + " frames");
-                        for (const auto& frame : frames)
-                            if (!frame.IsString())
-                                return absl::InvalidArgumentError("video_url url array must contain only strings");
-                    } else {
-                        return absl::InvalidArgumentError("unsupported content type: " + partType);
+            } else if (fieldName == "type") {
+                // The OpenAI decisions schema allows an explicit "message" type tag.
+                if (!field->value.IsString() || std::string(field->value.GetString()) != "message")
+                    return absl::InvalidArgumentError("input message type must be 'message'");
+            } else if (fieldName == "content") {
+                if (field->value.IsString()) {
+                    content = field->value.GetString();
+                } else if (field->value.IsArray()) {
+                    for (const auto& part : field->value.GetArray()) {
+                        if (!part.IsObject())
+                            return absl::InvalidArgumentError("content array should contain objects");
+                        if (!part.HasMember("type") || !part["type"].IsString())
+                            return absl::InvalidArgumentError("content object type missing");
+                        const std::string partType = part["type"].GetString();
+                        if (partType == "input_text" || partType == "text") {
+                            if (!part.HasMember("text") || !part["text"].IsString())
+                                return absl::InvalidArgumentError("content text missing");
+                            content += part["text"].GetString();
+                        } else if (partType == "image_url" || partType == "video_url") {
+                            return absl::InvalidArgumentError("Decisions supports text input only; images are not supported");
+                        } else {
+                            return absl::InvalidArgumentError("unsupported content type: " + partType);
+                        }
                     }
+                } else {
+                    return absl::InvalidArgumentError("input message content must be a string or an array of text parts");
                 }
-                request.chatHistory.last()["content"] = rapidJsonValueToJsonContainer(field->value);
                 hasContent = true;
             } else {
                 return absl::InvalidArgumentError("unsupported field in input message: " + fieldName);
@@ -193,6 +189,9 @@ absl::Status OpenAIDecisionsHandler::parseInput() {
         }
         if (!hasRole || !hasContent)
             return absl::InvalidArgumentError("input message must contain non-empty 'role' and 'content' fields");
+        if (content.empty())
+            return absl::InvalidArgumentError("input message content cannot be empty");
+        request.chatHistory.push_back({{"role", "user"}, {"content", content}});
     }
     return absl::OkStatus();
 }
@@ -233,15 +232,15 @@ absl::Status OpenAIDecisionsHandler::parseQuestions() {
         question.instructions = instructionsIt->value.GetString();
 
         auto nameIt = questionIt->FindMember("name");
-        if (nameIt != questionIt->MemberEnd() && !nameIt->value.IsNull()) {
+        if (nameIt != questionIt->MemberEnd()) {
             if (!nameIt->value.IsString())
-                return absl::InvalidArgumentError("question.name is not a string");
+                return absl::InvalidArgumentError("question.name must be a string when provided");
             question.name = nameIt->value.GetString();
         }
 
         // Reject duplicate option values within a single question: two options
-        // sharing a value would collide in the probabilities object and push the
-        // label mass above 1. The same value across DIFFERENT questions is fine
+        // sharing a value would push the label mass above 1 (the same label token
+        // is read twice). The same value across DIFFERENT questions is fine
         // (each question reads its own labels).
         std::set<std::string> seenValues;
 
@@ -252,28 +251,41 @@ absl::Status OpenAIDecisionsHandler::parseQuestions() {
             auto choicesIt = questionIt->FindMember("choices");
             if (choicesIt == questionIt->MemberEnd() || !choicesIt->value.IsArray())
                 return absl::InvalidArgumentError("question.choices is missing or not an array");
-            if (choicesIt->value.Empty())
-                return absl::InvalidArgumentError("question.choices cannot be empty");
+            if (choicesIt->value.Size() < 2)
+                return absl::InvalidArgumentError("question.choices must contain at least 2 choices");
             if (choicesIt->value.Size() > MAX_CHOICES)
                 return absl::InvalidArgumentError(absl::StrCat("at most ", MAX_CHOICES, " choices are supported"));
             for (auto choiceIt = choicesIt->value.GetArray().Begin(); choiceIt != choicesIt->value.GetArray().End(); ++choiceIt) {
                 if (!choiceIt->IsObject())
                     return absl::InvalidArgumentError("choice is not a JSON object");
                 auto valueIt = choiceIt->FindMember("value");
-                if (valueIt == choiceIt->MemberEnd() || !valueIt->value.IsString() || valueIt->value.GetStringLength() == 0)
-                    return absl::InvalidArgumentError("choice.value is missing or not a non-empty string");
-                const std::string value = valueIt->value.GetString();
-                if (!seenValues.insert(value).second)
+                if (valueIt == choiceIt->MemberEnd())
+                    return absl::InvalidArgumentError("choice.value is missing");
+                bool isBool = false;
+                std::string value;
+                if (valueIt->value.IsString()) {
+                    if (valueIt->value.GetStringLength() == 0)
+                        return absl::InvalidArgumentError("choice.value must be a non-empty string or a boolean");
+                    value = valueIt->value.GetString();
+                } else if (valueIt->value.IsBool()) {
+                    isBool = true;
+                    value = valueIt->value.GetBool() ? "true" : "false";
+                } else {
+                    return absl::InvalidArgumentError("choice.value must be a non-empty string or a boolean");
+                }
+                // The bool prefix keeps "true" (string) and true (bool) distinct.
+                if (!seenValues.insert((isBool ? "b" : "s") + value).second)
                     return absl::InvalidArgumentError(absl::StrCat("duplicate choice value '", value, "' in question"));
                 question.values.push_back(value);
+                question.choiceIsBool.push_back(isBool);
                 question.labels.push_back(std::string(1, static_cast<char>('A' + question.labels.size())));
             }
         } else {  // SCORE
             auto levelsIt = questionIt->FindMember("levels");
             if (levelsIt == questionIt->MemberEnd() || !levelsIt->value.IsArray())
                 return absl::InvalidArgumentError("question.levels is missing or not an array");
-            if (levelsIt->value.Empty())
-                return absl::InvalidArgumentError("question.levels cannot be empty");
+            if (levelsIt->value.Size() < 2)
+                return absl::InvalidArgumentError("question.levels must contain at least 2 levels");
             if (levelsIt->value.Size() > MAX_SCORE_LEVELS)
                 return absl::InvalidArgumentError(absl::StrCat("at most ", MAX_SCORE_LEVELS, " levels are supported"));
             for (auto levelIt = levelsIt->value.GetArray().Begin(); levelIt != levelsIt->value.GetArray().End(); ++levelIt) {
@@ -413,10 +425,6 @@ std::string OpenAIDecisionsHandler::serializeUnaryResponse(
     OpenAiJsonResponse jsonResponse;
     jsonResponse.StartObject();
 
-    const int64_t createdSeconds = std::chrono::duration_cast<std::chrono::seconds>(created.time_since_epoch()).count();
-    jsonResponse.String("id", "dec-" + std::to_string(createdSeconds));
-    jsonResponse.String("object", "decision");
-    jsonResponse.Int("created", createdSeconds);
     jsonResponse.String("model", request.model);
 
     // One engine request per question: logprobData[i] is question i's result.
@@ -429,13 +437,6 @@ std::string OpenAIDecisionsHandler::serializeUnaryResponse(
         return jsonResponse.ToString();
     }
 
-    struct Diagnostic {
-        double labelMass;
-        bool argmaxIsLabel;
-    };
-    std::vector<Diagnostic> diagnostics;
-    diagnostics.reserve(questions.size());
-
     jsonResponse.StartArray("answers");
     for (size_t qi = 0; qi < questions.size(); ++qi) {
         const auto& question = questions[qi];
@@ -443,7 +444,6 @@ std::string OpenAIDecisionsHandler::serializeUnaryResponse(
         const bool hasResult = !entry.generatedIds.empty() && !entry.requestedTokenLogprobs.empty();
         const std::vector<std::pair<int64_t, float>> emptyPositionLogprobs;
         const auto& positionLogprobs = hasResult ? entry.requestedTokenLogprobs.front() : emptyPositionLogprobs;
-        const int64_t argmaxTokenId = hasResult ? entry.generatedIds.front() : -1;
 
         // Gather the full-vocabulary-normalized logprob of each of this question's labels
         std::vector<double> labelLogprobs;
@@ -481,6 +481,7 @@ std::string OpenAIDecisionsHandler::serializeUnaryResponse(
         // otherwise make exp(logprob - maxLogprob) = exp(NaN) and leak NaN into the response.
         // A finite maxLogprob guarantees expSum >= 1 (the max term is exp(0)), so no div-by-zero.
         if (!complete || !std::isfinite(maxLogprob)) {
+            // Defensive shape (kept for consumers of the pre-strict contract):
             if (question.type == QuestionType::SCORE) {
                 jsonResponse.String("answer");
                 jsonResponse.Null();
@@ -499,8 +500,6 @@ std::string OpenAIDecisionsHandler::serializeUnaryResponse(
             jsonResponse.String("confidence");
             jsonResponse.Null();
             jsonResponse.EndObject();
-            diagnostics.push_back({0.0,
-                question.labelTokenIds.end() != std::find(question.labelTokenIds.begin(), question.labelTokenIds.end(), argmaxTokenId)});
             continue;
         }
 
@@ -512,58 +511,76 @@ std::string OpenAIDecisionsHandler::serializeUnaryResponse(
         for (size_t i = 1; i < labelLogprobs.size(); ++i)
             if (labelLogprobs[i] > labelLogprobs[winnerIndex])
                 winnerIndex = i;
+        // Full-vocabulary probability of the winning label token (= vLLM probs[top] * label_mass)
         const double confidence = std::exp(labelLogprobs[winnerIndex]);
-        const double labelMass = expSum * std::exp(maxLogprob);
-        const bool argmaxIsLabel = question.labelTokenIds.end() !=
-                                     std::find(question.labelTokenIds.begin(), question.labelTokenIds.end(), argmaxTokenId);
 
-        if (question.type == QuestionType::SCORE) {
-            // Expected level (0-indexed) over the label probabilities, plus a legend
-            // mapping each level index to its label.
+        if (question.type == QuestionType::PREDICATE) {
+            // probability = P("yes"); "yes" is label index 0
+            jsonResponse.String("probability");
+            jsonResponse.Double(std::exp(labelLogprobs[0] - maxLogprob) / expSum);
+        } else if (question.type == QuestionType::SCORE) {
+            // Expected level (0-indexed) over the label probabilities
             double expectedValue = 0.0;
             for (size_t i = 0; i < labelLogprobs.size(); ++i)
                 expectedValue += static_cast<double>(i) * (std::exp(labelLogprobs[i] - maxLogprob) / expSum);
-            jsonResponse.String("answer");
+            jsonResponse.String("score");
             jsonResponse.Double(expectedValue);
-            jsonResponse.StartObject("legend");
+            jsonResponse.StartArray("probabilities");
             for (size_t i = 0; i < question.labels.size(); ++i) {
-                jsonResponse.String(question.labels[i]);
-                jsonResponse.String(question.values[i]);
+                jsonResponse.StartObject();
+                jsonResponse.Int("value", static_cast<int>(i));
+                jsonResponse.String("label", question.values[i]);
+                jsonResponse.String("probability");
+                jsonResponse.Double(std::exp(labelLogprobs[i] - maxLogprob) / expSum);
+                jsonResponse.EndObject();
             }
-            jsonResponse.EndObject();
-        } else {
-            jsonResponse.String("answer", question.values[winnerIndex]);
+            jsonResponse.EndArray();
+        } else {  // CHOICE: echo the winning option's original value (string or JSON bool)
+            if (question.choiceIsBool[winnerIndex]) {
+                jsonResponse.String("choice");
+                jsonResponse.Bool(question.values[winnerIndex] == "true");
+            } else {
+                jsonResponse.String("choice", question.values[winnerIndex]);
+            }
+            jsonResponse.StartArray("probabilities");
+            for (size_t i = 0; i < question.labels.size(); ++i) {
+                jsonResponse.StartObject();
+                if (question.choiceIsBool[i]) {
+                    jsonResponse.String("value");
+                    jsonResponse.Bool(question.values[i] == "true");
+                } else {
+                    jsonResponse.String("value", question.values[i]);
+                }
+                jsonResponse.String("probability");
+                jsonResponse.Double(std::exp(labelLogprobs[i] - maxLogprob) / expSum);
+                jsonResponse.EndObject();
+            }
+            jsonResponse.EndArray();
         }
-
-        jsonResponse.StartObject("probabilities");
-        for (size_t i = 0; i < question.labels.size(); ++i) {
-            // choice is keyed by the option value; score/predicate by the label token.
-            const std::string& key = question.type == QuestionType::CHOICE ? question.values[i] : question.labels[i];
-            jsonResponse.String(key);
-            jsonResponse.Double(std::exp(labelLogprobs[i] - maxLogprob) / expSum);
+        if (question.type != QuestionType::PREDICATE) {
+            jsonResponse.String("confidence");
+            jsonResponse.Double(confidence);
         }
         jsonResponse.EndObject();
-        jsonResponse.String("confidence");
-        jsonResponse.Double(confidence);
-        jsonResponse.EndObject();
-        diagnostics.push_back({labelMass, argmaxIsLabel});
     }
     jsonResponse.EndArray();
 
-    // prompt_tokens_details.cached_tokens is part of the decisions contract: with prefix
-    // caching the common prompt prefix is shared across the per-question reads.
-    jsonResponse.UsageObject(usage, true);
-
-    jsonResponse.StartArray("diagnostics");
-    for (const auto& diagnostic : diagnostics) {
-        jsonResponse.StartObject();
-        jsonResponse.String("label_mass");
-        jsonResponse.Double(diagnostic.labelMass);
-        jsonResponse.String("argmax_is_label");
-        jsonResponse.Bool(diagnostic.argmaxIsLabel);
-        jsonResponse.EndObject();
-    }
-    jsonResponse.EndArray();
+    // Decisions usage contract (vLLM/OpenAI): input_tokens/output_tokens naming.
+    // Inlined here (not the shared UsageObject) because completions keep prompt_tokens.
+    // With prefix caching the common prompt prefix is shared across the per-question reads,
+    // so cached_tokens is part of the contract.
+    jsonResponse.StartObject("usage");
+    jsonResponse.Int("input_tokens", usage.promptTokens);
+    jsonResponse.StartObject("input_tokens_details");
+    jsonResponse.Uint("cached_tokens", static_cast<size_t>(usage.cachedPromptTokens));
+    jsonResponse.Int("cache_write_tokens", 0);
+    jsonResponse.EndObject();
+    jsonResponse.Int("output_tokens", usage.completionTokens);
+    jsonResponse.StartObject("output_tokens_details");
+    jsonResponse.Int("reasoning_tokens", 0);
+    jsonResponse.EndObject();
+    jsonResponse.Int("total_tokens", usage.calculateTotalTokens());
+    jsonResponse.EndObject();
 
     jsonResponse.EndObject();
     return jsonResponse.ToString();

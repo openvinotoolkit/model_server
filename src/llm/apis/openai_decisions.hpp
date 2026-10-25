@@ -23,17 +23,24 @@
 
 namespace ovms {
 
-// Handler for the /v1/decisions endpoint (vLLM structured-decisions compatible):
+// Handler for the /v1/decisions endpoint (strict vLLM/OpenAI decisions contract):
 // one greedy forward pass PER QUESTION, each with its own prompt embedding the
 // question's instructions and options. The first-token log-probabilities of the
 // question's label tokens are gathered and reduced to per-question probabilities.
 //
+// Response (exactly {model, answers, usage}, mirroring vLLM adapters.py):
+//   - predicate -> {type, name, probability} where probability = P("yes").
+//   - choice    -> {type, name, choice, probabilities, confidence}: choice echoes
+//                  the winning option's original value (string or JSON bool);
+//                  probabilities is an array of {value, probability} in option order.
+//   - score     -> {type, name, score, probabilities, confidence}: score is the
+//                  expected 0-indexed level (a float); probabilities is an array
+//                  of {value (int index), label, probability}.
+//
 // Label scheme (vLLM parity):
-//   - choice    -> options labeled A..Z in the prompt; read the letter token;
-//                  answer = the option value; multi-word values are allowed.
-//   - score     -> levels labeled 0..9 in the prompt; read the digit token;
-//                  answer = expected value (a number); a legend maps index->level.
-//   - predicate -> labels "yes"/"no"; answer = "yes"/"no".
+//   - choice    -> options labeled A..Z in the prompt; read the letter token.
+//   - score     -> levels labeled 0..9 in the prompt; read the digit token.
+//   - predicate -> labels "yes"/"no"; read the word token.
 class OpenAIDecisionsHandler : public OpenAIApiHandler {
 public:
     enum class QuestionType {
@@ -48,6 +55,10 @@ public:
         std::string instructions;
         // Answer-facing values: choice option value / score level label / "yes","no".
         std::vector<std::string> values;
+        // Parallel to values: true for choice options whose original value was a
+        // JSON bool (rendered as "true"/"false" in the prompt and echoed as a JSON
+        // bool in the response). Always false for score/predicate.
+        std::vector<bool> choiceIsBool;
         // Prompt-facing tokens read from the model: A,B,C / 0,1,2 / yes,no.
         std::vector<std::string> labels;
         std::vector<int64_t> labelTokenIds;  // parallel to labels
