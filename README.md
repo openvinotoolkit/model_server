@@ -2,6 +2,8 @@
 
 > **GEMMAMONSTER fork baseline:** [2026.4 RC4 Windows release and reproducible packaging](docs/qwenmonster/RC4-WINDOWS-RELEASE.md). Python On and Python Off use the OVMS Windows distribution protocol. Historical release branches and mutable local Bazel outputs are not the baseline for new work.
 
+> **Linux build handoff for this RC4 baseline:** [source/dependency pins, Python Off/On builds, packaging and acceptance](docs/qwenmonster/RC4-LINUX-BUILD-HANDOFF.md). Linux execution is not yet validated; the custom Linux GPU plugin requires separate provenance and runtime checks. Default clones use `main`, which carries the RC4 baseline and this handoff.
+
 **High-performance model serving for Generative AI and classic deep learning — powered by [OpenVINO](https://github.com/openvinotoolkit/openvino) and optimized for Intel hardware.**
 
 [![Apache License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](https://github.com/openvinotoolkit/model_server/blob/main/LICENSE)
