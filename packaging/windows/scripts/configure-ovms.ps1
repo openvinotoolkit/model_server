@@ -2,6 +2,7 @@ param(
     [Parameter(Mandatory = $true)][string]$InstallDir,
     [Parameter(Mandatory = $true)][string]$DataDir,
     [string]$PackageVariant = "python_on",
+    [string]$RunMode = "user-login",
     [int]$RestPort = 8000,
     [int]$GrpcPort = 0,
     [string]$BindAddress = "127.0.0.1",
@@ -104,10 +105,10 @@ $settings = [ordered]@{
     grpcPort = $GrpcPort
     bindAddress = $BindAddress
     logLevel = $LogLevel
-    runMode = "user-login"
-    startAtLogin = $true
-    showTrayIcon = $true
-    serviceAutoStart = $false
+    runMode = $RunMode
+    startAtLogin = ($RunMode -ne "service")
+    showTrayIcon = ($RunMode -ne "service")
+    serviceAutoStart = ($RunMode -eq "service")
     packageVariant = $PackageVariant
 }
 

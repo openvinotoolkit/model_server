@@ -40,7 +40,15 @@ try {
 }
 
 $settings.runMode = "service"
+$settings.startAtLogin = $false
+$settings.showTrayIcon = $false
+$settings.serviceAutoStart = $true
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllText($settingsPath, ($settings | ConvertTo-Json -Depth 10), $utf8NoBom)
 
-Write-Host "[INFO] OVMS service installed."
+$service = Get-Service ovms -ErrorAction SilentlyContinue
+if ($service -and $service.Status -ne "Running") {
+    Start-Service ovms
+}
+
+Write-Host "[INFO] OVMS service installed and started."

@@ -13,9 +13,10 @@
 [Setup]
 AppId={{9F35B167-C72A-4E1D-93E9-448CE4AE5270}
 AppName={#AppName}
-AppVersion=2026.5.0
+AppVersion=2026.5.1
 AppPublisher={#AppPublisher}
-DefaultDirName={localappdata}\Programs\OVMS
+LicenseFile={#SourceRoot}\LICENSE
+DefaultDirName={autopf}\OVMS
 DefaultGroupName=OpenVINO Model Server
 DisableProgramGroupPage=yes
 OutputDir={#OutputDir}
@@ -40,13 +41,11 @@ DisableReadyPage=no
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
-[Tasks]
-Name: "path"; Description: "Add OVMS to PATH"; GroupDescription: "Optional configuration:"; Flags: checkedonce
-
 [Components]
 Name: "core"; Description: "Core OVMS installation"; Types: full compact custom; Flags: fixed
 Name: "python_system"; Description: "Use existing Python on this system and install Jinja, Setuptools and MarkupSafe"; Types: full custom; Flags: exclusive
 Name: "python_embedded"; Description: "Bundle embedded Python runtime"; Types: full custom; Flags: exclusive
+Name: "python_none"; Description: "Do not install bundled Python and do not use a system Python"; Types: full custom; Flags: exclusive
 Name: "espeak"; Description: "espeak / Kokoro support"; Types: full custom
 Name: "gstreamer"; Description: "GStreamer for media handling"; Types: full custom
 Name: "npu"; Description: "NPU OpenVINO backend"; Types: full custom
@@ -98,7 +97,17 @@ Source: "{#OvmsSourceDir}\openvino_paddle_frontend.dll"; DestDir: "{app}"; Compo
 Source: "{#OvmsSourceDir}\openvino_pytorch_frontend.dll"; DestDir: "{app}"; Components: pytorch_frontend; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\openvino_tensorflow_frontend.dll"; DestDir: "{app}"; Components: tensorflow_frontend; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\openvino_tensorflow_lite_frontend.dll"; DestDir: "{app}"; Components: tensorflow_lite_frontend; Flags: ignoreversion
-Source: "{#SourceRoot}\packaging\windows\scripts\*.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
+Source: "{#SourceRoot}\packaging\windows\scripts\configure-ovms.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
+Source: "{#SourceRoot}\packaging\windows\scripts\install-service.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
+Source: "{#SourceRoot}\packaging\windows\scripts\ovms-env.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
+Source: "{#SourceRoot}\packaging\windows\scripts\repair-package.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
+Source: "{#SourceRoot}\packaging\windows\scripts\set-path.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
+Source: "{#SourceRoot}\packaging\windows\scripts\start-ovms.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
+Source: "{#SourceRoot}\packaging\windows\scripts\stop-ovms.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
+Source: "{#SourceRoot}\packaging\windows\scripts\uninstall-ovms.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
+Source: "{#SourceRoot}\packaging\windows\scripts\uninstall-service.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
+Source: "{#SourceRoot}\packaging\windows\scripts\upgrade-package.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
+Source: "{#SourceRoot}\packaging\windows\scripts\validate-install.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 Source: "{#SourceRoot}\packaging\windows\settings\settings.template.json"; DestDir: "{app}\templates"; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\*"; DestDir: "{localappdata}\OVMS\packages\source"; Flags: ignoreversion recursesubdirs createallsubdirs
 
@@ -111,10 +120,7 @@ Name: "{group}\Uninstall OpenVINO Model Server"; Filename: "{uninstallexe}"
 [Registry]
 Root: HKCU; Subkey: "Software\OpenVINO\OVMS"; ValueType: string; ValueName: "InstallDir"; ValueData: "{app}"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\OpenVINO\OVMS"; ValueType: string; ValueName: "DataDir"; ValueData: "{localappdata}\OVMS"; Flags: uninsdeletekey
-Root: HKCU; Subkey: "Software\OpenVINO\OVMS"; ValueType: string; ValueName: "Version"; ValueData: "1.0.0"; Flags: uninsdeletekey
-
-[Run]
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\set-path.ps1"" -InstallDir ""{app}"" -Action Add"; Tasks: path; Flags: runhidden waituntilterminated
+Root: HKCU; Subkey: "Software\OpenVINO\OVMS"; ValueType: string; ValueName: "Version"; ValueData: "2026.5.0"; Flags: uninsdeletekey
 
 [UninstallRun]
 Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\uninstall-ovms.ps1"" -InstallDir ""{app}"" -DataDir ""{localappdata}\OVMS"" -DataMode ""{code:GetDataMode}"""; Flags: runhidden waituntilterminated; RunOnceId: "OVMSCleanup"
@@ -126,13 +132,17 @@ var
   // consumed by InitializeWizard/NextButtonClick to drive the custom page.
   ExistingInstallDetected: Boolean;
   ExistingInstallDir: String;
+  ExistingInstallVersion: String;
   ExistingUninstallString: String;
   ExistingInstallPage: TWizardPage;
   RbRepair: TNewRadioButton;
   RbUninstall: TNewRadioButton;
-  PythonSelectionPage: TWizardPage;
-  PythonSelectionLabel: TNewStaticText;
-  PythonSelectionMode: String;
+  RuntimeSummaryPage: TWizardPage;
+  AdditionalTasksPage: TWizardPage;
+  AddOvmsToPathCheck: TNewCheckBox;
+  ModelRepositoryPathEdit: TNewEdit;
+  OvmsServiceModeRadio: TNewRadioButton;
+  OvmsTerminalModeRadio: TNewRadioButton;
   // When True, the "Exit Setup?" confirmation is suppressed so Setup can
   // close cleanly after handing off to the existing uninstaller.
   SuppressCancelConfirm: Boolean;
@@ -149,8 +159,10 @@ function GetPythonModeValue(Param: String): String;
 begin
   if WizardIsComponentSelected('python_system') then
     Result := 'system'
+  else if WizardIsComponentSelected('python_embedded') then
+    Result := 'embedded'
   else
-    Result := 'embedded';
+    Result := 'none';
 end;
 
 function DetectSystemPythonPath: String;
@@ -165,48 +177,121 @@ begin
     Result := ExpandConstant('{win}\python.exe');
 end;
 
-function GetPythonDetectionSummary: String;
-var
-  PythonPath: String;
-begin
-  PythonPath := DetectSystemPythonPath;
-
-  if PythonPath = '' then
-  begin
-    Result :=
-      'ERROR: No compatible Python 3.12 interpreter was detected on this system.' + #13#10 +
-      'OVMS cannot use the system-Python option in this environment.' + #13#10 + #13#10 +
-      'Package installation status: not available for this interpreter.' + #13#10 +
-      'If you want a self-contained install, press Back and choose the embedded Python option.';
-  end
-  else
-  begin
-    Result :=
-      'Detected system Python: ' + PythonPath + #13#10 +
-      'OVMS will validate this interpreter and install the required Python packages if needed.' + #13#10 + #13#10 +
-      'Package installation status: the installer will report success or failure during configuration.' + #13#10 +
-      'If this interpreter is not the one you want, press Back and select the embedded Python option instead.';
-  end;
-end;
-
 function GetSelectedPythonVariant: String;
 begin
-  if PythonSelectionMode <> '' then
-    Result := PythonSelectionMode
-  else if WizardIsComponentSelected('python_system') then
+  if WizardIsComponentSelected('python_system') then
     Result := 'system'
+  else if WizardIsComponentSelected('python_embedded') then
+    Result := 'embedded'
+  else if WizardIsComponentSelected('python_none') then
+    Result := 'none'
   else
-    Result := 'embedded';
-end;
-
-function IsSystemPythonAvailable: Boolean;
-begin
-  Result := DetectSystemPythonPath <> '';
+    Result := 'none';
 end;
 
 function GetDataMode(Param: String): String;
 begin
   Result := DataModeChoice;
+end;
+
+function NormalizeVersionText(Value: String): String;
+var
+  Index: Integer;
+  Ch: Char;
+begin
+  Result := '';
+  for Index := 1 to Length(Value) do
+  begin
+    Ch := Value[Index];
+    if ((Ch >= '0') and (Ch <= '9')) or (Ch = '.') then
+      Result := Result + Ch;
+  end;
+
+  if Result = '' then
+    Result := '0';
+end;
+
+function CompareVersionStrings(Left: String; Right: String): Integer;
+var
+  LeftValue: String;
+  RightValue: String;
+  LeftNum: Integer;
+  RightNum: Integer;
+  LeftPos: Integer;
+  RightPos: Integer;
+begin
+  Result := 0;
+
+  LeftValue := NormalizeVersionText(Left);
+  RightValue := NormalizeVersionText(Right);
+
+  while (LeftValue <> '') or (RightValue <> '') do
+  begin
+    LeftPos := Pos('.', LeftValue);
+    RightPos := Pos('.', RightValue);
+
+    if LeftPos = 0 then
+    begin
+      LeftNum := StrToIntDef(LeftValue, 0);
+      LeftValue := '';
+    end
+    else
+    begin
+      LeftNum := StrToIntDef(Copy(LeftValue, 1, LeftPos - 1), 0);
+      Delete(LeftValue, 1, LeftPos);
+    end;
+
+    if RightPos = 0 then
+    begin
+      RightNum := StrToIntDef(RightValue, 0);
+      RightValue := '';
+    end
+    else
+    begin
+      RightNum := StrToIntDef(Copy(RightValue, 1, RightPos - 1), 0);
+      Delete(RightValue, 1, RightPos);
+    end;
+
+    if LeftNum < RightNum then
+    begin
+      Result := -1;
+      exit;
+    end;
+
+    if LeftNum > RightNum then
+    begin
+      Result := 1;
+      exit;
+    end;
+  end;
+end;
+
+function GetInstalledOvmsVersion: String;
+var
+  VersionValue: String;
+begin
+  Result := '';
+
+  if RegQueryStringValue(HKCU, 'Software\OpenVINO\OVMS', 'Version', VersionValue) then
+    Result := VersionValue;
+
+  if Result = '' then
+    if RegQueryStringValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{9F35B167-C72A-4E1D-93E9-448CE4AE5270}_is1', 'DisplayVersion', VersionValue) then
+      Result := VersionValue;
+
+  if Result = '' then
+    if RegQueryStringValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{9F35B167-C72A-4E1D-93E9-448CE4AE5270}_is1', 'Version', VersionValue) then
+      Result := VersionValue;
+end;
+
+function IsInstalledOvmsOlderThanCurrent: Boolean;
+begin
+  Result := False;
+  ExistingInstallVersion := GetInstalledOvmsVersion;
+  if ExistingInstallVersion = '' then
+    exit;
+
+  Result := CompareVersionStrings(ExistingInstallVersion, '2026.5.0') < 0;
 end;
 
 function IsGstreamerAvailable: Boolean;
@@ -235,6 +320,104 @@ begin
     FileExists(ExpandConstant('{sys}\IntelVpuDriver.dll')) or
     DirExists(ExpandConstant('{commonpf64}\Intel\NPU')) or
     DirExists(ExpandConstant('{commonpf32}\Intel\NPU'));
+end;
+
+function GetIntelGpuDriverPath: String;
+begin
+  Result := '';
+
+  if FileExists(ExpandConstant('{sys}\igfxicd64.dll')) then
+    Result := ExpandConstant('{sys}\igfxicd64.dll')
+  else if FileExists(ExpandConstant('{sys}\igfxicd64.exe')) then
+    Result := ExpandConstant('{sys}\igfxicd64.exe')
+  else if FileExists(ExpandConstant('{commonpf64}\Intel\igfxicd64.dll')) then
+    Result := ExpandConstant('{commonpf64}\Intel\igfxicd64.dll')
+  else if FileExists(ExpandConstant('{commonpf64}\Intel\igfxicd64.exe')) then
+    Result := ExpandConstant('{commonpf64}\Intel\igfxicd64.exe')
+  else if FileExists(ExpandConstant('{commonpf32}\Intel\igfxicd64.dll')) then
+    Result := ExpandConstant('{commonpf32}\Intel\igfxicd64.dll')
+  else if FileExists(ExpandConstant('{commonpf32}\Intel\igfxicd64.exe')) then
+    Result := ExpandConstant('{commonpf32}\Intel\igfxicd64.exe')
+  else if DirExists(ExpandConstant('{commonpf64}\Intel')) then
+    Result := ExpandConstant('{commonpf64}\Intel')
+  else if DirExists(ExpandConstant('{commonpf32}\Intel')) then
+    Result := ExpandConstant('{commonpf32}\Intel');
+end;
+
+function GetNpuDriverPath: String;
+begin
+  Result := '';
+
+  if FileExists(ExpandConstant('{sys}\IntelVpuDriver.dll')) then
+    Result := ExpandConstant('{sys}\IntelVpuDriver.dll')
+  else if DirExists(ExpandConstant('{commonpf64}\Intel\NPU')) then
+    Result := ExpandConstant('{commonpf64}\Intel\NPU')
+  else if DirExists(ExpandConstant('{commonpf32}\Intel\NPU')) then
+    Result := ExpandConstant('{commonpf32}\Intel\NPU');
+end;
+
+function GetIntelCpuName: String;
+var
+  CpuName: String;
+begin
+  Result := '';
+
+  if RegQueryStringValue(HKLM, 'HARDWARE\DESCRIPTION\System\CentralProcessor\0', 'ProcessorNameString', CpuName) then
+    Result := CpuName;
+end;
+
+function GetPythonStatusLine: String;
+begin
+  if GetSelectedPythonVariant = 'system' then
+  begin
+    if DetectSystemPythonPath <> '' then
+      Result := 'Python: system (' + DetectSystemPythonPath + ')'
+    else
+      Result := 'Python: system (not available)';
+  end
+  else if GetSelectedPythonVariant = 'embedded' then
+    Result := 'Python: bundled runtime'
+  else
+    Result := 'Python: Not installing';
+end;
+
+function GetIntelDriverStatusLine(DriverName: String; DriverPresent: Boolean; DriverPath: String): String;
+begin
+  if DriverPresent then
+  begin
+    if DriverPath <> '' then
+      Result := DriverName + ': present (' + DriverPath + ')'
+    else
+      Result := DriverName + ': present';
+  end
+  else
+    Result := DriverName + ': not detected';
+end;
+
+function GetOvmsSettingsSummary: String;
+var
+  CpuName: String;
+begin
+  Result :=
+    GetPythonStatusLine + #13#10 +
+    GetIntelDriverStatusLine('Intel GPU driver', IsIntelGpuDriverAvailable, GetIntelGpuDriverPath);
+
+  if IsIntelGpuDriverAvailable then
+    Result := Result + #13#10 + 'It is recommended to increase RAM allocation for GPU';
+
+  Result := Result + #13#10 +
+    GetIntelDriverStatusLine('Intel NPU driver', IsNpuDriverAvailable, GetNpuDriverPath);
+
+  CpuName := GetIntelCpuName;
+  if CpuName <> '' then
+    Result := Result + #13#10 + 'Intel CPU: ' + CpuName
+  else
+    Result := Result + #13#10 + 'Intel CPU: not detected';
+end;
+
+function GetDefaultModelRepositoryPath: String;
+begin
+  Result := 'C:\models';
 end;
 
 procedure WriteOptionalInstallSelection;
@@ -337,6 +520,7 @@ begin
   // the custom page is never shown/navigated in silent mode, RbRepair's
   // default behavior (proceed) is effectively what happens.
   ExistingInstallDetected := QueryExistingManagedInstall(ExistingInstallDir, ExistingUninstallString);
+  ExistingInstallVersion := GetInstalledOvmsVersion;
 
   if HasRunningOvmsProcess then
   begin
@@ -360,12 +544,15 @@ end;
 procedure InitializeWizard;
 var
   Lbl: TNewStaticText;
+  SettingsSummaryEdit: TNewMemo;
 begin
-  PythonSelectionMode := 'embedded';
-  if WizardIsComponentSelected('python_system') then
-    PythonSelectionMode := 'system'
-  else if WizardIsComponentSelected('python_embedded') then
-    PythonSelectionMode := 'embedded';
+  if ExistingInstallDetected then
+  begin
+    if Length(ExistingInstallDir) > 0 then
+    begin
+      WizardForm.DirEdit.Text := ExistingInstallDir;
+    end;
+  end;
 
   if ExistingInstallDetected then
   begin
@@ -383,8 +570,16 @@ begin
     Lbl.Caption :=
       'An existing install was found at:' + #13#10 +
       ExistingInstallDir + #13#10#13#10 +
+      'Installed version: ' + ExistingInstallVersion + #13#10 +
+      'Installer version: 2026.5.0' + #13#10#13#10 +
       'Choose how to continue:';
-    Lbl.Height := ScaleY(60);
+    Lbl.Height := ScaleY(80);
+
+    if IsInstalledOvmsOlderThanCurrent then
+    begin
+      Lbl.Caption := Lbl.Caption + #13#10 +
+        'This installation is older than the current OVMS package. Upgrade is recommended.';
+    end;
 
     RbRepair := TNewRadioButton.Create(ExistingInstallPage);
     RbRepair.Parent := ExistingInstallPage.Surface;
@@ -404,96 +599,143 @@ begin
     RbUninstall.Caption := 'Uninstall the existing installation, then exit';
   end;
 
-  if WizardIsComponentSelected('python_system') or WizardIsComponentSelected('python_embedded') then
+  if WizardIsComponentSelected('python_system') or WizardIsComponentSelected('python_embedded') or WizardIsComponentSelected('python_none') then
   begin
-    PythonSelectionPage := CreateCustomPage(wpSelectComponents,
-      'Python detection',
-      'OVMS Python configuration');
+    RuntimeSummaryPage := CreateCustomPage(wpSelectComponents,
+      'Ovms runtime configuration',
+      'OVMS runtime configuration');
 
-    PythonSelectionLabel := TNewStaticText.Create(PythonSelectionPage);
-    PythonSelectionLabel.Parent := PythonSelectionPage.Surface;
-    PythonSelectionLabel.Left := 0;
-    PythonSelectionLabel.Top := 0;
-    PythonSelectionLabel.Width := PythonSelectionPage.SurfaceWidth;
-    PythonSelectionLabel.AutoSize := False;
-    PythonSelectionLabel.WordWrap := True;
+    SettingsSummaryEdit := TNewMemo.Create(RuntimeSummaryPage);
+    SettingsSummaryEdit.Parent := RuntimeSummaryPage.Surface;
+    SettingsSummaryEdit.Left := 0;
+    SettingsSummaryEdit.Top := 0;
+    SettingsSummaryEdit.Width := RuntimeSummaryPage.SurfaceWidth;
+    SettingsSummaryEdit.Height := ScaleY(110);
+    SettingsSummaryEdit.ReadOnly := True;
+    SettingsSummaryEdit.WordWrap := True;
+    SettingsSummaryEdit.Text := GetOvmsSettingsSummary;
 
-    if GetSelectedPythonVariant = 'system' then
-      PythonSelectionLabel.Caption := GetPythonDetectionSummary
-    else
-      PythonSelectionLabel.Caption :=
-        'Embedded Python runtime: selected.' + #13#10 +
-        'OVMS will use the bundled Python installation under the application directory.' + #13#10 + #13#10 +
-        'No system Python detection is required for this option.' + #13#10 +
-        'If you want to use an existing system Python instead, use the Back button and choose the system-Python option.';
-    PythonSelectionLabel.Height := ScaleY(110);
+    // Keep the runtime summary on its dedicated page and expose the
+    // model repository path and OVMS startup mode on the custom tasks page.
+    AdditionalTasksPage := CreateCustomPage(wpSelectTasks,
+      'Additional tasks',
+      'OVMS install options');
 
-    if GetSelectedPythonVariant = 'system' then
-    begin
-      if not IsSystemPythonAvailable then
-      begin
-        Lbl := TNewStaticText.Create(PythonSelectionPage);
-        Lbl.Parent := PythonSelectionPage.Surface;
-        Lbl.Left := 0;
-        Lbl.Top := PythonSelectionLabel.Top + PythonSelectionLabel.Height + ScaleY(10);
-        Lbl.Width := PythonSelectionPage.SurfaceWidth;
-        Lbl.AutoSize := False;
-        Lbl.WordWrap := True;
-        Lbl.Caption :=
-          'ERROR: No compatible Python 3.12 interpreter was detected on this system.' + #13#10 +
-          'Use the Back button to return to the component selection page and choose the embedded Python option instead.';
-        Lbl.Height := ScaleY(60);
-      end
-      else
-      begin
-        Lbl := TNewStaticText.Create(PythonSelectionPage);
-        Lbl.Parent := PythonSelectionPage.Surface;
-        Lbl.Left := 0;
-        Lbl.Top := PythonSelectionLabel.Top + PythonSelectionLabel.Height + ScaleY(10);
-        Lbl.Width := PythonSelectionPage.SurfaceWidth;
-        Lbl.AutoSize := False;
-        Lbl.WordWrap := True;
-        Lbl.Caption :=
-          'Package installation status is checked during setup. If the required Python packages fail to install, the setup will stop and show the error.' + #13#10 +
-          'If you want to avoid modifying your system Python, use the Back button and select the embedded Python option.';
-        Lbl.Height := ScaleY(80);
-      end;
-    end
-    else
-    begin
-      Lbl := TNewStaticText.Create(PythonSelectionPage);
-      Lbl.Parent := PythonSelectionPage.Surface;
-      Lbl.Left := 0;
-      Lbl.Top := PythonSelectionLabel.Top + PythonSelectionLabel.Height + ScaleY(10);
-      Lbl.Width := PythonSelectionPage.SurfaceWidth;
-      Lbl.AutoSize := False;
-      Lbl.WordWrap := True;
-      Lbl.Caption :=
-        'The bundled Python runtime will be installed with OVMS.' + #13#10 +
-        'This keeps the installation self-contained and avoids changing the system Python environment.';
-      Lbl.Height := ScaleY(60);
-    end;
+    AddOvmsToPathCheck := TNewCheckBox.Create(AdditionalTasksPage);
+    AddOvmsToPathCheck.Parent := AdditionalTasksPage.Surface;
+    AddOvmsToPathCheck.Left := 0;
+    AddOvmsToPathCheck.Top := 0;
+    AddOvmsToPathCheck.Width := AdditionalTasksPage.SurfaceWidth;
+    AddOvmsToPathCheck.Checked := True;
+    AddOvmsToPathCheck.Caption := 'Add OVMS to PATH';
+
+    Lbl := TNewStaticText.Create(AdditionalTasksPage);
+    Lbl.Parent := AdditionalTasksPage.Surface;
+    Lbl.Left := 0;
+    Lbl.Top := AddOvmsToPathCheck.Top + AddOvmsToPathCheck.Height + ScaleY(8);
+    Lbl.Width := AdditionalTasksPage.SurfaceWidth;
+    Lbl.AutoSize := False;
+    Lbl.WordWrap := True;
+    Lbl.Caption := 'Model repository path used for OVMS_MODEL_REPOSITORY_PATH';
+    Lbl.Height := ScaleY(20);
+
+    ModelRepositoryPathEdit := TNewEdit.Create(AdditionalTasksPage);
+    ModelRepositoryPathEdit.Parent := AdditionalTasksPage.Surface;
+    ModelRepositoryPathEdit.Left := 0;
+    ModelRepositoryPathEdit.Top := Lbl.Top + Lbl.Height + ScaleY(4);
+    ModelRepositoryPathEdit.Width := AdditionalTasksPage.SurfaceWidth;
+    ModelRepositoryPathEdit.Text := GetDefaultModelRepositoryPath;
+
+    Lbl := TNewStaticText.Create(AdditionalTasksPage);
+    Lbl.Parent := AdditionalTasksPage.Surface;
+    Lbl.Left := 0;
+    Lbl.Top := ModelRepositoryPathEdit.Top + ModelRepositoryPathEdit.Height + ScaleY(8);
+    Lbl.Width := AdditionalTasksPage.SurfaceWidth;
+    Lbl.AutoSize := False;
+    Lbl.WordWrap := True;
+    Lbl.Caption := 'Ovms start mode';
+    Lbl.Height := ScaleY(20);
+
+    OvmsServiceModeRadio := TNewRadioButton.Create(AdditionalTasksPage);
+    OvmsServiceModeRadio.Parent := AdditionalTasksPage.Surface;
+    OvmsServiceModeRadio.Left := 0;
+    OvmsServiceModeRadio.Top := Lbl.Top + Lbl.Height + ScaleY(4);
+    OvmsServiceModeRadio.Width := AdditionalTasksPage.SurfaceWidth;
+    OvmsServiceModeRadio.Height := ScaleY(17);
+    OvmsServiceModeRadio.Caption := 'Automatic - start ovms service';
+    OvmsServiceModeRadio.Checked := False;
+
+    OvmsTerminalModeRadio := TNewRadioButton.Create(AdditionalTasksPage);
+    OvmsTerminalModeRadio.Parent := AdditionalTasksPage.Surface;
+    OvmsTerminalModeRadio.Left := 0;
+    OvmsTerminalModeRadio.Top := OvmsServiceModeRadio.Top + OvmsServiceModeRadio.Height + ScaleY(6);
+    OvmsTerminalModeRadio.Width := AdditionalTasksPage.SurfaceWidth;
+    OvmsTerminalModeRadio.Height := ScaleY(17);
+    OvmsTerminalModeRadio.Caption := 'Manual - start ovms in terminal';
+    OvmsTerminalModeRadio.Checked := True;
+  end;
+end;
+
+procedure PersistModelRepositoryPath;
+var
+  ModelRepositoryPath: String;
+  ResultCode: Integer;
+  Message: String;
+begin
+  if not Assigned(ModelRepositoryPathEdit) then
+    Exit;
+
+  ModelRepositoryPath := Trim(ModelRepositoryPathEdit.Text);
+  if ModelRepositoryPath = '' then
+    ModelRepositoryPath := GetDefaultModelRepositoryPath;
+
+  ResultCode := 0;
+  Exec('cmd.exe',
+    '/C setx OVMS_MODEL_REPOSITORY_PATH "' + ModelRepositoryPath + '" >nul',
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+
+  if ResultCode <> 0 then
+  begin
+    Message :=
+      'OVMS could not persist the model repository path to the user environment.' + #13#10 +
+      'Path: ' + ModelRepositoryPath + #13#10 +
+      'The installation will continue, but you may need to set OVMS_MODEL_REPOSITORY_PATH manually.';
+    MsgBox(Message, mbError, MB_OK);
   end;
 end;
 
 function RunPythonConfigurationForSelectedVariant: Boolean;
 var
   Variant: String;
+  RunMode: String;
   ResultCode: Integer;
   LogPath: String;
   Message: String;
+  ScriptPath: String;
 begin
   Result := True;
 
   Variant := GetSelectedPythonVariant;
-  if Variant = '' then
+  if (Variant = '') or (Variant = 'none') then
     exit;
+
+  RunMode := 'user-login';
+  if Assigned(OvmsServiceModeRadio) and OvmsServiceModeRadio.Checked then
+    RunMode := 'service';
+
+  ScriptPath := ExpandConstant('{app}\scripts\configure-ovms.ps1');
+  if not FileExists(ScriptPath) then
+  begin
+    MsgBox('The OVMS Python configuration helper script was not installed with the package. Expected path:' + #13#10 + ScriptPath + #13#10#13#10 + 'Rebuild the installer or reinstall the package with the full scripts bundle.', mbError, MB_OK);
+    Result := False;
+    exit;
+  end;
 
   LogPath := ExpandConstant('{src}\ovms-python-config.log');
   DeleteFile(LogPath);
 
   Exec('cmd.exe',
-    '/C powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{app}\scripts\configure-ovms.ps1" -InstallDir "{app}" -DataDir "{localappdata}\OVMS" -PackageVariant "' + Variant + '" 1> "' + LogPath + '" 2>&1',
+    '/C powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + ScriptPath + '" -InstallDir "{app}" -DataDir "{localappdata}\OVMS" -PackageVariant "' + Variant + '" -RunMode "' + RunMode + '" 1> "' + LogPath + '" 2>&1',
     '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 
   if ResultCode = 0 then
@@ -522,6 +764,8 @@ begin
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
+var
+  ResultCode: Integer;
 begin
   Result := True;
 
@@ -544,18 +788,60 @@ begin
     Result := True;
   end;
 
-  if (PythonSelectionPage <> nil) and (CurPageID = PythonSelectionPage.ID) then
+  if (CurPageID = wpSelectDir) and ExistingInstallDetected then
   begin
-    Result := RunPythonConfigurationForSelectedVariant;
-    if not Result then
-      exit;
+    if (Length(ExistingInstallDir) > 0) and (CompareText(ExistingInstallDir, WizardForm.DirEdit.Text) <> 0) then
+    begin
+      if DirExists(ExistingInstallDir) then
+      begin
+        Exec('cmd.exe', '/C rmdir /s /q "' + ExistingInstallDir + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+        if ResultCode <> 0 then
+        begin
+          MsgBox('Previous OVMS installation directory could not be removed automatically:' + #13#10 + ExistingInstallDir + #13#10#13#10 + 'Please delete it manually before continuing.', mbError, MB_OK);
+          Result := False;
+          exit;
+        end;
+      end;
+    end;
   end;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
+var
+  ServiceScriptPath: String;
+  ResultCode: Integer;
 begin
   if CurStep = ssPostInstall then
+  begin
     WriteOptionalInstallSelection;
+    PersistModelRepositoryPath;
+
+    if Assigned(AddOvmsToPathCheck) and AddOvmsToPathCheck.Checked then
+    begin
+      Exec('cmd.exe',
+        '/C powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{app}\scripts\set-path.ps1" -InstallDir "{app}" -Action Add',
+        '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    end;
+
+    if (WizardIsComponentSelected('python_system') or WizardIsComponentSelected('python_embedded') or WizardIsComponentSelected('python_none')) and
+       (GetSelectedPythonVariant <> 'none') then
+      RunPythonConfigurationForSelectedVariant;
+
+    if Assigned(OvmsServiceModeRadio) and OvmsServiceModeRadio.Checked then
+    begin
+      ServiceScriptPath := ExpandConstant('{app}\scripts\install-service.ps1');
+      if FileExists(ServiceScriptPath) then
+      begin
+        Exec('cmd.exe',
+          '/C powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + ServiceScriptPath + '" -InstallDir "{app}" -DataDir "{localappdata}\OVMS"',
+          '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+        if ResultCode <> 0 then
+        begin
+          MsgBox('OVMS service mode was selected, but the Windows service could not be started automatically after installation.', mbError, MB_OK);
+        end;
+      end;
+    end;
+  end;
 end;
 
 procedure CancelButtonClick(CurPageID: Integer; var Cancel, Confirm: Boolean);
@@ -609,3 +895,4 @@ begin
     DataModeChoice := 'RemoveSettingsKeepModels';
   end;
 end;
+

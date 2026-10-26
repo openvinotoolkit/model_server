@@ -68,19 +68,40 @@ if ($settings.grpcPort -and [int]$settings.grpcPort -gt 0) {
     $args += @("--port", $settings.grpcPort)
 }
 
-$process = Start-Process -FilePath $ovmsExe -ArgumentList $args -WindowStyle Hidden -PassThru
+$commandText = "ovms " + (($args | ForEach-Object {
+    if ($_ -match '^[A-Za-z0-9_./:-]+$') {
+        $_
+    } else {
+        '"' + ($_ -replace '"', '\"') + '"'
+    }
+}) -join ' ')
 
-$runtimeState = [ordered]@{
-    owner = "manager-process"
-    pid = $process.Id
-    serviceName = "ovms"
-    restPort = [int]$settings.restPort
-    grpcPort = [int]$settings.grpcPort
-    startedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
-}
+$setupVarsPath = Join-Path $settings.installDir "setupvars.ps1"
+$terminalCommand = @(
+    "Set-Location -LiteralPath '$($settings.installDir.TrimEnd('\\'))'",
+    "try {",
+    "  . '$($setupVarsPath.Replace("'", "''"))'",
+    "  Write-Host ''",
+    "  Write-Host 'You can start ovms with:'",
+    "  Write-Host '  $commandText'",
+    "  Write-Host 'Call ovms --help for more options.'",
+    "  Write-Host ''",
+    "} catch {",
+    "  Write-Error $_",
+    "  Write-Host 'Failed to initialize OVMS environment.'",
+    "  Read-Host 'Press Enter to close this window'",
+    "  exit 1",
+    "}"
+) -join '; '
 
-$tmpRuntime = "$runtimePath.tmp"
-[System.IO.File]::WriteAllText($tmpRuntime, ($runtimeState | ConvertTo-Json -Depth 10), $utf8NoBom)
-Move-Item -Force -Path $tmpRuntime -Destination $runtimePath
+Start-Process -FilePath "powershell.exe" -ArgumentList @(
+    '-NoExit',
+    '-NoLogo',
+    '-NoProfile',
+    '-ExecutionPolicy', 'Bypass',
+    '-Command',
+    $terminalCommand
+) -WindowStyle Normal
 
-Write-Host "[INFO] Started OVMS with pid $($process.Id)."
+Write-Host "[INFO] Displayed OVMS startup command in a new terminal."
+exit 0
