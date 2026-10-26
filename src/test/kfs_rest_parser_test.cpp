@@ -233,7 +233,7 @@ TEST_F(KFSRestParserTest, parseValidRequestFP64) {
     ASSERT_THAT(proto.inputs()[0].shape(), ElementsAre(2, 2));
     ASSERT_EQ(proto.inputs()[0].datatype(), "FP64");
     ASSERT_EQ(proto.inputs()[0].contents().fp64_contents_size(), 4);
-    ASSERT_THAT(proto.inputs()[0].contents().fp64_contents(), ElementsAre(1.1f, 2.2f, 3.3f, 4.4f));
+    ASSERT_THAT(proto.inputs()[0].contents().fp64_contents(), ElementsAre(1.1, 2.2, 3.3, 4.4));
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestFP64PreservesPrecision) {
