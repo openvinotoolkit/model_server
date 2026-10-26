@@ -29,10 +29,6 @@ logger = get_logger(__name__)
 class OVHfDownloader:
 
     def __init__(self, model_type, model_base_path=None):
-        if not huggingface_token:
-            raise OVHfDownloadException(
-                "Provide huggingface_token with TT_HUGGINGFACE_TOKEN or TT_HUGGINGFACE_TOKEN_FILE_PATH envs"
-            )
         self.api = HfApi(token=huggingface_token)
         self.model = model_type()
         self.model_name = self.model.name

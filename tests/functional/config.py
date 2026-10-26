@@ -125,11 +125,6 @@ ovms_test_image_name = os.environ.get("TT_OVMS_TEST_IMAGE_NAME", None)
 """ TT_FORCE_USE_OVMS_IMAGE - force to use given image parameters (skip automatic suffix updates) """
 force_use_ovms_image = get_bool("TT_FORCE_USE_OVMS_IMAGE", False)
 
-""" TT_OVMS_C_RELEASE_ARTIFACTS_PATH - path to current release artifacts """
-# multiple local and remote location supported
-# example: TT_OVMS_C_RELEASE_ARTIFACTS_PATH="../ubuntu24/ovms.tar.gz,../redat/ovms.tar.gz"
-ovms_c_release_artifacts_path = get_list("TT_OVMS_C_RELEASE_ARTIFACTS_PATH")
-
 """START_CONTAINER_COMMAND - command to start ovms container"""
 start_container_command = os.environ.get("START_CONTAINER_COMMAND", "")
 
@@ -312,6 +307,15 @@ base_image = os.environ.get("BASE_IMAGE", None)
 if base_image is not None:
     assert len(base_os) == 1, "If you wish to iterate by TT_BASE_OS: do not set BASE_IMAGE explicitly."
 
+""" TT_OVMS_C_RELEASE_ARTIFACTS_PATH - path to current release artifacts """
+# multiple local and remote location supported
+# example: TT_OVMS_C_RELEASE_ARTIFACTS_PATH="../ubuntu24/ovms.tar.gz,../redat/ovms.tar.gz"
+if OsType.Windows in base_os:
+    default_artifacts_path = f"dist\\{base_os[0]}\\ovms.zip"
+else:
+    default_artifacts_path = ",".join(f"dist/{_base_os}/ovms.tar.gz" for _base_os in base_os)
+ovms_c_release_artifacts_path = get_list("TT_OVMS_C_RELEASE_ARTIFACTS_PATH", default_artifacts_path)
+
 """ GLOBAL_TEMP_DIR - global temporary directory """
 global_tmp_dir_default = os.path.join("~", "AppData", "Local", "Temp") if OsType.Windows in base_os else "/tmp"
 global_tmp_dir = get_path("GLOBAL_TEMP_DIR", global_tmp_dir_default)
@@ -407,18 +411,18 @@ divide_target_device_per_worker = get_bool("TT_DIVIDE_TARGET_DEVICE_PER_WORKER",
 """ TT_PYTEST_KEYWORD_FILTER """
 pytest_keyword_filter = os.environ.get("TT_PYTEST_KEYWORD_FILTER", None)
 
-""" TT_HUGGINGFACE_TOKEN_FILE_PATH - path to file containing huggingface token """
+""" HF_TOKEN_FILE_PATH - path to file containing huggingface token """
 huggingface_token_file_path = get_path(
-    "TT_HUGGINGFACE_TOKEN_FILE_PATH", os.path.join("~", "ovms_tokens", "huggingface_token")
+    "HF_TOKEN_FILE_PATH", os.path.join("~", "ovms_tokens", "huggingface_token")
 )
 
-""" TT_HUGGINGFACE_TOKEN - huggingface token value. Env var takes priority, then file. """
-huggingface_token = os.environ.get("TT_HUGGINGFACE_TOKEN") or get_token_value(huggingface_token_file_path, "")
+""" HF_TOKEN - huggingface token value. Env var takes priority, then file. """
+huggingface_token = os.environ.get("HF_TOKEN") or get_token_value(huggingface_token_file_path, None)
 
-"""TT_ON_COMMIT_TESTS - False -> api-on-commit tests are not run,
+""" TT_ON_COMMIT_TESTS - False -> api-on-commit tests are not run,
                         True -> api-on-commit tests are run, default: True """
 run_on_commit_tests = get_bool("TT_ON_COMMIT_TESTS", True)
 
-"""TT_RUN_REGRESSION_TESTS - False -> api-regression tests are not run,
+""" TT_RUN_REGRESSION_TESTS - False -> api-regression tests are not run,
                              True -> api-regression tests are run, default: False """
 run_regression_tests = get_bool("TT_RUN_REGRESSION_TESTS", False)

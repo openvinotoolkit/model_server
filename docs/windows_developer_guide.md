@@ -95,6 +95,37 @@ The optional script compiles ovms_test binary with python support, downloads and
 windows_test.bat opt --with_python
 ```
 
+# Running functional tests - optional
+The script runs pytest tests from `tests\functional` against the ovms.exe binary from a release package. It creates a `.venv` virtual environment, installs `tests\requirements.txt` and writes results to `pytest-functional.xml`.
+Create the deployment package first (see the next section) and pass the absolute path to the ovms.zip as the first argument.
+A HuggingFace token is required (some tests download gated models). Provide it with the `HF_TOKEN` environment variable, or with `HF_TOKEN_FILE_PATH` pointing to a file containing the token. `HF_TOKEN` takes priority. When `HF_TOKEN_FILE_PATH` is not set, `~\ovms_tokens\huggingface_token` is used.
+```bat
+set HF_TOKEN=<your_huggingface_token>
+windows_test_functional.bat c:\git\model_server\dist\windows\ovms.zip
+```
+or
+```bat
+set HF_TOKEN_FILE_PATH=c:\path\to\huggingface_token_file
+windows_test_functional.bat c:\git\model_server\dist\windows\ovms.zip
+```
+
+Optionally, you can add parameters to the windows_test_functional.bat script
+```bat
+windows_test_functional.bat c:\git\model_server\dist\windows\ovms.zip "tests/functional/test_embeddings.py -k on_commit" 2
+```
+[arg1] - absolute path(s) to the OVMS release artifacts, comma-separated (required)  
+[arg2] - pytest target(s) and options, quote when it contains spaces. Default: `tests/functional`  
+[arg3] - number of pytest-xdist workers. Default: 4
+
+Other test settings are read from `TT_*` environment variables set before running the script, for example:
+```bat
+set TT_TARGET_DEVICE=CPU,GPU
+set TT_LOGGING_LEVEL_OVMS=DEBUG
+set TT_ON_COMMIT_TESTS=False
+set TT_RUN_REGRESSION_TESTS=True
+windows_test_functional.bat c:\git\model_server\dist\windows\ovms.zip
+```
+
 # Creating deployment package
 This step prepares ovms.zip deployment package from the build artifacts in the dist\windows\ directory. Run this script after successful compilation.
 The default version creates C++ only version without Python dependency.

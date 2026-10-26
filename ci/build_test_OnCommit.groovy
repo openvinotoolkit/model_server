@@ -363,7 +363,7 @@ pipeline {
               } 
               }
             }
-            stage("Internal tests") {
+            stage("Functional tests") {
               agent {
                 label "${agent_name_linux}"
               }
@@ -371,20 +371,13 @@ pipeline {
               steps {
                 script {
                   timeout(time: 120, unit: 'MINUTES') {
-                  withGithubStageStatus('jenkins/oncommit/internal-tests', 'Internal tests') {
-                    dir ('internal_tests'){
-                      checkout scmGit(branches: [[name: validation_branch]], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
-                      sh "pwd"
-                      def pwd = sh(returnStdout:true, script: "pwd").strip()
-                      def cmd_venv = "make create-venv TT_OVMS_C_REPO_PATH=../"
-                      def cmd_links = "rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional"
-                      def cmd_export = "TT_OVMS_C_REPO_PATH=../ TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10"
-                      def cmd_run_tests = "make tests"
+                  withGithubStageStatus('jenkins/oncommit/functional-tests', 'Functional tests') {
+                    dir ('functional_tests') {
                       def cmd = ""
                       if (image_build_needed == "true") {
-                        cmd = "${cmd_venv} && ${cmd_links} && ${cmd_export} TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True ${cmd_run_tests}"
+                        cmd = "make test_functional TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True ${cmd_run_tests} TT_XDIST_WORKERS=10"
                       } else {
-                        cmd = "${cmd_venv} && ${cmd_links} && ${cmd_export} ${cmd_run_tests}"
+                        cmd = "make test_functional"
                       }
                       sh cmd
                     }
@@ -392,6 +385,36 @@ pipeline {
                   }
                 }
               }            
+            }
+            stage("Extended functional tests") {
+              agent {
+                label "${agent_name_linux}"
+              }
+              when { expression { image_build_needed == "true" || functional_tests_changed == "true" } }
+              steps {
+                script {
+                  timeout(time: 120, unit: 'MINUTES') {
+                  withGithubStageStatus('jenkins/oncommit/extended-functional-tests', 'Extended functional tests') {
+                    dir ('extended_functional_tests') {
+                      checkout scmGit(branches: [[name: validation_branch]], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
+                      sh "pwd"
+                      def pwd = sh(returnStdout:true, script: "pwd").strip()
+                      def cmd_venv = "make create-venv TT_OVMS_C_REPO_PATH=../"
+                      def cmd_links = "rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional"
+                      def cmd_export = "export TT_OVMS_C_REPO_PATH=../ && export TT_ON_COMMIT_TESTS=True && export TT_XDIST_WORKERS=10"
+                      def cmd_run_tests = "pytest tests -n 10 --dist loadgroup --ignore=tests/functional"
+                      def cmd = ""
+                      if (image_build_needed == "true") {
+                        cmd = "${cmd_venv} && ${cmd_links} && ${cmd_export} && export TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} && export TT_OVMS_IMAGE_LOCAL=True ${cmd_run_tests} --ignore=tests/functional"
+                      } else {
+                        cmd = "${cmd_venv} && ${cmd_links} && ${cmd_export} ${cmd_run_tests} "
+                      }
+                      sh cmd
+                    }
+                  }
+                  }
+                }
+              }
             }
             stage("Documentation tests") {
               agent none

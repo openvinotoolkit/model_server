@@ -18,6 +18,7 @@ import re
 
 from tests.functional.utils.environment_info import EnvironmentInfo
 from tests.functional.constants.os_type import OsType, UBUNTU
+from tests.functional.constants.os_version import OPENVINO_MODEL_SERVER
 from tests.functional.config import (
     base_os,
     docker_registry,
@@ -143,18 +144,25 @@ def calculate_ovms_image_name(target_device=None, base_os=OsType.Ubuntu22):
             return ovms_image
         image_name = re.sub("|".join(DEFAULT_OVMS_IMAGE_SUFFIXES.values()), "", ovms_image.split(":")[0])
         image_tag = ovms_image.split(":")[1]
-        image_name = f"{image_name}{calculate_ovms_image_suffix(target_device)}"
-        image_tag = calculate_ovms_image_tag(image_tag, base_os, base_os_list)
+        if ovms_image.startswith(OPENVINO_MODEL_SERVER):
+            image_tag = f"{image_tag}{calculate_ovms_image_suffix(target_device)}"
+        else:
+            image_name = f"{image_name}{calculate_ovms_image_suffix(target_device)}"
+            image_tag = calculate_ovms_image_tag(image_tag, base_os, base_os_list)
     else:
         if docker_registry is not None:
             image_name = f"{docker_registry}/{ovms_cpp_docker_image}"
+            if force_use_ovms_image:
+                return f"{image_name}:{ovms_image_tag}"
+            image_name = f"{image_name}{calculate_ovms_image_suffix(target_device)}"
+            image_tag = ovms_image_tag if ovms_image_tag else ovms_image_tag_dict[base_os]
+            image_tag = calculate_ovms_image_tag(image_tag, base_os, base_os_list)
         else:
             image_name = ovms_cpp_docker_image
-        if force_use_ovms_image:
-            return f"{image_name}:{ovms_image_tag}"
-        image_name = f"{image_name}{calculate_ovms_image_suffix(target_device)}"
-        image_tag = ovms_image_tag if ovms_image_tag else ovms_image_tag_dict[base_os]
-        image_tag = calculate_ovms_image_tag(image_tag, base_os, base_os_list)
+            if force_use_ovms_image:
+                return f"{image_name}:{ovms_image_tag}"
+            image_tag = ovms_image_tag if ovms_image_tag else ovms_image_tag_dict[base_os]
+            image_tag = f"{image_tag}{calculate_ovms_image_suffix(target_device)}"
 
     return f"{image_name}:{image_tag}"
 

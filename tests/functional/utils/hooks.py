@@ -23,6 +23,7 @@ import sys
 import time
 import warnings
 from collections import Counter, defaultdict, namedtuple
+from huggingface_hub.errors import GatedRepoError
 from itertools import groupby
 from pathlib import Path
 
@@ -468,6 +469,10 @@ def download_models():
             if model_type.is_local:
                 ov_hf_downloader = OVHfDownloader(model_type)
                 ov_hf_downloader.check_and_update_hf_model()
+    except GatedRepoError as e:
+        msg = f"{str(e)}\nProvide huggingface_token with either HF_TOKEN or HF_TOKEN_FILE_PATH envs."
+        logger.error(msg)
+        pytest.exit(msg, returncode=-1)
     except Exception as e:
         logger.exception(str(e))
         msg = "Failed to download required models."
