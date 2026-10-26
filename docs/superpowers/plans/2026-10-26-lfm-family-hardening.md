@@ -56,7 +56,7 @@ Consumes Task 2 parseArguments; produces existing ToolCall/Delta interfaces with
 - [x] Replace normalization/splitting with strict reader; maintain phases and error propagation via existing OutputParser exception path.
 - [x] Add exhaustive two-way and fixed-seed multipart splits, STOP/LENGTH/empty flush, multi-tool and invalid-completion tests; adjust only proven LFM boundary bugs.
 - [x] Build successor and run focused LFM then Gemma/Qwen regression suites with exact fixture provenance. Update legacy permissive LFM assertions to strict rejection.
-- [ ] Commit with test receipts.
+- [x] Commit with test receipts.
 
 ### Task 4: Template and reasoning round trip
 
@@ -66,7 +66,7 @@ Create docs/lfm/templates per-model overrides only when required by real export 
 - [x] Add minja end-to-end cases with O'Brien, literal backslashes, controls, Unicode, nested objects/lists and actual export templates; watch failures.
 - [x] Serialize argument literals safely; preserve LFM2.5 thinking/continuation conventions. Keep downloaded files immutable.
 - [x] Verify real-tokenizer reasoning/content separation, nested tool-result reinjection and unary/SSE reconstruction.
-- [ ] Commit only changes proved by round-trip tests.
+- [x] Commit only changes proved by round-trip tests.
 
 ### Task 5: Model and performance evidence
 
