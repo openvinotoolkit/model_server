@@ -102,14 +102,11 @@ cc_shared_library(
             "@flatbuffers//:__subpackages__",],
         "//:disable_mediapipe": []
         })
-     + select({
-        "//:not_disable_python": [
-            "@pybind11//:__subpackages__",
-            "//third_party:=python3//:__subpackages__",
-            "@local_config_python//:__subpackages__",
-            ],
-        "//:disable_python": []
-        })
+      + [
+          "@pybind11//:__subpackages__",
+          "//third_party:=python3//:__subpackages__",
+          "@local_config_python//:__subpackages__",
+          ]
      + select({
             "//conditions:default": [
                 "@boringssl//:__subpackages__",
@@ -143,25 +140,6 @@ ovms_cc_library(
     linkstatic = 1,
 )
 
-# DO NOT REMOVE: loaded at runtime by mediapipe_runtime_api and plugin loader.
-# This is the runtime boundary for MediaPipe factory symbols and registration.
-# Build OVMS MediaPipe integration as a shared runtime component to avoid
-# embedding calculator/extension registration directly into ovms executable.
-cc_binary(
-    name = "ovms_mediapipe_runtime_shared",
-    srcs = [],
-    deps = [
-        "//src/mediapipe_internal:libovms_mediapipe_runtime_owner",
-        "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
-        ":libovms_ov_version",
-    ],
-    linkopts = select({
-        "//conditions:default": ["-Wl,--allow-shlib-undefined"],
-        "//src:windows": ["/FORCE:UNRESOLVED"],
-    }),
-    linkshared = 1,
-    visibility = ["//visibility:public"],
-)
 load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_proto_library", "mediapipe_proto_library")
 
 mediapipe_proto_library(
@@ -178,6 +156,7 @@ ovms_cc_library(
     hdrs = ["queue.hpp"],
     visibility = ["//visibility:public",],
 )
+
 ovms_cc_library(
     name = "libovms_ovinferrequestsqueue",
     hdrs = ["ovinferrequestsqueue.hpp"],
@@ -298,6 +277,7 @@ ovms_cc_library(
             "libovmslogging",
             "libovms_tensorinfo",
             "libovmsmodelversion",
+            "modelconfig",
             "requesttensorextractor",
             "predict_request_validation_utils_impl",
 ],
@@ -802,13 +782,10 @@ ovms_cc_library(
         hdrs = [
             "ovms_internal.h",
         ],
-        deps = select({
-            "//:not_disable_python": [
+        deps = [
                 "//src/python:python_runtime_loader",
                 "//src/python:python_calculators_plugin_loader",
-            ],
-            "//:disable_python": []
-        }) + select({
+            ] + select({
             "//:not_disable_mediapipe" : [
                 "//src/audio:audio_utils",
             ],
@@ -817,6 +794,7 @@ ovms_cc_library(
             "libdrogon_http_server",
             "libmultipart_parser_drogon_impl",
             "cpp_headers",
+            "//src:module_names",
             "libovms_shutdown_state",
             "libovms_curl_global_init",
             "ovms_header",
@@ -924,20 +902,19 @@ ovms_cc_library(
                 "//conditions:default": ["-lOpenCL"], # TODO make as direct dependency
                 "//src:windows" : ["/DEFAULTLIB:Rpcrt4.lib"],}),
     data = select({
-        "//:is_windows_and_python_is_enabled": [
+        "//src:windows": [
             "//src/python/binding:pyovms.pyd",
         ],
-        "//:disable_python": [],
         "//conditions:default": [
             "//src/python/binding:pyovms.so",
             "//src/python:python_runtime_module_api_hdrs",
         ],
-        }) + select({
-            "//:is_windows_and_python_is_enabled": [
-                "//src/python/binding:copy_pyovms",
-            ],
-            "//conditions:default": [],
-        }),
+    }) + select({
+        "//src:windows": [
+            "//src/python/binding:copy_pyovms",
+        ],
+        "//conditions:default": [],
+    }),
     alwayslink = 1,
 )
 
@@ -1165,6 +1142,7 @@ ovms_cc_library(
     srcs = ["status.cpp",],
     deps = ["libovmslogging",
             "@fmtlib",],
+    linkstatic = 1,
     visibility = ["//visibility:public"],
 )
 
@@ -1869,6 +1847,14 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public",],
 )
+ovms_cc_library(
+    name = "module_names",
+    hdrs = ["module_names.hpp"],
+    srcs = ["module_names.cpp"],
+    linkstatic = 1,
+    visibility = ["//visibility:public"],
+)
+
 ovms_cc_library( # TODO split further
     name = "cpp_headers",
     hdrs = [
@@ -1877,10 +1863,8 @@ ovms_cc_library( # TODO split further
     srcs = ["server.hpp",
         "config.hpp",
         "status.hpp",
-        "module_names.hpp",
-        "module_names.cpp",
     ],
-    deps = ["libovmslogging", "libovmsstring_utils"],
+    deps = ["libovmslogging", "libovmsstring_utils", ":module_names"],
     visibility = ["//visibility:public"],
 )
 
@@ -1948,8 +1932,7 @@ cc_binary(
     deps = [
         "//src:ovms_lib",
         "//src/filesystem:libovmsfilesystemfactory",
-        "//src/mediapipe_internal:libovms_mediapipe_runtime_owner_no_python_calculators",
-        "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
+        "//src:module_names",
         ":libovms_ov_version",
         "//src/llm:llmcalculator_proto_owner",
     ]
@@ -1957,28 +1940,23 @@ cc_binary(
             "//conditions:default": [],
             "//src:windows" : ["@winreg//:winreg"],
         })
-    + select({
-            "//:not_disable_python": ["//src/python:python_calculators_host"],
-            "//:disable_python": [],
-        })
      + select({
-            "//conditions:default": [],
+            "//:not_disable_mediapipe": [
+                "//src/mediapipe_internal:libovms_mediapipe_runtime_owner_no_python_calculators",
+                "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
+                "//src/python:python_calculators_host",
+            ],
             "//:disable_mediapipe" : [],
         }),
     data = select({
-        "//:is_windows_and_python_is_enabled": [
+        "//src:windows": [
             "//src/python/binding:pyovms.pyd",
         ],
-        "//:disable_python": [],
         "//conditions:default": [
             "//src/python/binding:pyovms.so",
-        ],
-    }) + select({
-        "//:not_disable_python": [
             "//src/python:libovmspython",
             "//src/python:libpython_calculators",
         ],
-        "//:disable_python": [],
     }) + select({
         "//:not_disable_mediapipe": [
             "//src/lib:ovms_llm_calculators",
@@ -2074,18 +2052,13 @@ cc_test(
             "//:disable_mediapipe" : [
                 "test/disabled_mediapipe_test.cpp",
             ],
-        }) + select({
-            "//:not_disable_python": [
+        }) + [
                 # OvmsPyTensor is currently not used in OVMS core and is just a base for the binding.
                 # "test/python/ovms_py_tensor_test.cpp",
                 "test/pythonnode_test.cpp",
-                # LLM logic uses Python for processing Jinja templates when built with Python enabled
                 "test/llm/llmtemplate_test.cpp",
                 "test/llm/chat_template_end_to_end_jinja_test.cpp",
-            ],
-            "//:disable_python" : [],
-        }) + [
-            "test/multi_part_parser_drogon_test.cpp",
+                "test/multi_part_parser_drogon_test.cpp",
         ],
     data = [
         "test/add_two_inputs_model/1/add.xml",
@@ -2205,11 +2178,10 @@ cc_test(
         ],
         "//:disable_mediapipe": [],
     }) + select({
-        "//:is_windows_and_python_is_enabled": [
-            "//src/python:libovmspython.dll",
+        "//src:windows": [
+            "//src/python:copy_libovmspython",
             "//src/python:libpython_calculators",
         ],
-        "//:disable_python": [],
         "//conditions:default": [
             "//src/python:libovmspython.so",
             "//src/python:libpython_calculators.so",
@@ -2218,6 +2190,7 @@ cc_test(
     deps = [
             "optimum-cli",
             "//src:ovms_lib",
+            "//src:module_names",
             "//src:libovms_default_task_detector",
             "//src/filesystem:libovmsfilesystemfactory",
             "@cpp_httplib//:cpp_httplib", # server_test.cpp
@@ -2270,6 +2243,7 @@ cc_test(
                 # via this linkage point to keep runtime-split behavior stable.
                 "//src:libmediapipe_framework_impl",
                 "//src:kfs_graph_executor_impl_h",
+                "//src/python:python_calculators_runtime_objects",
                 ":test_llm_io_processing_utils_tests",
                 ":test_chat_template_workarounds",
                 ":test_llm_input_processing_tests",
@@ -2288,19 +2262,12 @@ cc_test(
             "//:disable_mediapipe": [
                 "serialization_common",
             ],
-        }) + select({
-            "//:not_disable_python": PYBIND_HEADERS_ONLY + [
-                "//src/python:python_headers_only",
-                "//src/python:libovmspythonmodule",
-                # Keep explicit in-process Python runtime entry points available to
-                # tests and embedded execution paths without pulling the full
-                # runtime into the main ovms link graph.
-                "//src/python:python_runtime_entry_static",
-                "//src/python:python_calculators_host",
-                "//src/python:python_calculators_runtime_objects",
-            ],
-            "//:disable_python": [],
-        }) + select({
+        }) + PYBIND_HEADERS_ONLY + [
+            "//src/python:python_headers_only",
+            "//src/python:libovmspythonmodule",
+            "//src/python:python_runtime_entry_static",
+            "//src/python:python_calculators_host",
+        ] + select({
             "//:not_disable_mediapipe": [
                 "//src/audio/speech_to_text:s2t_streaming_handler",
                 "//src/audio/speech_to_text:s2t_calculator",
@@ -2363,7 +2330,6 @@ cc_test(
             "//src/python:libovmspython.dll",
             "//src/python/binding:pyovms.pyd",
         ],
-        "//:disable_python": [],
         "//conditions:default": [
             "//src/python:libovmspython.so",
             "//src/python/binding:pyovms.so",
@@ -2517,13 +2483,8 @@ cc_library(
         "test/c_api_test_utils.cpp",
         "test/test_utils.cpp",
         ],
-    deps = select({
-        "//:not_disable_python": PYBIND_HEADERS_ONLY,
-        "//:disable_python": [],
-    }) + select({
-        "//:not_disable_python": ["//src/python:python_headers_only"],
-        "//:disable_python": [],
-    }) + [
+    deps = PYBIND_HEADERS_ONLY + [
+        "//src/python:python_headers_only",
         "test_test_models",
         "//src:ovms_lib",
         "//src:network_utils",
@@ -2557,6 +2518,7 @@ cc_library(
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
     linkopts = COMMON_STATIC_LIBS_LINKOPTS,
+    visibility = ["//src:__pkg__", "//src/python:__pkg__"],
 )
 cc_library( # DO NOT ADD BIG DEPENDENCIES HERE
     name = "test_light_test_utils",
@@ -2812,6 +2774,8 @@ cc_library(
         ":test_light_test_utils",
         "//src/config_export_module:config_export",
         "//src:libovms_server_settings",
+        "//src:libovmsschema",
+        "@com_github_tencent_rapidjson//:rapidjson",
         "@com_google_googletest//:gtest",
     ],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -2835,6 +2799,7 @@ cc_library(
         "//src/mediapipe_internal:graphqueue",
         "//src/mediapipe_internal:libovms_mediapipe",
         "//src:libovms_server_settings",
+        "//src:module_names",
         "@com_google_googletest//:gtest",
     ],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -2903,6 +2868,7 @@ cc_library(
         "//src:test_platform_utils",
         "//src/image_gen:imagegenutils",
         "//src/image_gen:imagegen_init",
+        "@stb//:image",
     ],
     local_defines = COMMON_LOCAL_DEFINES,
     copts = COPTS_TESTS,
@@ -3066,6 +3032,7 @@ cc_library(
         "//src/llm:io_processing_input_processor",
         "//src/llm:io_processing_input_processor_context",
         "//src/llm:generation_config_builders",
+        "//src/llm:runtime_chat_template_loader",
     ],
     copts = COPTS_TESTS,
     local_defines = COMMON_LOCAL_DEFINES,

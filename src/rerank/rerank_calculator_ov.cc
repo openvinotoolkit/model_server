@@ -300,7 +300,7 @@ public:
             if (auto strings = std::get_if<std::vector<std::string>>(&tokenizeRequest.input)) {
                 auto tokens = rerank_session->getTokenizer().encode(*strings, tokenizeRequest.parameters);
                 StringBuffer buffer;
-                status = TokenizeParser::parseTokenizeResponse(buffer, tokens, tokenizeRequest.parameters);
+                status = TokenizeParser::parseTokenizeResponse(buffer, tokens, tokenizeRequest.parameters, tokenizeRequest.inputIsBatch);
                 cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string(buffer.GetString()), cc->InputTimestamp());
                 return absl::OkStatus();
             } else {
