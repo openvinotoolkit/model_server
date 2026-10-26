@@ -149,11 +149,13 @@ mediamtx
 
 Then write to the server using ffmpeg, example using video or camera
 
+The file source below loops at real-time speed for up to five minutes, then exits automatically.
+
 ```console
-ffmpeg -stream_loop -1 -i ./video.mp4 -f rtsp -rtsp_transport tcp rtsp://localhost:8554/channel1
+ffmpeg -re -stream_loop -1 -i ./video.mp4 -t 300 -f rtsp -rtsp_transport tcp rtsp://localhost:8554/channel1
 ```
 
-```
+```text
 ffmpeg -f dshow -i video="HP HD Camera" -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
 ```
 
@@ -164,7 +166,7 @@ python client.py --grpc_address localhost:9000 --input_stream 'rtsp://localhost:
 
 The results can be examined with ffplay utility which reads and display the altered content.
 
-```console
+```text
 ffplay -rtsp_transport tcp rtsp://localhost:8554/channel2
 ```
 
