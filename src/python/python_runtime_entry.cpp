@@ -465,7 +465,8 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_applyPreparedChatTemplateRuntime(
             "bos_token"_a = prepared->bosToken,
             "eos_token"_a = prepared->eosToken);
 
-        SPDLOG_LOGGER_DEBUG(ovms::modelmanager_logger, "Applying chat template via Python Jinja renderer");
+        // TODO: Group chat-template runtime logging in a follow-up change.
+        SPDLOG_DEBUG("Applying chat template via Python Jinja renderer");
         py::exec(R"(
             import json
             output = ""
