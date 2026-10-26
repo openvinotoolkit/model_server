@@ -61,6 +61,7 @@ Labels description
 
 ## Enable metrics
 
+By default, the metrics feature is disabled.
 
 Metrics endpoint is using the same port as the REST interface for running the model queries.
 
