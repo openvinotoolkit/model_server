@@ -155,6 +155,8 @@ def check_dir(start_dir):
         "kserve-openvino.yaml",
         "ServingRuntime.yaml",
         "dummy_facebook_template.jinja",
+        "demos/integration_with_OpenHands/docker-compose.template.yml",
+        "demos/integration_with_OpenHands/scripts/deploy_model_ovms.sh",
         ]
 
     exclude_directories = ['/dist/', 'release_files/thirdparty-licenses', 'extras/chat_template_examples']
