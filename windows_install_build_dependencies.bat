@@ -340,6 +340,78 @@ IF /I EXIST %opencl_dir% (
 )
 echo [INFO] OpenCL headers installed: %opencl_dir%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: Inno Setup 6
+set "inno_setup_version=7.1.0"
+set "inno_setup_exe=innosetup-%inno_setup_version%.exe"
+set "inno_setup_exe=innosetup-%inno_setup_version%-x64.exe"
+set "inno_setup_url=https://github.com/jrsoftware/issrc/releases/download/is-7_1_0/%inno_setup_exe%"
+set "inno_setup_dir=%opt_install_dir%\Inno Setup 7"
+set "inno_setup_path=%inno_setup_dir%\ISCC.exe"
+if "%INNO_SETUP_ALLUSERS%"=="" set "INNO_SETUP_ALLUSERS=0"
+if "%INNO_SETUP_ALLUSERS%"=="1" (
+    set "inno_setup_install_mode=/ALLUSERS"
+) else (
+    set "inno_setup_install_mode=/CURRENTUSER"
+)
+
+echo [INFO] Installing Inno Setup 7 ...
+set "inno_setup_skip_install=0"
+IF /I EXIST "%inno_setup_path%" (
+    if %expunge% EQU 1 (
+        rmdir /S /Q "%inno_setup_dir%"
+        if !errorlevel! neq 0 exit /b !errorlevel!
+    ) else (
+        echo [INFO] ::::::::::::::::::::::: Inno Setup 7 already installed in: %inno_setup_dir%
+        set "inno_setup_skip_install=1"
+    )
+)
+
+if "!inno_setup_skip_install!"=="1" (
+    echo [INFO] Inno Setup 7 already installed. Continuing.
+) else (
+    IF /I NOT EXIST "%opt_install_dir%\%inno_setup_exe%" (
+        echo [INFO] Downloading Inno Setup installer: %inno_setup_url%
+        "%wget_path%" -O "%opt_install_dir%\%inno_setup_exe%" "%inno_setup_url%"
+        if !errorlevel! neq 0 exit /b !errorlevel!
+    )
+
+    IF /I EXIST "%opt_install_dir%\%inno_setup_exe%" (
+        start "Installing_InnoSetup" "%opt_install_dir%\%inno_setup_exe%" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART %inno_setup_install_mode% /DIR="%inno_setup_dir%"
+        set "inno_setup_finished=0"
+        for /l %%i in (1,1,200) do (
+            echo Timeout iteration: %%i
+            tasklist /NH | c:\Windows\SysWOW64\find.exe /i "%inno_setup_exe%" > nul
+            if !errorlevel! neq 0 (
+                echo Process "%inno_setup_exe%" finished
+                set "inno_setup_finished=1"
+            ) else (
+                echo Process "%inno_setup_exe%" in progress ...
+                ping 1.1.1.1 -n 3 > nul
+            )
+        )
+
+        if "!inno_setup_finished!"=="0" (
+            taskkill /f /t /im %inno_setup_exe%
+            if !errorlevel! neq 0 exit /b !errorlevel!
+        )
+    )
+)
+
+IF /I NOT EXIST "%inno_setup_path%" (
+    IF /I EXIST "%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe" (
+        set "inno_setup_path=%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe"
+    ) ELSE IF /I EXIST "%ProgramFiles%\Inno Setup 6\ISCC.exe" (
+        set "inno_setup_path=%ProgramFiles%\Inno Setup 6\ISCC.exe"
+    )
+)
+
+IF /I NOT EXIST "%inno_setup_path%" (
+    echo [ERROR] Inno Setup compiler ISCC.exe not found in %inno_setup_dir%
+    exit /b 1
+)
+
+echo [INFO] Inno Setup 6 installed: %inno_setup_path%
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Install in c:\opt\ section started - ONE per system, not per BUILD, reinstalled only with expunge clean :::::::::::::::::::::::
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 

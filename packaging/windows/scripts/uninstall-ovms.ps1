@@ -6,8 +6,6 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-Get-Process -Name "OVMS.Manager" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-
 $runtimePath = Join-Path $DataDir "runtime.json"
 if (Test-Path $runtimePath) {
     try {
@@ -29,8 +27,6 @@ if (Test-Path $runtimePath) {
 [Environment]::SetEnvironmentVariable("OVMS_DIR", $null, "User")
 [Environment]::SetEnvironmentVariable("PYTHONHOME", $null, "User")
 [Environment]::SetEnvironmentVariable("ESPEAK_DATA_PATH", $null, "User")
-
-Remove-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "OVMS Manager" -ErrorAction SilentlyContinue
 
 switch ($DataMode) {
     "PreserveAll" {

@@ -20,6 +20,72 @@ if (-not $resolvedSource) {
     Write-Warning "Repair cannot restore missing files without a valid package source (checked: '$PackageSource', '$packageCacheDir')."
 }
 
+function Get-RelativePathNormalized {
+    param(
+        [Parameter(Mandatory = $true)][string]$BasePath,
+        [Parameter(Mandatory = $true)][string]$FullPath
+    )
+
+    $relative = [System.IO.Path]::GetRelativePath($BasePath, $FullPath)
+    return $relative.Replace('\\', '/').Replace('\', '/')
+}
+
+function Get-ManagedInstallFiles {
+    param(
+        [Parameter(Mandatory = $true)][string]$InstallDir,
+        [Parameter(Mandatory = $true)][string]$PackageRoot
+    )
+
+    $expected = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+
+    if (Test-Path $PackageRoot) {
+        Get-ChildItem -LiteralPath $PackageRoot -File -Recurse | ForEach-Object {
+            $relative = Get-RelativePathNormalized -BasePath $PackageRoot -FullPath $_.FullName
+            $expected.Add($relative) | Out-Null
+        }
+    }
+
+    foreach ($subdir in @('scripts', 'templates')) {
+        $dir = Join-Path $InstallDir $subdir
+        if (Test-Path $dir) {
+            Get-ChildItem -LiteralPath $dir -File -Recurse | ForEach-Object {
+                $relative = Get-RelativePathNormalized -BasePath $InstallDir -FullPath $_.FullName
+                $expected.Add($relative) | Out-Null
+            }
+        }
+    }
+
+    return $expected
+}
+
+$managedInstallFiles = @{}
+if ($resolvedSource) {
+    $managedInstallFiles = Get-ManagedInstallFiles -InstallDir $InstallDir -PackageRoot $resolvedSource
+}
+
+$staleFiles = @()
+if ($managedInstallFiles.Count -gt 0) {
+    Get-ChildItem -LiteralPath $InstallDir -File -Recurse | ForEach-Object {
+        $relative = Get-RelativePathNormalized -BasePath $InstallDir -FullPath $_.FullName
+        if (-not $managedInstallFiles.Contains($relative) -and $_.Name -notlike 'unins*' -and $_.Name -notlike 'OVMS.Manager*') {
+            $staleFiles += $_.FullName
+        }
+    }
+
+    foreach ($file in $staleFiles) {
+        Remove-Item -LiteralPath $file -Force
+        Write-Host "[INFO] Removed stale file no longer in current package: $file"
+    }
+
+    $dirs = Get-ChildItem -LiteralPath $InstallDir -Directory -Recurse | Sort-Object -Descending FullName
+    foreach ($dir in $dirs) {
+        $children = Get-ChildItem -LiteralPath $dir.FullName -Force -ErrorAction SilentlyContinue
+        if (-not $children) {
+            Remove-Item -LiteralPath $dir.FullName -Force
+        }
+    }
+}
+
 $required = @(
     "ovms.exe",
     "setupvars.bat",

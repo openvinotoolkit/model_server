@@ -32,7 +32,6 @@ The full Manager UI is planned as a later phase.
 ```powershell
 .\windows_build.bat --with_python
 .\windows_create_package.bat opt --with_python
-.\packaging\windows\manager\build_manager.ps1
 .\packaging\windows\installer\build_installer.ps1
 ```
 
