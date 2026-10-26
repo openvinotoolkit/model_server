@@ -110,9 +110,11 @@ Status OmniModelLegacyServableInitializer::initialize(std::shared_ptr<GenAiServa
         return status;
     }
     if (properties->chatTemplateStatus == ChatTemplateStatus::AVAILABLE) {
-        analyzeChatTemplate(properties);
+        const auto analysisResult = analyzeChatTemplate(properties);
+        selectOutputParsers(properties, analysisResult);
+    } else {
+        selectOutputParsers(properties, std::nullopt);
     }
-    clearDisabledParserNames(properties);
     if (nodeOptions.has_chat_template_engine()) {
         status = validateChatTemplateAvailability(properties);
         if (!status.ok()) {

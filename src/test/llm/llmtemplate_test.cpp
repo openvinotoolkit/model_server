@@ -68,7 +68,8 @@ protected:
         const auto status = GenAiServableInitializer::loadChatTemplate(servable->getProperties(), directoryPath);
         ASSERT_TRUE(status.ok()) << status.string();
         ASSERT_EQ(properties.chatTemplateStatus, ChatTemplateStatus::AVAILABLE);
-        GenAiServableInitializer::analyzeChatTemplate(servable->getProperties());
+        const auto analysisResult = GenAiServableInitializer::analyzeChatTemplate(servable->getProperties());
+        GenAiServableInitializer::selectOutputParsers(servable->getProperties(), analysisResult);
         ASSERT_TRUE(properties.preparedChatTemplate.isPrepared());
     }
 
@@ -214,7 +215,8 @@ TEST_F(LLMChatTemplateTest, MinjaUsesChatTemplateJinjaSource) {
 
     const auto status = GenAiServableInitializer::loadChatTemplate(properties, directoryPath);
     ASSERT_TRUE(status.ok()) << status.string();
-    GenAiServableInitializer::analyzeChatTemplate(properties);
+    const auto analysisResult = GenAiServableInitializer::analyzeChatTemplate(properties);
+    GenAiServableInitializer::selectOutputParsers(properties, analysisResult);
     EXPECT_EQ(properties->chatTemplateStatus, ChatTemplateStatus::AVAILABLE);
     EXPECT_EQ(properties->chatTemplateSource, ChatTemplateSource::CHAT_TEMPLATE_JINJA);
     // CreateJinjaConfig adds newline at the end. To consider if this behavior is expected in all cases.
@@ -280,7 +282,7 @@ TEST_F(LLMChatTemplateTest, MissingTemplateRejectsChatInputButAllowsCompletionIn
     chatContext->inputRequest.input = std::move(history);
     const auto chatStatus = servable->validateInputCompatibility(chatContext);
     EXPECT_EQ(chatStatus.code(), absl::StatusCode::kInvalidArgument);
-    EXPECT_EQ(chatStatus.message(), "This servable supports only /v1/completions endpoint.");
+    EXPECT_EQ(chatStatus.message(), "Chat requests are unavailable because the model has no chat template.");
 
     auto completionContext = servable->createExecutionContext();
     completionContext->inputRequest.input = std::string("Hello");
@@ -301,7 +303,7 @@ TEST_F(LLMChatTemplateTest, MissingTemplateClearsDisabledParsers) {
     EXPECT_EQ(properties->toolParserName, "none");
     EXPECT_EQ(properties->reasoningParserName, "none");
 
-    GenAiServableInitializer::clearDisabledParserNames(properties);
+    GenAiServableInitializer::selectOutputParsers(properties, std::nullopt);
     EXPECT_TRUE(properties->toolParserName.empty());
     EXPECT_TRUE(properties->reasoningParserName.empty());
 

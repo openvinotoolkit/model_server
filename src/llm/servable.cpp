@@ -223,7 +223,7 @@ absl::Status GenAiServable::validateInputCompatibility(std::shared_ptr<GenAiServ
             break;
         }
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Rejecting chat request: {}", reason);
-        return absl::InvalidArgumentError("This servable supports only /v1/completions endpoint.");
+        return absl::InvalidArgumentError("Chat requests are unavailable because " + reason + ".");
     }
 
     // LM servables reject requests containing image content. Images are preserved

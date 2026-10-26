@@ -308,30 +308,12 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
     return StatusCode::OK;
 }
 
-void GenAiServableInitializer::analyzeChatTemplate(std::shared_ptr<GenAiServableProperties> properties) {
+ChatTemplateAnalysisResult GenAiServableInitializer::analyzeChatTemplate(std::shared_ptr<GenAiServableProperties> properties) {
     const std::string templateSource = properties->chatTemplateEngine == ChatTemplateEngine::JINJA ? properties->tokenizer.get_original_chat_template() : properties->tokenizer.get_chat_template();
     auto analysisResult = ChatTemplateAnalyzer::analyze(templateSource);
     properties->chatTemplateCaps = analysisResult.caps;
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template capabilities: {}",
         analysisResult.caps.toString());
-    // Auto-detect or report manually configured tool parser
-    if (!isParserDisabled(properties->toolParserName)) {
-        if (!properties->toolParserName.empty()) {
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured tool_parser: {}", properties->toolParserName);
-        } else if (analysisResult.detectedToolParser.has_value()) {
-            properties->toolParserName = analysisResult.detectedToolParser.value();
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected tool_parser: {}", properties->toolParserName);
-        }
-    }
-    // Auto-detect or report manually configured reasoning parser
-    if (!isParserDisabled(properties->reasoningParserName)) {
-        if (!properties->reasoningParserName.empty()) {
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured reasoning_parser: {}", properties->reasoningParserName);
-        } else if (analysisResult.detectedReasoningParser.has_value()) {
-            properties->reasoningParserName = analysisResult.detectedReasoningParser.value();
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected reasoning_parser: {}", properties->reasoningParserName);
-        }
-    }
 
     probeServableChatTemplateCaps(properties);
     SPDLOG_LOGGER_INFO(llm_calculator_logger, "Chat template loaded successfully. Engine: {}, Source: {}",
@@ -342,6 +324,35 @@ void GenAiServableInitializer::analyzeChatTemplate(std::shared_ptr<GenAiServable
     properties->inputProcessorContext.chatTemplateCaps = properties->chatTemplateCaps;
     properties->inputProcessorContext.templateProcessor =
         properties->preparedChatTemplate.isPrepared() ? &properties->preparedChatTemplate : nullptr;
+    return analysisResult;
+}
+
+void GenAiServableInitializer::selectOutputParsers(
+    const std::shared_ptr<GenAiServableProperties>& properties,
+    const std::optional<ChatTemplateAnalysisResult>& analysisResult) {
+    if (!isParserDisabled(properties->toolParserName)) {
+        if (!properties->toolParserName.empty()) {
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured tool_parser: {}", properties->toolParserName);
+        } else if (analysisResult.has_value() && analysisResult->detectedToolParser.has_value()) {
+            properties->toolParserName = analysisResult->detectedToolParser.value();
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected tool_parser: {}", properties->toolParserName);
+        }
+    } else {
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Tool parser explicitly disabled");
+        properties->toolParserName.clear();
+    }
+
+    if (!isParserDisabled(properties->reasoningParserName)) {
+        if (!properties->reasoningParserName.empty()) {
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured reasoning_parser: {}", properties->reasoningParserName);
+        } else if (analysisResult.has_value() && analysisResult->detectedReasoningParser.has_value()) {
+            properties->reasoningParserName = analysisResult->detectedReasoningParser.value();
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected reasoning_parser: {}", properties->reasoningParserName);
+        }
+    } else {
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Reasoning parser explicitly disabled");
+        properties->reasoningParserName.clear();
+    }
 }
 
 Status GenAiServableInitializer::validateChatTemplateAvailability(
@@ -359,18 +370,6 @@ Status GenAiServableInitializer::validateChatTemplateAvailability(
             "Explicit chat_template_engine requires a compatible chat template, but " + std::string(failureReason) + ".");
     }
     return StatusCode::OK;
-}
-
-void GenAiServableInitializer::clearDisabledParserNames(
-    const std::shared_ptr<GenAiServableProperties>& properties) {
-    if (isParserDisabled(properties->toolParserName)) {
-        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Tool parser explicitly disabled");
-        properties->toolParserName.clear();
-    }
-    if (isParserDisabled(properties->reasoningParserName)) {
-        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Reasoning parser explicitly disabled");
-        properties->reasoningParserName.clear();
-    }
 }
 
 void GenAiServableInitializer::applyGlobalCacheDir(std::shared_ptr<GenAiServableProperties> properties) {
