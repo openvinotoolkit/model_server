@@ -7,8 +7,15 @@
 #include <string_view>
 #include <unordered_set>
 #include <utility>
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 6313)  // rapidjson Writer<StringBuffer>::WriteDouble flag test
+#endif
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 namespace ovms::lfm2 {
 

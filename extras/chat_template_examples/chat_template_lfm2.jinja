@@ -5,13 +5,7 @@
 {{- bos_token -}}
 
 {%- macro format_arg_value(arg_value) -%}
-    {%- if arg_value is string -%}
-        {{- "'" + arg_value + "'" -}}
-    {%- elif arg_value is mapping -%}
-        {{- arg_value | tojson -}}
-    {%- else -%}
-        {{- arg_value | string -}}
-    {%- endif -%}
+    {{- arg_value | tojson -}}
 {%- endmacro -%}
 
 {%- macro render_tool_calls(tool_calls) -%}

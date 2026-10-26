@@ -695,21 +695,14 @@ TEST_F(LFM2OutputParserTest, ParseToolCallWithArgumentMissingEquals) {
     std::string input = "<|tool_call_start|>[broken(malformed_arg)]<|tool_call_end|>";
     auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*lfm2Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
-    // The tool call is parsed but the argument value will be empty and invalid
-    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
-    EXPECT_EQ(parsedOutput.toolCalls[0].name, "broken");
+    EXPECT_THROW(ovms::test::parseWithStreamer(*lfm2Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true), std::invalid_argument);
 }
 
 TEST_F(LFM2OutputParserTest, ParseToolCallWithArgumentMissingValue) {
-    // Argument without value - parseSingleArgument sets isValid = false
     std::string input = "<|tool_call_start|>[broken(arg1=)]<|tool_call_end|>";
     auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*lfm2Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
-    // The tool call is parsed but the argument value will be empty and invalid
-    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
-    EXPECT_EQ(parsedOutput.toolCalls[0].name, "broken");
+    EXPECT_THROW(ovms::test::parseWithStreamer(*lfm2Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true), std::invalid_argument);
 }
 
 TEST_F(LFM2OutputParserTest, ParseToolCallWithMissingSquareBracket) {
@@ -745,7 +738,7 @@ TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArgumentsContainingBracesAnd
 }
 
 TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArgumentsContainingSpecialCharacters) {
-    std::string impl = "import package\nimport package2\n\ndef func(a, b):\n\td={\"python\": \"dict\"}\n\tl = [\"list \\\"with escaped text\\\"\", 123, []]\n\treturn f\"formatted {a} and {b}\"";
+    const std::string impl = R"(import package\nimport package2\n\ndef func(a, b):\n\td={\"python\": \"dict\"}\n\tl = [\"list \\\"with escaped text\\\"\", 123, []]\n\treturn f\"formatted {a} and {b}\")";
     std::string input = R"(<|tool_call_start|>[execute(code=")" + impl + R"(")]<|tool_call_end|>)";
     auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -779,7 +772,7 @@ TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArgumentsContainingApostroph
 }
 
 TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArgumentsContainingBackslashes) {
-    std::string input = R"(<|tool_call_start|>[read_file(path="C:\Users\test\file.txt", encoding="utf-8")]<|tool_call_end|>)";
+    std::string input = R"(<|tool_call_start|>[read_file(path="C:\\Users\\test\\file.txt", encoding="utf-8")]<|tool_call_end|>)";
     auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*lfm2Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
@@ -790,7 +783,7 @@ TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArgumentsContainingBackslash
 }
 
 TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArgumentsArrayWithStringsContainingQuotes) {
-    std::string input = R"(<|tool_call_start|>[save(lines=['it's the wonderful day', 'My name's Jan', 'That's Johns' car.'])]<|tool_call_end|>)";
+    std::string input = R"(<|tool_call_start|>[save(lines=['it\'s the wonderful day', 'My name\'s Jan', 'That\'s Johns\' car.'])]<|tool_call_end|>)";
     auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*lfm2Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
@@ -812,7 +805,7 @@ TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArgumentContainingSingleQuot
 }
 
 TEST_F(LFM2OutputParserTest, ParseToolCallWithStringArgumentsObjectWithStringsContainingQuotes) {
-    std::string input = R"(<|tool_call_start|>[save(obj={'name':'it's the wonderful day', 'greeting':'Hello, my name's Jan', 'note':'That's Johns' car.'})]<|tool_call_end|>)";
+    std::string input = R"(<|tool_call_start|>[save(obj={'name':'it\'s the wonderful day', 'greeting':'Hello, my name\'s Jan', 'note':'That\'s Johns\' car.'})]<|tool_call_end|>)";
     auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*lfm2Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
@@ -856,13 +849,7 @@ TEST_F(LFM2OutputParserTest, ParseToolCallWithUnicodeCharactersInArguments) {
 }
 
 TEST_F(LFM2OutputParserTest, ParseToolCallWithPythonCodeAsArgument) {
-    std::string input = R"x(<|tool_call_start|>[string_tool(param="
-    if __name__ == "__main__":
-    addresses = {}
-    addresses["Hodor"] = """The door"""
-    addresses["Arya"] = "Winterfell"
-    for name, address in addresses.items():
-        print(f'\n\t{name} lives at {address}\n\r')")]<|tool_call_end|>)x";
+    std::string input = R"x(<|tool_call_start|>[string_tool(param="\n    if __name__ == \"__main__\":\n    addresses = {}\n    addresses[\"Hodor\"] = \"\"\"The door\"\"\"\n    addresses[\"Arya\"] = \"Winterfell\"\n    for name, address in addresses.items():\n        print(f'\\n\\t{name} lives at {address}\\n\\r')")]<|tool_call_end|>)x";
     auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
     ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*lfm2Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
@@ -870,4 +857,17 @@ TEST_F(LFM2OutputParserTest, ParseToolCallWithPythonCodeAsArgument) {
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
     EXPECT_EQ(parsedOutput.toolCalls[0].name, "string_tool");
     EXPECT_EQ(parsedOutput.toolCalls[0].arguments, R"x({"param":"\n    if __name__ == \"__main__\":\n    addresses = {}\n    addresses[\"Hodor\"] = \"\"\"The door\"\"\"\n    addresses[\"Arya\"] = \"Winterfell\"\n    for name, address in addresses.items():\n        print(f'\\n\\t{name} lives at {address}\\n\\r')"})x");
+}
+
+TEST_F(LFM2OutputParserTest, RejectsLegacyMalformedLiterals) {
+    const std::vector<std::string> inputs = {
+        R"(<|tool_call_start|>[read_file(path="C:\Users\test\file.txt")]<|tool_call_end|>)",
+        R"(<|tool_call_start|>[save(lines=['it's the wonderful day', 'My name's Jan'])]<|tool_call_end|>)",
+        "<|tool_call_start|>[execute(code=\"line1\nline2\")]<|tool_call_end|>",
+    };
+    for (const auto& input : inputs) {
+        auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+        std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+        EXPECT_THROW(ovms::test::parseWithStreamer(*lfm2Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true), std::invalid_argument) << input;
+    }
 }

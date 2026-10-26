@@ -110,6 +110,10 @@ public:
 
     virtual void resetState() {}
 
+    // A parser may reject an apparent end marker inside its literal payload.
+    // offset indexes the not-yet-delivered chunk. This query must not mutate state.
+    virtual bool isStructuralEndTag(const std::string& /*chunk*/, size_t /*offset*/) const { return true; }
+
     void setImplicitStart(bool value) { implicitStart = value; }
     bool isImplicitStart() const { return implicitStart; }
 

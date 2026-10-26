@@ -46,6 +46,25 @@
 #include "minicpm5/minicpm5_reasoning_parser.hpp"
 
 namespace ovms {
+namespace {
+std::optional<TagMatch> findStructuralToolEnd(const BaseOutputParser& parser, const std::string& chunk) {
+    std::optional<TagMatch> earliest;
+    for (const auto& tag : parser.getParsingConfig().endTags) {
+        if (tag.empty()) continue;
+        for (auto pos = chunk.find(tag); pos != std::string::npos; pos = chunk.find(tag, pos + 1)) {
+            if (parser.isStructuralEndTag(chunk, pos)) {
+                if (!earliest || pos < earliest->position ||
+                    (pos == earliest->position && tag.size() > earliest->length)) {
+                    earliest = TagMatch{pos, tag.size()};
+                }
+                break;
+            }
+        }
+    }
+    return earliest;
+}
+}  // namespace
+
 OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const std::string& tag) const {
     if (tag.empty()) {
         return TagLookupStatus::NOT_FOUND;
@@ -166,9 +185,8 @@ std::optional<Delta> OutputParser::parseToolCallChunk(const std::vector<int64_t>
     }
     // Bytes after the end tag belong to the next phase — preserve them before clearing.
     std::string remainder;
-    const auto& endTags = toolParser->getParsingConfig().endTags;
     const std::string& buffer = streamOutputCache.getBuffer();
-    const auto toolEndMatch = findEarliestTag(buffer, endTags);
+    const auto toolEndMatch = findStructuralToolEnd(*toolParser, buffer);
     if (toolEndMatch.has_value()) {
         remainder = buffer.substr(toolEndMatch->position + toolEndMatch->length);
     }
@@ -610,6 +628,8 @@ std::optional<Delta> OutputParser::parseChunk(const std::string& chunkResponse, 
         // Active tool call: accumulate until the end tag, then transition to WAITING_FOR_TOOL
         // to determine whether another tool call or a content turn follows.
         TagLookupStatus toolEndTagStatus = streamOutputCache.lookupTags(toolParser->getParsingConfig().endTags);
+        if (toolEndTagStatus == FOUND_COMPLETE && !findStructuralToolEnd(*toolParser, streamOutputCache.getBuffer()))
+            toolEndTagStatus = NOT_FOUND;
         if (toolEndTagStatus == TagLookupStatus::FOUND_INCOMPLETE && finishReason == ov::genai::GenerationFinishReason::NONE) {
             return std::nullopt;  // Wait for more chunks to determine if end tag is complete
         }

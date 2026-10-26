@@ -2826,6 +2826,7 @@ cc_library(
     linkstatic = 1,
     alwayslink = True,
     hdrs = ["test/llm/output_parsers/output_parser_test_utils.hpp"],
+    # Includes lfm_strict_output_parser_test.cpp and lfm_template_roundtrip_test.cpp.
     srcs = glob(["test/llm/output_parsers/*_test.cpp"]),
     data = glob(["test/llm/output_parsers/fixtures/*.json"]),
     deps = [

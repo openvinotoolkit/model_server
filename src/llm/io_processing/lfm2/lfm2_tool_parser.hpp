@@ -73,6 +73,12 @@ public:
         const std::vector<int64_t>& tokens,
         ov::genai::GenerationFinishReason finishReason) override;
 
+    bool isStructuralEndTag(const std::string& chunk, size_t offset) const override;
+
+    std::optional<Delta> drainPendingDelta() override {
+        return parseChunk("", {}, ov::genai::GenerationFinishReason::NONE);
+    }
+
 private:
     std::string streamingContent;
     size_t streamingPosition{0};

@@ -14,13 +14,13 @@
 // limitations under the License.
 //*****************************************************************************
 #include "lfm2_tool_parser.hpp"
+
+#include "python_literal.hpp"
+
 #include "../utils.hpp"
 #include "../../../logging.hpp"
 #include "../../../stringutils.hpp"
-#include "src/port/rapidjson_document.hpp"
-#include "rapidjson/error/en.h"
 
-#include <algorithm>
 #include <cctype>
 #include <utility>
 
@@ -36,139 +36,69 @@ const std::string TOOL_LIST_START_INDICATOR = "[";
 const std::string TOOL_LIST_END_INDICATOR = "]";
 const std::string TOOL_ARGS_START_INDICATOR = "(";
 const std::string TOOL_ARGS_END_INDICATOR = ")";
-const std::string TOOL_SEPARATOR_STR = ", ";
 // EOS token emitted by the LFM2.5 chat template after tool-call blocks.
 const std::string EOS_TOKEN_STR = "<|im_end|>";
 
-struct Argument {
-    std::string name;
-    std::string value;
-};
-
-// ---------------------------------------------------------------------------
-// Argument-value normalisation helpers
-// ---------------------------------------------------------------------------
-
-std::string parseArrayParameter(std::string argumentStr) {
-    int quoteDepth = 0;
-    for (size_t i = 1; i < argumentStr.size() - 1; ++i) {
-        if (argumentStr[i] != '\'')
+// Closing parenthesis of the active argument list. Even runs of backslashes do
+// not keep a quote open, so a following ")" stays structural. Odd runs do.
+size_t findArgumentListEnd(const std::string& text, size_t start) {
+    int parenDepth = 0;
+    int bracketDepth = 0;
+    int braceDepth = 0;
+    bool inString = false;
+    char quote = 0;
+    bool escaped = false;
+    for (size_t i = start; i < text.size(); ++i) {
+        const char c = text[i];
+        if (inString) {
+            if (escaped) {
+                escaped = false;
+                continue;
+            }
+            if (c == '\\') {
+                escaped = true;
+                continue;
+            }
+            if (c == quote)
+                inString = false;
             continue;
-        bool isLastElement = (i == argumentStr.size() - 2);
-        bool isFollowedByComma = !isLastElement && argumentStr[i + 1] == ',';
-        if (quoteDepth == 0) {
-            argumentStr[i] = '"';
-            quoteDepth++;
-        } else if (quoteDepth > 0 && (isFollowedByComma || isLastElement)) {
-            argumentStr[i] = '"';
-            quoteDepth--;
         }
-    }
-    return argumentStr;
-}
-
-std::string parseObjectParameter(std::string argumentStr) {
-    int quoteDepth = 0;
-    for (size_t i = 1; i < argumentStr.size() - 1; ++i) {
-        if (argumentStr[i] != '\'')
+        if (c == '\'' || c == '"') {
+            inString = true;
+            quote = c;
             continue;
-        bool isLastElement = (i == argumentStr.size() - 2);
-        bool isFollowedByComma = !isLastElement && argumentStr[i + 1] == ',';
-        bool isFollowedByColon = !isLastElement && argumentStr[i + 1] == ':';
-        if (quoteDepth == 0) {
-            argumentStr[i] = '"';
-            quoteDepth++;
-        } else if (quoteDepth > 0 && (isFollowedByComma || isLastElement || isFollowedByColon)) {
-            argumentStr[i] = '"';
-            quoteDepth--;
+        }
+        if (c == '(') {
+            ++parenDepth;
+        } else if (c == ')') {
+            if (parenDepth == 0 && bracketDepth == 0 && braceDepth == 0)
+                return i;
+            if (parenDepth > 0)
+                --parenDepth;
+        } else if (c == '[') {
+            ++bracketDepth;
+        } else if (c == ']') {
+            if (bracketDepth > 0)
+                --bracketDepth;
+        } else if (c == '{') {
+            ++braceDepth;
+        } else if (c == '}') {
+            if (braceDepth > 0)
+                --braceDepth;
         }
     }
-    return argumentStr;
+    return std::string::npos;
 }
 
-std::string normalizeArgStr(const std::string& arg) {
-    if (arg.empty())
-        return arg;
-
-    std::string normalized = arg;
-    trim(normalized);
-    std::string lower = normalized;
-    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
-
-    if (lower == "true" || lower == "false" || lower == "null")
-        return lower;
-
-    const char first = normalized.front();
-    const char last = normalized.back();
-    if (first == '{' && last == '}') {
-        normalized = parseObjectParameter(normalized);
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument is an object, replaced single quotes: {}", normalized);
+// Comma that separates tool calls after a completed argument list. Whitespace
+// around the comma is optional; a "]" or end tag is not a separator.
+size_t findCallSeparator(const std::string& text, size_t start) {
+    for (size_t i = start; i < text.size(); ++i) {
+        if (std::isspace(static_cast<unsigned char>(text[i])) != 0)
+            continue;
+        return text[i] == ',' ? i : std::string::npos;
     }
-    if (first == '[' && last == ']') {
-        normalized = parseArrayParameter(normalized);
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument is an array, normalised quotes: {}", normalized);
-    }
-    if (first == '\'' && last == '\'') {
-        normalized[0] = '"';
-        normalized[normalized.size() - 1] = '"';
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument enclosed in single quotes, replaced with double quotes: {}", normalized);
-    }
-
-    rapidjson::Document tempDoc;
-    rapidjson::Value finalValue;
-    tempDoc.Parse(normalized.c_str());
-    if (tempDoc.HasParseError()) {
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument not valid JSON ({}), treating as string: {}",
-            rapidjson::GetParseError_En(tempDoc.GetParseError()), normalized);
-        if (first == '"' && last == '"')
-            normalized = normalized.substr(1, normalized.size() - 2);
-        finalValue.SetString(normalized.c_str(), static_cast<rapidjson::SizeType>(normalized.size()), tempDoc.GetAllocator());
-    } else {
-        finalValue.CopyFrom(tempDoc, tempDoc.GetAllocator());
-    }
-
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    finalValue.Accept(writer);
-    return buffer.GetString();
-}
-
-void writeArgumentToWriter(const std::string& arg, rapidjson::Writer<rapidjson::StringBuffer>& writer) {
-    std::string normalized = normalizeArgStr(arg);
-    rapidjson::Document doc;
-    doc.Parse(normalized.c_str());
-    rapidjson::Value& argumentDoc = doc;
-    writeArgumentOfAnyType(argumentDoc, writer);
-}
-
-Argument parseSingleArgument(const std::string& argumentStr) {
-    Argument argument;
-    size_t equalPos = argumentStr.find('=');
-    if (equalPos != std::string::npos) {
-        argument.name = argumentStr.substr(0, equalPos);
-        argument.value = argumentStr.substr(equalPos + 1);
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed argument - name: {}, value: {}", argument.name, argument.value);
-    } else {
-        argument.name = argumentStr;
-        argument.value = "";
-        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Argument '{}' has no '='; value set to empty", argumentStr);
-    }
-    return argument;
-}
-
-std::vector<Argument> parseArguments(const std::string& argumentsStr) {
-    std::vector<Argument> parsedArgs;
-    size_t argPos = 0;
-    while (argPos < argumentsStr.length()) {
-        size_t commaPos = findInStringRespectingSpecialChars(argumentsStr, TOOL_SEPARATOR_STR, argPos);
-        if (commaPos == std::string::npos) {
-            parsedArgs.push_back(parseSingleArgument(argumentsStr.substr(argPos)));
-            break;
-        }
-        parsedArgs.push_back(parseSingleArgument(argumentsStr.substr(argPos, commaPos - argPos)));
-        argPos = commaPos + TOOL_SEPARATOR_STR.length();
-    }
-    return parsedArgs;
+    return std::string::npos;
 }
 
 // ---------------------------------------------------------------------------
@@ -200,22 +130,34 @@ bool parseInContentState(const std::string& streamingContent, size_t& streamingP
 
 bool parseInToolCallState(const std::string& streamingContent, ToolCall& toolCall,
     size_t& streamingPosition, Lfm2ParseState& currentState) {
-    size_t toolListStartPos = streamingContent.find(TOOL_LIST_START_INDICATOR, streamingPosition);
-    size_t argsPos = streamingContent.find(TOOL_ARGS_START_INDICATOR, streamingPosition);
-
-    if (toolListStartPos != std::string::npos) {
-        streamingPosition = toolListStartPos + TOOL_LIST_START_INDICATOR.length();
-    } else if (argsPos != std::string::npos) {
-        size_t bracketAnyPos = streamingContent.find(TOOL_LIST_START_INDICATOR);
-        if (bracketAnyPos == std::string::npos || bracketAnyPos >= argsPos)
-            return false;
+    // Only the list opener at the current cursor is structural. A later "["
+    // such as a=[...] belongs to arguments and must not move the name start.
+    while (streamingPosition < streamingContent.size() &&
+           std::isspace(static_cast<unsigned char>(streamingContent[streamingPosition])) != 0) {
+        ++streamingPosition;
+    }
+    if (streamingPosition < streamingContent.size() &&
+        streamingContent.compare(streamingPosition, TOOL_LIST_START_INDICATOR.size(), TOOL_LIST_START_INDICATOR) == 0) {
+        streamingPosition += TOOL_LIST_START_INDICATOR.size();
+        while (streamingPosition < streamingContent.size() &&
+               std::isspace(static_cast<unsigned char>(streamingContent[streamingPosition])) != 0) {
+            ++streamingPosition;
+        }
     }
 
+    const size_t argsPos = streamingContent.find(TOOL_ARGS_START_INDICATOR, streamingPosition);
     if (argsPos == std::string::npos)
+        return false;
+    // Require the tool-list "[" before this argument list. Nested brackets after
+    // the name are irrelevant; a call with no list opener is rejected.
+    const size_t listOpener = streamingContent.find(TOOL_LIST_START_INDICATOR);
+    if (listOpener == std::string::npos || listOpener >= argsPos)
         return false;
 
     std::string toolName = streamingContent.substr(streamingPosition, argsPos - streamingPosition);
     trim(toolName);
+    if (toolName.empty())
+        return false;
     toolCall = ToolCall{generateRandomId(), toolName, ""};
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed tool name: {}", toolName);
     streamingPosition = argsPos + TOOL_ARGS_START_INDICATOR.length();
@@ -225,23 +167,15 @@ bool parseInToolCallState(const std::string& streamingContent, ToolCall& toolCal
 
 bool parseInToolCallParametersState(const std::string& streamingContent, ToolCall& toolCall,
     size_t& streamingPosition, Lfm2ParseState& currentState) {
-    size_t pos = findInStringRespectingSpecialChars(streamingContent, TOOL_ARGS_END_INDICATOR, streamingPosition);
+    const size_t pos = findArgumentListEnd(streamingContent, streamingPosition);
     if (pos == std::string::npos)
         return false;
 
-    std::string argumentsStr = streamingContent.substr(streamingPosition, pos - streamingPosition);
+    const std::string argumentsStr = streamingContent.substr(streamingPosition, pos - streamingPosition);
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Parsed arguments string: {}", argumentsStr);
-    std::vector<Argument> arguments = parseArguments(argumentsStr);
-
-    rapidjson::StringBuffer sb;
-    rapidjson::Writer<rapidjson::StringBuffer> argsWriter(sb);
-    argsWriter.StartObject();
-    for (const Argument& argument : arguments) {
-        argsWriter.Key(argument.name.c_str());
-        writeArgumentToWriter(argument.value, argsWriter);
-    }
-    argsWriter.EndObject();
-    toolCall.arguments = sb.GetString();
+    // Throws before any argument delta is published. A name already emitted
+    // therefore cannot become a successful tool call.
+    toolCall.arguments = ovms::lfm2::parseArguments(argumentsStr);
     currentState = Lfm2ParseState::ToolCallEnded;
     streamingPosition = pos + TOOL_ARGS_END_INDICATOR.length();
     return true;
@@ -249,27 +183,46 @@ bool parseInToolCallParametersState(const std::string& streamingContent, ToolCal
 
 bool parseInToolCallEndedState(const std::string& streamingContent, size_t& streamingPosition,
     Lfm2ParseState& currentState, const std::string& endTag) {
-    size_t listEndPos = streamingContent.find(TOOL_LIST_END_INDICATOR, streamingPosition);
-    size_t separatorPos = streamingContent.find(TOOL_SEPARATOR_STR, streamingPosition);
-    size_t endTagPos = streamingContent.find(endTag, streamingPosition);
+    const size_t listEndPos = streamingContent.find(TOOL_LIST_END_INDICATOR, streamingPosition);
+    const size_t separatorPos = findCallSeparator(streamingContent, streamingPosition);
+    const size_t endTagPos = streamingContent.find(endTag, streamingPosition);
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "ToolCallEnded: content from pos {}: {}",
         streamingPosition, streamingContent.substr(streamingPosition));
     if (listEndPos == std::string::npos && separatorPos == std::string::npos && endTagPos == std::string::npos)
         return false;
-    if (separatorPos != std::string::npos && separatorPos < listEndPos) {
-        streamingPosition = separatorPos + TOOL_SEPARATOR_STR.length();
+    // size_t npos comparisons are unsafe; rank only positions that exist.
+    const auto before = [](size_t candidate, size_t limit) {
+        return candidate != std::string::npos && (limit == std::string::npos || candidate < limit);
+    };
+    if (before(separatorPos, listEndPos) && before(separatorPos, endTagPos)) {
+        streamingPosition = separatorPos + 1;
+        while (streamingPosition < streamingContent.size() &&
+               std::isspace(static_cast<unsigned char>(streamingContent[streamingPosition])) != 0) {
+            ++streamingPosition;
+        }
         currentState = Lfm2ParseState::ToolCallStarted;
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Tool-call separator at {}, expecting next call", separatorPos);
-    } else if (endTagPos != std::string::npos) {
+        return true;
+    }
+    if (endTagPos != std::string::npos) {
         streamingPosition = endTagPos + endTag.length();
         currentState = Lfm2ParseState::AfterToolCall;
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "End tag at {}", endTagPos);
-    } else {
-        streamingPosition = listEndPos + TOOL_LIST_END_INDICATOR.length();
+        return true;
+    }
+    if (listEndPos != std::string::npos) {
+        const size_t afterList = listEndPos + TOOL_LIST_END_INDICATOR.length();
+        const std::string tail = streamingContent.substr(afterList);
+        // Hold while "]<" is only a prefix of <|tool_call_end|>; otherwise the
+        // partial tag is published as content and the real closer never matches.
+        if (tail.empty() || endTag.compare(0, tail.size(), tail) == 0)
+            return false;
+        streamingPosition = afterList;
         currentState = Lfm2ParseState::AfterToolCall;
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "End of tool list at {}", listEndPos);
+        return true;
     }
-    return true;
+    return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -322,30 +275,83 @@ bool Lfm2ToolParser::parseNewContent() {
     return false;
 }
 
+bool Lfm2ToolParser::isStructuralEndTag(const std::string& chunk, size_t offset) const {
+    if (parsingConfig.startTags.empty() || parsingConfig.endTags.empty() || offset > chunk.size())
+        return true;
+    const std::string& startTag = parsingConfig.startTags[0];
+    const std::string& endTag = parsingConfig.endTags.front();
+    const std::string& prior = streamingContent;
+    const size_t candidate = prior.size() + offset;
+    auto at = [&](size_t index) -> char {
+        return index < prior.size() ? prior[index] : chunk[index - prior.size()];
+    };
+    auto match = [&](size_t index, const std::string& tag) {
+        if (tag.empty() || index + tag.size() > prior.size() + chunk.size())
+            return false;
+        for (size_t k = 0; k < tag.size(); ++k) {
+            if (at(index + k) != tag[k])
+                return false;
+        }
+        return true;
+    };
+
+    bool inTool = false;
+    bool inString = false;
+    char quote = 0;
+    bool escaped = false;
+    for (size_t i = 0; i < candidate;) {
+        const char c = at(i);
+        if (inString) {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == quote) {
+                inString = false;
+            }
+            ++i;
+            continue;
+        }
+        if (!inTool && match(i, startTag)) {
+            inTool = true;
+            i += startTag.size();
+            continue;
+        }
+        if (inTool && match(i, endTag)) {
+            inTool = false;
+            i += endTag.size();
+            continue;
+        }
+        if (inTool && (c == '\'' || c == '"')) {
+            inString = true;
+            quote = c;
+        }
+        ++i;
+    }
+    return !inString;
+}
+
 std::optional<Delta> Lfm2ToolParser::parseChunk(const std::string& chunk,
     const std::vector<int64_t>& /*tokens*/,
     ov::genai::GenerationFinishReason finishReason) {
-    // Empty chunks may arrive from the two-step streamer end() (NONE + empty STOP).
-    // Skip them unless we have buffered state that still needs to be flushed.
-    const bool hasPendingState = (this->currentState == Lfm2ParseState::ToolCallParameters) ||
-                                 (this->currentState == Lfm2ParseState::ToolCallEnded);
-    if (chunk.empty() && !hasPendingState)
-        return std::nullopt;
+    if (!chunk.empty())
+        this->streamingContent += chunk;
 
-    this->streamingContent += chunk;
-
-    if (parseNewContent()) {
-        if (this->currentState == Lfm2ParseState::ToolCallParameters) {
-            return ToolCallDelta{this->toolCallIndex, generateRandomId(), this->toolCall.name, ""};
-        }
-        if (this->currentState == Lfm2ParseState::ToolCallEnded) {
-            auto delta = wrapDeltaArgs(this->toolCall.arguments, this->toolCallIndex);
-            this->toolCall = ToolCall{};
-            return delta;
-        }
-        if (this->currentState == Lfm2ParseState::Content) {
-            const std::string& startTag = parsingConfig.startTags[0];
-            size_t contentEnd = this->streamingContent.find(startTag, this->streamingPosition);
+    const std::string& startTag = parsingConfig.startTags[0];
+    const std::string& endTag = parsingConfig.endTags.front();
+    // One observable delta per call. Non-emitting transitions keep walking the
+    // same states so a closed envelope can be drained without a new phase.
+    for (int step = 0; step < 32; ++step) {
+        const size_t positionBefore = this->streamingPosition;
+        switch (this->currentState) {
+        case Lfm2ParseState::Content: {
+            const bool contentReady = parseInContentState(this->streamingContent, this->streamingPosition,
+                this->currentState, startTag, endTag);
+            if (this->currentState != Lfm2ParseState::Content)
+                continue;
+            if (!contentReady && this->streamingPosition != positionBefore)
+                continue;
+            const size_t contentEnd = this->streamingContent.find(startTag, this->streamingPosition);
             std::string content = (contentEnd != std::string::npos)
                                       ? this->streamingContent.substr(this->streamingPosition, contentEnd - this->streamingPosition)
                                       : this->streamingContent.substr(this->streamingPosition);
@@ -353,28 +359,38 @@ std::optional<Delta> Lfm2ToolParser::parseChunk(const std::string& chunk,
             cutEOSFromContent(content);
             if (!content.empty())
                 return wrapDeltaContent(content);
+            return std::nullopt;
         }
-        if (this->currentState == Lfm2ParseState::AfterToolCall) {
+        case Lfm2ParseState::ToolCallStarted:
+            if (!parseInToolCallState(this->streamingContent, this->toolCall, this->streamingPosition, this->currentState))
+                return std::nullopt;
+            ++this->toolCallIndex;
+            return ToolCallDelta{this->toolCallIndex, generateRandomId(), this->toolCall.name, ""};
+        case Lfm2ParseState::ToolCallParameters:
+            if (!parseInToolCallParametersState(this->streamingContent, this->toolCall, this->streamingPosition, this->currentState)) {
+                if (finishReason != ov::genai::GenerationFinishReason::NONE && !this->toolCall.arguments.empty())
+                    return wrapDeltaArgs(this->toolCall.arguments, this->toolCallIndex);
+                return std::nullopt;
+            }
+            {
+                auto delta = wrapDeltaArgs(this->toolCall.arguments, this->toolCallIndex);
+                this->toolCall = ToolCall{};
+                return delta;
+            }
+        case Lfm2ParseState::ToolCallEnded:
+            if (!parseInToolCallEndedState(this->streamingContent, this->streamingPosition, this->currentState, endTag)) {
+                if (finishReason != ov::genai::GenerationFinishReason::NONE && !this->toolCall.arguments.empty())
+                    return wrapDeltaArgs(this->toolCall.arguments, this->toolCallIndex);
+                return std::nullopt;
+            }
+            if (this->currentState == Lfm2ParseState::AfterToolCall)
+                this->currentState = Lfm2ParseState::Content;
+            continue;
+        case Lfm2ParseState::AfterToolCall:
             this->currentState = Lfm2ParseState::Content;
+            continue;
         }
     }
-
-    if (finishReason != ov::genai::GenerationFinishReason::NONE) {
-        if ((this->currentState == Lfm2ParseState::ToolCallParameters ||
-                this->currentState == Lfm2ParseState::ToolCallEnded) &&
-            !this->toolCall.arguments.empty()) {
-            return wrapDeltaArgs(this->toolCall.arguments, this->toolCallIndex);
-        }
-        if (this->currentState == Lfm2ParseState::Content &&
-            this->streamingPosition < this->streamingContent.size()) {
-            auto content = this->streamingContent.substr(this->streamingPosition);
-            this->streamingPosition += content.size();
-            cutEOSFromContent(content);
-            if (!content.empty())
-                return wrapDeltaContent(content);
-        }
-    }
-
     return std::nullopt;
 }
 

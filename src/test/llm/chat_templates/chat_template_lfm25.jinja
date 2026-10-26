@@ -6,13 +6,7 @@
 {%- set preserve_thinking = preserve_thinking | default(false) -%}
 
 {%- macro format_arg_value(arg_value) -%}
-    {%- if arg_value is string -%}
-        {{- "'" + arg_value + "'" -}}
-    {%- elif arg_value is mapping -%}
-        {{- arg_value | tojson -}}
-    {%- else -%}
-        {{- arg_value | string -}}
-    {%- endif -%}
+    {{- arg_value | tojson -}}
 {%- endmacro -%}
 
 {%- macro parse_content(content) -%}

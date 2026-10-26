@@ -32,30 +32,30 @@ Files: docs/lfm/evidence/*, docs/lfm/REPORT.md.
 Interface: immutable source/runtime/model locks and fresh build-py_off/COMPLETE.json.
 
 - [x] Fetch/check a5f60ccd; hash exports/runtime and record prior binary test provenance.
-- [ ] Finish fresh Python Off build via scripts/windows/build-rc4.ps1 -Output C:\gm\lfm-2026.4\baseline-a5f60ccd -Jobs 4.
-- [ ] Run new binary *LFM2*:*LFM25* with target tokenizer fixtures; require 90 passes.
-- [ ] Restore version header, create named branch, commit design/plan/evidence inventory.
+- [x] Finish fresh Python Off build via scripts/windows/build-rc4.ps1 -Output C:\gm\lfm-2026.4\baseline-a5f60ccd -Jobs 4.
+- [x] Run new binary *LFM2*:*LFM25* with target tokenizer fixtures; require 90 passes.
+- [x] Restore version header, create named branch, commit design/plan/evidence inventory.
 
 ### Task 2: Strict literal reader
 
 Create src/llm/io_processing/lfm2/python_literal.hpp and src/test/llm/output_parsers/lfm_literal_test.cpp.
 Interface: std::string ovms::lfm2::parseArguments(std::string_view input), returning a complete JSON object or throwing std::invalid_argument.
 
-- [ ] Add table-driven positive/negative C++ golden tests first; demonstrate old parser's lossy fallback with nested Python literals and escaped strings.
-- [ ] Run focused red cases, preserving logs. Standalone direct-reader checks may run while the unmodified base builds.
-- [ ] Implement bounded recursive descent; validate JSON-compatible number tokens without floating point conversion; JSON-encode decoded UTF-8 strings once.
-- [ ] Verify all fixtures and fixed-seed mutation/depth/size fuzz; reject expression execution, duplicate names/keys and malformed escapes.
-- [ ] Commit reader/tests after green validation.
+- [x] Add table-driven positive/negative C++ golden tests first; demonstrate old parser's lossy fallback with nested Python literals and escaped strings.
+- [x] Run focused red cases, preserving logs. Standalone direct-reader checks may run while the unmodified base builds.
+- [x] Implement bounded recursive descent; validate JSON-compatible number tokens without floating point conversion; JSON-encode decoded UTF-8 strings once.
+- [x] Verify all fixtures and fixed-seed mutation/depth/size fuzz; reject expression execution, duplicate names/keys and malformed escapes.
+- [x] Commit reader/tests after green validation.
 
 ### Task 3: Integrate argument reader and stream boundaries
 
 Modify src/llm/io_processing/lfm2/lfm2_tool_parser.cpp; tests in the LFM2/LFM25 output-parser suites.
 Consumes Task 2 parseArguments; produces existing ToolCall/Delta interfaces without shared parser changes.
 
-- [ ] Add red tests for nested None/True/False, numeric spelling, malformed keyword/value, comma without a space and quoted delimiter text.
-- [ ] Replace normalization/splitting with strict reader; maintain phases and error propagation via existing OutputParser exception path.
-- [ ] Add exhaustive two-way and fixed-seed multipart splits, STOP/LENGTH/empty flush, multi-tool and invalid-completion tests; adjust only proven LFM boundary bugs.
-- [ ] Build successor and run focused LFM then Gemma/Qwen regression suites with exact fixture provenance. Update legacy permissive LFM assertions to strict rejection.
+- [x] Add red tests for nested None/True/False, numeric spelling, malformed keyword/value, comma without a space and quoted delimiter text.
+- [x] Replace normalization/splitting with strict reader; maintain phases and error propagation via existing OutputParser exception path.
+- [x] Add exhaustive two-way and fixed-seed multipart splits, STOP/LENGTH/empty flush, multi-tool and invalid-completion tests; adjust only proven LFM boundary bugs.
+- [x] Build successor and run focused LFM then Gemma/Qwen regression suites with exact fixture provenance. Update legacy permissive LFM assertions to strict rejection.
 - [ ] Commit with test receipts.
 
 ### Task 4: Template and reasoning round trip
@@ -63,9 +63,9 @@ Consumes Task 2 parseArguments; produces existing ToolCall/Delta interfaces with
 Modify only extras/chat_template_examples/chat_template_lfm*.jinja and matching src/test/llm/chat_templates copies after red tests.
 Create docs/lfm/templates per-model overrides only when required by real export behavior.
 
-- [ ] Add minja end-to-end cases with O'Brien, literal backslashes, controls, Unicode, nested objects/lists and actual export templates; watch failures.
-- [ ] Serialize argument literals safely; preserve LFM2.5 thinking/continuation conventions. Keep downloaded files immutable.
-- [ ] Verify real-tokenizer reasoning/content separation, nested tool-result reinjection and unary/SSE reconstruction.
+- [x] Add minja end-to-end cases with O'Brien, literal backslashes, controls, Unicode, nested objects/lists and actual export templates; watch failures.
+- [x] Serialize argument literals safely; preserve LFM2.5 thinking/continuation conventions. Keep downloaded files immutable.
+- [x] Verify real-tokenizer reasoning/content separation, nested tool-result reinjection and unary/SSE reconstruction.
 - [ ] Commit only changes proved by round-trip tests.
 
 ### Task 5: Model and performance evidence
@@ -73,10 +73,10 @@ Create docs/lfm/templates per-model overrides only when required by real export 
 Create scripts/windows/lfm-smoke.py, docs/lfm/evidence/runtime receipts and final REPORT.md.
 Consumes successor build, locked runtime/model inputs and explicit template overrides.
 
-- [ ] Start one owned loopback server at a time after host memory/service checks; pin loaded-module hashes.
-- [ ] Test CPU and GPU separately for each model: load, generation, reasoning, tool result/continuation, unary/SSE and negative protocol cases. Save raw requests and responses.
-- [ ] Warm up then measure 3 repetitions, output lengths 128/512, fixed short/long prompts, concurrency 1/2 and memory-admitted 4. Save precise scheduler/cache/token settings, TTFT, decode TPS, wall TPS, memory and failures.
-- [ ] Stop only owned servers and verify cleanup. Failed admission stays separate from unsupported graph/kernel.
+- [ ] Start one owned loopback server at a time after host memory/service checks; pin loaded-module hashes. NOT_RUN this pass.
+- [ ] Test CPU and GPU separately for each model: load, generation, reasoning, tool result/continuation, unary/SSE and negative protocol cases. Save raw requests and responses. NOT_RUN this pass.
+- [ ] Warm up then measure 3 repetitions, output lengths 128/512, fixed short/long prompts, concurrency 1/2 and memory-admitted 4. Save precise scheduler/cache/token settings, TTFT, decode TPS, wall TPS, memory and failures. NOT_RUN this pass.
+- [ ] Stop only owned servers and verify cleanup. Failed admission stays separate from unsupported graph/kernel. Smoke script prepared only.
 
 ### Task 6: Pack V2 mapping and handoff
 
