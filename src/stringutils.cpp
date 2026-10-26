@@ -140,8 +140,10 @@ std::optional<uint64_t> stou64(const std::string& str) {
         return std::nullopt;
     }
 
-    // Reject negative numbers for unsigned conversion
-    if (!str.empty() && str[0] == '-') {
+    // Reject negative numbers for unsigned conversion. std::stoull skips leading
+    // whitespace, so check the first non-whitespace character instead of str[0].
+    auto first_non_space = str.find_first_not_of(" \t\n\r\f\v");
+    if (first_non_space != std::string::npos && str[first_non_space] == '-') {
         return std::nullopt;
     }
 

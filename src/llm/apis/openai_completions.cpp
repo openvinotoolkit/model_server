@@ -683,6 +683,23 @@ std::string OpenAIChatCompletionsHandler::serializeStreamingHandshakeChunk() {
     return buffer.GetString();
 }
 
+std::string OpenAIChatCompletionsHandler::serializeStreamingError(const std::string& errorMessage) {
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    writer.StartObject();
+    writer.String("error");
+    writer.StartObject();
+    writer.String("message");
+    writer.String(errorMessage.data(), static_cast<rapidjson::SizeType>(errorMessage.size()));
+    writer.String("type");
+    writer.String("server_error");
+    writer.String("code");
+    writer.Int(500);
+    writer.EndObject();
+    writer.EndObject();
+    return buffer.GetString();
+}
+
 void OpenAIChatCompletionsHandler::incrementProcessedTokens(size_t numTokens) {
     const size_t previousProcessed = processedTokens;
     processedTokens += numTokens;
