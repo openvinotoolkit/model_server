@@ -465,11 +465,11 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_applyPreparedChatTemplateRuntime(
             "bos_token"_a = prepared->bosToken,
             "eos_token"_a = prepared->eosToken);
 
+        SPDLOG_LOGGER_DEBUG(ovms::modelmanager_logger, "Applying chat template via Python Jinja renderer");
         py::exec(R"(
             import json
             output = ""
             error = ""
-            print("OVMS: prepared Python Jinja renderer executing", flush=True)
             try:
                 request_json = json.loads(request_body)
                 messages = request_json["messages"]
