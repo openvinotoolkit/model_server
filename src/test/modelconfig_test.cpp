@@ -23,6 +23,7 @@
 #include <sys/types.h>
 
 #include "../modelconfig.hpp"
+#include "../schema.hpp"
 #include "src/status.hpp"
 #include "test_utils.hpp"
 
@@ -1376,4 +1377,74 @@ TEST(ModelConfig, ConfigParseNodeWithValidShapeFormatArray) {
     auto shapes = modelConfig.getShapes();
     ASSERT_TRUE(shapes.find("input") != shapes.end());
     EXPECT_EQ(shapes["input"].shape, (ovms::Shape{1, 3, 600, 600}));
+}
+
+TEST(ModelConfig, ConfigParseNodeDisableInputCountValidation) {
+    for (const auto& [configValue, expected] : std::vector<std::pair<std::string, bool>>{{"", false}, {R"(, "disable_input_count_validation": false)", false}, {R"(, "disable_input_count_validation": true)", true}}) {
+        std::string config = R"({"model_config_list": [{"config": {"name": "alpha", "base_path": "/tmp/models/dummy1")" + configValue + R"(}}]})";
+        adjustConfigForTargetPlatform(config);
+        rapidjson::Document configJson;
+        rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
+        ASSERT_EQ(parsingSucceeded.Code(), 0);
+        ASSERT_EQ(ovms::validateJsonAgainstSchema(configJson, ovms::MODELS_CONFIG_SCHEMA.c_str()), ovms::StatusCode::OK) << config;
+
+        ovms::ModelConfig modelConfig;
+        auto status = modelConfig.parseNode(configJson["model_config_list"].GetArray()[0]["config"]);
+        ASSERT_EQ(status, ovms::StatusCode::OK);
+        EXPECT_EQ(modelConfig.isInputCountValidationDisabled(), expected) << config;
+    }
+}
+
+TEST(ModelConfig, ConfigDisableInputCountValidationInvalidTypeRejectedBySchema) {
+    std::string config = R"({"model_config_list": [{"config": {"name": "alpha", "base_path": "/tmp/models/dummy1", "disable_input_count_validation": "true"}}]})";
+    rapidjson::Document configJson;
+    rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
+    ASSERT_EQ(parsingSucceeded.Code(), 0);
+    EXPECT_EQ(ovms::validateJsonAgainstSchema(configJson, ovms::MODELS_CONFIG_SCHEMA.c_str()), ovms::StatusCode::JSON_INVALID);
+}
+
+TEST(ModelConfig, ConfigParseNodePreprocessingParams) {
+    std::string config = R"({"model_config_list": [{"config": {"name": "alpha", "base_path": "/tmp/models/dummy1",
+        "layout": "NHWC:NCHW",
+        "mean": "[123.675,116.28,103.53]",
+        "scale": "[58.395,57.12,57.375]",
+        "color_format": "BGR:RGB",
+        "precision": "FP16:FP32"}}]})";
+    adjustConfigForTargetPlatform(config);
+    rapidjson::Document configJson;
+    rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
+    ASSERT_EQ(parsingSucceeded.Code(), 0);
+    ASSERT_EQ(ovms::validateJsonAgainstSchema(configJson, ovms::MODELS_CONFIG_SCHEMA.c_str()), ovms::StatusCode::OK);
+
+    ovms::ModelConfig modelConfig;
+    auto status = modelConfig.parseNode(configJson["model_config_list"].GetArray()[0]["config"]);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+    ASSERT_TRUE(modelConfig.getMeans().has_value());
+    EXPECT_EQ(std::get<std::vector<float>>(modelConfig.getMeans().value()), (std::vector<float>{123.675f, 116.28f, 103.53f}));
+    ASSERT_TRUE(modelConfig.getScales().has_value());
+    EXPECT_EQ(std::get<std::vector<float>>(modelConfig.getScales().value()), (std::vector<float>{58.395f, 57.12f, 57.375f}));
+    ASSERT_TRUE(modelConfig.getColorFormat().has_value());
+    EXPECT_EQ(modelConfig.getColorFormat().value().getTargetColorFormat(), ov::preprocess::ColorFormat::BGR);
+    EXPECT_EQ(modelConfig.getColorFormat().value().getSourceColorFormat(), ov::preprocess::ColorFormat::RGB);
+    ASSERT_TRUE(modelConfig.getPrecision().has_value());
+    EXPECT_EQ(modelConfig.getPrecision().value().getTargetPrecision(), ov::element::f16);
+    EXPECT_EQ(modelConfig.getPrecision().value().getSourcePrecision(), ov::element::f32);
+}
+
+TEST(ModelConfig, ConfigPreprocessingParamsInvalidTypeRejectedBySchema) {
+    for (const std::string param : {"mean", "scale", "color_format", "precision"}) {
+        std::string config = R"({"model_config_list": [{"config": {"name": "alpha", "base_path": "/tmp/models/dummy1", ")" + param + R"(": [1, 2, 3]}}]})";
+        rapidjson::Document configJson;
+        rapidjson::ParseResult parsingSucceeded = configJson.Parse(config.c_str());
+        ASSERT_EQ(parsingSucceeded.Code(), 0);
+        EXPECT_EQ(ovms::validateJsonAgainstSchema(configJson, ovms::MODELS_CONFIG_SCHEMA.c_str()), ovms::StatusCode::JSON_INVALID) << param;
+    }
+}
+
+TEST(ModelConfig, ReloadRequiredWhenDisableInputCountValidationChanges) {
+    ovms::ModelConfig lhs{"alpha", "/tmp/models/dummy1"};
+    ovms::ModelConfig rhs{"alpha", "/tmp/models/dummy1"};
+    EXPECT_FALSE(lhs.isReloadRequired(rhs));
+    rhs.setDisableInputCountValidation(true);
+    EXPECT_TRUE(lhs.isReloadRequired(rhs));
 }
