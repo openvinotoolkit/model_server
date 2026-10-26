@@ -27,6 +27,7 @@ ovms_cc_library(
         "//src:libovmslogging",
         "//src:libmodelconfigjsonparser",
         "//src:libovms_ov_utils",
+        "//src/port:rapidjson_document",
         "t2s_calculator_cc_proto",
     ],
     additional_copts = select({
