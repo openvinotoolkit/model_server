@@ -460,6 +460,12 @@ static std::vector<T> asVector(const std::string& tensor_content) {
     return v;
 }
 
+inline ovms::ModelConfig createValidationModelConfig(std::string name = "dummy", ovms::model_version_t version = 1) {
+    ovms::ModelConfig modelConfig{name};
+    modelConfig.setVersion(version);
+    return modelConfig;
+}
+
 class MockedMetadataModelIns : public ovms::ModelInstance {
 public:
     MockedMetadataModelIns(ov::Core& ieCore) :
@@ -480,11 +486,7 @@ public:
             *request,
             this->getInputsInfo(),
             this->getOutputsInfo(),
-            this->getName(),
-            this->getVersion(),
-            this->getOptionalInputNames(),
-            this->getModelConfig().getBatchingMode(),
-            this->getModelConfig().getShapes());
+            this->getModelConfig());
     }
 };
 
