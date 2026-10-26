@@ -346,7 +346,7 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "io_processing_lfm2_tool_parser",
-    hdrs = ["io_processing/lfm2/lfm2_tool_parser.hpp"],
+    hdrs = ["io_processing/lfm2/lfm2_tool_parser.hpp", "io_processing/lfm2/python_literal.hpp"],
     srcs = ["io_processing/lfm2/lfm2_tool_parser.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",

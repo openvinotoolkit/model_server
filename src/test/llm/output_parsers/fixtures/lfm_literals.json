@@ -1,0 +1,14 @@
+[
+  {"input":"arg={'items': [True, None, {'n': 1.10, 'e': 1e3, 'big': 9007199254740993}]}","expected":"{\"arg\":{\"items\":[true,null,{\"n\":1.10,\"e\":1e3,\"big\":9007199254740993}]}}"},
+  {"input":"arg='O\\'Brien'","expected":"{\"arg\":\"O'Brien\"}"},
+  {"input":"arg='C:\\\\test\\\\'","expected":"{\"arg\":\"C:\\\\test\\\\\"}"},
+  {"input":"arg='Привет, 世界 😀'","expected":"{\"arg\":\"Привет, 世界 😀\"}"},
+  {"input":"arg='\\u0000\\n\\t'","expected":"{\"arg\":\"\\u0000\\n\\t\"}"},
+  {"input":"arg='1.10'","expected":"{\"arg\":\"1.10\"}"},
+  {"input":"arg='x<|tool_call_end|>y'","expected":"{\"arg\":\"x<|tool_call_end|>y\"}"},
+  {"input":"arg='O'Brien'","error":true},
+  {"input":"arg='C:\\Users\\test'","error":true},
+  {"input":"arg=undefined","error":true},
+  {"input":"arg={'a':1,'\\u0061':2}","error":true},
+  {"input":"arg=1 # comment","error":true}
+]

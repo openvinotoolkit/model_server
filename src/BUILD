@@ -2827,6 +2827,7 @@ cc_library(
     alwayslink = True,
     hdrs = ["test/llm/output_parsers/output_parser_test_utils.hpp"],
     srcs = glob(["test/llm/output_parsers/*_test.cpp"]),
+    data = glob(["test/llm/output_parsers/fixtures/*.json"]),
     deps = [
         "@com_google_googletest//:gtest",
         ":test_platform_utils",
