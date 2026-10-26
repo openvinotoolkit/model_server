@@ -94,7 +94,10 @@ ovms_cc_library(
 ovms_cc_library(
     name = "gst_openvino_inference_calculator",
     srcs = ["gst_openvino_inference_calculator.cc"],
-    hdrs = ["gst_video_frame_packet.hpp"],
+    hdrs = ["gst_video_frame_packet.hpp"] + select({
+        "//src:windows": [],
+        "//conditions:default": ["gst_vaapi_inference.hpp"],
+    }),
     additional_copts = COPTS_ADJUSTED,
     alwayslink = 1,
     visibility = ["//visibility:public"],
@@ -111,7 +114,14 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "gst_video_openvino_inference_calculator",
-    srcs = ["gst_video_openvino_inference_calculator.cc"],
+    srcs = select({
+        "//src:windows": ["gst_video_openvino_inference_calculator.cc"],
+        "//conditions:default": ["gst_video_openvino_inference_calculator_linux.cc"],
+    }),
+    hdrs = select({
+        "//src:windows": [],
+        "//conditions:default": ["gst_vaapi_inference.hpp"],
+    }),
     additional_copts = COPTS_ADJUSTED,
     alwayslink = 1,
     visibility = ["//visibility:public"],

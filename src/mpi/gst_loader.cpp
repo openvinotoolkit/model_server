@@ -218,6 +218,7 @@ static void try_load_va_symbols() {
     s_fns.gst_va_buffer_get_surface  = get_surf;
     s_fns.gst_va_buffer_peek_display = peek_disp;  // may be null on older gst
     s_fns.gst_va_display_get_va_dpy  = get_va_dpy; // may be null on older gst
+    s_va_surface_capable = get_surf && peek_disp && get_va_dpy;
     // Optional: symbols needed to push an externally-owned VADisplay into the
     // pipeline (Option B). Non-fatal when missing — injection simply stays off.
     s_fns.gst_va_display_wrapped_new = reinterpret_cast<decltype(s_fns.gst_va_display_wrapped_new)>(
@@ -314,7 +315,8 @@ void gst_loader_set_va_display(void* va_display) {
     // decode actually happens on this (externally-owned) display — Option B.
     s_va_display = va_display;
     s_injected_va_display = va_display;
-    s_va_surface_capable = (va_display != nullptr);
+    s_va_surface_capable = s_fns.gst_va_buffer_get_surface &&
+        s_fns.gst_va_buffer_peek_display && s_fns.gst_va_display_get_va_dpy;
 }
 
 // ============================================================================

@@ -23,6 +23,8 @@ constexpr int kModelWidth = 672;
 constexpr int kModelHeight = 384;
 constexpr int kWarmupFrames = 20;
 constexpr int kMeasuredFrames = 230;
+constexpr int kSampleCount = 5;
+constexpr int kRequestCount = 4;
 constexpr char kPerformanceHint[] = "LATENCY";
 constexpr char kNumStreams[] = "1";
 

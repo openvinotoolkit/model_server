@@ -368,7 +368,7 @@ class GstVideoSourceCalculator : public CalculatorBase {
                 imp_tensor_release(tensor);
                 return nullptr;
             }
-            pkt->resource = VaSurfaceFrame{surface_id};
+            pkt->resource = VaSurfaceFrame{surface_id, disp};
             pkt->width = fw;
             pkt->height = fh;
         }

@@ -97,7 +97,106 @@ cc_library(
 )
 
 # Standalone smoke test: decode video with GStreamer + infer with OV directly
+cc_library(
+    name = "performance_benchmark_config",
+    testonly = True,
+    hdrs = ["performance_benchmark_config.hpp"],
+)
+
+cc_library(
+    name = "inference_benchmark_utils",
+    testonly = True,
+    hdrs = ["inference_benchmark_utils.hpp"],
+    deps = [
+        ":performance_benchmark_config",
+        "//third_party:openvino",
+    ] + select({
+        "//src:windows": ["@windows_opencl//:opencl", "@windows_opencl2//:opencl2"],
+        "//conditions:default": [],
+    }),
+)
+
+cc_library(
+    name = "mpi_inference_benchmark_utils",
+    testonly = True,
+    hdrs = ["mpi_inference_benchmark_utils.hpp"],
+    deps = [
+        ":inference_benchmark_utils",
+        "//src/mpi:intel_mpi",
+        "//src/mediapipe_gst_calculators:gst_openvino_inference_calculator_cc_proto",
+        "@com_google_googletest//:gtest",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+    ],
+)
+
+cc_test(
+    name = "openvino_inference_benchmark",
+    srcs = ["openvino_inference_benchmark.cpp"],
+    copts = COPTS_ADJUSTED,
+    linkstatic = 1,
+    deps = [
+        ":inference_benchmark_utils",
+        "//third_party:openvino",
+        "@com_google_googletest//:gtest_main",
+    ] + select({
+        "//src:windows": ["@windows_opencl//:opencl", "@windows_opencl2//:opencl2"],
+        "//conditions:default": [],
+    }),
+    linkopts = LINKOPTS_ADJUSTED + select({
+        "//src:windows": ["d3d11.lib", "dxgi.lib"],
+        "//conditions:default": ["-lOpenCL", "-lva", "-lva-drm"],
+    }),
+)
+
+cc_test(
+    name = "mpi_openvino_inference_benchmark",
+    srcs = ["mpi_openvino_inference_benchmark.cpp"],
+    copts = COPTS_ADJUSTED,
+    linkstatic = 1,
+    deps = [
+        ":mpi_inference_benchmark_utils",
+        "//src/mpi:intel_mpi",
+        "//src/mediapipe_gst_calculators:gst_video_source_calculator",
+        "//src/mediapipe_gst_calculators:gst_openvino_inference_calculator",
+        "//src/mediapipe_gst_calculators:gst_video_openvino_inference_calculator",
+        "//src/mediapipe_gst_calculators:gst_openvino_inference_calculator_cc_proto",
+        "//third_party:openvino",
+        "@com_google_googletest//:gtest_main",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe_calculators//:mediapipe_calculators",
+    ],
+    linkopts = LINKOPTS_ADJUSTED + select({
+        "//src:windows": ["d3d11.lib", "dxgi.lib"],
+        "//conditions:default": ["-lOpenCL", "-lva"],
+    }),
+)
+
 # Run with:
+cc_test(
+    name = "mpi_capi_inference_benchmark",
+    srcs = ["mpi_capi_inference_benchmark.cpp"],
+    copts = COPTS_ADJUSTED,
+    linkstatic = 1,
+    deps = [
+        ":mpi_inference_benchmark_utils",
+        "//src:ovms_lib",
+        "//src/mpi:intel_mpi",
+        "//src/mediapipe_gst_calculators:gst_video_source_calculator",
+        "//src/mediapipe_gst_calculators:gst_capi_inference_calculator",
+        "//src/mediapipe_gst_calculators:gst_video_capi_inference_calculator",
+        "//src/mediapipe_gst_calculators:gst_openvino_inference_calculator_cc_proto",
+        "//third_party:openvino",
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "@com_google_googletest//:gtest_main",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe_calculators//:mediapipe_calculators",
+    ],
+    linkopts = LINKOPTS_ADJUSTED + select({
+        "//src:windows": ["d3d11.lib", "dxgi.lib"],
+        "//conditions:default": ["-lOpenCL", "-lva", "-lva-drm"],
+    }),
+)
+
 #   bazel run //src/test/mediapipe/calculators:video_decode_infer_test \
 #     -- /path/to/video.avi /path/to/model.xml
 cc_binary(
@@ -284,6 +383,39 @@ cc_test(
 )
 
 # Temporary standalone OpenCL remote-tensor detector ceiling benchmark.
+cc_test(
+    name = "remote_tensor_performance_test",
+    srcs = ["remote_tensor_performance_test.cpp"],
+    target_compatible_with = select({
+        "//src:windows": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    linkstatic = 1,
+    deps = [
+        ":performance_benchmark_config",
+        "//src:ovms_lib",
+        "//src/mpi:intel_mpi",
+        "//src/mediapipe_gst_calculators:gst_video_source_calculator",
+        "//src/mediapipe_gst_calculators:gst_openvino_inference_calculator",
+        "//src/mediapipe_gst_calculators:gst_video_openvino_inference_calculator",
+        "//src/mediapipe_gst_calculators:gst_video_openvino_pipeline_inference_calculator",
+        "//src/mediapipe_gst_calculators:gst_capi_inference_calculator",
+        "//src/mediapipe_gst_calculators:gst_video_capi_inference_calculator",
+        "//src/mediapipe_gst_calculators:gst_openvino_inference_calculator_cc_proto",
+        "//third_party:openvino",
+        "@com_google_googletest//:gtest_main",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe_calculators//:mediapipe_calculators",
+    ] + select({
+        "//src:windows": ["@windows_opencl//:opencl", "@windows_opencl2//:opencl2"],
+        "//conditions:default": [],
+    }),
+    linkopts = select({
+        "//src:windows": ["d3d11.lib", "dxgi.lib"],
+        "//conditions:default": [],
+    }),
+)
+
 cc_test(
     name = "opencl_detector_ceiling_test",
     srcs = select({

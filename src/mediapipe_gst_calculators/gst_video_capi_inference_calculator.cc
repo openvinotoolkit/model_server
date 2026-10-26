@@ -89,7 +89,11 @@ class GstVideoCapiInferenceCalculator : public CalculatorBase {
         imp_video_source_set(source, "width", std::to_string(width).c_str());
         imp_video_source_set(source, "height", std::to_string(height).c_str());
         imp_video_decode_opts_t decode_options{};
+    #ifdef _WIN32
         decode_options.use_d3d11_surface_memory = true;
+    #else
+        decode_options.use_va_surface_memory = true;
+    #endif
         const imp_status_t status = imp_video_open(&stream_, source, context_, &decode_options);
         imp_video_source_destroy(source);
         if (status != IMP_OK)
@@ -108,15 +112,29 @@ class GstVideoCapiInferenceCalculator : public CalculatorBase {
         if (read_status != IMP_OK || raw_tensor == nullptr)
             return absl::InternalError("GstVideoCapiInferenceCalculator: frame read failed");
         std::unique_ptr<imp_tensor_t, decltype(&imp_tensor_release)> tensor(raw_tensor, imp_tensor_release);
-        void* texture = nullptr;
-        void* decode_device = nullptr;
-        uint32_t subresource = 0;
+        void* surface_handle = nullptr;
+        OVMS_BufferType buffer_type_y;
+        OVMS_BufferType buffer_type_uv;
         int width = 0;
         int height = 0;
-        if (imp_tensor_get_d3d11_texture(tensor.get(), &texture, &decode_device, &subresource,
+    #ifdef _WIN32
+        void* decode_device = nullptr;
+        uint32_t subresource = 0;
+        if (imp_tensor_get_d3d11_texture(tensor.get(), &surface_handle, &decode_device, &subresource,
                                          &width, &height) != IMP_OK)
             return absl::InternalError("GstVideoCapiInferenceCalculator: expected D3D11 texture");
         RET_CHECK_EQ(subresource, 0u) << "D3D11 texture array slice is not importable by OpenVINO";
+        buffer_type_y = OVMS_BUFFERTYPE_D3D11_TEXTURE_Y;
+        buffer_type_uv = OVMS_BUFFERTYPE_D3D11_TEXTURE_UV;
+    #else
+        uint32_t surface = 0;
+        void* display = nullptr;
+        if (imp_tensor_get_va_surface(tensor.get(), &surface, &display, &width, &height) != IMP_OK)
+            return absl::InternalError("GstVideoCapiInferenceCalculator: expected VA-API surface");
+        surface_handle = reinterpret_cast<void*>(static_cast<uintptr_t>(surface));
+        buffer_type_y = OVMS_BUFFERTYPE_VASURFACE_Y;
+        buffer_type_uv = OVMS_BUFFERTYPE_VASURFACE_UV;
+    #endif
 
         const std::string y_name = input_name_ + "/y";
         const std::string uv_name = input_name_ + "/uv";
@@ -155,11 +173,11 @@ class GstVideoCapiInferenceCalculator : public CalculatorBase {
             request_has_bound_data_ = false;
         }
         status = checkCapiStatus(OVMS_InferenceRequestInputSetData(request_, y_name.c_str(),
-            texture, bytes_y, OVMS_BUFFERTYPE_D3D11_TEXTURE_Y, 1), "OVMS_InferenceRequestInputSetData(Y)");
+            surface_handle, bytes_y, buffer_type_y, 1), "OVMS_InferenceRequestInputSetData(Y)");
         if (!status.ok())
             return status;
         status = checkCapiStatus(OVMS_InferenceRequestInputSetData(request_, uv_name.c_str(),
-            texture, bytes_uv, OVMS_BUFFERTYPE_D3D11_TEXTURE_UV, 1), "OVMS_InferenceRequestInputSetData(UV)");
+            surface_handle, bytes_uv, buffer_type_uv, 1), "OVMS_InferenceRequestInputSetData(UV)");
         if (!status.ok())
             return status;
         request_has_bound_data_ = true;

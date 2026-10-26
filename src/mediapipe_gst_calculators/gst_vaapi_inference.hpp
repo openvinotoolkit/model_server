@@ -1,0 +1,72 @@
+// Copyright (c) 2026 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#ifndef SRC_MEDIAPIPE_GST_CALCULATORS_GST_VAAPI_INFERENCE_HPP_
+#define SRC_MEDIAPIPE_GST_CALCULATORS_GST_VAAPI_INFERENCE_HPP_
+
+#include <cstdint>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <openvino/openvino.hpp>
+#include <openvino/runtime/intel_gpu/ocl/va.hpp>
+
+namespace mediapipe {
+class GstVaapiInference {
+public:
+    int infer(void* display, uint32_t surface, int width, int height,
+        const std::string& modelPath, const std::string& inputName,
+        const std::string& performanceHint, uint32_t streams) {
+        if (display == nullptr || width <= 0 || height <= 0 || width % 2 || height % 2)
+            throw std::invalid_argument("Invalid VA-API frame");
+        if (!context_) {
+            display_ = display;
+            width_ = width;
+            height_ = height;
+            ov::preprocess::PrePostProcessor processor(core_.read_model(modelPath));
+            processor.input().tensor().set_element_type(ov::element::u8).set_spatial_static_shape(height, width).set_color_format(ov::preprocess::ColorFormat::NV12_TWO_PLANES, {"y", "uv"}).set_memory_type(ov::intel_gpu::memory_type::surface);
+            processor.input().preprocess().convert_color(ov::preprocess::ColorFormat::BGR);
+            processor.input().model().set_layout("NCHW");
+            context_ = std::make_unique<ov::intel_gpu::ocl::VAContext>(core_, display);
+            compiled_ = core_.compile_model(processor.build(), *context_,
+                {{"PERFORMANCE_HINT", performanceHint}, {"NUM_STREAMS", std::to_string(streams)}});
+            request_ = compiled_.create_infer_request();
+        }
+        if (display != display_ || width != width_ || height != height_)
+            throw std::invalid_argument("VA-API display or frame dimensions changed during inference");
+        auto planes = context_->create_tensor_nv12(height, width, surface);
+        request_.set_tensor(inputName + "/y", planes.first);
+        request_.set_tensor(inputName + "/uv", planes.second);
+        request_.infer();
+        const ov::Tensor output = request_.get_output_tensor();
+        const float* values = output.data<const float>();
+        int detections = 0;
+        for (size_t result = 0; result + 7 <= output.get_size(); result += 7) {
+            if (values[result + 2] >= 0.5f)
+                ++detections;
+        }
+        return detections;
+    }
+
+private:
+    ov::Core core_;
+    void* display_ = nullptr;
+    int width_ = 0;
+    int height_ = 0;
+    std::unique_ptr<ov::intel_gpu::ocl::VAContext> context_;
+    ov::CompiledModel compiled_;
+    ov::InferRequest request_;
+};
+}  // namespace mediapipe
+#endif

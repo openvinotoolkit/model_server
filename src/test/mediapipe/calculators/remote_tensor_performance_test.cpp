@@ -93,8 +93,8 @@ namespace {
 
 using Microsoft::WRL::ComPtr;
 
-constexpr char kModelName[] = benchmark_config::kModelName;
-constexpr char kInputName[] = benchmark_config::kInputName;
+constexpr const char* kModelName = benchmark_config::kModelName;
+constexpr const char* kInputName = benchmark_config::kInputName;
 constexpr int kModelW = benchmark_config::kModelWidth;
 constexpr int kModelH = benchmark_config::kModelHeight;
 constexpr int kPerformanceWarmupFrames = benchmark_config::kWarmupFrames;

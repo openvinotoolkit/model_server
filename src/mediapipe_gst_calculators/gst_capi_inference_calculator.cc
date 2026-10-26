@@ -113,7 +113,7 @@ class GstCapiInferenceCalculator : public CalculatorBase {
         OVMS_BufferType buffer_type_y = OVMS_BUFFERTYPE_VASURFACE_Y;
         OVMS_BufferType buffer_type_uv = OVMS_BUFFERTYPE_VASURFACE_UV;
         if (const auto* va_frame = std::get_if<VaSurfaceFrame>(&frame.resource)) {
-            RET_CHECK(va_frame->surface_id != 0) << "invalid VA surface id";
+            RET_CHECK(va_frame->surface_id != UINT32_MAX) << "invalid VA surface id";
             surface_handle = reinterpret_cast<void*>(static_cast<uintptr_t>(va_frame->surface_id));
             buffer_type_y = OVMS_BUFFERTYPE_VASURFACE_Y;
             buffer_type_uv = OVMS_BUFFERTYPE_VASURFACE_UV;

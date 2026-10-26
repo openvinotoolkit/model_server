@@ -34,6 +34,7 @@ namespace mediapipe {
 
 struct VaSurfaceFrame {
     uint32_t surface_id = 0;
+    void* display = nullptr;
 };
 
 struct D3D11Frame {

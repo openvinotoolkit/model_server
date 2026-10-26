@@ -17,7 +17,11 @@
 #include <string>
 
 #include <openvino/openvino.hpp>
+#ifdef _WIN32
 #include <openvino/runtime/intel_gpu/ocl/dx.hpp>
+#else
+#include "src/mediapipe_gst_calculators/gst_vaapi_inference.hpp"
+#endif
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -65,7 +69,21 @@ class GstOpenVinoInferenceCalculator : public CalculatorBase {
 
     absl::Status Process(CalculatorContext* cc) override {
 #ifndef _WIN32
-        return absl::UnimplementedError("GstOpenVinoInferenceCalculator supports D3D11 frames on Windows only");
+        const GstVideoFramePacket& frame = cc->Inputs().Tag(kFrameTag).Get<GstVideoFramePacket>();
+        const VaSurfaceFrame* surface = std::get_if<VaSurfaceFrame>(&frame.resource);
+        RET_CHECK(surface != nullptr) << "direct OpenVINO requires a VA-API NV12 frame";
+        try {
+            if (!va_inference_)
+                va_inference_ = std::make_unique<GstVaapiInference>();
+            va_frame_owner_ = frame.owner;
+            const int detections = va_inference_->infer(surface->display, surface->surface_id,
+                frame.width, frame.height, model_path_, input_name_, performance_hint_, num_streams_);
+            cc->Outputs().Tag(kDetectionsTag).AddPacket(
+                MakePacket<int>(detections).At(cc->InputTimestamp()));
+            return absl::OkStatus();
+        } catch (const std::exception& exception) {
+            return absl::InternalError(exception.what());
+        }
 #else
         const GstVideoFramePacket& frame = cc->Inputs().Tag(kFrameTag).Get<GstVideoFramePacket>();
         RET_CHECK_GT(frame.width, 0);
@@ -117,6 +135,14 @@ class GstOpenVinoInferenceCalculator : public CalculatorBase {
 #endif
     }
 
+    absl::Status Close(CalculatorContext*) override {
+#ifndef _WIN32
+        va_inference_.reset();
+        va_frame_owner_.reset();
+#endif
+        return absl::OkStatus();
+    }
+
  private:
 #ifdef _WIN32
     absl::Status initializeModel() {
@@ -145,6 +171,9 @@ class GstOpenVinoInferenceCalculator : public CalculatorBase {
 
     Microsoft::WRL::ComPtr<ID3D11Device> device_;
     std::unique_ptr<ov::intel_gpu::ocl::D3DContext> d3d_context_;
+#else
+    std::shared_ptr<imp_tensor_t> va_frame_owner_;
+    std::unique_ptr<GstVaapiInference> va_inference_;
 #endif
     ov::Core core_;
     ov::CompiledModel compiled_model_;
