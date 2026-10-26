@@ -243,14 +243,22 @@ if [ "$FUZZER_BUILD" == "0" ]; then
     patchelf --remove-rpath ./ovms && \
     patchelf --set-rpath '$ORIGIN/../lib/' ./ovms
 fi
-find /ovms_release/lib/ -type f -iname '*.so*' ! -name '*.repo_mapping' -exec patchelf --debug --remove-rpath {} +
-find /ovms_release/lib/ -type f -iname '*.so*' ! -name '*.repo_mapping' -exec patchelf --debug --set-rpath '$ORIGIN/../lib' {} +
-
 find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
-patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/libopenvino.so
-patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/libopenvino_tokenizers.so
-find /ovms_release/lib -type f -name 'lib*plugin.so*' -exec patchelf --debug --set-rpath '$ORIGIN' {} +
 if [ -e /ovms_release/lib/libopenvino_genai_c.so ]; then rm -rf /ovms_release/lib/libopenvino_genai_c.so* ; fi
+
+# RUNPATH is not inherited by indirect dependencies. Patch every library after
+# the final copy, including Python extensions nested below lib/python.
+find /ovms_release/lib/ -type f -iname '*.so*' ! -name '*.repo_mapping' -exec bash -e -c '
+    for library_path in "$@"; do
+        library_dir=$(dirname "$library_path")
+        relative_lib_dir=$(realpath --relative-to="$library_dir" /ovms_release/lib)
+        library_rpath="\$ORIGIN"
+        if [ "$relative_lib_dir" != "." ]; then
+            library_rpath="$library_rpath:\$ORIGIN/$relative_lib_dir"
+        fi
+        patchelf --debug --set-rpath "$library_rpath" "$library_path"
+    done
+' _ {} +
 
 cd /ovms
 cp -v /ovms/release_files/LICENSE /ovms_release/
@@ -271,4 +279,3 @@ cd /ovms_pkg/${BASE_OS}
 tar cf ovms.tar --transform 's/ovms_release/ovms/' /ovms_release/
 cd /ovms_release
 ls -l
-
