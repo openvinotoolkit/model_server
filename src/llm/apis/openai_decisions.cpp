@@ -26,6 +26,7 @@
 
 #include "../../logging.hpp"
 #include "../../profiler.hpp"
+#include "../io_processing/video_utils.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/strings/str_cat.h"
@@ -139,14 +140,16 @@ absl::Status OpenAIDecisionsHandler::parseInput() {
         return absl::InvalidArgumentError("input must be a string or an array of messages");
     if (it->value.Empty())
         return absl::InvalidArgumentError("input messages array cannot be empty");
-    // vLLM/OpenAI contract: every input message is a user message with text-only
-    // content (a string, or an array of text parts). Media parts are rejected.
+    // OpenAI/vLLM contract: every input message is a user message. Content is a
+    // string or an array of parts: text (input_text/text), image_url, video_url, and
+    // the OpenAI decisions image part (input_image). Media parts are preserved for the
+    // VLM input processors (ImageDecodingProcessor, VideoFramesProcessor); LLM servables
+    // reject them in validateInputCompatibility.
     for (auto message = it->value.GetArray().Begin(); message != it->value.GetArray().End(); ++message) {
         if (!message->IsObject())
             return absl::InvalidArgumentError("input message is not a JSON object");
         bool hasRole = false;
         bool hasContent = false;
-        std::string content;
         for (auto field = message->MemberBegin(); field != message->MemberEnd(); ++field) {
             if (!field->name.IsString())
                 return absl::InvalidArgumentError("invalid input message structure");
@@ -161,8 +164,15 @@ absl::Status OpenAIDecisionsHandler::parseInput() {
                     return absl::InvalidArgumentError("input message type must be 'message'");
             } else if (fieldName == "content") {
                 if (field->value.IsString()) {
-                    content = field->value.GetString();
+                    if (field->value.GetStringLength() == 0)
+                        return absl::InvalidArgumentError("input message content cannot be empty");
+                    request.chatHistory.push_back({{"role", "user"}, {"content", std::string(field->value.GetString())}});
+                    hasContent = true;
                 } else if (field->value.IsArray()) {
+                    if (field->value.Empty())
+                        return absl::InvalidArgumentError("input message content cannot be empty");
+                    std::string textContent;
+                    bool hasMedia = false;
                     for (const auto& part : field->value.GetArray()) {
                         if (!part.IsObject())
                             return absl::InvalidArgumentError("content array should contain objects");
@@ -172,26 +182,70 @@ absl::Status OpenAIDecisionsHandler::parseInput() {
                         if (partType == "input_text" || partType == "text") {
                             if (!part.HasMember("text") || !part["text"].IsString())
                                 return absl::InvalidArgumentError("content text missing");
-                            content += part["text"].GetString();
-                        } else if (partType == "image_url" || partType == "video_url") {
-                            return absl::InvalidArgumentError("Decisions supports text input only; images are not supported");
+                            textContent += part["text"].GetString();
+                        } else if (partType == "image_url") {
+                            if (!part.HasMember("image_url") || !part["image_url"].IsObject())
+                                return absl::InvalidArgumentError("content image_url missing");
+                            const auto imageUrl = part["image_url"].GetObject();
+                            if (!imageUrl.HasMember("url") || !imageUrl["url"].IsString())
+                                return absl::InvalidArgumentError("image_url does not have url field");
+                            hasMedia = true;
+                        } else if (partType == "video_url") {
+                            if (!part.HasMember("video_url") || !part["video_url"].IsObject())
+                                return absl::InvalidArgumentError("content video_url missing");
+                            const auto videoUrl = part["video_url"].GetObject();
+                            if (!videoUrl.HasMember("url") || !videoUrl["url"].IsArray())
+                                return absl::InvalidArgumentError("video_url does not have url array field");
+                            const auto frames = videoUrl["url"].GetArray();
+                            if (frames.Size() == 0)
+                                return absl::InvalidArgumentError("video_url url array cannot be empty");
+                            if (static_cast<int64_t>(frames.Size()) > MAX_VIDEO_FRAMES)
+                                return absl::InvalidArgumentError("video_url url array exceeds the allowed maximum of " + std::to_string(MAX_VIDEO_FRAMES) + " frames");
+                            for (const auto& frame : frames)
+                                if (!frame.IsString())
+                                    return absl::InvalidArgumentError("video_url url array must contain only strings");
+                            hasMedia = true;
+                        } else if (partType == "input_image") {
+                            // OpenAI decisions image part: {"type": "input_image",
+                            // "image_url": "<http(s) url | base64 data url>"}; normalized to
+                            // the internal image_url object consumed by the input processors.
+                            if (!part.HasMember("image_url") || !part["image_url"].IsString())
+                                return absl::InvalidArgumentError("input_image does not have an image_url string field");
+                            if (part["image_url"].GetStringLength() == 0)
+                                return absl::InvalidArgumentError("input_image image_url cannot be empty");
+                            hasMedia = true;
                         } else {
                             return absl::InvalidArgumentError("unsupported content type: " + partType);
                         }
                     }
+                    if (hasMedia) {
+                        // Multimodal content: preserve the parts for the VLM input
+                        // processors (mirrors OpenAIChatCompletionsHandler::parseMessages);
+                        // input_image parts are normalized to image_url objects.
+                        ov::genai::JsonContainer contentParts = ov::genai::JsonContainer::array();
+                        for (const auto& part : field->value.GetArray()) {
+                            if (std::string(part["type"].GetString()) == "input_image") {
+                                contentParts.push_back(ov::genai::JsonContainer({{"type", "image_url"}, {"image_url", ov::genai::JsonContainer({{"url", std::string(part["image_url"].GetString())}})}}));
+                            } else {
+                                contentParts.push_back(rapidJsonValueToJsonContainer(part));
+                            }
+                        }
+                        request.chatHistory.push_back({{"role", "user"}, {"content", std::move(contentParts)}});
+                    } else {
+                        if (textContent.empty())
+                            return absl::InvalidArgumentError("input message content cannot be empty");
+                        request.chatHistory.push_back({{"role", "user"}, {"content", textContent}});
+                    }
+                    hasContent = true;
                 } else {
-                    return absl::InvalidArgumentError("input message content must be a string or an array of text parts");
+                    return absl::InvalidArgumentError("input message content must be a string or an array of parts");
                 }
-                hasContent = true;
             } else {
                 return absl::InvalidArgumentError("unsupported field in input message: " + fieldName);
             }
         }
         if (!hasRole || !hasContent)
             return absl::InvalidArgumentError("input message must contain non-empty 'role' and 'content' fields");
-        if (content.empty())
-            return absl::InvalidArgumentError("input message content cannot be empty");
-        request.chatHistory.push_back({{"role", "user"}, {"content", content}});
     }
     return absl::OkStatus();
 }

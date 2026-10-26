@@ -394,11 +394,11 @@ TEST_F(LLMHttpDecisionsTest, decisionsVlmStringInput) {
     ASSERT_GT(parsedResponse["usage"]["input_tokens"].GetInt(), 0);
 }
 
-// Media content parts are rejected: decisions input is text-only (vLLM/OpenAI contract),
-// even on a VLM servable.
-TEST_F(LLMHttpDecisionsTest, decisionsImageInputRejected) {
+// LLM servables reject media content parts: the input processors would turn the image
+// into a placeholder tag the text model cannot see.
+TEST_F(LLMHttpDecisionsTest, decisionsLlmImageInputRejected) {
     std::string requestBody = R"({
-        "model": "vlm_cb_regular",
+        "model": ")" + modelName + R"(",
         "input": [
             {"role": "user", "content": [
                 {"type": "text", "text": "What is in the image?"},
@@ -413,7 +413,96 @@ TEST_F(LLMHttpDecisionsTest, decisionsImageInputRejected) {
     auto status = handler->dispatchToProcessor(endpointDecisions, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
     ASSERT_NE(status.string().find("INVALID_ARGUMENT"), std::string::npos);
-    ASSERT_NE(status.string().find("Decisions supports text input only; images are not supported"), std::string::npos);
+    ASSERT_NE(status.string().find("This servable supports only text input, but image_url has been provided"), std::string::npos);
+}
+
+// The same rejection on the legacy LLM servable, using the OpenAI decisions image part
+// format (input_image with a string image_url): normalization to image_url happens before
+// the servable compatibility check.
+TEST_F(LLMHttpDecisionsTest, decisionsLegacyLlmImageInputRejected) {
+    std::string requestBody = R"({
+        "model": "lm_legacy_regular",
+        "input": [
+            {"role": "user", "content": [
+                {"type": "input_text", "text": "What is in the image?"},
+                {"type": "input_image", "image_url": "base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg=="}
+            ]}
+        ],
+        "questions": [
+            {"type": "predicate", "instructions": "Is the main subject an animal?"}
+        ]
+    })";
+
+    auto status = handler->dispatchToProcessor(endpointDecisions, requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
+    ASSERT_NE(status.string().find("INVALID_ARGUMENT"), std::string::npos);
+    ASSERT_NE(status.string().find("This servable supports only text input, but image_url has been provided"), std::string::npos);
+}
+
+// Two questions sharing an image on a VLM servable: the media is decoded once for the
+// first question and the ref-counted tensors are reused for the second, so the request
+// must be answered without re-fetching/re-decoding the image per question.
+TEST_F(LLMHttpDecisionsTest, decisionsVlmSharedImageTwoQuestions) {
+    std::string requestBody = R"({
+        "model": "vlm_cb_regular",
+        "input": [
+            {"role": "user", "content": [
+                {"type": "text", "text": "What is in the image?"},
+                {"type": "image_url", "image_url": {"url": "base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg=="}}
+            ]}
+        ],
+        "questions": [
+            {"type": "predicate", "instructions": "Is the main subject an animal?", "name": "is_animal"},
+            {"type": "predicate", "instructions": "Is the main subject a vehicle?", "name": "is_vehicle"}
+        ]
+    })";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointDecisions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK)
+        << response;
+    parsedResponse.Parse(response.c_str());
+    ASSERT_FALSE(parsedResponse.HasParseError());
+    const auto& answers = parsedResponse["answers"];
+    ASSERT_TRUE(answers.IsArray());
+    ASSERT_EQ(answers.Size(), 2);
+    for (rapidjson::SizeType i = 0; i < answers.Size(); ++i) {
+        ASSERT_STREQ(answers[i]["type"].GetString(), "predicate");
+        ASSERT_TRUE(answers[i]["probability"].IsNumber());
+        ASSERT_STREQ(answers[i]["name"].GetString(), i == 0 ? "is_animal" : "is_vehicle");
+    }
+    // One greedy token per question; the visual tokens expand the prompt.
+    ASSERT_EQ(parsedResponse["usage"]["output_tokens"].GetInt(), 2);
+    ASSERT_GT(parsedResponse["usage"]["input_tokens"].GetInt(), 0);
+}
+
+// The OpenAI decisions image part format (input_image with a string image_url) is
+// accepted on a VLM servable and normalized to the internal image_url part.
+TEST_F(LLMHttpDecisionsTest, decisionsVlmInputImagePart) {
+    std::string requestBody = R"({
+        "model": "vlm_cb_regular",
+        "input": [
+            {"role": "user", "content": [
+                {"type": "input_text", "text": "What is in the image?"},
+                {"type": "input_image", "image_url": "base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg=="}
+            ]}
+        ],
+        "questions": [
+            {"type": "predicate", "instructions": "Is the main subject an animal?"}
+        ]
+    })";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointDecisions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK)
+        << response;
+    parsedResponse.Parse(response.c_str());
+    ASSERT_FALSE(parsedResponse.HasParseError());
+    const auto& answers = parsedResponse["answers"];
+    ASSERT_TRUE(answers.IsArray());
+    ASSERT_EQ(answers.Size(), 1);
+    ASSERT_STREQ(answers[0]["type"].GetString(), "predicate");
+    ASSERT_TRUE(answers[0]["probability"].IsNumber());
 }
 
 // Two predicate questions in one request are each answered from their own forward pass
