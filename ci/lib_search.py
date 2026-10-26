@@ -190,17 +190,20 @@ def check_dir(start_dir):
         "ServingRuntime.yaml",
         "dummy_facebook_template.jinja",
         "mediapipe_model_api_openvino_windows.patch",
-        'windows_zlib_dependency.patch',
-        'windows_msvc_untyped_message_hash_fix.patch',
-        'field_mask_util_deps.patch',
-        'ovms_constinit_definition.diff',
-        'ovms_msvc_api3_calculator_context.diff',
-        'ovms_calculator_graph_visibility.diff',
-        'model_api_json_archive.patch',
-        'com_google_protobuf_fixes.diff',
-        'ovms_no_litert.diff',
-        'ovms_strip.diff',
-        ]
+        "windows_zlib_dependency.patch",
+        "windows_msvc_untyped_message_hash_fix.patch",
+        "field_mask_util_deps.patch",
+        "ovms_constinit_definition.diff",
+        "ovms_msvc_api3_calculator_context.diff",
+        "ovms_calculator_graph_visibility.diff",
+        "model_api_json_archive.patch",
+        "com_google_protobuf_fixes.diff",
+        "ovms_no_litert.diff",
+        "ovms_strip.diff",
+        "demos/integration_with_OpenHands/docker-compose.template.yml",
+        "demos/integration_with_OpenHands/scripts/deploy_model_ovms.sh",
+    ],
+        
 
     for (d_path, dir_names, file_set) in os.walk(start_dir):
         dir_names[:] = [d for d in dir_names if not should_skip_directory(os.path.join(d_path, d))]
