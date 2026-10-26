@@ -163,3 +163,22 @@ ovms_cc_library(
     ],
     additional_linkopts = LINKOPTS_ADJUSTED,
 )
+
+ovms_cc_library(
+    name = "gst_video_openvino_pipeline_inference_calculator",
+    srcs = ["gst_video_openvino_pipeline_inference_calculator.cc"],
+    additional_copts = COPTS_ADJUSTED,
+    alwayslink = 1,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":gst_openvino_inference_calculator_cc_proto",
+        "//src/mpi:intel_mpi",
+        "//third_party:openvino",
+        "//third_party:gstreamer",
+        "@mediapipe_calculators//:mediapipe_calculators",
+    ],
+    additional_linkopts = LINKOPTS_ADJUSTED + select({
+        "//src:windows": ["d3d11.lib", "dxgi.lib"],
+        "//conditions:default": [],
+    }),
+)

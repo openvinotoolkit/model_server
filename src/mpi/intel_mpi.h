@@ -342,6 +342,9 @@ typedef struct {
     // Use imp_tensor_get_d3d11_texture() to obtain the ID3D11Texture2D for zero-copy
     // import into an OpenVINO D3DContext. When false (default): host NV12 (IMP_MEM_SYSTEM).
     bool use_d3d11_surface_memory;
+    // Optional registered GStreamer element fragment inserted after D3D11 NV12 conversion
+    // and before each appsink. The caller owns the string for the imp_video_open duration.
+    const char* d3d11_filter;
 } imp_video_decode_opts_t;
 
 /**

@@ -465,6 +465,9 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
         " ! d3d11upload ! d3d11convert ! "
         "video/x-raw(memory:D3D11Memory),format=NV12,"
         "width=" + std::to_string(src_w) + ",height=" + std::to_string(src_h);
+    const std::string d3d11_filter = (opts && opts->d3d11_filter && *opts->d3d11_filter)
+        ? " ! " + std::string(opts->d3d11_filter)
+        : "";
 
     // Source + decode + NV12 convert. Three explicit heads, no silent fallback:
     //   FILE   : filesrc ! decodebin (GPU decode auto-plugged onto injected device)
@@ -530,11 +533,10 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
             if (d3d11_surface && !rb.use_system_memory) {
                 // Buffers are already D3D11 NV12 from convert/scale above; feed
                 // the texture straight to appsink (no download, no extra caps).
-                pipeline_str +=
-                    "appsink name=" + sink_name + " " + sink_props;
+                pipeline_str += d3d11_filter + " ! appsink name=" + sink_name + " " + sink_props;
             } else {
                 pipeline_str +=
-                    "d3d11download ! "
+                    d3d11_filter + " ! d3d11download ! "
                     "video/x-raw,format=NV12,"
                     "width=" + std::to_string(rb.width) + ",height=" + std::to_string(rb.height) + " ! "
                     "appsink name=" + sink_name + " " + sink_props;
@@ -554,11 +556,10 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
         if (d3d11_surface && !rb.use_system_memory) {
             // Buffers are already D3D11 NV12 from convert/scale above; feed the
             // texture straight to appsink (no download, no extra caps filter).
-            pipeline_str +=
-                " ! appsink name=branch_0 " + sink_props;
+            pipeline_str += d3d11_filter + " ! appsink name=branch_0 " + sink_props;
         } else {
             pipeline_str +=
-                " ! d3d11download ! "
+                d3d11_filter + " ! d3d11download ! "
                 "video/x-raw,format=NV12,"
                 "width=" + std::to_string(rb.width) + ",height=" + std::to_string(rb.height) + " ! "
                 "appsink name=branch_0 " + sink_props;

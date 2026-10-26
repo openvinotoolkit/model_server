@@ -118,37 +118,53 @@ class GstVideoCapiInferenceCalculator : public CalculatorBase {
             return absl::InternalError("GstVideoCapiInferenceCalculator: expected D3D11 texture");
         RET_CHECK_EQ(subresource, 0u) << "D3D11 texture array slice is not importable by OpenVINO";
 
-        OVMS_InferenceRequest* raw_request = nullptr;
-        absl::Status status = checkCapiStatus(OVMS_InferenceRequestNew(
-            &raw_request, server_, servable_name_.c_str(), servable_version_), "OVMS_InferenceRequestNew");
-        if (!status.ok())
-            return status;
-        std::unique_ptr<OVMS_InferenceRequest, decltype(&OVMS_InferenceRequestDelete)> request(
-            raw_request, OVMS_InferenceRequestDelete);
         const std::string y_name = input_name_ + "/y";
         const std::string uv_name = input_name_ + "/uv";
         const int64_t shape_y[] = {1, height, width, 1};
         const int64_t shape_uv[] = {1, height / 2, width / 2, 2};
         const size_t bytes_y = static_cast<size_t>(width) * height;
         const size_t bytes_uv = bytes_y / 2;
-        status = checkCapiStatus(OVMS_InferenceRequestAddInput(request.get(), y_name.c_str(),
-            OVMS_DATATYPE_U8, shape_y, 4), "OVMS_InferenceRequestAddInput(Y)");
-        if (!status.ok())
-            return status;
-        status = checkCapiStatus(OVMS_InferenceRequestInputSetData(request.get(), y_name.c_str(),
+        absl::Status status;
+        if (request_ == nullptr) {
+            status = checkCapiStatus(OVMS_InferenceRequestNew(
+                &request_, server_, servable_name_.c_str(), servable_version_), "OVMS_InferenceRequestNew");
+            if (!status.ok())
+                return status;
+            status = checkCapiStatus(OVMS_InferenceRequestAddInput(request_, y_name.c_str(),
+                OVMS_DATATYPE_U8, shape_y, 4), "OVMS_InferenceRequestAddInput(Y)");
+            if (!status.ok())
+                return status;
+            status = checkCapiStatus(OVMS_InferenceRequestAddInput(request_, uv_name.c_str(),
+                OVMS_DATATYPE_U8, shape_uv, 4), "OVMS_InferenceRequestAddInput(UV)");
+            if (!status.ok())
+                return status;
+            request_width_ = width;
+            request_height_ = height;
+        }
+        RET_CHECK_EQ(width, request_width_);
+        RET_CHECK_EQ(height, request_height_);
+        if (request_has_bound_data_) {
+            status = checkCapiStatus(OVMS_InferenceRequestInputRemoveData(request_, y_name.c_str()),
+                "OVMS_InferenceRequestInputRemoveData(Y)");
+            if (!status.ok())
+                return status;
+            status = checkCapiStatus(OVMS_InferenceRequestInputRemoveData(request_, uv_name.c_str()),
+                "OVMS_InferenceRequestInputRemoveData(UV)");
+            if (!status.ok())
+                return status;
+            request_has_bound_data_ = false;
+        }
+        status = checkCapiStatus(OVMS_InferenceRequestInputSetData(request_, y_name.c_str(),
             texture, bytes_y, OVMS_BUFFERTYPE_D3D11_TEXTURE_Y, 1), "OVMS_InferenceRequestInputSetData(Y)");
         if (!status.ok())
             return status;
-        status = checkCapiStatus(OVMS_InferenceRequestAddInput(request.get(), uv_name.c_str(),
-            OVMS_DATATYPE_U8, shape_uv, 4), "OVMS_InferenceRequestAddInput(UV)");
-        if (!status.ok())
-            return status;
-        status = checkCapiStatus(OVMS_InferenceRequestInputSetData(request.get(), uv_name.c_str(),
+        status = checkCapiStatus(OVMS_InferenceRequestInputSetData(request_, uv_name.c_str(),
             texture, bytes_uv, OVMS_BUFFERTYPE_D3D11_TEXTURE_UV, 1), "OVMS_InferenceRequestInputSetData(UV)");
         if (!status.ok())
             return status;
+        request_has_bound_data_ = true;
         OVMS_InferenceResponse* raw_response = nullptr;
-        status = checkCapiStatus(OVMS_Inference(server_, request.get(), &raw_response), "OVMS_Inference");
+        status = checkCapiStatus(OVMS_Inference(server_, request_, &raw_response), "OVMS_Inference");
         if (!status.ok())
             return status;
         std::unique_ptr<OVMS_InferenceResponse, decltype(&OVMS_InferenceResponseDelete)> response(
@@ -181,6 +197,10 @@ class GstVideoCapiInferenceCalculator : public CalculatorBase {
     }
 
     absl::Status Close(CalculatorContext*) override {
+        if (request_ != nullptr) {
+            OVMS_InferenceRequestDelete(request_);
+            request_ = nullptr;
+        }
         if (stream_ != nullptr)
             imp_video_close(stream_);
         if (context_ != nullptr)
@@ -192,11 +212,15 @@ class GstVideoCapiInferenceCalculator : public CalculatorBase {
     imp_context_t* context_ = nullptr;
     imp_video_stream_t* stream_ = nullptr;
     OVMS_Server* server_ = nullptr;
+    OVMS_InferenceRequest* request_ = nullptr;
     std::string servable_name_;
     std::string input_name_;
     int servable_version_ = 1;
     int max_frames_ = 0;
     int64_t frame_index_ = 0;
+    int request_width_ = 0;
+    int request_height_ = 0;
+    bool request_has_bound_data_ = false;
 };
 
 REGISTER_CALCULATOR(GstVideoCapiInferenceCalculator);

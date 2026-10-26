@@ -78,6 +78,7 @@
 #include "src/ovms.h"
 #include "src/mediapipe_gst_calculators/gst_openvino_inference_calculator.pb.h"
 #include "src/mediapipe_gst_calculators/gst_video_frame_packet.hpp"
+#include "src/test/mediapipe/calculators/performance_benchmark_config.hpp"
 
 #include <windows.h>
 #include <d3d11.h>
@@ -92,10 +93,12 @@ namespace {
 
 using Microsoft::WRL::ComPtr;
 
-constexpr char kModelName[] = "face_detection_adas";
-constexpr char kInputName[] = "data";
-constexpr int kModelW = 672;
-constexpr int kModelH = 384;
+constexpr char kModelName[] = benchmark_config::kModelName;
+constexpr char kInputName[] = benchmark_config::kInputName;
+constexpr int kModelW = benchmark_config::kModelWidth;
+constexpr int kModelH = benchmark_config::kModelHeight;
+constexpr int kPerformanceWarmupFrames = benchmark_config::kWarmupFrames;
+constexpr int kPerformanceMeasuredFrames = benchmark_config::kMeasuredFrames;
 
 std::string envOr(const char* name, const std::string& fallback) {
     const char* v = std::getenv(name);
@@ -184,7 +187,9 @@ std::string writeTempConfig() {
     std::ofstream f(cfgPath);
     f << "{\"model_config_list\":[{\"config\":{\"name\":\"" << kModelName
             << "\",\"base_path\":\"" << configuredModelDir
-            << "\",\"target_device\":\"GPU\",\"nireq\":4,\"plugin_config\":{\"PERFORMANCE_HINT\":\"LATENCY\",\"NUM_STREAMS\":\"1\"}}}]}";
+            << "\",\"target_device\":\"GPU\",\"nireq\":4,\"plugin_config\":{\"PERFORMANCE_HINT\":\""
+            << benchmark_config::kPerformanceHint << "\",\"NUM_STREAMS\":\""
+            << benchmark_config::kNumStreams << "\"}}}]}";
     f.close();
     return cfgPath;
 }
@@ -274,7 +279,7 @@ struct WindowsD3D11RemoteTensorFixture : public ::testing::Test {
         const void* out = nullptr;
         size_t bytes = 0;
         uint32_t id = 0;
-        OVMS_DataType dt = static_cast<OVMS_DataType>(199);
+        OVMS_DataType dt = OVMS_DATATYPE_UNDEFINED;
         const int64_t* shape = nullptr;
         size_t dims = 0;
         OVMS_BufferType bt = OVMS_BUFFERTYPE_CPU;
@@ -316,7 +321,7 @@ struct WindowsD3D11RemoteTensorFixture : public ::testing::Test {
         const void* out = nullptr;
         size_t bytes = 0;
         uint32_t id = 0;
-        OVMS_DataType dt = static_cast<OVMS_DataType>(199);
+        OVMS_DataType dt = OVMS_DATATYPE_UNDEFINED;
         const int64_t* shape = nullptr;
         size_t dims = 0;
         OVMS_BufferType bt = OVMS_BUFFERTYPE_CPU;
@@ -381,8 +386,8 @@ TEST_F(WindowsD3D11RemoteTensorFixture, DecoderAndOvmsCapiInferenceUseSameRegist
 TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithOvmsCapiInferencePerformance) {
     ASSERT_TRUE(fileExists(videoPath)) << "test video not found: " << videoPath;
 
-    constexpr int warmupFrames = 20;
-    constexpr int measuredFrames = 150;
+    constexpr int warmupFrames = kPerformanceWarmupFrames;
+    constexpr int measuredFrames = kPerformanceMeasuredFrames;
     const int trialCount = performanceTrialCount();
     using Clock = std::chrono::steady_clock;
 
@@ -493,13 +498,13 @@ TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithOvmsCapiInferencePerforman
     std::cout << "REMOTE_TENSOR_DIRECT_D3D11 config=LATENCY streams=1 nireq=4 warmup_frames="
               << warmupFrames << " measured_frames=" << measuredFrames << std::endl;
     for (int trial = 1; trial <= trialCount; ++trial)
-        runTrial(true, false, false, trial);
+        runTrial(true, true, false, trial);
 }
 
 TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithD3D11Nv12SurfacePerformance) {
     ASSERT_TRUE(fileExists(videoPath)) << "test video not found: " << videoPath;
-    constexpr int warmupFrames = 20;
-    constexpr int measuredFrames = 150;
+    constexpr int warmupFrames = kPerformanceWarmupFrames;
+    constexpr int measuredFrames = kPerformanceMeasuredFrames;
     const int trialCount = performanceTrialCount();
     using Clock = std::chrono::steady_clock;
     for (int trial = 1; trial <= trialCount; ++trial) {
@@ -542,8 +547,8 @@ TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithD3D11Nv12SurfacePerformanc
 
 TEST_F(WindowsD3D11RemoteTensorFixture, OvmsCapiInferenceWithD3D11Nv12Performance) {
     ASSERT_TRUE(fileExists(videoPath)) << "test video not found: " << videoPath;
-    constexpr int warmupFrames = 20;
-    constexpr int measuredFrames = 150;
+    constexpr int warmupFrames = kPerformanceWarmupFrames;
+    constexpr int measuredFrames = kPerformanceMeasuredFrames;
     const int trialCount = performanceTrialCount();
     using Clock = std::chrono::steady_clock;
     for (int trial = 1; trial <= trialCount; ++trial) {
@@ -560,6 +565,17 @@ TEST_F(WindowsD3D11RemoteTensorFixture, OvmsCapiInferenceWithD3D11Nv12Performanc
         ASSERT_EQ(imp_video_open(&stream, source, context, &options), IMP_OK)
             << imp_context_get_error(context);
         imp_video_source_destroy(source);
+        OVMS_InferenceRequest* request = nullptr;
+        const std::string yName = std::string(kInputName) + "/y";
+        const std::string uvName = std::string(kInputName) + "/uv";
+        const int64_t shapeY[] = {1, kModelH, kModelW, 1};
+        const int64_t shapeUV[] = {1, kModelH / 2, kModelW / 2, 2};
+        ASSERT_TRUE(capiOk(OVMS_InferenceRequestNew(&request, server, kModelName, 1)));
+        ASSERT_TRUE(capiOk(OVMS_InferenceRequestAddInput(
+            request, yName.c_str(), OVMS_DATATYPE_U8, shapeY, 4)));
+        ASSERT_TRUE(capiOk(OVMS_InferenceRequestAddInput(
+            request, uvName.c_str(), OVMS_DATATYPE_U8, shapeUV, 4)));
+        bool hasBoundData = false;
         std::vector<double> capiMs;
         capiMs.reserve(measuredFrames);
         for (int frameIndex = 0; frameIndex < warmupFrames + measuredFrames; ++frameIndex) {
@@ -576,12 +592,15 @@ TEST_F(WindowsD3D11RemoteTensorFixture, OvmsCapiInferenceWithD3D11Nv12Performanc
             ASSERT_EQ(decodeDevice, static_cast<void*>(device.Get()));
             ASSERT_EQ(subresource, 0u);
             const auto start = Clock::now();
-            ASSERT_GE(runCapiInference(texture, frameWidth, frameHeight), 0);
+            ASSERT_GE(runReusableCapiInference(
+                          request, &hasBoundData, texture, frameWidth, frameHeight),
+                0);
             const auto stop = Clock::now();
             if (frameIndex >= warmupFrames)
                 capiMs.push_back(std::chrono::duration<double, std::milli>(stop - start).count());
             imp_tensor_release(tensor);
         }
+        OVMS_InferenceRequestDelete(request);
         imp_video_close(stream);
         imp_context_destroy(context);
         const double sum = std::accumulate(capiMs.begin(), capiMs.end(), 0.0);
@@ -604,8 +623,8 @@ TEST_F(WindowsD3D11RemoteTensorFixture, OvmsCapiInferenceWithD3D11Nv12Performanc
 TEST_F(WindowsD3D11RemoteTensorFixture, MediaPipeFileSourceAndOvmsCapiInferenceCalculatorsPerformance) {
     ASSERT_TRUE(fileExists(videoPath)) << "test video not found: " << videoPath;
 
-    constexpr int warmupFrames = 20;
-    constexpr int measuredFrames = 150;
+    constexpr int warmupFrames = kPerformanceWarmupFrames;
+    constexpr int measuredFrames = kPerformanceMeasuredFrames;
     const int trialCount = performanceTrialCount();
     constexpr int totalFrames = warmupFrames + measuredFrames;
     using Clock = std::chrono::steady_clock;
@@ -709,8 +728,8 @@ node {
 TEST_F(WindowsD3D11RemoteTensorFixture, PureOpenVinoInferenceWithD3D11Nv12InCalculatorPerformance) {
     ASSERT_TRUE(fileExists(videoPath)) << "test video not found: " << videoPath;
 
-    constexpr int warmupFrames = 20;
-    constexpr int measuredFrames = 150;
+    constexpr int warmupFrames = kPerformanceWarmupFrames;
+    constexpr int measuredFrames = kPerformanceMeasuredFrames;
     const int trialCount = performanceTrialCount();
     using Clock = std::chrono::steady_clock;
     const std::string configuredModelPath = std::filesystem::path(modelXmlPath()).generic_string();
@@ -820,8 +839,8 @@ node {
 TEST_F(WindowsD3D11RemoteTensorFixture, OvmsCapiInferenceWithD3D11Nv12InCalculatorPerformance) {
     ASSERT_TRUE(fileExists(videoPath)) << "test video not found: " << videoPath;
 
-    constexpr int warmupFrames = 20;
-    constexpr int measuredFrames = 150;
+    constexpr int warmupFrames = kPerformanceWarmupFrames;
+    constexpr int measuredFrames = kPerformanceMeasuredFrames;
     const int trialCount = performanceTrialCount();
     using Clock = std::chrono::steady_clock;
     const std::string graphText = R"pb(
@@ -936,8 +955,8 @@ node {
 TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithOpenVinoSourceAndInferenceCalculatorsPerformance) {
     ASSERT_TRUE(fileExists(videoPath)) << "test video not found: " << videoPath;
 
-    constexpr int warmupFrames = 20;
-    constexpr int measuredFrames = 150;
+    constexpr int warmupFrames = kPerformanceWarmupFrames;
+    constexpr int measuredFrames = kPerformanceMeasuredFrames;
     const int trialCount = performanceTrialCount();
     constexpr int totalFrames = warmupFrames + measuredFrames;
     using Clock = std::chrono::steady_clock;
@@ -1038,8 +1057,8 @@ node {
 TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithOpenVinoSingleCalculatorPerformance) {
     ASSERT_TRUE(fileExists(videoPath)) << "test video not found: " << videoPath;
 
-    constexpr int warmupFrames = 20;
-    constexpr int measuredFrames = 150;
+    constexpr int warmupFrames = kPerformanceWarmupFrames;
+    constexpr int measuredFrames = kPerformanceMeasuredFrames;
     const int trialCount = performanceTrialCount();
     constexpr int totalFrames = warmupFrames + measuredFrames;
     using Clock = std::chrono::steady_clock;
@@ -1132,11 +1151,88 @@ node {
     }
 }
 
+TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithOpenVinoGstreamerElementPerformance) {
+    ASSERT_TRUE(fileExists(videoPath)) << "test video not found: " << videoPath;
+
+    constexpr int warmupFrames = kPerformanceWarmupFrames;
+    constexpr int measuredFrames = kPerformanceMeasuredFrames;
+    constexpr int totalFrames = warmupFrames + measuredFrames;
+    const int trialCount = performanceTrialCount();
+    using Clock = std::chrono::steady_clock;
+    const std::string configuredModelPath = std::filesystem::path(modelXmlPath()).generic_string();
+    const std::string graphText = R"pb(
+input_side_packet: "VIDEO_PATH:video_path"
+input_side_packet: "WIDTH:width"
+input_side_packet: "HEIGHT:height"
+input_side_packet: "MAX_FRAMES:max_frames"
+output_stream: "FRAMES:frames"
+node {
+  calculator: "GstVideoOpenVinoPipelineInferenceCalculator"
+  input_side_packet: "VIDEO_PATH:video_path"
+  input_side_packet: "WIDTH:width"
+  input_side_packet: "HEIGHT:height"
+  input_side_packet: "MAX_FRAMES:max_frames"
+  output_stream: "FRAMES:frames"
+  options {
+    [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
+      model_path: ")pb" + configuredModelPath + R"pb("
+      input_name: "data"
+      performance_hint: "LATENCY"
+      num_streams: 1
+    }
+  }
+}
+)pb";
+    const auto config = ::mediapipe::ParseTextProtoOrDie<::mediapipe::CalculatorGraphConfig>(graphText);
+
+    std::cout << "REMOTE_TENSOR_GSTREAMER_ELEMENT_DIRECT_OV graph=d3d11convert_plus_ovd3d11infer "
+              << "input=D3D11_NV12 config=LATENCY streams=1 warmup_frames=" << warmupFrames
+              << " measured_frames=" << measuredFrames << std::endl;
+    for (int trial = 1; trial <= trialCount; ++trial) {
+        ::mediapipe::CalculatorGraph graph;
+        ASSERT_TRUE(graph.Initialize(config).ok());
+        auto pollerOr = graph.AddOutputStreamPoller("frames");
+        ASSERT_TRUE(pollerOr.ok());
+        ::mediapipe::OutputStreamPoller poller = std::move(pollerOr.value());
+        const std::map<std::string, ::mediapipe::Packet> sidePackets = {
+            {"video_path", ::mediapipe::MakePacket<std::string>(videoPath)},
+            {"width", ::mediapipe::MakePacket<int>(kModelW)},
+            {"height", ::mediapipe::MakePacket<int>(kModelH)},
+            {"max_frames", ::mediapipe::MakePacket<int>(totalFrames)},
+        };
+        ASSERT_TRUE(graph.StartRun(sidePackets).ok());
+        Clock::time_point measuredStart;
+        Clock::time_point measuredStop;
+        int frames = 0;
+        int inferredFrames = 0;
+        ::mediapipe::Packet packet;
+        while (poller.Next(&packet)) {
+            ++frames;
+            inferredFrames += packet.Get<int>();
+            if (frames == warmupFrames)
+                measuredStart = Clock::now();
+            if (frames == totalFrames)
+                measuredStop = Clock::now();
+        }
+        const absl::Status doneStatus = graph.WaitUntilDone();
+        ASSERT_TRUE(doneStatus.ok()) << doneStatus.message();
+        ASSERT_EQ(frames, totalFrames);
+        ASSERT_EQ(inferredFrames, totalFrames);
+        const double steadyMs = std::chrono::duration<double, std::milli>(
+            measuredStop - measuredStart).count();
+        std::cout << std::fixed << std::setprecision(3)
+                  << "REMOTE_TENSOR_GSTREAMER_ELEMENT_DIRECT_OV trial=" << trial
+                  << " frames=" << measuredFrames
+                  << " steady_fps=" << measuredFrames * 1000.0 / steadyMs
+                  << " inferred_frames=" << inferredFrames << std::endl;
+    }
+}
+
 TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithOvmsCapiSingleCalculatorPerformance) {
     ASSERT_TRUE(fileExists(videoPath)) << "test video not found: " << videoPath;
 
-    constexpr int warmupFrames = 20;
-    constexpr int measuredFrames = 150;
+    constexpr int warmupFrames = kPerformanceWarmupFrames;
+    constexpr int measuredFrames = kPerformanceMeasuredFrames;
     const int trialCount = performanceTrialCount();
     constexpr int totalFrames = warmupFrames + measuredFrames;
     using Clock = std::chrono::steady_clock;
@@ -1214,8 +1310,8 @@ node {
 TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeAndOpenVinoD3D11RemoteTensorInferencePerformance) {
     ASSERT_TRUE(fileExists(videoPath)) << "test video not found: " << videoPath;
 
-    constexpr int warmupFrames = 20;
-    constexpr int measuredFrames = 150;
+    constexpr int warmupFrames = kPerformanceWarmupFrames;
+    constexpr int measuredFrames = kPerformanceMeasuredFrames;
     const int trialCount = performanceTrialCount();
     using Clock = std::chrono::steady_clock;
 
@@ -1342,8 +1438,8 @@ TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeAndOpenVinoD3D11RemoteTensorIn
 TEST_F(WindowsD3D11RemoteTensorFixture, OpenVinoHostNv12GpuPreprocessingInferencePerformance) {
     ASSERT_TRUE(fileExists(videoPath)) << "test video not found: " << videoPath;
 
-    constexpr int warmupFrames = 20;
-    constexpr int measuredFrames = 150;
+    constexpr int warmupFrames = kPerformanceWarmupFrames;
+    constexpr int measuredFrames = kPerformanceMeasuredFrames;
     const int trialCount = performanceTrialCount();
     constexpr int totalFrames = warmupFrames + measuredFrames;
     using Clock = std::chrono::steady_clock;
@@ -1459,8 +1555,8 @@ TEST_F(WindowsD3D11RemoteTensorFixture, OpenVinoHostNv12GpuPreprocessingInferenc
 }
 
 TEST(OpenVinoGpuPerformance, OpenClRemoteFp32TensorInferencePerformance) {
-    constexpr int warmupFrames = 20;
-    constexpr int measuredFrames = 150;
+    constexpr int warmupFrames = kPerformanceWarmupFrames;
+    constexpr int measuredFrames = kPerformanceMeasuredFrames;
     const int trialCount = performanceTrialCount();
     constexpr int requestCount = 4;
     const std::string videoPath = envOr("VIDEO_PATH", repoRoot() + "\\recording_3_raw.avi");

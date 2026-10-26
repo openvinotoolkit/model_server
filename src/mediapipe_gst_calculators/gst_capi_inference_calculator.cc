@@ -130,15 +130,6 @@ class GstCapiInferenceCalculator : public CalculatorBase {
             RET_CHECK(false) << "unsupported frame resource for C-API inference";
         }
 
-        OVMS_InferenceRequest* raw_request = nullptr;
-        absl::Status status = checkCapiStatus(
-            OVMS_InferenceRequestNew(&raw_request, server_, servable_name_.c_str(), servable_version_),
-            "OVMS_InferenceRequestNew");
-        if (!status.ok())
-            return status;
-        std::unique_ptr<OVMS_InferenceRequest, decltype(&OVMS_InferenceRequestDelete)> request(
-            raw_request, OVMS_InferenceRequestDelete);
-
         const std::string input_name_y = input_name_ + "/y";
         const std::string input_name_uv = input_name_ + "/uv";
         const int64_t shape_y[] = {1, frame.height, frame.width, 1};
@@ -146,33 +137,48 @@ class GstCapiInferenceCalculator : public CalculatorBase {
         const size_t bytes_y = static_cast<size_t>(frame.width) * frame.height;
         const size_t bytes_uv = bytes_y / 2;
 
-        status = checkCapiStatus(
-            OVMS_InferenceRequestAddInput(request.get(), input_name_y.c_str(), OVMS_DATATYPE_U8,
-                                          shape_y, 4),
-            "OVMS_InferenceRequestAddInput(Y)");
+        absl::Status status;
+        if (request_ == nullptr) {
+            status = checkCapiStatus(OVMS_InferenceRequestNew(
+                &request_, server_, servable_name_.c_str(), servable_version_), "OVMS_InferenceRequestNew");
+            if (!status.ok())
+                return status;
+            status = checkCapiStatus(OVMS_InferenceRequestAddInput(request_, input_name_y.c_str(),
+                OVMS_DATATYPE_U8, shape_y, 4), "OVMS_InferenceRequestAddInput(Y)");
+            if (!status.ok())
+                return status;
+            status = checkCapiStatus(OVMS_InferenceRequestAddInput(request_, input_name_uv.c_str(),
+                OVMS_DATATYPE_U8, shape_uv, 4), "OVMS_InferenceRequestAddInput(UV)");
+            if (!status.ok())
+                return status;
+            request_width_ = frame.width;
+            request_height_ = frame.height;
+        }
+        RET_CHECK_EQ(frame.width, request_width_);
+        RET_CHECK_EQ(frame.height, request_height_);
+        if (request_has_bound_data_) {
+            status = checkCapiStatus(OVMS_InferenceRequestInputRemoveData(request_, input_name_y.c_str()),
+                "OVMS_InferenceRequestInputRemoveData(Y)");
+            if (!status.ok())
+                return status;
+            status = checkCapiStatus(OVMS_InferenceRequestInputRemoveData(request_, input_name_uv.c_str()),
+                "OVMS_InferenceRequestInputRemoveData(UV)");
+            if (!status.ok())
+                return status;
+            request_has_bound_data_ = false;
+        }
+        status = checkCapiStatus(OVMS_InferenceRequestInputSetData(request_, input_name_y.c_str(),
+            surface_handle, bytes_y, buffer_type_y, 1), "OVMS_InferenceRequestInputSetData(Y)");
         if (!status.ok())
             return status;
-        status = checkCapiStatus(
-            OVMS_InferenceRequestInputSetData(request.get(), input_name_y.c_str(), surface_handle,
-                                              bytes_y, buffer_type_y, 1),
-            "OVMS_InferenceRequestInputSetData(Y)");
+        status = checkCapiStatus(OVMS_InferenceRequestInputSetData(request_, input_name_uv.c_str(),
+            surface_handle, bytes_uv, buffer_type_uv, 1), "OVMS_InferenceRequestInputSetData(UV)");
         if (!status.ok())
             return status;
-        status = checkCapiStatus(
-            OVMS_InferenceRequestAddInput(request.get(), input_name_uv.c_str(), OVMS_DATATYPE_U8,
-                                          shape_uv, 4),
-            "OVMS_InferenceRequestAddInput(UV)");
-        if (!status.ok())
-            return status;
-        status = checkCapiStatus(
-            OVMS_InferenceRequestInputSetData(request.get(), input_name_uv.c_str(), surface_handle,
-                                              bytes_uv, buffer_type_uv, 1),
-            "OVMS_InferenceRequestInputSetData(UV)");
-        if (!status.ok())
-            return status;
+        request_has_bound_data_ = true;
 
         OVMS_InferenceResponse* raw_response = nullptr;
-        status = checkCapiStatus(OVMS_Inference(server_, request.get(), &raw_response), "OVMS_Inference");
+        status = checkCapiStatus(OVMS_Inference(server_, request_, &raw_response), "OVMS_Inference");
         if (!status.ok())
             return status;
         std::unique_ptr<OVMS_InferenceResponse, decltype(&OVMS_InferenceResponseDelete)> response(
@@ -233,13 +239,25 @@ class GstCapiInferenceCalculator : public CalculatorBase {
         return absl::OkStatus();
     }
 
+    absl::Status Close(CalculatorContext*) override {
+        if (request_ != nullptr) {
+            OVMS_InferenceRequestDelete(request_);
+            request_ = nullptr;
+        }
+        return absl::OkStatus();
+    }
+
  private:
     OVMS_Server* server_ = nullptr;
+    OVMS_InferenceRequest* request_ = nullptr;
     std::string servable_name_;
     std::string input_name_;
     int servable_version_ = 1;
     int full_width_ = 0;
     int full_height_ = 0;
+    int request_width_ = 0;
+    int request_height_ = 0;
+    bool request_has_bound_data_ = false;
 };
 
 REGISTER_CALCULATOR(GstCapiInferenceCalculator);
