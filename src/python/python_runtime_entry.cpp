@@ -251,6 +251,28 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_ensurePythonInterpreterInitialized(co
     return false;
 }
 
+extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_ensureChatTemplateRuntimeInitialized(const char** errorMessage) {
+    if (!OVMS_ensurePythonInterpreterInitialized(errorMessage)) {
+        return false;
+    }
+
+    py::gil_scoped_acquire acquire;
+    try {
+        py::module_::import("json");
+        py::module_::import("pathlib");
+        py::module_::import("datetime");
+        py::module_::import("jinja2");
+        py::module_::import("jinja2.sandbox");
+        py::module_::import("jinja2.ext");
+        return true;
+    } catch (const std::exception& error) {
+        setRuntimeOutput(error.what(), errorMessage);
+    } catch (...) {
+        setRuntimeOutput("Failed to initialize Python chat template dependencies", errorMessage);
+    }
+    return false;
+}
+
 extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_createPreparedChatTemplateRuntime(
     const char* modelsPath,
     const char* chatTemplate,
@@ -374,11 +396,6 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_createPreparedChatTemplateRuntime(
                     with open(tool_use_template_file, "r", encoding="utf-8") as f:
                         tool_chat_template = f.read()
 
-                chat_template_jinja_file = Path(models_path) / "chat_template.jinja"
-                if chat_template_jinja_file.is_file():
-                    with open(chat_template_jinja_file, "r", encoding="utf-8") as f:
-                        chat_template = f.read()
-
                 prepared_chat_template = jinja_env.from_string(chat_template)
                 prepared_tool_template = jinja_env.from_string(tool_chat_template) if tool_chat_template is not None else prepared_chat_template
             except Exception as e:
@@ -449,11 +466,12 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_applyPreparedChatTemplateRuntime(
             "bos_token"_a = prepared->bosToken,
             "eos_token"_a = prepared->eosToken);
 
+        // TODO: Group chat-template runtime logging in a follow-up change.
+        SPDLOG_DEBUG("Applying chat template via Python Jinja renderer");
         py::exec(R"(
             import json
             output = ""
             error = ""
-            print("OVMS: prepared Python Jinja renderer executing", flush=True)
             try:
                 request_json = json.loads(request_body)
                 messages = request_json["messages"]
