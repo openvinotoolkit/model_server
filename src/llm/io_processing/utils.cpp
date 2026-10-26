@@ -178,14 +178,11 @@ const char* jsonTypeOf(const rapidjson::Value& val) {
     return "unknown";
 }
 
-void enforceStringValue(rapidjson::Value& v, rapidjson::Document::AllocatorType& alloc) {
+void enforceStringValue(rapidjson::Value& v, const std::string& rawText, rapidjson::Document::AllocatorType& alloc) {
     if (v.IsString()) {
         return;
     }
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    v.Accept(writer);
-    v.SetString(buffer.GetString(), buffer.GetLength(), alloc);
+    v.SetString(rawText.c_str(), static_cast<rapidjson::SizeType>(rawText.size()), alloc);
 }
 
 void normalizeBooleanString(std::string& value) {
