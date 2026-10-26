@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="10" failures="6" disabled="0" errors="0" time="2.998" timestamp="2026-10-26T22:52:46.098" name="AllTests">
+  <testsuite name="TargetTokenizers/LfmStrictOutputParserTest" tests="10" failures="6" disabled="0" skipped="1" errors="0" time="2.997" timestamp="2026-10-26T22:52:46.098">
+    <testcase name="AllTwoWaySplitsPreserveNestedArgumentsAndNumberSpelling/0" value_param="false" file="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp" line="58" status="run" result="completed" time="0.372" timestamp="2026-10-26T22:52:46.098" classname="TargetTokenizers/LfmStrictOutputParserTest">
+      <failure message="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:63&#x0A;Expected equality of these values:&#x0A;  result.toolCalls.size()&#x0A;    Which is: 0&#x0A;  1&#x0A;Google Test trace:&#x0A;C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp(61): 0" type=""><![CDATA[C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:63
+Expected equality of these values:
+  result.toolCalls.size()
+    Which is: 0
+  1
+Google Test trace:
+C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp(61): 0]]></failure>
+    </testcase>
+    <testcase name="AllTwoWaySplitsPreserveNestedArgumentsAndNumberSpelling/1" value_param="true" file="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp" line="58" status="run" result="completed" time="0.398" timestamp="2026-10-26T22:52:46.470" classname="TargetTokenizers/LfmStrictOutputParserTest">
+      <failure message="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:63&#x0A;Expected equality of these values:&#x0A;  result.toolCalls.size()&#x0A;    Which is: 0&#x0A;  1&#x0A;Google Test trace:&#x0A;C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp(61): 0" type=""><![CDATA[C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:63
+Expected equality of these values:
+  result.toolCalls.size()
+    Which is: 0
+  1
+Google Test trace:
+C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp(61): 0]]></failure>
+    </testcase>
+    <testcase name="FixedSeedMultipartSplitsKeepQuotedMarkersAndEscapedBackslashes/0" value_param="false" file="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp" line="70" status="run" result="completed" time="0.248" timestamp="2026-10-26T22:52:46.868" classname="TargetTokenizers/LfmStrictOutputParserTest">
+      <failure message="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:81&#x0A;Expected equality of these values:&#x0A;  result.toolCalls.size()&#x0A;    Which is: 1&#x0A;  2" type=""><![CDATA[C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:81
+Expected equality of these values:
+  result.toolCalls.size()
+    Which is: 1
+  2]]></failure>
+    </testcase>
+    <testcase name="FixedSeedMultipartSplitsKeepQuotedMarkersAndEscapedBackslashes/1" value_param="true" file="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp" line="70" status="run" result="completed" time="0.298" timestamp="2026-10-26T22:52:47.117" classname="TargetTokenizers/LfmStrictOutputParserTest">
+      <failure message="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:81&#x0A;Expected equality of these values:&#x0A;  result.toolCalls.size()&#x0A;    Which is: 1&#x0A;  2" type=""><![CDATA[C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:81
+Expected equality of these values:
+  result.toolCalls.size()
+    Which is: 1
+  2]]></failure>
+    </testcase>
+    <testcase name="CompletedMalformedLiteralsThrowInsteadOfBecomingStrings/0" value_param="false" file="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp" line="88" status="run" result="completed" time="0.276" timestamp="2026-10-26T22:52:47.415" classname="TargetTokenizers/LfmStrictOutputParserTest">
+      <failure message="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:90&#x0A;Expected: run({std::string(&quot;&lt;|tool_call_start|&gt;[f(&quot;) + args + &quot;)]&lt;|tool_call_end|&gt;&quot;}) throws an exception of type std::invalid_argument.&#x0A;  Actual: it throws nothing.&#x0A;missing" type=""><![CDATA[C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:90
+Expected: run({std::string("<|tool_call_start|>[f(") + args + ")]<|tool_call_end|>"}) throws an exception of type std::invalid_argument.
+  Actual: it throws nothing.
+missing]]></failure>
+      <failure message="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:90&#x0A;Expected: run({std::string(&quot;&lt;|tool_call_start|&gt;[f(&quot;) + args + &quot;)]&lt;|tool_call_end|&gt;&quot;}) throws an exception of type std::invalid_argument.&#x0A;  Actual: it throws nothing.&#x0A;a=" type=""><![CDATA[C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:90
+Expected: run({std::string("<|tool_call_start|>[f(") + args + ")]<|tool_call_end|>"}) throws an exception of type std::invalid_argument.
+  Actual: it throws nothing.
+a=]]></failure>
+      <failure message="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:90&#x0A;Expected: run({std::string(&quot;&lt;|tool_call_start|&gt;[f(&quot;) + args + &quot;)]&lt;|tool_call_end|&gt;&quot;}) throws an exception of type std::invalid_argument.&#x0A;  Actual: it throws nothing.&#x0A;a=unknown" type=""><![CDATA[C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:90
+Expected: run({std::string("<|tool_call_start|>[f(") + args + ")]<|tool_call_end|>"}) throws an exception of type std::invalid_argument.
+  Actual: it throws nothing.
+a=unknown]]></failure>
+      <failure message="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:90&#x0A;Expected: run({std::string(&quot;&lt;|tool_call_start|&gt;[f(&quot;) + args + &quot;)]&lt;|tool_call_end|&gt;&quot;}) throws an exception of type std::invalid_argument.&#x0A;  Actual: it throws nothing.&#x0A;a=None,a=True" type=""><![CDATA[C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:90
+Expected: run({std::string("<|tool_call_start|>[f(") + args + ")]<|tool_call_end|>"}) throws an exception of type std::invalid_argument.
+  Actual: it throws nothing.
+a=None,a=True]]></failure>
+      <failure message="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:90&#x0A;Expected: run({std::string(&quot;&lt;|tool_call_start|&gt;[f(&quot;) + args + &quot;)]&lt;|tool_call_end|&gt;&quot;}) throws an exception of type std::invalid_argument.&#x0A;  Actual: it throws nothing.&#x0A;a=__import__(&apos;os&apos;)" type=""><![CDATA[C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:90
+Expected: run({std::string("<|tool_call_start|>[f(") + args + ")]<|tool_call_end|>"}) throws an exception of type std::invalid_argument.
+  Actual: it throws nothing.
+a=__import__('os')]]></failure>
+    </testcase>
+    <testcase name="CompletedMalformedLiteralsThrowInsteadOfBecomingStrings/1" value_param="true" file="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp" line="88" status="run" result="completed" time="0.261" timestamp="2026-10-26T22:52:47.691" classname="TargetTokenizers/LfmStrictOutputParserTest">
+      <failure message="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:90&#x0A;Expected: run({std::string(&quot;&lt;|tool_call_start|&gt;[f(&quot;) + args + &quot;)]&lt;|tool_call_end|&gt;&quot;}) throws an exception of type std::invalid_argument.&#x0A;  Actual: it throws nothing.&#x0A;missing" type=""><![CDATA[C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:90
+Expected: run({std::string("<|tool_call_start|>[f(") + args + ")]<|tool_call_end|>"}) throws an exception of type std::invalid_argument.
+  Actual: it throws nothing.
+missing]]></failure>
+      <failure message="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:90&#x0A;Expected: run({std::string(&quot;&lt;|tool_call_start|&gt;[f(&quot;) + args + &quot;)]&lt;|tool_call_end|&gt;&quot;}) throws an exception of type std::invalid_argument.&#x0A;  Actual: it throws nothing.&#x0A;a=" type=""><![CDATA[C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:90
+Expected: run({std::string("<|tool_call_start|>[f(") + args + ")]<|tool_call_end|>"}) throws an exception of type std::invalid_argument.
+  Actual: it throws nothing.
+a=]]></failure>
+      <failure message="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:90&#x0A;Expected: run({std::string(&quot;&lt;|tool_call_start|&gt;[f(&quot;) + args + &quot;)]&lt;|tool_call_end|&gt;&quot;}) throws an exception of type std::invalid_argument.&#x0A;  Actual: it throws nothing.&#x0A;a=unknown" type=""><![CDATA[C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:90
+Expected: run({std::string("<|tool_call_start|>[f(") + args + ")]<|tool_call_end|>"}) throws an exception of type std::invalid_argument.
+  Actual: it throws nothing.
+a=unknown]]></failure>
+      <failure message="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:90&#x0A;Expected: run({std::string(&quot;&lt;|tool_call_start|&gt;[f(&quot;) + args + &quot;)]&lt;|tool_call_end|&gt;&quot;}) throws an exception of type std::invalid_argument.&#x0A;  Actual: it throws nothing.&#x0A;a=None,a=True" type=""><![CDATA[C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:90
+Expected: run({std::string("<|tool_call_start|>[f(") + args + ")]<|tool_call_end|>"}) throws an exception of type std::invalid_argument.
+  Actual: it throws nothing.
+a=None,a=True]]></failure>
+      <failure message="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:90&#x0A;Expected: run({std::string(&quot;&lt;|tool_call_start|&gt;[f(&quot;) + args + &quot;)]&lt;|tool_call_end|&gt;&quot;}) throws an exception of type std::invalid_argument.&#x0A;  Actual: it throws nothing.&#x0A;a=__import__(&apos;os&apos;)" type=""><![CDATA[C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:90
+Expected: run({std::string("<|tool_call_start|>[f(") + args + ")]<|tool_call_end|>"}) throws an exception of type std::invalid_argument.
+  Actual: it throws nothing.
+a=__import__('os')]]></failure>
+    </testcase>
+    <testcase name="LengthDoesNotFabricateIncompleteArguments/0" value_param="false" file="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp" line="94" status="run" result="completed" time="0.242" timestamp="2026-10-26T22:52:47.953" classname="TargetTokenizers/LfmStrictOutputParserTest" />
+    <testcase name="LengthDoesNotFabricateIncompleteArguments/1" value_param="true" file="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp" line="94" status="run" result="completed" time="0.271" timestamp="2026-10-26T22:52:48.195" classname="TargetTokenizers/LfmStrictOutputParserTest" />
+    <testcase name="ReasoningIsSeparatedFromContent/0" value_param="false" file="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp" line="99" status="run" result="skipped" time="0.251" timestamp="2026-10-26T22:52:48.467" classname="TargetTokenizers/LfmStrictOutputParserTest">
+      <skipped message="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:100&#x0A;LFM2.5 reasoning only"><![CDATA[C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp:100
+LFM2.5 reasoning only]]></skipped>
+    </testcase>
+    <testcase name="ReasoningIsSeparatedFromContent/1" value_param="true" file="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_strict_output_parser_test.cpp" line="99" status="run" result="completed" time="0.377" timestamp="2026-10-26T22:52:48.718" classname="TargetTokenizers/LfmStrictOutputParserTest" />
+  </testsuite>
+</testsuites>

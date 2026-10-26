@@ -1,0 +1,63 @@
+﻿{
+    "source_commit":  "a5f60ccd85d7b5f1ede3d14fd26a7e2c0b72de36",
+    "config":  "win_mp_on_py_off",
+    "flags":  [
+                  "--config=win_mp_on_py_off",
+                  "--action_env=OpenVINO_DIR=C:/gm/qwenmonster/semantic-refit-2026.4-sdk/extracted/openvino_genai_windows_2026.4.0.0rc1_x86_64/runtime/cmake",
+                  "--action_env=PYTHON_BIN_PATH=C:\\gm\\qwenmonster\\semantic-refit-2026.4-tools\\py-nupkg\\tools/python.exe",
+                  "--action_env=PYTHON_LIB_PATH=C:\\gm\\qwenmonster\\semantic-refit-2026.4-tools\\py-nupkg\\tools/Lib/site-packages",
+                  "--repo_env=PYTHON_BIN_PATH=C:\\gm\\qwenmonster\\semantic-refit-2026.4-tools\\py-nupkg\\tools/python.exe",
+                  "--repo_env=PYTHON_LIB_PATH=C:\\gm\\qwenmonster\\semantic-refit-2026.4-tools\\py-nupkg\\tools/Lib/site-packages",
+                  "--python_path=C:\\gm\\qwenmonster\\semantic-refit-2026.4-tools\\py-nupkg\\tools/python.exe",
+                  "--jobs=4",
+                  "--verbose_failures"
+              ],
+    "files":  [
+                  {
+                      "path":  "version.hpp",
+                      "bytes":  1110,
+                      "sha256":  "0dceadf111c5d35fdebf135ed3f397feabda9af848cabbb76b92f69e6ba413cb"
+                  },
+                  {
+                      "path":  "bin\\git2.dll",
+                      "bytes":  1756160,
+                      "sha256":  "e17d5ff32da71fd840a3e66505a4a22044130f6eac18c2bf3c353dd9372ebfdc"
+                  },
+                  {
+                      "path":  "bin\\libcurl-x64.dll",
+                      "bytes":  3647080,
+                      "sha256":  "f31fa58061e162ff4702b37224404df210346df6dff4a49e92d07b8dd5217334"
+                  },
+                  {
+                      "path":  "bin\\opencv_world4140.dll",
+                      "bytes":  79832576,
+                      "sha256":  "a192cbf006faf48c054468fa2a2e56e3f680b401c23b8f7fb24373ff75654c46"
+                  },
+                  {
+                      "path":  "bin\\openvino_genai.dll",
+                      "bytes":  7425808,
+                      "sha256":  "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d"
+                  },
+                  {
+                      "path":  "bin\\openvino_tokenizers.dll",
+                      "bytes":  3483912,
+                      "sha256":  "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c"
+                  },
+                  {
+                      "path":  "bin\\ovms.exe",
+                      "bytes":  22596608,
+                      "sha256":  "ce6fd4eb550d6d29cea0ad052a4ea37a85493f873179b5779c6388a14eec72d7"
+                  },
+                  {
+                      "path":  "bin\\ovms_test.exe",
+                      "bytes":  40555008,
+                      "sha256":  "3e8b8bc79214b486871112da57b84fa730b3656d63b95b62e1d4aef5d78e0b14"
+                  },
+                  {
+                      "path":  "bin\\python312.dll",
+                      "bytes":  6945272,
+                      "sha256":  "9a0e3435aaa680d868150f87ab3e388ad2eebc22f87e036155c7b4eda8cd2120"
+                  }
+              ],
+    "status":  "BUILD_PASS"
+}

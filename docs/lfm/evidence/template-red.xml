@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="2" failures="2" disabled="0" errors="0" time="0.437" timestamp="2026-10-26T22:42:21.649" name="AllTests">
+  <testsuite name="TargetTokenizers/LfmTemplateRoundTripTest" tests="2" failures="2" disabled="0" skipped="0" errors="0" time="0.436" timestamp="2026-10-26T22:42:21.650">
+    <testcase name="MinjaRealTokenizerPreservesNestedToolValues/0" value_param="false" file="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_template_roundtrip_test.cpp" line="15" status="run" result="completed" time="0.181" timestamp="2026-10-26T22:42:21.650" classname="TargetTokenizers/LfmTemplateRoundTripTest">
+      <failure message="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_template_roundtrip_test.cpp:40&#x0A;Expected: (begin) != (std::string::npos), actual: 18446744073709551615 vs 18446744073709551615&#x0A;&lt;|startoftext|&gt;&lt;|im_start|&gt;user&#x0A;Report a value.&lt;|im_end|&gt;&#x0A;&lt;|im_start|&gt;assistant&#x0A;{&#x0A;  &quot;tool_calls&quot;: [&#x0A;    {&#x0A;      &quot;name&quot;: &quot;report_value&quot;,&#x0A;      &quot;arguments&quot;: {&#x0A;        &quot;text&quot;: &quot;O&apos;Brien at C:\\test\nnext&quot;,&#x0A;        &quot;items&quot;: [&#x0A;          true,&#x0A;          null,&#x0A;          {&#x0A;            &quot;n&quot;: 42&#x0A;          }&#x0A;        ]&#x0A;      },&#x0A;      &quot;id&quot;: &quot;test_call&quot;&#x0A;    }&#x0A;  ],&#x0A;  &quot;content&quot;: &quot;&quot;&#x0A;}&lt;|im_end|&gt;&#x0A;&lt;|im_start|&gt;assistant&#x0A;" type=""><![CDATA[C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_template_roundtrip_test.cpp:40
+Expected: (begin) != (std::string::npos), actual: 18446744073709551615 vs 18446744073709551615
+<|startoftext|><|im_start|>user
+Report a value.<|im_end|>
+<|im_start|>assistant
+{
+  "tool_calls": [
+    {
+      "name": "report_value",
+      "arguments": {
+        "text": "O'Brien at C:\\test\nnext",
+        "items": [
+          true,
+          null,
+          {
+            "n": 42
+          }
+        ]
+      },
+      "id": "test_call"
+    }
+  ],
+  "content": ""
+}<|im_end|>
+<|im_start|>assistant
+]]></failure>
+    </testcase>
+    <testcase name="MinjaRealTokenizerPreservesNestedToolValues/1" value_param="true" file="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_template_roundtrip_test.cpp" line="15" status="run" result="completed" time="0.255" timestamp="2026-10-26T22:42:21.831" classname="TargetTokenizers/LfmTemplateRoundTripTest">
+      <failure message="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_template_roundtrip_test.cpp:45&#x0A;Expected: parsed = ovms::lfm2::parseArguments(args) doesn&apos;t throw an exception.&#x0A;  Actual: it throws class std::invalid_argument with description &quot;Invalid LFM literal at byte 8&quot;.&#x0A;&lt;|startoftext|&gt;&lt;|im_start|&gt;user&#x0A;Report a value.&lt;|im_end|&gt;&#x0A;&lt;|im_start|&gt;assistant&#x0A;&lt;think&gt;private&lt;/think&gt;&lt;|tool_call_start|&gt;[report_value(text=&apos;O&apos;Brien at C:\test&#x0A;next&apos;, items=[True, null, {&apos;n&apos;: 42}])]&lt;|tool_call_end|&gt;&lt;|im_end|&gt;&#x0A;&lt;|im_start|&gt;assistant&#x0A;" type=""><![CDATA[C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_template_roundtrip_test.cpp:45
+Expected: parsed = ovms::lfm2::parseArguments(args) doesn't throw an exception.
+  Actual: it throws class std::invalid_argument with description "Invalid LFM literal at byte 8".
+<|startoftext|><|im_start|>user
+Report a value.<|im_end|>
+<|im_start|>assistant
+<think>private</think><|tool_call_start|>[report_value(text='O'Brien at C:\test
+next', items=[True, null, {'n': 42}])]<|tool_call_end|><|im_end|>
+<|im_start|>assistant
+]]></failure>
+    </testcase>
+  </testsuite>
+</testsuites>

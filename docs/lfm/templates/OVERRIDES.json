@@ -1,0 +1,16 @@
+[
+  {
+    "model": "OpenVINO/LFM2-24B-A2B-int4-ov",
+    "source": "RC4 existing LFM2 tool-history adaptation (original export has no renderer)",
+    "normalized_source_sha256": "e676d87d54737f73605686d47612ace7a834840ba62871ac1deb08bf89d8d753",
+    "override": "docs/lfm/templates/LFM2-24B-A2B-int4-ov.jinja",
+    "sha256": "ddc8cc91b42dd2fa62bc603b840f85116d79fc08ef4b3413f54aba769d35cd12"
+  },
+  {
+    "model": "OpenVINO/LFM2.5-8B-A1B-int4-ov",
+    "source": "Unmodified target export chat_template.jinja",
+    "normalized_source_sha256": "49d2c3f6f81224949ad6c0b70008ecb24dacd053fde42b18d8bd2053033b814c",
+    "override": "docs/lfm/templates/LFM2.5-8B-A1B-int4-ov.jinja",
+    "sha256": "d8d4c0fdd46298e8c44bc6b7308f6663137cdfd22d34e6b38c93db2cec85bc8e"
+  }
+]

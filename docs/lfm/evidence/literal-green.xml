@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="5" failures="0" disabled="0" errors="0" time="0.015" timestamp="2026-10-26T22:58:30.237" name="AllTests">
+  <testsuite name="LfmLiteralTest" tests="5" failures="0" disabled="0" skipped="0" errors="0" time="0.015" timestamp="2026-10-26T22:58:30.237">
+    <testcase name="GoldenValuesPreserveTypesAndSpelling" file="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_literal_test.cpp" line="21" status="run" result="completed" time="0" timestamp="2026-10-26T22:58:30.237" classname="LfmLiteralTest" />
+    <testcase name="RejectsMalformedOrExecutableSyntax" file="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_literal_test.cpp" line="40" status="run" result="completed" time="0" timestamp="2026-10-26T22:58:30.237" classname="LfmLiteralTest" />
+    <testcase name="BoundsAreEnforced" file="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_literal_test.cpp" line="54" status="run" result="completed" time="0.001" timestamp="2026-10-26T22:58:30.237" classname="LfmLiteralTest" />
+    <testcase name="FixedSeedStringRoundTripAndHostileMutation" file="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_literal_test.cpp" line="62" status="run" result="completed" time="0.013" timestamp="2026-10-26T22:58:30.239" classname="LfmLiteralTest" />
+    <testcase name="ExternalGoldenCorpus" file="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_literal_test.cpp" line="76" status="run" result="completed" time="0" timestamp="2026-10-26T22:58:30.252" classname="LfmLiteralTest" />
+  </testsuite>
+</testsuites>

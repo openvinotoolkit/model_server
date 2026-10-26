@@ -1,0 +1,17 @@
+﻿[
+    {
+        "name":  "openvino.dll",
+        "file_version":  "2026.4.0.22930",
+        "product_version":  "2026.4.0-22930-61afcb26271-releases/2026/4"
+    },
+    {
+        "name":  "openvino_genai.dll",
+        "file_version":  "2026.4.0.0",
+        "product_version":  "2026.4.0.0-3401-5f7f1278107"
+    },
+    {
+        "name":  "openvino_tokenizers.dll",
+        "file_version":  "2026.4.0.0",
+        "product_version":  "2026.4.0.0-736-a04accf6282"
+    }
+]

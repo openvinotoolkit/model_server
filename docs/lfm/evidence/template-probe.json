@@ -1,0 +1,47 @@
+{
+  "template": "C:\\llm\\models\\LFM2.5-8B-A1B-int4-ov\\chat_template.jinja",
+  "scope": "unmodified format_arg_value macro in Jinja2 only; not minja or parser round-trip",
+  "cases": [
+    {
+      "value": "O'Brien",
+      "export_macro_output": "'O'Brien'",
+      "json_literal_for_comparison": "\"O'Brien\""
+    },
+    {
+      "value": "C:\\test",
+      "export_macro_output": "'C:\\test'",
+      "json_literal_for_comparison": "\"C:\\\\test\""
+    },
+    {
+      "value": "line\nnext",
+      "export_macro_output": "'line\nnext'",
+      "json_literal_for_comparison": "\"line\\nnext\""
+    },
+    {
+      "value": "\"quoted\"",
+      "export_macro_output": "'\"quoted\"'",
+      "json_literal_for_comparison": "\"\\\"quoted\\\"\""
+    },
+    {
+      "value": "末尾\\",
+      "export_macro_output": "'末尾\\'",
+      "json_literal_for_comparison": "\"末尾\\\\\""
+    },
+    {
+      "value": {
+        "path": "C:\\test",
+        "enabled": true
+      },
+      "export_macro_output": "{\"enabled\": true, \"path\": \"C:\\\\test\"}",
+      "json_literal_for_comparison": "{\"path\": \"C:\\\\test\", \"enabled\": true}"
+    },
+    {
+      "value": [
+        "a",
+        "b'c"
+      ],
+      "export_macro_output": "['a', \"b'c\"]",
+      "json_literal_for_comparison": "[\"a\", \"b'c\"]"
+    }
+  ]
+}

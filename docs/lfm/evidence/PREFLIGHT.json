@@ -1,0 +1,390 @@
+{
+  "source_head": "a5f60ccd85d7b5f1ede3d14fd26a7e2c0b72de36",
+  "models": [
+    {
+      "id": "OpenVINO/LFM2-24B-A2B-int4-ov",
+      "local_dir": "C:\\llm\\models\\LFM2-24B-A2B-int4-ov",
+      "files": [
+        {
+          "name": ".gitattributes",
+          "bytes": 1519,
+          "sha256": "11ad7efa24975ee4b0c3c3a38ed18737f0658a5f75a0a96787b576a78a023361",
+          "download_revision": "f8feb127b6125c29ba4d75d6f10ab2564ecd695c",
+          "download_etag": "a6344aac8c09253b3b630fb776ae94478aa0275b",
+          "lfs_sha256_matches": null
+        },
+        {
+          "name": "chat_template.jinja",
+          "bytes": 2553,
+          "sha256": "013eed60546434b6967e3483153d8c5c37abcb1d667f8b1f914683f2a9411531",
+          "download_revision": "f8feb127b6125c29ba4d75d6f10ab2564ecd695c",
+          "download_etag": "ad239e10dff9f5ebf8fa0b0a47e338b125b9c2ad",
+          "lfs_sha256_matches": null
+        },
+        {
+          "name": "config.json",
+          "bytes": 1423,
+          "sha256": "c52e1a9ff58828cf04c5c4fffc94c068e5a1359bc6c0b9d169a3e8db8614edef",
+          "download_revision": "f8feb127b6125c29ba4d75d6f10ab2564ecd695c",
+          "download_etag": "922eec901f7aad447092c3102f4ca1f8b769fee6",
+          "lfs_sha256_matches": null
+        },
+        {
+          "name": "generation_config.json",
+          "bytes": 131,
+          "sha256": "e6a1ce8f16f9c3d6ac1f13bee18484f271a2566b5af238853c90fb9b2b5c5cda",
+          "download_revision": "f8feb127b6125c29ba4d75d6f10ab2564ecd695c",
+          "download_etag": "d5045602cf084d62e0b42a8b25c0daebda400458",
+          "lfs_sha256_matches": null
+        },
+        {
+          "name": "openvino_config.json",
+          "bytes": 523,
+          "sha256": "aaeb5f3952aafba73c9da5f96bac5c6beac89000aa676d290ef521b45e5d4b39",
+          "download_revision": "f8feb127b6125c29ba4d75d6f10ab2564ecd695c",
+          "download_etag": "9848ca898843d7d47559534908af91fadf6eedbd",
+          "lfs_sha256_matches": null
+        },
+        {
+          "name": "openvino_detokenizer.bin",
+          "bytes": 911427,
+          "sha256": "866214ab962259d51b044d5d9c4eafb0ee6739f096542c0f16a40712a052edf2",
+          "download_revision": "f8feb127b6125c29ba4d75d6f10ab2564ecd695c",
+          "download_etag": "866214ab962259d51b044d5d9c4eafb0ee6739f096542c0f16a40712a052edf2",
+          "lfs_sha256_matches": true
+        },
+        {
+          "name": "openvino_detokenizer.xml",
+          "bytes": 11004,
+          "sha256": "11d14c4cc77bea53aa096b5ef5394209b82263f305cc26ec0938f367d3041fa4",
+          "download_revision": "f8feb127b6125c29ba4d75d6f10ab2564ecd695c",
+          "download_etag": "917b3014e6347c37b7e98ce40c3be0db9d293e21",
+          "lfs_sha256_matches": null
+        },
+        {
+          "name": "openvino_model.bin",
+          "bytes": 12453075098,
+          "sha256": "ccd69ef318d13e726d0483e8defa9c050ddb6987dc56bf580dbef3fdb47bb92d",
+          "download_revision": "f8feb127b6125c29ba4d75d6f10ab2564ecd695c",
+          "download_etag": "ccd69ef318d13e726d0483e8defa9c050ddb6987dc56bf580dbef3fdb47bb92d",
+          "lfs_sha256_matches": true
+        },
+        {
+          "name": "openvino_model.xml",
+          "bytes": 4515134,
+          "sha256": "1ed2a74b825eb2d57b28ae6b645761013df40a0d375eef1e0a34f3b90d928804",
+          "download_revision": "f8feb127b6125c29ba4d75d6f10ab2564ecd695c",
+          "download_etag": "dbb049fd7468fd5476588e801c79705fcce594c5",
+          "lfs_sha256_matches": null
+        },
+        {
+          "name": "openvino_tokenizer.bin",
+          "bytes": 2339619,
+          "sha256": "4eebc4855b79ce9c237ca0c897321a20d2e49e10685ce8c69ac9fd1549722053",
+          "download_revision": "f8feb127b6125c29ba4d75d6f10ab2564ecd695c",
+          "download_etag": "4eebc4855b79ce9c237ca0c897321a20d2e49e10685ce8c69ac9fd1549722053",
+          "lfs_sha256_matches": true
+        },
+        {
+          "name": "openvino_tokenizer.xml",
+          "bytes": 27874,
+          "sha256": "9c8c11f716a4e710db628b523521160ff0a9b4d2d5c3905d6bd3c80966fa66fa",
+          "download_revision": "f8feb127b6125c29ba4d75d6f10ab2564ecd695c",
+          "download_etag": "9c100a85e5c7278795a1c421e65444d2c2462d03",
+          "lfs_sha256_matches": null
+        },
+        {
+          "name": "README.md",
+          "bytes": 4460,
+          "sha256": "ec0c577cd41cee40e87241c7b39240cc24415b548b2a02885f1c975e790c1ca1",
+          "download_revision": "f8feb127b6125c29ba4d75d6f10ab2564ecd695c",
+          "download_etag": "f75a7311144576bd1539ab5bd38a29556d4c4142",
+          "lfs_sha256_matches": null
+        },
+        {
+          "name": "tokenizer.json",
+          "bytes": 4733383,
+          "sha256": "2221c71b5dce048a8abae62843b92bd7deec13cc153f95fa6e3327a47b79a7da",
+          "download_revision": "f8feb127b6125c29ba4d75d6f10ab2564ecd695c",
+          "download_etag": "d54bc82c1b982709e5de555c5e6f2c708e3e967f",
+          "lfs_sha256_matches": null
+        },
+        {
+          "name": "tokenizer_config.json",
+          "bytes": 558,
+          "sha256": "06846f034523288692f879c3c385b5b59c287bc2f90d95b667196c361d92aade",
+          "download_revision": "f8feb127b6125c29ba4d75d6f10ab2564ecd695c",
+          "download_etag": "871ffefe48da0b1dc8509ccda09d88dd55e482b5",
+          "lfs_sha256_matches": null
+        }
+      ],
+      "operation_counts": {
+        "Parameter": 3,
+        "Const": 3599,
+        "ShapeOf": 212,
+        "Gather": 234,
+        "Concat": 214,
+        "Broadcast": 169,
+        "ReadValue": 50,
+        "Convert": 1080,
+        "Subtract": 320,
+        "Multiply": 840,
+        "Power": 101,
+        "ReduceMean": 101,
+        "Add": 350,
+        "Sqrt": 101,
+        "Divide": 169,
+        "Reshape": 604,
+        "Slice": 168,
+        "Unsqueeze": 101,
+        "Equal": 30,
+        "MatMul": 260,
+        "Transpose": 109,
+        "Mod": 30,
+        "Greater": 30,
+        "VariadicSplit": 30,
+        "GroupConvolution": 30,
+        "Swish": 40,
+        "Range": 3,
+        "Cos": 1,
+        "Sin": 1,
+        "Squeeze": 3,
+        "LessEqual": 1,
+        "BitwiseAnd": 2,
+        "Split": 2,
+        "Pad": 1,
+        "ReduceProd": 1,
+        "Select": 1,
+        "ScaledDotProductAttention": 10,
+        "Tile": 38,
+        "Sigmoid": 38,
+        "TopK": 38,
+        "GatherElements": 38,
+        "ReduceSum": 76,
+        "ScatterElementsUpdate": 38,
+        "Assign": 50,
+        "Result": 1
+      },
+      "constant_count": 3599,
+      "rt_info": "<rt_info>\n\t\t<info name=\"OpenVINO Runtime\" value=\"2026.2.0-21752-51ac1b94f89\" />\n\t\t<Runtime_version value=\"2026.2.0-21752-51ac1b94f89\" />\n\t\t<conversion_parameters>\n\t\t\t<framework value=\"pytorch\" />\n\t\t\t<is_python_object value=\"True\" />\n\t\t</conversion_parameters>\n\t\t<nncf>\n\t\t\t<friendly_names_were_updated value=\"True\" />\n\t\t\t<version value=\"3.2.0.dev0+e5d2b41f7\" />\n\t\t\t<weight_compression>\n\t\t\t\t<advanced_parameters value=\"{'statistics_path': None, 'lora_adapter_rank': 256, 'group_size_fallback_mode': 'error', 'min_adjusted_group_size': 32, 'awq_params': {'subset_size': 32, 'percent_to_apply': 0.002, 'alpha_min': 0.0, 'alpha_max': 1.0, 'steps': 100, 'prefer_data_aware_scaling': True}, 'scale_estimation_params': {'subset_size': 64, 'initial_steps': 5, 'scale_steps': 5, 'weight_penalty': -1.0}, 'gptq_params': {'damp_percent': 0.1, 'block_size': 128, 'subset_size': 128}, 'lora_correction_params': {'adapter_rank': 8, 'num_iterations': 3, 'apply_regularization': True, 'subset_size': 128, 'use_int8_adapters': True}, 'backend_params': {}, 'codebook': None, 'adaptive_codebook_params': {'value_type': 'f8e4m3', 'across_blocks': False, 'num_elements': 16}}\" />\n\t\t\t\t<all_layers value=\"False\" />\n\t\t\t\t<awq value=\"False\" />\n\t\t\t\t<backup_mode value=\"int8_asym\" />\n\t\t\t\t<compression_format value=\"dequantize\" />\n\t\t\t\t<gptq value=\"False\" />\n\t\t\t\t<group_size value=\"128\" />\n\t\t\t\t<ignored_scope value=\"[]\" />\n\t\t\t\t<lora_correction value=\"False\" />\n\t\t\t\t<mode value=\"int4_asym\" />\n\t\t\t\t<ratio value=\"1.0\" />\n\t\t\t\t<scale_estimation value=\"False\" />\n\t\t\t\t<sensitivity_metric value=\"weight_quantization_error\" />\n\t\t\t</weight_compression>\n\t\t</nncf>\n\t\t<optimum>\n\t\t\t<nncf_version value=\"3.2.0.dev0+e5d2b41f7\" />\n\t\t\t<optimum_intel_version value=\"1.27.0.dev0+190d59f\" />\n\t\t\t<optimum_version value=\"2.1.0.dev0\" />\n\t\t\t<pytorch_version value=\"2.11.0\" />\n\t\t\t<transformers_version value=\"5.0.0\" />\n\t\t</optimum>\n\t\t<runtime_options>\n\t\t\t<ACTIVATIONS_SCALE_FACTOR value=\"8.0\" />\n\t\t</runtime_options>\n\t</rt_info>\n"
+    },
+    {
+      "id": "OpenVINO/LFM2.5-8B-A1B-int4-ov",
+      "local_dir": "C:\\llm\\models\\LFM2.5-8B-A1B-int4-ov",
+      "files": [
+        {
+          "name": ".gitattributes",
+          "bytes": 1570,
+          "sha256": "34448b82c17d60fec9b65b1f093c115ddbaadc04beb1b0140b6bfed2e012a930",
+          "download_revision": "97164c6953b3291fcd58a877f0ed5dc3efa24135",
+          "download_etag": "52373fe24473b1aa44333d318f578ae6bf04b49b",
+          "lfs_sha256_matches": null
+        },
+        {
+          "name": "chat_template.jinja",
+          "bytes": 5112,
+          "sha256": "49d2c3f6f81224949ad6c0b70008ecb24dacd053fde42b18d8bd2053033b814c",
+          "download_revision": "97164c6953b3291fcd58a877f0ed5dc3efa24135",
+          "download_etag": "26acf01dfd2e610ca278d375f80cfffae7bcc2bf",
+          "lfs_sha256_matches": null
+        },
+        {
+          "name": "config.json",
+          "bytes": 1204,
+          "sha256": "25cc812bda12ba3318a8962a3ba18bcf3b967905d3b384ca78547aa9f9f4c483",
+          "download_revision": "97164c6953b3291fcd58a877f0ed5dc3efa24135",
+          "download_etag": "eb1fd9ad68955f8a4daf216f12500a8e784488ed",
+          "lfs_sha256_matches": null
+        },
+        {
+          "name": "generation_config.json",
+          "bytes": 318,
+          "sha256": "c7da57546d89f0ec5bc8cc62a2d007f5ee272ab108b0334e07f443b8b9074b0f",
+          "download_revision": "97164c6953b3291fcd58a877f0ed5dc3efa24135",
+          "download_etag": "0724e27a8d07a1eb0d75cf5b2589522fff8a79a3",
+          "lfs_sha256_matches": null
+        },
+        {
+          "name": "openvino_config.json",
+          "bytes": 455,
+          "sha256": "8098608e450c73d80f3bcd016f16e284cd8cc06ae5e0d50468ea8be262c7fcc3",
+          "download_revision": "97164c6953b3291fcd58a877f0ed5dc3efa24135",
+          "download_etag": "349c93b9b46ea8f92cb998d22ffbe971d15a2fb4",
+          "lfs_sha256_matches": null
+        },
+        {
+          "name": "openvino_detokenizer.bin",
+          "bytes": 1804415,
+          "sha256": "d659a36c4fa4fb8024e74c051d17be6848993579db3716ff8156ae31f43a1a25",
+          "download_revision": "97164c6953b3291fcd58a877f0ed5dc3efa24135",
+          "download_etag": "d659a36c4fa4fb8024e74c051d17be6848993579db3716ff8156ae31f43a1a25",
+          "lfs_sha256_matches": true
+        },
+        {
+          "name": "openvino_detokenizer.xml",
+          "bytes": 12498,
+          "sha256": "d2bd05614ea6fd67b0dbbe47b057b72055ae3cb084f235ddebf4b060ddaaf894",
+          "download_revision": "97164c6953b3291fcd58a877f0ed5dc3efa24135",
+          "download_etag": "5687751d184783f0c2cffb5744352928e0067af8",
+          "lfs_sha256_matches": null
+        },
+        {
+          "name": "openvino_model.bin",
+          "bytes": 4526171034,
+          "sha256": "4f882fe35deb890d0489e661990f880298af08694f32ad953b4fd9269cdfcfe8",
+          "download_revision": "97164c6953b3291fcd58a877f0ed5dc3efa24135",
+          "download_etag": "4f882fe35deb890d0489e661990f880298af08694f32ad953b4fd9269cdfcfe8",
+          "lfs_sha256_matches": true
+        },
+        {
+          "name": "openvino_model.xml",
+          "bytes": 2708612,
+          "sha256": "f2f39318009046ace86fda681fc332f44f781bd6e1c77aca8f0e5e8b94c688e3",
+          "download_revision": "97164c6953b3291fcd58a877f0ed5dc3efa24135",
+          "download_etag": "789c93abc3dda86fa20d4e202604ca1f21cfbe32",
+          "lfs_sha256_matches": null
+        },
+        {
+          "name": "openvino_tokenizer.bin",
+          "bytes": 8624522,
+          "sha256": "dd2af3d5f5cb27636d7746ebb76a846e5abe83018bbf6e6da13827cd0829a5c5",
+          "download_revision": "97164c6953b3291fcd58a877f0ed5dc3efa24135",
+          "download_etag": "dd2af3d5f5cb27636d7746ebb76a846e5abe83018bbf6e6da13827cd0829a5c5",
+          "lfs_sha256_matches": true
+        },
+        {
+          "name": "openvino_tokenizer.xml",
+          "bytes": 28417,
+          "sha256": "a77a77b6ca83c1d554ca6f2b252093ac89b789ef99cc6d80bd2130b805db737e",
+          "download_revision": "97164c6953b3291fcd58a877f0ed5dc3efa24135",
+          "download_etag": "263151438606e268ebe2fb3e6696a6d469b5387b",
+          "lfs_sha256_matches": null
+        },
+        {
+          "name": "README.md",
+          "bytes": 4914,
+          "sha256": "151d84be68ccef8f71a9bced1d91f2627f0cafc1d01868a239d58fca95832a5a",
+          "download_revision": "97164c6953b3291fcd58a877f0ed5dc3efa24135",
+          "download_etag": "c09759e9ee20544e35ae79a6c50a0d715de815aa",
+          "lfs_sha256_matches": null
+        },
+        {
+          "name": "tokenizer.json",
+          "bytes": 17905598,
+          "sha256": "695be7802a0e4b8a81048f0ff5ebb7fc811a0ba5a6be63dbb24deb5a81096f41",
+          "download_revision": "97164c6953b3291fcd58a877f0ed5dc3efa24135",
+          "download_etag": "695be7802a0e4b8a81048f0ff5ebb7fc811a0ba5a6be63dbb24deb5a81096f41",
+          "lfs_sha256_matches": true
+        },
+        {
+          "name": "tokenizer_config.json",
+          "bytes": 316,
+          "sha256": "055fed274ff57d1b675ca13f409e8908cc8b8e8c7e4f5b6b08d12171d2dd3e58",
+          "download_revision": "97164c6953b3291fcd58a877f0ed5dc3efa24135",
+          "download_etag": "158bde0558379dec22e965aaff349acd26c9bed0",
+          "lfs_sha256_matches": null
+        }
+      ],
+      "operation_counts": {
+        "Parameter": 3,
+        "Const": 2163,
+        "ShapeOf": 128,
+        "Gather": 142,
+        "Concat": 130,
+        "Broadcast": 101,
+        "ReadValue": 30,
+        "Convert": 648,
+        "Subtract": 192,
+        "Multiply": 504,
+        "Power": 61,
+        "ReduceMean": 61,
+        "Add": 210,
+        "Sqrt": 61,
+        "Divide": 101,
+        "Reshape": 360,
+        "Slice": 100,
+        "Unsqueeze": 65,
+        "Equal": 18,
+        "MatMul": 156,
+        "Transpose": 65,
+        "Mod": 18,
+        "Greater": 18,
+        "VariadicSplit": 18,
+        "GroupConvolution": 18,
+        "Swish": 24,
+        "Range": 3,
+        "Cos": 1,
+        "Sin": 1,
+        "Squeeze": 3,
+        "LessEqual": 1,
+        "BitwiseAnd": 2,
+        "Split": 2,
+        "Pad": 1,
+        "ReduceProd": 1,
+        "Select": 1,
+        "ScaledDotProductAttention": 6,
+        "Tile": 22,
+        "Sigmoid": 22,
+        "TopK": 22,
+        "GatherElements": 22,
+        "ReduceSum": 44,
+        "ScatterElementsUpdate": 22,
+        "Assign": 30,
+        "Result": 1
+      },
+      "constant_count": 2163,
+      "rt_info": "<rt_info>\n\t\t<info name=\"OpenVINO Runtime\" value=\"2026.3.0-22165-7b32f06bcaa\" />\n\t\t<Runtime_version value=\"2026.3.0-22165-7b32f06bcaa\" />\n\t\t<conversion_parameters>\n\t\t\t<framework value=\"pytorch\" />\n\t\t\t<is_python_object value=\"True\" />\n\t\t</conversion_parameters>\n\t\t<nncf>\n\t\t\t<friendly_names_were_updated value=\"True\" />\n\t\t\t<version value=\"3.3.0.dev0+a83f0ca6\" />\n\t\t\t<weight_compression>\n\t\t\t\t<advanced_parameters value=\"{'statistics_path': None, 'lora_adapter_rank': 256, 'group_size_fallback_mode': 'error', 'min_adjusted_group_size': 32, 'awq_params': {'subset_size': 32, 'percent_to_apply': 0.002, 'alpha_min': 0.0, 'alpha_max': 1.0, 'steps': 100, 'prefer_data_aware_scaling': True}, 'scale_estimation_params': {'subset_size': 64, 'initial_steps': 5, 'scale_steps': 5, 'weight_penalty': -1.0}, 'gptq_params': {'damp_percent': 0.1, 'block_size': 128, 'subset_size': 128}, 'lora_correction_params': {'adapter_rank': 8, 'num_iterations': 3, 'apply_regularization': True, 'subset_size': 128, 'use_int8_adapters': True}, 'backend_params': {}, 'codebook': None, 'adaptive_codebook_params': {'value_type': 'f8e4m3', 'across_blocks': False, 'num_elements': 16}}\" />\n\t\t\t\t<all_layers value=\"False\" />\n\t\t\t\t<awq value=\"False\" />\n\t\t\t\t<backup_mode value=\"int8_asym\" />\n\t\t\t\t<compression_format value=\"dequantize\" />\n\t\t\t\t<gptq value=\"False\" />\n\t\t\t\t<group_size value=\"128\" />\n\t\t\t\t<ignored_scope value=\"[]\" />\n\t\t\t\t<lora_correction value=\"False\" />\n\t\t\t\t<mode value=\"int4_asym\" />\n\t\t\t\t<ratio value=\"1.0\" />\n\t\t\t\t<scale_estimation value=\"False\" />\n\t\t\t\t<sensitivity_metric value=\"weight_quantization_error\" />\n\t\t\t</weight_compression>\n\t\t</nncf>\n\t\t<optimum>\n\t\t\t<nncf_version value=\"3.3.0.dev0+a83f0ca6\" />\n\t\t\t<optimum_intel_version value=\"2.1.0.dev0+bda82c2\" />\n\t\t\t<optimum_version value=\"2.2.0\" />\n\t\t\t<pytorch_version value=\"2.12.0+cpu\" />\n\t\t\t<transformers_version value=\"5.0.0\" />\n\t\t</optimum>\n\t\t<runtime_options>\n\t\t\t<ACTIVATIONS_SCALE_FACTOR value=\"8.0\" />\n\t\t</runtime_options>\n\t</rt_info>\n"
+    }
+  ],
+  "runtime": [
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino.dll",
+      "bytes": 16465168,
+      "sha256": "829c4642e287522f8a8e748a726d4ad3117a701e22ab46adc82771f98e5d2f7e",
+      "destination": "bin/openvino.dll",
+      "actual_sha256": "829c4642e287522f8a8e748a726d4ad3117a701e22ab46adc82771f98e5d2f7e",
+      "matches_rc4_lock": true
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_genai.dll",
+      "bytes": 7425808,
+      "sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d",
+      "destination": "bin/openvino_genai.dll",
+      "actual_sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d",
+      "matches_rc4_lock": true
+    },
+    {
+      "source": "C:\\llm\\ovms\\openvino_intel_gpu_plugin.dll",
+      "bytes": 33879040,
+      "sha256": "21a2fd9f5d856c297416059325832f0f902c84a4e78b840f859ca508f5aea66d",
+      "destination": "bin/openvino_intel_gpu_plugin.dll",
+      "actual_sha256": "21a2fd9f5d856c297416059325832f0f902c84a4e78b840f859ca508f5aea66d",
+      "matches_rc4_lock": true
+    },
+    {
+      "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-sdk\\extracted\\openvino_genai_windows_2026.4.0.0rc1_x86_64\\runtime\\bin\\intel64\\Release\\openvino_tokenizers.dll",
+      "bytes": 3483912,
+      "sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c",
+      "destination": "bin/openvino_tokenizers.dll",
+      "actual_sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c",
+      "matches_rc4_lock": true
+    }
+  ],
+  "gates": {
+    "source_ref": "PASS",
+    "model_inventory": "PASS",
+    "fresh_build": "NOT_RUN",
+    "baseline_cpp_tests": "NOT_RUN",
+    "strict_parser": "NOT_RUN",
+    "template_round_trip": "NOT_RUN",
+    "reasoning": "NOT_RUN",
+    "unary_sse": "NOT_RUN",
+    "cpu_load": "NOT_RUN",
+    "gpu_load": "NOT_RUN",
+    "tool_cycle_continuation": "NOT_RUN",
+    "arc140v_benchmark": "NOT_RUN",
+    "cib2_mapping": "INCOMPLETE",
+    "offload": "DISABLED",
+    "acceptance": "NO"
+  }
+}

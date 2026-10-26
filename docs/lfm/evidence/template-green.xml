@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="2" failures="0" disabled="0" errors="0" time="0.277" timestamp="2026-10-26T22:43:03.111" name="AllTests">
+  <testsuite name="TargetTokenizers/LfmTemplateRoundTripTest" tests="2" failures="0" disabled="0" skipped="0" errors="0" time="0.277" timestamp="2026-10-26T22:43:03.111">
+    <testcase name="MinjaRealTokenizerPreservesNestedToolValues/0" value_param="false" file="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_template_roundtrip_test.cpp" line="15" status="run" result="completed" time="0.117" timestamp="2026-10-26T22:43:03.111" classname="TargetTokenizers/LfmTemplateRoundTripTest" />
+    <testcase name="MinjaRealTokenizerPreservesNestedToolValues/1" value_param="true" file="C:\git\gemmamonster-lfm-2026.4\src\test\llm\output_parsers\lfm_template_roundtrip_test.cpp" line="15" status="run" result="completed" time="0.158" timestamp="2026-10-26T22:43:03.229" classname="TargetTokenizers/LfmTemplateRoundTripTest" />
+  </testsuite>
+</testsuites>

@@ -1,0 +1,170 @@
+[
+  {
+    "source": "C:\\llm\\models\\LFM2-24B-A2B-int4-ov\\openvino_tokenizer.xml",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\LiquidAI\\LFM2-2.6B\\openvino_tokenizer.xml",
+    "sha256": "9c8c11f716a4e710db628b523521160ff0a9b4d2d5c3905d6bd3c80966fa66fa",
+    "note": "target 24B tokenizer at legacy suite path; not a 2.6B model claim"
+  },
+  {
+    "source": "C:\\llm\\models\\LFM2-24B-A2B-int4-ov\\openvino_tokenizer.bin",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\LiquidAI\\LFM2-2.6B\\openvino_tokenizer.bin",
+    "sha256": "4eebc4855b79ce9c237ca0c897321a20d2e49e10685ce8c69ac9fd1549722053",
+    "note": "target 24B tokenizer at legacy suite path; not a 2.6B model claim"
+  },
+  {
+    "source": "C:\\llm\\models\\LFM2-24B-A2B-int4-ov\\openvino_detokenizer.xml",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\LiquidAI\\LFM2-2.6B\\openvino_detokenizer.xml",
+    "sha256": "11d14c4cc77bea53aa096b5ef5394209b82263f305cc26ec0938f367d3041fa4",
+    "note": "target 24B tokenizer at legacy suite path; not a 2.6B model claim"
+  },
+  {
+    "source": "C:\\llm\\models\\LFM2-24B-A2B-int4-ov\\openvino_detokenizer.bin",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\LiquidAI\\LFM2-2.6B\\openvino_detokenizer.bin",
+    "sha256": "866214ab962259d51b044d5d9c4eafb0ee6739f096542c0f16a40712a052edf2",
+    "note": "target 24B tokenizer at legacy suite path; not a 2.6B model claim"
+  },
+  {
+    "source": "C:\\llm\\models\\LFM2-24B-A2B-int4-ov\\tokenizer_config.json",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\LiquidAI\\LFM2-2.6B\\tokenizer_config.json",
+    "sha256": "06846f034523288692f879c3c385b5b59c287bc2f90d95b667196c361d92aade",
+    "note": "target 24B tokenizer at legacy suite path; not a 2.6B model claim"
+  },
+  {
+    "source": "C:\\llm\\models\\LFM2-24B-A2B-int4-ov\\chat_template.jinja",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\LiquidAI\\LFM2-2.6B\\chat_template.jinja",
+    "sha256": "013eed60546434b6967e3483153d8c5c37abcb1d667f8b1f914683f2a9411531",
+    "note": "target 24B tokenizer at legacy suite path; not a 2.6B model claim"
+  },
+  {
+    "source": "C:\\llm\\models\\LFM2.5-8B-A1B-int4-ov\\openvino_tokenizer.xml",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\LiquidAI\\LFM2.5-8B-A1B\\openvino_tokenizer.xml",
+    "sha256": "a77a77b6ca83c1d554ca6f2b252093ac89b789ef99cc6d80bd2130b805db737e",
+    "note": "target export tokenizer"
+  },
+  {
+    "source": "C:\\llm\\models\\LFM2.5-8B-A1B-int4-ov\\openvino_tokenizer.bin",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\LiquidAI\\LFM2.5-8B-A1B\\openvino_tokenizer.bin",
+    "sha256": "dd2af3d5f5cb27636d7746ebb76a846e5abe83018bbf6e6da13827cd0829a5c5",
+    "note": "target export tokenizer"
+  },
+  {
+    "source": "C:\\llm\\models\\LFM2.5-8B-A1B-int4-ov\\openvino_detokenizer.xml",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\LiquidAI\\LFM2.5-8B-A1B\\openvino_detokenizer.xml",
+    "sha256": "d2bd05614ea6fd67b0dbbe47b057b72055ae3cb084f235ddebf4b060ddaaf894",
+    "note": "target export tokenizer"
+  },
+  {
+    "source": "C:\\llm\\models\\LFM2.5-8B-A1B-int4-ov\\openvino_detokenizer.bin",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\LiquidAI\\LFM2.5-8B-A1B\\openvino_detokenizer.bin",
+    "sha256": "d659a36c4fa4fb8024e74c051d17be6848993579db3716ff8156ae31f43a1a25",
+    "note": "target export tokenizer"
+  },
+  {
+    "source": "C:\\llm\\models\\LFM2.5-8B-A1B-int4-ov\\tokenizer_config.json",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\LiquidAI\\LFM2.5-8B-A1B\\tokenizer_config.json",
+    "sha256": "055fed274ff57d1b675ca13f409e8908cc8b8e8c7e4f5b6b08d12171d2dd3e58",
+    "note": "target export tokenizer"
+  },
+  {
+    "source": "C:\\llm\\models\\LFM2.5-8B-A1B-int4-ov\\chat_template.jinja",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\LiquidAI\\LFM2.5-8B-A1B\\chat_template.jinja",
+    "sha256": "49d2c3f6f81224949ad6c0b70008ecb24dacd053fde42b18d8bd2053033b814c",
+    "note": "target export tokenizer"
+  },
+  {
+    "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\src\\test\\llm_testing\\facebook\\opt-125m\\openvino_tokenizer.xml",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\facebook\\opt-125m\\openvino_tokenizer.xml",
+    "sha256": "b2f86feb70e6a08dbfc73fa35fb7191ba49ff8bb071f3ee926edeffa3474f307",
+    "note": "existing genuine template fixture"
+  },
+  {
+    "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\src\\test\\llm_testing\\facebook\\opt-125m\\openvino_tokenizer.bin",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\facebook\\opt-125m\\openvino_tokenizer.bin",
+    "sha256": "1584d4fab31ec7cedb209e9d09d4a078e0120af2e9c8ac5fb1908de72a1082cb",
+    "note": "existing genuine template fixture"
+  },
+  {
+    "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\src\\test\\llm_testing\\facebook\\opt-125m\\openvino_detokenizer.xml",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\facebook\\opt-125m\\openvino_detokenizer.xml",
+    "sha256": "9089b92189a012a9764399c6ee124c21162350be4843ea5727c86858abec00ba",
+    "note": "existing genuine template fixture"
+  },
+  {
+    "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\src\\test\\llm_testing\\facebook\\opt-125m\\openvino_detokenizer.bin",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\facebook\\opt-125m\\openvino_detokenizer.bin",
+    "sha256": "50cd9af30112ff045bdd59615c0d9570a0686682d4b92b13792765b85896cfd3",
+    "note": "existing genuine template fixture"
+  },
+  {
+    "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\src\\test\\llm_testing\\Qwen\\Qwen3-8B\\openvino_tokenizer.xml",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\Qwen\\Qwen3-8B\\openvino_tokenizer.xml",
+    "sha256": "cee34515686c4c8c44c1276c8279273c457cae68497a9f2a5bca531e1ff7296c",
+    "note": "existing Qwen regression fixture"
+  },
+  {
+    "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\src\\test\\llm_testing\\Qwen\\Qwen3-8B\\openvino_tokenizer.bin",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\Qwen\\Qwen3-8B\\openvino_tokenizer.bin",
+    "sha256": "63c613e041e2d7f84f7376d6b628b72c8af29259b4d1b27540035f0d9ef034b3",
+    "note": "existing Qwen regression fixture"
+  },
+  {
+    "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\src\\test\\llm_testing\\Qwen\\Qwen3-8B\\openvino_detokenizer.xml",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\Qwen\\Qwen3-8B\\openvino_detokenizer.xml",
+    "sha256": "13247d687ad651e0d21285719896f24dcac206e1259863ad6eee493dc5217e90",
+    "note": "existing Qwen regression fixture"
+  },
+  {
+    "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\src\\test\\llm_testing\\Qwen\\Qwen3-8B\\openvino_detokenizer.bin",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\Qwen\\Qwen3-8B\\openvino_detokenizer.bin",
+    "sha256": "d73093f72c80ebcaffb76a192727170ecd3c6a06c4df52df0e76b3f70ad9d7f7",
+    "note": "existing Qwen regression fixture"
+  },
+  {
+    "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\src\\test\\llm_testing\\Qwen\\Qwen3-8B\\tokenizer_config.json",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\Qwen\\Qwen3-8B\\tokenizer_config.json",
+    "sha256": "443bfa629eb16387a12edbf92a76f6a6f10b2af3b53d87ba1550adfcf45f7fa0",
+    "note": "existing Qwen regression fixture"
+  },
+  {
+    "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\src\\test\\llm_testing\\Qwen\\Qwen3-8B\\chat_template.jinja",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\Qwen\\Qwen3-8B\\chat_template.jinja",
+    "sha256": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+    "note": "existing Qwen regression fixture"
+  },
+  {
+    "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\src\\test\\llm_testing\\OpenVINO\\gemma-4-E4B-it-int4-ov\\openvino_tokenizer.xml",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\OpenVINO\\gemma-4-E4B-it-int4-ov\\openvino_tokenizer.xml",
+    "sha256": "f206b7b4a3663d3a249f0757bd479b03c77132b9e9ea2256cf59bb2c02d6e54f",
+    "note": "existing Gemma regression fixture"
+  },
+  {
+    "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\src\\test\\llm_testing\\OpenVINO\\gemma-4-E4B-it-int4-ov\\openvino_tokenizer.bin",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\OpenVINO\\gemma-4-E4B-it-int4-ov\\openvino_tokenizer.bin",
+    "sha256": "d151f48d29ba9d22fdf0f071cd16cb68e5f8fba51a5489c3d2df8e29030e4a13",
+    "note": "existing Gemma regression fixture"
+  },
+  {
+    "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\src\\test\\llm_testing\\OpenVINO\\gemma-4-E4B-it-int4-ov\\openvino_detokenizer.xml",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\OpenVINO\\gemma-4-E4B-it-int4-ov\\openvino_detokenizer.xml",
+    "sha256": "3d3d911ee1e28b31e0bd9498dba8f7f3959bea821ad754e9273ecf9caed2067a",
+    "note": "existing Gemma regression fixture"
+  },
+  {
+    "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\src\\test\\llm_testing\\OpenVINO\\gemma-4-E4B-it-int4-ov\\openvino_detokenizer.bin",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\OpenVINO\\gemma-4-E4B-it-int4-ov\\openvino_detokenizer.bin",
+    "sha256": "461919bda7b546453e903052588c578e3e94e9e8215b7cec07cb00cb97459d13",
+    "note": "existing Gemma regression fixture"
+  },
+  {
+    "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\src\\test\\llm_testing\\OpenVINO\\gemma-4-E4B-it-int4-ov\\tokenizer_config.json",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\OpenVINO\\gemma-4-E4B-it-int4-ov\\tokenizer_config.json",
+    "sha256": "d7859e99f4d4070b8fa563589decfdf7378f33cc7c6d2c2a38c7353c3eb3b092",
+    "note": "existing Gemma regression fixture"
+  },
+  {
+    "source": "C:\\gm\\qwenmonster\\semantic-refit-2026.4-src\\src\\test\\llm_testing\\OpenVINO\\gemma-4-E4B-it-int4-ov\\chat_template.jinja",
+    "fixture": "C:\\git\\gemmamonster-lfm-2026.4\\src\\test\\llm_testing\\OpenVINO\\gemma-4-E4B-it-int4-ov\\chat_template.jinja",
+    "sha256": "781d10940fbc44be40064b5d43a056fc486c84ceaa55538226368b57314132bf",
+    "note": "existing Gemma regression fixture"
+  }
+]

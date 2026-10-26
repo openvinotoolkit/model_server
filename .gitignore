@@ -17,6 +17,7 @@ bazel-out
 bazel-ovms
 bazel-ovms-c
 bazel-testlogs
+bazel-gemmamonster-lfm-2026.4
 __pycache__
 .workspace
 *user_config*
