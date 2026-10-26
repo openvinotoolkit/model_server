@@ -18,8 +18,8 @@ All the client scenarios mentioned below can read the input content from mention
 
 In the demo will be used two gRPC communication patterns which might be advantageous depending on the scenario.
 
-- gRPC streaming - recommended for MediaPipe graphs especially for stateful analysis
-- gRPC unary calls - recommended for inference only on DAG graphs
+- gRPC streaming - recommended especially for stateful analysis
+- gRPC unary calls
 
 
 ## Requirements
@@ -68,14 +68,10 @@ pip install -r ../../common/stream_client/requirements.txt
 ```
 For the use case with RTSP client, install also FFMPEG component on the host.
 
-Alternatively build a docker image with the client with the following command:
-```bash
-docker build ../../common/stream_client/ -t rtsp_client
-```
 
 Client parameters:
 ```console
-python3 client.py --help
+python client.py --help
 usage: client.py [-h] [--grpc_address GRPC_ADDRESS] [--ffmpeg_output_width FFMPEG_OUTPUT_WIDTH] [--ffmpeg_output_height FFMPEG_OUTPUT_HEIGHT] [--input_stream INPUT_STREAM] [--output_stream OUTPUT_STREAM]
                  [--model_name MODEL_NAME] [--input_name INPUT_NAME] [--output_name OUTPUT_NAME] [--verbose] [--benchmark] [--limit_stream_duration LIMIT_STREAM_DURATION] [--limit_frames LIMIT_FRAMES]
 
