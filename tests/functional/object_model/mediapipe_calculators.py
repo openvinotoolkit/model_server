@@ -634,10 +634,10 @@ class HttpLLMCalculator(LLMCalculator):
             plugin_config_params = []
             for plugin_config_key, plugin_config_value in plugin_config_dict.items():
                 if plugin_config_value is not None:
-                    if isinstance(plugin_config_value, int):
-                        plugin_config_params.append(f'"{plugin_config_key}": {plugin_config_value}')
-                    elif isinstance(plugin_config_value, bool):
+                    if isinstance(plugin_config_value, bool):
                         plugin_config_value = "true" if plugin_config_value else "false"
+                        plugin_config_params.append(f'"{plugin_config_key}": {plugin_config_value}')
+                    elif isinstance(plugin_config_value, int):
                         plugin_config_params.append(f'"{plugin_config_key}": {plugin_config_value}')
                     elif isinstance(plugin_config_value, str):
                         plugin_config_params.append(f'"{plugin_config_key}": "{plugin_config_value}"')

@@ -490,6 +490,9 @@ def get_docker_images(images_to_download):
 
 
 def download_docker_images():
+    if airplane_mode:
+        print("Skipping downloading required resources")
+        return
     docker_ovms_types = [
         OvmsType.DOCKER, OvmsType.DOCKER_CMD_LINE, OvmsType.BINARY_DOCKER, OvmsType.CAPI_DOCKER
     ]

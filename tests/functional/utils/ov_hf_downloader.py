@@ -19,7 +19,6 @@ from datetime import datetime, timezone
 from huggingface_hub import HfApi, snapshot_download
 
 from tests.functional.config import huggingface_token
-from tests.functional.utils.assertions import OVHfDownloadException
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.test_framework import get_dir_latest_mtime, remove_dir_tree, swap_directory
 

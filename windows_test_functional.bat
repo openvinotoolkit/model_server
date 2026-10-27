@@ -28,7 +28,6 @@ IF "%~1"=="" (
     echo Usage: windows_test_functional.bat ^<ovms_release_artifacts_path^> [pytest_params] [xdist_workers]
     exit /b 1
 )
-
 set "TT_OVMS_C_RELEASE_ARTIFACTS_PATH=%~1"
 
 IF "%~2"=="" (

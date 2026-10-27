@@ -310,10 +310,11 @@ if base_image is not None:
 """ TT_OVMS_C_RELEASE_ARTIFACTS_PATH - path to current release artifacts """
 # multiple local and remote location supported
 # example: TT_OVMS_C_RELEASE_ARTIFACTS_PATH="../ubuntu24/ovms.tar.gz,../redat/ovms.tar.gz"
-if OsType.Windows in base_os:
-    default_artifacts_path = f"dist\\{base_os[0]}\\ovms.zip"
-else:
-    default_artifacts_path = ",".join(f"dist/{_base_os}/ovms.tar.gz" for _base_os in base_os)
+default_artifacts_path = (  # pylint: disable=invalid-name
+    f"dist\\{base_os[0]}\\ovms.zip"
+    if OsType.Windows in base_os
+    else ",".join(f"dist/{_base_os}/ovms.tar.gz" for _base_os in base_os)
+)
 ovms_c_release_artifacts_path = get_list("TT_OVMS_C_RELEASE_ARTIFACTS_PATH", default_artifacts_path)
 
 """ GLOBAL_TEMP_DIR - global temporary directory """
