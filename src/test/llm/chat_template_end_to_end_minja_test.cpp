@@ -238,6 +238,53 @@ celsius
     EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
+TEST_F(ChatTemplateEndToEndMinjaTest, Qwen38_ToolCallWithStringArgs) {
+    // Load the real qwen chat template
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_qwen38.jinja");
+    ASSERT_FALSE(chatTemplate.empty()) << "Failed to load qwen38 template";
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
+
+    run(true);
+
+    ASSERT_FALSE(exceptionThrownDuringApplication);
+
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "qwen3coder");
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "qwen3");
+
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.requiresObjectArguments);
+
+    std::string expectedOutput = R"(<|im_start|>system
+Reasoning effort is set to xhigh. Please think carefully through the task, validate key assumptions, consider plausible alternatives, and prioritize correctness, consistency, and clarity in the final answer.<|im_end|>
+<|im_start|>user
+What's the weather in Paris?<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+<tool_call>
+<function=get_weather>
+<parameter=location>
+Paris
+</parameter>
+<parameter=unit>
+celsius
+</parameter>
+</function>
+</tool_call><|im_end|>
+<|im_start|>assistant
+<think>
+)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
+}
+
 // =============================================================================
 // Ovms detects str2obj workaround is needed and applies workaround.
 // Minja does not do it automatically, their probe is broken with gemma.

@@ -25,6 +25,7 @@ struct ChatTemplateAdjusterConfig {
     std::vector<std::string> removeFunctions;
     bool concatMultiLineStrings = false;
     std::vector<std::string> removeFunctionsParams;
+    bool replaceUndefinedChecks = false;
 
     static ChatTemplateAdjusterConfig forMinja();
     static ChatTemplateAdjusterConfig forJinja();
@@ -57,6 +58,11 @@ private:
 class ConcatMultiLineStringAdjustment : public BaseChatTemplateAdjustment {
 public:
     ConcatMultiLineStringAdjustment();
+    void apply(std::string& templateSource) const override;
+};
+
+class ReplaceUndefinedChecksAdjustment : public BaseChatTemplateAdjustment {
+public:
     void apply(std::string& templateSource) const override;
 };
 

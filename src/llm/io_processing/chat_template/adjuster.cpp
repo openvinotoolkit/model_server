@@ -169,8 +169,13 @@ void ConcatMultiLineStringAdjustment::apply(std::string& processed) const {
     processed = std::move(concatenated);
 }
 
+void ReplaceUndefinedChecksAdjustment::apply(std::string& processed) const {
+    static const std::regex varIsUndefinedPattern{R"((\b[\w\.]+)\s+is\s+undefined)"};
+    processed = std::regex_replace(processed, varIsUndefinedPattern, "not $1 is defined");
+}
+
 ChatTemplateAdjusterConfig ChatTemplateAdjusterConfig::forMinja() {
-    return {{"min", "from_json"}, true, {"tojson"}};
+    return {{"min", "from_json"}, true, {"tojson"}, true};
 }
 
 ChatTemplateAdjusterConfig ChatTemplateAdjusterConfig::forJinja() {
@@ -190,6 +195,9 @@ ChatTemplateAdjuster::ChatTemplateAdjuster(const ChatTemplateAdjusterConfig& con
     }
     if (config.concatMultiLineStrings) {
         adjustments.emplace_back(std::make_unique<ConcatMultiLineStringAdjustment>());
+    }
+    if (config.replaceUndefinedChecks) {
+        adjustments.emplace_back(std::make_unique<ReplaceUndefinedChecksAdjustment>());
     }
 }
 

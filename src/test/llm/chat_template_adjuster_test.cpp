@@ -269,6 +269,46 @@ TEST(ChatTemplateAdjusterTest, preservesEmptyAssignmentBetweenStringExpressions)
     EXPECT_EQ(tmpl, original);
 }
 
+TEST(ChatTemplateAdjusterTest, replacesUndefinedChecks) {
+    std::string tmpl = "{% if value is undefined or message.content\tis\nundefined %}missing{% endif %}";
+    const ReplaceUndefinedChecksAdjustment adjustment;
+
+    adjustment.apply(tmpl);
+
+    EXPECT_EQ(tmpl, "{% if not value is defined or not message.content is defined %}missing{% endif %}");
+}
+
+TEST(ChatTemplateAdjusterTest, minjaConfigurationReplacesUndefinedChecks) {
+    std::string tmpl = "{% if value is undefined %}missing{% endif %}";
+    const ChatTemplateAdjuster adjuster(ChatTemplateAdjusterConfig::forMinja());
+
+    adjuster.adjust(tmpl);
+
+    EXPECT_EQ(tmpl, "{% if not value is defined %}missing{% endif %}");
+}
+
+TEST(ChatTemplateAdjusterTest, undefinedCheckReplacementIsDisabledByDefaultAndForJinja) {
+    const std::string original = "{% if value is undefined %}missing{% endif %}";
+    for (const auto& config : {ChatTemplateAdjusterConfig{}, ChatTemplateAdjusterConfig::forJinja()}) {
+        std::string tmpl = original;
+        const ChatTemplateAdjuster adjuster(config);
+
+        adjuster.adjust(tmpl);
+
+        EXPECT_EQ(tmpl, original);
+    }
+}
+
+TEST(ChatTemplateAdjusterTest, undefinedCheckReplacementPreservesDefinedChecks) {
+    const std::string original = "{% if value is defined and not message.content is defined %}present{% endif %}";
+    std::string tmpl = original;
+    const ReplaceUndefinedChecksAdjustment adjustment;
+
+    adjustment.apply(tmpl);
+
+    EXPECT_EQ(tmpl, original);
+}
+
 TEST(ChatTemplateAdjusterTest, preservesDoubleQuotesInsideSingleQuotedLiteral) {
     const std::string original = R"({{ '"first" "second"' }})";
     std::string tmpl = original;
