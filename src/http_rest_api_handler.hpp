@@ -30,7 +30,9 @@
 #include "rest_parser.hpp"
 #include "status.hpp"
 #include "tensorinfo_fwd.hpp"
+#if defined(BUILD_WITH_WEBRTC)
 #include "webrtc/webrtc_session_controller.hpp"
+#endif
 
 namespace ovms {
 class ServableMetricReporter;
@@ -172,6 +174,7 @@ public:
     Status processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::optional<int>& inferenceHeaderContentLength);
     Status processMetrics(const HttpRequestComponents& request_components, HttpResponseComponents& response_components, std::string& response, const std::string& request_body);
+#if defined(BUILD_WITH_WEBRTC)
     /// OpenAI Realtime WebRTC call: multipart "sdp" and "session" naming the speech-to-text graph,
     /// or application/sdp using the sole available speech-to-text graph. Returns an SDP answer with ICE candidates.
     Status processRealtimeCall(const HttpRequestComponents& request_components, const std::string& request_body, std::string& response,
@@ -179,6 +182,7 @@ public:
     /// Resolves a named speech-to-text graph, or the sole available one when modelName is empty.
     Status getRealtimeCallSpeechModel(const std::string& modelName, SttPipelineHandle& speechModel);
     Status processRealtimeHangup(const HttpRequestComponents& request_components, std::string& response);
+#endif
     Status processOptions(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
     Status processServerReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
@@ -218,7 +222,9 @@ private:
     ovms::Server& ovmsServer;
     ovms::KFSInferenceServiceImpl& kfsGrpcImpl;
     ovms::ModelManager& modelManager;
+#if defined(BUILD_WITH_WEBRTC)
     WebRtcSessionController webRtcSessionController;
+#endif
 
     Status getReporter(const HttpRequestComponents& components, ovms::ServableMetricReporter*& reporter);
 };

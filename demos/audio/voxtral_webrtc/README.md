@@ -4,6 +4,14 @@ This setup sends incoming Opus audio directly to a per-session Voxtral ASR strea
 
 The model directory must contain `openvino_audio_encoder.xml`, `openvino_text_decoder.xml`, the corresponding `.bin` files, `config.json`, `preprocessor_config.json`, and `tekken.json`. OVMS must be built against an OpenVINO GenAI library that provides `ASRPipeline::create_stream()` and uses a compatible OpenVINO/Tokenizers runtime.
 
+WebRTC is an opt-in Linux build feature. Enable it with `--define BUILD_WITH_WEBRTC=1`; to include the experimental Voxtral streaming adapter, also pass `--define BUILD_WITH_EXPERIMENTAL_VOXTRAL=1`. The default build omits WebRTC and does not require the experimental GenAI API. WebRTC is not available in the MSVC Windows build.
+
+The experimental Voxtral flag requires a GenAI build that includes `ASRPipeline::create_stream()`. The default builder uses upstream GenAI and does not provide that API. To build a compatible builder from the branch used by [openvino.genai#4696](https://github.com/openvinotoolkit/openvino.genai/pull/4696), run:
+
+```bash
+OV_USE_BINARY=0 OV_GENAI_ORG=kbalka OV_GENAI_BRANCH=streaming_input_POC make ovms_builder_image
+```
+
 For the local builder image and Bazel build, run from the OVMS checkout:
 
 ```bash
@@ -13,7 +21,7 @@ docker run --rm --network host \
   -v "$HOME/models:/models" \
   -w /ovms --entrypoint /bin/bash \
   openvino/model_server-build:voxtral-local-20261006 \
-  -c 'exec "$(bazel --output_user_root=/root/.cache/bazel/bazel info bazel-bin)/src/ovms" --rest_port 8080 --source_model OpenVINO/voxtral-realtime-2602 --model_repository_path /models --model_name voxtral-asr --task speech2text --target_device CPU'
+  -c 'bazel --output_user_root=/root/.cache/bazel build --define BUILD_WITH_WEBRTC=1 --define BUILD_WITH_EXPERIMENTAL_VOXTRAL=1 //src:ovms && exec "$(bazel --output_user_root=/root/.cache/bazel info bazel-bin)/src/ovms" --rest_port 8080 --source_model OpenVINO/voxtral-realtime-2602 --model_repository_path /models --model_name voxtral-asr --task speech2text --target_device CPU'
 ```
 
 ## OpenAI Realtime compatible signaling
@@ -23,7 +31,7 @@ OVMS accepts the OpenAI Realtime WebRTC flow used by OpenAI-compatible clients. 
 The response body is the SDP answer (`application/sdp`) with all server ICE candidates embedded, so no candidate exchange is needed. Create the data channel with the label `oai-events`. After it opens, the server sends `session.created`. Stream audio and send `{"type":"input_audio_buffer.commit"}` to end an utterance. The server replies with `input_audio_buffer.committed`, then `conversation.item.input_audio_transcription.delta` events and a final `conversation.item.input_audio_transcription.completed` event that carries `item_id` and `transcript`. Audio sent after a commit starts a new item. The `Location` response header holds the call path (`/v1/realtime/calls/{call_id}`). End the call by closing the peer connection, or with `POST /v1/realtime/calls/{call_id}/hangup`. If OVMS runs with an API key, every `/v1/realtime/calls*` endpoint requires it as `Authorization: Bearer <api-key>`. `session.update` events sent over the data channel are ignored: the model is fixed when the call is created.
 
 The end-to-end tests in `tests/webrtc_e2e` exercise the OpenAI Realtime protocol against OpenAI and OVMS.
-Run the focused C++ WebRTC tests with `bazel test //src/webrtc:voxtral_audio_adapter_test //src/webrtc:webrtc_session_controller_test`.
+Run the focused C++ tests inside the builder container with `bazel test --define BUILD_WITH_WEBRTC=1 --define BUILD_WITH_EXPERIMENTAL_VOXTRAL=1 //src/webrtc:voxtral_audio_adapter_test //src/webrtc:webrtc_session_controller_test`.
 The model-backed Voxtral cases in the controller test require `OVMS_VOXTRAL_MODEL_PATH` and `OVMS_VOXTRAL_TEST_WAV`.
 
 ## Connecting from another machine (Docker)

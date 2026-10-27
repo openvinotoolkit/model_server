@@ -56,6 +56,7 @@ static const ovms::HTTPStatusCode http(const ovms::Status& status) {
         {StatusCode::REST_UNSUPPORTED_METHOD, ovms::HTTPStatusCode::NONE_ACC},
         {StatusCode::REST_NOT_FOUND, ovms::HTTPStatusCode::NOT_FOUND},
         {StatusCode::REST_INVALID_REQUEST, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::REST_TOO_MANY_REQUESTS, ovms::HTTPStatusCode::TOO_MANY_REQUESTS},
         {StatusCode::UNAUTHORIZED, ovms::HTTPStatusCode::UNAUTHORIZED},
 
         // REST parser failure

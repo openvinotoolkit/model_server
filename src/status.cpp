@@ -119,6 +119,7 @@ const std::unordered_map<StatusCode, std::string> Status::statusMessageMap = {
     // Rest handler failure
     {StatusCode::REST_NOT_FOUND, "Requested REST resource not found"},
     {StatusCode::REST_INVALID_REQUEST, "Invalid REST request"},
+    {StatusCode::REST_TOO_MANY_REQUESTS, "Too many REST requests"},
     {StatusCode::REST_COULD_NOT_PARSE_VERSION, "Could not parse model version in request"},
     {StatusCode::REST_INVALID_URL, "Invalid request URL"},
     {StatusCode::REST_UNSUPPORTED_METHOD, "Unsupported method"},

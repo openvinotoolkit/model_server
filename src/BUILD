@@ -17,7 +17,7 @@ load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
 load("//:common_settings.bzl",
     "COMMON_STATIC_TEST_COPTS", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES",
-    "PYBIND_HEADERS_ONLY", "COPTS_CLOUD", "COPTS_TESTS",
+    "PYBIND_HEADERS_ONLY", "COPTS_CLOUD", "COPTS_TESTS", "COMMON_DEFINES",
     "create_config_settings", "PYBIND_DEPS", "ovms_cc_library", "ovms_cc_test_library")
 
 COPTS_OV_TRACE = select({
@@ -32,6 +32,35 @@ LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
 config_setting(
     name = "windows",
     values = {"cpu": "x64_windows"},
+    visibility = ["//visibility:public"],
+)
+
+more_selects.config_setting_negation(
+    name = "not_windows",
+    negate = ":windows",
+)
+
+config_setting(
+    name = "build_with_webrtc",
+    define_values = {"BUILD_WITH_WEBRTC": "1"},
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "build_with_experimental_voxtral",
+    define_values = {"BUILD_WITH_EXPERIMENTAL_VOXTRAL": "1"},
+    visibility = ["//visibility:public"],
+)
+
+selects.config_setting_group(
+    name = "webrtc_enabled",
+    match_all = [":build_with_webrtc", ":not_windows"],
+    visibility = ["//visibility:public"],
+)
+
+selects.config_setting_group(
+    name = "experimental_voxtral_enabled",
+    match_all = [":webrtc_enabled", ":build_with_experimental_voxtral"],
     visibility = ["//visibility:public"],
 )
 
@@ -60,8 +89,6 @@ cc_shared_library(
         "@com_github_google_crc32c//:__subpackages__",
         "@com_github_googleapis_google_cloud_cpp_common//:__subpackages__",
         "@com_github_libevent_libevent//:__subpackages__",
-        "@libdatachannel//:__subpackages__",
-        "@libopus//:__subpackages__",
         "@com_google_protobuf//:__subpackages__",
         "@com_github_tencent_rapidjson//:__subpackages__",
         "@com_google_absl//:__subpackages__",
@@ -103,6 +130,13 @@ cc_shared_library(
             "@gemmlowp//:__subpackages__",
             "@flatbuffers//:__subpackages__",],
         "//:disable_mediapipe": []
+        })
+      + select({
+            "//src:webrtc_enabled": [
+                "@libdatachannel//:__subpackages__",
+                "@libopus//:__subpackages__",
+            ],
+            "//conditions:default": [],
         })
       + [
           "@pybind11//:__subpackages__",
@@ -819,7 +853,6 @@ ovms_cc_library(
             "rest_parser_utils",
             "libovms_cliparser",
             "libovms_config",
-            "//src/webrtc:webrtc_session_controller",
             "//src/audio/speech_to_text:stt_pipeline_handle",
             "libmultipart_parser",
             "//src/mediapipe_internal:pipelinedefinitionstatus",
@@ -885,6 +918,9 @@ ovms_cc_library(
             "kfs_python_tensor_bridge",
             "copyable_object_wrapper",
          ] + select({
+                "//src:webrtc_enabled": ["//src/webrtc:webrtc_session_controller"],
+                "//conditions:default": [],
+            }) + select({
                 "//:not_disable_cloud": [
                     "//src/filesystem:libovmsazurefilesystem",
                     ],
@@ -920,6 +956,10 @@ ovms_cc_library(
         "//conditions:default": [],
     }),
     alwayslink = 1,
+    defines = COMMON_DEFINES + select({
+        "//src:webrtc_enabled": ["BUILD_WITH_WEBRTC"],
+        "//conditions:default": [],
+    }),
 )
 
 ovms_cc_library(

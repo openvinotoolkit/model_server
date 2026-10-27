@@ -53,6 +53,14 @@ ovms_cc_library(
         "//third_party:genai",
         "//third_party:openvino",
     ],
+    defines = select({
+        "//src:experimental_voxtral_enabled": ["BUILD_WITH_EXPERIMENTAL_VOXTRAL"],
+        "//conditions:default": [],
+    }),
+    target_compatible_with = select({
+        "//src:experimental_voxtral_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     visibility = ["//visibility:public"],
 )
 
@@ -61,6 +69,10 @@ ovms_cc_library(
     srcs = ["opus_audio_codec.cpp"],
     hdrs = ["opus_audio_codec.hpp"],
     deps = ["@libopus//:libopus"],
+    target_compatible_with = select({
+        "//src:webrtc_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     visibility = ["//visibility:public"],
 )
 
@@ -76,6 +88,10 @@ ovms_cc_library(
         ":opus_audio_codec",
         "@libdatachannel//:libdatachannel",
     ],
+    target_compatible_with = select({
+        "//src:webrtc_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     visibility = ["//visibility:public"],
 )
 
@@ -87,7 +103,6 @@ ovms_cc_library(
         ":audio_utterance_buffer",
         ":opus_audio_codec",
         ":stt_audio_adapter",
-        ":voxtral_audio_adapter",
         ":webrtc_peer_connection",
         "//src/audio/speech_to_text:stt_pipeline_handle",
         "//src/port:rapidjson_document",
@@ -96,7 +111,18 @@ ovms_cc_library(
         "//src/port:rapidjson_writer",
         "//third_party:genai",
         "@libdatachannel//:libdatachannel",
-    ],
+    ] + select({
+        "//src:experimental_voxtral_enabled": [":voxtral_audio_adapter"],
+        "//conditions:default": [],
+    }),
+    defines = select({
+        "//src:experimental_voxtral_enabled": ["BUILD_WITH_EXPERIMENTAL_VOXTRAL"],
+        "//conditions:default": [],
+    }),
+    target_compatible_with = select({
+        "//src:webrtc_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     visibility = ["//visibility:public"],
 )
 
@@ -113,6 +139,10 @@ cc_test(
         ":webrtc_peer_connection",
         "@com_google_googletest//:gtest_main",
     ],
+    target_compatible_with = select({
+        "//src:webrtc_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
 
 cc_test(
@@ -125,11 +155,17 @@ cc_test(
         "//src/audio/speech_to_text:stt_pipeline_handle",
         "//third_party:genai",
         ":webrtc_session_controller",
-        ":voxtral_audio_adapter",
         ":opus_audio_codec",
         "@libdatachannel//:libdatachannel",
         "@com_google_googletest//:gtest_main",
-    ],
+    ] + select({
+        "//src:experimental_voxtral_enabled": [":voxtral_audio_adapter"],
+        "//conditions:default": [],
+    }),
+    target_compatible_with = select({
+        "//src:webrtc_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
 
 cc_test(
@@ -140,6 +176,10 @@ cc_test(
         ":voxtral_audio_adapter",
         "@com_google_googletest//:gtest_main",
     ],
+    target_compatible_with = select({
+        "//src:experimental_voxtral_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
 
 cc_test(
@@ -160,4 +200,8 @@ cc_test(
         ":opus_audio_codec",
         "@com_google_googletest//:gtest_main",
     ],
+    target_compatible_with = select({
+        "//src:webrtc_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )

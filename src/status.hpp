@@ -374,6 +374,7 @@ enum class StatusCode {
     GROUP_UNLOAD_BLOCKED,
 
     REST_INVALID_REQUEST, /*!< Invalid REST request content or configuration */
+    REST_TOO_MANY_REQUESTS, /*!< REST request cannot be served due to capacity limits */
 
     STATUS_CODE_END
 };

@@ -880,6 +880,7 @@ TEST_F(ConfigStatus, isAuthorized) {
     EXPECT_FALSE(handler.isAuthorized(headers, "any_key"));
 }
 
+#if defined(BUILD_WITH_WEBRTC)
 TEST_F(ConfigStatus, RealtimeCallEndpointsRequireApiKey) {
     ovms::Server& ovmsServer = ovms::Server::instance();
     std::string contents;
@@ -931,6 +932,8 @@ TEST_F(ConfigStatus, RealtimeCallRequiresMultipartSessionModel) {
         {"", ovms::StatusCode::REST_INVALID_REQUEST},
         {"not JSON", ovms::StatusCode::REST_INVALID_REQUEST},
         {"[]", ovms::StatusCode::REST_INVALID_REQUEST},
+        {R"({"audio":"speech2text"})", ovms::StatusCode::REST_INVALID_REQUEST},
+        {R"({"audio":{"input":"speech2text"}})", ovms::StatusCode::REST_INVALID_REQUEST},
         {R"({"type":"transcription"})", ovms::StatusCode::REST_INVALID_REQUEST},
         {R"({"model":42})", ovms::StatusCode::REST_INVALID_REQUEST},
         {R"({"audio":{"input":{"transcription":{"model":""}}},"model":"dummy"})", ovms::StatusCode::REST_INVALID_REQUEST},
@@ -1016,6 +1019,7 @@ TEST_F(ConfigStatus, RealtimeCallPlainSdpAuthentication) {
         }
     }
 }
+#endif
 
 #if (MEDIAPIPE_DISABLE == 0)
 TEST_F(ConfigStatus, RealtimeCallIgnoresNonSttGraphs) {

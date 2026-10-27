@@ -94,10 +94,12 @@ enum : unsigned int {
 };
 const std::string DEFAULT_VERSION = "DEFAULT";
 
+#if defined(BUILD_WITH_WEBRTC)
 std::string getWebRtcAnnouncedIp() {
     const char* address = std::getenv("OVMS_WEBRTC_ANNOUNCED_IP");
     return address == nullptr ? std::string{} : std::string(address);
 }
+#endif
 }  // namespace
 
 namespace ovms {
@@ -149,8 +151,13 @@ HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_
     ovmsServer(ovmsServer),
 
     kfsGrpcImpl(dynamic_cast<const GRPCServerModule*>(this->ovmsServer.getModule(GRPC_SERVER_MODULE_NAME))->getKFSGrpcImpl()),
+#if defined(BUILD_WITH_WEBRTC)
     modelManager(dynamic_cast<const ServableManagerModule*>(this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager()),
-    webRtcSessionController(16, getWebRtcAnnouncedIp()) {
+    webRtcSessionController(16, getWebRtcAnnouncedIp())
+#else
+    modelManager(dynamic_cast<const ServableManagerModule*>(this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))->getServableManager())
+#endif
+{
     if (nullptr == this->ovmsServer.getModule(GRPC_SERVER_MODULE_NAME))
         throw std::logic_error("Tried to create http rest api handler without grpc server module");
     if (nullptr == this->ovmsServer.getModule(SERVABLE_MANAGER_MODULE_NAME))
@@ -215,6 +222,7 @@ void HttpRestApiHandler::registerAll() {
     registerHandler(Metrics, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processMetrics(request_components, response_components, response, request_body);
     });
+#if defined(BUILD_WITH_WEBRTC)
     registerHandler(WebRTC_RealtimeCall, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         if (!isWebRtcRequestAuthorized(request_components))
             return StatusCode::UNAUTHORIZED;
@@ -225,6 +233,16 @@ void HttpRestApiHandler::registerAll() {
             return StatusCode::UNAUTHORIZED;
         return processRealtimeHangup(request_components, response);
     });
+#else
+    registerHandler(WebRTC_RealtimeCall, [](const std::string_view, const HttpRequestComponents&, std::string&, const std::string&,
+                                  HttpResponseComponents&, std::shared_ptr<HttpAsyncWriter>, std::shared_ptr<MultiPartParser>) -> Status {
+        return StatusCode::REST_NOT_FOUND;
+    });
+    registerHandler(WebRTC_RealtimeHangup, [](const std::string_view, const HttpRequestComponents&, std::string&, const std::string&,
+                                     HttpResponseComponents&, std::shared_ptr<HttpAsyncWriter>, std::shared_ptr<MultiPartParser>) -> Status {
+        return StatusCode::REST_NOT_FOUND;
+    });
+#endif
     registerHandler(Options, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processOptions(request_components, response, request_body);
     });
@@ -1064,6 +1082,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
     return StatusCode::REST_INVALID_URL;
 }
 
+#if defined(BUILD_WITH_WEBRTC)
 Status HttpRestApiHandler::getRealtimeCallSpeechModel(const std::string& modelName, SttPipelineHandle& speechModel) {
 #if (MEDIAPIPE_DISABLE == 0)
     if (modelName.empty()) {
@@ -1114,17 +1133,21 @@ std::string getRealtimeSessionModel(const std::string& sessionJson) {
     session.Parse(sessionJson.c_str());
     if (session.HasParseError() || !session.IsObject())
         return {};
-    const rapidjson::Value* value = &session;
-    for (const char* key : {"audio", "input", "transcription", "model"}) {
-        if (!value->IsObject())
-            break;
-        const auto member = value->FindMember(key);
-        if (member == value->MemberEnd())
-            break;
-        value = &member->value;
+    const rapidjson::Value* transcription = nullptr;
+    const auto audio = session.FindMember("audio");
+    if (audio != session.MemberEnd() && audio->value.IsObject()) {
+        const auto input = audio->value.FindMember("input");
+        if (input != audio->value.MemberEnd() && input->value.IsObject()) {
+            const auto transcriptionMember = input->value.FindMember("transcription");
+            if (transcriptionMember != input->value.MemberEnd() && transcriptionMember->value.IsObject())
+                transcription = &transcriptionMember->value;
+        }
     }
-    if (value->IsString())
-        return value->GetString();
+    if (transcription != nullptr) {
+        const auto model = transcription->FindMember("model");
+        if (model != transcription->MemberEnd() && model->value.IsString())
+            return model->value.GetString();
+    }
     const auto model = session.FindMember("model");
     if (model != session.MemberEnd() && model->value.IsString())
         return model->value.GetString();
@@ -1170,9 +1193,17 @@ Status HttpRestApiHandler::processRealtimeCall(const HttpRequestComponents& requ
         return status;
 
     WebRtcSessionController::OfferResult result;
-    if (!webRtcSessionController.createRealtimeCall(offerSdp, speechModel, result)) {
+    const auto createResult = webRtcSessionController.createRealtimeCall(offerSdp, speechModel, result);
+    switch (createResult) {
+    case WebRtcSessionController::CreateCallResult::InvalidOffer:
+        return Status(StatusCode::REST_INVALID_REQUEST, "The SDP offer is invalid");
+    case WebRtcSessionController::CreateCallResult::CapacityExhausted:
+        return Status(StatusCode::REST_TOO_MANY_REQUESTS, "The maximum number of realtime calls has been reached");
+    case WebRtcSessionController::CreateCallResult::InternalError:
         SPDLOG_LOGGER_ERROR(webrtc_logger, "Failed to create realtime call");
         return StatusCode::INTERNAL_ERROR;
+    case WebRtcSessionController::CreateCallResult::Success:
+        break;
     }
     SPDLOG_LOGGER_INFO(webrtc_logger, "Returning realtime call {} SDP answer with {} candidates", result.sessionId, result.candidates.size());
     response_components.contentType = ContentType::SDP;
@@ -1189,6 +1220,7 @@ Status HttpRestApiHandler::processRealtimeHangup(const HttpRequestComponents& re
     response = "{}";
     return StatusCode::OK;
 }
+#endif
 
 Status HttpRestApiHandler::processRequest(
     const std::string_view http_method,

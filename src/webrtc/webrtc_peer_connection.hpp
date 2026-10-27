@@ -64,6 +64,7 @@ public:
     bool sendAudioFrame(rtc::binary data, rtc::FrameInfo info);
 
     void setRemoteDescription(const std::string& sdp, const std::string& type);
+    void setRemoteDescription(const rtc::Description& description);
     void addRemoteCandidate(const std::string& candidate, const std::string& mid);
 
     rtc::PeerConnection::State state() const;

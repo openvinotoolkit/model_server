@@ -52,7 +52,26 @@ TEST(WebRtcSessionControllerTest, RejectsEmptyOffer) {
     WebRtcSessionController controller;
     WebRtcSessionController::OfferResult result;
 
-    EXPECT_FALSE(controller.createRealtimeCall("", {}, result));
+    EXPECT_EQ(controller.createRealtimeCall("", {}, result), WebRtcSessionController::CreateCallResult::InvalidOffer);
+    EXPECT_EQ(controller.sessionCount(), 0);
+}
+
+TEST(WebRtcSessionControllerTest, RejectsMalformedSdpOffer) {
+    WebRtcSessionController controller;
+    WebRtcSessionController::OfferResult result;
+
+    const std::string malformedSdp =
+        "v=0\r\no=- 0 0 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n"
+        "m=audio invalid UDP/TLS/RTP/SAVPF 111\r\na=rtpmap:111 opus/48000/2\r\n";
+    EXPECT_EQ(controller.createRealtimeCall(malformedSdp, {}, result), WebRtcSessionController::CreateCallResult::InvalidOffer);
+    EXPECT_EQ(controller.sessionCount(), 0);
+}
+
+TEST(WebRtcSessionControllerTest, ReportsSessionCapacityExhaustion) {
+    WebRtcSessionController controller(0);
+    WebRtcSessionController::OfferResult result;
+
+    EXPECT_EQ(controller.createRealtimeCall("v=0\r\n", {}, result), WebRtcSessionController::CreateCallResult::CapacityExhausted);
     EXPECT_EQ(controller.sessionCount(), 0);
 }
 
@@ -79,6 +98,7 @@ protected:
     std::filesystem::path directory;
 };
 
+#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
 TEST_F(WebRtcSpeechModelTest, SelectsRealtimeFromMetadataRegardlessOfDirectoryName) {
     writeConfig(R"({"model_type":"voxtral_realtime"})");
     EXPECT_TRUE(WebRtcSessionController::isRealtimeSpeechModel(directory.string()));
@@ -96,7 +116,9 @@ TEST_F(WebRtcSpeechModelTest, RejectsMissingOrInvalidConfiguration) {
         EXPECT_THROW(WebRtcSessionController::isRealtimeSpeechModel(directory.string()), std::runtime_error);
     }
 }
+#endif
 
+#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
 TEST(VoxtralAudioAdapterTest, EmitsTextBeforeInputEnds) {
     const char* modelPath = std::getenv("OVMS_VOXTRAL_MODEL_PATH");
     const char* audioPath = std::getenv("OVMS_VOXTRAL_TEST_WAV");
@@ -128,6 +150,7 @@ TEST(VoxtralAudioAdapterTest, EmitsTextBeforeInputEnds) {
     EXPECT_FALSE(deltas.empty());
     EXPECT_NE(final.find("biggest animal"), std::string::npos) << final;
 }
+#endif
 
 namespace {
 constexpr uint32_t TestSampleRate = 48000;
@@ -215,7 +238,7 @@ void streamAudioOverWebRtc(WebRtcSessionController& controller, const SttPipelin
     const std::string offerSdp = std::string(*offerer->localDescription());
 
     WebRtcSessionController::OfferResult result;
-    ASSERT_TRUE(controller.createRealtimeCall(offerSdp, speechModel, result));
+    ASSERT_EQ(controller.createRealtimeCall(offerSdp, speechModel, result), WebRtcSessionController::CreateCallResult::Success);
     offerer->setRemoteDescription(rtc::Description(result.sdp, result.type));
     for (const auto& candidate : result.candidates)
         offerer->addRemoteCandidate(rtc::Candidate(candidate.candidate, candidate.mid));
@@ -387,7 +410,7 @@ TEST(WebRtcSessionControllerTest, CreatesRealtimeCallWithCompleteAnswer) {
     const std::string offerSdp = createGatheredOffer(offerer);
     ASSERT_FALSE(offerSdp.empty());
 
-    ASSERT_TRUE(controller.createRealtimeCall(offerSdp, {}, result));
+    ASSERT_EQ(controller.createRealtimeCall(offerSdp, {}, result), WebRtcSessionController::CreateCallResult::Success);
     EXPECT_FALSE(result.sessionId.empty());
     EXPECT_EQ(result.type, "answer");
     // Non-trickle clients (OpenAI Realtime /v1/realtime/calls) need candidates inside the SDP answer.
@@ -419,7 +442,7 @@ TEST(WebRtcSessionControllerTest, UsesConfiguredUdpPortRange) {
     const std::string offerSdp = createGatheredOffer(offerer);
     ASSERT_FALSE(offerSdp.empty());
 
-    ASSERT_TRUE(controller.createRealtimeCall(offerSdp, {}, result));
+    ASSERT_EQ(controller.createRealtimeCall(offerSdp, {}, result), WebRtcSessionController::CreateCallResult::Success);
     ASSERT_FALSE(result.candidates.empty());
     for (const auto& candidate : result.candidates) {
         std::istringstream fields(candidate.candidate);
@@ -442,7 +465,7 @@ TEST(WebRtcSessionControllerTest, RejectsInvalidUdpPortRange) {
         environment.set("OVMS_WEBRTC_PORT_RANGE", range);
         WebRtcSessionController controller;
         WebRtcSessionController::OfferResult result;
-        EXPECT_FALSE(controller.createRealtimeCall("offer", {}, result));
+        EXPECT_EQ(controller.createRealtimeCall("offer", {}, result), WebRtcSessionController::CreateCallResult::InternalError);
         EXPECT_EQ(controller.sessionCount(), 0);
     }
 }
@@ -486,7 +509,7 @@ TEST(WebRtcSessionControllerTest, RealtimeCallAnnouncesConfiguredIp) {
     const std::string offerSdp = createGatheredOffer(offerer);
     ASSERT_FALSE(offerSdp.empty());
 
-    ASSERT_TRUE(controller.createRealtimeCall(offerSdp, {}, result));
+    ASSERT_EQ(controller.createRealtimeCall(offerSdp, {}, result), WebRtcSessionController::CreateCallResult::Success);
     EXPECT_NE(result.sdp.find(" " + announcedIp + " 52000 typ host"), std::string::npos) << result.sdp;
     const bool announcedInCandidates = std::any_of(result.candidates.begin(), result.candidates.end(),
         [&](const WebRtcSessionController::Candidate& candidate) {
@@ -503,7 +526,7 @@ TEST(WebRtcSessionControllerTest, IgnoresInvalidAnnouncedIp) {
     const std::string offerSdp = createGatheredOffer(offerer);
     ASSERT_FALSE(offerSdp.empty());
 
-    ASSERT_TRUE(controller.createRealtimeCall(offerSdp, {}, result));
+    ASSERT_EQ(controller.createRealtimeCall(offerSdp, {}, result), WebRtcSessionController::CreateCallResult::Success);
     EXPECT_EQ(result.sdp.find("not-an-ip"), std::string::npos) << result.sdp;
     EXPECT_TRUE(controller.removeSession(result.sessionId));
 }

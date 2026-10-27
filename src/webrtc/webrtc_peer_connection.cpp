@@ -356,8 +356,12 @@ bool WebRtcPeerConnection::sendAudioFrame(rtc::binary data, rtc::FrameInfo info)
 }
 
 void WebRtcPeerConnection::setRemoteDescription(const std::string& sdp, const std::string& type) {
-    SPDLOG_LOGGER_INFO(webrtc_logger, "Setting remote description, type: {}", type);
-    peerConnection_->setRemoteDescription(rtc::Description(sdp, type));
+    setRemoteDescription(rtc::Description(sdp, type));
+}
+
+void WebRtcPeerConnection::setRemoteDescription(const rtc::Description& description) {
+    SPDLOG_LOGGER_INFO(webrtc_logger, "Setting remote description, type: {}", description.typeString());
+    peerConnection_->setRemoteDescription(description);
 }
 
 void WebRtcPeerConnection::addRemoteCandidate(const std::string& candidate, const std::string& mid) {

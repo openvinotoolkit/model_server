@@ -301,6 +301,7 @@ std::string WebRtcSessionController::Session::nextItemId() {
     return "item_" + id + "_" + std::to_string(++itemCounter);
 }
 
+#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
 void WebRtcSessionController::Session::startVoxtralStream() {
     std::string itemId = nextItemId();
     const std::weak_ptr<Session> weakSession = weak_from_this();
@@ -345,6 +346,7 @@ std::shared_ptr<VoxtralAudioAdapter::Stream> WebRtcSessionController::Session::c
     std::lock_guard<std::mutex> lock(mutex);
     return voxtralStream;
 }
+#endif
 
 void WebRtcSessionController::Session::commitAudio() {
     if (sttAdapter) {
@@ -360,6 +362,7 @@ void WebRtcSessionController::Session::commitAudio() {
         transcribeUtterance(std::move(*utterance));
         return;
     }
+#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
     if (!voxtralAdapter) {
         sendEvent(errorEvent("invalid_request_error", "input_audio_buffer.commit requires a speech-to-text model"));
         return;
@@ -380,6 +383,9 @@ void WebRtcSessionController::Session::commitAudio() {
     startVoxtralStream();
     if (committedStream)
         committedStream->finish();
+#else
+    sendEvent(errorEvent("invalid_request_error", "input_audio_buffer.commit requires a speech-to-text model"));
+#endif
 }
 
 void WebRtcSessionController::Session::pushUtteranceAudio(const AudioChunk& frame) {
@@ -429,6 +435,7 @@ void WebRtcSessionController::Session::shutdown() {
         transcriptChannel.reset();
     }
     peer.close();
+#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
     std::vector<std::shared_ptr<VoxtralAudioAdapter::Stream>> streams;
     {
         std::lock_guard<std::mutex> lock(mutex);
@@ -439,6 +446,7 @@ void WebRtcSessionController::Session::shutdown() {
     }
     for (const auto& stream : streams)
         stream->close();
+#endif
 }
 
 bool WebRtcSessionController::Session::isDisconnected() const {
@@ -514,6 +522,7 @@ std::string WebRtcSessionController::announceHostCandidate(const std::string& ca
     return rewritten;
 }
 
+#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
 bool WebRtcSessionController::isRealtimeSpeechModel(const std::string& modelPath) {
     const std::string configPath = modelPath + "/config.json";
     std::ifstream input(configPath);
@@ -529,8 +538,9 @@ bool WebRtcSessionController::isRealtimeSpeechModel(const std::string& modelPath
         throw std::runtime_error("Missing or invalid model_type in speech model configuration: " + configPath);
     return std::string(modelType->value.GetString()) == "voxtral_realtime";
 }
+#endif
 
-bool WebRtcSessionController::createRealtimeCall(const std::string& offerSdp, const SttPipelineHandle& speechModel,
+WebRtcSessionController::CreateCallResult WebRtcSessionController::createRealtimeCall(const std::string& offerSdp, const SttPipelineHandle& speechModel,
     OfferResult& result) {
     // Realtime call clients never close sessions explicitly, so reclaim dead ones before admitting new calls.
     removeDisconnectedRealtimeCalls();
@@ -556,24 +566,30 @@ void WebRtcSessionController::removeDisconnectedRealtimeCalls() {
     }
 }
 
-bool WebRtcSessionController::negotiateSession(const std::string& offerSdp, const SttPipelineHandle& speechModel, OfferResult& result) {
+WebRtcSessionController::CreateCallResult WebRtcSessionController::negotiateSession(const std::string& offerSdp, const SttPipelineHandle& speechModel, OfferResult& result) {
     if (offerSdp.empty()) {
         SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected realtime call creation, offer is empty");
-        return false;
+        return CreateCallResult::InvalidOffer;
     }
 
     std::shared_ptr<SttAudioAdapter> sttAdapter;
+#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
     std::shared_ptr<VoxtralAudioAdapter> voxtralAdapter;
+#endif
     if (speechModel.pipeline) {
         try {
+#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
             if (isRealtimeSpeechModel(speechModel.modelsPath)) {
                 voxtralAdapter = std::make_shared<VoxtralAudioAdapter>(speechModel.pipeline);
             } else {
                 sttAdapter = std::make_shared<SttAudioAdapter>(speechModel.pipeline, speechModel.pipelineMutex);
             }
+#else
+            sttAdapter = std::make_shared<SttAudioAdapter>(speechModel.pipeline, speechModel.pipelineMutex);
+#endif
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_ERROR(webrtc_logger, "Could not use speech model at {} for WebRTC: {}", speechModel.modelsPath, e.what());
-            return false;
+            return CreateCallResult::InternalError;
         }
     }
 
@@ -582,7 +598,7 @@ bool WebRtcSessionController::negotiateSession(const std::string& offerSdp, cons
         std::lock_guard<std::mutex> lock(mutex_);
         if (sessions_.size() >= maxSessions_) {
             SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected session creation, session limit reached: {}", maxSessions_);
-            return false;
+            return CreateCallResult::CapacityExhausted;
         }
         sessionId = std::to_string(nextSessionId_++);
     }
@@ -606,15 +622,17 @@ bool WebRtcSessionController::negotiateSession(const std::string& offerSdp, cons
             configuration.portRangeBegin > configuration.portRangeEnd) {
             SPDLOG_LOGGER_ERROR(webrtc_logger,
                 "Invalid OVMS_WEBRTC_PORT_RANGE '{}': expected start-end with 1 <= start <= end <= 65535", value);
-            return false;
+            return CreateCallResult::InternalError;
         }
     }
     auto session = std::make_shared<Session>(std::move(configuration), sessionId);
     session->peer.onStateChange([session](rtc::PeerConnection::State state) {
         if (state == rtc::PeerConnection::State::Disconnected ||
             state == rtc::PeerConnection::State::Failed || state == rtc::PeerConnection::State::Closed) {
+#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
             if (const auto stream = session->currentVoxtralStream())
                 stream->finish();
+#endif
             return;
         }
         if (state != rtc::PeerConnection::State::Connected) {
@@ -664,6 +682,7 @@ bool WebRtcSessionController::negotiateSession(const std::string& offerSdp, cons
         }
         activeSession->descriptionReady.notify_all();
     });
+#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
     if (voxtralAdapter) {
         const std::weak_ptr<Session> weakSession = session;
         session->voxtralAdapter = voxtralAdapter;
@@ -681,7 +700,9 @@ bool WebRtcSessionController::negotiateSession(const std::string& offerSdp, cons
                 stream->finish();
             }
         });
-    } else if (sttAdapter) {
+    } else
+#endif
+    if (sttAdapter) {
         const std::weak_ptr<Session> weakSession = session;
         session->sttAdapter = sttAdapter;
         session->peer.onAudioFrame([weakSession](rtc::binary data, rtc::FrameInfo info) {
@@ -696,17 +717,42 @@ bool WebRtcSessionController::negotiateSession(const std::string& offerSdp, cons
             }
         });
     }
+    // Reuse the browser's single sendrecv m-line (via onTrack) instead of
+    // calling addAudioTrack(), which would add a second, unmatched m-line
+    // and make libdatachannel emit a renegotiation offer instead of an answer.
+    std::string opusPreferredOffer;
     try {
-        // Reuse the browser's single sendrecv m-line (via onTrack) instead of
-        // calling addAudioTrack(), which would add a second, unmatched m-line
-        // and make libdatachannel emit a renegotiation offer instead of an answer.
-        const auto opusPreferredOffer = preferOpusAudioCodec(offerSdp);
-        session->peer.setRemoteDescription(opusPreferredOffer, "offer");
+        opusPreferredOffer = preferOpusAudioCodec(offerSdp);
+    } catch (const std::invalid_argument& e) {
+        SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected invalid WebRTC offer: {}", e.what());
+        session->shutdown();
+        return CreateCallResult::InvalidOffer;
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_ERROR(webrtc_logger, "Failed to prepare WebRTC offer: {}", e.what());
+        session->shutdown();
+        return CreateCallResult::InternalError;
+    }
+    std::optional<rtc::Description> remoteDescription;
+    try {
+        remoteDescription.emplace(opusPreferredOffer, "offer");
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected invalid WebRTC offer: {}", e.what());
+        session->shutdown();
+        return CreateCallResult::InvalidOffer;
+    }
+    try {
+        session->peer.setRemoteDescription(*remoteDescription);
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_ERROR(webrtc_logger, "Failed to apply WebRTC offer: {}", e.what());
+        session->shutdown();
+        return CreateCallResult::InternalError;
+    }
+    try {
         session->peer.createAnswer();
     } catch (const std::exception& e) {
-        SPDLOG_LOGGER_ERROR(webrtc_logger, "Failed to negotiate WebRTC session: {}", e.what());
+        SPDLOG_LOGGER_ERROR(webrtc_logger, "Failed to create WebRTC answer: {}", e.what());
         session->shutdown();
-        return false;
+        return CreateCallResult::InternalError;
     }
 
     std::unique_lock<std::mutex> lock(session->mutex);
@@ -716,7 +762,7 @@ bool WebRtcSessionController::negotiateSession(const std::string& offerSdp, cons
         SPDLOG_LOGGER_ERROR(webrtc_logger, "Timed out waiting for local SDP answer");
         lock.unlock();
         session->shutdown();
-        return false;
+        return CreateCallResult::InternalError;
     }
 
     result.type = session->localType;
@@ -739,12 +785,12 @@ bool WebRtcSessionController::negotiateSession(const std::string& offerSdp, cons
     if (sessions_.size() >= maxSessions_) {
         SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected session creation, session limit reached after negotiation: {}", maxSessions_);
         session->shutdown();
-        return false;
+        return CreateCallResult::CapacityExhausted;
     }
     result.sessionId = sessionId;
     SPDLOG_LOGGER_INFO(webrtc_logger, "WebRTC session {} created, answer type: {}, local candidates: {}", result.sessionId, result.type, result.candidates.size());
     sessions_.emplace(result.sessionId, std::move(session));
-    return true;
+    return CreateCallResult::Success;
 }
 
 bool WebRtcSessionController::removeSession(const std::string& sessionId) {
