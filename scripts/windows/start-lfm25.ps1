@@ -3,7 +3,8 @@
 1. package — каталог RC4 extracted-py_off\ovms: DLL OpenVINO/GenAI и MANIFEST.
    exe — отдельно candidate-final ovms.exe с LFM retainer/policy (не подменяйте DLL пакета).
    modelPath — OpenVINO IR LFM2.5-8B; modelName — имя в API/карточке OMP.
-2. WEIGHTS_PATH не используется: OFFLOAD_RATIO=0 (Pack/offload отложены).
+2. Default r0 optimum: OFFLOAD_RATIO=0 + KV_CACHE_PRECISION=u4 (resident; no
+   WEIGHTS_PATH/CACHE_DIR). Pack/offload still deferred.
    Веса — openvino_model.bin (не openvino_language_model.bin).
 3. servingDir — рабочая копия IR: .bin через hardlink, остальное копируется,
    chat_template.jinja берётся из docs/lfm/templates override. Скачанный
@@ -88,7 +89,11 @@ Write-Host ('Serving model: ' + $servingDir)
 $configDir = Join-Path $PSScriptRoot 'configs\lfm25'
 [void][IO.Directory]::CreateDirectory($configDir)
 $commandPath = Join-Path $configDir 'command.json'
-$gpuPluginConfig = '{"OFFLOAD_RATIO":0}'
+$pluginConfig = [ordered]@{
+    KV_CACHE_PRECISION = 'u4'
+    OFFLOAD_RATIO = 0
+}
+$gpuPluginConfig = $pluginConfig | ConvertTo-Json -Compress
 if ($PSVersionTable.PSVersion.Major -le 5 -or $PSNativeCommandArgumentPassing -eq 'Legacy') {
     $gpuPluginConfigEscaped = $gpuPluginConfig.Replace('"', '\"')
 } else {

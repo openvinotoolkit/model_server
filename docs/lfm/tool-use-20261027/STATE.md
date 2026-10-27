@@ -6,7 +6,7 @@ CURRENT_HEAD: see branch tip after docs/config handoff commit
 LAST_GREEN_TESTS: final-tests 319/1 SKIP; runtime-native-required2 PASS both models
 CURRENT_FAILURE: residuals + Design C leak + offload cliff (see HANDOFF-CLOUD-REVIEW.md)
 STAFF_MODE: parallel_tool_calls=true (API default already; agent/probe harnesses aligned)
-NEXT_ACTION: cloud review of Design C + speed/u4; then implement Hybrid C plan tasks 1–4; optional start-lfm25 u4 default
+NEXT_ACTION: cloud review of Design C + speed/u4; then implement Hybrid C plan tasks 1–4
 REVERT_POINT: BASELINE-LOCK.json
 EVIDENCE_PATH: C:/gm/lfm-2026.4/tool-use-20261027
 CLOUD_HANDOFF: docs/lfm/tool-use-20261027/HANDOFF-CLOUD-REVIEW.md
@@ -26,11 +26,12 @@ Approved 2026-10-27. Keep `<think>` primary; demote pseudo-plan JSON / `[tool:�
 - u4 matrix DONE: r0+u4≈58.5 (+3.5); r20+u4≈32.4 (cliff remains ~−23 vs r0)
 - Recs: default r0+u4; r20+u4 = VRAM trade not speed fix; offload needs WEIGHTS_PATH+CACHE_DIR
 - Report: `C:/gm/lfm-2026.4/tool-use-20261027/speed-offload-20261027/MEMORY-PRESSURE-REPORT.md`
+- Start scripts (`start-lfm25.ps1`, `start-lfm2-24b.ps1` + OMP agent copies): default `KV_CACHE_PRECISION=u4` + `OFFLOAD_RATIO=0`; lfm25 batch stays 1024; 24b-long profile batch/seqs unchanged
 
 ## Plan
 - [x] A0–A9 including commit/push and residual root-cause (read-only)
 - [x] Design C spec + plan written / approved
 - [x] Memory-pressure / u4 matrix + report
 - [x] Cloud handoff docs for PR 4697
+- [x] Wire KV_CACHE_PRECISION=u4 into start-lfm25 / start-lfm2-24b (r0 default)
 - [ ] Hybrid C implementation (see plan tasks 1–4)
-- [ ] Optional: wire KV_CACHE_PRECISION=u4 into start-lfm25.ps1
