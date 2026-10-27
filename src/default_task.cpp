@@ -52,7 +52,7 @@ static std::string describeTaskMetadataFailure(const std::string& sourceModel, i
     if (httpCode == -1 || httpCode == 0) {
         return "Could not reach the model endpoint to resolve task metadata for '" + sourceModel + "'. Check the internet connection or proxy configuration.";
     }
-    return "Could not retrieve task metadata for model '" + sourceModel + "' from the model endpoint.";
+    return "Could not retrieve task metadata for model '" + sourceModel + "' from the model endpoint (HTTP status " + std::to_string(httpCode) + ").";
 }
 
 bool graphPbtxtExists(const std::string& modelPath) {
@@ -117,6 +117,12 @@ std::optional<std::string> determineDefaultTaskParameter(const std::optional<std
     if (configStatus.ok()) {
         ctx.addContent("config.json", std::move(configBody));
     } else {
+        if (configHttpCode != 404) {
+            if (errorMessage != nullptr) {
+                *errorMessage = describeTaskMetadataFailure(*sourceModel, configHttpCode);
+            }
+            return std::nullopt;
+        }
         // config.json not available — try model_index.json (Diffusers repos)
         std::string indexBody;
         int indexHttpCode = -1;
