@@ -52,6 +52,13 @@ set "PYTHONHOME=C:\opt\Python312"
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel, wget to PATH
 set "PATH=%setPath%"
 
+if defined GITHUB_TOKEN (
+    if not defined GIT_CONFIG_COUNT set "GIT_CONFIG_COUNT=0"
+    set "GIT_CONFIG_KEY_!GIT_CONFIG_COUNT!=url.https://x-access-token:!GITHUB_TOKEN!@github.com/.insteadOf"
+    set "GIT_CONFIG_VALUE_!GIT_CONFIG_COUNT!=https://github.com/"
+    set /a GIT_CONFIG_COUNT+=1 >nul
+)
+
 :: Bazel compilation settings
 set VS_2022_BT="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
 IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :msvc_error
