@@ -9,8 +9,5 @@
   "bindAddress": "127.0.0.1",
   "logLevel": "INFO",
   "runMode": "user-login",
-  "startAtLogin": true,
-  "showTrayIcon": true,
-  "serviceAutoStart": false,
   "packageVariant": "python_on"
 }

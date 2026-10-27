@@ -143,6 +143,8 @@ var
   ModelRepositoryPathEdit: TNewEdit;
   OvmsServiceModeRadio: TNewRadioButton;
   OvmsTerminalModeRadio: TNewRadioButton;
+  OvmsServiceStatusLabel: TNewStaticText;
+  StopOvmsServiceButton: TNewButton;
   // When True, the "Exit Setup?" confirmation is suppressed so Setup can
   // close cleanly after handing off to the existing uninstaller.
   SuppressCancelConfirm: Boolean;
@@ -153,6 +155,24 @@ begin
     Result := 'true'
   else
     Result := 'false';
+end;
+
+function GetSetupLogPath: String;
+begin
+  Result := AddBackslash(ExtractFileDir(ExpandConstant('{srcexe}'))) + 'OVMSSetup.log';
+end;
+
+procedure InitializeSetupLog;
+var
+  LogPath: String;
+  MarkerText: String;
+begin
+  LogPath := GetSetupLogPath;
+  if FileExists(LogPath) then
+    DeleteFile(LogPath);
+
+  MarkerText := '[SETUP] ==================== OVMS Setup started ====================' + #13#10;
+  SaveStringToFile(LogPath, MarkerText, False);
 end;
 
 function GetPythonModeValue(Param: String): String;
@@ -415,6 +435,65 @@ begin
     Result := Result + #13#10 + 'Intel CPU: not detected';
 end;
 
+function IsOvmsServiceRunning: Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := False;
+  Exec('powershell.exe',
+    '-NoProfile -ExecutionPolicy Bypass -Command "$svc = Get-Service ovms -ErrorAction SilentlyContinue; if ($svc -and $svc.Status -eq ''Running'') { exit 0 } else { exit 1 }"',
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Result := ResultCode = 0;
+end;
+
+procedure UpdateOvmsServiceStatus;
+begin
+  if not Assigned(OvmsServiceStatusLabel) then
+    Exit;
+
+  if IsOvmsServiceRunning then
+  begin
+    OvmsServiceStatusLabel.Caption := 'OVMS Windows service: running';
+    if Assigned(StopOvmsServiceButton) then
+      StopOvmsServiceButton.Enabled := True;
+  end
+  else
+  begin
+    OvmsServiceStatusLabel.Caption := 'OVMS Windows service: stopped or not installed';
+    if Assigned(StopOvmsServiceButton) then
+      StopOvmsServiceButton.Enabled := False;
+  end;
+end;
+
+procedure StopOvmsServiceButtonClick(Sender: TObject);
+var
+  ResultCode: Integer;
+  Message: String;
+begin
+  if not IsOvmsServiceRunning then
+  begin
+    UpdateOvmsServiceStatus;
+    Exit;
+  end;
+
+  Exec('powershell.exe',
+    '-NoProfile -ExecutionPolicy Bypass -Command "Stop-Service ovms -Force -ErrorAction SilentlyContinue; $svc = Get-Service ovms -ErrorAction SilentlyContinue; if ($svc -and $svc.Status -eq ''Stopped'') { exit 0 } else { exit 1 }"',
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+
+  if ResultCode = 0 then
+  begin
+    Message := 'The OVMS Windows service was stopped successfully.';
+    MsgBox(Message, mbInformation, MB_OK);
+  end
+  else
+  begin
+    Message := 'OVMS service could not be stopped. Please stop it manually and then continue with installation.';
+    MsgBox(Message, mbError, MB_OK);
+  end;
+
+  UpdateOvmsServiceStatus;
+end;
+
 function GetDefaultModelRepositoryPath: String;
 begin
   Result := 'C:\models';
@@ -546,6 +625,8 @@ var
   Lbl: TNewStaticText;
   SettingsSummaryEdit: TNewMemo;
 begin
+  InitializeSetupLog;
+
   if ExistingInstallDetected then
   begin
     if Length(ExistingInstallDir) > 0 then
@@ -603,7 +684,7 @@ begin
   begin
     RuntimeSummaryPage := CreateCustomPage(wpSelectComponents,
       'Ovms runtime configuration',
-      'OVMS runtime configuration');
+      '');
 
     SettingsSummaryEdit := TNewMemo.Create(RuntimeSummaryPage);
     SettingsSummaryEdit.Parent := RuntimeSummaryPage.Surface;
@@ -614,6 +695,26 @@ begin
     SettingsSummaryEdit.ReadOnly := True;
     SettingsSummaryEdit.WordWrap := True;
     SettingsSummaryEdit.Text := GetOvmsSettingsSummary;
+
+    OvmsServiceStatusLabel := TNewStaticText.Create(RuntimeSummaryPage);
+    OvmsServiceStatusLabel.Parent := RuntimeSummaryPage.Surface;
+    OvmsServiceStatusLabel.Left := 0;
+    OvmsServiceStatusLabel.Top := SettingsSummaryEdit.Top + SettingsSummaryEdit.Height + ScaleY(12);
+    OvmsServiceStatusLabel.Width := RuntimeSummaryPage.SurfaceWidth;
+    OvmsServiceStatusLabel.AutoSize := False;
+    OvmsServiceStatusLabel.WordWrap := True;
+    OvmsServiceStatusLabel.Caption := 'OVMS Windows service: checking...';
+    OvmsServiceStatusLabel.Height := ScaleY(20);
+
+    StopOvmsServiceButton := TNewButton.Create(RuntimeSummaryPage);
+    StopOvmsServiceButton.Parent := RuntimeSummaryPage.Surface;
+    StopOvmsServiceButton.Left := 0;
+    StopOvmsServiceButton.Top := OvmsServiceStatusLabel.Top + OvmsServiceStatusLabel.Height + ScaleY(8);
+    StopOvmsServiceButton.Width := ScaleX(150);
+    StopOvmsServiceButton.Height := ScaleY(23);
+    StopOvmsServiceButton.Caption := 'Stop OVMS service';
+    StopOvmsServiceButton.OnClick := @StopOvmsServiceButtonClick;
+    UpdateOvmsServiceStatus;
 
     // Keep the runtime summary on its dedicated page and expose the
     // model repository path and OVMS startup mode on the custom tasks page.
@@ -665,14 +766,34 @@ begin
     OvmsServiceModeRadio.Caption := 'Automatic - start ovms service';
     OvmsServiceModeRadio.Checked := False;
 
+    Lbl := TNewStaticText.Create(AdditionalTasksPage);
+    Lbl.Parent := AdditionalTasksPage.Surface;
+    Lbl.Left := ScaleX(18);
+    Lbl.Top := OvmsServiceModeRadio.Top + OvmsServiceModeRadio.Height + ScaleY(2);
+    Lbl.Width := AdditionalTasksPage.SurfaceWidth - ScaleX(18);
+    Lbl.AutoSize := False;
+    Lbl.WordWrap := True;
+    Lbl.Caption := 'Will stop and reinstall the existing OVMS service.';
+    Lbl.Height := ScaleY(26);
+
     OvmsTerminalModeRadio := TNewRadioButton.Create(AdditionalTasksPage);
     OvmsTerminalModeRadio.Parent := AdditionalTasksPage.Surface;
     OvmsTerminalModeRadio.Left := 0;
-    OvmsTerminalModeRadio.Top := OvmsServiceModeRadio.Top + OvmsServiceModeRadio.Height + ScaleY(6);
+    OvmsTerminalModeRadio.Top := Lbl.Top + Lbl.Height + ScaleY(8);
     OvmsTerminalModeRadio.Width := AdditionalTasksPage.SurfaceWidth;
     OvmsTerminalModeRadio.Height := ScaleY(17);
     OvmsTerminalModeRadio.Caption := 'Manual - start ovms in terminal';
     OvmsTerminalModeRadio.Checked := True;
+
+    Lbl := TNewStaticText.Create(AdditionalTasksPage);
+    Lbl.Parent := AdditionalTasksPage.Surface;
+    Lbl.Left := ScaleX(18);
+    Lbl.Top := OvmsTerminalModeRadio.Top + OvmsTerminalModeRadio.Height + ScaleY(2);
+    Lbl.Width := AdditionalTasksPage.SurfaceWidth - ScaleX(18);
+    Lbl.AutoSize := False;
+    Lbl.WordWrap := True;
+    Lbl.Caption := 'Run "Start OVMS Server" from Start Windows Menu.';
+    Lbl.Height := ScaleY(26);
   end;
 end;
 
@@ -691,7 +812,7 @@ begin
 
   ResultCode := 0;
   Exec('cmd.exe',
-    '/C setx OVMS_MODEL_REPOSITORY_PATH "' + ModelRepositoryPath + '" >nul',
+    '/C setx OVMS_MODEL_REPOSITORY_PATH "' + ModelRepositoryPath + '"',
     '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 
   if ResultCode <> 0 then
@@ -731,11 +852,10 @@ begin
     exit;
   end;
 
-  LogPath := ExpandConstant('{src}\ovms-python-config.log');
-  DeleteFile(LogPath);
+  LogPath := GetSetupLogPath;
 
   Exec('cmd.exe',
-    '/C powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + ScriptPath + '" -InstallDir "{app}" -DataDir "{localappdata}\OVMS" -PackageVariant "' + Variant + '" -RunMode "' + RunMode + '" 1> "' + LogPath + '" 2>&1',
+    '/C powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + ScriptPath + '" -InstallDir "' + ExpandConstant('{app}') + '" -DataDir "' + ExpandConstant('{localappdata}\OVMS') + '" -PackageVariant "' + Variant + '" -RunMode "' + RunMode + '" -SetupLogPath "' + LogPath + '"',
     '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 
   if ResultCode = 0 then
@@ -788,6 +908,13 @@ begin
     Result := True;
   end;
 
+  if (CurPageID = RuntimeSummaryPage.ID) and IsOvmsServiceRunning then
+  begin
+    MsgBox('The OVMS Windows service is still running. Stop it before continuing with the installation.', mbError, MB_OK);
+    Result := False;
+    Exit;
+  end;
+
   if (CurPageID = wpSelectDir) and ExistingInstallDetected then
   begin
     if (Length(ExistingInstallDir) > 0) and (CompareText(ExistingInstallDir, WizardForm.DirEdit.Text) <> 0) then
@@ -809,38 +936,70 @@ end;
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   ServiceScriptPath: String;
+  RepairScriptPath: String;
   ResultCode: Integer;
 begin
   if CurStep = ssPostInstall then
   begin
+    SaveStringToFile(GetSetupLogPath, '[SETUP] Starting post-install stage markers.' + #13#10, True);
     WriteOptionalInstallSelection;
+
+    if ExistingInstallDetected and Assigned(RbRepair) and RbRepair.Checked then
+    begin
+      SaveStringToFile(GetSetupLogPath, '[SETUP] Stage: repair existing installation' + #13#10, True);
+      RepairScriptPath := ExpandConstant('{app}\scripts\repair-package.ps1');
+      if FileExists(RepairScriptPath) then
+      begin
+        Exec('cmd.exe',
+          '/C powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + RepairScriptPath + '" -InstallDir "' + ExpandConstant('{app}') + '" -DataDir "' + ExpandConstant('{localappdata}\OVMS') + '"',
+          '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+        if ResultCode <> 0 then
+        begin
+          MsgBox('Repair cleanup failed for the existing installation. Some deselected components may still be present.' + #13#10 + 'See the setup log for details: ' + GetSetupLogPath, mbError, MB_OK);
+        end;
+      end;
+    end;
+
     PersistModelRepositoryPath;
+
+    ResultCode := 0;
 
     if Assigned(AddOvmsToPathCheck) and AddOvmsToPathCheck.Checked then
     begin
+      SaveStringToFile(GetSetupLogPath, '[SETUP] Stage: update PATH environment variable' + #13#10, True);
       Exec('cmd.exe',
-        '/C powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{app}\scripts\set-path.ps1" -InstallDir "{app}" -Action Add',
+        '/C powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\scripts\set-path.ps1') + '" -InstallDir "' + ExpandConstant('{app}') + '" -Action Add -SetupLogPath "' + GetSetupLogPath + '"',
         '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+      if ResultCode <> 0 then
+      begin
+        MsgBox('OVMS PATH configuration failed. See the setup log for details: ' + GetSetupLogPath, mbError, MB_OK);
+      end;
     end;
 
     if (WizardIsComponentSelected('python_system') or WizardIsComponentSelected('python_embedded') or WizardIsComponentSelected('python_none')) and
        (GetSelectedPythonVariant <> 'none') then
+    begin
+      SaveStringToFile(GetSetupLogPath, '[SETUP] Stage: configure Python runtime' + #13#10, True);
       RunPythonConfigurationForSelectedVariant;
+    end;
 
     if Assigned(OvmsServiceModeRadio) and OvmsServiceModeRadio.Checked then
     begin
+      SaveStringToFile(GetSetupLogPath, '[SETUP] Stage: configure OVMS Windows service' + #13#10, True);
       ServiceScriptPath := ExpandConstant('{app}\scripts\install-service.ps1');
       if FileExists(ServiceScriptPath) then
       begin
         Exec('cmd.exe',
-          '/C powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + ServiceScriptPath + '" -InstallDir "{app}" -DataDir "{localappdata}\OVMS"',
+          '/C powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + ServiceScriptPath + '" -InstallDir "' + ExpandConstant('{app}') + '" -DataDir "' + ExpandConstant('{localappdata}\OVMS') + '" -SetupLogPath "' + GetSetupLogPath + '"',
           '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
         if ResultCode <> 0 then
         begin
-          MsgBox('OVMS service mode was selected, but the Windows service could not be started automatically after installation.', mbError, MB_OK);
+          MsgBox('OVMS service mode was selected, but the Windows service could not be started automatically after installation.' + #13#10 + 'Command output was logged to:' + #13#10 + GetSetupLogPath, mbError, MB_OK);
         end;
       end;
     end;
+
+    SaveStringToFile(GetSetupLogPath, '[SETUP] ==================== OVMS Setup completed successfully ====================' + #13#10, True);
   end;
 end;
 

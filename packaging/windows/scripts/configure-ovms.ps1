@@ -6,15 +6,42 @@ param(
     [int]$RestPort = 8000,
     [int]$GrpcPort = 0,
     [string]$BindAddress = "127.0.0.1",
-    [string]$LogLevel = "INFO"
+    [string]$LogLevel = "INFO",
+    [string]$SetupLogPath = (Join-Path (Split-Path -Parent $PSScriptRoot) "setup.log")
 )
 
 $ErrorActionPreference = "Stop"
+
+function Write-SetupLog {
+    param(
+        [Parameter(Mandatory = $true)][string]$Message,
+        [Parameter(Mandatory = $true)][string]$LogPath
+    )
+
+    if ([string]::IsNullOrWhiteSpace($LogPath)) {
+        return
+    }
+
+    $scriptName = [System.IO.Path]::GetFileName($MyInvocation.ScriptName)
+    if ([string]::IsNullOrWhiteSpace($scriptName)) {
+        $scriptName = 'unknown-script'
+    }
+
+    $logDir = Split-Path -Parent $LogPath
+    if (-not [string]::IsNullOrWhiteSpace($logDir) -and -not (Test-Path -LiteralPath $logDir)) {
+        New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+    }
+
+    $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+    $line = "[$timestamp] [$scriptName] $Message"
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::AppendAllText($LogPath, $line + [Environment]::NewLine, $utf8NoBom)
+    Write-Host $line
+}
+
 trap {
     $message = $_.Exception.Message
-    if ($message) {
-        [System.Console]::Error.WriteLine("OVMS configuration failed: $message")
-    }
+    Write-SetupLog -Message "[ERROR] OVMS configuration failed: $message" -LogPath $SetupLogPath
     exit 1
 }
 
@@ -106,9 +133,6 @@ $settings = [ordered]@{
     bindAddress = $BindAddress
     logLevel = $LogLevel
     runMode = $RunMode
-    startAtLogin = ($RunMode -ne "service")
-    showTrayIcon = ($RunMode -ne "service")
-    serviceAutoStart = ($RunMode -eq "service")
     packageVariant = $PackageVariant
 }
 
@@ -143,4 +167,4 @@ $tmpInstall = "$installMarkerPath.tmp"
 [System.IO.File]::WriteAllText($tmpInstall, ($installMarker | ConvertTo-Json -Depth 10), $utf8NoBom)
 Move-Item -Force -Path $tmpInstall -Destination $installMarkerPath
 
-Write-Host "[INFO] OVMS configured at $DataDir"
+Write-SetupLog -Message "[INFO] OVMS configured at $DataDir" -LogPath $SetupLogPath
