@@ -122,6 +122,10 @@ def main():
     ap.add_argument('--port', type=int, default=18147)
     ap.add_argument('--benchmark', action='store_true')
     ap.add_argument('--plan-only', action='store_true')
+    ap.add_argument('--tool-use-refit', action='store_true', help='Run saved policy matrix and real bounded host-tool loops')
+    ap.add_argument('--agent-profile', choices=('deterministic', 'official', 'native'), default='deterministic')
+    ap.add_argument('--agent-policy', choices=('auto', 'action-required'), default='auto')
+    ap.add_argument('--agent-repeats', type=int, default=3)
     args = ap.parse_args()
     model = Path(r'C:\llm\models') / args.model
     state = {'model': 'OpenVINO/' + args.model, 'local_dir': str(model), 'device': args.device,
@@ -308,6 +312,23 @@ def main():
             assert 'TOOL_OK' in continued, 'SSE continuation missing tool result: ' + repr(continued[:300])
             assert '<|tool_call_start|>' not in continued, 'SSE continuation emitted another tool call as content'
             state['gates']['tool_cycle_continuation_sse'] = 'PASS'
+            if args.tool_use_refit:
+                for script, name, extra in [
+                    ('lfm-tool-use-probe.py', 'policy-api', []),
+                    ('lfm-agent-loop.py', 'agent-loops', ['--repeats', str(args.agent_repeats), '--profile', args.agent_profile, '--tool-policy', args.agent_policy]),
+                ]:
+                    destination = args.output / name
+                    command = [sys.executable, str(REPO / 'scripts/windows' / script), '--url', url,
+                               '--model', 'lfm', '--output', str(destination)] + extra
+                    with (args.output / (name + '.log')).open('w', encoding='utf-8') as evidence:
+                        checked = subprocess.run(command, stdout=evidence, stderr=subprocess.STDOUT, timeout=3600,
+                                                 creationflags=subprocess.CREATE_NO_WINDOW)
+                    assert checked.returncode == 0, name + ' runner failed'
+                    result = json.loads((destination / 'RESULT.json').read_text(encoding='utf-8'))
+                    rows = result['results'] if isinstance(result, dict) else result
+                    state['gates'][name] = 'PASS' if rows and all(r['verdict'] == 'PASS' for r in rows) else 'FAIL'
+                assert state['gates']['policy-api'] == 'PASS', 'Policy API matrix failed'
+                assert state['gates']['agent-loops'] == 'PASS', 'Agent loops failed; inspect actual model behavior'
             if args.benchmark:
                 # The preceding protocol calls are labeled warmup, never included below.
                 for length in (128, 512):

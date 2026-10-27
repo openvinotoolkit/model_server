@@ -21,8 +21,9 @@ protected:
         tokenizer = std::make_unique<ov::genai::Tokenizer>(root + "/src/test/llm_testing/LiquidAI/" + (GetParam() ? "LFM2.5-8B-A1B" : "LFM2-2.6B"));
     }
     ovms::ParsedOutput run(const std::vector<std::string>& chunks,
-        ov::genai::GenerationFinishReason finish = ov::genai::GenerationFinishReason::STOP) {
-        ovms::OutputParser parser(*tokenizer, "lfm2", GetParam() ? "lfm2" : "", {});
+        ov::genai::GenerationFinishReason finish = ov::genai::GenerationFinishReason::STOP,
+        bool finishOnLastChunk = false) {
+        ovms::OutputParser parser(*tokenizer, "lfm2", GetParam() ? "lfm2" : "", ovms::ToolsSchemas_t{{"f", {nullptr, R"({"type":"object"})"}}, {"g", {nullptr, R"({"type":"object"})"}}});
         ovms::ParsedOutput result;
         auto accept = [&](const std::optional<ovms::Delta>& delta) {
             if (!delta) return;
@@ -45,11 +46,12 @@ protected:
             }
             FAIL() << "Unbounded parser drain";
         };
-        for (const auto& chunk : chunks) {
-            accept(parser.parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE));
+        for (size_t i = 0; i < chunks.size(); ++i) {
+            accept(parser.parseChunk(chunks[i], {}, true,
+                finishOnLastChunk && i + 1 == chunks.size() ? finish : ov::genai::GenerationFinishReason::NONE));
             drain();
         }
-        accept(parser.parseChunk("", {}, true, finish));
+        if (!finishOnLastChunk) accept(parser.parseChunk("", {}, true, finish));
         drain();
         return result;
     }
@@ -101,6 +103,17 @@ TEST_P(LfmStrictOutputParserTest, ReasoningIsSeparatedFromContent) {
     const auto result = run({"<think>private</think>public"});
     EXPECT_EQ(result.reasoning, "private");
     EXPECT_EQ(result.content, "public");
+}
+
+TEST_P(LfmStrictOutputParserTest, TerminalChunkDrainsMultipleEnvelopesAndContent) {
+    const auto result = run({"before<|tool_call_start|>[f(a=1)]<|tool_call_end|>middle<|tool_call_start|>[g()]<|tool_call_end|>after"},
+        ov::genai::GenerationFinishReason::STOP, true);
+    EXPECT_EQ(result.content, "beforemiddleafter");
+    ASSERT_EQ(result.toolCalls.size(), 2);
+    EXPECT_EQ(result.toolCalls[0].name, "f");
+    EXPECT_EQ(result.toolCalls[0].arguments, R"({"a":1})");
+    EXPECT_EQ(result.toolCalls[1].name, "g");
+    EXPECT_EQ(result.toolCalls[1].arguments, "{}");
 }
 INSTANTIATE_TEST_SUITE_P(TargetTokenizers, LfmStrictOutputParserTest, ::testing::Values(false, true));
 }  // namespace

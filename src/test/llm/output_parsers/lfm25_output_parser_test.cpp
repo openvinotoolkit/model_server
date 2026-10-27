@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Copyright 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,6 +21,7 @@
 #include <tuple>
 #include <algorithm>
 #include <cctype>
+#include <unordered_set>
 
 #include "../../../llm/io_processing/base_output_parser.hpp"
 #include "../../../llm/io_processing/output_parser.hpp"
@@ -37,7 +38,14 @@ const std::string tokenizerPath = "/ovms/src/test/llm_testing/LiquidAI/LFM2.5-8B
 #endif
 
 static std::unique_ptr<ov::genai::Tokenizer> lfm25Tokenizer;
-static const ToolsSchemas_t& EMPTY_TOOLS_SCHEMA = {};  // not used in lfm2.5
+static const ToolsSchemas_t LFM_FIXTURE_SCHEMAS = [] {
+    ToolsSchemas_t result;
+    // Explicitly registered tools; permissive object schemas test extraction,
+    // while lfm_retainer_test.cpp pins required/type/unknown-tool rejection.
+    for (const auto* name : {"another_tool", "check_status", "create", "dummy", "dummy1", "dummy2", "example_tool", "execute", "format", "generate_DNA_sequence", "log", "no_args_tool", "read_file", "save", "search", "send", "solve", "sort", "string_tool", "test1", "third_tool", "translate"})
+        result.emplace(name, ToolSchemaWrapper{nullptr, R"({"type":"object"})"});
+    return result;
+}();
 
 class LFM25OutputParserTest : public ::testing::Test {
 protected:
@@ -59,7 +67,7 @@ protected:
 
     void SetUp() override {
         // For LFM2 model there is only tool parser available
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*lfm25Tokenizer, "lfm2", "lfm2", EMPTY_TOOLS_SCHEMA);
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*lfm25Tokenizer, "lfm2", "lfm2", LFM_FIXTURE_SCHEMAS);
     }
 
     void assertChunkEqual(const std::optional<ovms::Delta>& doc, const std::optional<std::string>& expectedDelta, const std::string& chunk) {
@@ -87,49 +95,43 @@ protected:
     }
 
     void assertStreamingVec(const std::vector<std::tuple<std::string, ov::genai::GenerationFinishReason, std::optional<std::string>>>& chunkToDeltaVec) {
+        ParsedOutput actual, expected;
+        auto append = [](ParsedOutput& output, const std::string& json) {
+            rapidjson::Document document;
+            ASSERT_FALSE(document.Parse(json.c_str()).HasParseError());
+            const auto& delta = document["delta"];
+            if (delta.HasMember("content")) output.content += delta["content"].GetString();
+            if (delta.HasMember("reasoning_content")) output.reasoning += delta["reasoning_content"].GetString();
+            if (!delta.HasMember("tool_calls")) return;
+            for (const auto& call : delta["tool_calls"].GetArray()) {
+                const auto index = call["index"].GetUint();
+                if (output.toolCalls.size() <= index) output.toolCalls.resize(index + 1);
+                auto& destination = output.toolCalls[index];
+                if (call.HasMember("id")) destination.id = call["id"].GetString();
+                const auto& function = call["function"];
+                if (function.HasMember("name")) destination.name = function["name"].GetString();
+                if (function.HasMember("arguments")) destination.arguments += function["arguments"].GetString();
+            }
+        };
         for (const auto& [chunk, finishReason, expectedDelta] : chunkToDeltaVec) {
-            auto tokens = encodeChunk(chunk);
-            std::optional<ovms::Delta> doc = outputParserWithRegularToolParsing->parseChunk(chunk, tokens, true, finishReason);
-            if (!expectedDelta.has_value() && !doc.has_value()) {
-                continue;  // Both are nullopt, OK
+            if (expectedDelta) append(expected, *expectedDelta);
+            auto delta = outputParserWithRegularToolParsing->parseChunk(chunk, encodeChunk(chunk), true, finishReason);
+            size_t drained = 0;
+            while (delta && drained++ < 100) {
+                append(actual, ovms::test::deltaToJson(*delta));
+                delta = outputParserWithRegularToolParsing->drainPendingDelta();
             }
-            if (expectedDelta.has_value() && doc.has_value()) {
-                std::string docStr = ovms::test::deltaToJson(*doc);
-                // If both strings contain "id":"...", compare id values by length and alphanumeric, else compare whole strings
-                std::string expected = expectedDelta.value();
-                std::string idKey = "\"id\":\"";
-                auto docIdPos = docStr.find(idKey);
-                auto expectedIdPos = expected.find(idKey);
-                if (docIdPos != std::string::npos && expectedIdPos != std::string::npos) {
-                    auto docIdStart = docIdPos + idKey.size();
-                    auto docIdEnd = docStr.find("\"", docIdStart);
-                    auto expectedIdStart = expectedIdPos + idKey.size();
-                    auto expectedIdEnd = expected.find("\"", expectedIdStart);
-                    ASSERT_NE(docIdEnd, std::string::npos);
-                    ASSERT_NE(expectedIdEnd, std::string::npos);
-                    std::string docId = docStr.substr(docIdStart, docIdEnd - docIdStart);
-                    std::string expectedId = expected.substr(expectedIdStart, expectedIdEnd - expectedIdStart);
-                    EXPECT_EQ(docId.size(), expectedId.size()) << "ID length mismatch for chunk: " << chunk;
-                    EXPECT_TRUE(std::all_of(docId.begin(), docId.end(), ::isalnum)) << "ID not alphanumeric for chunk: " << chunk;
-                    // Compare everything except the id value
-                    std::string docStrNoId = docStr;
-                    std::string expectedNoId = expected;
-                    docStrNoId.replace(docIdStart, docId.size(), std::string(docId.size(), '*'));
-                    expectedNoId.replace(expectedIdStart, expectedId.size(), std::string(expectedId.size(), '*'));
-                    EXPECT_EQ(docStrNoId, expectedNoId) << "Mismatch for chunk (ignoring id value): " << chunk;
-                } else {
-                    EXPECT_EQ(docStr, expected) << "Mismatch for chunk: " << chunk;
-                }
-            } else {
-                std::string expectedStr = expectedDelta.has_value() ? expectedDelta.value() : "std::nullopt";
-                std::string docStr = doc.has_value() ? [&]() {
-                    return ovms::test::deltaToJson(*doc);
-                }()
-                                                     : "std::nullopt";
-                FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk
-                       << "\nexpectedDelta: " << expectedStr
-                       << "\ndoc: " << docStr;
-            }
+            EXPECT_LT(drained, 100);
+        }
+        EXPECT_EQ(actual.content, expected.content);
+        EXPECT_EQ(actual.reasoning, expected.reasoning);
+        ASSERT_EQ(actual.toolCalls.size(), expected.toolCalls.size());
+        std::unordered_set<std::string> identities;
+        for (size_t i = 0; i < expected.toolCalls.size(); ++i) {
+            EXPECT_EQ(actual.toolCalls[i].name, expected.toolCalls[i].name);
+            EXPECT_EQ(actual.toolCalls[i].arguments, expected.toolCalls[i].arguments);
+            EXPECT_FALSE(actual.toolCalls[i].id.empty());
+            EXPECT_TRUE(identities.insert(actual.toolCalls[i].id).second);
         }
     }
 };
@@ -766,16 +768,14 @@ TEST_F(LFM25OutputParserTest, ParseToolCallWithMissingParentheses) {
     std::string input = "<|tool_call_start|>[broken_tool]<|tool_call_end|>";
     auto generatedTensor = lfm25Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*lfm25Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
-    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+    EXPECT_THROW(ovms::test::parseWithStreamer(*lfm25Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true), std::invalid_argument);
 }
 
 TEST_F(LFM25OutputParserTest, ParseToolCallWithMissingClosingParenthesis) {
     std::string input = "<|tool_call_start|>[broken_tool(arg1=\"value1\"]<|tool_call_end|>";
     auto generatedTensor = lfm25Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*lfm25Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
-    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+    EXPECT_THROW(ovms::test::parseWithStreamer(*lfm25Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true), std::invalid_argument);
 }
 
 TEST_F(LFM25OutputParserTest, ParseToolCallWithArgumentMissingEquals) {
@@ -797,8 +797,7 @@ TEST_F(LFM25OutputParserTest, ParseToolCallWithMissingSquareBracket) {
     std::string input = "<|tool_call_start|>broken(arg1=1)<|tool_call_end|>";
     auto generatedTensor = lfm25Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
-    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*lfm25Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
-    ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
+    EXPECT_THROW(ovms::test::parseWithStreamer(*lfm25Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true), std::invalid_argument);
 }
 
 // Tests with special characters

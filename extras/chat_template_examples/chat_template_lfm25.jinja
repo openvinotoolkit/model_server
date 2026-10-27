@@ -1,6 +1,8 @@
 {#-
   Modifications:
-    * Adding support for arguments as string so that minja does not detect the need to apply polyfills. This is dead path for OVMS as it always converts arguments to dict anyway. 
+    * Safe JSON literals, native tool definitions and reasoning aliases.
+    * Keep the string-argument compatibility branch required by pinned Minja's
+      tool-capability probe. OVMS adapts API JSON argument strings to mappings.
 #}
 {{- bos_token -}}
 {%- set preserve_thinking = preserve_thinking | default(false) -%}
@@ -12,10 +14,14 @@
 {%- macro parse_content(content) -%}
     {%- if content is string -%}
         {{- content -}}
-    {%- else -%}
+    {%- elif content is mapping -%}
+        {{- content | tojson -}}
+    {%- elif content is iterable -%}
         {%- set _ns = namespace(result="") -%}
         {%- for item in content -%}
-            {%- if item["type"] == "image" -%}
+            {%- if item is string -%}
+                {%- set _ns.result = _ns.result + item -%}
+            {%- elif item["type"] == "image" -%}
                 {%- set _ns.result = _ns.result + "<image>" -%}
             {%- elif item["type"] == "text" -%}
                 {%- set _ns.result = _ns.result + item["text"] -%}
@@ -30,23 +36,24 @@
 {%- macro render_tool_calls(tool_calls) -%}
     {%- set tool_calls_ns = namespace(tool_calls=[]) -%}
     {%- for tool_call in tool_calls -%}
-        {%- set func_name = tool_call["function"]["name"] -%}
-        {%- set func_args = tool_call["function"]["arguments"] -%}
-        {%- if func_args is string -%}
-            {%- set tool_calls_ns.tool_calls = tool_calls_ns.tool_calls + [func_name + "(" + func_args + ")"] -%}
-        {%- else -%}
-            {%- set args_ns = namespace(arg_strings=[]) -%}
+        {%- set func = tool_call["function"] if "function" in tool_call else tool_call -%}
+        {%- set func_name = func["name"] -%}
+        {%- set func_args = func.get("arguments") -%}
+        {%- set args_ns = namespace(arg_strings=[]) -%}
+        {%- if func_args is mapping -%}
             {%- for arg_name, arg_value in func_args.items() -%}
                 {%- set args_ns.arg_strings = args_ns.arg_strings + [arg_name + "=" + format_arg_value(arg_value)] -%}
             {%- endfor -%}
-            {%- set tool_calls_ns.tool_calls = tool_calls_ns.tool_calls + [func_name + "(" + (args_ns.arg_strings | join(", ")) + ")"] -%}
+        {%- elif func_args is string -%}
+            {%- set args_ns.arg_strings = [func_args] -%}
         {%- endif -%}
+        {%- set tool_calls_ns.tool_calls = tool_calls_ns.tool_calls + [func_name + "(" + (args_ns.arg_strings | join(", ")) + ")"] -%}
     {%- endfor -%}
     {{- "<|tool_call_start|>[" + (tool_calls_ns.tool_calls | join(", ")) + "]<|tool_call_end|>" -}}
 {%- endmacro -%}
 
 {%- set ns = namespace(system_prompt="", last_user_index=-1) -%}
-{%- if messages[0]["role"] == "system" -%}
+{%- if messages and messages[0]["role"] == "system" -%}
     {%- if messages[0].get("content") -%}
         {%- set ns.system_prompt = parse_content(messages[0]["content"]) -%}
     {%- endif -%}
@@ -55,6 +62,9 @@
 {%- if tools -%}
     {%- set ns.system_prompt = ns.system_prompt + ("\n" if ns.system_prompt else "") + "List of tools: [" -%}
     {%- for tool in tools -%}
+        {%- if tool is mapping and "function" in tool -%}
+            {%- set tool = tool["function"] -%}
+        {%- endif -%}
         {%- if tool is not string -%}
             {%- set tool = tool | tojson -%}
         {%- endif -%}
@@ -77,8 +87,9 @@
     {{- "<|im_start|>" + message.role + "\n" -}}
     {%- if message.role == "assistant" -%}
         {%- generation -%}
-        {%- if message.thinking is defined and (preserve_thinking or loop.index0 > ns.last_user_index) -%}
-            {{- "<think>" + message.thinking + "</think>" -}}
+        {%- set thinking = message.thinking or message.reasoning or message.reasoning_content -%}
+        {%- if thinking is string and thinking and (preserve_thinking or loop.index0 > ns.last_user_index) -%}
+            {{- "<think>" + thinking + "</think>" -}}
         {%- endif -%}
         {%- set _cfm_tag = "CONTINUE_FINAL_MESSAGE_TAG " -%}
         {%- set _has_cfm = false -%}

@@ -2834,6 +2834,7 @@ cc_library(
         ":test_platform_utils",
         "//src/llm:text_streamer",
         "//src/llm:output_parsers",
+        "//src/llm:generation_config_builders",
         "//src/llm:io_processing_delta",
         "//src/llm:openai_delta_serializer",
     ],

@@ -1,0 +1,17 @@
+{
+  "retrieved_utc": "2026-10-27T02:05:39.274838+00:00",
+  "sources": [
+    {
+      "model": "LiquidAI/LFM2.5-8B-A1B",
+      "revision": "5dd22602c2e9f6a097b1de4c4efe0658b605015c",
+      "url": "https://huggingface.co/LiquidAI/LFM2.5-8B-A1B/raw/5dd22602c2e9f6a097b1de4c4efe0658b605015c/chat_template.jinja",
+      "sha256": "c5b67247c9f736f6c40eaa91ae1ef27dc67f5b041eedaadb97a1bea5030fb0ff"
+    },
+    {
+      "model": "LiquidAI/LFM2-24B-A2B",
+      "revision": "a3bbacd91a678b97712f0e323e52f8c24ba29542",
+      "url": "https://huggingface.co/LiquidAI/LFM2-24B-A2B/raw/a3bbacd91a678b97712f0e323e52f8c24ba29542/chat_template.jinja",
+      "sha256": "ba551d58630afa3190b1be3602e28301f3d2e9bbac978dfc49d6d825171648b6"
+    }
+  ]
+}

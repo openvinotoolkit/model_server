@@ -267,6 +267,8 @@ absl::Status OpenAIApiHandler::parseTools() {
             }
         }
     } else {
+        if (toolParserName == "lfm2" && toolChoice != "none" && toolChoice != "auto")
+            return absl::InvalidArgumentError("LFM hard tool_choice requires available tools");
         toolChoice = "none";  // If tools are not provided, set toolChoice to "none"
     }
 
@@ -285,7 +287,7 @@ absl::Status OpenAIApiHandler::parseRequest(std::optional<uint32_t> maxTokensLim
 void OpenAIApiHandler::initOutputParser() {
     if (toolParserName.empty() && reasoningParserName.empty())
         return;
-    outputParser = std::make_shared<OutputParser>(tokenizer, toolParserName, reasoningParserName, request.toolNameSchemaMap);
+    outputParser = std::make_shared<OutputParser>(tokenizer, toolParserName, reasoningParserName, request.toolNameSchemaMap, request.parallelToolCalls);
 }
 
 absl::StatusOr<std::optional<ov::genai::JsonContainer>> OpenAIApiHandler::parseToolsToJsonContainer() {

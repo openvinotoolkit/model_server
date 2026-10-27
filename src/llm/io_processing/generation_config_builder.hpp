@@ -27,6 +27,7 @@
 #include "llama3/generation_config_builder.hpp"
 #include "hermes3/generation_config_builder.hpp"
 #include "devstral/generation_config_builder.hpp"
+#include "lfm2/generation_config_builder.hpp"
 #include "../apis/openai_request.hpp"
 #include "../../logging.hpp"
 
@@ -51,6 +52,8 @@ public:
             builder_impl = std::make_unique<Phi4GenerationConfigBuilder>(baseConfig, enableToolGuidedGeneration, decodingMethod);
         } else if (toolParserName == "devstral") {
             builder_impl = std::make_unique<DevstralGenerationConfigBuilder>(baseConfig, enableToolGuidedGeneration, decodingMethod);
+        } else if (toolParserName == "lfm2") {
+            builder_impl = std::make_unique<Lfm2GenerationConfigBuilder>(baseConfig, enableToolGuidedGeneration, decodingMethod);
         } else if (toolParserName == "gemma4") {
             builder_impl = std::make_unique<Gemma4GenerationConfigBuilder>(baseConfig, enableToolGuidedGeneration, decodingMethod);
         } else {

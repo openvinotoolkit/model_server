@@ -781,6 +781,14 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingFunctionToolsWithAut
     EXPECT_EQ(apiHandler->getToolChoice(), "auto");
 }
 
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, LfmRequiredWithoutToolsFailsClosed) {
+    const auto json = createTextRequest("Say hello", ",\"tool_choice\":\"required\"");
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(endpoint(), "lfm2");
+    EXPECT_FALSE(apiHandler->parseRequest(std::nullopt, 0, std::nullopt).ok());
+}
+
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingToolChoiceFunctionObjectSucceeds) {
     std::string json = createToolRequest("{\"type\":\"function\",\"function\":{\"name\":\"get_current_weather\"}}");
     auto apiHandler = parseCurrentRequest(json);

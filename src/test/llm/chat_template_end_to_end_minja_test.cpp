@@ -390,7 +390,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Mistral7B_ToolCallWithStringArgs) {
 }
 
 // =============================================================================
-// // LFM2 does not render tool calls in current chat template, minja inserts them as stringified JSON, which is not correct.
+// LFM overrides render native Python-style history after object-argument adaptation.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndMinjaTest, LFM2_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_lfm2.jinja");
@@ -403,9 +403,12 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM2_ToolCallWithStringArgs) {
 
     run(true);
 
+    ASSERT_FALSE(exceptionThrownDuringApplication);
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "lfm2");
-    ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
+    // The current native LFM2 template replays explicit thinking/reasoning fields.
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "lfm2");
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
@@ -414,7 +417,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM2_ToolCallWithStringArgs) {
     std::string expectedOutput = R"(</s><|im_start|>user
 What's the weather in Paris?<|im_end|>
 <|im_start|>assistant
-<|tool_call_start|>[get_weather(location='Paris', unit='celsius')]<|tool_call_end|><|im_end|>
+<|tool_call_start|>[get_weather(location="Paris", unit="celsius")]<|tool_call_end|><|im_end|>
 <|im_start|>assistant
 )";
     EXPECT_EQ(appliedOutput, expectedOutput);
@@ -440,12 +443,12 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ToolCallWithStringArgs) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
-    EXPECT_EQ(caps.missnamedReasoningField, "thinking");
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(</s><|im_start|>user
 What's the weather in Paris?<|im_end|>
 <|im_start|>assistant
-<|tool_call_start|>[get_weather(location='Paris', unit='celsius')]<|tool_call_end|><|im_end|>
+<|tool_call_start|>[get_weather(location="Paris", unit="celsius")]<|tool_call_end|><|im_end|>
 <|im_start|>assistant
 )";
     EXPECT_EQ(appliedOutput, expectedOutput);
@@ -471,12 +474,12 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ToolCallWithStringArgsAndReasoning) 
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
-    EXPECT_EQ(caps.missnamedReasoningField, "thinking");
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(</s><|im_start|>user
 What's the weather in Paris?<|im_end|>
 <|im_start|>assistant
-<think>Here is some reasoning content</think><|tool_call_start|>[get_weather(location='Paris', unit='celsius')]<|tool_call_end|><|im_end|>
+<think>Here is some reasoning content</think><|tool_call_start|>[get_weather(location="Paris", unit="celsius")]<|tool_call_end|><|im_end|>
 <|im_start|>assistant
 )";
     EXPECT_EQ(appliedOutput, expectedOutput);
@@ -502,7 +505,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ReasoningAndEmptyToolCalls) {
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
-    EXPECT_EQ(caps.missnamedReasoningField, "thinking");
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
     std::string expectedOutput = R"(</s><|im_start|>user
 What's the weather in Paris?<|im_end|>

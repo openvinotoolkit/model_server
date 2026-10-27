@@ -16,12 +16,14 @@
 #include "lfm2_tool_parser.hpp"
 
 #include "python_literal.hpp"
+#include "../qwen3coder/tool_schema_profile.hpp"
 
 #include "../utils.hpp"
 #include "../../../logging.hpp"
 #include "../../../stringutils.hpp"
 
 #include <cctype>
+#include <stdexcept>
 #include <utility>
 
 namespace ovms {
@@ -249,6 +251,157 @@ void cutEOSFromContent(std::string& content) {
 // Lfm2ToolParser implementation
 // ---------------------------------------------------------------------------
 
+void Lfm2ToolParser::retainEnvelope(const std::string& body) {
+    // Transactional across the complete native list: no public identity exists
+    // until every call in the envelope has passed syntax and schema checks.
+    std::vector<ToolCall> calls;
+    size_t position = 0;
+    const auto whitespace = [&]() {
+        while (position < body.size() && std::isspace(static_cast<unsigned char>(body[position]))) ++position;
+    };
+    const auto require = [&](char expected) {
+        whitespace();
+        if (position >= body.size() || body[position++] != expected)
+            throw std::invalid_argument("Invalid LFM tool envelope");
+    };
+    require('[');
+    whitespace();
+    if (position >= body.size() || body[position] == ']')
+        throw std::invalid_argument("Empty LFM tool envelope");
+    for (;;) {
+        whitespace();
+        const size_t nameStart = position;
+        if (position >= body.size() || !((body[position] >= 'A' && body[position] <= 'Z') ||
+                (body[position] >= 'a' && body[position] <= 'z') || body[position] == '_'))
+            throw std::invalid_argument("Invalid LFM tool name");
+        while (position < body.size() && ((body[position] >= 'A' && body[position] <= 'Z') ||
+                   (body[position] >= 'a' && body[position] <= 'z') ||
+                   (body[position] >= '0' && body[position] <= '9') || body[position] == '_')) ++position;
+        const std::string name = body.substr(nameStart, position - nameStart);
+        require('(');
+        const size_t argsEnd = findArgumentListEnd(body, position);
+        if (argsEnd == std::string::npos)
+            throw std::invalid_argument("Incomplete LFM tool arguments");
+        std::string arguments = lfm2::parseArguments(std::string_view(body).substr(position, argsEnd - position));
+        const auto schema = registeredSchemas.find(name);
+        if (schema == registeredSchemas.end() || !validateQwenXmlToolArguments(schema->second, arguments))
+            throw std::invalid_argument("Unregistered LFM tool or invalid arguments");
+        calls.push_back(ToolCall{"", name, std::move(arguments)});
+        if (!parallelToolCalls && (calls.size() > 1 || toolCallIndex >= 0))
+            throw std::invalid_argument("Parallel LFM tool calls are disabled");
+        // Bound the entire generation, including published IDs and deltas a
+        // caller has not drained, rather than only the current envelope.
+        if (static_cast<size_t>(toolCallIndex + 1) + calls.size() > 4096)
+            throw std::invalid_argument("LFM tool count exceeds limit");
+        position = argsEnd + 1;
+        whitespace();
+        if (position < body.size() && body[position] == ']') {
+            ++position;
+            break;
+        }
+        require(',');
+    }
+    whitespace();
+    if (position != body.size())
+        throw std::invalid_argument("Trailing text in LFM tool envelope");
+    for (auto& call : calls) {
+        std::string id;
+        do { id = generateRandomId(); } while (!publishedCallIds.insert(id).second);
+        pendingDeltas.emplace_back(ToolCallDelta{++toolCallIndex, std::move(id), std::move(call.name), std::move(call.arguments)});
+    }
+}
+
+std::optional<Delta> Lfm2ToolParser::parseRetainedChunk(const std::string& chunk,
+    ov::genai::GenerationFinishReason finishReason) {
+    static constexpr size_t maxRetainedBytes = 1024 * 1024;
+    const std::string& startTag = parsingConfig.startTags.front();
+    const std::string& endTag = parsingConfig.endTags.front();
+    const bool finished = finishReason != ov::genai::GenerationFinishReason::NONE;
+    if (terminal && !chunk.empty())
+        throw std::invalid_argument("LFM output received after terminal notification");
+    if (chunk.size() > maxRetainedBytes || streamingContent.size() > maxRetainedBytes - chunk.size()) {
+        resetState();
+        terminal = true;
+        throw std::invalid_argument("LFM retained output exceeds byte limit");
+    }
+    streamingContent += chunk;
+    try {
+        while (!streamingContent.empty()) {
+            if (!retainedEnvelope) {
+                const size_t opener = streamingContent.find(startTag);
+                if (opener == std::string::npos) {
+                    // Retain a possible split opener, emit only proven content.
+                    size_t suffix = 0;
+                    if (!finished) {
+                        for (size_t length = 1; length < startTag.size() && length <= streamingContent.size(); ++length)
+                            if (streamingContent.compare(streamingContent.size() - length, length, startTag, 0, length) == 0) suffix = length;
+                    }
+                    std::string content = streamingContent.substr(0, streamingContent.size() - suffix);
+                    streamingContent.erase(0, content.size());
+                    cutEOSFromContent(content);
+                    if (!content.empty()) pendingDeltas.emplace_back(ContentDelta{std::move(content)});
+                    break;
+                }
+                if (opener != 0) {
+                    std::string content = streamingContent.substr(0, opener);
+                    cutEOSFromContent(content);
+                    if (!content.empty()) pendingDeltas.emplace_back(ContentDelta{std::move(content)});
+                }
+                streamingContent.erase(0, opener);
+                retainedEnvelope = true;
+                retainedScanPosition = startTag.size();
+                retainedQuote = 0;
+                retainedEscape = false;
+            }
+            size_t closer = std::string::npos;
+            // Scan each retained byte once, apart from the bounded delimiter
+            // suffix. Large generated code strings must not cause a quadratic
+            // rescan on every token.
+            for (size_t& i = retainedScanPosition; i < streamingContent.size(); ++i) {
+                const char value = streamingContent[i];
+                if (retainedQuote) {
+                    if (retainedEscape) retainedEscape = false;
+                    else if (value == '\\') retainedEscape = true;
+                    else if (value == retainedQuote) retainedQuote = 0;
+                } else if (value == '\'' || value == '"') {
+                    retainedQuote = value;
+                } else if (streamingContent.compare(i, endTag.size(), endTag) == 0) {
+                    closer = i;
+                    break;
+                } else if (streamingContent.size() - i < endTag.size() &&
+                    endTag.compare(0, streamingContent.size() - i, streamingContent, i, streamingContent.size() - i) == 0) {
+                    break;
+                }
+            }
+            if (closer == std::string::npos) break;
+            retainEnvelope(streamingContent.substr(startTag.size(), closer - startTag.size()));
+            streamingContent.erase(0, closer + endTag.size());
+            retainedEnvelope = false;
+            retainedScanPosition = 0;
+        }
+    } catch (...) {
+        // Nothing from the failing invocation can be executable, including an
+        // earlier valid call in an otherwise malformed native list.
+        pendingDeltas.clear();
+        streamingContent.clear();
+        retainedEnvelope = false;
+        terminal = true;
+        throw;
+    }
+    if (finished) {
+        // STOP, LENGTH and TOOL_CALL do not repair missing semantic delimiters.
+        // Cancellation/error use resetState at the owner; this API has no
+        // distinct cancellation/error enum values.
+        streamingContent.clear();
+        retainedEnvelope = false;
+        terminal = true;
+    }
+    if (pendingDeltas.empty()) return std::nullopt;
+    Delta result = std::move(pendingDeltas.front());
+    pendingDeltas.pop_front();
+    return result;
+}
+
 bool Lfm2ToolParser::parseNewContent() {
     const std::string& startTag = parsingConfig.startTags[0];
     const std::string& endTag = parsingConfig.endTags.front();
@@ -334,6 +487,7 @@ bool Lfm2ToolParser::isStructuralEndTag(const std::string& chunk, size_t offset)
 std::optional<Delta> Lfm2ToolParser::parseChunk(const std::string& chunk,
     const std::vector<int64_t>& /*tokens*/,
     ov::genai::GenerationFinishReason finishReason) {
+    if (registryEnabled) return parseRetainedChunk(chunk, finishReason);
     if (!chunk.empty())
         this->streamingContent += chunk;
 

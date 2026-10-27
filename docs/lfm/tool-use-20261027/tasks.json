@@ -1,0 +1,58 @@
+{
+  "updated_utc": "2026-10-27T03:16:00Z",
+  "base": "a13dff47929bd40e38ecbb654ce7014e9a635704",
+  "tasks": [
+    {
+      "id": "parser",
+      "owner": "native-parser",
+      "status": "DONE",
+      "scope": "LFM parser and new retainer tests",
+      "dependencies": [],
+      "report": "parser-report.md",
+      "verification": "standalone 16/16; integrated in final-tests 319/1 SKIP"
+    },
+    {
+      "id": "template",
+      "owner": "native-template",
+      "status": "DONE",
+      "scope": "LFM templates and template tests",
+      "dependencies": [],
+      "report": "template-report.md",
+      "verification": "template report GREEN; included in final-tests"
+    },
+    {
+      "id": "policy",
+      "owner": "root",
+      "status": "DONE",
+      "scope": "LFM generation builder, selector, policy tests",
+      "dependencies": [],
+      "report": "policy-report.md",
+      "verification": "standalone 12/12; live policy-api PASS both models"
+    },
+    {
+      "id": "external-review",
+      "owner": "Cursor",
+      "status": "BLOCKED",
+      "scope": "read-only MFP-1 gap review; report only",
+      "dependencies": [],
+      "report": "review-report.md",
+      "verification": "source review filed; prior Cursor session exhausted before shell preflight"
+    },
+    {
+      "id": "runtime",
+      "owner": "root",
+      "status": "DONE",
+      "scope": "build and API evidence",
+      "dependencies": ["parser", "template", "policy"],
+      "verification": "candidate-final build; runtime-native-required2 PASS both models (native+action-required agent loops)"
+    },
+    {
+      "id": "A9-commit",
+      "owner": "root",
+      "status": "TODO",
+      "scope": "commits, final report, truthful outstanding gates",
+      "dependencies": ["runtime"],
+      "verification": "NOT_RUN"
+    }
+  ]
+}

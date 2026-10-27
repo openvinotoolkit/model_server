@@ -195,7 +195,12 @@ std::optional<Delta> OutputParser::parseToolCallChunk(const std::vector<int64_t>
         // The router owns the remainder. Deliver only this envelope so a later
         // phase cannot be appended a second time to the tool parser's buffer.
         const auto ownedChunk = toolEndMatch ? buffer.substr(0, toolEndMatch->position + toolEndMatch->length) : buffer;
-        result = toolParser->parseChunk(ownedChunk, tokens, finishReason);
+        // A terminal raw chunk can contain several owned envelopes. Notify a
+        // parser only on the final segment; retained owner state carries the
+        // original finish reason through subsequent remainder drains.
+        const auto ownedFinish = !remainder.empty() ? ov::genai::GenerationFinishReason::NONE :
+            (finishReason != ov::genai::GenerationFinishReason::NONE ? finishReason : terminalContentFinish);
+        result = toolParser->parseChunk(ownedChunk, tokens, ownedFinish);
     } catch (...) {
         streamOutputCache.clear();
         throw;
@@ -258,7 +263,7 @@ std::optional<Delta> OutputParser::parseReasoningChunk(const std::vector<int64_t
     return result;
 }
 
-OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName, const ToolsSchemas_t& toolNameSchemaMap) :
+OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName, const ToolsSchemas_t& toolNameSchemaMap, bool parallelToolCalls) :
     tokenizer(tokenizer) {
     if (toolParserName == "llama3") {
         toolParser = std::make_unique<Llama3ToolParser>(tokenizer);
@@ -275,7 +280,7 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     } else if (toolParserName == "devstral") {
         toolParser = std::make_unique<DevstralToolParser>(tokenizer, toolNameSchemaMap);
     } else if (toolParserName == "lfm2") {
-        toolParser = std::make_unique<Lfm2ToolParser>(tokenizer);
+        toolParser = std::make_unique<Lfm2ToolParser>(tokenizer, toolNameSchemaMap, parallelToolCalls);
     } else if (toolParserName == "gemma4") {
         toolParser = std::make_unique<Gemma4ToolParser>(tokenizer, toolNameSchemaMap);
     } else if (toolParserName == "onyx") {

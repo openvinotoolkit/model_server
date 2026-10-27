@@ -355,6 +355,7 @@ ovms_cc_library(
         "//src:libovmsstring_utils",
         ":io_processing_utils",
         ":io_processing_base_output_parser",
+        ":io_processing_qwen3coder_tool_parser",
         "//third_party:genai",
     ],
     visibility = ["//visibility:public"],
@@ -551,6 +552,8 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
 ovms_cc_library(
     name = "generation_config_builders",
     hdrs = ["io_processing/base_generation_config_builder.hpp",
+            "io_processing/lfm2/generation_config_builder.hpp",
+            "io_processing/lfm2/tool_grammar.hpp",
             "io_processing/phi4/generation_config_builder.hpp",
             "io_processing/llama3/generation_config_builder.hpp",
             "io_processing/hermes3/generation_config_builder.hpp",
@@ -566,6 +569,7 @@ ovms_cc_library(
             "io_processing/devstral/generation_config_builder.cpp"],
     deps = [
         ":openai_request",
+        ":io_processing_qwen3coder_tool_parser",
         "//src:libovmslogging",
         "//third_party:genai",
         "@com_github_tencent_rapidjson//:rapidjson",],

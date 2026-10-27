@@ -15,6 +15,9 @@
 //*****************************************************************************
 #pragma once
 #include <optional>
+#include <deque>
+#include <map>
+#include <unordered_set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -56,10 +59,22 @@ public:
         return cfg;
     }
 
+    // Low-level compatibility constructor without executable-tool validation.
+    // Production OutputParser must use the registry-taking overload below.
     explicit Lfm2ToolParser(ov::genai::Tokenizer& tokenizer,
         std::optional<OutputParsingConfig> configOverride = std::nullopt) :
         BaseOutputParser(tokenizer,
             configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+
+    // Executable publication path. The registry is copied so retained chunks
+    // never depend on request-owned RapidJSON values or their lifetime.
+    explicit Lfm2ToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& schemas, bool parallelToolCalls = true,
+        std::optional<OutputParsingConfig> configOverride = std::nullopt) :
+        BaseOutputParser(tokenizer,
+            configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()),
+        registryEnabled(true), parallelToolCalls(parallelToolCalls) {
+        for (const auto& entry : schemas) registeredSchemas.emplace(entry.first, entry.second.stringRepr);
+    }
 
     void resetState() override {
         streamingContent.clear();
@@ -67,6 +82,13 @@ public:
         currentState = Lfm2ParseState::Content;
         toolCall = {};
         toolCallIndex = -1;
+        pendingDeltas.clear();
+        publishedCallIds.clear();
+        retainedEnvelope = false;
+        terminal = false;
+        retainedScanPosition = 0;
+        retainedQuote = 0;
+        retainedEscape = false;
     }
 
     std::optional<Delta> parseChunk(const std::string& chunk,
@@ -85,6 +107,21 @@ private:
     Lfm2ParseState currentState{Lfm2ParseState::Content};
     ToolCall toolCall;
     int toolCallIndex{-1};
+
+    bool registryEnabled{false};
+    bool parallelToolCalls{true};
+    std::map<std::string, std::string> registeredSchemas;
+    std::deque<Delta> pendingDeltas;
+    std::unordered_set<std::string> publishedCallIds;
+    bool retainedEnvelope{false};
+    bool terminal{false};
+    size_t retainedScanPosition{0};
+    char retainedQuote{0};
+    bool retainedEscape{false};
+
+    std::optional<Delta> parseRetainedChunk(const std::string& chunk,
+        ov::genai::GenerationFinishReason finishReason);
+    void retainEnvelope(const std::string& body);
 
     bool parseNewContent();
 };
