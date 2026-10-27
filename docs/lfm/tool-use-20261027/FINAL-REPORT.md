@@ -53,11 +53,10 @@ See also `parser-report.md`, `policy-report.md`, `template-report.md`, `review-r
 
 1. **deterministic+auto**: model invents `[tool:…]` prose instead of structured
    calls — expected when auto retains unconstrained generation.
-2. **LFM2-24B native+auto**: model emits multiple calls under `parallel=false`;
-   retainer correctly fail-closes. Required mode forces one-call grammar and passes.
-
-Delegated root-cause task: `residual-rootcause` (read-only report under
-`C:\gm\lfm-2026.4\tool-use-20261027\residual-rootcause\`).
+2. **LFM2-24B native+auto under parallel=false** (historical residual): multi-call
+   fail-closed. **Staff mode is now `parallel_tool_calls=true`** (API default and
+   harness default); false remains an explicit client opt-in. Root-cause report:
+   `C:\gm\lfm-2026.4\tool-use-20261027\residual-rootcause\REPORT.md`.
 
 ## Control server
 

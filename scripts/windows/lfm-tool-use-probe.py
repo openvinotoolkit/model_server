@@ -32,7 +32,8 @@ def main():
     results = []
     for name, prompt, choice, stream in cases:
         body = {'model': args.model, 'messages': [{'role': 'user', 'content': prompt}], 'tools': tools,
-                'tool_choice': choice, 'parallel_tool_calls': False, 'temperature': 0, 'seed': 1234,
+                # Staff mode: parallel_tool_calls=true (OpenAI/OVMS default when omitted).
+                'tool_choice': choice, 'parallel_tool_calls': True, 'temperature': 0, 'seed': 1234,
                 'max_tokens': 256, 'stream': stream}
         if name == 'required-no-tools':
             del body['tools']

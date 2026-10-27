@@ -1,16 +1,19 @@
 ﻿<#
-ИНСТРУКЦИЯ ПО АДАПТАЦИИ СКРИПТОВ ЗАПУСКА (LFM2-24B)
+ИНСТРУКЦИЯ ПО АДАПТАЦИИ СКРИПТОВ ЗАПУСКА (LFM2-24B, long)
 1. package — каталог RC4 extracted-py_off\ovms: DLL OpenVINO/GenAI и MANIFEST.
-   exe — отдельно Task-3 ovms.exe с lfm2 parser (не подменяйте DLL пакета).
+   exe — candidate-final ovms.exe с LFM retainer/policy (не подменяйте DLL пакета).
    modelPath — OpenVINO IR LFM2-24B-A2B; modelName — имя в API/карточке OMP.
 2. WEIGHTS_PATH не используется: OFFLOAD_RATIO=0 (Pack/offload отложены).
    Веса — openvino_model.bin. Нужен запас host RAM (admission ~ weights+2.5 GiB).
 3. servingDir — рабочая копия IR с override chat_template (экспорт без renderer).
    Скачанный C:\llm\models\* не изменяется. configs/logs создаются сами.
-4. Pipeline LM. tool_parser — lfm2. reasoning_parser для LFM2-24B не задаём
-   (в отличие от LFM2.5). Чужой chat_template не переносить.
-5. Профиль как в GPU smoke Task 5: 4 слота, batch 1024, cache_size=1 GiB,
-   prefix caching выключен. Пик WS на Arc 140V ~13 GiB.
+4. Pipeline LM. tool_parser — lfm2. reasoning_parser для LFM2-24B не задаём.
+   Штатный parallel_tool_calls=true на стороне API (поле можно не слать).
+5. Профиль ДЛИННОЙ генерации (не smoke Task5): 2 слота, batch 4096,
+   cache_size=0 (динамический KV), prefix caching ON, interval 256,
+   dynamic_split_fuse ON, rest_workers=1. cache_size=0 не ограничивает всю RAM
+   процесса — следите за свободной памятью на Arc 140V / UMA.
+   После смены scheduler параметров считайте это новой конфигурацией.
 6. Порт 8137 общий с Qwen/Gemma/Ornith: по очереди либо сменить порт.
    Скрипт чужие процессы не останавливает. -ConfigureOnly только готовит serving.
 7. Файл — UTF-8 с BOM для PS 5.1. Это запуск сервера, не автотест.
@@ -21,8 +24,8 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $package = 'C:\gm\qwenmonster\releases\gemmamonster-2026.4-rc4\extracted-py_off\ovms'
-$exe = 'C:\gm\lfm-2026.4\serving\ovms.exe'
-$expectedExeSha256 = 'f484927cc5bacbb979f9edb11df85c494b6cdf369d7c179b29c48d6807dfc877'
+$exe = 'C:\gm\lfm-2026.4\tool-use-20261027\candidate-final\build-py_off\bin\ovms.exe'
+$expectedExeSha256 = '95fb62b5df7d68a880457378a4d3503cc606b5f06a82c23e70010d96358272ba'
 $modelPath = 'C:\llm\models\LFM2-24B-A2B-int4-ov'
 $modelName = 'lfm2-24b-a2b-int4'
 $templatePath = 'C:\git\gemmamonster-lfm-2026.4\docs\lfm\templates\LFM2-24B-A2B-int4-ov.jinja'
@@ -53,7 +56,7 @@ if ($actualExe -ne $expectedExeSha256) {
     throw ('Serving ovms.exe hash drift: expected ' + $expectedExeSha256 + ' got ' + $actualExe)
 }
 
-# Baseline DLLs: gemmamonster-2026.4-rc4; serving EXE: Task 3 LFM parser rebuild.
+# Baseline DLLs: gemmamonster-2026.4-rc4; EXE: tool-use candidate-final.
 $manifest = Get-Content (Join-Path $package 'MANIFEST.json') -Raw | ConvertFrom-Json
 foreach ($row in $manifest.files) {
     if ($row.path -match '\.dll$') {
@@ -84,7 +87,7 @@ Get-ChildItem -LiteralPath $modelPath -File | ForEach-Object {
 Copy-Item -LiteralPath $templatePath -Destination (Join-Path $servingDir 'chat_template.jinja') -Force
 Write-Host ('Serving model: ' + $servingDir)
 
-$configDir = Join-Path $PSScriptRoot 'configs\lfm2-24b'
+$configDir = Join-Path $PSScriptRoot 'configs\lfm2-24b-long'
 [void][IO.Directory]::CreateDirectory($configDir)
 $commandPath = Join-Path $configDir 'command.json'
 $gpuPluginConfig = '{"OFFLOAD_RATIO":0}'
@@ -93,10 +96,12 @@ if ($PSVersionTable.PSVersion.Major -le 5 -or $PSNativeCommandArgumentPassing -e
 } else {
     $gpuPluginConfigEscaped = $gpuPluginConfig
 }
+# Long profile: fewer concurrent seqs, larger batch, dynamic KV (cache_size=0).
 $command = @(
     $exe,
     '--rest_port', "$Port",
     '--rest_bind_address', '127.0.0.1',
+    '--rest_workers', '1',
     '--model_path', $servingDir,
     '--model_name', $modelName,
     '--task', 'text_generation',
@@ -105,15 +110,18 @@ $command = @(
     '--plugin_config', $gpuPluginConfig,
     '--tool_parser', 'lfm2',
     '--enable_tool_guided_generation', 'true',
-    '--max_num_seqs', '4',
-    '--max_num_batched_tokens', '1024',
-    '--cache_size', '1',
-    '--enable_prefix_caching', 'false',
+    '--max_num_seqs', '2',
+    '--max_num_batched_tokens', '4096',
+    '--cache_size', '0',
+    '--cache_interval_multiplier', '256',
+    '--enable_prefix_caching', 'true',
+    '--dynamic_split_fuse', 'true',
     '--log_level', 'INFO'
 )
 $utf8 = New-Object Text.UTF8Encoding($false)
 [IO.File]::WriteAllText($commandPath, ($command | ConvertTo-Json -Compress), $utf8)
 Write-Host ('Command receipt: ' + $commandPath)
+Write-Host 'Profile: LFM2-24B long (seqs=2 batch=4096 cache_size=0 prefix=on interval=256)'
 if ($ConfigureOnly) { exit 0 }
 
 if (Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue) {
@@ -126,12 +134,13 @@ $env:PYTHONDONTWRITEBYTECODE = '1'
 $env:PATH = "$package;$env:SystemRoot\System32;$env:SystemRoot"
 $logDir = Join-Path $PSScriptRoot 'logs'
 [void][IO.Directory]::CreateDirectory($logDir)
-$logPath = Join-Path $logDir ($modelName + '-' + [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ') + '.log')
+$logPath = Join-Path $logDir ($modelName + '-long-' + [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ') + '.log')
 Write-Host ('Model: ' + $modelName + ' -> ' + $servingDir)
 Write-Host ('OVMS log: ' + $logPath)
 & $exe `
     --rest_port $Port `
     --rest_bind_address 127.0.0.1 `
+    --rest_workers 1 `
     --model_path $servingDir `
     --model_name $modelName `
     --task text_generation `
@@ -140,10 +149,12 @@ Write-Host ('OVMS log: ' + $logPath)
     --plugin_config $gpuPluginConfigEscaped `
     --tool_parser lfm2 `
     --enable_tool_guided_generation true `
-    --max_num_seqs 4 `
-    --max_num_batched_tokens 1024 `
-    --cache_size 1 `
-    --enable_prefix_caching false `
+    --max_num_seqs 2 `
+    --max_num_batched_tokens 4096 `
+    --cache_size 0 `
+    --cache_interval_multiplier 256 `
+    --enable_prefix_caching true `
+    --dynamic_split_fuse true `
     --log_level INFO `
     --log_path $logPath
 exit $LASTEXITCODE

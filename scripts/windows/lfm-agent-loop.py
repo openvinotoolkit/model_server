@@ -15,6 +15,9 @@ def main():
     ap.add_argument('--max-tokens', type=int, default=2048)
     ap.add_argument('--profile', choices=['deterministic', 'official', 'native'], default='deterministic')
     ap.add_argument('--tool-policy', choices=['auto', 'action-required'], default='auto')
+    # Staff mode matches OpenAI/OVMS default (omit or true). false remains an explicit opt-in.
+    ap.add_argument('--parallel-tool-calls', dest='parallel_tool_calls', action='store_true', default=True)
+    ap.add_argument('--no-parallel-tool-calls', dest='parallel_tool_calls', action='store_false')
     args = ap.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     tools = []
@@ -32,33 +35,33 @@ def main():
             sandbox = root / 'sandbox'
             sandbox.mkdir(parents=True, exist_ok=True)
             # Avoid JSON/Python single-backslash traps (\t/\n/\b) that silently alter Windows paths.
-            # Same apostrophe + path coverage as lfm-smoke tool_call gate.
             payload = "O'Brien C:/llm/lfm-test 1.10"
-            # Agent contract: structured tool_calls only. Prose that names tools does not execute them.
-            # parallel_tool_calls=false is intentional — one call per turn, then consume its result.
             messages = [{'role': 'system', 'content': (
                 'You are an agent with executable tools. Perform requested file actions using tools, '
                 'inspect their results, then report. Never claim an action occurred before its result. '
-                'Emit exactly one tool call per assistant turn, then wait for that tool result. '
-                'A text description of an action does not execute it. Do not invent tool output.'
+                'A text description of an action does not execute it. Do not invent tool output. '
+                'You may emit one or more native tool calls in a turn when needed; use structured tool calls only.'
             )},
                 {'role': 'user', 'content': 'Узнай текущий каталог инструментом cwd, создай hello.txt с точным содержимым ' + json.dumps(payload, ensure_ascii=False) + ', затем прочитай файл инструментом read и сообщи результат. Выполни действия сам.'}]
             if args.profile == 'native':
                 messages[0]['content'] += (
                     ' Invoke tools with native calls, for example '
-                    '<|tool_call_start|>[cwd()]<|tool_call_end|>. '
-                    'Do not put multiple calls inside one envelope.'
+                    '<|tool_call_start|>[cwd()]<|tool_call_end|> '
+                    'or multiple calls in one envelope: '
+                    '<|tool_call_start|>[cwd(), write(path="hello.txt", content="...")]<|tool_call_end|>.'
                 )
+            if not args.parallel_tool_calls:
+                messages[0]['content'] += ' Emit exactly one tool call per assistant turn, then wait for its result.'
             executed = []
             error = None
             for turn in range(8):
                 body = {'model': args.model, 'messages': messages, 'tools': tools, 'tool_choice': 'auto',
-                    'parallel_tool_calls': False, 'temperature': 0, 'seed': 1234 + repeat, 'max_tokens': args.max_tokens, 'stream': stream}
+                    'parallel_tool_calls': bool(args.parallel_tool_calls),
+                    'temperature': 0, 'seed': 1234 + repeat, 'max_tokens': args.max_tokens, 'stream': stream}
                 if args.profile == 'official':
                     body.update(temperature=0.2, top_k=80, repetition_penalty=1.05)
                 if args.profile == 'native':
                     body.update(temperature=0.2, top_k=80, repetition_penalty=1.05)
-                # Hard required/named modes are explicit policy — not a forced-auto heuristic.
                 if args.tool_policy == 'action-required':
                     body['tool_choice'] = 'none' if [x['tool'] for x in executed] == ['cwd', 'write', 'read'] else 'required'
                 (root / f'{turn}.request.json').write_text(json.dumps(body, ensure_ascii=False, indent=2), encoding='utf-8')
@@ -88,7 +91,8 @@ def main():
                     messages.append(assistant)
                     calls = assistant.get('tool_calls') or []
                     if not calls: break
-                    if len(calls) != 1: raise ValueError('parallel=false violated')
+                    if not args.parallel_tool_calls and len(calls) != 1:
+                        raise ValueError('parallel_tool_calls=false violated: got %d calls' % len(calls))
                     for call in calls:
                         name = call['function']['name']
                         params = json.loads(call['function']['arguments'])
@@ -115,6 +119,7 @@ def main():
             target = sandbox / 'hello.txt'
             passed = not error and names == ['cwd', 'write', 'read'] and target.exists() and target.read_text(encoding='utf-8') == payload and not (messages[-1].get('tool_calls') or []) and messages[-1]['role'] == 'assistant'
             results.append({'stream': stream, 'repeat': repeat, 'profile': args.profile, 'tool_policy': args.tool_policy,
+                            'parallel_tool_calls': bool(args.parallel_tool_calls),
                             'verdict': 'PASS' if passed else 'FAIL', 'executed': executed, 'error': error, 'final': messages[-1]})
             (args.output / 'RESULT.json').write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding='utf-8')
             print('stream', stream, 'repeat', repeat, 'PASS' if passed else 'FAIL', names, error, flush=True)
