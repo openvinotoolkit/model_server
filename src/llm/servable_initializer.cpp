@@ -269,9 +269,9 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
                 templateLoadError = errorMessage;
             }
         } else {
+            setAndAjustChatTemplateWithConfig(properties->tokenizer, templateSource, ChatTemplateAdjusterConfig::forMinja());
             if (selectedSource == ChatTemplateSource::CHAT_TEMPLATE_JINJA) {
                 SPDLOG_LOGGER_INFO(llm_calculator_logger, "Setting selected chat template on tokenizer for Minja");
-                setAndAjustChatTemplateWithConfig(properties->tokenizer, templateSource, ChatTemplateAdjusterConfig::forMinja());
                 templateSource = properties->tokenizer.get_chat_template();
             } else {
                 SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using GenAI-resolved chat template already set on tokenizer for Minja");

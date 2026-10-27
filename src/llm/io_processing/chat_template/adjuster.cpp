@@ -44,6 +44,14 @@ bool findFilter(const std::string& source, const std::string& function,
             }
             continue;
         }
+        if (source.compare(pipe, 2, "{#") == 0) {
+            const size_t commentEnd = source.find("#}", pipe + 2);
+            if (commentEnd == std::string::npos) {
+                return false;
+            }
+            pipe = commentEnd + 1;
+            continue;
+        }
         if (value == '\'' || value == '"') {
             quote = value;
             continue;
@@ -170,7 +178,7 @@ void ConcatMultiLineStringAdjustment::apply(std::string& processed) const {
 }
 
 void ReplaceUndefinedChecksAdjustment::apply(std::string& processed) const {
-    static const std::regex varIsUndefinedPattern{R"((\b[\w\.]+)\s+is\s+undefined)"};
+    static const std::regex varIsUndefinedPattern{R"((\b\w+(?:\.\w+|\[\d+\])*)\s+is\s+undefined\b)"};
     processed = std::regex_replace(processed, varIsUndefinedPattern, "not $1 is defined");
 }
 
@@ -185,7 +193,7 @@ ChatTemplateAdjusterConfig ChatTemplateAdjusterConfig::forJinja() {
 ChatTemplateAdjuster::ChatTemplateAdjuster(const ChatTemplateAdjusterConfig& config) {
     if (!config.removeFunctionsParams.empty() || !config.removeFunctions.empty()) {
         std::vector<std::string> removeFunctionsParams = config.removeFunctionsParams;
-        removeFunctionsParams.emplace_back(config.removeFunctions.front());
+        removeFunctionsParams.insert(removeFunctionsParams.end(), config.removeFunctions.begin(), config.removeFunctions.end());
         if (!removeFunctionsParams.empty()) {
             adjustments.emplace_back(std::make_unique<RemoveFunctionParamsAdjustment>(removeFunctionsParams));
         }

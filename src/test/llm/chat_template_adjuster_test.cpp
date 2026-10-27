@@ -194,6 +194,33 @@ TEST(ChatTemplateAdjusterTest, notRemovesFunctionFromString) {
     EXPECT_EQ(original, tmpl);
 }
 
+TEST(ChatTemplateAdjusterTest, removesFunctionWithArgumentsSkippingComment) {
+    std::string tmpl = "{# user's template #} {{ value | min(some_param=42) }}";
+    const ChatTemplateAdjuster adjuster({{"min"}});
+
+    adjuster.adjust(tmpl);
+
+    EXPECT_EQ(tmpl, "{# user's template #} {{ value }}");
+}
+
+TEST(ChatTemplateAdjusterTest, preservesFiltersInsideComments) {
+    std::string tmpl = "{# user's | min(some_param=42) #} {{ value | min(some_param=42) }}";
+    const ChatTemplateAdjuster adjuster({{"min"}});
+
+    adjuster.adjust(tmpl);
+
+    EXPECT_EQ(tmpl, "{# user's | min(some_param=42) #} {{ value }}");
+}
+
+TEST(ChatTemplateAdjusterTest, preservesCommentMarkersInsideStrings) {
+    std::string tmpl = "{{ '{# literal | min' }} {{ value | min }}";
+    const RemoveFiltersAdjustment adjustment({"min"});
+
+    adjustment.apply(tmpl);
+
+    EXPECT_EQ(tmpl, "{{ '{# literal | min' }} {{ value }}");
+}
+
 TEST(ChatTemplateAdjusterTest, removesCompactFilterWithoutAddingWhitespace) {
     std::string tmpl = "{{value|min}}";
     const RemoveFiltersAdjustment adjustment({"min"});
@@ -307,6 +334,16 @@ TEST(ChatTemplateAdjusterTest, undefinedCheckReplacementPreservesDefinedChecks) 
     adjustment.apply(tmpl);
 
     EXPECT_EQ(tmpl, original);
+}
+
+TEST(ChatTemplateAdjusterTest, replacesUndefinedChecksWithArrayAccess) {
+    const std::string original = "{% if messages[0].content is undefined %}missing{% endif %}";
+    std::string tmpl = original;
+    const ReplaceUndefinedChecksAdjustment adjustment;
+
+    adjustment.apply(tmpl);
+
+    EXPECT_EQ(tmpl, "{% if not messages[0].content is defined %}missing{% endif %}");
 }
 
 TEST(ChatTemplateAdjusterTest, preservesDoubleQuotesInsideSingleQuotedLiteral) {
