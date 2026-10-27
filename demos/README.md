@@ -69,9 +69,6 @@ Integrations <ovms_demos_integrations>
 ## MediaPipe
 | Demo | Description |
 |---|---|
-|[Object Detection](./mediapipe/object_detection/README.md)|A pipeline implementing object detection.|
-|[Iris](./mediapipe/iris_tracking/README.md)|A pipeline implementing iris detection.|
-|[Holistic](./mediapipe/holistic_tracking/README.md)|A complex pipeline linking several image analytical models and image transformations.|
 |[Realtime Stream Analysis](real_time_stream_analysis/python/README.md)|Analyze RTSP video stream in real time with generic application template for custom pre and post processing routines.|
 |[Image classification](./mediapipe/image_classification/README.md)|Basic example with a single inference node.|
 |[Chain of models](./mediapipe/multi_model_graph/README.md)|A chain of models in a graph.|
