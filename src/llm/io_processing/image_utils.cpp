@@ -125,7 +125,7 @@ absl::Status downloadImage(const char* url, std::string& image, const int64_t& s
 
     const bool isHttpUrl = std::strncmp(url, "http://", 7) == 0 || std::strncmp(url, "https://", 8) == 0;
     if (isHttpUrl) {
-        long httpCode = 0;
+        long httpCode = 0;  // NOLINT(runtime/int): CURLINFO_RESPONSE_CODE requires long*.
         status = curl_easy_getinfo(curl_handle, CURLINFO_RESPONSE_CODE, &httpCode);
         if (status != CURLE_OK) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Getting HTTP response code failed: {}", curl_easy_strerror(status));
