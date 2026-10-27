@@ -1,0 +1,322 @@
+{
+  "model": "OpenVINO/LFM2.5-8B-A1B-int4-ov",
+  "local_dir": "C:\\llm\\models\\LFM2.5-8B-A1B-int4-ov",
+  "device": "GPU",
+  "started_utc": "2026-10-26T23:34:37.644133+00:00",
+  "status": "PASS",
+  "offload": "DISABLED; OFFLOAD_RATIO=0",
+  "gates": {
+    "model_load": "PASS",
+    "loaded_modules": "PASS",
+    "unary": "PASS",
+    "sse": "PASS",
+    "tool_call": "PASS",
+    "tool_cycle_continuation": "PASS",
+    "tool_sse": "PASS",
+    "tool_cycle_continuation_sse": "PASS"
+  },
+  "benchmark": [],
+  "source_head": "000d989fc045cc03e73aa0d55187a1bbd841d46b",
+  "runtime": [
+    {
+      "path": "C:\\gm\\qwenmonster\\releases\\gemmamonster-2026.4-rc4\\extracted-py_off\\ovms\\openvino.dll",
+      "sha256": "829c4642e287522f8a8e748a726d4ad3117a701e22ab46adc82771f98e5d2f7e"
+    },
+    {
+      "path": "C:\\gm\\qwenmonster\\releases\\gemmamonster-2026.4-rc4\\extracted-py_off\\ovms\\openvino_genai.dll",
+      "sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d"
+    },
+    {
+      "path": "C:\\gm\\qwenmonster\\releases\\gemmamonster-2026.4-rc4\\extracted-py_off\\ovms\\openvino_intel_gpu_plugin.dll",
+      "sha256": "21a2fd9f5d856c297416059325832f0f902c84a4e78b840f859ca508f5aea66d"
+    },
+    {
+      "path": "C:\\gm\\qwenmonster\\releases\\gemmamonster-2026.4-rc4\\extracted-py_off\\ovms\\openvino_tokenizers.dll",
+      "sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c"
+    }
+  ],
+  "binary": {
+    "path": "C:\\git\\gemmamonster-lfm-2026.4\\bazel-bin\\src\\ovms.exe",
+    "sha256": "f484927cc5bacbb979f9edb11df85c494b6cdf369d7c179b29c48d6807dfc877"
+  },
+  "model_weight_sha256": "4f882fe35deb890d0489e661990f880298af08694f32ad953b4fd9269cdfcfe8",
+  "initial_free_mib": 14083,
+  "admission_floor_mib": 6876,
+  "template_override": {
+    "path": "C:\\git\\gemmamonster-lfm-2026.4\\docs\\lfm\\templates\\LFM2.5-8B-A1B-int4-ov.jinja",
+    "sha256": "d8d4c0fdd46298e8c44bc6b7308f6663137cdfd22d34e6b38c93db2cec85bc8e"
+  },
+  "command": [
+    "C:\\git\\gemmamonster-lfm-2026.4\\bazel-bin\\src\\ovms.exe",
+    "--rest_port",
+    "18147",
+    "--rest_bind_address",
+    "127.0.0.1",
+    "--model_path",
+    "C:\\gm\\lfm-2026.4\\task5-gpu\\gpu-LFM2.5-8B-A1B-int4-ov\\serving-model",
+    "--model_name",
+    "lfm",
+    "--task",
+    "text_generation",
+    "--pipeline_type",
+    "LM",
+    "--target_device",
+    "GPU",
+    "--tool_parser",
+    "lfm2",
+    "--enable_tool_guided_generation",
+    "true",
+    "--max_num_seqs",
+    "4",
+    "--max_num_batched_tokens",
+    "1024",
+    "--cache_size",
+    "1",
+    "--enable_prefix_caching",
+    "false",
+    "--log_level",
+    "INFO",
+    "--plugin_config",
+    "{\"OFFLOAD_RATIO\":0}",
+    "--reasoning_parser",
+    "lfm2"
+  ],
+  "hardware": [
+    {
+      "Name": "Intel(R) Arc(TM) 140V GPU (16GB)",
+      "DriverVersion": "32.0.101.9150",
+      "PNPDeviceID": "PCI\\VEN_8086&DEV_64A0&SUBSYS_146C1462&REV_04\\3&11583659&0&10"
+    },
+    {
+      "Name": "DisplayLink USB Device",
+      "DriverVersion": "11.2.3146.0",
+      "PNPDeviceID": "USB\\VID_17E9&PID_6006&MI_01\\7&43B2873&0&0001"
+    },
+    {
+      "Name": "DisplayLink USB Device",
+      "DriverVersion": "11.2.3146.0",
+      "PNPDeviceID": "USB\\VID_17E9&PID_6006&MI_00\\7&43B2873&0&0000"
+    }
+  ],
+  "owned_pid": 16380,
+  "observed_unary_reasoning": true,
+  "process_memory": {
+    "PrivateMemorySize64": 5117247488,
+    "WorkingSet64": 5118406656,
+    "PeakWorkingSet64": 5139062784
+  },
+  "gpu_memory": "NOT_MEASURED; no unverified DXGI/COM probe used",
+  "free_mib_samples": [
+    {
+      "monotonic_seconds": 126918.4836943,
+      "free_mib": 13847,
+      "PrivateMemorySize64": 243265536,
+      "WorkingSet64": 250806272,
+      "PeakWorkingSet64": 276635648
+    },
+    {
+      "monotonic_seconds": 126919.4840991,
+      "free_mib": 13047,
+      "PrivateMemorySize64": 1108164608,
+      "WorkingSet64": 1126363136,
+      "PeakWorkingSet64": 1126363136
+    },
+    {
+      "monotonic_seconds": 126920.4843367,
+      "free_mib": 11408,
+      "PrivateMemorySize64": 2706399232,
+      "WorkingSet64": 2763636736,
+      "PeakWorkingSet64": 2763636736
+    },
+    {
+      "monotonic_seconds": 126921.4845344,
+      "free_mib": 9817,
+      "PrivateMemorySize64": 4369584128,
+      "WorkingSet64": 4418318336,
+      "PeakWorkingSet64": 4418318336
+    },
+    {
+      "monotonic_seconds": 126922.4852705,
+      "free_mib": 9170,
+      "PrivateMemorySize64": 5124988928,
+      "WorkingSet64": 5122473984,
+      "PeakWorkingSet64": 5122473984
+    },
+    {
+      "monotonic_seconds": 126923.485589,
+      "free_mib": 9189,
+      "PrivateMemorySize64": 5074366464,
+      "WorkingSet64": 5071306752,
+      "PeakWorkingSet64": 5122473984
+    },
+    {
+      "monotonic_seconds": 126924.4857791,
+      "free_mib": 9265,
+      "PrivateMemorySize64": 5079171072,
+      "WorkingSet64": 5077528576,
+      "PeakWorkingSet64": 5122473984
+    },
+    {
+      "monotonic_seconds": 126925.4860324,
+      "free_mib": 9242,
+      "PrivateMemorySize64": 5079363584,
+      "WorkingSet64": 5077884928,
+      "PeakWorkingSet64": 5122473984
+    },
+    {
+      "monotonic_seconds": 126926.4863209,
+      "free_mib": 9176,
+      "PrivateMemorySize64": 5116301312,
+      "WorkingSet64": 5114642432,
+      "PeakWorkingSet64": 5134696448
+    },
+    {
+      "monotonic_seconds": 126927.4865459,
+      "free_mib": 9174,
+      "PrivateMemorySize64": 5116309504,
+      "WorkingSet64": 5114650624,
+      "PeakWorkingSet64": 5134696448
+    },
+    {
+      "monotonic_seconds": 126928.4871733,
+      "free_mib": 9174,
+      "PrivateMemorySize64": 5116264448,
+      "WorkingSet64": 5114605568,
+      "PeakWorkingSet64": 5134696448
+    },
+    {
+      "monotonic_seconds": 126929.4873706,
+      "free_mib": 9169,
+      "PrivateMemorySize64": 5116264448,
+      "WorkingSet64": 5114605568,
+      "PeakWorkingSet64": 5134696448
+    },
+    {
+      "monotonic_seconds": 126930.4878182,
+      "free_mib": 9205,
+      "PrivateMemorySize64": 5116284928,
+      "WorkingSet64": 5114626048,
+      "PeakWorkingSet64": 5134696448
+    },
+    {
+      "monotonic_seconds": 126931.4886844,
+      "free_mib": 9172,
+      "PrivateMemorySize64": 5116284928,
+      "WorkingSet64": 5114626048,
+      "PeakWorkingSet64": 5134696448
+    },
+    {
+      "monotonic_seconds": 126932.4894582,
+      "free_mib": 9174,
+      "PrivateMemorySize64": 5116284928,
+      "WorkingSet64": 5114630144,
+      "PeakWorkingSet64": 5134696448
+    },
+    {
+      "monotonic_seconds": 126933.489797,
+      "free_mib": 9175,
+      "PrivateMemorySize64": 5116284928,
+      "WorkingSet64": 5114634240,
+      "PeakWorkingSet64": 5134696448
+    },
+    {
+      "monotonic_seconds": 126934.489978,
+      "free_mib": 9210,
+      "PrivateMemorySize64": 5116653568,
+      "WorkingSet64": 5117808640,
+      "PeakWorkingSet64": 5139062784
+    },
+    {
+      "monotonic_seconds": 126935.490176,
+      "free_mib": 9165,
+      "PrivateMemorySize64": 5116661760,
+      "WorkingSet64": 5117816832,
+      "PeakWorkingSet64": 5139062784
+    },
+    {
+      "monotonic_seconds": 126936.4910241,
+      "free_mib": 9173,
+      "PrivateMemorySize64": 5116678144,
+      "WorkingSet64": 5117833216,
+      "PeakWorkingSet64": 5139062784
+    },
+    {
+      "monotonic_seconds": 126937.4920334,
+      "free_mib": 9162,
+      "PrivateMemorySize64": 5116981248,
+      "WorkingSet64": 5118144512,
+      "PeakWorkingSet64": 5139062784
+    },
+    {
+      "monotonic_seconds": 126938.4923467,
+      "free_mib": 9170,
+      "PrivateMemorySize64": 5116981248,
+      "WorkingSet64": 5118144512,
+      "PeakWorkingSet64": 5139062784
+    },
+    {
+      "monotonic_seconds": 126939.4928011,
+      "free_mib": 9169,
+      "PrivateMemorySize64": 5116981248,
+      "WorkingSet64": 5118144512,
+      "PeakWorkingSet64": 5139062784
+    },
+    {
+      "monotonic_seconds": 126940.4932695,
+      "free_mib": 9167,
+      "PrivateMemorySize64": 5116944384,
+      "WorkingSet64": 5118107648,
+      "PeakWorkingSet64": 5139062784
+    },
+    {
+      "monotonic_seconds": 126941.4936006,
+      "free_mib": 9170,
+      "PrivateMemorySize64": 5116944384,
+      "WorkingSet64": 5118107648,
+      "PeakWorkingSet64": 5139062784
+    },
+    {
+      "monotonic_seconds": 126942.4942721,
+      "free_mib": 9169,
+      "PrivateMemorySize64": 5116944384,
+      "WorkingSet64": 5118111744,
+      "PeakWorkingSet64": 5139062784
+    },
+    {
+      "monotonic_seconds": 126943.4945657,
+      "free_mib": 9168,
+      "PrivateMemorySize64": 5116944384,
+      "WorkingSet64": 5118111744,
+      "PeakWorkingSet64": 5139062784
+    },
+    {
+      "monotonic_seconds": 126944.4947497,
+      "free_mib": 9206,
+      "PrivateMemorySize64": 5116944384,
+      "WorkingSet64": 5118111744,
+      "PeakWorkingSet64": 5139062784
+    },
+    {
+      "monotonic_seconds": 126945.494988,
+      "free_mib": 9173,
+      "PrivateMemorySize64": 5117186048,
+      "WorkingSet64": 5118365696,
+      "PeakWorkingSet64": 5139062784
+    },
+    {
+      "monotonic_seconds": 126946.4951886,
+      "free_mib": 9165,
+      "PrivateMemorySize64": 5117186048,
+      "WorkingSet64": 5118365696,
+      "PeakWorkingSet64": 5139062784
+    },
+    {
+      "monotonic_seconds": 126947.4953952,
+      "free_mib": 9166,
+      "PrivateMemorySize64": 5117186048,
+      "WorkingSet64": 5118365696,
+      "PeakWorkingSet64": 5139062784
+    }
+  ],
+  "owned_process_stopped": true
+}

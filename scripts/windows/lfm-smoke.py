@@ -27,7 +27,8 @@ def write(path, value):
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
 def powershell(code):
-    result = subprocess.run(['powershell', '-NoProfile', '-Command', code], capture_output=True,
+    shell = os.environ.get('POWERSHELL_EXE', r'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe')
+    result = subprocess.run([shell, '-NoProfile', '-Command', code], capture_output=True,
                             text=True, creationflags=subprocess.CREATE_NO_WINDOW, check=True)
     return result.stdout.strip()
 
@@ -126,7 +127,9 @@ def main():
     state = {'model': 'OpenVINO/' + args.model, 'local_dir': str(model), 'device': args.device,
              'started_utc': dt.datetime.now(dt.timezone.utc).isoformat(), 'status': 'RUNNING',
              'offload': 'DISABLED; OFFLOAD_RATIO=0', 'gates': {}, 'benchmark': [],
-             'source_head': subprocess.check_output(['git', '-C', str(REPO), 'rev-parse', 'HEAD'], text=True).strip()}
+             'source_head': subprocess.check_output(
+                 [os.environ.get('GIT_EXE', r'C:\Program Files\Git\bin\git.exe'), '-C', str(REPO), 'rev-parse', 'HEAD'],
+                 text=True).strip()}
     args.output.mkdir(parents=True, exist_ok=False)
     process, watcher = None, None
     gpu_slot = Path(r'C:\gm\qwenmonster\benchmarks\GPU-RUNTIME.lock')
@@ -178,9 +181,9 @@ def main():
             state['template_override'] = {'path': str(args.template), 'sha256': sha(args.template)}
         command = [str(args.binary), '--rest_port', str(args.port), '--rest_bind_address', '127.0.0.1',
                    '--model_path', str(serving), '--model_name', 'lfm', '--task', 'text_generation',
-                   '--pipeline_type', 'VLM', '--target_device', args.device, '--tool_parser', 'lfm2',
+                   '--pipeline_type', 'LM', '--target_device', args.device, '--tool_parser', 'lfm2',
                    '--enable_tool_guided_generation', 'true', '--max_num_seqs', '4',
-                   '--max_num_batched_tokens', '1024', '--cache_size', '0.25',
+                   '--max_num_batched_tokens', '1024', '--cache_size', '1',
                    '--enable_prefix_caching', 'false', '--log_level', 'INFO']
         if args.device == 'GPU': command += ['--plugin_config', '{"OFFLOAD_RATIO":0}']
         if args.model.startswith('LFM2.5'): command += ['--reasoning_parser', 'lfm2']
@@ -258,19 +261,30 @@ def main():
             state['gates']['sse'] = 'PASS'
             tools = [{'type': 'function', 'function': {'name': 'report_value', 'description': 'Report a supplied string exactly.',
                      'parameters': {'type': 'object', 'properties': {'text': {'type': 'string'}}, 'required': ['text']}}}]
-            target = "O'Brien at C:\\test"
+            # Avoid JSON single-backslash traps such as \t in C:\test. Keep apostrophe coverage.
+            target = "O'Brien at C:/llm/lfm-test"
             history = [{'role': 'user', 'content': 'Call report_value once with this exact text: ' + target}]
+            # Reasoning models spend tokens before the tool call; 256 was LENGTH-truncated.
+            tool_budget = 768
             tool_request = {**basic, 'messages': history, 'tools': tools,
-                            'tool_choice': {'type': 'function', 'function': {'name': 'report_value'}}, 'max_tokens': 256}
+                            'tool_choice': {'type': 'function', 'function': {'name': 'report_value'}}, 'max_tokens': tool_budget}
             response, _ = post(url, tool_request, args.output / 'tool-unary.json')
             assistant = response['choices'][0]['message']
             calls = assistant.get('tool_calls', [])
             assert len(calls) == 1 and calls[0]['function']['name'] == 'report_value', 'Tool call missing'
-            assert json.loads(calls[0]['function']['arguments']) == {'text': target}, 'Tool string changed'
+            parsed_args = json.loads(calls[0]['function']['arguments'])
+            assert parsed_args == {'text': target}, 'Tool string changed: ' + repr(parsed_args)
+            assert response['choices'][0].get('finish_reason') != 'length', 'Tool call truncated by max_tokens'
             state['gates']['tool_call'] = 'PASS'
-            history += [assistant, {'role': 'tool', 'tool_call_id': calls[0]['id'], 'content': 'TOOL_OK. Tell the user TOOL_OK.'}]
-            response, _ = post(url, {**basic, 'messages': history, 'tools': tools, 'tool_choice': 'none', 'max_tokens': 256}, args.output / 'continuation.json')
-            assert 'TOOL_OK' in response['choices'][0]['message'].get('content', ''), 'Continuation missing tool result'
+            # Replay only the structured tool call; do not re-inject private reasoning.
+            assistant_replay = {'role': 'assistant', 'content': assistant.get('content') or '', 'tool_calls': calls}
+            history = [history[0], assistant_replay,
+                       {'role': 'tool', 'tool_call_id': calls[0]['id'], 'content': 'TOOL_OK'},
+                       {'role': 'user', 'content': 'Using the tool result, reply with exactly the word TOOL_OK and nothing else.'}]
+            response, _ = post(url, {**basic, 'messages': history, 'tools': tools, 'tool_choice': 'none', 'max_tokens': tool_budget}, args.output / 'continuation.json')
+            cont = response['choices'][0]['message'].get('content') or ''
+            assert 'TOOL_OK' in cont, 'Continuation missing tool result: ' + repr(cont[:300])
+            assert '<|tool_call_start|>' not in cont, 'Continuation emitted another tool call as content'
             state['gates']['tool_cycle_continuation'] = 'PASS'
             events, _ = post(url, {**tool_request, 'stream': True, 'stream_options': {'include_usage': True}}, args.output / 'tool-sse.txt')
             streamed_calls = {}
@@ -287,10 +301,12 @@ def main():
             assert json.loads(streamed_call['function']['arguments']) == {'text': target}, 'SSE tool string changed'
             state['gates']['tool_sse'] = 'PASS'
             stream_history = [tool_request['messages'][0], {'role': 'assistant', 'content': '', 'tool_calls': [streamed_call]},
-                              {'role': 'tool', 'tool_call_id': streamed_call['id'], 'content': 'TOOL_OK. Tell the user TOOL_OK.'}]
-            events, _ = post(url, {**streaming, 'messages': stream_history, 'tools': tools, 'tool_choice': 'none', 'max_tokens': 256}, args.output / 'continuation-sse.txt')
+                              {'role': 'tool', 'tool_call_id': streamed_call['id'], 'content': 'TOOL_OK'},
+                              {'role': 'user', 'content': 'Using the tool result, reply with exactly the word TOOL_OK and nothing else.'}]
+            events, _ = post(url, {**streaming, 'messages': stream_history, 'tools': tools, 'tool_choice': 'none', 'max_tokens': tool_budget}, args.output / 'continuation-sse.txt')
             continued = ''.join(c.get('delta', {}).get('content', '') for e in events for c in e.get('choices', []))
-            assert 'TOOL_OK' in continued, 'SSE continuation missing tool result'
+            assert 'TOOL_OK' in continued, 'SSE continuation missing tool result: ' + repr(continued[:300])
+            assert '<|tool_call_start|>' not in continued, 'SSE continuation emitted another tool call as content'
             state['gates']['tool_cycle_continuation_sse'] = 'PASS'
             if args.benchmark:
                 # The preceding protocol calls are labeled warmup, never included below.

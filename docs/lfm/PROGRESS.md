@@ -33,9 +33,32 @@ C:\llm\models templates remain immutable. Round-trip tests in focused green.
 Gemma/Qwen parser regression after Task 3 relink: 201/201
 (docs/lfm/evidence/task3-gemma-qwen-regression.xml).
 
-Task 5: scripts/windows/lfm-smoke.py prepared. CPU/GPU model load, tool cycle,
-and Arc 140V benchmarks NOT_RUN in this pass (no owned server started).
+Task 5 (GPU-first; CPU deferred by user):
+- Rebuilt serving ovms.exe with Task 3 parser: sha256
+  f484927cc5bacbb979f9edb11df85c494b6cdf369d7c179b29c48d6807dfc877
+- LFM2.5-8B-A1B-int4-ov GPU protocol PASS (load/modules/unary/SSE/tool/
+  continuation/tool-SSE/continuation-SSE). Evidence:
+  C:\gm\lfm-2026.4\task5-gpu\gpu-LFM2.5-8B-A1B-int4-ov\RESULT.json and
+  docs/lfm/evidence/task5-gpu-lfm25-RESULT.json. Peak WS ~4.9 GiB on Arc 140V.
+- LFM2.5 GPU benchmark PASS (36 batches / 84 requests): TTFT p50/p95
+  4.387s/29.048s, decode TPS p50/p95 51.73/55.04. Receipt:
+  docs/lfm/evidence/task5-gpu-lfm25-bench-RESULT.json.
+- LFM2-24B-A2B-int4-ov GPU was RAM-admission blocked (~14.1 GiB free vs
+  14436 MiB floor; docs/lfm/evidence/task5-gpu-lfm2-24b-admission.json);
+  after host memory freed, GPU protocol PASS. Evidence:
+  C:\gm\lfm-2026.4\task5-gpu\gpu-LFM2-24B-A2B-int4-ov\RESULT.json and
+  docs/lfm/evidence/task5-gpu-lfm2-24b-RESULT.json. Peak WS ~13.1 GiB.
+- LFM2-24B GPU benchmark PASS (36 batches / 84 requests): TTFT p50/p95
+  4.892s/38.069s, decode TPS p50/p95 40.20/42.09. Receipt:
+  docs/lfm/evidence/task5-gpu-lfm2-24b-bench-RESULT.json.
+- CPU gates: NOT_RUN (user deferred).
 
 Task 6: Pack mapping deferred. Artifacts under C:\gm\lfm-2026.4\future-pack-notes.
 
-Acceptance: NO until real GPU/tool/continuation gates for both exports.
+Acceptance (GPU-first scope): YES — both exports cleared protocol + benchmark
+on GPU (tool/continuation/SSE included). CPU and Pack remain deferred.
+
+Launch scripts (OMP pattern from start-qwen.ps1): scripts/windows/start-lfm25.ps1
+and start-lfm2-24b.ps1; mirrored to C:\Users\testc\.omp\agent\. Serving EXE
+C:\gm\lfm-2026.4\serving\ovms.exe (sha256 f484927c…), RC4 DLLs, LM pipeline,
+template overrides, OFFLOAD_RATIO=0, port 8137.

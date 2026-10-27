@@ -1,0 +1,41 @@
+{
+  "model": "OpenVINO/LFM2-24B-A2B-int4-ov",
+  "local_dir": "C:\\llm\\models\\LFM2-24B-A2B-int4-ov",
+  "device": "GPU",
+  "started_utc": "2026-10-26T23:35:22.576604+00:00",
+  "status": "BLOCKED",
+  "offload": "DISABLED; OFFLOAD_RATIO=0",
+  "gates": {
+    "model_load": "NOT_RUN"
+  },
+  "benchmark": [],
+  "source_head": "000d989fc045cc03e73aa0d55187a1bbd841d46b",
+  "runtime": [
+    {
+      "path": "C:\\gm\\qwenmonster\\releases\\gemmamonster-2026.4-rc4\\extracted-py_off\\ovms\\openvino.dll",
+      "sha256": "829c4642e287522f8a8e748a726d4ad3117a701e22ab46adc82771f98e5d2f7e"
+    },
+    {
+      "path": "C:\\gm\\qwenmonster\\releases\\gemmamonster-2026.4-rc4\\extracted-py_off\\ovms\\openvino_genai.dll",
+      "sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d"
+    },
+    {
+      "path": "C:\\gm\\qwenmonster\\releases\\gemmamonster-2026.4-rc4\\extracted-py_off\\ovms\\openvino_intel_gpu_plugin.dll",
+      "sha256": "21a2fd9f5d856c297416059325832f0f902c84a4e78b840f859ca508f5aea66d"
+    },
+    {
+      "path": "C:\\gm\\qwenmonster\\releases\\gemmamonster-2026.4-rc4\\extracted-py_off\\ovms\\openvino_tokenizers.dll",
+      "sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c"
+    }
+  ],
+  "binary": {
+    "path": "C:\\git\\gemmamonster-lfm-2026.4\\bazel-bin\\src\\ovms.exe",
+    "sha256": "f484927cc5bacbb979f9edb11df85c494b6cdf369d7c179b29c48d6807dfc877"
+  },
+  "model_weight_sha256": "ccd69ef318d13e726d0483e8defa9c050ddb6987dc56bf580dbef3fdb47bb92d",
+  "initial_free_mib": 14113,
+  "admission_floor_mib": 14436,
+  "blocker": "Host RAM admission floor",
+  "free_mib_samples": [],
+  "owned_process_stopped": true
+}

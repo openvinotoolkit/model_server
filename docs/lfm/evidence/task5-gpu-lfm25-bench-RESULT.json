@@ -1,0 +1,5904 @@
+{
+  "model": "OpenVINO/LFM2.5-8B-A1B-int4-ov",
+  "local_dir": "C:\\llm\\models\\LFM2.5-8B-A1B-int4-ov",
+  "device": "GPU",
+  "started_utc": "2026-10-26T23:36:01.048441+00:00",
+  "status": "PASS",
+  "offload": "DISABLED; OFFLOAD_RATIO=0",
+  "gates": {
+    "model_load": "PASS",
+    "loaded_modules": "PASS",
+    "unary": "PASS",
+    "sse": "PASS",
+    "tool_call": "PASS",
+    "tool_cycle_continuation": "PASS",
+    "tool_sse": "PASS",
+    "tool_cycle_continuation_sse": "PASS",
+    "benchmark": "PASS"
+  },
+  "benchmark": [
+    {
+      "input": "short",
+      "max_tokens": 128,
+      "concurrency": 1,
+      "repetition": 0,
+      "batch_wall_seconds": 2.5795407999976305,
+      "free_mib": 9624,
+      "process_memory": {
+        "PrivateMemorySize64": 5122072576,
+        "WorkingSet64": 5123436544,
+        "PeakWorkingSet64": 5149392896
+      },
+      "requests": [
+        {
+          "wall_seconds": 2.5350545999972383,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 128,
+            "total_tokens": 146
+          },
+          "ttft_seconds": 0.22330490000604186,
+          "wall_tps": 50.49200912680123,
+          "decode_tps_client_observed": 54.94981200035372,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "short",
+      "max_tokens": 128,
+      "concurrency": 1,
+      "repetition": 1,
+      "batch_wall_seconds": 2.4576589000062086,
+      "free_mib": 9671,
+      "process_memory": {
+        "PrivateMemorySize64": 5122314240,
+        "WorkingSet64": 5123706880,
+        "PeakWorkingSet64": 5149392896
+      },
+      "requests": [
+        {
+          "wall_seconds": 2.4530949000036344,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 128,
+            "total_tokens": 146
+          },
+          "ttft_seconds": 0.1452551999973366,
+          "wall_tps": 52.178984188426774,
+          "decode_tps_client_observed": 55.035200861033964,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "short",
+      "max_tokens": 128,
+      "concurrency": 1,
+      "repetition": 2,
+      "batch_wall_seconds": 2.4589749000006123,
+      "free_mib": 9612,
+      "process_memory": {
+        "PrivateMemorySize64": 5122347008,
+        "WorkingSet64": 5123751936,
+        "PeakWorkingSet64": 5149392896
+      },
+      "requests": [
+        {
+          "wall_seconds": 2.456522500011488,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 128,
+            "total_tokens": 146
+          },
+          "ttft_seconds": 0.1420529000024544,
+          "wall_tps": 52.10617855093996,
+          "decode_tps_client_observed": 54.88041126255002,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "short",
+      "max_tokens": 128,
+      "concurrency": 2,
+      "repetition": 0,
+      "batch_wall_seconds": 4.903024800005369,
+      "free_mib": 9625,
+      "process_memory": {
+        "PrivateMemorySize64": 5122469888,
+        "WorkingSet64": 5123817472,
+        "PeakWorkingSet64": 5149392896
+      },
+      "requests": [
+        {
+          "wall_seconds": 4.8985953999945195,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 128,
+            "total_tokens": 146
+          },
+          "ttft_seconds": 2.5892233999911696,
+          "wall_tps": 26.129939206684266,
+          "decode_tps_client_observed": 54.99878547963567,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 2.4508649000053992,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 128,
+            "total_tokens": 146
+          },
+          "ttft_seconds": 0.13186779999523424,
+          "wall_tps": 52.2264609525062,
+          "decode_tps_client_observed": 54.77539199533522,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "short",
+      "max_tokens": 128,
+      "concurrency": 2,
+      "repetition": 1,
+      "batch_wall_seconds": 4.872575600005803,
+      "free_mib": 9661,
+      "process_memory": {
+        "PrivateMemorySize64": 5122801664,
+        "WorkingSet64": 5124153344,
+        "PeakWorkingSet64": 5149392896
+      },
+      "requests": [
+        {
+          "wall_seconds": 2.4230298999900697,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 128,
+            "total_tokens": 146
+          },
+          "ttft_seconds": 0.12779589999991003,
+          "wall_tps": 52.82642199360585,
+          "decode_tps_client_observed": 55.337907643150935,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 4.869956299997284,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 128,
+            "total_tokens": 146
+          },
+          "ttft_seconds": 2.5448057999892626,
+          "wall_tps": 26.2836034072978,
+          "decode_tps_client_observed": 54.62859245874845,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "short",
+      "max_tokens": 128,
+      "concurrency": 2,
+      "repetition": 2,
+      "batch_wall_seconds": 4.9146260999987135,
+      "free_mib": 9612,
+      "process_memory": {
+        "PrivateMemorySize64": 5122871296,
+        "WorkingSet64": 5124161536,
+        "PeakWorkingSet64": 5149392896
+      },
+      "requests": [
+        {
+          "wall_seconds": 2.4417347999988124,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 128,
+            "total_tokens": 146
+          },
+          "ttft_seconds": 0.14563689999340568,
+          "wall_tps": 52.4217453918674,
+          "decode_tps_client_observed": 55.31821235381679,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 4.906254199988325,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 128,
+            "total_tokens": 146
+          },
+          "ttft_seconds": 2.5700214999960735,
+          "wall_tps": 26.0891496409429,
+          "decode_tps_client_observed": 54.3673297384399,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "short",
+      "max_tokens": 128,
+      "concurrency": 4,
+      "repetition": 0,
+      "batch_wall_seconds": 9.791999099994428,
+      "free_mib": 9623,
+      "process_memory": {
+        "PrivateMemorySize64": 5122830336,
+        "WorkingSet64": 5124104192,
+        "PeakWorkingSet64": 5149392896
+      },
+      "requests": [
+        {
+          "wall_seconds": 4.901476399987587,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 128,
+            "total_tokens": 146
+          },
+          "ttft_seconds": 2.5863318999909097,
+          "wall_tps": 26.11458049666916,
+          "decode_tps_client_observed": 54.861898131074334,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 2.4454912999935914,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 128,
+            "total_tokens": 146
+          },
+          "ttft_seconds": 0.13570459999027662,
+          "wall_tps": 52.341220760153774,
+          "decode_tps_client_observed": 54.987760027665885,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 9.78808700000809,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 128,
+            "total_tokens": 146
+          },
+          "ttft_seconds": 7.454220900006476,
+          "wall_tps": 13.077121198441963,
+          "decode_tps_client_observed": 54.421083087763925,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 7.330319899992901,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 128,
+            "total_tokens": 146
+          },
+          "ttft_seconds": 5.02980989999196,
+          "wall_tps": 17.461720872526172,
+          "decode_tps_client_observed": 55.21143567077937,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "short",
+      "max_tokens": 128,
+      "concurrency": 4,
+      "repetition": 1,
+      "batch_wall_seconds": 10.206364700003178,
+      "free_mib": 9579,
+      "process_memory": {
+        "PrivateMemorySize64": 5122834432,
+        "WorkingSet64": 5124108288,
+        "PeakWorkingSet64": 5149392896
+      },
+      "requests": [
+        {
+          "wall_seconds": 5.006079400001909,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 128,
+            "total_tokens": 146
+          },
+          "ttft_seconds": 2.6557407000073,
+          "wall_tps": 25.568911272152654,
+          "decode_tps_client_observed": 54.04118951400444,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 2.5255667000019457,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 128,
+            "total_tokens": 146
+          },
+          "ttft_seconds": 0.21157569999922998,
+          "wall_tps": 50.68169452816328,
+          "decode_tps_client_observed": 54.89062028221884,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 10.203108700006851,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 128,
+            "total_tokens": 146
+          },
+          "ttft_seconds": 7.597589099998004,
+          "wall_tps": 12.545196151827144,
+          "decode_tps_client_observed": 48.746237183905365,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 7.464978999996674,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 128,
+            "total_tokens": 146
+          },
+          "ttft_seconds": 5.146577499996056,
+          "wall_tps": 17.146732763756873,
+          "decode_tps_client_observed": 54.78685948832203,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "short",
+      "max_tokens": 128,
+      "concurrency": 4,
+      "repetition": 2,
+      "batch_wall_seconds": 9.837352200003807,
+      "free_mib": 9613,
+      "process_memory": {
+        "PrivateMemorySize64": 5122834432,
+        "WorkingSet64": 5124112384,
+        "PeakWorkingSet64": 5149392896
+      },
+      "requests": [
+        {
+          "wall_seconds": 2.443531900004018,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 128,
+            "total_tokens": 146
+          },
+          "ttft_seconds": 0.13652020000154153,
+          "wall_tps": 52.38319172333683,
+          "decode_tps_client_observed": 55.06027561077878,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 7.362742500001332,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 128,
+            "total_tokens": 146
+          },
+          "ttft_seconds": 5.052687100003823,
+          "wall_tps": 17.384826374136654,
+          "decode_tps_client_observed": 54.98316064934229,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 4.910636300002807,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 128,
+            "total_tokens": 146
+          },
+          "ttft_seconds": 2.5724381000036374,
+          "wall_tps": 26.06586849038827,
+          "decode_tps_client_observed": 54.31948083941795,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 9.829179699998349,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 128,
+            "total_tokens": 146
+          },
+          "ttft_seconds": 7.488569699999061,
+          "wall_tps": 13.022449879517566,
+          "decode_tps_client_observed": 54.26780847265941,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "long",
+      "max_tokens": 128,
+      "concurrency": 1,
+      "repetition": 0,
+      "batch_wall_seconds": 3.8585099000047194,
+      "free_mib": 9039,
+      "process_memory": {
+        "PrivateMemorySize64": 5784264704,
+        "WorkingSet64": 5783150592,
+        "PeakWorkingSet64": 5783150592
+      },
+      "requests": [
+        {
+          "wall_seconds": 3.8562801999942167,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 128,
+            "total_tokens": 2843
+          },
+          "ttft_seconds": 1.370606399999815,
+          "wall_tps": 33.192608773654975,
+          "decode_tps_client_observed": 51.099946465955504,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "long",
+      "max_tokens": 128,
+      "concurrency": 1,
+      "repetition": 1,
+      "batch_wall_seconds": 3.429649600002449,
+      "free_mib": 8977,
+      "process_memory": {
+        "PrivateMemorySize64": 5784260608,
+        "WorkingSet64": 5783154688,
+        "PeakWorkingSet64": 5783191552
+      },
+      "requests": [
+        {
+          "wall_seconds": 3.4269810000114376,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 128,
+            "total_tokens": 2843
+          },
+          "ttft_seconds": 0.9717793000017991,
+          "wall_tps": 37.350659370324145,
+          "decode_tps_client_observed": 51.73620807412856,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "long",
+      "max_tokens": 128,
+      "concurrency": 1,
+      "repetition": 2,
+      "batch_wall_seconds": 3.429552399989916,
+      "free_mib": 9057,
+      "process_memory": {
+        "PrivateMemorySize64": 5784264704,
+        "WorkingSet64": 5783171072,
+        "PeakWorkingSet64": 5783191552
+      },
+      "requests": [
+        {
+          "wall_seconds": 3.4250024000066333,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 128,
+            "total_tokens": 2843
+          },
+          "ttft_seconds": 0.9576499999966472,
+          "wall_tps": 37.37223658580563,
+          "decode_tps_client_observed": 51.47835290648428,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "long",
+      "max_tokens": 128,
+      "concurrency": 2,
+      "repetition": 0,
+      "batch_wall_seconds": 6.858815599989612,
+      "free_mib": 8985,
+      "process_memory": {
+        "PrivateMemorySize64": 5784264704,
+        "WorkingSet64": 5783171072,
+        "PeakWorkingSet64": 5783191552
+      },
+      "requests": [
+        {
+          "wall_seconds": 3.4241970000002766,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 128,
+            "total_tokens": 2843
+          },
+          "ttft_seconds": 0.9642770999926142,
+          "wall_tps": 37.38102685096379,
+          "decode_tps_client_observed": 51.631815394592316,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 6.853582199997618,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 128,
+            "total_tokens": 2843
+          },
+          "ttft_seconds": 4.38735170000291,
+          "wall_tps": 18.67636460244753,
+          "decode_tps_client_observed": 51.499662048780095,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "long",
+      "max_tokens": 128,
+      "concurrency": 2,
+      "repetition": 1,
+      "batch_wall_seconds": 6.904898699998739,
+      "free_mib": 9029,
+      "process_memory": {
+        "PrivateMemorySize64": 5784264704,
+        "WorkingSet64": 5783183360,
+        "PeakWorkingSet64": 5783191552
+      },
+      "requests": [
+        {
+          "wall_seconds": 3.4436376999947242,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 128,
+            "total_tokens": 2843
+          },
+          "ttft_seconds": 0.9679879000032088,
+          "wall_tps": 37.16999613524852,
+          "decode_tps_client_observed": 51.3073081929648,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 6.8997344999952475,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 128,
+            "total_tokens": 2843
+          },
+          "ttft_seconds": 4.448322800002643,
+          "wall_tps": 18.55143846478269,
+          "decode_tps_client_observed": 51.81871024299504,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "long",
+      "max_tokens": 128,
+      "concurrency": 2,
+      "repetition": 2,
+      "batch_wall_seconds": 6.881847299999208,
+      "free_mib": 8980,
+      "process_memory": {
+        "PrivateMemorySize64": 5784264704,
+        "WorkingSet64": 5783195648,
+        "PeakWorkingSet64": 5783195648
+      },
+      "requests": [
+        {
+          "wall_seconds": 3.435121500006062,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 128,
+            "total_tokens": 2843
+          },
+          "ttft_seconds": 0.975339000011445,
+          "wall_tps": 37.2621463315851,
+          "decode_tps_client_observed": 51.63869712903839,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 6.855330499995034,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 128,
+            "total_tokens": 2843
+          },
+          "ttft_seconds": 4.3955561999900965,
+          "wall_tps": 18.67160160988485,
+          "decode_tps_client_observed": 51.63669414069809,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "long",
+      "max_tokens": 128,
+      "concurrency": 4,
+      "repetition": 0,
+      "batch_wall_seconds": 13.765848499999265,
+      "free_mib": 8979,
+      "process_memory": {
+        "PrivateMemorySize64": 5784264704,
+        "WorkingSet64": 5783199744,
+        "PeakWorkingSet64": 5783199744
+      },
+      "requests": [
+        {
+          "wall_seconds": 13.760695499993744,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 128,
+            "total_tokens": 2843
+          },
+          "ttft_seconds": 11.289374799991492,
+          "wall_tps": 9.30185541857664,
+          "decode_tps_client_observed": 51.39485016311027,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 3.4400142999948002,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 128,
+            "total_tokens": 2843
+          },
+          "ttft_seconds": 0.9711353999882704,
+          "wall_tps": 37.2091476480762,
+          "decode_tps_client_observed": 51.446401396973094,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 6.869184900002438,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 128,
+            "total_tokens": 2843
+          },
+          "ttft_seconds": 4.399004199993215,
+          "wall_tps": 18.63394301701714,
+          "decode_tps_client_observed": 51.41881515647877,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 10.319854800007306,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 128,
+            "total_tokens": 2843
+          },
+          "ttft_seconds": 7.8352496000006795,
+          "wall_tps": 12.403275286383815,
+          "decode_tps_client_observed": 51.11960796810196,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "long",
+      "max_tokens": 128,
+      "concurrency": 4,
+      "repetition": 1,
+      "batch_wall_seconds": 13.813383600005182,
+      "free_mib": 9040,
+      "process_memory": {
+        "PrivateMemorySize64": 5784158208,
+        "WorkingSet64": 5783142400,
+        "PeakWorkingSet64": 5783207936
+      },
+      "requests": [
+        {
+          "wall_seconds": 3.4223990000027698,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 128,
+            "total_tokens": 2843
+          },
+          "ttft_seconds": 0.9586162000050535,
+          "wall_tps": 37.40066543962186,
+          "decode_tps_client_observed": 51.552137436814654,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 6.890761999995448,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 128,
+            "total_tokens": 2843
+          },
+          "ttft_seconds": 4.40716319999774,
+          "wall_tps": 18.57559439726471,
+          "decode_tps_client_observed": 51.138994256435815,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 13.810170799988555,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 128,
+            "total_tokens": 2843
+          },
+          "ttft_seconds": 11.280526199989254,
+          "wall_tps": 9.268531276970599,
+          "decode_tps_client_observed": 50.20976016851993,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 10.316869900008896,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 128,
+            "total_tokens": 2843
+          },
+          "ttft_seconds": 7.861575400005677,
+          "wall_tps": 12.406863829880187,
+          "decode_tps_client_observed": 51.73157601311169,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "long",
+      "max_tokens": 128,
+      "concurrency": 4,
+      "repetition": 2,
+      "batch_wall_seconds": 13.852598600002239,
+      "free_mib": 9060,
+      "process_memory": {
+        "PrivateMemorySize64": 5784158208,
+        "WorkingSet64": 5783150592,
+        "PeakWorkingSet64": 5783207936
+      },
+      "requests": [
+        {
+          "wall_seconds": 3.4941254000004847,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 128,
+            "total_tokens": 2843
+          },
+          "ttft_seconds": 0.9977760000037961,
+          "wall_tps": 36.63291534985615,
+          "decode_tps_client_observed": 50.87833228039167,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 13.847048700001324,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 128,
+            "total_tokens": 2843
+          },
+          "ttft_seconds": 11.358522800001083,
+          "wall_tps": 9.243847030016422,
+          "decode_tps_client_observed": 51.03767633415038,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 6.950761599990074,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 128,
+            "total_tokens": 2843
+          },
+          "ttft_seconds": 4.455847299992456,
+          "wall_tps": 18.415248193835737,
+          "decode_tps_client_observed": 50.90723915362776,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 10.392313500007731,
+          "completion_tokens": 128,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 128,
+            "total_tokens": 2843
+          },
+          "ttft_seconds": 7.916772900003707,
+          "wall_tps": 12.316795485423413,
+          "decode_tps_client_observed": 51.31033049465889,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "short",
+      "max_tokens": 512,
+      "concurrency": 1,
+      "repetition": 0,
+      "batch_wall_seconds": 9.632612099987455,
+      "free_mib": 8989,
+      "process_memory": {
+        "PrivateMemorySize64": 5784158208,
+        "WorkingSet64": 5783154688,
+        "PeakWorkingSet64": 5783207936
+      },
+      "requests": [
+        {
+          "wall_seconds": 9.63045900000725,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 512,
+            "total_tokens": 530
+          },
+          "ttft_seconds": 0.1437861000013072,
+          "wall_tps": 53.16465186130947,
+          "decode_tps_client_observed": 53.86667937820384,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "short",
+      "max_tokens": 512,
+      "concurrency": 1,
+      "repetition": 1,
+      "batch_wall_seconds": 9.695417499999166,
+      "free_mib": 9416,
+      "process_memory": {
+        "PrivateMemorySize64": 5346361344,
+        "WorkingSet64": 5346291712,
+        "PeakWorkingSet64": 5783207936
+      },
+      "requests": [
+        {
+          "wall_seconds": 9.690749499990488,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 512,
+            "total_tokens": 530
+          },
+          "ttft_seconds": 0.1270784999942407,
+          "wall_tps": 52.83389071201382,
+          "decode_tps_client_observed": 53.433650009463975,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "short",
+      "max_tokens": 512,
+      "concurrency": 1,
+      "repetition": 2,
+      "batch_wall_seconds": 9.726935500002583,
+      "free_mib": 9476,
+      "process_memory": {
+        "PrivateMemorySize64": 5346361344,
+        "WorkingSet64": 5346291712,
+        "PeakWorkingSet64": 5783207936
+      },
+      "requests": [
+        {
+          "wall_seconds": 9.719973100000061,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 512,
+            "total_tokens": 530
+          },
+          "ttft_seconds": 0.1344429000018863,
+          "wall_tps": 52.67504289698053,
+          "decode_tps_client_observed": 53.31257196409863,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "short",
+      "max_tokens": 512,
+      "concurrency": 2,
+      "repetition": 0,
+      "batch_wall_seconds": 20.21155949999229,
+      "free_mib": 9789,
+      "process_memory": {
+        "PrivateMemorySize64": 5346361344,
+        "WorkingSet64": 5346291712,
+        "PeakWorkingSet64": 5783207936
+      },
+      "requests": [
+        {
+          "wall_seconds": 20.209195899995393,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 512,
+            "total_tokens": 530
+          },
+          "ttft_seconds": 10.063581999987946,
+          "wall_tps": 25.335001082359575,
+          "decode_tps_client_observed": 50.368528584142766,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 9.932038900005864,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 512,
+            "total_tokens": 530
+          },
+          "ttft_seconds": 0.13958020000427496,
+          "wall_tps": 51.55034179333487,
+          "decode_tps_client_observed": 52.1855156068819,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "short",
+      "max_tokens": 512,
+      "concurrency": 2,
+      "repetition": 1,
+      "batch_wall_seconds": 19.656186000007438,
+      "free_mib": 9715,
+      "process_memory": {
+        "PrivateMemorySize64": 5346492416,
+        "WorkingSet64": 5346439168,
+        "PeakWorkingSet64": 5783207936
+      },
+      "requests": [
+        {
+          "wall_seconds": 19.649012499998207,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 512,
+            "total_tokens": 530
+          },
+          "ttft_seconds": 10.18110030000389,
+          "wall_tps": 26.05728913857868,
+          "decode_tps_client_observed": 53.97497430777934,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 10.052365399998962,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 512,
+            "total_tokens": 530
+          },
+          "ttft_seconds": 0.13887950000935234,
+          "wall_tps": 50.93328581152182,
+          "decode_tps_client_observed": 51.54791634042141,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "short",
+      "max_tokens": 512,
+      "concurrency": 2,
+      "repetition": 2,
+      "batch_wall_seconds": 19.20794449999812,
+      "free_mib": 9748,
+      "process_memory": {
+        "PrivateMemorySize64": 5346525184,
+        "WorkingSet64": 5346484224,
+        "PeakWorkingSet64": 5783207936
+      },
+      "requests": [
+        {
+          "wall_seconds": 9.589269600008265,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 512,
+            "total_tokens": 530
+          },
+          "ttft_seconds": 0.14433460000145715,
+          "wall_tps": 53.393013373986136,
+          "decode_tps_client_observed": 54.104467616591414,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 19.20298120001098,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 512,
+            "total_tokens": 530
+          },
+          "ttft_seconds": 9.711701500011259,
+          "wall_tps": 26.662526753903567,
+          "decode_tps_client_observed": 53.84075955805128,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "short",
+      "max_tokens": 512,
+      "concurrency": 4,
+      "repetition": 0,
+      "batch_wall_seconds": 38.62426160000905,
+      "free_mib": 9715,
+      "process_memory": {
+        "PrivateMemorySize64": 5346525184,
+        "WorkingSet64": 5346484224,
+        "PeakWorkingSet64": 5783207936
+      },
+      "requests": [
+        {
+          "wall_seconds": 9.678948200002196,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 512,
+            "total_tokens": 530
+          },
+          "ttft_seconds": 0.13732780001009814,
+          "wall_tps": 52.8983097564138,
+          "decode_tps_client_observed": 53.56030043451244,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 19.294073700002627,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 512,
+            "total_tokens": 530
+          },
+          "ttft_seconds": 9.815488199994434,
+          "wall_tps": 26.53664580953323,
+          "decode_tps_client_observed": 53.91338252750576,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 38.618425799999386,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 512,
+            "total_tokens": 530
+          },
+          "ttft_seconds": 29.048167299988563,
+          "wall_tps": 13.257920005636484,
+          "decode_tps_client_observed": 53.39581556320367,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 28.912185399996815,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 512,
+            "total_tokens": 530
+          },
+          "ttft_seconds": 19.423960900006932,
+          "wall_tps": 17.708796236484304,
+          "decode_tps_client_observed": 53.85843402312372,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "short",
+      "max_tokens": 512,
+      "concurrency": 4,
+      "repetition": 1,
+      "batch_wall_seconds": 38.360206299999845,
+      "free_mib": 9754,
+      "process_memory": {
+        "PrivateMemorySize64": 5346525184,
+        "WorkingSet64": 5346623488,
+        "PeakWorkingSet64": 5783207936
+      },
+      "requests": [
+        {
+          "wall_seconds": 9.599490200009313,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 512,
+            "total_tokens": 530
+          },
+          "ttft_seconds": 0.12670259999867994,
+          "wall_tps": 53.336165705914595,
+          "decode_tps_client_observed": 53.945705558112124,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 28.77802579999843,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 512,
+            "total_tokens": 530
+          },
+          "ttft_seconds": 19.331601700003375,
+          "wall_tps": 17.79135245615173,
+          "decode_tps_client_observed": 54.09693961969716,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 19.19846219998726,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 512,
+            "total_tokens": 530
+          },
+          "ttft_seconds": 9.733164999997825,
+          "wall_tps": 26.668802671098298,
+          "decode_tps_client_observed": 53.99021669801942,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 38.35659140000644,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 512,
+            "total_tokens": 530
+          },
+          "ttft_seconds": 28.89899270000751,
+          "wall_tps": 13.348422821531376,
+          "decode_tps_client_observed": 54.03349920454558,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "short",
+      "max_tokens": 512,
+      "concurrency": 4,
+      "repetition": 2,
+      "batch_wall_seconds": 38.65847960000974,
+      "free_mib": 9703,
+      "process_memory": {
+        "PrivateMemorySize64": 5346525184,
+        "WorkingSet64": 5346623488,
+        "PeakWorkingSet64": 5783207936
+      },
+      "requests": [
+        {
+          "wall_seconds": 9.876180599996587,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 512,
+            "total_tokens": 530
+          },
+          "ttft_seconds": 0.13820529999793507,
+          "wall_tps": 51.84190333661749,
+          "decode_tps_client_observed": 52.47704865952882,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 29.023199999995995,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 512,
+            "total_tokens": 530
+          },
+          "ttft_seconds": 19.606142999997246,
+          "wall_tps": 17.641059566142626,
+          "decode_tps_client_observed": 54.26673822229657,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 19.483318300000974,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 512,
+            "total_tokens": 530
+          },
+          "ttft_seconds": 10.01100710000901,
+          "wall_tps": 26.278891106551107,
+          "decode_tps_client_observed": 53.948340188567826,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 38.653097100002924,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 18,
+            "completion_tokens": 512,
+            "total_tokens": 530
+          },
+          "ttft_seconds": 29.15836329999729,
+          "wall_tps": 13.246027832526808,
+          "decode_tps_client_observed": 53.82196628853438,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "long",
+      "max_tokens": 512,
+      "concurrency": 1,
+      "repetition": 0,
+      "batch_wall_seconds": 11.212912300004973,
+      "free_mib": 9193,
+      "process_memory": {
+        "PrivateMemorySize64": 5890715648,
+        "WorkingSet64": 5889654784,
+        "PeakWorkingSet64": 5889654784
+      },
+      "requests": [
+        {
+          "wall_seconds": 11.208401299998513,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 512,
+            "total_tokens": 3227
+          },
+          "ttft_seconds": 1.0133345000067493,
+          "wall_tps": 45.68002039684892,
+          "decode_tps_client_observed": 50.12443562803061,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "long",
+      "max_tokens": 512,
+      "concurrency": 1,
+      "repetition": 1,
+      "batch_wall_seconds": 11.077459099993575,
+      "free_mib": 9233,
+      "process_memory": {
+        "PrivateMemorySize64": 5897580544,
+        "WorkingSet64": 5896470528,
+        "PeakWorkingSet64": 5945753600
+      },
+      "requests": [
+        {
+          "wall_seconds": 11.072114199996577,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 512,
+            "total_tokens": 3227
+          },
+          "ttft_seconds": 1.0254491000087,
+          "wall_tps": 46.24229760926403,
+          "decode_tps_client_observed": 50.86489938318832,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "long",
+      "max_tokens": 512,
+      "concurrency": 1,
+      "repetition": 2,
+      "batch_wall_seconds": 11.078703600011067,
+      "free_mib": 9222,
+      "process_memory": {
+        "PrivateMemorySize64": 5904412672,
+        "WorkingSet64": 5903286272,
+        "PeakWorkingSet64": 5945753600
+      },
+      "requests": [
+        {
+          "wall_seconds": 11.076331600008416,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 512,
+            "total_tokens": 3227
+          },
+          "ttft_seconds": 0.9963513000111561,
+          "wall_tps": 46.22469049225747,
+          "decode_tps_client_observed": 50.6967564781018,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "long",
+      "max_tokens": 512,
+      "concurrency": 2,
+      "repetition": 0,
+      "batch_wall_seconds": 22.06057069999224,
+      "free_mib": 9224,
+      "process_memory": {
+        "PrivateMemorySize64": 5898260480,
+        "WorkingSet64": 5897125888,
+        "PeakWorkingSet64": 5945753600
+      },
+      "requests": [
+        {
+          "wall_seconds": 22.055733200002578,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 512,
+            "total_tokens": 3227
+          },
+          "ttft_seconds": 12.00246970000444,
+          "wall_tps": 23.213918819073317,
+          "decode_tps_client_observed": 50.831117620485735,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 11.032897099998081,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 512,
+            "total_tokens": 3227
+          },
+          "ttft_seconds": 0.9807868999923812,
+          "wall_tps": 46.40666865279556,
+          "decode_tps_client_observed": 50.83713136116251,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "long",
+      "max_tokens": 512,
+      "concurrency": 2,
+      "repetition": 1,
+      "batch_wall_seconds": 22.113618999996106,
+      "free_mib": 9197,
+      "process_memory": {
+        "PrivateMemorySize64": 5888413696,
+        "WorkingSet64": 5887324160,
+        "PeakWorkingSet64": 5945753600
+      },
+      "requests": [
+        {
+          "wall_seconds": 22.106162700001732,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 512,
+            "total_tokens": 3227
+          },
+          "ttft_seconds": 12.0358344999986,
+          "wall_tps": 23.16096225963088,
+          "decode_tps_client_observed": 50.744498757582555,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 11.063702400002512,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 512,
+            "total_tokens": 3227
+          },
+          "ttft_seconds": 0.9819832000066526,
+          "wall_tps": 46.27745590842029,
+          "decode_tps_client_observed": 50.68815468813466,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "long",
+      "max_tokens": 512,
+      "concurrency": 2,
+      "repetition": 2,
+      "batch_wall_seconds": 22.171332399986568,
+      "free_mib": 9219,
+      "process_memory": {
+        "PrivateMemorySize64": 5875163136,
+        "WorkingSet64": 5874085888,
+        "PeakWorkingSet64": 5945753600
+      },
+      "requests": [
+        {
+          "wall_seconds": 11.116556099994341,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 512,
+            "total_tokens": 3227
+          },
+          "ttft_seconds": 0.9898719999910099,
+          "wall_tps": 46.05742960270408,
+          "decode_tps_client_observed": 50.46251113380911,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 22.168226400011918,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 512,
+            "total_tokens": 3227
+          },
+          "ttft_seconds": 12.088008999999147,
+          "wall_tps": 23.096119227640365,
+          "decode_tps_client_observed": 50.69546941828514,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "long",
+      "max_tokens": 512,
+      "concurrency": 4,
+      "repetition": 0,
+      "batch_wall_seconds": 44.18266869999934,
+      "free_mib": 9218,
+      "process_memory": {
+        "PrivateMemorySize64": 5862096896,
+        "WorkingSet64": 5861056512,
+        "PeakWorkingSet64": 5945753600
+      },
+      "requests": [
+        {
+          "wall_seconds": 11.068602699990151,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 512,
+            "total_tokens": 3227
+          },
+          "ttft_seconds": 0.9908763999992516,
+          "wall_tps": 46.25696791885534,
+          "decode_tps_client_observed": 50.708564364968815,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 22.147170200012624,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 512,
+            "total_tokens": 3227
+          },
+          "ttft_seconds": 12.059983200000715,
+          "wall_tps": 23.11807763141262,
+          "decode_tps_client_observed": 50.660363288106986,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 44.17697850000695,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 512,
+            "total_tokens": 3227
+          },
+          "ttft_seconds": 34.16906780000136,
+          "wall_tps": 11.589746908560517,
+          "decode_tps_client_observed": 51.06116645103592,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 33.19656009999744,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 512,
+            "total_tokens": 3227
+          },
+          "ttft_seconds": 23.13722739998775,
+          "wall_tps": 15.423284775823488,
+          "decode_tps_client_observed": 50.80028694303413,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "long",
+      "max_tokens": 512,
+      "concurrency": 4,
+      "repetition": 1,
+      "batch_wall_seconds": 44.33318960000179,
+      "free_mib": 9180,
+      "process_memory": {
+        "PrivateMemorySize64": 5856653312,
+        "WorkingSet64": 5855617024,
+        "PeakWorkingSet64": 5945753600
+      },
+      "requests": [
+        {
+          "wall_seconds": 10.974754399998346,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 512,
+            "total_tokens": 3227
+          },
+          "ttft_seconds": 0.9722342000022763,
+          "wall_tps": 46.65252463418017,
+          "decode_tps_client_observed": 51.0890495731469,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 22.215847299987217,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 512,
+            "total_tokens": 3227
+          },
+          "ttft_seconds": 11.935577899988857,
+          "wall_tps": 23.046611416000083,
+          "decode_tps_client_observed": 49.70866152311825,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 33.292337699997006,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 512,
+            "total_tokens": 3227
+          },
+          "ttft_seconds": 23.18180229999416,
+          "wall_tps": 15.378914049644704,
+          "decode_tps_client_observed": 50.54416580857791,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 44.32642709999345,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 512,
+            "total_tokens": 3227
+          },
+          "ttft_seconds": 34.25782210000034,
+          "wall_tps": 11.55067154059154,
+          "decode_tps_client_observed": 50.754050746864216,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    },
+    {
+      "input": "long",
+      "max_tokens": 512,
+      "concurrency": 4,
+      "repetition": 2,
+      "batch_wall_seconds": 44.28060659999028,
+      "free_mib": 9222,
+      "process_memory": {
+        "PrivateMemorySize64": 5832499200,
+        "WorkingSet64": 5831499776,
+        "PeakWorkingSet64": 5945753600
+      },
+      "requests": [
+        {
+          "wall_seconds": 44.275240500006475,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 512,
+            "total_tokens": 3227
+          },
+          "ttft_seconds": 34.240716500004055,
+          "wall_tps": 11.56402527051039,
+          "decode_tps_client_observed": 50.9265436829191,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 22.145682099988335,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 512,
+            "total_tokens": 3227
+          },
+          "ttft_seconds": 12.077449899996282,
+          "wall_tps": 23.119631072473027,
+          "decode_tps_client_observed": 50.75698934175264,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 11.095424700004514,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 512,
+            "total_tokens": 3227
+          },
+          "ttft_seconds": 1.0015006000030553,
+          "wall_tps": 46.145146656692795,
+          "decode_tps_client_observed": 50.626470873601264,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        },
+        {
+          "wall_seconds": 33.2695715999871,
+          "completion_tokens": 512,
+          "usage": {
+            "prompt_tokens": 2715,
+            "completion_tokens": 512,
+            "total_tokens": 3227
+          },
+          "ttft_seconds": 23.14877709999564,
+          "wall_tps": 15.389437716721261,
+          "decode_tps_client_observed": 50.491729168192485,
+          "method": "client SSE first/last nonempty delta; completion_tokens from server usage; not internal token timestamps"
+        }
+      ]
+    }
+  ],
+  "source_head": "000d989fc045cc03e73aa0d55187a1bbd841d46b",
+  "runtime": [
+    {
+      "path": "C:\\gm\\qwenmonster\\releases\\gemmamonster-2026.4-rc4\\extracted-py_off\\ovms\\openvino.dll",
+      "sha256": "829c4642e287522f8a8e748a726d4ad3117a701e22ab46adc82771f98e5d2f7e"
+    },
+    {
+      "path": "C:\\gm\\qwenmonster\\releases\\gemmamonster-2026.4-rc4\\extracted-py_off\\ovms\\openvino_genai.dll",
+      "sha256": "5a2904f2564e4ce002db5ef5fe003a782e6f296f6377cd66df1b2db41d4c5e8d"
+    },
+    {
+      "path": "C:\\gm\\qwenmonster\\releases\\gemmamonster-2026.4-rc4\\extracted-py_off\\ovms\\openvino_intel_gpu_plugin.dll",
+      "sha256": "21a2fd9f5d856c297416059325832f0f902c84a4e78b840f859ca508f5aea66d"
+    },
+    {
+      "path": "C:\\gm\\qwenmonster\\releases\\gemmamonster-2026.4-rc4\\extracted-py_off\\ovms\\openvino_tokenizers.dll",
+      "sha256": "e96e02744f4cd9567e54065430aa609e97c48951299a21f30abc00fba6078d3c"
+    }
+  ],
+  "binary": {
+    "path": "C:\\git\\gemmamonster-lfm-2026.4\\bazel-bin\\src\\ovms.exe",
+    "sha256": "f484927cc5bacbb979f9edb11df85c494b6cdf369d7c179b29c48d6807dfc877"
+  },
+  "model_weight_sha256": "4f882fe35deb890d0489e661990f880298af08694f32ad953b4fd9269cdfcfe8",
+  "initial_free_mib": 13946,
+  "admission_floor_mib": 6876,
+  "template_override": {
+    "path": "C:\\git\\gemmamonster-lfm-2026.4\\docs\\lfm\\templates\\LFM2.5-8B-A1B-int4-ov.jinja",
+    "sha256": "d8d4c0fdd46298e8c44bc6b7308f6663137cdfd22d34e6b38c93db2cec85bc8e"
+  },
+  "command": [
+    "C:\\git\\gemmamonster-lfm-2026.4\\bazel-bin\\src\\ovms.exe",
+    "--rest_port",
+    "18147",
+    "--rest_bind_address",
+    "127.0.0.1",
+    "--model_path",
+    "C:\\gm\\lfm-2026.4\\task5-gpu\\gpu-LFM2.5-8B-A1B-int4-ov-bench\\serving-model",
+    "--model_name",
+    "lfm",
+    "--task",
+    "text_generation",
+    "--pipeline_type",
+    "LM",
+    "--target_device",
+    "GPU",
+    "--tool_parser",
+    "lfm2",
+    "--enable_tool_guided_generation",
+    "true",
+    "--max_num_seqs",
+    "4",
+    "--max_num_batched_tokens",
+    "1024",
+    "--cache_size",
+    "1",
+    "--enable_prefix_caching",
+    "false",
+    "--log_level",
+    "INFO",
+    "--plugin_config",
+    "{\"OFFLOAD_RATIO\":0}",
+    "--reasoning_parser",
+    "lfm2"
+  ],
+  "hardware": [
+    {
+      "Name": "Intel(R) Arc(TM) 140V GPU (16GB)",
+      "DriverVersion": "32.0.101.9150",
+      "PNPDeviceID": "PCI\\VEN_8086&DEV_64A0&SUBSYS_146C1462&REV_04\\3&11583659&0&10"
+    },
+    {
+      "Name": "DisplayLink USB Device",
+      "DriverVersion": "11.2.3146.0",
+      "PNPDeviceID": "USB\\VID_17E9&PID_6006&MI_01\\7&43B2873&0&0001"
+    },
+    {
+      "Name": "DisplayLink USB Device",
+      "DriverVersion": "11.2.3146.0",
+      "PNPDeviceID": "USB\\VID_17E9&PID_6006&MI_00\\7&43B2873&0&0000"
+    }
+  ],
+  "owned_pid": 19616,
+  "observed_unary_reasoning": true,
+  "process_memory": {
+    "PrivateMemorySize64": 5832499200,
+    "WorkingSet64": 5831499776,
+    "PeakWorkingSet64": 5945753600
+  },
+  "gpu_memory": "NOT_MEASURED; no unverified DXGI/COM probe used",
+  "free_mib_samples": [
+    {
+      "monotonic_seconds": 127002.8142537,
+      "free_mib": 13778,
+      "PrivateMemorySize64": 220352512,
+      "WorkingSet64": 198799360,
+      "PeakWorkingSet64": 198799360
+    },
+    {
+      "monotonic_seconds": 127003.8159443,
+      "free_mib": 13708,
+      "PrivateMemorySize64": 249577472,
+      "WorkingSet64": 256757760,
+      "PeakWorkingSet64": 276406272
+    },
+    {
+      "monotonic_seconds": 127004.8161442,
+      "free_mib": 13124,
+      "PrivateMemorySize64": 1492996096,
+      "WorkingSet64": 1514549248,
+      "PeakWorkingSet64": 1557417984
+    },
+    {
+      "monotonic_seconds": 127005.8163897,
+      "free_mib": 11832,
+      "PrivateMemorySize64": 2776641536,
+      "WorkingSet64": 2809286656,
+      "PeakWorkingSet64": 2839838720
+    },
+    {
+      "monotonic_seconds": 127006.8165598,
+      "free_mib": 10415,
+      "PrivateMemorySize64": 4258111488,
+      "WorkingSet64": 4257026048,
+      "PeakWorkingSet64": 4297924608
+    },
+    {
+      "monotonic_seconds": 127007.8171568,
+      "free_mib": 9659,
+      "PrivateMemorySize64": 5017632768,
+      "WorkingSet64": 5017706496,
+      "PeakWorkingSet64": 5017706496
+    },
+    {
+      "monotonic_seconds": 127008.8177609,
+      "free_mib": 9716,
+      "PrivateMemorySize64": 5027844096,
+      "WorkingSet64": 5029216256,
+      "PeakWorkingSet64": 5128548352
+    },
+    {
+      "monotonic_seconds": 127009.8184957,
+      "free_mib": 9606,
+      "PrivateMemorySize64": 5075726336,
+      "WorkingSet64": 5078204416,
+      "PeakWorkingSet64": 5128548352
+    },
+    {
+      "monotonic_seconds": 127010.8187012,
+      "free_mib": 9595,
+      "PrivateMemorySize64": 5075984384,
+      "WorkingSet64": 5078564864,
+      "PeakWorkingSet64": 5128548352
+    },
+    {
+      "monotonic_seconds": 127011.8190169,
+      "free_mib": 9597,
+      "PrivateMemorySize64": 5076156416,
+      "WorkingSet64": 5078814720,
+      "PeakWorkingSet64": 5128548352
+    },
+    {
+      "monotonic_seconds": 127012.8192351,
+      "free_mib": 9566,
+      "PrivateMemorySize64": 5112119296,
+      "WorkingSet64": 5114060800,
+      "PeakWorkingSet64": 5135425536
+    },
+    {
+      "monotonic_seconds": 127013.8194932,
+      "free_mib": 9558,
+      "PrivateMemorySize64": 5112127488,
+      "WorkingSet64": 5114068992,
+      "PeakWorkingSet64": 5135425536
+    },
+    {
+      "monotonic_seconds": 127014.8198583,
+      "free_mib": 9575,
+      "PrivateMemorySize64": 5112127488,
+      "WorkingSet64": 5114068992,
+      "PeakWorkingSet64": 5135425536
+    },
+    {
+      "monotonic_seconds": 127015.820077,
+      "free_mib": 9576,
+      "PrivateMemorySize64": 5112127488,
+      "WorkingSet64": 5114068992,
+      "PeakWorkingSet64": 5135425536
+    },
+    {
+      "monotonic_seconds": 127016.8202857,
+      "free_mib": 9577,
+      "PrivateMemorySize64": 5112127488,
+      "WorkingSet64": 5114068992,
+      "PeakWorkingSet64": 5135425536
+    },
+    {
+      "monotonic_seconds": 127017.8208189,
+      "free_mib": 9586,
+      "PrivateMemorySize64": 5112127488,
+      "WorkingSet64": 5114068992,
+      "PeakWorkingSet64": 5135425536
+    },
+    {
+      "monotonic_seconds": 127018.8222535,
+      "free_mib": 9578,
+      "PrivateMemorySize64": 5112184832,
+      "WorkingSet64": 5114109952,
+      "PeakWorkingSet64": 5135425536
+    },
+    {
+      "monotonic_seconds": 127019.8224776,
+      "free_mib": 9576,
+      "PrivateMemorySize64": 5112184832,
+      "WorkingSet64": 5114118144,
+      "PeakWorkingSet64": 5135425536
+    },
+    {
+      "monotonic_seconds": 127020.8228519,
+      "free_mib": 9573,
+      "PrivateMemorySize64": 5120028672,
+      "WorkingSet64": 5121503232,
+      "PeakWorkingSet64": 5140574208
+    },
+    {
+      "monotonic_seconds": 127021.8243164,
+      "free_mib": 9576,
+      "PrivateMemorySize64": 5120028672,
+      "WorkingSet64": 5121503232,
+      "PeakWorkingSet64": 5140574208
+    },
+    {
+      "monotonic_seconds": 127022.827357,
+      "free_mib": 9596,
+      "PrivateMemorySize64": 5120028672,
+      "WorkingSet64": 5121503232,
+      "PeakWorkingSet64": 5140574208
+    },
+    {
+      "monotonic_seconds": 127023.8277417,
+      "free_mib": 9601,
+      "PrivateMemorySize64": 5120032768,
+      "WorkingSet64": 5121507328,
+      "PeakWorkingSet64": 5140574208
+    },
+    {
+      "monotonic_seconds": 127024.8284962,
+      "free_mib": 9608,
+      "PrivateMemorySize64": 5120212992,
+      "WorkingSet64": 5121757184,
+      "PeakWorkingSet64": 5140574208
+    },
+    {
+      "monotonic_seconds": 127025.829249,
+      "free_mib": 9601,
+      "PrivateMemorySize64": 5120212992,
+      "WorkingSet64": 5121757184,
+      "PeakWorkingSet64": 5140574208
+    },
+    {
+      "monotonic_seconds": 127026.829806,
+      "free_mib": 9605,
+      "PrivateMemorySize64": 5120176128,
+      "WorkingSet64": 5121720320,
+      "PeakWorkingSet64": 5140574208
+    },
+    {
+      "monotonic_seconds": 127027.8299958,
+      "free_mib": 9598,
+      "PrivateMemorySize64": 5120176128,
+      "WorkingSet64": 5121720320,
+      "PeakWorkingSet64": 5140574208
+    },
+    {
+      "monotonic_seconds": 127028.8304377,
+      "free_mib": 9600,
+      "PrivateMemorySize64": 5120176128,
+      "WorkingSet64": 5121720320,
+      "PeakWorkingSet64": 5140574208
+    },
+    {
+      "monotonic_seconds": 127029.8308907,
+      "free_mib": 9598,
+      "PrivateMemorySize64": 5120176128,
+      "WorkingSet64": 5121720320,
+      "PeakWorkingSet64": 5140574208
+    },
+    {
+      "monotonic_seconds": 127030.8318035,
+      "free_mib": 9597,
+      "PrivateMemorySize64": 5120180224,
+      "WorkingSet64": 5121724416,
+      "PeakWorkingSet64": 5140574208
+    },
+    {
+      "monotonic_seconds": 127031.8321378,
+      "free_mib": 9612,
+      "PrivateMemorySize64": 5120180224,
+      "WorkingSet64": 5121724416,
+      "PeakWorkingSet64": 5140574208
+    },
+    {
+      "monotonic_seconds": 127032.8327195,
+      "free_mib": 9624,
+      "PrivateMemorySize64": 5120409600,
+      "WorkingSet64": 5122002944,
+      "PeakWorkingSet64": 5140574208
+    },
+    {
+      "monotonic_seconds": 127033.8328754,
+      "free_mib": 9621,
+      "PrivateMemorySize64": 5120409600,
+      "WorkingSet64": 5122002944,
+      "PeakWorkingSet64": 5140574208
+    },
+    {
+      "monotonic_seconds": 127034.8330805,
+      "free_mib": 9624,
+      "PrivateMemorySize64": 5120409600,
+      "WorkingSet64": 5122002944,
+      "PeakWorkingSet64": 5140574208
+    },
+    {
+      "monotonic_seconds": 127035.8332728,
+      "free_mib": 9614,
+      "PrivateMemorySize64": 5122072576,
+      "WorkingSet64": 5123436544,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127036.8336881,
+      "free_mib": 9629,
+      "PrivateMemorySize64": 5122072576,
+      "WorkingSet64": 5123436544,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127037.8343134,
+      "free_mib": 9627,
+      "PrivateMemorySize64": 5122072576,
+      "WorkingSet64": 5123436544,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127038.8350981,
+      "free_mib": 9624,
+      "PrivateMemorySize64": 5122314240,
+      "WorkingSet64": 5123706880,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127039.8353741,
+      "free_mib": 9619,
+      "PrivateMemorySize64": 5122314240,
+      "WorkingSet64": 5123706880,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127040.835546,
+      "free_mib": 9628,
+      "PrivateMemorySize64": 5122322432,
+      "WorkingSet64": 5123727360,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127041.835837,
+      "free_mib": 9619,
+      "PrivateMemorySize64": 5122322432,
+      "WorkingSet64": 5123727360,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127042.8361128,
+      "free_mib": 9612,
+      "PrivateMemorySize64": 5122347008,
+      "WorkingSet64": 5123751936,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127043.8364136,
+      "free_mib": 9627,
+      "PrivateMemorySize64": 5122469888,
+      "WorkingSet64": 5123817472,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127044.8366041,
+      "free_mib": 9631,
+      "PrivateMemorySize64": 5122469888,
+      "WorkingSet64": 5123817472,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127045.8370477,
+      "free_mib": 9622,
+      "PrivateMemorySize64": 5122469888,
+      "WorkingSet64": 5123817472,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127046.8376499,
+      "free_mib": 9616,
+      "PrivateMemorySize64": 5122469888,
+      "WorkingSet64": 5123817472,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127047.8383391,
+      "free_mib": 9625,
+      "PrivateMemorySize64": 5122469888,
+      "WorkingSet64": 5123821568,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127048.8390313,
+      "free_mib": 9617,
+      "PrivateMemorySize64": 5122469888,
+      "WorkingSet64": 5123821568,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127049.8392287,
+      "free_mib": 9623,
+      "PrivateMemorySize64": 5122469888,
+      "WorkingSet64": 5123821568,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127050.839868,
+      "free_mib": 9657,
+      "PrivateMemorySize64": 5122469888,
+      "WorkingSet64": 5123821568,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127051.8400555,
+      "free_mib": 9630,
+      "PrivateMemorySize64": 5122801664,
+      "WorkingSet64": 5124153344,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127052.8402497,
+      "free_mib": 9638,
+      "PrivateMemorySize64": 5122871296,
+      "WorkingSet64": 5124161536,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127053.8404249,
+      "free_mib": 9618,
+      "PrivateMemorySize64": 5122871296,
+      "WorkingSet64": 5124161536,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127054.8405905,
+      "free_mib": 9620,
+      "PrivateMemorySize64": 5122871296,
+      "WorkingSet64": 5124161536,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127055.8409633,
+      "free_mib": 9632,
+      "PrivateMemorySize64": 5122871296,
+      "WorkingSet64": 5124161536,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127056.8419842,
+      "free_mib": 9621,
+      "PrivateMemorySize64": 5122871296,
+      "WorkingSet64": 5124161536,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127057.8428141,
+      "free_mib": 9606,
+      "PrivateMemorySize64": 5122940928,
+      "WorkingSet64": 5124169728,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127058.8430125,
+      "free_mib": 9609,
+      "PrivateMemorySize64": 5122940928,
+      "WorkingSet64": 5124169728,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127059.8434708,
+      "free_mib": 9603,
+      "PrivateMemorySize64": 5122940928,
+      "WorkingSet64": 5124169728,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127060.8438791,
+      "free_mib": 9609,
+      "PrivateMemorySize64": 5122940928,
+      "WorkingSet64": 5124169728,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127061.8441565,
+      "free_mib": 9609,
+      "PrivateMemorySize64": 5122940928,
+      "WorkingSet64": 5124169728,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127062.8443591,
+      "free_mib": 9610,
+      "PrivateMemorySize64": 5122830336,
+      "WorkingSet64": 5124104192,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127063.8449925,
+      "free_mib": 9600,
+      "PrivateMemorySize64": 5122830336,
+      "WorkingSet64": 5124104192,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127064.8456847,
+      "free_mib": 9602,
+      "PrivateMemorySize64": 5122830336,
+      "WorkingSet64": 5124104192,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127065.8460046,
+      "free_mib": 9615,
+      "PrivateMemorySize64": 5122830336,
+      "WorkingSet64": 5124104192,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127066.8471595,
+      "free_mib": 9604,
+      "PrivateMemorySize64": 5122830336,
+      "WorkingSet64": 5124104192,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127067.8476094,
+      "free_mib": 9614,
+      "PrivateMemorySize64": 5122834432,
+      "WorkingSet64": 5124108288,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127068.8478316,
+      "free_mib": 9636,
+      "PrivateMemorySize64": 5122834432,
+      "WorkingSet64": 5124108288,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127069.8483346,
+      "free_mib": 9623,
+      "PrivateMemorySize64": 5122834432,
+      "WorkingSet64": 5124108288,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127070.8485425,
+      "free_mib": 9631,
+      "PrivateMemorySize64": 5122834432,
+      "WorkingSet64": 5124108288,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127071.8487811,
+      "free_mib": 9633,
+      "PrivateMemorySize64": 5122834432,
+      "WorkingSet64": 5124108288,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127072.8490134,
+      "free_mib": 9622,
+      "PrivateMemorySize64": 5122834432,
+      "WorkingSet64": 5124108288,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127073.8496832,
+      "free_mib": 9619,
+      "PrivateMemorySize64": 5122834432,
+      "WorkingSet64": 5124108288,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127074.8502868,
+      "free_mib": 9615,
+      "PrivateMemorySize64": 5122834432,
+      "WorkingSet64": 5124108288,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127075.8505164,
+      "free_mib": 9566,
+      "PrivateMemorySize64": 5122834432,
+      "WorkingSet64": 5124108288,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127076.8519874,
+      "free_mib": 9574,
+      "PrivateMemorySize64": 5122834432,
+      "WorkingSet64": 5124108288,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127077.8521954,
+      "free_mib": 9576,
+      "PrivateMemorySize64": 5122834432,
+      "WorkingSet64": 5124112384,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127078.8525559,
+      "free_mib": 9576,
+      "PrivateMemorySize64": 5122834432,
+      "WorkingSet64": 5124112384,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127079.8527781,
+      "free_mib": 9572,
+      "PrivateMemorySize64": 5122834432,
+      "WorkingSet64": 5124112384,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127080.8531625,
+      "free_mib": 9592,
+      "PrivateMemorySize64": 5122834432,
+      "WorkingSet64": 5124112384,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127081.8539205,
+      "free_mib": 9608,
+      "PrivateMemorySize64": 5122834432,
+      "WorkingSet64": 5124112384,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127082.854152,
+      "free_mib": 9609,
+      "PrivateMemorySize64": 5122834432,
+      "WorkingSet64": 5124112384,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127083.8543532,
+      "free_mib": 9615,
+      "PrivateMemorySize64": 5122834432,
+      "WorkingSet64": 5124112384,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127084.8545709,
+      "free_mib": 9614,
+      "PrivateMemorySize64": 5122834432,
+      "WorkingSet64": 5124112384,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127085.8552153,
+      "free_mib": 9613,
+      "PrivateMemorySize64": 5122834432,
+      "WorkingSet64": 5124112384,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127086.8554903,
+      "free_mib": 9612,
+      "PrivateMemorySize64": 5122834432,
+      "WorkingSet64": 5124112384,
+      "PeakWorkingSet64": 5149392896
+    },
+    {
+      "monotonic_seconds": 127087.8559903,
+      "free_mib": 9236,
+      "PrivateMemorySize64": 5558972416,
+      "WorkingSet64": 5512474624,
+      "PeakWorkingSet64": 5514162176
+    },
+    {
+      "monotonic_seconds": 127088.8566448,
+      "free_mib": 8972,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783150592
+    },
+    {
+      "monotonic_seconds": 127089.8568353,
+      "free_mib": 8978,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783150592
+    },
+    {
+      "monotonic_seconds": 127090.8570448,
+      "free_mib": 8982,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783150592
+    },
+    {
+      "monotonic_seconds": 127091.8575138,
+      "free_mib": 8984,
+      "PrivateMemorySize64": 5784297472,
+      "WorkingSet64": 5783191552,
+      "PeakWorkingSet64": 5783191552
+    },
+    {
+      "monotonic_seconds": 127092.8584473,
+      "free_mib": 8982,
+      "PrivateMemorySize64": 5784297472,
+      "WorkingSet64": 5783191552,
+      "PeakWorkingSet64": 5783191552
+    },
+    {
+      "monotonic_seconds": 127093.8589438,
+      "free_mib": 8978,
+      "PrivateMemorySize64": 5784297472,
+      "WorkingSet64": 5783191552,
+      "PeakWorkingSet64": 5783191552
+    },
+    {
+      "monotonic_seconds": 127094.8592129,
+      "free_mib": 8979,
+      "PrivateMemorySize64": 5784260608,
+      "WorkingSet64": 5783166976,
+      "PeakWorkingSet64": 5783191552
+    },
+    {
+      "monotonic_seconds": 127095.8594249,
+      "free_mib": 8985,
+      "PrivateMemorySize64": 5784260608,
+      "WorkingSet64": 5783166976,
+      "PeakWorkingSet64": 5783191552
+    },
+    {
+      "monotonic_seconds": 127096.8596962,
+      "free_mib": 8986,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783171072,
+      "PeakWorkingSet64": 5783191552
+    },
+    {
+      "monotonic_seconds": 127097.8599466,
+      "free_mib": 8980,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783171072,
+      "PeakWorkingSet64": 5783191552
+    },
+    {
+      "monotonic_seconds": 127098.8603708,
+      "free_mib": 8982,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783171072,
+      "PeakWorkingSet64": 5783191552
+    },
+    {
+      "monotonic_seconds": 127099.8605691,
+      "free_mib": 8977,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783171072,
+      "PeakWorkingSet64": 5783191552
+    },
+    {
+      "monotonic_seconds": 127100.8618801,
+      "free_mib": 8976,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783171072,
+      "PeakWorkingSet64": 5783191552
+    },
+    {
+      "monotonic_seconds": 127101.8620585,
+      "free_mib": 8978,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783171072,
+      "PeakWorkingSet64": 5783191552
+    },
+    {
+      "monotonic_seconds": 127102.8625812,
+      "free_mib": 9023,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783171072,
+      "PeakWorkingSet64": 5783191552
+    },
+    {
+      "monotonic_seconds": 127103.8628261,
+      "free_mib": 9051,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783171072,
+      "PeakWorkingSet64": 5783191552
+    },
+    {
+      "monotonic_seconds": 127104.8632216,
+      "free_mib": 8998,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783171072,
+      "PeakWorkingSet64": 5783191552
+    },
+    {
+      "monotonic_seconds": 127105.8642071,
+      "free_mib": 8982,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783183360,
+      "PeakWorkingSet64": 5783191552
+    },
+    {
+      "monotonic_seconds": 127106.8657088,
+      "free_mib": 8976,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783183360,
+      "PeakWorkingSet64": 5783191552
+    },
+    {
+      "monotonic_seconds": 127107.8660343,
+      "free_mib": 8977,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783183360,
+      "PeakWorkingSet64": 5783191552
+    },
+    {
+      "monotonic_seconds": 127108.8668517,
+      "free_mib": 8986,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783183360,
+      "PeakWorkingSet64": 5783191552
+    },
+    {
+      "monotonic_seconds": 127109.8672923,
+      "free_mib": 8992,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783183360,
+      "PeakWorkingSet64": 5783191552
+    },
+    {
+      "monotonic_seconds": 127110.8679857,
+      "free_mib": 9055,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783183360,
+      "PeakWorkingSet64": 5783191552
+    },
+    {
+      "monotonic_seconds": 127111.8685926,
+      "free_mib": 9034,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783183360,
+      "PeakWorkingSet64": 5783191552
+    },
+    {
+      "monotonic_seconds": 127112.8689049,
+      "free_mib": 8999,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783195648,
+      "PeakWorkingSet64": 5783195648
+    },
+    {
+      "monotonic_seconds": 127113.8695851,
+      "free_mib": 8989,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783195648,
+      "PeakWorkingSet64": 5783195648
+    },
+    {
+      "monotonic_seconds": 127114.870246,
+      "free_mib": 8981,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783195648,
+      "PeakWorkingSet64": 5783195648
+    },
+    {
+      "monotonic_seconds": 127115.8706601,
+      "free_mib": 8988,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783195648,
+      "PeakWorkingSet64": 5783195648
+    },
+    {
+      "monotonic_seconds": 127116.8709683,
+      "free_mib": 8980,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783195648,
+      "PeakWorkingSet64": 5783195648
+    },
+    {
+      "monotonic_seconds": 127117.8715122,
+      "free_mib": 8987,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783195648,
+      "PeakWorkingSet64": 5783195648
+    },
+    {
+      "monotonic_seconds": 127118.8717591,
+      "free_mib": 8981,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783199744,
+      "PeakWorkingSet64": 5783199744
+    },
+    {
+      "monotonic_seconds": 127119.8719728,
+      "free_mib": 8988,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783199744,
+      "PeakWorkingSet64": 5783199744
+    },
+    {
+      "monotonic_seconds": 127120.8722272,
+      "free_mib": 8980,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783199744,
+      "PeakWorkingSet64": 5783199744
+    },
+    {
+      "monotonic_seconds": 127121.8724969,
+      "free_mib": 8982,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783199744,
+      "PeakWorkingSet64": 5783199744
+    },
+    {
+      "monotonic_seconds": 127122.8726796,
+      "free_mib": 8978,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783199744,
+      "PeakWorkingSet64": 5783199744
+    },
+    {
+      "monotonic_seconds": 127123.8729388,
+      "free_mib": 8977,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783199744,
+      "PeakWorkingSet64": 5783199744
+    },
+    {
+      "monotonic_seconds": 127124.8739685,
+      "free_mib": 8989,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783199744,
+      "PeakWorkingSet64": 5783199744
+    },
+    {
+      "monotonic_seconds": 127125.8755652,
+      "free_mib": 8983,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783199744,
+      "PeakWorkingSet64": 5783199744
+    },
+    {
+      "monotonic_seconds": 127126.8758068,
+      "free_mib": 9058,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783199744,
+      "PeakWorkingSet64": 5783199744
+    },
+    {
+      "monotonic_seconds": 127127.8760334,
+      "free_mib": 9024,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783199744,
+      "PeakWorkingSet64": 5783199744
+    },
+    {
+      "monotonic_seconds": 127128.8770283,
+      "free_mib": 8986,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783199744,
+      "PeakWorkingSet64": 5783199744
+    },
+    {
+      "monotonic_seconds": 127129.8772722,
+      "free_mib": 8978,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783199744,
+      "PeakWorkingSet64": 5783199744
+    },
+    {
+      "monotonic_seconds": 127130.8774565,
+      "free_mib": 8977,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783199744,
+      "PeakWorkingSet64": 5783199744
+    },
+    {
+      "monotonic_seconds": 127131.8780384,
+      "free_mib": 8978,
+      "PrivateMemorySize64": 5784264704,
+      "WorkingSet64": 5783199744,
+      "PeakWorkingSet64": 5783199744
+    },
+    {
+      "monotonic_seconds": 127132.8782692,
+      "free_mib": 8976,
+      "PrivateMemorySize64": 5784268800,
+      "WorkingSet64": 5783207936,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127133.878806,
+      "free_mib": 8984,
+      "PrivateMemorySize64": 5784268800,
+      "WorkingSet64": 5783207936,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127134.8794878,
+      "free_mib": 8969,
+      "PrivateMemorySize64": 5784268800,
+      "WorkingSet64": 5783207936,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127135.8798731,
+      "free_mib": 8969,
+      "PrivateMemorySize64": 5784268800,
+      "WorkingSet64": 5783207936,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127136.8803885,
+      "free_mib": 9047,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783142400,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127137.8813987,
+      "free_mib": 9008,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783142400,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127138.881772,
+      "free_mib": 8978,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783142400,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127139.8826378,
+      "free_mib": 8973,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783142400,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127140.8830942,
+      "free_mib": 8974,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783142400,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127141.8836598,
+      "free_mib": 8972,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783142400,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127142.8839123,
+      "free_mib": 8971,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783142400,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127143.8846336,
+      "free_mib": 8978,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783142400,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127144.8854954,
+      "free_mib": 8983,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783142400,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127145.8868505,
+      "free_mib": 8991,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783142400,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127146.8874957,
+      "free_mib": 9001,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127147.8877141,
+      "free_mib": 8988,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127148.8883137,
+      "free_mib": 8987,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127149.8890261,
+      "free_mib": 8975,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127150.8892218,
+      "free_mib": 8987,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127151.8897159,
+      "free_mib": 8978,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127152.8899595,
+      "free_mib": 8990,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127153.8901561,
+      "free_mib": 8976,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127154.8904674,
+      "free_mib": 8983,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127155.8906469,
+      "free_mib": 8979,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127156.8915532,
+      "free_mib": 8978,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127157.8921741,
+      "free_mib": 8977,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127158.8924768,
+      "free_mib": 8975,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127159.8930403,
+      "free_mib": 8995,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127160.8939163,
+      "free_mib": 8991,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127161.8954518,
+      "free_mib": 8992,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127162.8958727,
+      "free_mib": 8992,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127163.8967849,
+      "free_mib": 8989,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127164.8969992,
+      "free_mib": 8989,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127165.8977813,
+      "free_mib": 8988,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127166.8982543,
+      "free_mib": 8999,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127167.8984701,
+      "free_mib": 8986,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783150592,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127168.8986467,
+      "free_mib": 8991,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783154688,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127169.898883,
+      "free_mib": 8989,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783154688,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127170.8990633,
+      "free_mib": 9057,
+      "PrivateMemorySize64": 5784158208,
+      "WorkingSet64": 5783154688,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127171.8995742,
+      "free_mib": 9145,
+      "PrivateMemorySize64": 5643911168,
+      "WorkingSet64": 5643169792,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127172.9001934,
+      "free_mib": 9142,
+      "PrivateMemorySize64": 5643911168,
+      "WorkingSet64": 5643169792,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127173.9004655,
+      "free_mib": 9184,
+      "PrivateMemorySize64": 5584097280,
+      "WorkingSet64": 5583466496,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127174.901736,
+      "free_mib": 9288,
+      "PrivateMemorySize64": 5477924864,
+      "WorkingSet64": 5477560320,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127175.902417,
+      "free_mib": 9281,
+      "PrivateMemorySize64": 5477924864,
+      "WorkingSet64": 5477560320,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127176.9030328,
+      "free_mib": 9399,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127177.9032196,
+      "free_mib": 9399,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127178.9035665,
+      "free_mib": 9407,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127179.9037741,
+      "free_mib": 9412,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127180.9040578,
+      "free_mib": 9417,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127181.9044865,
+      "free_mib": 9415,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127182.9050033,
+      "free_mib": 9419,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127183.9053859,
+      "free_mib": 9427,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127184.9055893,
+      "free_mib": 9427,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127185.9058231,
+      "free_mib": 9427,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127186.9065865,
+      "free_mib": 9437,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127187.9071611,
+      "free_mib": 9436,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127188.9074808,
+      "free_mib": 9433,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127189.9078627,
+      "free_mib": 9431,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127190.9085461,
+      "free_mib": 9433,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127191.908924,
+      "free_mib": 9433,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127192.9091666,
+      "free_mib": 9392,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127193.9095946,
+      "free_mib": 9403,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127194.9103069,
+      "free_mib": 9346,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127195.9116221,
+      "free_mib": 9345,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127196.9118449,
+      "free_mib": 9300,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127197.912108,
+      "free_mib": 9305,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127198.9123615,
+      "free_mib": 9409,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127199.9128887,
+      "free_mib": 9357,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127200.913061,
+      "free_mib": 9398,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127201.9136672,
+      "free_mib": 9354,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127202.9142729,
+      "free_mib": 9333,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127203.9146088,
+      "free_mib": 9301,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127204.9151659,
+      "free_mib": 9302,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127205.9155359,
+      "free_mib": 9372,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127206.9163907,
+      "free_mib": 9588,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127207.9171279,
+      "free_mib": 9700,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127208.9173357,
+      "free_mib": 9746,
+      "PrivateMemorySize64": 5346361344,
+      "WorkingSet64": 5346291712,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127209.9175702,
+      "free_mib": 9738,
+      "PrivateMemorySize64": 5346492416,
+      "WorkingSet64": 5346439168,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127210.9177843,
+      "free_mib": 9741,
+      "PrivateMemorySize64": 5346492416,
+      "WorkingSet64": 5346439168,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127211.9184631,
+      "free_mib": 9736,
+      "PrivateMemorySize64": 5346492416,
+      "WorkingSet64": 5346439168,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127212.9187694,
+      "free_mib": 9717,
+      "PrivateMemorySize64": 5346492416,
+      "WorkingSet64": 5346439168,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127213.9194912,
+      "free_mib": 9720,
+      "PrivateMemorySize64": 5346492416,
+      "WorkingSet64": 5346439168,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127214.9203127,
+      "free_mib": 9718,
+      "PrivateMemorySize64": 5346492416,
+      "WorkingSet64": 5346439168,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127215.9214407,
+      "free_mib": 9713,
+      "PrivateMemorySize64": 5346492416,
+      "WorkingSet64": 5346439168,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127216.9222106,
+      "free_mib": 9671,
+      "PrivateMemorySize64": 5346492416,
+      "WorkingSet64": 5346439168,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127217.9225097,
+      "free_mib": 9668,
+      "PrivateMemorySize64": 5346492416,
+      "WorkingSet64": 5346439168,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127218.9227944,
+      "free_mib": 9672,
+      "PrivateMemorySize64": 5346492416,
+      "WorkingSet64": 5346439168,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127219.9230387,
+      "free_mib": 9672,
+      "PrivateMemorySize64": 5346492416,
+      "WorkingSet64": 5346439168,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127220.9232903,
+      "free_mib": 9675,
+      "PrivateMemorySize64": 5346492416,
+      "WorkingSet64": 5346439168,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127221.923479,
+      "free_mib": 9673,
+      "PrivateMemorySize64": 5346492416,
+      "WorkingSet64": 5346439168,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127222.9237007,
+      "free_mib": 9675,
+      "PrivateMemorySize64": 5346492416,
+      "WorkingSet64": 5346439168,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127223.9238946,
+      "free_mib": 9682,
+      "PrivateMemorySize64": 5346492416,
+      "WorkingSet64": 5346439168,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127224.9254032,
+      "free_mib": 9678,
+      "PrivateMemorySize64": 5346492416,
+      "WorkingSet64": 5346439168,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127225.9255823,
+      "free_mib": 9684,
+      "PrivateMemorySize64": 5346492416,
+      "WorkingSet64": 5346439168,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127226.9263777,
+      "free_mib": 9683,
+      "PrivateMemorySize64": 5346492416,
+      "WorkingSet64": 5346439168,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127227.9266877,
+      "free_mib": 9703,
+      "PrivateMemorySize64": 5346492416,
+      "WorkingSet64": 5346439168,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127228.9270956,
+      "free_mib": 9705,
+      "PrivateMemorySize64": 5346492416,
+      "WorkingSet64": 5346439168,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127229.9273025,
+      "free_mib": 9701,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127230.9278039,
+      "free_mib": 9702,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127231.9283599,
+      "free_mib": 9701,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127232.9288189,
+      "free_mib": 9701,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127233.9292483,
+      "free_mib": 9700,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127234.929913,
+      "free_mib": 9702,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127235.9301279,
+      "free_mib": 9705,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127236.931061,
+      "free_mib": 9704,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127237.931301,
+      "free_mib": 9694,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127238.931515,
+      "free_mib": 9692,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127239.9318398,
+      "free_mib": 9690,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127240.9320151,
+      "free_mib": 9692,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127241.932289,
+      "free_mib": 9695,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127242.9326415,
+      "free_mib": 9700,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127243.9334829,
+      "free_mib": 9702,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127244.9337232,
+      "free_mib": 9703,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127245.933969,
+      "free_mib": 9705,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127246.9343717,
+      "free_mib": 9708,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127247.9350308,
+      "free_mib": 9709,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127248.9363394,
+      "free_mib": 9711,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127249.9366596,
+      "free_mib": 9710,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127250.9371961,
+      "free_mib": 9709,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127251.9378219,
+      "free_mib": 9706,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127252.9383889,
+      "free_mib": 9726,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127253.9386472,
+      "free_mib": 9721,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127254.9388757,
+      "free_mib": 9717,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127255.9395412,
+      "free_mib": 9707,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127256.9400221,
+      "free_mib": 9707,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127257.9402698,
+      "free_mib": 9718,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127258.9413476,
+      "free_mib": 9719,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127259.9418007,
+      "free_mib": 9721,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127260.9422616,
+      "free_mib": 9724,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127261.9428702,
+      "free_mib": 9731,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127262.9435329,
+      "free_mib": 9734,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127263.9439953,
+      "free_mib": 9732,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127264.9442288,
+      "free_mib": 9732,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127265.944771,
+      "free_mib": 9729,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127266.9462443,
+      "free_mib": 9725,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127267.9464689,
+      "free_mib": 9730,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127268.9470063,
+      "free_mib": 9729,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127269.9477373,
+      "free_mib": 9734,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127270.9482291,
+      "free_mib": 9735,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127271.9484228,
+      "free_mib": 9734,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127272.9486213,
+      "free_mib": 9722,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127273.9489716,
+      "free_mib": 9724,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127274.9491735,
+      "free_mib": 9730,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127275.9494154,
+      "free_mib": 9732,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127276.9499956,
+      "free_mib": 9729,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127277.9502148,
+      "free_mib": 9730,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127278.9511379,
+      "free_mib": 9724,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127279.9519323,
+      "free_mib": 9725,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127280.9521507,
+      "free_mib": 9720,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127281.9524373,
+      "free_mib": 9725,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127282.9528998,
+      "free_mib": 9724,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127283.9531138,
+      "free_mib": 9688,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127284.9533229,
+      "free_mib": 9715,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127285.9535619,
+      "free_mib": 9715,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127286.9540158,
+      "free_mib": 9715,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127287.9546553,
+      "free_mib": 9721,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127288.9553824,
+      "free_mib": 9716,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127289.9559703,
+      "free_mib": 9721,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127290.9562238,
+      "free_mib": 9722,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127291.9564349,
+      "free_mib": 9745,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127292.9566816,
+      "free_mib": 9721,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127293.9570908,
+      "free_mib": 9721,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127294.9572821,
+      "free_mib": 9724,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127295.9575492,
+      "free_mib": 9715,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127296.9581734,
+      "free_mib": 9717,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127297.9589277,
+      "free_mib": 9708,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127298.959302,
+      "free_mib": 9712,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127299.9600849,
+      "free_mib": 9716,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127300.9609374,
+      "free_mib": 9717,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127301.9615002,
+      "free_mib": 9718,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346484224,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127302.9617864,
+      "free_mib": 9715,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127303.9623079,
+      "free_mib": 9716,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127304.9627421,
+      "free_mib": 9716,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127305.9633394,
+      "free_mib": 9723,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127306.9635255,
+      "free_mib": 9721,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127307.964219,
+      "free_mib": 9718,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127308.9648237,
+      "free_mib": 9724,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127309.9650212,
+      "free_mib": 9718,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127310.96621,
+      "free_mib": 9717,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127311.9664324,
+      "free_mib": 9718,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127312.9669523,
+      "free_mib": 9722,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127313.9672502,
+      "free_mib": 9703,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127314.9674254,
+      "free_mib": 9709,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127315.9678297,
+      "free_mib": 9708,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127316.9682299,
+      "free_mib": 9712,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127317.9684819,
+      "free_mib": 9707,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127318.9687595,
+      "free_mib": 9710,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127319.969464,
+      "free_mib": 9711,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127320.9696986,
+      "free_mib": 9711,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127321.9699626,
+      "free_mib": 9714,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127322.9711573,
+      "free_mib": 9715,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127323.9714587,
+      "free_mib": 9714,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127324.971847,
+      "free_mib": 9716,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127325.9724856,
+      "free_mib": 9715,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127326.9726621,
+      "free_mib": 9712,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127327.9728628,
+      "free_mib": 9708,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127328.9732211,
+      "free_mib": 9707,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127329.9735151,
+      "free_mib": 9707,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127330.9806082,
+      "free_mib": 9697,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127331.9807965,
+      "free_mib": 9663,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127332.981,
+      "free_mib": 9664,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127333.9813976,
+      "free_mib": 9667,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127334.9818429,
+      "free_mib": 9673,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127335.98254,
+      "free_mib": 9667,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127336.9833273,
+      "free_mib": 9682,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127337.9838322,
+      "free_mib": 9679,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127338.9840535,
+      "free_mib": 9684,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127339.9843748,
+      "free_mib": 9680,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127340.9845762,
+      "free_mib": 9679,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127341.9849463,
+      "free_mib": 9683,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127342.9851642,
+      "free_mib": 9678,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127343.985782,
+      "free_mib": 9682,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127344.9871675,
+      "free_mib": 9690,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127345.9874233,
+      "free_mib": 9689,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127346.9880902,
+      "free_mib": 9689,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127347.9884015,
+      "free_mib": 9694,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127348.9887094,
+      "free_mib": 9691,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127349.9889663,
+      "free_mib": 9685,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127350.9896746,
+      "free_mib": 9696,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127351.9899397,
+      "free_mib": 9689,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127352.9907758,
+      "free_mib": 9690,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127353.9910225,
+      "free_mib": 9691,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127354.9912652,
+      "free_mib": 9693,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127355.9914761,
+      "free_mib": 9693,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127356.9917224,
+      "free_mib": 9692,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127357.9920412,
+      "free_mib": 9681,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127358.9926012,
+      "free_mib": 9683,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127359.9928028,
+      "free_mib": 9686,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127360.9930101,
+      "free_mib": 9699,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127361.9931901,
+      "free_mib": 9697,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127362.9937803,
+      "free_mib": 9711,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127363.9940414,
+      "free_mib": 9703,
+      "PrivateMemorySize64": 5346525184,
+      "WorkingSet64": 5346623488,
+      "PeakWorkingSet64": 5783207936
+    },
+    {
+      "monotonic_seconds": 127364.9944555,
+      "free_mib": 9285,
+      "PrivateMemorySize64": 5784330240,
+      "WorkingSet64": 5783486464,
+      "PeakWorkingSet64": 5783486464
+    },
+    {
+      "monotonic_seconds": 127365.9947294,
+      "free_mib": 9288,
+      "PrivateMemorySize64": 5784330240,
+      "WorkingSet64": 5783486464,
+      "PeakWorkingSet64": 5783486464
+    },
+    {
+      "monotonic_seconds": 127366.9960926,
+      "free_mib": 9288,
+      "PrivateMemorySize64": 5784330240,
+      "WorkingSet64": 5783486464,
+      "PeakWorkingSet64": 5783486464
+    },
+    {
+      "monotonic_seconds": 127367.9963165,
+      "free_mib": 9256,
+      "PrivateMemorySize64": 5818286080,
+      "WorkingSet64": 5817368576,
+      "PeakWorkingSet64": 5817368576
+    },
+    {
+      "monotonic_seconds": 127368.9965546,
+      "free_mib": 9257,
+      "PrivateMemorySize64": 5818286080,
+      "WorkingSet64": 5817368576,
+      "PeakWorkingSet64": 5817368576
+    },
+    {
+      "monotonic_seconds": 127369.9969766,
+      "free_mib": 9256,
+      "PrivateMemorySize64": 5818286080,
+      "WorkingSet64": 5817368576,
+      "PeakWorkingSet64": 5817368576
+    },
+    {
+      "monotonic_seconds": 127370.9975469,
+      "free_mib": 9223,
+      "PrivateMemorySize64": 5853679616,
+      "WorkingSet64": 5852692480,
+      "PeakWorkingSet64": 5852692480
+    },
+    {
+      "monotonic_seconds": 127371.9979379,
+      "free_mib": 9217,
+      "PrivateMemorySize64": 5853679616,
+      "WorkingSet64": 5852692480,
+      "PeakWorkingSet64": 5852692480
+    },
+    {
+      "monotonic_seconds": 127372.9986488,
+      "free_mib": 9210,
+      "PrivateMemorySize64": 5867077632,
+      "WorkingSet64": 5866061824,
+      "PeakWorkingSet64": 5866061824
+    },
+    {
+      "monotonic_seconds": 127373.9993634,
+      "free_mib": 9182,
+      "PrivateMemorySize64": 5890715648,
+      "WorkingSet64": 5889654784,
+      "PeakWorkingSet64": 5889654784
+    },
+    {
+      "monotonic_seconds": 127374.9995811,
+      "free_mib": 9182,
+      "PrivateMemorySize64": 5890715648,
+      "WorkingSet64": 5889654784,
+      "PeakWorkingSet64": 5889654784
+    },
+    {
+      "monotonic_seconds": 127376.0009037,
+      "free_mib": 9157,
+      "PrivateMemorySize64": 5918826496,
+      "WorkingSet64": 5917704192,
+      "PeakWorkingSet64": 5917704192
+    },
+    {
+      "monotonic_seconds": 127377.0015274,
+      "free_mib": 9130,
+      "PrivateMemorySize64": 5946933248,
+      "WorkingSet64": 5945753600,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127378.0020583,
+      "free_mib": 9132,
+      "PrivateMemorySize64": 5946933248,
+      "WorkingSet64": 5945753600,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127379.0025943,
+      "free_mib": 9132,
+      "PrivateMemorySize64": 5946933248,
+      "WorkingSet64": 5945753600,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127380.0031874,
+      "free_mib": 9132,
+      "PrivateMemorySize64": 5946933248,
+      "WorkingSet64": 5945753600,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127381.003857,
+      "free_mib": 9131,
+      "PrivateMemorySize64": 5946933248,
+      "WorkingSet64": 5945753600,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127382.0046403,
+      "free_mib": 9185,
+      "PrivateMemorySize64": 5890752512,
+      "WorkingSet64": 5889654784,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127383.0049039,
+      "free_mib": 9187,
+      "PrivateMemorySize64": 5890752512,
+      "WorkingSet64": 5889654784,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127384.0060702,
+      "free_mib": 9188,
+      "PrivateMemorySize64": 5890752512,
+      "WorkingSet64": 5889654784,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127385.0063687,
+      "free_mib": 9179,
+      "PrivateMemorySize64": 5897580544,
+      "WorkingSet64": 5896470528,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127386.0065991,
+      "free_mib": 9180,
+      "PrivateMemorySize64": 5897580544,
+      "WorkingSet64": 5896470528,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127387.0068563,
+      "free_mib": 9246,
+      "PrivateMemorySize64": 5897580544,
+      "WorkingSet64": 5896470528,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127388.0073767,
+      "free_mib": 9192,
+      "PrivateMemorySize64": 5914521600,
+      "WorkingSet64": 5913378816,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127389.007561,
+      "free_mib": 9165,
+      "PrivateMemorySize64": 5914521600,
+      "WorkingSet64": 5913378816,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127390.007755,
+      "free_mib": 9163,
+      "PrivateMemorySize64": 5914521600,
+      "WorkingSet64": 5913378816,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127391.00795,
+      "free_mib": 9163,
+      "PrivateMemorySize64": 5914521600,
+      "WorkingSet64": 5913378816,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127392.0081213,
+      "free_mib": 9161,
+      "PrivateMemorySize64": 5914521600,
+      "WorkingSet64": 5913378816,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127393.008469,
+      "free_mib": 9175,
+      "PrivateMemorySize64": 5901201408,
+      "WorkingSet64": 5900075008,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127394.0087176,
+      "free_mib": 9178,
+      "PrivateMemorySize64": 5897592832,
+      "WorkingSet64": 5896470528,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127395.0090143,
+      "free_mib": 9180,
+      "PrivateMemorySize64": 5897592832,
+      "WorkingSet64": 5896470528,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127396.0095489,
+      "free_mib": 9176,
+      "PrivateMemorySize64": 5904412672,
+      "WorkingSet64": 5903286272,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127397.0098123,
+      "free_mib": 9170,
+      "PrivateMemorySize64": 5904412672,
+      "WorkingSet64": 5903286272,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127398.0104563,
+      "free_mib": 9174,
+      "PrivateMemorySize64": 5901201408,
+      "WorkingSet64": 5900075008,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127399.0108927,
+      "free_mib": 9165,
+      "PrivateMemorySize64": 5906980864,
+      "WorkingSet64": 5905842176,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127400.0110869,
+      "free_mib": 9168,
+      "PrivateMemorySize64": 5906980864,
+      "WorkingSet64": 5905842176,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127401.0115864,
+      "free_mib": 9166,
+      "PrivateMemorySize64": 5906980864,
+      "WorkingSet64": 5905842176,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127402.0123982,
+      "free_mib": 9169,
+      "PrivateMemorySize64": 5903699968,
+      "WorkingSet64": 5902565376,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127403.0128078,
+      "free_mib": 9169,
+      "PrivateMemorySize64": 5903699968,
+      "WorkingSet64": 5902565376,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127404.013262,
+      "free_mib": 9179,
+      "PrivateMemorySize64": 5897924608,
+      "WorkingSet64": 5896798208,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127405.0136905,
+      "free_mib": 9179,
+      "PrivateMemorySize64": 5897924608,
+      "WorkingSet64": 5896798208,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127406.0145503,
+      "free_mib": 9177,
+      "PrivateMemorySize64": 5897924608,
+      "WorkingSet64": 5896798208,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127407.0158869,
+      "free_mib": 9167,
+      "PrivateMemorySize64": 5908164608,
+      "WorkingSet64": 5907021824,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127408.0163427,
+      "free_mib": 9167,
+      "PrivateMemorySize64": 5908164608,
+      "WorkingSet64": 5907021824,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127409.0165914,
+      "free_mib": 9172,
+      "PrivateMemorySize64": 5904953344,
+      "WorkingSet64": 5903810560,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127410.0171906,
+      "free_mib": 9168,
+      "PrivateMemorySize64": 5907116032,
+      "WorkingSet64": 5905973248,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127411.0173997,
+      "free_mib": 9171,
+      "PrivateMemorySize64": 5907116032,
+      "WorkingSet64": 5905973248,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127412.0180014,
+      "free_mib": 9177,
+      "PrivateMemorySize64": 5900423168,
+      "WorkingSet64": 5899288576,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127413.0186619,
+      "free_mib": 9175,
+      "PrivateMemorySize64": 5900423168,
+      "WorkingSet64": 5899288576,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127414.0191972,
+      "free_mib": 9177,
+      "PrivateMemorySize64": 5900423168,
+      "WorkingSet64": 5899288576,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127415.0194095,
+      "free_mib": 9177,
+      "PrivateMemorySize64": 5898260480,
+      "WorkingSet64": 5897125888,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127416.0197686,
+      "free_mib": 9178,
+      "PrivateMemorySize64": 5898260480,
+      "WorkingSet64": 5897125888,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127417.0207033,
+      "free_mib": 9178,
+      "PrivateMemorySize64": 5898260480,
+      "WorkingSet64": 5897125888,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127418.0209882,
+      "free_mib": 9170,
+      "PrivateMemorySize64": 5898260480,
+      "WorkingSet64": 5897125888,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127419.021675,
+      "free_mib": 9174,
+      "PrivateMemorySize64": 5898260480,
+      "WorkingSet64": 5897125888,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127420.0223191,
+      "free_mib": 9176,
+      "PrivateMemorySize64": 5895041024,
+      "WorkingSet64": 5893914624,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127421.0225342,
+      "free_mib": 9172,
+      "PrivateMemorySize64": 5897203712,
+      "WorkingSet64": 5896097792,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127422.0229167,
+      "free_mib": 9172,
+      "PrivateMemorySize64": 5897203712,
+      "WorkingSet64": 5896097792,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127423.023566,
+      "free_mib": 9174,
+      "PrivateMemorySize64": 5897203712,
+      "WorkingSet64": 5896097792,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127424.0238753,
+      "free_mib": 9173,
+      "PrivateMemorySize64": 5897203712,
+      "WorkingSet64": 5896101888,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127425.0241092,
+      "free_mib": 9175,
+      "PrivateMemorySize64": 5897203712,
+      "WorkingSet64": 5896101888,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127426.024603,
+      "free_mib": 9180,
+      "PrivateMemorySize64": 5895041024,
+      "WorkingSet64": 5893939200,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127427.0248412,
+      "free_mib": 9180,
+      "PrivateMemorySize64": 5895041024,
+      "WorkingSet64": 5893939200,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127428.0253126,
+      "free_mib": 9180,
+      "PrivateMemorySize64": 5895041024,
+      "WorkingSet64": 5893939200,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127429.0255674,
+      "free_mib": 9181,
+      "PrivateMemorySize64": 5895041024,
+      "WorkingSet64": 5893939200,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127430.026187,
+      "free_mib": 9180,
+      "PrivateMemorySize64": 5895041024,
+      "WorkingSet64": 5893939200,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127431.0265492,
+      "free_mib": 9183,
+      "PrivateMemorySize64": 5891821568,
+      "WorkingSet64": 5890732032,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127432.0272477,
+      "free_mib": 9177,
+      "PrivateMemorySize64": 5897601024,
+      "WorkingSet64": 5896499200,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127433.0286809,
+      "free_mib": 9178,
+      "PrivateMemorySize64": 5897601024,
+      "WorkingSet64": 5896499200,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127434.0293267,
+      "free_mib": 9174,
+      "PrivateMemorySize64": 5894184960,
+      "WorkingSet64": 5893091328,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127435.0296366,
+      "free_mib": 9174,
+      "PrivateMemorySize64": 5894184960,
+      "WorkingSet64": 5893091328,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127436.0304771,
+      "free_mib": 9172,
+      "PrivateMemorySize64": 5894184960,
+      "WorkingSet64": 5893091328,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127437.0308272,
+      "free_mib": 9178,
+      "PrivateMemorySize64": 5888413696,
+      "WorkingSet64": 5887324160,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127438.031476,
+      "free_mib": 9180,
+      "PrivateMemorySize64": 5888413696,
+      "WorkingSet64": 5887324160,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127439.0316852,
+      "free_mib": 9182,
+      "PrivateMemorySize64": 5888413696,
+      "WorkingSet64": 5887324160,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127440.032254,
+      "free_mib": 9180,
+      "PrivateMemorySize64": 5888413696,
+      "WorkingSet64": 5887324160,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127441.0327215,
+      "free_mib": 9180,
+      "PrivateMemorySize64": 5888413696,
+      "WorkingSet64": 5887324160,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127442.0337974,
+      "free_mib": 9183,
+      "PrivateMemorySize64": 5885198336,
+      "WorkingSet64": 5884112896,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127443.0344509,
+      "free_mib": 9181,
+      "PrivateMemorySize64": 5887361024,
+      "WorkingSet64": 5886275584,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127444.0346578,
+      "free_mib": 9182,
+      "PrivateMemorySize64": 5887361024,
+      "WorkingSet64": 5886275584,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127445.0354111,
+      "free_mib": 9187,
+      "PrivateMemorySize64": 5883949056,
+      "WorkingSet64": 5882867712,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127446.0359088,
+      "free_mib": 9186,
+      "PrivateMemorySize64": 5883949056,
+      "WorkingSet64": 5882867712,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127447.0361124,
+      "free_mib": 9189,
+      "PrivateMemorySize64": 5883949056,
+      "WorkingSet64": 5882867712,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127448.0366425,
+      "free_mib": 9186,
+      "PrivateMemorySize64": 5881786368,
+      "WorkingSet64": 5880705024,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127449.0369687,
+      "free_mib": 9190,
+      "PrivateMemorySize64": 5881786368,
+      "WorkingSet64": 5880705024,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127450.037144,
+      "free_mib": 9177,
+      "PrivateMemorySize64": 5881786368,
+      "WorkingSet64": 5880705024,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127451.0377717,
+      "free_mib": 9198,
+      "PrivateMemorySize64": 5881786368,
+      "WorkingSet64": 5880705024,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127452.0379615,
+      "free_mib": 9199,
+      "PrivateMemorySize64": 5881786368,
+      "WorkingSet64": 5880705024,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127453.038362,
+      "free_mib": 9205,
+      "PrivateMemorySize64": 5878571008,
+      "WorkingSet64": 5877493760,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127454.0386908,
+      "free_mib": 9200,
+      "PrivateMemorySize64": 5880733696,
+      "WorkingSet64": 5879656448,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127455.0393473,
+      "free_mib": 9208,
+      "PrivateMemorySize64": 5880733696,
+      "WorkingSet64": 5879656448,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127456.0407817,
+      "free_mib": 9212,
+      "PrivateMemorySize64": 5877325824,
+      "WorkingSet64": 5876248576,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127457.0410705,
+      "free_mib": 9211,
+      "PrivateMemorySize64": 5877325824,
+      "WorkingSet64": 5876248576,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127458.0413361,
+      "free_mib": 9210,
+      "PrivateMemorySize64": 5877325824,
+      "WorkingSet64": 5876248576,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127459.0415101,
+      "free_mib": 9215,
+      "PrivateMemorySize64": 5875163136,
+      "WorkingSet64": 5874085888,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127460.0417102,
+      "free_mib": 9214,
+      "PrivateMemorySize64": 5875163136,
+      "WorkingSet64": 5874085888,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127461.0422209,
+      "free_mib": 9218,
+      "PrivateMemorySize64": 5875163136,
+      "WorkingSet64": 5874085888,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127462.0426126,
+      "free_mib": 9212,
+      "PrivateMemorySize64": 5875163136,
+      "WorkingSet64": 5874085888,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127463.0429061,
+      "free_mib": 9213,
+      "PrivateMemorySize64": 5875163136,
+      "WorkingSet64": 5874085888,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127464.0433016,
+      "free_mib": 9222,
+      "PrivateMemorySize64": 5871939584,
+      "WorkingSet64": 5870882816,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127465.0435135,
+      "free_mib": 9219,
+      "PrivateMemorySize64": 5874102272,
+      "WorkingSet64": 5873049600,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127466.0437587,
+      "free_mib": 9218,
+      "PrivateMemorySize64": 5874102272,
+      "WorkingSet64": 5873049600,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127467.0439836,
+      "free_mib": 9218,
+      "PrivateMemorySize64": 5874102272,
+      "WorkingSet64": 5873049600,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127468.0444486,
+      "free_mib": 9219,
+      "PrivateMemorySize64": 5874036736,
+      "WorkingSet64": 5872984064,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127469.0453716,
+      "free_mib": 9220,
+      "PrivateMemorySize64": 5874036736,
+      "WorkingSet64": 5872984064,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127470.0457019,
+      "free_mib": 9216,
+      "PrivateMemorySize64": 5871874048,
+      "WorkingSet64": 5870821376,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127471.0463083,
+      "free_mib": 9219,
+      "PrivateMemorySize64": 5871874048,
+      "WorkingSet64": 5870821376,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127472.0468801,
+      "free_mib": 9219,
+      "PrivateMemorySize64": 5871874048,
+      "WorkingSet64": 5870821376,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127473.0470775,
+      "free_mib": 9217,
+      "PrivateMemorySize64": 5871874048,
+      "WorkingSet64": 5870821376,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127474.0474866,
+      "free_mib": 9221,
+      "PrivateMemorySize64": 5871874048,
+      "WorkingSet64": 5870821376,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127475.0476822,
+      "free_mib": 9220,
+      "PrivateMemorySize64": 5871874048,
+      "WorkingSet64": 5870821376,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127476.048281,
+      "free_mib": 9216,
+      "PrivateMemorySize64": 5870817280,
+      "WorkingSet64": 5869772800,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127477.0485662,
+      "free_mib": 9222,
+      "PrivateMemorySize64": 5870817280,
+      "WorkingSet64": 5869772800,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127478.0488743,
+      "free_mib": 9214,
+      "PrivateMemorySize64": 5870817280,
+      "WorkingSet64": 5869772800,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127479.0492909,
+      "free_mib": 9210,
+      "PrivateMemorySize64": 5870751744,
+      "WorkingSet64": 5869707264,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127480.0495377,
+      "free_mib": 9215,
+      "PrivateMemorySize64": 5870751744,
+      "WorkingSet64": 5869707264,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127481.0507945,
+      "free_mib": 9214,
+      "PrivateMemorySize64": 5868589056,
+      "WorkingSet64": 5867544576,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127482.0511394,
+      "free_mib": 9220,
+      "PrivateMemorySize64": 5868589056,
+      "WorkingSet64": 5867544576,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127483.0513747,
+      "free_mib": 9218,
+      "PrivateMemorySize64": 5868589056,
+      "WorkingSet64": 5867544576,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127484.0515546,
+      "free_mib": 9219,
+      "PrivateMemorySize64": 5868589056,
+      "WorkingSet64": 5867544576,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127485.0518286,
+      "free_mib": 9221,
+      "PrivateMemorySize64": 5868589056,
+      "WorkingSet64": 5867544576,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127486.0523869,
+      "free_mib": 9219,
+      "PrivateMemorySize64": 5868589056,
+      "WorkingSet64": 5867544576,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127487.0526008,
+      "free_mib": 9295,
+      "PrivateMemorySize64": 5867536384,
+      "WorkingSet64": 5866496000,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127488.0528289,
+      "free_mib": 9244,
+      "PrivateMemorySize64": 5867536384,
+      "WorkingSet64": 5866496000,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127489.0530182,
+      "free_mib": 9224,
+      "PrivateMemorySize64": 5867536384,
+      "WorkingSet64": 5866496000,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127490.0532366,
+      "free_mib": 9224,
+      "PrivateMemorySize64": 5867470848,
+      "WorkingSet64": 5866430464,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127491.0534995,
+      "free_mib": 9223,
+      "PrivateMemorySize64": 5867470848,
+      "WorkingSet64": 5866430464,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127492.0536798,
+      "free_mib": 9225,
+      "PrivateMemorySize64": 5865304064,
+      "WorkingSet64": 5864267776,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127493.0539151,
+      "free_mib": 9222,
+      "PrivateMemorySize64": 5865304064,
+      "WorkingSet64": 5864267776,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127494.0541545,
+      "free_mib": 9213,
+      "PrivateMemorySize64": 5865304064,
+      "WorkingSet64": 5864267776,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127495.0545613,
+      "free_mib": 9211,
+      "PrivateMemorySize64": 5865304064,
+      "WorkingSet64": 5864267776,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127496.0557537,
+      "free_mib": 9208,
+      "PrivateMemorySize64": 5865304064,
+      "WorkingSet64": 5864267776,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127497.0563823,
+      "free_mib": 9214,
+      "PrivateMemorySize64": 5865304064,
+      "WorkingSet64": 5864267776,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127498.0566748,
+      "free_mib": 9204,
+      "PrivateMemorySize64": 5879033856,
+      "WorkingSet64": 5877964800,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127499.0571336,
+      "free_mib": 9207,
+      "PrivateMemorySize64": 5879033856,
+      "WorkingSet64": 5877964800,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127500.0573511,
+      "free_mib": 9210,
+      "PrivateMemorySize64": 5879033856,
+      "WorkingSet64": 5877964800,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127501.0576671,
+      "free_mib": 9209,
+      "PrivateMemorySize64": 5879033856,
+      "WorkingSet64": 5877964800,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127502.0580565,
+      "free_mib": 9208,
+      "PrivateMemorySize64": 5879033856,
+      "WorkingSet64": 5877964800,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127503.0589523,
+      "free_mib": 9206,
+      "PrivateMemorySize64": 5873258496,
+      "WorkingSet64": 5872197632,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127504.0592484,
+      "free_mib": 9216,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127505.0602171,
+      "free_mib": 9217,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127506.0604124,
+      "free_mib": 9217,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127507.0605973,
+      "free_mib": 9216,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127508.0610171,
+      "free_mib": 9218,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127509.0612477,
+      "free_mib": 9217,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127510.061985,
+      "free_mib": 9216,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127511.0621818,
+      "free_mib": 9218,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127512.0627442,
+      "free_mib": 9217,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127513.0629243,
+      "free_mib": 9217,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127514.0634436,
+      "free_mib": 9217,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127515.0641334,
+      "free_mib": 9220,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127516.0656446,
+      "free_mib": 9216,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127517.0663029,
+      "free_mib": 9203,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127518.0665784,
+      "free_mib": 9203,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127519.0669937,
+      "free_mib": 9204,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127520.0675793,
+      "free_mib": 9204,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127521.067923,
+      "free_mib": 9203,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127522.068346,
+      "free_mib": 9203,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127523.0687287,
+      "free_mib": 9208,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127524.0693136,
+      "free_mib": 9193,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127525.0705158,
+      "free_mib": 9197,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127526.0707127,
+      "free_mib": 9199,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127527.0709803,
+      "free_mib": 9201,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127528.0712129,
+      "free_mib": 9210,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127529.0764373,
+      "free_mib": 9175,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127530.0768835,
+      "free_mib": 9180,
+      "PrivateMemorySize64": 5862096896,
+      "WorkingSet64": 5861056512,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127531.0775534,
+      "free_mib": 9152,
+      "PrivateMemorySize64": 5890199552,
+      "WorkingSet64": 5889105920,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127532.0778173,
+      "free_mib": 9154,
+      "PrivateMemorySize64": 5890199552,
+      "WorkingSet64": 5889105920,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127533.0781778,
+      "free_mib": 9175,
+      "PrivateMemorySize64": 5890199552,
+      "WorkingSet64": 5889105920,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127534.0786755,
+      "free_mib": 9165,
+      "PrivateMemorySize64": 5890199552,
+      "WorkingSet64": 5889105920,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127535.0790872,
+      "free_mib": 9166,
+      "PrivateMemorySize64": 5890199552,
+      "WorkingSet64": 5889105920,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127536.0795154,
+      "free_mib": 9199,
+      "PrivateMemorySize64": 5862895616,
+      "WorkingSet64": 5861842944,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127537.0797915,
+      "free_mib": 9198,
+      "PrivateMemorySize64": 5859282944,
+      "WorkingSet64": 5858238464,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127538.0799874,
+      "free_mib": 9197,
+      "PrivateMemorySize64": 5859282944,
+      "WorkingSet64": 5858238464,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127539.0802091,
+      "free_mib": 9193,
+      "PrivateMemorySize64": 5859282944,
+      "WorkingSet64": 5858238464,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127540.0803959,
+      "free_mib": 9177,
+      "PrivateMemorySize64": 5859282944,
+      "WorkingSet64": 5858238464,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127541.0809781,
+      "free_mib": 9177,
+      "PrivateMemorySize64": 5859282944,
+      "WorkingSet64": 5858238464,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127542.0815606,
+      "free_mib": 9176,
+      "PrivateMemorySize64": 5861445632,
+      "WorkingSet64": 5860401152,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127543.0818835,
+      "free_mib": 9174,
+      "PrivateMemorySize64": 5861445632,
+      "WorkingSet64": 5860401152,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127544.0821007,
+      "free_mib": 9175,
+      "PrivateMemorySize64": 5861445632,
+      "WorkingSet64": 5860401152,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127545.0825109,
+      "free_mib": 9172,
+      "PrivateMemorySize64": 5861445632,
+      "WorkingSet64": 5860401152,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127546.0826921,
+      "free_mib": 9180,
+      "PrivateMemorySize64": 5861445632,
+      "WorkingSet64": 5860401152,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127547.0830181,
+      "free_mib": 9183,
+      "PrivateMemorySize64": 5861445632,
+      "WorkingSet64": 5860401152,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127548.0836491,
+      "free_mib": 9188,
+      "PrivateMemorySize64": 5856325632,
+      "WorkingSet64": 5855289344,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127549.084312,
+      "free_mib": 9187,
+      "PrivateMemorySize64": 5856325632,
+      "WorkingSet64": 5855289344,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127550.084501,
+      "free_mib": 9191,
+      "PrivateMemorySize64": 5853241344,
+      "WorkingSet64": 5852209152,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127551.085141,
+      "free_mib": 9186,
+      "PrivateMemorySize64": 5856653312,
+      "WorkingSet64": 5855617024,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127552.0856287,
+      "free_mib": 9188,
+      "PrivateMemorySize64": 5856653312,
+      "WorkingSet64": 5855617024,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127553.0863552,
+      "free_mib": 9244,
+      "PrivateMemorySize64": 5873594368,
+      "WorkingSet64": 5872525312,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127554.087178,
+      "free_mib": 9190,
+      "PrivateMemorySize64": 5873594368,
+      "WorkingSet64": 5872525312,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127555.0876877,
+      "free_mib": 9165,
+      "PrivateMemorySize64": 5873594368,
+      "WorkingSet64": 5872525312,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127556.0881781,
+      "free_mib": 9165,
+      "PrivateMemorySize64": 5873594368,
+      "WorkingSet64": 5872525312,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127557.0888373,
+      "free_mib": 9165,
+      "PrivateMemorySize64": 5873594368,
+      "WorkingSet64": 5872525312,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127558.0902966,
+      "free_mib": 9165,
+      "PrivateMemorySize64": 5873594368,
+      "WorkingSet64": 5872525312,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127559.0910984,
+      "free_mib": 9186,
+      "PrivateMemorySize64": 5853708288,
+      "WorkingSet64": 5852667904,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127560.0917597,
+      "free_mib": 9183,
+      "PrivateMemorySize64": 5853708288,
+      "WorkingSet64": 5852667904,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127561.0922866,
+      "free_mib": 9187,
+      "PrivateMemorySize64": 5850624000,
+      "WorkingSet64": 5849587712,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127562.092694,
+      "free_mib": 9180,
+      "PrivateMemorySize64": 5857447936,
+      "WorkingSet64": 5856403456,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127563.0931041,
+      "free_mib": 9180,
+      "PrivateMemorySize64": 5857447936,
+      "WorkingSet64": 5856403456,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127564.0936648,
+      "free_mib": 9180,
+      "PrivateMemorySize64": 5857447936,
+      "WorkingSet64": 5856403456,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127565.0951293,
+      "free_mib": 9178,
+      "PrivateMemorySize64": 5859610624,
+      "WorkingSet64": 5858566144,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127566.0954345,
+      "free_mib": 9172,
+      "PrivateMemorySize64": 5859610624,
+      "WorkingSet64": 5858566144,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127567.0956736,
+      "free_mib": 9172,
+      "PrivateMemorySize64": 5859610624,
+      "WorkingSet64": 5858566144,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127568.0963695,
+      "free_mib": 9172,
+      "PrivateMemorySize64": 5859610624,
+      "WorkingSet64": 5858566144,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127569.0967463,
+      "free_mib": 9172,
+      "PrivateMemorySize64": 5859610624,
+      "WorkingSet64": 5858566144,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127570.0970103,
+      "free_mib": 9177,
+      "PrivateMemorySize64": 5854486528,
+      "WorkingSet64": 5853454336,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127571.0972794,
+      "free_mib": 9177,
+      "PrivateMemorySize64": 5854486528,
+      "WorkingSet64": 5853454336,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127572.0974795,
+      "free_mib": 9180,
+      "PrivateMemorySize64": 5851398144,
+      "WorkingSet64": 5850374144,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127573.0976928,
+      "free_mib": 9180,
+      "PrivateMemorySize64": 5851398144,
+      "WorkingSet64": 5850374144,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127574.0980629,
+      "free_mib": 9176,
+      "PrivateMemorySize64": 5851398144,
+      "WorkingSet64": 5850374144,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127575.0985608,
+      "free_mib": 9176,
+      "PrivateMemorySize64": 5851398144,
+      "WorkingSet64": 5850374144,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127576.0991963,
+      "free_mib": 9159,
+      "PrivateMemorySize64": 5866172416,
+      "WorkingSet64": 5865119744,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127577.0999762,
+      "free_mib": 9159,
+      "PrivateMemorySize64": 5866172416,
+      "WorkingSet64": 5865119744,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127578.1001515,
+      "free_mib": 9162,
+      "PrivateMemorySize64": 5862764544,
+      "WorkingSet64": 5861711872,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127579.1003882,
+      "free_mib": 9163,
+      "PrivateMemorySize64": 5862764544,
+      "WorkingSet64": 5861711872,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127580.1009,
+      "free_mib": 9162,
+      "PrivateMemorySize64": 5862764544,
+      "WorkingSet64": 5861711872,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127581.101511,
+      "free_mib": 9180,
+      "PrivateMemorySize64": 5845024768,
+      "WorkingSet64": 5844017152,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127582.1017169,
+      "free_mib": 9179,
+      "PrivateMemorySize64": 5845024768,
+      "WorkingSet64": 5844017152,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127583.1019099,
+      "free_mib": 9186,
+      "PrivateMemorySize64": 5841940480,
+      "WorkingSet64": 5840936960,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127584.1026145,
+      "free_mib": 9185,
+      "PrivateMemorySize64": 5841940480,
+      "WorkingSet64": 5840936960,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127585.1030405,
+      "free_mib": 9158,
+      "PrivateMemorySize64": 5841940480,
+      "WorkingSet64": 5840936960,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127586.1032458,
+      "free_mib": 9172,
+      "PrivateMemorySize64": 5841940480,
+      "WorkingSet64": 5840936960,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127587.1038051,
+      "free_mib": 9153,
+      "PrivateMemorySize64": 5858885632,
+      "WorkingSet64": 5857845248,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127588.1053063,
+      "free_mib": 9153,
+      "PrivateMemorySize64": 5858885632,
+      "WorkingSet64": 5857845248,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127589.1063532,
+      "free_mib": 9162,
+      "PrivateMemorySize64": 5855473664,
+      "WorkingSet64": 5854437376,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127590.106587,
+      "free_mib": 9158,
+      "PrivateMemorySize64": 5855473664,
+      "WorkingSet64": 5854437376,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127591.1068704,
+      "free_mib": 9165,
+      "PrivateMemorySize64": 5855473664,
+      "WorkingSet64": 5854437376,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127592.1073196,
+      "free_mib": 9186,
+      "PrivateMemorySize64": 5835579392,
+      "WorkingSet64": 5834579968,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127593.1077497,
+      "free_mib": 9187,
+      "PrivateMemorySize64": 5835579392,
+      "WorkingSet64": 5834579968,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127594.1088889,
+      "free_mib": 9188,
+      "PrivateMemorySize64": 5832499200,
+      "WorkingSet64": 5831499776,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127595.1090994,
+      "free_mib": 9186,
+      "PrivateMemorySize64": 5832499200,
+      "WorkingSet64": 5831499776,
+      "PeakWorkingSet64": 5945753600
+    },
+    {
+      "monotonic_seconds": 127596.1099507,
+      "free_mib": 9185,
+      "PrivateMemorySize64": 5832499200,
+      "WorkingSet64": 5831499776,
+      "PeakWorkingSet64": 5945753600
+    }
+  ],
+  "owned_process_stopped": true
+}
