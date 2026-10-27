@@ -340,8 +340,9 @@ def unit_test(){
     }
 }
 
-def functional_test(){
-    def status = bat(returnStatus: true, script: '@windows_test_functional.bat "' + env.WORKSPACE + '\\dist\\windows\\ovms.zip"')
+def functional_test(String artifactsPath = null){
+    def packagePath = artifactsPath ?: env.WORKSPACE + '\\dist\\windows\\ovms.zip'
+    def status = bat(returnStatus: true, script: '@windows_test_functional.bat "' + packagePath + '"')
     if (status != 0) {
         error "Error: functional_test() failed with exit code ${status}. Check pytest-functional.xml for details."
     }

@@ -323,9 +323,7 @@ pipeline {
                           windows.install_dependencies()
                           windows.clean()
                           windows.build()
-                          if ( test_doc_files_windows ) {
-                            stash name: 'ovms-windows-package', includes: 'dist\\windows\\ovms.zip'
-                          }
+                          stash name: 'ovms-windows-package', includes: 'dist\\windows\\ovms.zip'
                         } finally {
                           windows.archive_build_artifacts()
                         }
@@ -372,11 +370,12 @@ pipeline {
                 script {
                   timeout(time: 120, unit: 'MINUTES') {
                   withGithubStageStatus('jenkins/oncommit/functional-tests', 'Functional tests') {
+                    println "Running on NODE = ${env.NODE_NAME}"
                     def cmd = ""
                     if (image_build_needed == "true") {
                       cmd = "make test_functional TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True TT_XDIST_WORKERS=10"
                     } else {
-                      cmd = "make test_functional"
+                      cmd = "make test_functional TT_OVMS_IMAGE_NAME=registry.toolbox.iotg.sclab.intel.com/openvino/model_server:ubuntu24_main TT_XDIST_WORKERS=10"
                     }
                     try {
                       // bash + pipefail keeps the test exit code while tee writes the log
@@ -398,6 +397,7 @@ pipeline {
                 script {
                   timeout(time: 120, unit: 'MINUTES') {
                   withGithubStageStatus('jenkins/oncommit/extended-functional-tests', 'Extended functional tests') {
+                    println "Running on NODE = ${env.NODE_NAME}"
                     dir ('extended_functional_tests') {
                       checkout scmGit(branches: [[name: validation_branch]], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
                       sh "pwd"
@@ -435,6 +435,7 @@ pipeline {
                   timeout(time: 120, unit: 'MINUTES') {
                   script {
                     withGithubStageStatus('jenkins/oncommit/doc-tests-linux', 'Linux doc tests') {
+                      println "Running on NODE = ${env.NODE_NAME}"
                       checkout scm
                       dir ('documentation_tests') {
                         checkout scmGit(branches: [[name: validation_branch]], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
@@ -498,6 +499,41 @@ pipeline {
                   }
               }
             }
+            stage("Functional tests windows") {
+              agent {
+                label "${agent_name_windows}"
+              }
+              when { expression { win_image_build_needed == "true" || functional_tests_changed == "true" } }
+              steps {
+                  script {
+                    timeout(time: 120, unit: 'MINUTES') {
+                    withGithubStageStatus('jenkins/oncommit/functional-tests-windows', 'Windows functional tests') {
+                      def windows = load 'ci/loadWin.groovy'
+                      println "Running functional tests: NODE_NAME = ${env.NODE_NAME}"
+                      // Null means the package built in this run (restored by unstash)
+                      def artifactsPath = null
+                      if (win_image_build_needed == "true") {
+                          // Parallel stages on one node get separate workspaces, so restore the package built earlier
+                          unstash 'ovms-windows-package'
+                      } else {
+                          artifactsPath = '\\\\10.102.76.118\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms-windows-with_python-main-latest.zip'
+                      }
+                      if (windows != null) {
+                          try {
+                            windows.setup_bazel_remote_cache()
+                            windows.install_dependencies()
+                            windows.functional_test(artifactsPath)
+                          } finally {
+                            windows.archive_test_artifacts()
+                          }
+                      } else {
+                          error "Cannot load ci/loadWin.groovy file."
+                        }
+                    }
+                    }
+                  }
+              }
+            }
             stage("Documentation tests windows") {
               agent none
               when {
@@ -509,6 +545,7 @@ pipeline {
                   timeout(time: 120, unit: 'MINUTES') {
                   script {
                     withGithubStageStatus('jenkins/oncommit/doc-tests-windows', 'Windows doc tests') {
+                      println "Running on NODE = ${env.NODE_NAME}"
                       checkout scm
                       dir ('documentation_tests') {
                         checkout scmGit(branches: [[name: validation_branch]], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
