@@ -29,6 +29,7 @@
 #include "src/llm/llm_calculator.pb.h"
 #include "src/llm/servable.hpp"
 #include "io_processing/chat_template/analyzer.hpp"
+#include "io_processing/chat_template/adjuster.hpp"
 
 namespace ovms {
 
@@ -52,6 +53,7 @@ public:
     virtual ~GenAiServableInitializer() = default;
     static Status loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
     static ChatTemplateAnalysisResult analyzeChatTemplate(std::shared_ptr<GenAiServableProperties> properties);
+    static void setAndAjustChatTemplateWithConfig(ov::genai::Tokenizer& tokenizer, std::string& templateSource, const ChatTemplateAdjusterConfig& adjusterConfig);
     static void selectOutputParsers(const std::shared_ptr<GenAiServableProperties>& properties,
         const std::optional<ChatTemplateAnalysisResult>& analysisResult);
     static Status validateChatTemplateAvailability(const std::shared_ptr<GenAiServableProperties>& properties);
