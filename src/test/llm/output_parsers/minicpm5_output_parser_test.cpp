@@ -393,6 +393,26 @@ TEST(Minicpm5ToolParserImplTest, SingleCallNoContent) {
     EXPECT_FALSE(calls[0].id.empty());
 }
 
+// A string parameter keeps the model's text as written. The last two values would otherwise be
+// reparsed as JSON, the last one after its single quotes were converted to double quotes.
+TEST(Minicpm5ToolParserImplTest, StringParameterKeepsOriginalText) {
+    const std::vector<std::pair<std::string, std::string>> valuesAndExpectedArguments = {
+        {"1.10", R"({"query":"1.10"})"},
+        {"[1, 2,   3]", R"({"query":"[1, 2,   3]"})"},
+        {"{'a': 1}", R"({"query":"{'a': 1}"})"},
+    };
+    for (const auto& [value, expectedArguments] : valuesAndExpectedArguments) {
+        const std::string input = R"(<function name="search"><param name="query">)" + value + R"(</param></function>)";
+        auto content = input;
+        Minicpm5ToolParserImpl parser(minicpm5TypeMap);
+        auto callsOpt = parser.parseChunk(content);
+        ASSERT_TRUE(callsOpt.has_value()) << input;
+        auto& calls = callsOpt.value();
+        ASSERT_EQ(calls.size(), 1u) << input;
+        EXPECT_EQ(calls[0].arguments, expectedArguments) << input;
+    }
+}
+
 TEST(Minicpm5ToolParserImplTest, SingleCallWithEmptyParam) {
     const std::string input =
         R"(<function name="dummy"><param name="config"></param></function>)";

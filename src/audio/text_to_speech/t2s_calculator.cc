@@ -54,6 +54,31 @@ namespace mediapipe {
 
 const std::string TTS_SESSION_SIDE_PACKET_TAG = "TTS_NODE_RESOURCES";
 
+static std::string resolveBuiltinSpeakerName(const ovms::TtsServable& servable, const std::string& voiceName) {
+    auto speakerIt = servable.builtinSpeakerAliases.find(voiceName);
+    if (speakerIt != servable.builtinSpeakerAliases.end()) {
+        return speakerIt->second;
+    }
+    speakerIt = servable.builtinSpeakerAliases.find(ovms::toLowerCopy(voiceName));
+    if (speakerIt != servable.builtinSpeakerAliases.end()) {
+        return speakerIt->second;
+    }
+    return voiceName;
+}
+
+static bool isKnownVoice(const ovms::TtsServable& servable, const std::string& voiceName) {
+    if (servable.voices.find(voiceName) != servable.voices.end()) {
+        return true;
+    }
+    if (servable.builtinSpeakerAliases.find(voiceName) != servable.builtinSpeakerAliases.end()) {
+        return true;
+    }
+    if (servable.builtinSpeakerAliases.find(ovms::toLowerCopy(voiceName)) != servable.builtinSpeakerAliases.end()) {
+        return true;
+    }
+    return false;
+}
+
 static absl::Status checkClientDisconnected(const ovms::HttpPayload& payload, const std::string& nodeName, const char* context) {
     if (payload.client && payload.client->isDisconnected()) {
         SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "Client disconnected {} [Node: {}]", context, nodeName);
@@ -131,6 +156,14 @@ public:
                     }
                     voiceName = voiceIt->value.GetString();
                 }
+                std::optional<std::string> instructions;
+                auto instructionsIt = payload.parsedJson->FindMember("instructions");
+                if (instructionsIt != payload.parsedJson->MemberEnd() && !instructionsIt->value.IsNull()) {
+                    if (!instructionsIt->value.IsString()) {
+                        return absl::InvalidArgumentError("instructions field is not a string");
+                    }
+                    instructions = instructionsIt->value.GetString();
+                }
                 std::string language = "en-us";
                 auto languageIt = payload.parsedJson->FindMember("language");
                 if (languageIt != payload.parsedJson->MemberEnd()) {
@@ -164,13 +197,18 @@ public:
                     return disconnectStatus;
                 const ov::Tensor* speakerEmbedding = nullptr;
                 ov::AnyMap properties{{"language", language}, {"speed", speed}};
+                if (instructions.has_value()) {
+                    properties["instruct"] = instructions.value();
+                }
                 if (voiceName.has_value()) {
                     auto speakerIt = pipe->voices.find(voiceName.value());
                     if (speakerIt != pipe->voices.end()) {
                         speakerEmbedding = &speakerIt->second;
                     } else {
-                        // SpeechT5 and other models only support pre-loaded speaker embeddings
-                        return absl::InvalidArgumentError(absl::StrCat("Requested voice '", voiceName.value(), "' not found in available voices"));
+                        if (!isKnownVoice(*pipe, voiceName.value())) {
+                            return absl::InvalidArgumentError(absl::StrCat("Requested voice '", voiceName.value(), "' not found in available voices"));
+                        }
+                        properties["speaker"] = resolveBuiltinSpeakerName(*pipe, voiceName.value());
                     }
                 }
                 if (speakerEmbedding != nullptr) {

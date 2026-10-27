@@ -19,6 +19,7 @@
 #include <gtest/gtest.h>
 
 #include "../../audio/audio_utils.hpp"
+#include "../../audio/text_to_speech/t2s_servable.hpp"
 #include "../../http_rest_api_handler.hpp"
 #include "../../server.hpp"
 #include "../test_http_utils.hpp"
@@ -128,6 +129,28 @@ TEST_F(Text2SpeechHttpTest, nonExistingVoiceRequested) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(Text2SpeechHttpTest, instructionsMustBeString) {
+    std::string requestBody = R"(
+        {
+            "model": ")" + modelName +
+                              R"(",
+            "input": "The quick brown fox jumped over the lazy dog.",
+            "voice": "af_alloy",
+            "instructions": 123
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST(Text2SpeechServableTest, LoadsBuiltinQwenCustomVoiceSpeakers) {
+    const auto aliases = TtsServable::loadBuiltinSpeakerAliases(getGenericFullPathForSrcTest("/ovms/src/test/models_config_json/qwen3_tts_customvoice_runtime/config.json"));
+
+    EXPECT_THAT(aliases, testing::Contains(testing::Pair("ryan", "ryan")));
+    EXPECT_THAT(aliases, testing::Contains(testing::Pair("serena", "serena")));
 }
 
 TEST_F(Text2SpeechHttpTest, speedBelowDefaultMinRejected) {

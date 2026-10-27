@@ -130,10 +130,6 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, const
                 "\"__verbose\" object with additional debug information.",
                 cxxopts::value<bool>()->default_value("false"),
                 "VERBOSE_RESPONSE")
-            ("disable_input_count_validation",
-                "When enabled, OVMS allows inference requests to include additional, unrecognized inputs beyond the model/pipeline signature (extra inputs are ignored). Required inputs must still be present, and shape/precision validation is still performed for recognized inputs. Default: false (extra inputs cause the request to be rejected).",
-                cxxopts::value<bool>()->default_value("false"),
-                "DISABLE_INPUT_COUNT_VALIDATION")
 #ifdef MTR_ENABLED
             ("trace_path",
                 "Path to the trace file",
@@ -217,14 +213,6 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, const
                 "path to the text file containing API key for authentication for generative endpoints. If not set, authentication is disabled.",
                 cxxopts::value<std::string>()->default_value(""),
                 "API_KEY");
-
-#if (PYTHON_DISABLE == 0)
-        options->add_options()
-            ("with_python",
-                "Enable Python runtime support",
-                cxxopts::value<bool>()->default_value("true"),
-                "WITH_PYTHON");
-#endif
 
         options->add_options("multi model")
             ("config_path",
@@ -329,6 +317,10 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, const
                 "Resets model precision.",
                 cxxopts::value<std::string>(),
                 "PRECISION")
+            ("disable_input_count_validation",
+                "When enabled, inference requests may include additional, unrecognized inputs beyond the model signature (extra inputs are ignored). Required inputs must still be present, and shape/precision validation is still performed for recognized inputs. Default: false (extra inputs cause the request to be rejected).",
+                cxxopts::value<bool>(),
+                "DISABLE_INPUT_COUNT_VALIDATION")
             ("model_version_policy",
                 "Model version policy",
                 cxxopts::value<std::string>(),
@@ -620,8 +612,6 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
         serverSettings.logPath = result->operator[]("log_path").as<std::string>();
     if (result->count("verbose_response"))
         serverSettings.verboseResponse = result->operator[]("verbose_response").as<bool>();
-    if (result->count("disable_input_count_validation"))
-        serverSettings.disableInputCountValidation = result->operator[]("disable_input_count_validation").as<bool>();
 
     if (result->count("grpc_channel_arguments"))
         serverSettings.grpcChannelArguments = result->operator[]("grpc_channel_arguments").as<std::string>();
@@ -658,10 +648,6 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
 
     if (result->count("rest_workers"))
         serverSettings.restWorkers = result->operator[]("rest_workers").as<uint32_t>();
-
-#if (PYTHON_DISABLE == 0)
-    serverSettings.withPython = result->operator[]("with_python").as<bool>();
-#endif
 
 #ifdef MTR_ENABLED
     if (result->count("trace_path"))
@@ -752,6 +738,11 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
         }
         modelsSettings.precision = result->operator[]("precision").as<std::string>();
         modelsSettings.userSetSingleModelArguments.push_back("precision");
+    }
+
+    if (result->count("disable_input_count_validation")) {
+        modelsSettings.disableInputCountValidation = result->operator[]("disable_input_count_validation").as<bool>();
+        modelsSettings.userSetSingleModelArguments.push_back("disable_input_count_validation");
     }
 
     if (result->count("model_version_policy")) {

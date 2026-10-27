@@ -48,6 +48,8 @@ static void addOptionalModelFields(rapidjson::Value& configObj, const ModelsSett
         configObj.AddMember("color_format", rapidjson::Value(modelSettings.colorFormat.value().c_str(), alloc), alloc);
     if (modelSettings.precision.has_value())
         configObj.AddMember("precision", rapidjson::Value(modelSettings.precision.value().c_str(), alloc), alloc);
+    if (modelSettings.disableInputCountValidation.has_value())
+        configObj.AddMember("disable_input_count_validation", modelSettings.disableInputCountValidation.value(), alloc);
     if (!modelSettings.modelVersionPolicy.empty())
         addJsonOrStringMember(configObj, "model_version_policy", modelSettings.modelVersionPolicy, alloc);
     if (modelSettings.nireq != 0)
