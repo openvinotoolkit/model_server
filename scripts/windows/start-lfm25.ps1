@@ -1,7 +1,7 @@
 ﻿<#
 ИНСТРУКЦИЯ ПО АДАПТАЦИИ СКРИПТОВ ЗАПУСКА (LFM2.5)
 1. package — каталог RC4 extracted-py_off\ovms: DLL OpenVINO/GenAI и MANIFEST.
-   exe — отдельно Task-3 ovms.exe с lfm2 parser (не подменяйте DLL пакета).
+   exe — отдельно candidate-final ovms.exe с LFM retainer/policy (не подменяйте DLL пакета).
    modelPath — OpenVINO IR LFM2.5-8B; modelName — имя в API/карточке OMP.
 2. WEIGHTS_PATH не используется: OFFLOAD_RATIO=0 (Pack/offload отложены).
    Веса — openvino_model.bin (не openvino_language_model.bin).
@@ -22,8 +22,8 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $package = 'C:\gm\qwenmonster\releases\gemmamonster-2026.4-rc4\extracted-py_off\ovms'
-$exe = 'C:\gm\lfm-2026.4\serving\ovms.exe'
-$expectedExeSha256 = 'f484927cc5bacbb979f9edb11df85c494b6cdf369d7c179b29c48d6807dfc877'
+$exe = 'C:\gm\lfm-2026.4\tool-use-20261027\candidate-final\build-py_off\bin\ovms.exe'
+$expectedExeSha256 = '95fb62b5df7d68a880457378a4d3503cc606b5f06a82c23e70010d96358272ba'
 $modelPath = 'C:\llm\models\LFM2.5-8B-A1B-int4-ov'
 $modelName = 'lfm25-8b-a1b-int4'
 $templatePath = 'C:\git\gemmamonster-lfm-2026.4\docs\lfm\templates\LFM2.5-8B-A1B-int4-ov.jinja'
@@ -54,7 +54,7 @@ if ($actualExe -ne $expectedExeSha256) {
     throw ('Serving ovms.exe hash drift: expected ' + $expectedExeSha256 + ' got ' + $actualExe)
 }
 
-# Baseline DLLs: gemmamonster-2026.4-rc4; serving EXE: Task 3 LFM parser rebuild.
+# Baseline DLLs: gemmamonster-2026.4-rc4; EXE: tool-use candidate-final.
 $manifest = Get-Content (Join-Path $package 'MANIFEST.json') -Raw | ConvertFrom-Json
 foreach ($row in $manifest.files) {
     if ($row.path -match '\.dll$') {
