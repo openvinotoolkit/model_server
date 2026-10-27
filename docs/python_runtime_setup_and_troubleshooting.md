@@ -5,7 +5,7 @@ This document covers Python-related setup, fallback behavior, and common runtime
 ## Scope
 
 Use this guide when:
-- You use a package with Python support.
+- You want to enable optional Python integration.
 - You need Python nodes.
 - You need advanced LLM chat-template behavior.
 - You see Python runtime or plugin errors during startup.
@@ -14,15 +14,20 @@ For installation steps of baremetal packages, see [Deploying Model Server on Bar
 
 ## Python Support Modes
 
-Model Server supports two deployment configurations:
+Model Server provides one package per operating system. There are no separate
+`python_on` and `python_off` downloads. Python integration depends on the
+availability of a compatible Python installation at runtime.
+The Windows package includes an embedded Python runtime with Jinja2 and
+MarkupSafe in `ovms\python`; no separate installation of Python or these packages
+is required. This subfolder can be deleted if neither Python feature is needed.
 
-**With Python Support** (`PYTHON_DISABLE=0`, default):
-- Python nodes are available.
-- LLM chat-template handling has broader feature coverage.
+**With Python integration available**:
+- A Jinja-based chat-template engine is available for LLM models.
+- Python custom nodes can run in MediaPipe graphs.
 - Runtime Python libraries must be available.
 
-**Without Python Support** (`PYTHON_DISABLE=1`):
-- Lightweight deployment for C++ models only.
+**Without Python integration available**:
+- The same package can serve models that do not require Python.
 - Python nodes cannot be used.
 - LLM template rendering has limitations.
 - No Python runtime dependencies are required.
@@ -39,73 +44,35 @@ Behavior:
 
 ## Runtime Setup Checklist
 
-### Linux
+1. Keep the extracted package directory structure intact.
+2. On Windows, keep the embedded runtime in `ovms\python`. On Linux, install
+   Python 3.12 for Ubuntu 24.04 and Red Hat Enterprise Linux 9, or Python 3.14
+   for Ubuntu 26.04.
+3. On Linux, install Jinja2 for that interpreter; MarkupSafe is installed as a
+   dependency. Both packages are already included in the Windows embedded runtime.
+4. Install NumPy if your Python nodes use OpenVINO or OpenVINO GenAI.
+5. Restart OVMS after installing dependencies.
 
-- Ensure `LD_LIBRARY_PATH` points to package libraries:
+For OS-specific commands, see [Optional Python Integration](deploying_server_baremetal.md#optional-python-integration).
+No `LD_LIBRARY_PATH`, `PYTHONPATH`, or `setupvars` configuration is required.
 
-```text
-export LD_LIBRARY_PATH=${PWD}/ovms/lib
-```
-
-- Ensure `PYTHONPATH` points to OVMS Python package:
-
-```text
-export PYTHONPATH=${PWD}/ovms/lib/python
-```
-
-- Install template dependencies:
-
-```text
-pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
-```
-
-- If using Python nodes with OpenVINO/OpenVINO GenAI, install NumPy:
-
-```text
-pip3 install numpy
-```
-
-Do not install `openvino`, `openvino-tokenizers`, or `openvino-genai` via pip for OVMS Python package usage.
-
-### Windows
-
-Run setup in the same shell before starting OVMS:
-
-```text
-.\ovms\setupvars.bat
-```
-
-or in PowerShell:
-
-```text
-.\ovms\setupvars.ps1
-```
-
-Optional explicit `PYTHONPATH`:
-
-Command Prompt:
-
-```text
-set PYTHONPATH=%CD%\ovms\lib\python
-```
-
-PowerShell:
-
-```text
-$env:PYTHONPATH = "$PWD\ovms\lib\python"
-```
+Do not install `openvino`, `openvino-tokenizers`, or `openvino-genai` via pip for
+OVMS usage; use the versions included in the package.
 
 ## Common Issues
 
 ### Error: "Failed to initialize Python interpreter"
 
 Cause:
-- System Python shared library is missing or unavailable in runtime environment.
+- The Python runtime is missing or unavailable: a system shared library on
+  Linux, or the embedded runtime on Windows.
 
 Fix:
-- Ubuntu: `sudo apt install libpython3.12-dev`
-- RHEL: `sudo yum install python312-devel`
-- Windows: rerun `setupvars.bat` or `setupvars.ps1` in the same shell before starting `ovms`
+- Ubuntu 24.04: `sudo apt install libpython3.12`
+- Ubuntu 26.04: `sudo apt install libpython3.14`
+- Red Hat Enterprise Linux 9: `sudo dnf install python3.12-libs`
+- Windows: restore the `ovms\python` subfolder by re-extracting the Windows
+  package if Python features are needed.
 
 Check:
 
@@ -117,19 +84,15 @@ find /usr -name "libpython*" -type f
 
 Cause:
 - `pyovms` module cannot be imported.
-- `PYTHONPATH` is missing or incorrect.
+- The package is incomplete, its directory structure has changed, or its Python
+  extensions do not match the installed Python runtime.
 
 Fix:
 
-```text
-export PYTHONPATH=${PWD}/ovms/lib/python
-```
-
-Check:
-
-```text
-python3 -c "import pyovms; print(pyovms.__file__)"
-```
+- Re-extract the package for your operating system into a clean directory.
+- Keep the bundled Python modules and runtime libraries in their original locations.
+- Use the compatible Python version listed in the runtime setup checklist.
+- Restart OVMS and inspect its Python initialization logs.
 
 ### Warning: "Python calculators plugin failed to load"
 
@@ -148,19 +111,16 @@ Fix:
 1. Start OVMS and inspect logs for Python runtime/plugin initialization messages.
 2. Load a Python node graph and confirm it initializes.
 3. Confirm package files exist:
-   - `${PWD}/ovms/lib/python` for Python package files
-   - `${PWD}/ovms/lib` for runtime libraries
+   - Linux: `ovms/lib/python` for Python package files and `ovms/lib` for runtime libraries.
+   - Windows: `ovms\python` for the embedded Python runtime and packages.
 
-## Migration Between Package Variants
+## Migrating from Older Package Variants
 
-**From without-Python to with-Python**:
-1. Download with-Python package.
-2. Extract to same location.
-3. Repeat OS-specific setup (`PYTHONPATH`, dependencies, or `setupvars`).
-4. Restart server.
-
-**From with-Python to without-Python**:
-1. Download without-Python package.
-2. Extract to same location.
-3. Repeat OS-specific setup for selected package variant.
-4. Restart server.
+1. Download the single package for your operating system from the
+   [baremetal deployment guide](deploying_server_baremetal.md).
+2. Extract it into a clean directory rather than overlaying an older package.
+3. Remove shell configuration that points to libraries or Python modules from
+   the older package.
+4. If Python features are needed, keep the embedded runtime on Windows or
+   install the compatible runtime on Linux, and ensure Jinja2 is installed.
+5. Restart OVMS using the executable in the new package.

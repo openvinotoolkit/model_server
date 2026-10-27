@@ -36,6 +36,10 @@
 #include "src/config.hpp"
 #include "src/logging.hpp"
 #include "src/status.hpp"
+#pragma warning(push)
+#pragma warning(disable : 6262 6386 6385)
+#include "stb_image.h"  // NOLINT
+#pragma warning(pop)
 
 using ovms::prepareImageGenPipelineArgs;
 using ovms::resolution_t;
@@ -1727,6 +1731,78 @@ TEST(Text2ImageTest, ResponseFromOvTensorBatch1) {
 TEST(Text2ImageTest, ResponseFromOvTensorBatch3) {
     uint16_t n = 3;
     testResponseFromOvTensor(n);
+}
+
+void testResponseFromOvTensorRGBA(size_t batchSize) {
+    constexpr size_t HEIGHT = 4;
+    constexpr size_t WIDTH = 4;
+    constexpr size_t CHANNELS = 4;
+    constexpr size_t ALPHA_CHANNEL = CHANNELS - 1;
+    constexpr size_t ALPHA_VALUE_COUNT = 3;
+    constexpr size_t BYTE_VALUE_RANGE = 256;
+    constexpr uint8_t TRANSPARENT_ALPHA = 0;
+    constexpr uint8_t PARTIAL_ALPHA = 127;
+    constexpr uint8_t OPAQUE_ALPHA = 255;
+    constexpr uint8_t ALPHA_VALUES[ALPHA_VALUE_COUNT] = {TRANSPARENT_ALPHA, PARTIAL_ALPHA, OPAQUE_ALPHA};
+    ov::Tensor tensor(ov::element::u8, ov::Shape{batchSize, HEIGHT, WIDTH, CHANNELS});
+    auto* imageData = tensor.data<uint8_t>();
+    size_t valueCounter = 0;
+    for (size_t image = 0; image < batchSize; ++image) {
+        for (size_t pixel = 0; pixel < HEIGHT * WIDTH; ++pixel) {
+            const size_t pixelOffset = (image * HEIGHT * WIDTH + pixel) * CHANNELS;
+            for (size_t channel = 0; channel < ALPHA_CHANNEL; ++channel) {
+                imageData[pixelOffset + channel] = static_cast<uint8_t>(valueCounter++ % BYTE_VALUE_RANGE);
+            }
+            imageData[pixelOffset + ALPHA_CHANNEL] = ALPHA_VALUES[pixel % ALPHA_VALUE_COUNT];
+        }
+    }
+
+    auto responseOrStatus = ovms::generateJSONResponseFromOvTensor(tensor);
+    ASSERT_FALSE(std::holds_alternative<absl::Status>(responseOrStatus));
+    auto response = std::move(std::get<std::unique_ptr<std::string>>(responseOrStatus));
+    rapidjson::Document document;
+    document.Parse(response->c_str());
+    ASSERT_TRUE(document.IsObject());
+    ASSERT_TRUE(document.HasMember("data"));
+    ASSERT_TRUE(document["data"].IsArray());
+    const auto& dataArray = document["data"].GetArray();
+    ASSERT_EQ(dataArray.Size(), batchSize);
+
+    for (size_t image = 0; image < batchSize; ++image) {
+        const auto& imageB64PngString = dataArray[image].GetObject()["b64_json"].GetString();
+        std::string pngBytes;
+        ASSERT_TRUE(absl::Base64Unescape(imageB64PngString, &pngBytes));
+
+        int decodedWidth = 0;
+        int decodedHeight = 0;
+        int decodedChannels = 0;
+        unsigned char* decodedPixels = stbi_load_from_memory(
+            reinterpret_cast<const unsigned char*>(pngBytes.data()), static_cast<int>(pngBytes.size()),
+            &decodedWidth, &decodedHeight, &decodedChannels, STBI_rgb_alpha);
+        ASSERT_NE(decodedPixels, nullptr) << stbi_failure_reason();
+        std::unique_ptr<unsigned char, decltype(&stbi_image_free)> decodedPixelsPtr(decodedPixels, stbi_image_free);
+
+        ASSERT_EQ(decodedChannels, CHANNELS);
+        ASSERT_EQ(decodedWidth, WIDTH);
+        ASSERT_EQ(decodedHeight, HEIGHT);
+        const size_t imageSize = HEIGHT * WIDTH * CHANNELS;
+        const size_t imageOffset = image * imageSize;
+        for (size_t pixel = 0; pixel < HEIGHT * WIDTH; ++pixel) {
+            const size_t alphaOffset = pixel * CHANNELS + ALPHA_CHANNEL;
+            EXPECT_EQ(decodedPixelsPtr.get()[alphaOffset], ALPHA_VALUES[pixel % ALPHA_VALUE_COUNT])
+                << "Alpha mismatch for image " << image << ", pixel " << pixel;
+        }
+        EXPECT_EQ(0, std::memcmp(decodedPixelsPtr.get(), imageData + imageOffset, imageSize))
+            << "RGBA data mismatch for image " << image;
+    }
+}
+
+TEST(Text2ImageTest, ResponseFromOvTensorRGBABatch1) {
+    testResponseFromOvTensorRGBA(1);
+}
+
+TEST(Text2ImageTest, ResponseFromOvTensorRGBABatch3) {
+    testResponseFromOvTensorRGBA(3);
 }
 // ===================== LoRA Proto Parsing Tests =====================
 

@@ -236,6 +236,23 @@ TEST(StringUtils, stou64) {
     auto result = ovms::stou64("-100");
     EXPECT_FALSE(result);
 
+    result = ovms::stou64(" -100");
+    EXPECT_FALSE(result);
+
+    result = ovms::stou64("\t-100");
+    EXPECT_FALSE(result);
+
+    result = ovms::stou64("  -5");
+    EXPECT_FALSE(result);
+
+    result = ovms::stou64("100");
+    EXPECT_TRUE(result);
+    EXPECT_EQ(result.value(), 100ULL);
+
+    result = ovms::stou64(" 100");
+    EXPECT_TRUE(result);
+    EXPECT_EQ(result.value(), 100ULL);
+
     result = ovms::stou64("   100 ");
     EXPECT_FALSE(result);
 
@@ -245,6 +262,12 @@ TEST(StringUtils, stou64) {
     result = ovms::stou64("18446744073709551615");
     EXPECT_TRUE(result);
     EXPECT_EQ(result.value(), 18446744073709551615ULL);
+
+    result = ovms::stou64("");
+    EXPECT_FALSE(result);
+
+    result = ovms::stou64("   ");
+    EXPECT_FALSE(result);
 }
 
 TEST(StringUtils, stoi32) {

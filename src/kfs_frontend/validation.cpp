@@ -55,15 +55,6 @@ template <>
 Status RequestValidator<KFSRequest, KFSTensorInputProto, ValidationChoice::INPUT, KFSInputTensorIteratorType, KFSShapeType>::validateNumberOfTensors() const {
     size_t expectedNumberOfInputs = inputsInfo.size();
 
-    if (optionalAllowedInputNames.size() > 0) {
-        auto it = request.inputs().begin();
-        while (it != request.inputs().end()) {
-            if (optionalAllowedInputNames.find(it->name()) != optionalAllowedInputNames.end()) {
-                ++expectedNumberOfInputs;
-            }
-            ++it;
-        }
-    }
     if (request.inputs_size() > 0 && expectedNumberOfInputs == static_cast<size_t>(request.inputs_size())) {
         return StatusCode::OK;
     }
@@ -329,9 +320,9 @@ const std::string* getRawInputContents(const KFSRequest& request, size_t bufferI
     }
 
 template <>
-Status validate(const KFSRequest& request, const tensor_map_t& inputsInfo, const tensor_map_t& outputsInfo, const std::string& servableName, const model_version_t servableVersion, const std::set<std::string>& optionalAllowedInputNames, const Mode batchingMode, const shapes_info_map_t& shapeInfo) {
+Status validate(const KFSRequest& request, const tensor_map_t& inputsInfo, const tensor_map_t& outputsInfo, const ModelConfig& modelConfig) {
     OVMS_PROFILE_FUNCTION();
-    return RequestValidator<KFSRequest, KFSTensorInputProto, ValidationChoice::INPUT, KFSInputTensorIteratorType, KFSShapeType>(request, inputsInfo, outputsInfo, servableName, servableVersion, optionalAllowedInputNames, batchingMode, shapeInfo).validate();
+    return RequestValidator<KFSRequest, KFSTensorInputProto, ValidationChoice::INPUT, KFSInputTensorIteratorType, KFSShapeType>(request, inputsInfo, outputsInfo, modelConfig).validate();
 }
 }  // namespace request_validation_utils
 }  // namespace ovms
