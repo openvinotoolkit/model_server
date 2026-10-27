@@ -378,7 +378,12 @@ pipeline {
                     } else {
                       cmd = "make test_functional"
                     }
-                    sh cmd
+                    try {
+                      // bash + pipefail keeps the test exit code while tee writes the log
+                      sh "#!/bin/bash\nset -o pipefail\n${cmd} 2>&1 | tee functional_tests.log"
+                    } finally {
+                      archiveArtifacts allowEmptyArchive: true, artifacts: "functional_tests.log,report.xml"
+                    }
                   }
                   }
                 }
@@ -408,7 +413,11 @@ pipeline {
                       } else {
                         cmd = "${cmd_venv} && ${cmd_links} && ${cmd_venv_activate} && ${cmd_export} && ${cmd_run_tests}"
                       }
-                      sh cmd
+                      try {
+                        sh "#!/bin/bash\nset -o pipefail\n${cmd} 2>&1 | tee extended_functional_tests.log"
+                      } finally {
+                        archiveArtifacts allowEmptyArchive: true, artifacts: "extended_functional_tests.log"
+                      }
                     }
                   }
                   }
@@ -448,11 +457,11 @@ pipeline {
                             cmd = "${cmd_venv_activate} && ${cmd_export} && ${cmd_pytest}"
                         }
                         try {
-                          sh cmd
+                          sh "#!/bin/bash\nset -o pipefail\n${cmd} 2>&1 | tee documentation_tests_linux.log"
                         } finally {
                           // Always save artifacts
                           zip zipFile: 'documentation_tests_linux_logs.zip', glob: 'test_log/**,tests/functional/test_log_build/**', overwrite: true
-                          archiveArtifacts(artifacts: 'documentation_tests_linux_logs.zip', allowEmptyArchive: true)
+                          archiveArtifacts(artifacts: 'documentation_tests_linux_logs.zip,documentation_tests_linux.log', allowEmptyArchive: true)
                         }
                       }
                     }
@@ -518,14 +527,15 @@ pipeline {
                             cmd = "${cmd_link_ovms} && ${cmd_requirements} && ${cmd_export} && ${cmd_pytest}"
                         }
                         try {
-                          def exitCode = bat(returnStatus: true, script: cmd)
+                          // cmd.exe has no pipefail: redirect to the log, keep the exit code, then print the log
+                          def exitCode = bat(returnStatus: true, script: "${cmd} > documentation_tests_windows.log 2>&1\nset \"rc=%errorlevel%\"\n@if exist documentation_tests_windows.log type documentation_tests_windows.log\n@exit /b %rc%")
                           if (exitCode != 0) {
                               error "Documentation tests windows command failed with exit code ${exitCode}"
                           }
                         } finally {
                           // Always save artifacts
                           zip zipFile: 'documentation_tests_windows_logs.zip', glob: 'test_log/**,tests/functional/test_log_build/**', overwrite: true
-                          archiveArtifacts(artifacts: 'documentation_tests_windows_logs.zip', allowEmptyArchive: true)
+                          archiveArtifacts(artifacts: 'documentation_tests_windows_logs.zip,documentation_tests_windows.log', allowEmptyArchive: true)
                         }
                       }
                     }
