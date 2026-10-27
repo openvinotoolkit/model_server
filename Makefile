@@ -225,9 +225,9 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg https_proxy=$(HTTPS_PROXY)\
 	--build-arg no_proxy=$(NO_PROXY)\
 	--build-arg ov_source_branch=$(OV_SOURCE_BRANCH)\
-	--build-arg ov_source_org=$(OV_SOURCE_ORG)\
-	--build-arg ov_genai_org=$(OV_GENAI_ORG)\
-	--build-arg ov_tokenizers_org=$(OV_TOKENIZERS_ORG)\
+	--build-arg ov_repo=$(OV_REPO)\
+	--build-arg ov_genai_repo=$(OV_GENAI_REPO)\
+	--build-arg ov_tokenizers_repo=$(OV_TOKENIZERS_REPO)\
 	--build-arg ov_tokenizers_branch=$(OV_TOKENIZERS_BRANCH)\
 	--build-arg ov_genai_branch=$(OV_GENAI_BRANCH)\
 	--build-arg ov_use_binary=$(OV_USE_BINARY)\
