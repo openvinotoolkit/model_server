@@ -25,6 +25,6 @@ bool graphPbtxtExists(const std::string& modelPath);
 bool hasTaskSpecificParameters(const std::vector<std::string>& unmatchedOptions);
 
 // Returns the detected task name, or std::nullopt if the task could not be determined.
-std::optional<std::string> determineDefaultTaskParameter(const std::optional<std::string>& modelPath, const std::optional<std::string>& sourceModel, const std::optional<std::string>& modelRepositoryPath);
+std::optional<std::string> determineDefaultTaskParameter(const std::optional<std::string>& modelPath, const std::optional<std::string>& sourceModel, const std::optional<std::string>& modelRepositoryPath, std::string* errorMessage = nullptr);
 
 }  // namespace ovms

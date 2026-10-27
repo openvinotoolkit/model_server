@@ -3024,6 +3024,8 @@ cc_library(
         "//src/llm:image_utils",
         "//src/llm:io_processing_input_processors",
         "//src/llm:video_utils",
+        "//src/utils:env_guard",
+        "@cpp_httplib//:cpp_httplib",
     ],
     copts = COPTS_TESTS,
     local_defines = COMMON_LOCAL_DEFINES,
