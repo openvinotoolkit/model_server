@@ -178,7 +178,7 @@ void ConcatMultiLineStringAdjustment::apply(std::string& processed) const {
 }
 
 void ReplaceUndefinedChecksAdjustment::apply(std::string& processed) const {
-    static const std::regex varIsUndefinedPattern{R"((\b\w+(?:\.\w+|\[\d+\])*)\s+is\s+undefined\b)"};
+    static const std::regex varIsUndefinedPattern{R"regex((\b\w+(?:\.\w+|\[(?:\d+|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")\])*)\s+is\s+undefined\b)regex"};
     processed = std::regex_replace(processed, varIsUndefinedPattern, "not $1 is defined");
 }
 

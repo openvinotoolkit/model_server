@@ -346,6 +346,16 @@ TEST(ChatTemplateAdjusterTest, replacesUndefinedChecksWithArrayAccess) {
     EXPECT_EQ(tmpl, "{% if not messages[0].content is defined %}missing{% endif %}");
 }
 
+TEST(ChatTemplateAdjusterTest, replacesUndefinedChecksWithObjectAccess) {
+    const std::string original = "{% if object['messages'].content is undefined %}missing{% endif %}";
+    std::string tmpl = original;
+    const ReplaceUndefinedChecksAdjustment adjustment;
+
+    adjustment.apply(tmpl);
+
+    EXPECT_EQ(tmpl, "{% if not object['messages'].content is defined %}missing{% endif %}");
+}
+
 TEST(ChatTemplateAdjusterTest, preservesDoubleQuotesInsideSingleQuotedLiteral) {
     const std::string original = R"({{ '"first" "second"' }})";
     std::string tmpl = original;
