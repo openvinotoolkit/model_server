@@ -224,7 +224,7 @@ GIT_CONFIG_MOUNT = $(if $(wildcard .gitconfig),-v $(shell realpath .gitconfig):/
 BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg https_proxy=$(HTTPS_PROXY)\
 	--build-arg no_proxy=$(NO_PROXY)\
-	--build-arg ov_source_branch=$(OV_SOURCE_BRANCH)\
+	--build-arg ov_branch=$(OV_BRANCH)\
 	--build-arg ov_repo=$(OV_REPO)\
 	--build-arg ov_genai_repo=$(OV_GENAI_REPO)\
 	--build-arg ov_tokenizers_repo=$(OV_TOKENIZERS_REPO)\

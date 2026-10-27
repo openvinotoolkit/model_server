@@ -161,7 +161,7 @@ for /f "usebackq eol=# tokens=1,3" %%A in ("%~dp0versions.mk") do (
     call :setifempty "%%A" "%%B"
 )
 echo [INFO]   OV_USE_BINARY=%OV_USE_BINARY%
-echo [INFO]   OV_SOURCE_BRANCH=%OV_SOURCE_BRANCH%
+echo [INFO]   OV_BRANCH=%OV_BRANCH%
 echo [INFO]   OV_TOKENIZERS_BRANCH=%OV_TOKENIZERS_BRANCH%
 echo [INFO]   OV_GENAI_BRANCH=%OV_GENAI_BRANCH%
 echo [INFO]   OV_REPO=%OV_REPO%
@@ -246,7 +246,7 @@ git clone https://github.com/%OV_REPO%.git %BAZEL_SHORT_PATH%\openvino_src
 set "BACK_CWD=%cd%"
 cd %BAZEL_SHORT_PATH%\openvino_src
 git fetch origin
-git checkout %OV_SOURCE_BRANCH%
+git checkout %OV_BRANCH%
 if !errorlevel! neq 0 exit /b !errorlevel!
 git submodule update --init --recursive
 if !errorlevel! neq 0 exit /b !errorlevel!
