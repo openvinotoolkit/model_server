@@ -45,6 +45,16 @@ static std::string ensureTrailingSlash(std::string path) {
     return path;
 }
 
+static std::string describeTaskMetadataFailure(const std::string& sourceModel, int httpCode) {
+    if (httpCode == 401 || httpCode == 403 || httpCode == 404) {
+        return "Model '" + sourceModel + "' was not found locally and its task metadata is not accessible from the model endpoint (check whether it is private or the repo name is wrong).";
+    }
+    if (httpCode == -1 || httpCode == 0) {
+        return "Could not reach the model endpoint to resolve task metadata for '" + sourceModel + "'. Check the internet connection or proxy configuration.";
+    }
+    return "Could not retrieve task metadata for model '" + sourceModel + "' from the model endpoint.";
+}
+
 bool graphPbtxtExists(const std::string& modelPath) {
     const auto graphPath = std::filesystem::path(modelPath) / "graph.pbtxt";
     return std::filesystem::exists(graphPath);
@@ -54,7 +64,7 @@ bool hasTaskSpecificParameters(const std::vector<std::string>& unmatchedOptions)
     return !unmatchedOptions.empty();
 }
 
-std::optional<std::string> determineDefaultTaskParameter(const std::optional<std::string>& modelPath, const std::optional<std::string>& sourceModel, const std::optional<std::string>& modelRepositoryPath) {
+std::optional<std::string> determineDefaultTaskParameter(const std::optional<std::string>& modelPath, const std::optional<std::string>& sourceModel, const std::optional<std::string>& modelRepositoryPath, std::string* errorMessage) {
     DefaultTaskDetector detector;
 
     if (modelPath.has_value() && !modelPath->empty()) {
@@ -115,6 +125,9 @@ std::optional<std::string> determineDefaultTaskParameter(const std::optional<std
         if (indexStatus.ok()) {
             ctx.addContent("model_index.json", std::move(indexBody));
         } else {
+            if (errorMessage != nullptr) {
+                *errorMessage = describeTaskMetadataFailure(*sourceModel, indexHttpCode);
+            }
             return std::nullopt;
         }
     }

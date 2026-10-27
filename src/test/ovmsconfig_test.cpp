@@ -944,6 +944,21 @@ TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTask) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Could not infer model task");
 }
 
+TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTaskUnreachableEndpoint) {
+    EnvGuard envGuard;
+    envGuard.set("https_proxy", "");
+    envGuard.set("HF_ENDPOINT", "https://127.0.0.1:1/");
+    const char* n_argv[] = {
+        "ovms",
+        "--source_model",
+        "some/model",
+        "--model_repository_path",
+        "/some/path",
+    };
+    int arg_count = 5;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Could not reach the model endpoint");
+}
+
 TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTaskInvalidArchitectureLocal) {
     auto currentPath = std::filesystem::current_path();
     auto repoPath = std::filesystem::weakly_canonical(currentPath / ".." / ".." / "src/test/models_config_json").string();
