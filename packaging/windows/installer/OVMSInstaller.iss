@@ -9,11 +9,15 @@
 #ifndef OutputDir
 #define OutputDir SourceRoot + "\dist\windows"
 #endif
+#define MyAppURL "https://github.com/openvinotoolkit/model_server"
 
 [Setup]
 AppId={{9F35B167-C72A-4E1D-93E9-448CE4AE5270}
 AppName={#AppName}
 AppVersion=2026.5.1
+AppPublisherURL={#MyAppURL}
+AppSupportURL={#MyAppURL}
+AppUpdatesURL={#MyAppURL}
 AppPublisher={#AppPublisher}
 LicenseFile={#SourceRoot}\LICENSE
 DefaultDirName={autopf}\OVMS
@@ -100,6 +104,7 @@ Source: "{#OvmsSourceDir}\openvino_tensorflow_lite_frontend.dll"; DestDir: "{app
 Source: "{#SourceRoot}\packaging\windows\scripts\configure-ovms.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 Source: "{#SourceRoot}\packaging\windows\scripts\install-service.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 Source: "{#SourceRoot}\packaging\windows\scripts\ovms-env.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
+Source: "{#SourceRoot}\packaging\windows\scripts\pull-model.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 Source: "{#SourceRoot}\packaging\windows\scripts\repair-package.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 Source: "{#SourceRoot}\packaging\windows\scripts\set-path.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 Source: "{#SourceRoot}\packaging\windows\scripts\start-ovms.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
@@ -138,6 +143,7 @@ var
   RbRepair: TNewRadioButton;
   RbUninstall: TNewRadioButton;
   RuntimeSummaryPage: TWizardPage;
+  SettingsSummaryEdit: TNewMemo;
   AdditionalTasksPage: TWizardPage;
   AddOvmsToPathCheck: TNewCheckBox;
   ModelRepositoryPathEdit: TNewEdit;
@@ -145,6 +151,8 @@ var
   OvmsTerminalModeRadio: TNewRadioButton;
   OvmsServiceStatusLabel: TNewStaticText;
   StopOvmsServiceButton: TNewButton;
+  DownloadGptOssCheck: TNewCheckBox;
+  DownloadQwenCheck: TNewCheckBox;
   // When True, the "Exit Setup?" confirmation is suppressed so Setup can
   // close cleanly after handing off to the existing uninstaller.
   SuppressCancelConfirm: Boolean;
@@ -342,7 +350,45 @@ begin
     DirExists(ExpandConstant('{commonpf32}\Intel\NPU'));
 end;
 
+function FindDriverFileInDirectory(Path: String; FileName: String): String;
+var
+  FindRec: TFindRec;
+  CandidatePath: String;
+begin
+  Result := '';
+  if not DirExists(Path) then
+    Exit;
+
+  if FindFirst(AddBackslash(Path) + '*', FindRec) then
+  begin
+    try
+      repeat
+        if (FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY) <> 0 then
+        begin
+          if (FindRec.Name <> '.') and (FindRec.Name <> '..') then
+          begin
+            CandidatePath := AddBackslash(Path) + FindRec.Name;
+            Result := FindDriverFileInDirectory(CandidatePath, FileName);
+            if Result <> '' then
+              Exit;
+          end;
+        end
+        else if CompareText(FindRec.Name, FileName) = 0 then
+        begin
+          Result := AddBackslash(Path) + FindRec.Name;
+          Exit;
+        end;
+      until not FindNext(FindRec);
+    finally
+      FindClose(FindRec);
+    end;
+  end;
+end;
+
 function GetIntelGpuDriverPath: String;
+var
+  SearchPath: String;
+  Candidate: String;
 begin
   Result := '';
 
@@ -358,22 +404,67 @@ begin
     Result := ExpandConstant('{commonpf32}\Intel\igfxicd64.dll')
   else if FileExists(ExpandConstant('{commonpf32}\Intel\igfxicd64.exe')) then
     Result := ExpandConstant('{commonpf32}\Intel\igfxicd64.exe')
-  else if DirExists(ExpandConstant('{commonpf64}\Intel')) then
-    Result := ExpandConstant('{commonpf64}\Intel')
-  else if DirExists(ExpandConstant('{commonpf32}\Intel')) then
-    Result := ExpandConstant('{commonpf32}\Intel');
+  else
+  begin
+    if DirExists(ExpandConstant('{commonpf64}\Intel')) then
+    begin
+      SearchPath := ExpandConstant('{commonpf64}\Intel');
+      Candidate := FindDriverFileInDirectory(SearchPath, 'igfxicd64.dll');
+      if Candidate = '' then
+        Candidate := FindDriverFileInDirectory(SearchPath, 'igfxicd64.exe');
+      if Candidate <> '' then
+        Result := Candidate
+      else
+        Result := AddBackslash(SearchPath) + 'igfxicd64.dll';
+      Exit;
+    end;
+
+    if DirExists(ExpandConstant('{commonpf32}\Intel')) then
+    begin
+      SearchPath := ExpandConstant('{commonpf32}\Intel');
+      Candidate := FindDriverFileInDirectory(SearchPath, 'igfxicd64.dll');
+      if Candidate = '' then
+        Candidate := FindDriverFileInDirectory(SearchPath, 'igfxicd64.exe');
+      if Candidate <> '' then
+        Result := Candidate
+      else
+        Result := AddBackslash(SearchPath) + 'igfxicd64.dll';
+    end;
+  end;
 end;
 
 function GetNpuDriverPath: String;
+var
+  SearchPath: String;
+  Candidate: String;
 begin
   Result := '';
 
   if FileExists(ExpandConstant('{sys}\IntelVpuDriver.dll')) then
     Result := ExpandConstant('{sys}\IntelVpuDriver.dll')
-  else if DirExists(ExpandConstant('{commonpf64}\Intel\NPU')) then
-    Result := ExpandConstant('{commonpf64}\Intel\NPU')
-  else if DirExists(ExpandConstant('{commonpf32}\Intel\NPU')) then
-    Result := ExpandConstant('{commonpf32}\Intel\NPU');
+  else
+  begin
+    if DirExists(ExpandConstant('{commonpf64}\Intel')) then
+    begin
+      SearchPath := ExpandConstant('{commonpf64}\Intel');
+      Candidate := FindDriverFileInDirectory(SearchPath, 'IntelVpuDriver.dll');
+      if Candidate <> '' then
+        Result := Candidate
+      else if DirExists(ExpandConstant('{commonpf64}\Intel\NPU')) then
+        Result := ExpandConstant('{commonpf64}\Intel\NPU');
+      Exit;
+    end;
+
+    if DirExists(ExpandConstant('{commonpf32}\Intel')) then
+    begin
+      SearchPath := ExpandConstant('{commonpf32}\Intel');
+      Candidate := FindDriverFileInDirectory(SearchPath, 'IntelVpuDriver.dll');
+      if Candidate <> '' then
+        Result := Candidate
+      else if DirExists(ExpandConstant('{commonpf32}\Intel\NPU')) then
+        Result := ExpandConstant('{commonpf32}\Intel\NPU');
+    end;
+  end;
 end;
 
 function GetIntelCpuName: String;
@@ -499,6 +590,29 @@ begin
   Result := 'C:\models';
 end;
 
+function GetSavedInstallOptionBool(Key: String): Boolean;
+var
+  FilePath: String;
+  MarkerPath: String;
+  ResultCode: Integer;
+  Command: String;
+begin
+  Result := False;
+  FilePath := ExpandConstant('{localappdata}\OVMS\install-options.json');
+  if not FileExists(FilePath) then
+    Exit;
+
+  MarkerPath := ExpandConstant('{tmp}\ovms-install-option-' + Key + '.txt');
+  DeleteFile(MarkerPath);
+
+  Command :=
+    '-NoProfile -ExecutionPolicy Bypass -Command "$p = ''' + FilePath + '''; if ((Get-Content -Raw $p) -match ''"'' + Key + ''"\s*:\s*true'') { ''true'' | Set-Content -Path ''' + MarkerPath + ''' }"';
+
+  Exec('powershell.exe', Command, '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Result := FileExists(MarkerPath);
+  DeleteFile(MarkerPath);
+end;
+
 procedure WriteOptionalInstallSelection;
 var
   FilePath: String;
@@ -515,6 +629,8 @@ begin
     '"npu":' + BoolToJson(WizardIsComponentSelected('npu')) + ',' +
     '"gpu":' + BoolToJson(WizardIsComponentSelected('gpu')) + ',' +
     '"opencv_mp":' + BoolToJson(WizardIsComponentSelected('opencv_mp')) + ',' +
+    '"downloadGptOss":' + BoolToJson(Assigned(DownloadGptOssCheck) and DownloadGptOssCheck.Checked) + ',' +
+    '"downloadQwen3":' + BoolToJson(Assigned(DownloadQwenCheck) and DownloadQwenCheck.Checked) + ',' +
     '"cloud_storage":false,' +
     '"openvino_frontends":{' +
       '"gguf":' + BoolToJson(WizardIsComponentSelected('gguf_frontend')) + ',' +
@@ -623,7 +739,7 @@ end;
 procedure InitializeWizard;
 var
   Lbl: TNewStaticText;
-  SettingsSummaryEdit: TNewMemo;
+  ModelDownloadHeaderTop: Integer;
 begin
   InitializeSetupLog;
 
@@ -715,85 +831,166 @@ begin
     StopOvmsServiceButton.Caption := 'Stop OVMS service';
     StopOvmsServiceButton.OnClick := @StopOvmsServiceButtonClick;
     UpdateOvmsServiceStatus;
+  end;
 
-    // Keep the runtime summary on its dedicated page and expose the
-    // model repository path and OVMS startup mode on the custom tasks page.
-    AdditionalTasksPage := CreateCustomPage(wpSelectTasks,
-      'Additional tasks',
-      'OVMS install options');
+  // Keep the install-options page available regardless of the selected Python
+  // flavor so the model-download shortcut toggles remain visible to the user.
+  AdditionalTasksPage := CreateCustomPage(wpSelectTasks,
+    'Additional tasks',
+    'OVMS install options');
 
-    AddOvmsToPathCheck := TNewCheckBox.Create(AdditionalTasksPage);
-    AddOvmsToPathCheck.Parent := AdditionalTasksPage.Surface;
-    AddOvmsToPathCheck.Left := 0;
-    AddOvmsToPathCheck.Top := 0;
-    AddOvmsToPathCheck.Width := AdditionalTasksPage.SurfaceWidth;
-    AddOvmsToPathCheck.Checked := True;
-    AddOvmsToPathCheck.Caption := 'Add OVMS to PATH';
+  AddOvmsToPathCheck := TNewCheckBox.Create(AdditionalTasksPage);
+  AddOvmsToPathCheck.Parent := AdditionalTasksPage.Surface;
+  AddOvmsToPathCheck.Left := 0;
+  AddOvmsToPathCheck.Top := 0;
+  AddOvmsToPathCheck.Width := AdditionalTasksPage.SurfaceWidth;
+  AddOvmsToPathCheck.Checked := True;
+  AddOvmsToPathCheck.Caption := 'Add OVMS to PATH';
 
-    Lbl := TNewStaticText.Create(AdditionalTasksPage);
-    Lbl.Parent := AdditionalTasksPage.Surface;
-    Lbl.Left := 0;
-    Lbl.Top := AddOvmsToPathCheck.Top + AddOvmsToPathCheck.Height + ScaleY(8);
-    Lbl.Width := AdditionalTasksPage.SurfaceWidth;
-    Lbl.AutoSize := False;
-    Lbl.WordWrap := True;
-    Lbl.Caption := 'Model repository path used for OVMS_MODEL_REPOSITORY_PATH';
-    Lbl.Height := ScaleY(20);
+  Lbl := TNewStaticText.Create(AdditionalTasksPage);
+  Lbl.Parent := AdditionalTasksPage.Surface;
+  Lbl.Left := 0;
+  Lbl.Top := AddOvmsToPathCheck.Top + AddOvmsToPathCheck.Height + ScaleY(8);
+  Lbl.Width := AdditionalTasksPage.SurfaceWidth;
+  Lbl.AutoSize := False;
+  Lbl.WordWrap := True;
+  Lbl.Caption := 'Model repository path used for OVMS_MODEL_REPOSITORY_PATH';
+  Lbl.Height := ScaleY(20);
 
-    ModelRepositoryPathEdit := TNewEdit.Create(AdditionalTasksPage);
-    ModelRepositoryPathEdit.Parent := AdditionalTasksPage.Surface;
-    ModelRepositoryPathEdit.Left := 0;
-    ModelRepositoryPathEdit.Top := Lbl.Top + Lbl.Height + ScaleY(4);
-    ModelRepositoryPathEdit.Width := AdditionalTasksPage.SurfaceWidth;
-    ModelRepositoryPathEdit.Text := GetDefaultModelRepositoryPath;
+  ModelRepositoryPathEdit := TNewEdit.Create(AdditionalTasksPage);
+  ModelRepositoryPathEdit.Parent := AdditionalTasksPage.Surface;
+  ModelRepositoryPathEdit.Left := 0;
+  ModelRepositoryPathEdit.Top := Lbl.Top + Lbl.Height + ScaleY(4);
+  ModelRepositoryPathEdit.Width := AdditionalTasksPage.SurfaceWidth;
+  ModelRepositoryPathEdit.Text := GetDefaultModelRepositoryPath;
 
-    Lbl := TNewStaticText.Create(AdditionalTasksPage);
-    Lbl.Parent := AdditionalTasksPage.Surface;
-    Lbl.Left := 0;
-    Lbl.Top := ModelRepositoryPathEdit.Top + ModelRepositoryPathEdit.Height + ScaleY(8);
-    Lbl.Width := AdditionalTasksPage.SurfaceWidth;
-    Lbl.AutoSize := False;
-    Lbl.WordWrap := True;
-    Lbl.Caption := 'Ovms start mode';
-    Lbl.Height := ScaleY(20);
+  Lbl := TNewStaticText.Create(AdditionalTasksPage);
+  Lbl.Parent := AdditionalTasksPage.Surface;
+  Lbl.Left := 0;
+  Lbl.Top := ModelRepositoryPathEdit.Top + ModelRepositoryPathEdit.Height + ScaleY(8);
+  Lbl.Width := AdditionalTasksPage.SurfaceWidth;
+  Lbl.AutoSize := False;
+  Lbl.WordWrap := True;
+  Lbl.Caption := 'Ovms start mode';
+  Lbl.Height := ScaleY(20);
 
-    OvmsServiceModeRadio := TNewRadioButton.Create(AdditionalTasksPage);
-    OvmsServiceModeRadio.Parent := AdditionalTasksPage.Surface;
-    OvmsServiceModeRadio.Left := 0;
-    OvmsServiceModeRadio.Top := Lbl.Top + Lbl.Height + ScaleY(4);
-    OvmsServiceModeRadio.Width := AdditionalTasksPage.SurfaceWidth;
-    OvmsServiceModeRadio.Height := ScaleY(17);
-    OvmsServiceModeRadio.Caption := 'Automatic - start ovms service';
-    OvmsServiceModeRadio.Checked := False;
+  OvmsServiceModeRadio := TNewRadioButton.Create(AdditionalTasksPage);
+  OvmsServiceModeRadio.Parent := AdditionalTasksPage.Surface;
+  OvmsServiceModeRadio.Left := 0;
+  OvmsServiceModeRadio.Top := Lbl.Top + Lbl.Height + ScaleY(4);
+  OvmsServiceModeRadio.Width := AdditionalTasksPage.SurfaceWidth;
+  OvmsServiceModeRadio.Height := ScaleY(17);
+  OvmsServiceModeRadio.Caption := 'Automatic - start ovms service';
+  OvmsServiceModeRadio.Checked := False;
 
-    Lbl := TNewStaticText.Create(AdditionalTasksPage);
-    Lbl.Parent := AdditionalTasksPage.Surface;
-    Lbl.Left := ScaleX(18);
-    Lbl.Top := OvmsServiceModeRadio.Top + OvmsServiceModeRadio.Height + ScaleY(2);
-    Lbl.Width := AdditionalTasksPage.SurfaceWidth - ScaleX(18);
-    Lbl.AutoSize := False;
-    Lbl.WordWrap := True;
-    Lbl.Caption := 'Will stop and reinstall the existing OVMS service.';
-    Lbl.Height := ScaleY(26);
+  Lbl := TNewStaticText.Create(AdditionalTasksPage);
+  Lbl.Parent := AdditionalTasksPage.Surface;
+  Lbl.Left := ScaleX(18);
+  Lbl.Top := OvmsServiceModeRadio.Top + OvmsServiceModeRadio.Height + ScaleY(2);
+  Lbl.Width := AdditionalTasksPage.SurfaceWidth - ScaleX(18);
+  Lbl.AutoSize := False;
+  Lbl.WordWrap := True;
+  Lbl.Caption := 'Will stop and reinstall the existing OVMS service.';
+  Lbl.Height := ScaleY(26);
 
-    OvmsTerminalModeRadio := TNewRadioButton.Create(AdditionalTasksPage);
-    OvmsTerminalModeRadio.Parent := AdditionalTasksPage.Surface;
-    OvmsTerminalModeRadio.Left := 0;
-    OvmsTerminalModeRadio.Top := Lbl.Top + Lbl.Height + ScaleY(8);
-    OvmsTerminalModeRadio.Width := AdditionalTasksPage.SurfaceWidth;
-    OvmsTerminalModeRadio.Height := ScaleY(17);
-    OvmsTerminalModeRadio.Caption := 'Manual - start ovms in terminal';
-    OvmsTerminalModeRadio.Checked := True;
+  OvmsTerminalModeRadio := TNewRadioButton.Create(AdditionalTasksPage);
+  OvmsTerminalModeRadio.Parent := AdditionalTasksPage.Surface;
+  OvmsTerminalModeRadio.Left := 0;
+  OvmsTerminalModeRadio.Top := Lbl.Top + Lbl.Height + ScaleY(8);
+  OvmsTerminalModeRadio.Width := AdditionalTasksPage.SurfaceWidth;
+  OvmsTerminalModeRadio.Height := ScaleY(17);
+  OvmsTerminalModeRadio.Caption := 'Manual - start ovms in terminal';
+  OvmsTerminalModeRadio.Checked := True;
 
-    Lbl := TNewStaticText.Create(AdditionalTasksPage);
-    Lbl.Parent := AdditionalTasksPage.Surface;
-    Lbl.Left := ScaleX(18);
-    Lbl.Top := OvmsTerminalModeRadio.Top + OvmsTerminalModeRadio.Height + ScaleY(2);
-    Lbl.Width := AdditionalTasksPage.SurfaceWidth - ScaleX(18);
-    Lbl.AutoSize := False;
-    Lbl.WordWrap := True;
-    Lbl.Caption := 'Run "Start OVMS Server" from Start Windows Menu.';
-    Lbl.Height := ScaleY(26);
+  Lbl := TNewStaticText.Create(AdditionalTasksPage);
+  Lbl.Parent := AdditionalTasksPage.Surface;
+  Lbl.Left := ScaleX(18);
+  Lbl.Top := OvmsTerminalModeRadio.Top + OvmsTerminalModeRadio.Height + ScaleY(2);
+  Lbl.Width := AdditionalTasksPage.SurfaceWidth - ScaleX(18);
+  Lbl.AutoSize := False;
+  Lbl.WordWrap := True;
+  Lbl.Caption := 'Run "Start OVMS Server" from Start Windows Menu.';
+  Lbl.Height := ScaleY(26);
+
+  ModelDownloadHeaderTop := Lbl.Top + Lbl.Height + ScaleY(8);
+
+  Lbl := TNewStaticText.Create(AdditionalTasksPage);
+  Lbl.Parent := AdditionalTasksPage.Surface;
+  Lbl.Left := 0;
+  Lbl.Top := ModelDownloadHeaderTop;
+  Lbl.Width := AdditionalTasksPage.SurfaceWidth;
+  Lbl.AutoSize := False;
+  Lbl.WordWrap := True;
+  Lbl.Caption := 'Create start menu shortcuts for huggingface.com recommended models download';
+  Lbl.Height := ScaleY(26);
+
+  DownloadGptOssCheck := TNewCheckBox.Create(AdditionalTasksPage);
+  DownloadGptOssCheck.Parent := AdditionalTasksPage.Surface;
+  DownloadGptOssCheck.Left := 0;
+  DownloadGptOssCheck.Top := Lbl.Top + Lbl.Height + ScaleY(8);
+  DownloadGptOssCheck.Width := AdditionalTasksPage.SurfaceWidth;
+  DownloadGptOssCheck.Checked := GetSavedInstallOptionBool('downloadGptOss');
+  DownloadGptOssCheck.Caption := 'OpenVINO/gpt-oss-20b-int4-ov';
+
+  DownloadQwenCheck := TNewCheckBox.Create(AdditionalTasksPage);
+  DownloadQwenCheck.Parent := AdditionalTasksPage.Surface;
+  DownloadQwenCheck.Left := 0;
+  DownloadQwenCheck.Top := DownloadGptOssCheck.Top + DownloadGptOssCheck.Height + ScaleY(6);
+  DownloadQwenCheck.Width := AdditionalTasksPage.SurfaceWidth;
+  DownloadQwenCheck.Checked := GetSavedInstallOptionBool('downloadQwen3');
+  DownloadQwenCheck.Caption := 'OpenVINO/Qwen3-4B-int4-ov';
+end;
+
+function GetSelectedModelRepositoryPath: String;
+begin
+  Result := '';
+  if Assigned(ModelRepositoryPathEdit) then
+    Result := Trim(ModelRepositoryPathEdit.Text);
+
+  if Result = '' then
+    Result := GetDefaultModelRepositoryPath;
+end;
+
+procedure CreateModelPullStartMenuEntry(ModelName: String; ShortcutLabel: String; ModelRepositoryPath: String);
+var
+  ShortcutDir: String;
+  ShortcutPath: String;
+  InstallDir: String;
+  ScriptPath: String;
+  Command: String;
+  ResultCode: Integer;
+begin
+  InstallDir := ExpandConstant('{app}');
+  ShortcutDir := ExpandConstant('{userprograms}\OpenVINO Model Server');
+  CreateDir(ShortcutDir);
+
+  ScriptPath := InstallDir + '\scripts\pull-model.ps1';
+  ShortcutPath := ShortcutDir + '\' + ShortcutLabel + '.lnk';
+
+  Command :=
+    '$ws = New-Object -ComObject WScript.Shell; ' +
+    '$s = $ws.CreateShortcut(''' + ShortcutPath + '''); ' +
+    '$s.TargetPath = ''cmd.exe''; ' +
+    '$s.Arguments = ''/K powershell.exe -NoProfile -ExecutionPolicy Bypass -File ""' + ScriptPath + '"" -ModelName ""' + ModelName + '"" -InstallDir ""' + InstallDir + '"" -ModelRepositoryPath ""' + ModelRepositoryPath + '""''; ' +
+    '$s.WorkingDirectory = ''' + InstallDir + '''; ' +
+    '$s.WindowStyle = 1; ' +
+    '$s.Save();';
+
+  Exec('powershell.exe',
+    '-NoProfile -ExecutionPolicy Bypass -Command "' + Command + '"',
+    '',
+    SW_HIDE,
+    ewWaitUntilTerminated,
+    ResultCode);
+
+  if (ResultCode <> 0) or (not FileExists(ShortcutPath)) then
+  begin
+    ShortcutPath := ShortcutDir + '\' + ShortcutLabel + '.cmd';
+    SaveStringToFile(
+      ShortcutPath,
+      '@echo off' + #13#10 +
+      'powershell.exe -NoExit -NoProfile -ExecutionPolicy Bypass -File "' + ScriptPath + '" -ModelName "' + ModelName + '" -InstallDir "' + InstallDir + '" -ModelRepositoryPath "' + ModelRepositoryPath + '"',
+      False);
   end;
 end;
 
@@ -806,9 +1003,7 @@ begin
   if not Assigned(ModelRepositoryPathEdit) then
     Exit;
 
-  ModelRepositoryPath := Trim(ModelRepositoryPathEdit.Text);
-  if ModelRepositoryPath = '' then
-    ModelRepositoryPath := GetDefaultModelRepositoryPath;
+  ModelRepositoryPath := GetSelectedModelRepositoryPath;
 
   ResultCode := 0;
   Exec('cmd.exe',
@@ -880,6 +1075,16 @@ begin
         'No detailed output was captured. Please check the installer log and try again.';
     MsgBox(Message, mbError, MB_OK);
     Result := False;
+  end;
+end;
+
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  if Assigned(RuntimeSummaryPage) and (CurPageID = RuntimeSummaryPage.ID) then
+  begin
+    if Assigned(SettingsSummaryEdit) then
+      SettingsSummaryEdit.Text := GetOvmsSettingsSummary;
+    UpdateOvmsServiceStatus;
   end;
 end;
 
@@ -981,6 +1186,18 @@ begin
     begin
       SaveStringToFile(GetSetupLogPath, '[SETUP] Stage: configure Python runtime' + #13#10, True);
       RunPythonConfigurationForSelectedVariant;
+    end;
+
+    if ((Assigned(DownloadGptOssCheck) and DownloadGptOssCheck.Checked) or GetSavedInstallOptionBool('downloadGptOss')) then
+    begin
+      SaveStringToFile(GetSetupLogPath, '[SETUP] Stage: create gpt-oss download shortcut' + #13#10, True);
+      CreateModelPullStartMenuEntry('OpenVINO/gpt-oss-20b-int4-ov', 'Download OpenVINO.gpt-oss-20b-int4-ov', GetSelectedModelRepositoryPath);
+    end;
+
+    if ((Assigned(DownloadQwenCheck) and DownloadQwenCheck.Checked) or GetSavedInstallOptionBool('downloadQwen3')) then
+    begin
+      SaveStringToFile(GetSetupLogPath, '[SETUP] Stage: create Qwen download shortcut' + #13#10, True);
+      CreateModelPullStartMenuEntry('OpenVINO/Qwen3-4B-int4-ov', 'Download OpenVINO.Qwen3-4B-int4-ov', GetSelectedModelRepositoryPath);
     end;
 
     if Assigned(OvmsServiceModeRadio) and OvmsServiceModeRadio.Checked then

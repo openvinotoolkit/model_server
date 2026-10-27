@@ -66,14 +66,25 @@ try {
     }
 
     Write-SetupLog -Message "[INFO] Creating Windows service with binPath: $binPath" -LogPath $SetupLogPath
-    & sc.exe create ovms binPath= $binPath DisplayName= "OpenVINO Model Server" start= demand 2>&1 | Tee-Object -FilePath $SetupLogPath -Append -Encoding utf8
+    $createOutput = & sc.exe create ovms binPath= $binPath DisplayName= "OpenVINO Model Server" start= demand 2>&1
+    foreach ($line in $createOutput) {
+        Write-SetupLog -Message $line.ToString() -LogPath $SetupLogPath
+    }
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to create ovms service."
     }
 
+    $service = Get-Service ovms -ErrorAction SilentlyContinue
+    if (-not $service) {
+        throw "OVMS service was not created successfully; Get-Service ovms returned no service object."
+    }
+
     try {
         Write-SetupLog -Message "[INFO] Running ovms.exe install step." -LogPath $SetupLogPath
-        & $ovmsExe install 2>&1 | Tee-Object -FilePath $SetupLogPath -Append -Encoding utf8
+        $installOutput = & $ovmsExe install 2>&1
+        foreach ($line in $installOutput) {
+            Write-SetupLog -Message $line.ToString() -LogPath $SetupLogPath
+        }
     } catch {
         Write-SetupLog -Message "[WARN] ovms.exe install returned an error: $($_.Exception.Message)" -LogPath $SetupLogPath
     }
@@ -83,9 +94,21 @@ try {
     [System.IO.File]::WriteAllText($settingsPath, ($settings | ConvertTo-Json -Depth 10), $utf8NoBom)
 
     $service = Get-Service ovms -ErrorAction SilentlyContinue
-    if ($service -and $service.Status -ne "Running") {
+    if (-not $service) {
+        throw "OVMS service disappeared after installation."
+    }
+
+    if ($service.Status -ne "Running") {
         Write-SetupLog -Message "[INFO] Starting OVMS service." -LogPath $SetupLogPath
-        Start-Service ovms 2>&1 | Tee-Object -FilePath $SetupLogPath -Append -Encoding utf8
+        $startOutput = Start-Service ovms -ErrorAction Stop 2>&1
+        foreach ($line in $startOutput) {
+            Write-SetupLog -Message $line.ToString() -LogPath $SetupLogPath
+        }
+    }
+
+    $service = Get-Service ovms -ErrorAction SilentlyContinue
+    if (-not $service -or $service.Status -ne "Running") {
+        throw "OVMS service did not reach Running state after startup attempt."
     }
 
     Write-SetupLog -Message "[INFO] OVMS service installed and started." -LogPath $SetupLogPath

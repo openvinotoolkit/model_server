@@ -40,7 +40,10 @@ try {
             Write-SetupLog -Message "[INFO] Stopping existing OVMS service before deletion." -LogPath $SetupLogPath
             Stop-Service ovms -ErrorAction SilentlyContinue
         }
-        & sc.exe delete ovms 2>&1 | Tee-Object -FilePath $SetupLogPath -Append -Encoding utf8
+        $deleteOutput = & sc.exe delete ovms 2>&1
+        foreach ($line in $deleteOutput) {
+            Write-SetupLog -Message $line.ToString() -LogPath $SetupLogPath
+        }
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to delete ovms service."
         }
