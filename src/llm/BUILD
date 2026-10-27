@@ -689,6 +689,11 @@ ovms_cc_library(
         ":runtime_chat_template_loader",
         ":llm_calculators_plugin_api",
     ],
+    # RapidJSON's reader.h triggers C6313 under MSVC /analyze.
+    additional_copts = select({
+        "//src:windows": ["/wd6313"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
 )
 

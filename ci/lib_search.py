@@ -121,6 +121,7 @@ def check_dir(start_dir):
         'resnet_images.txt',
         "resnet_labels.txt",
         'rest_sdk_v2.10.16.patch',
+        'stb_image_convert_format16_overflow.patch',
         'tf.patch',
         'tf_graph_info_multilinecomment.patch',
         'tftext.patch',
