@@ -120,6 +120,9 @@ class StreamClient:
         self.verbose = verbose
         self.exact = exact
         self.benchmark = benchmark
+        self.max_inflight_packets = max_inflight_packets
+        self.pending_frames = {}
+        self.pending_frames_lock = threading.Lock()
 
         self.req_s = threading.Semaphore(max_inflight_packets)
 
@@ -131,25 +134,49 @@ class StreamClient:
             self.force_exit = True
             return None
 
+        return frame
+
+    def preprocess_frame(self, frame):
         if self.preprocess_callback is not None:
             return self.preprocess_callback(frame)
-        else:
-            return frame
+        return frame
 
     inference_time = []
     dropped_frames = 0
     frames = 0
     def callback(self, frame, i, timestamp, result, error):
-        self.req_s.release()
         if error is not None:
             if self.benchmark:
                 self.dropped_frames += 1
             if self.verbose:
                 print(error)
+        response = result.get_response() if result is not None else None
+        response_timestamp = None
+        if response is not None:
+            timestamp_parameter = response.parameters.get("OVMS_MP_TIMESTAMP")
+            if timestamp_parameter is not None:
+                response_timestamp = timestamp_parameter.int64_param
+        if self.streaming_api and response is not None:
+            with self.pending_frames_lock:
+                if response_timestamp in self.pending_frames:
+                    frame = self.pending_frames.pop(response_timestamp)
+                elif response.id:
+                    frame = self.pending_frames.pop(int(response.id), frame)
+                elif self.pending_frames:
+                    frame = self.pending_frames.pop(next(iter(self.pending_frames)))
+        self.req_s.release()
         if i == None:
-            i = result.get_response().parameters["OVMS_MP_TIMESTAMP"].int64_param
+            if response_timestamp is not None:
+                i = response_timestamp
+            elif response is not None and response.id:
+                i = int(response.id)
+            else:
+                i = 0
         if timestamp == None:
-            timestamp = result.get_response().parameters["OVMS_MP_TIMESTAMP"].int64_param
+            if response_timestamp is not None:
+                timestamp = response_timestamp
+            else:
+                timestamp = time.time_ns()
         frame = self.postprocess_callback(frame, result)
         self.pq.put((i, frame, timestamp))
 
@@ -206,15 +233,15 @@ class StreamClient:
         display_th = threading.Thread(target=self.display)
         display_th.start()
         test_frame = self.grab_frame()
+        first_frame = test_frame
 
         if test_frame is None:
             self. force_exit = True
         else:
-            np_test_frame = np.array(test_frame, dtype=datatype.dtype())
             if self.width is None:
-                self.width = np_test_frame.shape[1]
+                self.width = test_frame.shape[1]
             if self.height is None:
-                self.height = np_test_frame.shape[0]
+                self.height = test_frame.shape[0]
         self.output_backend.init(self.sink, fps, self.width, self.height)
 
         if streaming_api:
@@ -225,13 +252,33 @@ class StreamClient:
         try:
             while not self.force_exit:
                 self.req_s.acquire()
-                frame = self.grab_frame()
+                frame = first_frame
+                first_frame = None
+                if frame is None:
+                    frame = self.grab_frame()
+                    if frame is None:
+                        self.req_s.release()
+                        break
                 if frame is not None:
-                    np_frame = np.array([frame], dtype=datatype.dtype()) if batch else np.array(frame, dtype=datatype.dtype())
+                    inference_frame = self.preprocess_frame(frame)
+                    np_frame = np.array([inference_frame], dtype=datatype.dtype()) if batch else np.array(inference_frame, dtype=datatype.dtype())
                     inputs=[grpcclient.InferInput(input_name, np_frame.shape, datatype.string())]
                     inputs[0].set_data_from_numpy(np_frame)
                     if streaming_api:
-                        triton_client.async_stream_infer(model_name=model_name, inputs=inputs)
+                        if frame_number == 0:
+                            request_timestamp = time.time_ns() // 1000
+                        else:
+                            request_timestamp = max(request_timestamp + 1, time.time_ns() // 1000)
+                        request_id = str(request_timestamp)
+                        with self.pending_frames_lock:
+                            if len(self.pending_frames) >= self.max_inflight_packets:
+                                self.pending_frames.pop(next(iter(self.pending_frames)))
+                            self.pending_frames[request_timestamp] = frame
+                        triton_client.async_stream_infer(
+                            model_name=model_name,
+                            inputs=inputs,
+                            request_id=request_id,
+                            parameters={"OVMS_MP_TIMESTAMP": request_timestamp})
                     else:
                         triton_client.async_infer(
                             model_name=model_name,
@@ -243,9 +290,11 @@ class StreamClient:
                 if limit_frames > 0 and frame_number > limit_frames:
                     break
         finally:
-            self.pq.put((frame_number, "EOS", 0))
             if streaming_api:
+                for _ in range(self.max_inflight_packets):
+                    self.req_s.acquire()
                 triton_client.stop_stream()
+            self.pq.put((frame_number, "EOS", 0))
         sent_all_frames = time.time() - total_time_start
 
 

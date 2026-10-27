@@ -603,6 +603,9 @@ http_archive(
     url = "https://github.com/nothings/stb/archive/5c205738c191bcb0abc65c4febfa9bd25ff35234.tar.gz",
     sha256 = "cfeab9f800961882d6d22ddf36e965523b33002f4f937de08321304c9ba72af3",
     strip_prefix = "stb-5c205738c191bcb0abc65c4febfa9bd25ff35234",
+    patches = ["@ovms//third_party/stb:stb_image_convert_format16_overflow.patch"],
+    patch_args = ["-p1"],
+    patch_tool = "patch",
     build_file_content = """
 cc_library(
     name = "image",

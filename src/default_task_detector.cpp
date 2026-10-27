@@ -164,10 +164,26 @@ bool Text2SpeechDetector::scan(const ModelCatalogContext& ctx) const {
 
     if (!archs.IsArray())
         return false;
+
     for (const auto& a : archs.GetArray()) {
         if (!a.IsString())
             continue;
+
         const std::string arch = a.GetString();
+
+        if (arch == "Qwen3TTSForConditionalGeneration") {
+            std::optional<std::string> ttsModelType;
+            if (config->HasMember("tts_model_type") && (*config)["tts_model_type"].IsString()) {
+                ttsModelType = (*config)["tts_model_type"].GetString();
+            }
+            if (ttsModelType && *ttsModelType == "base") {
+                return false;
+            }
+            if (!ttsModelType || *ttsModelType == "custom_voice" || *ttsModelType == "voice_design") {
+                return true;
+            }
+        }
+
         if (arch == "ParlerTTSForConditionalGeneration" ||
             arch == "SpeechT5ForTextToSpeech" ||
             arch == "KModel" ||  // Kokoro TTS
@@ -306,6 +322,10 @@ std::string TextGenerationDetector::getName() const { return "text_generation"; 
 bool TextGenerationDetector::scan(const ModelCatalogContext& ctx) const {
     const auto* config = ctx.json("config.json");
     if (!config)
+        return false;
+    if (anyArchitecture(*config, [](const std::string& arch) {
+            return arch == "Qwen3TTSForConditionalGeneration";
+        }))
         return false;
     // Note: if we reach this detector, all higher-priority detectors have
     // already returned false, so ForCausalLM / ForConditionalGeneration

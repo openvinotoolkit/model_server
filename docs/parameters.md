@@ -18,6 +18,7 @@
 | `"plugin_config"` | `json/string`  |  List of device plugin parameters. For full list refer to [OpenVINO documentation](https://docs.openvino.ai/2026/documentation/compatibility-and-support/supported-devices.html) and [performance tuning guide](./performance_tuning.md). Example: <br> `{"PERFORMANCE_HINT": "LATENCY"}`  |
 | `"nireq"` | `integer` | The size of internal request queue. When set to 0 or no value is set value is calculated automatically based on available resources.|
 | `"target_device"` | `string` | Device name to be used to execute inference operations. Accepted values are: `"CPU"/"GPU"/"NPU"/"HETERO"/"`. By default server selects the device with this priority: dGPU if present, iGPU if present, CPU. If several discrete GPUs are present, the one with most available VRAM will be selected. |
+| `"disable_input_count_validation"` | `bool` (default: false) | Disables enforcement for the KServe requests to match all the model inputs. It ignores all inputs which are not used in the model. Not recommended for performance reasons but in some cases might simplify the client. |
 | `"metrics_enable"` | `bool` | Flag enabling [metrics](metrics.md) endpoint on rest_port. |
 | `"metrics_list"` | `string` | Comma separated list of [metrics](metrics.md). If unset, only default metrics will be enabled.|
 
@@ -59,7 +60,6 @@ Configuration options for the server are defined only via command-line options a
 | `allowed_local_media_path` | `string` | Path to the directory containing images to include in requests. If unset, local filesystem images in requests are not supported.|
 | `allowed_media_domains` | `string` | Comma separated list of media domains from which URLs can be used as input for LLMs. Set to \"all\" to disable this restrictions. If unset, URLs in requests are not supported."
 | `verbose_response` | `NA` | When enabled, responses include an extra `__verbose` object with additional debug information. Applies for text generation models |
-| `disable_input_count_validation` | `bool` (default: false) | Disables enforcement for the KServe requests to match all the model inputs. It ignores all inputs which are not used in the model. Not recommended for performance reasons but in some cases might simplify the client. |
 | `idle_unload_timeout_seconds` | `integer` (default: 0) | Unloads servable resources after this many seconds with no inference requests, freeing GPU/CPU memory. Resources are reloaded automatically on the next request. Set to `0` to disable the feature. See [Idle servable unload](#idle-servable-unload). |
 
 ### Idle servable unload
@@ -169,7 +169,7 @@ Task specific parameters for different tasks (text generation/image generation/e
 | `--model_distribution_policy`         | `string`     | TENSOR_PARALLEL distributes tensor to multiple sockets/devices and processes it in parallel. PIPELINE_PARALLEL distributes different tensors to process by each device. Accepted values: `TENSOR_PARALLEL`, `PIPELINE_PARALLEL` or empty (default). |
 | `--reasoning_parser`                  | `string`     | Type of parser to use for reasoning content extraction from model output. Auto-detected from chat template if not specified. Use `none` to explicitly disable. Supported: [qwen3, gptoss, lfm2, gemma4, onyx]                     |
 | `--tool_parser`                       | `string`     | Type of parser to use for tool calls extraction from model output. Auto-detected from chat template if not specified. Use `none` to explicitly disable. Supported: [llama3, phi4, hermes3, mistral, qwen3coder, gptoss, devstral, lfm2, gemma4, onyx]            |
-| `--chat_template_engine` | `string` | Chat template renderer: `jinja` or `minja`. Defaults to Jinja when Python is available, otherwise Minja. Explicit Jinja requires Python; the alternate spelling is supported for compatibility. |
+| `--chat_template_engine` | `string` | Chat template renderer: `jinja` or `minja`. Defaults to Jinja when Python is available, otherwise Minja. An explicitly selected engine requires a compatible chat template; Jinja also requires Python. |
 | `--enable_tool_guided_generation`     | `bool`       | Enables enforcing tool schema during generation. Requires setting response parser. Default: false.                         |
 | `--cache_interval_multiplier`         | `integer`    | Multiplier for the KV cache block interval. Controls the granularity of cache allocation. Default: adaptive for the model.                  |
 
