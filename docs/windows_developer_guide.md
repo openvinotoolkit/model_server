@@ -92,7 +92,19 @@ Optionally, pass the dependency location and a GoogleTest filter:
 windows_test.bat my_dir_on_c PythonFlowTest.*
 ```
 [arg1] - Dependency location under `C:\`; defaults to `C:\opt`.
-[arg2] - GoogleTest filter; defaults to `*`.
+[arg2] - GoogleTest filter for `ovms_test`; defaults to `*`.
+
+To skip downloading the Hugging Face test models, use the built-in negative
+filter for tests that do not access those models:
+```bat
+windows_test.bat opt --skip-model-download
+```
+The filter is applied only to `ovms_test`; the Windows service and Python
+runtime tests still run. To provide a custom model-independent filter, pass it
+before the option:
+```bat
+windows_test.bat opt "ModelVersionStatus.*" --skip-model-download
+```
 
 # Creating deployment package
 This step prepares ovms.zip deployment package from the build artifacts in the dist\windows\ directory. Run this script after successful compilation.

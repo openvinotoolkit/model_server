@@ -27,6 +27,22 @@ on the files changed.
 | Linux | `make ovms_builder_image BASE_OS=ubuntu24 RUN_TESTS=0 OPTIMIZE_BUILDING_TESTS=1`<br>`make release_image BASE_OS=ubuntu24 RUN_TESTS=0`<br>`make run_lib_files_test`<br>`make run_unit_tests BASE_OS=ubuntu24` (prepares models with `./prepare_llm_models.sh src/test/llm_testing`) | Source, dependency, or build-system changes that trigger the Linux build pipeline |
 | Windows | `windows_install_build_dependencies.bat opt`<br>`windows_clean_build.bat opt`<br>`windows_build.bat opt`<br>`windows_test.bat opt` (prepares models with `windows_prepare_llm_models.bat %cd%\src\test\llm_testing`) | Source, dependency, or build-system changes that trigger the Windows build pipeline; run from a configured Windows build environment |
 
+For local model-independent unit tests without downloading Hugging Face models:
+
+```bash
+make run_unit_tests SKIP_MODEL_DOWNLOAD=1
+```
+
+```bat
+windows_test.bat opt --skip-model-download
+```
+
+Both commands use a negative filter for model-dependent cases in `//src:ovms_test`;
+the Python runtime tests and Windows service test still run. To override the
+default filter, use `OVMS_TEST_FILTER='SuiteName.TestName'` with Make, or pass
+the filter before `--skip-model-download` to `windows_test.bat`. Custom filters
+must select only tests that do not access downloaded models.
+
 Record the exact developer commands run and the status of each applicable check
 in the [pull request template](../.github/pull_request_template.md). Mark checks
 that could not be run as `not run` and explain why. PRs missing required checks

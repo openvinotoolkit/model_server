@@ -298,6 +298,22 @@ make ovms_builder_image
 make run_unit_tests
 ```
 
+To run a model-independent test subset without downloading test models, use:
+```bash
+make run_unit_tests SKIP_MODEL_DOWNLOAD=1
+```
+The no-download default uses a negative gtest filter on `//src:ovms_test`:
+`*` selects all tests, and `-` separates the exclusions for LLM, VLM, parser,
+audio, embeddings, and rerank tests that load downloaded model files.
+The filter is applied only to `//src:ovms_test`; the Python binding and Python
+runtime targets still run their full test suites. Override it with a gtest
+filter containing only `//src:ovms_test` cases that do not access downloaded
+model files:
+```bash
+make run_unit_tests SKIP_MODEL_DOWNLOAD=1 OVMS_TEST_FILTER='SuiteName.TestName'
+```
+This mode skips model preparation and cannot be combined with `RUN_GPU_TESTS=1`.
+
 To run unit tests, verifying integration with Intel GPUs, add `RUN_GPU_TESTS=1` parameter:
 ```
 make run_unit_tests RUN_GPU_TESTS=1
