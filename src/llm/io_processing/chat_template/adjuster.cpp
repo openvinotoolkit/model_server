@@ -18,6 +18,7 @@
 #include <cctype>
 #include <regex>
 #include <string>
+#include <optional>
 #include <utility>
 
 namespace ovms {
@@ -27,8 +28,13 @@ bool isIdentifierChar(char value) {
     return std::isalnum(static_cast<unsigned char>(value)) || value == '_';
 }
 
-bool findFilter(const std::string& source, const std::string& function,
-    size_t searchFrom, size_t& pipePosition, size_t& functionEnd) {
+struct FindFilterResult {
+    size_t pipePosition;
+    size_t functionEnd;
+};
+
+std::optional<FindFilterResult> findFilter(const std::string& source, const std::string& function,
+    size_t searchFrom) {
     char quote = '\0';
     bool escaped = false;
     for (size_t pipe = 0; pipe < source.size(); ++pipe) {
@@ -46,7 +52,7 @@ bool findFilter(const std::string& source, const std::string& function,
         if (source.compare(pipe, 2, "{#") == 0) {
             const size_t commentEnd = source.find("#}", pipe + 2);
             if (commentEnd == std::string::npos) {
-                return false;
+                return std::nullopt;
             }
             pipe = commentEnd + 1;
             continue;
@@ -59,8 +65,6 @@ bool findFilter(const std::string& source, const std::string& function,
             continue;
         }
 
-        pipePosition = pipe;
-
         size_t functionStart = pipe + 1;
         while (functionStart < source.size() && std::isspace(static_cast<unsigned char>(source[functionStart]))) {
             ++functionStart;
@@ -68,14 +72,14 @@ bool findFilter(const std::string& source, const std::string& function,
         if (source.compare(functionStart, function.size(), function) != 0) {
             continue;
         }
-        functionEnd = functionStart + function.size();
+        size_t functionEnd = functionStart + function.size();
         if (functionEnd < source.size() && isIdentifierChar(source[functionEnd])) {
             continue;
         }
 
-        return true;
+        return FindFilterResult{pipe, functionEnd};
     }
-    return false;
+    return std::nullopt;
 }
 
 size_t findClosingParenthesis(const std::string& source, size_t openPosition) {
@@ -113,14 +117,12 @@ RemoveFunctionParamsAdjustment::RemoveFunctionParamsAdjustment(std::vector<std::
 void RemoveFunctionParamsAdjustment::apply(std::string& processed) const {
     for (const auto& function : functions) {
         size_t searchFrom = 0;
-        size_t pipePosition = 0;
-        size_t functionEnd = 0;
-        while (findFilter(processed, function, searchFrom, pipePosition, functionEnd)) {
-            size_t openPosition = functionEnd;
+        while (auto result = findFilter(processed, function, searchFrom)) {
+            size_t openPosition = result->functionEnd;
             while (openPosition < processed.size() && std::isspace(static_cast<unsigned char>(processed[openPosition]))) {
                 ++openPosition;
             }
-            searchFrom = functionEnd;
+            searchFrom = result->functionEnd;
             if (openPosition >= processed.size() || processed[openPosition] != '(') {
                 continue;
             }
@@ -138,14 +140,12 @@ RemoveFiltersAdjustment::RemoveFiltersAdjustment(std::vector<std::string> filter
 void RemoveFiltersAdjustment::apply(std::string& processed) const {
     for (const auto& filter : filters) {
         size_t searchFrom = 0;
-        size_t pipePosition = 0;
-        size_t functionEnd = 0;
-        while (findFilter(processed, filter, searchFrom, pipePosition, functionEnd)) {
-            size_t removalStart = pipePosition;
+        while (auto result = findFilter(processed, filter, searchFrom)) {
+            size_t removalStart = result->pipePosition;
             while (removalStart > 0 && (processed[removalStart - 1] == ' ' || processed[removalStart - 1] == '\t')) {
                 --removalStart;
             }
-            processed.erase(removalStart, functionEnd - removalStart);
+            processed.erase(removalStart, result->functionEnd - removalStart);
             searchFrom = removalStart;
         }
     }
