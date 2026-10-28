@@ -19,6 +19,7 @@
 
 import json
 import os
+import sys
 import numpy as np
 
 from openai import NotFoundError
@@ -219,8 +220,9 @@ class GenerativeAIUtils:
         input_data_json_path = os.path.join(tmp_path, "input_data.json")
         with open(input_data_json_path, "w", encoding='utf-8') as fo:
             json.dump(input_data, fo)
-        venv_cmd = f"source {os.path.join(ovms_c_repo_path, ".venv", "bin", "activate")}" \
-            if context.base_os != OsType.Windows else os.path.join(ovms_c_repo_path, ".venv", "Scripts", "activate.bat")
+        # sys.prefix follows whichever repo the tests were started from
+        venv_cmd = os.path.join(sys.prefix, "Scripts", "activate.bat") if context.base_os == OsType.Windows else \
+            f"source {os.path.join(sys.prefix, 'bin', 'activate')}"
         script_path = os.path.join(
             ovms_c_repo_path, "tests", "functional", "utils", "generative_ai", "openai_client.py")
         request_params_dict = request_parameters.prepare_dict(use_extra_body=False)
