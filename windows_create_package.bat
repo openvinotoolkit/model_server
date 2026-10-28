@@ -15,7 +15,13 @@
 ::
 echo off
 setlocal EnableExtensions EnableDelayedExpansion
-set "setPath=C:\opt;C:\opt\msys64\usr\bin\;%PATH%;"
+set "msvc_tools_dir=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC"
+for /f "delims=" %%V in ('dir /b /ad /o-n "%msvc_tools_dir%" 2^>nul') do (
+    if not defined dumpbin_dir if exist "%msvc_tools_dir%\%%V\bin\Hostx64\x64\dumpbin.exe" (
+        set "dumpbin_dir=%msvc_tools_dir%\%%V\bin\Hostx64\x64"
+    )
+)
+set "setPath=C:\opt;C:\opt\msys64\usr\bin\;!dumpbin_dir!;%PATH%;"
 set "PATH=%setPath%"
 
 set "libovmspython_src="
@@ -36,12 +42,12 @@ IF "%~1"=="" (
     set "output_user_root=%1"
 )
 
-IF "%~2"=="--with_python" (
+IF /I "%~2"=="--with_python" (
     echo Self contained Python will be included in the package
-    set "with_python=true"
+    set "include_python=true"
 ) ELSE (
     echo Self contained Python will not be included in the package
-    set "with_python=false"
+    set "include_python=false"
 )
 
 :: Set default USE_OV_BINARY if not set
@@ -58,45 +64,101 @@ md dist\windows\ovms
 copy bazel-bin\src\ovms.exe dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-copy %cd%\bazel-out\x64_windows-opt\bin\src\ovms_mediapipe_runtime_shared.dll dist\windows\ovms
-if !errorlevel! neq 0 exit /b !errorlevel!
+where dumpbin >nul 2>&1
+if !errorlevel! equ 0 (
+    set "deps_file=%TEMP%\ovms_deps_!RANDOM!.txt"
+    dumpbin /DEPENDENTS dist\windows\ovms\ovms.exe > "!deps_file!"
+    if !errorlevel! neq 0 (
+        del "!deps_file!"
+        exit /b 1
+    )
+    findstr /I /R "python[0-9][0-9]*\.dll libovmspython\.dll" "!deps_file!" >nul
+    if !errorlevel! equ 0 (
+        del "!deps_file!"
+        echo OVMS binary must not link directly against Python.
+        exit /b 1
+    )
+    del "!deps_file!"
+
+    echo DEBUG: Running MediaPipe runtime export check with dumpbin.
+    set "exports_file=%TEMP%\ovms_exports_!RANDOM!.txt"
+    dumpbin /EXPORTS dist\windows\ovms\ovms.exe > "!exports_file!"
+    if !errorlevel! neq 0 (
+        del "!exports_file!"
+        echo Failed to inspect OVMS exports with dumpbin.
+        exit /b 1
+    )
+    :: These are required by MediapipeRuntimeApi's GetProcAddress initialization.
+    for %%S in (
+        OVMS_MPFactoryCreate
+        OVMS_MPFactoryDestroy
+        OVMS_MPFactoryGetLastError
+        OVMS_MPFactoryProcessConfig
+        OVMS_MPFactoryCreateExecutor
+        OVMS_MPFactoryCreateExecutorHandle
+        OVMS_MPFactoryDefinitionExists
+        OVMS_MPFactoryWakeUpDefinition
+        OVMS_MPFactoryPutToSleepDefinition
+        OVMS_MPFactoryRetireDefinition
+        OVMS_MPFactoryIsDefinitionRetired
+        OVMS_MPFactoryIsDefinitionAvailable
+        OVMS_MPFactoryShouldUnloadDefinitionDueToIdle
+        OVMS_MPFactoryHasActiveInference
+        OVMS_MPFactoryGetDefinitionGroupName
+        OVMS_MPFactoryAliasesConflictExcluding
+        OVMS_MPFactoryGetNames
+        OVMS_MPFactoryFindServableDefinitionByName
+        OVMS_MPGraphExportCreateServableConfig
+        OVMS_MPGraphExportCreateServableConfigInMemory
+    ) do (
+        findstr /R /C:"[ ]%%S$" "!exports_file!" >nul
+        if !errorlevel! neq 0 (
+            del "!exports_file!"
+            echo Missing required MediaPipe runtime export %%S in OVMS.
+            exit /b 1
+        )
+    )
+    del "!exports_file!"
+    echo PASS: all required MediaPipe runtime exports are present in OVMS.
+) else (
+    echo dumpbin not available; skipping OVMS Python linkage and MediaPipe export checks.
+)
 
 copy C:\%output_user_root%\openvino\runtime\bin\intel64\Release\*.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 set "dest_dir=C:\opt"
 
-if /i "%with_python%"=="true" (
-    if exist %cd%\bazel-bin\src\python\libovmspython.dll (
-        set "libovmspython_src=%cd%\bazel-bin\src\python\libovmspython.dll"
-    ) else if exist %cd%\bazel-out\x64_windows-opt\bin\src\python\libovmspython.dll (
-        set "libovmspython_src=%cd%\bazel-out\x64_windows-opt\bin\src\python\libovmspython.dll"
-    )
-    if not defined libovmspython_src (
-        echo Missing libovmspython.dll in bazel output. Ensure //src/python:libovmspython is built.
-        exit /b 1
-    )
+if exist %cd%\bazel-bin\src\python\libovmspython.dll (
+    set "libovmspython_src=%cd%\bazel-bin\src\python\libovmspython.dll"
+) else if exist %cd%\bazel-out\x64_windows-opt\bin\src\python\libovmspython.dll (
+    set "libovmspython_src=%cd%\bazel-out\x64_windows-opt\bin\src\python\libovmspython.dll"
+)
+if not defined libovmspython_src (
+    echo Missing libovmspython.dll in bazel output. Ensure //src/python:libovmspython is built.
+    exit /b 1
+)
 
-    if exist %cd%\bazel-bin\src\python\libpython_calculators.dll (
-        set "libpython_calculators_src=%cd%\bazel-bin\src\python\libpython_calculators.dll"
-    ) else if exist %cd%\bazel-out\x64_windows-opt\bin\src\python\libpython_calculators.dll (
-        set "libpython_calculators_src=%cd%\bazel-out\x64_windows-opt\bin\src\python\libpython_calculators.dll"
-    )
-    if not defined libpython_calculators_src (
-        echo Missing libpython_calculators.dll in bazel output. Ensure //src/python:libpython_calculators is built.
-        exit /b 1
-    )
+if exist %cd%\bazel-bin\src\python\libpython_calculators.dll (
+    set "libpython_calculators_src=%cd%\bazel-bin\src\python\libpython_calculators.dll"
+) else if exist %cd%\bazel-out\x64_windows-opt\bin\src\python\libpython_calculators.dll (
+    set "libpython_calculators_src=%cd%\bazel-out\x64_windows-opt\bin\src\python\libpython_calculators.dll"
+)
+if not defined libpython_calculators_src (
+    echo Missing libpython_calculators.dll in bazel output. Ensure //src/python:libpython_calculators is built.
+    exit /b 1
+)
 
-    :: Copy pyovms module
-    md dist\windows\ovms\python
-    copy %cd%\bazel-out\x64_windows-opt\bin\src\python\binding\pyovms.pyd dist\windows\ovms\python
-    if !errorlevel! neq 0 exit /b !errorlevel!
+:: Copy Python runtime libraries and binding required by ovms.exe.
+copy "!libovmspython_src!" dist\windows\ovms
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy "!libpython_calculators_src!" dist\windows\ovms
+if !errorlevel! neq 0 exit /b !errorlevel!
+md dist\windows\ovms\python
+copy %cd%\bazel-out\x64_windows-opt\bin\src\python\binding\pyovms.pyd dist\windows\ovms\python
+if !errorlevel! neq 0 exit /b !errorlevel!
 
-    :: Copy shared OVMS python runtime libraries required by ovms.exe when Python is enabled.
-    copy "!libovmspython_src!" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    copy "!libpython_calculators_src!" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
+if /i "%include_python%"=="true" (
     :: Prepare self-contained python
     set "python_version=3.12.10"
 
@@ -231,15 +293,13 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 dist\windows\ovms\ovms.exe --help
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-if /i "%with_python%"=="true" (
-    if not exist dist\windows\ovms\libovmspython.dll (
-        echo Packaging validation failed: libovmspython.dll is missing from dist\windows\ovms.
-        exit /b 1
-    )
-    if not exist dist\windows\ovms\libpython_calculators.dll (
-        echo Packaging validation failed: libpython_calculators.dll is missing from dist\windows\ovms.
-        exit /b 1
-    )
+if not exist dist\windows\ovms\libovmspython.dll (
+    echo Packaging validation failed: libovmspython.dll is missing from dist\windows\ovms.
+    exit /b 1
+)
+if not exist dist\windows\ovms\libpython_calculators.dll (
+    echo Packaging validation failed: libpython_calculators.dll is missing from dist\windows\ovms.
+    exit /b 1
 )
 
 cd dist\windows

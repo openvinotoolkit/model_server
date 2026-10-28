@@ -26,6 +26,7 @@
 #include "input_processors/empty_content_array_normalization_processor.hpp"
 #include "input_processors/empty_tool_calls_array_removing_processor.hpp"
 #include "input_processors/image_decoding_processor.hpp"
+#include "input_processors/video_frames_processor.hpp"
 #include "input_processors/audio_decoding_processor.hpp"
 #include "input_processors/chat_template_adapter.hpp"
 #include "input_processors/raw_prompt_extractor.hpp"
@@ -52,6 +53,9 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
             processors.emplace_back(std::make_unique<ImageDecodingProcessor>(
                 settings.allowedLocalMediaPath,
                 settings.allowedMediaDomains));
+            processors.emplace_back(std::make_unique<VideoFramesProcessor>(
+                settings.allowedLocalMediaPath,
+                settings.allowedMediaDomains));
         }
 
         if (context.config.isOmni) {
@@ -66,8 +70,7 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
 
         processors.emplace_back(std::make_unique<ChatTemplateProcessor>(
             context.tokenizer,
-            context.config.useMinja,
-            context.preparedRuntimeChatTemplate));
+            context.templateProcessor));
     } else {
         processors.emplace_back(std::make_unique<RawPromptExtractor>());
     }

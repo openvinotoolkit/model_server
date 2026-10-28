@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -34,24 +35,30 @@
 #include "src/port/rapidjson_stringbuffer.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6001 6385 6386)
+#include "absl/status/statusor.h"
 #include "absl/strings/escaping.h"
 #pragma warning(pop)
 
 namespace ovms {
 
 struct TokenizeRequest {
-    using InputDataType = std::variant<std::vector<std::string>, std::vector<std::vector<int64_t>>, std::vector<std::vector<std::string>>>;
+    // A plain string is the unbatched form. parseInput() returns it as such, and the request parsers turn it into
+    // a vector of one string and clear inputIsBatch, so a parsed request's input never holds a std::string.
+    using InputDataType = std::variant<std::string, std::vector<std::string>, std::vector<std::vector<int64_t>>, std::vector<std::vector<std::string>>>;
     InputDataType input;
     ov::AnyMap parameters = {};
+    // True when "text" was given as an array of strings, even if the array holds a single string.
+    bool inputIsBatch = false;
 };
 
 class TokenizeParser {
 public:
     static constexpr const char* TOKENIZE_ENDPOINT_SUFFIX = "tokenize";
-    static std::variant<TokenizeRequest::InputDataType, std::string> parseInput(rapidjson::Document& parsedJson, const std::string& field_name);
-    static absl::Status parseTokenizeResponse(rapidjson::StringBuffer& buffer, const ov::genai::TokenizedInputs& tokens, const ov::AnyMap& parameters = {});
-    static absl::Status parseTokenizeRequest(rapidjson::Document& parsedJson, TokenizeRequest& request);
-    static std::variant<TokenizeRequest, std::string> validateTokenizeRequest(rapidjson::Document& parsedJson);
+    static constexpr size_t MAX_LENGTH_LIMIT = 1000000;
+    static absl::StatusOr<TokenizeRequest::InputDataType> parseInput(rapidjson::Document& parsedJson, const std::string& field_name);
+    static absl::Status parseTokenizeResponse(rapidjson::StringBuffer& buffer, const ov::genai::TokenizedInputs& tokens, const ov::AnyMap& parameters = {}, bool inputIsBatch = false);
+    static absl::Status parseTokenizeRequest(rapidjson::Document& parsedJson, TokenizeRequest& request, std::optional<size_t> maxModelLength = std::nullopt);
+    static std::variant<TokenizeRequest, std::string> validateTokenizeRequest(rapidjson::Document& parsedJson, std::optional<size_t> maxModelLength = std::nullopt);
     static bool isTokenizeEndpoint(const std::string& uri);
 };
 }  // namespace ovms

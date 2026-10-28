@@ -25,9 +25,21 @@ Response:
 }
 ```
 
+When `text` is a list of strings, the response holds one list of tokens per string, also when the list has a single string:
+
+```bash
+curl http://localhost:8000/v1/tokenize -H "Content-Type: application/json" -d '{ "model": "Qwen/Qwen3-8B", "text": ["hello world", "hi"]}'
+```
+Response:
+```json
+{
+  "tokens":[[14990,1879],[6023]]
+}
+```
+
 It's possible to use additional parameters:
  - `pad_to_max_length` - whether to pad the sequence to the maximum length. Default is False. 
- - `max_length` - maximum length of the sequence. If specified, it truncates the tokens to the provided number.
+ - `max_length` - maximum length of the sequence. If specified, it truncates the tokens to the provided number. Must be a positive integer and cannot exceed 1,000,000 tokens, or the model's maximum context length if that is greater than 1,000,000.
  - `padding_side` - side to pad the sequence, can be `left` or `right`. Default is `right`.
  - `add_special_tokens` - whether to add special tokens like BOS, EOS, PAD. Default is True. 
 

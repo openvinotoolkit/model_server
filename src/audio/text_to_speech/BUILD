@@ -27,8 +27,13 @@ ovms_cc_library(
         "//src:libovmslogging",
         "//src:libmodelconfigjsonparser",
         "//src:libovms_ov_utils",
+        "//src/port:rapidjson_document",
         "t2s_calculator_cc_proto",
     ],
+    additional_copts = select({
+        "//conditions:default": [],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
+    }),
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )
@@ -52,6 +57,10 @@ ovms_cc_library(
         "//src/mediapipe_internal:node_initializer",
         "//src:libovmsstring_utils",
     ],
+    additional_copts = select({
+        "//conditions:default": [],
+        "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
+    }),
     visibility = ["//visibility:public"],
     alwayslink = 1,
 )

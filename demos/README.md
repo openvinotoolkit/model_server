@@ -69,13 +69,11 @@ Integrations <ovms_demos_integrations>
 ## MediaPipe
 | Demo | Description |
 |---|---|
-|[Object Detection](./mediapipe/object_detection/README.md)|A pipeline implementing object detection.|
-|[Iris](./mediapipe/iris_tracking/README.md)|A pipeline implementing iris detection.|
-|[Holistic](./mediapipe/holistic_tracking/README.md)|A complex pipeline linking several image analytical models and image transformations.|
 |[Realtime Stream Analysis](real_time_stream_analysis/python/README.md)|Analyze RTSP video stream in real time with generic application template for custom pre and post processing routines.|
 |[Image classification](./mediapipe/image_classification/README.md)|Basic example with a single inference node.|
 |[Chain of models](./mediapipe/multi_model_graph/README.md)|A chain of models in a graph.|
 |[CLIP image classification](python_demos/clip_image_classification/README.md)|Classify image according to provided labels using CLIP model embedded in a multi-node MediaPipe graph.|
+|[ByteTrack (preview)](./mediapipe/bytetrack/README.md)|Detect and track objects from a video source with YOLOX and ByteTrack.|
 
 ## Python Node
 | Demo | Description |
@@ -86,4 +84,8 @@ Integrations <ovms_demos_integrations>
 | Demo | Description |
 |---|---|
 |[Integration with Open WebUI](integration_with_OpenWebUI/README.md)|Using Open WebUI with OVMS as inference provider. Shows text and image generation as well as usage with RAG and tools.|
-|[Visual Studio Code assistant](./code_local_assistant/README.md)|Use Continue or Cline extension to Visual Studio Code with local OVMS serving.|
+|[Visual Studio Code assistant](./code_local_assistant/README.md)|Use Continue extension in Visual Studio Code with local OVMS serving.|
+|[Cline coding agent integration](./cline_integration/README.md)|Use the Cline coding agent in Visual Studio Code with local OVMS serving, including MCP, image input and reasoning_effort usage.|
+|[Integration with DeepAgents Code](integration_with_deepagents_code/README.md)|Using DeepAgents Code with OVMS as inference provider. Shows MCP server creation, subagent-based validation and tool use.|
+|[GitHub Copilot integration](./copilot_integration/README.md)|Use GitHub Copilot in Visual Studio Code with local OVMS serving via a custom endpoint model.|
+

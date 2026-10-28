@@ -170,7 +170,7 @@ Status KFSInferenceServiceImpl::ServerMetadataImpl(::grpc::ServerContext* contex
     (void)request;
     (void)response;
     response->set_name(PROJECT_NAME);
-    response->set_version(PROJECT_VERSION);
+    response->set_version(getProjectVersion());
     return StatusCode::OK;
 }
 
@@ -283,7 +283,7 @@ Status KFSInferenceServiceImpl::ModelInferImpl(::grpc::ServerContext* context, c
 #if (MEDIAPIPE_DISABLE == 0)
         SPDLOG_DEBUG("Requested model: {} does not exist. Searching for mediapipe graph with that name...", request->model_name());
         std::unique_ptr<MediapipeGraphExecutorInterface> executor;
-        status = this->modelManager.createPipelineHandle(executor, request->model_name());
+        status = this->modelManager.createPipeline(executor, request->model_name());
         if (!status.ok()) {
             return status;
         }
@@ -321,7 +321,7 @@ Status KFSInferenceServiceImpl::ModelStreamInferImpl(::grpc::ServerContext* cont
         return status;
     }
     std::unique_ptr<MediapipeGraphExecutorInterface> executor;
-    auto status = this->modelManager.createPipelineHandle(executor, firstRequest.model_name());
+    auto status = this->modelManager.createPipeline(executor, firstRequest.model_name());
     if (!status.ok()) {
         return status;
     }

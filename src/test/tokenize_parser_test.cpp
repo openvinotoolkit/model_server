@@ -264,3 +264,176 @@ TEST(TokenizeDeserialization, invalidTokenizeMaxLengthZero) {
     auto error = status.message();
     ASSERT_EQ(error, "max_length should be greater than 0");
 }
+
+TEST(TokenizeDeserialization, positiveTokenizeMaxLengthAtLimit) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "text": ["one", "two", "three"],
+            "max_length": 1000000
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ovms::TokenizeRequest request;
+    ASSERT_EQ(ok.Code(), 0);
+    auto status = ovms::TokenizeParser::parseTokenizeRequest(d, request);
+    ASSERT_EQ(status, absl::OkStatus());
+    ASSERT_EQ(request.parameters["max_length"].as<size_t>(), 1000000);
+}
+
+TEST(TokenizeDeserialization, invalidTokenizeMaxLengthAboveLimit) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "text": ["one", "two", "three"],
+            "max_length": 1000001
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ovms::TokenizeRequest request;
+    ASSERT_EQ(ok.Code(), 0);
+    auto status = ovms::TokenizeParser::parseTokenizeRequest(d, request);
+    ASSERT_NE(status, absl::OkStatus());
+    auto error = status.message();
+    ASSERT_EQ(error, "max_length 1000001 exceeds the allowed limit of 1000000");
+}
+
+TEST(TokenizeDeserialization, positiveTokenizeMaxLengthAboveLimitWithLargerModelContext) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "text": ["one", "two", "three"],
+            "max_length": 1000001
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ovms::TokenizeRequest request;
+    ASSERT_EQ(ok.Code(), 0);
+    auto status = ovms::TokenizeParser::parseTokenizeRequest(d, request, 2000000);
+    ASSERT_EQ(status, absl::OkStatus());
+    ASSERT_EQ(request.parameters["max_length"].as<size_t>(), 1000001);
+}
+
+TEST(TokenizeDeserialization, invalidTokenizeMaxLengthAboveLargerModelContext) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "text": ["one", "two", "three"],
+            "max_length": 2000001
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ovms::TokenizeRequest request;
+    ASSERT_EQ(ok.Code(), 0);
+    auto status = ovms::TokenizeParser::parseTokenizeRequest(d, request, 2000000);
+    ASSERT_NE(status, absl::OkStatus());
+    auto error = status.message();
+    ASSERT_EQ(error, "max_length 2000001 exceeds the allowed limit of 2000000");
+}
+
+TEST(TokenizeDeserialization, positiveTokenizeMaxLengthWithSmallModelContext) {
+    std::string requestBody = R"(
+        {
+            "model": "embeddings",
+            "text": ["one", "two", "three"],
+            "max_length": 1000000
+        }
+    )";
+    rapidjson::Document d;
+    rapidjson::ParseResult ok = d.Parse(requestBody.c_str());
+    ovms::TokenizeRequest request;
+    ASSERT_EQ(ok.Code(), 0);
+    auto status = ovms::TokenizeParser::parseTokenizeRequest(d, request, 512);
+    ASSERT_EQ(status, absl::OkStatus());
+    ASSERT_EQ(request.parameters["max_length"].as<size_t>(), 1000000);
+}
+
+TEST(TokenizeParseInput, plainStringIsReturnedAsUnbatched) {
+    rapidjson::Document d;
+    d.Parse(R"({"text": "one"})");
+    auto input = ovms::TokenizeParser::parseInput(d, "text");
+    ASSERT_TRUE(input.ok());
+    auto* text = std::get_if<std::string>(&input.value());
+    ASSERT_NE(text, nullptr);
+    EXPECT_EQ(*text, "one");
+}
+
+TEST(TokenizeParseInput, arrayWithOneStringIsReturnedAsBatch) {
+    rapidjson::Document d;
+    d.Parse(R"({"text": ["one"]})");
+    auto input = ovms::TokenizeParser::parseInput(d, "text");
+    ASSERT_TRUE(input.ok());
+    auto* texts = std::get_if<std::vector<std::string>>(&input.value());
+    ASSERT_NE(texts, nullptr);
+    ASSERT_EQ(texts->size(), 1);
+    EXPECT_EQ(texts->at(0), "one");
+}
+
+TEST(TokenizeParseInput, invalidInputReturnsErrorStatus) {
+    rapidjson::Document d;
+    d.Parse(R"({"text": []})");
+    auto input = ovms::TokenizeParser::parseInput(d, "text");
+    ASSERT_FALSE(input.ok());
+    EXPECT_EQ(input.status().message(), "text array should not be empty");
+}
+
+TEST(TokenizeDeserialization, singleStringIsNotABatch) {
+    rapidjson::Document d;
+    d.Parse(R"({"model": "embeddings", "text": "one"})");
+    ovms::TokenizeRequest request;
+    ASSERT_EQ(ovms::TokenizeParser::parseTokenizeRequest(d, request), absl::OkStatus());
+    EXPECT_FALSE(request.inputIsBatch);
+}
+
+TEST(TokenizeDeserialization, arrayWithOneStringIsABatch) {
+    rapidjson::Document d;
+    d.Parse(R"({"model": "embeddings", "text": ["one"]})");
+    ovms::TokenizeRequest request;
+    ASSERT_EQ(ovms::TokenizeParser::parseTokenizeRequest(d, request), absl::OkStatus());
+    EXPECT_TRUE(request.inputIsBatch);
+}
+
+TEST(TokenizeDeserialization, arrayWithManyStringsIsABatch) {
+    rapidjson::Document d;
+    d.Parse(R"({"model": "embeddings", "text": ["one", "two"]})");
+    ovms::TokenizeRequest request;
+    ASSERT_EQ(ovms::TokenizeParser::parseTokenizeRequest(d, request), absl::OkStatus());
+    EXPECT_TRUE(request.inputIsBatch);
+}
+
+namespace {
+// Tokenizer output for `rows` inputs of two tokens each: row i is [10 * i + 1, 10 * i + 2].
+ov::genai::TokenizedInputs twoTokensPerRow(size_t rows) {
+    ov::Tensor inputIds(ov::element::i64, ov::Shape{rows, 2});
+    ov::Tensor attentionMask(ov::element::i64, ov::Shape{rows, 2});
+    for (size_t row = 0; row < rows; row++) {
+        for (size_t column = 0; column < 2; column++) {
+            inputIds.data<int64_t>()[row * 2 + column] = 10 * row + column + 1;
+            attentionMask.data<int64_t>()[row * 2 + column] = 1;
+        }
+    }
+    return ov::genai::TokenizedInputs{inputIds, attentionMask};
+}
+
+std::string tokenizeResponse(size_t rows, bool inputIsBatch) {
+    rapidjson::StringBuffer buffer;
+    EXPECT_EQ(ovms::TokenizeParser::parseTokenizeResponse(buffer, twoTokensPerRow(rows), {}, inputIsBatch), absl::OkStatus());
+    return buffer.GetString();
+}
+}  // namespace
+
+TEST(TokenizeResponse, singleStringGivesFlatList) {
+    EXPECT_EQ(tokenizeResponse(1, false), R"({"tokens":[1,2]})");
+}
+
+TEST(TokenizeResponse, arrayWithOneStringGivesListOfLists) {
+    EXPECT_EQ(tokenizeResponse(1, true), R"({"tokens":[[1,2]]})");
+}
+
+TEST(TokenizeResponse, arrayWithManyStringsGivesListOfLists) {
+    EXPECT_EQ(tokenizeResponse(2, true), R"({"tokens":[[1,2],[11,12]]})");
+}

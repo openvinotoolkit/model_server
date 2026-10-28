@@ -16,6 +16,7 @@
 #include "validation.hpp"
 
 #include <algorithm>
+#include <cstring>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -23,6 +24,7 @@
 #include <sstream>
 #include <string>
 
+#include "src/image_utils/decoded_image_size.hpp"
 #include "../tensor_conversion_common.hpp"
 #include "kfs_utils.hpp"
 #include "../precision.hpp"
@@ -53,15 +55,6 @@ template <>
 Status RequestValidator<KFSRequest, KFSTensorInputProto, ValidationChoice::INPUT, KFSInputTensorIteratorType, KFSShapeType>::validateNumberOfTensors() const {
     size_t expectedNumberOfInputs = inputsInfo.size();
 
-    if (optionalAllowedInputNames.size() > 0) {
-        auto it = request.inputs().begin();
-        while (it != request.inputs().end()) {
-            if (optionalAllowedInputNames.find(it->name()) != optionalAllowedInputNames.end()) {
-                ++expectedNumberOfInputs;
-            }
-            ++it;
-        }
-    }
     if (request.inputs_size() > 0 && expectedNumberOfInputs == static_cast<size_t>(request.inputs_size())) {
         return StatusCode::OK;
     }
@@ -136,6 +129,76 @@ size_t getStringInputWidth(const KFSTensorInputProto& src) {
     }
     return maxStringLength + 1;
 }
+
+template <>
+Status validateImageInputEstimatedDecodedSize(const KFSTensorInputProto& tensor,
+    const std::string* rawInputBuffer,
+    const std::string& inputName,
+    size_t& totalEstimatedImagePixels,
+    size_t maxAllowedImagePixels) {
+    auto checkAndAccumulateEstimate = [&](std::string_view encodedImage) -> Status {
+        auto status = tensor_conversion::checkEstimatedImageSize(encodedImage, inputName, totalEstimatedImagePixels, maxAllowedImagePixels);
+        if (!status.ok()) {
+            return status;
+        }
+        uint64_t estimatedDecodedPixels = 0;
+        auto estimate = image_utils::estimateDecodedImageSize(encodedImage, estimatedDecodedPixels);
+        if (estimate != image_utils::DecodedSizeEstimate::Estimated) {
+            return StatusCode::OK;
+        }
+        if (estimatedDecodedPixels > std::numeric_limits<size_t>::max() - totalEstimatedImagePixels) {
+            SPDLOG_DEBUG("Estimated decoded image pixels overflow aggregate counter for input: {}", inputName);
+            return StatusCode::INVALID_IMAGE_MAX_SIZE_EXCEEDED;
+        }
+        totalEstimatedImagePixels += static_cast<size_t>(estimatedDecodedPixels);
+        return StatusCode::OK;
+    };
+
+    if (rawInputBuffer != nullptr) {
+        size_t offset = 0;
+        while (true) {
+            if (offset > rawInputBuffer->size()) {
+                SPDLOG_DEBUG("Raw input contents offset exceeds buffer while estimating decoded image size for input: {}", inputName);
+                return StatusCode::INVALID_INPUT_FORMAT;
+            }
+            const size_t remainingAtOffset = rawInputBuffer->size() - offset;
+            if (remainingAtOffset == 0) {
+                break;
+            }
+            if (remainingAtOffset < sizeof(uint32_t)) {
+                SPDLOG_DEBUG("Raw input contents invalid format while estimating decoded image size for input: {}", inputName);
+                return StatusCode::INVALID_INPUT_FORMAT;
+            }
+            uint32_t encodedImageSize = 0;
+            std::memcpy(&encodedImageSize, rawInputBuffer->data() + offset, sizeof(uint32_t));
+            offset += sizeof(uint32_t);
+            const size_t remaining = rawInputBuffer->size() - offset;
+            if (static_cast<size_t>(encodedImageSize) > remaining) {
+                SPDLOG_DEBUG("Raw input contents invalid format while estimating decoded image size for input: {}", inputName);
+                return StatusCode::INVALID_INPUT_FORMAT;
+            }
+            auto status = checkAndAccumulateEstimate(std::string_view(rawInputBuffer->data() + offset, encodedImageSize));
+            if (!status.ok()) {
+                return status;
+            }
+            offset += static_cast<size_t>(encodedImageSize);
+        }
+        if (offset != rawInputBuffer->size()) {
+            SPDLOG_DEBUG("Raw input contents invalid format while estimating decoded image size for input: {}", inputName);
+            return StatusCode::INVALID_INPUT_FORMAT;
+        }
+        return StatusCode::OK;
+    }
+
+    for (const auto& encodedImage : tensor.contents().bytes_contents()) {
+        auto status = checkAndAccumulateEstimate(encodedImage);
+        if (!status.ok()) {
+            return status;
+        }
+    }
+    return StatusCode::OK;
+}
+
 template <>
 int64_t getStringBatchSize(const KFSTensorInputProto& src) {
     return src.contents().bytes_contents_size();
@@ -257,9 +320,9 @@ const std::string* getRawInputContents(const KFSRequest& request, size_t bufferI
     }
 
 template <>
-Status validate(const KFSRequest& request, const tensor_map_t& inputsInfo, const tensor_map_t& outputsInfo, const std::string& servableName, const model_version_t servableVersion, const std::set<std::string>& optionalAllowedInputNames, const Mode batchingMode, const shapes_info_map_t& shapeInfo) {
+Status validate(const KFSRequest& request, const tensor_map_t& inputsInfo, const tensor_map_t& outputsInfo, const ModelConfig& modelConfig) {
     OVMS_PROFILE_FUNCTION();
-    return RequestValidator<KFSRequest, KFSTensorInputProto, ValidationChoice::INPUT, KFSInputTensorIteratorType, KFSShapeType>(request, inputsInfo, outputsInfo, servableName, servableVersion, optionalAllowedInputNames, batchingMode, shapeInfo).validate();
+    return RequestValidator<KFSRequest, KFSTensorInputProto, ValidationChoice::INPUT, KFSInputTensorIteratorType, KFSShapeType>(request, inputsInfo, outputsInfo, modelConfig).validate();
 }
 }  // namespace request_validation_utils
 }  // namespace ovms

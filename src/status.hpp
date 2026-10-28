@@ -35,6 +35,7 @@ enum class StatusCode {
     MODEL_NOT_LOADED,
     JSON_INVALID,                /*!< The file/content is not valid json */
     JSON_NESTING_DEPTH_EXCEEDED, /*!< JSON nesting depth exceeds the allowed limit */
+    JSON_COMPLEXITY_EXCEEDED,    /*!< JSON structure exceeds the allowed complexity */
     JSON_SERIALIZATION_ERROR,    /*!< Data serialization to json format failed */
     MODELINSTANCE_NOT_FOUND,
     SHAPE_WRONG_FORMAT,                   /*!< The provided shape param is in wrong format */
@@ -97,6 +98,7 @@ enum class StatusCode {
     INVALID_STRING_INPUT,             /*!< Invalid string input */
     INVALID_INPUT_FORMAT,             /*!< Invalid format of the input inside buffer */
     INVALID_STRING_MAX_SIZE_EXCEEDED, /*!< Maximum 2D array after string conversion exceeded 1GB */
+    INVALID_IMAGE_MAX_SIZE_EXCEEDED,  /*!< Image binary payload size exceeds maximum allowed limit */
 
     // Deserialization
     OV_UNSUPPORTED_DESERIALIZATION_PRECISION, /*!< Unsupported deserialization precision, theoretically should never be returned since ModelInstance::validation checks against model precision */

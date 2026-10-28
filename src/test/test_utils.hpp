@@ -52,9 +52,7 @@
 
 #include "../kfs_frontend/validation.hpp"
 
-#if (PYTHON_DISABLE == 0)
 #include "../python/pythonnoderesources.hpp"
-#endif
 
 #include "test_models.hpp"
 
@@ -63,6 +61,36 @@ using inputs_info_t = std::map<std::string, std::tuple<ovms::signed_shape_t, ovm
 void adjustConfigToAllowModelFileRemovalWhenLoaded(ovms::ModelConfig& modelConfig);
 
 static const ovms::ExecutionContext DEFAULT_TEST_CONTEXT{ovms::ExecutionContext::Interface::GRPC, ovms::ExecutionContext::Method::ModelInfer};
+
+class ScopedOVMSConfigGuard {
+public:
+    ScopedOVMSConfigGuard() :
+        serverSettings(ovms::Config::instance().getServerSettings()),
+        modelsSettings(ovms::Config::instance().getModelSettings()) {}
+
+    ScopedOVMSConfigGuard(const ScopedOVMSConfigGuard&) = delete;
+    ScopedOVMSConfigGuard& operator=(const ScopedOVMSConfigGuard&) = delete;
+
+    ~ScopedOVMSConfigGuard() {
+        parse(serverSettings, modelsSettings);
+    }
+
+    const ovms::ServerSettingsImpl& getServerSettings() const {
+        return serverSettings;
+    }
+
+    const ovms::ModelsSettingsImpl& getModelSettings() const {
+        return modelsSettings;
+    }
+
+    bool parse(ovms::ServerSettingsImpl& serverSettings, ovms::ModelsSettingsImpl& modelsSettings) {
+        return ovms::Config::instance().parse(&serverSettings, &modelsSettings);
+    }
+
+private:
+    ovms::ServerSettingsImpl serverSettings;
+    ovms::ModelsSettingsImpl modelsSettings;
+};
 
 using KFSInterface = std::pair<KFSRequest, KFSResponse>;
 using CAPIInterface = std::pair<ovms::InferenceRequest, ovms::InferenceResponse>;
@@ -432,6 +460,12 @@ static std::vector<T> asVector(const std::string& tensor_content) {
     return v;
 }
 
+inline ovms::ModelConfig createValidationModelConfig(std::string name = "dummy", ovms::model_version_t version = 1) {
+    ovms::ModelConfig modelConfig{name};
+    modelConfig.setVersion(version);
+    return modelConfig;
+}
+
 class MockedMetadataModelIns : public ovms::ModelInstance {
 public:
     MockedMetadataModelIns(ov::Core& ieCore) :
@@ -452,11 +486,7 @@ public:
             *request,
             this->getInputsInfo(),
             this->getOutputsInfo(),
-            this->getName(),
-            this->getVersion(),
-            this->getOptionalInputNames(),
-            this->getModelConfig().getBatchingMode(),
-            this->getModelConfig().getShapes());
+            this->getModelConfig());
     }
 };
 
@@ -716,9 +746,10 @@ void SetUpServerForDownloadAndStartWithLoras(std::unique_ptr<std::thread>& t, ov
 /*
  *  starts loading OVMS on separate thread but waits until it is ready
  */
-void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS, std::string apiKeyFile = "", bool withPython = true);
+void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS, std::string apiKeyFile = "");
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
 void SetUpServer(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* modelPath, const char* modelName, int timeoutSeconds, const char* task);
+void SetUpServerWithExtraArgs(std::unique_ptr<std::thread>& t, ovms::Server& server, std::string& port, const char* configPath, std::vector<std::string> extraArgs, int timeoutSeconds = SERVER_START_FROM_CONFIG_TIMEOUT_SECONDS);
 
 class ConstructorEnabledConfig : public ovms::Config {
 public:
@@ -737,7 +768,6 @@ void checkBuffers(const T* expected, const T* actual, size_t bufferSize) {
 class DummyMediapipeGraphDefinition : public ovms::MediapipeGraphDefinition {
 public:
     std::string inputConfig;
-#if (PYTHON_DISABLE == 0)
     ovms::PythonNodeResources* getPythonNodeResources(const std::string& nodeName) {
         auto it = this->sidePacketMaps->pythonNodeResourcesMap.find(nodeName);
         if (it == std::end(this->sidePacketMaps->pythonNodeResourcesMap)) {
@@ -746,7 +776,6 @@ public:
             return it->second.get();
         }
     }
-#endif
 
     ovms::GenAiServable* getGenAiServable(const std::string& nodeName) {
         auto it = this->sidePacketMaps->genAiServableMap.find(nodeName);

@@ -110,6 +110,7 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional CacheEvictionConfig cache_eviction_config` - KV cache eviction configuration. Disabled if not specified.
 -    `optional string reasoning_parser` - name of the parser to use for reasoning content extraction from model output before creating a response;
 -    `optional string tool_parser` - name of the parser to use for tool calls extraction from model output before creating a response;
+-    `optional ChatTemplateEngine chat_template_engine` - template renderer: `JINJA` or `MINJA`. Defaults to Jinja when Python is available, otherwise Minja. An explicitly selected engine must have a usable chat template; Jinja also requires Python;
 -    `optional bool enable_tool_guided_generation` - enable enforcing tool schema during generation. Requires setting response parser. [default = false];
 -    `optional SparseAttentionConfig sparse_attention_config` - Sparse attention configuration. Disabled if not specified.
 
@@ -125,6 +126,7 @@ The dynamic allocation reserves as much as required to prevent preemption. In su
 
 `enable_prefix_caching` can improve generation performance when the initial prompt content is repeated. That is the case with chat applications which resend the history of the conversations. Thanks to prefix caching, there is no need to reevaluate the same sequence of tokens. Thanks to that, first token will be generated much quicker and the overall
 utilization of resource will be lower. Old cache will be cleared automatically when entire free cache is consumed, so it is recommended to increase `cache_size` to get better performance advantage and store longer history of previous requests.
+The number of prompt tokens reused from the cache is reported per request in `usage.prompt_tokens_details.cached_tokens` (chat/completions) and `usage.input_tokens_details.cached_tokens` (responses). Cache reuse works mostly at KV block granularity, so the reported value may be lower than the actual matching prefix.
 
 Another cache related option is `cache_eviction_config` which can help with latency of the long generation, but at the cost of accuracy. It's type is defined as follows:
 ```
@@ -312,7 +314,7 @@ ovms --rest_port 8000 --model_path /model --model_name my-model --task text_gene
 ```
 
 Note that using `tools` might require a chat template other than the original. 
-We recommend using templates from the [vLLM repository](https://github.com/vllm-project/vllm/tree/main/examples) for `hermes3`, `llama3`, `phi4`, `mistral`, `devstral`, `gptoss`, and `qwen3coder` models (if available). Save the selected template as `chat_template.jinja` in the model directory and it will be used instead of the default one. If a template is not available for your model, please refer to the model's documentation or use the default template provided by the model server.
+We recommend using templates from the [vLLM repository](https://github.com/vllm-project/vllm/tree/main/examples) for `hermes3`, `llama3`, `phi4`, `mistral`, `devstral`, `gptoss`, and `qwen3coder` models (if available). Save the selected template as `chat_template.jinja` in the model directory and it will take precedence over GenAI's resolved template. If no chat template is available, provide one or use `/completions`, which does not require a chat template.
 
 When `tool_parser` is used, it's possible to leverage tool guided generation with `enable_tool_guided_generation` option. That setting pushes the model to generate tool calls that matches the schemas specified in the `tools`.
 
@@ -400,9 +402,9 @@ When sending a request to `/completions` endpoint, model server adds `bos_token_
 When sending a request to `/chat/completions` endpoint, model server will try to apply chat template to request `messages` contents.
 
 Loading chat template proceeds as follows:
-1. If `chat_template.jinja` is present, try to load template from it.
-2. If there is no `chat_template.jinja` and `tokenizer_config.json` exists, try to read template from its `chat_template` field. If it's not present, use default template.
-3. If `tokenizer_config.json` exists try to read `eos_token` and `bos_token` fields. If they are not present, both values are set to empty string.
+1. Try to read `chat_template.jinja`. If it is readable and non-empty, use it for either Jinja or Minja.
+2. If it is missing, empty, or cannot be read, use the chat template already resolved by GenAI from the tokenizer/model files, if one is available.
+3. Independently, GenAI reads `eos_token` and `bos_token` from `tokenizer_config.json`; if absent, both values are set to empty strings.
 
 If both `chat_template.jinja` file and `chat_template` field from `tokenizer_config.json` are successfully loaded, `chat_template.jinja` takes precedence over `tokenizer_config.json`.
 
@@ -410,7 +412,7 @@ After loading the template, the server analyzes its source to automatically dete
 
 Template is not applied for calls to `/completions`, so it doesn't have to exist, if you plan to work only with `/completions`.
 
-Errors during configuration files processing (access issue, corrupted file, incorrect content) result in servable loading failure.
+The server logs the selected template source. Once a source is selected, Jinja preparation or Minja compatibility probing determines whether chat requests can use it; failure at this stage does not trigger another source fallback. If no usable template remains, the server records whether it is missing, failed to load, or incompatible with Minja. With an implicit engine, model initialization continues in completion-only mode; chat requests fail while `/completions` remains available. An explicitly configured `chat_template_engine` requires a compatible template, otherwise model initialization fails.
 
 When working with tools, `/chat/completions` API accepts `tool_choice` parameter which gives additional control over model behavior related to tool calling.
 `tool_choice` accepts three special string values:

@@ -635,6 +635,5 @@ public:
 
     template <class ArrayType>
     void fetchModelFiles(bool& found, ArrayType ext);
-    virtual const std::set<std::string>& getOptionalInputNames();
 };
 }  // namespace ovms

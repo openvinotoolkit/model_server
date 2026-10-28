@@ -1,224 +1,202 @@
 ## Deploying Model Server on Baremetal {#ovms_docs_deploying_server_baremetal}
 
-It is possible to deploy Model Server outside of container.
-To deploy Model Server on baremetal, use pre-compiled binaries for Ubuntu22, Ubuntu24, RHEL9 or Windows 11.
+OpenVINO Model Server can run outside a container using precompiled packages for
+Windows 11, Ubuntu 24.04, Ubuntu 26.04, and Red Hat Enterprise Linux 9.
 
-You can download model server package in two configurations. One with Python support (containing Python environment for Python code execution) and another without Python dependency - C++ only. Lack of support for Python code execution comes with the following limitations in model server from C++ only package:
+Starting from version 2026.5, there is **one package per operating system**. Separate `python_on` and
+`python_off` packages are no longer provided. Python integration is optional:
+the same package can run without Python, or enable Python features when a
+compatible Python installation and its dependencies are available.
 
-- Deploying [Python nodes](./python_support/reference.md) is not available.
-- Chat template application for [LLM servables](./llm/reference.md) (used when requesting generation on chat/completions endpoint) supports basic user/assistant messages. More complex templates that use Pythonic syntax/functions for flow control or input processing might not render all parts of the prompt correctly.
-- System message is not included in the prompt.
-- Due to limited template support, using [tools](https://platform.openai.com/docs/guides/function-calling?api-mode=chat) is not possible.
+The instructions below use the [latest weekly packages](https://storage.openvinotoolkit.org/repositories/openvino_model_server/packages/weekly/latest/).
+Weekly packages are built from the main branch and let you evaluate features
+ahead of official releases. The contents of `latest` change with each weekly build.
 
-For advanced LLM chat-template scenarios, the package with Python support is recommended, but it is not a universal fix for every template issue. Final rendering still depends on template correctness and model-specific expectations.
+## Install and Verify
+
+Download and extract the package for your operating system. Run the executable
+directly from the extracted directory.
 
 ::::{tab-set}
-:::{tab-item} Ubuntu 22.04
-:sync: ubuntu-22-04
-Download precompiled package (without python):
-```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.3/ovms_ubuntu22_2026.3.0_python_off.tar.gz
-tar -xzvf ovms_ubuntu22_2026.3.0_python_off.tar.gz
-```
-or precompiled package (with python):
-```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.3/ovms_ubuntu22_2026.3.0_python_on.tar.gz
-tar -xzvf ovms_ubuntu22_2026.3.0_python_on.tar.gz
-```
-Install required libraries:
-```{code} sh
-sudo apt update -y && sudo apt install -y libxml2 curl
-```
-Set path to the libraries and add binary to the `PATH`
-```{code} sh
-export LD_LIBRARY_PATH=${PWD}/ovms/lib
-export PATH=$PATH:${PWD}/ovms/bin
-```
-In case of the version with python run also:
-```{code} sh
-export PYTHONPATH=${PWD}/ovms/lib/python
-sudo apt -y install python3-pip
-pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
-```
-and if you plan to use Python nodes with OpenVINO or OpenVINO GenAI, you will also need to install NumPy:
-```{code} sh
-pip3 install numpy
-```
-**Do not install openvino, openvino-tokenizers or openvino-genai via pip**.
-Model server version with Python is shipped with those packages and new installation with pip will likely result in broken dependencies.
-
-:::
-:::{tab-item} Ubuntu 24.04
-:sync: ubuntu-24-04
-Download precompiled package (without python):
-```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.3/ovms_ubuntu24_2026.3.0_python_off.tar.gz
-tar -xzvf ovms_ubuntu24_2026.3.0_python_off.tar.gz
-```
-or precompiled package (with python):
-```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.3/ovms_ubuntu24_2026.3.0_python_on.tar.gz
-tar -xzvf ovms_ubuntu24_2026.3.0_python_on.tar.gz
-```
-Install required libraries:
-```{code} sh
-sudo apt update -y && sudo apt install -y libxml2 curl
-```
-Set path to the libraries and add binary to the `PATH`
-```{code} sh
-export LD_LIBRARY_PATH=${PWD}/ovms/lib
-export PATH=$PATH:${PWD}/ovms/bin
-```
-In case of the version with python run also:
-```{code} sh
-export PYTHONPATH=${PWD}/ovms/lib/python
-sudo apt -y install python3-pip
-pip3 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
-```
-and if you plan to use Python nodes with OpenVINO or OpenVINO GenAI, you will also need to install NumPy:
-```{code} sh
-pip3 install numpy
-```
-**Do not install openvino, openvino-tokenizers or openvino-genai via pip**.
-Model server version with Python is shipped with those packages and new installation with pip will likely result in broken dependencies.
-
-:::
-:::{tab-item} RHEL 9.6
-:sync: rhel-9.6
-Download precompiled package (without python):
-```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.3/ovms_redhat_2026.3.0_python_off.tar.gz
-tar -xzvf ovms_redhat_2026.3.0_python_off.tar.gz
-```
-or precompiled package (with python):
-```{code} sh
-wget https://github.com/openvinotoolkit/model_server/releases/download/v2026.3/ovms_redhat_2026.3.0_python_on.tar.gz
-tar -xzvf ovms_redhat_2026.3.0_python_on.tar.gz
-```
-Install required libraries:
-```{code} sh
-sudo yum install compat-openssl11.x86_64
-```
-Set path to the libraries and add binary to the `PATH`
-```{code} sh
-export LD_LIBRARY_PATH=${PWD}/ovms/lib
-export PATH=$PATH:${PWD}/ovms/bin
-```
-In case of the version with python run also:
-```{code} sh
-export PYTHONPATH=${PWD}/ovms/lib/python
-sudo yum install -y python3.12 python3.12-pip
-pip3.12 install "Jinja2==3.1.6" "MarkupSafe==3.0.2"
-```
-
-and if you plan to use Python nodes with OpenVINO or OpenVINO GenAI, you will also need to install NumPy:
-```{code} sh
-pip3.12 install numpy
-```
-**Do not install openvino, openvino-tokenizers or openvino-genai via pip**.
-Model server version with Python is shipped with those packages and new installation with pip will likely result in broken dependencies.
-
-:::
 :::{tab-item} Windows
 :sync: windows
-Make sure you have [Microsoft Visual C++ Redistributable](https://aka.ms/vs/17/release/VC_redist.x64.exe) installed before moving forward.
 
-Download and unpack model server archive for Windows(with python):
+Install the [Microsoft Visual C++ Redistributable (x64)](https://aka.ms/vs/17/release/VC_redist.x64.exe).
 
-```bat
-curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2026.3/ovms_windows_2026.3.0_python_on.zip -o ovms.zip
-tar -xf ovms.zip
-```
-
-or archive without python:
+Download, extract, and verify the package in Command Prompt or PowerShell:
 
 ```bat
-curl -L https://github.com/openvinotoolkit/model_server/releases/download/v2026.3/ovms_windows_2026.3.0_python_off.zip -o ovms.zip
-tar -xf ovms.zip
+curl.exe -fL http://ov-share-13.sclab.intel.com/cv_bench_cache/OVMS_do_not_remove/ovms_artefacts/2026.5.0/test/ovms_windows_2026.5.0_weekly.zip -o ovms_windows.zip
+tar -xf ovms_windows.zip
+.\ovms\ovms.exe --version
 ```
 
-Run `setupvars` script to set required environment variables. 
+The Windows package includes an embedded Python runtime and packages in the
+`ovms\python` subfolder; a separate Python installation is not required.
+You can delete this subfolder if Python capabilities are not needed.
 
-**Windows Command Line**
-```bat
-.\ovms\setupvars.bat
-```
+Optionally, install OVMS as a [Windows service](windows_service.md):
 
-**Windows PowerShell**
-```powershell
-.\ovms\setupvars.ps1
-```
-
-Additionally you can install [ovms as a windows service](windows_service.md)
-
-**Windows install service**
 ```bat
 .\ovms\install_ovms_service.bat
 ```
 
-> **Note**: If package contains Python, running this script changes Python settings for the shell that runs it. Environment variables are set only for the current shell so make sure you rerun the script before using model server in a new shell. 
+:::
+:::{tab-item} Ubuntu 24.04
+:sync: ubuntu-24-04
 
-You can also build model server from source by following the [developer guide](windows_developer_guide.md).
+Install system dependencies, then download, extract, and verify the package:
+
+```bash
+sudo apt update
+sudo apt install -y curl ca-certificates libxml2
+curl -fLO http://ov-share-13.sclab.intel.com/cv_bench_cache/OVMS_do_not_remove/ovms_artefacts/2026.5.0/test/ovms_ubuntu24_2026.5.0_weekly.tar.gz
+tar -xzf ovms_ubuntu24_2026.5.0_weekly.tar.gz
+./ovms/bin/ovms --version
+```
+
+:::
+:::{tab-item} Ubuntu 26.04
+:sync: ubuntu-26-04
+
+Install system dependencies, then download, extract, and verify the package:
+
+```bash
+sudo apt update
+sudo apt install -y curl ca-certificates libxml2-16
+curl -fLO http://ov-share-13.sclab.intel.com/cv_bench_cache/OVMS_do_not_remove/ovms_artefacts/2026.5.0/test/ovms_ubuntu26_2026.5.0_weekly.tar.gz
+tar -xzf ovms_ubuntu26_2026.5.0_weekly.tar.gz
+./ovms/bin/ovms --version
+```
+
+:::
+:::{tab-item} Red Hat Enterprise Linux 9
+:sync: rhel-9
+
+Install system dependencies, then download, extract, and verify the package:
+
+```bash
+sudo dnf install -y curl ca-certificates libxml2
+curl -fLO http://ov-share-13.sclab.intel.com/cv_bench_cache/OVMS_do_not_remove/ovms_artefacts/2026.5.0/test/ovms_redhat_2026.5.0_weekly.tar.gz
+tar -xzf ovms_redhat_2026.5.0_weekly.tar.gz
+./ovms/bin/ovms --version
+```
 
 :::
 ::::
 
-> **NOTE**: You can also access [public drops of the development version](https://storage.openvinotoolkit.org/repositories/openvino_model_server/packages/weekly/) of the model server, which are built from the main branch. These builds allow you to evaluate the latest features ahead of official releases.
+## Optional Python Integration
 
-## Python Support and Fallback Behavior
+Python integration provides two features:
 
-Model Server supports two deployment configurations:
+- A **Jinja-based chat-template engine for LLM models**, using Jinja2 to render
+  model chat templates.
+- **Python custom nodes in MediaPipe graphs**, allowing graphs to execute
+  user-defined Python code.
 
-**With Python Support** (`PYTHON_DISABLE=0`, default):
-- Python nodes are available and LLM chat-template handling has broader feature coverage.
-- Requires runtime Python libraries to be available.
-- Can gracefully degrade if Python runtime libraries/plugins are unavailable.
+Python is not required to start OVMS or serve models that do not use these
+features. On Linux, install the compatible Python runtime for your package.
+On Windows, use the embedded runtime in the `ovms\python` subfolder, which
+already includes **Jinja2** and **MarkupSafe**. On Linux, install Jinja2 for
+chat-template rendering before starting OVMS; its MarkupSafe dependency is
+installed automatically.
 
-**Without Python Support** (`PYTHON_DISABLE=1`):
-- Lightweight deployment for C++ models only.
-- Python nodes are unavailable.
-- LLM template rendering has reduced feature coverage.
+::::{tab-set}
+:::{tab-item} Windows
+:sync: windows
 
-For Python runtime setup, fallback behavior details, and common error resolution, see:
-- [Python Runtime Setup and Troubleshooting](python_runtime_setup_and_troubleshooting.md)
+The embedded Python runtime already includes Jinja2 and MarkupSafe. No separate
+Python installation or installation of these packages is required.
+Keep the `ovms\python` subfolder
+when using either Python feature; delete it only if neither feature is needed.
 
-For Python nodes reference, see:
-- [Python Support Reference](./python_support/reference.md)
+:::
+:::{tab-item} Ubuntu 24.04
+:sync: ubuntu-24-04
 
-> **Note**: Python support is recommended for advanced LLM template usage, but it does not guarantee successful rendering of every template.
+Install Python 3.12, its shared library, and Jinja2 from the system packages:
+
+```bash
+sudo apt install -y python3 libpython3.12 python3-jinja2
+```
+
+:::
+:::{tab-item} Ubuntu 26.04
+:sync: ubuntu-26-04
+
+Install Python 3.14, its shared library, and Jinja2 from the system packages:
+
+```bash
+sudo apt install -y python3 libpython3.14 python3-jinja2
+```
+
+:::
+:::{tab-item} Red Hat Enterprise Linux 9
+:sync: rhel-9
+
+Install Python 3.12 and pip, then install Jinja2 for the current user:
+
+```bash
+sudo dnf install -y python3.12 python3.12-libs python3.12-pip
+python3.12 -m pip install --user Jinja2
+```
+
+:::
+::::
+
+If your [Python nodes](./python_support/reference.md) use OpenVINO or OpenVINO
+GenAI, also install NumPy for the same interpreter (`python3-numpy` on Ubuntu,
+`python3.12 -m pip install --user numpy` on Red Hat, or
+`.\ovms\python\python.exe -m pip install numpy` on Windows).
+
+**Do not install `openvino`, `openvino-tokenizers`, or `openvino-genai` via pip
+for OVMS usage.** These packages are already included in the OVMS package;
+installing other versions can cause dependency conflicts.
+
+If a compatible Python runtime or required Python plugins are unavailable,
+OVMS continues with Python features disabled. Python nodes are then unavailable,
+and LLM chat-template rendering has reduced functionality. Enable Python
+integration for advanced templates and tool-calling scenarios. Python support
+does not guarantee that every model's chat template will render successfully.
+
+For runtime diagnostics, see [Python Runtime Setup and Troubleshooting](python_runtime_setup_and_troubleshooting.md).
 
 ## Test the Deployment
 
-Download ResNet50 model:
+Download a ResNet50 model (use `curl.exe` instead of `curl` in Windows PowerShell):
+
 ```console
-curl --create-dirs -k https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet50/1/model.xml
-curl --create-dirs -k https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -o models/resnet50/1/model.bin
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -O
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -O
 ```
 
-For linux run:
+Start the server on Linux:
+
 ```bash
-chmod -R 755 models
+./ovms/bin/ovms --model_name resnet --model_path resnet50.xml --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --port 9000
+
 ```
-Start the server:
-```console
-ovms --port 9000 --model_name resnet --model_path models/resnet50
+or on Windows:
+
+```bat
+ovms.exe --model_name resnet --model_path resnet50.xml --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --port 9000
 ```
 
-or start as a background process, daemon initiated by ```systemctl/initd``` or a Windows service depending on the operating system and specific hosting requirements.
+You can also run the server as a background process, a system service on Linux,
+or a Windows service, depending on your hosting requirements.
 
-Most of the Model Server documentation demonstrate containers usage, but the same can be achieved with just the binary package.
-Learn more about model server [starting parameters](parameters.md).
+Learn more about Model Server [starting parameters](parameters.md).
 
 > **NOTE**:
-> When serving models on [AI accelerators](accelerators.md), some additional steps may be required to install device drivers and dependencies.
-> Learn more in the [Additional Configurations for Hardware](https://docs.openvino.ai/2026/get-started/install-openvino/configurations.html) documentation.
-
+> When serving models on [AI accelerators](accelerators.md), additional device
+> drivers and dependencies may be required. See
+> [Additional Configurations for Hardware](https://docs.openvino.ai/2026/get-started/install-openvino/configurations.html).
 
 ## Next Steps
 
 - [Start the server](starting_server.md)
-- Try the model server [features](features.md)
-- Explore the model server [demos](../demos/README.md)
+- Try the Model Server [features](features.md)
+- Explore the Model Server [demos](../demos/README.md)
 
 ## Additional Resources
 
@@ -226,4 +204,4 @@ Learn more about model server [starting parameters](parameters.md).
 - [Using Cloud Storage](using_cloud_storage.md)
 - [Python Runtime Setup and Troubleshooting](python_runtime_setup_and_troubleshooting.md)
 - [Troubleshooting](troubleshooting.md)
-- [Model server parameters](parameters.md)
+- [Model Server parameters](parameters.md)

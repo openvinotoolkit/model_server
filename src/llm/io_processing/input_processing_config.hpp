@@ -26,10 +26,6 @@ struct InputProcessingConfig {
     // True for Omni servables. Enables AudioDecodingProcessor in addition to
     // ImageDecodingProcessor (implies isVLM-like behavior for images).
     bool isOmni = false;
-    // True when the GenAI built-in tokenizer.apply_chat_template() should be used
-    // even on Python-enabled builds (i.e. ChatTemplateMode::MINJA).
-    // False (default) uses the prepared runtime Python/Jinja template.
-    bool useMinja = false;
 };
 
 }  // namespace ovms

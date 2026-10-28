@@ -357,7 +357,7 @@ TEST_P(SerializeKFSInferOutputTensorNegative, SerializeTensorProtoShouldFailForP
 TEST(SerializeKFSGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
     KFSResponse response;
     ov::Core ieCore;
-    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().string() + "/src/test/dummy/1/dummy.xml");
     ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
     ov::InferRequest inferRequest = compiledModel.create_infer_request();
     ovms::tensor_map_t tenMap;
@@ -382,7 +382,7 @@ TEST(SerializeKFSGRPCPredictResponse, ShouldSuccessForSupportedPrecision) {
 TEST(SerializeKFSGRPCPredictResponse, ShouldSuccessForSupportedPrecisionWithuseSharedOutputContent) {
     KFSResponse response;
     ov::Core ieCore;
-    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().string() + "/src/test/dummy/1/dummy.xml");
     ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
     ov::InferRequest inferRequest = compiledModel.create_infer_request();
     ovms::tensor_map_t tenMap;
@@ -408,7 +408,7 @@ TEST(SerializeKFSGRPCPredictResponse, ShouldSuccessForSupportedPrecisionWithuseS
 TEST(SerializeKFSGRPCPredictResponse, ShouldSuccessForSupportedPrecisionWithsharedInputContentsNotUsed) {
     KFSResponse response;
     ov::Core ieCore;
-    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().string() + "/src/test/dummy/1/dummy.xml");
     ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
     ov::InferRequest inferRequest = compiledModel.create_infer_request();
     ovms::tensor_map_t tenMap;
@@ -464,7 +464,7 @@ protected:
 TEST(SerializeCAPITensorSingle, NegativeMismatchBetweenTensorInfoAndTensorPrecision) {
     InferenceResponse response{"dummy", 1};
     ov::Core ieCore;
-    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().string() + "/src/test/dummy/1/dummy.xml");
     ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
     ov::InferRequest inferRequest = compiledModel.create_infer_request();
     ovms::tensor_map_t tenMap;
@@ -486,7 +486,7 @@ TEST(SerializeCAPITensorSingle, NegativeMismatchBetweenTensorInfoAndTensorPrecis
 TEST(SerializeCAPITensorSingle, NegativeMismatchBetweenTensorInfoAndTensorShape) {
     InferenceResponse response{"dummy", 1};
     ov::Core ieCore;
-    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().u8string() + "/src/test/dummy/1/dummy.xml");
+    std::shared_ptr<ov::Model> model = ieCore.read_model(std::filesystem::current_path().string() + "/src/test/dummy/1/dummy.xml");
     ov::CompiledModel compiledModel = ieCore.compile_model(model, "CPU");
     ov::InferRequest inferRequest = compiledModel.create_infer_request();
     ovms::tensor_map_t tenMap;

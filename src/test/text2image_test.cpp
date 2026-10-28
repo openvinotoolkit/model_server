@@ -32,10 +32,14 @@
 
 #include "src/image_gen/imagegenutils.hpp"
 #include "src/image_gen/imagegen_init.hpp"
-#include "src/image_conversion.hpp"
+#include "src/image_utils/image_conversion.hpp"
 #include "src/config.hpp"
 #include "src/logging.hpp"
 #include "src/status.hpp"
+#pragma warning(push)
+#pragma warning(disable : 6262 6386 6385)
+#include "stb_image.h"  // NOLINT
+#pragma warning(pop)
 
 using ovms::prepareImageGenPipelineArgs;
 using ovms::resolution_t;
@@ -61,6 +65,7 @@ ovms::ImageGenPipelineArgs DEFAULTIMAGE_GEN_ARGS{
     ov::AnyMap(),
     {4096, 4096},  // maxResolution
     std::nullopt,  // defaultResolution
+    std::nullopt,  // nativeResolution
     std::nullopt,  // seed
     10,  // maxNumImagesPerPrompt
     10,  // defaultNumInferenceSteps
@@ -137,6 +142,48 @@ void testNegativeDimensions(const std::string& dims) {
     ASSERT_TRUE(std::holds_alternative<absl::Status>(dimensions)) << dims;
     EXPECT_EQ(std::get<absl::Status>(dimensions).code(), absl::StatusCode::kInvalidArgument) << dims;
 }
+
+void testMaxResolutionExceeded(std::optional<std::pair<unsigned int, unsigned int>> maxRes, const std::string& dims) {
+    // /create JSON
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    payload.parsedJson->Parse(dims.c_str());
+    ovms::ImageGenPipelineArgs args = DEFAULTIMAGE_GEN_ARGS;
+    args.maxResolution = maxRes.value_or(args.maxResolution);
+    std::variant<absl::Status, ov::AnyMap> requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args, true);
+
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions)) << dims;
+
+    EXPECT_EQ(std::get<absl::Status>(requestOptions).code(), absl::StatusCode::kInvalidArgument) << dims;
+}
+
+void testMaxResolutionNotExceeded(std::optional<std::pair<unsigned int, unsigned int>> maxRes, const std::string& dims) {
+    // /create JSON
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    payload.parsedJson->Parse(dims.c_str());
+    ovms::ImageGenPipelineArgs args = DEFAULTIMAGE_GEN_ARGS;
+    args.maxResolution = maxRes.value_or(args.maxResolution);
+    std::variant<absl::Status, ov::AnyMap> requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args, true);
+
+    ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(requestOptions)) << dims;
+}
+
+TEST(Text2ImageTest, testMaxResolutionExceeded) {
+    testMaxResolutionExceeded(std::make_optional(std::make_pair(500, 500)), R"({"size":"1000x1000"})");
+    testMaxResolutionExceeded(std::make_optional(std::make_pair(500, 500)), R"({"size":"400x1000"})");
+    testMaxResolutionExceeded(std::make_optional(std::make_pair(500, 500)), R"({"size":"1000x400"})");
+    testMaxResolutionExceeded(std::nullopt, R"({"size":"5000x5000"})");
+}
+
+TEST(Text2ImageTest, testMaxResolutionNotExceeded) {
+    testMaxResolutionNotExceeded(std::nullopt, R"({"size":"1000x1000"})");
+    testMaxResolutionNotExceeded(std::make_optional(std::make_pair(2000, 2000)), R"({"size":"1000x500"})");
+    testMaxResolutionNotExceeded(std::make_optional(std::make_pair(2000, 2000)), R"({"size":"500x1000"})");
+    testMaxResolutionNotExceeded(std::make_optional(std::make_pair(2000, 2000)), R"({"size":"1000x1000"})");
+}
+
+
 TEST(Text2ImageTest, testGetDimensionsNegativeImproperFormat) {
     testNegativeDimensions(R"({"size":"51:512"})");
     testNegativeDimensions(R"({"size":"512_51x"})");
@@ -147,6 +194,8 @@ TEST(Text2ImageTest, testGetDimensionsNegativeImproperFormat) {
     testNegativeDimensions(R"({"size":"51x0"})");
     testNegativeDimensions(R"({"size":"abcx512"})");
     testNegativeDimensions(R"({"size":"5151xabc"})");
+    testNegativeDimensions(R"({"size":"5151x"})");
+    testNegativeDimensions(R"({"size":"x5151"})");
     // max int64_t 9223372036854775807
     // min int64_t -9223372036854775808
     testNegativeDimensions(R"({"size":"9223372036854775808x1"})");
@@ -467,7 +516,8 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsWidth0) {
     auto requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, DEFAULTIMAGE_GEN_ARGS);
     ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
     auto& err = std::get<absl::Status>(requestOptions);
-    EXPECT_EQ(err.message(), "width must be higher than 0");
+
+    EXPECT_THAT(err.message(), ::testing::HasSubstr("width must be higher than 0"));
 }
 TEST(Text2ImageTest, getImageGenerationRequestOptionsHeight0) {
     ovms::HttpPayload payload;
@@ -484,7 +534,7 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsHeight0) {
     auto requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, DEFAULTIMAGE_GEN_ARGS);
     ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
     auto& err = std::get<absl::Status>(requestOptions);
-    EXPECT_EQ(err.message(), "height must be higher than 0");
+    EXPECT_THAT(err.message(), ::testing::HasSubstr("height must be higher than 0"));
 }
 TEST(Text2ImageTest, getImageGenerationRequestOptionsN0) {
     ovms::HttpPayload payload;
@@ -630,6 +680,54 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsDefaultSizeBehavior) {
     EXPECT_EQ(options.at("height").as<int64_t>(), 256);
     EXPECT_EQ(options.at("width").as<int64_t>(), 512);
 }
+
+TEST(Text2ImageTest, getImageGenerationRequestOptionsUsesNativeResolutionWhenSizeIsMissing) {
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    payload.parsedJson->Parse(R"({"prompt":"test prompt","size":"auto"})");
+    auto args = DEFAULTIMAGE_GEN_ARGS;
+    args.nativeResolution = std::make_pair(1024, 768);
+
+    auto requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args);
+    ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(requestOptions));
+    auto& options = std::get<ov::AnyMap>(requestOptions);
+    EXPECT_EQ(options.at("width").as<int64_t>(), 1024);
+    EXPECT_EQ(options.at("height").as<int64_t>(), 768);
+
+    payload.parsedJson->Parse(R"({"prompt":"test prompt"})");
+    requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args);
+    ASSERT_TRUE(std::holds_alternative<ov::AnyMap>(requestOptions));
+    auto& optionsWithoutSize = std::get<ov::AnyMap>(requestOptions);
+    EXPECT_EQ(optionsWithoutSize.at("width").as<int64_t>(), 1024);
+    EXPECT_EQ(optionsWithoutSize.at("height").as<int64_t>(), 768);
+}
+
+TEST(Text2ImageTest, getImageGenerationRequestOptionsRejectsNativeResolutionAboveMax) {
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    payload.parsedJson->Parse(R"({"prompt":"test prompt","size":"auto"})");
+    auto args = DEFAULTIMAGE_GEN_ARGS;
+    args.maxResolution = {64, 64};
+    args.nativeResolution = std::make_pair(128, 64);
+
+    auto requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    EXPECT_THAT(std::get<absl::Status>(requestOptions).message(), ::testing::HasSubstr("width 128 exceeds maxResolution"));
+}
+
+TEST(Text2ImageTest, getImageGenerationRequestOptionsRejectsNativeResolutionAboveMaxWhenSizeIsMissing) {
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    payload.parsedJson->Parse(R"({"prompt":"test prompt"})");
+    auto args = DEFAULTIMAGE_GEN_ARGS;
+    args.maxResolution = {64, 64};
+    args.nativeResolution = std::make_pair(128, 64);
+
+    auto requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    EXPECT_THAT(std::get<absl::Status>(requestOptions).message(), ::testing::HasSubstr("width 128 exceeds maxResolution"));
+}
+
 TEST(Text2ImageTest, getImageGenerationRequestOptionsRejectedFields) {
     // OpenAI fields background, mask, quality, response_format, user
     ovms::HttpPayload payload;
@@ -1232,7 +1330,7 @@ TEST(ImageGenCalculatorOptionsTest, PositiveRelativePathToGraphPbtxt) {
     auto imageGenArgs = std::get<ImageGenPipelineArgs>(imageGenArgsOrStatus);
 #ifdef _WIN32
     ASSERT_EQ(getGenericFullPathForSrcTest(imageGenArgs.modelsPath),
-        getGenericFullPathForSrcTest(std::filesystem::current_path().u8string() + "/src/test/dummy\\.\\", false))
+        getGenericFullPathForSrcTest(std::filesystem::current_path().string() + "/src/test/dummy\\.\\", false))
         << imageGenArgs.modelsPath;
 #else
     ASSERT_EQ(imageGenArgs.modelsPath, "/ovms/src/test/dummy/./")
@@ -1411,12 +1509,13 @@ TEST(Text2ImageTest, getImageGenerationRequestOptionsValidatedFields) {
     }
 }
 TEST(Text2ImageTest, validateForStaticReshapeSettings_MatchesOneResolution) {
-    ImageGenPipelineArgs args;
+    ImageGenPipelineArgs args = DEFAULTIMAGE_GEN_ARGS;
     args.modelsPath = "/ovms/src/test/dummy";
     args.device.push_back("NPU");
     args.defaultNumInferenceSteps = 10;
     args.maxNumInferenceSteps = 50;
     args.maxNumImagesPerPrompt = 10;
+
     args.staticReshapeSettings = ovms::StaticReshapeSettingsArgs({{512, 256}, {1024, 512}, {2048, 1024}});
 
     std::string value = R"({"prompt": "test prompt", "size": "1024x512", "n": 1, "model": "test model"})";
@@ -1427,10 +1526,61 @@ TEST(Text2ImageTest, validateForStaticReshapeSettings_MatchesOneResolution) {
     auto requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args);
     bool holdsStatus = std::holds_alternative<absl::Status>(requestOptions);
     ASSERT_FALSE(holdsStatus) << std::get<absl::Status>(requestOptions).ToString();
+    auto& options = std::get<ov::AnyMap>(requestOptions);
+    EXPECT_EQ(options.at("num_inference_steps").as<uint64_t>(), args.defaultNumInferenceSteps);
+}
+
+TEST(Text2ImageTest, validateForStaticReshapeSettings_ValidatesInferenceSteps) {
+    ImageGenPipelineArgs args = DEFAULTIMAGE_GEN_ARGS;
+    args.modelsPath = "/ovms/src/test/dummy";
+    args.maxNumInferenceSteps = 50;
+    args.staticReshapeSettings = ovms::StaticReshapeSettingsArgs({{512, 256}});
+
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    payload.parsedJson->Parse(R"({"prompt":"test prompt","size":"512x256","n":1,"num_inference_steps":0})");
+    auto requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    EXPECT_THAT(std::get<absl::Status>(requestOptions).message(), ::testing::HasSubstr("num_inference_steps must be higher than 0"));
+
+    payload.parsedJson->Parse(R"({"prompt":"test prompt","size":"512x256","n":1,"num_inference_steps":51})");
+    requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    EXPECT_THAT(std::get<absl::Status>(requestOptions).message(), ::testing::HasSubstr("num_inference_steps is greater than maxNumInferenceSteps"));
+}
+
+TEST(Text2ImageTest, validateForStaticReshapeSettings_ValidatesMaxNumImagesPerPrompt) {
+    ImageGenPipelineArgs args = DEFAULTIMAGE_GEN_ARGS;
+    args.modelsPath = "/ovms/src/test/dummy";
+    args.maxNumImagesPerPrompt = 1;
+    args.staticReshapeSettings = ovms::StaticReshapeSettingsArgs({{512, 256}, {1024, 512}});
+
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    payload.parsedJson->Parse(R"({"prompt":"test prompt","size":"1024x512","n":2})");
+    auto requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    EXPECT_THAT(std::get<absl::Status>(requestOptions).message(), ::testing::HasSubstr("num_images_per_prompt/n is greater than maxNumImagesPerPrompt"));
+}
+
+TEST(Text2ImageTest, validateForStaticReshapeSettings_ExceedsDefaultMaxResolution) {
+    ImageGenPipelineArgs args = DEFAULTIMAGE_GEN_ARGS;
+    args.modelsPath = "/ovms/src/test/dummy";
+    args.staticReshapeSettings = ovms::StaticReshapeSettingsArgs({{5000, 512}});
+
+    std::string value = R"({"prompt": "test prompt", "size": "5000x512", "n": 1, "model": "test model"})";
+    ovms::HttpPayload payload;
+    payload.parsedJson = std::make_shared<rapidjson::Document>();
+    payload.parsedJson->Parse(value.c_str());
+    ASSERT_FALSE(payload.parsedJson->HasParseError());
+
+    auto requestOptions = ovms::getImageGenerationRequestOptions(*payload.parsedJson, args);
+    ASSERT_TRUE(std::holds_alternative<absl::Status>(requestOptions));
+    EXPECT_THAT(std::get<absl::Status>(requestOptions).message(), ::testing::HasSubstr("exceeds maxResolution"));
 }
 
 TEST(Text2ImageTest, validateForStaticReshapeSettings_DoesntMatchResolution) {
-    ImageGenPipelineArgs args;
+    ImageGenPipelineArgs args = DEFAULTIMAGE_GEN_ARGS;
     args.modelsPath = "/ovms/src/test/dummy";
     args.device.push_back("NPU");
     args.defaultNumInferenceSteps = 10;
@@ -1452,7 +1602,7 @@ TEST(Text2ImageTest, validateForStaticReshapeSettings_DoesntMatchResolution) {
 }
 
 TEST(Text2ImageTest, validateForStaticReshapeSettings_NegativeStatic4ButRequested5NumImagesPerPrompt) {
-    ImageGenPipelineArgs args;
+    ImageGenPipelineArgs args = DEFAULTIMAGE_GEN_ARGS;
     args.modelsPath = "/ovms/src/test/dummy";
     args.device.push_back("NPU");
     args.defaultNumInferenceSteps = 10;
@@ -1475,7 +1625,7 @@ TEST(Text2ImageTest, validateForStaticReshapeSettings_NegativeStatic4ButRequeste
 
 
 TEST(Text2ImageTest, validateForStaticReshapeSettings_DoesntMatchGuidanceScale) {
-    ImageGenPipelineArgs args;
+    ImageGenPipelineArgs args = DEFAULTIMAGE_GEN_ARGS;
     args.modelsPath = "/ovms/src/test/dummy";
     args.device.push_back("NPU");
     args.defaultNumInferenceSteps = 10;
@@ -1581,6 +1731,78 @@ TEST(Text2ImageTest, ResponseFromOvTensorBatch1) {
 TEST(Text2ImageTest, ResponseFromOvTensorBatch3) {
     uint16_t n = 3;
     testResponseFromOvTensor(n);
+}
+
+void testResponseFromOvTensorRGBA(size_t batchSize) {
+    constexpr size_t HEIGHT = 4;
+    constexpr size_t WIDTH = 4;
+    constexpr size_t CHANNELS = 4;
+    constexpr size_t ALPHA_CHANNEL = CHANNELS - 1;
+    constexpr size_t ALPHA_VALUE_COUNT = 3;
+    constexpr size_t BYTE_VALUE_RANGE = 256;
+    constexpr uint8_t TRANSPARENT_ALPHA = 0;
+    constexpr uint8_t PARTIAL_ALPHA = 127;
+    constexpr uint8_t OPAQUE_ALPHA = 255;
+    constexpr uint8_t ALPHA_VALUES[ALPHA_VALUE_COUNT] = {TRANSPARENT_ALPHA, PARTIAL_ALPHA, OPAQUE_ALPHA};
+    ov::Tensor tensor(ov::element::u8, ov::Shape{batchSize, HEIGHT, WIDTH, CHANNELS});
+    auto* imageData = tensor.data<uint8_t>();
+    size_t valueCounter = 0;
+    for (size_t image = 0; image < batchSize; ++image) {
+        for (size_t pixel = 0; pixel < HEIGHT * WIDTH; ++pixel) {
+            const size_t pixelOffset = (image * HEIGHT * WIDTH + pixel) * CHANNELS;
+            for (size_t channel = 0; channel < ALPHA_CHANNEL; ++channel) {
+                imageData[pixelOffset + channel] = static_cast<uint8_t>(valueCounter++ % BYTE_VALUE_RANGE);
+            }
+            imageData[pixelOffset + ALPHA_CHANNEL] = ALPHA_VALUES[pixel % ALPHA_VALUE_COUNT];
+        }
+    }
+
+    auto responseOrStatus = ovms::generateJSONResponseFromOvTensor(tensor);
+    ASSERT_FALSE(std::holds_alternative<absl::Status>(responseOrStatus));
+    auto response = std::move(std::get<std::unique_ptr<std::string>>(responseOrStatus));
+    rapidjson::Document document;
+    document.Parse(response->c_str());
+    ASSERT_TRUE(document.IsObject());
+    ASSERT_TRUE(document.HasMember("data"));
+    ASSERT_TRUE(document["data"].IsArray());
+    const auto& dataArray = document["data"].GetArray();
+    ASSERT_EQ(dataArray.Size(), batchSize);
+
+    for (size_t image = 0; image < batchSize; ++image) {
+        const auto& imageB64PngString = dataArray[image].GetObject()["b64_json"].GetString();
+        std::string pngBytes;
+        ASSERT_TRUE(absl::Base64Unescape(imageB64PngString, &pngBytes));
+
+        int decodedWidth = 0;
+        int decodedHeight = 0;
+        int decodedChannels = 0;
+        unsigned char* decodedPixels = stbi_load_from_memory(
+            reinterpret_cast<const unsigned char*>(pngBytes.data()), static_cast<int>(pngBytes.size()),
+            &decodedWidth, &decodedHeight, &decodedChannels, STBI_rgb_alpha);
+        ASSERT_NE(decodedPixels, nullptr) << stbi_failure_reason();
+        std::unique_ptr<unsigned char, decltype(&stbi_image_free)> decodedPixelsPtr(decodedPixels, stbi_image_free);
+
+        ASSERT_EQ(decodedChannels, CHANNELS);
+        ASSERT_EQ(decodedWidth, WIDTH);
+        ASSERT_EQ(decodedHeight, HEIGHT);
+        const size_t imageSize = HEIGHT * WIDTH * CHANNELS;
+        const size_t imageOffset = image * imageSize;
+        for (size_t pixel = 0; pixel < HEIGHT * WIDTH; ++pixel) {
+            const size_t alphaOffset = pixel * CHANNELS + ALPHA_CHANNEL;
+            EXPECT_EQ(decodedPixelsPtr.get()[alphaOffset], ALPHA_VALUES[pixel % ALPHA_VALUE_COUNT])
+                << "Alpha mismatch for image " << image << ", pixel " << pixel;
+        }
+        EXPECT_EQ(0, std::memcmp(decodedPixelsPtr.get(), imageData + imageOffset, imageSize))
+            << "RGBA data mismatch for image " << image;
+    }
+}
+
+TEST(Text2ImageTest, ResponseFromOvTensorRGBABatch1) {
+    testResponseFromOvTensorRGBA(1);
+}
+
+TEST(Text2ImageTest, ResponseFromOvTensorRGBABatch3) {
+    testResponseFromOvTensorRGBA(3);
 }
 // ===================== LoRA Proto Parsing Tests =====================
 

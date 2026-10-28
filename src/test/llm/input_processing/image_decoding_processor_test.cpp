@@ -13,20 +13,50 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <algorithm>
+#include <array>
+#include <cstdint>
 #include <filesystem>
+#include <stdexcept>
 #include <string>
 #include <system_error>
 
+#include "absl/strings/escaping.h"
 #include <gtest/gtest.h>
 #include <openvino/genai/chat_history.hpp>
+#include <zlib.h>
 
 #include "../../../llm/io_processing/input_processors/image_decoding_processor.hpp"
 #include "../../../llm/io_processing/image_utils.hpp"
 #include "../../../llm/io_processing/input_request.hpp"
+#include "src/config.hpp"
+#include "src/test/environment.hpp"
 
 using namespace ovms;
 
 // Helpers ----------------------------------------------------------------
+
+class ScopedImageDecodeBudget {
+public:
+    ScopedImageDecodeBudget(uint64_t maxImageDecodePixels, bool allowUnestimatableImageFormats) :
+        savedServerSettings(ovms::Config::instance().getServerSettings()),
+        savedModelsSettings(ovms::Config::instance().getModelSettings()) {
+        ovms::ServerSettingsImpl serverSettings = savedServerSettings;
+        serverSettings.maxImageDecodePixels = maxImageDecodePixels;
+        serverSettings.allowUnestimatableImageFormats = allowUnestimatableImageFormats;
+        ovms::ModelsSettingsImpl modelsSettings = savedModelsSettings;
+        ovms::Config::instance().parse(&serverSettings, &modelsSettings);
+    }
+    ScopedImageDecodeBudget(const ScopedImageDecodeBudget&) = delete;
+    ScopedImageDecodeBudget& operator=(const ScopedImageDecodeBudget&) = delete;
+    ~ScopedImageDecodeBudget() {
+        ovms::Config::instance().parse(&savedServerSettings, &savedModelsSettings);
+    }
+
+private:
+    ovms::ServerSettingsImpl savedServerSettings;
+    ovms::ModelsSettingsImpl savedModelsSettings;
+};
 
 static InputRequest makeChatRequest(ov::genai::ChatHistory chatHistory) {
     InputRequest req;
@@ -147,6 +177,75 @@ static InputRequest makeImageUrlRequest(const std::string& url) {
     return makeChatRequest(history);
 }
 
+static void appendBigEndianUint32(std::string& output, uint32_t value) {
+    output.push_back(static_cast<char>(value >> 24));
+    output.push_back(static_cast<char>(value >> 16));
+    output.push_back(static_cast<char>(value >> 8));
+    output.push_back(static_cast<char>(value));
+}
+
+static void appendPngChunk(std::string& output, const char* type, const std::string& data) {
+    appendBigEndianUint32(output, static_cast<uint32_t>(data.size()));
+    output.append(type, 4);
+    output.append(data);
+
+    uLong crc = crc32(0L, Z_NULL, 0);
+    crc = crc32(crc, reinterpret_cast<const Bytef*>(type), 4);
+    crc = crc32(crc, reinterpret_cast<const Bytef*>(data.data()), static_cast<uInt>(data.size()));
+    appendBigEndianUint32(output, static_cast<uint32_t>(crc));
+}
+
+static std::string makeLarge16BitGrayPng(const uint32_t width, const uint32_t height) {
+    const uint64_t uncompressedSize = static_cast<uint64_t>(height) * (1 + static_cast<uint64_t>(width) * 2);
+    std::array<Bytef, 64 * 1024> input{};
+    std::array<Bytef, 64 * 1024> compressedChunk{};
+    std::string compressed;
+    z_stream stream{};
+    if (deflateInit(&stream, Z_BEST_SPEED) != Z_OK) {
+        throw std::runtime_error("Failed to initialize PNG compressor");
+    }
+
+    uint64_t remaining = uncompressedSize;
+    int result = Z_OK;
+    do {
+        const uInt inputSize = static_cast<uInt>(std::min<uint64_t>(remaining, input.size()));
+        stream.next_in = input.data();
+        stream.avail_in = inputSize;
+        remaining -= inputSize;
+        const int flush = remaining == 0 ? Z_FINISH : Z_NO_FLUSH;
+
+        do {
+            stream.next_out = compressedChunk.data();
+            stream.avail_out = static_cast<uInt>(compressedChunk.size());
+            result = deflate(&stream, flush);
+            if (result != Z_OK && result != Z_STREAM_END) {
+                deflateEnd(&stream);
+                throw std::runtime_error("Failed to compress PNG data");
+            }
+            compressed.append(reinterpret_cast<const char*>(compressedChunk.data()),
+                compressedChunk.size() - stream.avail_out);
+        } while (stream.avail_out == 0);
+    } while (remaining != 0);
+
+    if (result != Z_STREAM_END) {
+        deflateEnd(&stream);
+        throw std::runtime_error("PNG compressor did not finish");
+    }
+    deflateEnd(&stream);
+
+    std::string png("\x89PNG\r\n\x1a\n", 8);
+    std::string header;
+    appendBigEndianUint32(header, width);
+    appendBigEndianUint32(header, height);
+    header.push_back(16);  // 16-bit depth
+    header.push_back(0);   // Grayscale
+    header.append("\0\0\0", 3);
+    appendPngChunk(png, "IHDR", header);
+    appendPngChunk(png, "IDAT", compressed);
+    appendPngChunk(png, "IEND", "");
+    return png;
+}
+
 TEST(ImageDecodingProcessorTest, Base64InvalidDataRejected) {
     InputRequest req = makeImageUrlRequest("data:image/jpeg;base64,NOT_VALID_BASE64!!!");
     ImageDecodingProcessor processor(std::nullopt, std::nullopt);
@@ -154,6 +253,30 @@ TEST(ImageDecodingProcessorTest, Base64InvalidDataRejected) {
     EXPECT_FALSE(status.ok());
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
     EXPECT_EQ(status.message(), "Invalid base64 string in request");
+}
+
+// This image is only about 1.5 MB compressed, but stb expands it to roughly
+// 1.4 GiB before format conversion and requires a machine with sufficient memory.
+TEST(ImageDecodingProcessorTest, Large16BitDataUrlWithRaisedBudgetIsRejected) {
+    // This regression test is too resource-intensive for precommit runs.
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
+
+    constexpr uint32_t width = 26755;
+    constexpr uint32_t height = 26755;
+    constexpr uint64_t pixels = static_cast<uint64_t>(width) * height;
+    ScopedImageDecodeBudget budgetGuard(pixels, false);
+
+    const std::string base64 = absl::Base64Escape(makeLarge16BitGrayPng(width, height));
+    InputRequest req = makeImageUrlRequest("data:image/png;base64," + base64);
+    ImageDecodingProcessor processor(std::nullopt, std::nullopt);
+
+    const auto status = processor.process(req);
+
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_EQ(status.message(), "Image parsing failed");
+    EXPECT_TRUE(req.inputImages.empty());
+    EXPECT_EQ(req.totalDecodedPixels, 0u);
 }
 
 TEST(ImageDecodingProcessorTest, HttpUrlDomainNotInAllowList) {
@@ -234,7 +357,7 @@ TEST(ImageDecodingProcessorTest, LocalPathInsideAllowedDirectoryButFileNotFound)
     const auto status = processor.process(req);
     EXPECT_FALSE(status.ok());
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
-    EXPECT_EQ(status.message(), "Image file parsing failed");
+    EXPECT_EQ(status.message(), "Image loading failed");
 }
 
 TEST(ImageDecodingProcessorTest, Base64ImageDecodedAndStoredInInputImages) {
@@ -329,8 +452,54 @@ TEST(ImageDecodingProcessorTest, MultipleImageUrlsProduceSeparateInputImageSlots
     const auto status = processor.process(req);
     EXPECT_FALSE(status.ok());
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
-    EXPECT_EQ(status.message(), "Loading images from local filesystem is disabled.");
     EXPECT_TRUE(req.inputImages.empty());
+}
+
+// Minimal 1x1 PNG data URI decoding to a single pixel; used by the per-request budget tests.
+static const std::string kOnePixelPngUrl =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1Pe"
+    "AAAAEElEQVR4nGLK27oAEAAA//8DYAHGgEvy5AAAAABJRU5ErkJggg==";
+
+// Builds a single user message whose content array holds `count` copies of the 1x1 PNG image_url.
+static InputRequest makeMultiImageRequest(size_t count) {
+    std::string contentJson = "[";
+    for (size_t i = 0; i < count; i++) {
+        if (i > 0) {
+            contentJson += ",";
+        }
+        contentJson += R"({"type":"image_url","image_url":{"url":")" + kOnePixelPngUrl + R"("}})";
+    }
+    contentJson += "]";
+
+    ov::genai::ChatHistory history;
+    ov::AnyMap msg;
+    msg["role"] = std::string("user");
+    msg["content"] = ov::genai::JsonContainer::from_json_string(contentJson);
+    history.push_back(msg);
+    return makeChatRequest(history);
+}
+
+TEST(ImageDecodingProcessorTest, PerRequestPixelBudgetRejectsAccumulatedImages) {
+    bool allowUnestimatableFormats{false};
+    ScopedImageDecodeBudget budgetGuard(1, allowUnestimatableFormats);
+
+    InputRequest req = makeMultiImageRequest(2);
+    ImageDecodingProcessor processor(std::nullopt, std::nullopt);
+    const auto status = processor.process(req);
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_EQ(status.message(), "Image exceeds maximum decoded size");
+}
+
+TEST(ImageDecodingProcessorTest, PerRequestPixelBudgetAcceptsImagesWithinTotal) {
+    bool allowUnestimatableFormats{false};
+    ScopedImageDecodeBudget budgetGuard(2, allowUnestimatableFormats);
+
+    InputRequest req = makeMultiImageRequest(2);
+    ImageDecodingProcessor processor(std::nullopt, std::nullopt);
+    const auto status = processor.process(req);
+    ASSERT_TRUE(status.ok()) << status.message();
+    EXPECT_EQ(req.inputImages.size(), 2u);
 }
 
 TEST(ImageDecodingProcessorTest, InterleavedTextAndImageUrlInContentArray) {
