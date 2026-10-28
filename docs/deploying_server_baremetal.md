@@ -166,18 +166,18 @@ For Python nodes reference, see:
 
 Download ResNet50 model:
 ```console
-mkdir -p ${HOME}/models
-curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o ${HOME}/models/resnet50.bin
-curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o ${HOME}/models/resnet50.xml
+mkdir -p models
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o models/resnet50.bin
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o models/resnet50.xml
 ```
 
 For linux run:
 ```bash
-chmod -R 755 ${HOME}/models
+chmod -R 755 models
 ```
 Start the server:
 ```console
-ovms --port 9000 --model_name resnet --model_path ${HOME}/models/resnet50.xml \
+ovms --port 9000 --model_name resnet --model_path models/resnet50.xml \
   --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW"
 ```
 
