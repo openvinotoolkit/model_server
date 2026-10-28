@@ -16,7 +16,6 @@
 #include "adjuster.hpp"
 
 #include <cctype>
-#include <iostream>
 #include <regex>
 #include <string>
 #include <utility>
@@ -59,6 +58,9 @@ bool findFilter(const std::string& source, const std::string& function,
         if (pipe < searchFrom || value != '|') {
             continue;
         }
+
+        pipePosition = pipe;
+
         size_t functionStart = pipe + 1;
         while (functionStart < source.size() && std::isspace(static_cast<unsigned char>(source[functionStart]))) {
             ++functionStart;
@@ -70,7 +72,7 @@ bool findFilter(const std::string& source, const std::string& function,
         if (functionEnd < source.size() && isIdentifierChar(source[functionEnd])) {
             continue;
         }
-        pipePosition = pipe;
+
         return true;
     }
     return false;
@@ -183,11 +185,17 @@ void ReplaceUndefinedChecksAdjustment::apply(std::string& processed) const {
 }
 
 ChatTemplateAdjusterConfig ChatTemplateAdjusterConfig::forMinja() {
-    return {{"min", "from_json"}, true, {"tojson"}, true};
+    ChatTemplateAdjusterConfig config;
+    config.removeFunctions = {"min", "from_json"};
+    config.concatMultiLineStrings = true;
+    config.removeFunctionsParams = {"tojson"};
+    config.replaceUndefinedChecks = true;
+    return config;
 }
 
 ChatTemplateAdjusterConfig ChatTemplateAdjusterConfig::forJinja() {
-    return {{}};
+    ChatTemplateAdjusterConfig config;
+    return config;
 }
 
 ChatTemplateAdjuster::ChatTemplateAdjuster(const ChatTemplateAdjusterConfig& config) {

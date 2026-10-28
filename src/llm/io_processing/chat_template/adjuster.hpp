@@ -55,12 +55,14 @@ private:
     std::vector<std::string> functions;
 };
 
+// TODO @przepeck: It's already implemented in GenAI(but only for pipeline intialization), remove it when it will be supported when setting chat template
 class ConcatMultiLineStringAdjustment : public BaseChatTemplateAdjustment {
 public:
     ConcatMultiLineStringAdjustment();
     void apply(std::string& templateSource) const override;
 };
 
+// TODO @przepeck: It's already implemented in GenAI(but only for pipeline intialization), remove it when it will be supported when setting chat template
 class ReplaceUndefinedChecksAdjustment : public BaseChatTemplateAdjustment {
 public:
     void apply(std::string& templateSource) const override;
