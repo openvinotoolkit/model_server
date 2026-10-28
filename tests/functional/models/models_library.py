@@ -38,9 +38,9 @@ class ModelsLibrary:
         return defaultdict(
             list,
             {
-                TargetDevice.CPU: [mg.DummyCyclicLlavaOvHf],
-                TargetDevice.GPU: [mg.DummyCyclicLlavaOvHf],
-                TargetDevice.NPU: [mg.DummyCyclicLlavaOvHf],
+                TargetDevice.CPU: [mg.DummyCyclicLlavaOvHf, mg.Gemma34bItInt4OvHf],
+                TargetDevice.GPU: [mg.DummyCyclicLlavaOvHf, mg.Gemma34bItInt4OvHf],
+                TargetDevice.NPU: [mg.DummyCyclicLlavaOvHf, mg.Gemma34bItInt4CwOvHf],
             },
         )
 
