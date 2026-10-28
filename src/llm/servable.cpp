@@ -23,7 +23,8 @@
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246 6313)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mediapipe/framework/calculator_graph.h"
+#include "mediapipe/framework/calculator.pb.h"
+#include "mediapipe/framework/port/ret_check.h"
 #include <rapidjson/document.h>
 #include <rapidjson/prettywriter.h>
 #pragma GCC diagnostic pop
@@ -38,6 +39,7 @@
 #include "apis/openai_responses.hpp"
 #include "io_processing/generation_config_builder.hpp"
 #include "io_processing/input_processor.hpp"
+#include "llm_calculators_plugin_api.hpp"
 #include "ovms_text_streamer.hpp"
 #include "servable.hpp"
 #include "text_utils.hpp"
@@ -47,6 +49,10 @@ namespace ovms {
 
 double calculatePrefillSpeed(size_t inputTokenCount, double ttftMs) {
     return ttftMs > 0.0 ? (1000.0 * inputTokenCount) / ttftMs : 0.0;
+}
+
+std::shared_ptr<GenAiServableExecutionContext> createGenAiServableExecutionContext(GenAiServable& servable) {
+    return servable.createExecutionContext();
 }
 
 void GenAiServable::determineDecodingMethod() {
@@ -110,7 +116,7 @@ absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionCo
 
 absl::Status GenAiServable::processTokenizeRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     ovms::TokenizeRequest tokenizeRequest;
-    auto status = ovms::TokenizeParser::parseTokenizeRequest(*executionContext->payload.parsedJson, tokenizeRequest);
+    auto status = ovms::TokenizeParser::parseTokenizeRequest(*executionContext->payload.parsedJson, tokenizeRequest, getProperties()->maxModelLength);
     if (status != absl::OkStatus()) {
         return status;
     }
@@ -126,7 +132,7 @@ absl::Status GenAiServable::processTokenizeRequest(std::shared_ptr<GenAiServable
     }
 
     StringBuffer responseBuffer;
-    auto responseStatus = ovms::TokenizeParser::parseTokenizeResponse(responseBuffer, tokens, tokenizeRequest.parameters);
+    auto responseStatus = ovms::TokenizeParser::parseTokenizeResponse(responseBuffer, tokens, tokenizeRequest.parameters, tokenizeRequest.inputIsBatch);
 
     if (!responseStatus.ok()) {
         return responseStatus;
@@ -195,18 +201,47 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
 }
 
 absl::Status GenAiServable::validateInputCompatibility(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    const bool chatInput = std::holds_alternative<ov::genai::ChatHistory>(executionContext->inputRequest.input);
+
+    // Reject chat requests if the chat template is not available.
+    if (chatInput && getProperties()->chatTemplateStatus != ChatTemplateStatus::AVAILABLE) {
+        std::string reason;
+        switch (getProperties()->chatTemplateStatus) {
+        case ChatTemplateStatus::MISSING:
+            reason = "the model has no chat template";
+            break;
+        case ChatTemplateStatus::LOAD_FAILED:
+            reason = "the chat template could not be loaded";
+            break;
+        case ChatTemplateStatus::INCOMPATIBLE:
+            reason = "the chat template is incompatible with the selected engine";
+            break;
+        case ChatTemplateStatus::NOT_CHECKED:
+            reason = "chat template initialization has not completed";
+            break;
+        case ChatTemplateStatus::AVAILABLE:
+            break;
+        }
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Rejecting chat request: {}", reason);
+        return absl::InvalidArgumentError("Chat requests are unavailable because " + reason + ".");
+    }
+
     // LM servables reject requests containing image content. Images are preserved
     // as JsonContainer arrays in chatHistory. Reject if any message's content array
     // contains an image_url entry.
     if (!getProperties()->inputProcessorContext.config.isVLM &&
-        std::holds_alternative<ov::genai::ChatHistory>(executionContext->inputRequest.input)) {
+        chatInput) {
         const auto& ch = std::get<ov::genai::ChatHistory>(executionContext->inputRequest.input);
         for (size_t i = 0; i < ch.size(); i++) {
             const auto content = ch[i]["content"];
             if (content.is_array()) {
                 for (size_t j = 0; j < content.size(); j++) {
-                    if (content[j]["type"].as_string().value_or("") == "image_url") {
+                    const auto type = content[j]["type"].as_string().value_or("");
+                    if (type == "image_url") {
                         return absl::Status(absl::StatusCode::kInvalidArgument, "This servable supports only text input, but image_url has been provided");
+                    }
+                    if (type == "video_url") {
+                        return absl::Status(absl::StatusCode::kInvalidArgument, "This servable supports only text input, but video_url has been provided");
                     }
                 }
             }
@@ -323,6 +358,16 @@ absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServabl
         }
     }
 
+    if (executionContext->perfMetrics) {
+        auto& perfMetrics = *executionContext->perfMetrics;
+        executionContext->apiHandler->setPromptTokensUsage(perfMetrics.get_num_input_tokens());
+        executionContext->apiHandler->setCachedPromptTokensUsage(perfMetrics.get_num_prefix_cache_hit_tokens());
+        // For beam search we do not rely on perfMetrics for completion tokens usage, as multiple beams may contribute.
+        if (numOutputs == 1 && executionContext->inputRequest.generationConfig.num_beams == 1) {
+            executionContext->apiHandler->setCompletionTokensUsage(perfMetrics.get_num_generated_tokens());
+        }
+    }
+
     if (hasLogprobs) {
         executionContext->response = executionContext->apiHandler->serializeUnaryResponse(
             allDeltas, finishReasons, logprobData);
@@ -351,16 +396,28 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
 
     ov::genai::GenerationFinishReason finishReason = generationOutput.finish_reason;
     const bool isFinishing = (finishReason != ov::genai::GenerationFinishReason::NONE);
+    if (isFinishing && executionContext->perfMetrics) {
+        auto& perfMetrics = *executionContext->perfMetrics;
+        executionContext->apiHandler->setPromptTokensUsage(perfMetrics.get_num_input_tokens());
+        executionContext->apiHandler->setCompletionTokensUsage(perfMetrics.get_num_generated_tokens());
+        executionContext->apiHandler->setCachedPromptTokensUsage(perfMetrics.get_num_prefix_cache_hit_tokens());
+    }
 
     // OVMSTextStreamer::write() fires the callback for each flush event, pushing
     // Documents into executionContext->deltaChannel.
     executionContext->textStreamer->write(generationOutput.generated_ids);
+    if (executionContext->textStreamer->hadParserError()) {
+        return absl::InternalError(executionContext->textStreamer->parserErrorMessage());
+    }
 
     if (isFinishing) {
         OVMS_PROFILE_SCOPE("Generation of last streaming response");
         // end() flushes held-back tokens and calls parseChunk(STOP). Any resulting
         // Document is pushed into deltaChannel by the callback.
         executionContext->textStreamer->end();
+        if (executionContext->textStreamer->hadParserError()) {
+            return absl::InternalError(executionContext->textStreamer->parserErrorMessage());
+        }
     }
 
     // Drain all deltas accumulated during this write()/end() cycle.

@@ -81,29 +81,30 @@ size_t findInStringRespectingSpecialChars(const std::string& str, const std::str
             return i;
         }
 
-        if (str[i] == '{') {
+        // Structural chars inside an already-open quote (of either kind) belong to the
+        // value's own payload, not to the outer structure.
+        const bool insideAnyQuote = quoteDepth != 0 || singleQuoteDepth != 0;
+
+        if (!insideAnyQuote && str[i] == '{') {
             braceDepth++;
-        } else if (str[i] == '}') {
+        } else if (!insideAnyQuote && str[i] == '}') {
             braceDepth--;
-        } else if (str[i] == '[') {
+        } else if (!insideAnyQuote && str[i] == '[') {
             bracketDepth++;
-        } else if (str[i] == ']') {
+        } else if (!insideAnyQuote && str[i] == ']') {
             bracketDepth--;
-        } else if (str[i] == '"' && (i == 0 || str[i - 1] != '\\')) {
+        } else if (singleQuoteDepth == 0 && str[i] == '"' && (i == 0 || str[i - 1] != '\\')) {
             quoteDepth = 1 - quoteDepth;
         } else if (quoteDepth == 0 && str[i] == '\'' && (i == 0 || str[i - 1] != '\\')) {
             const bool prevIsWord = (i > 0) && isWordChar(str[i - 1]);
             const bool nextIsWord = (i + 1 < str.size()) && isWordChar(str[i + 1]);
 
             if (singleQuoteDepth == 0) {
-                // Opening single quote: ignore apostrophes inside words.
-                if (!(prevIsWord && nextIsWord)) {
+                const bool precededByBoundary = (i == 0) || !prevIsWord;
+                if (precededByBoundary) {
                     singleQuoteDepth = 1;
                 }
             } else {
-                // Inside single-quoted text: treat apostrophes in words as plain
-                // characters (it's, Johns'). Close only when the following
-                // non-space token looks like an argument/list/object delimiter.
                 if (prevIsWord && nextIsWord) {
                     continue;
                 }
@@ -112,7 +113,7 @@ size_t findInStringRespectingSpecialChars(const std::string& str, const std::str
                 while (j < str.size() && std::isspace(static_cast<unsigned char>(str[j])) != 0) {
                     ++j;
                 }
-                if (j == str.size() || str[j] == ',' || str[j] == ':' || str[j] == ']' || str[j] == '}' || str[j] == ')') {
+                if (j == str.size() || !isWordChar(str[j])) {
                     singleQuoteDepth = 0;
                 }
             }
@@ -177,14 +178,11 @@ const char* jsonTypeOf(const rapidjson::Value& val) {
     return "unknown";
 }
 
-void enforceStringValue(rapidjson::Value& v, rapidjson::Document::AllocatorType& alloc) {
+void enforceStringValue(rapidjson::Value& v, const std::string& rawText, rapidjson::Document::AllocatorType& alloc) {
     if (v.IsString()) {
         return;
     }
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    v.Accept(writer);
-    v.SetString(buffer.GetString(), buffer.GetLength(), alloc);
+    v.SetString(rawText.c_str(), static_cast<rapidjson::SizeType>(rawText.size()), alloc);
 }
 
 void normalizeBooleanString(std::string& value) {

@@ -25,18 +25,21 @@ mkdir -vp /ovms_release/lib
 # Do not link this tokenizer lib as it has old protobuf sentencepiece symbols the conflict with new protobuf from ovsm
 if [ "$ov_use_binary" == "0" ] ; then cp -v /openvino_tokenizers/build/src/libopenvino_tokenizers.so /ovms_release/lib/ ; fi
 
+# Dereference Bazel output symlinks so release artifacts do not point to the
+# build container's Bazel cache.
 # Narrow python filter to versioned interpreter SONAMEs only, so libovmspython.so and libpython_calculators.so are still copied.
 find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d \
     ! -name "libgtest.so" ! -name "*gtest*" ! -name "*googletest*" \
     ! -name "*params" ! -name "*.hana.*" ! -name "*runfiles_manifest*" \
     ! -name "py_generate_pipeline.cpython*" ! -name "lib_node_*" \
-    ! -name "libazure-*" ! -name "pyovms.so" \
+    ! -name "libazure-*" ! -name "pyovms.so" ! -name "*.repo_mapping" \
+	! -name "libexternal_Sjsoncpp_Slibjsoncpp.so" \
     ! -path "*/_solib_k8/*" ! -path "*test_python_binding*" \
     ! -name "libpython[0-9]*.so*" \
-    -exec cp -vP {} /ovms_release/lib/ \;
+	-exec cp -vLf --remove-destination {} /ovms_release/lib/ \;
 
 # Copy pyovms.so directly as a file (not symlink) to avoid broken Bazel cache paths.
-if ! [[ $debug_bazel_flags == *"_py_off"* ]] && [ "$FUZZER_BUILD" == "0" ]; then
+if [ "$FUZZER_BUILD" == "0" ]; then
     find /ovms/bazel-out/k8-*/bin/src/python/binding -name 'pyovms.so' -type f -exec cp -v {} /ovms_release/lib/ \;
 fi
 
@@ -46,6 +49,11 @@ find /azure-sdk-install/lib -maxdepth 1 -name 'libazure-*.so*' -exec cp -vP {} /
 
 # Defensive cleanup: keep Bazel runfiles metadata out of release payloads.
 rm -f /ovms_release/lib/*.runfiles_manifest
+if find -L /ovms_release/lib -type l -print -quit | grep -q .; then
+	echo "Release staging contains broken symbolic links."
+	find -L /ovms_release/lib -type l -printf '%p -> %l\n'
+	exit 1
+fi
 
 # Bundle espeak-ng data files when espeak was enabled in the Bazel build.
 # rules_foreign_cc places the cmake install tree under copy_<rule>/espeak-ng/
@@ -106,47 +114,29 @@ if [ -f /ovms_release/lib/libsrc_Slibovms_Ushared.so ] ; then \
 fi
 
 # Add Python bindings for pyovms, openvino, openvino_tokenizers and openvino_genai, so they are all available for OVMS Python servables
-if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then
-	# Keep explicit copies for Python runtime/plugin artifacts so release staging
-	# remains stable even if the generic .so copy filter changes.
-	OVMS_PY_RUNTIME_LIB=$(find /ovms/bazel-out/k8-*/bin -type f -name 'libovmspython.so' | head -n 1 || true)
-	OVMS_PY_CALCULATORS_LIB=$(find /ovms/bazel-out/k8-*/bin -type f -name 'libpython_calculators.so' | head -n 1 || true)
-	if [ -z "$OVMS_PY_RUNTIME_LIB" ] || [ -z "$OVMS_PY_CALCULATORS_LIB" ]; then
-		echo "Missing Python runtime/plugin shared libraries in bazel outputs. Ensure //src/python:libovmspython and //src/python:libpython_calculators are built."
-		exit 1
-	fi
-	# --remove-destination overwrites any prior symlink staged by the generic *.so find above.
-	cp -vLf --remove-destination "$OVMS_PY_RUNTIME_LIB" /ovms_release/lib/
-	cp -vLf --remove-destination "$OVMS_PY_CALCULATORS_LIB" /ovms_release/lib/
-	# Verify the copies landed in the staging directory.
-	if [ ! -f /ovms_release/lib/libovmspython.so ] || [ ! -f /ovms_release/lib/libpython_calculators.so ]; then
-		echo "Missing libovmspython.so or libpython_calculators.so in package staging after cp."
-		exit 1
-	fi
+# Keep explicit copies for Python runtime/plugin artifacts so release staging
+# remains stable even if the generic *.so copy filter changes.
+OVMS_PY_RUNTIME_LIB=$(find /ovms/bazel-out/k8-*/bin -type f -name 'libovmspython.so' | head -n 1 || true)
+OVMS_PY_CALCULATORS_LIB=$(find /ovms/bazel-out/k8-*/bin -type f -name 'libpython_calculators.so' | head -n 1 || true)
+if [ -z "$OVMS_PY_RUNTIME_LIB" ] || [ -z "$OVMS_PY_CALCULATORS_LIB" ]; then
+	echo "Missing Python runtime/plugin shared libraries in bazel outputs. Ensure //src/python:libovmspython and //src/python:libpython_calculators are built."
+	exit 1
+fi
+# --remove-destination overwrites any prior symlink staged by the generic *.so find above.
+cp -vLf --remove-destination "$OVMS_PY_RUNTIME_LIB" /ovms_release/lib/
+cp -vLf --remove-destination "$OVMS_PY_CALCULATORS_LIB" /ovms_release/lib/
+# Verify the copies landed in the staging directory.
+if [ ! -f /ovms_release/lib/libovmspython.so ] || [ ! -f /ovms_release/lib/libpython_calculators.so ]; then
+	echo "Missing libovmspython.so or libpython_calculators.so in package staging after cp."
+	exit 1
 fi
 
-if ! [[ $debug_bazel_flags == *"mp_off"* ]]; then
-	# Keep explicit copy for the OVMS MediaPipe runtime library.
-	OVMS_MP_RUNTIME_LIB=$(find /ovms/bazel-out/k8-*/bin -type f -name 'libovms_mediapipe_runtime_shared.so' | head -n 1 || true)
-	if [ -z "$OVMS_MP_RUNTIME_LIB" ]; then
-		echo "Missing OVMS MediaPipe runtime library in bazel outputs. Ensure //src:ovms_mediapipe_runtime_shared is built."
-		exit 1
-	fi
-	# --remove-destination overwrites any prior symlink staged by the generic *.so find above.
-	cp -vLf --remove-destination "$OVMS_MP_RUNTIME_LIB" /ovms_release/lib/
-	# Verify the copy landed in the staging directory.
-	if [ ! -f /ovms_release/lib/libovms_mediapipe_runtime_shared.so ]; then
-		echo "Missing libovms_mediapipe_runtime_shared.so in package staging after cp."
-		exit 1
-	fi
-fi
-
-if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then cp -r /opt/intel/openvino/python /ovms_release/lib/python ; fi
-if ! [[ $debug_bazel_flags == *"_py_off"* ]] && [ "$FUZZER_BUILD" == "0" ]; then mv /ovms_release/lib/pyovms.so /ovms_release/lib/python ; fi
-if ! [[ $debug_bazel_flags == *"_py_off"* ]]; then mv /ovms_release/lib/python/bin/convert_tokenizer /ovms_release/bin/convert_tokenizer ; \
-   chmod +x /ovms_release/bin/convert_tokenizer ; fi
-if  ! [[ $debug_bazel_flags == *"_py_off"* ]]; then	mkdir -p /ovms_release/lib/python/openvino_genai-2026.5.dist-info ; \
-	echo $'Metadata-Version: 1.0\nName: openvino-genai\nVersion: 2026.5\nRequires-Python: >=3.9\nRequires-Dist: openvino-genai~=2026.5.0' > /ovms_release/lib/python/openvino_genai-2026.5.dist-info/METADATA; fi
+cp -r /opt/intel/openvino/python /ovms_release/lib/python
+if [ "$FUZZER_BUILD" == "0" ]; then mv /ovms_release/lib/pyovms.so /ovms_release/lib/python ; fi
+mv /ovms_release/lib/python/bin/convert_tokenizer /ovms_release/bin/convert_tokenizer
+chmod +x /ovms_release/bin/convert_tokenizer
+mkdir -p /ovms_release/lib/python/openvino_genai-2026.5.dist-info
+echo $'Metadata-Version: 1.0\nName: openvino-genai\nVersion: 2026.5\nRequires-Python: >=3.9\nRequires-Dist: openvino-genai~=2026.5.0' > /ovms_release/lib/python/openvino_genai-2026.5.dist-info/METADATA
 
 if [ -f /opt/intel/openvino/runtime/lib/intel64/plugins.xml ]; then cp /opt/intel/openvino/runtime/lib/intel64/plugins.xml /ovms_release/lib/ ; fi
 find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.mvcmd*' -exec cp -vP {} /ovms_release/lib/ \;
@@ -170,17 +160,105 @@ if [[ "$BASE_OS" =~ "ubuntu" ]] ; then cp -P /usr/lib/x86_64-linux-gnu/libOpenCL
 if [ "$FUZZER_BUILD" == "0" ]; then find /ovms/bazel-bin/src -name 'ovms' -type f -exec cp -v {} /ovms_release/bin \; ; fi;
 cd /ovms_release/bin
 if [ "$FUZZER_BUILD" == "0" ]; then
+	if ! command -v readelf >/dev/null 2>&1; then
+		echo "Cannot verify OVMS Python linkage: readelf is unavailable."
+		exit 1
+	fi
+	ovms_needed=$(readelf -d ./ovms)
+	if echo "$ovms_needed" | grep -Eiq '[(]NEEDED[)].*(libpython[0-9.]*[.]so|libovmspython[.]so)'; then
+		echo "OVMS binary must not link directly against libpython."
+		exit 1
+	fi
+	if [[ "$debug_bazel_flags" != *"mp_off"* && "$debug_bazel_flags" != *"disable_mediapipe"* ]]; then
+		if ! command -v nm >/dev/null 2>&1; then
+			echo "Cannot verify OVMS MediaPipe symbols: nm is unavailable."
+			exit 1
+		fi
+		exported_symbols=$(nm -D ./ovms | awk '$2 ~ /^[A-TV-Z]$/ { print $3 }')
+		for symbol in \
+			OVMS_MPFactoryCreate \
+			OVMS_MPFactoryDestroy \
+			OVMS_MPFactoryGetLastError \
+			OVMS_MPFactoryProcessConfig \
+			OVMS_MPFactoryCreateExecutor \
+			OVMS_MPFactoryCreateExecutorHandle \
+			OVMS_MPFactoryDefinitionExists \
+			OVMS_MPFactoryWakeUpDefinition \
+			OVMS_MPFactoryPutToSleepDefinition \
+			OVMS_MPFactoryRetireDefinition \
+			OVMS_MPFactoryIsDefinitionRetired \
+			OVMS_MPFactoryIsDefinitionAvailable \
+			OVMS_MPFactoryShouldUnloadDefinitionDueToIdle \
+			OVMS_MPFactoryHasActiveInference \
+			OVMS_MPFactoryGetDefinitionGroupName \
+			OVMS_MPFactoryAliasesConflictExcluding \
+			OVMS_MPFactoryGetNames \
+			OVMS_MPFactoryFindServableDefinitionByName \
+			OVMS_MPGraphExportCreateServableConfig \
+			OVMS_MPGraphExportCreateServableConfigInMemory; do
+			count=$(grep -cx "$symbol" <<< "$exported_symbols" || true)
+			if [ "$count" -ne 1 ]; then
+				echo "Expected exactly one exported $symbol in OVMS; found $count."
+				exit 1
+			fi
+		done
+
+		registration_artifacts=(./ovms ../lib/libovms_llm_calculators.so)
+		registration_artifacts+=(../lib/libovmspython.so ../lib/libpython_calculators.so)
+		registration_symbol_sets=()
+		for artifact in "${registration_artifacts[@]}"; do
+			if [ ! -f "$artifact" ]; then
+				echo "Missing MediaPipe runtime artifact for registration-symbol check: $artifact."
+				exit 1
+			fi
+			defined_symbols=$(nm -an --defined-only -C "$artifact") || {
+				echo "Failed to read symbols from $artifact."
+				exit 1
+			}
+			calculator_options=$(printf '%s\n' "$defined_symbols" \
+				| grep -oE '\b[A-Za-z_][A-Za-z0-9_]*CalculatorOptions\b' \
+				| sort -u)
+			registration_symbol_sets+=("$calculator_options")
+		done
+
+		registration_symbols_failed=0
+		for ((left_index = 0; left_index < ${#registration_artifacts[@]}; ++left_index)); do
+			for ((right_index = left_index + 1; right_index < ${#registration_artifacts[@]}; ++right_index)); do
+				overlap=$(comm -12 \
+					<(printf '%s\n' "${registration_symbol_sets[$left_index]}" | sed '/^$/d' | sort -u) \
+					<(printf '%s\n' "${registration_symbol_sets[$right_index]}" | sed '/^$/d' | sort -u))
+				if [ -n "$overlap" ]; then
+					while IFS= read -r symbol; do
+						[ -n "$symbol" ] || continue
+						echo "ERROR: duplicate CalculatorOptions symbol $symbol in ${registration_artifacts[$left_index]} and ${registration_artifacts[$right_index]}." >&2
+					done <<< "$overlap"
+					registration_symbols_failed=1
+				fi
+			done
+		done
+		if [ "$registration_symbols_failed" -ne 0 ]; then
+			exit 1
+		fi
+	fi
     patchelf --remove-rpath ./ovms && \
     patchelf --set-rpath '$ORIGIN/../lib/' ./ovms
 fi
-find /ovms_release/lib/ -type f -iname '*.so*' -exec patchelf --debug --remove-rpath {} +
-find /ovms_release/lib/ -type f -iname '*.so*' -exec patchelf --debug --set-rpath '$ORIGIN/../lib' {} +
-
 find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.so*' -exec cp -vP {} /ovms_release/lib/ \;
-patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/libopenvino.so
-patchelf --debug --set-rpath '$ORIGIN' /ovms_release/lib/libopenvino_tokenizers.so
-find /ovms_release/lib -type f -name 'lib*plugin.so*' -exec patchelf --debug --set-rpath '$ORIGIN' {} +
 if [ -e /ovms_release/lib/libopenvino_genai_c.so ]; then rm -rf /ovms_release/lib/libopenvino_genai_c.so* ; fi
+
+# RUNPATH is not inherited by indirect dependencies. Patch every library after
+# the final copy, including Python extensions nested below lib/python.
+find /ovms_release/lib/ -type f -iname '*.so*' ! -name '*.repo_mapping' -exec bash -e -c '
+    for library_path in "$@"; do
+        library_dir=$(dirname "$library_path")
+        relative_lib_dir=$(realpath --relative-to="$library_dir" /ovms_release/lib)
+        library_rpath="\$ORIGIN"
+        if [ "$relative_lib_dir" != "." ]; then
+            library_rpath="$library_rpath:\$ORIGIN/$relative_lib_dir"
+        fi
+        patchelf --debug --set-rpath "$library_rpath" "$library_path"
+    done
+' _ {} +
 
 cd /ovms
 cp -v /ovms/release_files/LICENSE /ovms_release/
@@ -189,7 +267,8 @@ cp -rv /ovms/release_files/thirdparty-licenses /ovms_release/
 if [ "$ov_use_binary" == "1" ] ; then cp -rf /opt/intel/openvino/docs/licensing/EULA.txt /ovms/release_files/thirdparty-licenses/openvino.LICENSE.txt; fi
 if [ "$ov_use_binary" == "0" ] ; then cp -rf /openvino/LICENSE /ovms/release_files/thirdparty-licenses/openvino.LICENSE.txt; fi
 mkdir -vp /ovms_release/include && cp /ovms/src/ovms.h /ovms_release/include
-ls -lahR /ovms_release/
+# -A not -a: uutils ls (Ubuntu 26.04) fails recursing into ".."
+ls -lAhR /ovms_release/
 
 # removing 29MB of cpython packages for unsupported python versions
 rls_python=cpython-"$(python3 --version 2>&1 | awk '{gsub(/\./, "", $2); print $2}' | cut -c1-3)"
@@ -200,4 +279,3 @@ cd /ovms_pkg/${BASE_OS}
 tar cf ovms.tar --transform 's/ovms_release/ovms/' /ovms_release/
 cd /ovms_release
 ls -l
-

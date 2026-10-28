@@ -25,6 +25,7 @@ node {
       [type.googleapis.com/mediapipe.EmbeddingsCalculatorOVOptions]: {
         models_path: "/ovms/src/test/llm_testing/thenlper/gte-small/ov"
         max_length: 32
+        max_batch_size: 2
       }
     }
 }

@@ -26,7 +26,7 @@
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mediapipe/framework/calculator_graph.h"
+#include "mediapipe/framework/calculator.pb.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
@@ -74,17 +74,11 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
         }
     }
-    if (nodeOptions.has_chat_template_mode()) {
-#if (PYTHON_DISABLE == 0)
-        properties->chatTemplateMode = (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::JINJA)
-                                           ? ChatTemplateMode::JINJA
-                                           : ChatTemplateMode::MINJA;
-#else
-        if (nodeOptions.chat_template_mode() == mediapipe::LLMCalculatorOptions::JINJA) {
-            SPDLOG_WARN("chat_template_mode=JINJA is not supported in Python-disabled builds. Falling back to MINJA.");
-        }
-        properties->chatTemplateMode = ChatTemplateMode::MINJA;
-#endif
+    try {
+        properties->chatTemplateEngine = determineChatTemplateEngine(nodeOptions);
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Failed to determine chat template engine: {}", e.what());
+        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
 
     properties->schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();
@@ -171,7 +165,22 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
         SPDLOG_ERROR("Error during llm node initialization for models_path: {}", parsedModelsPath);
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
-    loadChatTemplate(properties, parsedModelsPath);
+    status = loadChatTemplate(properties, parsedModelsPath);
+    if (!status.ok()) {
+        return status;
+    }
+    if (properties->chatTemplateStatus == ChatTemplateStatus::AVAILABLE) {
+        const auto analysisResult = analyzeChatTemplate(properties);
+        selectOutputParsers(properties, analysisResult);
+    } else {
+        selectOutputParsers(properties, std::nullopt);
+    }
+    if (nodeOptions.has_chat_template_engine()) {
+        status = validateChatTemplateAvailability(properties);
+        if (!status.ok()) {
+            return status;
+        }
+    }
     properties->legacyExecutor = std::make_shared<LegacyExecutorWrapper>(properties->pipeline);
     if (nodeOptions.has_max_tokens_limit()) {
         properties->maxTokensLimit = nodeOptions.max_tokens_limit();

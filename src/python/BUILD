@@ -21,7 +21,7 @@ load("//:common_settings.bzl",
      "COMMON_STATIC_LIBS_LINKOPTS",
      "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS",
     "COMMON_LOCAL_DEFINES", "LINUX_COMMON_STATIC_LIBS_COPTS_WITHOUT_VISIBILITY",
-    "PYBIND_HEADERS_ONLY", "PYBIND_DEPS", "ovms_cc_library")
+    "COPTS_TESTS", "PYBIND_HEADERS_ONLY", "PYBIND_DEPS", "ovms_cc_library")
 
 # Copts for the python shared library. These intentionally mirror the common
 # Linux static-library flags, but omit -fvisibility=hidden so the exported
@@ -38,14 +38,23 @@ _SHARED_LIB_COPTS_LINUX = LINUX_COMMON_STATIC_LIBS_COPTS_WITHOUT_VISIBILITY + [
 ]
 
 ovms_cc_library(
+    name = "python_calculators_plugin_api",
+    hdrs = [
+        "python_calculators_plugin_api.hpp",
+        "python_node_config.hpp",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "python_calculators_plugin_loader",
     hdrs = ["python_calculators_plugin_loader.hpp"],
     srcs = ["python_calculators_plugin_loader.cpp"],
     deps = [
+        ":python_calculators_plugin_api",
         "//src:cpp_headers",
         "//src:libovmslogging",
         "//src:libovmsstatus",
-        "//src:kfs_python_tensor_bridge",
     ],
     visibility = ["//visibility:public"],
 )
@@ -94,9 +103,6 @@ _SHARED_LIB_COPTS_WINDOWS = [
 COPTS_SO = select({
     "//conditions:default": _SHARED_LIB_COPTS_LINUX,
     "//src:windows": _SHARED_LIB_COPTS_WINDOWS,
-}) + select({
-    "//conditions:default": ["-DPYTHON_DISABLE=1"],
-    "//:not_disable_python": ["-DPYTHON_DISABLE=0"],
 }) + select({
     "//conditions:default": ["-DMEDIAPIPE_DISABLE=1"],
     "//:not_disable_mediapipe": ["-DMEDIAPIPE_DISABLE=0"],
@@ -156,57 +162,6 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
-    name = "pythonnoderesources",
-    hdrs = ["pythonnoderesources.hpp",],
-    srcs = ["pythonnoderesources.cpp",],
-    deps = PYBIND_HEADERS_ONLY + [
-        "@mediapipe//mediapipe/framework:calculator_framework",
-        "//src:libovmslogging",
-        "//src:libovmsstatus",
-        "//src/mediapipe_internal:mediapipe_utils",
-        "pythonexecutorcalculator_cc_proto",
-        "utils",
-    ],
-    visibility = ["//src:__pkg__"],
-    data = ["//src/python/binding:pyovms.so"],
-)
-
-ovms_cc_library(
-    name = "pytensorovtensorconvertercalculator",
-    srcs = ["pytensor_ovtensor_converter_calculator.cc",],
-    deps = PYBIND_HEADERS_ONLY + [
-        "//third_party:openvino",
-        "@mediapipe//mediapipe/framework:calculator_framework",
-        "//src:libovmsprecision",
-        "ovmspytensor",
-        "pytensorovtensorconvertercalculator_cc_proto",
-        "pythonbackend",
-    ],
-    visibility = ["//src:__pkg__"],
-    alwayslink = 1,
-    data = ["//src/python/binding:pyovms.so"],
-)
-
-ovms_cc_library(
-    name = "pythonexecutorcalculator",
-    srcs = ["python_executor_calculator.cc",
-            "python_node_initializer.cpp",],
-    deps = PYBIND_HEADERS_ONLY + [
-        "//third_party:openvino",
-        "@mediapipe//mediapipe/framework:calculator_framework",
-        "ovmspytensor",
-        "pythonexecutorcalculator_cc_proto",
-        "pythonbackend",
-        "pythonnoderesources",
-        "//src/mediapipe_internal:node_initializer",
-        "//src:libovmslogging",
-    ],
-    visibility = ["//src:__pkg__"],
-    alwayslink = 1,
-    data = ["//src/python/binding:pyovms.so"],
-)
-
-ovms_cc_library(
     name = "ovmspytensor",
     hdrs = ["ovms_py_tensor.hpp",],
     srcs = ["ovms_py_tensor.cpp",],
@@ -226,6 +181,7 @@ ovms_cc_library(
         "utils.hpp",
     ],
     deps = PYBIND_HEADERS_ONLY + [
+        ":python_calculators_plugin_api",
         "//src:cpp_headers",
         "//src:libovmslogging",
         "//src:libovmsstatus",
@@ -253,6 +209,13 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "python_runtime_path",
+    hdrs = ["python_runtime_path.hpp"],
+    deps = PYBIND_DEPS,
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "libovmspythonmodule",
     hdrs = [
         "pythoninterpretermodule.hpp",
@@ -260,9 +223,12 @@ ovms_cc_library(
     ],
     srcs = ["pythoninterpretermodule.cpp",],
     deps = PYBIND_DEPS + [
+        ":python_runtime_path",
         "//src:cpp_headers", # TODO make ovmslib depend on that
         "//src:libovmslogging",
+        "//src:libovmsstatus",
         "//src:libovms_module",
+        "//src:module_names",
         ":python_calculators_plugin_loader",
         "//src/mediapipe_internal:mediapipe_utils",
         "pythonbackend",
@@ -283,6 +249,7 @@ ovms_cc_library(
     deps = PYBIND_DEPS + [
         "libovmspythonmodule",
         "python_runtime_env",
+        ":python_runtime_path",
         "//src:libovmslogging",
         "//src:libovmsstatus",
         "//src:libovms_module",
@@ -303,14 +270,96 @@ ovms_cc_library(
     ],
     srcs = ["pythoninterpretermodule.cpp",],
     deps = PYBIND_DEPS + [
+        ":python_runtime_path",
         "//src:cpp_headers",
         "//src:libovmslogging",
+        "//src:libovmsstatus",
         "//src:libovms_module",
+        "//src:module_names",
+        ":python_calculators_plugin_loader",
         "pythonbackend",
     ],
     visibility = ["//src:__pkg__"],
     alwayslink = 1,
     data = ["//src/python/binding:pyovms.so"],
+)
+
+cc_test(
+    name = "pythoninterpretermodule_lifecycle_test",
+    srcs = [
+        "pythoninterpretermodule.cpp",
+        "pythoninterpretermodule_lifecycle_test.cpp",
+        "python_calculators_plugin_loader.hpp",
+        "pythoninterpretermodule.hpp",
+        "python_runtime_module_api.hpp",
+    ],
+    copts = COPTS_TESTS,
+    deps = PYBIND_DEPS + [
+        ":pythonbackend",
+        ":python_runtime_path",
+        "//src:cpp_headers",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+        "//src:libovms_module",
+        "//src:module_names",
+        "//src/utils:env_guard",
+        "@com_google_googletest//:gtest_main",
+    ],
+    data = select({
+        "//src:windows": ["//src/python/binding:copy_pyovms"],
+        "//conditions:default": ["//src/python/binding:pyovms.so"],
+    }),
+)
+
+cc_test(
+    name = "pythoninterpretermodule_backend_failure_test",
+    srcs = [
+        "pythoninterpretermodule.cpp",
+        "pythoninterpretermodule_backend_failure_test.cpp",
+        "python_calculators_plugin_loader.hpp",
+        "pythoninterpretermodule.hpp",
+        "python_runtime_module_api.hpp",
+    ],
+    copts = COPTS_TESTS,
+    deps = PYBIND_DEPS + [
+        ":pythonbackend",
+        ":python_runtime_path",
+        "//src:cpp_headers",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+        "//src:libovms_module",
+        "//src:module_names",
+        "//src:test_test_with_temp_dir",
+        "//src/utils:env_guard",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "pythoninterpretermodule_borrowed_interpreter_test",
+    srcs = [
+        "pythoninterpretermodule.cpp",
+        "pythoninterpretermodule_borrowed_interpreter_test.cpp",
+        "python_calculators_plugin_loader.hpp",
+        "pythoninterpretermodule.hpp",
+        "python_runtime_module_api.hpp",
+    ],
+    copts = COPTS_TESTS,
+    deps = PYBIND_DEPS + [
+        ":pythonbackend",
+        ":python_runtime_path",
+        "//src:cpp_headers",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+        "//src:libovms_module",
+        "//src:module_names",
+        "//src/utils:env_guard",
+        "@com_google_googletest//:gtest_main",
+    ],
+    data = select({
+        "//src:windows": ["//src/python/binding:copy_pyovms"],
+        "//conditions:default": ["//src/python/binding:pyovms.so"],
+    }),
 )
 
 # Shared library built from all Python binding sources.
@@ -333,6 +382,7 @@ cc_binary(
     ],
     deps = PYBIND_DEPS + [
         "python_runtime_env",
+        ":python_runtime_path",
         "//src:libovmslogging",
         "//src:libovmsstatus",
         "//src:libovms_module",
@@ -416,32 +466,6 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 
-# Runtime implementation of the KFS OVMS_PY_TENSOR bridge vtable.
-# This source is intentionally compiled in two different BUILD scopes:
-#   1) as part of the runtime plugin (libpython_calculators.so), which is
-#      loaded at process startup and provides the real bridge implementation,
-#   2) as an in-process helper linked into ovms_test and similar runtime
-#      consumers, so the symbol is resolvable without requiring a separate
-#      plugin DLL load. This keeps the main ovms binary free of direct Python
-#      linkage while preserving test/runtime symbol availability.
-ovms_cc_library(
-    name = "kfs_python_tensor_bridge_impl",
-    srcs = [
-        "kfs_python_tensor_bridge_impl.cpp",
-    ],
-    deps = PYBIND_HEADERS_ONLY + [
-        "//src:kfs_python_tensor_bridge_hdrs",
-        "//src:libovmslogging",
-        "//src:libovmsstatus",
-        "@mediapipe//mediapipe/framework:calculator_framework",
-        "pythonbackend",
-        "utils",
-    ],
-    copts = COPTS_SO,
-    visibility = ["//visibility:public"],
-    alwayslink = 1,
-)
-
 # cc_import wrapper for libmediapipe_framework.so to force proper linking
 cc_import(
     name = "libmediapipe_framework_import",
@@ -449,20 +473,54 @@ cc_import(
     visibility = ["//visibility:private"],
 )
 
-# This object set intentionally duplicates the bridge implementation from the
-# runtime plugin. It exists so unit tests and in-process runtime code can
-# resolve the same exported bridge symbols without first dlopen-ing the plugin.
-# The duplicate is architectural: the plugin is a separate shared library for
-# the production runtime split, while this target provides the same symbols in
-# the current process for tests and embedded loads.
+# Host side of the Python calculators: MediaPipe registration, packets, option protos, node initializer and the
+# KFS OVMS_PY_TENSOR bridge. Free of pybind/libpython; Python work goes through the plugin API.
 ovms_cc_library(
-    name = "python_calculators_runtime_objects",
+    name = "python_calculators_host",
     srcs = [
         "kfs_python_tensor_bridge_impl.cpp",
-        "python_calculators_plugin.cpp",
         "python_executor_calculator.cc",
         "python_node_initializer.cpp",
         "pytensor_ovtensor_converter_calculator.cc",
+    ],
+    hdrs = ["py_object_handle.hpp"],
+    deps = [
+        ":python_calculators_plugin_api",
+        ":python_calculators_plugin_loader",
+        ":pythonexecutorcalculator_cc_proto",
+        ":pytensorovtensorconvertercalculator_cc_proto",
+        "//third_party:openvino",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe//mediapipe/framework:calculator_graph",
+        "//src/mediapipe_internal:graph_side_packets",
+        "//src/mediapipe_internal:mediapipe_utils",
+        "//src/mediapipe_internal:node_initializer",
+        "//src:kfs_python_tensor_bridge",
+        "//src:libovmslogging",
+        "//src:libovmsprecision",
+        "//src:libovmsstatus",
+    ],
+    additional_copts = select({
+        "//conditions:default": [],
+        "//src:windows": [
+            "/wd4005",  # GLOG_NO_ABBREVIATED_SEVERITIES redefinition (mediapipe/glog)
+            "/wd4309",  # truncation of constant value (mediapipe circular_buffer.h)
+            "/wd4456",  # variable shadowing (mediapipe graph_profiler.h)
+            "/wd6246",  # local declaration hides previous declaration (mediapipe graph_profiler.h)
+            "/wd6011",  # NULL pointer dereference (mediapipe packet.h)
+            "/wd6001",  # uninitialized memory false positive (absl/strings/str_cat.h)
+        ],
+    }),
+    visibility = ["//visibility:public"],
+    alwayslink = 1,
+)
+
+# Python implementation behind PythonCalculatorsPluginApi. Free of MediaPipe so the same
+# libpython_calculators works on Linux and Windows. Also linked in-process into ovms_test.
+ovms_cc_library(
+    name = "python_calculators_runtime_objects",
+    srcs = [
+        "python_calculators_plugin.cpp",
         "pythonnoderesources.cpp",
     ],
     hdrs = [
@@ -471,17 +529,10 @@ ovms_cc_library(
         "utils.hpp",
     ],
     deps = PYBIND_HEADERS_ONLY + [
-        "//src:kfs_python_tensor_bridge_hdrs",
-        "//third_party:openvino",
-        "@mediapipe//mediapipe/framework:calculator_framework",
+        ":python_calculators_plugin_api",
         "//src:libovmslogging",
         "//src:libovmsstatus",
-        "//src:libovmsprecision",
-        "//src/mediapipe_internal:mediapipe_utils",
-        "//src/mediapipe_internal:node_initializer",
         "ovmspytensor",
-        "pythonexecutorcalculator_cc_proto",
-        "pytensorovtensorconvertercalculator_cc_proto",
         "pythonbackend",
         "utils",
     ],
@@ -517,9 +568,7 @@ cc_binary(
         ":python_calculators_runtime_objects",
     ],
     linkopts = LINKOPTS_SO + select({
-        "//src:windows": [
-            "/FORCE:MULTIPLE",  # Allow multiple symbol definitions for glog (linked in both this DLL and main binary)
-        ],
+        "//src:windows": [],
         "//conditions:default": [
             "-Wl,--as-needed",  # Only link needed symbols
             "-Wl,--allow-shlib-undefined",  # Allow undefined symbols in plugin (resolved at runtime from main binary)

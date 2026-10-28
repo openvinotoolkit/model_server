@@ -117,8 +117,15 @@ std::optional<uint32_t> stou32(const std::string& input) {
         return std::nullopt;
     }
 
+    size_t idx = 0;
     try {
-        uint64_t val = std::stoul(str);
+        uint64_t val = std::stoul(str, &idx);
+        // Check if the whole string was consumed, as stou64/stoi32/stof do. Without this
+        // std::stoul stops at the first non-digit and reports success, so "12abc" parsed
+        // as 12 and "3.9" as 3.
+        if (idx != str.size()) {
+            return std::nullopt;
+        }
         if (val > std::numeric_limits<uint32_t>::max()) {
             return std::nullopt;
         }
@@ -133,8 +140,10 @@ std::optional<uint64_t> stou64(const std::string& str) {
         return std::nullopt;
     }
 
-    // Reject negative numbers for unsigned conversion
-    if (!str.empty() && str[0] == '-') {
+    // Reject negative numbers for unsigned conversion. std::stoull skips leading
+    // whitespace, so check the first non-whitespace character instead of str[0].
+    auto first_non_space = str.find_first_not_of(" \t\n\r\f\v");
+    if (first_non_space != std::string::npos && str[first_non_space] == '-') {
         return std::nullopt;
     }
 

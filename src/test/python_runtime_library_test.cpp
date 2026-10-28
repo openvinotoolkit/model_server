@@ -35,6 +35,7 @@ using testing::HasSubstr;
 namespace {
 
 using ValidatePythonEnvironmentFn = bool (*)(const char** errorMessage);
+using EnsurePythonInterpreterInitializedFn = bool (*)(const char** errorMessage);
 
 class ScopedSharedLibrary {
 public:
@@ -241,6 +242,10 @@ TEST(PythonRuntimeLibrary, ExistingLibraryExportsRequiredSymbols) {
 
     EXPECT_NE(findSymbol(library.get(), "OVMS_createPythonInterpreterModule"), nullptr);
     EXPECT_NE(findSymbol(library.get(), "OVMS_validatePythonEnvironment"), nullptr);
+    EXPECT_NE(findSymbol(library.get(), "OVMS_ensureChatTemplateRuntimeInitialized"), nullptr);
+    EXPECT_NE(findSymbol(library.get(), "OVMS_createPreparedChatTemplateRuntime"), nullptr);
+    EXPECT_NE(findSymbol(library.get(), "OVMS_applyPreparedChatTemplateRuntime"), nullptr);
+    EXPECT_NE(findSymbol(library.get(), "OVMS_destroyPreparedChatTemplateRuntime"), nullptr);
 }
 
 TEST(PythonRuntimeLibrary, ValidationFailsWithoutBindingOnPythonPath) {
@@ -306,5 +311,59 @@ TEST(PythonRuntimeLibrary, ValidationSucceedsWithBindingOnPythonPath) {
 
     const char* errorMessage = nullptr;
     EXPECT_TRUE(validate(&errorMessage));
+    EXPECT_EQ(errorMessage, nullptr);
+}
+
+TEST(PythonRuntimeLibrary, DoesNotInitializeWithInvalidPythonPath) {
+    const auto runtimeLibraryFilename = getRuntimeLibraryFilename();
+    const auto libraryPath = findLibrary(runtimeLibraryFilename);
+    ASSERT_FALSE(libraryPath.empty()) << "Could not find " << runtimeLibraryFilename;
+
+    ScopedSharedLibrary library(libraryPath);
+    ASSERT_NE(library.get(), nullptr) << getLibraryLoadError();
+
+    ScopedEnvironmentVariable pythonPathEnv("PYTHONPATH", "/invalid");
+    auto ensureInitialized = reinterpret_cast<EnsurePythonInterpreterInitializedFn>(
+        findSymbol(library.get(), "OVMS_ensurePythonInterpreterInitialized"));
+    ASSERT_NE(ensureInitialized, nullptr);
+
+    const char* errorMessage = nullptr;
+    EXPECT_FALSE(ensureInitialized(&errorMessage));
+    ASSERT_NE(errorMessage, nullptr);
+    EXPECT_THAT(std::string(errorMessage), HasSubstr("PYTHONPATH"));
+}
+
+TEST(PythonRuntimeLibrary, InitializesInterpreterWhenLibpythonIsAvailable) {
+    const auto runtimeLibraryFilename = getRuntimeLibraryFilename();
+    const auto libraryPath = findLibrary(runtimeLibraryFilename);
+    ASSERT_FALSE(libraryPath.empty()) << "Could not find " << runtimeLibraryFilename;
+
+    ScopedSharedLibrary library(libraryPath);
+    ASSERT_NE(library.get(), nullptr) << getLibraryLoadError();
+
+    auto ensureInitialized = reinterpret_cast<EnsurePythonInterpreterInitializedFn>(
+        findSymbol(library.get(), "OVMS_ensurePythonInterpreterInitialized"));
+    ASSERT_NE(ensureInitialized, nullptr);
+
+    const char* errorMessage = nullptr;
+    EXPECT_TRUE(ensureInitialized(&errorMessage));
+    EXPECT_EQ(errorMessage, nullptr);
+}
+
+TEST(PythonRuntimeLibrary, InitializesChatTemplateDependenciesWithoutTemplate) {
+    const auto runtimeLibraryFilename = getRuntimeLibraryFilename();
+    const auto libraryPath = findLibrary(runtimeLibraryFilename);
+    ASSERT_FALSE(libraryPath.empty()) << "Could not find " << runtimeLibraryFilename;
+
+    ScopedSharedLibrary library(libraryPath);
+    ASSERT_NE(library.get(), nullptr) << getLibraryLoadError();
+
+    auto ensureInitialized = reinterpret_cast<EnsurePythonInterpreterInitializedFn>(
+        findSymbol(library.get(), "OVMS_ensureChatTemplateRuntimeInitialized"));
+    ASSERT_NE(ensureInitialized, nullptr);
+
+    const char* errorMessage = nullptr;
+    const bool initialized = ensureInitialized(&errorMessage);
+    EXPECT_TRUE(initialized) << (errorMessage != nullptr ? errorMessage : "Unknown error");
     EXPECT_EQ(errorMessage, nullptr);
 }

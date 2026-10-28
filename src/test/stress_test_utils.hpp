@@ -54,7 +54,6 @@
 #include "test_with_temp_dir.hpp"
 #if (MEDIAPIPE_DISABLE == 0)
 #include "src/mediapipe_internal/mediapipegraphexecutor.hpp"
-#include "src/tensorflow_type_utils.hpp"
 #endif
 
 using namespace ovms;
@@ -348,12 +347,12 @@ static const std::string basicMediapipeQueueConfigWithNewGraphPath = R"({
 
 #if (MEDIAPIPE_DISABLE == 0)
 template <typename Request, typename Response>
-static void mediaexec(std::unique_ptr<MediapipeGraphExecutor>& executorPtr, ovms::ModelManager& manager, Request&, Response&, ovms::Status& status) {
+static void mediaexec(std::unique_ptr<MediapipeGraphExecutorInterface>& executorPtr, ovms::ModelManager& manager, Request&, Response&, ovms::Status& status) {
     throw std::string("Unsupported");
 }
 
 template <typename Request, typename Response>
-static void mediacreate(std::unique_ptr<MediapipeGraphExecutor>& executorPtr, ovms::ModelManager& manager, Request&, Response&, ovms::Status& status) {
+static void mediacreate(std::unique_ptr<MediapipeGraphExecutorInterface>& executorPtr, ovms::ModelManager& manager, Request&, Response&, ovms::Status& status) {
     throw std::string("Unsupported");
 }
 #endif
@@ -786,7 +785,7 @@ public:
                 breakLoop = true;
             }
 #if (MEDIAPIPE_DISABLE == 0)
-            std::unique_ptr<MediapipeGraphExecutor> executorPtr;
+            std::unique_ptr<MediapipeGraphExecutorInterface> executorPtr;
 #endif
             ResponseType response;
             // little hack - we can't use noninitializad object to call function

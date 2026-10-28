@@ -1,7 +1,4 @@
 pipeline {
-    options {
-        timeout(time: 2, unit: 'HOURS')
-    }
     agent {
         label 'win_ovms'
     }
@@ -9,6 +6,7 @@ pipeline {
         stage ("Build and test windows") {
             steps {
                 script {
+                  timeout(time: 2, unit: 'HOURS') {
                     echo "JOB_BASE_NAME: ${env.JOB_BASE_NAME}"
                     echo "WORKSPACE: ${env.WORKSPACE}"
                     echo "OVMS_PYTHON_ENABLED: ${env.OVMS_PYTHON_ENABLED}"
@@ -42,6 +40,7 @@ pipeline {
                     } else {
                         error "Cannot load ci/loadWin.groovy file."
                     }
+                  }
                 }
             }
         }

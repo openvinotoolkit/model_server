@@ -48,17 +48,18 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
 
     auto parsedInput = TokenizeParser::parseInput(*parsedJson, "input");
 
-    if (std::holds_alternative<std::string>(parsedInput)) {
-        return std::get<std::string>(parsedInput);
+    if (!parsedInput.ok()) {
+        return std::string(parsedInput.status().message());
+    }
+    auto& inputVariant = parsedInput.value();
+    if (std::holds_alternative<std::string>(inputVariant)) {
+        request.input = std::vector<std::string>{std::get<std::string>(inputVariant)};
+    } else if (std::holds_alternative<std::vector<std::string>>(inputVariant)) {
+        request.input = std::get<std::vector<std::string>>(inputVariant);
+    } else if (std::holds_alternative<std::vector<std::vector<int64_t>>>(inputVariant)) {
+        request.input = std::get<std::vector<std::vector<int64_t>>>(inputVariant);
     } else {
-        auto inputVariant = std::get<EmbeddingsRequest::InputDataType>(parsedInput);
-        if (std::holds_alternative<std::vector<std::string>>(inputVariant)) {
-            request.input = std::get<std::vector<std::string>>(inputVariant);
-        } else if (std::holds_alternative<std::vector<std::vector<int64_t>>>(inputVariant)) {
-            request.input = std::get<std::vector<std::vector<int64_t>>>(inputVariant);
-        } else {
-            return "input must be either array of strings or array of array of integers";
-        }
+        return "input must be either array of strings or array of array of integers";
     }
 
     auto it = parsedJson->FindMember("encoding_format");
@@ -148,8 +149,7 @@ absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Te
         writer.String("embedding");
         if (getEncodingFormat() == EmbeddingsRequest::EncodingFormat::BASE64) {
             std::string_view sv2(reinterpret_cast<const char*>(batch_result.data()), batch_result.size() * sizeof(float));
-            std::string escaped;
-            absl::Base64Escape(sv2, &escaped);
+            const std::string escaped = absl::Base64Escape(sv2);
             writer.String(escaped.c_str());
         } else {
             writer.StartArray();

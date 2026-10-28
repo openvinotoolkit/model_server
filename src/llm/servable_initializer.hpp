@@ -16,17 +16,19 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 
 #pragma warning(push)
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 4005 4456 6246)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "mediapipe/framework/calculator_graph.h"
+#include "mediapipe/framework/calculator.pb.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 #include "src/llm/llm_calculator.pb.h"
 #include "src/llm/servable.hpp"
+#include "io_processing/chat_template/analyzer.hpp"
 
 namespace ovms {
 
@@ -44,22 +46,23 @@ enum class PipelineType {
 class Status;
 class GenAiServable;
 struct GenAiServableProperties;
-struct ExtraGenerationInfo;
 
 class GenAiServableInitializer {
 public:
     virtual ~GenAiServableInitializer() = default;
-    static void loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
+    static Status loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
+    static ChatTemplateAnalysisResult analyzeChatTemplate(std::shared_ptr<GenAiServableProperties> properties);
+    static void selectOutputParsers(const std::shared_ptr<GenAiServableProperties>& properties,
+        const std::optional<ChatTemplateAnalysisResult>& analysisResult);
+    static Status validateChatTemplateAvailability(const std::shared_ptr<GenAiServableProperties>& properties);
     // Propagates the global --cache_dir (ServerSettings) into the pipeline plugin config
     // when the node did not set an explicit CACHE_DIR. Shared by every GenAI initializer
     // (continuous batching and legacy, LM and VLM) since they all construct GenAI pipelines
     // directly and would otherwise never apply the server-level cache_dir.
     static void applyGlobalCacheDir(std::shared_ptr<GenAiServableProperties> properties);
-#if (PYTHON_DISABLE == 0)
-    // Use Python Jinja module for template processing
-    static void loadPyTemplateProcessor(std::shared_ptr<GenAiServableProperties> properties, const ExtraGenerationInfo& extraGenInfo);
-    static ExtraGenerationInfo readExtraGenerationInfo(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
-#endif
+    static ChatTemplateEngine determineChatTemplateEngine(const mediapipe::LLMCalculatorOptions& nodeOptions);
+    static ChatTemplateEngine determineChatTemplateModeWithRuntimeContext(const mediapipe::LLMCalculatorOptions& nodeOptions,
+        bool pythonRuntimeAvailable);
     /*
     initialize method implementation MUST fill servable with all required properties i.e. pipeline, tokenizer, configs etc. based on mediapipe node options.
     It is strictly connected with the servable, so implementation of this method in a derived class should be aware of the specific servable class structure

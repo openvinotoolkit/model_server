@@ -19,6 +19,7 @@
 #include <utility>
 
 #include "src/config.hpp"
+#include "src/llm/llm_calculators_plugin_loader.hpp"
 #include "src/logging.hpp"
 #include "src/metrics/metric_module.hpp"
 #include "modelmanager.hpp"
@@ -30,12 +31,10 @@ class PythonBackend;
 
 ServableManagerModule::ServableManagerModule(ovms::Server& ovmsServer) {
     PythonBackend* pythonBackend = nullptr;
-#if (PYTHON_DISABLE == 0)
     auto pythonModule = ovmsServer.getModule(PYTHON_INTERPRETER_MODULE_NAME);
     if (auto pythonRuntimeApi = dynamic_cast<const PythonRuntimeModuleApi*>(pythonModule)) {
         pythonBackend = pythonRuntimeApi->getPythonBackend();
     }
-#endif
     if (auto metricsModule = dynamic_cast<const MetricModule*>(ovmsServer.getModule(METRICS_MODULE_NAME))) {
         this->servableManager = std::make_unique<ModelManager>("", &metricsModule->getRegistry(), pythonBackend);
     } else {
@@ -48,6 +47,9 @@ ServableManagerModule::ServableManagerModule(ovms::Server& ovmsServer) {
 Status ServableManagerModule::start(const ovms::Config& config) {
     state = ModuleState::STARTED_INITIALIZE;
     SPDLOG_INFO("{} starting", SERVABLE_MANAGER_MODULE_NAME);
+#if (MEDIAPIPE_DISABLE == 0) && defined(__linux__)
+    loadLlmCalculatorsPlugin();
+#endif
     auto status = getServableManager().start(config);
     if (status.ok()) {
         state = ModuleState::INITIALIZED;

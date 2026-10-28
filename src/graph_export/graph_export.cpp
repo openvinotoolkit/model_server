@@ -55,7 +55,7 @@
 #endif
 namespace ovms {
 
-static const std::string OVMS_VERSION_GRAPH_LINE = std::string("# File created with: ") + PROJECT_NAME + std::string(" ") + PROJECT_VERSION + std::string("\n");
+static const std::string OVMS_VERSION_GRAPH_LINE = std::string("# File created with: ") + PROJECT_NAME + std::string(" ") + getProjectVersion() + std::string("\n");
 static const std::string OVMS_GRAPH_QUEUE_MAX_SIZE_LINE_PREFIX = "# OVMS_GRAPH_QUEUE_MAX_SIZE: ";
 static const std::string OVMS_GRAPH_QUEUE_SIZE_AUTO = "AUTO";
 
@@ -185,6 +185,10 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
     if (graphSettings.toolParser.has_value()) {
         oss << R"(
             tool_parser: ")" << graphSettings.toolParser.value() << R"(",)";
+    }
+    if (graphSettings.chatTemplateEngine.has_value()) {
+        oss << R"(
+            chat_template_engine: )" << graphSettings.chatTemplateEngine.value() << R"(,)";
     }
     if (graphSettings.enableToolGuidedGeneration == "true") {
         oss << R"(
@@ -323,6 +327,10 @@ node {
     if (graphSettings.maxLength.has_value()) {
         oss << R"(
             max_length: )" << graphSettings.maxLength.value() << R"(,)";
+    }
+    if (graphSettings.maxBatchSize.has_value()) {
+        oss << R"(
+            max_batch_size: )" << graphSettings.maxBatchSize.value() << R"(,)";
     }
     if (!exportSettings.targetDevice.empty()) {
         oss << R"(

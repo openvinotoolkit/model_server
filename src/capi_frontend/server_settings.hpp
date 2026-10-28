@@ -127,6 +127,7 @@ struct TextGenGraphSettingsImpl {
     std::optional<std::string> pipelineType;
     std::optional<std::string> reasoningParser;
     std::optional<std::string> toolParser;
+    std::optional<std::string> chatTemplateEngine;
     std::string enableToolGuidedGeneration = "false";
     std::optional<uint64_t> cacheIntervalMultiplier;
 };
@@ -136,6 +137,7 @@ struct EmbeddingsGraphSettingsImpl {
     std::string truncate = "false";
     std::optional<std::string> pooling;
     std::optional<uint32_t> maxLength;
+    std::optional<uint32_t> maxBatchSize;
 };
 
 struct TextToSpeechGraphSettingsImpl {
@@ -217,6 +219,8 @@ struct HFSettingsImpl {
     std::variant<TextGenGraphSettingsImpl, RerankGraphSettingsImpl, EmbeddingsGraphSettingsImpl, TextToSpeechGraphSettingsImpl, SpeechToTextGraphSettingsImpl, ImageGenerationGraphSettingsImpl> graphSettings;
 };
 
+constexpr uint64_t OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS = 67108864;
+
 struct ServerSettingsImpl {
     uint32_t grpcPort = 0;
     uint32_t restPort = 0;
@@ -233,8 +237,10 @@ struct ServerSettingsImpl {
     std::string logLevel = "INFO";
     std::string logPath;
     bool verboseResponse = false;
-    bool disableInputCountValidation = false;
     bool allowCredentials = false;
+    uint64_t maxImageDecodePixels = OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS;
+    // When false, images whose decoded size cannot be estimated are rejected; when true they are decoded anyway.
+    bool allowUnestimatableImageFormats = false;
     std::string allowedOrigins{"*"};
     std::string allowedMethods{"*"};
     std::string allowedHeaders{"*"};
@@ -243,12 +249,12 @@ struct ServerSettingsImpl {
     std::string tracePath;
 #endif
     std::optional<size_t> grpcMemoryQuota;
+    std::optional<size_t> jsonMaxComplexity;
     std::string grpcChannelArguments;
     uint32_t filesystemPollWaitMilliseconds = 1000;
     uint32_t memoryTrimmingIntervalSeconds = 300;
     uint32_t idleUnloadTimeoutSeconds = 0;
     std::string cacheDir;
-    bool withPython = false;
     bool startedWithCLI = false;
     ConfigExportType exportConfigType = UNKNOWN_MODEL;
     HFSettingsImpl hfSettings;
@@ -270,6 +276,7 @@ struct ModelsSettingsImpl {
     std::optional<std::string> scale;
     std::optional<std::string> colorFormat;
     std::optional<std::string> precision;
+    std::optional<bool> disableInputCountValidation;
     std::string modelVersionPolicy;
     uint32_t nireq = 0;
     std::string targetDevice;
