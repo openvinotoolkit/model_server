@@ -48,11 +48,11 @@ private:
 
 class RemoveFiltersAdjustment : public BaseChatTemplateAdjustment {
 public:
-    explicit RemoveFiltersAdjustment(std::vector<std::string> functions);
+    explicit RemoveFiltersAdjustment(std::vector<std::string> filters);
     void apply(std::string& templateSource) const override;
 
 private:
-    std::vector<std::string> functions;
+    std::vector<std::string> filters;
 };
 
 // TODO @przepeck: It's already implemented in GenAI(but only for pipeline initialization), remove it when it will be supported when setting chat template

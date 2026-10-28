@@ -132,15 +132,15 @@ void RemoveFunctionParamsAdjustment::apply(std::string& processed) const {
     }
 }
 
-RemoveFiltersAdjustment::RemoveFiltersAdjustment(std::vector<std::string> functions) :
-    functions(std::move(functions)) {}
+RemoveFiltersAdjustment::RemoveFiltersAdjustment(std::vector<std::string> filters) :
+    filters(std::move(filters)) {}
 
 void RemoveFiltersAdjustment::apply(std::string& processed) const {
-    for (const auto& function : functions) {
+    for (const auto& filter : filters) {
         size_t searchFrom = 0;
         size_t pipePosition = 0;
         size_t functionEnd = 0;
-        while (findFilter(processed, function, searchFrom, pipePosition, functionEnd)) {
+        while (findFilter(processed, filter, searchFrom, pipePosition, functionEnd)) {
             size_t removalStart = pipePosition;
             while (removalStart > 0 && (processed[removalStart - 1] == ' ' || processed[removalStart - 1] == '\t')) {
                 --removalStart;
