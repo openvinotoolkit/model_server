@@ -139,9 +139,9 @@ in the configured build environment. For a two-host build, set
 Exact commands inside either build container:
 
 ```bash
-bazel build --config=mp_on_py_on //src/test/mediapipe/calculators:openvino_inference_benchmark
-bazel build --config=mp_on_py_on //src/test/mediapipe/calculators:mpi_openvino_inference_benchmark
-bazel build --config=mp_on_py_on //src/test/mediapipe/calculators:mpi_capi_inference_benchmark
+bazel build --config=mp_on //src/test/mediapipe/calculators:openvino_inference_benchmark
+bazel build --config=mp_on //src/test/mediapipe/calculators:mpi_openvino_inference_benchmark
+bazel build --config=mp_on //src/test/mediapipe/calculators:mpi_capi_inference_benchmark
 ```
 
 Exact per-binary run commands inside the configured GPU test container:
@@ -153,7 +153,7 @@ bash tools/run_linux_inference_benchmarks.sh //src/test/mediapipe/calculators:mp
 ```
 
 Omit positional targets to run the entire matrix. The helper prepares the full
-fixture, then invokes `bazel test --config=mp_on_py_on --nocache_test_results
+fixture, then invokes `bazel test --config=mp_on --nocache_test_results
 --local_test_jobs=1` with explicit runtime environment forwarding. Action-cache
 reuse is not disabled. No remote-cache endpoint was active in the supplied
 environment, so cross-host remote-cache hits were not verified; existing disk

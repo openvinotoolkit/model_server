@@ -15,7 +15,7 @@ local_container=${LOCAL_BUILD_CONTAINER:-ovms_gst_va2}
 worker=${BENCHMARK_WORKER:?Set BENCHMARK_WORKER to the configured build worker}
 remote_container=${REMOTE_BUILD_CONTAINER:?Set REMOTE_BUILD_CONTAINER to the configured build container}
 remote_checkout=${REMOTE_CHECKOUT:?Set REMOTE_CHECKOUT to the writable checkout path on the build worker}
-config=${BAZEL_BENCHMARK_CONFIG:-mp_on_py_on}
+config=${BAZEL_BENCHMARK_CONFIG:-mp_on}
 targets=(
     //src/test/mediapipe/calculators:openvino_inference_benchmark
     //src/test/mediapipe/calculators:mpi_openvino_inference_benchmark

@@ -43,7 +43,7 @@ try {
         "--output_user_root=C:\opt"
     )
     $commandArgs = @(
-        "--config=win_mp_on_py_on",
+        "--config=win_mp_on",
         "--action_env", "OpenVINO_DIR=C:/opt/openvino/runtime/cmake",
         "--jobs=10"
     )

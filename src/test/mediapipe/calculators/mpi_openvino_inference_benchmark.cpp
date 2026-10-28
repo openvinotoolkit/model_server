@@ -143,7 +143,7 @@ TEST(MpiOpenVinoBenchmark, Direct) {
             ASSERT_EQ(status, IMP_OK);
             ASSERT_NE(tensor, nullptr);
 #ifndef _WIN32
-            const bool measuredFrame = frames >= benchmark_config::kWarmupFrames;
+            const bool measuredFrame = frames >= bench::warmupFrames();
             if (collectE2 && measuredFrame)
                 readTime += readStop - readStart;
 #endif
@@ -204,7 +204,7 @@ TEST(MpiOpenVinoBenchmark, Direct) {
                 releaseTime += releaseStop - releaseStart;
 #endif
             ++frames;
-            if (frames == benchmark_config::kWarmupFrames) {
+            if (frames == bench::warmupFrames()) {
                 start = bench::Clock::now();
 #ifndef _WIN32
                 if (collectE2) {
@@ -228,25 +228,25 @@ TEST(MpiOpenVinoBenchmark, Direct) {
                               << " sync_appsink=" << bench::environment("OVMS_MPI_E2_SYNC_APPSINK", "off")
                               << " explicit_va_sync=" << (synchronizeSurface ? "on" : "off")
                               << " request_count=1 preprocessing=NV12_to_BGR_NCHW"
-                              << " output=detection_count warmup=" << benchmark_config::kWarmupFrames
-                              << " measured=" << benchmark_config::kMeasuredFrames << std::endl;
+                              << " output=detection_count warmup=" << bench::warmupFrames()
+                              << " measured=" << bench::measuredFrames() << std::endl;
                 }
 #endif
             }
-            if (frames == bench::kTotalFrames)
+            if (frames == bench::totalFrames())
                 stop = bench::Clock::now();
         }
-        ASSERT_EQ(frames, bench::kTotalFrames);
-        samples.push_back(bench::milliseconds(start, stop) / benchmark_config::kMeasuredFrames);
+        ASSERT_EQ(frames, bench::totalFrames());
+        samples.push_back(bench::milliseconds(start, stop) / bench::measuredFrames());
 #ifndef _WIN32
         if (collectE2) {
-            const double scale = 1.0 / benchmark_config::kMeasuredFrames;
+            const double scale = 1.0 / bench::measuredFrames();
             const double wall = samples.back();
             const double stageSum = milliseconds(readTime + surfaceExtractionTime + surfaceSyncTime + tensorImportTime +
                 tensorBindingTime + inferCallTime + outputHandlingTime + releaseTime) * scale;
             std::cout << std::fixed << std::setprecision(6)
                       << "E2_DIRECT sample=" << sample + 1
-                      << " measured=" << benchmark_config::kMeasuredFrames
+                      << " measured=" << bench::measuredFrames()
                       << " read_pull_ms_per_frame=" << milliseconds(readTime) * scale
                       << " surface_extract_ms_per_frame=" << milliseconds(surfaceExtractionTime) * scale
                       << " explicit_va_sync_ms_per_frame=" << milliseconds(surfaceSyncTime) * scale
@@ -288,27 +288,27 @@ TEST(MpiOpenVinoDiagnostics, DecodeSupply) {
             ASSERT_EQ(status, IMP_OK);
             ASSERT_NE(tensor, nullptr);
             ASSERT_EQ(imp_tensor_get_memory_type(tensor.get()), IMP_MEM_VA_SURFACE);
-            if (frames >= benchmark_config::kWarmupFrames)
+            if (frames >= bench::warmupFrames())
                 readTime += readStop - readStart;
             const auto releaseStart = bench::Clock::now();
             tensor.reset();
             const auto releaseStop = bench::Clock::now();
-            if (frames >= benchmark_config::kWarmupFrames)
+            if (frames >= bench::warmupFrames())
                 releaseTime += releaseStop - releaseStart;
             ++frames;
-            if (frames == benchmark_config::kWarmupFrames)
+            if (frames == bench::warmupFrames())
                 start = bench::Clock::now();
-            if (frames == bench::kTotalFrames)
+            if (frames == bench::totalFrames())
                 stop = bench::Clock::now();
         }
-        ASSERT_EQ(frames, bench::kTotalFrames);
-        const double wall = bench::milliseconds(start, stop) / benchmark_config::kMeasuredFrames;
+        ASSERT_EQ(frames, bench::totalFrames());
+        const double wall = bench::milliseconds(start, stop) / bench::measuredFrames();
         samples.push_back(wall);
-        const double scale = 1.0 / benchmark_config::kMeasuredFrames;
+        const double scale = 1.0 / bench::measuredFrames();
         std::cout << std::fixed << std::setprecision(6)
                   << "E2_DECODE_SUPPLY sample=" << sample + 1
-                  << " warmup=" << benchmark_config::kWarmupFrames
-                  << " measured=" << benchmark_config::kMeasuredFrames
+                  << " warmup=" << bench::warmupFrames()
+                  << " measured=" << bench::measuredFrames()
                   << " consumed=" << frames << " eos=1"
                   << " read_pull_ms_per_frame=" << milliseconds(readTime) * scale
                   << " tensor_release_ms_per_frame=" << milliseconds(releaseTime) * scale
@@ -341,7 +341,7 @@ TEST(MpiOpenVinoIntegration, DecodeEosCleanup) {
 #endif
             ++frames;
         }
-        ASSERT_EQ(frames, bench::kTotalFrames);
+        ASSERT_EQ(frames, bench::totalFrames());
     }
 }
 
@@ -358,7 +358,7 @@ TEST(MpiOpenVinoIntegration, NativePixelsMatchPureFixture) {
     const auto expected = bench::frames();
     bench::DecodeStream decode;
     decode.open();
-    for (int frame = 0; frame < bench::kTotalFrames; ++frame) {
+    for (int frame = 0; frame < bench::totalFrames(); ++frame) {
         SCOPED_TRACE(frame);
         imp_tensor_t* raw = nullptr;
         ASSERT_EQ(imp_video_read_frame(&raw, decode.stream, 0), IMP_OK);

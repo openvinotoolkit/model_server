@@ -35,13 +35,33 @@
 
 namespace inference_benchmark {
 using Clock = std::chrono::steady_clock;
-constexpr int kTotalFrames = benchmark_config::kWarmupFrames + benchmark_config::kMeasuredFrames;
 inline const std::string kYInputName = std::string(benchmark_config::kInputName) + "/y";
 inline const std::string kUvInputName = std::string(benchmark_config::kInputName) + "/uv";
 
 inline std::string environment(const char* name, const std::string& fallback) {
     const char* value = std::getenv(name);
     return value && *value ? value : fallback;
+}
+
+inline int repeatCount() {
+    const std::string value = environment("OVMS_BENCHMARK_REPEAT_COUNT", "1");
+    size_t parsed = 0;
+    const int count = std::stoi(value, &parsed);
+    if (parsed != value.size() || count <= 0)
+        throw std::runtime_error("OVMS_BENCHMARK_REPEAT_COUNT must be a positive integer");
+    return count;
+}
+
+inline int warmupFrames() {
+    return benchmark_config::kWarmupFrames * repeatCount();
+}
+
+inline int measuredFrames() {
+    return benchmark_config::kMeasuredFrames * repeatCount();
+}
+
+inline int totalFrames() {
+    return warmupFrames() + measuredFrames();
 }
 
 inline std::filesystem::path root() {
@@ -88,8 +108,9 @@ inline std::vector<std::vector<uint8_t>> frames() {
             throw std::runtime_error("Incomplete NV12 frame");
         result.push_back(std::move(frame));
     }
-    if (result.size() != kTotalFrames)
-        throw std::runtime_error("Benchmark requires the complete 250-frame source, got " + std::to_string(result.size()));
+    if (result.size() != static_cast<size_t>(totalFrames()))
+        throw std::runtime_error("Benchmark requires " + std::to_string(totalFrames()) +
+            " NV12 frames, got " + std::to_string(result.size()));
     return result;
 }
 
@@ -102,9 +123,9 @@ inline void report(const std::string& name, const std::vector<double>& samples) 
     for (size_t sample = 0; sample < samples.size(); ++sample) {
         fps.push_back(1000.0 / samples[sample]);
         std::cout << std::fixed << std::setprecision(6) << "BENCHMARK case=" << name
-                  << " sample=" << sample + 1 << " warmup=" << benchmark_config::kWarmupFrames
-                  << " measured=" << benchmark_config::kMeasuredFrames
-                  << " consumed=" << kTotalFrames << " eos=1"
+                  << " sample=" << sample + 1 << " repeat=" << repeatCount()
+                  << " warmup=" << warmupFrames() << " measured=" << measuredFrames()
+                  << " consumed=" << totalFrames() << " eos=1"
                   << " ms_per_frame=" << samples[sample] << " fps=" << fps.back() << '\n';
     }
     const auto summarize = [&](const std::vector<double>& values, const char* unit) {

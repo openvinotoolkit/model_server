@@ -229,7 +229,7 @@ protected:
                 ASSERT_EQ(width, benchmark_config::kModelWidth);
                 ASSERT_EQ(height, benchmark_config::kModelHeight);
                 const void* surfaceHandle = reinterpret_cast<void*>(static_cast<uintptr_t>(surface));
-                const bool measuredFrame = frames >= benchmark_config::kWarmupFrames;
+                const bool measuredFrame = frames >= bench::warmupFrames();
                 int directDetections = -1;
                 int capiDetections = -1;
 
@@ -364,9 +364,9 @@ protected:
                 }
                 ++frames;
             }
-            ASSERT_EQ(frames, bench::kTotalFrames) << "Source must reach EOS, not a MAX_FRAMES cutoff";
+            ASSERT_EQ(frames, bench::totalFrames()) << "Source must reach EOS, not a MAX_FRAMES cutoff";
 
-            const double scale = 1.0 / benchmark_config::kMeasuredFrames;
+            const double scale = 1.0 / bench::measuredFrames();
             const double directMs = paired
                 ? std::chrono::duration<double, std::milli>(directWall).count() * scale
                 : 0.0;
@@ -494,13 +494,13 @@ protected:
             result.detections.push_back(detections);
             tensor.reset();
             ++frames;
-            if (frames == benchmark_config::kWarmupFrames)
+            if (frames == bench::warmupFrames())
                 start = bench::Clock::now();
-            if (frames == bench::kTotalFrames)
+            if (frames == bench::totalFrames())
                 stop = bench::Clock::now();
         }
-        ASSERT_EQ(frames, bench::kTotalFrames) << "Direct path must consume all 250 frames and reach EOS";
-        result.millisecondsPerFrame = bench::milliseconds(start, stop) / benchmark_config::kMeasuredFrames;
+        ASSERT_EQ(frames, bench::totalFrames()) << "Direct path must reach EOS";
+        result.millisecondsPerFrame = bench::milliseconds(start, stop) / bench::measuredFrames();
     }
 
     void runFairCapiPath(FairPathResult& result) {
@@ -583,13 +583,13 @@ protected:
             response.reset();
             tensor.reset();
             ++frames;
-            if (frames == benchmark_config::kWarmupFrames)
+            if (frames == bench::warmupFrames())
                 start = bench::Clock::now();
-            if (frames == bench::kTotalFrames)
+            if (frames == bench::totalFrames())
                 stop = bench::Clock::now();
         }
-        ASSERT_EQ(frames, bench::kTotalFrames) << "C-API path must consume all 250 frames and reach EOS";
-        result.millisecondsPerFrame = bench::milliseconds(start, stop) / benchmark_config::kMeasuredFrames;
+        ASSERT_EQ(frames, bench::totalFrames()) << "C-API path must reach EOS";
+        result.millisecondsPerFrame = bench::milliseconds(start, stop) / bench::measuredFrames();
     }
 
     void runFairFullPathComparison() {
@@ -612,9 +612,9 @@ protected:
             }
             if (testing::Test::HasFatalFailure())
                 return;
-            ASSERT_EQ(direct.detections.size(), bench::kTotalFrames);
-            ASSERT_EQ(capi.detections.size(), bench::kTotalFrames);
-            for (size_t frame = 0; frame < bench::kTotalFrames; ++frame) {
+            ASSERT_EQ(direct.detections.size(), static_cast<size_t>(bench::totalFrames()));
+            ASSERT_EQ(capi.detections.size(), static_cast<size_t>(bench::totalFrames()));
+            for (size_t frame = 0; frame < static_cast<size_t>(bench::totalFrames()); ++frame) {
                 SCOPED_TRACE(frame);
                 ASSERT_EQ(direct.detections[frame], capi.detections[frame]);
             }

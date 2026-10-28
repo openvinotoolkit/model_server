@@ -42,6 +42,7 @@ namespace mediapipe {
 namespace {
 constexpr char kFrameTag[] = "FRAME";
 constexpr char kDetectionsTag[] = "DETECTIONS";
+constexpr char kPreinitializedInferenceTag[] = "PREINITIALIZED_INFERENCE";
 constexpr float kFaceConfidenceThreshold = 0.5f;
 }  // namespace
 
@@ -49,6 +50,8 @@ class GstOpenVinoInferenceCalculator : public CalculatorBase {
  public:
     static absl::Status GetContract(CalculatorContract* cc) {
         cc->Inputs().Tag(kFrameTag).Set<GstVideoFramePacket>();
+        if (cc->InputSidePackets().HasTag(kPreinitializedInferenceTag))
+            cc->InputSidePackets().Tag(kPreinitializedInferenceTag).Set<std::shared_ptr<GstVaapiInference>>();
         cc->Outputs().Tag(kDetectionsTag).Set<int>();
         return absl::OkStatus();
     }
@@ -64,6 +67,13 @@ class GstOpenVinoInferenceCalculator : public CalculatorBase {
         num_streams_ = options.num_streams();
         if (num_streams_ == 0)
             return absl::InvalidArgumentError("GstOpenVinoInferenceCalculator: num_streams must be positive");
+#ifndef _WIN32
+        if (cc->InputSidePackets().HasTag(kPreinitializedInferenceTag)) {
+            va_inference_ = cc->InputSidePackets().Tag(kPreinitializedInferenceTag).Get<std::shared_ptr<GstVaapiInference>>();
+            if (!va_inference_)
+                return absl::InvalidArgumentError("PREINITIALIZED_INFERENCE must not be null");
+        }
+#endif
         return absl::OkStatus();
     }
 
@@ -74,7 +84,7 @@ class GstOpenVinoInferenceCalculator : public CalculatorBase {
         RET_CHECK(surface != nullptr) << "direct OpenVINO requires a VA-API NV12 frame";
         try {
             if (!va_inference_)
-                va_inference_ = std::make_unique<GstVaapiInference>();
+                va_inference_ = std::make_shared<GstVaapiInference>();
             va_frame_owner_ = frame.owner;
             const int detections = va_inference_->infer(surface->display, surface->surface_id,
                 frame.width, frame.height, model_path_, input_name_, performance_hint_, num_streams_);
@@ -173,7 +183,7 @@ class GstOpenVinoInferenceCalculator : public CalculatorBase {
     std::unique_ptr<ov::intel_gpu::ocl::D3DContext> d3d_context_;
 #else
     std::shared_ptr<imp_tensor_t> va_frame_owner_;
-    std::unique_ptr<GstVaapiInference> va_inference_;
+    std::shared_ptr<GstVaapiInference> va_inference_;
 #endif
     ov::Core core_;
     ov::CompiledModel compiled_model_;

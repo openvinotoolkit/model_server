@@ -22,10 +22,16 @@ export GST_REGISTRY=${GST_REGISTRY:-$root/logs/benchmark_gst_registry.bin}
 export LIBVA_DRIVER_NAME=${LIBVA_DRIVER_NAME:-iHD}
 export LIBVA_DRIVERS_PATH=${LIBVA_DRIVERS_PATH:-/usr/lib/x86_64-linux-gnu/dri}
 export OVMS_PERF_RENDER_NODE=${OVMS_PERF_RENDER_NODE:-/dev/dri/renderD128}
-config=${BAZEL_BENCHMARK_CONFIG:-mp_on_py_on}
+config=${BAZEL_BENCHMARK_CONFIG:-mp_on}
 artifact=${BENCHMARK_LOG:-$root/logs/panther_lake_inference_benchmark_raw.log}
 test_filter=${BENCHMARK_TEST_FILTER:-}
+repeat_count=${OVMS_BENCHMARK_REPEAT_COUNT:-1}
 mkdir -p "$root/logs"
+
+if ! [[ "$repeat_count" =~ ^[1-9][0-9]*$ ]]; then
+    printf 'OVMS_BENCHMARK_REPEAT_COUNT must be a positive integer\n' >&2
+    exit 1
+fi
 
 dimensions=()
 mapfile -t dimensions < <(awk '$3 == "kModelWidth" || $3 == "kModelHeight" {gsub(";", "", $5); print $5}' \
@@ -35,6 +41,15 @@ if (( ${#dimensions[@]} != 2 )); then
     exit 1
 fi
 gst-inspect-1.0 vapostproc >"$root/logs/benchmark_va_environment.log" 2>&1
+source_video="$VIDEO_PATH"
+repeated_video="$root/logs/benchmark_input_repeat_${repeat_count}.avi"
+concat_arguments=(concat name=join ! videoconvert ! jpegenc quality=100 ! avimux ! filesink "location=$repeated_video")
+for (( copy = 0; copy < repeat_count; ++copy )); do
+    concat_arguments+=(filesrc "location=$source_video" ! decodebin ! videoconvert ! "video/x-raw,format=I420" ! queue ! "join.sink_$copy")
+done
+gst-launch-1.0 -e "${concat_arguments[@]}" >"$root/logs/prepare_repeated_video.log" 2>&1
+export VIDEO_PATH="$repeated_video"
+export OVMS_PERF_NV12_PATH="$root/logs/benchmark_input_repeat_${repeat_count}.nv12"
 gst-launch-1.0 -e filesrc "location=$VIDEO_PATH" ! decodebin ! vapostproc ! \
     "video/x-raw,format=NV12,width=${dimensions[0]},height=${dimensions[1]}" ! \
     filesink "location=$OVMS_PERF_NV12_PATH" >"$root/logs/prepare_nv12.log" 2>&1
@@ -64,6 +79,7 @@ bazel test "--config=$config" --curses=no --color=no --nocache_test_results \
     --test_env=OVMS_MPI_E4_DIAGNOSTICS --test_env=OVMS_MPI_E4_WARMUP_FRAMES \
     --test_env=OVMS_MPI_E4_VA_SYNC \
     --test_env=OVMS_CAPI_LOG_LEVEL \
+    --test_env=OVMS_BENCHMARK_REPEAT_COUNT \
     "${targets[@]}" >"$artifact" 2>&1 || result=$?
 if (( result != 0 )); then
     printf 'Benchmark failed; inspect %s\n' "$artifact" >&2

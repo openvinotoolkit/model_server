@@ -114,9 +114,9 @@ inline void measureGraph(const std::string& name, bool capi, bool split,
                 return absl::InternalError("Negative detection count");
             detections += count;
             ++frames;
-            if (frames == benchmark_config::kWarmupFrames)
+            if (frames == warmupFrames())
                 start = Clock::now();
-            if (frames == kTotalFrames)
+            if (frames == totalFrames())
                 stop = Clock::now();
             return absl::OkStatus();
         });
@@ -129,9 +129,9 @@ inline void measureGraph(const std::string& name, bool capi, bool split,
         ASSERT_TRUE(status.ok()) << status;
         status = graph.WaitUntilDone();
         ASSERT_TRUE(status.ok()) << status;
-        ASSERT_EQ(frames, kTotalFrames) << "Source must reach EOS, not a MAX_FRAMES cutoff";
+        ASSERT_EQ(frames, totalFrames()) << "Source must reach EOS, not a MAX_FRAMES cutoff";
         ASSERT_GT(detections, 0);
-        samples.push_back(milliseconds(start, stop) / benchmark_config::kMeasuredFrames);
+        samples.push_back(milliseconds(start, stop) / measuredFrames());
     }
     report(name, samples);
 }

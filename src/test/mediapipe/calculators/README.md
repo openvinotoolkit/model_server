@@ -115,9 +115,9 @@ logs, external downloads and node_modules; it does not delete remote files.
 Exact commands inside either build container:
 
 ```bash
-bazel build --config=mp_on_py_on //src/test/mediapipe/calculators:openvino_inference_benchmark
-bazel build --config=mp_on_py_on //src/test/mediapipe/calculators:mpi_openvino_inference_benchmark
-bazel build --config=mp_on_py_on //src/test/mediapipe/calculators:mpi_capi_inference_benchmark
+bazel build --config=mp_on //src/test/mediapipe/calculators:openvino_inference_benchmark
+bazel build --config=mp_on //src/test/mediapipe/calculators:mpi_openvino_inference_benchmark
+bazel build --config=mp_on //src/test/mediapipe/calculators:mpi_capi_inference_benchmark
 ```
 
 Run the cases inside the configured GPU test container:
@@ -129,7 +129,7 @@ bash tools/run_linux_inference_benchmarks.sh //src/test/mediapipe/calculators:mp
 ```
 
 The runner prepares the complete raw NV12 fixture using GStreamer outside the
-pure binary, then invokes `bazel test --config=mp_on_py_on
+pure binary, then invokes `bazel test --config=mp_on
 --nocache_test_results --local_test_jobs=1 --test_timeout=900 --test_output=all`
 with explicit library/driver/fixture environment forwarding. Serial targets
 avoid concurrent GPU measurements. Neither helper disables action-cache reuse.
@@ -221,7 +221,7 @@ export LD_LIBRARY_PATH=/azure-sdk-install/lib:/opt/gstreamer/lib:$LD_LIBRARY_PAT
 export GST_PLUGIN_PATH=/opt/gstreamer/lib/gstreamer-1.0
 export LIBVA_DRIVER_NAME=iHD
 export GST_REGISTRY=/ovms/logs/benchmark_gst_registry.bin
-bazel test --config=mp_on_py_on --nocache_test_results --local_test_jobs=1 \
+bazel test --config=mp_on --nocache_test_results --local_test_jobs=1 \
 	--test_timeout=900 --test_output=all --test_env=OVMS_REPO_ROOT \
 	--test_env=PATH --test_env=LD_LIBRARY_PATH --test_env=GST_PLUGIN_PATH \
 	--test_env=LIBVA_DRIVER_NAME --test_env=LIBVA_DRIVERS_PATH --test_env=GST_REGISTRY \
@@ -302,6 +302,6 @@ The legacy Windows diagnostic fixture and runner remain available:
 .\tools\run_remote_tensor_performance.ps1 -NoTestCache -BenchmarkTrialCount 5 -GTestFilter '*Performance'
 ```
 
-The new targets require the normal `win_mp_on_py_on` configuration and Windows
+The new targets require the normal `win_mp_on` configuration and Windows
 GStreamer/OpenVINO/OpenCL environment. The pure binary also needs a prepared
 NV12 fixture. The Linux shell fixture-preparation script is not a Windows runner.
