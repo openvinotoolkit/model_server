@@ -12,7 +12,6 @@ Describe the changes.
 - [ ] `make run_lib_files_test`
 - [ ] `make run_unit_tests BASE_OS=ubuntu24`
 - [ ] `windows_install_build_dependencies.bat opt`
-- [ ] `windows_clean_build.bat opt`
 - [ ] `windows_build.bat opt`
 - [ ] `windows_test.bat opt`
 - [ ] Unit tests added.
