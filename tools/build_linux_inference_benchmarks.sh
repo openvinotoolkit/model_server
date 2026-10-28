@@ -12,9 +12,9 @@ set -euo pipefail
 
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 local_container=${LOCAL_BUILD_CONTAINER:-ovms_gst_va2}
-worker=${BENCHMARK_WORKER:-sys_k8sworker@ov-ptl-13.sclab.intel.com}
-remote_container=${REMOTE_BUILD_CONTAINER:-ovms_linux_benchmark}
-remote_checkout=${REMOTE_CHECKOUT:-/opt/home/sys_k8sworker/atobisze/model_server}
+worker=${BENCHMARK_WORKER:?Set BENCHMARK_WORKER to the configured build worker}
+remote_container=${REMOTE_BUILD_CONTAINER:?Set REMOTE_BUILD_CONTAINER to the configured build container}
+remote_checkout=${REMOTE_CHECKOUT:?Set REMOTE_CHECKOUT to the writable checkout path on the build worker}
 config=${BAZEL_BENCHMARK_CONFIG:-mp_on_py_on}
 targets=(
     //src/test/mediapipe/calculators:openvino_inference_benchmark
@@ -41,7 +41,7 @@ rsync -az --itemize-changes \
 
 printf -v remote_command 'docker start %q >/dev/null && docker exec -w /ovms %q bash -lc %q' \
     "$remote_container" "$remote_container" "$build > /ovms/logs/build_benchmarks_remote.log 2>&1"
-printf 'Building on Panther Lake (logs/build_benchmarks_remote.log)\n'
+printf 'Building on remote worker (logs/build_benchmarks_remote.log)\n'
 result=0
 ssh -o BatchMode=yes "$worker" "$remote_command" || result=$?
 rsync -az "$worker:$remote_checkout/logs/build_benchmarks_remote.log" "$root/logs/"

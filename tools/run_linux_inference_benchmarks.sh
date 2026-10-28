@@ -24,6 +24,7 @@ export LIBVA_DRIVERS_PATH=${LIBVA_DRIVERS_PATH:-/usr/lib/x86_64-linux-gnu/dri}
 export OVMS_PERF_RENDER_NODE=${OVMS_PERF_RENDER_NODE:-/dev/dri/renderD128}
 config=${BAZEL_BENCHMARK_CONFIG:-mp_on_py_on}
 artifact=${BENCHMARK_LOG:-$root/logs/panther_lake_inference_benchmark_raw.log}
+test_filter=${BENCHMARK_TEST_FILTER:-}
 mkdir -p "$root/logs"
 
 dimensions=()
@@ -46,14 +47,24 @@ targets=(
 if (( $# )); then
     targets=("$@")
 fi
+test_filter_args=()
+if [[ -n "$test_filter" ]]; then
+    test_filter_args+=("--test_filter=$test_filter")
+fi
 printf 'Running uncached, serial measurements; raw output: %s\n' "$artifact"
 result=0
 bazel test "--config=$config" --curses=no --color=no --nocache_test_results \
-    --local_test_jobs=1 --test_timeout=900 --test_output=all \
+    --local_test_jobs=1 --test_timeout=900 --test_output=all "${test_filter_args[@]}" \
     --test_env=PATH --test_env=LD_LIBRARY_PATH --test_env=GST_PLUGIN_PATH --test_env=GST_REGISTRY \
     --test_env=LIBVA_DRIVER_NAME --test_env=LIBVA_DRIVERS_PATH --test_env=OVMS_REPO_ROOT \
     --test_env=OVMS_PERF_RENDER_NODE --test_env=OVMS_PERF_NV12_PATH --test_env=VIDEO_PATH \
-    --test_env=OVMS_PERF_MODEL_XML "${targets[@]}" >"$artifact" 2>&1 || result=$?
+    --test_env=OVMS_PERF_MODEL_XML --test_env=OVMS_PERF_DIAGNOSTICS --test_env=OVMS_MPI_E2_DIAGNOSTICS \
+    --test_env=OVMS_MPI_E2_SURFACE_SYNC --test_env=OVMS_MPI_E2_SYNC_APPSINK \
+    --test_env=OVMS_MPI_E2_PREINITIALIZE_OV \
+    --test_env=OVMS_MPI_E4_DIAGNOSTICS --test_env=OVMS_MPI_E4_WARMUP_FRAMES \
+    --test_env=OVMS_MPI_E4_VA_SYNC \
+    --test_env=OVMS_CAPI_LOG_LEVEL \
+    "${targets[@]}" >"$artifact" 2>&1 || result=$?
 if (( result != 0 )); then
     printf 'Benchmark failed; inspect %s\n' "$artifact" >&2
     exit "$result"

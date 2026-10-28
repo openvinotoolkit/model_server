@@ -1,3 +1,4 @@
+
 // Copyright (c) 2026 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,6 +32,12 @@
 #include <va/va.h>
 #include <va/va_drm.h>
 #include <openvino/runtime/intel_gpu/ocl/va.hpp>
+#include <iomanip>
+#include <iostream>
+#include <map>
+#include <tuple>
+#include <openvino/runtime/profiling_info.hpp>
+#include <openvino/runtime/properties.hpp>
 #endif
 #include "inference_benchmark_utils.hpp"
 
@@ -41,24 +48,144 @@ constexpr size_t kHeight = benchmark_config::kModelHeight;
 const ov::Shape kYShape{1, kHeight, kWidth, 1};
 const ov::Shape kUvShape{1, kHeight / 2, kWidth / 2, 2};
 
+#ifndef _WIN32
+std::string diagnosticMode() {
+    return bench::environment("OVMS_PERF_DIAGNOSTICS", "off");
+}
+
+bool collectStageTimings() {
+    const std::string mode = diagnosticMode();
+    return mode == "stages" || mode == "profile";
+}
+
+bool collectNodeProfiles() {
+    return diagnosticMode() == "profile";
+}
+
+ov::AnyMap compileProperties() {
+    ov::AnyMap result = bench::properties();
+    if (collectNodeProfiles())
+        result[ov::enable_profiling.name()] = true;
+    return result;
+}
+
+void reportCompiledProperties(const std::string& name, const ov::CompiledModel& compiled,
+    const char* inputMode) {
+    std::string devices = "unavailable";
+    std::string precision = "unavailable";
+    try {
+        const auto executionDevices = compiled.get_property(ov::execution_devices);
+        devices.clear();
+        for (const auto& device : executionDevices) {
+            if (!devices.empty())
+                devices += ",";
+            devices += device;
+        }
+    } catch (const std::exception&) {
+    }
+    try {
+        precision = compiled.get_property(ov::hint::inference_precision).to_string();
+    } catch (const std::exception&) {
+    }
+    std::cout << "E1_CONFIG case=" << name << " input=" << inputMode
+              << " device=" << devices << " inference_precision=" << precision
+              << " performance_hint=" << benchmark_config::kPerformanceHint
+              << " num_streams=" << benchmark_config::kNumStreams
+              << " profiling=" << (collectNodeProfiles() ? "on" : "off")
+              << " warmup=" << benchmark_config::kWarmupFrames
+              << " measured=" << benchmark_config::kMeasuredFrames
+              << " samples=" << benchmark_config::kSampleCount << std::endl;
+}
+
+struct NodeProfileTotals {
+    uint64_t realTimeMicroseconds = 0;
+    uint64_t cpuTimeMicroseconds = 0;
+    uint64_t observations = 0;
+};
+#else
+ov::AnyMap compileProperties() {
+    return bench::properties();
+}
+
+void reportCompiledProperties(const std::string&, const ov::CompiledModel&, const char*) {}
+#endif
+
 template <typename Bind>
 void measure(const std::string& name, ov::CompiledModel& compiled, Bind bind) {
     std::vector<double> samples;
     for (int sample = 0; sample < benchmark_config::kSampleCount; ++sample) {
         ov::InferRequest request = compiled.create_infer_request();
-        double elapsed = 0;
-        for (int frame = 0; frame < bench::kTotalFrames; ++frame) {
+        double fullPathElapsed = 0;
+        double inferenceElapsed = 0;
+#ifndef _WIN32
+        double bindElapsed = 0;
+        double outputElapsed = 0;
+        std::map<std::tuple<std::string, std::string, std::string>, NodeProfileTotals> nodeProfiles;
+#endif
+        for (int frame = 0; frame < bench::totalFrames(); ++frame) {
+        const auto frameStart = bench::Clock::now();
+#ifndef _WIN32
+            const auto bindStart = collectStageTimings() ? bench::Clock::now() : bench::Clock::time_point{};
+#endif
             bind(request, frame);
+#ifndef _WIN32
+            const auto bindStop = collectStageTimings() ? bench::Clock::now() : bench::Clock::time_point{};
+#endif
             if (testing::Test::HasFatalFailure())
                 return;
-            const auto start = bench::Clock::now();
+            const auto inferenceStart = bench::Clock::now();
             request.infer();
-            const auto stop = bench::Clock::now();
-            ASSERT_GT(request.get_output_tensor().get_size(), 0);
-            if (frame >= benchmark_config::kWarmupFrames)
-                elapsed += bench::milliseconds(start, stop);
+            const auto inferenceStop = bench::Clock::now();
+#ifdef _WIN32
+            const size_t outputSize = request.get_output_tensor().get_size();
+#else
+            const auto outputStart = collectStageTimings() ? bench::Clock::now() : bench::Clock::time_point{};
+            const size_t outputSize = request.get_output_tensor().get_size();
+            const auto outputStop = collectStageTimings() ? bench::Clock::now() : bench::Clock::time_point{};
+#endif
+            const auto frameStop = bench::Clock::now();
+            ASSERT_GT(outputSize, 0);
+            if (frame >= bench::warmupFrames()) {
+                fullPathElapsed += bench::milliseconds(frameStart, frameStop);
+                inferenceElapsed += bench::milliseconds(inferenceStart, inferenceStop);
+#ifndef _WIN32
+                if (collectStageTimings()) {
+                    bindElapsed += bench::milliseconds(bindStart, bindStop);
+                    outputElapsed += bench::milliseconds(outputStart, outputStop);
+                }
+                if (collectNodeProfiles()) {
+                    for (const auto& info : request.get_profiling_info()) {
+                        auto& totals = nodeProfiles[{info.node_name, info.node_type, info.exec_type}];
+                        totals.realTimeMicroseconds += info.real_time.count();
+                        totals.cpuTimeMicroseconds += info.cpu_time.count();
+                        ++totals.observations;
+                    }
+                }
+#endif
+            }
         }
-        samples.push_back(elapsed / benchmark_config::kMeasuredFrames);
+        samples.push_back(fullPathElapsed / bench::measuredFrames());
+#ifndef _WIN32
+        if (collectStageTimings()) {
+            std::cout << std::fixed << std::setprecision(6)
+                      << "E1_STAGE case=" << name << " sample=" << sample + 1
+                      << " measured=" << bench::measuredFrames()
+                      << " bind_upload_ms_per_frame=" << bindElapsed / bench::measuredFrames()
+                      << " infer_call_ms_per_frame=" << inferenceElapsed / bench::measuredFrames()
+                      << " output_access_ms_per_frame=" << outputElapsed / bench::measuredFrames()
+                      << " full_path_ms_per_frame=" << fullPathElapsed / bench::measuredFrames()
+                      << std::endl;
+        }
+        for (const auto& [key, totals] : nodeProfiles) {
+            const auto& [nodeName, nodeType, execType] = key;
+            std::cout << std::fixed << std::setprecision(3)
+                      << "E1_NODE_PROFILE case=" << name << " sample=" << sample + 1
+                      << " node=" << nodeName << " type=" << nodeType << " exec=" << execType
+                      << " mean_real_us=" << static_cast<double>(totals.realTimeMicroseconds) / totals.observations
+                      << " mean_cpu_us=" << static_cast<double>(totals.cpuTimeMicroseconds) / totals.observations
+                      << " observations=" << totals.observations << std::endl;
+        }
+#endif
     }
     bench::report(name, samples);
 }
@@ -66,7 +193,8 @@ void measure(const std::string& name, ov::CompiledModel& compiled, Bind bind) {
 void host(const std::string& device) {
     auto frames = bench::frames();
     ov::Core core;
-    auto compiled = core.compile_model(bench::model(core, false), device, bench::properties());
+    auto compiled = core.compile_model(bench::model(core, false), device, compileProperties());
+    reportCompiledProperties("pure_ov_" + device + "_host", compiled, "host");
     measure("pure_ov_" + device + "_host", compiled, [&](ov::InferRequest& request, int index) {
         request.set_tensor(bench::kYInputName, ov::Tensor(ov::element::u8, kYShape, frames[index].data()));
         request.set_tensor(bench::kUvInputName, ov::Tensor(ov::element::u8, kUvShape, frames[index].data() + kWidth * kHeight));
@@ -80,7 +208,8 @@ TEST(PureOpenVinoBenchmark, OpenClRemote) {
     auto frames = bench::frames();
     ov::Core core;
     auto context = core.get_default_context("GPU").as<ov::intel_gpu::ocl::ClContext>();
-    auto compiled = core.compile_model(bench::model(core, false), context, bench::properties());
+    auto compiled = core.compile_model(bench::model(core, false), context, compileProperties());
+    reportCompiledProperties("pure_ov_GPU_opencl", compiled, "opencl_buffers");
     cl::Context clContext(context.get(), true);
     cl::CommandQueue queue(clContext);
     cl::Buffer yBuffer(clContext, CL_MEM_READ_WRITE, kWidth * kHeight);
@@ -160,10 +289,11 @@ TEST(PureOpenVinoBenchmark, NativeGpuMemory) {
     ov::CompiledModel compiled;
     try {
         context = std::make_unique<ov::intel_gpu::ocl::VAContext>(core, native.display);
-        compiled = core.compile_model(bench::model(core, true), *context, bench::properties());
+        compiled = core.compile_model(bench::model(core, true), *context, compileProperties());
     } catch (const std::exception& error) {
         GTEST_SKIP() << "VA-API remote inference unavailable: " << error.what();
     }
+    reportCompiledProperties("pure_ov_GPU_vaapi", compiled, "va_surface");
     auto planes = context->create_tensor_nv12(kHeight, kWidth, native.surface);
     measure("pure_ov_GPU_vaapi", compiled, [&](ov::InferRequest& request, int index) {
         VAImage image{};

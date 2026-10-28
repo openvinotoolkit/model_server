@@ -131,11 +131,10 @@ The second includes no OVMS headers or C-API setup. Only the third acquires
 
 ## Linux commands
 
-Build locally on SPR, rsync writable sources, and build identical targets on
-Panther Lake with `bash tools/build_linux_inference_benchmarks.sh`. The default
-containers are local `ovms_gst_va2` and worker `ovms_linux_benchmark`, both using
-`ovms_gst_va2-build:latest`. They mount the checkout read/write at `/ovms`.
-The worker needs `/dev/dri` and the actual host video/render group IDs.
+Build the benchmark targets with `bash tools/build_linux_inference_benchmarks.sh`
+in the configured build environment. For a two-host build, set
+`LOCAL_BUILD_CONTAINER`, `BENCHMARK_WORKER`, `REMOTE_BUILD_CONTAINER`, and
+`REMOTE_CHECKOUT`; keep those values in local environment configuration.
 
 Exact commands inside either build container:
 
@@ -145,12 +144,12 @@ bazel build --config=mp_on_py_on //src/test/mediapipe/calculators:mpi_openvino_i
 bazel build --config=mp_on_py_on //src/test/mediapipe/calculators:mpi_capi_inference_benchmark
 ```
 
-Exact per-binary run commands inside the Panther Lake container:
+Exact per-binary run commands inside the configured GPU test container:
 
 ```bash
-LIBVA_DRIVERS_PATH=/opt/ptl-va-driver bash tools/run_linux_inference_benchmarks.sh //src/test/mediapipe/calculators:openvino_inference_benchmark
-LIBVA_DRIVERS_PATH=/opt/ptl-va-driver bash tools/run_linux_inference_benchmarks.sh //src/test/mediapipe/calculators:mpi_openvino_inference_benchmark
-LIBVA_DRIVERS_PATH=/opt/ptl-va-driver bash tools/run_linux_inference_benchmarks.sh //src/test/mediapipe/calculators:mpi_capi_inference_benchmark
+bash tools/run_linux_inference_benchmarks.sh //src/test/mediapipe/calculators:openvino_inference_benchmark
+bash tools/run_linux_inference_benchmarks.sh //src/test/mediapipe/calculators:mpi_openvino_inference_benchmark
+bash tools/run_linux_inference_benchmarks.sh //src/test/mediapipe/calculators:mpi_capi_inference_benchmark
 ```
 
 Omit positional targets to run the entire matrix. The helper prepares the full
@@ -160,15 +159,9 @@ reuse is not disabled. No remote-cache endpoint was active in the supplied
 environment, so cross-host remote-cache hits were not verified; existing disk
 cache configuration was preserved.
 
-OpenVINO is under `/opt/intel/openvino`, GStreamer under `/opt/gstreamer`, and
-the C-API runtime additionally needs `/azure-sdk-install/lib` in
-`LD_LIBRARY_PATH`. The runner supplies these paths. The image's media driver
-24.3.4 cannot expose VA features on the tested Panther Lake GPU. The successful
-run uses the worker's compatible 25.4.0 iHD driver copied into the dedicated
-container at `/opt/ptl-va-driver` and selected through `LIBVA_DRIVERS_PATH`.
-Neither host nor packaged container drivers were overwritten. Future images
-should package a Panther Lake-compatible driver. Verify `gst-inspect-1.0
-vapostproc` before testing; zero plugin features are not working VA support.
+The runner supplies the configured OpenVINO, GStreamer, C-API, and VA runtime
+paths. Verify `gst-inspect-1.0 vapostproc` before testing and keep any driver
+override in local environment configuration rather than this document.
 
 ## Results and validation
 

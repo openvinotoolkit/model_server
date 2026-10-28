@@ -26,6 +26,9 @@
 
 #include "src/ovms.h"
 #include "src/mediapipe_gst_calculators/gst_detection_box.hpp"
+#ifndef _WIN32
+#include "src/mediapipe_gst_calculators/gst_capi_stage_timing.hpp"
+#endif
 #include "src/mediapipe_gst_calculators/gst_video_frame_packet.hpp"
 
 extern "C" void* OVMS_MPGetExternalServerHandle();
@@ -102,6 +105,10 @@ class GstCapiInferenceCalculator : public CalculatorBase {
     }
 
     absl::Status Process(CalculatorContext* cc) override {
+#ifndef _WIN32
+        const bool e4Measured = e4Timing_.beginFrame();
+        const auto e4ProcessStart = e4Timing_.mark();
+#endif
         const auto& frame = cc->Inputs().Tag(kFrameTag).Get<GstVideoFramePacket>();
         RET_CHECK_GT(frame.width, 0);
         RET_CHECK_GT(frame.height, 0);
@@ -156,6 +163,9 @@ class GstCapiInferenceCalculator : public CalculatorBase {
         }
         RET_CHECK_EQ(frame.width, request_width_);
         RET_CHECK_EQ(frame.height, request_height_);
+    #ifndef _WIN32
+        const auto removeStart = e4Timing_.mark();
+    #endif
         if (request_has_bound_data_) {
             status = checkCapiStatus(OVMS_InferenceRequestInputRemoveData(request_, input_name_y.c_str()),
                 "OVMS_InferenceRequestInputRemoveData(Y)");
@@ -167,6 +177,10 @@ class GstCapiInferenceCalculator : public CalculatorBase {
                 return status;
             request_has_bound_data_ = false;
         }
+        #ifndef _WIN32
+            e4Timing_.add(GstCapiStageTiming::Stage::RemoveData, removeStart, e4Timing_.mark(), e4Measured);
+            const auto setDataStart = e4Timing_.mark();
+        #endif
         status = checkCapiStatus(OVMS_InferenceRequestInputSetData(request_, input_name_y.c_str(),
             surface_handle, bytes_y, buffer_type_y, 1), "OVMS_InferenceRequestInputSetData(Y)");
         if (!status.ok())
@@ -177,13 +191,24 @@ class GstCapiInferenceCalculator : public CalculatorBase {
             return status;
         request_has_bound_data_ = true;
 
+        #ifndef _WIN32
+            const auto inferenceStart = e4Timing_.mark();
+        #endif
         OVMS_InferenceResponse* raw_response = nullptr;
         status = checkCapiStatus(OVMS_Inference(server_, request_, &raw_response), "OVMS_Inference");
         if (!status.ok())
             return status;
+        #ifndef _WIN32
+            const auto inferenceStop = e4Timing_.mark();
+            e4Timing_.add(GstCapiStageTiming::Stage::SetData, setDataStart, inferenceStart, e4Measured);
+            e4Timing_.add(GstCapiStageTiming::Stage::Inference, inferenceStart, inferenceStop, e4Measured);
+        #endif
         std::unique_ptr<OVMS_InferenceResponse, decltype(&OVMS_InferenceResponseDelete)> response(
             raw_response, OVMS_InferenceResponseDelete);
 
+        #ifndef _WIN32
+            const auto responseAccessStart = e4Timing_.mark();
+        #endif
         const void* output_data = nullptr;
         size_t output_bytes = 0;
         uint32_t output_id = 0;
@@ -229,6 +254,15 @@ class GstCapiInferenceCalculator : public CalculatorBase {
             box.ymax = std::clamp(values[i + 6] * full_h, 0.0f, full_h - 1.0f);
             boxes.push_back(box);
         }
+        #ifndef _WIN32
+            const auto responseAccessStop = e4Timing_.mark();
+            e4Timing_.add(GstCapiStageTiming::Stage::ResponseAccess, responseAccessStart, responseAccessStop, e4Measured);
+            if (e4Measured) {
+                const auto responseDeleteStart = e4Timing_.mark();
+                response.reset();
+                e4Timing_.add(GstCapiStageTiming::Stage::ResponseDelete, responseDeleteStart, e4Timing_.mark(), true);
+            }
+        #endif
         cc->Outputs()
             .Tag(kDetectionsTag)
             .AddPacket(MakePacket<int>(detections).At(cc->InputTimestamp()));
@@ -236,10 +270,16 @@ class GstCapiInferenceCalculator : public CalculatorBase {
             cc->Outputs()
                 .Tag(kDetectionBoxesTag)
                 .AddPacket(MakePacket<GstDetectionBoxes>(std::move(boxes)).At(cc->InputTimestamp()));
+    #ifndef _WIN32
+        e4Timing_.finishFrame(e4ProcessStart, e4Measured);
+    #endif
         return absl::OkStatus();
     }
 
     absl::Status Close(CalculatorContext*) override {
+    #ifndef _WIN32
+        e4Timing_.report("GstCapiInferenceCalculator");
+    #endif
         if (request_ != nullptr) {
             OVMS_InferenceRequestDelete(request_);
             request_ = nullptr;
@@ -258,6 +298,9 @@ class GstCapiInferenceCalculator : public CalculatorBase {
     int request_width_ = 0;
     int request_height_ = 0;
     bool request_has_bound_data_ = false;
+#ifndef _WIN32
+    GstCapiStageTiming e4Timing_;
+#endif
 };
 
 REGISTER_CALCULATOR(GstCapiInferenceCalculator);

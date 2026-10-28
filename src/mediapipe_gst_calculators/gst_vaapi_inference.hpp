@@ -15,6 +15,7 @@
 #ifndef SRC_MEDIAPIPE_GST_CALCULATORS_GST_VAAPI_INFERENCE_HPP_
 #define SRC_MEDIAPIPE_GST_CALCULATORS_GST_VAAPI_INFERENCE_HPP_
 
+#include <chrono>
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
@@ -23,9 +24,16 @@
 #include <openvino/runtime/intel_gpu/ocl/va.hpp>
 
 namespace mediapipe {
+struct GstVaapiInferenceTimings {
+    std::chrono::nanoseconds tensorImport{};
+    std::chrono::nanoseconds tensorBinding{};
+    std::chrono::nanoseconds inferCall{};
+    std::chrono::nanoseconds outputHandling{};
+};
+
 class GstVaapiInference {
 public:
-    int infer(void* display, uint32_t surface, int width, int height,
+    void initialize(void* display, int width, int height,
         const std::string& modelPath, const std::string& inputName,
         const std::string& performanceHint, uint32_t streams) {
         if (display == nullptr || width <= 0 || height <= 0 || width % 2 || height % 2)
@@ -45,10 +53,27 @@ public:
         }
         if (display != display_ || width != width_ || height != height_)
             throw std::invalid_argument("VA-API display or frame dimensions changed during inference");
+    }
+
+    int infer(void* display, uint32_t surface, int width, int height,
+        const std::string& modelPath, const std::string& inputName,
+        const std::string& performanceHint, uint32_t streams,
+        GstVaapiInferenceTimings* timings = nullptr) {
+        initialize(display, width, height, modelPath, inputName, performanceHint, streams);
+        const auto importStart = timings ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
         auto planes = context_->create_tensor_nv12(height, width, surface);
+        if (timings)
+            timings->tensorImport += std::chrono::steady_clock::now() - importStart;
+        const auto bindingStart = timings ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
         request_.set_tensor(inputName + "/y", planes.first);
         request_.set_tensor(inputName + "/uv", planes.second);
+        if (timings)
+            timings->tensorBinding += std::chrono::steady_clock::now() - bindingStart;
+        const auto inferStart = timings ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
         request_.infer();
+        if (timings)
+            timings->inferCall += std::chrono::steady_clock::now() - inferStart;
+        const auto outputStart = timings ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
         const ov::Tensor output = request_.get_output_tensor();
         const float* values = output.data<const float>();
         int detections = 0;
@@ -56,7 +81,13 @@ public:
             if (values[result + 2] >= 0.5f)
                 ++detections;
         }
+        if (timings)
+            timings->outputHandling += std::chrono::steady_clock::now() - outputStart;
         return detections;
+    }
+
+    const ov::CompiledModel& compiledModel() const {
+        return compiled_;
     }
 
 private:

@@ -167,7 +167,7 @@ cc_test(
     ],
     linkopts = LINKOPTS_ADJUSTED + select({
         "//src:windows": ["d3d11.lib", "dxgi.lib"],
-        "//conditions:default": ["-lOpenCL", "-lva"],
+        "//conditions:default": ["-lOpenCL", "-lva", "-lva-drm"],
     }),
 )
 

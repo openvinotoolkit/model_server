@@ -58,6 +58,14 @@ All paths execute synchronously with one outstanding request. The OVMS pool
 does not represent four concurrent benchmark workers. No model settings change
 between cases.
 
+Set `OVMS_BENCHMARK_REPEAT_COUNT` to a positive integer to repeat the source
+and scale both the warm-up and measured frame counts by that value. For example,
+`OVMS_BENCHMARK_REPEAT_COUNT=5` prepares a five-copy source and runs 100
+warm-up plus 1,150 measured frames. The runner generates the repeated AVI with
+the same GStreamer raw-video concat and MJPEG encode path for every repeat
+count, then regenerates the matching NV12 fixture. Compare only runs prepared
+with this same runner path.
+
 Each sample consumes the complete 250-frame source. Graphs omit `MAX_FRAMES`
 and require EOS with exactly 250 outputs. Direct MPI also reads to EOS. Pure
 OpenVINO reads the full prepared raw NV12 fixture and rejects short, partial,
@@ -80,21 +88,26 @@ Within each group timer boundaries match. Comparing groups does not isolate
 calculator overhead. Each sample reports FPS and ms/frame; sample SD uses
 denominator `n-1`, and CV is `100 * SD / mean`, separately for both metrics.
 
+An experimental OVMS C-API path that imported both NV12 planes through one
+`VAContext::create_tensor_nv12` call was evaluated separately from this matrix.
+It was opt-in only and was removed because five-sample comparisons showed no
+reliable performance difference from the existing independent Y/UV imports:
+approximately +2.1% for one calculator and +0.5% for two calculators, within
+run-to-run variation. The supported C-API path remains the independent
+per-plane import, and the paired experiment must not be used to interpret the
+baseline measurements.
+
 ## Linux commands
 
-Build on local SPR, synchronize the writable checkout, then build the same
-targets on Panther Lake:
+Build the benchmark targets in the project's configured Linux build container:
 
 ```bash
 bash tools/build_linux_inference_benchmarks.sh
 ```
 
-Defaults: local container `ovms_gst_va2`, worker
-`sys_k8sworker@ov-ptl-13.sclab.intel.com`, remote container
-`ovms_linux_benchmark`, checkout
-`/opt/home/sys_k8sworker/atobisze/model_server`, Bazel config `mp_on_py_on`.
-Override using `LOCAL_BUILD_CONTAINER`, `BENCHMARK_WORKER`,
-`REMOTE_BUILD_CONTAINER`, `REMOTE_CHECKOUT`, `BAZEL_BENCHMARK_CONFIG`.
+The build helper requires `LOCAL_BUILD_CONTAINER`, `BENCHMARK_WORKER`,
+`REMOTE_BUILD_CONTAINER`, and `REMOTE_CHECKOUT` to be set for a two-host build.
+Use `BAZEL_BENCHMARK_CONFIG` to select the Bazel configuration.
 Logs: `logs/build_benchmarks_local.log`, `logs/sync_benchmarks.log`, and
 `logs/build_benchmarks_remote.log`. Rsync excludes `.git`, Bazel outputs,
 logs, external downloads and node_modules; it does not delete remote files.
@@ -107,19 +120,12 @@ bazel build --config=mp_on_py_on //src/test/mediapipe/calculators:mpi_openvino_i
 bazel build --config=mp_on_py_on //src/test/mediapipe/calculators:mpi_capi_inference_benchmark
 ```
 
-Run all cases on Panther Lake from the local host:
+Run the cases inside the configured GPU test container:
 
 ```bash
-ssh sys_k8sworker@ov-ptl-13.sclab.intel.com \
-	'docker exec -w /ovms ovms_linux_benchmark bash -lc "LIBVA_DRIVERS_PATH=/opt/ptl-va-driver bash tools/run_linux_inference_benchmarks.sh"'
-```
-
-Exact per-binary commands inside the worker container:
-
-```bash
-LIBVA_DRIVERS_PATH=/opt/ptl-va-driver bash tools/run_linux_inference_benchmarks.sh //src/test/mediapipe/calculators:openvino_inference_benchmark
-LIBVA_DRIVERS_PATH=/opt/ptl-va-driver bash tools/run_linux_inference_benchmarks.sh //src/test/mediapipe/calculators:mpi_openvino_inference_benchmark
-LIBVA_DRIVERS_PATH=/opt/ptl-va-driver bash tools/run_linux_inference_benchmarks.sh //src/test/mediapipe/calculators:mpi_capi_inference_benchmark
+bash tools/run_linux_inference_benchmarks.sh //src/test/mediapipe/calculators:openvino_inference_benchmark
+bash tools/run_linux_inference_benchmarks.sh //src/test/mediapipe/calculators:mpi_openvino_inference_benchmark
+bash tools/run_linux_inference_benchmarks.sh //src/test/mediapipe/calculators:mpi_capi_inference_benchmark
 ```
 
 The runner prepares the complete raw NV12 fixture using GStreamer outside the
@@ -138,6 +144,73 @@ Overrides: `VIDEO_PATH`, `OVMS_REPO_ROOT`, `OVMS_PERF_MODEL_XML`,
 The pure binary reads the fixture without invoking GStreamer or MPI. The runner
 reads dimensions from the shared configuration header.
 
+For focused Linux runs, `BENCHMARK_TEST_FILTER` forwards a GoogleTest filter
+and `OVMS_PERF_DIAGNOSTICS=stages` reports per-frame bind/upload, synchronous
+`infer()` wall time, and output-access durations for the pure OpenVINO binary.
+`OVMS_PERF_DIAGNOSTICS=profile` additionally enables OpenVINO `PERF_COUNT` and
+reports per-node timings; profiling materially perturbs inference latency and
+is diagnostic-only. The default is `off`. Stage and profile records are saved
+in the raw `BENCHMARK_LOG` artifact.
+
+For MPI-direct E2 measurements, set `OVMS_MPI_E2_DIAGNOSTICS=stages` and filter
+to `MpiOpenVinoBenchmark.Direct:MpiOpenVinoDiagnostics.DecodeSupply`. The
+diagnostic reports frame-read/pull, VA surface extraction, tensor import and
+binding, synchronous inference, output handling, release, and completion-wall
+time. Decode-supply reports app-sink pull/drain with the same full-frame/EOS
+check. Linux file appsinks are currently unbounded (`max-buffers=0`), so this
+is not isolated decoder latency and must not be subtracted mechanically from
+the direct path. The diagnostics are MPI/OpenVINO-only and do not depend on
+OVMS.
+
+Set `OVMS_MPI_E2_SURFACE_SYNC=on` with the E2 stage flag to time an explicit
+`vaSyncSurface` before direct inference. This is a diagnostic-only control for
+producer readiness; it does not change the default inference path.
+
+Set `OVMS_MPI_E2_SYNC_APPSINK=on` to enable MPI's file-mode `sync_appsink`
+option (`max-buffers=1`, `drop=false`) for both direct and decode-supply E2
+cases. This is a bounded-queue diagnostic control; the default remains the
+existing unbounded appsink.
+
+Set `OVMS_MPI_E2_PREINITIALIZE_OV=on` for the direct case to initialize the
+VAContext, compile the model, and create the request on the same injected
+VADisplay before opening the decoder. This separates compilation from decoder
+startup without changing model settings. It is an E2 diagnostic control; the
+default still compiles on the first decoded frame.
+
+The Linux-only `MpiCapiBenchmark.PairedNativeSurface` test in
+`mpi_capi_inference_benchmark` replays each MPI VA surface through direct OV
+and the in-process OVMS C-API before releasing the frame tensor. It alternates
+call order, checks equal detection counts, and reports per-path operation
+timings plus ms/frame and FPS. Run it with
+`BENCHMARK_TEST_FILTER=MpiCapiBenchmark.PairedNativeSurface`; the C-API does
+not expose every compiled-model property, so its configuration evidence is
+reported separately from direct OpenVINO runtime properties.
+`MpiCapiBenchmark.CapiNativeSurfaceOnly` uses the same setup but runs only the
+C-API path, avoiding direct-OV call-order interference.
+Set `OVMS_CAPI_LOG_LEVEL=DEBUG` or `TRACE` to change the benchmark server log
+level. DEBUG emits per-request C-API total timings and OVMS compiled plugin
+properties when supported; verbose logging is diagnostic-only and can perturb
+latency. The default remains INFO.
+
+Use the Linux-only `MpiCapiBenchmark.FairFullPathComparison` for the direct-OV
+versus C-API throughput comparison. Direct OV compilation and C-API model
+loading finish before timing. Each pass starts its timer immediately before
+decoder open and ends after all 250 frames and EOS; no warm-up frames are
+excluded. Both use one synchronous request, alternate pass order per sample,
+and verify matching detections. Do not compare the pure infer-only ceiling
+directly against a decode-inclusive C-API path.
+
+Set `OVMS_MPI_E4_DIAGNOSTICS=stages` to report C-API calculator `Process` wall
+time and its read/pull, surface extraction, request rebinding, synchronous
+`OVMS_Inference`, response access, and response destruction buckets. The
+monolithic calculator includes decode pull; the split inference calculator
+does not. `OVMS_MPI_E4_WARMUP_FRAMES` defaults to 20. This is opt-in timing and
+does not alter normal runs.
+
+For the monolithic one-C-API graph, set `OVMS_MPI_E4_VA_SYNC=on` to time an
+explicit `vaSyncSurface` immediately before input binding. The E4 output reports
+this as `surface_sync_ms_per_frame`; the default is off.
+
 For focused lifecycle tests, first prepare inputs with the runner, then inside
 the worker container:
 
@@ -146,7 +219,7 @@ export OVMS_REPO_ROOT=/ovms
 export PATH=/opt/gstreamer/bin:$PATH
 export LD_LIBRARY_PATH=/azure-sdk-install/lib:/opt/gstreamer/lib:$LD_LIBRARY_PATH
 export GST_PLUGIN_PATH=/opt/gstreamer/lib/gstreamer-1.0
-export LIBVA_DRIVER_NAME=iHD LIBVA_DRIVERS_PATH=/opt/ptl-va-driver
+export LIBVA_DRIVER_NAME=iHD
 export GST_REGISTRY=/ovms/logs/benchmark_gst_registry.bin
 bazel test --config=mp_on_py_on --nocache_test_results --local_test_jobs=1 \
 	--test_timeout=900 --test_output=all --test_env=OVMS_REPO_ROOT \
@@ -161,49 +234,11 @@ native-memory selection, and byte-for-byte equality of every native frame's
 Y/UV pixels against the pure fixture. The benchmark graphs additionally test
 inference and repeated cleanup for both calculator shapes.
 
-## Panther Lake results (2026-10-26)
+## Linux benchmark results
 
-Worker `ov-ptl-13`, GPU PCI ID `0xb081`, image `ovms_gst_va2-build:latest`,
-OpenVINO `2026.5.0`, GStreamer `1.26.2`, compute runtime `26.31.39395.13-0`,
-libva `2.22.0.2-87~u24.04`. Source: `recording_3_raw.avi`, MJPEG 1280x720,
-30 FPS, 250 frames. The NV12 fixture contains 96,768,000 bytes.
-
-The packaged media driver `24.3.4-1018~24.04` exposes zero VA plugin features
-on this GPU. Successful runs select the worker's compatible
-`25.4.0-14237~24.04` iHD driver copied into the dedicated container:
-
-```bash
-# Run on the worker, without changing the host or packaged container driver.
-docker exec ovms_linux_benchmark mkdir -p /opt/ptl-va-driver
-docker cp /usr/lib/x86_64-linux-gnu/dri/iHD_drv_video.so ovms_linux_benchmark:/opt/ptl-va-driver/iHD_drv_video.so
-```
-
-A fresh container needs writable sources, GPU devices and the worker's group
-IDs (`getent group video render`):
-
-```bash
-docker run -dit --name ovms_linux_benchmark --entrypoint bash \
-	--device=/dev/dri --group-add 44 --group-add 992 \
-	-v "$HOME/atobisze/model_server:/ovms" -w /ovms ovms_gst_va2-build:latest
-```
-
-The helper selects the override using `LIBVA_DRIVERS_PATH`. Verify
-`gst-inspect-1.0 vapostproc` first. A future image should package a recent
-Panther Lake media driver. `/azure-sdk-install/lib` must be in the C-API
-runtime library path; the run helper adds it. Use the worker's proxy environment
-for package access, if needed. No host drivers were modified.
-
-Raw artifact: `logs/panther_lake_inference_benchmark_raw.log`; condensed
-records: `logs/benchmark_summary.log`. Both are host-visible on the worker and
-copied back locally. They are generated, gitignored artifacts. Every successful
-sample reports `warmup=20 measured=230 consumed=250 eos=1`.
-
-Five **ms/frame** sample values:
-
-| Case | Sample 1 | Sample 2 | Sample 3 | Sample 4 | Sample 5 |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| 1 CPU host | 6.388495 | 6.167282 | 6.159034 | 6.157960 | 6.155765 |
-| 2 GPU host | 1.215373 | 1.191301 | 1.193493 | 1.197354 | 1.198069 |
+Benchmark logs and hardware-specific results are local artifacts. Do not add
+worker names, driver paths, credentials, or host-specific measurements to this
+tracked document. Record those details in local task notes when needed.
 | 3 OpenCL | 1.171954 | 1.155088 | 1.156161 | 1.155725 | 1.157448 |
 | 4 VA native | 1.500315 | 1.503836 | 1.493484 | 1.496956 | 1.499236 |
 | 5 MPI direct OV | 1.785505 | 1.828692 | 1.777307 | 1.937910 | 2.003527 |

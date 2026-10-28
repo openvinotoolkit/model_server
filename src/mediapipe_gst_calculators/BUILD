@@ -66,7 +66,7 @@ ovms_cc_library(
 ovms_cc_library(
     name = "gst_capi_inference_calculator",
     srcs = ["gst_capi_inference_calculator.cc"],
-    hdrs = ["gst_video_frame_packet.hpp", "gst_detection_box.hpp"],
+    hdrs = ["gst_video_frame_packet.hpp", "gst_detection_box.hpp", "gst_capi_stage_timing.hpp"],
     additional_copts = COPTS_ADJUSTED,
     alwayslink = 1,
     visibility = ["//visibility:public"],
@@ -80,6 +80,7 @@ ovms_cc_library(
 ovms_cc_library(
     name = "gst_video_capi_inference_calculator",
     srcs = ["gst_video_capi_inference_calculator.cc"],
+    hdrs = ["gst_capi_stage_timing.hpp"],
     additional_copts = COPTS_ADJUSTED,
     alwayslink = 1,
     visibility = ["//visibility:public"],

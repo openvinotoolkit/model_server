@@ -25,6 +25,10 @@
 
 #include "src/mpi/intel_mpi.h"
 #include "src/ovms.h"
+#ifndef _WIN32
+#include <va/va.h>
+#include "src/mediapipe_gst_calculators/gst_capi_stage_timing.hpp"
+#endif
 
 namespace mediapipe {
 
@@ -105,8 +109,17 @@ class GstVideoCapiInferenceCalculator : public CalculatorBase {
     absl::Status Process(CalculatorContext* cc) override {
         if (max_frames_ > 0 && frame_index_ >= max_frames_)
             return tool::StatusStop();
+#ifndef _WIN32
+        const bool e4Measured = e4Timing_.beginFrame();
+        const auto e4ProcessStart = e4Timing_.mark();
+        const auto readStart = e4Timing_.mark();
+#endif
         imp_tensor_t* raw_tensor = nullptr;
         const imp_status_t read_status = imp_video_read_frame(&raw_tensor, stream_, 0);
+#ifndef _WIN32
+        const auto readStop = e4Timing_.mark();
+        e4Timing_.add(GstCapiStageTiming::Stage::ReadPull, readStart, readStop, e4Measured);
+#endif
         if (read_status == IMP_ERROR_STREAM_END)
             return tool::StatusStop();
         if (read_status != IMP_OK || raw_tensor == nullptr)
@@ -129,8 +142,22 @@ class GstVideoCapiInferenceCalculator : public CalculatorBase {
     #else
         uint32_t surface = 0;
         void* display = nullptr;
+    #ifndef _WIN32
+        const auto surfaceStart = e4Timing_.mark();
+    #endif
         if (imp_tensor_get_va_surface(tensor.get(), &surface, &display, &width, &height) != IMP_OK)
             return absl::InternalError("GstVideoCapiInferenceCalculator: expected VA-API surface");
+    #ifndef _WIN32
+        e4Timing_.add(GstCapiStageTiming::Stage::SurfaceExtract, surfaceStart, e4Timing_.mark(), e4Measured);
+        if (e4Timing_.surfaceSyncEnabled()) {
+            const auto syncStart = e4Timing_.mark();
+            const VAStatus syncStatus = vaSyncSurface(display, surface);
+            const auto syncStop = e4Timing_.mark();
+            e4Timing_.add(GstCapiStageTiming::Stage::SurfaceSync, syncStart, syncStop, e4Measured);
+            if (syncStatus != VA_STATUS_SUCCESS)
+                return absl::InternalError("GstVideoCapiInferenceCalculator: vaSyncSurface failed");
+        }
+    #endif
         surface_handle = reinterpret_cast<void*>(static_cast<uintptr_t>(surface));
         buffer_type_y = OVMS_BUFFERTYPE_VASURFACE_Y;
         buffer_type_uv = OVMS_BUFFERTYPE_VASURFACE_UV;
@@ -161,6 +188,9 @@ class GstVideoCapiInferenceCalculator : public CalculatorBase {
         }
         RET_CHECK_EQ(width, request_width_);
         RET_CHECK_EQ(height, request_height_);
+    #ifndef _WIN32
+        const auto removeStart = e4Timing_.mark();
+    #endif
         if (request_has_bound_data_) {
             status = checkCapiStatus(OVMS_InferenceRequestInputRemoveData(request_, y_name.c_str()),
                 "OVMS_InferenceRequestInputRemoveData(Y)");
@@ -172,6 +202,10 @@ class GstVideoCapiInferenceCalculator : public CalculatorBase {
                 return status;
             request_has_bound_data_ = false;
         }
+        #ifndef _WIN32
+            e4Timing_.add(GstCapiStageTiming::Stage::RemoveData, removeStart, e4Timing_.mark(), e4Measured);
+            const auto setDataStart = e4Timing_.mark();
+        #endif
         status = checkCapiStatus(OVMS_InferenceRequestInputSetData(request_, y_name.c_str(),
             surface_handle, bytes_y, buffer_type_y, 1), "OVMS_InferenceRequestInputSetData(Y)");
         if (!status.ok())
@@ -181,12 +215,23 @@ class GstVideoCapiInferenceCalculator : public CalculatorBase {
         if (!status.ok())
             return status;
         request_has_bound_data_ = true;
+        #ifndef _WIN32
+            const auto inferenceStart = e4Timing_.mark();
+        #endif
         OVMS_InferenceResponse* raw_response = nullptr;
         status = checkCapiStatus(OVMS_Inference(server_, request_, &raw_response), "OVMS_Inference");
         if (!status.ok())
             return status;
+        #ifndef _WIN32
+            const auto inferenceStop = e4Timing_.mark();
+            e4Timing_.add(GstCapiStageTiming::Stage::SetData, setDataStart, inferenceStart, e4Measured);
+            e4Timing_.add(GstCapiStageTiming::Stage::Inference, inferenceStart, inferenceStop, e4Measured);
+        #endif
         std::unique_ptr<OVMS_InferenceResponse, decltype(&OVMS_InferenceResponseDelete)> response(
             raw_response, OVMS_InferenceResponseDelete);
+        #ifndef _WIN32
+            const auto responseAccessStart = e4Timing_.mark();
+        #endif
         const void* output = nullptr;
         size_t output_bytes = 0;
         uint32_t output_id = 0;
@@ -209,12 +254,26 @@ class GstVideoCapiInferenceCalculator : public CalculatorBase {
             if (values[result + 2] >= kFaceConfidenceThreshold)
                 ++detections;
         }
+    #ifndef _WIN32
+        e4Timing_.add(GstCapiStageTiming::Stage::ResponseAccess, responseAccessStart, e4Timing_.mark(), e4Measured);
+        if (e4Measured) {
+            const auto responseDeleteStart = e4Timing_.mark();
+            response.reset();
+            e4Timing_.add(GstCapiStageTiming::Stage::ResponseDelete, responseDeleteStart, e4Timing_.mark(), true);
+        }
+    #endif
         cc->Outputs().Tag(kDetectionsTag).AddPacket(
             MakePacket<int>(detections).At(Timestamp(frame_index_++)));
+    #ifndef _WIN32
+        e4Timing_.finishFrame(e4ProcessStart, e4Measured);
+    #endif
         return absl::OkStatus();
     }
 
     absl::Status Close(CalculatorContext*) override {
+    #ifndef _WIN32
+        e4Timing_.report("GstVideoCapiInferenceCalculator");
+    #endif
         if (request_ != nullptr) {
             OVMS_InferenceRequestDelete(request_);
             request_ = nullptr;
@@ -239,6 +298,9 @@ class GstVideoCapiInferenceCalculator : public CalculatorBase {
     int request_width_ = 0;
     int request_height_ = 0;
     bool request_has_bound_data_ = false;
+#ifndef _WIN32
+    GstCapiStageTiming e4Timing_;
+#endif
 };
 
 REGISTER_CALCULATOR(GstVideoCapiInferenceCalculator);

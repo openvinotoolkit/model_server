@@ -76,6 +76,8 @@ namespace {
 enum : uint32_t {
     TIMER_TOTAL,
     TIMER_CALLBACK,
+    TIMER_MODEL_INSTANCE_LOOKUP,
+    TIMER_OVMS_INFER,
     TIMER_END
 };
 
@@ -1027,7 +1029,12 @@ DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceReq
 
     std::shared_ptr<ovms::ModelInstance> modelInstance;
 
+    const bool phaseTimingEnabled = spdlog::default_logger_raw()->should_log(spdlog::level::debug);
+    if (phaseTimingEnabled)
+        timer.start(TIMER_MODEL_INSTANCE_LOOKUP);
     auto status = getModelInstance(server, req->getServableName(), req->getServableVersion(), modelInstance, modelInstanceUnloadGuard);
+    if (phaseTimingEnabled)
+        timer.stop(TIMER_MODEL_INSTANCE_LOOKUP);
 
     if (!status.ok()) {
         if (modelInstance) {
@@ -1036,7 +1043,11 @@ DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceReq
         SPDLOG_DEBUG("Getting modelInstance or pipeline failed. {}", status.string());
         return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));
     }
+    if (phaseTimingEnabled)
+        timer.start(TIMER_OVMS_INFER);
     status = ovms::infer(*modelInstance, req, res.get(), modelInstanceUnloadGuard);
+    if (phaseTimingEnabled)
+        timer.stop(TIMER_OVMS_INFER);
 
     if (!status.ok()) {
         return reinterpret_cast<OVMS_Status*>(new Status(std::move(status)));
@@ -1046,6 +1057,13 @@ DLL_PUBLIC OVMS_Status* OVMS_Inference(OVMS_Server* serverPtr, OVMS_InferenceReq
     double reqTotal = timer.elapsed<microseconds>(TIMER_TOTAL);
     //   OBSERVE_IF_ENABLED(modelInstance->getMetricReporter().reqTimeGrpc, reqTotal);
     SPDLOG_DEBUG("Total C-API req processing time: {} ms", reqTotal / 1000);
+    if (phaseTimingEnabled) {
+        const double modelInstanceLookup = timer.elapsed<microseconds>(TIMER_MODEL_INSTANCE_LOOKUP);
+        const double modelInfer = timer.elapsed<microseconds>(TIMER_OVMS_INFER);
+        SPDLOG_DEBUG("C-API request phases servable={} version={} model_instance_lookup_ms={} ovms_infer_ms={} total_ms={}",
+            req->getServableName(), req->getServableVersion(), modelInstanceLookup / 1000,
+            modelInfer / 1000, reqTotal / 1000);
+    }
     callbackGuard.success = true;
     return nullptr;
 }

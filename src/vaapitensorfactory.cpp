@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "vaapitensorfactory.hpp"
 
+#include <chrono>
 #include <openvino/openvino.hpp>
 #include <openvino/runtime/intel_gpu/ocl/va.hpp>
 
@@ -46,6 +47,15 @@ ov::Tensor VAAPITensorFactory::create(ov::element::Type_t type, const ov::Shape&
         {ov::intel_gpu::dev_object_handle.name(), static_cast<cl_uint>(reinterpret_cast<intptr_t>(data))},
         {ov::intel_gpu::va_plane.name(), this->vaPlaneId}};
     OV_LOGGER("ov::intel_gpu::ocl::VAContext: {}, ov::intel_gpu::ocl::VAContext::create_tensor(element::type: {}, shape: {}, data: {})", (void*)&vaContext, type, (void*)&shape, data);
-    return vaContext.create_tensor(type, shape, tensor_params);
+    const bool timingEnabled = spdlog::default_logger_raw()->should_log(spdlog::level::debug);
+    const auto createTensorStart = timingEnabled ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
+    ov::Tensor tensor = vaContext.create_tensor(type, shape, tensor_params);
+    if (timingEnabled) {
+        const auto createTensorMs = std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - createTensorStart).count();
+        SPDLOG_DEBUG("VAAPITensorFactory::create plane={} shape_rank={} duration_ms={:.6f}",
+            vaPlaneId, shape.size(), createTensorMs);
+    }
+    return tensor;
 }
 }  // namespace ovms
