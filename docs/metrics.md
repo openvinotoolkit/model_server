@@ -183,7 +183,7 @@ echo '{
      {
         "config": {
              "name": "resnet",
-             "base_path": "/workspace/models/resnet50.xml"
+             "base_path": "/workspace/resnet50.xml"
         }
      }
  ],
