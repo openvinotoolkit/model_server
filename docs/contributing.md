@@ -2,7 +2,7 @@
 
 ## Overview
 This guide provides steps and coding standards to follow before sending merge requests:
-1. [Required CI Checks](#required-ci-checks)
+1. [Required Checks](#required-ci-checks)
 2. [Merge Request Checklist](#merge-request-checklist)
 3. [C++ Coding Style](#c-coding-style)
     - [Variable Naming Conventions](#1-variable-naming-conventions)
@@ -13,7 +13,7 @@ This guide provides steps and coding standards to follow before sending merge re
 4. [Compiler Security Flags](#compiler-security-flags)
 5. [Docker and Python Files Check](#docker-and-python-files-check)
 
-## Required CI Checks
+## Required Checks
 
 Run the checks for the platforms affected by your changes, using the
 [Linux developer guide](developer_guide.md) or
@@ -26,6 +26,11 @@ on the files changed.
 | Linux | `make style`<br>`make sdl-check` | Every on-commit build |
 | Linux | `make ovms_builder_image BASE_OS=ubuntu24 RUN_TESTS=0 OPTIMIZE_BUILDING_TESTS=1`<br>`make release_image BASE_OS=ubuntu24 RUN_TESTS=0`<br>`make run_lib_files_test`<br>`make run_unit_tests BASE_OS=ubuntu24` (prepares models with `./prepare_llm_models.sh src/test/llm_testing`) | Source, dependency, or build-system changes that trigger the Linux build pipeline |
 | Windows | `windows_install_build_dependencies.bat opt`<br>`windows_clean_build.bat opt`<br>`windows_build.bat opt`<br>`windows_test.bat opt` (prepares models with `windows_prepare_llm_models.bat %cd%\src\test\llm_testing`) | Source, dependency, or build-system changes that trigger the Windows build pipeline; run from a configured Windows build environment |
+
+Record the exact developer commands run and the status of each applicable check
+in the [pull request template](../.github/pull_request_template.md). Mark checks
+that could not be run as `not run` and explain why. PRs missing required checks
+will not be considered.
 
 Both model-preparation scripts fetch models and tokenizers from Hugging Face and
 install Python dependencies from PyPI, the PyTorch CPU wheel index, and the
