@@ -12,6 +12,7 @@ This document gives information and steps to run and debug tests. It gives infor
 		- [Step 2: Install software](#step-2-install-software)
 	- [Run the Tests](#run-the-tests)
 	- [Run unit tests](#run-unit-tests)
+	- [Develop Python runtime support](#develop-python-runtime-support)
 	- [Debugging](#debugging)
 		- [Option 1. Use OpenVINO Model Server build image.](#option-1-use-openvino-model-server-build-image)
 		- [Option 2. Build OVMS image with minitrace enabled](#option-2-build-ovms-image-with-minitrace-enabled)
@@ -19,7 +20,7 @@ This document gives information and steps to run and debug tests. It gives infor
 
 ## Set up the Development Environment
 
-The tests in this guide are written in Python. Therefore, to complete the functional tests, Python 3.8 must be installed.
+Use Python 3.12 for the host functional-test environment; `make venv` uses the `python3` interpreter on `PATH` to create it. Run Bazel builds and unit tests inside the OVMS build container.
 
 In-case of problems, see [Debugging](#debugging).
 
@@ -163,7 +164,7 @@ Where:
 
 <details><summary>Run functional tests</summary>
 
-The functional tests are written in Python. Therefore, to complete the tests in this section, Python 3.6 - 3.8 must be installed.
+The functional tests are written in Python 3.12. Ensure `python3` on `PATH` is Python 3.12, then use the repository virtual environment created by `make venv` to install and run their dependencies.
 > **NOTE**: In-case of additional problems, see the [debugging section](#debugging).
 
 1. Run command
@@ -317,6 +318,64 @@ sudo reboot
 > NOTE: It is required to execute unit tests on machine with Intel Data Center GPU.
 
 > NOTE: For RedHat base OS unit tests, which require VA API, are skipped.
+
+## Develop Python runtime support
+
+Python support uses separate runtime libraries rather than linking Python into
+the main `ovms` executable. Preserve this boundary when changing Python,
+MediaPipe, or KFS Python tensor support:
+
+- `libovmspython` owns Python interpreter/runtime entry points and runtime
+	chat-template operations.
+- `libpython_calculators` contains Python MediaPipe calculators and the KFS
+	Python tensor bridge implementation.
+- `libovms_mediapipe_runtime_shared` owns runtime MediaPipe registrations and
+	its runtime C ABI.
+- `mediapipe_framework_shared` is a separate shared framework artifact.
+- `pyovms` remains a Python extension module and must be importable by the
+	selected interpreter in Python-enabled deployments.
+
+Do not add Python embedding or pybind linkage to core targets just to compile
+Python-aware interfaces. Use `python_headers_only` for targets that need headers
+but do not own Python runtime execution.
+
+### Build and test the split runtime
+
+Run Bazel commands inside the repository's build container. Use the distro flag
+matching that container and the Python/MediaPipe configuration required by the
+change. Building `//src:ovms` also builds its required runtime product libraries
+as Bazel data dependencies, including the MediaPipe runtime, Python runtime,
+Python calculators, and `pyovms` binding. For Ubuntu:
+
+```bash
+bazel build --//:distro=ubuntu --config=mp_on_py_on \
+	//src:ovms
+
+bazel test --//:distro=ubuntu --config=mp_on_py_on \
+	//src:ovms_no_libpython_smoke_test \
+	//src:python_runtime_library_test \
+	//src:ovms_no_duplicate_calculator_extensions_smoke_test
+```
+
+Use `--//:distro=redhat` instead for a Red Hat build container. For changes to
+the Python binding itself, also run:
+
+```bash
+bazel test --//:distro=ubuntu --config=mp_on_py_on \
+	//src/python/binding:test_python_binding
+```
+
+The checks cover distinct concerns: `ovms_no_libpython_smoke_test` ensures the
+main executable has no direct `libpython` dependency;
+`python_runtime_library_test` checks runtime symbols and `pyovms` importability;
+and `ovms_no_duplicate_calculator_extensions_smoke_test` detects duplicate
+MediaPipe calculator registrations. The duplicate-registration check is
+Linux-only.
+
+`./run_unit_tests.sh` runs the standard build-container suite, including
+`//src:ovms_test` and the split-runtime smoke tests. Use focused Bazel tests
+while iterating, then run the script before submitting broader runtime changes.
+
 
 ## Checking code coverage of unit tests
 

@@ -351,7 +351,7 @@ http_archive(
   urls = ["https://github.com/pybind/pybind11/archive/v2.11.1.tar.gz"],
 )
 load("@pybind11_bazel//:python_configure.bzl", "python_configure")
-python_configure(name = "local_config_python")
+python_configure(name = "local_config_python", python_version = "3")
 
 load("@rules_python//python:repositories.bzl", "py_repositories")
 py_repositories()
