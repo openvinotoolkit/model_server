@@ -321,17 +321,21 @@ sudo reboot
 
 ## Develop Python runtime support
 
-Python support uses separate runtime libraries rather than linking Python into
-the main `ovms` executable. Preserve this boundary when changing Python,
+Python support separates the MediaPipe-facing host code from dynamically
+loaded Python runtime libraries. Preserve this boundary when changing Python,
 MediaPipe, or KFS Python tensor support:
 
-- `libovmspython` owns Python interpreter/runtime entry points and runtime
-	chat-template operations.
-- `libpython_calculators` contains Python MediaPipe calculators and the KFS
-	Python tensor bridge implementation.
-- `libovms_mediapipe_runtime_shared` owns runtime MediaPipe registrations and
-	its runtime C ABI.
-- `mediapipe_framework_shared` is a separate shared framework artifact.
+- `python_calculators_host` contains MediaPipe calculator registration,
+	node initialization, and the KFS Python tensor bridge. It is linked into
+	`ovms` when MediaPipe is enabled.
+- `libpython_calculators` implements the Python calculator plugin interface
+	and is loaded dynamically; it does not contain the MediaPipe calculator
+	registrations or KFS bridge.
+- `libovmspython` provides Python interpreter/runtime entry points and the
+	runtime chat-template API.
+- MediaPipe runtime registrations and the runtime C API are linked into
+	`ovms` from `src/mediapipe_internal`, rather than shipped as a separate
+	MediaPipe runtime shared product library.
 - `pyovms` remains a Python extension module and must be importable by the
 	selected interpreter in Python-enabled deployments.
 
@@ -342,61 +346,41 @@ but do not own Python runtime execution.
 ### Build and test the split runtime
 
 Run Bazel commands inside the repository's build container. Use the distro flag
-matching that container and the Python/MediaPipe configuration required by the
-change. Building `//src:ovms` also builds its required runtime product libraries
-as Bazel data dependencies, including the MediaPipe runtime, Python runtime,
-Python calculators, and `pyovms` binding. For Ubuntu:
+matching that container. Python no longer has a separate on/off build
+configuration; use `--config=mp_on` for changes that require MediaPipe. Building
+`//src:ovms` links the MediaPipe runtime and host-side Python calculators into
+the executable, and includes `libovmspython`, `libpython_calculators`, and
+`pyovms` as runtime data dependencies. For Ubuntu:
 
 ```bash
-bazel build --//:distro=ubuntu --config=mp_on_py_on \
+bazel build --//:distro=ubuntu --config=mp_on \
 	//src:ovms
 
-bazel test --//:distro=ubuntu --config=mp_on_py_on \
-	//src:ovms_no_libpython_smoke_test \
+bazel test --//:distro=ubuntu --config=mp_on \
 	//src:python_runtime_library_test \
-	//src:ovms_no_duplicate_calculator_extensions_smoke_test
+	//src/python:pythoninterpretermodule_lifecycle_test \
+	//src/python:pythoninterpretermodule_backend_failure_test \
+	//src/python:pythoninterpretermodule_borrowed_interpreter_test
 ```
 
 Use `--//:distro=redhat` instead for a Red Hat build container. For changes to
 the Python binding itself, also run:
 
 ```bash
-bazel test --//:distro=ubuntu --config=mp_on_py_on \
+bazel test --//:distro=ubuntu --config=mp_on \
 	//src/python/binding:test_python_binding
 ```
 
-The checks cover distinct concerns: `ovms_no_libpython_smoke_test` ensures the
-main executable has no direct `libpython` dependency;
-`python_runtime_library_test` checks runtime symbols and `pyovms` importability;
-and `ovms_no_duplicate_calculator_extensions_smoke_test` detects duplicate
-MediaPipe calculator registrations. The duplicate-registration check is
-Linux-only.
-
+`python_runtime_library_test` checks the runtime library symbols and
+`pyovms` importability. The interpreter module tests cover lifecycle,
+initialization failure, and borrowed-interpreter behavior.
 `./run_unit_tests.sh` runs the standard build-container suite, including
-`//src:ovms_test` and the split-runtime smoke tests. Use focused Bazel tests
-while iterating, then run the script before submitting broader runtime changes.
-
-
-## Checking code coverage of unit tests
-
-To check code coverage of unit tests, execute the following command to create build image and run unit tests with code coverage enabled:
-
-```
-make ovms_builder_image BASE_OS=ubuntu24 CHECK_COVERAGE=1 RUN_TESTS=1 MEDIAPIPE_DISABLE=0 OV_USE_BINARY=1 OVMS_CPP_DOCKER_IMAGE=ovms_coverage
-```
-
-Then run `get_coverage` target to extract report from the container:
-
-```
-make get_coverage OVMS_CPP_DOCKER_IMAGE=ovms_coverage
-```
-
-It should create report in `genhtml` directory. Open `index.html` file in this directory to check the code coverage report.
+`//src:ovms_test` and these Python runtime tests. Use focused Bazel tests while
+iterating, then run the script before submitting broader runtime changes.
 
 ## Debugging
 
 Debugging options are available. Click on the required option :
-
 
 <details><summary>Use gdb to debug in Docker</summary>
 

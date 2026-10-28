@@ -149,9 +149,15 @@ if not exist "%repository%\%model%\openvino_tokenizer.bin" (
   echo Downloading tokenizer and detokenizer for %model% model to %repository%\%model% directory.
   mkdir "%repository%\%model%"
   hf download "%model%" --local-dir "%repository%\%model%" --include *tokenizer*
+  if !errorlevel! neq 0 exit /b !errorlevel!
 ) else (
   echo Models file %repository%\%model%\openvino_tokenizer.bin exists. Skipping downloading models.
 )
+if not exist "%repository%\%model%\openvino_tokenizer.bin" (
+  echo Models file %repository%\%model%\openvino_tokenizer.bin does not exist.
+  exit /b 1
+)
+exit /b 0
 
 :: Helper subroutine to download tokenizers
 :download_tokenizer

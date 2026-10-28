@@ -2,15 +2,37 @@
 
 ## Overview
 This guide provides steps and coding standards to follow before sending merge requests:
-1. [Merge Request Checklist](#merge-request-checklist)
-2. [C++ Coding Style](#c-coding-style)
+1. [Required CI Checks](#required-ci-checks)
+2. [Merge Request Checklist](#merge-request-checklist)
+3. [C++ Coding Style](#c-coding-style)
     - [Variable Naming Conventions](#1-variable-naming-conventions)
     - [File Naming Conventions](#2-file-naming-conventions)
     - [Headers Naming Conventions](#3-headers-naming-conventions)
     - [Scoping](#4-scoping)
     - [Clang Format](#clang-format)
-3. [Compiler Security Flags](#compiler-security-flags)
-4. [Docker and Python Files Check](#docker-and-python-files-check)
+4. [Compiler Security Flags](#compiler-security-flags)
+5. [Docker and Python Files Check](#docker-and-python-files-check)
+
+## Required CI Checks
+
+Run the checks for the platforms affected by your changes, using the
+[Linux developer guide](developer_guide.md) or
+[Windows developer guide](windows_developer_guide.md). Jenkins runs the Linux
+style and SDL checks for every on-commit build; builds and tests are conditional
+on the files changed.
+
+| Platform | Commands | When Jenkins runs them |
+| :--- | :--- | :--- |
+| Linux | `make style`<br>`make sdl-check` | Every on-commit build |
+| Linux | `make ovms_builder_image BASE_OS=ubuntu24 RUN_TESTS=0 OPTIMIZE_BUILDING_TESTS=1`<br>`make release_image BASE_OS=ubuntu24 RUN_TESTS=0`<br>`make run_lib_files_test`<br>`make run_unit_tests BASE_OS=ubuntu24` (prepares models with `./prepare_llm_models.sh src/test/llm_testing`) | Source, dependency, or build-system changes that trigger the Linux build pipeline |
+| Windows | `windows_install_build_dependencies.bat opt`<br>`windows_clean_build.bat opt`<br>`windows_build.bat opt`<br>`windows_test.bat opt` (prepares models with `windows_prepare_llm_models.bat %cd%\src\test\llm_testing`) | Source, dependency, or build-system changes that trigger the Windows build pipeline; run from a configured Windows build environment |
+
+Both model-preparation scripts fetch models and tokenizers from Hugging Face and
+install Python dependencies from PyPI, the PyTorch CPU wheel index, and the
+OpenVINO nightly wheel index. Model-only download size varies with model
+revisions and local caches; the Windows guide requires 40 GB free for the full
+development and test setup, not just model downloads.
+
 
 ## Merge Request Checklist
 
@@ -194,9 +216,23 @@ Example:
 - intermediate states of the objects
 
 ### Modules
-For OVMS modules, use a different logger that appends module prefix to the message. Example modules:
-- GCS
-- S3
-- Azure
-- Model Manager
-- Ensemble
+OVMS named loggers append their logger name as a prefix to each message. Current
+logger names include:
+- `serving`
+- `gcs`
+- `s3`
+- `azurestorage`
+- `modelmanager`
+- `dag_executor`
+- `C-API`
+
+When MediaPipe is enabled, the following logger names are also available:
+- `mediapipe`
+- `llm_executor`
+- `llm_calculator`
+- `s2t_calculator`
+- `t2s_calculator`
+- `embeddings_calculator`
+- `rerank_calculator`
+
+With OpenVINO tracing enabled, the `openvino` logger is also available.
