@@ -17,27 +17,32 @@
 # pylint: disable=too-many-arguments
 # pylint: disable=too-many-positional-arguments
 
+import json
+import os
+import numpy as np
+
 from openai import NotFoundError
 
 from tests.functional.config import (
     logging_level_ovms,
     kv_cache_size_value,
     kv_cache_precision_value,
+    ovms_c_repo_path,
 )
 from tests.functional.constants.generative_ai import GenerativeAIPluginConfig
+from tests.functional.constants.os_type import OsType
 from tests.functional.constants.ovms import CurrentTarget as ct
 from tests.functional.constants.ovms_cohere import OvmsCohereRequestParamsBuilder
 from tests.functional.constants.ovms_openai import OvmsOpenAIRequestParamsBuilder
 from tests.functional.constants.ovms_messages import OvmsMessages
+from tests.functional.constants.paths import Paths
 from tests.functional.fixtures.server import start_ovms
+from tests.functional.models.models_datasets import FeatureExtractionModelDataset
+from tests.functional.models.models_generative import Qwen3Embedding06BFp16OvHf
 from tests.functional.object_model.inference_helpers import run_llm_inference
+from tests.functional.object_model.mediapipe_calculators import MediaPipeCalculator
+from tests.functional.object_model.ovms_config import OvmsConfig
 from tests.functional.object_model.ovms_params import OvmsParams
-from tests.functional.utils.assertions import assert_raises_exception
-from tests.functional.utils.context import Context
-from tests.functional.utils.hooks import timeout_dict
-from tests.functional.utils.inference.serving.cohere import CohereWrapper
-from tests.functional.utils.logger import step
-from tests.functional.utils.marks import MarkRunType
 from tests.functional.object_model.python_custom_nodes.python_custom_nodes import (
     SimpleLLM,
     SimpleFeatureExtraction,
@@ -46,6 +51,17 @@ from tests.functional.object_model.python_custom_nodes.python_custom_nodes impor
     SimpleAsrModel,
     SimpleTtsModel,
 )
+from tests.functional.object_model.test_environment import TestEnvironment
+from tests.functional.object_model.test_helpers import send_reload_request
+from tests.functional.utils.assertions import assert_raises_exception
+from tests.functional.utils.context import Context
+from tests.functional.utils.hooks import timeout_dict
+from tests.functional.utils.inference.serving.cohere import CohereWrapper
+from tests.functional.utils.inference.serving.openai import OpenAIWrapper
+from tests.functional.utils.logger import get_logger, step
+from tests.functional.utils.marks import MarkRunType
+
+logger = get_logger(__name__)
 
 INITIALIZE_LLM_TIMEOUT = 900
 
@@ -195,3 +211,105 @@ class GenerativeAIUtils:
             dataset=dataset,
             request_parameters=request_parameters,
         )
+
+    @staticmethod
+    def prepare_python_script_command(
+            context, tmp_path, port, model, endpoint, input_data, request_parameters, image_path=None, timeout=900
+    ):
+        input_data_json_path = os.path.join(tmp_path, "input_data.json")
+        with open(input_data_json_path, "w", encoding='utf-8') as fo:
+            json.dump(input_data, fo)
+        venv_cmd = f"source {os.path.join(ovms_c_repo_path, ".venv", "bin", "activate")}" \
+            if context.base_os != OsType.Windows else os.path.join(ovms_c_repo_path, ".venv", "Scripts", "activate.bat")
+        script_path = os.path.join(
+            ovms_c_repo_path, "tests", "functional", "utils", "generative_ai", "openai_client.py")
+        request_params_dict = request_parameters.prepare_dict(use_extra_body=False)
+        request_params_str = " ".join(f"--{key} {value}" for key, value in request_params_dict.items())
+        cmd = (f"{venv_cmd} && python3 {script_path} --port {port} --model {model.name} --endpoint {endpoint} "
+               f"--input_data_file {input_data_json_path} {request_params_str} --timeout {timeout}")
+        if image_path is not None:
+            cmd += f" --image_path {image_path}"
+        return cmd
+
+    @staticmethod
+    def get_llm_outputs_from_curl_stdout(stdout):
+        braces_left_str = "[\""
+        braces_right_str = "\"]"
+        stdout_list = stdout.replace("['", braces_left_str).replace("']", braces_right_str).split(braces_right_str)
+        outputs_multiple_requests = [
+            [(outputs_str + braces_right_str).strip().strip(braces_left_str).strip(braces_right_str)]
+            for outputs_str in stdout_list[:-1]
+        ]
+        return outputs_multiple_requests
+
+    @staticmethod
+    def load_llm_model_and_verify(model, result, context, port, reload_retry=1):
+        result.models.append(model)
+        result.ovms.prepare_resources([model])
+        result.ovms.update_model_list_and_config(result.ovms.name, result.models, context=context)
+
+        params = OvmsParams(models=[model], use_config=True, use_subconfig=model.use_subconfig)
+        config_dir_path_on_host = os.path.join(
+            TestEnvironment.current.base_dir,
+            result.ovms.name,
+            Paths.MODELS_PATH_NAME,
+        )
+        if model.use_subconfig:
+            OvmsConfig.create_subconfig(result.ovms.name, params, config_dir_path_on_host)
+        MediaPipeCalculator.prepare_proto_calculator(
+            params,
+            config_dir_path_on_host,
+            os.path.join(config_dir_path_on_host, Paths.CONFIG_FILE_NAME)
+        )
+
+        ovms_log = result.ovms.create_log(False)
+        send_reload_request(port, timeout=300, retry=reload_retry, retry_delay=2, retry_backoff=2, retry_max_delay=15)
+        break_msg_list = result.ovms.get_break_msg_list([model])
+        ovms_log.models_loaded([model], break_msg_list=break_msg_list, ovms_instance=result.ovms)
+
+    @classmethod
+    def check_llm_outputs_similarity(
+            cls,
+            context,
+            outputs_list,
+            reference_outputs,
+            result,
+            openai_rest_api_type,
+            port,
+            cos_sim_reference=0.7,
+            embeddings_model_type=Qwen3Embedding06BFp16OvHf,
+    ):
+        step("Check Similarity")
+        embeddings_model = GenerativeAIUtils.prepare_model(embeddings_model_type)
+        cls.load_llm_model_and_verify(embeddings_model, result, context, port)
+
+        embeddings_request_params = GenerativeAIUtils.prepare_request_params(OpenAIWrapper.EMBEDDINGS)
+        embedding_from_string_reference = None
+        cos_sim_errors = []
+        for index, outputs in enumerate([reference_outputs] + outputs_list):
+
+            class TestDataset(FeatureExtractionModelDataset):
+                input_data = [outputs[0]]
+
+            _, embeddings_outputs_raw, _, _ = run_llm_inference(
+                embeddings_model,
+                openai_rest_api_type,
+                port,
+                OpenAIWrapper.EMBEDDINGS,
+                dataset=TestDataset,
+                input_data_type="list",
+                request_parameters=embeddings_request_params,
+            )
+
+            if index == 0:
+                embedding_from_string_reference = np.array(embeddings_outputs_raw.data[0].embedding)
+            else:
+                embedding_from_string = np.array(embeddings_outputs_raw.data[0].embedding)
+                cos_sim = np.dot(embedding_from_string_reference, embedding_from_string) / \
+                          (np.linalg.norm(embedding_from_string_reference) * np.linalg.norm(embedding_from_string))
+                logger.debug(f"Similarity score as cos_sim: {cos_sim}")
+                if cos_sim < cos_sim_reference:
+                    cos_sim_errors.append({"cos_sim": cos_sim, "outputs": outputs[0]})
+
+        assert not cos_sim_errors, \
+            f"Similarity score is too low. Reference outputs: {reference_outputs[0]}. Results: {cos_sim_errors}"

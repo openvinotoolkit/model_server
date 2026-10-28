@@ -27,9 +27,9 @@ class ModelsLibrary:
         return defaultdict(
             list,
             {
-                TargetDevice.CPU: [mg.LFM25350MInt8OvHf],
-                TargetDevice.GPU: [mg.LFM25350MInt8OvHf],
-                TargetDevice.NPU: [mg.Phi35MiniInstructInt4CwOvHf],
+                TargetDevice.CPU: [mg.DummyCyclicGpt2OvHf],
+                TargetDevice.GPU: [mg.DummyCyclicGpt2OvHf],
+                TargetDevice.NPU: [mg.DummyCyclicGpt2OvHf],
             },
         )
 
@@ -38,9 +38,9 @@ class ModelsLibrary:
         return defaultdict(
             list,
             {
-                TargetDevice.CPU: [mg.Gemma34bItInt4OvHf],
-                TargetDevice.GPU: [mg.Gemma34bItInt4OvHf],
-                TargetDevice.NPU: [mg.Gemma34bItInt4CwOvHf],
+                TargetDevice.CPU: [mg.DummyCyclicLlavaOvHf],
+                TargetDevice.GPU: [mg.DummyCyclicLlavaOvHf],
+                TargetDevice.NPU: [mg.DummyCyclicLlavaOvHf],
             },
         )
 

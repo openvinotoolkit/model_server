@@ -32,7 +32,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from tests.functional.config import binary_io_images_path, datasets_path
+from tests.functional.config import binary_io_images_path, datasets_path, ovms_c_repo_path
 from tests.functional.constants.ovms import Ovms
 from tests.functional.constants.paths import Paths
 from tests.functional.utils.inference.serving.openai import ChatCompletionsApi
@@ -196,6 +196,30 @@ class RerankModelDataset(LargeLanguageModelDataset):
 
 class SingleMessageLanguageModelDataset(LargeLanguageModelDataset):
     user_data = [ChatCompletionsApi.ROLE_USER, LargeLanguageModelDataset.user_content]
+    input_data = [user_data]
+
+
+def get_long_prompt():
+    with open(
+            os.path.join(ovms_c_repo_path, "tests", "functional","data", "generative_ai", "long_prompt.txt"),
+            'r',
+            encoding='utf-8'
+    ) as file:
+        user_content = file.read()
+    return user_content
+
+
+class LongPromptLanguageModelDataset(LargeLanguageModelDataset):
+    user_content = get_long_prompt()
+    system_content = "You are a helpful assistant giving short answers."
+    user_data = [ChatCompletionsApi.ROLE_USER, user_content]
+    system_data = [ChatCompletionsApi.ROLE_SYSTEM, system_content]
+    input_data = [system_data, user_data]
+
+
+class LongPromptSingleMessageLanguageModelDataset(LargeLanguageModelDataset):
+    user_content = get_long_prompt()
+    user_data = [ChatCompletionsApi.ROLE_USER, user_content]
     input_data = [user_data]
 
 
