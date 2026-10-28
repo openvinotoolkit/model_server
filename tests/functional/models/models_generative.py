@@ -217,6 +217,7 @@ class DummyCyclicLlavaOvHf(GenerativeModelHuggingFace, VisionLanguageModel):
     is_dummy: bool = True
 
 
+@dataclass
 class Gemma34bItInt4OvHf(GenerativeModelHuggingFace, VisionLanguageModel):
     name: str = "OpenVINO/gemma-3-4b-it-int4-ov"
     is_local: bool = True
