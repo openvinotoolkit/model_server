@@ -22,6 +22,15 @@
 
 namespace ovms {
 
+namespace {
+bool needsResultBridge(const mediapipe::CalculatorGraphConfig_Node& node) {
+    return node.calculator() == "StreamingS2TCalculator" ||
+           (node.calculator() == "S2tCalculator" &&
+               std::any_of(node.input_stream().begin(), node.input_stream().end(),
+                   [](const std::string& stream) { return stream.rfind("AUDIO:", 0) == 0; }));
+}
+}  // namespace
+
 StreamingS2TGraphExecution::StreamingS2TGraphExecution(mediapipe::CalculatorGraph& graph) :
     graph_(graph) {}
 
@@ -30,15 +39,14 @@ StreamingS2TGraphExecution::~StreamingS2TGraphExecution() {
 }
 
 absl::Status StreamingS2TGraphExecution::initialize(const mediapipe::CalculatorGraphConfig& config) {
-    const bool hasStreamingS2T = std::any_of(config.node().begin(), config.node().end(),
-        [](const auto& node) { return node.calculator() == "StreamingS2TCalculator"; });
+    const bool hasStreamingS2T = std::any_of(config.node().begin(), config.node().end(), needsResultBridge);
     if (!hasStreamingS2T)
         return graph_.Initialize(config);
 
     auto runtimeConfig = config;
     size_t index = 0;
     for (auto& node : *runtimeConfig.mutable_node()) {
-        if (node.calculator() != "StreamingS2TCalculator")
+        if (!needsResultBridge(node))
             continue;
         const std::string input = "__ovms_stt_ready_" + std::to_string(index++);
         runtimeConfig.add_input_stream(input);

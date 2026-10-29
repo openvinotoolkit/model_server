@@ -700,6 +700,7 @@ ovms_cc_library(
     deps = [
         "cpp_headers",
         "mediapipe_executor_interface",
+        "//src/audio/speech_to_text:streaming_s2t_session",
         "libovms_execution_context",
         "libovmsstatus",
         "libovmslogging",
@@ -853,7 +854,6 @@ ovms_cc_library(
             "rest_parser_utils",
             "libovms_cliparser",
             "libovms_config",
-            "//src/audio/speech_to_text:stt_pipeline_handle",
             "libmultipart_parser",
             "//src/mediapipe_internal:pipelinedefinitionstatus",
             "ovms_exit_codes",
@@ -1803,6 +1803,7 @@ ovms_cc_library(
     hdrs = ["ov_utils.hpp",],
     srcs = ["ov_utils.cpp",],
     deps = [
+            "libovms_config",
             "//third_party:openvino",
             "libovmslogging",
             "libovmsstatus",
@@ -2078,6 +2079,7 @@ cc_test(
                 "test/mediapipe_validation_test.cpp", # Mediapipe enabled
                 "test/get_mediapipe_graph_metadata_response_test.cpp",
                 "test/mediapipe_framework_test.cpp",
+                "test/live_graph_session_test.cpp",
                 "test/http_openai_handler_test.cpp",
                 "test/multipart_calculator_test.cpp",
                 "test/llm/assisted_decoding_test.cpp",

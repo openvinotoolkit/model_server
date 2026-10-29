@@ -102,27 +102,15 @@ ovms_cc_library(
     deps = [
         ":audio_utterance_buffer",
         ":opus_audio_codec",
-        ":stt_audio_adapter",
         ":webrtc_peer_connection",
-        "//src/audio/speech_to_text:stt_pipeline_handle",
+        "//src:mediapipe_executor_interface",
+        "//src/audio/speech_to_text:streaming_s2t",
+        "//src/audio/speech_to_text:streaming_s2t_session",
         "//src/port:rapidjson_document",
-        "//src/port:rapidjson_istreamwrapper",
         "//src/port:rapidjson_stringbuffer",
         "//src/port:rapidjson_writer",
-        "//third_party:genai",
         "@libdatachannel//:libdatachannel",
-    ] + select({
-        "//src:experimental_voxtral_enabled": [
-            "//src/audio/speech_to_text:s2t_servable",
-            "//src/audio/speech_to_text:streaming_s2t_session",
-            ":voxtral_audio_adapter",
-        ],
-        "//conditions:default": [],
-    }),
-    defines = select({
-        "//src:experimental_voxtral_enabled": ["BUILD_WITH_EXPERIMENTAL_VOXTRAL"],
-        "//conditions:default": [],
-    }),
+    ],
     target_compatible_with = select({
         "//src:webrtc_enabled": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -156,14 +144,22 @@ cc_test(
     deps = [
         "//src/utils:env_guard",
         "//src/audio:audio_utils",
-        "//src/audio/speech_to_text:stt_pipeline_handle",
+        "//src/mediapipe_internal:libovms_mediapipe",
+        "//src:kfs_graph_executor_impl",
+        "//src:libovms_mediapipe_http_executor",
+        "//src/audio/speech_to_text:s2t_calculator",
+        "//src/mediapipe_internal:mediapipegraphexecutor_h",
+        "//src/audio/speech_to_text:s2t_calculator_cc_proto",
+        "//src/audio/speech_to_text:s2t_servable",
         "//third_party:genai",
         ":webrtc_session_controller",
         ":opus_audio_codec",
         "@libdatachannel//:libdatachannel",
         "@com_google_googletest//:gtest_main",
     ] + select({
-        "//src:experimental_voxtral_enabled": [":voxtral_audio_adapter"],
+        "//src:experimental_voxtral_enabled": [
+            ":voxtral_audio_adapter",
+        ],
         "//conditions:default": [],
     }),
     target_compatible_with = select({

@@ -300,7 +300,6 @@ public:
     void startCleaner();
 
 #if (MEDIAPIPE_DISABLE == 0)
-    Status getSttPipeline(const std::string& name, SttPipelineHandle& handle) const;
     const MediapipeRuntimeApi& getMediapipeFactory() const {
         return *mediapipeFactory;
     }

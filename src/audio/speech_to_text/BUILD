@@ -18,12 +18,6 @@ load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_cc_prot
 load("//:common_settings.bzl", "ovms_cc_library")
 
 ovms_cc_library(
-    name = "stt_pipeline_handle",
-    hdrs = ["stt_pipeline_handle.hpp"],
-    visibility = ["//visibility:public"],
-)
-
-ovms_cc_library(
     name = "streaming_s2t",
     srcs = ["streaming_s2t.cpp"],
     hdrs = ["streaming_s2t.hpp"],
@@ -41,11 +35,8 @@ ovms_cc_library(
     srcs = ["streaming_s2t_session.cpp"],
     hdrs = ["streaming_s2t_session.hpp"],
     deps = [
-        ":s2t_servable",
         ":streaming_s2t",
-        "//src/mediapipe_internal:streaming_s2t_graph",
-        "//src:libovmslogging",
-        "@mediapipe//mediapipe/framework:calculator_graph",
+        "//src:mediapipe_executor_interface",
     ],
     visibility = ["//visibility:public"],
 )
@@ -64,14 +55,14 @@ ovms_cc_library(
         "//src:libmodelconfigjsonparser",
         "//src:libovmsstring_utils",
         "//src:libovms_ov_utils",
+        "//src/port:rapidjson_document",
+        "//src/port:rapidjson_istreamwrapper",
         "s2t_calculator_cc_proto",
         "@com_google_absl//absl/status",
         "//third_party:genai",
     ] + select({
         "//src:experimental_voxtral_enabled": [
             "//src:libovmsclient_connection",
-            "//src/port:rapidjson_document",
-            "//src/port:rapidjson_istreamwrapper",
             "//src/webrtc:voxtral_audio_adapter",
         ],
         "//conditions:default": [],
@@ -140,15 +131,17 @@ ovms_cc_library(
         "//src/audio:audio_utils",
         "//src:libmodelconfigjsonparser",
         "//src/mediapipe_internal:node_initializer",
+        "//src/mediapipe_internal:live_graph_config",
+        "//src/mediapipe_internal:streaming_s2t_graph",
         ":streaming_s2t",
+        ":streaming_s2t_session",
+        "//src/webrtc:stt_audio_adapter",
     ] + select({
         "//src:experimental_voxtral_enabled": [
             "//src/webrtc:voxtral_audio_adapter",
             "//src:libovmsclient_connection",
             "//src:libovmsstatus",
             "//src:sse_utils",
-            "//src/port:rapidjson_stringbuffer",
-            "//src/port:rapidjson_writer",
         ],
         "//conditions:default": [],
     }),
@@ -167,7 +160,10 @@ ovms_cc_library(
 mediapipe_proto_library(
     name = "s2t_calculator_proto",
     srcs = ["s2t_calculator.proto"],
-    visibility = ["//visibility:private"],
+    visibility = [
+        "//src/mediapipe_internal:__pkg__",
+        "//src/webrtc:__pkg__",
+    ],
     deps = [
         "@mediapipe//mediapipe/framework:calculator_options_proto",
         "@mediapipe//mediapipe/framework:calculator_proto",

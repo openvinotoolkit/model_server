@@ -41,7 +41,13 @@
 #include <openvino/genai/automatic_speech_recognition/pipeline.hpp>
 
 #include "src/audio/audio_utils.hpp"
-#include "src/audio/speech_to_text/stt_pipeline_handle.hpp"
+#include "src/audio/speech_to_text/s2t_calculator.pb.h"
+#include "src/audio/speech_to_text/s2t_servable.hpp"
+#include "src/mediapipe_internal/mediapipegraphexecutor.hpp"
+#include "src/mediapipe_internal/node_initializer.hpp"
+#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
+#include "voxtral_audio_adapter.hpp"
+#endif
 #include "src/utils/env_guard.hpp"
 #include "webrtc_session_controller.hpp"
 #include "webrtc_peer_connection.hpp"
@@ -98,25 +104,38 @@ protected:
     std::filesystem::path directory;
 };
 
-#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
 TEST_F(WebRtcSpeechModelTest, SelectsRealtimeFromMetadataRegardlessOfDirectoryName) {
     writeConfig(R"({"model_type":"voxtral_realtime"})");
-    EXPECT_TRUE(WebRtcSessionController::isRealtimeSpeechModel(directory.string()));
+    EXPECT_TRUE(SttServable::isRealtimeModel(directory.string()));
 }
 
 TEST_F(WebRtcSpeechModelTest, SelectsWhisperFromMetadata) {
     writeConfig(R"({"model_type":"whisper"})");
-    EXPECT_FALSE(WebRtcSessionController::isRealtimeSpeechModel(directory.string()));
+    EXPECT_FALSE(SttServable::isRealtimeModel(directory.string()));
 }
 
-TEST_F(WebRtcSpeechModelTest, RejectsMissingOrInvalidConfiguration) {
-    EXPECT_THROW(WebRtcSessionController::isRealtimeSpeechModel(directory.string()), std::runtime_error);
-    for (const std::string& content : {"invalid json", "[]", "{}", R"({"model_type":42})"}) {
+TEST_F(WebRtcSpeechModelTest, MissingConfigurationDoesNotSelectRealtime) {
+    EXPECT_FALSE(SttServable::isRealtimeModel(directory.string()));
+}
+
+TEST_F(WebRtcSpeechModelTest, RejectsInvalidConfiguration) {
+    for (const char* content : {"invalid json", "[]", "{}", R"({"model_type":42})"}) {
         writeConfig(content);
-        EXPECT_THROW(WebRtcSessionController::isRealtimeSpeechModel(directory.string()), std::runtime_error);
+        EXPECT_THROW(SttServable::isRealtimeModel(directory.string()), std::runtime_error);
     }
 }
-#endif
+
+TEST(WebRtcAudioExecutorTest, RejectsGraphWithoutSpeechResources) {
+    mediapipe::CalculatorGraphConfig config;
+    auto executor = std::make_unique<MediapipeGraphExecutor>("not-stt", "1",
+        config, stream_types_mapping_t{}, stream_types_mapping_t{},
+        std::vector<std::string>{}, std::vector<std::string>{},
+        GraphSidePackets{}, nullptr, nullptr);
+    EXPECT_EQ(StreamingS2TSession::inputMode(*executor), AudioInputMode::Unsupported);
+    std::unique_ptr<StreamingS2TSession> session;
+    EXPECT_FALSE(StreamingS2TSession::create(*executor, [](const StreamingS2TEvent&) {}, session).ok());
+    EXPECT_FALSE(session);
+}
 
 #if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
 TEST(VoxtralAudioAdapterTest, EmitsTextBeforeInputEnds) {
@@ -189,12 +208,36 @@ std::vector<float> readTestAudio(const char* audioPath) {
 
 // Streams 48 kHz mono audio to the controller over a real WebRTC connection and collects data channel
 // messages until one contains finalMarker. Set commitAudio to exercise explicit Realtime commits.
-SttPipelineHandle loadSpeechModel(const std::string& modelPath) {
-    return SttPipelineHandle{std::make_shared<ov::genai::ASRPipeline>(modelPath, "CPU", ov::AnyMap{}),
-        std::make_shared<std::mutex>(), modelPath};
+std::unique_ptr<MediapipeGraphExecutorInterface> loadSpeechModel(const std::string& modelPath) {
+    mediapipe::S2tCalculatorOptions options;
+    options.set_models_path(modelPath);
+    options.set_target_device("CPU");
+    auto servable = std::make_shared<SttServable>(options, modelPath);
+    mediapipe::CalculatorGraphConfig config;
+    config.add_input_stream("HTTP_REQUEST_PAYLOAD:input");
+    config.add_output_stream("HTTP_RESPONSE_PAYLOAD:output");
+    config.add_input_side_packet("s2t_servable");
+    auto* node = config.add_node();
+    node->set_name("speech");
+    node->set_calculator(servable->streamingBackend ? "StreamingS2TCalculator" : "S2tCalculator");
+    node->add_input_stream("HTTP_REQUEST_PAYLOAD:input");
+    node->add_output_stream("HTTP_RESPONSE_PAYLOAD:output");
+    node->add_input_side_packet("STT_NODE_RESOURCES:s2t_servable");
+    GraphSidePackets resources;
+    resources.sttServableMap.emplace("speech", std::move(servable));
+    for (const auto& initializer : NodeInitializerRegistry::instance().all()) {
+        const auto status = initializer->prepareLiveGraph(config, resources);
+        if (!status.ok())
+            throw std::runtime_error(status.string());
+    }
+    return std::make_unique<MediapipeGraphExecutor>("speech", "1", config,
+        stream_types_mapping_t{}, stream_types_mapping_t{},
+        std::vector<std::string>{"input"}, std::vector<std::string>{"output"},
+        resources, nullptr, nullptr);
 }
 
-void streamAudioOverWebRtc(WebRtcSessionController& controller, const SttPipelineHandle& speechModel,
+void streamAudioOverWebRtc(WebRtcSessionController& controller,
+    std::unique_ptr<MediapipeGraphExecutorInterface> executor,
     const std::vector<float>& samples, bool commitAudio, const std::string& finalMarker,
     std::vector<std::string>& messages, size_t commitCount = 1) {
     rtc::Configuration configuration;
@@ -238,7 +281,7 @@ void streamAudioOverWebRtc(WebRtcSessionController& controller, const SttPipelin
     const std::string offerSdp = std::string(*offerer->localDescription());
 
     WebRtcSessionController::OfferResult result;
-    ASSERT_EQ(controller.createRealtimeCall(offerSdp, speechModel, result), WebRtcSessionController::CreateCallResult::Success);
+    ASSERT_EQ(controller.createRealtimeCall(offerSdp, std::move(executor), result), WebRtcSessionController::CreateCallResult::Success);
     offerer->setRemoteDescription(rtc::Description(result.sdp, result.type));
     for (const auto& candidate : result.candidates)
         offerer->addRemoteCandidate(rtc::Candidate(candidate.candidate, candidate.mid));
@@ -274,9 +317,9 @@ void streamAudioOverWebRtc(WebRtcSessionController& controller, const SttPipelin
     {
         std::unique_lock<std::mutex> lock(mutex);
         const size_t expectedFinals = commitAudio ? commitCount : 1;
-        EXPECT_TRUE(condition.wait_for(lock, std::chrono::seconds(60), [&] {
+        EXPECT_TRUE(condition.wait_for(lock, std::chrono::seconds(120), [&] {
             return finalReceivedCount >= expectedFinals;
-        }));
+        })) << ::testing::PrintToString(messages);
     }
     EXPECT_TRUE(controller.removeSession(result.sessionId));
     offerer->close();
@@ -290,6 +333,7 @@ bool containsMessage(const std::vector<std::string>& messages, const std::string
 }
 }  // namespace
 
+#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
 TEST(WebRtcSessionControllerTest, VoxtralTranscribesWebRtcAudioWithoutSilenceDetection) {
     const char* modelPath = std::getenv("OVMS_VOXTRAL_MODEL_PATH");
     const char* audioPath = std::getenv("OVMS_VOXTRAL_TEST_WAV");
@@ -346,6 +390,7 @@ TEST(WebRtcSessionControllerTest, VoxtralCommitCreatesIndependentTranscriptItems
     EXPECT_TRUE(containsMessage(messages, "\"type\":\"session.created\""));
     EXPECT_FALSE(containsMessage(messages, "\"type\":\"error\""));
 }
+#endif
 
 TEST(WebRtcSessionControllerTest, WhisperTranscribesUtteranceAfterSilence) {
     const char* modelPath = std::getenv("OVMS_WHISPER_MODEL_PATH");

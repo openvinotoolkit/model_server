@@ -17,7 +17,8 @@
 
 #include "../config.hpp"
 #include "../http_rest_api_handler.hpp"
-#include "../audio/speech_to_text/stt_pipeline_handle.hpp"
+#include "../mediapipe_internal/mediapipe_graph_executor_interface.hpp"
+#include "../audio/speech_to_text/streaming_s2t_session.hpp"
 #include "src/filesystem/localfilesystem.hpp"
 #include "../logging.hpp"
 #include "src/servable_management/modelmanager.hpp"
@@ -28,6 +29,8 @@
 #include "test_utils.hpp"
 #include "light_test_utils.hpp"
 #include "test_with_temp_dir.hpp"
+#include "constructor_enabled_model_manager.hpp"
+#include "../mediapipe_runtime_api.hpp"
 
 static const char* configWith1Dummy = R"(
 {
@@ -1022,6 +1025,46 @@ TEST_F(ConfigStatus, RealtimeCallPlainSdpAuthentication) {
 #endif
 
 #if (MEDIAPIPE_DISABLE == 0)
+class RealtimeAudioExecutorTest : public TestWithTempDir {};
+
+TEST_F(RealtimeAudioExecutorTest, WakesLazyModelAndTracksCallLifetime) {
+    const std::string configPath = directoryPath + "/config.json";
+    createConfigFileWithContent(R"({
+        "model_config_list": [],
+        "mediapipe_config_list": [{
+            "name": "speech",
+            "group_name": "audio",
+            "base_path": "/ovms/src/test/audio/",
+            "graph_path": "/ovms/src/test/audio/graph_stt.pbtxt"
+        }]
+    })", configPath);
+    ConstructorEnabledModelManager manager(uint64_t{30'000'000});
+    ASSERT_EQ(manager.loadConfig(configPath), ovms::StatusCode::OK);
+    auto& factory = manager.getMediapipeFactory();
+    ASSERT_FALSE(factory.isDefinitionAvailable("speech"));
+
+    std::unique_ptr<ovms::MediapipeGraphExecutorInterface> executor;
+    ASSERT_EQ(manager.createPipeline(executor, "speech"), ovms::StatusCode::OK);
+    ASSERT_TRUE(factory.isDefinitionAvailable("speech"));
+    ASSERT_TRUE(factory.hasActiveInference("speech"));
+    EXPECT_EQ(ovms::StreamingS2TSession::inputMode(*executor), ovms::AudioInputMode::Utterance);
+    std::unique_ptr<ovms::StreamingS2TSession> session;
+    ASSERT_EQ(ovms::StreamingS2TSession::create(*executor, [](const ovms::StreamingS2TEvent&) {}, session), ovms::StatusCode::OK);
+    EXPECT_FALSE(ovms::StreamingS2TSession::create(*executor, [](const ovms::StreamingS2TEvent&) {}, session).ok());
+    executor.reset();
+    EXPECT_TRUE(factory.hasActiveInference("speech"));
+    EXPECT_EQ(factory.putToSleepDefinition("speech"), ovms::StatusCode::MEDIAPIPE_PUT_TO_SLEEP_ACTIVE_INFERENCES);
+
+    session->cancel();
+    EXPECT_FALSE(session->finish("closed").ok());
+    session.reset();
+    EXPECT_FALSE(factory.hasActiveInference("speech"));
+    ASSERT_EQ(factory.putToSleepDefinition("speech"), ovms::StatusCode::OK);
+    ASSERT_FALSE(factory.isDefinitionAvailable("speech"));
+    ASSERT_EQ(manager.createPipeline(executor, "speech"), ovms::StatusCode::OK);
+    EXPECT_TRUE(factory.isDefinitionAvailable("speech"));
+}
+
 TEST_F(ConfigStatus, RealtimeCallIgnoresNonSttGraphs) {
     std::string contents;
     auto fs = std::make_shared<ovms::LocalFileSystem>();
@@ -1029,11 +1072,11 @@ TEST_F(ConfigStatus, RealtimeCallIgnoresNonSttGraphs) {
         ovms::StatusCode::OK);
     TestHelper1 t(*this, contents.c_str());
     auto handler = ovms::HttpRestApiHandler(ovms::Server::instance(), 10);
-    ovms::SttPipelineHandle speechModel;
-    auto status = handler.getRealtimeCallSpeechModel("", speechModel);
+    std::unique_ptr<ovms::MediapipeGraphExecutorInterface> executor;
+    auto status = handler.getRealtimeCallExecutor("", executor);
     EXPECT_EQ(status, ovms::StatusCode::REST_INVALID_REQUEST);
     EXPECT_NE(status.string().find("No speech-to-text graph"), std::string::npos);
-    EXPECT_FALSE(speechModel.pipeline);
+    EXPECT_FALSE(executor);
 }
 
 TEST_F(ConfigStatus, RealtimeCallSelectsSoleAvailableSttGraph) {
@@ -1047,14 +1090,20 @@ TEST_F(ConfigStatus, RealtimeCallSelectsSoleAvailableSttGraph) {
     })";
     TestHelper1 t(*this, config);
     auto handler = ovms::HttpRestApiHandler(ovms::Server::instance(), 10);
-    ovms::SttPipelineHandle namedModel;
-    ASSERT_EQ(handler.getRealtimeCallSpeechModel("speech2text", namedModel), ovms::StatusCode::OK);
-    ASSERT_TRUE(namedModel.pipeline);
-    ovms::SttPipelineHandle selectedModel;
-    ASSERT_EQ(handler.getRealtimeCallSpeechModel("", selectedModel), ovms::StatusCode::OK);
-    EXPECT_EQ(selectedModel.pipeline, namedModel.pipeline);
-    EXPECT_EQ(selectedModel.pipelineMutex, namedModel.pipelineMutex);
-    EXPECT_EQ(selectedModel.modelsPath, namedModel.modelsPath);
+    std::unique_ptr<ovms::MediapipeGraphExecutorInterface> namedExecutor;
+    ASSERT_EQ(handler.getRealtimeCallExecutor("speech2text", namedExecutor), ovms::StatusCode::OK);
+    ASSERT_TRUE(namedExecutor);
+    EXPECT_EQ(ovms::StreamingS2TSession::inputMode(*namedExecutor), ovms::AudioInputMode::Utterance);
+    std::unique_ptr<ovms::MediapipeGraphExecutorInterface> selectedExecutor;
+    ASSERT_EQ(handler.getRealtimeCallExecutor("", selectedExecutor), ovms::StatusCode::OK);
+    ASSERT_TRUE(selectedExecutor);
+    EXPECT_EQ(ovms::StreamingS2TSession::inputMode(*selectedExecutor), ovms::StreamingS2TSession::inputMode(*namedExecutor));
+    auto& factory = t.getManager().getMediapipeFactory();
+    EXPECT_TRUE(factory.hasActiveInference("speech2text"));
+    selectedExecutor.reset();
+    EXPECT_TRUE(factory.hasActiveInference("speech2text"));
+    namedExecutor.reset();
+    EXPECT_FALSE(factory.hasActiveInference("speech2text"));
 }
 
 TEST_F(ConfigStatus, RealtimeCallRejectsAmbiguousSttGraphs) {
@@ -1064,10 +1113,10 @@ TEST_F(ConfigStatus, RealtimeCallRejectsAmbiguousSttGraphs) {
         ovms::StatusCode::OK);
     TestHelper1 t(*this, contents.c_str());
     auto handler = ovms::HttpRestApiHandler(ovms::Server::instance(), 10);
-    ovms::SttPipelineHandle speechModel;
-    ASSERT_EQ(handler.getRealtimeCallSpeechModel("speech2text", speechModel), ovms::StatusCode::OK);
-    ASSERT_EQ(handler.getRealtimeCallSpeechModel("speech2textWordTimestamps", speechModel), ovms::StatusCode::OK);
-    auto status = handler.getRealtimeCallSpeechModel("", speechModel);
+    std::unique_ptr<ovms::MediapipeGraphExecutorInterface> executor;
+    ASSERT_EQ(handler.getRealtimeCallExecutor("speech2text", executor), ovms::StatusCode::OK);
+    ASSERT_EQ(handler.getRealtimeCallExecutor("speech2textWordTimestamps", executor), ovms::StatusCode::OK);
+    auto status = handler.getRealtimeCallExecutor("", executor);
     EXPECT_EQ(status, ovms::StatusCode::REST_INVALID_REQUEST);
     EXPECT_NE(status.string().find("Multiple speech-to-text graphs"), std::string::npos);
     EXPECT_NE(status.string().find("multipart/form-data"), std::string::npos);

@@ -16,6 +16,7 @@
 #pragma once
 #include <atomic>
 #include <chrono>
+#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
@@ -194,15 +195,16 @@ private:
 
     MediapipeServableMetricReporter* mediapipeServableMetricReporter;
     std::optional<GraphIdGuard> guard;
-    // RAII guard tracking this executor's active inference on the parent definition.
-    // Held for the entire lifetime of the executor so that the in-flight-inference
-    // check in shouldUnloadDueToIdle() / unload() sees a non-zero count while any
-    // inference method (infer / inferStream) is executing. On destruction (when the
-    // executor goes out of scope after inference completes) the counter decrements
-    // and lastActivityTimeNs is refreshed.
     std::optional<ActiveInferenceGuard> activeInferenceGuard;
+    // Promoted only for live sessions, avoiding a shared allocation on the HTTP path.
+    std::shared_ptr<ActiveInferenceGuard> liveExecutionLease;
 
 public:
+    ~MediapipeGraphExecutor() override;
+    bool supportsSession(const std::string& profile) const override;
+    Status startSession(const std::string& profile, LiveGraphSession::Observer observer,
+        std::unique_ptr<LiveGraphSession>& session) override;
+
     MediapipeGraphExecutor(const std::string& name,
         const std::string& version,
         const ::mediapipe::CalculatorGraphConfig& config,

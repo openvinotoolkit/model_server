@@ -17,10 +17,10 @@
 #include "s2t_servable.hpp"
 
 #include <stdexcept>
-#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
 #include <fstream>
 #include "src/port/rapidjson_document.hpp"
 #include "src/port/rapidjson_istreamwrapper.hpp"
+#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
 #include "src/webrtc/voxtral_audio_adapter.hpp"
 #endif
 
@@ -66,12 +66,15 @@ SttServable::SttServable(const ::mediapipe::S2tCalculatorOptions& nodeOptions, c
         config["STATIC_PIPELINE"] = true;
     }
     config["word_timestamps"] = enableWordTimestamps;
-#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
     streamingBackend = isRealtimeModel(parsedModelsPath.string());
+#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
     if (streamingBackend && !VoxtralAudioAdapter::isAvailable())
         throw std::runtime_error("Voxtral realtime requires an OpenVINO GenAI build with independent ASR streams");
     if (streamingBackend && enableWordTimestamps)
         throw std::invalid_argument("Voxtral realtime streams do not support word timestamps");
+#else
+    if (streamingBackend)
+        throw std::runtime_error("Voxtral realtime requires BUILD_WITH_WEBRTC=1 and BUILD_WITH_EXPERIMENTAL_VOXTRAL=1");
 #endif
     sttPipeline = std::make_shared<ov::genai::ASRPipeline>(parsedModelsPath.string(), device, config);
 
@@ -79,7 +82,6 @@ SttServable::SttServable(const ::mediapipe::S2tCalculatorOptions& nodeOptions, c
         streamingExecutor = std::make_unique<SttExecutorWrapper>(sttPipeline, sttPipelineMutex);
 }
 
-#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
 bool SttServable::isRealtimeModel(const std::string& modelPath) {
     const std::string configPath = modelPath + "/config.json";
     std::ifstream input(configPath);
@@ -96,6 +98,7 @@ bool SttServable::isRealtimeModel(const std::string& modelPath) {
     return std::string(modelType->value.GetString()) == "voxtral_realtime";
 }
 
+#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
 std::shared_ptr<VoxtralAudioAdapter> SttServable::createStreamingAdapter() const {
     if (!streamingBackend)
         throw std::invalid_argument("The configured STT backend does not support incremental audio");

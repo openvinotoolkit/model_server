@@ -49,6 +49,9 @@
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
 #include "mediapipe_internal/mediapipe_graph_executor_interface.hpp"
+#if defined(BUILD_WITH_WEBRTC)
+#include "audio/speech_to_text/streaming_s2t_session.hpp"
+#endif
 #include "metrics/metric_config.hpp"
 #include "metrics/metric_module.hpp"
 #include "metrics/metric_registry.hpp"
@@ -64,7 +67,6 @@
 #include "src/logging.hpp"
 #include "status.hpp"
 #include "stringutils.hpp"
-#include "audio/speech_to_text/stt_pipeline_handle.hpp"
 #include "multi_part_parser.hpp"
 #include "timer.hpp"
 #include "utils/rapidjson_utils.hpp"
@@ -1083,13 +1085,15 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
 }
 
 #if defined(BUILD_WITH_WEBRTC)
-Status HttpRestApiHandler::getRealtimeCallSpeechModel(const std::string& modelName, SttPipelineHandle& speechModel) {
+Status HttpRestApiHandler::getRealtimeCallExecutor(const std::string& modelName,
+    std::unique_ptr<MediapipeGraphExecutorInterface>& executor) {
+    executor.reset();
 #if (MEDIAPIPE_DISABLE == 0)
     if (modelName.empty()) {
         bool found = false;
         for (const auto& name : modelManager.getMediapipeFactory().getNamesOfAvailableMediapipePipelines()) {
-            SttPipelineHandle candidate;
-            auto status = modelManager.getSttPipeline(name, candidate);
+            std::unique_ptr<MediapipeGraphExecutorInterface> candidate;
+            auto status = modelManager.createPipeline(candidate, name);
             if (status == StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING ||
                 status == StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_YET ||
                 status == StatusCode::MEDIAPIPE_DEFINITION_NOT_LOADED_ANYMORE) {
@@ -1100,12 +1104,15 @@ Status HttpRestApiHandler::getRealtimeCallSpeechModel(const std::string& modelNa
                 SPDLOG_LOGGER_ERROR(webrtc_logger, "Failed to inspect speech-to-text graph {}: {}", name, status.string());
                 return status;
             }
+            if (StreamingS2TSession::inputMode(*candidate) == AudioInputMode::Unsupported)
+                continue;
             if (found) {
+                executor.reset();
                 SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected raw SDP realtime call: multiple available speech-to-text graphs");
                 return Status(StatusCode::REST_INVALID_REQUEST,
                     "Multiple speech-to-text graphs are available; use multipart/form-data with a session naming the model");
             }
-            speechModel = std::move(candidate);
+            executor = std::move(candidate);
             found = true;
         }
         if (!found) {
@@ -1114,9 +1121,13 @@ Status HttpRestApiHandler::getRealtimeCallSpeechModel(const std::string& modelNa
         }
         return StatusCode::OK;
     }
-    auto status = modelManager.getSttPipeline(modelName, speechModel);
+    auto status = modelManager.createPipeline(executor, modelName);
     if (!status.ok())
         SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected realtime call, {} is not a served speech-to-text graph: {}", modelName, status.string());
+    if (status.ok() && StreamingS2TSession::inputMode(*executor) == AudioInputMode::Unsupported) {
+        executor.reset();
+        return Status(StatusCode::REST_INVALID_REQUEST, "WebRTC requires a single-node speech-to-text graph");
+    }
     return status;
 #else
     SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected realtime call, speech-to-text graphs require MediaPipe");
@@ -1187,13 +1198,13 @@ Status HttpRestApiHandler::processRealtimeCall(const HttpRequestComponents& requ
             return Status(StatusCode::REST_INVALID_REQUEST, "The session field must be a JSON object setting audio.input.transcription.model or model");
         }
     }
-    SttPipelineHandle speechModel;
-    auto status = getRealtimeCallSpeechModel(modelName, speechModel);
+    std::unique_ptr<MediapipeGraphExecutorInterface> executor;
+    auto status = getRealtimeCallExecutor(modelName, executor);
     if (!status.ok())
         return status;
 
     WebRtcSessionController::OfferResult result;
-    const auto createResult = webRtcSessionController.createRealtimeCall(offerSdp, speechModel, result);
+    const auto createResult = webRtcSessionController.createRealtimeCall(offerSdp, std::move(executor), result);
     switch (createResult) {
     case WebRtcSessionController::CreateCallResult::InvalidOffer:
         return Status(StatusCode::REST_INVALID_REQUEST, "The SDP offer is invalid");

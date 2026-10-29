@@ -29,14 +29,10 @@
 #include "webrtc_peer_connection.hpp"
 #include "audio_utterance_buffer.hpp"
 #include "opus_audio_codec.hpp"
-#include "stt_audio_adapter.hpp"
-#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
-#include "voxtral_audio_adapter.hpp"
+#include "src/mediapipe_internal/mediapipe_graph_executor_interface.hpp"
 #include "src/audio/speech_to_text/streaming_s2t_session.hpp"
-#endif
 
 namespace ovms {
-struct SttPipelineHandle;
 
 class WebRtcSessionController {
 public:
@@ -61,10 +57,6 @@ public:
 
     explicit WebRtcSessionController(size_t maxSessions = 16, std::string announcedIp = {});
 
-#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
-    /// Select streaming ASR from the exported model metadata, not its repository name.
-    static bool isRealtimeSpeechModel(const std::string& modelPath);
-#endif
     /// 1:1 NAT mapping: returns a copy of a host ICE candidate ("candidate:..." or "a=candidate:...")
     /// with its address replaced by announcedIp and the port kept, or an empty string when the
     /// candidate is not a host candidate of the same IP family or already uses announcedIp.
@@ -72,7 +64,8 @@ public:
 
     /// OpenAI Realtime API compatible signaling (POST /v1/realtime/calls): the SDP answer embeds all
     /// server ICE candidates and OpenAI transcription events are exchanged on the "oai-events" channel.
-    CreateCallResult createRealtimeCall(const std::string& offerSdp, const SttPipelineHandle& speechModel, OfferResult& result);
+    CreateCallResult createRealtimeCall(const std::string& offerSdp,
+        std::unique_ptr<MediapipeGraphExecutorInterface> executor, OfferResult& result);
     bool removeSession(const std::string& sessionId);
     size_t sessionCount() const;
 
@@ -90,9 +83,7 @@ private:
         void attachDataChannel(std::shared_ptr<rtc::DataChannel> channel);
         void handleClientEvent(const std::string& message);
         std::string nextItemId();
-#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
-        void startVoxtralSession(const SttPipelineHandle& speechModel);
-#endif
+        Status startAudioSession(std::unique_ptr<MediapipeGraphExecutorInterface> executor);
         void commitAudio();
         // Utterance-based ASR (e.g. Whisper): buffers audio until silence or an explicit commit.
         void pushUtteranceAudio(const AudioChunk& frame);
@@ -105,13 +96,10 @@ private:
         const std::string id;
         WebRtcPeerConnection peer;
         OpusAudioCodec codec;
-        std::shared_ptr<SttAudioAdapter> sttAdapter;
         AudioUtteranceBuffer utteranceBuffer;
-#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
-        std::shared_ptr<StreamingS2TSession> streamingSession;
+        std::shared_ptr<StreamingS2TSession> audioSession;
         std::string currentItemId;
-        bool voxtralHasAudio = false;
-#endif
+        bool hasAudio = false;
         uint64_t itemCounter = 0;
         std::shared_ptr<rtc::DataChannel> transcriptChannel;
         std::mutex transcriptSendMutex;
@@ -129,7 +117,8 @@ private:
         std::thread outboundWorker;
     };
 
-    CreateCallResult negotiateSession(const std::string& offerSdp, const SttPipelineHandle& speechModel, OfferResult& result);
+    CreateCallResult negotiateSession(const std::string& offerSdp,
+        std::unique_ptr<MediapipeGraphExecutorInterface> executor, OfferResult& result);
     void removeDisconnectedRealtimeCalls();
 
     mutable std::mutex mutex_;

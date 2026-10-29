@@ -60,8 +60,9 @@ struct SttServable {
 #if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
     /// Creates a lightweight adapter sharing this servable's already-loaded model.
     std::shared_ptr<VoxtralAudioAdapter> createStreamingAdapter() const;
-    static bool isRealtimeModel(const std::string& modelPath);
 #endif
+    /// Detects the incremental backend from exported model metadata in every build.
+    static bool isRealtimeModel(const std::string& modelPath);
 
     static absl::Status parseTemperature(const HttpPayload& payload, ov::genai::ASRGenerationConfig& config);
 

@@ -59,7 +59,6 @@ extern "C" const char* OVMS_MPFactoryGetDefinitionGroupName(void*, const char*) 
 extern "C" int OVMS_MPFactoryAliasesConflictExcluding(void*, const char*, const char*) __attribute__((weak));
 extern "C" const char* OVMS_MPFactoryGetNames(void*, int) __attribute__((weak));
 extern "C" void* OVMS_MPFactoryFindServableDefinitionByName(void*, const char*) __attribute__((weak));
-extern "C" int OVMS_MPFactoryGetSttPipeline(void*, const char*, ovms::SttPipelineHandle*) __attribute__((weak));
 extern "C" int OVMS_MPGraphExportCreateServableConfig(const char*, const ovms::HFSettingsImpl*) __attribute__((weak));
 extern "C" int OVMS_MPGraphExportCreateServableConfigInMemory(const char*, const ovms::HFSettingsImpl*, char**) __attribute__((weak));
 extern "C" void OVMS_MPSetExternalServerHandle(void*) __attribute__((weak));
@@ -92,7 +91,6 @@ struct MediapipeRuntimeApi::ApiSymbols {
     using AliasesConflictExcludingFn = int (*)(void*, const char*, const char*);
     using GetNamesFn = const char* (*)(void*, int);
     using FindServableDefinitionFn = void* (*)(void*, const char*);
-    using GetSttPipelineFn = int (*)(void*, const char*, SttPipelineHandle*);
     using CreateServableConfigFn = int (*)(const char*, const HFSettingsImpl*);
     using CreateServableConfigInMemoryFn = int (*)(const char*, const HFSettingsImpl*, char**);
     using SetExternalServerHandleFn = void (*)(void*);
@@ -118,7 +116,6 @@ struct MediapipeRuntimeApi::ApiSymbols {
     AliasesConflictExcludingFn aliasesConflictExcluding = nullptr;
     GetNamesFn getNames = nullptr;
     FindServableDefinitionFn findServableDefinition = nullptr;
-    GetSttPipelineFn getSttPipeline = nullptr;
     CreateServableConfigFn createServableConfig = nullptr;
     CreateServableConfigInMemoryFn createServableConfigInMemory = nullptr;
     SetExternalServerHandleFn setExternalServerHandle = nullptr;
@@ -165,7 +162,6 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
     api->aliasesConflictExcluding = reinterpret_cast<ApiSymbols::AliasesConflictExcludingFn>(resolveSymbol(currentModule, "OVMS_MPFactoryAliasesConflictExcluding"));
     api->getNames = reinterpret_cast<ApiSymbols::GetNamesFn>(resolveSymbol(currentModule, "OVMS_MPFactoryGetNames"));
     api->findServableDefinition = reinterpret_cast<ApiSymbols::FindServableDefinitionFn>(resolveSymbol(currentModule, "OVMS_MPFactoryFindServableDefinitionByName"));
-    api->getSttPipeline = reinterpret_cast<ApiSymbols::GetSttPipelineFn>(resolveSymbol(currentModule, "OVMS_MPFactoryGetSttPipeline"));
     api->createServableConfig = reinterpret_cast<ApiSymbols::CreateServableConfigFn>(resolveSymbol(currentModule, "OVMS_MPGraphExportCreateServableConfig"));
     api->createServableConfigInMemory = reinterpret_cast<ApiSymbols::CreateServableConfigInMemoryFn>(resolveSymbol(currentModule, "OVMS_MPGraphExportCreateServableConfigInMemory"));
     api->setExternalServerHandle = reinterpret_cast<ApiSymbols::SetExternalServerHandleFn>(resolveSymbol(currentModule, "OVMS_MPSetExternalServerHandle"));
@@ -361,19 +357,6 @@ ServableDefinition* MediapipeRuntimeApi::findServableDefinitionByName(const std:
         return nullptr;
     }
     return reinterpret_cast<ServableDefinition*>(api->findServableDefinition(api->factoryHandle, name.c_str()));
-}
-
-Status MediapipeRuntimeApi::getSttPipeline(const std::string& name, SttPipelineHandle& handle) const {
-    if (!isLoaded() || api->getSttPipeline == nullptr) {
-        SPDLOG_ERROR("MediaPipe runtime API does not provide speech-to-text pipeline access");
-        return StatusCode::INTERNAL_ERROR;
-    }
-    const int code = api->getSttPipeline(api->factoryHandle, name.c_str(), &handle);
-    if (code == static_cast<int>(StatusCode::OK)) {
-        return StatusCode::OK;
-    }
-    const char* details = api->lastError();
-    return details == nullptr ? Status(static_cast<StatusCode>(code), "MediaPipe runtime API error") : Status(static_cast<StatusCode>(code), details);
 }
 
 Status MediapipeRuntimeApi::createServableConfig(const std::string& directoryPath, const HFSettingsImpl& hfSettings) const {

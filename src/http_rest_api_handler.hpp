@@ -40,7 +40,7 @@ class KFSInferenceServiceImpl;
 class Server;
 class ModelManager;
 class MultiPartParser;
-struct SttPipelineHandle;
+class MediapipeGraphExecutorInterface;
 
 // note since removal of TFS, V3 endpoints (from OpenAI) are will be also accepted as V1
 enum RequestType { ConfigReload,
@@ -180,7 +180,8 @@ public:
     Status processRealtimeCall(const HttpRequestComponents& request_components, const std::string& request_body, std::string& response,
         const std::shared_ptr<MultiPartParser>& multiPartParser, HttpResponseComponents& response_components);
     /// Resolves a named speech-to-text graph, or the sole available one when modelName is empty.
-    Status getRealtimeCallSpeechModel(const std::string& modelName, SttPipelineHandle& speechModel);
+    Status getRealtimeCallExecutor(const std::string& modelName,
+        std::unique_ptr<MediapipeGraphExecutorInterface>& executor);
     Status processRealtimeHangup(const HttpRequestComponents& request_components, std::string& response);
 #endif
     Status processOptions(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);

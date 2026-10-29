@@ -47,7 +47,6 @@ class MediapipeGraphExecutor;
 class ServableDefinition;
 class PythonBackend;
 struct HFSettingsImpl;
-struct SttPipelineHandle;
 struct HttpPayload;
 class HttpAsyncWriter;
 
@@ -85,8 +84,6 @@ public:
     const std::vector<std::string> getNamesOfAvailableMediapipePipelines() const;
     MediapipeGraphDefinition* findDefinitionByName(const std::string& name) const;
     ServableDefinition* findServableDefinitionByName(const std::string& name) const;
-    /// Shares the ASR pipeline of the served speech-to-text graph called name.
-    Status getSttPipeline(const std::string& name, SttPipelineHandle& handle) const;
     Status createServableConfig(const std::string& directoryPath,
         const HFSettingsImpl& hfSettings) const;
     // In-memory variant: returns the generated pbtxt via outPbtxt without writing to disk.

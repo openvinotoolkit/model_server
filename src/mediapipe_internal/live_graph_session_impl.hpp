@@ -15,26 +15,22 @@
 //*****************************************************************************
 #pragma once
 
+#include <map>
 #include <memory>
-#include <mutex>
 #include <string>
 
-namespace ov::genai {
-class ASRPipeline;
-}  // namespace ov::genai
+#include "live_graph_session.hpp"
+
+namespace mediapipe {
+class Packet;
+}
 
 namespace ovms {
-struct SttServable;
+struct LiveGraphConfig;
 
-/// Shared access to the ASR pipeline of a served speech-to-text graph.
-/// Holding the handle keeps the pipeline alive even if the graph is reloaded or retired meanwhile.
-struct SttPipelineHandle {
-    std::shared_ptr<ov::genai::ASRPipeline> pipeline;
-    /// Serializes ASRPipeline::generate() calls with the other users of the served pipeline.
-    std::shared_ptr<std::mutex> pipelineMutex;
-    std::string modelsPath;
-    /// Retains backend selection and the servable for live graph resource injection.
-    std::shared_ptr<SttServable> servable;
-};
+Status createLiveGraphSession(std::shared_ptr<const LiveGraphConfig> config,
+    std::map<std::string, mediapipe::Packet> sidePackets,
+    std::shared_ptr<void> executionLease, LiveGraphSession::Observer observer,
+    std::unique_ptr<LiveGraphSession>& session);
 
 }  // namespace ovms

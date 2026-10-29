@@ -19,25 +19,32 @@
 #include <memory>
 #include <string>
 
-#include "absl/status/status.h"
+#include "src/mediapipe_internal/live_graph_session.hpp"
 #include "streaming_s2t.hpp"
 
 namespace ovms {
-struct SttServable;
+class MediapipeGraphExecutorInterface;
 
-/// One live graph execution sharing a configured STT servable.
+inline constexpr const char* STT_INCREMENTAL_PROFILE = "speech-to-text.incremental";
+inline constexpr const char* STT_UTTERANCE_PROFILE = "speech-to-text.utterance";
+enum class AudioInputMode { Unsupported, Utterance, Incremental };
+
+/// Typed STT adapter over a generic managed graph session; no model resources are exposed.
 class StreamingS2TSession {
 public:
     using Observer = std::function<void(const StreamingS2TEvent&)>;
-    StreamingS2TSession(std::shared_ptr<SttServable> servable, Observer observer);
-    ~StreamingS2TSession();
-    absl::Status push(const std::string& utteranceId, AudioChunk audio);
-    absl::Status finish(const std::string& utteranceId);
-    /// Invalidates callback wakeups and requests graph cancellation without joining.
+    static AudioInputMode inputMode(const MediapipeGraphExecutorInterface& executor);
+    /// Acquires a session lease; the executor need not outlive the resulting adapter.
+    static Status create(MediapipeGraphExecutorInterface& executor, Observer observer,
+        std::unique_ptr<StreamingS2TSession>& session);
+    AudioInputMode inputMode() const { return mode_; }
+    Status push(const std::string& utteranceId, AudioChunk audio);
+    Status finish(const std::string& utteranceId);
     void cancel();
 
 private:
-    struct Impl;
-    std::unique_ptr<Impl> impl_;
+    StreamingS2TSession(std::unique_ptr<LiveGraphSession> session, AudioInputMode mode);
+    std::unique_ptr<LiveGraphSession> session_;
+    AudioInputMode mode_;
 };
 }  // namespace ovms

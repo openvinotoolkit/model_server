@@ -76,9 +76,6 @@ public:
     const MediapipeGraphConfig& getMediapipeGraphConfig() const { return this->mgconfig; }
     MediapipeServableMetricReporter& getMetricReporter() const override { return *this->reporter; }
     Status create(std::unique_ptr<MediapipeGraphExecutor>& pipeline);
-    /// Returns the speech-to-text servable of the loaded graph; MEDIAPIPE_DEFINITION_NAME_MISSING when the graph has none.
-    Status getSttServable(std::shared_ptr<SttServable>& servable);
-
     Status reload(const ServableNameChecker& checker, const MediapipeGraphConfig& config);
     Status validate(const ServableNameChecker& checker);
     void retire();
