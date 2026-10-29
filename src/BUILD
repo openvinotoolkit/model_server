@@ -2772,6 +2772,7 @@ cc_library(
         ":test_light_test_utils",
         ":test_test_with_temp_dir",
         "//src/graph_export:graph_export",
+        "//src/pull_module:model_downloader",
         "//src:libovms_server_settings",
         "//src:libovms_systeminfo",
         "@com_google_googletest//:gtest",
