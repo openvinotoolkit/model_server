@@ -105,7 +105,15 @@ class DmesgLogMonitor(LogMonitor):
             start_position = self._read_lines[self.current_offset - 1] if self._read_lines else ""
         # skip non-fatal log levels ("notice,info,debug")
         level = ",".join(["emerg", "alert", "crit", "err", "warn", "info"])
-        stdout = self._proc.run_and_check(f"dmesg -T --level={level}", exception_type=DmesgError)
+        try:
+            stdout = self._proc.run_and_check(f"dmesg -T --level={level}", exception_type=DmesgError)
+        except DmesgError as e:
+            if "Operation not permitted" in str(e):
+                message = ("Missing permissions to use dmesg without sudo. "
+                           "Please set 'sudo sysctl -w kernel.dmesg_restrict=0'.")
+                raise DmesgError(message)
+            else:
+                raise e
         self._read_lines = stdout.splitlines()
         self.current_offset = self._calculate_current_offset(start_position)
 

@@ -371,11 +371,12 @@ pipeline {
                   timeout(time: 120, unit: 'MINUTES') {
                   withGithubStageStatus('jenkins/oncommit/functional-tests', 'Functional tests') {
                     println "Running on NODE = ${env.NODE_NAME}"
+                    def cmd_envs = "TT_XDIST_WORKERS=10 TT_DISABLE_DMESG_LOG_MONITOR=False"
                     def cmd = ""
                     if (image_build_needed == "true") {
-                      cmd = "make test_functional TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True TT_XDIST_WORKERS=10"
+                      cmd = "make test_functional TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True ${cmd_envs}"
                     } else {
-                      cmd = "make test_functional TT_OVMS_IMAGE_NAME=registry.toolbox.iotg.sclab.intel.com/openvino/model_server:ubuntu24_main TT_XDIST_WORKERS=10"
+                      cmd = "make test_functional TT_OVMS_IMAGE_NAME=registry.toolbox.iotg.sclab.intel.com/openvino/model_server:ubuntu24_main ${cmd_envs}"
                     }
                     try {
                       // bash + pipefail keeps the test exit code while tee writes the log
