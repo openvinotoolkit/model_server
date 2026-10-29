@@ -43,7 +43,48 @@ if not exist "%ROOT%\.venv-style\Scripts\clang-format.exe" (
     "%ROOT%\.venv-style\Scripts\python.exe" -m pip install --disable-pip-version-check --no-input -r "%ROOT%\ci\style_requirements.txt"
 )
 
-"C:\opt\Python312\python.exe" -c "from pathlib import Path; d = Path(r'%LOCAL_TOOLS_DIR%'); d.mkdir(exist_ok=True); d.joinpath('python3').write_text('''#!/usr/bin/env bash\nif [ -x \"/c/opt/Python312/python.exe\" ]; then\n    exec \"/c/opt/Python312/python.exe\" \"$@\"\nfi\nif command -v python >/dev/null 2>&1; then\n    exec python \"$@\"\nfi\necho \"[ERROR] python3 shim could not find a Python 3 interpreter.\" >&2\nexit 127\n''', encoding='utf-8'); d.joinpath('lscpu').write_text('''#!/usr/bin/env bash\nif command -v /usr/bin/lscpu >/dev/null 2>&1; then\n    exec /usr/bin/lscpu \"$@\"\nfi\ncore_count=${NUMBER_OF_PROCESSORS:-1}\necho \"Core(s) per socket: $core_count\"\necho \"Socket(s): 1\"\n''', encoding='utf-8'); d.joinpath('git').write_text('''#!/usr/bin/env bash\nif [ -x \"/c/Program Files/Git/bin/git.exe\" ]; then\n    exec \"/c/Program Files/Git/bin/git.exe\" \"$@\"\nfi\nif [ -x \"/c/Program Files/Git/cmd/git.exe\" ]; then\n    exec \"/c/Program Files/Git/cmd/git.exe\" \"$@\"\nfi\nif command -v git >/dev/null 2>&1; then\n    exec git \"$@\"\nfi\necho \"[ERROR] Git for Windows was not found in the expected installation paths.\" >&2\nexit 127\n''', encoding='utf-8')"
+if exist "%LOCAL_TOOLS_DIR%\python3" del /f /q "%LOCAL_TOOLS_DIR%\python3"
+if exist "%LOCAL_TOOLS_DIR%\lscpu" del /f /q "%LOCAL_TOOLS_DIR%\lscpu"
+if exist "%LOCAL_TOOLS_DIR%\git" del /f /q "%LOCAL_TOOLS_DIR%\git"
+> "%LOCAL_TOOLS_DIR%\python3.bat" echo @echo off
+>> "%LOCAL_TOOLS_DIR%\python3.bat" echo if exist "C:\opt\Python312\python.exe" (
+>> "%LOCAL_TOOLS_DIR%\python3.bat" echo   "C:\opt\Python312\python.exe" %%*
+>> "%LOCAL_TOOLS_DIR%\python3.bat" echo   exit /b %%ERRORLEVEL%%
+>> "%LOCAL_TOOLS_DIR%\python3.bat" echo )
+>> "%LOCAL_TOOLS_DIR%\python3.bat" echo if where python ^>NUL 2^>NUL (
+>> "%LOCAL_TOOLS_DIR%\python3.bat" echo   python %%*
+>> "%LOCAL_TOOLS_DIR%\python3.bat" echo   exit /b %%ERRORLEVEL%%
+>> "%LOCAL_TOOLS_DIR%\python3.bat" echo )
+>> "%LOCAL_TOOLS_DIR%\python3.bat" echo echo [ERROR] python3 shim could not find a Python 3 interpreter. 1^>^&2
+>> "%LOCAL_TOOLS_DIR%\python3.bat" echo exit /b 127
+> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo @echo off
+>> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo if exist "C:\opt\msys64\usr\bin\lscpu.exe" (
+>> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo   "C:\opt\msys64\usr\bin\lscpu.exe" %%*
+>> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo   exit /b %%ERRORLEVEL%%
+>> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo )
+>> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo if where lscpu ^>NUL 2^>NUL (
+>> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo   lscpu %%*
+>> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo   exit /b %%ERRORLEVEL%%
+>> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo )
+>> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo set "core_count=%NUMBER_OF_PROCESSORS%"
+>> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo if not defined core_count set "core_count=1"
+>> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo echo Core(s) per socket: %%core_count%%
+>> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo echo Socket(s): 1
+> "%LOCAL_TOOLS_DIR%\git.bat" echo @echo off
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo if exist "C:\Program Files\Git\bin\git.exe" (
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo   "C:\Program Files\Git\bin\git.exe" %%*
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo   exit /b %%ERRORLEVEL%%
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo )
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo if exist "C:\Program Files\Git\cmd\git.exe" (
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo   "C:\Program Files\Git\cmd\git.exe" %%*
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo   exit /b %%ERRORLEVEL%%
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo )
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo if where git ^>NUL 2^>NUL (
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo   git %%*
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo   exit /b %%ERRORLEVEL%%
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo )
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo echo [ERROR] Git for Windows was not found in the expected installation paths. 1^>^&2
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo exit /b 127
 
 :: Setting up default OVMS compilation environment variables
 set "CURL_PATH_WINDOWS=C:\opt\curl-!curl_version!-win64-mingw\bin"
