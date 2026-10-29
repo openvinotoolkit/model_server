@@ -382,7 +382,7 @@ pipeline {
                       // bash + pipefail keeps the test exit code while tee writes the log
                       sh "#!/bin/bash\nset -o pipefail\n${cmd} 2>&1 | tee functional_tests.log"
                     } finally {
-                      archiveArtifacts allowEmptyArchive: true, artifacts: "functional_tests.log,report.xml"
+                      archiveArtifacts allowEmptyArchive: true, artifacts: "functional_tests.log,report.xml,report.html"
                     }
                   }
                   }
