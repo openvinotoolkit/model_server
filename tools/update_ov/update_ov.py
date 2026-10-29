@@ -104,10 +104,10 @@ def update_openvino():
     # Update Makefile content with package links and OV commit
     new_makefile_content = []
     for line in makefile_content:
-        if "OV_SOURCE_BRANCH ?=" in line:
-            print("Updating OV_SOURCE_BRANCH")
-            indentation = line[:line.index("OV_SOURCE_BRANCH ?=")]
-            new_line = f'{indentation}OV_SOURCE_BRANCH ?= {commit} # master {date_formatted}\n'
+        if "OV_BRANCH ?=" in line:
+            print("Updating OV_BRANCH")
+            indentation = line[:line.index("OV_BRANCH ?=")]
+            new_line = f'{indentation}OV_BRANCH ?= {commit} # master {date_formatted}\n'
             print(new_line.lstrip())
             new_makefile_content.append(new_line)
         elif "DLDT_PACKAGE_URL ?= " in line:

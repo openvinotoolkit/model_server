@@ -50,6 +50,9 @@ const std::vector<std::pair<std::string, std::string>> CLIParserDetermineTaskTes
     {"flux", "image_generation"},
     {"speecht5", "text2speech"},
     {"parlertts", "text2speech"},
+    {"qwen3_tts_customvoice", "text2speech"},
+    {"qwen3_tts_voicedesign", "text2speech"},
+    {"qwen3_tts_base", ""},
     {"whisper", "speech2text"},
     {"seamlessm4t", "speech2text"},
     {"qwen3_6", "text_generation"},
@@ -162,6 +165,18 @@ TEST(TaskDetectorTest, Text2SpeechDetectsNullArchWithNMels) {
 TEST(TaskDetectorTest, Text2SpeechDetectsKModelArch) {
     auto ctx = makeCtx("kokoro", R"({"architectures":["KModel"],"n_mels":80})");
     EXPECT_TRUE(ovms::Text2SpeechDetector{}.scan(ctx));
+}
+TEST(TaskDetectorTest, Text2SpeechDetectsQwen3TTSCustomVoice) {
+    auto ctx = makeCtx("qwen3-tts-customvoice", R"({"architectures":["Qwen3TTSForConditionalGeneration"],"tts_model_type":"custom_voice"})");
+    EXPECT_TRUE(ovms::Text2SpeechDetector{}.scan(ctx));
+}
+TEST(TaskDetectorTest, Text2SpeechDetectsQwen3TTSVoiceDesign) {
+    auto ctx = makeCtx("qwen3-tts-voicedesign", R"({"architectures":["Qwen3TTSForConditionalGeneration"],"tts_model_type":"voice_design"})");
+    EXPECT_TRUE(ovms::Text2SpeechDetector{}.scan(ctx));
+}
+TEST(TaskDetectorTest, Text2SpeechDoesNotMatchQwen3TTSBase) {
+    auto ctx = makeCtx("qwen3-tts-base", R"({"architectures":["Qwen3TTSForConditionalGeneration"],"tts_model_type":"base"})");
+    EXPECT_FALSE(ovms::Text2SpeechDetector{}.scan(ctx));
 }
 TEST(TaskDetectorTest, Text2SpeechDoesNotMatchNullArchWithoutNMels) {
     auto ctx = makeCtx("unknown", R"({"architectures":null})");
