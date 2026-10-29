@@ -269,7 +269,7 @@ TEST_F(Text2SpeechConfigTest, NodeNameMissing) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            models_path: "/ovms/src/test/llm_testing/OpenVINO/Kokoro-82M-int8-ov"
             target_device: "CPU"
         }
         }
@@ -292,7 +292,7 @@ TEST_F(Text2SpeechConfigTest, SidePacketMissing) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            models_path: "/ovms/src/test/llm_testing/OpenVINO/Kokoro-82M-int8-ov"
             target_device: "CPU"
         }
         }
@@ -339,7 +339,7 @@ TEST_F(Text2SpeechConfigTest, InvalidPluginConfig) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            models_path: "/ovms/src/test/llm_testing/OpenVINO/Kokoro-82M-int8-ov"
             plugin_config: 'INVALID',
             target_device: "CPU"
         }
@@ -364,7 +364,7 @@ TEST_F(Text2SpeechConfigTest, MissingVoicesInGraphUsesModelVoicesDir) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            models_path: "/ovms/src/test/llm_testing/OpenVINO/Kokoro-82M-int8-ov"
             plugin_config: '{"NUM_STREAMS": "1" }',
             target_device: "CPU"
         }
@@ -389,7 +389,7 @@ TEST_F(Text2SpeechConfigTest, NonExistingVoicePath) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            models_path: "/ovms/src/test/llm_testing/OpenVINO/Kokoro-82M-int8-ov"
             plugin_config: '{"NUM_STREAMS": "1" }',
             target_device: "CPU"
             voices: [
@@ -420,7 +420,7 @@ TEST_F(Text2SpeechConfigTest, VoiceMissingPath) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            models_path: "/ovms/src/test/llm_testing/OpenVINO/Kokoro-82M-int8-ov"
             plugin_config: '{"NUM_STREAMS": "1" }',
             target_device: "CPU"
             voices: [
@@ -450,7 +450,7 @@ TEST_F(Text2SpeechConfigTest, CustomSpeedBoundsConfigured) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            models_path: "/ovms/src/test/llm_testing/OpenVINO/Kokoro-82M-int8-ov"
             plugin_config: '{"NUM_STREAMS": "1" }',
             target_device: "CPU"
             speed_min: 0.5
@@ -477,7 +477,7 @@ TEST_F(Text2SpeechConfigTest, InvertedSpeedBoundsRejected) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            models_path: "/ovms/src/test/llm_testing/OpenVINO/Kokoro-82M-int8-ov"
             plugin_config: '{"NUM_STREAMS": "1" }',
             target_device: "CPU"
             speed_min: 2.0
@@ -505,7 +505,7 @@ TEST_F(Text2SpeechConfigTest, EqualSpeedBoundsAccepted) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            models_path: "/ovms/src/test/llm_testing/OpenVINO/Kokoro-82M-int8-ov"
             plugin_config: '{"NUM_STREAMS": "1" }',
             target_device: "CPU"
             speed_min: 1.0
@@ -532,7 +532,7 @@ TEST_F(Text2SpeechConfigTest, VoiceInvalidFile) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            models_path: "/ovms/src/test/llm_testing/OpenVINO/Kokoro-82M-int8-ov"
             plugin_config: '{"NUM_STREAMS": "1" }',
             target_device: "CPU"
             voices: [

@@ -33,7 +33,7 @@ public:
     calculator: "HttpLLMCalculator"
     node_options: {
         [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
+            models_path: "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov"
         }
     }
     }
@@ -44,7 +44,7 @@ public:
         adjustConfigForTargetPlatform(adjustedPbtxt);
         ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(adjustedPbtxt, &config));
         ASSERT_EQ(ovms::initializeGenAiServable(servable, config.node(0), ""), ovms::StatusCode::OK);
-        tokenizer = std::make_shared<ov::genai::Tokenizer>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m"));
+        tokenizer = std::make_shared<ov::genai::Tokenizer>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov"));
         auto callback = [](std::string text) {
             lastTextChunk = text;
             return ov::genai::StreamingStatus::RUNNING;

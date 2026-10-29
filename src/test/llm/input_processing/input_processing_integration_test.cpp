@@ -21,12 +21,13 @@
 //   → InputProcessor::process()              (ImageDecoding / TextNorm / ChatTemplate / Tokenize)
 //
 // The tokenizer is loaded once per test suite from a known test fixture
-// (SmolLM2-360M-Instruct). No inference is performed.
+// (dummy-cyclic-gpt2-ov). No inference is performed.
 
 #include <chrono>
 #include <memory>
 #include <optional>
 #include <string>
+#include <fstream>
 
 #include <gtest/gtest.h>
 #include <openvino/genai/generation_config.hpp>
@@ -53,12 +54,10 @@ namespace {
 
 using test_utils::buildWavBuffer;
 
-// SmolLM2-360M-Instruct injects this default system turn when the first message
+// Dummy model injects this default system turn when the first message
 // is not 'system' (verified from tokenizer_config.json chat_template).
-constexpr const char* SMOL_DEFAULT_SYSTEM =
-    "<|im_start|>system\n"
-    "You are a helpful AI assistant named SmolLM, trained by Hugging Face"
-    "<|im_end|>\n";
+constexpr const char* LLM_DEFAULT_SYSTEM = "<|im_start|>system\\n"
+"You are Dummy, a helpful AI assistant that explains what OpenVINO is to users.<|im_end|>\n";
 
 // Minimal 1×1 PNG (same fixture used throughout the handler test suite).
 constexpr const char* TINY_PNG =
@@ -74,8 +73,14 @@ static std::unique_ptr<ov::genai::Tokenizer> sharedTokenizer;
 class InputProcessingIntegrationTest : public testing::TestWithParam<Endpoint> {
 protected:
     static void SetUpTestSuite() {
-        sharedTokenizer = std::make_unique<ov::genai::Tokenizer>(getGenericFullPathForSrcTest(
-            "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov"));
+        const std::string modelPath = getGenericFullPathForSrcTest(
+            "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov");
+        sharedTokenizer = std::make_unique<ov::genai::Tokenizer>(modelPath);
+        std::ifstream templateFile(modelPath + "/chat_template.jinja");
+        ASSERT_TRUE(templateFile.is_open()) << "Failed to open chat_template.jinja in " << modelPath;
+        const std::string chatTemplate{
+            std::istreambuf_iterator<char>(templateFile), std::istreambuf_iterator<char>()};
+        sharedTokenizer->set_chat_template(chatTemplate);
     }
 
     static void TearDownTestSuite() {
@@ -254,9 +259,9 @@ TEST_P(InputProcessingIntegrationTest, TextOnly_PromptAndGenConfigPopulated) {
     ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
 
     const std::string expected =
-        std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\nWhat is OpenVINO?<|im_end|>\n"
-        "<|im_start|>assistant\n";
+        std::string(LLM_DEFAULT_SYSTEM) +
+        "User: What is OpenVINO?"
+        "Assistant: ";
     EXPECT_EQ(result.req.promptText, expected);
     EXPECT_GT(result.req.inputIds.get_size(), 0u);
     EXPECT_TRUE(result.req.inputImages.empty());
@@ -273,9 +278,9 @@ TEST_P(InputProcessingIntegrationTest, SingleBase64Image_DecodedAndTagInPrompt) 
 
     // Preserve the multipart order: [text("Describe this."), image].
     const std::string expected =
-        std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\nDescribe this.\n<ov_genai_image_0><|im_end|>\n"
-        "<|im_start|>assistant\n";
+        std::string(LLM_DEFAULT_SYSTEM) +
+        "User: Describe this.\n<ov_genai_image_0>"
+        "Assistant: ";
     ASSERT_EQ(result.req.inputImages.size(), 1u);
     EXPECT_EQ(result.req.promptText, expected);
     EXPECT_GT(result.req.inputIds.get_size(), 0u);
@@ -289,10 +294,10 @@ TEST_P(InputProcessingIntegrationTest, ThreeImages_AllDecodedWithCorrectTagIndic
 
     // Preserve the multipart order: [text("Describe all."), image, image, image].
     const std::string expected =
-        std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\nDescribe all.\n"
-        "<ov_genai_image_0>\n<ov_genai_image_1>\n<ov_genai_image_2><|im_end|>\n"
-        "<|im_start|>assistant\n";
+        std::string(LLM_DEFAULT_SYSTEM) +
+        "User: Describe all.\n"
+        "<ov_genai_image_0>\n<ov_genai_image_1>\n<ov_genai_image_2>"
+        "Assistant: ";
     ASSERT_EQ(result.req.inputImages.size(), 3u);
     EXPECT_EQ(result.req.promptText, expected);
 }
@@ -305,9 +310,9 @@ TEST_P(InputProcessingIntegrationTest, InterleavedTextAndImage_BothTextPartsInPr
 
     // Preserve the multipart order: [text("Before."), image, text("After.")].
     const std::string expected =
-        std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\nBefore.\n<ov_genai_image_0>\nAfter.<|im_end|>\n"
-        "<|im_start|>assistant\n";
+        std::string(LLM_DEFAULT_SYSTEM) +
+        "User: Before.\n<ov_genai_image_0>\nAfter."
+        "Assistant: ";
     ASSERT_EQ(result.req.inputImages.size(), 1u);
     EXPECT_EQ(result.req.promptText, expected);
 }
@@ -318,15 +323,16 @@ TEST_P(InputProcessingIntegrationTest, MultiTurnConversation_AllTurnsInPrompt) {
     ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
     ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
 
-    // First message is 'system' → no default system injection by the template.
+    // First message is 'system'.
     // ImageDecodingProcessor also flattens the Responses endpoint's assistant
     // text array ([{type:text,text:"..."}]) to a plain string before ChatTemplateProcessor.
     const std::string expected =
-        "<|im_start|>system\nYou are helpful.<|im_end|>\n"
-        "<|im_start|>user\nFirst question.<|im_end|>\n"
-        "<|im_start|>assistant\nThat's a great question!<|im_end|>\n"
-        "<|im_start|>user\n<ov_genai_image_0>\nDescribe it.<|im_end|>\n"
-        "<|im_start|>assistant\n";
+        std::string(LLM_DEFAULT_SYSTEM) +
+        "System: You are helpful.\n"
+        "User: First question."
+        "Assistant: That's a great question!\n"
+        "User: <ov_genai_image_0>\nDescribe it."
+        "Assistant: ";
     ASSERT_EQ(result.req.inputImages.size(), 1u);
     EXPECT_EQ(result.req.promptText, expected);
 }
@@ -338,9 +344,9 @@ TEST_P(InputProcessingIntegrationTest, GenerationConfigFields_SurviveFullPipelin
     ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
 
     const std::string expected =
-        std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\nHello.<|im_end|>\n"
-        "<|im_start|>assistant\n";
+        std::string(LLM_DEFAULT_SYSTEM) +
+        "User: Hello."
+        "Assistant: ";
     EXPECT_EQ(result.req.promptText, expected);
     EXPECT_EQ(result.handler->getMaxTokens(), 42);
     EXPECT_NEAR(result.req.generationConfig.temperature, 0.7f, 1e-5f);
@@ -353,9 +359,9 @@ TEST_P(InputProcessingIntegrationTest, TextArrayContent_FlattenedByNormalization
     // VLM path used without images (VLM is a superset of LM).
     // TextContentNormalizationProcessor joins the two parts with \n before the template runs.
     const std::string expected =
-        std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\nFirst part.\nSecond part.<|im_end|>\n"
-        "<|im_start|>assistant\n";
+        std::string(LLM_DEFAULT_SYSTEM) +
+        "User: First part.\nSecond part."
+        "Assistant: ";
 
     for (bool isVLM : {false, true}) {
         auto result = runPipeline(textArrayJson(), isVLM);
@@ -567,9 +573,9 @@ TEST_P(InputProcessingIntegrationTest, VideoFrames_DecodedAndTagInPrompt) {
     EXPECT_TRUE(result.req.inputImages.empty());
     // Preserve the multipart order: [text("Describe this video."), video tag].
     const std::string expected =
-        std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\nDescribe this video.\n<ov_genai_video_0><|im_end|>\n"
-        "<|im_start|>assistant\n";
+        std::string(LLM_DEFAULT_SYSTEM) +
+        "User: Describe this video.\n<ov_genai_video_0>"
+        "Assistant: ";
     EXPECT_EQ(result.req.promptText, expected);
     EXPECT_GT(result.req.inputIds.get_size(), 0u);
 }
@@ -690,9 +696,9 @@ TEST(InputProcessingEquivalenceTest, ChatAndResponsesProduceSamePromptAndImages)
     auto [responsesPrompt, responsesImages] = run(Endpoint::RESPONSES);
 
     const std::string expectedPrompt =
-        std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\nDescribe this.\n<ov_genai_image_0><|im_end|>\n"
-        "<|im_start|>assistant\n";
+        std::string(LLM_DEFAULT_SYSTEM) +
+        "User: Describe this.\n<ov_genai_image_0>"
+        "Assistant: ";
     EXPECT_EQ(chatPrompt, expectedPrompt);
     EXPECT_EQ(responsesPrompt, expectedPrompt);
     EXPECT_EQ(chatImages, 1u);

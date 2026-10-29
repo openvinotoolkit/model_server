@@ -80,7 +80,7 @@ protected:
         jinjaConfigFilePath = directoryPath + "/chat_template.jinja";
 
         // We need real model tokenizer and detokenizer as we rely on them to load chat template properly
-        std::string realModelPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m");
+        std::string realModelPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov");
 
         std::string srcTokenizerPath = ovms::FileSystem::joinPath({realModelPath, "openvino_tokenizer.xml"});
         std::string dstTokenizerPath = ovms::FileSystem::joinPath({directoryPath, "openvino_tokenizer.xml"});
@@ -113,7 +113,7 @@ public:
         return createConfigFileWithContent(fileContents, jinjaConfigFilePath);
     }
     void CopyDefaultChatTemplate() {
-        std::string srcFilePath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m/chat_template.jinja");
+        std::string srcFilePath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov/chat_template.jinja");
         std::string dstFilePath = ovms::FileSystem::joinPath({directoryPath, "chat_template.jinja"});
         std::filesystem::copy_file(srcFilePath, dstFilePath, std::filesystem::copy_options::overwrite_existing);
     }
@@ -574,7 +574,7 @@ public:
 
 const std::string GRAPH_PATTERN = "<GRAPH_PATTERN>";
 const std::string WORKSPACE_PATTERN = "<MODELS_PATTERN>";
-const std::string MODEL_PATH = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m");
+const std::string MODEL_PATH = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov");
 
 class LLMChatTemplateHttpTest : public TestWithTempDir {
 protected:

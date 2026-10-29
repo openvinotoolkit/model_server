@@ -39,7 +39,7 @@ using namespace ovms;
 class ChatTemplateEndToEndMinjaTest : public ::testing::Test {
 protected:
     // Any tokenizer will do the job, the only thing we need to do is to change chat template content before use
-    const std::string& tokenizerPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m", false);
+    const std::string& tokenizerPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov", false);
     const std::string& chatTemplatesPath = getGenericFullPathForSrcTest("/ovms/src/test/llm/chat_templates", false);
 
     std::string savedLogLevel;

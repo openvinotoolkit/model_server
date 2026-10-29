@@ -53,7 +53,7 @@ using namespace ovms;
 class ChatTemplateEndToEndJinjaTest : public TestWithTempDir {
 protected:
     const std::string& chatTemplatesPath = getGenericFullPathForSrcTest("/ovms/src/test/llm/chat_templates", false);
-    const std::string& tokenizerModelPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m", false);
+    const std::string& tokenizerModelPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov", false);
 
     std::shared_ptr<GenAiServable> servable;
     std::string savedLogLevel;
