@@ -16,13 +16,20 @@
 
 #include "s2t_servable.hpp"
 
+#include <algorithm>
+#include <atomic>
+#include <condition_variable>
+#include <cstdint>
+#include <deque>
 #include <stdexcept>
+#include <thread>
 
 #pragma warning(push)
 #pragma warning(disable : 6386)
 #include "absl/status/status.h"
 #pragma warning(pop)
 #include "openvino/genai/automatic_speech_recognition/pipeline.hpp"
+#include "openvino/genai/continuous_batching_pipeline.hpp"
 
 #include "src/audio/speech_to_text/s2t_calculator.pb.h"
 #include "src/http_payload.hpp"
@@ -36,13 +43,18 @@ namespace ovms {
 namespace {
 constexpr size_t ISO_LANG_CODE_MAX = 3;
 }
-SttServable::SttServable(const ::mediapipe::S2tCalculatorOptions& nodeOptions, const std::string& graphPath) {
+SttServable::SttServable(const ::mediapipe::S2tCalculatorOptions& nodeOptions, const std::string& graphPath) :
+    enableWordTimestamps(nodeOptions.enable_word_timestamps()) {
     auto fsModelsPath = std::filesystem::path(nodeOptions.models_path());
     if (fsModelsPath.is_relative()) {
         parsedModelsPath = (std::filesystem::path(graphPath) / fsModelsPath);
     } else {
         parsedModelsPath = fsModelsPath;
     }
+}
+
+AsrPipelineServable::AsrPipelineServable(const ::mediapipe::S2tCalculatorOptions& nodeOptions, const std::string& graphPath) :
+    SttServable(nodeOptions, graphPath) {
     std::string device = nodeOptions.target_device();
     if (device.empty()) {
         device = recommendTargetDevice();
@@ -55,7 +67,6 @@ SttServable::SttServable(const ::mediapipe::S2tCalculatorOptions& nodeOptions, c
         throw std::runtime_error("Error during plugin_config option parsing");
     }
     applyGlobalCacheDirFallback(config);
-    enableWordTimestamps = nodeOptions.enable_word_timestamps();
     if (enableWordTimestamps && device == "NPU") {
         config["STATIC_PIPELINE"] = true;
     }
@@ -65,7 +76,56 @@ SttServable::SttServable(const ::mediapipe::S2tCalculatorOptions& nodeOptions, c
     streamingExecutor = std::make_unique<SttExecutorWrapper>(sttPipeline, sttPipelineMutex);
 }
 
-void SttServable::addRequest(std::shared_ptr<SttServableExecutionContext> executionContext) {
+bool AsrPipelineServable::supportsStreaming() const {
+    return true;
+}
+
+bool AsrPipelineServable::supportsTranslations() const {
+    return true;
+}
+
+absl::Status AsrPipelineServable::transcribe(const std::vector<float>& rawSpeech,
+    const HttpPayload& payload,
+    const std::function<bool()>& isClientDisconnected,
+    SttTranscriptionResult& result) {
+    ov::genai::ASRGenerationConfig config = sttPipeline->get_generation_config();
+    auto status = updateTranscriptionConfig(config, *this, payload);
+    if (!status.ok()) {
+        return status;
+    }
+    auto disconnectCallback = [&isClientDisconnected](std::string) -> ov::genai::StreamingStatus {
+        return isClientDisconnected() ? ov::genai::StreamingStatus::CANCEL : ov::genai::StreamingStatus::RUNNING;
+    };
+    std::unique_lock lock(sttPipelineMutex);
+    if (isClientDisconnected()) {
+        return absl::CancelledError("Client disconnected");
+    }
+    const ov::genai::ASRDecodedResults generated = sttPipeline->generate(rawSpeech, config, disconnectCallback);
+    lock.unlock();
+    if (isClientDisconnected()) {
+        return absl::CancelledError("Client disconnected");
+    }
+    result.text = generated;
+    result.wordTimestampsRequested = config.word_timestamps;
+    result.segmentTimestampsRequested = config.return_timestamps;
+    if (generated.words.has_value()) {
+        for (const auto& wordGroup : generated.words.value()) {
+            for (const auto& word : wordGroup) {
+                result.words.push_back({word.text, word.start_ts, word.end_ts});
+            }
+        }
+    }
+    if (generated.chunks.has_value()) {
+        for (const auto& chunkGroup : generated.chunks.value()) {
+            for (const auto& chunk : chunkGroup) {
+                result.segments.push_back({chunk.text, chunk.start_ts, chunk.end_ts});
+            }
+        }
+    }
+    return absl::OkStatus();
+}
+
+void AsrPipelineServable::addRequest(std::shared_ptr<SttServableExecutionContext> executionContext) {
     if (!streamingExecutor) {
         throw std::runtime_error("Cannot schedule STT streaming job - executor not initialized");
     }
@@ -87,8 +147,140 @@ absl::Status SttServable::parseTemperature(const HttpPayload& payload, ov::genai
     return absl::OkStatus();
 }
 
+struct Qwen3AsrContinuousBatchingServable::Impl {
+    struct Request {
+        std::vector<float> rawSpeech;
+        std::promise<std::string> result;
+        std::function<bool()> isClientDisconnected;
+    };
+
+    std::shared_ptr<ov::genai::ContinuousBatchingPipeline> pipeline;
+    std::mutex requestsMutex;
+    std::condition_variable requestsCv;
+    std::deque<std::shared_ptr<Request>> requests;
+    std::atomic<bool> stop{false};
+    std::thread executor;
+    std::atomic<uint64_t> nextRequestId{0};
+
+    Impl(const std::filesystem::path& modelsPath, const std::string& device, const ov::AnyMap& config) :
+        pipeline(std::make_shared<ov::genai::ContinuousBatchingPipeline>(modelsPath, ov::genai::SchedulerConfig{}, device, config)),
+        executor([this] { run(); }) {}
+
+    ~Impl() {
+        stop = true;
+        requestsCv.notify_one();
+        if (executor.joinable()) {
+            executor.join();
+        }
+    }
+
+    void addPendingRequests(std::vector<std::pair<std::shared_ptr<Request>, ov::genai::GenerationHandle>>& activeRequests) {
+        std::deque<std::shared_ptr<Request>> pendingRequests;
+        {
+            std::lock_guard<std::mutex> lock(requestsMutex);
+            pendingRequests.swap(requests);
+        }
+        for (auto& request : pendingRequests) {
+            if (request->isClientDisconnected()) {
+                request->result.set_exception(std::make_exception_ptr(std::runtime_error("Client disconnected")));
+                continue;
+            }
+            ov::Tensor audio(ov::element::f32, {request->rawSpeech.size()});
+            std::copy(request->rawSpeech.begin(), request->rawSpeech.end(), audio.data<float>());
+            const std::vector<ov::Tensor> audios{audio};
+            auto handle = pipeline->add_request(nextRequestId++, "", ov::genai::audios(audios), ov::genai::generation_config(pipeline->get_config()));
+            activeRequests.emplace_back(std::move(request), std::move(handle));
+        }
+    }
+
+    void run() {
+        std::vector<std::pair<std::shared_ptr<Request>, ov::genai::GenerationHandle>> activeRequests;
+        while (!stop) {
+            if (activeRequests.empty()) {
+                std::unique_lock<std::mutex> lock(requestsMutex);
+                requestsCv.wait(lock, [this] { return stop || !requests.empty(); });
+                if (stop) {
+                    return;
+                }
+            }
+            addPendingRequests(activeRequests);
+            if (activeRequests.empty()) {
+                continue;
+            }
+            pipeline->step();
+            addPendingRequests(activeRequests);
+            for (auto it = activeRequests.begin(); it != activeRequests.end();) {
+                const auto status = it->second->get_status();
+                if (status == ov::genai::GenerationStatus::RUNNING) {
+                    ++it;
+                    continue;
+                }
+                if (status == ov::genai::GenerationStatus::FINISHED) {
+                    const auto outputs = it->second->read_all();
+                    it->first->result.set_value(pipeline->get_tokenizer().decode(outputs.front().generated_ids));
+                } else {
+                    it->first->result.set_exception(std::make_exception_ptr(std::runtime_error("Qwen3 ASR generation failed")));
+                }
+                it = activeRequests.erase(it);
+            }
+        }
+    }
+};
+
+Qwen3AsrContinuousBatchingServable::Qwen3AsrContinuousBatchingServable(const ::mediapipe::S2tCalculatorOptions& nodeOptions, const std::string& graphPath) :
+    SttServable(nodeOptions, graphPath) {
+    std::string device = nodeOptions.target_device();
+    if (device.empty()) {
+        device = recommendTargetDevice();
+        SPDLOG_INFO("No device specified for Qwen3 ASR model, using recommended device: {}", device);
+    }
+    ov::AnyMap config;
+    auto status = JsonParser::parsePluginConfig(nodeOptions.plugin_config(), config);
+    if (!status.ok()) {
+        throw std::runtime_error("Error during plugin_config option parsing");
+    }
+    applyGlobalCacheDirFallback(config);
+    impl = std::make_unique<Impl>(parsedModelsPath, device, config);
+}
+
+Qwen3AsrContinuousBatchingServable::~Qwen3AsrContinuousBatchingServable() = default;
+
+bool Qwen3AsrContinuousBatchingServable::supportsStreaming() const {
+    return false;
+}
+
+bool Qwen3AsrContinuousBatchingServable::supportsTranslations() const {
+    return false;
+}
+
+absl::Status Qwen3AsrContinuousBatchingServable::transcribe(const std::vector<float>& rawSpeech,
+    const HttpPayload& payload,
+    const std::function<bool()>& isClientDisconnected,
+    SttTranscriptionResult& result) {
+    if (!payload.multipartParser->getFieldByName("language").empty()) {
+        return absl::InvalidArgumentError("language is not supported for Qwen3 ASR continuous batching");
+    }
+    if (!payload.multipartParser->getArrayFieldByName("timestamp_granularities[]").empty()) {
+        return absl::InvalidArgumentError("timestamps are not supported for Qwen3 ASR continuous batching");
+    }
+    if (!payload.multipartParser->getFieldByName("temperature").empty()) {
+        return absl::InvalidArgumentError("temperature is not supported for Qwen3 ASR continuous batching");
+    }
+    auto request = std::make_shared<Impl::Request>();
+    request->rawSpeech = rawSpeech;
+    request->isClientDisconnected = isClientDisconnected;
+    auto future = request->result.get_future();
+    {
+        std::lock_guard<std::mutex> lock(impl->requestsMutex);
+        impl->requests.push_back(std::move(request));
+    }
+    impl->requestsCv.notify_one();
+    result.text = future.get();
+    return absl::OkStatus();
+}
+
 absl::Status SttServable::updateTranscriptionConfig(ov::genai::ASRGenerationConfig& config,
-    const std::shared_ptr<SttServable>& servable, const HttpPayload& payload) {
+    const SttServable& servable, const HttpPayload& payload) {
     std::string language = payload.multipartParser->getFieldByName("language");
     if (language.size() > 0) {
         if (language.size() > ISO_LANG_CODE_MAX) {
@@ -104,7 +296,7 @@ absl::Status SttServable::updateTranscriptionConfig(ov::genai::ASRGenerationConf
         if (timestampsType == "segment") {
             config.return_timestamps = true;
         } else if (timestampsType == "word") {
-            if (!servable->enableWordTimestamps)
+            if (!servable.enableWordTimestamps)
                 return absl::InvalidArgumentError("Word timestamps not supported for this model");
             config.word_timestamps = true;
         } else {
@@ -115,6 +307,11 @@ absl::Status SttServable::updateTranscriptionConfig(ov::genai::ASRGenerationConf
     if (status != absl::OkStatus())
         return status;
     return absl::OkStatus();
+}
+
+absl::Status SttServable::updateTranscriptionConfig(ov::genai::ASRGenerationConfig& config,
+    const std::shared_ptr<SttServable>& servable, const HttpPayload& payload) {
+    return updateTranscriptionConfig(config, *servable, payload);
 }
 
 }  // namespace ovms

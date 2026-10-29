@@ -353,6 +353,7 @@ Clone the repository:
 ```text
 git clone https://github.com/huggingface/open_asr_leaderboard.git
 cd open_asr_leaderboard
+git checkout e224edd2b4ad48c94ec68c2e1183401a2e5c3006
 ```
 
 Download and apply OVMS API compatibility patch:

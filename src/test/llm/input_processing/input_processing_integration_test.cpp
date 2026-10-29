@@ -466,7 +466,7 @@ static std::string toBase64(const std::string& raw) {
     return absl::Base64Escape(raw);
 }
 
-TEST_P(InputProcessingIntegrationTest, TextImageAudio_AllModalitiesDecoded) {
+TEST_P(InputProcessingIntegrationTest, VlmAudioInput_AllModalitiesDecoded) {
     // Build a request with text + image + audio in a single message.
     const std::string audioB64 = toBase64(buildWavBuffer(160));
 
@@ -487,7 +487,7 @@ TEST_P(InputProcessingIntegrationTest, TextImageAudio_AllModalitiesDecoded) {
                audioB64 + R"(","format":"wav"}}]}]})";
     }
 
-    auto result = runPipeline(json, /*isVLM=*/true, /*isOmni=*/true);
+    auto result = runPipeline(json, /*isVLM=*/true, /*isOmni=*/false);
 
     ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
     ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();

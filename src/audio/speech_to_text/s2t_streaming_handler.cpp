@@ -61,7 +61,7 @@ std::string S2tStreamingHandler::serializeDoneEvent(const std::string& text) {
     return buffer.GetString();
 }
 
-absl::Status S2tStreamingHandler::start(std::shared_ptr<ovms::SttServable> pipe,
+absl::Status S2tStreamingHandler::start(std::shared_ptr<ovms::AsrPipelineServable> pipe,
     const ovms::HttpPayload& payload,
     std::vector<float> rawSpeech,
     const ov::genai::ASRGenerationConfig& config) {
