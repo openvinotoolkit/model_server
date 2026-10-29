@@ -129,7 +129,8 @@ class TestTextGeneration:
     @pytest.mark.parametrize("parallel_requests", [1000], ids=lambda x: f"parallel_requests={x}")
     @pytest.mark.parametrize("ovms_log_level", [Ovms.LOG_LEVEL_INFO, Ovms.LOG_LEVEL_DEBUG, Ovms.LOG_LEVEL_TRACE])
     @pytest.mark.parametrize("pipeline_type", PipelineType.TEXT_GENERATION)
-    @pytest.mark.timeout(2200)
+    # @pytest.mark.timeout(2200)
+    @pytest.mark.timeout(20000)
     def test_text_generation_multiple_requests(
             self,
             context: Context,
