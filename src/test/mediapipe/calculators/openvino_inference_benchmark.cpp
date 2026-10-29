@@ -216,11 +216,12 @@ TEST(PureOpenVinoBenchmark, OpenClRemote) {
     cl::Buffer uvBuffer(clContext, CL_MEM_READ_WRITE, kWidth * kHeight / 2);
     auto yTensor = context.create_tensor(ov::element::u8, kYShape, yBuffer);
     auto uvTensor = context.create_tensor(ov::element::u8, kUvShape, uvBuffer);
-    measure("pure_ov_GPU_opencl", compiled, [&](ov::InferRequest& request, int index) {
-        ASSERT_EQ(queue.enqueueWriteBuffer(yBuffer, CL_TRUE, 0, kWidth * kHeight, frames[index].data()), CL_SUCCESS);
-        ASSERT_EQ(queue.enqueueWriteBuffer(uvBuffer, CL_TRUE, 0, kWidth * kHeight / 2,
-                      frames[index].data() + kWidth * kHeight),
+    ASSERT_FALSE(frames.empty());
+    ASSERT_EQ(queue.enqueueWriteBuffer(yBuffer, CL_TRUE, 0, kWidth * kHeight, frames.front().data()), CL_SUCCESS);
+    ASSERT_EQ(queue.enqueueWriteBuffer(uvBuffer, CL_TRUE, 0, kWidth * kHeight / 2,
+                      frames.front().data() + kWidth * kHeight),
             CL_SUCCESS);
+    measure("pure_ov_GPU_opencl", compiled, [&](ov::InferRequest& request, int) {
         request.set_tensor(bench::kYInputName, yTensor);
         request.set_tensor(bench::kUvInputName, uvTensor);
     });
