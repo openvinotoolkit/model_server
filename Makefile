@@ -340,14 +340,13 @@ $(ACTIVATE):
 	@$(PYTHON_ENV_CLEAN) "$(VIRTUALENV_PYTHON)" -m pip install --disable-pip-version-check --no-input -r tests/requirements.txt
 	@touch "$(ACTIVATE)"
 
-$(ACTIVATE_STYLE):
+$(ACTIVATE_STYLE): ci/style_requirements.txt
 	@echo "Updating virtualenv dependencies in: $(VIRTUALENV_STYLE_DIR)..."
 	@test -d $(VIRTUALENV_STYLE_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_STYLE_DIR)
 	@if $(PYTHON_ENV_CLEAN) "$(VIRTUALENV_STYLE_PYTHON)" -m pip install --disable-pip-version-check --no-input -r ci/style_requirements.txt; then \
 		touch "$(ACTIVATE_STYLE)"; \
 	else \
 		echo "[WARN] Unable to install style requirements (offline or proxy-restricted environment). Continuing with existing tools only."; \
-		touch "$(ACTIVATE_STYLE)"; \
 	fi
 
 cppclean: venv-style
@@ -391,7 +390,11 @@ cpplint: venv-style
 	@echo "Style-checking codebase..."
 	@export PATH="$(STYLE_VENV_BIN):$$PATH"; echo ${PWD}; cpplint ${STYLE_CHECK_OPTS} ${STYLE_CHECK_DIRS}
 
-clang-format: venv-style
+.PHONY: clang-format-version
+clang-format-version: venv-style
+	@export PATH="$(STYLE_VENV_BIN):$$PATH"; clang-format --version
+
+clang-format: clang-format-version
 	@echo "Formatting files with clang-format.."
 	@export PATH="$(STYLE_VENV_BIN):$$PATH"; find ${STYLE_CHECK_DIRS} -regex '.*\.\(cpp\|hpp\|cc\|cxx\)' -exec clang-format -style=file -i {} \;
 
