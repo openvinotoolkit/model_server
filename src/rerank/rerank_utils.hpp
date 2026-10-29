@@ -69,8 +69,6 @@ public:
     std::optional<int> getMaxChunksPerDoc() const;
 
     absl::Status parseRequest();
-    // The calculator ranks documentsList only. Documents given as objects are parsed into documentsMap,
-    // which is not supported yet, and an empty array leaves nothing to rank; both are rejected here.
     absl::Status validateDocumentsCanBeRanked() const;
     absl::Status parseResponse(StringBuffer& buffer, std::vector<float>& scores);
 };
