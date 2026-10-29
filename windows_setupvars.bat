@@ -15,9 +15,10 @@
 ::
 @echo on
 setlocal EnableExtensions EnableDelayedExpansion
-:: Bazel / Python startup can inherit stale PYTHONHOME values from a different
+:: Bazel / Python startup can inherit stale PYTHONHOME/PYTHONPATH values from a different
 :: service install; clear them before configuring the expected runtime.
 if defined PYTHONHOME set "PYTHONHOME="
+if defined PYTHONPATH set "PYTHONPATH="
 set "SETUP_EXIT_CODE=0"
 :: Load chosen dependency versions from versions.mk
 for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
@@ -26,6 +27,8 @@ for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
 )
 :: Setting up default OVMS compilation environment variables
 set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-!curl_version!-win64-mingw\bin;%PATH%;"
+set "PYTHONHOME=C:\opt\Python312"
+set "PYTHONPATH=C:\opt\Python312;%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 :: Bazel normally exports TEST_SRCDIR/TEST_WORKSPACE when a test binary is launched under Bazel.
 :: For direct Windows invocation, seed them only if they are not already present.
@@ -52,6 +55,7 @@ set "BAZEL_VC_FULL_VERSION=14.44.35207"
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
 set "PATH=%setPath%"
 set "PYTHONHOME=C:\opt\Python312"
+set "PYTHONPATH=C:\opt\Python312;%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Set paths with libs for execution - affects PATH
@@ -69,7 +73,12 @@ if !errorlevel! neq 0 (
     set "SETUP_EXIT_CODE=!errorlevel!"
     goto :exit_build_error
 )
-set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
+set "PYTHONPATH=%PYTHONPATH:C:\opt\opencv_!opencv_version!\python_loader_is_not_installed;=%"
+set "PYTHONPATH=%PYTHONPATH:;C:\opt\opencv_!opencv_version!\python_loader_is_not_installed=%"
+set "PYTHONPATH=%PYTHONPATH:C:\opt\opencv_!opencv_version!\python_loader_is_not_installed=%"
+set "PYTHONHOME=C:\opt\Python312"
+if defined PYTHONPATH set "PYTHONPATH=C:\opt\Python312;%PYTHONPATH%;%setPythonPath%"
+if not defined PYTHONPATH set "PYTHONPATH=C:\opt\Python312;%setPythonPath%"
 
 :exit_build
 echo [INFO] Setup finished
@@ -80,4 +89,4 @@ echo [ERROR] Setup finished with error
 if "!SETUP_EXIT_CODE!"=="0" set "SETUP_EXIT_CODE=!errorlevel!"
 
 :propagate_env
-endlocal & set "PATH=%PATH%" & set "PYTHONPATH=%PYTHONPATH%" & set "PYTHONHOME=%PYTHONHOME%" & set "TEST_SRCDIR=%TEST_SRCDIR%" & set "TEST_WORKSPACE=%TEST_WORKSPACE%" & set "BAZEL_VS=%BAZEL_VS%" & set "BAZEL_VC=%BAZEL_VC%" & set "BAZEL_SH=%BAZEL_SH%" & set "BAZEL_VC_FULL_VERSION=%BAZEL_VC_FULL_VERSION%" & exit /b %SETUP_EXIT_CODE%
+endlocal & set "PATH=%PATH%" & set "PYTHONPATH=%PYTHONPATH%" & set "PYTHONHOME=C:\opt\Python312" & set "TEST_SRCDIR=%TEST_SRCDIR%" & set "TEST_WORKSPACE=%TEST_WORKSPACE%" & set "BAZEL_VS=%BAZEL_VS%" & set "BAZEL_VC=%BAZEL_VC%" & set "BAZEL_SH=%BAZEL_SH%" & set "BAZEL_VC_FULL_VERSION=%BAZEL_VC_FULL_VERSION%" & exit /b %SETUP_EXIT_CODE%

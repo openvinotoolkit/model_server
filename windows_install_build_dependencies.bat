@@ -137,6 +137,18 @@ IF /I EXIST %bash_path% (
     echo [INFO] Msys installed in: %msys_path%
 )
 
+:: GNU Make is required to run Linux-style Makefile targets (for example: make style, make sdl-check)
+:: on the Windows developer machine when using the MSYS2 toolchain that this script installs.
+set "msys_make=%msys_path%\usr\bin\make.exe"
+IF /I EXIST %msys_make% (
+    echo [INFO] GNU Make already installed in: %msys_make%
+) ELSE (
+    echo [INFO] Installing GNU Make and required POSIX utilities in MSYS2...
+    "%msys_path%\usr\bin\bash.exe" -lc "pacman --noconfirm --needed -S make python util-linux"
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    echo [INFO] GNU Make and required MSYS utilities installed in: %msys_make%
+)
+
 :: Set default OV_USE_BINARY if not set
 if "%OV_USE_BINARY%"=="" (
     set "OV_USE_BINARY=1"
