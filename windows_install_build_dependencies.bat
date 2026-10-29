@@ -144,9 +144,17 @@ IF /I EXIST %msys_make% (
     echo [INFO] GNU Make already installed in: %msys_make%
 ) ELSE (
     echo [INFO] Installing GNU Make and required POSIX utilities in MSYS2...
-    "%msys_path%\usr\bin\bash.exe" -lc "pacman --noconfirm --needed -S make python util-linux"
+    "%msys_path%\usr\bin\pacman.exe" --noconfirm --sync --refresh --needed make python util-linux
     if !errorlevel! neq 0 exit /b !errorlevel!
     echo [INFO] GNU Make and required MSYS utilities installed in: %msys_make%
+)
+
+:: Always refresh the MSYS2 package database before further tooling use to avoid stale package metadata
+:: and the interactive Y/N pacman prompts that occur when the repo snapshot is out-of-date.
+"%msys_path%\usr\bin\pacman.exe" --noconfirm --sync --refresh --sysupgrade
+if !errorlevel! neq 0 (
+    echo [ERROR] MSYS2 package refresh failed. This usually means the bundled MSYS2 snapshot is stale or the network/proxy cannot reach the repository mirrors.
+    exit /b !errorlevel!
 )
 
 :: Set default OV_USE_BINARY if not set

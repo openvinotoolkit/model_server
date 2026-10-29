@@ -98,16 +98,16 @@ if [ ! -x "${HADOLINT_BIN}" ]; then
         if ! "${CURL_BIN}" --fail --location --silent --show-error \
             "https://github.com/hadolint/hadolint/releases/download/v2.12.0/${HADOLINT_ASSET}" \
             -o "${HADOLINT_BIN}"; then
-            echo "[WARN] hadolint download failed; skipping Dockerfile lint checks because the environment is offline or proxy-restricted." >&2
-            exit 0
+            echo "[ERROR] hadolint download failed. Dockerfile lint checks cannot run without the tool." >&2
+            exit 1
         fi
         chmod 755 "${HADOLINT_BIN}"
     fi
 fi
 
 if [ ! -x "${HADOLINT_BIN}" ]; then
-    echo "[WARN] hadolint is not available at ${HADOLINT_BIN}; skipping Dockerfile lint checks." >&2
-    exit 0
+    echo "[ERROR] hadolint is not available at ${HADOLINT_BIN}. Dockerfile lint checks cannot run." >&2
+    exit 1
 fi
 
 has_issues=0
