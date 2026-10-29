@@ -15,6 +15,9 @@
 ::
 @echo on
 setlocal EnableExtensions EnableDelayedExpansion
+set "ROOT=%~dp0"
+for %%I in ("%ROOT%.") do set "ROOT=%%~fI"
+set "LOCAL_TOOLS_DIR=%ROOT%\.windows_make_tools"
 :: Bazel / Python startup can inherit stale PYTHONHOME/PYTHONPATH values from a different
 :: service install; clear them before configuring the expected runtime.
 if defined PYTHONHOME set "PYTHONHOME="
@@ -25,8 +28,25 @@ for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
     if "%%A"=="OPENCV_VERSION" if "!opencv_version!"=="" set "opencv_version=%%B"
     if "%%A"=="CURL_VERSION" if "!curl_version!"=="" set "curl_version=%%B"
 )
+
+if not exist "%LOCAL_TOOLS_DIR%" mkdir "%LOCAL_TOOLS_DIR%"
+if not exist "%ROOT%\.venv\Scripts\python.exe" (
+    echo [INFO] Creating local .venv for repo Python dependencies...
+    "C:\opt\Python312\python.exe" -m venv "%ROOT%\.venv"
+)
+if not exist "%ROOT%\.venv-style\Scripts\python.exe" (
+    echo [INFO] Creating local .venv-style for style tools...
+    "C:\opt\Python312\python.exe" -m venv "%ROOT%\.venv-style"
+)
+if not exist "%ROOT%\.venv-style\Scripts\clang-format.exe" (
+    echo [INFO] Installing style dependencies into .venv-style...
+    "%ROOT%\.venv-style\Scripts\python.exe" -m pip install --disable-pip-version-check --no-input -r "%ROOT%\ci\style_requirements.txt"
+)
+
+"C:\opt\Python312\python.exe" -c "from pathlib import Path; d = Path(r'%LOCAL_TOOLS_DIR%'); d.mkdir(exist_ok=True); d.joinpath('python3').write_text('''#!/usr/bin/env bash\nif [ -x \"/c/opt/Python312/python.exe\" ]; then\n    exec \"/c/opt/Python312/python.exe\" \"$@\"\nfi\nif command -v python >/dev/null 2>&1; then\n    exec python \"$@\"\nfi\necho \"[ERROR] python3 shim could not find a Python 3 interpreter.\" >&2\nexit 127\n''', encoding='utf-8'); d.joinpath('lscpu').write_text('''#!/usr/bin/env bash\nif command -v /usr/bin/lscpu >/dev/null 2>&1; then\n    exec /usr/bin/lscpu \"$@\"\nfi\ncore_count=${NUMBER_OF_PROCESSORS:-1}\necho \"Core(s) per socket: $core_count\"\necho \"Socket(s): 1\"\n''', encoding='utf-8'); d.joinpath('git').write_text('''#!/usr/bin/env bash\nif [ -x \"/c/Program Files/Git/bin/git.exe\" ]; then\n    exec \"/c/Program Files/Git/bin/git.exe\" \"$@\"\nfi\nif [ -x \"/c/Program Files/Git/cmd/git.exe\" ]; then\n    exec \"/c/Program Files/Git/cmd/git.exe\" \"$@\"\nfi\nif command -v git >/dev/null 2>&1; then\n    exec git \"$@\"\nfi\necho \"[ERROR] Git for Windows was not found in the expected installation paths.\" >&2\nexit 127\n''', encoding='utf-8')"
+
 :: Setting up default OVMS compilation environment variables
-set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-!curl_version!-win64-mingw\bin;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-!curl_version!-win64-mingw\bin;%ROOT%\.venv-style\Scripts;%LOCAL_TOOLS_DIR%;%PATH%;"
 set "PYTHONHOME=C:\opt\Python312"
 set "PYTHONPATH=C:\opt\Python312;%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
