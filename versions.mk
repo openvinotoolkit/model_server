@@ -19,14 +19,14 @@
 # Any variable can be overridden by the environment or command-line.
 
 # Source repository git commits / branches (used for source builds)
-OV_SOURCE_BRANCH ?= 41e0f2d7a21e4bbc4d65d29a916e9805e66230d5
+OV_BRANCH ?= 41e0f2d7a21e4bbc4d65d29a916e9805e66230d5
 OV_TOKENIZERS_BRANCH ?= d73028e255ddc279483fbc6e8ea90dc802e820f5
 OV_GENAI_BRANCH ?= 97206988b7b980248efa67b437b763041faa7626
 
-# Source repository organizations
-OV_SOURCE_ORG ?= openvinotoolkit
-OV_GENAI_ORG ?= openvinotoolkit
-OV_TOKENIZERS_ORG ?= openvinotoolkit	
+# Source repositories (GitHub owner/repository)
+OV_REPO ?= openvinotoolkit/openvino
+OV_GENAI_REPO ?= openvinotoolkit/openvino.genai
+OV_TOKENIZERS_REPO ?= openvinotoolkit/openvino_tokenizers
 
 # Binary package URLs for each supported platform.
 DLDT_PACKAGE_URL_UBUNTU26 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/nightly/2026.5.0.0.dev20261028/openvino_genai_ubuntu26_2026.5.0.0.dev20261028_x86_64.tar.gz
