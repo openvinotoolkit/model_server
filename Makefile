@@ -47,9 +47,11 @@ STYLE_CHECK_OPTS := --extensions=hpp,cc,cpp,h \
 	--linelength=120 \
 	--filter=-build/c++11,-runtime/references,-whitespace/braces,-whitespace/indent,-build/include_order,-runtime/indentation_namespace,-build/namespaces,-whitespace/line_length,-runtime/string,-readability/casting,-runtime/explicit,-readability/todo
 STYLE_CHECK_DIRS := src
-HTTP_PROXY := "$(http_proxy)"
-HTTPS_PROXY := "$(https_proxy)"
-NO_PROXY := "$(no_proxy)"
+HTTP_PROXY := $(if $(http_proxy),$(http_proxy),)
+HTTPS_PROXY := $(if $(https_proxy),$(https_proxy),)
+NO_PROXY := $(if $(no_proxy),$(no_proxy),)
+export HTTP_PROXY HTTPS_PROXY NO_PROXY
+export http_proxy https_proxy no_proxy
 ifeq ($(shell uname),Darwin)
     # MacOS
     CORES_TOTAL := $(shell sysctl -n hw.physicalcpu 2>/dev/null || echo 1)
@@ -117,6 +119,10 @@ include versions.mk
 
 TEST_LLM_PATH ?= "src/test/llm_testing"
 GPU_MODEL_PATH ?= "/tmp/face_detection_adas"
+ifneq ($(filter MINGW% MSYS% CYGWIN%,$(UNAME_S)),)
+CURL_PATH ?= /c/opt/curl-$(CURL_VERSION)-win64-mingw/bin
+CURL_BIN ?= $(CURL_PATH)/curl.exe
+endif
 
 APT_OV_PACKAGE ?= openvino-2022.1.0
 # opt, dbg:
@@ -353,15 +359,18 @@ style: venv-style spell clang-format-check cpplint cppclean
 hadolint:
 	@echo "Checking SDL requirements..."
 	@echo "Checking docker files..."
-	@./tests/hadolint.sh
+	@env CURL_BIN="$${CURL_BIN:-$(CURL_BIN)}" CURL_PATH="$${CURL_PATH:-$(CURL_PATH)}" \
+		HTTP_PROXY="$${HTTP_PROXY:-$(HTTP_PROXY)}" HTTPS_PROXY="$${HTTPS_PROXY:-$(HTTPS_PROXY)}" NO_PROXY="$${NO_PROXY:-$(NO_PROXY)}" \
+		http_proxy="$${http_proxy:-$(http_proxy)}" https_proxy="$${https_proxy:-$(https_proxy)}" no_proxy="$${no_proxy:-$(no_proxy)}" \
+		./tests/hadolint.sh
 
 bandit:
 	@echo "Checking python files..."
-	@. $(ACTIVATE_STYLE); $(BASH_BIN) -lc '"$(CI_DIR)/bandit.sh"'
+	@export PATH="$(STYLE_VENV_BIN):$$PATH"; ./ci/bandit.sh
 
 license-headers:
 	@echo "Checking license headers in files..."
-	@. $(ACTIVATE_STYLE); $(BASH_BIN) -lc "python3 '$(CI_DIR)/lib_search.py' . > missing_headers.txt"
+	@export PATH="$(STYLE_VENV_BIN):$$PATH"; "$(VIRTUALENV_STYLE_PYTHON)" '$(CI_DIR)/lib_search.py' . > missing_headers.txt
 	@if ! grep -FRq "All files have headers" missing_headers.txt; then\
         echo "Files with missing headers";\
         cat missing_headers.txt;\
@@ -372,7 +381,7 @@ license-headers:
 sdl-check: venv-style hadolint bandit license-headers
 
 	@echo "Checking forbidden functions in files..."
-	@. $(ACTIVATE_STYLE); $(BASH_BIN) -lc "python3 '$(CI_DIR)/lib_search.py' . functions > forbidden_functions.txt"
+	@export PATH="$(STYLE_VENV_BIN):$$PATH"; "$(VIRTUALENV_STYLE_PYTHON)" '$(CI_DIR)/lib_search.py' . functions > forbidden_functions.txt
 	@if ! grep -FRq "All files checked for forbidden functions" forbidden_functions.txt; then\
 		error Run python3 '$(CI_DIR)/lib_search.py' . functions - to see forbidden functions file list.;\
 	fi

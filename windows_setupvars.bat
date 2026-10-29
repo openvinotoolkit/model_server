@@ -46,7 +46,10 @@ if not exist "%ROOT%\.venv-style\Scripts\clang-format.exe" (
 "C:\opt\Python312\python.exe" -c "from pathlib import Path; d = Path(r'%LOCAL_TOOLS_DIR%'); d.mkdir(exist_ok=True); d.joinpath('python3').write_text('''#!/usr/bin/env bash\nif [ -x \"/c/opt/Python312/python.exe\" ]; then\n    exec \"/c/opt/Python312/python.exe\" \"$@\"\nfi\nif command -v python >/dev/null 2>&1; then\n    exec python \"$@\"\nfi\necho \"[ERROR] python3 shim could not find a Python 3 interpreter.\" >&2\nexit 127\n''', encoding='utf-8'); d.joinpath('lscpu').write_text('''#!/usr/bin/env bash\nif command -v /usr/bin/lscpu >/dev/null 2>&1; then\n    exec /usr/bin/lscpu \"$@\"\nfi\ncore_count=${NUMBER_OF_PROCESSORS:-1}\necho \"Core(s) per socket: $core_count\"\necho \"Socket(s): 1\"\n''', encoding='utf-8'); d.joinpath('git').write_text('''#!/usr/bin/env bash\nif [ -x \"/c/Program Files/Git/bin/git.exe\" ]; then\n    exec \"/c/Program Files/Git/bin/git.exe\" \"$@\"\nfi\nif [ -x \"/c/Program Files/Git/cmd/git.exe\" ]; then\n    exec \"/c/Program Files/Git/cmd/git.exe\" \"$@\"\nfi\nif command -v git >/dev/null 2>&1; then\n    exec git \"$@\"\nfi\necho \"[ERROR] Git for Windows was not found in the expected installation paths.\" >&2\nexit 127\n''', encoding='utf-8')"
 
 :: Setting up default OVMS compilation environment variables
-set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-!curl_version!-win64-mingw\bin;%ROOT%\.venv-style\Scripts;%LOCAL_TOOLS_DIR%;%PATH%;"
+set "CURL_PATH_WINDOWS=C:\opt\curl-!curl_version!-win64-mingw\bin"
+set "CURL_PATH=/c/opt/curl-!curl_version!-win64-mingw/bin"
+set "CURL_BIN=%CURL_PATH%/curl.exe"
+set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;!CURL_PATH_WINDOWS!;%ROOT%\.venv-style\Scripts;%LOCAL_TOOLS_DIR%;%PATH%;"
 set "PYTHONHOME=C:\opt\Python312"
 set "PYTHONPATH=C:\opt\Python312;%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
@@ -109,4 +112,4 @@ echo [ERROR] Setup finished with error
 if "!SETUP_EXIT_CODE!"=="0" set "SETUP_EXIT_CODE=!errorlevel!"
 
 :propagate_env
-endlocal & set "PATH=%PATH%" & set "PYTHONPATH=%PYTHONPATH%" & set "PYTHONHOME=C:\opt\Python312" & set "TEST_SRCDIR=%TEST_SRCDIR%" & set "TEST_WORKSPACE=%TEST_WORKSPACE%" & set "BAZEL_VS=%BAZEL_VS%" & set "BAZEL_VC=%BAZEL_VC%" & set "BAZEL_SH=%BAZEL_SH%" & set "BAZEL_VC_FULL_VERSION=%BAZEL_VC_FULL_VERSION%" & exit /b %SETUP_EXIT_CODE%
+endlocal & set "PATH=%PATH%" & set "PYTHONPATH=%PYTHONPATH%" & set "PYTHONHOME=C:\opt\Python312" & set "TEST_SRCDIR=%TEST_SRCDIR%" & set "TEST_WORKSPACE=%TEST_WORKSPACE%" & set "BAZEL_VS=%BAZEL_VS%" & set "BAZEL_VC=%BAZEL_VC%" & set "BAZEL_SH=%BAZEL_SH%" & set "BAZEL_VC_FULL_VERSION=%BAZEL_VC_FULL_VERSION%" & set "CURL_PATH=%CURL_PATH%" & set "CURL_PATH_WINDOWS=%CURL_PATH_WINDOWS%" & set "CURL_BIN=%CURL_BIN%" & set "HTTP_PROXY=%HTTP_PROXY%" & set "HTTPS_PROXY=%HTTPS_PROXY%" & set "NO_PROXY=%NO_PROXY%" & set "http_proxy=%http_proxy%" & set "https_proxy=%https_proxy%" & set "no_proxy=%no_proxy%" & exit /b %SETUP_EXIT_CODE%
