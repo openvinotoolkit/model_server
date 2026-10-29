@@ -233,7 +233,7 @@ logging_level_ovms = os.environ.get("TT_LOGGING_LEVEL_OVMS", "INFO")
 container_proxy = os.environ.get("TT_CONTAINER_PROXY", os.environ.get("http_proxy", ""))
 
 """TT_DISABLE_DMESG_LOG_MONITOR"""
-disable_dmesg_log_monitor = get_bool("TT_DISABLE_DMESG_LOG_MONITOR", False)
+disable_dmesg_log_monitor = get_bool("TT_DISABLE_DMESG_LOG_MONITOR", True)
 
 """ TT_MACHINE_IS_RESERVED_FOR_TEST_SESSION """
 machine_is_reserved_for_test_session = get_bool("TT_MACHINE_IS_RESERVED_FOR_TEST_SESSION", False)
