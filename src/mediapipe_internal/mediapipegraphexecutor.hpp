@@ -309,7 +309,7 @@ public:
         failedRequestsGuard.disable();
         INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, true));
 
-        auto status = graph.WaitUntilIdle();
+        auto status = this->guard->graphHelper->streamingS2T->waitUntilIdle();
         if (!status.ok()) {
             INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
         }
@@ -325,7 +325,8 @@ public:
     template <typename RequestType, typename ResponseType>
     Status inferWithoutQueue(const RequestType* request, ResponseType* response, ExecutionContext executionContext, MetricCounterGuard& failedRequestsGuard) {
         ::mediapipe::CalculatorGraph graph;
-        MP_RETURN_ON_FAIL(graph.Initialize(this->config), std::string("failed initialization of MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+        StreamingS2TGraphExecution streamingS2T(graph);
+        MP_RETURN_ON_FAIL(streamingS2T.initialize(this->config), std::string("failed initialization of MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
         auto llmContextStatus = initializeLlmExecutionContexts(this->sidePacketMaps.genAiServableMap, this->sidePacketMaps.genAiExecutionContextMap);
         if (!llmContextStatus.ok()) {
             return llmContextStatus;
@@ -351,6 +352,7 @@ public:
         std::map<std::string, mediapipe::Packet> inputSidePackets;
         OVMS_RETURN_ON_FAIL(deserializeInputSidePacketsFromFirstRequestImpl(inputSidePackets, *request));
         buildInputSidePackets(inputSidePackets, this->sidePacketMaps);
+        streamingS2T.addSidePackets(inputSidePackets);
 
         MP_RETURN_ON_FAIL(graph.StartRun(inputSidePackets), std::string("start MediaPipe graph: ") + this->name, StatusCode::MEDIAPIPE_GRAPH_START_ERROR);
 
@@ -379,7 +381,7 @@ public:
         failedRequestsGuard.disable();
         INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, true));
 
-        auto status = graph.WaitUntilIdle();
+        auto status = streamingS2T.waitUntilIdle();
         if (!status.ok()) {
             INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
         }
@@ -535,7 +537,7 @@ public:
             }
 
             // Do NOT CloseAllPacketSources or WaitUntilDone - graph stays alive for reuse
-            auto status = graph.WaitUntilIdle();
+            auto status = this->guard->graphHelper->streamingS2T->waitUntilIdle();
             if (!status.ok()) {
                 INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
             }
@@ -563,10 +565,11 @@ public:
         try {
             MetricGaugeGuard currentGraphs(this->mediapipeServableMetricReporter->currentGraphs.get());
             ::mediapipe::CalculatorGraph graph;
+            StreamingS2TGraphExecution streamingS2T(graph);
             {
                 OVMS_PROFILE_SCOPE("Mediapipe graph initialization");
                 // Init
-                MP_RETURN_ON_FAIL(graph.Initialize(this->config), "graph initialization", StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+                MP_RETURN_ON_FAIL(streamingS2T.initialize(this->config), "graph initialization", StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
             }
             auto llmContextStatus = initializeLlmExecutionContexts(this->sidePacketMaps.genAiServableMap, this->sidePacketMaps.genAiExecutionContextMap);
             if (!llmContextStatus.ok()) {
@@ -615,6 +618,7 @@ public:
                 OVMS_PROFILE_SCOPE("Mediapipe graph creating input side packets");
                 OVMS_RETURN_ON_FAIL(deserializeInputSidePacketsFromFirstRequestImpl(inputSidePackets, req));
                 buildInputSidePackets(inputSidePackets, this->sidePacketMaps);
+                streamingS2T.addSidePackets(inputSidePackets);
             }
 
             {
@@ -681,6 +685,7 @@ public:
             {
                 OVMS_PROFILE_SCOPE("MediaPipe closing all packet sources");
                 SPDLOG_DEBUG("Graph {}: Closing packet sources...", this->name);
+                MP_RETURN_ON_FAIL(streamingS2T.waitUntilIdle(), "streaming STT completion", StatusCode::MEDIAPIPE_EXECUTION_ERROR);
                 // Close input streams
                 MP_RETURN_ON_FAIL(graph.CloseAllPacketSources(), "closing all packet sources", StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR);
             }

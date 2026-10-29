@@ -40,12 +40,14 @@ class ASRGenerationConfig;
 namespace ovms {
 
 struct HttpPayload;
+class VoxtralAudioAdapter;
 
 struct SttServable {
     std::filesystem::path parsedModelsPath;
     std::shared_ptr<ov::genai::ASRPipeline> sttPipeline;
     std::mutex sttPipelineMutex;
     bool enableWordTimestamps;
+    bool streamingBackend = false;
 
     std::unique_ptr<SttExecutorWrapper> streamingExecutor;
 
@@ -54,6 +56,12 @@ struct SttServable {
     ~SttServable() = default;
 
     void addRequest(std::shared_ptr<SttServableExecutionContext> executionContext);
+
+#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
+    /// Creates a lightweight adapter sharing this servable's already-loaded model.
+    std::shared_ptr<VoxtralAudioAdapter> createStreamingAdapter() const;
+    static bool isRealtimeModel(const std::string& modelPath);
+#endif
 
     static absl::Status parseTemperature(const HttpPayload& payload, ov::genai::ASRGenerationConfig& config);
 

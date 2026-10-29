@@ -112,7 +112,11 @@ ovms_cc_library(
         "//third_party:genai",
         "@libdatachannel//:libdatachannel",
     ] + select({
-        "//src:experimental_voxtral_enabled": [":voxtral_audio_adapter"],
+        "//src:experimental_voxtral_enabled": [
+            "//src/audio/speech_to_text:s2t_servable",
+            "//src/audio/speech_to_text:streaming_s2t_session",
+            ":voxtral_audio_adapter",
+        ],
         "//conditions:default": [],
     }),
     defines = select({

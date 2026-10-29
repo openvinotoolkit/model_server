@@ -32,7 +32,7 @@ class SttNodeInitializer : public NodeInitializer {
 
 public:
     bool matches(const std::string& calculatorName) const override {
-        return endsWith(calculatorName, CALCULATOR_NAME);
+        return endsWith(calculatorName, CALCULATOR_NAME) || calculatorName == "StreamingS2TCalculator";
     }
     Status initialize(
         const ::mediapipe::CalculatorGraphConfig_Node& nodeConfig,
@@ -61,6 +61,10 @@ public:
             return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
         }
         auto servable = std::make_shared<SttServable>(nodeOptions, basePath);
+        if (nodeConfig.calculator() == "StreamingS2TCalculator" && !servable->streamingBackend) {
+            SPDLOG_ERROR("StreamingS2TCalculator requires an incremental ASR backend in graph: {}", graphName);
+            return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+        }
         sttServableMap.insert(std::pair<std::string, std::shared_ptr<SttServable>>(nodeName, std::move(servable)));
         return StatusCode::OK;
     }

@@ -17,6 +17,7 @@
 
 #include <chrono>
 #include <stdexcept>
+#include <type_traits>
 #include <utility>
 
 #include <openvino/genai/automatic_speech_recognition/pipeline.hpp>
@@ -28,6 +29,13 @@ namespace ovms {
 
 namespace {
 constexpr size_t MaxQueuedFrames = 1500;
+constexpr size_t MaxQueuedSamples = 48000 * 2 * 30;
+
+template <typename Pipeline, typename = void>
+struct HasIndependentStreams : std::false_type {};
+
+template <typename Pipeline>
+struct HasIndependentStreams<Pipeline, std::void_t<decltype(std::declval<Pipeline&>().create_stream())>> : std::true_type {};
 
 template <typename GenAiStream>
 class GenAiInferenceStream : public VoxtralAudioAdapter::InferenceStream {
@@ -44,7 +52,9 @@ public:
     }
 
     std::string generate(VoxtralAudioAdapter::TextCallback deltaCallback) override {
-        const auto result = stream_.generate([deltaCallback = std::move(deltaCallback)](std::string delta) {
+        const auto result = stream_.generate([this, deltaCallback = std::move(deltaCallback)](std::string delta) {
+            if (isCancelled())
+                return ov::genai::StreamingStatus::CANCEL;
             if (deltaCallback)
                 deltaCallback(delta);
             return ov::genai::StreamingStatus::RUNNING;
@@ -56,15 +66,23 @@ private:
     GenAiStream stream_;
 };
 
-VoxtralAudioAdapter::StreamFactory makeGenAiStreamFactory(
-    std::shared_ptr<ov::genai::ASRPipeline> pipeline) {
+template <typename Pipeline>
+VoxtralAudioAdapter::StreamFactory makeGenAiStreamFactory(std::shared_ptr<Pipeline> pipeline) {
     if (!pipeline)
         throw std::invalid_argument("Voxtral adapter requires a pipeline");
-    return [pipeline = std::move(pipeline)]() -> std::unique_ptr<VoxtralAudioAdapter::InferenceStream> {
-        auto stream = pipeline->create_stream();
-        return std::make_unique<GenAiInferenceStream<decltype(stream)>>(std::move(stream));
-    };
+    if constexpr (HasIndependentStreams<Pipeline>::value) {
+        return [pipeline = std::move(pipeline)]() -> std::unique_ptr<VoxtralAudioAdapter::InferenceStream> {
+            auto stream = pipeline->create_stream();
+            return std::make_unique<GenAiInferenceStream<decltype(stream)>>(std::move(stream));
+        };
+    } else {
+        throw std::runtime_error("This OpenVINO GenAI build does not provide ASRPipeline::create_stream()");
+    }
 }
+}
+
+bool VoxtralAudioAdapter::isAvailable() {
+    return HasIndependentStreams<ov::genai::ASRPipeline>::value;
 }
 
 VoxtralAudioAdapter::VoxtralAudioAdapter(std::shared_ptr<ov::genai::ASRPipeline> pipeline) :
@@ -87,8 +105,7 @@ VoxtralAudioAdapter::Stream::Stream(StreamFactory streamFactory,
     streamFactory_(std::move(streamFactory)),
     deltaCallback_(std::move(deltaCallback)),
     finalCallback_(std::move(finalCallback)),
-    errorCallback_(std::move(errorCallback)),
-    worker_(&Stream::run, this) {}
+    errorCallback_(std::move(errorCallback)) {}
 
 VoxtralAudioAdapter::Stream::~Stream() {
     close();
@@ -100,19 +117,26 @@ void VoxtralAudioAdapter::Stream::push(AudioChunk frame) {
         throw std::invalid_argument("Invalid Voxtral audio frame");
     }
     std::lock_guard<std::mutex> lock(mutex_);
-    if (finishing_)
+    if (finishing_ || cancelled_ || completed_)
         return;
-    if (frames_.size() >= MaxQueuedFrames)
+    if (frames_.size() >= MaxQueuedFrames || frame.samples.size() > MaxQueuedSamples - queuedSamples_)
         throw std::runtime_error("Voxtral audio queue is full");
+    queuedSamples_ += frame.samples.size();
     frames_.push(std::move(frame));
     hasAudio_ = true;
+    if (!worker_.joinable())
+        worker_ = std::thread(&Stream::run, this);
     condition_.notify_one();
 }
 
 void VoxtralAudioAdapter::Stream::finish() {
     {
         std::lock_guard<std::mutex> lock(mutex_);
+        if (cancelled_ || completed_)
+            return;
         finishing_ = true;
+        if (!worker_.joinable())
+            worker_ = std::thread(&Stream::run, this);
     }
     condition_.notify_one();
 }
@@ -121,6 +145,21 @@ void VoxtralAudioAdapter::Stream::close() {
     finish();
     if (worker_.joinable())
         worker_.join();
+}
+
+void VoxtralAudioAdapter::Stream::cancel() {
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        cancelled_ = true;
+        finishing_ = true;
+        std::queue<AudioChunk>().swap(frames_);
+        queuedSamples_ = 0;
+        if (inference_)
+            inference_->requestCancel();
+        if (!worker_.joinable())
+            completed_ = true;
+    }
+    condition_.notify_all();
 }
 
 bool VoxtralAudioAdapter::Stream::isCompleted() const {
@@ -133,9 +172,15 @@ bool VoxtralAudioAdapter::Stream::hasAudio() const {
 
 void VoxtralAudioAdapter::Stream::run() {
     try {
-        auto stream = streamFactory_();
+        std::shared_ptr<InferenceStream> stream(streamFactory_());
         if (!stream)
             throw std::runtime_error("Voxtral stream factory returned an empty stream");
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            inference_ = stream;
+            if (cancelled_)
+                inference_->requestCancel();
+        }
         std::exception_ptr inputError;
         std::thread inputWorker([this, &stream, &inputError] {
             try {
@@ -144,11 +189,12 @@ void VoxtralAudioAdapter::Stream::run() {
                     size_t queuedFrames = 0;
                     {
                         std::unique_lock<std::mutex> lock(mutex_);
-                        condition_.wait(lock, [this] { return finishing_ || !frames_.empty(); });
-                        if (frames_.empty())
+                        condition_.wait(lock, [this] { return finishing_ || generationFinished_ || !frames_.empty(); });
+                        if (cancelled_ || generationFinished_ || frames_.empty())
                             break;
                         frame = std::move(frames_.front());
                         frames_.pop();
+                        queuedSamples_ -= frame.samples.size();
                         queuedFrames = frames_.size();
                     }
                     const auto start = std::chrono::steady_clock::now();
@@ -163,7 +209,10 @@ void VoxtralAudioAdapter::Stream::run() {
                 inputError = std::current_exception();
                 try {
                     stream->endAudio();
+                } catch (const std::exception& e) {
+                    SPDLOG_LOGGER_ERROR(webrtc_logger, "Voxtral end_audio after input failure failed: {}", e.what());
                 } catch (...) {
+                    SPDLOG_LOGGER_ERROR(webrtc_logger, "Voxtral end_audio after input failure failed");
                 }
             }
         });
@@ -172,7 +221,7 @@ void VoxtralAudioAdapter::Stream::run() {
         std::exception_ptr generationError;
         try {
             transcript = stream->generate([this](const std::string& delta) {
-                if (!delta.empty()) {
+                if (!cancelled_ && !delta.empty()) {
                     SPDLOG_LOGGER_INFO(webrtc_logger, "Voxtral transcript delta: {}", delta);
                     if (deltaCallback_)
                         deltaCallback_(delta);
@@ -181,16 +230,29 @@ void VoxtralAudioAdapter::Stream::run() {
         } catch (...) {
             generationError = std::current_exception();
         }
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            generationFinished_ = true;
+        }
+        condition_.notify_all();
         inputWorker.join();
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            inference_.reset();
+        }
         if (generationError)
             std::rethrow_exception(generationError);
         if (inputError)
             std::rethrow_exception(inputError);
         SPDLOG_LOGGER_INFO(webrtc_logger, "Voxtral final transcript: {}", transcript);
-        if (finalCallback_)
+        if (!cancelled_ && finalCallback_)
             finalCallback_(transcript);
     } catch (...) {
-        if (errorCallback_) {
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            inference_.reset();
+        }
+        if (!cancelled_ && errorCallback_) {
             try {
                 errorCallback_(std::current_exception());
             } catch (const std::exception& e) {
@@ -198,6 +260,8 @@ void VoxtralAudioAdapter::Stream::run() {
             } catch (...) {
                 SPDLOG_LOGGER_ERROR(webrtc_logger, "Voxtral error callback failed with an unknown exception");
             }
+        } else if (!cancelled_) {
+            SPDLOG_LOGGER_ERROR(webrtc_logger, "Voxtral stream failed without an error callback");
         }
     }
     completed_ = true;

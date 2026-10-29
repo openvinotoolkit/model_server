@@ -45,12 +45,14 @@
 #include "graph_executor_constants.hpp"
 #include "graph_side_packets.hpp"
 #include "outputstreamobserver.hpp"
+#include "streaming_s2t_graph.hpp"
 namespace ovms {
 class OutputStreamObserverI;
 class NullOutputStreamObserver;
 struct ObserverHolder;
 struct GraphHelper {
     std::unique_ptr<::mediapipe::CalculatorGraph> graph;
+    std::unique_ptr<StreamingS2TGraphExecution> streamingS2T;
     // const after construction: keys are fixed, but observer implementations
     // can be swapped via the mutable ObserverHolder inside each shared_ptr.
     const std::unordered_map<std::string, std::shared_ptr<ObserverHolder>> outStreamObservers;
@@ -64,6 +66,7 @@ struct GraphHelper {
     GraphHelper& operator=(const GraphHelper&) = delete;
     GraphHelper(GraphHelper&& gh) :
         graph(std::move(gh.graph)),
+        streamingS2T(std::move(gh.streamingS2T)),
         outStreamObservers(std::move(const_cast<std::unordered_map<std::string, std::shared_ptr<ObserverHolder>>&>(gh.outStreamObservers))),
         genAiExecutionContextMap(std::move(gh.genAiExecutionContextMap)),
         currentTimestamp(gh.currentTimestamp) {}

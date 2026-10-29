@@ -45,6 +45,13 @@ public:
         virtual void pushAudio(const std::vector<float>& audio) = 0;
         virtual void endAudio() = 0;
         virtual std::string generate(TextCallback deltaCallback) = 0;
+        void requestCancel() { cancelled_ = true; }
+
+    protected:
+        bool isCancelled() const { return cancelled_.load(); }
+
+    private:
+        std::atomic<bool> cancelled_{false};
     };
 
     using StreamFactory = std::function<std::unique_ptr<InferenceStream>()>;
@@ -60,6 +67,8 @@ public:
 
         void push(AudioChunk frame);
         void finish();
+        /// Discards queued audio and suppresses callbacks; close() joins the workers.
+        void cancel();
         void close();
         // True once the final transcript or error callback has been delivered.
         bool isCompleted() const;
@@ -76,6 +85,10 @@ public:
         std::mutex mutex_;
         std::condition_variable condition_;
         bool finishing_ = false;
+        bool generationFinished_ = false;
+        size_t queuedSamples_ = 0;
+        std::shared_ptr<InferenceStream> inference_;
+        std::atomic<bool> cancelled_{false};
         std::atomic<bool> hasAudio_{false};
         std::atomic<bool> completed_{false};
         std::thread worker_;
@@ -85,6 +98,7 @@ public:
     explicit VoxtralAudioAdapter(std::shared_ptr<ov::genai::ASRPipeline> pipeline);
     explicit VoxtralAudioAdapter(StreamFactory streamFactory);
 
+    static bool isAvailable();
     std::shared_ptr<Stream> createStream(TextCallback deltaCallback, TextCallback finalCallback,
         ErrorCallback errorCallback) const;
 

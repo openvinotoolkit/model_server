@@ -24,6 +24,33 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "streaming_s2t",
+    srcs = ["streaming_s2t.cpp"],
+    hdrs = ["streaming_s2t.hpp"],
+    deps = [
+        "//src/webrtc:streaming_audio_model",
+        "//src:libovmslogging",
+        "//src:libovmsstatus",
+        "@com_google_absl//absl/status",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "streaming_s2t_session",
+    srcs = ["streaming_s2t_session.cpp"],
+    hdrs = ["streaming_s2t_session.hpp"],
+    deps = [
+        ":s2t_servable",
+        ":streaming_s2t",
+        "//src/mediapipe_internal:streaming_s2t_graph",
+        "//src:libovmslogging",
+        "@mediapipe//mediapipe/framework:calculator_graph",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "s2t_servable",
     srcs = ["s2t_servable.cpp"],
     hdrs = [
@@ -40,7 +67,19 @@ ovms_cc_library(
         "s2t_calculator_cc_proto",
         "@com_google_absl//absl/status",
         "//third_party:genai",
-    ],
+    ] + select({
+        "//src:experimental_voxtral_enabled": [
+            "//src:libovmsclient_connection",
+            "//src/port:rapidjson_document",
+            "//src/port:rapidjson_istreamwrapper",
+            "//src/webrtc:voxtral_audio_adapter",
+        ],
+        "//conditions:default": [],
+    }),
+    defines = select({
+        "//src:experimental_voxtral_enabled": ["BUILD_WITH_EXPERIMENTAL_VOXTRAL"],
+        "//conditions:default": [],
+    }),
     additional_copts = select({
         "//conditions:default": [],
         "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h
@@ -80,8 +119,13 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "s2t_calculator",
-    srcs = ["s2t_calculator.cc",
-            "stt_node_initializer.cpp"],
+    srcs = [
+        "s2t_calculator.cc",
+        "stt_node_initializer.cpp",
+    ] + select({
+        "//src:experimental_voxtral_enabled": ["streaming_s2t_calculator.cc"],
+        "//conditions:default": [],
+    }),
     deps = [
         "@mediapipe//mediapipe/framework:calculator_framework",
         "//src:httppayload",
@@ -96,7 +140,22 @@ ovms_cc_library(
         "//src/audio:audio_utils",
         "//src:libmodelconfigjsonparser",
         "//src/mediapipe_internal:node_initializer",
-    ],
+        ":streaming_s2t",
+    ] + select({
+        "//src:experimental_voxtral_enabled": [
+            "//src/webrtc:voxtral_audio_adapter",
+            "//src:libovmsclient_connection",
+            "//src:libovmsstatus",
+            "//src:sse_utils",
+            "//src/port:rapidjson_stringbuffer",
+            "//src/port:rapidjson_writer",
+        ],
+        "//conditions:default": [],
+    }),
+    defines = select({
+        "//src:experimental_voxtral_enabled": ["BUILD_WITH_EXPERIMENTAL_VOXTRAL"],
+        "//conditions:default": [],
+    }),
     additional_copts = select({
         "//conditions:default": [],
         "//src:windows": ["/wd6001"],  # uninitialized memory false positive in absl/strings/str_cat.h

@@ -21,8 +21,6 @@
 #include <chrono>
 #include <cstdlib>
 #include <exception>
-#include <iterator>
-#include <fstream>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
@@ -32,10 +30,12 @@
 #include <vector>
 
 #include "src/port/rapidjson_document.hpp"
-#include "src/port/rapidjson_istreamwrapper.hpp"
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 #include "src/audio/speech_to_text/stt_pipeline_handle.hpp"
+#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
+#include "src/audio/speech_to_text/s2t_servable.hpp"
+#endif
 #include "src/logging.hpp"
 
 namespace ovms {
@@ -109,12 +109,16 @@ std::string transcriptionCompletedEvent(const std::string& itemId, const std::st
     });
 }
 
-std::string errorEvent(const std::string& type, const std::string& message) {
+std::string errorEvent(const std::string& type, const std::string& message, const std::string& itemId = {}) {
     return openAiEvent("error", [&](auto& writer) {
         writer.Key("error");
         writer.StartObject();
         writer.Key("type");
         writer.String(type.c_str());
+        if (!itemId.empty()) {
+            writer.Key("item_id");
+            writer.String(itemId.c_str());
+        }
         writer.Key("message");
         writer.String(message.c_str(), static_cast<rapidjson::SizeType>(message.size()));
         writer.EndObject();
@@ -241,10 +245,15 @@ std::string preferOpusAudioCodec(const std::string& offerSdp) {
 WebRtcSessionController::Session::Session(rtc::Configuration configuration, std::string id) :
     id(std::move(id)),
     peer(std::move(configuration)),
-    codec(OpusAudioCodec::SampleRate, 2) {}
+    codec(OpusAudioCodec::SampleRate, 2),
+    outboundWorker(&Session::runOutboundSender, this) {}
+
+WebRtcSessionController::Session::~Session() {
+    shutdown();
+}
 
 void WebRtcSessionController::Session::sendUserDelta(const std::string& itemId, const std::string& text) {
-    sendEvent(transcriptionDeltaEvent(itemId, text));
+    enqueueEvent(transcriptionDeltaEvent(itemId, text), true);
 }
 
 void WebRtcSessionController::Session::sendUserFinal(const std::string& itemId, const std::string& text) {
@@ -253,6 +262,10 @@ void WebRtcSessionController::Session::sendUserFinal(const std::string& itemId, 
 
 void WebRtcSessionController::Session::sendUserError(const std::string& text) {
     sendEvent(errorEvent("server_error", text));
+}
+
+void WebRtcSessionController::Session::sendUserError(const std::string& itemId, const std::string& text) {
+    sendEvent(errorEvent("server_error", text, itemId));
 }
 
 void WebRtcSessionController::Session::attachDataChannel(std::shared_ptr<rtc::DataChannel> channel) {
@@ -302,49 +315,25 @@ std::string WebRtcSessionController::Session::nextItemId() {
 }
 
 #if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
-void WebRtcSessionController::Session::startVoxtralStream() {
-    std::string itemId = nextItemId();
+void WebRtcSessionController::Session::startVoxtralSession(const SttPipelineHandle& speechModel) {
     const std::weak_ptr<Session> weakSession = weak_from_this();
-    auto stream = voxtralAdapter->createStream(
-        [weakSession, itemId](const std::string& text) {
-            if (const auto activeSession = weakSession.lock())
-                activeSession->sendUserDelta(itemId, text);
-        },
-        [weakSession, itemId](const std::string& text) {
-            if (const auto activeSession = weakSession.lock())
-                activeSession->sendUserFinal(itemId, text);
-        },
-        [weakSession](std::exception_ptr error) {
-            try {
-                if (error)
-                    std::rethrow_exception(error);
-            } catch (const std::exception& e) {
-                SPDLOG_LOGGER_ERROR(webrtc_logger, "WebRTC Voxtral transcription failed: {}", e.what());
-                if (const auto activeSession = weakSession.lock())
-                    activeSession->sendUserError(e.what());
-            } catch (...) {
-                SPDLOG_LOGGER_ERROR(webrtc_logger, "WebRTC Voxtral transcription failed with an unknown error");
+    streamingSession = std::make_shared<StreamingS2TSession>(speechModel.servable,
+        [weakSession](const StreamingS2TEvent& event) {
+            if (const auto activeSession = weakSession.lock()) {
+                switch (event.type) {
+                case StreamingS2TEvent::Type::Delta:
+                    activeSession->sendUserDelta(event.utteranceId, event.text);
+                    break;
+                case StreamingS2TEvent::Type::Final:
+                    activeSession->sendUserFinal(event.utteranceId, event.text);
+                    break;
+                case StreamingS2TEvent::Type::Error:
+                    activeSession->sendUserError(event.utteranceId, event.text);
+                    break;
+                }
             }
         });
-    std::vector<std::shared_ptr<VoxtralAudioAdapter::Stream>> finishedStreams;
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        const auto firstFinished = std::stable_partition(committedVoxtralStreams.begin(), committedVoxtralStreams.end(),
-            [](const auto& committed) { return !committed->isCompleted(); });
-        std::move(firstFinished, committedVoxtralStreams.end(), std::back_inserter(finishedStreams));
-        committedVoxtralStreams.erase(firstFinished, committedVoxtralStreams.end());
-        if (voxtralStream)
-            committedVoxtralStreams.push_back(std::move(voxtralStream));
-        voxtralStream = std::move(stream);
-        currentItemId = std::move(itemId);
-    }
-    // Joining completed workers happens outside the session lock.
-    finishedStreams.clear();
-}
-
-std::shared_ptr<VoxtralAudioAdapter::Stream> WebRtcSessionController::Session::currentVoxtralStream() {
-    std::lock_guard<std::mutex> lock(mutex);
-    return voxtralStream;
+    currentItemId = nextItemId();
 }
 #endif
 
@@ -363,26 +352,34 @@ void WebRtcSessionController::Session::commitAudio() {
         return;
     }
 #if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
-    if (!voxtralAdapter) {
+    std::shared_ptr<StreamingS2TSession> activeSession;
+    std::string committedItemId;
+    bool hasAudio = false;
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        committedItemId = currentItemId;
+        hasAudio = voxtralHasAudio;
+        voxtralHasAudio = false;
+        activeSession = streamingSession;
+    }
+    if (!activeSession) {
         sendEvent(errorEvent("invalid_request_error", "input_audio_buffer.commit requires a speech-to-text model"));
         return;
     }
-    std::shared_ptr<VoxtralAudioAdapter::Stream> committedStream;
-    std::string committedItemId;
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        committedStream = voxtralStream;
-        committedItemId = currentItemId;
-    }
-    if (!committedStream || !committedStream->hasAudio()) {
+    if (!hasAudio) {
         sendEvent(errorEvent("invalid_request_error", "Error committing input audio buffer: buffer is empty"));
         return;
     }
     sendEvent(audioCommittedEvent(committedItemId));
-    // New audio goes to a fresh item while the committed stream drains and emits its completed event.
-    startVoxtralStream();
-    if (committedStream)
-        committedStream->finish();
+    const auto status = activeSession->finish(committedItemId);
+    if (!status.ok()) {
+        sendUserError(status.ToString());
+        return;
+    }
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        currentItemId = "item_" + id + "_" + std::to_string(++itemCounter);
+    }
 #else
     sendEvent(errorEvent("invalid_request_error", "input_audio_buffer.commit requires a speech-to-text model"));
 #endif
@@ -429,24 +426,29 @@ void WebRtcSessionController::Session::transcribeUtterance(AudioChunk utterance)
 }
 
 void WebRtcSessionController::Session::shutdown() {
+    std::shared_ptr<StreamingS2TSession> activeStreamingSession;
     {
-        std::lock_guard<std::mutex> sendLock(transcriptSendMutex);
         std::lock_guard<std::mutex> lock(mutex);
         transcriptChannel.reset();
+#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
+        activeStreamingSession = std::move(streamingSession);
+#endif
     }
     peer.close();
 #if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
-    std::vector<std::shared_ptr<VoxtralAudioAdapter::Stream>> streams;
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        streams = std::move(committedVoxtralStreams);
-        committedVoxtralStreams.clear();
-        if (voxtralStream)
-            streams.push_back(voxtralStream);
-    }
-    for (const auto& stream : streams)
-        stream->close();
+    if (activeStreamingSession)
+        activeStreamingSession->cancel();
+    activeStreamingSession.reset();
 #endif
+    {
+        std::lock_guard<std::mutex> lock(outboundMutex);
+        outboundStopping = true;
+        outboundQueue.clear();
+        outboundBytes = 0;
+    }
+    outboundReady.notify_all();
+    if (outboundWorker.joinable())
+        outboundWorker.join();
 }
 
 bool WebRtcSessionController::Session::isDisconnected() const {
@@ -457,22 +459,71 @@ bool WebRtcSessionController::Session::isDisconnected() const {
 }
 
 void WebRtcSessionController::Session::sendEvent(const std::string& message) {
-    std::lock_guard<std::mutex> sendLock(transcriptSendMutex);
-    std::shared_ptr<rtc::DataChannel> channel;
-    {
-        std::lock_guard<std::mutex> lock(mutex);
-        channel = transcriptChannel;
-    }
-    if (!channel || !channel->isOpen()) {
-        SPDLOG_LOGGER_WARN(webrtc_logger, "Transcript channel not open, dropping message: {}", message);
+    enqueueEvent(message);
+}
+
+void WebRtcSessionController::Session::enqueueEvent(std::string message, bool delta) {
+    constexpr size_t MaxOutboundEvents = 256;
+    constexpr size_t MaxOutboundBytes = 1024 * 1024;
+    std::lock_guard<std::mutex> lock(outboundMutex);
+    if (outboundStopping)
+        return;
+    if (message.size() > MaxOutboundBytes) {
+        SPDLOG_LOGGER_ERROR(webrtc_logger, "Dropping oversized realtime event for session {}", id);
         return;
     }
-    SPDLOG_LOGGER_DEBUG(webrtc_logger, "Sending transcript message: {}", message);
-    try {
-        // The transport can disconnect after isOpen() has been checked.
-        channel->send(message);
-    } catch (const std::exception& e) {
-        SPDLOG_LOGGER_ERROR(webrtc_logger, "Failed to send realtime event for session {}: {}", id, e.what());
+    while ((outboundQueue.size() >= MaxOutboundEvents ||
+               message.size() > MaxOutboundBytes - std::min(outboundBytes, MaxOutboundBytes)) &&
+        !outboundQueue.empty()) {
+        const auto discard = std::find_if(outboundQueue.begin(), outboundQueue.end(),
+            [](const auto& event) { return event.second; });
+        if (discard == outboundQueue.end()) {
+            if (delta) {
+                SPDLOG_LOGGER_WARN(webrtc_logger, "Dropping realtime transcript delta: outbound queue is full");
+                return;
+            }
+            SPDLOG_LOGGER_ERROR(webrtc_logger, "Dropping realtime event: outbound queue is full of non-delta events");
+            outboundBytes -= outboundQueue.front().first.size();
+            outboundQueue.pop_front();
+        } else {
+            outboundBytes -= discard->first.size();
+            outboundQueue.erase(discard);
+            SPDLOG_LOGGER_WARN(webrtc_logger, "Dropping queued realtime transcript delta: outbound queue is full");
+        }
+    }
+    outboundBytes += message.size();
+    outboundQueue.emplace_back(std::move(message), delta);
+    outboundReady.notify_one();
+}
+
+void WebRtcSessionController::Session::runOutboundSender() {
+    while (true) {
+        std::string message;
+        {
+            std::unique_lock<std::mutex> lock(outboundMutex);
+            outboundReady.wait(lock, [this] { return outboundStopping || !outboundQueue.empty(); });
+            if (outboundStopping && outboundQueue.empty())
+                return;
+            message = std::move(outboundQueue.front().first);
+            outboundBytes -= message.size();
+            outboundQueue.pop_front();
+        }
+        std::lock_guard<std::mutex> sendLock(transcriptSendMutex);
+        std::shared_ptr<rtc::DataChannel> channel;
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            channel = transcriptChannel;
+        }
+        if (!channel || !channel->isOpen()) {
+            SPDLOG_LOGGER_WARN(webrtc_logger, "Transcript channel not open, dropping event");
+            continue;
+        }
+        SPDLOG_LOGGER_DEBUG(webrtc_logger, "Sending transcript message: {}", message);
+        try {
+            channel->send(message);
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_ERROR(webrtc_logger, "Failed to send realtime event for session {}: {}", id, e.what());
+        }
     }
 }
 
@@ -524,19 +575,7 @@ std::string WebRtcSessionController::announceHostCandidate(const std::string& ca
 
 #if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
 bool WebRtcSessionController::isRealtimeSpeechModel(const std::string& modelPath) {
-    const std::string configPath = modelPath + "/config.json";
-    std::ifstream input(configPath);
-    if (!input.is_open())
-        throw std::runtime_error("Cannot open speech model configuration: " + configPath);
-    rapidjson::IStreamWrapper stream(input);
-    rapidjson::Document config;
-    config.ParseStream(stream);
-    if (config.HasParseError() || !config.IsObject())
-        throw std::runtime_error("Invalid speech model configuration: " + configPath);
-    const auto modelType = config.FindMember("model_type");
-    if (modelType == config.MemberEnd() || !modelType->value.IsString())
-        throw std::runtime_error("Missing or invalid model_type in speech model configuration: " + configPath);
-    return std::string(modelType->value.GetString()) == "voxtral_realtime";
+    return SttServable::isRealtimeModel(modelPath);
 }
 #endif
 
@@ -574,13 +613,15 @@ WebRtcSessionController::CreateCallResult WebRtcSessionController::negotiateSess
 
     std::shared_ptr<SttAudioAdapter> sttAdapter;
 #if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
-    std::shared_ptr<VoxtralAudioAdapter> voxtralAdapter;
+    bool voxtralStreaming = false;
 #endif
     if (speechModel.pipeline) {
         try {
 #if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
-            if (isRealtimeSpeechModel(speechModel.modelsPath)) {
-                voxtralAdapter = std::make_shared<VoxtralAudioAdapter>(speechModel.pipeline);
+            if (speechModel.servable && speechModel.servable->streamingBackend) {
+                voxtralStreaming = true;
+            } else if (isRealtimeSpeechModel(speechModel.modelsPath)) {
+                throw std::runtime_error("Voxtral realtime graph resources are unavailable");
             } else {
                 sttAdapter = std::make_shared<SttAudioAdapter>(speechModel.pipeline, speechModel.pipelineMutex);
             }
@@ -630,8 +671,13 @@ WebRtcSessionController::CreateCallResult WebRtcSessionController::negotiateSess
         if (state == rtc::PeerConnection::State::Disconnected ||
             state == rtc::PeerConnection::State::Failed || state == rtc::PeerConnection::State::Closed) {
 #if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
-            if (const auto stream = session->currentVoxtralStream())
-                stream->finish();
+            std::shared_ptr<StreamingS2TSession> streamingSession;
+            {
+                std::lock_guard<std::mutex> lock(session->mutex);
+                streamingSession = session->streamingSession;
+            }
+            if (streamingSession)
+                streamingSession->cancel();
 #endif
             return;
         }
@@ -683,21 +729,39 @@ WebRtcSessionController::CreateCallResult WebRtcSessionController::negotiateSess
         activeSession->descriptionReady.notify_all();
     });
 #if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
-    if (voxtralAdapter) {
+    if (voxtralStreaming) {
         const std::weak_ptr<Session> weakSession = session;
-        session->voxtralAdapter = voxtralAdapter;
-        session->startVoxtralStream();
+        try {
+            session->startVoxtralSession(speechModel);
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_ERROR(webrtc_logger, "Could not start Voxtral graph for WebRTC: {}", e.what());
+            session->shutdown();
+            return CreateCallResult::InternalError;
+        }
         session->peer.onAudioFrame([weakSession](rtc::binary data, rtc::FrameInfo info) {
             const auto currentSession = weakSession.lock();
             if (!currentSession)
                 return;
-            const auto stream = currentSession->currentVoxtralStream();
             try {
-                stream->push(currentSession->decodeAudioFrame(data, info));
+                const auto audio = currentSession->decodeAudioFrame(data, info);
+                std::shared_ptr<StreamingS2TSession> activeSession;
+                std::string itemId;
+                {
+                    std::lock_guard<std::mutex> lock(currentSession->mutex);
+                    activeSession = currentSession->streamingSession;
+                    itemId = currentSession->currentItemId;
+                    if (activeSession) {
+                        const auto status = activeSession->push(itemId, std::move(audio));
+                        if (!status.ok())
+                            throw std::runtime_error(status.ToString());
+                        currentSession->voxtralHasAudio = true;
+                    }
+                }
+                if (!activeSession)
+                    throw std::runtime_error("Streaming transcription session is closed");
             } catch (const std::exception& e) {
                 SPDLOG_LOGGER_ERROR(webrtc_logger, "Failed to process WebRTC Voxtral audio: {}", e.what());
                 currentSession->sendUserError(e.what());
-                stream->finish();
             }
         });
     } else

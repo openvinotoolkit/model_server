@@ -17,10 +17,13 @@
 
 #include <cstddef>
 #include <condition_variable>
+#include <deque>
 #include <mutex>
 #include <memory>
 #include <string>
+#include <thread>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "webrtc_peer_connection.hpp"
@@ -29,6 +32,7 @@
 #include "stt_audio_adapter.hpp"
 #if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
 #include "voxtral_audio_adapter.hpp"
+#include "src/audio/speech_to_text/streaming_s2t_session.hpp"
 #endif
 
 namespace ovms {
@@ -75,22 +79,25 @@ public:
 private:
     struct Session : std::enable_shared_from_this<Session> {
         Session(rtc::Configuration configuration, std::string id);
+        ~Session();
         void sendEvent(const std::string& message);
+        void enqueueEvent(std::string message, bool delta = false);
+        void runOutboundSender();
         void sendUserDelta(const std::string& itemId, const std::string& text);
         void sendUserFinal(const std::string& itemId, const std::string& text);
         void sendUserError(const std::string& text);
+        void sendUserError(const std::string& itemId, const std::string& text);
         void attachDataChannel(std::shared_ptr<rtc::DataChannel> channel);
         void handleClientEvent(const std::string& message);
         std::string nextItemId();
 #if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
-        void startVoxtralStream();
-        std::shared_ptr<VoxtralAudioAdapter::Stream> currentVoxtralStream();
+        void startVoxtralSession(const SttPipelineHandle& speechModel);
 #endif
         void commitAudio();
         // Utterance-based ASR (e.g. Whisper): buffers audio until silence or an explicit commit.
         void pushUtteranceAudio(const AudioChunk& frame);
         void transcribeUtterance(AudioChunk utterance);
-        // Closes the peer connection (releasing its UDP port and callbacks) and all Voxtral streams.
+        // Closes the peer connection and cancels the per-call streaming graph.
         void shutdown();
         bool isDisconnected() const;
         AudioChunk decodeAudioFrame(const rtc::binary& data, const rtc::FrameInfo& info);
@@ -101,21 +108,25 @@ private:
         std::shared_ptr<SttAudioAdapter> sttAdapter;
         AudioUtteranceBuffer utteranceBuffer;
 #if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
-        std::shared_ptr<VoxtralAudioAdapter> voxtralAdapter;
-        std::shared_ptr<VoxtralAudioAdapter::Stream> voxtralStream;
-        // Streams finished by input_audio_buffer.commit that may still be producing their final transcript.
-        std::vector<std::shared_ptr<VoxtralAudioAdapter::Stream>> committedVoxtralStreams;
+        std::shared_ptr<StreamingS2TSession> streamingSession;
         std::string currentItemId;
+        bool voxtralHasAudio = false;
 #endif
         uint64_t itemCounter = 0;
         std::shared_ptr<rtc::DataChannel> transcriptChannel;
         std::mutex transcriptSendMutex;
+        std::mutex outboundMutex;
+        std::condition_variable outboundReady;
+        std::deque<std::pair<std::string, bool>> outboundQueue;
+        size_t outboundBytes = 0;
+        bool outboundStopping = false;
         std::vector<Candidate> localCandidates;
         std::string localType;
         std::string localSdp;
         bool gatheringComplete = false;
         std::condition_variable descriptionReady;
         mutable std::mutex mutex;
+        std::thread outboundWorker;
     };
 
     CreateCallResult negotiateSession(const std::string& offerSdp, const SttPipelineHandle& speechModel, OfferResult& result);

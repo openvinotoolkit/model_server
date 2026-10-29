@@ -304,6 +304,7 @@ extern "C" MEDIAPIPE_RUNTIME_EXPORT int OVMS_MPFactoryGetSttPipeline(void* facto
     // Aliasing constructor: the mutex shares ownership of its servable.
     handle->pipelineMutex = std::shared_ptr<std::mutex>(servable, &servable->sttPipelineMutex);
     handle->modelsPath = servable->parsedModelsPath.string();
+    handle->servable = std::move(servable);
     return static_cast<int>(ovms::StatusCode::OK);
 }
 

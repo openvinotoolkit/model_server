@@ -24,6 +24,7 @@ class ASRPipeline;
 }  // namespace ov::genai
 
 namespace ovms {
+struct SttServable;
 
 /// Shared access to the ASR pipeline of a served speech-to-text graph.
 /// Holding the handle keeps the pipeline alive even if the graph is reloaded or retired meanwhile.
@@ -32,6 +33,8 @@ struct SttPipelineHandle {
     /// Serializes ASRPipeline::generate() calls with the other users of the served pipeline.
     std::shared_ptr<std::mutex> pipelineMutex;
     std::string modelsPath;
+    /// Retains backend selection and the servable for live graph resource injection.
+    std::shared_ptr<SttServable> servable;
 };
 
 }  // namespace ovms

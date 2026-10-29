@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "src/execution_context.hpp"
+#include "src/audio/speech_to_text/s2t_servable.hpp"
 #include "../config.hpp"
 #include "../llm/llm_calculators_plugin_loader.hpp"
 #include "src/utils/env_guard.hpp"
@@ -347,6 +348,13 @@ Status MediapipeGraphDefinition::validate(const ServableNameChecker& checker) {
     if (!status.ok()) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe validation failed at stage initializeNodes for graph: {} status: {}", getName(), status.string());
         return status;
+    }
+    for (auto& node : *this->config.mutable_node()) {
+        const auto it = this->sidePacketMaps->sttServableMap.find(node.name());
+        if (it != this->sidePacketMaps->sttServableMap.end() &&
+            it->second->streamingBackend && node.calculator() == "S2tCalculator") {
+            node.set_calculator("StreamingS2TCalculator");
+        }
     }
     status = this->initializeQueueIfRequired();
     if (!status.ok()) {
