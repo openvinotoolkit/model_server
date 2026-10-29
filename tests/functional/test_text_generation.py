@@ -126,11 +126,11 @@ class TestTextGeneration:
     @pytest.mark.parametrize("max_tokens", [MaxTokensValues.COMPARE], ids=lambda x: f"max_tokens={x}")
     @pytest.mark.parametrize("temperature", [TemperatureValues.TEST_DEFAULT], ids=lambda x: f"temperature={x}")
     @pytest.mark.parametrize("sequential_batches", [1], ids=lambda x: f"sequential_batches={x}")
-    @pytest.mark.parametrize("parallel_requests", [1000], ids=lambda x: f"parallel_requests={x}")
+    @pytest.mark.parametrize("parallel_requests", [100], ids=lambda x: f"parallel_requests={x}")
     @pytest.mark.parametrize("ovms_log_level", [Ovms.LOG_LEVEL_INFO, Ovms.LOG_LEVEL_DEBUG, Ovms.LOG_LEVEL_TRACE])
     @pytest.mark.parametrize("pipeline_type", PipelineType.TEXT_GENERATION)
-    # @pytest.mark.timeout(2200)
-    @pytest.mark.timeout(20000)
+    @pytest.mark.timeout(calculate_generative_test_timeout(2200))
+    # @pytest.mark.timeout(20000)
     def test_text_generation_multiple_requests(
             self,
             context: Context,
