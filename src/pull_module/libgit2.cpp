@@ -120,7 +120,7 @@ void removeLfsWipMarker(const std::string& repositoryPath) {
  * Attempts to remove stale lfs_error.txt file from a repository.
  * If the file cannot be checked or deleted, logs a warning but does not fail the operation.
  * This function clears error artifacts that would otherwise interfere with resume/clone detection.
- * 
+ *
  * @param repositoryPath Path to the git repository root directory.
  * @note Logs warnings if file operations fail; operation continues on error.
  */
@@ -182,7 +182,7 @@ int checkCloneCancellationUpdateTipsCallback(const char*, const git_oid*, const 
 /**
  * Callback fired during git checkout to notify about files being modified in the working tree.
  * Raised when files are created, updated, or deleted during clone or checkout operations.
- * 
+ *
  * @param why Notification type (GIT_CHECKOUT_NOTIFY_*) indicating what changed.
  * @param path Path of the file being checked out in the working directory.
  * @param baseline Diff file info at HEAD (unused).
@@ -206,7 +206,7 @@ int checkCloneCancellationCheckoutNotifyCallback(git_checkout_notify_t,
 /**
  * Callback for acquiring authentication credentials during git clone operations.
  * Attempts to use HF_TOKEN environment variable for Hugging Face authentication.
- * 
+ *
  * @param out [out] Pointer to git_credential structure to fill with credentials.
  * @param url The repository URL requiring authentication.
  * @param username_from_url Username parsed from URL (if any).
@@ -272,7 +272,7 @@ int cred_acquire_cb(git_credential** out,
  * Initializes the libgit2 library with server connection settings.
  * Sets timeouts for server connections and LFS operations, and configures SSL certificate locations.
  * Maintains a reference count of active guards to ensure single initialization.
- * 
+ *
  * @param opts Configuration options including server timeouts and SSL certificate path.
  * @note Thread-safe initialization; uses atomic counter to track active guards.
  * @note Connects to internet: configures timeouts for remote git/LFS operations.
@@ -452,7 +452,7 @@ Status mapRepositoryOpenFailureToStatus(const GitRepositoryGuard& repoGuard) {
 /**
  * Verifies the cleanliness of a git repository after clone or download operations.
  * Checks for staged changes, unstaged modifications, untracked files, and merge conflicts.
- * 
+ *
  * @param checkUntracked If true, also check for untracked files (more expensive on large repos).
  * @return StatusCode::OK if repository is clean, StatusCode::HF_GIT_STATUS_UNCLEAN if changes exist,
  *         or error status if repository check fails.
@@ -708,7 +708,7 @@ fs::path makeRelativeToBase(const fs::path& path, const fs::path& base) {
 /**
  * Recursively/non-recursively searches a directory for files matching the LFS pointer format.
  * Skips .git directories to avoid searching the repository metadata.
- * 
+ *
  * @param directory Root directory to search for LFS-like files.
  * @param recursive If true, search subdirectories; if false, only search directory root.
  * @return Vector of relative paths (relative to directory) of files matching LFS format.
@@ -783,7 +783,7 @@ struct MissingNonLfsPathsWalkPayload {
 /**
  * Tree-walk callback that collects paths from HEAD tree that have LFS pointers but missing worktree files.
  * Used to identify LFS files that need to be downloaded/resumed during clone recovery.
- * 
+ *
  * @param root Current directory path in the tree traversal (accumulates parent directories).
  * @param entry Current git_tree_entry being visited.
  * @param payloadPtr Pointer to MissingLfsPathsWalkPayload containing repo, worktree path, and output set.
@@ -815,7 +815,7 @@ int collectMissingLfsPathsFromHeadTreeCb(const char* root, const git_tree_entry*
 /**
  * Tree-walk callback that collects missing tracked non-LFS files from HEAD tree.
  * Paths are included only when missing in worktree and blob is not an LFS pointer.
- * 
+ *
  * @param root Current directory path in the tree traversal.
  * @param entry Current git_tree_entry being visited.
  * @param payloadPtr Pointer to MissingNonLfsPathsWalkPayload with output set.
@@ -847,7 +847,7 @@ int collectMissingNonLfsPathsFromHeadTreeCb(const char* root, const git_tree_ent
  * Identifies LFS files that are safe to resume downloading after interruption.
  * Combines working directory LFS pointers with missing LFS blobs from the HEAD tree.
  * Useful for recovery after abrupt clone termination.
- * 
+ *
  * @param repo Pointer to the git repository object.
  * @param directory Root directory of the git working tree to search.
  * @param parseHeadTreeIfInterrupted If true, also scan HEAD tree for missing tracked LFS blobs.
@@ -875,7 +875,7 @@ std::vector<fs::path> findResumableLfsFiles(git_repository* repo, const std::str
 /**
  * Finds tracked non-LFS files present in HEAD but missing in worktree.
  * Used during resume flow to restore required metadata/config artifacts.
- * 
+ *
  * @param repo Pointer to the git repository object.
  * @param directory Repository worktree root directory.
  * @return Vector of relative paths for missing tracked non-LFS files.
@@ -897,7 +897,7 @@ std::vector<fs::path> findMissingTrackedNonLfsFiles(git_repository* repo, const 
 /**
  * Checks for LFS download errors recorded by libgit2 patch in the repository root.
  * Reads and logs error messages from lfs_error.txt, then removes the file for cleanup.
- * 
+ *
  * @param repositoryRootPath Absolute path to the git repository root directory.
  * @return true if error file exists (even if unreadable); false if no error file found.
  * @note Works on specific git repository location; reads and deletes lfs_error.txt.
@@ -938,7 +938,7 @@ bool ifHasLfsErrorFileLogContentAndRemove(const std::string& repositoryRootPath)
 /**
  * Restores missing tracked non-LFS files after interrupted clone/resume.
  * Rebuilds index entries from HEAD and checks out selected paths into worktree.
- * 
+ *
  * @param repo Pointer to the git repository object.
  * @param missingPaths Relative paths of tracked non-LFS files missing in worktree.
  * @return StatusCode::OK on success, cancellation/error status otherwise.
@@ -1036,7 +1036,7 @@ Status restoreMissingTrackedNonLfsFiles(git_repository* repo, const std::vector<
  * Resumes the download of a single LFS file after an interrupted clone.
  * Repairs the index entry and forces git checkout to re-trigger the LFS smudge filter.
  * Removes the stale worktree file to ensure libgit2 re-downloads it.
- * 
+ *
  * @param repo Pointer to the git repository object.
  * @param filePathInRepo Path to the LFS file relative to repository root (e.g., "model.bin").
  * @return StatusCode::OK on successful resume, StatusCode::HF_GIT_CLONE_CANCELLED if shutdown
@@ -1144,7 +1144,7 @@ struct ResumeCandidates {
 
 /**
  * Populates resume candidate lists based on interruption markers and repository scan.
- * 
+ *
  * @param repo Pointer to the git repository object.
  * @param downloadPath Repository worktree root path.
  * @param candidates [in/out] Resume candidates to populate; hasWipMarker and hasLfsErrorFile
@@ -1182,7 +1182,7 @@ void printResumeCandidates(const ResumeCandidates& candidates) {
 /**
  * Reconciles index with HEAD tree after crash recovery operations.
  * This removes staged index artifacts before strict cleanliness validation.
- * 
+ *
  * @param repo Pointer to the git repository object.
  * @return StatusCode::OK on success, cancellation/error status otherwise.
  * @note Works on local git index; does not modify tracked file contents in worktree.
@@ -1375,7 +1375,7 @@ Status handleExistingRepository(const std::string& downloadPath,
 
 /**
  * Configures libgit2 clone options with callbacks, credentials, and optional proxy.
- * 
+ *
  * @param cloneOptions [in/out] libgit2 clone options structure to populate.
  * @param useProxy Whether to route git operations through proxyUrl.
  * @param proxyUrl Proxy URL to pass into libgit2 when useProxy is true.
@@ -1404,7 +1404,7 @@ void configureCloneOptions(git_clone_options& cloneOptions, bool useProxy, const
 
 /**
  * Executes git clone for a model repository and handles cancellation/error mapping.
- * 
+ *
  * @param downloadPath Destination repository path on local filesystem.
  * @param repoUrl Source repository URL without embedded credentials.
  * @param cloneOptions Prepared libgit2 clone options.
@@ -1499,7 +1499,7 @@ Status handleFreshClone(const std::string& downloadPath,
  * Main method to download a model from Hugging Face via git clone.
  * Handles initial full clone, resumption of partial downloads, and validation of repository state.
  * Applies appropriate authentication, proxy settings, and LFS configuration during clone.
- * 
+ *
  * @return StatusCode::OK on successful download or if model already exists locally,
  *         StatusCode::HF_GIT_CLONE_CANCELLED if shutdown requested during operation,
  *         StatusCode::HF_GIT_CLONE_FAILED or StatusCode::HF_GIT_LIBGIT2_LFS_DOWNLOAD_FAILED on errors.
@@ -1541,7 +1541,7 @@ Status HfDownloader::downloadModel() {
 /**
  * C-style function exported for libgit2 LFS extension to check if LFS downloads should be aborted.
  * Called by patched libgit2 to determine if server shutdown was requested.
- * 
+ *
  * @return 1 if LFS shutdown/cancellation is requested, 0 otherwise.
  * @note Reads in-process shutdown state only; does not perform filesystem or network I/O.
  * @note Extern C interface: for compatibility with libgit2 C library patches.

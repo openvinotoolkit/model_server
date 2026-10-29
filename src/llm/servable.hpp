@@ -57,10 +57,10 @@ GenAiServable support.
 This header contains the interface for GenAiServable and its properties and execution context.
 All classes in this file should not be instantiated, but rather extended by derived classes.
 
-GenAiServable is an interface for derived classes that implement logic for specific types of pipelines. 
+GenAiServable is an interface for derived classes that implement logic for specific types of pipelines.
 It uses both GenAiServableProperties and GenAiServableExecutionContext (or rather their extensions) to facilitate implementation.
 
-GenAiServableProperties is a container for data initialized when the servable is loaded and it is reused 
+GenAiServableProperties is a container for data initialized when the servable is loaded and it is reused
 for every request, in contrary to GenAiServableExecutionContext that is created multiple times during servable lifespan.
 GenAiServableProperties are initialized by servable initializer (see servable_initializer.hpp).
 

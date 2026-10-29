@@ -249,7 +249,8 @@ protected:
             case ovms::Precision::MIXED:
             case ovms::Precision::Q78:
             case ovms::Precision::BIN:
-            default: {}
+            default: {
+            }
             }
         }
     }

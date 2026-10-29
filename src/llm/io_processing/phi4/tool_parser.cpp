@@ -110,7 +110,7 @@ void Phi4ToolParser::clearState() {
 }
 
 std::optional<Delta> Phi4ToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
-    /* 
+    /*
     Phi4 with vLLM template produces tool calls in the format:
     functools[{"name": [function name], "arguments": [function arguments as JSON]}, ...]
 

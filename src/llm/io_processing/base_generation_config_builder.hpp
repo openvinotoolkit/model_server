@@ -23,22 +23,22 @@
 namespace ovms {
 
 /*
-* DecodingMethod enum is used to properly set defaults and validate GenerationConfig depending on whether pipeline has been
-* configured to use standard sampling strategies like greedy, beam search or multinomial or non-standard strategies like 
-* speculative decoding with draft model or prompt lookup technique.
-*
-* STANDARD: Standard decoding methods such as greedy, beam search, and multinomial sampling. No special pipeline configuration.
-* FAST_DRAFT: Classic two-model speculative decoding — a smaller off-the-shelf LLM drafts tokens that the main model verifies.
-*             Pipeline configured with draft_models_path.
-* EAGLE3: EAGLE3 speculative decoding — draft head conditioned on main model hidden states; supports tree drafting.
-*         Auto-detected from model rt_info (eagle3_mode=true). Greedy decoding only.
-* DFLASH: DFlash speculative decoding — hidden-state-conditioned head using linear attention.
-*         Auto-detected from model rt_info (dflash_mode=true). Supports VLM and multinomial sampling.
-* MTP: Multi-Token Prediction — bundled prediction head (openvino_mtp_model.xml) inside the draft model directory.
-*      Auto-detected from model artifacts; no extra flag required. Multinomial sampling supported.
-* PROMPT_LOOKUP: N-gram prompt lookup decoding; no draft model required.
-*                Pipeline configured with prompt_lookup=true in pluginConfig.
-*/
+ * DecodingMethod enum is used to properly set defaults and validate GenerationConfig depending on whether pipeline has been
+ * configured to use standard sampling strategies like greedy, beam search or multinomial or non-standard strategies like
+ * speculative decoding with draft model or prompt lookup technique.
+ *
+ * STANDARD: Standard decoding methods such as greedy, beam search, and multinomial sampling. No special pipeline configuration.
+ * FAST_DRAFT: Classic two-model speculative decoding — a smaller off-the-shelf LLM drafts tokens that the main model verifies.
+ *             Pipeline configured with draft_models_path.
+ * EAGLE3: EAGLE3 speculative decoding — draft head conditioned on main model hidden states; supports tree drafting.
+ *         Auto-detected from model rt_info (eagle3_mode=true). Greedy decoding only.
+ * DFLASH: DFlash speculative decoding — hidden-state-conditioned head using linear attention.
+ *         Auto-detected from model rt_info (dflash_mode=true). Supports VLM and multinomial sampling.
+ * MTP: Multi-Token Prediction — bundled prediction head (openvino_mtp_model.xml) inside the draft model directory.
+ *      Auto-detected from model artifacts; no extra flag required. Multinomial sampling supported.
+ * PROMPT_LOOKUP: N-gram prompt lookup decoding; no draft model required.
+ *                Pipeline configured with prompt_lookup=true in pluginConfig.
+ */
 enum DecodingMethod {
     STANDARD,
     FAST_DRAFT,
@@ -50,7 +50,7 @@ enum DecodingMethod {
 
 /*
  * BaseGenerationConfigBuilder is a class that helps in building the base generation configuration
- * for OpenVINO GenAI pipeline based on OpenAI API request. 
+ * for OpenVINO GenAI pipeline based on OpenAI API request.
  * This class provides functionalities common for different models and pipeline types.
  * It is designed to be extended by specific configuration builders for different models or pipeline types.
  */
@@ -73,20 +73,20 @@ public:
     ov::genai::GenerationConfig& getConfig() { return config; }
 
     /*
-    * Adjusts generation config based on the decoding method used in the pipeline.
-    * This includes setting defaults for parameters required by the selected decoding method if they are not already set.
-    */
+     * Adjusts generation config based on the decoding method used in the pipeline.
+     * This includes setting defaults for parameters required by the selected decoding method if they are not already set.
+     */
     void adjustConfigForDecodingMethod();
 
     /*
-    * Add stop string to generation config. Used when model server needs to add additional stop string that has not been provided in the request.
-    */
+     * Add stop string to generation config. Used when model server needs to add additional stop string that has not been provided in the request.
+     */
     void addStopString(const std::string& decodedStopString);
 
     /*
-    * Validates the structured output configuration, if exists.
-    * Throws exception if validation fails.
-    */
+     * Validates the structured output configuration, if exists.
+     * Throws exception if validation fails.
+     */
     void validateStructuredOutputConfig(ov::genai::Tokenizer& tokenizer);
 
     /*
