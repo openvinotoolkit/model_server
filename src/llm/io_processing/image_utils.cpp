@@ -106,7 +106,7 @@ absl::Status downloadImage(const char* url, std::string& image, const int64_t& s
 
     if (status != CURLE_OK) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Setting curl opts failed: {}", curl_easy_strerror(status));
-        return absl::InternalError("Failed to configure image download: " + std::string(curl_easy_strerror(status)));
+        return absl::InternalError("Failed to configure image download.");
     }
 
     status = curl_easy_perform(curl_handle);
@@ -120,7 +120,7 @@ absl::Status downloadImage(const char* url, std::string& image, const int64_t& s
             return absl::ResourceExhaustedError("Memory allocation failed while downloading image");
         }
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloading image failed: {}", curl_easy_strerror(status));
-        return absl::InvalidArgumentError("Failed to download image from external URL: " + std::string(curl_easy_strerror(status)) + ". Check network connectivity, proxy configuration, and URL accessibility.");
+        return absl::InvalidArgumentError("Failed to download image from external URL.");
     }
 
     const bool isHttpUrl = std::strncmp(url, "http://", 7) == 0 || std::strncmp(url, "https://", 8) == 0;
@@ -129,7 +129,7 @@ absl::Status downloadImage(const char* url, std::string& image, const int64_t& s
         status = curl_easy_getinfo(curl_handle, CURLINFO_RESPONSE_CODE, &httpCode);
         if (status != CURLE_OK) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Getting HTTP response code failed: {}", curl_easy_strerror(status));
-            return absl::InternalError("Failed to get image download response status: " + std::string(curl_easy_strerror(status)));
+            return absl::InternalError("Failed to get image download response status.");
         }
         if (httpCode >= 300 && httpCode < 400 && !redirectsAllowed) {
             return absl::InvalidArgumentError("Failed to download image from external URL because redirects are not allowed. Set OVMS_MEDIA_URL_ALLOW_REDIRECTS=1 environment variable to allow redirects.");
