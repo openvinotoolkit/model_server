@@ -27,6 +27,8 @@ else
 endif
 BASH_BIN := $(shell command -v bash 2>/dev/null || command -v sh 2>/dev/null || echo /bin/bash)
 GIT_BIN := $(shell command -v git 2>/dev/null || command -v git.exe 2>/dev/null || echo )
+REPO_ROOT := $(CURDIR)
+CI_DIR := $(REPO_ROOT)/ci
 VIRTUALENV_DIR := .venv
 VIRTUALENV_STYLE_DIR := .venv-style
 VIRTUALENV_PYTHON := $(VIRTUALENV_DIR)/$(VIRTUALENV_BIN_DIR)/python
@@ -344,7 +346,7 @@ $(ACTIVATE_STYLE):
 
 cppclean: venv-style
 	@echo "Checking cppclean..."
-	@$(BASH_BIN) -lc "./ci/cppclean.sh"
+	@$(BASH_BIN) -lc '"$(CI_DIR)/cppclean.sh"'
 
 style: venv-style spell clang-format-check cpplint cppclean
 
@@ -355,11 +357,11 @@ hadolint:
 
 bandit:
 	@echo "Checking python files..."
-	@. $(ACTIVATE_STYLE); $(BASH_BIN) -lc "./ci/bandit.sh"
+	@. $(ACTIVATE_STYLE); $(BASH_BIN) -lc '"$(CI_DIR)/bandit.sh"'
 
 license-headers:
 	@echo "Checking license headers in files..."
-	@. $(ACTIVATE_STYLE); $(BASH_BIN) -lc "python3 ./ci/lib_search.py . > missing_headers.txt"
+	@. $(ACTIVATE_STYLE); $(BASH_BIN) -lc "python3 '$(CI_DIR)/lib_search.py' . > missing_headers.txt"
 	@if ! grep -FRq "All files have headers" missing_headers.txt; then\
         echo "Files with missing headers";\
         cat missing_headers.txt;\
@@ -370,9 +372,9 @@ license-headers:
 sdl-check: venv-style hadolint bandit license-headers
 
 	@echo "Checking forbidden functions in files..."
-	@. $(ACTIVATE_STYLE); $(BASH_BIN) -lc "python3 ./ci/lib_search.py . functions > forbidden_functions.txt"
+	@. $(ACTIVATE_STYLE); $(BASH_BIN) -lc "python3 '$(CI_DIR)/lib_search.py' . functions > forbidden_functions.txt"
 	@if ! grep -FRq "All files checked for forbidden functions" forbidden_functions.txt; then\
-		error Run python3 ./ci/lib_search.py . functions - to see forbidden functions file list.;\
+		error Run python3 '$(CI_DIR)/lib_search.py' . functions - to see forbidden functions file list.;\
 	fi
 	@rm forbidden_functions.txt
 
