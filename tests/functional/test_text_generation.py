@@ -126,11 +126,11 @@ class TestTextGeneration:
     @pytest.mark.parametrize("max_tokens", [MaxTokensValues.COMPARE], ids=lambda x: f"max_tokens={x}")
     @pytest.mark.parametrize("temperature", [TemperatureValues.TEST_DEFAULT], ids=lambda x: f"temperature={x}")
     @pytest.mark.parametrize("sequential_batches", [1], ids=lambda x: f"sequential_batches={x}")
-    @pytest.mark.parametrize("parallel_requests", [100], ids=lambda x: f"parallel_requests={x}")
+    @pytest.mark.parametrize("parallel_requests", [1000], ids=lambda x: f"parallel_requests={x}")
     @pytest.mark.parametrize("ovms_log_level", [Ovms.LOG_LEVEL_INFO, Ovms.LOG_LEVEL_DEBUG, Ovms.LOG_LEVEL_TRACE])
     @pytest.mark.parametrize("pipeline_type", PipelineType.TEXT_GENERATION)
-    @pytest.mark.timeout(calculate_generative_test_timeout(2200))
-    # @pytest.mark.timeout(20000)
+    # @pytest.mark.timeout(calculate_generative_test_timeout(2200))
+    @pytest.mark.timeout(calculate_generative_test_timeout(22000))
     def test_text_generation_multiple_requests(
             self,
             context: Context,
@@ -197,12 +197,13 @@ class TestTextGeneration:
         input_data = CompletionsApi.prepare_completions_input_content(input_objects) \
             if endpoint == OpenAIWrapper.COMPLETIONS else \
             ChatCompletionsApi.prepare_chat_completions_input_content(input_objects)
+        client_timeout = 1800
         command = GenerativeAIUtils.prepare_python_script_command(
-            context, tmp_path, port, model, endpoint, input_data, request_params
+            context, tmp_path, port, model, endpoint, input_data, request_params, timeout=client_timeout
         )
         outputs_multiple_requests = None
         for _ in range(sequential_batches):
-            stdout = run_command_in_parallel(command, runs=parallel_requests)
+            stdout = run_command_in_parallel(command, runs=parallel_requests, timeout=client_timeout)
             assert stdout, f"Empty stdout for {parallel_requests} commands: '{command}'"
             outputs_multiple_requests = GenerativeAIUtils.get_llm_outputs_from_curl_stdout(stdout)
             len_stdout = len(outputs_multiple_requests)
