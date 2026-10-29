@@ -39,11 +39,13 @@ GPU_INSTALL_DRIVER_VERSION = {
     "redhat": "24.52.32224",
     "ubuntu22": "24.39.31294",
     "ubuntu24": "26.09.37435",
+    "ubuntu26": "26.31.39395",
 }
 
 GPU_INSTALL_SCRIPTS = {
     OsType.Ubuntu22: ["install_ubuntu_gpu_drivers.sh", "install_va.sh"],
     OsType.Ubuntu24: ["install_ubuntu_gpu_drivers.sh", "install_va.sh"],
+    OsType.Ubuntu26: ["install_ubuntu_gpu_drivers.sh", "install_va.sh"],
     OsType.Redhat: ["install_redhat_gpu_drivers.sh"],
 }
 
@@ -86,6 +88,8 @@ class OvmsImages:
             cls._os_type = OsType.Ubuntu22
         elif "ubuntu 24" in os_name_lower:
             cls._os_type = OsType.Ubuntu24
+        elif "ubuntu 26" in os_name_lower:
+            cls._os_type = OsType.Ubuntu26
         else:
             raise NotImplementedError()
 
@@ -103,6 +107,7 @@ DEFAULT_OVMS_IMAGE_SUFFIXES = {
 DEFAULT_OVMS_IMAGE_TAG = {
     OsType.Ubuntu22: "ubuntu22_main",
     OsType.Ubuntu24: "ubuntu24_main",
+    OsType.Ubuntu26: "ubuntu26_main",
     OsType.Redhat: "redhat_main",
 }
 
@@ -117,7 +122,7 @@ def calculate_ovms_image_suffix(target_device):
 
 def prepare_general_os_list(base_os_list):
     os_types = set(base_os_list)
-    if any(elem == OsType.Ubuntu22 or elem == OsType.Ubuntu24 for elem in base_os_list):
+    if any(elem in (OsType.Ubuntu22, OsType.Ubuntu24, OsType.Ubuntu26) for elem in base_os_list):
         os_types.add(UBUNTU)
     return os_types
 

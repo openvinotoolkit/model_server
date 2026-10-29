@@ -30,7 +30,6 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "io_processing/delta.hpp"
 #include "openvino/genai/perf_metrics.hpp"
-#include "openvino/genai/text_streamer.hpp"
 #include "mediapipe/framework/calculator.pb.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
@@ -45,6 +44,7 @@
 #include "runtime_chat_template_runtime_loader.hpp"
 
 namespace ovms {
+class OVMSTextStreamer;
 
 // Some pipelines internals rely on request_id, so for now we provide increasing ID
 static std::atomic<uint64_t> currentRequestId = 0;
@@ -73,11 +73,6 @@ Note that GenAiServableExecutionContext pointer is the only parameter most of th
 enum class GenerationPhase {
     INPUT_TOKEN_PROCESSING,
     OUTPUT_TOKEN_PROCESSING,
-};
-
-enum class ChatTemplateEngine {
-    MINJA,  // Use GenAI's apply_chat_template (minja-based)
-    JINJA,  // Use Python Jinja2 module for chat template processing
 };
 
 // Thread-safe channel for parsed streaming deltas.
@@ -149,7 +144,9 @@ struct GenAiServableExecutionContext {
     std::vector<ov::genai::GenerationOutput> generationOutputs;
     std::unique_ptr<ov::genai::PerfMetrics> perfMetrics;
     std::string response;
-    std::shared_ptr<ov::genai::TextStreamer> textStreamer;
+    std::shared_ptr<OVMSTextStreamer> textStreamer;
+    // Loopback iterations can occur before the calculator emits its first frame.
+    bool streamFrameEmitted = false;
     bool sendLoopbackSignal = false;
     bool lifecyclePrimed = false;  // true once RESPONSES lifecycle events have been primed
     DeltaChannel deltaChannel;     // thread-safe delta queue used by all streaming paths
@@ -178,6 +175,26 @@ struct LegacyServableExecutionContextBase : public GenAiServableExecutionContext
 // Defined in servable.cpp. Both Legacy servable overrides delegate here.
 absl::Status prepareLegacyPartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
+enum class ChatTemplateEngine {
+    NONE,
+    MINJA,  // Use GenAI's apply_chat_template (minja-based)
+    JINJA,  // Use Python Jinja2 module for chat template processing
+};
+
+enum class ChatTemplateStatus {
+    NOT_CHECKED,
+    AVAILABLE,
+    MISSING,
+    LOAD_FAILED,
+    INCOMPATIBLE,
+};
+
+enum class ChatTemplateSource {
+    NONE,
+    CHAT_TEMPLATE_JINJA,
+    GENAI_TOKENIZER,
+};
+
 struct GenAiServableProperties {
     // General configuration
     std::string modelsPath;
@@ -188,12 +205,9 @@ struct GenAiServableProperties {
     ov::AnyMap pluginConfig;
     ov::AnyMap tokenizerPluginConfig;
     bool enableToolGuidedGeneration = false;
-#if (PYTHON_DISABLE == 0)
-    ChatTemplateEngine chatTemplateEngine = ChatTemplateEngine::JINJA;
-#else
-    ChatTemplateEngine chatTemplateEngine = ChatTemplateEngine::MINJA;
-#endif
-    bool chatTemplateEngineExplicit = false;
+    ChatTemplateEngine chatTemplateEngine = ChatTemplateEngine::NONE;
+    ChatTemplateStatus chatTemplateStatus = ChatTemplateStatus::NOT_CHECKED;
+    ChatTemplateSource chatTemplateSource = ChatTemplateSource::NONE;
     // Chat template analysis
     ChatTemplateCaps chatTemplateCaps;
     // Sampling

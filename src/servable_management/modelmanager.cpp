@@ -371,6 +371,7 @@ Status ModelManager::startFromConfig() {
     }
 
     ModelConfig& modelConfig = it->second;
+    modelConfig.setDisableInputCountValidation(config.disableInputCountValidation());
 
     status = modelConfig.parsePluginConfig(config.pluginConfig(), modelConfig.getPluginConfig());
     if (!status.ok()) {
@@ -1658,7 +1659,7 @@ const std::vector<std::string> ModelManager::getNamesOfAvailableMediapipePipelin
 #endif
 
 #if (MEDIAPIPE_DISABLE == 0)
-Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
+Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutorInterface>& graph,
     const std::string& name) {
     if (servableGroupManager && servableGroupManager->isEnabled()) {
         // TODO current preview limitation -> we wait for whole group to load
@@ -1668,11 +1669,6 @@ Status ModelManager::createPipeline(std::unique_ptr<MediapipeGraphExecutor>& gra
             return status;
         }
     }
-    return this->mediapipeFactory->create(graph, name);
-}
-
-Status ModelManager::createPipelineHandle(std::unique_ptr<MediapipeGraphExecutorInterface>& graph,
-    const std::string& name) {
     return this->mediapipeFactory->createHandle(graph, name);
 }
 #endif

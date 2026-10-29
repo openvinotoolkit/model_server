@@ -39,6 +39,8 @@ private:
          */
     Config(const Config&) = delete;
 
+    bool hasModelParametersSetViaCLI() const;
+
     /**
          * @brief 
          */
@@ -164,6 +166,13 @@ public:
          * @return uint
          */
     size_t grpcMemoryQuota() const;
+
+    /**
+         * @brief Gets the maximum allowed JSON complexity for request parsing
+         *
+         * @return size_t
+         */
+    size_t jsonMaxComplexity() const;
 
     /**
          * @brief Gets the rest workers count

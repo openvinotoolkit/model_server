@@ -30,6 +30,7 @@
 
 #include "logging.hpp"
 #include "ovms_exit_codes.hpp"
+#include "utils/rapidjson_utils.hpp"
 
 #include "capi_frontend/server_settings.hpp"
 #include "cli_parser.hpp"
@@ -93,6 +94,15 @@ bool Config::parse(ServerSettingsImpl* serverSettings, ModelsSettingsImpl* model
     return validate();
 }
 
+bool Config::hasModelParametersSetViaCLI() const {
+    return std::any_of(
+        modelsSettings.userSetSingleModelArguments.begin(),
+        modelsSettings.userSetSingleModelArguments.end(),
+        [](const std::string& argument) {
+            return argument != "model_name" && argument != "model_path" && argument != "config_path";
+        });
+}
+
 bool Config::is_ipv6(const std::string& s) {
     addrinfo hints{};
     hints.ai_family = AF_INET6;
@@ -141,7 +151,7 @@ bool Config::validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl
     static const std::vector<std::string> allowedForRemove = {"model_name", "config_path"};
     static const std::vector<std::string> allowedForAdd = {"model_name", "model_path", "config_path",
         "batch_size", "shape", "layout", "mean", "scale", "color_format", "precision",
-        "model_version_policy", "nireq", "target_device", "plugin_config", "group_name"};
+        "disable_input_count_validation", "model_version_policy", "nireq", "target_device", "plugin_config", "group_name"};
 
     const auto& allowedUserSettings = (exportType == ENABLE_MODEL) ? allowedForAdd : allowedForRemove;
     std::vector<std::string> usedButDisallowedUserSettings;
@@ -278,9 +288,7 @@ bool Config::validate() {
             std::cerr << "Use config_path or model_path with model_name" << std::endl;
             return false;
         }
-        if (!configPath().empty() && (!this->modelsSettings.batchSize.empty() || !shape().empty() ||
-                                         nireq() != 0 || !modelVersionPolicy().empty() || !this->modelsSettings.targetDevice.empty() ||
-                                         !pluginConfig().empty())) {
+        if (!configPath().empty() && hasModelParametersSetViaCLI()) {
             std::cerr << "Model parameters in CLI are exclusive with the config file" << std::endl;
             return false;
         }
@@ -391,6 +399,10 @@ bool Config::validate() {
         std::cerr << "log_level should be one of: TRACE, DEBUG, INFO, WARNING, ERROR" << std::endl;
         return false;
     }
+    if (this->serverSettings.jsonMaxComplexity.has_value() && this->serverSettings.jsonMaxComplexity.value() == 0) {
+        std::cerr << "json_max_complexity must be greater than 0" << std::endl;
+        return false;
+    }
     return true;
 }
 
@@ -403,6 +415,7 @@ const std::string Config::restBindAddress() const { return this->serverSettings.
 uint32_t Config::grpcWorkers() const { return this->serverSettings.grpcWorkers; }
 uint32_t Config::grpcMaxThreads() const { return this->serverSettings.grpcMaxThreads.value_or(DEFAULT_GRPC_MAX_THREADS); }
 size_t Config::grpcMemoryQuota() const { return this->serverSettings.grpcMemoryQuota.value_or(DEFAULT_GRPC_MEMORY_QUOTA); }
+size_t Config::jsonMaxComplexity() const { return this->serverSettings.jsonMaxComplexity.value_or(DEFAULT_MAX_JSON_COMPLEXITY); }
 uint32_t Config::restWorkers() const { return static_cast<uint32_t>(std::max(static_cast<uint64_t>(2), static_cast<uint64_t>(this->serverSettings.restWorkers.value_or(getDefaultRestWorkers())))); }
 const std::string& Config::modelName() const { return this->modelsSettings.modelName; }
 const std::string& Config::modelPath() const { return this->modelsSettings.modelPath; }
@@ -433,7 +446,7 @@ const std::string& Config::grpcChannelArguments() const { return this->serverSet
 uint32_t Config::filesystemPollWaitMilliseconds() const { return this->serverSettings.filesystemPollWaitMilliseconds; }
 uint32_t Config::memoryTrimmingIntervalSeconds() const { return this->serverSettings.memoryTrimmingIntervalSeconds; }
 uint32_t Config::idleUnloadTimeoutSeconds() const { return this->serverSettings.idleUnloadTimeoutSeconds; }
-bool Config::disableInputCountValidation() const { return this->serverSettings.disableInputCountValidation; }
+bool Config::disableInputCountValidation() const { return this->modelsSettings.disableInputCountValidation.value_or(false); }
 bool Config::allowCredentials() const { return this->serverSettings.allowCredentials; }
 uint64_t Config::maxImageDecodePixels() const { return this->serverSettings.maxImageDecodePixels; }
 bool Config::allowUnestimatableImageFormats() const { return this->serverSettings.allowUnestimatableImageFormats; }

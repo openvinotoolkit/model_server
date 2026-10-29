@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include <string>
 
+#include <openvino/genai/text_streamer.hpp>
+
 #include "../../llm/servable.hpp"
 #include "../../llm/servable_initializer.hpp"
 #include "gtest/gtest.h"

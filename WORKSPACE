@@ -168,7 +168,7 @@ cc_library(
 
 new_local_repository(
     name = "windows_curl",
-    path = "C:\\opt\\curl-8.21.0_7-win64-mingw",
+    path = "C:\\opt\\curl-8.22.0_2-win64-mingw",
     build_file_content = """
 cc_import(
     name = "curl_lib",
@@ -527,9 +527,9 @@ grpc_extra_deps()
 # cxxopts
 http_archive(
     name = "com_github_jarro2783_cxxopts",
-    url = "https://github.com/jarro2783/cxxopts/archive/v3.1.1.zip",
-    sha256 = "25b644a2bfa9c6704d723be51b026bc02420dfdee1277a49bfe5df3f19b0eaa4",
-    strip_prefix = "cxxopts-3.1.1",
+    url = "https://github.com/jarro2783/cxxopts/archive/v3.3.1.zip",
+    sha256 = "f35f27daa5f6fab84e4fffd02fc171cae085b14647e19687357394c1fe90ce6a",
+    strip_prefix = "cxxopts-3.3.1",
     build_file = "@//third_party/cxxopts:BUILD",
 )
 
@@ -603,6 +603,9 @@ http_archive(
     url = "https://github.com/nothings/stb/archive/5c205738c191bcb0abc65c4febfa9bd25ff35234.tar.gz",
     sha256 = "cfeab9f800961882d6d22ddf36e965523b33002f4f937de08321304c9ba72af3",
     strip_prefix = "stb-5c205738c191bcb0abc65c4febfa9bd25ff35234",
+    patches = ["@ovms//third_party/stb:stb_image_convert_format16_overflow.patch"],
+    patch_args = ["-p1"],
+    patch_tool = "patch",
     build_file_content = """
 cc_library(
     name = "image",

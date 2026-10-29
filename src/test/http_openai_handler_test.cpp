@@ -20,10 +20,13 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "../config.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../filesystem/filesystem.hpp"
 #include "../llm/apis/openai_completions.hpp"
@@ -38,6 +41,7 @@
 #include <openvino/genai/visual_language/pipeline.hpp>
 #include "../module_names.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
+#include "src/utils/rapidjson_utils.hpp"
 #include "../server.hpp"
 #include "environment.hpp"
 #include "src/utils/env_guard.hpp"
@@ -362,6 +366,28 @@ TEST_F(HttpOpenAIHandlerTest, JsonBodyExceedsNestingDepth_NestedArrays) {
     ASSERT_EQ(status.string(), "The file is not valid json - JSON body exceeds maximum nesting depth");
 }
 
+TEST_F(HttpOpenAIHandlerTest, JsonBodyExceedsComplexityLimit) {
+    std::string requestBody = R"({"a":[0]})";
+    auto& config = const_cast<ovms::ServerSettingsImpl&>(ovms::Config::instance().getServerSettings());
+    const auto previousMaxComplexity = config.jsonMaxComplexity;
+    struct JsonMaxComplexityGuard {
+        ovms::ServerSettingsImpl& config;
+        std::optional<size_t> previousMaxComplexity;
+        ~JsonMaxComplexityGuard() {
+            config.jsonMaxComplexity = previousMaxComplexity;
+        }
+    } restore{config, previousMaxComplexity};
+    config.jsonMaxComplexity = 5;
+
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(0);
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(0);
+    EXPECT_CALL(*writer, IsDisconnected()).Times(0);
+
+    auto status = handler->dispatchToProcessor("/v1/completions", requestBody, &response, comp, responseComponents, writer, multiPartParser);
+    ASSERT_EQ(status, ovms::StatusCode::JSON_COMPLEXITY_EXCEEDED);
+    ASSERT_EQ(status.string(), "JSON structure exceeds the allowed complexity - JSON body exceeds maximum complexity");
+}
+
 TEST_F(HttpOpenAIHandlerTest, GraphWithANameDoesNotExist) {
     std::string requestBody = R"(
         {
@@ -476,6 +502,22 @@ protected:
             return "{\"model\":\"llama\",\"input\":\"valid prompt\",\"skip_special_tokens\":" + rawValue + "}";
         }
         return "{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"valid prompt\"}],\"skip_special_tokens\":" + rawValue + "}";
+    }
+
+    std::string createRequestWithField(const std::string& name, const std::string& rawValue) const {
+        const std::string field = "\"" + name + "\":" + rawValue;
+        if (endpoint() == ovms::Endpoint::COMPLETIONS) {
+            return "{\"model\":\"llama\",\"prompt\":\"valid prompt\"," + field + "}";
+        }
+        if (endpoint() == ovms::Endpoint::RESPONSES) {
+            return "{\"model\":\"llama\",\"input\":\"valid prompt\"," + field + "}";
+        }
+        return "{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"valid prompt\"}]," + field + "}";
+    }
+
+    // The Responses API names its token limit max_output_tokens, the other endpoints max_tokens.
+    std::string tokenLimitFieldName() const {
+        return endpoint() == ovms::Endpoint::RESPONSES ? "max_output_tokens" : "max_tokens";
     }
 };
 
@@ -603,6 +645,62 @@ TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, ReasoningParserSpecialToken
     // gemma4 reasoning needs special tokens visible: still required even though the caller
     // asked for skip_special_tokens=true (userWantsSpecialTokens=false).
     EXPECT_TRUE(outputParser->needSpecialTokensForCurrentDecode(/*userWantsSpecialTokens=*/false));
+}
+
+// max_tokens_limit and best_of_limit are documented as the maximum accepted value, so a request that
+// asks for exactly the limit must be accepted and one above it rejected.
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, TokenLimitEqualToConfiguredLimitIsAccepted) {
+    std::string json = createRequestWithField(tokenLimitFieldName(), "100");
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::optional<uint32_t> maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = createHandler(endpoint());
+
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+}
+
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, TokenLimitAboveConfiguredLimitIsRejected) {
+    std::string json = createRequestWithField(tokenLimitFieldName(), "101");
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::optional<uint32_t> maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = createHandler(endpoint());
+
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength),
+        absl::InvalidArgumentError(tokenLimitFieldName() + " exceeds limit provided in graph config: 100"));
+}
+
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, BestOfEqualToConfiguredLimitIsAccepted) {
+    std::string json = createRequestWithField("best_of", "20");
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 20;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = createHandler(endpoint());
+
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+}
+
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, BestOfAboveConfiguredLimitIsRejected) {
+    std::string json = createRequestWithField("best_of", "21");
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 20;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = createHandler(endpoint());
+
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength),
+        absl::InvalidArgumentError("best_of exceeds limit provided in graph config: 20"));
 }
 
 TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensNotBoolFails) {
@@ -2113,7 +2211,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeFailedEventContainsCorrectStructur
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
 
-    std::string failedEvent = apiHandler->serializeFailedEvent("Something went wrong");
+    std::string failedEvent = apiHandler->serializeStreamingError("Something went wrong");
 
     // Should contain response.failed event type
     ASSERT_NE(failedEvent.find("\"type\":\"response.failed\""), std::string::npos) << failedEvent;
@@ -2139,6 +2237,41 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeFailedEventContainsCorrectStructur
     auto failedPos = failedEvent.find("\"type\":\"response.failed\"");
     auto responseSection = failedEvent.substr(failedPos);
     ASSERT_EQ(responseSection.find("\"completed_at\""), std::string::npos) << "Failed response should not have completed_at: " << responseSection;
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, chatAndCompletionsFailedEventsAreEscapedOpenAiErrors) {
+    const std::string errorMessage = "quote: \" slash: \\ newline:\n";
+    const std::vector<std::pair<ovms::Endpoint, std::string>> requests{
+        {ovms::Endpoint::CHAT_COMPLETIONS, R"({"model":"llama","stream":true,"messages":[{"role":"user","content":"hello"}]})"},
+        {ovms::Endpoint::COMPLETIONS, R"({"model":"llama","stream":true,"prompt":"hello"})"}};
+
+    for (const auto& [endpoint, request] : requests) {
+        doc.Parse(request.c_str());
+        ASSERT_FALSE(doc.HasParseError());
+        auto apiHandler = createHandler(endpoint);
+        std::optional<uint32_t> maxTokensLimit;
+        uint32_t bestOfLimit = 0;
+        std::optional<uint32_t> maxModelLength;
+        ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+
+        rapidjson::Document error;
+        const std::string serialized = apiHandler->serializeStreamingError(errorMessage);
+        error.Parse(serialized.c_str());
+        ASSERT_FALSE(error.HasParseError()) << serialized;
+        ASSERT_TRUE(error.IsObject()) << serialized;
+        ASSERT_TRUE(error.HasMember("error")) << serialized;
+        const rapidjson::Value& errorObject = error["error"];
+        ASSERT_TRUE(errorObject.IsObject()) << serialized;
+        ASSERT_TRUE(errorObject.HasMember("type")) << serialized;
+        ASSERT_TRUE(errorObject["type"].IsString()) << serialized;
+        EXPECT_STREQ(errorObject["type"].GetString(), "server_error");
+        ASSERT_TRUE(errorObject.HasMember("code")) << serialized;
+        ASSERT_TRUE(errorObject["code"].IsInt()) << serialized;
+        EXPECT_EQ(errorObject["code"].GetInt(), 500);
+        ASSERT_TRUE(errorObject.HasMember("message")) << serialized;
+        ASSERT_TRUE(errorObject["message"].IsString()) << serialized;
+        EXPECT_EQ(std::string(errorObject["message"].GetString(), errorObject["message"].GetStringLength()), errorMessage);
+    }
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, serializeFailedEventWithCustomErrorCode) {
@@ -5221,6 +5354,15 @@ struct NeverDisconnectedClient : public ovms::ClientConnection {
 };
 }  // namespace
 
+static std::shared_ptr<ovms::OVMSTextStreamer> makeNoopTextStreamer(const ov::genai::Tokenizer& tokenizer) {
+    return std::make_shared<ovms::OVMSTextStreamer>(
+        tokenizer,
+        nullptr,
+        false,
+        [](ovms::Delta, bool) { return ov::genai::StreamingStatus::RUNNING; },
+        ov::AnyMap{});
+}
+
 static std::shared_ptr<ovms::LegacyServableExecutionContext> makeLegacyResponsesContext(
     const std::shared_ptr<ov::genai::Tokenizer>& tok,
     size_t numInputTokens, size_t numGeneratedTokens,
@@ -5252,8 +5394,7 @@ static std::shared_ptr<ovms::LegacyServableExecutionContext> makeLegacyResponses
     ctx->readySignal.set_value();
     ctx->deltaChannel.signalComplete();
 
-    ctx->textStreamer = std::make_shared<ov::genai::TextStreamer>(
-        *tok, [](std::string) { return ov::genai::StreamingStatus::RUNNING; });
+    ctx->textStreamer = makeNoopTextStreamer(*tok);
 
     return ctx;
 }
@@ -5389,6 +5530,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, legacyServableParserExceptionCancelsGenerat
         ASSERT_NO_THROW(streamer->end());
     }
     ASSERT_TRUE(streamer->hadParserError());
+    ASSERT_FALSE(streamer->parserErrorMessage().empty());
     EXPECT_EQ(finalCallbackCount, 1);
 
     // Mirrors what LegacyExecutor::processRequest does with the streamer after pipe->generate() returns.
@@ -5426,8 +5568,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, vlmLegacyServablePreparePartialResponseResp
     ctx->success = true;
     ctx->readySignal.set_value();
     ctx->deltaChannel.signalComplete();
-    ctx->textStreamer = std::make_shared<ov::genai::TextStreamer>(
-        *tokenizer, [](std::string) { return ov::genai::StreamingStatus::RUNNING; });
+    ctx->textStreamer = makeNoopTextStreamer(*tokenizer);
 
     ovms::VisualLanguageModelLegacyServable servable;
     std::shared_ptr<ovms::GenAiServableExecutionContext> ctxBase = ctx;
@@ -5470,8 +5611,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, legacyServablePreparePartialResponseChatCom
     ctx->success = true;
     ctx->readySignal.set_value();
     ctx->deltaChannel.signalComplete();
-    ctx->textStreamer = std::make_shared<ov::genai::TextStreamer>(
-        *tokenizer, [](std::string) { return ov::genai::StreamingStatus::RUNNING; });
+    ctx->textStreamer = makeNoopTextStreamer(*tokenizer);
 
     ovms::LegacyServable servable;
     std::shared_ptr<ovms::GenAiServableExecutionContext> ctxBase = ctx;
