@@ -22,6 +22,7 @@
 #include <limits>
 #include <regex>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 
 #include <fmt/ranges.h>
@@ -30,12 +31,10 @@
 #include <gtest/gtest.h>
 #include <openvino/genai/continuous_batching_pipeline.hpp>
 #include <openvino/openvino.hpp>
-#if (PYTHON_DISABLE == 0)
 #pragma warning(push)
 #pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/embed.h>
 #pragma warning(pop)
-#endif
 
 #include "../../http_rest_api_handler.hpp"
 #include "../../config.hpp"
@@ -44,8 +43,10 @@
 #include "../../llm/apis/openai_completions.hpp"
 #include "../../llm/apis/openai_json_response.hpp"
 #include "../../llm/io_processing/base_generation_config_builder.hpp"
+#include "../../llm/io_processing/output_parser.hpp"
 #include "../../llm/language_model/continuous_batching/llm_executor.hpp"
 #include "../../llm/language_model/continuous_batching/servable.hpp"
+#include "../../llm/ovms_text_streamer.hpp"
 #include "../../llm/servable.hpp"
 #include "../../llm/servable_initializer.hpp"
 #include "../../llm/text_utils.hpp"
@@ -1708,6 +1709,67 @@ TEST_P(LLMFlowHttpTestParameterized, unaryToolBadSchema) {
         ovms::StatusCode::OK);
 }
 
+TEST_P(LLMFlowHttpTestParameterized, continuousBatchingParserFailureStopsGenerationHandle) {
+    const auto params = GetParam();
+    if (params.modelName != "lm_cb_regular") {
+        GTEST_SKIP();
+    }
+
+    config.max_new_tokens = 1024;
+    config.rng_seed = 1;
+    config.temperature = 0;
+    ov::genai::Tokenizer tokenizer = cbPipe->get_tokenizer();
+    const auto inputIds = tokenizer.encode("keep the request active", ov::genai::add_special_tokens(false)).input_ids;
+    auto generationHandle = cbPipe->add_request(currentRequestId++, inputIds, config);
+    ASSERT_NE(generationHandle, nullptr);
+
+    struct GenerationHandleCleanup {
+        ov::genai::GenerationHandle handle;
+        std::shared_ptr<LLMExecutorWrapper> executor;
+        ~GenerationHandleCleanup() {
+            handle->stop();
+            executor->notifyNewRequestArrived();
+        }
+    } cleanup{generationHandle, llmExecutorWrapper};
+    ASSERT_EQ(generationHandle->get_status(), ov::genai::GenerationStatus::RUNNING);
+
+    rapidjson::Document requestDocument;
+    requestDocument.Parse(R"({"model":"lm_cb_regular","stream":true,"messages":[{"role":"user","content":"hello"}]})");
+    ASSERT_FALSE(requestDocument.HasParseError());
+    auto apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(
+        requestDocument, Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, 0, std::nullopt), absl::OkStatus());
+
+    auto outputParser = std::make_shared<OutputParser>(tokenizer, "mistral", "", ToolsSchemas_t{});
+    auto executionContext = std::make_shared<ContinuousBatchingServableExecutionContext>();
+    executionContext->apiHandler = std::move(apiHandler);
+    executionContext->generationHandle = generationHandle;
+    auto* context = executionContext.get();
+    executionContext->textStreamer = std::make_shared<OVMSTextStreamer>(
+        tokenizer, outputParser, true,
+        [context](Delta delta, bool isLast) {
+            context->deltaChannel.push(std::move(delta), isLast);
+            return ov::genai::StreamingStatus::RUNNING;
+        },
+        ov::AnyMap{});
+
+    const std::string malformedToolCall = "[{\"arguments\": {\"x\": 1}, \"name\": \"foo\"}]";
+    const auto generatedIds = tokenizer.encode(malformedToolCall, ov::genai::add_special_tokens(false)).input_ids;
+    executionContext->generationOutputs.resize(1);
+    executionContext->generationOutputs[0].generated_ids.assign(
+        generatedIds.data<int64_t>(), generatedIds.data<int64_t>() + generatedIds.get_size());
+    executionContext->generationOutputs[0].finish_reason = ov::genai::GenerationFinishReason::STOP;
+
+    std::shared_ptr<GenAiServableExecutionContext> baseExecutionContext = executionContext;
+    ContinuousBatchingServable servable;
+    const absl::Status status = servable.preparePartialResponse(baseExecutionContext);
+
+    EXPECT_EQ(status.code(), absl::StatusCode::kInternal);
+    EXPECT_NE(status.message().find("Tool call name is missing in generated output"), std::string::npos) << status;
+    EXPECT_EQ(generationHandle->get_status(), ov::genai::GenerationStatus::STOP);
+}
+
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonLogprobs) {
     auto params = GetParam();
     // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
@@ -1994,10 +2056,10 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStoppedByMaxModelLength
         GTEST_SKIP();
     }
     std::string prompt;
-    // 131066 "hello " words + the dummy chat template's ~5 tokens of literal overhead
-    // ("User"/":"/"\n"/"Assistant"/":") yields exactly 131071 prompt tokens - one under the
-    // dummy model's 131072 (128k) max length - leaving exactly 1 token of generation budget.
-    for (int i = 0; i < 131066; i++) {
+    // 131030 "hello " words yield exactly 131071 prompt tokens with the current
+    // chat template - one under the dummy model's 131072 (128k) max length,
+    // leaving exactly 1 token of generation budget.
+    for (int i = 0; i < 131030; i++) {
         prompt += "hello ";
     }
     std::string requestBody = R"(
@@ -2681,9 +2743,33 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsUsage) {
     }
 }
 
-// Unique leading nonce keeps the prompt out of the prefix cache filled by earlier runs (e.g. --gtest_repeat).
-static std::string uniquePrefixCachingPrompt() {
-    std::string prompt = "Request " + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + ".";
+class LLMPrefixCachingHttpTest : public LLMFlowHttpTest {
+    std::unique_ptr<std::thread> serverThread;
+
+public:
+    static void SetUpTestSuite() {}
+    static void TearDownTestSuite() {}
+
+    void SetUp() override {
+        std::string port = "9173";
+        ovms::Server& server = ovms::Server::instance();
+        ::SetUpServer(serverThread, server, port, getGenericFullPathForSrcTest("/ovms/src/test/llm/config.json").c_str(), 60);
+        LLMFlowHttpTest::SetUp();
+    }
+
+    void TearDown() override {
+        LLMFlowHttpTest::TearDown();
+        ovms::Server& server = ovms::Server::instance();
+        server.setShutdownRequest(1);
+        if (serverThread && serverThread->joinable()) {
+            serverThread->join();
+        }
+        server.setShutdownRequest(0);
+    }
+};
+
+static std::string prefixCachingPrompt() {
+    std::string prompt = "Request.";
     for (int i = 0; i < 16; ++i) {
         prompt += " The quick brown fox jumps over the lazy dog.";
     }
@@ -2704,8 +2790,8 @@ static uint64_t extractUsageField(const std::string& response, const std::string
     return std::stoull(match[1].str());
 }
 
-TEST_F(LLMFlowHttpTest, unaryChatCompletionsReportsPrefixCacheHit) {
-    const std::string content = uniquePrefixCachingPrompt();
+TEST_F(LLMPrefixCachingHttpTest, unaryChatCompletionsReportsPrefixCacheHit) {
+    const std::string content = prefixCachingPrompt();
     const std::string unaryRequest = R"({"model": "lm_cb_prefix_caching", "max_tokens": 5, "ignore_eos": true, "messages": [{"role": "user", "content": ")" + content + R"("}]})";
 
     ASSERT_EQ(handler->dispatchToProcessor(endpointChatCompletions, unaryRequest, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
@@ -2725,8 +2811,8 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsReportsPrefixCacheHit) {
     EXPECT_EQ(parsedResponse["usage"]["total_tokens"].GetUint64(), firstPromptTokens + 5) << response;
 }
 
-TEST_F(LLMFlowHttpTest, streamChatCompletionsReportsPrefixCacheHit) {
-    const std::string content = uniquePrefixCachingPrompt();
+TEST_F(LLMPrefixCachingHttpTest, streamChatCompletionsReportsPrefixCacheHit) {
+    const std::string content = prefixCachingPrompt();
     std::vector<std::string> responses;
     EXPECT_CALL(*writer, PartialReply(::testing::_))
         .WillRepeatedly([&responses](std::string response) {
@@ -2767,11 +2853,11 @@ static std::string lastUsageObject(const std::vector<std::string>& responses) {
     return pos == std::string::npos ? "" : stream.substr(pos);
 }
 
-TEST_F(LLMFlowHttpTest, unaryResponsesReportsPrefixCacheHit) {
+TEST_F(LLMPrefixCachingHttpTest, unaryResponsesReportsPrefixCacheHit) {
     const std::string endpointResponses = "/v1/responses";
     ovms::HttpRequestComponents responsesComp;
     ASSERT_EQ(handler->parseRequestComponents(responsesComp, "POST", endpointResponses, headers), ovms::StatusCode::OK);
-    const std::string request = prefixCachingResponsesRequest(uniquePrefixCachingPrompt(), false);
+    const std::string request = prefixCachingResponsesRequest(prefixCachingPrompt(), false);
 
     ASSERT_EQ(handler->dispatchToProcessor(endpointResponses, request, &response, responsesComp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
@@ -2791,11 +2877,11 @@ TEST_F(LLMFlowHttpTest, unaryResponsesReportsPrefixCacheHit) {
     EXPECT_EQ(parsedResponse["usage"]["total_tokens"].GetUint64(), firstInputTokens + 5) << response;
 }
 
-TEST_F(LLMFlowHttpTest, streamResponsesReportsPrefixCacheHit) {
+TEST_F(LLMPrefixCachingHttpTest, streamResponsesReportsPrefixCacheHit) {
     const std::string endpointResponses = "/v1/responses";
     ovms::HttpRequestComponents responsesComp;
     ASSERT_EQ(handler->parseRequestComponents(responsesComp, "POST", endpointResponses, headers), ovms::StatusCode::OK);
-    const std::string request = prefixCachingResponsesRequest(uniquePrefixCachingPrompt(), true);
+    const std::string request = prefixCachingResponsesRequest(prefixCachingPrompt(), true);
     std::vector<std::string> responses;
     EXPECT_CALL(*writer, PartialReply(::testing::_))
         .WillRepeatedly([&responses](std::string response) {
@@ -4531,6 +4617,35 @@ INSTANTIATE_TEST_SUITE_P(
 // Those tests are working on Continuous Batching path, since most of the node options are scheduler parameters that are not used in non-CB servables
 // We could consider adding tests for non-CB path in the future in the separate test suite
 class LLMOptionsHttpTestPython : public ::testing::Test {};
+
+TEST(LLMChatTemplateEngine, PropertiesStartUnset) {
+    const GenAiServableProperties properties{};
+    EXPECT_EQ(properties.chatTemplateEngine, ChatTemplateEngine::NONE);
+}
+
+TEST(LLMChatTemplateEngine, UnsetSelectsJinjaWhenPythonRuntimeIsAvailable) {
+    const mediapipe::LLMCalculatorOptions nodeOptions;
+    EXPECT_EQ(GenAiServableInitializer::determineChatTemplateModeWithRuntimeContext(nodeOptions, true), ChatTemplateEngine::JINJA);
+}
+
+TEST(LLMChatTemplateEngine, UnsetSelectsMinjaWhenPythonRuntimeIsUnavailable) {
+    const mediapipe::LLMCalculatorOptions nodeOptions;
+    EXPECT_EQ(GenAiServableInitializer::determineChatTemplateModeWithRuntimeContext(nodeOptions, false), ChatTemplateEngine::MINJA);
+}
+
+TEST(LLMChatTemplateEngine, ExplicitMinjaDoesNotRequirePythonRuntime) {
+    mediapipe::LLMCalculatorOptions nodeOptions;
+    nodeOptions.set_chat_template_engine(mediapipe::LLMCalculatorOptions::MINJA);
+    EXPECT_EQ(GenAiServableInitializer::determineChatTemplateModeWithRuntimeContext(nodeOptions, false), ChatTemplateEngine::MINJA);
+    EXPECT_EQ(GenAiServableInitializer::determineChatTemplateModeWithRuntimeContext(nodeOptions, true), ChatTemplateEngine::MINJA);
+}
+
+TEST(LLMChatTemplateEngine, ExplicitJinjaRequiresPythonRuntime) {
+    mediapipe::LLMCalculatorOptions nodeOptions;
+    nodeOptions.set_chat_template_engine(mediapipe::LLMCalculatorOptions::JINJA);
+    EXPECT_EQ(GenAiServableInitializer::determineChatTemplateModeWithRuntimeContext(nodeOptions, true), ChatTemplateEngine::JINJA);
+    EXPECT_THROW(GenAiServableInitializer::determineChatTemplateModeWithRuntimeContext(nodeOptions, false), std::runtime_error);
+}
 
 class LLMOptionsHttpTest : public LLMOptionsHttpTestPython {
 public:

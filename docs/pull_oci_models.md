@@ -28,6 +28,20 @@ For other operating systems and architectures, select the corresponding asset fr
 
 OVMS reports an error when `llmman` is not available on `PATH`.
 
+### Installing in a running OVMS container
+
+Release images do not include `llmman`; build images do. For a running Linux x86-64 OVMS release container, first install the verified binary on the host using the commands above, then copy it into the container (replace `ovms-container` with its name):
+
+```sh
+docker cp "$HOME/.local/bin/llmman" ovms-container:/usr/local/bin/llmman
+docker exec --user 0 ovms-container chmod 0755 /usr/local/bin/llmman
+docker exec ovms-container llmman --version
+```
+
+This requires a writable container filesystem. The installation persists across restarts of that container, but must be repeated if the container is recreated.
+
+### Registry authentication
+
 Public registries can be used without credentials. For a private registry, authenticate with `llmman login <registry>` and make the resulting Docker-compatible credential configuration available to the user running OVMS. `llmman` reads credentials from the Docker credential configuration; it does not use `HF_TOKEN` for OCI registry authentication.
 
 In a container, logging in on the host alone is not sufficient because the container does not automatically see the host's credentials. Mount the Docker config directory read-only and point `DOCKER_CONFIG` at it. For example:
@@ -37,34 +51,6 @@ docker run --mount type=bind,src="$HOME/.docker",dst=/home/ovms/.docker,readonly
 ```
 
 If the Docker config uses a credential helper (`credsStore` or `credHelpers`), that helper and any service it depends on must also be available inside the container. Alternatively, configure credentials in a mounted Docker config that does not rely on an unavailable helper. Do not bake registry credentials into the image.
-
-In Kubernetes, store the Docker config in a Secret and mount it into the OVMS pod. For example, create a Secret from a Docker config file:
-
-```text
-kubectl create secret generic registry-auth --from-file=config.json="$HOME/.docker/config.json"
-```
-
-Mount the Secret read-only and set `DOCKER_CONFIG` to the mount directory in the OVMS container spec:
-
-```yaml
-spec:
-  containers:
-    - name: ovms
-      image: openvino/model_server:latest
-      env:
-        - name: DOCKER_CONFIG
-          value: /var/run/registry-auth
-      volumeMounts:
-        - name: registry-auth
-          mountPath: /var/run/registry-auth
-          readOnly: true
-  volumes:
-    - name: registry-auth
-      secret:
-        secretName: registry-auth
-```
-
-The Secret must contain a `config.json` usable by llmman. As with a Docker bind mount, any credential helper it references must also be installed and usable in the pod.
 
 ## Supported payloads
 
@@ -106,7 +92,7 @@ Inside `--model_repository_path` the reference additionally has `:` replaced wit
 <model_repository_path>/ghcr.io/my-org/model+1.0/graph.pbtxt
 ```
 
-For OpenVINO IR and GGUF payloads that directory holds only `graph.pbtxt` — the weights stay in `llmman`'s content-addressed store and are referenced by absolute path, so pulling the same image for several servables does not duplicate them on disk. Removing a model therefore takes two steps: delete the directory from the model repository, and reclaim the blobs with `llmman rm <reference>`.
+For OpenVINO IR and GGUF payloads that directory holds only `graph.pbtxt` — the weights stay in `llmman`'s content-addressed store and are referenced by absolute path, so pulling the same image for several servables does not duplicate them on disk. This means the model repository alone is not self-contained: if it is moved or mounted in another container, the llmman cache must also be available at the same path, and its blobs must not be removed. Removing a model therefore takes two steps: delete the directory from the model repository, and reclaim the blobs with `llmman rm <reference>`.
 
 ## Limitations
 

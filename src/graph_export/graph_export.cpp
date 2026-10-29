@@ -78,7 +78,9 @@ static void setJsonStringFromPath(rapidjson::Value& jsonValue, const std::string
 static std::string constructModelsPath(const std::string& modelPath, const std::optional<std::string>& ggufFilenameOpt) {
     std::string modelsPath;
     if (ggufFilenameOpt.has_value()) {
-        modelsPath = FileSystem::joinPath({modelPath, ggufFilenameOpt.value()});
+        const std::string ggufFilename = std::filesystem::path(ggufFilenameOpt.value()).filename().string();
+        const std::string safeGgufFilename = ggufFilename.empty() ? ggufFilenameOpt.value() : ggufFilename;
+        modelsPath = FileSystem::joinPath({modelPath, safeGgufFilename});
     } else {
         modelsPath = modelPath;
     }

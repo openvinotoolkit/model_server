@@ -413,6 +413,9 @@ class OvmsMessages:
         'Create new stream for another request.'
     )
 
+    FAILED_TO_PREPARE_JINJA_CHAT_TEMPLATE = "Failed to prepare Jinja chat template"
+    CHAT_TEMPLATE_NOT_COMPATIBLE_WITH_MINJA = "Chat template is not compatible with minja"
+    DISABLING_CHAT_COMPLETIONS = "Disabling /chat/completions endpoint for this model."
     CHAT_TEMPLATE_NOT_LOADED = (
         "Warning: Chat template has not been loaded properly. Servable will not respond to /chat/completions endpoint"
     )

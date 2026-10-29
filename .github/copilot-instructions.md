@@ -157,7 +157,7 @@ Windows builds use batch files in the repository root:
 - `windows_build.bat` — Main build script
 - `windows_test.bat` — Run tests
 
-Windows-specific Bazel config: `--config=win_mp_on_py_off` (or `--config=win_mp_on_py_on` for Python support).
+Windows-specific Bazel config: `--config=win_mp_on` (Python support is always built; `windows_create_package.bat --with_python` optionally adds the embedded Python runtime to the ZIP).
 
 ## Testing
 
