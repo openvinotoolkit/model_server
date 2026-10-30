@@ -92,7 +92,7 @@ set "CURL_PATH=/c/opt/curl-!curl_version!-win64-mingw/bin"
 set "CURL_BIN=%CURL_PATH%/curl.exe"
 set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;!CURL_PATH_WINDOWS!;%ROOT%\.venv-style\Scripts;%LOCAL_TOOLS_DIR%;%PATH%;"
 set "PYTHONHOME=C:\opt\Python312"
-set "PYTHONPATH=C:\opt\Python312;%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
+set "PYTHONPATH=C:\opt\Python312"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 :: Bazel normally exports TEST_SRCDIR/TEST_WORKSPACE when a test binary is launched under Bazel.
 :: For direct Windows invocation, seed them only if they are not already present.
@@ -127,6 +127,8 @@ set "openvinoBatch=call C:\opt\openvino\setupvars.bat"
 set "opencvBatch=call C:\opt\opencv_!opencv_version!\setup_vars_opencv4.cmd"
 
 :: Set required libraries paths
+set "PYTHONHOME=C:\opt\Python312"
+set "PYTHONPATH=C:\opt\Python312;%setPythonPath%"
 %openvinoBatch%
 if !errorlevel! neq 0 (
     set "SETUP_EXIT_CODE=!errorlevel!"
@@ -137,12 +139,7 @@ if !errorlevel! neq 0 (
     set "SETUP_EXIT_CODE=!errorlevel!"
     goto :exit_build_error
 )
-set "PYTHONPATH=%PYTHONPATH:C:\opt\opencv_!opencv_version!\python_loader_is_not_installed;=%"
-set "PYTHONPATH=%PYTHONPATH:;C:\opt\opencv_!opencv_version!\python_loader_is_not_installed=%"
-set "PYTHONPATH=%PYTHONPATH:C:\opt\opencv_!opencv_version!\python_loader_is_not_installed=%"
-set "PYTHONHOME=C:\opt\Python312"
-if defined PYTHONPATH set "PYTHONPATH=C:\opt\Python312;%PYTHONPATH%;%setPythonPath%"
-if not defined PYTHONPATH set "PYTHONPATH=C:\opt\Python312;%setPythonPath%"
+set "PYTHONPATH=C:\opt\Python312;%setPythonPath%"
 
 :exit_build
 echo [INFO] Setup finished

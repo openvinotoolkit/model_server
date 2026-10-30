@@ -54,6 +54,28 @@ def check_function(fd):
     return detected
 
 
+def should_skip_directory(path):
+    norm_path = path.replace('\\', '/')
+    skip_dirs = [
+        '/dist/',
+        'release_files/thirdparty-licenses',
+        'extras/chat_template_examples',
+        'src/test/llm/chat_templates',
+        'src/test/llm_testing',
+        '/tmp/',
+        'tmp/',
+        '/~/',
+        '~/',
+        '.windows_make_tools/',
+        'AppData/',
+        'bazel-model_server',
+        'bazel-bin',
+        'bazel-out',
+        'bazel-testlogs',
+    ]
+    return any(skip_dir in norm_path for skip_dir in skip_dirs)
+
+
 def check_dir(start_dir):
     no_header = []
     exclude_files = [
@@ -174,9 +196,11 @@ def check_dir(start_dir):
         'ovms_strip.diff',
         ]
 
-    exclude_directories = ['/dist/', 'release_files/thirdparty-licenses', 'extras/chat_template_examples', 'src/test/llm/chat_templates', 'src/test/llm_testing', '/tmp/', 'tmp/', '/~/', '~/', '.windows_make_tools/', 'AppData/']
+    exclude_directories = ['/dist/', 'release_files/thirdparty-licenses', 'extras/chat_template_examples', 'src/test/llm/chat_templates', 'src/test/llm_testing', '/tmp/', 'tmp/', '/~/', '~/', '.windows_make_tools/', 'AppData/', 'bazel-model_server', 'bazel-bin', 'bazel-out', 'bazel-testlogs']
 
-    for (d_path, _, file_set) in os.walk(start_dir):
+    for (d_path, dir_names, file_set) in os.walk(start_dir):
+        dir_names[:] = [d for d in dir_names if not should_skip_directory(os.path.join(d_path, d))]
+
         norm_d_path = d_path.replace('\\', '/')
         for f_name in file_set:
             skip = False
@@ -270,9 +294,11 @@ def check_func(start_dir):
         "windows_sign.bat",
     ]
 
-    exclude_directories = ['/dist/', 'src/test/llm_testing', '/tmp/', 'tmp/', '/~/', '~/', '.windows_make_tools/', 'AppData/']
+    exclude_directories = ['/dist/', 'src/test/llm_testing', '/tmp/', 'tmp/', '/~/', '~/', '.windows_make_tools/', 'AppData/', 'bazel-model_server', 'bazel-bin', 'bazel-out', 'bazel-testlogs']
 
-    for (d_path, _, file_set) in os.walk(start_dir):
+    for (d_path, dir_names, file_set) in os.walk(start_dir):
+        dir_names[:] = [d for d in dir_names if not should_skip_directory(os.path.join(d_path, d))]
+
         norm_d_path = d_path.replace('\\', '/')
         for f_name in file_set:
 
