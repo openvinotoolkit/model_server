@@ -649,8 +649,14 @@ TEST_P(InputProcessingIntegrationTest, InvalidBase64VideoFrame_VideoDecodingFail
 TEST(InputProcessingEquivalenceTest, ChatAndResponsesProduceSamePromptAndImages) {
     const std::string tokPath = getGenericFullPathForSrcTest(
         "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov");
+    std::ifstream templateFile(tokPath + "/chat_template.jinja");
+    ASSERT_TRUE(templateFile.is_open()) << "Failed to open chat_template.jinja in " << tokPath;
+    const std::string chatTemplate{
+        std::istreambuf_iterator<char>(templateFile), std::istreambuf_iterator<char>()};
+
     // The tokenizer is shared between both endpoint runs in this one test.
     ov::genai::Tokenizer tokenizer(tokPath);
+    tokenizer.set_chat_template(chatTemplate);
 
     const auto run = [&](Endpoint ep) -> std::pair<std::string, size_t> {
         const std::string chatJson =
