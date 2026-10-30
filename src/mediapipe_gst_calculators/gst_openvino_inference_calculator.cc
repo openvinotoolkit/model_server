@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include <openvino/openvino.hpp>
 #ifdef _WIN32
@@ -30,6 +32,7 @@
 #pragma GCC diagnostic pop
 
 #include "src/mediapipe_gst_calculators/gst_openvino_inference_calculator.pb.h"
+#include "src/mediapipe_gst_calculators/gst_detection_box.hpp"
 #include "src/mediapipe_gst_calculators/gst_video_frame_packet.hpp"
 
 #ifdef _WIN32
@@ -42,6 +45,9 @@ namespace mediapipe {
 namespace {
 constexpr char kFrameTag[] = "FRAME";
 constexpr char kDetectionsTag[] = "DETECTIONS";
+constexpr char kDetectionBoxesTag[] = "DETECTION_BOXES";
+constexpr char kFullWidthTag[] = "FULL_WIDTH";
+constexpr char kFullHeightTag[] = "FULL_HEIGHT";
 constexpr char kPreinitializedInferenceTag[] = "PREINITIALIZED_INFERENCE";
 constexpr char kCompiledModelTag[] = "COMPILED_MODEL";
 constexpr float kFaceConfidenceThreshold = 0.5f;
@@ -58,6 +64,12 @@ class GstOpenVinoInferenceCalculator : public CalculatorBase {
             cc->InputSidePackets().Tag(kCompiledModelTag).Set<std::shared_ptr<ov::CompiledModel>>();
 #endif
         cc->Outputs().Tag(kDetectionsTag).Set<int>();
+        if (cc->Outputs().HasTag(kDetectionBoxesTag))
+            cc->Outputs().Tag(kDetectionBoxesTag).Set<GstDetectionBoxes>();
+        if (cc->InputSidePackets().HasTag(kFullWidthTag))
+            cc->InputSidePackets().Tag(kFullWidthTag).Set<int>();
+        if (cc->InputSidePackets().HasTag(kFullHeightTag))
+            cc->InputSidePackets().Tag(kFullHeightTag).Set<int>();
         return absl::OkStatus();
     }
 
@@ -70,6 +82,10 @@ class GstOpenVinoInferenceCalculator : public CalculatorBase {
         input_name_ = options.input_name();
         performance_hint_ = options.performance_hint();
         num_streams_ = options.num_streams();
+        if (cc->InputSidePackets().HasTag(kFullWidthTag))
+            full_width_ = cc->InputSidePackets().Tag(kFullWidthTag).Get<int>();
+        if (cc->InputSidePackets().HasTag(kFullHeightTag))
+            full_height_ = cc->InputSidePackets().Tag(kFullHeightTag).Get<int>();
         if (num_streams_ == 0)
             return absl::InvalidArgumentError("GstOpenVinoInferenceCalculator: num_streams must be positive");
 #ifndef _WIN32
@@ -98,10 +114,18 @@ class GstOpenVinoInferenceCalculator : public CalculatorBase {
             if (external_compiled_model_ && !va_inference_->initialized())
                 va_inference_->adoptCompiledModel(*external_compiled_model_, surface->display, frame.width, frame.height);
             va_frame_owner_ = frame.owner;
+            const bool emitBoxes = cc->Outputs().HasTag(kDetectionBoxesTag);
+            GstDetectionBoxes boxes;
             const int detections = va_inference_->infer(surface->display, surface->surface_id,
-                frame.width, frame.height, model_path_, input_name_, performance_hint_, num_streams_);
+                frame.width, frame.height, model_path_, input_name_, performance_hint_, num_streams_, nullptr,
+                emitBoxes ? &boxes : nullptr,
+                full_width_ > 0 ? full_width_ : frame.width,
+                full_height_ > 0 ? full_height_ : frame.height);
             cc->Outputs().Tag(kDetectionsTag).AddPacket(
                 MakePacket<int>(detections).At(cc->InputTimestamp()));
+            if (emitBoxes)
+                cc->Outputs().Tag(kDetectionBoxesTag).AddPacket(
+                    MakePacket<GstDetectionBoxes>(std::move(boxes)).At(cc->InputTimestamp()));
             return absl::OkStatus();
         } catch (const std::exception& exception) {
             return absl::InternalError(exception.what());
@@ -146,13 +170,30 @@ class GstOpenVinoInferenceCalculator : public CalculatorBase {
 
         const ov::Tensor output = infer_request_.get_output_tensor(0);
         const float* values = output.data<const float>();
+        const bool emitBoxes = cc->Outputs().HasTag(kDetectionBoxesTag);
+        const float fullWidth = static_cast<float>(full_width_ > 0 ? full_width_ : frame.width);
+        const float fullHeight = static_cast<float>(full_height_ > 0 ? full_height_ : frame.height);
+        GstDetectionBoxes boxes;
         int detections = 0;
         for (size_t result = 0; result + 7 <= output.get_size(); result += 7) {
-            if (values[result + 2] >= kFaceConfidenceThreshold)
-                ++detections;
+            const float score = values[result + 2];
+            if (score < kFaceConfidenceThreshold)
+                continue;
+            ++detections;
+            if (emitBoxes) {
+                boxes.push_back({
+                    score,
+                    std::clamp(values[result + 3] * fullWidth, 0.0f, fullWidth - 1.0f),
+                    std::clamp(values[result + 4] * fullHeight, 0.0f, fullHeight - 1.0f),
+                    std::clamp(values[result + 5] * fullWidth, 0.0f, fullWidth - 1.0f),
+                    std::clamp(values[result + 6] * fullHeight, 0.0f, fullHeight - 1.0f)});
+            }
         }
         cc->Outputs().Tag(kDetectionsTag).AddPacket(
             MakePacket<int>(detections).At(cc->InputTimestamp()));
+        if (emitBoxes)
+            cc->Outputs().Tag(kDetectionBoxesTag).AddPacket(
+                MakePacket<GstDetectionBoxes>(std::move(boxes)).At(cc->InputTimestamp()));
         return absl::OkStatus();
 #endif
     }
@@ -214,6 +255,8 @@ class GstOpenVinoInferenceCalculator : public CalculatorBase {
     std::string input_name_;
     std::string performance_hint_;
     uint32_t num_streams_ = 1;
+    int full_width_ = 0;
+    int full_height_ = 0;
 };
 
 REGISTER_CALCULATOR(GstOpenVinoInferenceCalculator);

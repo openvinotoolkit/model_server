@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <algorithm>
 #include <cstdint>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -39,8 +41,8 @@ bool parsePositiveInt(const char* text, int& value) {
 }  // namespace
 
 int main(int argc, char** argv) {
-    if (argc != 4 && argc != 6) {
-        std::cerr << "Usage: mpi_openvino_video GRAPH.pbtxt VIDEO MODEL.xml [WIDTH HEIGHT]\n";
+    if (argc != 4 && argc != 6 && argc != 7) {
+        std::cerr << "Usage: mpi_openvino_video GRAPH.pbtxt VIDEO MODEL.xml [WIDTH HEIGHT [OUTPUT.mp4]]\n";
         return 2;
     }
 
@@ -60,14 +62,20 @@ int main(int argc, char** argv) {
     graphText << graphFile.rdbuf();
     mediapipe::CalculatorGraphConfig config =
         mediapipe::ParseTextProtoOrDie<mediapipe::CalculatorGraphConfig>(graphText.str());
-    if (config.node_size() != 1) {
-        std::cerr << "Expected exactly one inference node in the graph\n";
+    bool modelPathSet = false;
+    for (int nodeIndex = 0; nodeIndex < config.node_size(); ++nodeIndex) {
+        auto* node = config.mutable_node(nodeIndex);
+        if (node->calculator() == "GstOpenVinoInferenceCalculator" ||
+            node->calculator() == "GstVideoOpenVinoInferenceCalculator") {
+            node->mutable_options()->MutableExtension(
+                mediapipe::GstOpenVinoInferenceCalculatorOptions::ext)->set_model_path(argv[3]);
+            modelPathSet = true;
+        }
+    }
+    if (!modelPathSet) {
+        std::cerr << "Graph must contain an OpenVino inference calculator\n";
         return 1;
     }
-
-    auto* options = config.mutable_node(0)->mutable_options()->MutableExtension(
-        mediapipe::GstOpenVinoInferenceCalculatorOptions::ext);
-    options->set_model_path(argv[3]);
 
     mediapipe::CalculatorGraph graph;
     absl::Status status = graph.Initialize(config);
@@ -90,11 +98,30 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    status = graph.StartRun({
+    std::map<std::string, mediapipe::Packet> sidePackets = {
         {"video_path", mediapipe::MakePacket<std::string>(argv[2])},
         {"width", mediapipe::MakePacket<int>(width)},
         {"height", mediapipe::MakePacket<int>(height)},
-    });
+    };
+    const auto hasInputSidePacket = [&config](const std::string& declaration) {
+        for (const std::string& configuredPacket : config.input_side_packet()) {
+            if (configuredPacket == declaration)
+                return true;
+        }
+        return false;
+    };
+    if (hasInputSidePacket("FULL_WIDTH:full_width"))
+        sidePackets.emplace("full_width", mediapipe::MakePacket<int>(width));
+    if (hasInputSidePacket("FULL_HEIGHT:full_height"))
+        sidePackets.emplace("full_height", mediapipe::MakePacket<int>(height));
+    if (hasInputSidePacket("FULL_VA_SURFACE:full_va_surface"))
+        sidePackets.emplace("full_va_surface", mediapipe::MakePacket<bool>(true));
+    if (hasInputSidePacket("OUTPUT_PATH:output_path"))
+        sidePackets.emplace("output_path", mediapipe::MakePacket<std::string>(argc == 7 ? argv[6] : "mpi_openvino_overlay.mp4"));
+    if (hasInputSidePacket("FRAMERATE:framerate"))
+        sidePackets.emplace("framerate", mediapipe::MakePacket<int>(30));
+
+    status = graph.StartRun(sidePackets);
     if (!status.ok()) {
         std::cerr << "Graph start failed: " << status.ToString() << '\n';
         return 1;

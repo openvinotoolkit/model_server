@@ -40,6 +40,25 @@ The host needs the matching `.bin` weights file. The runtime also needs a
 working GStreamer installation with the plugins required to decode the input
 video, plus GPU/VA access for this calculator's Linux path.
 
+## Overlay and Video Output
+
+The four-node graph decodes a video, runs OpenVINO inference, overlays detected
+boxes, and writes an H.264 MP4 file. Its calculators are `GstVideoSourceCalculator`,
+`GstOpenVinoInferenceCalculator`, `GstDetectionOverlayCalculator`, and
+`GstVideoSinkCalculator`. This graph is Linux-only because the overlay supports
+host NV12 and VA surfaces, not D3D11 frames.
+
+```bash
+bazel run --config=mp_on //standalone:mpi_openvino_video -- \
+  standalone/openvino_video_overlay.pbtxt \
+  recording_3_raw.avi \
+  /path/to/face-detection-adas-0001.xml \
+  672 384 annotated.mp4
+```
+
+The app prints per-frame detection counts. Confirm the sink finalized a
+non-empty video with `test -s annotated.mp4`.
+
 ## Verify Layering
 
 Run the dependency check from the repository root:

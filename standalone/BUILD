@@ -11,7 +11,11 @@ cc_binary(
     }),
     deps = [
         "//src/mediapipe_gst_calculators:gst_openvino_inference_calculator_cc_proto",
+        "//src/mediapipe_gst_calculators:gst_detection_overlay_calculator",
+        "//src/mediapipe_gst_calculators:gst_openvino_inference_calculator",
+        "//src/mediapipe_gst_calculators:gst_video_source_calculator",
         "//src/mediapipe_gst_calculators:gst_video_openvino_inference_calculator",
+        "//src/mediapipe_gst_calculators:gst_video_sink_calculator",
         "//src/mpi:intel_mpi",
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",

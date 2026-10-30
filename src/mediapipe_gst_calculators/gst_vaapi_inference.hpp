@@ -20,8 +20,10 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <algorithm>
 #include <openvino/openvino.hpp>
 #include <openvino/runtime/intel_gpu/ocl/va.hpp>
+#include "src/mediapipe_gst_calculators/gst_detection_box.hpp"
 
 namespace mediapipe {
 struct GstVaapiInferenceTimings {
@@ -83,7 +85,9 @@ public:
     int infer(void* display, uint32_t surface, int width, int height,
         const std::string& modelPath, const std::string& inputName,
         const std::string& performanceHint, uint32_t streams,
-        GstVaapiInferenceTimings* timings = nullptr) {
+        GstVaapiInferenceTimings* timings = nullptr,
+        GstDetectionBoxes* detectionBoxes = nullptr,
+        int detectionWidth = 0, int detectionHeight = 0) {
         initialize(display, width, height, modelPath, inputName, performanceHint, streams);
         const auto importStart = timings ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
         auto planes = context_->create_tensor_nv12(height, width, surface);
@@ -101,10 +105,24 @@ public:
         const auto outputStart = timings ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
         const ov::Tensor output = request_.get_output_tensor();
         const float* values = output.data<const float>();
+        if (detectionBoxes)
+            detectionBoxes->clear();
+        const float outputWidth = static_cast<float>(detectionWidth > 0 ? detectionWidth : width);
+        const float outputHeight = static_cast<float>(detectionHeight > 0 ? detectionHeight : height);
         int detections = 0;
         for (size_t result = 0; result + 7 <= output.get_size(); result += 7) {
-            if (values[result + 2] >= 0.5f)
-                ++detections;
+            const float score = values[result + 2];
+            if (score < 0.5f)
+                continue;
+            ++detections;
+            if (detectionBoxes) {
+                detectionBoxes->push_back({
+                    score,
+                    std::clamp(values[result + 3] * outputWidth, 0.0f, outputWidth - 1.0f),
+                    std::clamp(values[result + 4] * outputHeight, 0.0f, outputHeight - 1.0f),
+                    std::clamp(values[result + 5] * outputWidth, 0.0f, outputWidth - 1.0f),
+                    std::clamp(values[result + 6] * outputHeight, 0.0f, outputHeight - 1.0f)});
+            }
         }
         if (timings)
             timings->outputHandling += std::chrono::steady_clock::now() - outputStart;

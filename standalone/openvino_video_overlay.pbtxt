@@ -1,0 +1,52 @@
+input_side_packet: "VIDEO_PATH:video_path"
+input_side_packet: "WIDTH:width"
+input_side_packet: "HEIGHT:height"
+input_side_packet: "FULL_WIDTH:full_width"
+input_side_packet: "FULL_HEIGHT:full_height"
+input_side_packet: "FULL_VA_SURFACE:full_va_surface"
+input_side_packet: "OUTPUT_PATH:output_path"
+input_side_packet: "FRAMERATE:framerate"
+output_stream: "detections"
+
+node {
+  calculator: "GstVideoSourceCalculator"
+  input_side_packet: "VIDEO_PATH:video_path"
+  input_side_packet: "WIDTH:width"
+  input_side_packet: "HEIGHT:height"
+  input_side_packet: "FULL_WIDTH:full_width"
+  input_side_packet: "FULL_HEIGHT:full_height"
+  input_side_packet: "FULL_VA_SURFACE:full_va_surface"
+  output_stream: "FRAME_INFER:frame_infer"
+  output_stream: "FRAME_FULL:frame_full"
+}
+
+node {
+  calculator: "GstOpenVinoInferenceCalculator"
+  input_stream: "FRAME:frame_infer"
+  input_side_packet: "FULL_WIDTH:full_width"
+  input_side_packet: "FULL_HEIGHT:full_height"
+  output_stream: "DETECTIONS:detections"
+  output_stream: "DETECTION_BOXES:detection_boxes"
+  options {
+    [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
+      model_path: ""
+      input_name: "data"
+      performance_hint: "LATENCY"
+      num_streams: 1
+    }
+  }
+}
+
+node {
+  calculator: "GstDetectionOverlayCalculator"
+  input_stream: "FRAME_FULL:frame_full"
+  input_stream: "DETECTION_BOXES:detection_boxes"
+  output_stream: "FRAME_OVERLAID:frame_overlaid"
+}
+
+node {
+  calculator: "GstVideoSinkCalculator"
+  input_stream: "FRAME:frame_overlaid"
+  input_side_packet: "OUTPUT_PATH:output_path"
+  input_side_packet: "FRAMERATE:framerate"
+}
