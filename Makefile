@@ -272,10 +272,10 @@ GIT_CONFIG_MOUNT = $(if $(wildcard .gitconfig),-v $(shell realpath .gitconfig):/
 BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg https_proxy=$(HTTPS_PROXY)\
 	--build-arg no_proxy=$(NO_PROXY)\
-	--build-arg ov_source_branch=$(OV_SOURCE_BRANCH)\
-	--build-arg ov_source_org=$(OV_SOURCE_ORG)\
-	--build-arg ov_genai_org=$(OV_GENAI_ORG)\
-	--build-arg ov_tokenizers_org=$(OV_TOKENIZERS_ORG)\
+	--build-arg ov_branch=$(OV_BRANCH)\
+	--build-arg ov_repo=$(OV_REPO)\
+	--build-arg ov_genai_repo=$(OV_GENAI_REPO)\
+	--build-arg ov_tokenizers_repo=$(OV_TOKENIZERS_REPO)\
 	--build-arg ov_tokenizers_branch=$(OV_TOKENIZERS_BRANCH)\
 	--build-arg ov_genai_branch=$(OV_GENAI_BRANCH)\
 	--build-arg ov_use_binary=$(OV_USE_BINARY)\
@@ -672,7 +672,7 @@ test_throughput_dummy_model: venv
 	@docker rm --force $(OVMS_CPP_CONTAINER_NAME)
 
 test_functional: venv
-	@. $(ACTIVATE); pytest --json=report.json -v -s $(TEST_PATH)
+	@export OVMS_CPP_DOCKER_IMAGE=$(OVMS_CPP_DOCKER_IMAGE) && export OVMS_CPP_IMAGE_TAG=$(OVMS_CPP_IMAGE_TAG);. $(ACTIVATE); pytest --confcutdir=tests/functional --junitxml=report.xml --html=report.html --self-contained-html -v -rA -s $(TEST_PATH)
 
 test_python_clients:
 	@echo "Prepare docker image"
