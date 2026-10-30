@@ -173,7 +173,7 @@ def check_dir(start_dir):
         'ovms_strip.diff',
         ]
 
-    exclude_directories = ['/dist/', 'release_files/thirdparty-licenses', 'extras/chat_template_examples', 'src/test/llm/chat_templates']
+    exclude_directories = ['/dist/', 'release_files/thirdparty-licenses', 'extras/chat_template_examples', 'src/test/llm/chat_templates', 'extended_functional_tests', 'documentation_tests']
 
     for (d_path, _, file_set) in os.walk(start_dir):
         for f_name in file_set:
@@ -267,7 +267,7 @@ def check_func(start_dir):
         "windows_sign.bat",
     ]
 
-    exclude_directories = ['/dist/']
+    exclude_directories = ['/dist/', 'extended_functional_tests', 'documentation_tests']
 
     for (d_path, _, file_set) in os.walk(start_dir):
         for f_name in file_set:

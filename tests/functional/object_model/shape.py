@@ -108,8 +108,8 @@ class Shape(list):
 
     def init_by_list(self, _list, _layout=None):
         self.set_layout(_list, _layout)
-        for i in range(len(_list)):
-            setattr(self, self.layout[i], _list[i])
+        for i, val in enumerate(_list):
+            setattr(self, self.layout[i], val)
         self[:] = _list[:]
 
     def get_shape_by_layout(self, layout=None):

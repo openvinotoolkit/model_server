@@ -18,6 +18,7 @@ import re
 
 from tests.functional.utils.environment_info import EnvironmentInfo
 from tests.functional.constants.os_type import OsType, UBUNTU
+from tests.functional.constants.os_version import OPENVINO_MODEL_SERVER
 from tests.functional.config import (
     base_os,
     docker_registry,
@@ -26,6 +27,7 @@ from tests.functional.config import (
     ovms_cpp_docker_image,
     ovms_image,
     ovms_image_tag,
+    ovms_image_tag_dict,
     ovms_test_image_name,
     target_devices,
 )
@@ -97,25 +99,17 @@ class OvmsImages:
 
 
 NGINX = "nginx"
-DEFAULT_OVMS_IMAGE_NAME = "openvino/model_server"
 DEFAULT_OVMS_IMAGE_SUFFIXES = {
     NGINX: "-nginx-mtls",
     TargetDevice.GPU: "-gpu",
     TargetDevice.NPU: "-gpu",
 }
 
-DEFAULT_OVMS_IMAGE_TAG = {
-    OsType.Ubuntu22: "ubuntu22_main",
-    OsType.Ubuntu24: "ubuntu24_main",
-    OsType.Ubuntu26: "ubuntu26_main",
-    OsType.Redhat: "redhat_main",
-}
-
 
 def calculate_ovms_image_suffix(target_device):
     if is_nginx_mtls:
         return DEFAULT_OVMS_IMAGE_SUFFIXES[NGINX]
-    elif ct.is_gpu_based_target(target_device) or ct.is_npu_target():
+    if ct.is_gpu_based_target(target_device) or ct.is_npu_target():
         return DEFAULT_OVMS_IMAGE_SUFFIXES[TargetDevice.GPU]
     return ""
 
@@ -145,23 +139,30 @@ def calculate_ovms_image_name(target_device=None, base_os=OsType.Ubuntu22):
 
     ct.target_device = target_device
 
-    if force_use_ovms_image and ovms_image:
-        return ovms_image
-    elif ovms_image:
+    if ovms_image:
+        if force_use_ovms_image:
+            return ovms_image
         image_name = re.sub("|".join(DEFAULT_OVMS_IMAGE_SUFFIXES.values()), "", ovms_image.split(":")[0])
         image_tag = ovms_image.split(":")[1]
-        image_name = f"{image_name}{calculate_ovms_image_suffix(target_device)}"
-        image_tag = calculate_ovms_image_tag(image_tag, base_os, base_os_list)
-    else:
-        if ovms_cpp_docker_image:
-            image_name = ovms_cpp_docker_image
-        elif docker_registry is not None:
-            image_name = f"{docker_registry}/{DEFAULT_OVMS_IMAGE_NAME}"
+        if ovms_image.startswith(OPENVINO_MODEL_SERVER):
+            image_tag = f"{image_tag}{calculate_ovms_image_suffix(target_device)}"
         else:
-            image_name = DEFAULT_OVMS_IMAGE_NAME
-        image_name = f"{image_name}{calculate_ovms_image_suffix(target_device)}"
-        image_tag = ovms_image_tag if ovms_image_tag else DEFAULT_OVMS_IMAGE_TAG[base_os]
-        image_tag = calculate_ovms_image_tag(image_tag, base_os, base_os_list)
+            image_name = f"{image_name}{calculate_ovms_image_suffix(target_device)}"
+            image_tag = calculate_ovms_image_tag(image_tag, base_os, base_os_list)
+    else:
+        if docker_registry is not None:
+            image_name = f"{docker_registry}/{ovms_cpp_docker_image}"
+            if force_use_ovms_image:
+                return f"{image_name}:{ovms_image_tag}"
+            image_name = f"{image_name}{calculate_ovms_image_suffix(target_device)}"
+            image_tag = ovms_image_tag if ovms_image_tag else ovms_image_tag_dict[base_os]
+            image_tag = calculate_ovms_image_tag(image_tag, base_os, base_os_list)
+        else:
+            image_name = ovms_cpp_docker_image
+            if force_use_ovms_image:
+                return f"{image_name}:{ovms_image_tag}"
+            image_tag = ovms_image_tag if ovms_image_tag else ovms_image_tag_dict[base_os]
+            image_tag = f"{image_tag}{calculate_ovms_image_suffix(target_device)}"
 
     return f"{image_name}:{image_tag}"
 
