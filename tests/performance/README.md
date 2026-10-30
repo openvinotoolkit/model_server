@@ -7,11 +7,11 @@ $ git clone https://github.com/openvinotoolkit/model_server.git
 $ cd model_server/tests/performance
 ```
 
-Enable virtualenv in project root directory, install requirements.txt.
+Enable virtualenv in project root directory, install tf_requirements.txt (TensorFlow and TensorFlow Serving API clients).
 ```bash
 $ virtualenv .venv
 $ . .venv/bin/activate
-$ pip3 install -r ../requirements.txt
+$ pip3 install -r ../tf_requirements.txt
 ```
 
 ```bash

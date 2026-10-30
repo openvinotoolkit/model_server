@@ -517,7 +517,7 @@ test_perf: venv
 		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
 		--model_name resnet-binary --model_path /models/resnet50-binary --port $(OVMS_CPP_CONTAINER_PORT); sleep 5
 	@echo "Running latency test"
-	@. $(ACTIVATE); python3 tests/performance/grpc_latency.py \
+	@. $(ACTIVATE); pip3 install -qq -r tests/tf_requirements.txt; python3 tests/performance/grpc_latency.py \
 	  --grpc_port $(OVMS_CPP_CONTAINER_PORT) \
 		--images_numpy_path tests/performance/imgs.npy \
 		--labels_numpy_path tests/performance/labels.npy \
@@ -540,7 +540,7 @@ test_perf_dummy_model: venv
 		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
 		--model_name dummy --model_path /dummy --port $(OVMS_CPP_CONTAINER_PORT); sleep 5
 	@echo "Running latency test"
-	@. $(ACTIVATE); python3 tests/performance/grpc_latency.py \
+	@. $(ACTIVATE); pip3 install -qq -r tests/tf_requirements.txt; python3 tests/performance/grpc_latency.py \
 	  --grpc_port $(OVMS_CPP_CONTAINER_PORT) \
 		--images_numpy_path tests/performance/dummy_input.npy \
 		--labels_numpy_path tests/performance/dummy_lbs.npy \
@@ -568,7 +568,7 @@ test_throughput: venv
 		--port $(OVMS_CPP_CONTAINER_PORT); \
 		sleep 10
 	@echo "Running throughput test"
-	@. $(ACTIVATE); cd tests/performance; ./grpc_throughput.sh 28 \
+	@. $(ACTIVATE); pip3 install -qq -r tests/tf_requirements.txt; cd tests/performance; ./grpc_throughput.sh 28 \
 	  --grpc_port $(OVMS_CPP_CONTAINER_PORT) \
 		--images_numpy_path imgs.npy \
 		--labels_numpy_path labels.npy \
@@ -593,7 +593,7 @@ test_throughput_dummy_model: venv
 		--port $(OVMS_CPP_CONTAINER_PORT); \
 		sleep 10
 	@echo "Running throughput test"
-	@. $(ACTIVATE); cd tests/performance; ./grpc_throughput.sh 28 \
+	@. $(ACTIVATE); pip3 install -qq -r tests/tf_requirements.txt; cd tests/performance; ./grpc_throughput.sh 28 \
 	  --grpc_port $(OVMS_CPP_CONTAINER_PORT) \
 		--images_numpy_path dummy_input.npy \
 		--labels_numpy_path dummy_lbs.npy \
