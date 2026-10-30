@@ -240,6 +240,7 @@ absl::Status OmniModelLegacyServable::prepareCompleteResponse(std::shared_ptr<Ge
     executionContext->apiHandler->setCompletionTokensUsage(omniExecutionContext->results.perf_metrics.get_num_generated_tokens());
     executionContext->apiHandler->setCachedPromptTokensUsage(omniExecutionContext->results.perf_metrics.get_num_prefix_cache_hit_tokens());
     auto deltas = omniExecutionContext->deltaChannel.drain();
+    executionContext->observeGeneratedText(deltas, true);
     const ov::genai::GenerationFinishReason finishReason =
         omniExecutionContext->results.finish_reasons.empty()
             ? ov::genai::GenerationFinishReason::STOP
@@ -407,6 +408,7 @@ absl::Status OmniModelLegacyServable::preparePartialResponse(std::shared_ptr<Gen
     std::vector<Delta> deltas = executionContext->deltaChannel.drain();
     const bool isFinishing = executionContext->deltaChannel.complete();
     if (!isFinishing) {
+        executionContext->observeGeneratedText(deltas, false);
         if (deltas.size() > 0 || executionContext->apiHandler->getEndpoint() == Endpoint::RESPONSES) {
             for (auto& delta : deltas) {
                 if (executionContext->apiHandler->isVerboseResponse()) {
@@ -442,6 +444,7 @@ absl::Status OmniModelLegacyServable::preparePartialResponse(std::shared_ptr<Gen
         for (auto& d : executionContext->deltaChannel.drain()) {
             deltas.push_back(std::move(d));
         }
+        executionContext->observeGeneratedText(deltas, true);
         if (omniExecutionContext->results.finish_reasons.empty()) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Missing finish reason in legacy omni streaming generation result, defaulting to STOP");
         }

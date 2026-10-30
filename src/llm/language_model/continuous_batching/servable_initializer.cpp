@@ -310,7 +310,8 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     }
     properties->maxModelLength = parseMaxModelLength(parsedModelsPath);
 
-    properties->llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(properties->pipeline, properties->schedulerConfig.cache_size == 0);
+    properties->llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(
+        properties->pipeline, properties->schedulerConfig.cache_size == 0, properties->metricReporter);
 
     return StatusCode::OK;
 }

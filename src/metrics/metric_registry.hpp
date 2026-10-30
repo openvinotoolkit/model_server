@@ -16,14 +16,18 @@
 #pragma once
 
 #include <memory>
+#include <map>
+#include <mutex>
 #include <string>
 #include <stdexcept>
+#include <utility>
 #include <prometheus/registry.h>
 
 namespace ovms {
 
 template <typename MetricType>
 class MetricFamily;
+class MetricCounter;
 
 class MetricRegistry {
 public:
@@ -48,8 +52,13 @@ public:
     // Returns all collected metrics in "Prometheus Text Exposition Format".
     std::string collect() const;
 
+    /// Register a custom counter family, enforcing consistent help across scopes.
+    std::shared_ptr<MetricFamily<MetricCounter>> registerCustomCounterFamily(const std::string& name, const std::string& help);
+
 private:
     prometheus::Registry registryImpl;
+    std::mutex customFamiliesMutex;
+    std::map<std::string, std::pair<std::string, std::shared_ptr<MetricFamily<MetricCounter>>>> customCounterFamilies;
 };
 
 }  // namespace ovms

@@ -25,14 +25,17 @@
 namespace ovms {
 
 class LLMExecutorWrapper;
+class LLMMetricReporter;
 
 struct ContinuousBatchingServableExecutionContext : public GenAiServableExecutionContext {
     ov::genai::GenerationHandle generationHandle;
+    bool prefillMetricsRecorded = false;
 };
 
 struct ContinuousBatchingServableProperties : public GenAiServableProperties {
     ov::genai::SchedulerConfig schedulerConfig;
     std::shared_ptr<ov::genai::ContinuousBatchingPipeline> pipeline;
+    std::shared_ptr<LLMMetricReporter> metricReporter;
     std::shared_ptr<LLMExecutorWrapper> llmExecutorWrapper;
 };
 
@@ -41,6 +44,7 @@ protected:
     std::shared_ptr<ContinuousBatchingServableProperties> properties;
     void notifyExecutorThread();
     void logPerfMetrics(ov::genai::PerfMetrics& perfMetrics);
+    void recordPrefillMetrics(GenAiServableExecutionContext& executionContext);
     void stopGenerationOnResponseError(const std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext);
 
 public:
@@ -55,6 +59,9 @@ public:
     // Interface methods
     std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() override;
     std::shared_ptr<GenAiServableProperties> getProperties() override;
+    const std::shared_ptr<ContinuousBatchingServableProperties>& getContinuousBatchingProperties() const {
+        return properties;
+    }
     absl::Status scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status readCompleteExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status readPartialExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;

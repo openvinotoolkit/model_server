@@ -17,9 +17,11 @@
 
 #include <condition_variable>
 #include <future>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -150,6 +152,9 @@ struct GenAiServableExecutionContext {
     bool sendLoopbackSignal = false;
     bool lifecyclePrimed = false;  // true once RESPONSES lifecycle events have been primed
     DeltaChannel deltaChannel;     // thread-safe delta queue used by all streaming paths
+    // Called on the calculator thread for content deltas, before serialization.
+    std::function<void(std::string_view, bool)> generatedTextObserver;
+    void observeGeneratedText(const std::vector<Delta>& deltas, bool finish);
     GenerationPhase generationPhase = GenerationPhase::INPUT_TOKEN_PROCESSING;
 };
 

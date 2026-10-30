@@ -2233,6 +2233,7 @@ cc_test(
                 "//:not_disable_mediapipe": [
                     ":config_export_full_test",
                 "//src/llm:genai_servables",
+                "//src/llm:tomato_metric",
                 "//src/llm:output_parsers",
                 "//src/llm:video_utils",
                 ":test_llm_output_parser_tests",

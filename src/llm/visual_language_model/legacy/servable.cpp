@@ -205,6 +205,7 @@ absl::Status VisualLanguageModelLegacyServable::prepareCompleteResponse(std::sha
         legacyExecutionContext->results.finish_reasons.empty() ? ov::genai::GenerationFinishReason::STOP : legacyExecutionContext->results.finish_reasons[0];
 
     std::vector<Delta> deltas = executionContext->deltaChannel.drain();
+    executionContext->observeGeneratedText(deltas, true);
 
     if (executionContext->apiHandler->isVerboseResponse()) {
         for (const auto& delta : deltas) {

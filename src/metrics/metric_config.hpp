@@ -52,6 +52,9 @@ extern const std::string METRIC_NAME_PROCESSING_TIME;
 
 extern const std::string METRIC_NAME_REQUEST_LATENCY;
 
+extern const std::string METRIC_NAME_LLM_KV_CACHE_UTILIZATION;
+extern const std::string METRIC_NAME_LLM_PREFILL_SPEED;
+
 class Status;
 /**
  * @brief This class represents metrics configuration
@@ -90,7 +93,9 @@ private:
 
     std::unordered_set<std::string> additionalMetricFamilies = {
         {METRIC_NAME_INFER_REQ_QUEUE_SIZE},
-        {METRIC_NAME_INFER_REQ_ACTIVE}};
+        {METRIC_NAME_INFER_REQ_ACTIVE},
+        {METRIC_NAME_LLM_KV_CACHE_UTILIZATION},
+        {METRIC_NAME_LLM_PREFILL_SPEED}};
 
     std::unordered_set<std::string> defaultMetricFamilies = {
         {METRIC_NAME_CURRENT_REQUESTS},

@@ -14,7 +14,9 @@
 // limitations under the License.
 //*****************************************************************************
 #include <future>
+#include <limits>
 #include <memory>
+#include <stdexcept>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -23,8 +25,12 @@
 #include <gtest/gtest.h>
 
 #include "src/metrics/metric.hpp"
+#include "src/metrics/calculator_metrics.hpp"
+#include "src/metrics/llm_metric_reporter.hpp"
+#include "src/metrics/metric_config.hpp"
 #include "src/metrics/metric_family.hpp"
 #include "src/metrics/metric_registry.hpp"
+#include "src/status.hpp"
 
 using namespace ovms;
 
@@ -35,6 +41,292 @@ using testing::Not;
 TEST(Metrics, RegistryEmpty) {
     MetricRegistry registry;
     EXPECT_EQ(registry.collect().size(), 0);
+}
+
+TEST(CalculatorMetricsTest, RegistersAndUpdatesAcrossInstancesAndScrapes) {
+    MetricRegistry registry;
+    CalculatorMetrics metrics(&registry, "graph", "node");
+    auto first = metrics.registerCounter("custom_events_total", "Events.");
+    auto second = metrics.registerCounter("custom_events_total", "Events.");
+    EXPECT_EQ(first, second);
+    first->increment();
+    second->increment(2);
+    const std::string scrape = registry.collect();
+    EXPECT_THAT(scrape, HasSubstr("custom_events_total{name=\"graph\",node=\"node\"} 3\n"));
+    EXPECT_EQ(scrape, registry.collect());
+}
+
+TEST(CalculatorMetricsTest, NodeAndGraphScopesAreIndependent) {
+    MetricRegistry registry;
+    CalculatorMetrics first(&registry, "graph", "first");
+    CalculatorMetrics second(&registry, "graph", "second");
+    CalculatorMetrics other(&registry, "other", "first");
+    first.registerCounter("custom_events_total", "Events.")->increment();
+    second.registerCounter("custom_events_total", "Events.")->increment(2);
+    other.registerCounter("custom_events_total", "Events.")->increment(3);
+    EXPECT_THAT(registry.collect(), HasSubstr("custom_events_total{name=\"graph\",node=\"first\"} 1\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("custom_events_total{name=\"graph\",node=\"second\"} 2\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("custom_events_total{name=\"other\",node=\"first\"} 3\n"));
+}
+
+TEST(CalculatorMetricsTest, InvalidRegistrationsAndUpdatesFailExplicitly) {
+    MetricRegistry registry;
+    CalculatorMetrics metrics(&registry, "graph", "node");
+    for (const char* name : {"events_total", "ovms_events_total", "custom_events", "custom_bad-name_total", "custom__total"}) {
+        EXPECT_THROW(metrics.registerCounter(name, "Events."), std::invalid_argument);
+    }
+    EXPECT_THROW(metrics.registerCounter("custom_events_total", ""), std::invalid_argument);
+    auto counter = metrics.registerCounter("custom_events_total", "Events.");
+    EXPECT_THROW(metrics.registerCounter("custom_events_total", "Different help."), std::invalid_argument);
+    CalculatorMetrics other(&registry, "graph", "other");
+    EXPECT_THROW(other.registerCounter("custom_events_total", "Different help."), std::invalid_argument);
+    for (double value : {-1.0, std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::infinity()}) {
+        EXPECT_THROW(counter->increment(value), std::invalid_argument);
+    }
+    EXPECT_THAT(registry.collect(), HasSubstr("custom_events_total{name=\"graph\",node=\"node\"} 0\n"));
+}
+
+TEST(CalculatorMetricsTest, DisabledMetricsReturnUsableNoOpHandles) {
+    CalculatorMetrics metrics(nullptr, "graph", "node");
+    auto counter = metrics.registerCounter("custom_events_total", "Events.");
+    ASSERT_NE(counter, nullptr);
+    counter->increment(3);
+    EXPECT_EQ(counter, metrics.registerCounter("custom_events_total", "Events."));
+}
+
+TEST(CalculatorMetricsTest, DeactivationProtectsReplacementSeriesAndRegistryLifetime) {
+    std::shared_ptr<CalculatorCounter> retained;
+    {
+        MetricRegistry registry;
+        CalculatorMetrics oldScope(&registry, "graph", "node");
+        retained = oldScope.registerCounter("custom_events_total", "Events.");
+        retained->increment();
+        oldScope.deactivate();
+        EXPECT_TRUE(registry.collect().empty());
+        EXPECT_THROW(oldScope.registerCounter("custom_new_total", "New."), std::logic_error);
+        CalculatorMetrics replacement(&registry, "graph", "node");
+        auto current = replacement.registerCounter("custom_events_total", "Events.");
+        current->increment(2);
+        retained->increment(100);
+        EXPECT_THAT(registry.collect(), HasSubstr("custom_events_total{name=\"graph\",node=\"node\"} 2\n"));
+    }
+    retained->increment();
+    retained.reset();
+}
+
+TEST(CalculatorMetricsTest, ScopeDestructionRemovesSeriesEvenWhenHandleIsRetained) {
+    MetricRegistry registry;
+    std::shared_ptr<CalculatorCounter> retained;
+    {
+        CalculatorMetrics metrics(&registry, "graph", "node");
+        retained = metrics.registerCounter("custom_events_total", "Events.");
+        retained->increment();
+    }
+    EXPECT_TRUE(registry.collect().empty());
+    retained->increment();
+    EXPECT_TRUE(registry.collect().empty());
+}
+
+TEST(CalculatorMetricsTest, ConcurrentRegistrationUpdatesScrapesAndDeactivation) {
+    MetricRegistry registry;
+    CalculatorMetrics metrics(&registry, "graph", "node");
+    auto counter = metrics.registerCounter("custom_events_total", "Events.");
+    auto writer = std::async(std::launch::async, [&]() {
+        for (int i = 0; i < 1000; ++i) {
+            metrics.registerCounter("custom_events_total", "Events.")->increment();
+        }
+    });
+    for (int i = 0; i < 100; ++i) {
+        registry.collect();
+    }
+    writer.get();
+    EXPECT_THAT(registry.collect(), HasSubstr("custom_events_total{name=\"graph\",node=\"node\"} 1000\n"));
+    auto lateWriter = std::async(std::launch::async, [&]() {
+        for (int i = 0; i < 1000; ++i) {
+            counter->increment();
+        }
+    });
+    metrics.deactivate();
+    lateWriter.get();
+    EXPECT_TRUE(registry.collect().empty());
+}
+
+TEST(CalculatorMetricsTest, ConflictingBuiltInFamilyTypeFailsRegistration) {
+    MetricRegistry registry;
+    auto family = registry.createFamily<MetricGauge>("custom_events_total", "Events.");
+    ASSERT_NE(family, nullptr);
+    CalculatorMetrics metrics(&registry, "graph", "node");
+    EXPECT_THROW(metrics.registerCounter("custom_events_total", "Events."), std::invalid_argument);
+    EXPECT_TRUE(registry.collect().empty());
+}
+
+class LLMMetricsTest : public ::testing::Test {
+protected:
+    MetricRegistry registry;
+    MetricConfig config;
+
+    void SetUp() override {
+        ASSERT_EQ(config.loadFromCLIString(true,
+                      METRIC_NAME_LLM_KV_CACHE_UTILIZATION + "," + METRIC_NAME_LLM_PREFILL_SPEED),
+            StatusCode::OK);
+    }
+};
+
+TEST_F(LLMMetricsTest, OptionalFamiliesAreNotEnabledByDefault) {
+    MetricConfig defaults(true);
+    EXPECT_FALSE(defaults.isFamilyEnabled(METRIC_NAME_LLM_KV_CACHE_UTILIZATION));
+    EXPECT_FALSE(defaults.isFamilyEnabled(METRIC_NAME_LLM_PREFILL_SPEED));
+    LLMMetricReporter reporter(&defaults, &registry, "model", "llm");
+    reporter.setCacheUtilization(42);
+    reporter.observePrefillSpeed(1000);
+    EXPECT_FALSE(reporter.isCacheUtilizationEnabled());
+    EXPECT_FALSE(reporter.isPrefillSpeedEnabled());
+    EXPECT_TRUE(registry.collect().empty());
+}
+
+TEST_F(LLMMetricsTest, DisabledMetricsDoNotRegisterSeries) {
+    config.metricsEnabled = false;
+    LLMMetricReporter reporter(&config, &registry, "model", "llm");
+    reporter.setCacheUtilization(42);
+    reporter.observePrefillSpeed(1000);
+    EXPECT_FALSE(reporter.isCacheUtilizationEnabled());
+    EXPECT_TRUE(registry.collect().empty());
+}
+
+TEST_F(LLMMetricsTest, MissingRegistryOrConfigurationDoesNotRegisterSeries) {
+    LLMMetricReporter noRegistry(&config, nullptr, "model", "llm");
+    LLMMetricReporter noConfig(nullptr, &registry, "model", "llm");
+    EXPECT_FALSE(noRegistry.isCacheUtilizationEnabled());
+    EXPECT_FALSE(noConfig.isCacheUtilizationEnabled());
+    EXPECT_TRUE(registry.collect().empty());
+}
+
+TEST_F(LLMMetricsTest, FamiliesCanBeSelectedIndependently) {
+    MetricConfig cacheConfig;
+    ASSERT_EQ(cacheConfig.loadFromCLIString(true, METRIC_NAME_LLM_KV_CACHE_UTILIZATION), StatusCode::OK);
+    LLMMetricReporter cacheReporter(&cacheConfig, &registry, "cache_model", "llm");
+    EXPECT_TRUE(cacheReporter.isCacheUtilizationEnabled());
+    cacheReporter.observePrefillSpeed(1000);
+    EXPECT_THAT(registry.collect(), Not(HasSubstr(METRIC_NAME_LLM_PREFILL_SPEED)));
+
+    MetricConfig prefillConfig;
+    ASSERT_EQ(prefillConfig.loadFromCLIString(true, METRIC_NAME_LLM_PREFILL_SPEED), StatusCode::OK);
+    LLMMetricReporter prefillReporter(&prefillConfig, &registry, "prefill_model", "llm");
+    EXPECT_FALSE(prefillReporter.isCacheUtilizationEnabled());
+    EXPECT_TRUE(prefillReporter.isPrefillSpeedEnabled());
+    prefillReporter.observePrefillSpeed(1000);
+    EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"prefill_model\",node=\"llm\"} 1\n"));
+}
+
+TEST_F(LLMMetricsTest, GaugeRetainsLatestValueAcrossScrapes) {
+    LLMMetricReporter reporter(&config, &registry, "model", "llm");
+    ASSERT_TRUE(reporter.isCacheUtilizationEnabled());
+    reporter.setCacheUtilization(25);
+    reporter.setCacheUtilization(42.5);
+    const std::string firstScrape = registry.collect();
+    EXPECT_THAT(firstScrape, HasSubstr("ovms_llm_kv_cache_utilization_percent{name=\"model\",node=\"llm\"} 42.5\n"));
+    EXPECT_EQ(registry.collect(), firstScrape);
+    reporter.setCacheUtilization(0);
+    EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_kv_cache_utilization_percent{name=\"model\",node=\"llm\"} 0\n"));
+    reporter.setCacheUtilization(100);
+    EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_kv_cache_utilization_percent{name=\"model\",node=\"llm\"} 100\n"));
+}
+
+TEST_F(LLMMetricsTest, HistogramRetainsDistributionAcrossScrapes) {
+    LLMMetricReporter reporter(&config, &registry, "model", "llm");
+    reporter.observePrefillSpeed(100);
+    reporter.observePrefillSpeed(1000);
+    const std::string scrape = registry.collect();
+    EXPECT_THAT(scrape, HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"model\",node=\"llm\"} 2\n"));
+    EXPECT_THAT(scrape, HasSubstr("ovms_llm_prefill_speed_tokens_per_second_sum{name=\"model\",node=\"llm\"} 1100\n"));
+    EXPECT_THAT(scrape, HasSubstr("ovms_llm_prefill_speed_tokens_per_second_bucket{name=\"model\",node=\"llm\",le=\"100\"} 1\n"));
+    EXPECT_THAT(scrape, HasSubstr("ovms_llm_prefill_speed_tokens_per_second_bucket{name=\"model\",node=\"llm\",le=\"1000\"} 2\n"));
+    EXPECT_EQ(registry.collect(), scrape);
+}
+
+TEST_F(LLMMetricsTest, InvalidSamplesLeaveStoredValuesUnchanged) {
+    LLMMetricReporter reporter(&config, &registry, "model", "llm");
+    reporter.setCacheUtilization(42);
+    reporter.observePrefillSpeed(1000);
+    const std::string scrape = registry.collect();
+    for (double value : {-1.0, std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::infinity()}) {
+        reporter.setCacheUtilization(value);
+        reporter.observePrefillSpeed(value);
+    }
+    reporter.setCacheUtilization(100.01);
+    reporter.observePrefillSpeed(0);
+    EXPECT_EQ(registry.collect(), scrape);
+}
+
+TEST_F(LLMMetricsTest, PipelineLabelsAreIndependentAndRemovedOnDestruction) {
+    LLMMetricReporter first(&config, &registry, "model", "first");
+    first.setCacheUtilization(20);
+    {
+        LLMMetricReporter second(&config, &registry, "model", "second");
+        LLMMetricReporter otherGraph(&config, &registry, "other", "first");
+        second.setCacheUtilization(40);
+        otherGraph.setCacheUtilization(60);
+        EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_kv_cache_utilization_percent{name=\"model\",node=\"first\"} 20\n"));
+        EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_kv_cache_utilization_percent{name=\"model\",node=\"second\"} 40\n"));
+        EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_kv_cache_utilization_percent{name=\"other\",node=\"first\"} 60\n"));
+    }
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("node=\"second\"")));
+    EXPECT_THAT(registry.collect(), Not(HasSubstr("name=\"other\"")));
+    first.setCacheUtilization(30);
+    EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_kv_cache_utilization_percent{name=\"model\",node=\"first\"} 30\n"));
+}
+
+TEST_F(LLMMetricsTest, ReloadStartsFreshSeries) {
+    {
+        LLMMetricReporter reporter(&config, &registry, "model", "llm");
+        reporter.setCacheUtilization(42);
+        reporter.observePrefillSpeed(1000);
+    }
+    EXPECT_TRUE(registry.collect().empty());
+    LLMMetricReporter reloaded(&config, &registry, "model", "llm");
+    EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_kv_cache_utilization_percent{name=\"model\",node=\"llm\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"model\",node=\"llm\"} 0\n"));
+}
+
+TEST_F(LLMMetricsTest, RetainedOldPipelineCannotModifyOrRemoveReplacementMetrics) {
+    auto oldReporter = std::make_unique<LLMMetricReporter>(&config, &registry, "model", "llm");
+    oldReporter->setCacheUtilization(42);
+    oldReporter->observePrefillSpeed(1000);
+    oldReporter->deactivate();
+    EXPECT_FALSE(oldReporter->isCacheUtilizationEnabled());
+    EXPECT_TRUE(registry.collect().empty());
+
+    LLMMetricReporter replacement(&config, &registry, "model", "llm");
+    replacement.setCacheUtilization(25);
+    replacement.observePrefillSpeed(500);
+    const std::string scrape = registry.collect();
+    oldReporter->setCacheUtilization(90);
+    oldReporter->observePrefillSpeed(10000);
+    EXPECT_EQ(registry.collect(), scrape);
+    oldReporter.reset();
+    EXPECT_EQ(registry.collect(), scrape);
+}
+
+TEST_F(LLMMetricsTest, RegistrationFailureRollsBackPartialSeries) {
+    auto incompatibleFamily = registry.createFamily<MetricGauge>(METRIC_NAME_LLM_PREFILL_SPEED, "incompatible");
+    ASSERT_NE(incompatibleFamily, nullptr);
+    EXPECT_THROW(LLMMetricReporter(&config, &registry, "model", "llm"), std::logic_error);
+    EXPECT_TRUE(registry.collect().empty());
+}
+
+TEST_F(LLMMetricsTest, ConcurrentUpdatesAndScraping) {
+    LLMMetricReporter reporter(&config, &registry, "model", "llm");
+    auto writer = std::async(std::launch::async, [&reporter]() {
+        for (int i = 0; i < 1000; ++i) {
+            reporter.setCacheUtilization(i % 101);
+            reporter.observePrefillSpeed(1000);
+        }
+    });
+    for (int i = 0; i < 100; ++i) {
+        EXPECT_THAT(registry.collect(), HasSubstr("# TYPE ovms_llm_kv_cache_utilization_percent gauge"));
+    }
+    writer.get();
+    EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"model\",node=\"llm\"} 1000\n"));
 }
 
 TEST(MetricsCounter, IncrementDefault) {

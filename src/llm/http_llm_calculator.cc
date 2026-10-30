@@ -37,6 +37,7 @@
 #include "../profiler.hpp"
 #include "apis/openai_completions.hpp"
 #include "servable.hpp"
+#include "tomato_metric.hpp"
 
 using namespace ovms;
 
@@ -49,6 +50,7 @@ class HttpLLMCalculator : public CalculatorBase {
     std::shared_ptr<GenAiServable> servable;
     std::shared_ptr<GenAiExecutionContextHolder> executionContextHolder;
     std::shared_ptr<GenAiServableExecutionContext> executionContext;
+    std::shared_ptr<ovms::CalculatorCounter> tomatoCounter;
 
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
@@ -63,6 +65,9 @@ public:
         cc->Inputs().Tag(INPUT_TAG_NAME).Set<ovms::HttpPayload>();
         cc->Inputs().Tag(LOOPBACK_TAG_NAME).Set<bool>();
         cc->InputSidePackets().Tag(LLM_SESSION_SIDE_PACKET_TAG).Set<ovms::GenAiServableMap>();
+        if (cc->InputSidePackets().HasTag(ovms::CALCULATOR_METRICS_TAG)) {
+            cc->InputSidePackets().Tag(ovms::CALCULATOR_METRICS_TAG).Set<ovms::CalculatorMetricsMap>();
+        }
         if (cc->InputSidePackets().HasTag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG)) {
             cc->InputSidePackets().Tag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG).Set<ovms::GenAiExecutionContextMap>();
         }
@@ -84,6 +89,18 @@ public:
         auto it = servableMap.find(cc->NodeName());
         RET_CHECK(it != servableMap.end()) << "Could not find initialized LLM node named: " << cc->NodeName();
         this->servable = it->second;
+        if (cc->InputSidePackets().HasTag(ovms::CALCULATOR_METRICS_TAG)) {
+            const auto& scopes = cc->InputSidePackets().Tag(ovms::CALCULATOR_METRICS_TAG).Get<ovms::CalculatorMetricsMap>();
+            const auto scope = scopes.find(cc->NodeName());
+            RET_CHECK(scope != scopes.end()) << "Missing metrics scope for node: " << cc->NodeName();
+            try {
+                tomatoCounter = scope->second->registerCounter(
+                    "custom_llm_tomato_occurrences_total",
+                    "Whole-word tomato occurrences in generated content, ignoring ASCII case.");
+            } catch (const std::exception& e) {
+                return absl::InvalidArgumentError(e.what());
+            }
+        }
 
         if (cc->InputSidePackets().HasTag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG) && !cc->InputSidePackets().Tag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG).IsEmpty()) {
             ovms::GenAiExecutionContextMap executionContextMap = cc->InputSidePackets().Tag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG).Get<ovms::GenAiExecutionContextMap>();
@@ -144,6 +161,12 @@ public:
         try {
             // First iteration of Process()
             if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
+                if (tomatoCounter) {
+                    auto matcher = std::make_shared<ovms::TomatoMetric>(tomatoCounter);
+                    executionContext->generatedTextObserver = [matcher](std::string_view text, bool finish) {
+                        matcher->consume(text, finish);
+                    };
+                }
                 auto status = servable->loadRequest(executionContext, cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>());
                 if (status != absl::OkStatus())
                     return handlePreSchedulingError(cc, std::move(status));

@@ -66,6 +66,9 @@ const std::string METRIC_NAME_PROCESSING_TIME = "ovms_graph_processing_time_us";
 
 const std::string METRIC_NAME_REQUEST_LATENCY = "ovms_graph_request_latency_us";
 
+const std::string METRIC_NAME_LLM_KV_CACHE_UTILIZATION = "ovms_llm_kv_cache_utilization_percent";
+const std::string METRIC_NAME_LLM_PREFILL_SPEED = "ovms_llm_prefill_speed_tokens_per_second";
+
 bool MetricConfig::validateEndpointPath(const std::string& endpoint) {
     std::regex valid_endpoint_regex("^/[a-zA-Z0-9]*$");
     return std::regex_match(endpoint, valid_endpoint_regex);

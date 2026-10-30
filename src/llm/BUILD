@@ -31,13 +31,23 @@ ovms_cc_library(
         "//src/kfserving_api:kfserving_api_cpp",
         "//src:libovmsprofiler",
         ":genai_servables",
+        ":tomato_metric",
         "//src:httppayload",
         "//third_party:genai",
         "//src/mediapipe_internal:node_initializer",
+        "//src/metrics:libovmsmetrics",
         "//src:libovmslogging",
         "//src:libovmsstring_utils",],
     visibility = ["//visibility:public"],
     alwayslink = 1, # needed, so the calculator can be registered by MediaPipe
+)
+
+ovms_cc_library(
+    name = "tomato_metric",
+    hdrs = ["tomato_metric.hpp"],
+    srcs = ["tomato_metric.cpp"],
+    deps = ["//src/metrics:libovmsmetrics"],
+    visibility = ["//visibility:public"],
 )
 
 ovms_cc_library(
@@ -658,6 +668,7 @@ ovms_cc_library(
             "omni_model/legacy/servable_initializer.cpp",
             "omni_model/legacy/legacy_executor.cpp"],
     deps = [
+        "//src/metrics:libovmsmetrics",
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_cc_proto",
         "@mediapipe//mediapipe/framework/port:ret_check",
@@ -759,5 +770,3 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
-
-

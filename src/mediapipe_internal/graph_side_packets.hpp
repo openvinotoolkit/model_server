@@ -22,10 +22,13 @@
 #include <utility>
 #include <vector>
 
+#include "../metrics/calculator_metrics.hpp"
+
 namespace ovms {
 
 class PythonNodeResources;
 class GenAiServable;
+class LLMMetricReporter;
 struct GenAiServableExecutionContext;
 struct ImageGenerationPipelines;
 struct EmbeddingsServable;
@@ -68,8 +71,10 @@ private:
 using GenAiExecutionContextMap = std::unordered_map<std::string, std::shared_ptr<GenAiExecutionContextHolder>>;
 
 struct GraphSidePackets {
+    CalculatorMetricsMap calculatorMetrics;
     PythonNodeResourcesMap pythonNodeResourcesMap;
     GenAiServableMap genAiServableMap;
+    std::vector<std::weak_ptr<LLMMetricReporter>> llmMetricReporters;
     GenAiExecutionContextMap genAiExecutionContextMap;
     ImageGenerationPipelinesMap imageGenPipelinesMap;
     EmbeddingsServableMap embeddingsServableMap;
@@ -79,8 +84,13 @@ struct GraphSidePackets {
     std::vector<std::string> loraAliases;
     bool hideBaseModelInRouting = false;
     void clear() {
+        for (const auto& entry : calculatorMetrics) {
+            entry.second->deactivate();
+        }
+        calculatorMetrics.clear();
         pythonNodeResourcesMap.clear();
         genAiServableMap.clear();
+        llmMetricReporters.clear();
         genAiExecutionContextMap.clear();
         imageGenPipelinesMap.clear();
         embeddingsServableMap.clear();
@@ -91,7 +101,8 @@ struct GraphSidePackets {
         hideBaseModelInRouting = false;
     }
     bool empty() {
-        return (pythonNodeResourcesMap.empty() &&
+        return (calculatorMetrics.empty() &&
+                pythonNodeResourcesMap.empty() &&
                 genAiServableMap.empty() &&
                 genAiExecutionContextMap.empty() &&
                 imageGenPipelinesMap.empty() &&

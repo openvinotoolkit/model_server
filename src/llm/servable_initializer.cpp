@@ -549,7 +549,8 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
     return StatusCode::OK;
 }
 
-Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath) {
+Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig,
+    std::string graphPath, std::shared_ptr<LLMMetricReporter> metricReporter) {
     mediapipe::LLMCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
     Status status;
@@ -563,7 +564,9 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         if (pipelineType == PipelineType::LM_CB) {
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Language Model Continuous Batching servable");
             ContinuousBatchingServableInitializer cbServableInitializer;
-            servable = std::make_shared<ContinuousBatchingServable>();
+            auto cbServable = std::make_shared<ContinuousBatchingServable>();
+            cbServable->getContinuousBatchingProperties()->metricReporter = std::move(metricReporter);
+            servable = std::move(cbServable);
             status = cbServableInitializer.initialize(servable, nodeOptions, graphPath);
             if (status != StatusCode::OK) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
@@ -590,7 +593,9 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
             }
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Visual Language Model Continuous Batching servable");
             ContinuousBatchingServableInitializer cbServableInitializer;
-            servable = std::make_shared<VisualLanguageModelServable>();
+            auto cbServable = std::make_shared<VisualLanguageModelServable>();
+            cbServable->getContinuousBatchingProperties()->metricReporter = std::move(metricReporter);
+            servable = std::move(cbServable);
             status = cbServableInitializer.initialize(servable, nodeOptions, graphPath);
             if (status != StatusCode::OK) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
