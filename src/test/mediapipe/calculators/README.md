@@ -8,9 +8,9 @@ fixtures, integration tests, and test-only `VideoDecodeInferCalculator` /
 `VideoDecodeInferVaCalculator` implementations. See the
 [calculator reference](../../../mpi/README.md) for individual platform limits.
 
-Three separate sources/fixtures produce three separate binaries. The same
-target names have Linux and Windows variants; platform selections choose real
-implementations, not empty Windows-only translation units.
+The benchmark binaries remain separated by API boundary. A separate
+ModelManager-backed integration test verifies the OV calculator side-packet
+path without adding OVMS to the pure-OpenVINO benchmark.
 
 All target names below have prefix `//src/test/mediapipe/calculators:`.
 
@@ -18,10 +18,11 @@ All target names below have prefix `//src/test/mediapipe/calculators:`.
 | --- | --- | --- |
 | `openvino_inference_benchmark` | `openvino_inference_benchmark.cpp` | OpenVINO, OpenCL, VA-API/D3D11, gtest; no MPI, MediaPipe, OVMS headers/server |
 | `mpi_openvino_inference_benchmark` | `mpi_openvino_inference_benchmark.cpp` | MPI, GStreamer/MediaPipe, OpenVINO, interop; no OVMS headers/server |
+| `mpi_openvino_ovms_integration_test` | `mpi_openvino_ovms_integration_test.cpp` | ModelManager, MPI/GStreamer/MediaPipe, OpenVINO; OVMS-linked test only |
 | `mpi_capi_inference_benchmark` | `mpi_capi_inference_benchmark.cpp` | MPI, GStreamer/MediaPipe, OpenVINO, `//src:ovms_lib`; owns C-API server/settings/requests |
 
 Configured Bazel queries verified that `//src:ovms_lib` is absent from both
-OpenVINO binaries and present in C-API. Evidence is retained in
+OpenVINO benchmark binaries and present in C-API. Evidence is retained in
 `logs/dependency_split_no_ovms.log` and `logs/dependency_split_capi.log`.
 
 ## Nine-case matrix
@@ -42,7 +43,8 @@ to CPU inference or a different memory path.
 | 8 | `MpiCapiBenchmark.OneCalculator` | `mpi_capi_inference_benchmark` | `GstVideoCapiInferenceCalculator` | Supported |
 | 9 | `MpiCapiBenchmark.TwoCalculators` | `mpi_capi_inference_benchmark` | `GstVideoSourceCalculator` -> `GstCapiInferenceCalculator` | Supported |
 
-Only cases 8-9 require OVMS. The production
+Only benchmark cases 8-9 require OVMS; the separate integration test links it
+to obtain a loaded ModelInstance. The production
 `GstVideoOpenVinoPipelineInferenceCalculator` is distinct from case 6: it
 configures a GStreamer inference transform and consumes completion/progress
 packets; inference does not run in its MediaPipe `Process`. Its current Windows

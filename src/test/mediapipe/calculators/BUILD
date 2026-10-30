@@ -172,6 +172,30 @@ cc_test(
     }),
 )
 
+cc_test(
+    name = "mpi_openvino_ovms_integration_test",
+    srcs = ["mpi_openvino_ovms_integration_test.cpp"],
+    copts = COPTS_ADJUSTED,
+    linkstatic = 1,
+    deps = [
+        ":mpi_inference_benchmark_utils",
+        "//src:ovms_lib",
+        "//src/mpi:intel_mpi",
+        "//src/mediapipe_gst_calculators:gst_video_source_calculator",
+        "//src/mediapipe_gst_calculators:gst_openvino_inference_calculator",
+        "//src/mediapipe_gst_calculators:gst_video_openvino_inference_calculator",
+        "//src/mediapipe_gst_calculators:gst_openvino_inference_calculator_cc_proto",
+        "//third_party:openvino",
+        "@com_google_googletest//:gtest_main",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe_calculators//:mediapipe_calculators",
+    ],
+    linkopts = LINKOPTS_ADJUSTED + select({
+        "//src:windows": ["d3d11.lib", "dxgi.lib"],
+        "//conditions:default": ["-lOpenCL", "-lva", "-lva-drm"],
+    }),
+)
+
 # Run with:
 cc_test(
     name = "mpi_capi_inference_benchmark",

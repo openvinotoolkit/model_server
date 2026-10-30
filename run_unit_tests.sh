@@ -91,6 +91,8 @@ echo "Run test: ${RUN_TESTS}"
 echo "Run GPU test: ${RUN_GPU_TESTS}"
 echo "Run coverage: ${CHECK_COVERAGE}"
 if [ "$RUN_TESTS" == "1" ] ; then
+    bash standalone/check_dependencies.sh || exit 1
+    bazel build ${SHARED_OPTIONS} //standalone:mpi_openvino_video || exit 1
     if [ "$CHECK_COVERAGE" == "1" ] ; then
         if bazel coverage --instrumentation_filter="-src/test" --combined_report=lcov \
             ${SHARED_OPTIONS} ${TEST_FILTER} \

@@ -131,6 +131,8 @@ protected:
     std::shared_ptr<ov::CompiledModel> compiledModel;
 
 public:
+     ov::CompiledModel* getCompiledModel() const { return compiledModel.get(); }
+
     // TODO windows
 #ifdef __linux__
     cl_context oclContextC{nullptr};

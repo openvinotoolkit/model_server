@@ -1,0 +1,20 @@
+input_side_packet: "VIDEO_PATH:video_path"
+input_side_packet: "WIDTH:width"
+input_side_packet: "HEIGHT:height"
+output_stream: "detections"
+
+node {
+  calculator: "GstVideoOpenVinoInferenceCalculator"
+  input_side_packet: "VIDEO_PATH:video_path"
+  input_side_packet: "WIDTH:width"
+  input_side_packet: "HEIGHT:height"
+  output_stream: "DETECTIONS:detections"
+  options {
+    [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
+      model_path: ""
+      input_name: "data"
+      performance_hint: "LATENCY"
+      num_streams: 1
+    }
+  }
+}
