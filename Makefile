@@ -348,7 +348,8 @@ $(ACTIVATE_STYLE_READY): ci/style_requirements.txt
 	@if $(PYTHON_ENV_CLEAN) "$(VIRTUALENV_STYLE_PYTHON)" -m pip install --disable-pip-version-check --no-input -r ci/style_requirements.txt; then \
 		touch "$(ACTIVATE_STYLE_READY)"; \
 	else \
-		echo "[WARN] Unable to install style requirements (offline or proxy-restricted environment). Continuing with existing tools only."; \
+		echo "[ERROR] Unable to install style requirements; restore package-index access and retry."; \
+ 		exit 1; \
 	fi
 
 cppclean: venv-style

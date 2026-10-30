@@ -79,6 +79,10 @@ if exist "%LOCAL_TOOLS_DIR%\git" del /f /q "%LOCAL_TOOLS_DIR%\git"
 >> "%LOCAL_TOOLS_DIR%\git.bat" echo   "C:\Program Files\Git\cmd\git.exe" %%*
 >> "%LOCAL_TOOLS_DIR%\git.bat" echo   exit /b %%ERRORLEVEL%%
 >> "%LOCAL_TOOLS_DIR%\git.bat" echo )
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo for /f "delims=" %%%%G in ('where.exe git.exe 2^>NUL') do (
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo   "%%%%G" %%*
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo   exit /b %%ERRORLEVEL%%
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo )
 >> "%LOCAL_TOOLS_DIR%\git.bat" echo if where git ^>NUL 2^>NUL (
 >> "%LOCAL_TOOLS_DIR%\git.bat" echo   git %%*
 >> "%LOCAL_TOOLS_DIR%\git.bat" echo   exit /b %%ERRORLEVEL%%
