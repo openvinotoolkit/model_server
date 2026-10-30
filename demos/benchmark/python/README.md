@@ -59,7 +59,8 @@ docker run --rm -d -u $(id -u) -v ${HOME}/models:/models -p 9000:9000 -p 8000:80
 To check available options use `-h`, `--help` switches:
 ```bash
   docker run benchmark_client --help
-
+```
+```
 Client 2.7
 NO_PROXY= no_proxy= python3 /ovms_benchmark_client/main.py --help
 usage: main.py [-h] [-i ID] [-c CONCURRENCY] [-a SERVER_ADDRESS]
