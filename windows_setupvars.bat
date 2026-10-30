@@ -92,7 +92,7 @@ set "CURL_PATH=/c/opt/curl-!curl_version!-win64-mingw/bin"
 set "CURL_BIN=%CURL_PATH%/curl.exe"
 set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;!CURL_PATH_WINDOWS!;%ROOT%\.venv-style\Scripts;%LOCAL_TOOLS_DIR%;%PATH%;"
 set "PYTHONHOME=C:\opt\Python312"
-set "PYTHONPATH=C:\opt\Python312"
+set "PYTHONPATH=C:\opt\Python312;%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 :: Bazel normally exports TEST_SRCDIR/TEST_WORKSPACE when a test binary is launched under Bazel.
 :: For direct Windows invocation, seed them only if they are not already present.
@@ -127,8 +127,6 @@ set "openvinoBatch=call C:\opt\openvino\setupvars.bat"
 set "opencvBatch=call C:\opt\opencv_!opencv_version!\setup_vars_opencv4.cmd"
 
 :: Set required libraries paths
-set "PYTHONHOME=C:\opt\Python312"
-set "PYTHONPATH=C:\opt\Python312;%setPythonPath%"
 %openvinoBatch%
 if !errorlevel! neq 0 (
     set "SETUP_EXIT_CODE=!errorlevel!"
@@ -139,7 +137,12 @@ if !errorlevel! neq 0 (
     set "SETUP_EXIT_CODE=!errorlevel!"
     goto :exit_build_error
 )
-set "PYTHONPATH=C:\opt\Python312;%setPythonPath%"
+set "PYTHONPATH=%PYTHONPATH:C:\opt\opencv_!opencv_version!\python_loader_is_not_installed;=%"
+set "PYTHONPATH=%PYTHONPATH:;C:\opt\opencv_!opencv_version!\python_loader_is_not_installed=%"
+set "PYTHONPATH=%PYTHONPATH:C:\opt\opencv_!opencv_version!\python_loader_is_not_installed=%"
+set "PYTHONHOME=C:\opt\Python312"
+if defined PYTHONPATH set "PYTHONPATH=C:\opt\Python312;%PYTHONPATH%;%setPythonPath%"
+if not defined PYTHONPATH set "PYTHONPATH=C:\opt\Python312;%setPythonPath%"
 
 :exit_build
 echo [INFO] Setup finished
@@ -150,4 +153,6 @@ echo [ERROR] Setup finished with error
 if "!SETUP_EXIT_CODE!"=="0" set "SETUP_EXIT_CODE=!errorlevel!"
 
 :propagate_env
-endlocal & set "PATH=%PATH%" & set "PYTHONPATH=%PYTHONPATH%" & set "PYTHONHOME=C:\opt\Python312" & set "TEST_SRCDIR=%TEST_SRCDIR%" & set "TEST_WORKSPACE=%TEST_WORKSPACE%" & set "BAZEL_VS=%BAZEL_VS%" & set "BAZEL_VC=%BAZEL_VC%" & set "BAZEL_SH=%BAZEL_SH%" & set "BAZEL_VC_FULL_VERSION=%BAZEL_VC_FULL_VERSION%" & set "CURL_PATH=%CURL_PATH%" & set "CURL_PATH_WINDOWS=%CURL_PATH_WINDOWS%" & set "CURL_BIN=%CURL_BIN%" & set "HTTP_PROXY=%HTTP_PROXY%" & set "HTTPS_PROXY=%HTTPS_PROXY%" & set "NO_PROXY=%NO_PROXY%" & set "http_proxy=%http_proxy%" & set "https_proxy=%https_proxy%" & set "no_proxy=%no_proxy%" & exit /b %SETUP_EXIT_CODE%
+:: Do not leak PYTHONHOME/PYTHONPATH back into the parent environment.
+:: Those variables break venv activation and force the system Python instead of the repo-local runtime.
+endlocal & set "PATH=%PATH%" & set "TEST_SRCDIR=%TEST_SRCDIR%" & set "TEST_WORKSPACE=%TEST_WORKSPACE%" & set "BAZEL_VS=%BAZEL_VS%" & set "BAZEL_VC=%BAZEL_VC%" & set "BAZEL_SH=%BAZEL_SH%" & set "BAZEL_VC_FULL_VERSION=%BAZEL_VC_FULL_VERSION%" & set "CURL_PATH=%CURL_PATH%" & set "CURL_PATH_WINDOWS=%CURL_PATH_WINDOWS%" & set "CURL_BIN=%CURL_BIN%" & set "HTTP_PROXY=%HTTP_PROXY%" & set "HTTPS_PROXY=%HTTPS_PROXY%" & set "NO_PROXY=%NO_PROXY%" & set "http_proxy=%http_proxy%" & set "https_proxy=%https_proxy%" & set "no_proxy=%no_proxy%" & exit /b %SETUP_EXIT_CODE%
