@@ -75,16 +75,19 @@ print(response.choices[0].message)
 
 Check the deployed model's performance by using the vLLM benchmark script and the Sonnet dataset.
 
-Install vLLM and download the Sonnet dataset:
+Install vLLM 0.10.2, which supports the Sonnet dataset, and download the dataset from the matching release tag. The version pin applies only to the benchmark client, not the OVMS server.
 ```bash
-pip install vllm --index-url https://wheels.vllm.ai/nightly/cpu --extra-index-url https://pypi.org/simple
-curl https://raw.githubusercontent.com/vllm-project/vllm/refs/heads/main/benchmarks/sonnet.txt -o sonnet.txt
+pip install "vllm==0.10.2" --index-url https://wheels.vllm.ai/nightly/cpu --extra-index-url https://pypi.org/simple
+curl --fail --location https://raw.githubusercontent.com/vllm-project/vllm/v0.10.2/benchmarks/sonnet.txt -o sonnet.txt
 ```
 
-Run benchmark with 10 requests sent sequentially:
+Run the benchmark with 10 requests sent sequentially and an output budget of 150 tokens per request:
 ```bash
-vllm bench serve --dataset-name sonnet --dataset-path sonnet.txt --backend openai-chat --host localhost --port 8000 --endpoint /v1/chat/completions --max-concurrency 1 --model OpenVINO/Qwen3.8-27B-int4-ov --num-prompts 10
+vllm bench serve --dataset-name sonnet --dataset-path sonnet.txt --sonnet-output-len 150 --backend openai-chat --host localhost --port 8000 --endpoint /v1/chat/completions --max-concurrency 1 --model OpenVINO/Qwen3.8-27B-int4-ov --num-prompts 10
 ```
+
+Example output from a previous Sonnet run. Results depend on the hardware and software versions.
+
 ```
 ============ Serving Benchmark Result ============
 Successful requests:                     10
