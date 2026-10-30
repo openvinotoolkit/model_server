@@ -285,7 +285,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Gemma4_ToolCallWithStringArgs) {
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
-    std::string expectedOutput = R"(</s><|turn>user
+    std::string expectedOutput = R"(<|endoftext|><|turn>user
 What's the weather in Paris?<turn|>
 <|turn>model
 <|tool_call>call:get_weather{location:<|"|>Paris<|"|>,unit:<|"|>celsius<|"|>}<tool_call|><|tool_response>)";
@@ -470,7 +470,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Mistral7B_ToolCallWithStringArgs) {
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
-    std::string expectedOutput = R"(</s>[INST] What's the weather in Paris?[/INST][TOOL_CALLS] [{"name": "get_weather", "arguments": {"location": "Paris", "unit": "celsius"}, "id": "abc123def"}]</s>)";
+    std::string expectedOutput = R"(<|endoftext|>[INST] What's the weather in Paris?[/INST][TOOL_CALLS] [{"name": "get_weather", "arguments": {"location": "Paris", "unit": "celsius"}, "id": "abc123def"}]<|endoftext|>)";
     EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
@@ -498,7 +498,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, LFM2_ToolCallWithStringArgs) {
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
-    std::string expectedOutput = R"(</s><|im_start|>user
+    std::string expectedOutput = R"(<|endoftext|><|im_start|>user
 What's the weather in Paris?<|im_end|>
 <|im_start|>assistant
 <|tool_call_start|>[get_weather(location='Paris', unit='celsius')]<|tool_call_end|><|im_end|>
@@ -529,7 +529,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, LFM25_ToolCallWithStringArgsAndReasoning) 
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_EQ(caps.missnamedReasoningField, "thinking");
 
-    std::string expectedOutput = R"(</s><|im_start|>user
+    std::string expectedOutput = R"(<|endoftext|><|im_start|>user
 What's the weather in Paris?<|im_end|>
 <|im_start|>assistant
 <think>Here is some reasoning content</think><|tool_call_start|>[get_weather(location='Paris', unit='celsius')]<|tool_call_end|><|im_end|>
@@ -560,7 +560,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, LFM25_ReasoningAndEmptyToolCalls) {
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_EQ(caps.missnamedReasoningField, "thinking");
 
-    std::string expectedOutput = R"(</s><|im_start|>user
+    std::string expectedOutput = R"(<|endoftext|><|im_start|>user
 What's the weather in Paris?<|im_end|>
 <|im_start|>assistant
 <think>Here is some reasoning content</think><|im_end|>
@@ -594,7 +594,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, LFM25_ToolCallWithStringArgs) {
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_TRUE(caps.requiresObjectArguments);
 
-    std::string expectedOutput = R"(</s><|im_start|>user
+    std::string expectedOutput = R"(<|endoftext|><|im_start|>user
 What's the weather in Paris?<|im_end|>
 <|im_start|>assistant
 <|tool_call_start|>[get_weather(location='Paris', unit='celsius')]<|tool_call_end|><|im_end|>
@@ -746,7 +746,7 @@ TEST_F(ChatTemplateEndToEndJinjaTest, MiniCPM5_ToolCallWithStringArgs) {
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
-    std::string expectedOutput = R"(</s><|im_start|>user
+    std::string expectedOutput = R"(<|endoftext|><|im_start|>user
 What's the weather in Paris?<|im_end|>
 <|im_start|>assistant
 <function name="get_weather"><param name="location">Paris</param><param name="unit">celsius</param></function><|im_end|>
