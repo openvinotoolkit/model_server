@@ -23,6 +23,8 @@ del /f /q win_full_test.log 2>nul
 del /f /q win_test_summary.log 2>nul
 del /f /q win_test_log.zip 2>nul
 del /f /q win_install_service_test.log 2>nul
+if not exist unit_test_results mkdir unit_test_results
+del /f /q unit_test_results\*.xml 2>nul
 
 :: Need to set shorter build paths for bazel cache for too long commands in mediapipe compilation
 :: We expect a first script argument to be "PR-1234" number passed here from jenkins so that a tmp directory will be created
@@ -48,14 +50,14 @@ IF "%~2"=="" (
 
 set "bazelBuildArgs=--config=win_mp_on --action_env OpenVINO_DIR=%openvino_dir%"
 set "testTargets=//src:ovms_test //src:python_runtime_library_test //src/python:pythoninterpretermodule_lifecycle_test //src/python:pythoninterpretermodule_backend_failure_test //src/python:pythoninterpretermodule_borrowed_interpreter_test"
-set "runPythonRuntimeTest=%cd%\bazel-bin\src\python_runtime_library_test.exe --gtest_filter=!gtestFilter!"
+set "runPythonRuntimeTest=%cd%\bazel-bin\src\python_runtime_library_test.exe --gtest_filter=!gtestFilter! --gtest_output=xml:unit_test_results/python_runtime_library_test.xml"
 set "runPythonInterpreterLifecycleTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=!gtestFilter! //src/python:pythoninterpretermodule_lifecycle_test"
 set "runPythonInterpreterBackendFailureTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=!gtestFilter! //src/python:pythoninterpretermodule_backend_failure_test"
 set "runPythonInterpreterBorrowedTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=!gtestFilter! //src/python:pythoninterpretermodule_borrowed_interpreter_test"
 
 set "buildTestCommand=%bazelPath% %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %testTargets%"
 set "changeConfigsCmd=python windows_change_test_configs.py"
-set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=!gtestFilter! > win_full_test.log 2>&1"
+set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=!gtestFilter! --gtest_output=xml:unit_test_results/ovms_test.xml > win_full_test.log 2>&1"
 
 :: Load chosen dependency versions from versions.mk
 for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
@@ -131,7 +133,7 @@ if !errorlevel! neq 0 (
 
 :: Run install_ovms_service.bat unit tests
 echo Running install_ovms_service.bat unit tests...
-python -m pytest tests\python\test_install_ovms_service_windows.py -v > win_install_service_test.log 2>&1
+python -m pytest tests\python\test_install_ovms_service_windows.py --junitxml=unit_test_results/install_ovms_service.xml -v > win_install_service_test.log 2>&1
 set "pytestExitCode=!errorlevel!"
 type win_install_service_test.log
 if !pytestExitCode! neq 0 (
@@ -151,12 +153,15 @@ set "pythonTestExitCode=!errorlevel!"
 echo Running: %runPythonInterpreterLifecycleTest%
 %runPythonInterpreterLifecycleTest% >> win_full_test.log 2>&1
 set "pythonInterpreterLifecycleExitCode=!errorlevel!"
+if exist bazel-testlogs\src\python\pythoninterpretermodule_lifecycle_test\test.xml copy /y bazel-testlogs\src\python\pythoninterpretermodule_lifecycle_test\test.xml unit_test_results\pythoninterpretermodule_lifecycle_test.xml >nul
 echo Running: %runPythonInterpreterBackendFailureTest%
 %runPythonInterpreterBackendFailureTest% >> win_full_test.log 2>&1
 set "pythonInterpreterBackendFailureExitCode=!errorlevel!"
+if exist bazel-testlogs\src\python\pythoninterpretermodule_backend_failure_test\test.xml copy /y bazel-testlogs\src\python\pythoninterpretermodule_backend_failure_test\test.xml unit_test_results\pythoninterpretermodule_backend_failure_test.xml >nul
 echo Running: %runPythonInterpreterBorrowedTest%
 %runPythonInterpreterBorrowedTest% >> win_full_test.log 2>&1
 set "pythonInterpreterBorrowedExitCode=!errorlevel!"
+if exist bazel-testlogs\src\python\pythoninterpretermodule_borrowed_interpreter_test\test.xml copy /y bazel-testlogs\src\python\pythoninterpretermodule_borrowed_interpreter_test\test.xml unit_test_results\pythoninterpretermodule_borrowed_interpreter_test.xml >nul
 
 :: Cut tests log to results
 set regex="\[  .* ms"

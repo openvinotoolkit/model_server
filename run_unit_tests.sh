@@ -56,6 +56,20 @@ compress_logs() {
     rm -rf tmp.log
 } 
 
+collect_test_reports() {
+    local target
+    local report_path
+    for target in ${REPORT_TARGETS}; do
+        report_path="${target#//}"
+        report_path="${report_path/:/\/}"
+        if [[ -f "bazel-testlogs/${report_path}/test.xml" ]]; then
+            cp -L "bazel-testlogs/${report_path}/test.xml" "unit_test_results/${report_path//\//_}.xml" || echo "WARNING: Could not collect test report: ${target}"
+        else
+            echo "WARNING: Test report not found: ${target}"
+        fi
+    done
+}
+
 generate_coverage_report() {
     local coverage_dat="$(bazel info output_path)/_coverage/_coverage_report.dat"
 
@@ -91,7 +105,12 @@ echo "Run test: ${RUN_TESTS}"
 echo "Run GPU test: ${RUN_GPU_TESTS}"
 echo "Run coverage: ${CHECK_COVERAGE}"
 if [ "$RUN_TESTS" == "1" ] ; then
+    mkdir -p unit_test_results
+    rm -f unit_test_results/*.xml
+    REPORT_TARGETS=""
+    trap collect_test_reports EXIT
     if [ "$CHECK_COVERAGE" == "1" ] ; then
+        REPORT_TARGETS="${UNIT_TEST_TARGETS}"
         if bazel coverage --instrumentation_filter="-src/test" --combined_report=lcov \
             ${SHARED_OPTIONS} ${TEST_FILTER} \
             ${UNIT_TEST_TARGETS} > ${TEST_LOG} 2>&1 ; then
@@ -104,6 +123,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
             exit 1
         fi
     fi
+    REPORT_TARGETS+=" //src/python/binding:test_python_binding"
     bazel test ${SHARED_OPTIONS} "${TEST_FILTER}" //src/python/binding:test_python_binding || exit 1
     bazel build ${SHARED_OPTIONS} ${UNIT_TEST_TARGETS} || exit 1
     echo "Executing unit tests"
@@ -112,6 +132,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
     # Run each target separately for better isolation in CI logs and retries.
     : > ${TEST_LOG}
     for target in ${UNIT_TEST_TARGETS}; do
+        REPORT_TARGETS+=" ${target}"
         echo "===== Running ${target} =====" >> ${TEST_LOG}
         if ! bazel test --jobs=$JOBS ${debug_bazel_flags} ${SHARED_OPTIONS} --test_summary=detailed --test_output=streamed --test_filter="*" "${target}" >> ${TEST_LOG} 2>&1 ; then
             failed=1

@@ -348,6 +348,8 @@ pipeline {
                   finally {
                       archiveArtifacts allowEmptyArchive: true, artifacts: "test_logs.tar.gz"
                       archiveArtifacts allowEmptyArchive: true, artifacts: "linux_tests_summary.log"
+                      archiveArtifacts allowEmptyArchive: true, artifacts: "unit_test_results/*.xml"
+                      junit allowEmptyResults: true, testResults: "unit_test_results/*.xml"
                   }
                 }
                 }

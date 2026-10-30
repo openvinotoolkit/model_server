@@ -657,6 +657,8 @@ ifeq ($(RUN_GPU_TESTS),1)
 endif
 
 run_unit_tests: prepare_models
+	@mkdir -p unit_test_results
+	@rm -f unit_test_results/*.xml
 	docker rm -f $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
 ifeq ($(RUN_GPU_TESTS),1)
 	docker run \
@@ -678,6 +680,7 @@ ifeq ($(RUN_GPU_TESTS),1)
 		exit_code=$$? ;\
 		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/test_logs.tar.gz . ;\
 		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/linux_tests_summary.log . ;\
+		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/unit_test_results/. unit_test_results/ || echo "WARNING: Could not collect unit test reports" ;\
 		docker rm -f $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ;\
 		exit $$exit_code
 else
@@ -695,6 +698,7 @@ else
 		exit_code=$$? ; \
 		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/test_logs.tar.gz . ;\
 		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/linux_tests_summary.log . ;\
+		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/unit_test_results/. unit_test_results/ || echo "WARNING: Could not collect unit test reports" ;\
 		docker rm -f $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ;\
 		exit $$exit_code
 endif
