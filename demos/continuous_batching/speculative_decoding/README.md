@@ -15,9 +15,10 @@ All strategies share the same server API — only the generation parameters diff
 
 ## Prerequisites
 
-**Model preparation**: Python 3.9 or higher with pip and a Hugging Face account
+**Model preparation**: Python 3.10 or higher with pip (only if converting the model is needed using export_model.py or optimum-cli)
 
 **Model Server deployment**: Docker Engine or the OVMS binary package installed according to the [bare-metal deployment guide](../../../docs/deploying_server_baremetal.md)
+**Prerelease package**: Some presented features like MTP with prefix caching require the latest prerelease package from [storage.openvinotoolkit.org](https://storage.openvinotoolkit.org/repositories/openvino_model_server/packages/weekly/latest/)  or docker image `openvino/model_server:weekly`.
 
 # MTP (Multi-Token Prediction)
 
@@ -27,7 +28,7 @@ MTP replaces the separate draft model with a lightweight prediction head bundled
 
 For this demo we use [OpenVINO/Qwen3.8-27B-int4-ov](https://huggingface.co/OpenVINO/Qwen3.8-27B-int4-ov), which has a bundled MTP head and is exported in INT4 precision.
 
-> **Note:** This model requires OVMS 2026.4 or weekly pre-release build. See the model card for compatibility details. Prefix caching is not currently supported in MTP mode. It is also required to set max_tokens parameter
+> **Note:** This model requires OVMS 2026.5.0. See the model card for compatibility details.
 
 ## Server Deployment
 
@@ -38,14 +39,13 @@ docker run -d --rm ${GPU_ARGS} --user $(id -u):$(id -g) -p 8000:8000 -v ${HOME}/
   --rest_port 8000 \
   --model_repository_path /models \
   --source_model OpenVINO/Qwen3.8-27B-int4-ov \
-  --draft_model_path . \
-  --enable_prefix_caching false
+  --draft_model_path .
 ```
 :::
 
 :::{dropdown} **Deploying on Bare Metal**
 ```bat
-ovms --rest_port 8000 --model_repository_path c:\models --source_model OpenVINO/Qwen3.8-27B-int4-ov --draft_model_path . --enable_prefix_caching false
+ovms --rest_port 8000 --model_repository_path c:\models --source_model OpenVINO/Qwen3.8-27B-int4-ov --draft_model_path .
 ```
 :::
 
