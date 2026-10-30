@@ -354,6 +354,42 @@ TEST(MpiOpenVinoIntegration, CalculatorConstruction) {
 }
 
 #ifndef _WIN32
+TEST(MpiOpenVinoIntegration, CompiledModelSidePacket) {
+    NativeVaDisplay vaDisplay;
+    ASSERT_TRUE(vaDisplay.open()) << "VA display initialization failed";
+    ov::Core core;
+    ov::intel_gpu::ocl::VAContext context(core, vaDisplay.display);
+    auto compiled = std::make_shared<ov::CompiledModel>(mediapipe::GstVaapiInference::compileForVaContext(
+        core, context, benchmark_config::kModelWidth, benchmark_config::kModelHeight, bench::modelPath(),
+        benchmark_config::kPerformanceHint, std::stoi(benchmark_config::kNumStreams)));
+
+    mediapipe::CalculatorGraphConfig config = bench::graphConfig(false, false);
+    config.add_input_side_packet("COMPILED_MODEL:compiled_model");
+    mediapipe::CalculatorGraphConfig::Node* node = config.mutable_node(0);
+    node->add_input_side_packet("COMPILED_MODEL:compiled_model");
+    node->mutable_options()->MutableExtension(mediapipe::GstOpenVinoInferenceCalculatorOptions::ext)->clear_model_path();
+
+    mediapipe::CalculatorGraph graph;
+    ASSERT_TRUE(graph.Initialize(config).ok());
+    int frames = 0;
+    int detections = 0;
+    ASSERT_TRUE(graph.ObserveOutputStream("detections", [&](const mediapipe::Packet& packet) {
+                         detections += packet.Get<int>();
+                         ++frames;
+                         return absl::OkStatus();
+                     }).ok());
+    const absl::Status status = graph.StartRun({
+        {"video_path", mediapipe::MakePacket<std::string>(bench::videoPath())},
+        {"width", mediapipe::MakePacket<int>(benchmark_config::kModelWidth)},
+        {"height", mediapipe::MakePacket<int>(benchmark_config::kModelHeight)},
+        {"compiled_model", mediapipe::MakePacket<std::shared_ptr<ov::CompiledModel>>(compiled)},
+    });
+    ASSERT_TRUE(status.ok()) << status;
+    ASSERT_TRUE(graph.WaitUntilDone().ok());
+    ASSERT_EQ(frames, bench::totalFrames());
+    ASSERT_GT(detections, 0);
+}
+
 TEST(MpiOpenVinoIntegration, NativePixelsMatchPureFixture) {
     const auto expected = bench::frames();
     bench::DecodeStream decode;

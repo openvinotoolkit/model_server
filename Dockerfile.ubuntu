@@ -116,92 +116,8 @@ ARG JOBS=8
 ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        python3-pip \
-        python3-venv \
-        flex \
-        bison \
-        libglib2.0-dev \
-        libmount-dev \
-        libpcre2-dev \
-        libffi-dev \
-        libssl-dev \
-        libdrm-dev \
-        libva-dev \
-        nasm \
-        yasm \
-        libavcodec-dev \
-        libavformat-dev \
-        libavutil-dev \
-        libswscale-dev \
-        git \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-RUN python3 -m venv /build_venv && \
-    /build_venv/bin/pip install --no-cache-dir meson==1.4.1 ninja==1.11.1.1
-
-ENV PATH="/build_venv/bin:${PATH}"
-
-WORKDIR /src
-RUN git clone --depth 1 --branch ${GST_VERSION} \
-    https://gitlab.freedesktop.org/gstreamer/gstreamer.git
-
-WORKDIR /src/gstreamer
-
-# Install prefix: /opt/gstreamer
-RUN meson setup \
-    -Dexamples=disabled \
-    -Dtests=disabled \
-    -Dgst-examples=disabled \
-    -Ddevtools=disabled \
-    -Dorc=disabled \
-    -Dgpl=disabled \
-    -Dpython=disabled \
-    -Dlibnice=disabled \
-    -Dugly=disabled \
-    -Dgst-plugins-bad:gpl=disabled \
-    -Dgst-plugins-bad:va=enabled \
-    -Dgst-plugins-bad:doc=disabled \
-    -Dgst-plugins-bad:nls=disabled \
-    -Dgst-plugins-bad:directfb=disabled \
-    -Dgst-plugins-bad:openni2=disabled \
-    -Dgst-plugins-bad:fdkaac=disabled \
-    -Dgst-plugins-bad:ladspa=disabled \
-    -Dgst-plugins-bad:assrender=disabled \
-    -Dgst-plugins-bad:bs2b=disabled \
-    -Dgst-plugins-bad:flite=disabled \
-    -Dgst-plugins-bad:rtmp=disabled \
-    -Dgst-plugins-bad:opencv=disabled \
-    -Dgst-plugins-bad:sbc=disabled \
-    -Dgst-plugins-bad:teletext=disabled \
-    -Dgst-plugins-bad:x265=disabled \
-    -Dgst-plugins-bad:webrtcdsp=disabled \
-    -Dgst-plugins-bad:dash=disabled \
-    -Dgst-plugins-bad:openjpeg=disabled \
-    -Dgst-plugins-bad:soundtouch=disabled \
-    -Dgst-plugins-bad:isac=disabled \
-    -Dgst-plugins-base:nls=disabled \
-    -Dgst-plugins-base:gl=disabled \
-    -Dgst-plugins-base:pango=disabled \
-    -Dgst-plugins-base:xvideo=disabled \
-    -Dgst-plugins-good:nls=disabled \
-    -Dgst-plugins-good:libcaca=disabled \
-    -Dgst-plugins-good:lame=disabled \
-    -Dgst-plugins-good:flac=disabled \
-    -Dgst-plugins-good:dv=disabled \
-    -Dgst-plugins-good:adaptivedemux2=disabled \
-    --buildtype=release \
-    --prefix=/opt/gstreamer \
-    --libdir=lib \
-    --libexecdir=bin \
-    build/
-
-RUN ninja -C build/ -j${JOBS} && meson install -C build/
-
-# Copy glib/glib-2.0 headers into the prefix so it is self-contained.
-# glib is a build dependency; its headers live in the system include path.
-RUN cp -r /usr/include/glib-2.0 /opt/gstreamer/include/glib-2.0 && \
-    cp -r /usr/lib/x86_64-linux-gnu/glib-2.0/include/. /opt/gstreamer/include/glib-2.0/
+COPY extras/gstreamer/build_gstreamer.sh /tmp/build_gstreamer.sh
+RUN GST_VERSION=${GST_VERSION} JOBS=${JOBS} /tmp/build_gstreamer.sh
 
 ################### BASE BUILD ##########################
 FROM base_build as build
@@ -243,6 +159,9 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 # Runtime dlopen picks up /opt/gstreamer/lib at runtime via LD_LIBRARY_PATH or ldconfig.
 COPY --from=gstreamer-builder /opt/gstreamer /opt/gstreamer
 RUN echo /opt/gstreamer/lib > /etc/ld.so.conf.d/gstreamer.conf && ldconfig
+# The build container always carries the full GStreamer runtime (gst-inspect, gst-launch, plugins) for testing.
+ENV PATH="/opt/gstreamer/bin:${PATH}"
+ENV GST_PLUGIN_PATH=/opt/gstreamer/lib/gstreamer-1.0
 
 # Intel VA-API media driver — required for GStreamer vapostproc GPU decode.
 # Use Intel's official GPU repository for up-to-date libva + iHD driver (Ubuntu apt ships
@@ -582,7 +501,6 @@ RUN apt-get update ; \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
 COPY --from=pkg /ovms_release /ovms
-COPY --from=gstreamer-builder /opt/gstreamer /opt/gstreamer
 COPY --from=build /usr/local/lib/python3.*/dist-packages/numpy /ovms/python_deps/numpy/
 COPY --from=build /usr/local/lib/python3.*/dist-packages/numpy-*.dist-info /ovms/python_deps/
 COPY --from=build /usr/local/lib/python3.*/dist-packages/MarkupSafe-3.0.2.dist-info /ovms/python_deps/MarkupSafe-3.0.2.dist-info/
@@ -596,8 +514,8 @@ RUN apt-get update -y ; \
     apt-get install libpython$python_version --no-install-recommends -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
-ENV LD_LIBRARY_PATH=/ovms/lib:/opt/gstreamer/lib
-ENV GST_PLUGIN_PATH=/opt/gstreamer/lib/gstreamer-1.0
+# GStreamer is not shipped; see extras/gstreamer/Dockerfile.ubuntu for the optional GStreamer image.
+ENV LD_LIBRARY_PATH=/ovms/lib
 ENV PATH="$PATH:/ovms/bin"
 # When espeak-ng data is present in the package, point runtime to it.
 # Keep this conditional to avoid exporting a non-existent path when

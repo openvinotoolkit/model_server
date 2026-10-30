@@ -43,6 +43,7 @@ namespace {
 constexpr char kFrameTag[] = "FRAME";
 constexpr char kDetectionsTag[] = "DETECTIONS";
 constexpr char kPreinitializedInferenceTag[] = "PREINITIALIZED_INFERENCE";
+constexpr char kCompiledModelTag[] = "COMPILED_MODEL";
 constexpr float kFaceConfidenceThreshold = 0.5f;
 }  // namespace
 
@@ -52,6 +53,10 @@ class GstOpenVinoInferenceCalculator : public CalculatorBase {
         cc->Inputs().Tag(kFrameTag).Set<GstVideoFramePacket>();
         if (cc->InputSidePackets().HasTag(kPreinitializedInferenceTag))
             cc->InputSidePackets().Tag(kPreinitializedInferenceTag).Set<std::shared_ptr<GstVaapiInference>>();
+#ifndef _WIN32
+        if (cc->InputSidePackets().HasTag(kCompiledModelTag))
+            cc->InputSidePackets().Tag(kCompiledModelTag).Set<std::shared_ptr<ov::CompiledModel>>();
+#endif
         cc->Outputs().Tag(kDetectionsTag).Set<int>();
         return absl::OkStatus();
     }
@@ -59,8 +64,8 @@ class GstOpenVinoInferenceCalculator : public CalculatorBase {
     absl::Status Open(CalculatorContext* cc) override {
         const GstOpenVinoInferenceCalculatorOptions& options =
             cc->Options<GstOpenVinoInferenceCalculatorOptions>();
-        if (options.model_path().empty())
-            return absl::InvalidArgumentError("GstOpenVinoInferenceCalculator: empty model_path");
+        if (options.model_path().empty() && !hasCompiledModel(cc))
+            return absl::InvalidArgumentError("GstOpenVinoInferenceCalculator: either model_path or COMPILED_MODEL is required");
         model_path_ = options.model_path();
         input_name_ = options.input_name();
         performance_hint_ = options.performance_hint();
@@ -72,6 +77,11 @@ class GstOpenVinoInferenceCalculator : public CalculatorBase {
             va_inference_ = cc->InputSidePackets().Tag(kPreinitializedInferenceTag).Get<std::shared_ptr<GstVaapiInference>>();
             if (!va_inference_)
                 return absl::InvalidArgumentError("PREINITIALIZED_INFERENCE must not be null");
+        }
+        if (cc->InputSidePackets().HasTag(kCompiledModelTag)) {
+            external_compiled_model_ = cc->InputSidePackets().Tag(kCompiledModelTag).Get<std::shared_ptr<ov::CompiledModel>>();
+            if (!external_compiled_model_)
+                return absl::InvalidArgumentError("COMPILED_MODEL must not be null");
         }
 #endif
         return absl::OkStatus();
@@ -85,6 +95,8 @@ class GstOpenVinoInferenceCalculator : public CalculatorBase {
         try {
             if (!va_inference_)
                 va_inference_ = std::make_shared<GstVaapiInference>();
+            if (external_compiled_model_ && !va_inference_->initialized())
+                va_inference_->adoptCompiledModel(*external_compiled_model_, surface->display, frame.width, frame.height);
             va_frame_owner_ = frame.owner;
             const int detections = va_inference_->infer(surface->display, surface->surface_id,
                 frame.width, frame.height, model_path_, input_name_, performance_hint_, num_streams_);
@@ -149,11 +161,20 @@ class GstOpenVinoInferenceCalculator : public CalculatorBase {
 #ifndef _WIN32
         va_inference_.reset();
         va_frame_owner_.reset();
+        external_compiled_model_.reset();
 #endif
         return absl::OkStatus();
     }
 
  private:
+    static bool hasCompiledModel(const CalculatorContext* cc) {
+#ifndef _WIN32
+        return cc->InputSidePackets().HasTag(kCompiledModelTag);
+#else
+        return false;
+#endif
+    }
+
 #ifdef _WIN32
     absl::Status initializeModel() {
         try {
@@ -184,6 +205,7 @@ class GstOpenVinoInferenceCalculator : public CalculatorBase {
 #else
     std::shared_ptr<imp_tensor_t> va_frame_owner_;
     std::shared_ptr<GstVaapiInference> va_inference_;
+    std::shared_ptr<ov::CompiledModel> external_compiled_model_;
 #endif
     ov::Core core_;
     ov::CompiledModel compiled_model_;

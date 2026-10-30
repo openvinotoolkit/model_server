@@ -243,8 +243,8 @@ bool gst_loader_init() {
 
     if (!gst_h || !app_h || !vid_h || !glib_h) {
         std::cerr << "[GstLoader] GStreamer not available: " << dlerror() << "\n"
-                  << "[GstLoader] Install gstreamer1.0-* packages to enable "
-                     "media decode.\n";
+                  << "[GstLoader] Use an image built with extras/gstreamer/Dockerfile.ubuntu or install GStreamer "
+                     "to enable media decode.\n";
         return false;
     }
 
@@ -511,8 +511,8 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
     if (!stream || !source || !ctx) return IMP_ERROR_INVALID_ARGUMENT;
 
     if (!gst_loader_available()) {
-        ctx->last_error = "GStreamer not available; install gstreamer1.0-* "
-                          "packages and retry.";
+        ctx->last_error = "GStreamer not available; use an image built with extras/gstreamer/Dockerfile.ubuntu "
+                          "or install GStreamer and retry.";
         return IMP_ERROR_DEVICE_NOT_AVAILABLE;
     }
 

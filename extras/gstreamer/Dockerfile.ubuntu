@@ -1,0 +1,74 @@
+#
+# Copyright (c) 2026 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+# Recipe that adds GStreamer to an OVMS release image. GStreamer is built from source
+# here; no GStreamer binaries are published by the OVMS project.
+#
+#   docker build -f extras/gstreamer/Dockerfile.ubuntu \
+#       --build-arg BASE_IMAGE=openvino/model_server:latest-gpu \
+#       --build-arg ACCEPT_GSTREAMER_LICENSES=yes \
+#       -t openvino/model_server:latest-gpu-gstreamer extras/gstreamer
+#
+# The VA media driver (intel-media-va-driver-non-free) is installed from Intel's GPU repository, as in the OVMS build container.
+# Use a -gpu base image to get the OpenCL/Level Zero GPU drivers.
+
+ARG BASE_IMAGE=openvino/model_server:latest-gpu
+ARG BUILDER_IMAGE=ubuntu:24.04
+
+FROM $BUILDER_IMAGE AS gstreamer-builder
+ARG GST_VERSION=1.26.2
+ARG JOBS=8
+ARG ACCEPT_GSTREAMER_LICENSES=no
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# TODO: replace this build-arg gate with an explicit license accept & confirm step per component.
+# GStreamer core and plugins are LGPL-2.1+. Review the licenses of every component built or installed
+# here (gst-libav / FFmpeg, openh264, libva and the Intel media driver) before distributing the resulting image.
+RUN if [ "$ACCEPT_GSTREAMER_LICENSES" != "yes" ]; then \
+        echo "GStreamer and its plugins are third-party software under their own licenses (LGPL and others)."; \
+        echo "Review them and rebuild with --build-arg ACCEPT_GSTREAMER_LICENSES=yes to proceed."; \
+        exit 1; \
+    fi
+
+COPY build_gstreamer.sh /tmp/build_gstreamer.sh
+RUN GST_VERSION=${GST_VERSION} JOBS=${JOBS} /tmp/build_gstreamer.sh && \
+    rm -rf /opt/gstreamer/include /opt/gstreamer/share/man /opt/gstreamer/share/gtk-doc
+
+FROM $BASE_IMAGE
+USER root
+ENV DEBIAN_FRONTEND=noninteractive
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libglib2.0-0t64 libdrm2 ca-certificates wget gpg && \
+    wget -qO - https://repositories.intel.com/gpu/intel-graphics.key | \
+        gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg && \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/gpu/ubuntu noble client" > \
+        /etc/apt/sources.list.d/intel-gpu-noble.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends intel-media-va-driver-non-free libva2 libva-drm2 && \
+    apt-get purge -y wget gpg && apt-get autoremove -y && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+COPY --from=gstreamer-builder /opt/gstreamer /opt/gstreamer
+
+RUN echo /opt/gstreamer/lib > /etc/ld.so.conf.d/gstreamer.conf && ldconfig && \
+    ! (for f in /opt/gstreamer/lib/*.so /opt/gstreamer/lib/gstreamer-1.0/*.so; do ldd "$f"; done | grep "not found")
+
+ENV LD_LIBRARY_PATH=/ovms/lib:/opt/gstreamer/lib
+ENV GST_PLUGIN_PATH=/opt/gstreamer/lib/gstreamer-1.0
+ENV PATH="$PATH:/opt/gstreamer/bin"
+USER ovms

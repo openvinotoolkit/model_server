@@ -29,14 +29,21 @@ public:
         cc->InputSidePackets().Tag("HEIGHT").Set<int>();
         if (cc->InputSidePackets().HasTag("MAX_FRAMES"))
             cc->InputSidePackets().Tag("MAX_FRAMES").Set<int>();
+        if (cc->InputSidePackets().HasTag("COMPILED_MODEL"))
+            cc->InputSidePackets().Tag("COMPILED_MODEL").Set<std::shared_ptr<ov::CompiledModel>>();
         cc->Outputs().Tag("DETECTIONS").Set<int>();
         return absl::OkStatus();
     }
 
     absl::Status Open(CalculatorContext* cc) override {
         options_ = cc->Options<GstOpenVinoInferenceCalculatorOptions>();
-        if (options_.model_path().empty() || options_.num_streams() == 0)
-            return absl::InvalidArgumentError("Model path and positive num_streams are required");
+        if (cc->InputSidePackets().HasTag("COMPILED_MODEL")) {
+            compiled_model_ = cc->InputSidePackets().Tag("COMPILED_MODEL").Get<std::shared_ptr<ov::CompiledModel>>();
+            if (!compiled_model_)
+                return absl::InvalidArgumentError("COMPILED_MODEL must not be null");
+        }
+        if ((options_.model_path().empty() && !compiled_model_) || options_.num_streams() == 0)
+            return absl::InvalidArgumentError("Either model path or COMPILED_MODEL and positive num_streams are required");
         if (cc->InputSidePackets().HasTag("MAX_FRAMES"))
             max_frames_ = cc->InputSidePackets().Tag("MAX_FRAMES").Get<int>();
         if (imp_context_create(&context_, nullptr) != IMP_OK)
@@ -77,6 +84,8 @@ public:
         if (imp_tensor_get_va_surface(tensor.get(), &surface, &display, &width, &height) != IMP_OK)
             return absl::InternalError("Expected a VA-API surface, no host-memory fallback");
         try {
+            if (compiled_model_ && !inference_->initialized())
+                inference_->adoptCompiledModel(*compiled_model_, display, width, height);
             const int detections = inference_->infer(display, surface, width, height,
                 options_.model_path(), options_.input_name(), options_.performance_hint(), options_.num_streams());
             cc->Outputs().Tag("DETECTIONS").AddPacket(MakePacket<int>(detections).At(Timestamp(frame_index_++)));
@@ -96,6 +105,7 @@ public:
 private:
     void cleanup() {
         inference_.reset();
+        compiled_model_.reset();
         if (stream_)
             imp_video_close(stream_);
         stream_ = nullptr;
@@ -105,6 +115,7 @@ private:
     }
     GstOpenVinoInferenceCalculatorOptions options_;
     std::unique_ptr<GstVaapiInference> inference_;
+    std::shared_ptr<ov::CompiledModel> compiled_model_;
     imp_context_t* context_ = nullptr;
     imp_video_stream_t* stream_ = nullptr;
     int max_frames_ = 0;

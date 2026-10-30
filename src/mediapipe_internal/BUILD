@@ -259,6 +259,8 @@ ovms_cc_library(
         "//src/audio/text_to_speech:t2s_calculator",
         "//src/mediapipe_gst_calculators:gst_video_source_calculator",
         "//src/mediapipe_gst_calculators:gst_capi_inference_calculator",
+        "//src/mediapipe_gst_calculators:gst_openvino_inference_calculator",
+        "//src/mediapipe_gst_calculators:gst_video_openvino_inference_calculator",
         "//src/mediapipe_gst_calculators:gst_detection_overlay_calculator",
         "//src/mediapipe_gst_calculators:gst_video_sink_calculator",
         "//src/yolox:ov_yolox_tensors_to_detections_calculator",

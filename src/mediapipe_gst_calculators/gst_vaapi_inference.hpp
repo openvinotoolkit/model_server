@@ -33,6 +33,36 @@ struct GstVaapiInferenceTimings {
 
 class GstVaapiInference {
 public:
+    // Compiles modelPath with NV12 surface input and BGR conversion for the given VA context and frame size.
+    static ov::CompiledModel compileForVaContext(ov::Core& core, ov::intel_gpu::ocl::VAContext& context,
+        int width, int height, const std::string& modelPath,
+        const std::string& performanceHint, uint32_t streams) {
+        ov::preprocess::PrePostProcessor processor(core.read_model(modelPath));
+        processor.input().tensor().set_element_type(ov::element::u8).set_spatial_static_shape(height, width).set_color_format(ov::preprocess::ColorFormat::NV12_TWO_PLANES, {"y", "uv"}).set_memory_type(ov::intel_gpu::memory_type::surface);
+        processor.input().preprocess().convert_color(ov::preprocess::ColorFormat::BGR);
+        processor.input().model().set_layout("NCHW");
+        return core.compile_model(processor.build(), context,
+            {{"PERFORMANCE_HINT", performanceHint}, {"NUM_STREAMS", std::to_string(streams)}});
+    }
+
+    bool initialized() const {
+        return context_ != nullptr;
+    }
+
+    // compiled must come from compileForVaContext() on a context created from the same display and frame size.
+    void adoptCompiledModel(const ov::CompiledModel& compiled, void* display, int width, int height) {
+        if (display == nullptr || width <= 0 || height <= 0 || width % 2 || height % 2)
+            throw std::invalid_argument("Invalid VA-API frame");
+        if (context_)
+            throw std::logic_error("GstVaapiInference is already initialized");
+        context_ = std::make_unique<ov::intel_gpu::ocl::VAContext>(compiled.get_context().as<ov::intel_gpu::ocl::VAContext>());
+        compiled_ = compiled;
+        request_ = compiled_.create_infer_request();
+        display_ = display;
+        width_ = width;
+        height_ = height;
+    }
+
     void initialize(void* display, int width, int height,
         const std::string& modelPath, const std::string& inputName,
         const std::string& performanceHint, uint32_t streams) {
@@ -42,13 +72,8 @@ public:
             display_ = display;
             width_ = width;
             height_ = height;
-            ov::preprocess::PrePostProcessor processor(core_.read_model(modelPath));
-            processor.input().tensor().set_element_type(ov::element::u8).set_spatial_static_shape(height, width).set_color_format(ov::preprocess::ColorFormat::NV12_TWO_PLANES, {"y", "uv"}).set_memory_type(ov::intel_gpu::memory_type::surface);
-            processor.input().preprocess().convert_color(ov::preprocess::ColorFormat::BGR);
-            processor.input().model().set_layout("NCHW");
             context_ = std::make_unique<ov::intel_gpu::ocl::VAContext>(core_, display);
-            compiled_ = core_.compile_model(processor.build(), *context_,
-                {{"PERFORMANCE_HINT", performanceHint}, {"NUM_STREAMS", std::to_string(streams)}});
+            compiled_ = compileForVaContext(core_, *context_, width, height, modelPath, performanceHint, streams);
             request_ = compiled_.create_infer_request();
         }
         if (display != display_ || width != width_ || height != height_)
