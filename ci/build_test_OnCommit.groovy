@@ -447,8 +447,7 @@ pipeline {
                         sh "make create-venv TT_OVMS_C_REPO_PATH=${ovms_c_repo_path} && rm -f tests/functional && ln -s ${ovms_c_repo_path}/tests/functional tests/functional"
                         def cmd_venv_activate = ". .venv/bin/activate"
                         def cmd_export = "export TT_OVMS_C_REPO_PATH=../ && export TT_RUN_REGRESSION_TESTS=True && export TT_REGRESSION_WEEKLY_TESTS=True && export TT_TARGET_DEVICE=CPU,GPU,NPU && export TT_ENABLE_UAT_TESTS=True && export TT_ENABLE_SMOKE_TESTS=False && export TT_OVMS_C_REPO_PATH=${ovms_c_repo_path} && export TT_LOGGING_LEVEL_OVMS=DEBUG && export TT_WAIT_FOR_MESSAGES_TIMEOUT=1500 && export CORE_BRANCH=${env.CHANGE_BRANCH ?: 'main'}"
-                        def cmd_pytest = "pytest tests/non_functional/documentation -k 'test_links_ovms or ${test_doc_files_str}' -n 0 --dist loadgroup"
-                        def cmd = ""
+                        def cmd_pytest = "pytest tests/non_functional/documentation -k '${test_doc_files_str}' -n 0 --dist loadgroup"                        def cmd = ""
                         if ( image_build_needed == "true" ) {
                             unstash 'ovms-release-image'
                             sh "gunzip -c ovms_release_image.tar.gz | docker load"
