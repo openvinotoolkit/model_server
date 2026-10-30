@@ -37,8 +37,10 @@ ifneq ($(filter MINGW% MSYS% CYGWIN%,$(UNAME_S)),)
 	VIRTUALENV_PYTHON := $(VIRTUALENV_PYTHON).exe
 	VIRTUALENV_STYLE_PYTHON := $(VIRTUALENV_STYLE_PYTHON).exe
 endif
-ACTIVATE := $(VIRTUALENV_DIR)/.venv-ready
-ACTIVATE_STYLE := $(VIRTUALENV_STYLE_DIR)/.venv-ready
+ACTIVATE := $(VIRTUALENV_DIR)/$(VIRTUALENV_BIN_DIR)/activate
+ACTIVATE_STYLE := $(VIRTUALENV_STYLE_DIR)/$(VIRTUALENV_BIN_DIR)/activate
+ACTIVATE_READY := $(VIRTUALENV_DIR)/.venv-ready
+ACTIVATE_STYLE_READY := $(VIRTUALENV_STYLE_DIR)/.venv-ready
 STYLE_VENV_BIN := $(VIRTUALENV_STYLE_DIR)/$(VIRTUALENV_BIN_DIR)
 PYTHON_ENV_CLEAN := env -u PYTHONHOME -u PYTHONPATH
 STYLE_CHECK_OPTS := --extensions=hpp,cc,cpp,h \
@@ -309,12 +311,12 @@ default: docker_build
 
 ovms_builder_image targz_package ovms_release_images release_image: $(GIT_CONFIG_FILE)
 
-venv:$(ACTIVATE)
+venv:$(ACTIVATE_READY)
 	@echo $(BUILD_ARGS)
 	@echo -n "Using venv "
 	@$(PYTHON_ENV_CLEAN) "$(VIRTUALENV_PYTHON)" --version
 
-venv-style:$(ACTIVATE_STYLE)
+venv-style:$(ACTIVATE_STYLE_READY)
 	@echo $(BUILD_ARGS)
 	@echo -n "Using venv "
 	@$(PYTHON_ENV_CLEAN) "$(VIRTUALENV_STYLE_PYTHON)" --version
@@ -334,17 +336,17 @@ spell: venv-style
 	@$(GIT_FOR_SPELL) | $(SPELL_SKIP_FILTER) | sort | uniq | xargs "$(CODESPELL_BIN)" --skip "spelling-whitelist.txt" 2>&1 | grep -vFf spelling-whitelist.txt; if [ $$? != 1 ]; then exit 1; fi
 	@echo "Spelling check completed."
 
-$(ACTIVATE):
+$(ACTIVATE_READY):
 	@echo "Updating virtualenv dependencies in: $(VIRTUALENV_DIR)..."
 	@test -d $(VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_DIR)
 	@$(PYTHON_ENV_CLEAN) "$(VIRTUALENV_PYTHON)" -m pip install --disable-pip-version-check --no-input -r tests/requirements.txt
-	@touch "$(ACTIVATE)"
+	@touch "$(ACTIVATE_READY)"
 
-$(ACTIVATE_STYLE): ci/style_requirements.txt
+$(ACTIVATE_STYLE_READY): ci/style_requirements.txt
 	@echo "Updating virtualenv dependencies in: $(VIRTUALENV_STYLE_DIR)..."
 	@test -d $(VIRTUALENV_STYLE_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_STYLE_DIR)
 	@if $(PYTHON_ENV_CLEAN) "$(VIRTUALENV_STYLE_PYTHON)" -m pip install --disable-pip-version-check --no-input -r ci/style_requirements.txt; then \
-		touch "$(ACTIVATE_STYLE)"; \
+		touch "$(ACTIVATE_STYLE_READY)"; \
 	else \
 		echo "[WARN] Unable to install style requirements (offline or proxy-restricted environment). Continuing with existing tools only."; \
 	fi
