@@ -75,44 +75,41 @@ print(response.choices[0].message)
 
 Check the deployed model's performance by using the vLLM benchmark script and the Sonnet dataset.
 
-Install vLLM 0.10.2, which supports the Sonnet dataset, and download the dataset from the matching release tag. The version pin applies only to the benchmark client, not the OVMS server.
+Install vLLM and download the Sonnet dataset:
 ```bash
-pip install "vllm==0.10.2" --index-url https://wheels.vllm.ai/nightly/cpu --extra-index-url https://pypi.org/simple
-curl --fail --location https://raw.githubusercontent.com/vllm-project/vllm/v0.10.2/benchmarks/sonnet.txt -o sonnet.txt
+pip install vllm[bench] --extra-index-url https://wheels.vllm.ai/0.32.0/cpu --extra-index-url https://download.pytorch.org/whl/cpu
+curl -O https://raw.githubusercontent.com/hemingkx/Spec-Bench/refs/heads/main/data/spec_bench/question.jsonl
 ```
 
-Run the benchmark with 10 requests sent sequentially and an output budget of 150 tokens per request:
+Run benchmark with 10 requests sent sequentially:
 ```bash
-vllm bench serve --dataset-name sonnet --dataset-path sonnet.txt --sonnet-output-len 150 --backend openai-chat --host localhost --port 8000 --endpoint /v1/chat/completions --max-concurrency 1 --model OpenVINO/Qwen3.8-27B-int4-ov --num-prompts 10
-```
-
-Example output from a previous Sonnet run. Results depend on the hardware and software versions.
-
+vllm bench serve --model OpenVINO/Qwen3.8-27B-int4-ov --dataset-name spec_bench --dataset-path "question.jsonl" --num-prompts 10 \
+--spec-bench-category "summarization" --backend openai-chat --host localhost --port 8000 --endpoint /v1/chat/completions --max-concurrency 1
 ```
 ============ Serving Benchmark Result ============
 Successful requests:                     10
 Failed requests:                         0
 Maximum request concurrency:             1
-Benchmark duration (s):                  27.85
-Total input tokens:                      5405
-Total generated tokens:                  1500
-Request throughput (req/s):              0.36
-Output token throughput (tok/s):         53.86
-Peak output token throughput (tok/s):    72.00
+Benchmark duration (s):                  48.47
+Total input tokens:                      7883
+Total generated tokens:                  2324
+Request throughput (req/s):              0.21
+Output token throughput (tok/s):         47.95
+Peak output token throughput (tok/s):    67.00
 Peak concurrent requests:                2.00
-Total token throughput (tok/s):          247.95
+Total token throughput (tok/s):          210.58
 ---------------Time to First Token----------------
-Mean TTFT (ms):                          496.63
-Median TTFT (ms):                        433.09
-P99 TTFT (ms):                           897.54
+Mean TTFT (ms):                          534.38
+Median TTFT (ms):                        462.31
+P99 TTFT (ms):                           865.17
 -----Time per Output Token (excl. 1st token)------
-Mean TPOT (ms):                          15.35
-Median TPOT (ms):                        15.15
-P99 TPOT (ms):                           17.88
+Mean TPOT (ms):                          18.57
+Median TPOT (ms):                        18.67
+P99 TPOT (ms):                           20.42
 ---------------Inter-token Latency----------------
-Mean ITL (ms):                           16.02
-Median ITL (ms):                         0.02
-P99 ITL (ms):                            54.90
+Mean ITL (ms):                           18.83
+Median ITL (ms):                         0.01
+P99 ITL (ms):                            58.57
 ==================================================
 ```
 
