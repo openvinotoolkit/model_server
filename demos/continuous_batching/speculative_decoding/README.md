@@ -187,7 +187,7 @@ ovms --rest_port 8000 --model_repository_path c:\models --source_model OpenVINO/
 
 Use the standard chat completions API with `num_assistant_tokens` set to the draft budget. DFlash uses the same request interface as other speculative decoding modes; the draft strategy is selected automatically from the exported model metadata.
 
-```python
+```text
 from openai import OpenAI
 
 client = OpenAI(base_url="http://localhost:8000/v1", api_key="unused")
