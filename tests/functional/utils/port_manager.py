@@ -15,9 +15,10 @@
 #
 
 import errno
-import psutil
 import socket
 import threading
+
+import psutil
 
 from tests.functional.utils.core import NamedSingletonMeta
 from tests.functional.utils.logger import get_logger
