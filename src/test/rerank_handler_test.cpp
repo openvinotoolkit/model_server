@@ -66,6 +66,32 @@ TEST_F(RerankHandlerDeserializationTest, ValidRequestDocumentsMap) {
     EXPECT_STREQ(handler.getDocumentsMap().at("second document title").c_str(), "second document text");
 }
 
+TEST_F(RerankHandlerDeserializationTest, DocumentsListCanBeRanked) {
+    json = R"({"model": "model", "query": "query", "documents": ["first", "second"]})";
+    ASSERT_FALSE(doc.Parse(json.c_str()).HasParseError());
+    RerankHandler handler(doc);
+    ASSERT_EQ(handler.parseRequest(), absl::OkStatus());
+    EXPECT_EQ(handler.validateDocumentsCanBeRanked(), absl::OkStatus());
+}
+
+TEST_F(RerankHandlerDeserializationTest, DocumentsGivenAsObjectsCannotBeRanked) {
+    json = R"({"model": "model", "query": "query", "documents": [{"title": "first title", "text": "first text"}]})";
+    ASSERT_FALSE(doc.Parse(json.c_str()).HasParseError());
+    RerankHandler handler(doc);
+    ASSERT_EQ(handler.parseRequest(), absl::OkStatus());
+    EXPECT_EQ(handler.validateDocumentsCanBeRanked(),
+        absl::InvalidArgumentError("documents given as objects are not supported, use an array of strings"));
+}
+
+TEST_F(RerankHandlerDeserializationTest, EmptyDocumentsArrayCannotBeRanked) {
+    json = R"({"model": "model", "query": "query", "documents": []})";
+    ASSERT_FALSE(doc.Parse(json.c_str()).HasParseError());
+    RerankHandler handler(doc);
+    ASSERT_EQ(handler.parseRequest(), absl::OkStatus());
+    EXPECT_EQ(handler.validateDocumentsCanBeRanked(),
+        absl::InvalidArgumentError("documents array should not be empty"));
+}
+
 TEST_F(RerankHandlerDeserializationTest, ValidRequestDocumentsList) {
     json = R"({
     "model": "model",
