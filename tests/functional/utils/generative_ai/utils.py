@@ -85,6 +85,8 @@ class GenerativeAIUtils:
             resolution=None,
             apply_short_name=False,
             enable_word_timestamps=False,
+            tool_parser=None,
+            reasoning_parser=None,
             **kwargs
     ):
         if plugin_config is None:
@@ -129,6 +131,8 @@ class GenerativeAIUtils:
             target_device=target_device,
             resolution=resolution,
             enable_word_timestamps=enable_word_timestamps,
+            tool_parser=tool_parser,
+            reasoning_parser=reasoning_parser,
         )
         model.precision = llm.precision
         model.max_position_embeddings = max_position_embeddings

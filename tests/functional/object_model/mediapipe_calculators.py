@@ -28,6 +28,8 @@ from tests.functional.utils.process import Process
 from tests.functional.constants.generative_ai import GenerativeAIPluginConfig
 from tests.functional.config import (
     enable_prefix_caching_config,
+    enable_reasoning_parser_detection,
+    enable_tool_parser_detection,
     kv_cache_size_value,
     kv_cache_precision_value,
     max_num_batched_tokens,
@@ -638,6 +640,8 @@ class HttpLLMCalculator(LLMCalculator):
     best_of_limit: int = None
     max_tokens_limit: int = None
     device: str = None
+    tool_parser: str = None
+    reasoning_parser: str = None
 
     def __post_init__(self):
         super().__post_init__()
@@ -675,12 +679,18 @@ class HttpLLMCalculator(LLMCalculator):
             plugin_config_str = f"plugin_config: '{{ {', '.join(plugin_config_params)} }}',"
 
         tool_parser_str = ""
-        if any([
+        if self.tool_parser:
+            tool_parser_str = f'tool_parser: "{self.tool_parser}",'
+        elif not enable_tool_parser_detection and any([
             self.model.tool_parser is not None and self.model.tools_enabled,
             self.model.tool_parser is not None and self.model.is_agentic,
         ]):
             tool_parser_str = f'tool_parser: "{self.model.tool_parser}",'
-            if self.model.reasoning_parser is not None:
+
+        if tool_parser_str:
+            if self.reasoning_parser:
+                tool_parser_str += f' reasoning_parser: "{self.reasoning_parser}",'
+            elif not enable_reasoning_parser_detection and self.model.reasoning_parser is not None:
                 tool_parser_str += f' reasoning_parser: "{self.model.reasoning_parser}",'
 
         pipeline_type_str = ""
