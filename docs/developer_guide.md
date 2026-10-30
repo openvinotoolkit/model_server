@@ -22,6 +22,8 @@ This document gives information and steps to run and debug tests. It gives infor
 
 Use Python 3.12 for the host functional-test environment; `make venv` uses the `python3` interpreter on `PATH` to create it. Run Bazel builds and unit tests inside the OVMS build container.
 
+To add a skill for GitHub Copilot in VS Code, create `.github/skills/<skill-name>/SKILL.md` in the repository. Add YAML frontmatter with a unique `name` and a concise `description` that explains when to use the skill, then write its instructions below. Copilot Agent discovers repository skills from this directory when the workspace is open. You can then use them with parameters by invoking `/<skill-name> <parameters>` in the copilot chat.
+
 In-case of problems, see [Debugging](#debugging).
 
 ## Prepare Environment to Use the Tests
@@ -61,6 +63,8 @@ In-case of problems, see [Debugging](#debugging).
 	```bash
 	docker run -it -v ${PWD}:/ovms --entrypoint bash -p 9178:9178 openvino/model_server-build:latest
 	```
+
+To work in this container from VS Code when it runs on another Linux host, install the Remote - SSH and Dev Containers extensions and connect to the host using Remote - SSH. In the remote VS Code window, run **Dev Containers: Attach to Running Container...** from the Command Palette and select the OVMS build container; the repository will be available at `/ovms`.
 
 4. In the docker container context compile the source code via (choose distro `ubuntu` or `redhat` depending on the image type):
 	```bash
@@ -103,7 +107,7 @@ In-case of problems, see [Debugging](#debugging).
 
 ### Step 2: Install software
 
-1. Install Python release 3.8.
+1. Install Python 3.12 and ensure `python3` on `PATH` points to that installation.
 
 > **NOTE**: Python is only necessary to complete the functional tests in this guide.
 
@@ -296,22 +300,6 @@ make ovms_builder_image
 make run_unit_tests
 ```
 
-To run a model-independent test subset without downloading test models, use:
-```bash
-make run_unit_tests SKIP_MODEL_DOWNLOAD=1
-```
-The no-download default uses a negative gtest filter on `//src:ovms_test`:
-`*` selects all tests, and `-` separates the exclusions for LLM, VLM, parser,
-audio, embeddings, and rerank tests that load downloaded model files.
-The filter is applied only to `//src:ovms_test`; the Python binding and Python
-runtime targets still run their full test suites. Override it with a gtest
-filter containing only `//src:ovms_test` cases that do not access downloaded
-model files:
-```bash
-make run_unit_tests SKIP_MODEL_DOWNLOAD=1 OVMS_TEST_FILTER='SuiteName.TestName'
-```
-This mode skips model preparation and cannot be combined with `RUN_GPU_TESTS=1`.
-
 To run unit tests, verifying integration with Intel GPUs, add `RUN_GPU_TESTS=1` parameter:
 ```
 make run_unit_tests RUN_GPU_TESTS=1
@@ -332,30 +320,6 @@ sudo reboot
 > NOTE: It is required to execute unit tests on machine with Intel Data Center GPU.
 
 > NOTE: For RedHat base OS unit tests, which require VA API, are skipped.
-
-## Develop Python runtime support
-
-Python support separates the MediaPipe-facing host code from dynamically
-loaded Python runtime libraries. Preserve this boundary when changing Python,
-MediaPipe, or KFS Python tensor support:
-
-- `python_calculators_host` contains MediaPipe calculator registration,
-	node initialization, and the KFS Python tensor bridge. It is linked into
-	`ovms` when MediaPipe is enabled.
-- `libpython_calculators` implements the Python calculator plugin interface
-	and is loaded dynamically; it does not contain the MediaPipe calculator
-	registrations or KFS bridge.
-- `libovmspython` provides Python interpreter/runtime entry points and the
-	runtime chat-template API.
-- MediaPipe runtime registrations and the runtime C API are linked into
-	`ovms` from `src/mediapipe_internal`, rather than shipped as a separate
-	MediaPipe runtime shared product library.
-- `pyovms` remains a Python extension module and must be importable by the
-	selected interpreter in Python-enabled deployments.
-
-Do not add Python embedding or pybind linkage to core targets just to compile
-Python-aware interfaces. Use `python_headers_only` for targets that need headers
-but do not own Python runtime execution.
 
 ### Build and test the split runtime
 

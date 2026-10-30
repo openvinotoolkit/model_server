@@ -94,18 +94,6 @@ windows_test.bat my_dir_on_c PythonFlowTest.*
 [arg1] - Dependency location under `C:\`; defaults to `C:\opt`.
 [arg2] - GoogleTest filter for `ovms_test`; defaults to `*`.
 
-To skip downloading the Hugging Face test models, use the built-in negative
-filter for tests that do not access those models:
-```bat
-windows_test.bat opt --skip-model-download
-```
-The filter is applied only to `ovms_test`; the Windows service and Python
-runtime tests still run. To provide a custom model-independent filter, pass it
-before the option:
-```bat
-windows_test.bat opt "ModelVersionStatus.*" --skip-model-download
-```
-
 # Running functional tests - optional
 The script runs pytest tests from `tests\functional` against the ovms.exe binary from a release package. It creates a `.venv` virtual environment, installs `tests\requirements.txt` and writes results to `pytest-functional.xml`.
 Create the deployment package first (see the next section) and pass the absolute path to the ovms.zip as the first argument.

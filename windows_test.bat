@@ -40,21 +40,8 @@ set /p bazelVersion=<"%~dp0.bazelversion"
 set "bazelPath=C:\opt\bazel-%bazelVersion%-windows-x86_64.exe"
 set "OVMS_MEDIA_URL_ALLOW_REDIRECTS=1"
 
-set "skipModelDownload=0"
 set "ovmsGtestFilter=%~2"
-if /I "%~2"=="--skip-model-download" (
-    set "skipModelDownload=1"
-    set "ovmsGtestFilter="
-)
-if /I "%~3"=="--skip-model-download" set "skipModelDownload=1"
-if "!skipModelDownload!"=="1" if "!ovmsGtestFilter!"=="" (
-    set "ovmsGtestFilter=*-*LLM*.*:*VLM*.*:*OutputParser*.*:*ToolParser*.*:*ChatTemplate*.*:*InputProcessing*.*:*Text2Speech*.*:*TextStreamer*.*:*AssistedDecoding*.*:DefaultContentParserTest.*:ParserConfigValidationTest.*:EmbeddingsHttpTest.*:EmbeddingsExtensionTest.*:MediapipeEmbeddingsTest.*:RerankHttpTest.*:RerankWithParamsHttpTest.*:RerankTokenizeHttpTest.*:GraphCreationTest.positiveDraftAndFuse:GraphCreationTest.positiveDraftEagle3Mode:HttpOpenAIHandlerTest.GraphWithANameDoesNotExist:DetectDraftModelStrategyTest.MtpTakesPriorityOverXmlScan:IsolatedServableTests.PromtSizeBetweenDefaultAndNonDefaultMaxPromptLenNPU"
-)
 if "!ovmsGtestFilter!"=="" set "ovmsGtestFilter=*"
-if "!skipModelDownload!"=="1" if "!ovmsGtestFilter!"=="*" (
-    echo [ERROR] --skip-model-download requires a model-independent GoogleTest filter.
-    exit /b 1
-)
 
 set "bazelBuildArgs=--config=win_mp_on --action_env OpenVINO_DIR=%openvino_dir%"
 set "testTargets=//src:ovms_test //src:python_runtime_library_test //src/python:pythoninterpretermodule_lifecycle_test //src/python:pythoninterpretermodule_backend_failure_test //src/python:pythoninterpretermodule_borrowed_interpreter_test"
@@ -132,16 +119,11 @@ if !errorlevel! neq 0 (
     echo [ERROR] windows_change_test_configs.py failed with error code !errorlevel! >> win_full_test.log
     exit /b !errorlevel!
 )
-:: Download LLMs unless the model-independent test mode was requested
-if "!skipModelDownload!"=="1" (
-    echo Skipping HF model downloads; running ovms_test with filter: !ovmsGtestFilter!
-    if not exist src\test\llm_testing mkdir src\test\llm_testing
-) else (
-    call %cd%\windows_prepare_llm_models.bat %cd%\src\test\llm_testing
-    if !errorlevel! neq 0 (
-        echo [ERROR] windows_prepare_llm_models.bat failed with error code !errorlevel! >> win_full_test.log
-        exit /b !errorlevel!
-    )
+:: Download LLM test models
+call %cd%\windows_prepare_llm_models.bat %cd%\src\test\llm_testing
+if !errorlevel! neq 0 (
+    echo [ERROR] windows_prepare_llm_models.bat failed with error code !errorlevel! >> win_full_test.log
+    exit /b !errorlevel!
 )
 
 :: Run install_ovms_service.bat unit tests

@@ -656,24 +656,7 @@ ifeq ($(RUN_GPU_TESTS),1)
 	./prepare_gpu_models.sh ${GPU_MODEL_PATH}
 endif
 
-.PHONY: prepare_test_model_dir
-prepare_test_model_dir:
-	mkdir -p ${TEST_LLM_PATH}
-
-ifeq ($(SKIP_MODEL_DOWNLOAD),1)
-ifeq ($(RUN_GPU_TESTS),1)
-$(error SKIP_MODEL_DOWNLOAD=1 cannot be combined with RUN_GPU_TESTS=1)
-endif
-ifeq ($(strip $(OVMS_TEST_FILTER)),)
-OVMS_TEST_FILTER := *-*LLM*.*:*VLM*.*:*OutputParser*.*:*ToolParser*.*:*ChatTemplate*.*:*InputProcessing*.*:*Text2Speech*.*:*TextStreamer*.*:*AssistedDecoding*.*:DefaultContentParserTest.*:ParserConfigValidationTest.*:EmbeddingsHttpTest.*:EmbeddingsExtensionTest.*:MediapipeEmbeddingsTest.*:RerankHttpTest.*:RerankWithParamsHttpTest.*:RerankTokenizeHttpTest.*:GraphCreationTest.positiveDraftAndFuse:GraphCreationTest.positiveDraftEagle3Mode:HttpOpenAIHandlerTest.GraphWithANameDoesNotExist:DetectDraftModelStrategyTest.MtpTakesPriorityOverXmlScan:IsolatedServableTests.PromtSizeBetweenDefaultAndNonDefaultMaxPromptLenNPU
-endif
-ifeq ($(strip $(OVMS_TEST_FILTER)),*)
-$(error SKIP_MODEL_DOWNLOAD=1 requires an OVMS_TEST_FILTER other than '*')
-endif
-run_unit_tests: prepare_test_model_dir
-else
 run_unit_tests: prepare_models
-endif
 
 run_unit_tests:
 	docker rm -f $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
