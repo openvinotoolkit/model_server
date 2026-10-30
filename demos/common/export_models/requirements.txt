@@ -1,7 +1,7 @@
 --extra-index-url "https://download.pytorch.org/whl/cpu"
 --extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/nightly"
 --extra-index-url "https://storage.openvinotoolkit.org/simple/wheels/pre-release"
-optimum-intel
+optimum-intel>=2.2.0
 accelerate
 datasets
 diffusers  # for image generation

@@ -77,15 +77,9 @@ class DockerResourceMonitor(ResourceMonitor):
     FIELDS_TO_STATS = {
         "DATE": lambda x: x["read"],
         "PIDS_COUNT": lambda x: int(x["pids_stats"].get("current", "0")),
-        MEMORY_USAGE: lambda x: "{:.2f}M".format(float(x["memory_stats"].get("usage", "0.0")) / (2**20)),
-        PRIVATE_MEMORY: lambda x: "{:.2f}M".format(
-            float(x["memory_stats"].get("stats", {}).get(
-                "anon", x["memory_stats"].get("stats", {}).get("rss", 0)
-            )) / (2**20)
-        ),
-        MEMORY_CACHE: lambda x: "{:.2f}M".format(
-            _cgroup_cache_bytes(x["memory_stats"].get("stats", {})) / (2**20)
-        ),
+        MEMORY_USAGE: lambda x: f"{float(x['memory_stats'].get('usage', '0.0')) / (2**20):.2f}M",
+        PRIVATE_MEMORY: lambda x: f"{float(x['memory_stats'].get('stats', {}).get('anon', x['memory_stats'].get('stats', {}).get('rss', 0))) / (2**20):.2f}M",  # pylint: disable=line-too-long
+        MEMORY_CACHE: lambda x: f"{_cgroup_cache_bytes(x['memory_stats'].get('stats', {})) / (2**20):.2f}M",
         # Enable after debug & fixing
         # "CPU_USAGE": lambda x:
         #     [cpu / x['cpu_stats']['cpu_usage']['total_usage'] for cpu in x['cpu_stats']['cpu_usage']['percpu_usage']],
@@ -118,7 +112,7 @@ class DockerResourceMonitor(ResourceMonitor):
                 row[field] = self.get_field_data(field, stats)
             self.rows.append(row)
         log_path = Path(artifacts_dir, f"docker_stats_{self.container.name}.log")
-        with log_path.open("w") as csvfile:
+        with log_path.open("w", encoding="utf-8") as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=DockerResourceMonitor.FIELDS)
             writer.writeheader()
             writer.writerows(self.rows)
@@ -140,7 +134,7 @@ class DockerResourceMonitor(ResourceMonitor):
         x = np.array([(parser.parse(x["DATE"]) - started).seconds for x in self.rows])
         for field in DockerResourceMonitor.FIELDS[1:]:
             y = np.array([x[field] for x in self.rows])
-            filename = "diagram_{}_{}.png".format(field, self.container.name)
+            filename = f"diagram_{field}_{self.container.name}.png"
             self.plot_fo_file(x, y, field, filename)
 
     def check_resources(self):
@@ -263,7 +257,7 @@ class WindowsResourceMonitor(ResourceMonitor):
     def save_data(self):
         self.rows = list(self._stats_data_raw)
         log_path = Path(artifacts_dir, f"windows_stats_pid_{self.ovms_pid}.log")
-        with log_path.open("w") as csvfile:
+        with log_path.open("w", encoding="utf-8") as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=self.FIELDS)
             writer.writeheader()
             writer.writerows(self.rows)

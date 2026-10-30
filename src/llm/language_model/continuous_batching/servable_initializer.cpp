@@ -161,7 +161,6 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
         }
     }
-    properties->chatTemplateEngineExplicit = nodeOptions.has_chat_template_engine();
     try {
         properties->chatTemplateEngine = determineChatTemplateEngine(nodeOptions);
     } catch (const std::exception& e) {
@@ -292,6 +291,19 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     status = loadChatTemplate(properties, parsedModelsPath);
     if (!status.ok()) {
         return status;
+    }
+    if (properties->chatTemplateStatus == ChatTemplateStatus::AVAILABLE) {
+        const auto analysisResult = analyzeChatTemplate(properties);
+        selectOutputParsers(properties, analysisResult);
+    } else {
+        selectOutputParsers(properties, std::nullopt);
+    }
+
+    if (nodeOptions.has_chat_template_engine()) {
+        status = validateChatTemplateAvailability(properties);
+        if (!status.ok()) {
+            return status;
+        }
     }
     if (nodeOptions.has_max_tokens_limit()) {
         properties->maxTokensLimit = nodeOptions.max_tokens_limit();
