@@ -87,8 +87,10 @@ public:
             std::filesystem::path(basePath) / nodeOptions.models_path() : std::filesystem::path(nodeOptions.models_path());
         std::shared_ptr<SttServable> servable;
         if (isQwen3AsrContinuousBatchingModel(modelsPath)) {
+            SPDLOG_DEBUG("Speech-to-text graph {} uses Qwen3 ASR continuous batching backend from {}", graphName, modelsPath.string());
             servable = std::make_shared<Qwen3AsrContinuousBatchingServable>(nodeOptions, basePath);
         } else {
+            SPDLOG_DEBUG("Speech-to-text graph {} uses ASR pipeline backend from {}", graphName, modelsPath.string());
             servable = std::make_shared<AsrPipelineServable>(nodeOptions, basePath);
         }
         sttServableMap.insert(std::pair<std::string, std::shared_ptr<SttServable>>(nodeName, std::move(servable)));

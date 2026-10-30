@@ -21,6 +21,7 @@
 #include <condition_variable>
 #include <cstdint>
 #include <deque>
+#include <string_view>
 #include <stdexcept>
 #include <thread>
 
@@ -42,6 +43,33 @@ namespace ovms {
 
 namespace {
 constexpr size_t ISO_LANG_CODE_MAX = 3;
+
+std::optional<std::string_view> qwen3AsrLanguageName(std::string_view language) {
+    static const std::unordered_map<std::string_view, std::string_view> languageNames{
+        {"zh", "Chinese"}, {"en", "English"}, {"yue", "Cantonese"}, {"ar", "Arabic"},
+        {"de", "German"}, {"fr", "French"}, {"es", "Spanish"}, {"pt", "Portuguese"},
+        {"id", "Indonesian"}, {"it", "Italian"}, {"ko", "Korean"}, {"ru", "Russian"},
+        {"th", "Thai"}, {"vi", "Vietnamese"}, {"ja", "Japanese"}, {"tr", "Turkish"},
+        {"hi", "Hindi"}, {"ms", "Malay"}, {"nl", "Dutch"}, {"sv", "Swedish"},
+        {"da", "Danish"}, {"fi", "Finnish"}, {"pl", "Polish"}, {"cs", "Czech"},
+        {"fil", "Filipino"}, {"fa", "Persian"}, {"el", "Greek"}, {"ro", "Romanian"},
+        {"hu", "Hungarian"}, {"mk", "Macedonian"}};
+    const auto it = languageNames.find(language);
+    if (it != languageNames.end()) {
+        return it->second;
+    }
+    return std::nullopt;
+}
+
+std::string qwen3AsrPrompt(const std::optional<std::string_view>& language) {
+    std::string prompt = "<|im_start|>system\n<|im_end|>\n<|im_start|>user\n<|audio_start|><|audio_pad|><|audio_end|><|im_end|>\n<|im_start|>assistant\n";
+    if (language.has_value()) {
+        prompt += "language ";
+        prompt += language.value();
+        prompt += "<asr_text>";
+    }
+    return prompt;
+}
 }
 SttServable::SttServable(const ::mediapipe::S2tCalculatorOptions& nodeOptions, const std::string& graphPath) :
     enableWordTimestamps(nodeOptions.enable_word_timestamps()) {
@@ -150,6 +178,8 @@ absl::Status SttServable::parseTemperature(const HttpPayload& payload, ov::genai
 struct Qwen3AsrContinuousBatchingServable::Impl {
     struct Request {
         std::vector<float> rawSpeech;
+        std::string prompt;
+        std::optional<float> temperature;
         std::promise<std::string> result;
         std::function<bool()> isClientDisconnected;
     };
@@ -162,8 +192,8 @@ struct Qwen3AsrContinuousBatchingServable::Impl {
     std::thread executor;
     std::atomic<uint64_t> nextRequestId{0};
 
-    Impl(const std::filesystem::path& modelsPath, const std::string& device, const ov::AnyMap& config) :
-        pipeline(std::make_shared<ov::genai::ContinuousBatchingPipeline>(modelsPath, ov::genai::SchedulerConfig{}, device, config)),
+    Impl(const std::filesystem::path& modelsPath, const std::string& device, const ov::AnyMap& config, ov::genai::SchedulerConfig schedulerConfig) :
+        pipeline(std::make_shared<ov::genai::ContinuousBatchingPipeline>(modelsPath, std::move(schedulerConfig), device, config)),
         executor([this] { run(); }) {}
 
     ~Impl() {
@@ -188,7 +218,12 @@ struct Qwen3AsrContinuousBatchingServable::Impl {
             ov::Tensor audio(ov::element::f32, {request->rawSpeech.size()});
             std::copy(request->rawSpeech.begin(), request->rawSpeech.end(), audio.data<float>());
             const std::vector<ov::Tensor> audios{audio};
-            auto handle = pipeline->add_request(nextRequestId++, "", ov::genai::audios(audios), ov::genai::generation_config(pipeline->get_config()));
+            auto generationConfig = pipeline->get_config();
+            if (request->temperature.has_value()) {
+                generationConfig.temperature = request->temperature.value();
+                generationConfig.do_sample = generationConfig.temperature != 0;
+            }
+            auto handle = pipeline->add_request(nextRequestId++, request->prompt, ov::genai::audios(audios), ov::genai::generation_config(generationConfig));
             activeRequests.emplace_back(std::move(request), std::move(handle));
         }
     }
@@ -240,7 +275,11 @@ Qwen3AsrContinuousBatchingServable::Qwen3AsrContinuousBatchingServable(const ::m
         throw std::runtime_error("Error during plugin_config option parsing");
     }
     applyGlobalCacheDirFallback(config);
-    impl = std::make_unique<Impl>(parsedModelsPath, device, config);
+    ov::genai::SchedulerConfig schedulerConfig;
+    schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();
+    schedulerConfig.max_num_seqs = nodeOptions.max_num_seqs();
+    schedulerConfig.dynamic_split_fuse = nodeOptions.dynamic_split_fuse();
+    impl = std::make_unique<Impl>(parsedModelsPath, device, config, std::move(schedulerConfig));
 }
 
 Qwen3AsrContinuousBatchingServable::~Qwen3AsrContinuousBatchingServable() = default;
@@ -257,17 +296,29 @@ absl::Status Qwen3AsrContinuousBatchingServable::transcribe(const std::vector<fl
     const HttpPayload& payload,
     const std::function<bool()>& isClientDisconnected,
     SttTranscriptionResult& result) {
-    if (!payload.multipartParser->getFieldByName("language").empty()) {
-        return absl::InvalidArgumentError("language is not supported for Qwen3 ASR continuous batching");
+    const std::string language = payload.multipartParser->getFieldByName("language");
+    std::optional<std::string_view> languageName;
+    if (!language.empty()) {
+        languageName = qwen3AsrLanguageName(language);
+        if (!languageName.has_value()) {
+            return absl::InvalidArgumentError("Unsupported Qwen3 ASR language code.");
+        }
     }
     if (!payload.multipartParser->getArrayFieldByName("timestamp_granularities[]").empty()) {
         return absl::InvalidArgumentError("timestamps are not supported for Qwen3 ASR continuous batching");
     }
-    if (!payload.multipartParser->getFieldByName("temperature").empty()) {
-        return absl::InvalidArgumentError("temperature is not supported for Qwen3 ASR continuous batching");
+    std::optional<float> temperature;
+    const std::string temperatureString = payload.multipartParser->getFieldByName("temperature");
+    if (!temperatureString.empty()) {
+        temperature = ovms::stof(temperatureString);
+        if (!temperature.has_value()) {
+            return absl::InvalidArgumentError("Invalid temperature type.");
+        }
     }
     auto request = std::make_shared<Impl::Request>();
     request->rawSpeech = rawSpeech;
+    request->prompt = qwen3AsrPrompt(languageName);
+    request->temperature = temperature;
     request->isClientDisconnected = isClientDisconnected;
     auto future = request->result.get_future();
     {
