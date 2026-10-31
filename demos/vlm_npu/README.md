@@ -228,7 +228,7 @@ Benchmarking can be demonstrated using benchmarking app from vLLM repository:
 ```console
 git clone --branch v0.7.3 --depth 1 https://github.com/vllm-project/vllm
 cd vllm
-pip3 install -r requirements-cpu.txt --extra-index-url https://download.pytorch.org/whl/cpu
+pip3 install -r requirements-cpu.txt "transformers>=4.48.2,<5.0" --extra-index-url https://download.pytorch.org/whl/cpu
 cd benchmarks
 curl -L https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json -o ShareGPT_V3_unfiltered_cleaned_split.json # sample dataset
 python benchmark_serving.py --backend openai-chat --dataset-name hf --dataset-path lmarena-ai/vision-arena-bench-v0.1 --hf-split train --host localhost --port 8000 --model OpenVINO/Phi-3.5-vision-instruct-fp16-ov --endpoint /v3/chat/completions --num-prompts 10 --trust-remote-code --max-concurrency 1
