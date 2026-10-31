@@ -48,6 +48,16 @@ We are introducing a set of calculators which can bring to the graphs execution 
 
 Check their [documentation](https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/calculators/ovms)
 
+### Optional OpenCV calculators
+
+OpenCV-dependent image calculators are isolated from the always-loaded server and registered when a graph requiring them is deployed. Their upstream calculator sources are unchanged. OpenCV-free graphs and raw `IMAGE` stream transport do not require OpenCV.
+
+On Linux, install the optional calculator plugin and its OpenCV dependencies from the same OVMS release. A graph that needs an OpenCV calculator fails deployment with an explicit OpenCV dependency diagnostic if the plugin or its dependencies cannot be loaded. Other graphs remain usable. Calculator plugins remain loaded for the process lifetime, even after the graph is unloaded.
+
+When OVMS is embedded as a locally loaded shared library, the calculator loader promotes the already-loaded host library to global symbol visibility before loading the plugin. This allows the plugin to share the host's MediaPipe registries and types without requiring callers to load OVMS with `RTLD_GLOBAL`. Failure to promote the host is reported as a deployment error.
+
+The OpenCV calculator plugin is currently Linux-only. Deploying a graph requiring it on an unsupported platform reports that limitation explicitly. The stb fallback for [encoded model inputs](./binary_input.md) does not replace operations inside upstream MediaPipe calculators.
+
 ## PythonExecutorCalculator
 
 `PythonExecutorCalculator` enables Python code execution in a graph node. Learn more about [Python nodes](python_support/reference.md).

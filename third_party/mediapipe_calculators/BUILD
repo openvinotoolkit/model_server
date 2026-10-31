@@ -72,18 +72,11 @@ cc_library(
         "@mediapipe//mediapipe/calculators/core:packet_sequencer_calculator",
         "@mediapipe//mediapipe/calculators/core:merge_to_vector_calculator",
 
-        "@mediapipe//mediapipe/calculators/util:annotation_overlay_calculator",
         "@mediapipe//mediapipe/calculators/util:detection_label_id_to_text_calculator",
         "@mediapipe//mediapipe/calculators/util:detections_to_render_data_calculator",
         "@mediapipe//mediapipe/calculators/util:non_max_suppression_calculator",
-        "@mediapipe//mediapipe/calculators/image:color_convert_calculator",
-        "@mediapipe//mediapipe/calculators/image:opencv_encoded_image_to_image_frame_calculator",
-        "@mediapipe//mediapipe/calculators/image:opencv_image_encoder_calculator",
-        "@mediapipe//mediapipe/calculators/image:opencv_put_text_calculator",
         #GPU"@mediapipe//mediapipe/calculators/image:set_alpha_calculator",
         #GPU"@mediapipe//mediapipe/calculators/image:bilateral_filter_calculator",
-        "@mediapipe//mediapipe/calculators/image:image_transformation_calculator",
-        "@mediapipe//mediapipe/calculators/image:image_cropping_calculator",
         #GPU"@mediapipe//mediapipe/calculators/image:luminance_calculator",
         #GPU"@mediapipe//mediapipe/calculators/image:sobel_edges_calculator",
         #GPU"@mediapipe//mediapipe/calculators/image:recolor_calculator",
@@ -93,8 +86,6 @@ cc_library(
         #GPU"@mediapipe//mediapipe/calculators/image:mask_overlay_calculator",
         #TFLITE"@mediapipe//mediapipe/calculators/image:feature_detector_calculator",
         #REQUIRED_easyexif_DEPENDENCY"@mediapipe//mediapipe/calculators/image:image_file_properties_calculator",
-        "@mediapipe//mediapipe/calculators/image:segmentation_smoothing_calculator",
-        "@mediapipe//mediapipe/calculators/image:warp_affine_calculator",
         #REQUIRED_libyuv_DEPENDENCY"@mediapipe//mediapipe/calculators/image:yuv_to_image_calculator",
         #VISIBILITY_PRIVATE_THUS_SINK_BELOW"@mediapipe//mediapipe/calculators/internal:callback_packet_calculator",
         "@mediapipe//mediapipe/framework/tool:sink",
@@ -116,4 +107,23 @@ cc_library(
         "@ovms//src:windows" : [],
         }),
     linkstatic=1,
+)
+
+# Keep the upstream registration objects and their private proto extensions in
+# the optional plugin, never in the executable's calculator closure.
+cc_library(
+    name = "opencv_calculators",
+    deps = [
+        "@mediapipe//mediapipe/calculators/util:annotation_overlay_calculator",
+        "@mediapipe//mediapipe/calculators/image:color_convert_calculator",
+        "@mediapipe//mediapipe/calculators/image:opencv_encoded_image_to_image_frame_calculator",
+        "@mediapipe//mediapipe/calculators/image:opencv_image_encoder_calculator",
+        "@mediapipe//mediapipe/calculators/image:opencv_put_text_calculator",
+        "@mediapipe//mediapipe/calculators/image:image_transformation_calculator",
+        "@mediapipe//mediapipe/calculators/image:image_cropping_calculator",
+        "@mediapipe//mediapipe/calculators/image:segmentation_smoothing_calculator",
+        "@mediapipe//mediapipe/calculators/image:warp_affine_calculator",
+        "@mediapipe//mediapipe/calculators/tensor:image_to_tensor_calculator",
+    ],
+    linkstatic = 1,
 )

@@ -21,13 +21,14 @@
 #include <vector>
 #include <utility>
 
-#include "deps/opencv.hpp"
+#include "image_utils/kserve_image_conversion.hpp"
 #include "logging.hpp"
 #include "precision.hpp"
 #include "predict_request_validation_utils_impl.hpp"
 #include "profiler.hpp"
 #include "tensorinfo.hpp"
 #include "status.hpp"
+#include "tensor_conversion_common.hpp"
 
 namespace inference {
 class ModelInferRequest_InferInputTensor;
@@ -46,34 +47,8 @@ Status convertStringRequestToOVTensor2D(const TensorType& src, ov::Tensor& tenso
 template <typename TensorType>
 Status convertOVTensor2DToStringResponse(const ov::Tensor& tensor, TensorType& dst);
 
-namespace tensor_conversion {
-int getMatTypeFromTensorPrecision(ovms::Precision tensorPrecision);
-bool isPrecisionEqual(int matPrecision, ovms::Precision tensorPrecision);
-Status validateInput(const TensorInfo& tensorInfo, const cv::Mat input, cv::Mat* firstBatchImage, bool enforceResolutionAlignment);
-bool checkBatchSizeMismatch(const TensorInfo& tensorInfo, const int batchSize);
-Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::Mat* firstBatchImage);
-Status validateNumberOfChannels(const TensorInfo& tensorInfo, const cv::Mat input, cv::Mat* firstBatchImage);
-Status resizeMat(const cv::Mat& src, cv::Mat& dst, const dimension_value_t height, const dimension_value_t width);
-bool resizeNeeded(const cv::Mat& image, const dimension_value_t height, const dimension_value_t width);
-Status validateLayout(const TensorInfo& tensorInfo);
-Status convertPrecision(const cv::Mat& src, cv::Mat& dst, const ovms::Precision requestedPrecision);
-cv::Mat convertStringToMat(const std::string& image);
-int getNumberOfInputs(const std::string* buffer);
-Dimension getTensorInfoHeightDim(const TensorInfo& tensorInfo);
-Dimension getTensorInfoWidthDim(const TensorInfo& tensorInfo);
-void updateTargetResolution(Dimension& height, Dimension& width, const cv::Mat& image);
-bool isResizeSupported(const TensorInfo& tensorInfo);
-Status getInputs(const std::string* buffer, std::vector<std::string>& inputs);
-ov::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const TensorInfo& tensorInfo);
-ov::Tensor createTensorFromMats(const std::vector<cv::Mat>& images, const TensorInfo& tensorInfo);
-shape_t getShapeFromImages(const std::vector<cv::Mat>& images, const TensorInfo& tensorInfo);
-Status checkEstimatedImageSize(std::string_view encodedImage, const std::string& inputName,
-    size_t alreadyAllocatedPixels, size_t maxAllowedImagePixels);
-Status accumulateAndCheckDecodedImageSize(const cv::Mat& image, const TensorInfo& tensorInfo,
-    size_t& totalAllocatedPixels, size_t maxAllowedImagePixels);
-}  // namespace tensor_conversion
 template <typename TensorType>
-static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::vector<cv::Mat>& images, const TensorInfo& tensorInfo, const std::string* buffer) {
+static Status convertTensorToImagesMatchingTensorInfo(const TensorType& src, std::vector<ov::Tensor>& images, const TensorInfo& tensorInfo, const std::string* buffer) {
     OVMS_PROFILE_FUNCTION();
     Dimension targetHeight = tensor_conversion::getTensorInfoHeightDim(tensorInfo);
     Dimension targetWidth = tensor_conversion::getTensorInfoWidthDim(tensorInfo);
@@ -97,15 +72,16 @@ static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::
         if (status != StatusCode::OK) {
             return status;
         }
-        cv::Mat image = tensor_conversion::convertStringToMat(encodedImage);
-        if (image.data == nullptr)
-            return StatusCode::IMAGE_PARSING_FAILED;
+        ov::Tensor image;
+        status = image_utils::decodeImage(encodedImage, image);
+        if (!status.ok())
+            return status;
 
         status = tensor_conversion::accumulateAndCheckDecodedImageSize(image, tensorInfo, totalAllocatedPixels, maxAllowedImagePixels);
         if (status != StatusCode::OK) {
             return status;
         }
-        cv::Mat* firstImage = images.size() == 0 ? nullptr : &images.at(0);
+        const ov::Tensor* firstImage = images.empty() ? nullptr : &images.at(0);
         status = tensor_conversion::validateInput(tensorInfo, image, firstImage, enforceResolutionAlignment);
         if (status != StatusCode::OK) {
             return status;
@@ -114,40 +90,32 @@ static Status convertTensorToMatsMatchingTensorInfo(const TensorType& src, std::
             tensor_conversion::updateTargetResolution(targetHeight, targetWidth, image);
         }
 
-        bool needsPrecisionConv = !tensor_conversion::isPrecisionEqual(image.depth(), tensorInfo.getPrecision());
-        if (needsPrecisionConv) {
-            cv::Mat imageCorrectPrecision;
-            status = tensor_conversion::convertPrecision(image, imageCorrectPrecision, tensorInfo.getPrecision());
-
-            if (status != StatusCode::OK) {
-                return status;
-            }
-            image = std::move(imageCorrectPrecision);
-        }
+        if (!tensor_conversion::isSupportedImagePrecision(tensorInfo.getPrecision()))
+            return StatusCode::INVALID_PRECISION;
         if (!targetHeight.isStatic() || !targetWidth.isStatic()) {
             return StatusCode::INTERNAL_ERROR;
         }
-        if (tensor_conversion::resizeNeeded(image, targetHeight.getStaticValue(), targetWidth.getStaticValue())) {
-            if (!resizeSupported) {
-                return StatusCode::INVALID_SHAPE;
-            }
-            cv::Mat imageResized;
-            status = tensor_conversion::resizeMat(image, imageResized, targetHeight.getStaticValue(), targetWidth.getStaticValue());
-            if (!status.ok()) {
-                return status;
-            }
-            image = std::move(imageResized);
+        const size_t targetHeightValue = static_cast<size_t>(targetHeight.getStaticValue());
+        const size_t targetWidthValue = static_cast<size_t>(targetWidth.getStaticValue());
+        if (!resizeSupported && (image.get_shape()[1] != targetHeightValue || image.get_shape()[2] != targetWidthValue)) {
+            return StatusCode::INVALID_SHAPE;
         }
+        ov::Tensor processed;
+        status = image_utils::preprocessImage(image, processed, tensorInfo.getOvPrecision(),
+            targetHeightValue, targetWidthValue);
+        if (!status.ok())
+            return status;
+        image = std::move(processed);
 
-        if (firstImage != nullptr && image.channels() != firstImage->channels()) {
+        if (firstImage != nullptr && image.get_shape()[3] != firstImage->get_shape()[3]) {
             SPDLOG_DEBUG("Binary data sent to input: {} has mixed channel count within one batch. First image channels: {} current image channels: {}",
                 tensorInfo.getMappedName(),
-                firstImage->channels(),
-                image.channels());
+                firstImage->get_shape()[3],
+                image.get_shape()[3]);
             return StatusCode::INVALID_NO_OF_CHANNELS;
         }
 
-        images.push_back(image);
+        images.push_back(std::move(image));
     }
     return StatusCode::OK;
 }
@@ -160,13 +128,13 @@ Status convertNativeFileFormatRequestTensorToOVTensor(const TensorType& src, ov:
         SPDLOG_DEBUG("Input native file format validation failed");
         return status;
     }
-    std::vector<cv::Mat> images;
-    status = convertTensorToMatsMatchingTensorInfo(src, images, tensorInfo, buffer);
+    std::vector<ov::Tensor> images;
+    status = convertTensorToImagesMatchingTensorInfo(src, images, tensorInfo, buffer);
     if (!status.ok()) {
         SPDLOG_DEBUG("Input native file format conversion failed");
         return status;
     }
-    tensor = tensor_conversion::convertMatsToTensor(images, tensorInfo);
+    tensor = tensor_conversion::createTensorFromImages(images, tensorInfo);
     if (!tensor) {
         SPDLOG_DEBUG("Input native file format conversion failed");
         return StatusCode::IMAGE_PARSING_FAILED;

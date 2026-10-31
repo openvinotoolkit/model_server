@@ -1,0 +1,14 @@
+diff --git a/mediapipe/framework/tool/type_util.h b/mediapipe/framework/tool/type_util.h
+--- a/mediapipe/framework/tool/type_util.h
++++ b/mediapipe/framework/tool/type_util.h
+@@ -141,7 +141,9 @@ class TypeId {
+     decltype(&GetTypeInfo<void>) get_;
+   };
+ 
+-  using Impl = FastRttiImpl;
++  // OVMS calculators can live in runtime plugins. Getter addresses are not
++  // shared across DSOs with hidden symbols; use the existing RTTI comparison.
++  using Impl = FullRttiImpl;
+ #else
+   using Impl = NoRttiImpl;
+ #endif  // MEDIAPIPE_HAS_RTTI

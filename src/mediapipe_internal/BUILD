@@ -15,6 +15,29 @@
 #
 load("//:common_settings.bzl", "ovms_cc_library")
 
+filegroup(
+    name = "opencv_calculators_plugin_src",
+    srcs = ["opencv_calculators_plugin.cpp"],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "opencv_calculators_plugin_loader",
+    hdrs = ["opencv_calculators_plugin_loader.hpp"],
+    srcs = ["opencv_calculators_plugin_loader.cpp"],
+    deps = [
+        "//src:libovmslogging",
+    ] + select({
+        "//src:windows": [],
+        "//conditions:default": [
+            "@mediapipe//mediapipe/framework:calculator_framework",
+            "@mediapipe//mediapipe/framework:subgraph",
+            "//src/utils:env_guard",
+        ],
+    }),
+    visibility = ["//visibility:public"],
+)
+
 ovms_cc_library(
     name = "mediapipe_executor_interface",
     hdrs = ["mediapipe_graph_executor_interface.hpp"],
@@ -203,6 +226,7 @@ ovms_cc_library(
         "mediapipegraphexecutor.hpp",
     ],
     deps = [
+        ":opencv_calculators_plugin_loader",
         ":graphqueue",
         ":mediapipegraphconfig",
         ":node_initializer",
@@ -248,6 +272,7 @@ ovms_cc_library(
     name = "libovms_mediapipe_runtime_owner_no_python_calculators",
     deps = [
         ":libovms_mediapipe",
+        "//src:libmediapipe_framework_impl",
         "//src/mediapipe_calculators/ovms:ovms_calculator",
         "//src/llm:llmcalculator_registration",
         "//src:kfs_graph_executor_impl",
@@ -259,6 +284,19 @@ ovms_cc_library(
         "//src/audio/text_to_speech:t2s_calculator",
         "//src/yolox:ov_yolox_tensors_to_detections_calculator",
         "//src/bytetrack/calculators:bytetrack_calculators",
+    ],
+    visibility = ["//visibility:public"],
+    alwayslink = 1,
+)
+
+ovms_cc_library(
+    name = "libovms_mediapipe_runtime_owner",
+    deps = [
+        ":libovms_mediapipe_runtime_owner_no_python_calculators",
+        "//src/llm:execution_context_utils",
+        "//src/llm:llmcalculator_registration",
+        "//src/python:python_calculators_host",
+        "//src/python:python_calculators_runtime_objects",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,
