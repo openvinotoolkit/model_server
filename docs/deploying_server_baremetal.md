@@ -174,12 +174,12 @@ Start the server on Linux:
 
 ```bash
 ./ovms/bin/ovms --model_name resnet --model_path resnet50.xml --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --port 9000
-
 ```
+
 or on Windows:
 
 ```bat
-ovms.exe --model_name resnet --model_path resnet50.xml --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --port 9000
+.\ovms\ovms.exe --model_name resnet --model_path resnet50.xml --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --port 9000
 ```
 
 You can also run the server as a background process, a system service on Linux,
