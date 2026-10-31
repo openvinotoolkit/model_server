@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <filesystem>
+#include <fstream>
 #include <memory>
 #include <string>
 #include <utility>
@@ -25,8 +27,29 @@
 #include "src/audio/speech_to_text/s2t_calculator.pb.h"
 
 #include "src/logging.hpp"
+#include "src/port/rapidjson_document.hpp"
+#include "src/port/rapidjson_istreamwrapper.hpp"
 
 namespace ovms {
+namespace {
+bool isQwen3AsrContinuousBatchingModel(const std::filesystem::path& modelsPath) {
+    std::ifstream configFile(modelsPath / "config.json");
+    if (!configFile) {
+        return false;
+    }
+    rapidjson::Document document;
+    rapidjson::IStreamWrapper stream(configFile);
+    document.ParseStream(stream);
+        const bool isQwen3Asr = document.IsObject() && document.HasMember("model_type") &&
+                    document["model_type"].IsString() &&
+                    std::string(document["model_type"].GetString()) == "qwen3_asr";
+        return isQwen3Asr &&
+            std::filesystem::exists(modelsPath / "openvino_language_model.xml") &&
+            std::filesystem::exists(modelsPath / "openvino_text_embeddings_model.xml") &&
+            std::filesystem::exists(modelsPath / "openvino_audio_encoder_model.xml");
+}
+}  // namespace
+
 class SttNodeInitializer : public NodeInitializer {
     static constexpr const char* CALCULATOR_NAME = "S2tCalculator";
 
@@ -60,7 +83,16 @@ public:
             SPDLOG_ERROR("Failed to unpack calculator options");
             return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
         }
-        auto servable = std::make_shared<SttServable>(nodeOptions, basePath);
+        const std::filesystem::path modelsPath = std::filesystem::path(nodeOptions.models_path()).is_relative() ?
+            std::filesystem::path(basePath) / nodeOptions.models_path() : std::filesystem::path(nodeOptions.models_path());
+        std::shared_ptr<SttServable> servable;
+        if (isQwen3AsrContinuousBatchingModel(modelsPath)) {
+            SPDLOG_DEBUG("Speech-to-text graph {} uses Qwen3 ASR continuous batching backend from {}", graphName, modelsPath.string());
+            servable = std::make_shared<Qwen3AsrContinuousBatchingServable>(nodeOptions, basePath);
+        } else {
+            SPDLOG_DEBUG("Speech-to-text graph {} uses ASR pipeline backend from {}", graphName, modelsPath.string());
+            servable = std::make_shared<AsrPipelineServable>(nodeOptions, basePath);
+        }
         sttServableMap.insert(std::pair<std::string, std::shared_ptr<SttServable>>(nodeName, std::move(servable)));
         return StatusCode::OK;
     }

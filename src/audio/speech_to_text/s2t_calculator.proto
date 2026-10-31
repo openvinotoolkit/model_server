@@ -32,4 +32,9 @@ message S2tCalculatorOptions {
     optional string target_device = 2;
     optional string plugin_config = 3;
     optional bool enable_word_timestamps = 4 [default = false];
+
+    // Qwen3 ASR continuous batching scheduler configuration.
+    optional uint64 max_num_batched_tokens = 5 [default = 256];
+    optional uint64 max_num_seqs = 6 [default = 256];
+    optional bool dynamic_split_fuse = 7 [default = true];
 }
