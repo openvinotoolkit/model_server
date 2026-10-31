@@ -2,31 +2,30 @@ version: "3.8"
 
 services:
   ovms-llm:
-    image: ${OVMS_IMAGE:-openvino/model_server:latest-gpu}
+    image: ${OVMS_IMAGE}
     container_name: ovms-llm
     entrypoint: []
     user: "${HOST_UID}:${HOST_GID}"
 ${GPU_ARGS}
     ports:
-      - "${OVMS_REST_PORT:-8000}:8000"  # REST API
+      - "${OVMS_REST_PORT}:8000"  # REST API
     volumes:
       # Model cache directory - OVMS will materialize models here on --source_model pull
-      # Defaults to ${HOME}/ovms-openhands/models if not set
-      - ${MODEL_CACHE_DIR:-./docker/models}:/models:rw
+      - ${MODEL_CACHE_DIR}:/models:rw
     environment:
       # Hugging Face token for gated models.
-      HF_TOKEN: ${HF_TOKEN:-}
+      HF_TOKEN: ${HF_TOKEN}
       # Model configuration variables
       MODEL_ID: ${MODEL_ID}
       LOCAL_NAME: ${LOCAL_NAME}
       TARGET_DEVICE: ${TARGET_DEVICE}
       # Proxy configuration (forwarded from host if set)
-      http_proxy: ${http_proxy:-}
-      https_proxy: ${https_proxy:-}
-      HTTP_PROXY: ${HTTP_PROXY:-}
-      HTTPS_PROXY: ${HTTPS_PROXY:-}
-      no_proxy: ${no_proxy:-}
-      NO_PROXY: ${NO_PROXY:-}
+      http_proxy: ${http_proxy}
+      https_proxy: ${https_proxy}
+      HTTP_PROXY: ${HTTP_PROXY}
+      HTTPS_PROXY: ${HTTPS_PROXY}
+      no_proxy: ${no_proxy}
+      NO_PROXY: ${NO_PROXY}
     command:
       - /bin/bash
       - -c
@@ -50,7 +49,7 @@ ${GPU_ARGS}
     depends_on:
       - ovms-llm
     ports:
-      - "${OPENHANDS_PORT:-3000}:3000"  # Web UI
+      - "127.0.0.1:${OPENHANDS_PORT}:3000"
     extra_hosts:
       # Allows OpenHands container to reach host services if needed
       - host.docker.internal:host-gateway
@@ -69,12 +68,12 @@ ${GPU_ARGS}
       # Memory limit for OpenHands runtime sandboxes (agent code execution).
       SANDBOX_DOCKER_ARGS: --memory=1536m --memory-swap=1536m
       # Proxy configuration (forwarded from host if set)
-      http_proxy: ${http_proxy:-}
-      https_proxy: ${https_proxy:-}
-      HTTP_PROXY: ${HTTP_PROXY:-}
-      HTTPS_PROXY: ${HTTPS_PROXY:-}
-      no_proxy: ${no_proxy:-}
-      NO_PROXY: ${NO_PROXY:-}
+      http_proxy: ${http_proxy}
+      https_proxy: ${https_proxy}
+      HTTP_PROXY: ${HTTP_PROXY}
+      HTTPS_PROXY: ${HTTPS_PROXY}
+      no_proxy: ${no_proxy}
+      NO_PROXY: ${NO_PROXY}
     volumes:
       # Docker socket for OpenHands to create runtime sandbox containers
       - /var/run/docker.sock:/var/run/docker.sock

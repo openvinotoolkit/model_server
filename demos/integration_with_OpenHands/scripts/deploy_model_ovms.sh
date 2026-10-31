@@ -137,17 +137,21 @@ export_runtime_configuration() {
     HOST_UID="$(id -u)"
     HOST_GID="$(id -g)"
 
-    # Export all variables consumed by docker-compose.yml
-    export MODEL_ID LOCAL_NAME TARGET_DEVICE MODEL_CACHE_DIR HF_TOKEN="${HF_TOKEN:-}"
+    # Export all variables consumed by the Compose template.
+    # Every variable referenced in the template must be exported (even if empty)
+    # so that envsubst replaces it cleanly instead of leaving a literal ${VAR}.
+    export MODEL_ID LOCAL_NAME TARGET_DEVICE MODEL_CACHE_DIR
     export OVMS_REST_PORT OPENHANDS_PORT OVMS_IMAGE GPU_ARGS HOST_UID HOST_GID
 
-    # Forward proxy variables if set
-    [[ -n "${http_proxy:-}" ]] && export http_proxy
-    [[ -n "${https_proxy:-}" ]] && export https_proxy
-    [[ -n "${HTTP_PROXY:-}" ]] && export HTTP_PROXY
-    [[ -n "${HTTPS_PROXY:-}" ]] && export HTTPS_PROXY
-    [[ -n "${no_proxy:-}" ]] && export no_proxy
-    [[ -n "${NO_PROXY:-}" ]] && export NO_PROXY
+    # Token and proxy variables: default to empty so envsubst produces blank values
+    # rather than leaving shell default expressions in the generated file.
+    export HF_TOKEN="${HF_TOKEN:-}"
+    export http_proxy="${http_proxy:-}"
+    export https_proxy="${https_proxy:-}"
+    export HTTP_PROXY="${HTTP_PROXY:-}"
+    export HTTPS_PROXY="${HTTPS_PROXY:-}"
+    export no_proxy="${no_proxy:-}"
+    export NO_PROXY="${NO_PROXY:-}"
 
     echo "Runtime configuration:"
     echo "  MODEL_ID:       $MODEL_ID"
@@ -164,7 +168,11 @@ export_runtime_configuration() {
 
 deploy_ovms() {
     echo "Generating docker-compose.yml from template..."
-    envsubst '$MODEL_ID $LOCAL_NAME $TARGET_DEVICE $MODEL_CACHE_DIR $HF_TOKEN $OVMS_IMAGE $GPU_ARGS $HOST_UID $HOST_GID $OVMS_REST_PORT $OPENHANDS_PORT $http_proxy $https_proxy $HTTP_PROXY $HTTPS_PROXY $no_proxy $NO_PROXY' < "$COMPOSE_TEMPLATE" > "$COMPOSE_FILE"
+    envsubst '$MODEL_ID $LOCAL_NAME $TARGET_DEVICE $MODEL_CACHE_DIR $HF_TOKEN
+        $OVMS_IMAGE $GPU_ARGS $HOST_UID $HOST_GID $OVMS_REST_PORT $OPENHANDS_PORT
+        $http_proxy $https_proxy $HTTP_PROXY $HTTPS_PROXY $no_proxy $NO_PROXY' \
+        < "$COMPOSE_TEMPLATE" > "$COMPOSE_FILE"
+    chmod 600 "$COMPOSE_FILE"
     echo "  Generated: $COMPOSE_FILE"
 
     echo "Deploying OVMS and OpenHands via Docker Compose..."
@@ -206,6 +214,13 @@ main() {
 
     # Prepare model cache directory
     [[ -d "$MODEL_CACHE_DIR" ]] || { echo "Creating model cache directory: $MODEL_CACHE_DIR"; mkdir -p "$MODEL_CACHE_DIR"; }
+
+    # Normalize to absolute path so Docker mounts the intended host directory
+    # regardless of which working directory the script is invoked from.
+    MODEL_CACHE_DIR="$(cd "$MODEL_CACHE_DIR" && pwd)" || {
+        echo "ERROR: Cannot resolve model cache directory: $MODEL_CACHE_DIR" >&2
+        exit 1
+    }
     echo "Model cache ready: $MODEL_CACHE_DIR"
 
     export_runtime_configuration
