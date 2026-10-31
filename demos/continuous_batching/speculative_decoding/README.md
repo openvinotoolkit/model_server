@@ -163,7 +163,7 @@ ${HOME}/models
     └── ...
 ```
 
-## Server Deployment
+## Server Deployment 
 
 :::{dropdown} **Deploying with Docker**
 ```text
