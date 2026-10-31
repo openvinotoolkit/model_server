@@ -1,0 +1,41 @@
+# Split graph with fan-out: GStreamer/VA source feeds both ModelManager
+# inference (via C-API) and a file-output sink (via imp_video_encoder_*).
+#
+#   source -> inference -> detections
+#   source -> sink      -> output file
+
+input_side_packet: "VIDEO_PATH:video_path"
+input_side_packet: "WIDTH:width"
+input_side_packet: "HEIGHT:height"
+input_side_packet: "SERVABLE_NAME:servable_name"
+input_side_packet: "SERVABLE_VERSION:servable_version"
+input_side_packet: "INPUT_NAME:input_name"
+input_side_packet: "SERVER:server"
+input_side_packet: "OUTPUT_PATH:output_path"
+input_side_packet: "FRAMERATE:framerate"
+output_stream: "DETECTIONS:detections"
+
+node {
+  calculator: "GstVideoSourceCalculator"
+  input_side_packet: "VIDEO_PATH:video_path"
+  input_side_packet: "WIDTH:width"
+  input_side_packet: "HEIGHT:height"
+  output_stream: "FRAME:frame"
+}
+
+node {
+  calculator: "GstCapiInferenceCalculator"
+  input_stream: "FRAME:frame"
+  input_side_packet: "SERVABLE_NAME:servable_name"
+  input_side_packet: "SERVABLE_VERSION:servable_version"
+  input_side_packet: "INPUT_NAME:input_name"
+  input_side_packet: "SERVER:server"
+  output_stream: "DETECTIONS:detections"
+}
+
+node {
+  calculator: "GstVideoSinkCalculator"
+  input_stream: "FRAME:frame"
+  input_side_packet: "OUTPUT_PATH:output_path"
+  input_side_packet: "FRAMERATE:framerate"
+}

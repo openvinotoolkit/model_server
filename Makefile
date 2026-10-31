@@ -192,6 +192,10 @@ OVMS_CPP_IMAGE_TAG ?= latest
 
 OVMS_PYTHON_IMAGE_TAG ?= py
 
+# Optional GStreamer image built on top of the GPU release image; see extras/gstreamer/Dockerfile.ubuntu.
+ACCEPT_GSTREAMER_LICENSES ?= no
+GSTREAMER_BASE_IMAGE ?= $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
+
 PRODUCT_VERSION ?= "2026.5.0"
 PROJECT_VER_PATCH =
 
@@ -425,6 +429,24 @@ ifeq ($(BUILD_NGINX), 1)
 	http_proxy=$(HTTP_PROXY) https_proxy=$(HTTPS_PROXY) no_proxy=$(NO_PROXY) ./build.sh "$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)" "$(DIST_OS)" && \
 	docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls$(IMAGE_TAG_SUFFIX)
 endif
+
+# Builds the build image, package, GStreamer-free release images and the GStreamer image on top of the GPU one.
+.PHONY: gstreamer_image docker_gstreamer_build
+docker_gstreamer_build: docker_build gstreamer_image
+
+gstreamer_image:
+ifneq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
+	@echo "GStreamer image is supported only for ubuntu BASE_OS"; exit 1
+endif
+	docker $(BUILDX) build $(NO_CACHE_OPTION) -f extras/gstreamer/Dockerfile.ubuntu extras/gstreamer \
+		--build-arg http_proxy=$(HTTP_PROXY) \
+		--build-arg https_proxy=$(HTTPS_PROXY) \
+		--build-arg no_proxy=$(NO_PROXY) \
+		--build-arg BASE_IMAGE=$(GSTREAMER_BASE_IMAGE) \
+		--build-arg BUILDER_IMAGE=$(BASE_IMAGE) \
+		--build-arg JOBS=$(JOBS) \
+		--build-arg ACCEPT_GSTREAMER_LICENSES=$(ACCEPT_GSTREAMER_LICENSES) \
+		-t $(OVMS_CPP_DOCKER_IMAGE)-gstreamer:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
 
 get_gpl_mpl_packages:
 ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)

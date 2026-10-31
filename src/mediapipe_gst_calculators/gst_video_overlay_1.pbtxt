@@ -1,0 +1,92 @@
+# Config-deployable GStreamer/VA graph with a red overlay.
+input_stream: "OVTENSOR:trigger"
+output_stream: "OVTENSOR:trigger_response"
+
+node {
+  calculator: "PassThroughCalculator"
+  input_stream: "OVTENSOR:trigger"
+  output_stream: "OVTENSOR:trigger_response"
+}
+
+node {
+  calculator: "ConstantSidePacketCalculator"
+  output_side_packet: "PACKET:0:source_uri"
+  output_side_packet: "PACKET:1:width"
+  output_side_packet: "PACKET:2:height"
+  output_side_packet: "PACKET:3:full_width"
+  output_side_packet: "PACKET:4:full_height"
+  output_side_packet: "PACKET:5:full_va_surface"
+  output_side_packet: "PACKET:6:servable_name"
+  output_side_packet: "PACKET:7:servable_version"
+  output_side_packet: "PACKET:8:input_name"
+  output_side_packet: "PACKET:9:output_path"
+  output_side_packet: "PACKET:10:output_mode"
+  output_side_packet: "PACKET:11:framerate"
+  output_side_packet: "PACKET:12:max_frames"
+  output_side_packet: "PACKET:13:color_r"
+  output_side_packet: "PACKET:14:color_g"
+  output_side_packet: "PACKET:15:color_b"
+  options: {
+    [mediapipe.ConstantSidePacketCalculatorOptions.ext]: {
+      packet { string_value: "/ovms/recording_3_raw.avi" }
+      packet { int_value: 672 }
+      packet { int_value: 384 }
+      packet { int_value: 1280 }
+      packet { int_value: 720 }
+      packet { bool_value: true }
+      packet { string_value: "face_detection_adas" }
+      packet { int_value: 1 }
+      packet { string_value: "data" }
+      packet { string_value: "/tmp/ovms_overlay_1.mp4" }
+      packet { string_value: "file" }
+      packet { int_value: 30 }
+      packet { int_value: 30 }
+      packet { int_value: 255 }
+      packet { int_value: 0 }
+      packet { int_value: 0 }
+    }
+  }
+}
+
+node {
+  calculator: "GstVideoSourceCalculator"
+  input_side_packet: "SOURCE_URI:source_uri"
+  input_side_packet: "WIDTH:width"
+  input_side_packet: "HEIGHT:height"
+  input_side_packet: "FULL_WIDTH:full_width"
+  input_side_packet: "FULL_HEIGHT:full_height"
+  input_side_packet: "FULL_VA_SURFACE:full_va_surface"
+  input_side_packet: "MAX_FRAMES:max_frames"
+  output_stream: "FRAME_INFER:frame_infer"
+  output_stream: "FRAME_FULL:frame_full"
+}
+
+node {
+  calculator: "GstCapiInferenceCalculator"
+  input_stream: "FRAME:frame_infer"
+  input_side_packet: "SERVABLE_NAME:servable_name"
+  input_side_packet: "SERVABLE_VERSION:servable_version"
+  input_side_packet: "INPUT_NAME:input_name"
+  input_side_packet: "FULL_WIDTH:full_width"
+  input_side_packet: "FULL_HEIGHT:full_height"
+  output_stream: "DETECTIONS:detections"
+  output_stream: "DETECTION_BOXES:detection_boxes"
+}
+
+node {
+  calculator: "GstDetectionOverlayCalculator"
+  input_stream: "FRAME_FULL:frame_full"
+  input_stream: "DETECTION_BOXES:detection_boxes"
+  input_side_packet: "COLOR_R:color_r"
+  input_side_packet: "COLOR_G:color_g"
+  input_side_packet: "COLOR_B:color_b"
+  output_stream: "FRAME_OVERLAID:frame_overlaid"
+}
+
+node {
+  calculator: "GstVideoSinkCalculator"
+  input_stream: "FRAME:frame_overlaid"
+  input_side_packet: "OUTPUT_PATH:output_path"
+  input_side_packet: "OUTPUT_MODE:output_mode"
+  input_side_packet: "FRAMERATE:framerate"
+}

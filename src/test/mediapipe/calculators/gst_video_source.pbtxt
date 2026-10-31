@@ -1,0 +1,15 @@
+# P2 graph: standalone GStreamer/VA video source emitting GstVideoFramePacket.
+# One node, no inference (P3 does that). Proves per-packet surface ownership.
+
+input_side_packet: "VIDEO_PATH:video_path"
+input_side_packet: "WIDTH:width"
+input_side_packet: "HEIGHT:height"
+output_stream: "FRAME:frame"
+
+node {
+  calculator: "GstVideoSourceCalculator"
+  input_side_packet: "VIDEO_PATH:video_path"
+  input_side_packet: "WIDTH:width"
+  input_side_packet: "HEIGHT:height"
+  output_stream: "FRAME:frame"
+}

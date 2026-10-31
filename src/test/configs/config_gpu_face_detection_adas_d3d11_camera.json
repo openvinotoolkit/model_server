@@ -1,0 +1,22 @@
+{
+  "d3d11_device": {
+    "target_device": "GPU"
+  },
+  "model_config_list": [
+    {"config": {
+      "name": "face_detection_adas",
+      "base_path": "C:/git/model_server/src/test/face_detection_adas",
+      "target_device": "GPU"
+    }}
+  ],
+  "mediapipe_config_list": [
+    {
+      "name": "gst_camera_overlay",
+      "graph_path": "C:/git/model_server/src/mediapipe_gst_calculators/gst_video_camera_overlay.pbtxt"
+    },
+    {
+      "name": "gst_rtsp_overlay",
+      "graph_path": "C:/git/model_server/src/mediapipe_gst_calculators/gst_video_rtsp_overlay.pbtxt"
+    }
+  ]
+}

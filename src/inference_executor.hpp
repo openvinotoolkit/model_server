@@ -16,6 +16,7 @@
 #pragma once
 
 #include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -269,8 +270,16 @@ Status infer(ModelInstance& instance, const RequestType* requestProto,
     bool isPipeline = false;
 
     std::unique_ptr<OutputKeeper> outKeeper;
+    const bool outputKeeperTimingEnabled = spdlog::default_logger_raw()->should_log(spdlog::level::debug);
+    const auto outputKeeperStart = outputKeeperTimingEnabled ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
     if (instance.doesSupportOutputReset()) {
         outKeeper = std::make_unique<OutputKeeper>(executingStreamIdGuard.getInferRequest(), instance.getOutputsInfo());
+    }
+    if (outputKeeperTimingEnabled) {
+        const auto outputKeeperMs = std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - outputKeeperStart).count();
+        SPDLOG_DEBUG("Inference executor OutputKeeper construction model={} duration_ms={:.6f}",
+            instance.getName(), outputKeeperMs);
     }
     status = deserializePredictRequest<ConcreteTensorProtoDeserializator, InputSink<ov::InferRequest&>>(*requestProto, instance.getInputsInfo(), instance.getOutputsInfo(), inputSink, isPipeline, instance.getTensorFactories());
     timer.stop(DESERIALIZE);

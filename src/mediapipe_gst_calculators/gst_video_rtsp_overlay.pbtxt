@@ -1,0 +1,94 @@
+# Windows RTSP GStreamer/D3D11 graph with a detection overlay.
+#
+# Pipeline: rtspsrc (TCP) -> D3D11 NV12 decode -> C-API inference on a
+# ModelManager GPU model -> host-NV12 detection overlay -> mfh264enc ->
+# request-selected preview or RTSP output. MediaMTX owns camera publication
+# and fan-out; each OVMS request independently subscribes to its camera stream.
+input_stream: "OVTENSOR:trigger"
+output_stream: "OVTENSOR:trigger_response"
+input_side_packet: "output_mode"
+input_side_packet: "max_frames"
+input_side_packet: "color_r"
+input_side_packet: "color_g"
+input_side_packet: "color_b"
+input_side_packet: "output_path"
+
+node {
+  calculator: "PassThroughCalculator"
+  input_stream: "OVTENSOR:trigger"
+  output_stream: "OVTENSOR:trigger_response"
+}
+
+node {
+  calculator: "ConstantSidePacketCalculator"
+  output_side_packet: "PACKET:0:source_mode"
+  output_side_packet: "PACKET:1:source_uri"
+  output_side_packet: "PACKET:2:width"
+  output_side_packet: "PACKET:3:height"
+  output_side_packet: "PACKET:4:full_width"
+  output_side_packet: "PACKET:5:full_height"
+  output_side_packet: "PACKET:6:full_va_surface"
+  output_side_packet: "PACKET:7:servable_name"
+  output_side_packet: "PACKET:8:servable_version"
+  output_side_packet: "PACKET:9:input_name"
+  output_side_packet: "PACKET:10:framerate"
+  options: {
+    [mediapipe.ConstantSidePacketCalculatorOptions.ext]: {
+      packet { string_value: "rtsp" }
+      packet { string_value: "rtsp://127.0.0.1:18555/cam" }
+      packet { int_value: 672 }
+      packet { int_value: 384 }
+      packet { int_value: 1280 }
+      packet { int_value: 720 }
+      packet { bool_value: false }
+      packet { string_value: "face_detection_adas" }
+      packet { int_value: 1 }
+      packet { string_value: "data" }
+      packet { int_value: 30 }
+    }
+  }
+}
+
+node {
+  calculator: "GstVideoSourceCalculator"
+  input_side_packet: "SOURCE_MODE:source_mode"
+  input_side_packet: "SOURCE_URI:source_uri"
+  input_side_packet: "WIDTH:width"
+  input_side_packet: "HEIGHT:height"
+  input_side_packet: "FULL_WIDTH:full_width"
+  input_side_packet: "FULL_HEIGHT:full_height"
+  input_side_packet: "FULL_VA_SURFACE:full_va_surface"
+  input_side_packet: "MAX_FRAMES:max_frames"
+  output_stream: "FRAME_INFER:frame_infer"
+  output_stream: "FRAME_FULL:frame_full"
+}
+
+node {
+  calculator: "GstCapiInferenceCalculator"
+  input_stream: "FRAME:frame_infer"
+  input_side_packet: "SERVABLE_NAME:servable_name"
+  input_side_packet: "SERVABLE_VERSION:servable_version"
+  input_side_packet: "INPUT_NAME:input_name"
+  input_side_packet: "FULL_WIDTH:full_width"
+  input_side_packet: "FULL_HEIGHT:full_height"
+  output_stream: "DETECTIONS:detections"
+  output_stream: "DETECTION_BOXES:detection_boxes"
+}
+
+node {
+  calculator: "GstDetectionOverlayCalculator"
+  input_stream: "FRAME_FULL:frame_full"
+  input_stream: "DETECTION_BOXES:detection_boxes"
+  input_side_packet: "COLOR_R:color_r"
+  input_side_packet: "COLOR_G:color_g"
+  input_side_packet: "COLOR_B:color_b"
+  output_stream: "FRAME_OVERLAID:frame_overlaid"
+}
+
+node {
+  calculator: "GstVideoSinkCalculator"
+  input_stream: "FRAME:frame_overlaid"
+  input_side_packet: "OUTPUT_PATH:output_path"
+  input_side_packet: "OUTPUT_MODE:output_mode"
+  input_side_packet: "FRAMERATE:framerate"
+}

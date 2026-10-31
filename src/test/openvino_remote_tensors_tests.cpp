@@ -19,6 +19,10 @@
 #include <string>
 #include <thread>
 
+#include <atomic>
+#include <cstdio>
+#include <cstdlib>
+
 #include <CL/cl2.hpp>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -32,11 +36,22 @@
 #include "../ov_utils.hpp"
 #include "../ovms.h"           // NOLINT
 #include "../ovms_internal.h"  // NOLINT
+#include "../grpcservermodule.hpp"
+#include "../server.hpp"
 #include "src/status.hpp"
 #include "c_api_test_utils.hpp"
 #include "gpuenvironment.hpp"
 #include "light_test_utils.hpp"
+#include "test_utils.hpp"
 #include "test_with_temp_dir.hpp"
+#include "src/mpi/intel_mpi.h"
+#include "src/mediapipe_gst_calculators/gst_detection_box.hpp"
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#include "mediapipe/framework/calculator_framework.h"
+#include "mediapipe/framework/port/parse_text_proto.h"
+#pragma GCC diagnostic pop
 
 using namespace ov;
 
@@ -341,11 +356,27 @@ const std::shared_ptr<ov::Model> preprocessModel(const std::shared_ptr<ov::Model
 }
 
 const std::string FACE_DETECTION_ADAS_MODEL_CONFIG_JSON{"/ovms/src/test/configs/config_gpu_face_detection_adas.json"};
+const std::string FACE_DETECTION_ADAS_VA_DISPLAY_MODEL_CONFIG_JSON{"/ovms/src/test/configs/config_gpu_face_detection_adas_va_display.json"};
+const std::string FACE_DETECTION_ADAS_TEN_OVERLAYS_CONFIG_JSON{"/ovms/src/test/configs/config_gpu_face_detection_adas_ten_overlays.json"};
 const std::string FACE_DETECTION_ADAS_MODEL_PATH{"/ovms/src/test/face_detection_adas/1/face-detection-adas-0001.xml"};
 const std::string FACE_DETECTION_ADAS_MODEL_NAME{"face_detection_adas"};
 const std::string FACE_DETECTION_ADAS_INPUT_NAME{"data"};
 const std::string FACE_DETECTION_ADAS_OUTPUT_NAME{"detection_out"};
 const std::vector<int64_t> FACE_DETECTION_ADAS_INPUT_SHAPE{1, 3, 384, 672};
+
+// Knobs for the GStreamer overlay pipeline tests (GStreamerOverlayEncode*).
+// Set GST_OVERLAY_MAX_FRAMES to 0 to process the whole clip (~250 frames). Point
+// an output path outside /tmp (e.g. /ovms/logs/...) to keep the annotated file
+// for inspection; /tmp outputs are deleted at the end of the test.
+constexpr int GST_OVERLAY_MAX_FRAMES = 60;
+const std::string GST_OVERLAY_OUTPUT_PATH{"/tmp/gst_overlay_out.mp4"};
+const std::string GST_OVERLAY_VA_OUTPUT_PATH{"/tmp/gst_overlay_va_out.mp4"};
+
+// Keep outputs the caller asked to persist (anything outside /tmp).
+static void removeIfTemp(const std::string& path) {
+    if (path.rfind("/tmp/", 0) == 0)
+        std::remove(path.c_str());
+}
 
 TEST_F(OpenVINOGPU, LoadModelWithVAContextInferenceFaceDetectionAdasWithPreprocTest) {
 #ifndef BUILD_VAAPITESTS
@@ -500,6 +531,983 @@ TEST_F(CAPINonCopy, VAContextGlobalPreprocHardcodedInput) {  // TODO rename
         SPDLOG_ERROR(row);
     }
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSetGlobalVADisplay(cserver, 0));  // TODO reset always on exit
+    OVMS_ServerDelete(cserver);
+#endif
+}
+
+// POC (A): prove the server-owns-the-display ordering. OVMS creates a VADisplay
+// first, hands it to GStreamer (imp_video_set_va_display), and GStreamer must
+// decode onto THAT display rather than creating its own. The decoded VA
+// surface's display equalling the one we created is the proof.
+TEST_F(CAPINonCopy, GStreamerDecodesOntoServerOwnedVADisplay) {
+#ifndef BUILD_VAAPITESTS
+    GTEST_SKIP() << "Test not enabled on UBI images";
+#else
+    const std::string videoPath = "/ovms/recording_3_raw.avi";
+    if (!std::ifstream(videoPath).good())
+        GTEST_SKIP() << "test video not found: " << videoPath;
+    if (!imp_video_va_available())
+        GTEST_SKIP() << "VA/GPU surface sharing not available on this host";
+
+    // Server-owned display (stands in for globalVaDisplay), created up front.
+    VAHelper vaHelper;
+    ASSERT_NE(vaHelper.getVADisplay(), nullptr);
+
+    // Share it with GStreamer BEFORE opening the stream (Option B ordering).
+    imp_video_set_va_display(vaHelper.getVADisplay());
+
+    imp_context_t* ctx = nullptr;
+    ASSERT_EQ(imp_context_create(&ctx, nullptr), IMP_OK);
+
+    imp_video_source_t* src = nullptr;
+    imp_video_source_create(&src, IMP_SOURCE_FILE);
+    imp_video_source_set(src, "path", videoPath.c_str());
+
+    imp_video_decode_opts_t vopts{};
+    vopts.use_va_surface_memory = true;
+
+    imp_video_stream_t* stream = nullptr;
+    imp_status_t st = imp_video_open(&stream, src, ctx, &vopts);
+    imp_video_source_destroy(src);
+    ASSERT_EQ(st, IMP_OK) << "imp_video_open failed: " << imp_context_get_error(ctx);
+
+    imp_tensor_t* tensor = nullptr;
+    st = imp_video_read_frame(&tensor, stream, 0);
+    ASSERT_EQ(st, IMP_OK);
+    ASSERT_NE(tensor, nullptr);
+    ASSERT_EQ(imp_tensor_get_memory_type(tensor), IMP_MEM_VA_SURFACE)
+        << "expected a GPU VA surface frame";
+
+    uint32_t surfaceId = 0;
+    void* decodeDisplay = nullptr;
+    int fw = 0, fh = 0;
+    ASSERT_EQ(imp_tensor_get_va_surface(tensor, &surfaceId, &decodeDisplay, &fw, &fh), IMP_OK);
+
+    // The proof: GStreamer decoded onto the server-owned display.
+    EXPECT_EQ(decodeDisplay, vaHelper.getVADisplay())
+        << "GStreamer used its own display instead of the server-owned one";
+
+    imp_tensor_release(tensor);
+    imp_video_close(stream);
+    imp_context_destroy(ctx);
+    imp_video_set_va_display(nullptr);
+#endif
+}
+
+TEST_F(CAPINonCopy, ServerStartupOwnsConfiguredVaDisplay) {
+#ifndef BUILD_VAAPITESTS
+    GTEST_SKIP() << "Test not enabled on UBI images";
+#else
+    const std::string videoPath = "/ovms/recording_3_raw.avi";
+    if (std::getenv("RUN_GPU_TESTS") == nullptr || std::string(std::getenv("RUN_GPU_TESTS")) != "1")
+        GTEST_SKIP() << "set RUN_GPU_TESTS=1 to run the configured VA display test";
+    if (access("/dev/dri/renderD128", R_OK | W_OK) != 0)
+        GTEST_SKIP() << "configured render node is not usable";
+    if (!std::ifstream(videoPath).good())
+        GTEST_SKIP() << "test video not found: " << videoPath;
+    if (!imp_video_va_available())
+        GTEST_SKIP() << "VA/GPU surface sharing not available on this host";
+
+    // Model input is NCHW [1,3,384,672] -> H=384, W=672. Decode straight to it.
+    const int modelW = 672;
+    const int modelH = 384;
+
+    std::string port = "9000";
+    randomizeAndEnsureFree(port);
+    OVMS_ServerSettings* serverSettings = nullptr;
+    OVMS_ModelsSettings* modelsSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, FACE_DETECTION_ADAS_VA_DISPLAY_MODEL_CONFIG_JSON.c_str()));
+    OVMS_Server* cserver = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+    ASSERT_NE(ovms::globalVaDisplay, nullptr);
+
+    // Decode one frame to a VA surface on the shared display, sized to the model.
+    imp_context_t* ctx = nullptr;
+    ASSERT_EQ(imp_context_create(&ctx, nullptr), IMP_OK);
+    imp_video_source_t* src = nullptr;
+    imp_video_source_create(&src, IMP_SOURCE_FILE);
+    imp_video_source_set(src, "path", videoPath.c_str());
+    imp_video_source_set(src, "width", std::to_string(modelW).c_str());
+    imp_video_source_set(src, "height", std::to_string(modelH).c_str());
+    imp_video_decode_opts_t vopts{};
+    vopts.use_va_surface_memory = true;
+    imp_video_stream_t* stream = nullptr;
+    ASSERT_EQ(imp_video_open(&stream, src, ctx, &vopts), IMP_OK) << imp_context_get_error(ctx);
+    imp_video_source_destroy(src);
+
+    imp_tensor_t* tensor = nullptr;
+    ASSERT_EQ(imp_video_read_frame(&tensor, stream, 0), IMP_OK);
+    ASSERT_NE(tensor, nullptr);
+    uint32_t surfaceId = 0;
+    void* decodeDisplay = nullptr;
+    int fw = 0, fh = 0;
+    ASSERT_EQ(imp_tensor_get_va_surface(tensor, &surfaceId, &decodeDisplay, &fw, &fh), IMP_OK);
+    ASSERT_EQ(decodeDisplay, ovms::globalVaDisplay) << "surface not on the server-owned display";
+
+    imp_tensor_release(tensor);
+    imp_video_close(stream);
+    imp_context_destroy(ctx);
+    OVMS_ServerDelete(cserver);
+    EXPECT_EQ(ovms::globalVaDisplay, nullptr);
+#endif
+}
+
+TEST_F(CAPINonCopy, DeployedGraphUsesModelManagerServable) {
+#ifndef BUILD_VAAPITESTS
+    GTEST_SKIP() << "Test not enabled on UBI images";
+#else
+    const std::string videoPath = "/ovms/recording_3_raw.avi";
+    if (std::getenv("RUN_GPU_TESTS") == nullptr || std::string(std::getenv("RUN_GPU_TESTS")) != "1")
+        GTEST_SKIP() << "set RUN_GPU_TESTS=1 to run the deployed graph test";
+    if (access("/dev/dri/renderD128", R_OK | W_OK) != 0)
+        GTEST_SKIP() << "configured render node is not usable";
+    if (!std::ifstream(videoPath).good())
+        GTEST_SKIP() << "test video not found: " << videoPath;
+    if (!imp_video_va_available())
+        GTEST_SKIP() << "VA/GPU surface sharing not available on this host";
+
+    std::string port = "9000";
+    randomizeAndEnsureFree(port);
+    OVMS_ServerSettings* serverSettings = nullptr;
+    OVMS_ModelsSettings* modelsSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, FACE_DETECTION_ADAS_VA_DISPLAY_MODEL_CONFIG_JSON.c_str()));
+    OVMS_Server* cserver = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+
+    const std::string graphPath = "/ovms/src/mediapipe_gst_calculators/gst_video_infer.pbtxt";
+    std::ifstream graphFile(graphPath);
+    ASSERT_TRUE(graphFile.good()) << "graph not found: " << graphPath;
+    std::stringstream graphText;
+    graphText << graphFile.rdbuf();
+    auto graphConfig = mediapipe::ParseTextProtoOrDie<mediapipe::CalculatorGraphConfig>(graphText.str());
+    mediapipe::CalculatorGraph graph;
+    ASSERT_TRUE(graph.Initialize(graphConfig).ok());
+    auto pollerOr = graph.AddOutputStreamPoller("detections");
+    ASSERT_TRUE(pollerOr.ok());
+    mediapipe::OutputStreamPoller poller = std::move(pollerOr.value());
+    std::map<std::string, mediapipe::Packet> sidePackets = {
+        {"video_path", mediapipe::MakePacket<std::string>(videoPath)},
+        {"width", mediapipe::MakePacket<int>(672)},
+        {"height", mediapipe::MakePacket<int>(384)},
+        {"servable_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_MODEL_NAME)},
+        {"servable_version", mediapipe::MakePacket<int>(1)},
+        {"input_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_INPUT_NAME)},
+        {"server", mediapipe::MakePacket<OVMS_Server*>(cserver)},
+    };
+    ASSERT_TRUE(graph.StartRun(sidePackets).ok());
+    int graphFrames = 0;
+    int graphDetections = 0;
+    mediapipe::Packet graphPacket;
+    while (poller.Next(&graphPacket)) {
+        graphDetections += graphPacket.Get<int>();
+        ++graphFrames;
+    }
+    EXPECT_GT(graphFrames, 0);
+    EXPECT_GE(graphDetections, 1) << "expected deployed graph inference through the ModelManager servable";
+    ASSERT_TRUE(graph.WaitUntilDone().ok());
+    OVMS_ServerDelete(cserver);
+#endif
+}
+
+TEST_F(CAPINonCopy, ConfiguredOverlayGraphsProduceIndependentOutputs) {
+#ifndef BUILD_VAAPITESTS
+    GTEST_SKIP() << "Test not enabled on UBI images";
+#else
+    if (std::getenv("RUN_GPU_TESTS") == nullptr || std::string(std::getenv("RUN_GPU_TESTS")) != "1")
+        GTEST_SKIP() << "set RUN_GPU_TESTS=1 to run the configured overlay graph test";
+    if (access("/dev/dri/renderD128", R_OK | W_OK) != 0)
+        GTEST_SKIP() << "configured render node is not usable";
+    if (!std::ifstream("/ovms/recording_3_raw.avi").good())
+        GTEST_SKIP() << "test video not found";
+    if (!imp_video_va_available())
+        GTEST_SKIP() << "VA/GPU surface sharing not available on this host";
+
+    struct OverlayGraph {
+        const char* name;
+        const char* outputPath;
+    };
+    const std::array<OverlayGraph, 2> graphs{{
+        {"gst_overlay_0", "/tmp/ovms_overlay_0.mp4"},
+        {"gst_overlay_1", "/tmp/ovms_overlay_1.mp4"},
+    }};
+    for (const auto& graph : graphs)
+        std::remove(graph.outputPath);
+
+    std::string port = "9000";
+    randomizeAndEnsureFree(port);
+    OVMS_ServerSettings* serverSettings = nullptr;
+    OVMS_ModelsSettings* modelsSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, FACE_DETECTION_ADAS_TEN_OVERLAYS_CONFIG_JSON.c_str()));
+    OVMS_Server* cserver = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+
+    for (const auto& graph : graphs) {
+        const auto* server = reinterpret_cast<ovms::Server*>(cserver);
+        const ovms::Module* grpcModule = server->getModule(ovms::GRPC_SERVER_MODULE_NAME);
+        auto& grpcService = dynamic_cast<const ovms::GRPCServerModule*>(grpcModule)->getKFSGrpcImpl();
+        KFSRequest request;
+        KFSResponse response;
+        inputs_info_t inputs{{"trigger", {ovms::signed_shape_t{1}, ovms::Precision::FP32}}};
+        preparePredictRequest(request, inputs, std::vector<float>{1.0f});
+        request.mutable_model_name()->assign(graph.name);
+        ASSERT_EQ(grpcService.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+        EXPECT_TRUE(std::ifstream(graph.outputPath, std::ios::binary | std::ios::ate).good())
+            << "configured graph did not produce " << graph.outputPath;
+    }
+
+    OVMS_ServerDelete(cserver);
+    for (const auto& graph : graphs)
+        std::remove(graph.outputPath);
+#endif
+}
+
+// P6a split graph with fan-out: the GStreamer/VA source feeds BOTH ModelManager
+// inference (C-API, zero-copy) AND a file-output sink that re-encodes the native
+// decoded frames to H.264/MP4 via imp_video_encoder_* (VA zero-copy, no host
+// copy). Proves the sink reaches EOS/finalize and the output is readable, while
+// inference still produces detections on the same stream.
+TEST_F(CAPINonCopy, GStreamerSplitGraphFileSink) {
+#ifndef BUILD_VAAPITESTS
+    GTEST_SKIP() << "Test not enabled on UBI images";
+#else
+    const std::string videoPath = "/ovms/recording_3_raw.avi";
+    if (!std::ifstream(videoPath).good())
+        GTEST_SKIP() << "test video not found: " << videoPath;
+    if (!imp_video_va_available())
+        GTEST_SKIP() << "VA/GPU surface sharing not available on this host";
+
+    const int modelW = 672;
+    const int modelH = 384;
+    const std::string outPath = "/tmp/gst_split_sink_out.mp4";
+    std::remove(outPath.c_str());
+
+    std::string port = "9000";
+    randomizeAndEnsureFree(port);
+    OVMS_ServerSettings* serverSettings = nullptr;
+    OVMS_ModelsSettings* modelsSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, FACE_DETECTION_ADAS_MODEL_CONFIG_JSON.c_str()));
+    OVMS_Server* cserver = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+
+    VAHelper vaHelper;
+    ASSERT_NE(vaHelper.getVADisplay(), nullptr);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSetGlobalVADisplay(cserver, vaHelper.getVADisplay()));
+    imp_video_set_va_display(vaHelper.getVADisplay());
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+
+    const std::string graphPath = "/ovms/src/test/mediapipe/calculators/gst_video_infer_sink.pbtxt";
+    std::ifstream graphFile(graphPath);
+    ASSERT_TRUE(graphFile.good()) << "graph not found: " << graphPath;
+    std::stringstream graphText;
+    graphText << graphFile.rdbuf();
+    auto graphConfig = mediapipe::ParseTextProtoOrDie<mediapipe::CalculatorGraphConfig>(graphText.str());
+    mediapipe::CalculatorGraph graph;
+    ASSERT_TRUE(graph.Initialize(graphConfig).ok());
+    auto pollerOr = graph.AddOutputStreamPoller("detections");
+    ASSERT_TRUE(pollerOr.ok());
+    mediapipe::OutputStreamPoller poller = std::move(pollerOr.value());
+    std::map<std::string, mediapipe::Packet> sidePackets = {
+        {"video_path", mediapipe::MakePacket<std::string>(videoPath)},
+        {"width", mediapipe::MakePacket<int>(modelW)},
+        {"height", mediapipe::MakePacket<int>(modelH)},
+        {"servable_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_MODEL_NAME)},
+        {"servable_version", mediapipe::MakePacket<int>(1)},
+        {"input_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_INPUT_NAME)},
+        {"server", mediapipe::MakePacket<OVMS_Server*>(cserver)},
+        {"output_path", mediapipe::MakePacket<std::string>(outPath)},
+        {"framerate", mediapipe::MakePacket<int>(30)},
+    };
+    ASSERT_TRUE(graph.StartRun(sidePackets).ok());
+    int graphFrames = 0;
+    int graphDetections = 0;
+    mediapipe::Packet graphPacket;
+    while (poller.Next(&graphPacket)) {
+        graphDetections += graphPacket.Get<int>();
+        ++graphFrames;
+    }
+    EXPECT_GT(graphFrames, 0);
+    EXPECT_GE(graphDetections, 1) << "expected graph inference through the ModelManager servable";
+    // WaitUntilDone drives the sink's Close(): EOS + finalize the output file.
+    ASSERT_TRUE(graph.WaitUntilDone().ok()) << "graph did not finalize (sink EOS failed?)";
+
+    // Prove the written file is a readable H.264 stream: reopen and decode a frame.
+    ASSERT_TRUE(std::ifstream(outPath).good()) << "sink did not produce " << outPath;
+    imp_context_t* vctx = nullptr;
+    ASSERT_EQ(imp_context_create(&vctx, nullptr), IMP_OK);
+    imp_video_source_t* vsrc = nullptr;
+    imp_video_source_create(&vsrc, IMP_SOURCE_FILE);
+    imp_video_source_set(vsrc, "path", outPath.c_str());
+    imp_video_decode_opts_t vopts2{};
+    imp_video_stream_t* vstream = nullptr;
+    ASSERT_EQ(imp_video_open(&vstream, vsrc, vctx, &vopts2), IMP_OK) << "encoded file not readable";
+    imp_video_source_destroy(vsrc);
+    imp_tensor_t* vt = nullptr;
+    EXPECT_EQ(imp_video_read_frame(&vt, vstream, 0), IMP_OK) << "no frame from encoded file";
+    if (vt)
+        imp_tensor_release(vt);
+    imp_video_close(vstream);
+    imp_context_destroy(vctx);
+    std::remove(outPath.c_str());
+
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSetGlobalVADisplay(cserver, 0));
+    imp_video_set_va_display(nullptr);
+    OVMS_ServerDelete(cserver);
+#endif
+}
+
+// P6a.1 full pipeline: decode + infer -> overlay -> encode, on Linux VA. The
+// source emits a model-res VA surface (zero-copy inference branch) and a
+// full-res host NV12 frame (overlay/encode branch) on the same per-frame
+// timeline. The inference calculator emits structured boxes; the overlay draws
+// them into the host NV12 planes; the sink encodes an annotated, readable MP4.
+TEST_F(CAPINonCopy, GStreamerOverlayEncodePipeline) {
+#ifndef BUILD_VAAPITESTS
+    GTEST_SKIP() << "Test not enabled on UBI images";
+#else
+    const std::string videoPath = "/ovms/recording_3_raw.avi";
+    if (!std::ifstream(videoPath).good())
+        GTEST_SKIP() << "test video not found: " << videoPath;
+    if (!imp_video_va_available())
+        GTEST_SKIP() << "VA/GPU surface sharing not available on this host";
+
+    const int modelW = 672;
+    const int modelH = 384;
+    const int fullW = 1280;
+    const int fullH = 720;
+    const int maxFrames = GST_OVERLAY_MAX_FRAMES;
+    const std::string outPath = GST_OVERLAY_OUTPUT_PATH;
+    std::remove(outPath.c_str());
+
+    std::string port = "9000";
+    randomizeAndEnsureFree(port);
+    OVMS_ServerSettings* serverSettings = nullptr;
+    OVMS_ModelsSettings* modelsSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, FACE_DETECTION_ADAS_MODEL_CONFIG_JSON.c_str()));
+    OVMS_Server* cserver = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+
+    VAHelper vaHelper;
+    ASSERT_NE(vaHelper.getVADisplay(), nullptr);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSetGlobalVADisplay(cserver, vaHelper.getVADisplay()));
+    imp_video_set_va_display(vaHelper.getVADisplay());
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+
+    const std::string graphPath = "/ovms/src/test/mediapipe/calculators/gst_video_overlay_encode.pbtxt";
+    std::ifstream graphFile(graphPath);
+    ASSERT_TRUE(graphFile.good()) << "graph not found: " << graphPath;
+    std::stringstream graphText;
+    graphText << graphFile.rdbuf();
+    auto graphConfig = mediapipe::ParseTextProtoOrDie<mediapipe::CalculatorGraphConfig>(graphText.str());
+    mediapipe::CalculatorGraph graph;
+    ASSERT_TRUE(graph.Initialize(graphConfig).ok());
+
+    std::atomic<int> graphFrames{0};
+    std::atomic<int> totalBoxes{0};
+    std::atomic<int> framesWithBoxes{0};
+    ASSERT_TRUE(graph.ObserveOutputStream("detection_boxes",
+        [&](const mediapipe::Packet& p) {
+            const auto& boxes = p.Get<mediapipe::GstDetectionBoxes>();
+            ++graphFrames;
+            totalBoxes += static_cast<int>(boxes.size());
+            if (!boxes.empty())
+                ++framesWithBoxes;
+            return absl::OkStatus();
+        }).ok());
+    // Drain the count stream so the scheduler never blocks on it.
+    ASSERT_TRUE(graph.ObserveOutputStream("detections",
+        [&](const mediapipe::Packet&) { return absl::OkStatus(); }).ok());
+
+    std::map<std::string, mediapipe::Packet> sidePackets = {
+        {"source_mode", mediapipe::MakePacket<std::string>("file")},
+        {"source_uri", mediapipe::MakePacket<std::string>(videoPath)},
+        {"width", mediapipe::MakePacket<int>(modelW)},
+        {"height", mediapipe::MakePacket<int>(modelH)},
+        {"full_width", mediapipe::MakePacket<int>(fullW)},
+        {"full_height", mediapipe::MakePacket<int>(fullH)},
+        {"full_va_surface", mediapipe::MakePacket<bool>(false)},
+        {"servable_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_MODEL_NAME)},
+        {"servable_version", mediapipe::MakePacket<int>(1)},
+        {"input_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_INPUT_NAME)},
+        {"server", mediapipe::MakePacket<OVMS_Server*>(cserver)},
+        {"output_path", mediapipe::MakePacket<std::string>(outPath)},
+        {"framerate", mediapipe::MakePacket<int>(30)},
+        {"max_frames", mediapipe::MakePacket<int>(maxFrames)},
+        {"output_mode", mediapipe::MakePacket<std::string>("file")},
+    };
+    ASSERT_TRUE(graph.StartRun(sidePackets).ok());
+    // WaitUntilDone drives the sink's Close(): EOS + finalize the output file.
+    ASSERT_TRUE(graph.WaitUntilDone().ok()) << "graph did not finalize (sink EOS failed?)";
+
+    EXPECT_GT(graphFrames.load(), 0);
+    EXPECT_GE(totalBoxes.load(), 1) << "expected at least one face detection across the clip";
+    EXPECT_GE(framesWithBoxes.load(), 1) << "overlay had no boxes to render";
+
+    // Prove the written file is a readable H.264 stream: reopen and decode a frame.
+    ASSERT_TRUE(std::ifstream(outPath).good()) << "sink did not produce " << outPath;
+    imp_context_t* vctx = nullptr;
+    ASSERT_EQ(imp_context_create(&vctx, nullptr), IMP_OK);
+    imp_video_source_t* vsrc = nullptr;
+    imp_video_source_create(&vsrc, IMP_SOURCE_FILE);
+    imp_video_source_set(vsrc, "path", outPath.c_str());
+    imp_video_decode_opts_t vopts2{};
+    imp_video_stream_t* vstream = nullptr;
+    ASSERT_EQ(imp_video_open(&vstream, vsrc, vctx, &vopts2), IMP_OK) << "encoded file not readable";
+    imp_video_source_destroy(vsrc);
+    imp_tensor_t* vt = nullptr;
+    EXPECT_EQ(imp_video_read_frame(&vt, vstream, 0), IMP_OK) << "no frame from annotated file";
+    if (vt)
+        imp_tensor_release(vt);
+    imp_video_close(vstream);
+    imp_context_destroy(vctx);
+    removeIfTemp(outPath);
+
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSetGlobalVADisplay(cserver, 0));
+    imp_video_set_va_display(nullptr);
+    OVMS_ServerDelete(cserver);
+#endif
+}
+
+// P6a.2 zero-copy variant of the overlay pipeline: the full-res branch stays a
+// GPU VA surface end to end (FULL_VA_SURFACE=true). The overlay maps the surface
+// in place (no host NV12 branch, no full-frame download) and the sink encodes it
+// with the hardware encoder. Proves the annotated MP4 is still readable.
+//
+// KNOWN FAILURE (pre-existing, not a P6b regression): on the current GPU/VA host
+// this test fails at `graph.WaitUntilDone()` below — the hardware (vah264lpenc)
+// encode graph does not finalize. Verified it reproduces identically at commit
+// 032d40685 (the commit that FIRST introduced this test; it does not exist in
+// the parent, so it has never passed here) with NONE of the P6b/RTSP changes
+// present. The sibling SW-encode test (GStreamerOverlayEncodePipeline,
+// full_va_surface=false, openh264enc) finalizes fine, isolating the fault to the
+// VA hardware-encode path. Logs show inference + overlay run (frames produced),
+// then WaitUntilDone() returns a non-OK status with no explicit GStreamer error
+// surfaced (the status string is swallowed). Root cause of the vah264lpenc EOS
+// finalize is still open — tracked separately from the RTSP (P6b) work.
+TEST_F(CAPINonCopy, GStreamerOverlayEncodeVaPipeline) {
+#ifndef BUILD_VAAPITESTS
+    GTEST_SKIP() << "Test not enabled on UBI images";
+#else
+    const std::string videoPath = "/ovms/recording_3_raw.avi";
+    if (!std::ifstream(videoPath).good())
+        GTEST_SKIP() << "test video not found: " << videoPath;
+    if (!imp_video_va_available())
+        GTEST_SKIP() << "VA/GPU surface sharing not available on this host";
+
+    const int modelW = 672;
+    const int modelH = 384;
+    const int fullW = 1280;
+    const int fullH = 720;
+    const int maxFrames = GST_OVERLAY_MAX_FRAMES;
+    const std::string outPath = GST_OVERLAY_VA_OUTPUT_PATH;
+    std::remove(outPath.c_str());
+
+    std::string port = "9000";
+    randomizeAndEnsureFree(port);
+    OVMS_ServerSettings* serverSettings = nullptr;
+    OVMS_ModelsSettings* modelsSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, FACE_DETECTION_ADAS_MODEL_CONFIG_JSON.c_str()));
+    OVMS_Server* cserver = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+
+    VAHelper vaHelper;
+    ASSERT_NE(vaHelper.getVADisplay(), nullptr);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSetGlobalVADisplay(cserver, vaHelper.getVADisplay()));
+    imp_video_set_va_display(vaHelper.getVADisplay());
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+
+    const std::string graphPath = "/ovms/src/test/mediapipe/calculators/gst_video_overlay_encode.pbtxt";
+    std::ifstream graphFile(graphPath);
+    ASSERT_TRUE(graphFile.good()) << "graph not found: " << graphPath;
+    std::stringstream graphText;
+    graphText << graphFile.rdbuf();
+    auto graphConfig = mediapipe::ParseTextProtoOrDie<mediapipe::CalculatorGraphConfig>(graphText.str());
+    mediapipe::CalculatorGraph graph;
+    ASSERT_TRUE(graph.Initialize(graphConfig).ok());
+
+    std::atomic<int> graphFrames{0};
+    std::atomic<int> totalBoxes{0};
+    std::atomic<int> framesWithBoxes{0};
+    ASSERT_TRUE(graph.ObserveOutputStream("detection_boxes",
+        [&](const mediapipe::Packet& p) {
+            const auto& boxes = p.Get<mediapipe::GstDetectionBoxes>();
+            ++graphFrames;
+            totalBoxes += static_cast<int>(boxes.size());
+            if (!boxes.empty())
+                ++framesWithBoxes;
+            return absl::OkStatus();
+        }).ok());
+    ASSERT_TRUE(graph.ObserveOutputStream("detections",
+        [&](const mediapipe::Packet&) { return absl::OkStatus(); }).ok());
+
+    std::map<std::string, mediapipe::Packet> sidePackets = {
+        {"source_mode", mediapipe::MakePacket<std::string>("file")},
+        {"source_uri", mediapipe::MakePacket<std::string>(videoPath)},
+        {"width", mediapipe::MakePacket<int>(modelW)},
+        {"height", mediapipe::MakePacket<int>(modelH)},
+        {"full_width", mediapipe::MakePacket<int>(fullW)},
+        {"full_height", mediapipe::MakePacket<int>(fullH)},
+        {"full_va_surface", mediapipe::MakePacket<bool>(true)},
+        {"servable_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_MODEL_NAME)},
+        {"servable_version", mediapipe::MakePacket<int>(1)},
+        {"input_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_INPUT_NAME)},
+        {"server", mediapipe::MakePacket<OVMS_Server*>(cserver)},
+        {"output_path", mediapipe::MakePacket<std::string>(outPath)},
+        {"framerate", mediapipe::MakePacket<int>(30)},
+        {"max_frames", mediapipe::MakePacket<int>(maxFrames)},
+        {"output_mode", mediapipe::MakePacket<std::string>("file")},
+    };
+    ASSERT_TRUE(graph.StartRun(sidePackets).ok());
+    // KNOWN PRE-EXISTING FAILURE on the current VA host: this returns non-OK
+    // because the vah264lpenc encode graph fails to finalize. Reproduces at
+    // 032d40685 (first commit with this test) without any P6b change. See the
+    // test header comment above for full context.
+    ASSERT_TRUE(graph.WaitUntilDone().ok()) << "graph did not finalize (sink EOS failed?)";
+
+    EXPECT_GT(graphFrames.load(), 0);
+    EXPECT_GE(totalBoxes.load(), 1) << "expected at least one face detection across the clip";
+    EXPECT_GE(framesWithBoxes.load(), 1) << "overlay had no boxes to render";
+
+    // Prove the written file is a readable H.264 stream: reopen and decode a frame.
+    ASSERT_TRUE(std::ifstream(outPath).good()) << "sink did not produce " << outPath;
+    imp_context_t* vctx = nullptr;
+    ASSERT_EQ(imp_context_create(&vctx, nullptr), IMP_OK);
+    imp_video_source_t* vsrc = nullptr;
+    imp_video_source_create(&vsrc, IMP_SOURCE_FILE);
+    imp_video_source_set(vsrc, "path", outPath.c_str());
+    imp_video_decode_opts_t vopts2{};
+    imp_video_stream_t* vstream = nullptr;
+    ASSERT_EQ(imp_video_open(&vstream, vsrc, vctx, &vopts2), IMP_OK) << "encoded file not readable";
+    imp_video_source_destroy(vsrc);
+    imp_tensor_t* vt = nullptr;
+    EXPECT_EQ(imp_video_read_frame(&vt, vstream, 0), IMP_OK) << "no frame from annotated file";
+    if (vt)
+        imp_tensor_release(vt);
+    imp_video_close(vstream);
+    imp_context_destroy(vctx);
+    removeIfTemp(outPath);
+
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSetGlobalVADisplay(cserver, 0));
+    imp_video_set_va_display(nullptr);
+    OVMS_ServerDelete(cserver);
+#endif
+}
+
+// P6c RTSP source: a paced fixture publisher feeds /cam while the overlay graph
+// reads it as an RTSP URL and publishes annotated output to /annotated. Set
+// OVMS_EXTERNAL_RTSP_SOURCE to use an already-running external publisher; that
+// mode leaves MediaMTX and the publisher under the caller's control.
+TEST_F(CAPINonCopy, GStreamerRtspSourceOverlayPipeline) {
+#ifndef BUILD_VAAPITESTS
+    GTEST_SKIP() << "Test not enabled on UBI images";
+#else
+    if (std::getenv("RUN_GPU_TESTS") == nullptr)
+        GTEST_SKIP() << "set RUN_GPU_TESTS=1 to run the RTSP source test";
+    const char* externalSource = std::getenv("OVMS_EXTERNAL_RTSP_SOURCE");
+    const bool useExternalSource = externalSource != nullptr && externalSource[0] != '\0';
+    const std::string videoPath = "/ovms/recording_3_raw.avi";
+    if (!useExternalSource && !std::ifstream(videoPath).good())
+        GTEST_SKIP() << "test video not found: " << videoPath;
+    if (!imp_video_va_available())
+        GTEST_SKIP() << "VA/GPU surface sharing not available on this host";
+
+    const std::string mediamtxBin = "/usr/local/bin/mediamtx";
+    if (!useExternalSource && access(mediamtxBin.c_str(), X_OK) != 0)
+        GTEST_SKIP() << "mediamtx not found at " << mediamtxBin;
+    const std::string inputUrl = useExternalSource
+        ? externalSource : "rtsp://localhost:8554/cam";
+    const char* externalOutput = std::getenv("OVMS_EXTERNAL_RTSP_OUTPUT");
+    const std::string outputUrl = externalOutput != nullptr && externalOutput[0] != '\0'
+        ? externalOutput : "rtsp://localhost:8554/annotated";
+    const std::string pulledPath = "/tmp/pulled_rtsp_source.mp4";
+    const std::string mediamtxCfg = "/tmp/mediamtx_rtsp_source.yml";
+    const std::string publisherPid = "/tmp/gst_rtsp_source_publisher.pid";
+    std::remove(pulledPath.c_str());
+    const auto stopPublisher = [&publisherPid]() {
+        const std::string command =
+            "test ! -f " + publisherPid + " || kill $(cat " + publisherPid +
+            ") 2>/dev/null; rm -f " + publisherPid;
+        const int rc = std::system(command.c_str());
+        (void)rc;
+    };
+    const auto stopMediamtx = []() {
+        const int rc = std::system("pkill -9 -x mediamtx 2>/dev/null");
+        (void)rc;
+    };
+    if (!useExternalSource) {
+        std::remove(publisherPid.c_str());
+        {
+            std::ofstream cfg(mediamtxCfg);
+            cfg << "logLevel: error\n"
+                   "rtsp: yes\n"
+                   "rtspAddress: :8554\n"
+                   "rtmp: no\n"
+                   "hls: no\n"
+                   "webrtc: no\n"
+                   "srt: no\n"
+                   "protocols: [tcp]\n"
+                   "paths:\n"
+                   "  all_others:\n";
+        }
+        stopPublisher();
+        stopMediamtx();
+        const std::string startServer =
+            mediamtxBin + " " + mediamtxCfg + " >/tmp/mediamtx_rtsp_source.log 2>&1 &";
+        ASSERT_EQ(std::system(startServer.c_str()), 0) << "failed to start mediamtx";
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        if (std::system("timeout 2 bash -c 'echo >/dev/tcp/127.0.0.1/8554'") != 0) {
+            stopMediamtx();
+            FAIL() << "MediaMTX did not bind RTSP port 8554";
+        }
+
+        const std::string publisherCommand =
+            "bash -c 'export PATH=/opt/gstreamer/bin:$PATH; "
+            "export LD_LIBRARY_PATH=/opt/gstreamer/lib:/opt/gstreamer/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH; "
+            "export GST_PLUGIN_PATH=/opt/gstreamer/lib/gstreamer-1.0; "
+            "exec gst-launch-1.0 -e filesrc location=" + videoPath +
+            " ! decodebin ! videoconvert ! videorate ! video/x-raw,framerate=30/1 ! "
+            "identity sync=true ! openh264enc ! h264parse ! rtspclientsink location=" +
+            inputUrl + " protocols=tcp' >/tmp/gst_rtsp_source_publisher.log 2>&1 & echo $! > " +
+            publisherPid;
+        ASSERT_EQ(std::system(publisherCommand.c_str()), 0) << "failed to start RTSP input publisher";
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+
+    std::string port = "9000";
+    randomizeAndEnsureFree(port);
+    OVMS_ServerSettings* serverSettings = nullptr;
+    OVMS_ModelsSettings* modelsSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, FACE_DETECTION_ADAS_MODEL_CONFIG_JSON.c_str()));
+    OVMS_Server* cserver = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+
+    VAHelper vaHelper;
+    ASSERT_NE(vaHelper.getVADisplay(), nullptr);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSetGlobalVADisplay(cserver, vaHelper.getVADisplay()));
+    imp_video_set_va_display(vaHelper.getVADisplay());
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+
+    const std::string graphPath = "/ovms/src/test/mediapipe/calculators/gst_video_overlay_encode.pbtxt";
+    std::ifstream graphFile(graphPath);
+    ASSERT_TRUE(graphFile.good()) << "graph not found: " << graphPath;
+    std::stringstream graphText;
+    graphText << graphFile.rdbuf();
+    auto graphConfig = mediapipe::ParseTextProtoOrDie<mediapipe::CalculatorGraphConfig>(graphText.str());
+    mediapipe::CalculatorGraph graph;
+    ASSERT_TRUE(graph.Initialize(graphConfig).ok());
+
+    std::atomic<int> graphFrames{0};
+    std::atomic<int> totalBoxes{0};
+    ASSERT_TRUE(graph.ObserveOutputStream("detection_boxes",
+        [&](const mediapipe::Packet& packet) {
+            const auto& boxes = packet.Get<mediapipe::GstDetectionBoxes>();
+            ++graphFrames;
+            totalBoxes += static_cast<int>(boxes.size());
+            return absl::OkStatus();
+        }).ok());
+    ASSERT_TRUE(graph.ObserveOutputStream("detections",
+        [&](const mediapipe::Packet&) { return absl::OkStatus(); }).ok());
+
+    std::map<std::string, mediapipe::Packet> sidePackets = {
+        {"source_mode", mediapipe::MakePacket<std::string>("rtsp")},
+        {"source_uri", mediapipe::MakePacket<std::string>(inputUrl)},
+        {"width", mediapipe::MakePacket<int>(672)},
+        {"height", mediapipe::MakePacket<int>(384)},
+        {"full_width", mediapipe::MakePacket<int>(1280)},
+        {"full_height", mediapipe::MakePacket<int>(720)},
+        {"full_va_surface", mediapipe::MakePacket<bool>(false)},
+        {"servable_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_MODEL_NAME)},
+        {"servable_version", mediapipe::MakePacket<int>(1)},
+        {"input_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_INPUT_NAME)},
+        {"server", mediapipe::MakePacket<OVMS_Server*>(cserver)},
+        {"output_path", mediapipe::MakePacket<std::string>(outputUrl)},
+        {"output_mode", mediapipe::MakePacket<std::string>("rtsp")},
+        {"framerate", mediapipe::MakePacket<int>(30)},
+        {"max_frames", mediapipe::MakePacket<int>(0)},
+    };
+
+    std::future<int> puller;
+    if (!useExternalSource) {
+        const std::string pullCommand =
+            "bash -c 'export PATH=/opt/gstreamer/bin:$PATH; "
+            "export LD_LIBRARY_PATH=/opt/gstreamer/lib:/opt/gstreamer/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH; "
+            "export GST_PLUGIN_PATH=/opt/gstreamer/lib/gstreamer-1.0; "
+            "for i in $(seq 1 5); do "
+            "timeout -s INT 8 gst-launch-1.0 -e rtspsrc location=" + outputUrl +
+            " protocols=tcp latency=0 ! rtph264depay ! h264parse ! mp4mux ! "
+            "filesink location=" + pulledPath + " >/tmp/gst_rtsp_source_pull.log 2>&1; "
+            "test -s " + pulledPath + " && exit 0; rm -f " + pulledPath + "; "
+            "done; exit 1'";
+        puller = std::async(std::launch::async, [pullCommand]() {
+            return std::system(pullCommand.c_str());
+        });
+    }
+
+    std::atomic<bool> runOk{false};
+    std::atomic<bool> doneOk{false};
+    std::thread graphWorker([&]() {
+        if (!graph.StartRun(sidePackets).ok())
+            return;
+        runOk = true;
+        doneOk = graph.WaitUntilDone().ok();
+    });
+    graphWorker.join();
+    const int pullResult = useExternalSource ? 0 : puller.get();
+    if (!useExternalSource) {
+        stopPublisher();
+        stopMediamtx();
+    }
+
+    EXPECT_TRUE(runOk.load()) << "graph did not start";
+    EXPECT_TRUE(doneOk.load()) << "graph did not stop cleanly after source EOS";
+    EXPECT_GT(graphFrames.load(), 0);
+    EXPECT_GE(totalBoxes.load(), 1) << "expected at least one face detection";
+
+    if (!useExternalSource) {
+        EXPECT_EQ(pullResult, 0) << "failed to pull annotated RTSP output";
+        std::ifstream pulled(pulledPath, std::ios::binary | std::ios::ate);
+        const bool pulledReadable = pulled.good() && pulled.tellg() > 0;
+        EXPECT_TRUE(pulledReadable) << "puller did not capture annotated RTSP output";
+        if (pulledReadable) {
+        imp_context_t* vctx = nullptr;
+        ASSERT_EQ(imp_context_create(&vctx, nullptr), IMP_OK);
+        imp_video_source_t* vsrc = nullptr;
+        imp_video_source_create(&vsrc, IMP_SOURCE_FILE);
+        imp_video_source_set(vsrc, "path", pulledPath.c_str());
+        imp_video_decode_opts_t vopts{};
+        imp_video_stream_t* vstream = nullptr;
+        EXPECT_EQ(imp_video_open(&vstream, vsrc, vctx, &vopts), IMP_OK);
+        imp_video_source_destroy(vsrc);
+        if (vstream) {
+            imp_tensor_t* frame = nullptr;
+            EXPECT_EQ(imp_video_read_frame(&frame, vstream, 0), IMP_OK);
+            if (frame)
+                imp_tensor_release(frame);
+            imp_video_close(vstream);
+        }
+        imp_context_destroy(vctx);
+        }
+    }
+    std::remove(pulledPath.c_str());
+    if (!useExternalSource)
+        std::remove(mediamtxCfg.c_str());
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSetGlobalVADisplay(cserver, 0));
+    imp_video_set_va_display(nullptr);
+    OVMS_ServerDelete(cserver);
+#endif
+}
+
+// P6b RTSP output: the overlay pipeline publishes its annotated H.264 stream to
+// an external RTSP server (MediaMTX) via rtspclientsink instead of writing a
+// file (OUTPUT_MODE=rtsp). OVMS is a pure producer. The graph publishes on a
+// worker thread (WaitUntilDone blocks until the clip ends); meanwhile a client
+// pulls the live stream to /tmp/pulled.mp4, which is reopened and decoded to
+// prove the published stream is readable H.264. A mid-publish client disconnect
+// must not crash the graph. The FILE path and all existing graphs are unchanged.
+TEST_F(CAPINonCopy, GStreamerOverlayEncodeRtspPipeline) {
+#ifndef BUILD_VAAPITESTS
+    GTEST_SKIP() << "Test not enabled on UBI images";
+#else
+    if (std::getenv("RUN_GPU_TESTS") == nullptr)
+        GTEST_SKIP() << "set RUN_GPU_TESTS=1 to run the RTSP publish test";
+    const std::string videoPath = "/ovms/recording_3_raw.avi";
+    if (!std::ifstream(videoPath).good())
+        GTEST_SKIP() << "test video not found: " << videoPath;
+    if (!imp_video_va_available())
+        GTEST_SKIP() << "VA/GPU surface sharing not available on this host";
+
+    // MediaMTX provides the external RTSP server (producer-only test fixture).
+    const std::string mediamtxBin = "/usr/local/bin/mediamtx";
+    if (access(mediamtxBin.c_str(), X_OK) != 0)
+        GTEST_SKIP() << "mediamtx not found at " << mediamtxBin;
+
+    const std::string rtspUrl = "rtsp://localhost:8554/test";
+    const std::string pulledPath = "/tmp/pulled.mp4";
+    const std::string mediamtxCfg = "/tmp/mediamtx_test.yml";
+    std::remove(pulledPath.c_str());
+
+    // Minimal MediaMTX config: RTSP on 8554, TCP only, auto-create paths.
+    {
+        std::ofstream cfg(mediamtxCfg);
+        cfg << "logLevel: error\n"
+               "rtsp: yes\n"
+               "rtspAddress: :8554\n"
+               "rtmp: no\n"
+               "hls: no\n"
+               "webrtc: no\n"
+               "srt: no\n"
+               "protocols: [tcp]\n"
+               "paths:\n"
+               "  all_others:\n";
+    }
+    // GStreamer env for the out-of-process puller (from-source build at /opt/gstreamer).
+    auto stopMediamtx = []() {
+        int rc = std::system("pkill -f 'mediamtx /tmp/mediamtx_test.yml' 2>/dev/null");
+        (void)rc;
+    };
+    stopMediamtx();  // clear any stale instance from a previous run
+    const std::string startCmd =
+        mediamtxBin + " " + mediamtxCfg + " >/tmp/mediamtx_test.log 2>&1 & echo started";
+    ASSERT_EQ(std::system(startCmd.c_str()), 0) << "failed to start mediamtx";
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    const int modelW = 672;
+    const int modelH = 384;
+    const int fullW = 1280;
+    const int fullH = 720;
+    const int maxFrames = 0;  // whole clip: keep publishing long enough for the puller to connect
+
+    std::string port = "9000";
+    randomizeAndEnsureFree(port);
+    OVMS_ServerSettings* serverSettings = nullptr;
+    OVMS_ModelsSettings* modelsSettings = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, FACE_DETECTION_ADAS_MODEL_CONFIG_JSON.c_str()));
+    OVMS_Server* cserver = nullptr;
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
+
+    VAHelper vaHelper;
+    ASSERT_NE(vaHelper.getVADisplay(), nullptr);
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSetGlobalVADisplay(cserver, vaHelper.getVADisplay()));
+    imp_video_set_va_display(vaHelper.getVADisplay());
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
+
+    const std::string graphPath = "/ovms/src/test/mediapipe/calculators/gst_video_overlay_encode.pbtxt";
+    std::ifstream graphFile(graphPath);
+    ASSERT_TRUE(graphFile.good()) << "graph not found: " << graphPath;
+    std::stringstream graphText;
+    graphText << graphFile.rdbuf();
+    auto graphConfig = mediapipe::ParseTextProtoOrDie<mediapipe::CalculatorGraphConfig>(graphText.str());
+    mediapipe::CalculatorGraph graph;
+    ASSERT_TRUE(graph.Initialize(graphConfig).ok());
+
+    std::atomic<int> graphFrames{0};
+    std::atomic<int> totalBoxes{0};
+    std::atomic<int> framesWithBoxes{0};
+    ASSERT_TRUE(graph.ObserveOutputStream("detection_boxes",
+        [&](const mediapipe::Packet& p) {
+            const auto& boxes = p.Get<mediapipe::GstDetectionBoxes>();
+            ++graphFrames;
+            totalBoxes += static_cast<int>(boxes.size());
+            if (!boxes.empty())
+                ++framesWithBoxes;
+            return absl::OkStatus();
+        }).ok());
+    ASSERT_TRUE(graph.ObserveOutputStream("detections",
+        [&](const mediapipe::Packet&) { return absl::OkStatus(); }).ok());
+
+    std::map<std::string, mediapipe::Packet> sidePackets = {
+        {"source_mode", mediapipe::MakePacket<std::string>("file")},
+        {"source_uri", mediapipe::MakePacket<std::string>(videoPath)},
+        {"width", mediapipe::MakePacket<int>(modelW)},
+        {"height", mediapipe::MakePacket<int>(modelH)},
+        {"full_width", mediapipe::MakePacket<int>(fullW)},
+        {"full_height", mediapipe::MakePacket<int>(fullH)},
+        {"full_va_surface", mediapipe::MakePacket<bool>(false)},
+        {"servable_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_MODEL_NAME)},
+        {"servable_version", mediapipe::MakePacket<int>(1)},
+        {"input_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_INPUT_NAME)},
+        {"server", mediapipe::MakePacket<OVMS_Server*>(cserver)},
+        {"output_path", mediapipe::MakePacket<std::string>(rtspUrl)},
+        {"output_mode", mediapipe::MakePacket<std::string>("rtsp")},
+        {"framerate", mediapipe::MakePacket<int>(30)},
+        {"max_frames", mediapipe::MakePacket<int>(maxFrames)},
+    };
+
+    // The file encoder publishes as-fast-as-possible (no real-time pacing yet;
+    // see TODO in gst_loader.cpp / P6b pacing follow-up), so the whole clip is
+    // pushed in ~1-2s. To win the connect race deterministically, run a
+    // background retry-puller that keeps attempting rtspsrc until the publisher
+    // announces the path, then stays connected until publish EOS (which flushes
+    // mp4mux). Each pre-announce attempt 404-fails fast, so retries are cheap.
+    const std::string pullLoopCmd =
+        "bash -c 'export PATH=/opt/gstreamer/bin:$PATH; "
+        "export LD_LIBRARY_PATH=/opt/gstreamer/lib:/opt/gstreamer/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH; "
+        "export GST_PLUGIN_PATH=/opt/gstreamer/lib/gstreamer-1.0; "
+        "for i in $(seq 1 40); do "
+        "timeout -s INT 10 gst-launch-1.0 -e "
+        "rtspsrc location=" + rtspUrl + " protocols=tcp latency=0 ! "
+        "rtph264depay ! h264parse ! mp4mux ! filesink location=" + pulledPath +
+        " >/tmp/pull_test.log 2>&1; "
+        "if [ -s " + pulledPath + " ]; then break; fi; sleep 0.2; "
+        "done' >/tmp/pull_loop.log 2>&1 & echo started";
+    auto stopPuller = []() {
+        int rc = std::system("pkill -f 'rtspsrc location=rtsp://localhost:8554/test' 2>/dev/null; "
+                             "pkill -f 'seq 1 40' 2>/dev/null");
+        (void)rc;
+    };
+    ASSERT_EQ(std::system(pullLoopCmd.c_str()), 0) << "failed to start puller";
+
+    // Publish on a worker thread: WaitUntilDone() blocks until the whole clip is
+    // pushed to MediaMTX. A client disconnect mid-publish must not fail this.
+    std::atomic<bool> runOk{false};
+    std::atomic<bool> doneOk{false};
+    std::thread publisher([&]() {
+        if (!graph.StartRun(sidePackets).ok())
+            return;
+        runOk = true;
+        doneOk = graph.WaitUntilDone().ok();
+    });
+
+    publisher.join();
+    // Let a mid-publish puller finalize its MP4 after the publisher EOS'd.
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    stopPuller();
+
+    EXPECT_TRUE(runOk.load()) << "graph did not start";
+    EXPECT_TRUE(doneOk.load()) << "graph did not finalize (publish EOS failed?)";
+    EXPECT_GT(graphFrames.load(), 0);
+    EXPECT_GE(totalBoxes.load(), 1) << "expected at least one face detection across the clip";
+
+    // Prove the published stream is readable H.264: reopen the pulled MP4 and decode.
+    std::ifstream pulled(pulledPath, std::ios::binary | std::ios::ate);
+    ASSERT_TRUE(pulled.good() && pulled.tellg() > 0)
+        << "puller did not capture any data from " << rtspUrl;
+    imp_context_t* vctx = nullptr;
+    ASSERT_EQ(imp_context_create(&vctx, nullptr), IMP_OK);
+    imp_video_source_t* vsrc = nullptr;
+    imp_video_source_create(&vsrc, IMP_SOURCE_FILE);
+    imp_video_source_set(vsrc, "path", pulledPath.c_str());
+    imp_video_decode_opts_t vopts2{};
+    imp_video_stream_t* vstream = nullptr;
+    ASSERT_EQ(imp_video_open(&vstream, vsrc, vctx, &vopts2), IMP_OK) << "pulled stream not readable";
+    imp_video_source_destroy(vsrc);
+    imp_tensor_t* vt = nullptr;
+    EXPECT_EQ(imp_video_read_frame(&vt, vstream, 0), IMP_OK) << "no frame from pulled stream";
+    if (vt)
+        imp_tensor_release(vt);
+    imp_video_close(vstream);
+    imp_context_destroy(vctx);
+
+    std::remove(pulledPath.c_str());
+    stopMediamtx();
+    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSetGlobalVADisplay(cserver, 0));
+    imp_video_set_va_display(nullptr);
     OVMS_ServerDelete(cserver);
 #endif
 }

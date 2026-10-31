@@ -44,6 +44,10 @@ cc_library(
         "@windows_opencl2//:opencl2",
     ],
     defines = ["OV_GPU_USE_OPENCL_HPP"],
+    # OpenVINO's intel_gpu OCL/D3D remote context headers (ocl.hpp/dx.hpp) call
+    # OpenCL runtime functions (clRelease*); link the ICD import library so
+    # consumers of the D3D11/OCL tensor factories resolve those symbols.
+    linkopts = ["C:/opt/opencl/OpenCL.lib"],
     # TODO: Include headers when enabling OCL/VAAPI
     # copts = ["-I./"],
     # linkopts = ["-lopenvino"],

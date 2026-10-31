@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "deserialization_common.hpp"
 
+#include <chrono>
 #include <openvino/runtime/infer_request.hpp>
 
 #include "itensorfactory.hpp"
@@ -28,7 +29,14 @@ Status InputSink<ov::InferRequest&>::give(const std::string& name, ov::Tensor& t
     Status status;
     try {
         OV_LOGGER("ov::InferRequest: {}, request.set_tensor({}, tensor: {})", reinterpret_cast<void*>(&requester), name, reinterpret_cast<void*>(&tensor));
+        const bool timingEnabled = spdlog::default_logger_raw()->should_log(spdlog::level::debug);
+        const auto setTensorStart = timingEnabled ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
         requester.set_tensor(name, tensor);
+        if (timingEnabled) {
+            const auto setTensorMs = std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - setTensorStart).count();
+            SPDLOG_DEBUG("Inference executor InputSink::give name={} set_tensor_ms={:.6f}", name, setTensorMs);
+        }
         // OV implementation the ov::Exception is not
         // a base class for all other exceptions thrown from OV.
         // OV can throw exceptions derived from std::logic_error.

@@ -106,6 +106,19 @@ ARG OPENCV_VERSION=4.14.0
 RUN OPENCV_VERSION=${OPENCV_VERSION} ./install_opencv.sh
 ####### End of OpenCV
 
+################### GSTREAMER BUILD ##########################
+# Build GStreamer from source so we control exact version and plugin set.
+# Legal: gpl=disabled, ugly=disabled — no GPL/patent-risky plugins.
+# Installed to /opt/gstreamer (self-contained, includes glib headers).
+FROM base_build as gstreamer-builder
+ARG GST_VERSION=1.26.2
+ARG JOBS=8
+ENV DEBIAN_FRONTEND=noninteractive
+SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
+
+COPY extras/gstreamer/build_gstreamer.sh /tmp/build_gstreamer.sh
+RUN GST_VERSION=${GST_VERSION} JOBS=${JOBS} /tmp/build_gstreamer.sh
+
 ################### BASE BUILD ##########################
 FROM base_build as build
 ARG BASE_IMAGE
@@ -141,6 +154,32 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
             if [ "$BASE_OS" == "ubuntu26" ]; then apt-get install -y --no-install-recommends libxml2-16; else apt-get install -y --no-install-recommends libxml2; fi && \
             apt-get clean && \
             rm -rf /var/lib/apt/lists/*
+
+# GStreamer built from source — bring in the self-contained prefix.
+# Runtime dlopen picks up /opt/gstreamer/lib at runtime via LD_LIBRARY_PATH or ldconfig.
+COPY --from=gstreamer-builder /opt/gstreamer /opt/gstreamer
+RUN echo /opt/gstreamer/lib > /etc/ld.so.conf.d/gstreamer.conf && ldconfig
+# The build container always carries the full GStreamer runtime (gst-inspect, gst-launch, plugins) for testing.
+ENV PATH="/opt/gstreamer/bin:${PATH}"
+ENV GST_PLUGIN_PATH=/opt/gstreamer/lib/gstreamer-1.0
+
+# Intel VA-API media driver — required for GStreamer vapostproc GPU decode.
+# Use Intel's official GPU repository for up-to-date libva + iHD driver (Ubuntu apt ships
+# 24.1.0 which crashes on DG2/Flex 140; Intel repo has 24.3.4+ with the fix).
+RUN if [ "$BASE_OS" = "ubuntu24" ]; then \
+        apt-get update && \
+        apt-get install -y --no-install-recommends wget gpg && \
+        wget -qO - https://repositories.intel.com/gpu/intel-graphics.key | \
+            gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg && \
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/gpu/ubuntu noble client" > \
+            /etc/apt/sources.list.d/intel-gpu-noble.list && \
+        apt-get update && \
+        apt-get install -y --no-install-recommends \
+            intel-media-va-driver-non-free \
+            libva2 \
+            libva-drm2 && \
+        apt-get clean && rm -rf /var/lib/apt/lists/* ; \
+    fi
 RUN if [ "$BASE_OS" == "ubuntu22" ] ; then apt-get update && \
     apt-get install -y --no-install-recommends python3.10-dev python3.10-venv && \
     apt-get clean && rm -rf /var/lib/apt/lists/* ; fi
@@ -430,7 +469,7 @@ ARG INSTALL_DRIVER_VERSION="24.39.31294"
 COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
 # hadolint ignore=DL3003,SC2164
 RUN apt-get update ; \
-    if [ "$BASE_OS" == "ubuntu26" ]; then apt-get install -y --no-install-recommends curl ca-certificates libxml2-16; else apt-get install -y --no-install-recommends curl ca-certificates libxml2; fi || exit 1; \
+    if [ "$BASE_OS" == "ubuntu26" ]; then apt-get install -y --no-install-recommends curl ca-certificates libxml2-16 libva2 libva-drm2 libdrm2; else apt-get install -y --no-install-recommends curl ca-certificates libxml2 libva2 libva-drm2 libdrm2; fi || exit 1; \
     # espeak-ng shared library + data are shipped inside /ovms by the Bazel
     # build (controlled via --//:espeak=on/off in debug_bazel_flags);
     # no system package is required at runtime.
@@ -475,6 +514,7 @@ RUN apt-get update -y ; \
     apt-get install libpython$python_version --no-install-recommends -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /tmp/*
 
+# GStreamer is not shipped; see extras/gstreamer/Dockerfile.ubuntu for the optional GStreamer image.
 ENV LD_LIBRARY_PATH=/ovms/lib
 ENV PATH="$PATH:/ovms/bin"
 # When espeak-ng data is present in the package, point runtime to it.

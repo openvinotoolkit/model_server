@@ -1,0 +1,13 @@
+{
+    "va_display": {
+        "target_device": "GPU.0",
+        "render_node": "/dev/dri/renderD128"
+    },
+    "model_config_list": [
+        {"config": {
+            "name": "face_detection_adas",
+            "base_path": "/ovms/src/test/face_detection_adas",
+            "target_device": "GPU.0"
+        }}
+    ]
+}

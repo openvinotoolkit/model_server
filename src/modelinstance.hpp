@@ -54,6 +54,7 @@ namespace intel_gpu {
 namespace ocl {
 class ClContext;
 class VAContext;
+class D3DContext;
 }  // namespace ocl
 }  // namespace intel_gpu
 class RemoteTensor;
@@ -73,6 +74,11 @@ template <typename T1, typename T2>
 struct RequestProcessor;
 
 extern void* globalVaDisplay;
+void setGlobalVaDisplay(void* vaDisplay, const std::string& targetDevice = {});
+// Windows D3D11 analog of globalVaDisplay: a server-owned ID3D11Device registered
+// before GPU models load, so they compile on a matching D3DContext. nullptr = off.
+extern void* globalD3D11Device;
+void setGlobalD3D11Device(void* device);
 
 class DynamicModelParameter {
 public:
@@ -125,6 +131,8 @@ protected:
     std::shared_ptr<ov::CompiledModel> compiledModel;
 
 public:
+     ov::CompiledModel* getCompiledModel() const { return compiledModel.get(); }
+
     // TODO windows
 #ifdef __linux__
     cl_context oclContextC{nullptr};
@@ -138,6 +146,9 @@ protected:
 #ifdef __linux__
     std::unique_ptr<ov::intel_gpu::ocl::ClContext> oclContextCpp;
     std::unique_ptr<ov::intel_gpu::ocl::VAContext> vaContext;
+#endif
+#ifdef _WIN32
+    std::unique_ptr<ov::intel_gpu::ocl::D3DContext> d3dContext;
 #endif
     std::unordered_map<int, std::shared_ptr<IOVTensorFactory>> tensorFactories;
     /**
