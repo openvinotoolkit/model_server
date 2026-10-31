@@ -16,12 +16,15 @@
 #include <atomic>
 #include <condition_variable>
 #include <fstream>
+#include <iterator>
 #include <mutex>
 #include <optional>
 #include <set>
 #include <sstream>
 #include <string>
 #include <thread>
+#include <tuple>
+#include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -29,6 +32,7 @@
 #include "../config.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../mediapipe_runtime_api.hpp"
 #include "src/metrics/metric_config.hpp"
 #include "src/metrics/metric_module.hpp"
 #include "../precision.hpp"
@@ -700,6 +704,101 @@ TEST_F(MetricFlowTest, CurrentGraphs) {
 
 // Test MP metrics when mediapipe is enabled at build time
 #if (MEDIAPIPE_DISABLE == 0)
+class LLMMetricsFlowTest : public TestWithTempDir, public ::testing::WithParamInterface<std::tuple<bool, bool, bool>> {
+protected:
+    ServerWithMockedManagerModule server;
+    spdlog::level::level_enum previousLogLevel = spdlog::level::info;
+
+    void SetUp() override {
+#ifdef _WIN32
+        GTEST_SKIP() << "LLM metrics flow tests require Linux test models";
+#endif
+        TestWithTempDir::SetUp();
+        previousLogLevel = llm_calculator_logger->level();
+        llm_calculator_logger->set_level(spdlog::level::info);
+        std::vector<std::string> arguments{"ovms", "--config_path", "/unused", "--rest_port", "8080"};
+        std::vector<char*> argv;
+        for (auto& argument : arguments) {
+            argv.push_back(argument.data());
+        }
+        Config::instance().parse(argv.size(), argv.data());
+        const std::string sourceGraphPath = getGenericFullPathForSrcTest(std::get<0>(GetParam()) ? "/ovms/src/test/llm/visual_language_model/vlm_cb_regular.pbtxt" : "/ovms/src/test/llm/lm_cb_regular.pbtxt");
+        std::ifstream graphFile(sourceGraphPath);
+        std::string graphContent{std::istreambuf_iterator<char>(graphFile), std::istreambuf_iterator<char>()};
+        const size_t nodeStart = graphContent.find("node {");
+        ASSERT_NE(nodeStart, std::string::npos);
+        graphContent.insert(nodeStart + 6, "\n    input_side_packet: \"CALCULATOR_METRICS:calculator_metrics\"\n");
+        graphContent.insert(0, std::get<2>(GetParam()) ? "# OVMS_GRAPH_QUEUE_MAX_SIZE: 2\n" : "# OVMS_GRAPH_QUEUE_MAX_SIZE: 0\n");
+        const std::string graphPath = directoryPath + "/graph.pbtxt";
+        ASSERT_TRUE(createConfigFileWithContent(graphContent, graphPath));
+        const std::string content = R"({
+            "model_config_list": [],
+            "mediapipe_config_list": [{"name": "metrics_llm", "graph_path": ")" +
+                                    graphPath + R"("}],
+            "monitoring": {"metrics": {
+                "enable": true,
+                "metrics_list": [
+                    "ovms_llm_kv_cache_utilization_percent",
+                    "ovms_llm_prefill_speed_tokens_per_second"
+                ]
+            }}
+        })";
+        const std::string configPath = directoryPath + "/config.json";
+        ASSERT_TRUE(createConfigFileWithContent(content, configPath));
+        ASSERT_EQ(server.getManager().loadConfig(configPath), StatusCode::OK);
+    }
+
+    void TearDown() override {
+        auto& factory = server.getManager().getMediapipeFactory();
+        if (factory.definitionExists("metrics_llm")) {
+            EXPECT_EQ(factory.retireDefinition("metrics_llm"), StatusCode::OK);
+        }
+        llm_calculator_logger->set_level(previousLogLevel);
+        TestWithTempDir::TearDown();
+    }
+};
+
+TEST_P(LLMMetricsFlowTest, PublishesAtInfoLevelAndResetsAfterIdleUnload) {
+    HttpRestApiHandler handler(server, 5);
+    const std::string endpoint = "/v1/chat/completions";
+    HttpRequestComponents requestComponents;
+    HttpResponseComponents responseComponents;
+    const std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
+    ASSERT_EQ(handler.parseRequestComponents(requestComponents, "POST", endpoint, headers), StatusCode::OK);
+    auto writer = std::make_shared<MockedServerRequestInterface>();
+    auto parser = std::make_shared<MockedMultiPartParser>();
+    ON_CALL(*writer, PartialReplyBegin(testing::_)).WillByDefault(testing::Invoke([](std::function<void()> fn) { fn(); }));
+    const bool streaming = std::get<1>(GetParam());
+    const std::string request = std::string{R"({
+        "model": "metrics_llm",
+        "messages": [{"role": "user", "content": "What is the weather like today?"}],
+        "max_tokens": 5,
+        "temperature": 0,
+        "stream": )"} + (streaming ? "true" : "false") +
+                                "}";
+    for (int i = 1; i <= 2; ++i) {
+        std::string response;
+        ASSERT_EQ(handler.dispatchToProcessor(endpoint, request, &response, requestComponents,
+                      responseComponents, writer, parser),
+            streaming ? StatusCode::PARTIAL_END : StatusCode::OK);
+        const std::string scrape = server.collect();
+        EXPECT_THAT(scrape, HasSubstr("ovms_llm_kv_cache_utilization_percent{name=\"metrics_llm\",node=\"llmNode1\"} "));
+        EXPECT_THAT(scrape, HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"metrics_llm\",node=\"llmNode1\"} " + std::to_string(i) + "\n"));
+        EXPECT_THAT(scrape, Not(HasSubstr("ovms_llm_prefill_speed_tokens_per_second_sum{name=\"metrics_llm\",node=\"llmNode1\"} 0\n")));
+        EXPECT_THAT(scrape, HasSubstr("custom_llm_tomato_occurrences_total{name=\"metrics_llm\",node=\"llmNode1\"} "));
+    }
+    auto& manager = server.getManager();
+    auto& factory = manager.getMediapipeFactory();
+    ASSERT_EQ(factory.putToSleepDefinition("metrics_llm"), StatusCode::OK);
+    EXPECT_THAT(server.collect(), Not(HasSubstr("ovms_llm_")));
+    EXPECT_THAT(server.collect(), Not(HasSubstr("custom_llm_tomato_occurrences_total")));
+    ASSERT_EQ(factory.wakeUpDefinition("metrics_llm", manager), StatusCode::OK);
+    EXPECT_THAT(server.collect(), HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"metrics_llm\",node=\"llmNode1\"} 0\n"));
+}
+
+INSTANTIATE_TEST_SUITE_P(LLMAndVLM, LLMMetricsFlowTest,
+    ::testing::Combine(::testing::Bool(), ::testing::Bool(), ::testing::Bool()));
+
 std::string MetricFlowTest::prepareConfigContent() {
     auto configContent = std::string{R"({
         "monitoring": {

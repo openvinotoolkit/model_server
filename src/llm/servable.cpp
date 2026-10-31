@@ -47,6 +47,20 @@
 
 namespace ovms {
 
+void GenAiServableExecutionContext::observeGeneratedText(const std::vector<Delta>& deltas, bool finish) {
+    if (!generatedTextObserver) {
+        return;
+    }
+    for (const auto& delta : deltas) {
+        if (const auto* content = std::get_if<ContentDelta>(&delta)) {
+            generatedTextObserver(content->text, false);
+        }
+    }
+    if (finish) {
+        generatedTextObserver({}, true);
+    }
+}
+
 double calculatePrefillSpeed(size_t inputTokenCount, double ttftMs) {
     return ttftMs > 0.0 ? (1000.0 * inputTokenCount) / ttftMs : 0.0;
 }
@@ -351,6 +365,7 @@ absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServabl
             tempStreamer->end();
         }
 
+        executionContext->observeGeneratedText(localDeltas, true);
         allDeltas.push_back(std::move(localDeltas));
         finishReasons.push_back(output.finish_reason);
         if (hasLogprobs) {
@@ -423,6 +438,7 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     // Drain all deltas accumulated during this write()/end() cycle.
     std::vector<Delta> deltas = executionContext->deltaChannel.drain();
     const size_t count = deltas.size();
+    executionContext->observeGeneratedText(deltas, isFinishing);
 
     if (!isFinishing) {
         // For RESPONSES endpoint, always call serializeStreamingChunk so lifecycle
@@ -514,6 +530,7 @@ absl::Status prepareLegacyPartialResponse(std::shared_ptr<GenAiServableExecution
     };
 
     if (!isFinishing) {
+        executionContext->observeGeneratedText(deltas, false);
         // For RESPONSES endpoint, always call serializeStreamingChunk so that
         // output item initialization events are emitted even before the tokenizer produces text.
         if (deltas.size() > 0 || executionContext->apiHandler->getEndpoint() == Endpoint::RESPONSES) {
@@ -554,6 +571,7 @@ absl::Status prepareLegacyPartialResponse(std::shared_ptr<GenAiServableExecution
         for (auto& d : executionContext->deltaChannel.drain()) {
             deltas.push_back(std::move(d));
         }
+        executionContext->observeGeneratedText(deltas, true);
         // Legacy generation path always runs with deltas=1, so we read the single finish reason at index 0.
         const ov::genai::GenerationFinishReason finishReason = legacyCtx->legacyFinishReason();
         legacyCtx->setLegacyUsage(*executionContext->apiHandler);

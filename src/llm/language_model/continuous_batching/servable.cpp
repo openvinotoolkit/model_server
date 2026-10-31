@@ -37,8 +37,21 @@
 #include "../../text_utils.hpp"
 #include "llm_executor.hpp"
 #include "servable.hpp"
+#include "../../../metrics/llm_metric_reporter.hpp"
 
 namespace ovms {
+
+void ContinuousBatchingServable::recordPrefillMetrics(GenAiServableExecutionContext& executionContext) {
+    auto& cbExecutionContext = static_cast<ContinuousBatchingServableExecutionContext&>(executionContext);
+    if (!properties->metricReporter || !properties->metricReporter->isPrefillSpeedEnabled() ||
+        !executionContext.perfMetrics || cbExecutionContext.prefillMetricsRecorded) {
+        return;
+    }
+    cbExecutionContext.prefillMetricsRecorded = true;
+    auto& perfMetrics = *executionContext.perfMetrics;
+    properties->metricReporter->observePrefillSpeed(
+        calculatePrefillSpeed(perfMetrics.get_num_input_tokens(), perfMetrics.get_ttft().mean));
+}
 
 void ContinuousBatchingServable::logPerfMetrics(ov::genai::PerfMetrics& perfMetrics) {
     const size_t inputTokenCount = perfMetrics.get_num_input_tokens();
@@ -171,6 +184,9 @@ absl::Status ContinuousBatchingServable::readPartialExecutionResults(std::shared
 
 absl::Status ContinuousBatchingServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto status = GenAiServable::prepareCompleteResponse(executionContext);
+    if (status.ok()) {
+        recordPrefillMetrics(*executionContext);
+    }
     if (status.ok() && executionContext->perfMetrics && llm_calculator_logger->should_log(spdlog::level::debug)) {
         logPerfMetrics(*executionContext->perfMetrics);
     }
@@ -182,6 +198,9 @@ absl::Status ContinuousBatchingServable::preparePartialResponse(std::shared_ptr<
     if (!status.ok()) {
         stopGenerationOnResponseError(std::static_pointer_cast<ContinuousBatchingServableExecutionContext>(executionContext));
         return status;
+    }
+    if (!executionContext->sendLoopbackSignal) {
+        recordPrefillMetrics(*executionContext);
     }
     if (status.ok() &&
         !executionContext->sendLoopbackSignal &&

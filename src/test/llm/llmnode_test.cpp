@@ -50,8 +50,11 @@
 #include "../../llm/servable.hpp"
 #include "../../llm/servable_initializer.hpp"
 #include "../../llm/text_utils.hpp"
+#include "../../llm/tomato_metric.hpp"
 #include "../../mediapipe_internal/mediapipefactory.hpp"
 #include "../../mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "../../metrics/llm_metric_reporter.hpp"
+#include "../../metrics/metric_config.hpp"
 #include "../../ov_utils.hpp"
 #include "../../server.hpp"
 #include "src/filesystem/filesystem.hpp"
@@ -67,6 +70,123 @@
 #include "src/test/environment.hpp"
 
 using namespace ovms;
+
+class TomatoMetricTest : public ::testing::Test {
+protected:
+    MetricRegistry registry;
+    CalculatorMetrics metrics{&registry, "graph", "llm"};
+    std::shared_ptr<CalculatorCounter> counter = metrics.registerCounter("custom_tomato_total", "Tomatoes.");
+    TomatoMetric matcher{counter};
+};
+
+TEST_F(TomatoMetricTest, CountsCaseInsensitiveWholeWordsNotSubstrings) {
+    matcher.consume("tomato TOMATO Tomato! tomatoes _tomato tomato_ tomato2 2tomato tomatotomato", true);
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("custom_tomato_total{name=\"graph\",node=\"llm\"} 3\n"));
+}
+
+TEST_F(TomatoMetricTest, EveryChunkBoundaryHasSameResult) {
+    const std::string text = "tomato, TOMATO tomatoes tomato";
+    for (size_t split = 0; split <= text.size(); ++split) {
+        matcher.consume(std::string_view(text).substr(0, split), false);
+        matcher.consume(std::string_view(text).substr(split), true);
+    }
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("custom_tomato_total{name=\"graph\",node=\"llm\"} " + std::to_string(3 * (text.size() + 1)) + "\n"));
+}
+
+TEST_F(TomatoMetricTest, DelaysUntilBoundaryAndFlushesOnlyOnce) {
+    matcher.consume("tom", false);
+    matcher.consume("ato", false);
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("custom_tomato_total{name=\"graph\",node=\"llm\"} 0\n"));
+    matcher.consume("", true);
+    matcher.consume("", true);
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("custom_tomato_total{name=\"graph\",node=\"llm\"} 1\n"));
+}
+
+TEST_F(TomatoMetricTest, DoesNotTreatNonAsciiBytesAsWordBoundaries) {
+    matcher.consume("tomato\xc3\xa9 \xc3\xa9tomato tomato", true);
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("custom_tomato_total{name=\"graph\",node=\"llm\"} 1\n"));
+}
+
+TEST_F(TomatoMetricTest, RequestsHaveIndependentMatchingState) {
+    TomatoMetric other(counter);
+    matcher.consume("tom", false);
+    other.consume("ato", true);
+    matcher.consume("ato", true);
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("custom_tomato_total{name=\"graph\",node=\"llm\"} 1\n"));
+}
+
+TEST_F(TomatoMetricTest, AbortedStreamRetainsCompletedWordsWithoutFlushingPartialWord) {
+    matcher.consume("tomato tomato", false);
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("custom_tomato_total{name=\"graph\",node=\"llm\"} 1\n"));
+}
+
+TEST_F(TomatoMetricTest, ObservesOnlyContentAndSeparatesSequences) {
+    ContinuousBatchingServableExecutionContext context;
+    context.generatedTextObserver = [&](std::string_view text, bool finish) { matcher.consume(text, finish); };
+    context.observeGeneratedText({ContentDelta{"tom"}, ReasoningDelta{"tomato"}, FinishDelta{}}, false);
+    context.observeGeneratedText({ContentDelta{"ato"}}, true);
+    context.observeGeneratedText({ContentDelta{"tom"}}, true);
+    context.observeGeneratedText({ContentDelta{"ato"}}, true);
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("custom_tomato_total{name=\"graph\",node=\"llm\"} 1\n"));
+}
+
+class LLMPrefillMetricsTest : public ::testing::Test {
+protected:
+    class TestServable : public ContinuousBatchingServable {
+    public:
+        using ContinuousBatchingServable::recordPrefillMetrics;
+    };
+
+    MetricRegistry registry;
+    MetricConfig metricConfig;
+    TestServable servable;
+    ContinuousBatchingServableExecutionContext context;
+
+    void SetUp() override {
+        ASSERT_EQ(metricConfig.loadFromCLIString(true, METRIC_NAME_LLM_PREFILL_SPEED), StatusCode::OK);
+        servable.getContinuousBatchingProperties()->metricReporter =
+            std::make_shared<LLMMetricReporter>(&metricConfig, &registry, "model", "llm");
+        context.perfMetrics = std::make_unique<ov::genai::PerfMetrics>();
+        context.perfMetrics->num_input_tokens = 100;
+        context.perfMetrics->ttft = {20, 0};
+        context.perfMetrics->m_evaluated = true;
+    }
+};
+
+TEST_F(LLMPrefillMetricsTest, ConvertsMillisecondsAndRecordsOnlyOnce) {
+    servable.recordPrefillMetrics(context);
+    servable.recordPrefillMetrics(context);
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"model\",node=\"llm\"} 1\n"));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_prefill_speed_tokens_per_second_sum{name=\"model\",node=\"llm\"} 5000\n"));
+}
+
+TEST_F(LLMPrefillMetricsTest, MissingPerformanceMetricsCanBePublishedAtCompletion) {
+    auto metrics = std::move(context.perfMetrics);
+    servable.recordPrefillMetrics(context);
+    EXPECT_FALSE(context.prefillMetricsRecorded);
+    context.perfMetrics = std::move(metrics);
+    servable.recordPrefillMetrics(context);
+    EXPECT_TRUE(context.prefillMetricsRecorded);
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"model\",node=\"llm\"} 1\n"));
+}
+
+TEST_F(LLMPrefillMetricsTest, InvalidTimeToFirstTokenIsNotObserved) {
+    for (float ttft : {0.0f, -1.0f, std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::infinity()}) {
+        context.prefillMetricsRecorded = false;
+        context.perfMetrics->ttft.mean = ttft;
+        servable.recordPrefillMetrics(context);
+    }
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"model\",node=\"llm\"} 0\n"));
+}
+
+TEST_F(LLMPrefillMetricsTest, DisabledPrefillMetricDoesNotEvaluatePerformanceStatistics) {
+    servable.getContinuousBatchingProperties()->metricReporter->deactivate();
+    context.perfMetrics->m_evaluated = false;
+    servable.recordPrefillMetrics(context);
+    EXPECT_FALSE(context.prefillMetricsRecorded);
+    EXPECT_FALSE(context.perfMetrics->m_evaluated);
+    EXPECT_TRUE(registry.collect().empty());
+}
 
 struct TestParameters {
     std::string modelName;

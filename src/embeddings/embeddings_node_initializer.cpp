@@ -51,7 +51,9 @@ public:
         const std::string& graphName,
         const std::string& basePath,
         GraphSidePackets& sidePackets,
-        PythonBackend* /*pythonBackend*/) override {
+        PythonBackend* /*pythonBackend*/,
+        MetricRegistry* /*metricRegistry*/,
+        const MetricConfig* /*metricConfig*/) override {
         auto& embeddingsServableMap = sidePackets.embeddingsServableMap;
         if (!nodeConfig.node_options().size()) {
             SPDLOG_ERROR("Embeddings node missing options in graph: {}. ", graphName);

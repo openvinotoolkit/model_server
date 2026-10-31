@@ -18,6 +18,8 @@ load("//:common_settings.bzl", "ovms_cc_library")
 ovms_cc_library(
     name = "libovmsmetrics",
     hdrs = [
+        "calculator_metrics.hpp",
+        "llm_metric_reporter.hpp",
         "metric.hpp",
         "metric_config.hpp",
         "metric_family.hpp",
@@ -25,6 +27,8 @@ ovms_cc_library(
         "metric_registry.hpp",
     ],
     srcs = [
+        "calculator_metrics.cpp",
+        "llm_metric_reporter.cpp",
         "metric.cpp",
         "metric_config.cpp",
         "metric_family.cpp",

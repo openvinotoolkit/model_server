@@ -34,6 +34,10 @@
 #include "../llm/io_processing/video_utils.hpp"
 #include "../llm/io_processing/output_parser.hpp"
 #include "../llm/language_model/legacy/servable.hpp"
+#include "../llm/language_model/continuous_batching/servable.hpp"
+#include "../llm/tomato_metric.hpp"
+#include "../metrics/calculator_metrics.hpp"
+#include "../metrics/metric_registry.hpp"
 #include "../llm/omni_model/legacy/servable.hpp"
 #include "../llm/ovms_text_streamer.hpp"
 #include "../llm/visual_language_model/legacy/servable.hpp"
@@ -5361,6 +5365,100 @@ static std::shared_ptr<ovms::OVMSTextStreamer> makeNoopTextStreamer(const ov::ge
         false,
         [](ovms::Delta, bool) { return ov::genai::StreamingStatus::RUNNING; },
         ov::AnyMap{});
+}
+
+template <typename Servable, typename Context>
+static void checkLegacyTomatoMetric(const ov::genai::Tokenizer& tokenizer, bool streaming) {
+    ovms::MetricRegistry registry;
+    ovms::CalculatorMetrics metrics(&registry, "graph", "llm");
+    auto matcher = std::make_shared<ovms::TomatoMetric>(
+        metrics.registerCounter("custom_tomato_total", "Tomatoes."));
+    auto context = std::make_shared<Context>();
+    context->payload.client = std::make_shared<NeverDisconnectedClient>();
+    rapidjson::Document request;
+    request.Parse(streaming ?
+                            R"({"model":"test","stream":true,"messages":[{"role":"user","content":"tomato"}]})"
+                            :
+                            R"({"model":"test","messages":[{"role":"user","content":"tomato"}]})");
+    context->apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(
+        request, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), tokenizer);
+    std::optional<uint32_t> maxTokens;
+    ASSERT_TRUE(context->apiHandler->parseRequest(maxTokens, 0, std::nullopt).ok());
+    context->generatedTextObserver = [matcher](std::string_view text, bool finish) { matcher->consume(text, finish); };
+    context->results.finish_reasons.push_back(ov::genai::GenerationFinishReason::STOP);
+    context->deltaChannel.push(ovms::ContentDelta{"tom"});
+    Servable servable;
+    std::shared_ptr<ovms::GenAiServableExecutionContext> base = context;
+    if (streaming) {
+        ASSERT_TRUE(servable.preparePartialResponse(base).ok());
+    }
+    context->deltaChannel.push(ovms::ContentDelta{"ato TOMATO tomatoes"});
+    context->deltaChannel.push(ovms::ReasoningDelta{"tomato"});
+    context->deltaChannel.signalComplete();
+    context->readySignal.set_value();
+    if (streaming) {
+        ASSERT_TRUE(servable.preparePartialResponse(base).ok());
+    } else {
+        ASSERT_TRUE(servable.prepareCompleteResponse(base).ok());
+    }
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("custom_tomato_total{name=\"graph\",node=\"llm\"} 2\n"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, CustomTomatoMetricSupportsLegacyLMVLMAndOmni) {
+    for (bool streaming : {false, true}) {
+        checkLegacyTomatoMetric<ovms::LegacyServable, ovms::LegacyServableExecutionContext>(*tokenizer, streaming);
+        checkLegacyTomatoMetric<ovms::VisualLanguageModelLegacyServable, ovms::VisualLanguageModelLegacyServableExecutionContext>(*tokenizer, streaming);
+        checkLegacyTomatoMetric<ovms::OmniModelLegacyServable, ovms::OmniModelLegacyServableExecutionContext>(*tokenizer, streaming);
+    }
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, CustomTomatoMetricCountsGeneratedContentForUnaryAndStreaming) {
+    ovms::MetricRegistry registry;
+    ovms::CalculatorMetrics metrics(&registry, "graph", "llm");
+    auto counter = metrics.registerCounter("custom_tomato_total", "Tomatoes.");
+    for (bool streaming : {false, true}) {
+        auto context = std::make_shared<ovms::ContinuousBatchingServableExecutionContext>();
+        context->payload.client = std::make_shared<NeverDisconnectedClient>();
+        rapidjson::Document request;
+        request.Parse(streaming ?
+                                R"({"model":"test","stream":true,"messages":[{"role":"user","content":"tomato"}]})"
+                                :
+                                R"({"model":"test","messages":[{"role":"user","content":"tomato"}]})");
+        context->apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(
+            request, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+        std::optional<uint32_t> maxTokens;
+        ASSERT_TRUE(context->apiHandler->parseRequest(maxTokens, 0, std::nullopt).ok());
+        auto matcher = std::make_shared<ovms::TomatoMetric>(counter);
+        context->generatedTextObserver = [matcher](std::string_view text, bool finish) { matcher->consume(text, finish); };
+        auto* rawContext = context.get();
+        context->textStreamer = std::make_shared<ovms::OVMSTextStreamer>(
+            *tokenizer, nullptr, false,
+            [rawContext](ovms::Delta delta, bool) {
+                rawContext->deltaChannel.push(std::move(delta));
+                return ov::genai::StreamingStatus::RUNNING;
+            },
+            ov::AnyMap{});
+        ovms::ContinuousBatchingServable servable;
+        std::shared_ptr<ovms::GenAiServableExecutionContext> base = context;
+        const auto tokens = tokenizer->encode("tomato TOMATO tomatoes", ov::genai::add_special_tokens(false)).input_ids;
+        context->generationOutputs.resize(1);
+        if (streaming) {
+            for (size_t i = 0; i < tokens.get_size(); ++i) {
+                context->generationOutputs[0].generated_ids = {tokens.data<int64_t>()[i]};
+                context->generationOutputs[0].finish_reason = ov::genai::GenerationFinishReason::NONE;
+                ASSERT_TRUE(servable.preparePartialResponse(base).ok());
+            }
+            context->generationOutputs[0].generated_ids.clear();
+            context->generationOutputs[0].finish_reason = ov::genai::GenerationFinishReason::STOP;
+            ASSERT_TRUE(servable.preparePartialResponse(base).ok());
+        } else {
+            context->generationOutputs[0].generated_ids.assign(tokens.data<int64_t>(), tokens.data<int64_t>() + tokens.get_size());
+            context->generationOutputs[0].finish_reason = ov::genai::GenerationFinishReason::STOP;
+            ASSERT_TRUE(servable.prepareCompleteResponse(base).ok());
+        }
+        EXPECT_THAT(registry.collect(), testing::HasSubstr(
+                                            std::string{"custom_tomato_total{name=\"graph\",node=\"llm\"} "} + (streaming ? "4\n" : "2\n")));
+    }
 }
 
 static std::shared_ptr<ovms::LegacyServableExecutionContext> makeLegacyResponsesContext(
