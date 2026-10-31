@@ -130,14 +130,14 @@ absl::Status OpenVINOModelServerSessionCalculator::Close(CalculatorContext* cc) 
 absl::Status OpenVINOModelServerSessionCalculator::Open(CalculatorContext* cc) {
     LOG(INFO) << "OpenVINOModelServerSessionCalculator Open start";
     for (CollectionItemId id = cc->Inputs().BeginId();
-         id < cc->Inputs().EndId(); ++id) {
+        id < cc->Inputs().EndId(); ++id) {
         if (!cc->Inputs().Get(id).Header().IsEmpty()) {
             cc->Outputs().Get(id).SetHeader(cc->Inputs().Get(id).Header());
         }
     }
     if (cc->OutputSidePackets().NumEntries() != 0) {
         for (CollectionItemId id = cc->InputSidePackets().BeginId();
-             id < cc->InputSidePackets().EndId(); ++id) {
+            id < cc->InputSidePackets().EndId(); ++id) {
             cc->OutputSidePackets().Get(id).Set(cc->InputSidePackets().Get(id));
         }
     }

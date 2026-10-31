@@ -25,18 +25,18 @@ namespace ovms {
 class CustomLoaderInterface;
 class Status;
 /**
-     * @brief Provides all customloaders
-     */
+ * @brief Provides all customloaders
+ */
 class CustomLoaders {
 private:
     /**
-         * @brief A default constructor is private
-         */
+     * @brief A default constructor is private
+     */
     CustomLoaders() = default;
 
     /**
-         * @brief Private copying constructor
-         */
+     * @brief Private copying constructor
+     */
     CustomLoaders(const CustomLoaders&) = delete;
 
     std::map<std::string, std::pair<void*, std::shared_ptr<CustomLoaderInterface>>> customLoaderInterfacePtrs;
@@ -46,46 +46,46 @@ private:
 
 public:
     /**
-         * @brief Gets the instance of the CustomLoaders
-         */
+     * @brief Gets the instance of the CustomLoaders
+     */
     static CustomLoaders& instance() {
         static CustomLoaders instance;
         return instance;
     }
 
     /**
-         * @brief insert a new customloader
-         * 
-         * @return status 
-         */
+     * @brief insert a new customloader
+     *
+     * @return status
+     */
     Status add(std::string name, std::shared_ptr<CustomLoaderInterface> loaderInsterface, void* library);
 
     /**
-         * @brief remove an existing customLoader referenced by it's name
-         * 
-         * @return status 
-         */
+     * @brief remove an existing customLoader referenced by it's name
+     *
+     * @return status
+     */
     Status remove(const std::string& name);
 
     /**
-         * @brief find an existing customLoader referenced by it's name
-         * 
-         * @return pointer to customloader Interface if found, else NULL
-         */
+     * @brief find an existing customLoader referenced by it's name
+     *
+     * @return pointer to customloader Interface if found, else NULL
+     */
     std::shared_ptr<CustomLoaderInterface> find(const std::string& name);
 
     /**
-         * @brief move the existing loader from serviced map to new map.
-         * 
-         * @return status
-         */
+     * @brief move the existing loader from serviced map to new map.
+     *
+     * @return status
+     */
     Status move(const std::string& name);
 
     /**
-         * @brief finalize the customloaders list after parsing config
-         * 
-         * @return status
-         */
+     * @brief finalize the customloaders list after parsing config
+     *
+     * @return status
+     */
     Status finalize();
 };
 }  // namespace ovms

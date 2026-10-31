@@ -173,7 +173,7 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
     }
 
     {
-        auto ovmsCallback = [& ctx = *executionContext](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
+        auto ovmsCallback = [&ctx = *executionContext](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
             ctx.deltaChannel.push(std::move(delta), isLast);
             return ov::genai::StreamingStatus::RUNNING;
         };

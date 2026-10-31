@@ -105,7 +105,9 @@ if !errorlevel! neq 0 (
     echo [ERROR] OpenCV setup_vars_opencv4.cmd failed with error code !errorlevel! >> win_full_test.log
     exit /b !errorlevel!
 )
-set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
+
+if defined PYTHONPATH set "PYTHONPATH=C:\opt\Python312;%PYTHONPATH%;%setPythonPath%"
+if not defined PYTHONPATH set "PYTHONPATH=C:\opt\Python312;%setPythonPath%"
 
 :: Start bazel build test
 %buildTestCommand% 2>&1 | tee win_build_test.log

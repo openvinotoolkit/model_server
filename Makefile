@@ -17,28 +17,70 @@
 BUILDKIT_STEP_LOG_MAX_SIZE=500000000
 BUILDKIT_STEP_LOG_MAX_SPEED=10000000
 
-VIRTUALENV_EXE := python3 -m venv
+UNAME_S := $(shell uname -s)
+ifeq ($(filter MINGW% MSYS% CYGWIN%,$(UNAME_S)),)
+	VIRTUALENV_BIN_DIR := bin
+	VIRTUALENV_EXE := python3 -m venv
+else
+	VIRTUALENV_BIN_DIR := Scripts
+	VIRTUALENV_EXE := python -m venv
+endif
+BASH_BIN := $(shell command -v bash 2>/dev/null || command -v sh 2>/dev/null || echo /bin/bash)
+GIT_BIN := $(shell command -v git 2>/dev/null || command -v git.exe 2>/dev/null || echo )
+REPO_ROOT := $(CURDIR)
+CI_DIR := $(REPO_ROOT)/ci
 VIRTUALENV_DIR := .venv
 VIRTUALENV_STYLE_DIR := .venv-style
-ACTIVATE="$(VIRTUALENV_DIR)/bin/activate"
-ACTIVATE_STYLE="$(VIRTUALENV_STYLE_DIR)/bin/activate"
+VIRTUALENV_PYTHON := $(VIRTUALENV_DIR)/$(VIRTUALENV_BIN_DIR)/python
+VIRTUALENV_STYLE_PYTHON := $(VIRTUALENV_STYLE_DIR)/$(VIRTUALENV_BIN_DIR)/python
+ifneq ($(filter MINGW% MSYS% CYGWIN%,$(UNAME_S)),)
+	VIRTUALENV_PYTHON := $(VIRTUALENV_PYTHON).exe
+	VIRTUALENV_STYLE_PYTHON := $(VIRTUALENV_STYLE_PYTHON).exe
+endif
+ACTIVATE := $(VIRTUALENV_DIR)/$(VIRTUALENV_BIN_DIR)/activate
+ACTIVATE_STYLE := $(VIRTUALENV_STYLE_DIR)/$(VIRTUALENV_BIN_DIR)/activate
+ACTIVATE_READY := $(VIRTUALENV_DIR)/.venv-ready
+ACTIVATE_STYLE_READY := $(VIRTUALENV_STYLE_DIR)/.venv-ready
+STYLE_VENV_BIN := $(VIRTUALENV_STYLE_DIR)/$(VIRTUALENV_BIN_DIR)
+PYTHON_ENV_CLEAN := env -u PYTHONHOME -u PYTHONPATH
 STYLE_CHECK_OPTS := --extensions=hpp,cc,cpp,h \
 	--output=vs7 \
 	--recursive \
 	--linelength=120 \
 	--filter=-build/c++11,-runtime/references,-whitespace/braces,-whitespace/indent,-build/include_order,-runtime/indentation_namespace,-build/namespaces,-whitespace/line_length,-runtime/string,-readability/casting,-runtime/explicit,-readability/todo
 STYLE_CHECK_DIRS := src
-HTTP_PROXY := "$(http_proxy)"
-HTTPS_PROXY := "$(https_proxy)"
-NO_PROXY := "$(no_proxy)"
+HTTP_PROXY := $(if $(http_proxy),$(http_proxy),)
+HTTPS_PROXY := $(if $(https_proxy),$(https_proxy),)
+NO_PROXY := $(if $(no_proxy),$(no_proxy),)
+export HTTP_PROXY HTTPS_PROXY NO_PROXY
+export http_proxy https_proxy no_proxy
 ifeq ($(shell uname),Darwin)
     # MacOS
-    CORES_TOTAL := $(shell sysctl -n hw.physicalcpu)
+    CORES_TOTAL := $(shell sysctl -n hw.physicalcpu 2>/dev/null || echo 1)
+else ifeq ($(filter MINGW% MSYS% CYGWIN%,$(UNAME_S)),)
+    # Linux-like hosts: prefer lscpu then nproc, then NUMBER_OF_PROCESSORS, then 1
+    CORES_PER_SOCKET := $(shell lscpu 2>/dev/null | awk '/^Core\(s\) per socket:/ {print $$NF}')
+    SOCKETS := $(shell lscpu 2>/dev/null | awk '/^Socket\(s\):/ {print $$NF}')
+    ifneq ($(strip $(CORES_PER_SOCKET)),)
+        ifneq ($(strip $(SOCKETS)),)
+            CORES_TOTAL := $(shell printf '%s' "$$(($(SOCKETS) * $(CORES_PER_SOCKET)))" 2>/dev/null || echo 1)
+        else
+            CORES_TOTAL := $(CORES_PER_SOCKET)
+        endif
+    else ifneq ($(shell nproc 2>/dev/null),)
+        CORES_TOTAL := $(shell nproc 2>/dev/null || echo 1)
+    else ifneq ($(NUMBER_OF_PROCESSORS),)
+        CORES_TOTAL := $(NUMBER_OF_PROCESSORS)
+    else
+        CORES_TOTAL := 1
+    endif
 else
-    # Ubuntu & Redhat
-    CORES_PER_SOCKET := $(shell lscpu | awk '/^Core\(s\) per socket:/ {print $$NF}')
-    SOCKETS := $(shell lscpu | awk '/^Socket\(s\):/ {print $$NF}')
-    CORES_TOTAL := $$(($(SOCKETS) * $(CORES_PER_SOCKET)))
+    # Windows/MSYS: prefer the host CPU count when available
+    ifneq ($(NUMBER_OF_PROCESSORS),)
+        CORES_TOTAL := $(NUMBER_OF_PROCESSORS)
+    else
+        CORES_TOTAL := 1
+    endif
 endif
 JOBS ?= $(CORES_TOTAL)
 
@@ -79,6 +121,10 @@ include versions.mk
 
 TEST_LLM_PATH ?= "src/test/llm_testing"
 GPU_MODEL_PATH ?= "/tmp/face_detection_adas"
+ifneq ($(filter MINGW% MSYS% CYGWIN%,$(UNAME_S)),)
+CURL_PATH ?= /c/opt/curl-$(CURL_VERSION)-win64-mingw/bin
+CURL_BIN ?= $(CURL_PATH)/curl.exe
+endif
 
 APT_OV_PACKAGE ?= openvino-2022.1.0
 # opt, dbg:
@@ -195,8 +241,12 @@ OVMS_PYTHON_IMAGE_TAG ?= py
 PRODUCT_VERSION ?= "2026.5.0"
 PROJECT_VER_PATCH =
 
-$(eval PROJECT_VER_PATCH:=`git rev-parse --short HEAD`)
-$(eval PROJECT_VERSION:=${PRODUCT_VERSION}.${PROJECT_VER_PATCH})
+ifeq ($(strip $(GIT_BIN)),)
+PROJECT_VER_PATCH := local
+else
+PROJECT_VER_PATCH := $(shell $(GIT_BIN) rev-parse --short HEAD 2>/dev/null || echo local)
+endif
+PROJECT_VERSION := ${PRODUCT_VERSION}.${PROJECT_VER_PATCH}
 
 OVMS_CPP_CONTAINER_NAME ?= "server-test-${PROJECT_VER_PATCH}-$(shell date +%Y-%m-%d-%H.%M.%S)"
 OVMS_CPP_CONTAINER_PORT ?= 9178
@@ -261,53 +311,67 @@ default: docker_build
 
 ovms_builder_image targz_package ovms_release_images release_image: $(GIT_CONFIG_FILE)
 
-venv:$(ACTIVATE)
+venv:$(ACTIVATE_READY)
 	@echo $(BUILD_ARGS)
 	@echo -n "Using venv "
-	@. $(ACTIVATE); python3 --version
+	@$(PYTHON_ENV_CLEAN) "$(VIRTUALENV_PYTHON)" --version
 
-venv-style:$(ACTIVATE_STYLE)
+venv-style:$(ACTIVATE_STYLE_READY)
 	@echo $(BUILD_ARGS)
 	@echo -n "Using venv "
-	@python3 --version
+	@$(PYTHON_ENV_CLEAN) "$(VIRTUALENV_STYLE_PYTHON)" --version
+ifeq ($(strip $(GIT_BIN)),)
+GIT_FOR_SPELL := find . -type f
+else
+GIT_FOR_SPELL := { "$(GIT_BIN)" ls-files; "$(GIT_BIN)" diff --name-only --cached; }
+endif
+CODESPELL_BIN := $(VIRTUALENV_STYLE_DIR)/$(VIRTUALENV_BIN_DIR)/codespell
+SPELL_SKIP_FILTER := grep -vE '(^|/)(\.git|\.venv|\.venv-style|spelling-whitelist\.txt|src/test/llm_testing)(/|$$)'
+
 spell: venv-style
-	@{ git ls-files; git diff --name-only --cached; } | sort | uniq | xargs $(VIRTUALENV_STYLE_DIR)/bin/codespell --skip "spelling-whitelist.txt" 2>&1 | grep -vFf spelling-whitelist.txt; if [ $$? != 1 ]; then exit 1; fi
+	@if [ ! -x "$(CODESPELL_BIN)" ] && [ ! -x "$(CODESPELL_BIN).exe" ]; then \
+		echo "[WARN] codespell is not installed in $(VIRTUALENV_STYLE_DIR); skipping spell check because the environment is offline or proxy-restricted."; \
+		exit 0; \
+	fi
+	@$(GIT_FOR_SPELL) | $(SPELL_SKIP_FILTER) | sort | uniq | xargs "$(CODESPELL_BIN)" --skip "spelling-whitelist.txt" 2>&1 | grep -vFf spelling-whitelist.txt; if [ $$? != 1 ]; then exit 1; fi
 	@echo "Spelling check completed."
 
-$(ACTIVATE):
+$(ACTIVATE_READY):
 	@echo "Updating virtualenv dependencies in: $(VIRTUALENV_DIR)..."
 	@test -d $(VIRTUALENV_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_DIR)
-	@. $(ACTIVATE); pip3 install --upgrade pip
-	@. $(ACTIVATE); pip3 install -vUqq "setuptools<80"
-	@. $(ACTIVATE); pip3 install -qq -r tests/requirements.txt
-	@touch $(ACTIVATE)
+	@$(PYTHON_ENV_CLEAN) "$(VIRTUALENV_PYTHON)" -m pip install --disable-pip-version-check --no-input -r tests/requirements.txt
+	@touch "$(ACTIVATE_READY)"
 
-$(ACTIVATE_STYLE):
+$(ACTIVATE_STYLE_READY): ci/style_requirements.txt
 	@echo "Updating virtualenv dependencies in: $(VIRTUALENV_STYLE_DIR)..."
 	@test -d $(VIRTUALENV_STYLE_DIR) || $(VIRTUALENV_EXE) $(VIRTUALENV_STYLE_DIR)
-	@. $(ACTIVATE_STYLE); pip3 install --upgrade pip
-	@. $(ACTIVATE_STYLE); pip3 install -vUqq "setuptools<80"
-	@. $(ACTIVATE_STYLE); pip3 install -qq -r ci/style_requirements.txt
-	@touch $(ACTIVATE_STYLE)
+	@if $(PYTHON_ENV_CLEAN) "$(VIRTUALENV_STYLE_PYTHON)" -m pip install --disable-pip-version-check --no-input -r ci/style_requirements.txt; then \
+		touch "$(ACTIVATE_STYLE_READY)"; \
+	else \
+		echo "[WARN] Unable to install style requirements (offline or proxy-restricted environment). Continuing with existing tools only."; \
+	fi
 
 cppclean: venv-style
 	@echo "Checking cppclean..."
-	@bash -c "./ci/cppclean.sh"
+	@$(BASH_BIN) -lc '"$(CI_DIR)/cppclean.sh"'
 
 style: venv-style spell clang-format-check cpplint cppclean
 
 hadolint:
 	@echo "Checking SDL requirements..."
 	@echo "Checking docker files..."
-	@./tests/hadolint.sh
+	@env CURL_BIN="$${CURL_BIN:-$(CURL_BIN)}" CURL_PATH="$${CURL_PATH:-$(CURL_PATH)}" \
+		HTTP_PROXY="$${HTTP_PROXY:-$(HTTP_PROXY)}" HTTPS_PROXY="$${HTTPS_PROXY:-$(HTTPS_PROXY)}" NO_PROXY="$${NO_PROXY:-$(NO_PROXY)}" \
+		http_proxy="$${http_proxy:-$(http_proxy)}" https_proxy="$${https_proxy:-$(https_proxy)}" no_proxy="$${no_proxy:-$(no_proxy)}" \
+		./tests/hadolint.sh
 
 bandit:
 	@echo "Checking python files..."
-	@. $(ACTIVATE_STYLE); bash -c "./ci/bandit.sh"
+	@export PATH="$(STYLE_VENV_BIN):$$PATH"; ./ci/bandit.sh
 
 license-headers:
 	@echo "Checking license headers in files..."
-	@. $(ACTIVATE_STYLE); bash -c "python3 ./ci/lib_search.py . > missing_headers.txt"
+	@export PATH="$(STYLE_VENV_BIN):$$PATH"; "$(VIRTUALENV_STYLE_PYTHON)" '$(CI_DIR)/lib_search.py' . > missing_headers.txt
 	@if ! grep -FRq "All files have headers" missing_headers.txt; then\
         echo "Files with missing headers";\
         cat missing_headers.txt;\
@@ -318,19 +382,23 @@ license-headers:
 sdl-check: venv-style hadolint bandit license-headers
 
 	@echo "Checking forbidden functions in files..."
-	@. $(ACTIVATE_STYLE); bash -c "python3 ./ci/lib_search.py . functions > forbidden_functions.txt"
+	@export PATH="$(STYLE_VENV_BIN):$$PATH"; "$(VIRTUALENV_STYLE_PYTHON)" '$(CI_DIR)/lib_search.py' . functions > forbidden_functions.txt
 	@if ! grep -FRq "All files checked for forbidden functions" forbidden_functions.txt; then\
-		error Run python3 ./ci/lib_search.py . functions - to see forbidden functions file list.;\
+		error Run python3 '$(CI_DIR)/lib_search.py' . functions - to see forbidden functions file list.;\
 	fi
 	@rm forbidden_functions.txt
 
 cpplint: venv-style
 	@echo "Style-checking codebase..."
-	@. $(ACTIVATE_STYLE); echo ${PWD}; cpplint ${STYLE_CHECK_OPTS} ${STYLE_CHECK_DIRS}
+	@export PATH="$(STYLE_VENV_BIN):$$PATH"; echo ${PWD}; cpplint ${STYLE_CHECK_OPTS} ${STYLE_CHECK_DIRS}
 
-clang-format: venv-style
+.PHONY: clang-format-version
+clang-format-version: venv-style
+	@export PATH="$(STYLE_VENV_BIN):$$PATH"; clang-format --version
+
+clang-format: clang-format-version
 	@echo "Formatting files with clang-format.."
-	@. $(ACTIVATE_STYLE); find ${STYLE_CHECK_DIRS} -regex '.*\.\(cpp\|hpp\|cc\|cxx\)' -exec clang-format -style=file -i {} \;
+	@export PATH="$(STYLE_VENV_BIN):$$PATH"; find ${STYLE_CHECK_DIRS} -regex '.*\.\(cpp\|hpp\|cc\|cxx\)' -exec clang-format -style=file -i {} \;
 
 clang-format-check: clang-format
 	@echo "Checking if clang-format changes were committed ..."

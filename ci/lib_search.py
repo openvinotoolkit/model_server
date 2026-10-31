@@ -17,7 +17,7 @@ import os
 import sys
 import re
 
-COPYRIGHT = re.compile(r'(C|c)opyright (\((c|C)\) )?(20(0|1|2)([0-9])-)?(20(0|1|2)([0-9]),)*20(0|1|2)([0-9])(,)? ([a-z]|[A-Z]|[0-9]| )*')
+COPYRIGHT = re.compile(r'(?i)copyright(?:\s+\([cC]\))?\s+\d{4}(?:-\d{4})?(?:\s*,\s*\d{4}(?:-\d{4})?)*(?:\s*,)?\s+[A-Za-z0-9._-]+(?:\s+[A-Za-z0-9._-]+)*')
 FORBIDDEN_FUNCTIONS = re.compile(r'setjmp\(|longjmp\(|getwd\(|strlen\(|wcslen\(|gets\(|strcpy\(|wcscpy\(|strcat\(|wcscat\(|sprintf\(|vsprintf\(|asctime\(')
 
 
@@ -54,6 +54,28 @@ def check_function(fd):
     return detected
 
 
+def should_skip_directory(path):
+    norm_path = path.replace('\\', '/')
+    skip_dirs = [
+        '/dist/',
+        'release_files/thirdparty-licenses',
+        'extras/chat_template_examples',
+        'src/test/llm/chat_templates',
+        'src/test/llm_testing',
+        '/tmp/',
+        'tmp/',
+        '/~/',
+        '~/',
+        '.windows_make_tools/',
+        'AppData/',
+        'bazel-model_server',
+        'bazel-bin',
+        'bazel-out',
+        'bazel-testlogs',
+    ]
+    return any(skip_dir in norm_path for skip_dir in skip_dirs)
+
+
 def check_dir(start_dir):
     no_header = []
     exclude_files = [
@@ -76,6 +98,7 @@ def check_dir(start_dir):
         '.svg',
         '.tar.gz',
         '.venv',
+        '.windows_make_tools',
         '.wav',
         '.webp',
         '.log',
@@ -173,13 +196,16 @@ def check_dir(start_dir):
         'ovms_strip.diff',
         ]
 
-    exclude_directories = ['/dist/', 'release_files/thirdparty-licenses', 'extras/chat_template_examples', 'src/test/llm/chat_templates', 'extended_functional_tests', 'documentation_tests']
+    exclude_directories = ['/dist/', 'release_files/thirdparty-licenses', 'extras/chat_template_examples', 'src/test/llm/chat_templates', 'src/test/llm_testing', 'extended_functional_tests', 'documentation_tests', '/tmp/', 'tmp/', '/~/', '~/', '.windows_make_tools/', 'AppData/', 'bazel-model_server', 'bazel-bin', 'bazel-out', 'bazel-testlogs']
 
-    for (d_path, _, file_set) in os.walk(start_dir):
+    for (d_path, dir_names, file_set) in os.walk(start_dir):
+        dir_names[:] = [d for d in dir_names if not should_skip_directory(os.path.join(d_path, d))]
+
+        norm_d_path = d_path.replace('\\', '/')
         for f_name in file_set:
             skip = False
             for excluded in exclude_directories:
-                if excluded in d_path:
+                if excluded in norm_d_path:
                     skip = True
                     print('Warning - Skipping directory - ' + d_path + ' for file - ' + f_name)
                     break
@@ -187,9 +213,10 @@ def check_dir(start_dir):
                 continue
 
             fpath = os.path.join(d_path, f_name)
+            norm_fpath = os.path.normpath(fpath).replace('\\', '/')
 
-            if not [test for test in exclude_files if test in fpath]:
-                with open(fpath, 'r') as fd:
+            if not [test for test in exclude_files if test in norm_fpath]:
+                with open(fpath, 'r', encoding='utf-8', errors='ignore') as fd:
                     header_detected = check_header(fd)
                     if not header_detected:
                         no_header.append(fpath)
@@ -267,14 +294,17 @@ def check_func(start_dir):
         "windows_sign.bat",
     ]
 
-    exclude_directories = ['/dist/', 'extended_functional_tests', 'documentation_tests']
+    exclude_directories = ['/dist/', 'extended_functional_tests', 'documentation_tests','src/test/llm_testing', '/tmp/', 'tmp/', '/~/', '~/', '.windows_make_tools/', 'AppData/', 'bazel-model_server', 'bazel-bin', 'bazel-out', 'bazel-testlogs']
 
-    for (d_path, _, file_set) in os.walk(start_dir):
+    for (d_path, dir_names, file_set) in os.walk(start_dir):
+        dir_names[:] = [d for d in dir_names if not should_skip_directory(os.path.join(d_path, d))]
+
+        norm_d_path = d_path.replace('\\', '/')
         for f_name in file_set:
 
             skip = False
             for excluded in exclude_directories:
-                if excluded in d_path:
+                if excluded in norm_d_path:
                     skip = True
                     print('Warning - Skipping directory - ' + d_path + ' for file - ' + f_name)
                     break
@@ -283,9 +313,10 @@ def check_func(start_dir):
                 continue
 
             fpath = os.path.join(d_path, f_name)
+            norm_fpath = os.path.normpath(fpath).replace('\\', '/')
 
-            if not [test for test in exclude_files if test in fpath]:
-                with open(fpath, 'r') as fd:
+            if not [test for test in exclude_files if test in norm_fpath]:
+                with open(fpath, 'r', encoding='utf-8', errors='ignore') as fd:
                     detected = check_function(fd)
                     if detected:
                         not_ok.append(fpath)

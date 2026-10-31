@@ -32,21 +32,21 @@ class Status;
 class JsonParser {
 public:
     /**
-        * @brief Parses json node for plugin config keys and values
-        * 
-        * @param json node representing plugin_config
-        * 
-        * @return status
-        */
+     * @brief Parses json node for plugin config keys and values
+     *
+     * @param json node representing plugin_config
+     *
+     * @return status
+     */
     static Status parsePluginConfig(const rapidjson::Value& node, plugin_config_t& pluginConfig);
 
     /**
-        * @brief Parses string for plugin config keys and values
-        * 
-        * @param string representing plugin_config
-        * 
-        * @return status
-        */
+     * @brief Parses string for plugin config keys and values
+     *
+     * @param string representing plugin_config
+     *
+     * @return status
+     */
     static Status parsePluginConfig(std::string command, plugin_config_t& pluginConfig);
 };
 }  // namespace ovms

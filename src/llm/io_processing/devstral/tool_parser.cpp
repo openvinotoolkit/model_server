@@ -41,7 +41,7 @@ ContentDelta DevstralToolParser::parseContentChunk() {
 }
 
 std::optional<Delta> DevstralToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
-    /* 
+    /*
     Devstral [TOOL_CALL]tool_name[ARGS]arguments[</s>]
     It does not support parallel tool calls, so tool calls are always in sequence.
 
