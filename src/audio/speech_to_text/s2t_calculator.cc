@@ -14,7 +14,14 @@
 // limitations under the License.
 //*****************************************************************************
 #include <chrono>
+#include <cstdint>
+#include <exception>
+#include <memory>
+#include <mutex>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
 
 #pragma warning(push)
 #pragma warning(disable : 4005 4309 6001 6385 6386 6326 6011 6246 4456 6246)
@@ -39,6 +46,8 @@
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "s2t_servable.hpp"
 #include "s2t_streaming_handler.hpp"
+#include "streaming_s2t.hpp"
+#include "src/webrtc/stt_audio_adapter.hpp"
 
 using namespace ovms;
 
@@ -77,9 +86,23 @@ class S2tCalculator : public CalculatorBase {
 
     bool hasLoopback_ = false;
     S2tStreamingHandler streamingHandler_;
+    std::shared_ptr<ovms::StreamingS2TBridge> audioBridge_;
+    std::unique_ptr<ovms::SttAudioAdapter> audioAdapter_;
+    std::unordered_map<std::string, ovms::AudioChunk> pendingAudio_;
+    std::unordered_set<std::string> activeAudio_;
+    int64_t audioTimestamp_ = 0;
 
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
+        if (cc->Inputs().HasTag("AUDIO")) {
+            RET_CHECK(!cc->Inputs().HasTag(INPUT_TAG_NAME));
+            cc->Inputs().Tag("AUDIO").Set<ovms::StreamingS2TInput>();
+            cc->Inputs().Tag("WAKE").Set<bool>();
+            cc->Outputs().Tag("EVENT").Set<ovms::StreamingS2TEvent>();
+            cc->InputSidePackets().Tag(STT_SESSION_SIDE_PACKET_TAG).Set<SttServableMap>();
+            cc->InputSidePackets().Tag("STREAMING_S2T_RESOURCES").Set<ovms::StreamingS2TBridgeMap>();
+            return absl::OkStatus();
+        }
         RET_CHECK(!cc->Inputs().GetTags().empty());
         RET_CHECK(!cc->Outputs().GetTags().empty());
         cc->Inputs().Tag(INPUT_TAG_NAME).Set<ovms::HttpPayload>();
@@ -95,17 +118,35 @@ public:
     }
 
     absl::Status Close(CalculatorContext* cc) final {
+        if (audioBridge_)
+            audioBridge_->invalidate();
+        audioAdapter_.reset();
         SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "SpeechToTextCalculator [Node: {} ] Close", cc->NodeName());
         return absl::OkStatus();
     }
 
     absl::Status Open(CalculatorContext* cc) final {
+        if (cc->Inputs().HasTag("AUDIO")) {
+            const auto& servables = cc->InputSidePackets().Tag(STT_SESSION_SIDE_PACKET_TAG).Get<SttServableMap>();
+            const auto servable = servables.find(cc->NodeName());
+            RET_CHECK(servable != servables.end()) << "Missing initialized STT servable";
+            RET_CHECK(!servable->second->streamingBackend) << "Incremental ASR requires StreamingS2TCalculator";
+            const auto& bridges = cc->InputSidePackets().Tag("STREAMING_S2T_RESOURCES").Get<ovms::StreamingS2TBridgeMap>();
+            const auto bridge = bridges.find(cc->NodeName());
+            RET_CHECK(bridge != bridges.end()) << "Missing STT result bridge";
+            audioBridge_ = bridge->second;
+            audioAdapter_ = std::make_unique<ovms::SttAudioAdapter>(servable->second->sttPipeline,
+                std::shared_ptr<std::mutex>(servable->second, &servable->second->sttPipelineMutex));
+            return absl::OkStatus();
+        }
         SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "SpeechToTextCalculator  [Node: {}] Open start", cc->NodeName());
         hasLoopback_ = cc->Inputs().HasTag(LOOPBACK_TAG_NAME);
         return absl::OkStatus();
     }
 
     absl::Status Process(CalculatorContext* cc) final {
+        if (audioAdapter_)
+            return processAudio(cc);
         SPDLOG_LOGGER_DEBUG(s2t_calculator_logger, "SpeechToTextCalculator  [Node: {}] Process start", cc->NodeName());
 
         bool loopbackEmpty = !hasLoopback_ || cc->Inputs().Tag(LOOPBACK_TAG_NAME).IsEmpty();
@@ -204,6 +245,66 @@ public:
     }
 
 private:
+    absl::Status processAudio(CalculatorContext* cc) {
+        try {
+            if (!cc->Inputs().Tag("AUDIO").IsEmpty()) {
+                const auto& input = cc->Inputs().Tag("AUDIO").Get<ovms::StreamingS2TInput>();
+                const std::string id = input.utteranceId;
+                if (id.empty())
+                    return absl::InvalidArgumentError("STT requires an utterance ID");
+                if (input.type == ovms::StreamingS2TInput::Type::Audio) {
+                    if (!input.audio || input.audio->samples.empty())
+                        return absl::InvalidArgumentError("STT requires a complete audio utterance");
+                    if (activeAudio_.size() >= 8 || activeAudio_.count(id))
+                        return absl::ResourceExhaustedError("Too many active or duplicate STT utterances");
+                    audioBridge_->begin();
+                    activeAudio_.insert(id);
+                    pendingAudio_.emplace(id, std::move(*input.audio));
+                } else if (input.type == ovms::StreamingS2TInput::Type::Finish) {
+                    const auto audio = pendingAudio_.find(id);
+                    if (audio == pendingAudio_.end())
+                        return absl::InvalidArgumentError("Unknown or already finished STT utterance");
+                    const auto bridge = audioBridge_;
+                    audioAdapter_->submit(std::move(audio->second),
+                        [bridge, id](const std::string& text) {
+                            bridge->publish({ovms::StreamingS2TEvent::Type::Delta, id, text});
+                        },
+                        [bridge, id](std::exception_ptr error) {
+                            std::string message = "Unknown STT inference failure";
+                            try {
+                                if (error)
+                                    std::rethrow_exception(error);
+                            } catch (const std::exception& e) {
+                                message = e.what();
+                            } catch (...) {
+                                SPDLOG_ERROR("STT inference threw an unknown exception");
+                            }
+                            SPDLOG_ERROR("STT utterance {} failed: {}", id, message);
+                            bridge->publish({ovms::StreamingS2TEvent::Type::Error, id, std::move(message)});
+                        },
+                        [bridge, id](const std::string& text) {
+                            bridge->publish({ovms::StreamingS2TEvent::Type::Final, id, text});
+                        });
+                    pendingAudio_.erase(audio);
+                } else {
+                    return absl::InvalidArgumentError("Use graph cancellation to cancel utterance-based STT");
+                }
+            }
+            for (auto& event : audioBridge_->drain()) {
+                if (event.type != ovms::StreamingS2TEvent::Type::Delta) {
+                    activeAudio_.erase(event.utteranceId);
+                    audioBridge_->complete();
+                }
+                cc->Outputs().Tag("EVENT").Add(
+                    new ovms::StreamingS2TEvent(std::move(event)), Timestamp(++audioTimestamp_));
+            }
+        } catch (const std::exception& e) {
+            SPDLOG_ERROR("Live STT processing failed: {}", e.what());
+            return absl::InternalError(e.what());
+        }
+        return absl::OkStatus();
+    }
+
     absl::Status processUnaryRequest(CalculatorContext* cc, std::shared_ptr<ovms::SttServable> pipe,
         Endpoint endpoint, const ovms::HttpPayload& payload, const std::vector<float>& rawSpeech) {
         auto client = payload.client;

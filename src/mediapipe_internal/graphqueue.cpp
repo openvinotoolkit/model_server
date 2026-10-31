@@ -69,6 +69,14 @@ GraphHelper::~GraphHelper() {
     if (!graph) {
         return;
     }
+    if (streamingS2T && streamingS2T->enabled()) {
+        streamingS2T->invalidate();
+        graph->Cancel();
+        const auto status = graph->WaitUntilDone();
+        if (!status.ok())
+            SPDLOG_DEBUG("Streaming STT graph shutdown: {}", status.ToString());
+        return;
+    }
     auto absStatus = graph->WaitUntilIdle();
     if (!absStatus.ok()) {
         SPDLOG_DEBUG("GraphHelper WaitUntilIdle error: {}", absStatus.ToString());
@@ -86,8 +94,9 @@ GraphHelper::~GraphHelper() {
 
 absl::Status GraphHelper::initialize(const ::mediapipe::CalculatorGraphConfig& config, const GraphSidePackets& sidePacketMaps) {
     this->graph = std::make_unique<::mediapipe::CalculatorGraph>();
+    this->streamingS2T = std::make_unique<StreamingS2TGraphExecution>(*this->graph);
     this->currentTimestamp = ::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE);
-    auto absStatus = this->graph->Initialize(config);
+    auto absStatus = this->streamingS2T->initialize(config);
     if (!absStatus.ok()) {
         SPDLOG_ERROR("Graph initialize failed: {}", absStatus.ToString());
         return absStatus;
@@ -103,6 +112,7 @@ absl::Status GraphHelper::initialize(const ::mediapipe::CalculatorGraphConfig& c
     }
     std::map<std::string, mediapipe::Packet> inputSidePackets;
     buildInputSidePackets(inputSidePackets, sidePacketMaps);
+    this->streamingS2T->addSidePackets(inputSidePackets);
     inputSidePackets[LLM_EXECUTION_CONTEXT_SESSION_SIDE_PACKET_TAG] =
         mediapipe::MakePacket<GenAiExecutionContextMap>(this->genAiExecutionContextMap)
             .At(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE));
@@ -118,10 +128,15 @@ void GraphHelper::reinitialize(const ::mediapipe::CalculatorGraphConfig& config,
     SPDLOG_DEBUG("Reinitializing graph after error");
     // Tear down the old graph (best-effort, errors expected since graph is in bad state)
     if (this->graph) {
+        if (this->streamingS2T && this->streamingS2T->enabled()) {
+            this->streamingS2T->invalidate();
+            this->graph->Cancel();
+        }
         auto absStatus = this->graph->CloseAllPacketSources();
         if (!absStatus.ok()) {
             SPDLOG_DEBUG("reinitialize: CloseAllPacketSources: {}", absStatus.ToString());
         }
+        this->streamingS2T.reset();
         absStatus = this->graph->WaitUntilDone();
         if (!absStatus.ok()) {
             SPDLOG_DEBUG("reinitialize: WaitUntilDone: {}", absStatus.ToString());
