@@ -26,6 +26,7 @@
 #include "light_test_utils.hpp"
 #include "../capi_frontend/server_settings.hpp"
 #include "../graph_export/graph_export.hpp"
+#include "../pull_module/model_downloader.hpp"
 #include "src/filesystem/filesystem.hpp"
 #include "src/status.hpp"
 #include "../version.hpp"
@@ -1075,6 +1076,22 @@ TEST_F(GraphCreationTest, imageGenerationPositiveFull) {
     imageGenerationGraphSettings.maxNumInferenceSteps = 3;
     hfSettings.graphSettings = std::move(imageGenerationGraphSettings);
     assertCreatedGraphEquals(hfSettings, expectedImageGenerationGraphContents);
+}
+
+TEST_F(GraphCreationTest, getGraphDirectoryDoesNotDuplicateSourceModelPath) {
+    const std::string downloadPath = "C:/models";
+    const std::string sourceModel = "docker.io/ai/qwen3.5+0.8b";
+    const std::string resolvedPath = "C:/models/docker.io/ai/qwen3.5+0.8b";
+
+    EXPECT_EQ(ovms::IModelDownloader::getGraphDirectory(downloadPath, sourceModel), resolvedPath);
+    EXPECT_EQ(ovms::IModelDownloader::getGraphDirectory(resolvedPath, sourceModel), resolvedPath);
+}
+
+TEST_F(GraphCreationTest, getGraphDirectoryDoesNotDuplicateOciSourceModelInsideDownloadPath) {
+    const std::string downloadPath = "C:/llmman_ovms/llmman_ovms/ovms.models/docker.io/ai/qwen3.5+0.8b/models";
+    const std::string sourceModel = "docker.io/ai/qwen3.5+0.8b";
+
+    EXPECT_EQ(ovms::IModelDownloader::getGraphDirectory(downloadPath, sourceModel), downloadPath);
 }
 
 #ifdef _WIN32

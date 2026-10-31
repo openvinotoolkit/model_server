@@ -24,6 +24,8 @@ Then use the ovms cli commands described in `Pulling the models` section
 
 ## Pulling the models
 
+For security, OVMS does not allow optimum-cli to execute model-supplied custom code by default. If the model requires custom code and you trust its source, explicitly pass `--trust_remote_code`. This option can execute arbitrary Python code with the permissions of the OVMS process.
+
 Using `--pull` parameter, we can use OVMS to download the model, quantize and compress to required format. The model will be prepared to the deployment in the configured `--model_repository_path`. Without `--pull` parameter, OVMS will start serving immediately after the model is prepared.
 
 ::::{tab-set}
