@@ -12,6 +12,7 @@ This document gives information and steps to run and debug tests. It gives infor
 		- [Step 2: Install software](#step-2-install-software)
 	- [Run the Tests](#run-the-tests)
 	- [Run unit tests](#run-unit-tests)
+	- [Develop Python runtime support](#develop-python-runtime-support)
 	- [Debugging](#debugging)
 		- [Option 1. Use OpenVINO Model Server build image.](#option-1-use-openvino-model-server-build-image)
 		- [Option 2. Build OVMS image with minitrace enabled](#option-2-build-ovms-image-with-minitrace-enabled)
@@ -19,7 +20,9 @@ This document gives information and steps to run and debug tests. It gives infor
 
 ## Set up the Development Environment
 
-The tests in this guide are written in Python. Therefore, to complete the functional tests, Python 3.8 must be installed.
+Use Python 3.12 for the host functional-test environment; `make venv` uses the `python3` interpreter on `PATH` to create it. Run Bazel builds and unit tests inside the OVMS build container.
+
+To add a skill for GitHub Copilot in VS Code, create `.github/skills/<skill-name>/SKILL.md` in the repository. Add YAML frontmatter with a unique `name` and a concise `description` that explains when to use the skill, then write its instructions below. Copilot Agent discovers repository skills from this directory when the workspace is open. You can then use them with parameters by invoking `/<skill-name> <parameters>` in the copilot chat.
 
 In-case of problems, see [Debugging](#debugging).
 
@@ -60,6 +63,8 @@ In-case of problems, see [Debugging](#debugging).
 	```bash
 	docker run -it -v ${PWD}:/ovms --entrypoint bash -p 9178:9178 openvino/model_server-build:latest
 	```
+
+To work in this container from VS Code when it runs on another Linux host, install the Remote - SSH and Dev Containers extensions and connect to the host using Remote - SSH. In the remote VS Code window, run **Dev Containers: Attach to Running Container...** from the Command Palette and select the OVMS build container; the repository will be available at `/ovms`.
 
 4. In the docker container context compile the source code via (choose distro `ubuntu` or `redhat` depending on the image type):
 	```bash
@@ -102,7 +107,7 @@ In-case of problems, see [Debugging](#debugging).
 
 ### Step 2: Install software
 
-1. Install Python release 3.8.
+1. Install Python 3.12 and ensure `python3` on `PATH` points to that installation.
 
 > **NOTE**: Python is only necessary to complete the functional tests in this guide.
 
@@ -163,7 +168,7 @@ Where:
 
 <details><summary>Run functional tests</summary>
 
-The functional tests are written in Python. Therefore, to complete the tests in this section, Python 3.6 - 3.8 must be installed.
+The functional tests are written in Python 3.12. Ensure `python3` on `PATH` is Python 3.12, then use the repository virtual environment created by `make venv` to install and run their dependencies.
 > **NOTE**: In-case of additional problems, see the [debugging section](#debugging).
 
 1. Run command
@@ -316,26 +321,44 @@ sudo reboot
 
 > NOTE: For RedHat base OS unit tests, which require VA API, are skipped.
 
-## Checking code coverage of unit tests
+### Build and test the split runtime
 
-To check code coverage of unit tests, execute the following command to create build image and run unit tests with code coverage enabled:
+Run Bazel commands inside the repository's build container. Use the distro flag
+matching that container. Python no longer has a separate on/off build
+configuration; use `--config=mp_on` for changes that require MediaPipe. Building
+`//src:ovms` links the MediaPipe runtime and host-side Python calculators into
+the executable, and includes `libovmspython`, `libpython_calculators`, and
+`pyovms` as runtime data dependencies. For Ubuntu:
 
+```bash
+bazel build --//:distro=ubuntu --config=mp_on \
+	//src:ovms
+
+bazel test --//:distro=ubuntu --config=mp_on \
+	//src:python_runtime_library_test \
+	//src/python:pythoninterpretermodule_lifecycle_test \
+	//src/python:pythoninterpretermodule_backend_failure_test \
+	//src/python:pythoninterpretermodule_borrowed_interpreter_test
 ```
-make ovms_builder_image BASE_OS=ubuntu24 CHECK_COVERAGE=1 RUN_TESTS=1 MEDIAPIPE_DISABLE=0 OV_USE_BINARY=1 OVMS_CPP_DOCKER_IMAGE=ovms_coverage
+
+Use `--//:distro=redhat` instead for a Red Hat build container. For changes to
+the Python binding itself, also run:
+
+```bash
+bazel test --//:distro=ubuntu --config=mp_on \
+	//src/python/binding:test_python_binding
 ```
 
-Then run `get_coverage` target to extract report from the container:
-
-```
-make get_coverage OVMS_CPP_DOCKER_IMAGE=ovms_coverage
-```
-
-It should create report in `genhtml` directory. Open `index.html` file in this directory to check the code coverage report.
+`python_runtime_library_test` checks the runtime library symbols and
+`pyovms` importability. The interpreter module tests cover lifecycle,
+initialization failure, and borrowed-interpreter behavior.
+`./run_unit_tests.sh` runs the standard build-container suite, including
+`//src:ovms_test` and these Python runtime tests. Use focused Bazel tests while
+iterating, then run the script before submitting broader runtime changes.
 
 ## Debugging
 
 Debugging options are available. Click on the required option :
-
 
 <details><summary>Use gdb to debug in Docker</summary>
 

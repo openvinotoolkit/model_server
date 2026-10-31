@@ -40,22 +40,19 @@ set /p bazelVersion=<"%~dp0.bazelversion"
 set "bazelPath=C:\opt\bazel-%bazelVersion%-windows-x86_64.exe"
 set "OVMS_MEDIA_URL_ALLOW_REDIRECTS=1"
 
-IF "%~2"=="" (
-    set "gtestFilter=*"
-) ELSE (
-    set "gtestFilter=%2"
-)
+set "ovmsGtestFilter=%~2"
+if "!ovmsGtestFilter!"=="" set "ovmsGtestFilter=*"
 
 set "bazelBuildArgs=--config=win_mp_on --action_env OpenVINO_DIR=%openvino_dir%"
 set "testTargets=//src:ovms_test //src:python_runtime_library_test //src/python:pythoninterpretermodule_lifecycle_test //src/python:pythoninterpretermodule_backend_failure_test //src/python:pythoninterpretermodule_borrowed_interpreter_test"
-set "runPythonRuntimeTest=%cd%\bazel-bin\src\python_runtime_library_test.exe --gtest_filter=!gtestFilter!"
-set "runPythonInterpreterLifecycleTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=!gtestFilter! //src/python:pythoninterpretermodule_lifecycle_test"
-set "runPythonInterpreterBackendFailureTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=!gtestFilter! //src/python:pythoninterpretermodule_backend_failure_test"
-set "runPythonInterpreterBorrowedTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=!gtestFilter! //src/python:pythoninterpretermodule_borrowed_interpreter_test"
+set "runPythonRuntimeTest=%cd%\bazel-bin\src\python_runtime_library_test.exe"
+set "runPythonInterpreterLifecycleTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed //src/python:pythoninterpretermodule_lifecycle_test"
+set "runPythonInterpreterBackendFailureTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed //src/python:pythoninterpretermodule_backend_failure_test"
+set "runPythonInterpreterBorrowedTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed //src/python:pythoninterpretermodule_borrowed_interpreter_test"
 
 set "buildTestCommand=%bazelPath% %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %testTargets%"
 set "changeConfigsCmd=python windows_change_test_configs.py"
-set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=!gtestFilter! > win_full_test.log 2>&1"
+set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=!ovmsGtestFilter! > win_full_test.log 2>&1"
 
 :: Load chosen dependency versions from versions.mk
 for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
@@ -122,7 +119,7 @@ if !errorlevel! neq 0 (
     echo [ERROR] windows_change_test_configs.py failed with error code !errorlevel! >> win_full_test.log
     exit /b !errorlevel!
 )
-:: Download LLMs
+:: Download LLM test models
 call %cd%\windows_prepare_llm_models.bat %cd%\src\test\llm_testing
 if !errorlevel! neq 0 (
     echo [ERROR] windows_prepare_llm_models.bat failed with error code !errorlevel! >> win_full_test.log

@@ -82,7 +82,7 @@ windows_build.bat my_dir_on_c --with_tests --integrity
 [arg2..3] - Optional `--with_tests` and `--integrity` flags. They can be supplied individually or in either order.
 
 # Running unit tests - optional
-The script compiles the Python-enabled ovms_test binary, downloads and converts test LLM models (src\tests\llm_testing), and installs Python torch and optimum.
+The script builds and runs the Python-enabled `ovms_test` binary, the Python runtime library test, and the Python interpreter lifecycle, backend-failure, and borrowed-interpreter tests. It also runs the Windows service tests and prepares the LLM test models (src\test\llm_testing).
 ```bat
 windows_test.bat
 ```
@@ -92,7 +92,7 @@ Optionally, pass the dependency location and a GoogleTest filter:
 windows_test.bat my_dir_on_c PythonFlowTest.*
 ```
 [arg1] - Dependency location under `C:\`; defaults to `C:\opt`.
-[arg2] - GoogleTest filter; defaults to `*`.
+[arg2] - GoogleTest filter for `ovms_test`; defaults to `*`.
 
 # Running functional tests - optional
 The script runs pytest tests from `tests\functional` against the ovms.exe binary from a release package. It creates a `.venv` virtual environment, installs `tests\requirements.txt` and writes results to `pytest-functional.xml`.
@@ -149,9 +149,9 @@ cd c:\git\model_server
 windows_setupvars.bat
 ```
 
-Rebuild unit tests:
+Build the unit-test and Python runtime test targets with the same configuration used by `windows_test.bat`:
 ```bat
-bazel --output_user_root=c:\opt build --config=windows --action_env OpenVINO_DIR=c:\opt\genai/runtime/cmake --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test 2>&1 | tee win_build_test.log
+bazel --output_user_root=c:\opt build --config=win_mp_on --action_env OpenVINO_DIR=c:\opt/openvino/runtime/cmake --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test //src:python_runtime_library_test //src/python:pythoninterpretermodule_lifecycle_test //src/python:pythoninterpretermodule_backend_failure_test //src/python:pythoninterpretermodule_borrowed_interpreter_test 2>&1 | tee win_build_test.log
 ```
 
 Download LLMs
@@ -167,4 +167,14 @@ python windows_change_test_configs.py
 Run specific unit tests by setting gtest_filter:
 ```bat
 %cd%\bazel-bin\src\ovms_test.exe --gtest_filter=* 2>&1 | tee win_full_test.log
+```
+
+Run the Python runtime library test:
+```bat
+%cd%\bazel-bin\src\python_runtime_library_test.exe --gtest_filter=*
+```
+
+Run the Python interpreter module tests:
+```bat
+bazel --output_user_root=c:\opt test --config=win_mp_on --action_env OpenVINO_DIR=c:\opt/openvino/runtime/cmake --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=* //src/python:pythoninterpretermodule_lifecycle_test //src/python:pythoninterpretermodule_backend_failure_test //src/python:pythoninterpretermodule_borrowed_interpreter_test
 ```

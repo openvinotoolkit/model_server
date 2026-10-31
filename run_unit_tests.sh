@@ -24,7 +24,7 @@ TEST_LOG=${TEST_LOG:-"test.log"}
 FAIL_LOG=${FAIL_LOG:-"fail.log"}
 if [ -f /etc/redhat-release ] ; then dist="--//:distro=redhat" ; fi
 debug_bazel_flags=${debug_bazel_flags:-"--config=mp_on $dist"}
-TEST_FILTER="--test_filter=*"
+OVMS_TEST_FILTER=${OVMS_TEST_FILTER:-"*"}
 UNIT_TEST_TARGETS="//src:ovms_test //src:python_runtime_library_test //src/python:pythoninterpretermodule_lifecycle_test //src/python:pythoninterpretermodule_backend_failure_test //src/python:pythoninterpretermodule_borrowed_interpreter_test"
 SHARED_OPTIONS=" \
 --jobs=$JOBS \
@@ -92,9 +92,13 @@ echo "Run GPU test: ${RUN_GPU_TESTS}"
 echo "Run coverage: ${CHECK_COVERAGE}"
 if [ "$RUN_TESTS" == "1" ] ; then
     if [ "$CHECK_COVERAGE" == "1" ] ; then
+        COVERAGE_TARGETS=${UNIT_TEST_TARGETS}
+        if [ "${OVMS_TEST_FILTER}" != "*" ]; then
+            COVERAGE_TARGETS="//src:ovms_test"
+        fi
         if bazel coverage --instrumentation_filter="-src/test" --combined_report=lcov \
-            ${SHARED_OPTIONS} ${TEST_FILTER} \
-            ${UNIT_TEST_TARGETS} > ${TEST_LOG} 2>&1 ; then
+            ${SHARED_OPTIONS} --test_filter="${OVMS_TEST_FILTER}" \
+            ${COVERAGE_TARGETS} > ${TEST_LOG} 2>&1 ; then
             if ! generate_coverage_report ; then
                 compress_logs
                 exit 1
@@ -104,7 +108,7 @@ if [ "$RUN_TESTS" == "1" ] ; then
             exit 1
         fi
     fi
-    bazel test ${SHARED_OPTIONS} "${TEST_FILTER}" //src/python/binding:test_python_binding || exit 1
+    bazel test ${SHARED_OPTIONS} //src/python/binding:test_python_binding || exit 1
     bazel build ${SHARED_OPTIONS} ${UNIT_TEST_TARGETS} || exit 1
     echo "Executing unit tests"
     failed=0
@@ -113,7 +117,11 @@ if [ "$RUN_TESTS" == "1" ] ; then
     : > ${TEST_LOG}
     for target in ${UNIT_TEST_TARGETS}; do
         echo "===== Running ${target} =====" >> ${TEST_LOG}
-        if ! bazel test --jobs=$JOBS ${debug_bazel_flags} ${SHARED_OPTIONS} --test_summary=detailed --test_output=streamed --test_filter="*" "${target}" >> ${TEST_LOG} 2>&1 ; then
+        test_filter_args=()
+        if [ "${target}" == "//src:ovms_test" ]; then
+            test_filter_args=(--test_filter="${OVMS_TEST_FILTER}")
+        fi
+        if ! bazel test --jobs=$JOBS ${debug_bazel_flags} ${SHARED_OPTIONS} --test_summary=detailed --test_output=streamed "${test_filter_args[@]}" "${target}" >> ${TEST_LOG} 2>&1 ; then
             failed=1
         fi
     done

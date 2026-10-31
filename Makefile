@@ -657,6 +657,8 @@ ifeq ($(RUN_GPU_TESTS),1)
 endif
 
 run_unit_tests: prepare_models
+
+run_unit_tests:
 	docker rm -f $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
 ifeq ($(RUN_GPU_TESTS),1)
 	docker run \
@@ -672,6 +674,7 @@ ifeq ($(RUN_GPU_TESTS),1)
 		-e RUN_TESTS=1 \
 		-e RUN_GPU_TESTS=$(RUN_GPU_TESTS) \
 		-e JOBS=$(JOBS) \
+		-e OVMS_TEST_FILTER="$(OVMS_TEST_FILTER)" \
 		-e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} \
 		$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		./run_unit_tests.sh ;\
@@ -689,6 +692,7 @@ else
 		-e https_proxy=${https_proxy} \
 		-e RUN_TESTS=1 \
 		-e JOBS=$(JOBS) \
+		-e OVMS_TEST_FILTER="$(OVMS_TEST_FILTER)" \
 		-e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} \
 		$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		./run_unit_tests.sh ;\
