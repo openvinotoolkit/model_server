@@ -249,11 +249,11 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
             selectedSource == ChatTemplateSource::CHAT_TEMPLATE_JINJA ? "chat_template.jinja" : "GenAI tokenizer/model");
     }
 
-    // Phase 2: load the chosen source with the selected engine.
+    // Phase 2: load the chosen source with the selected engine. Apply adjustments if needed.
     if (selectedSource != ChatTemplateSource::NONE) {
         if (properties->chatTemplateEngine == ChatTemplateEngine::JINJA) {
             if (selectedSource == ChatTemplateSource::CHAT_TEMPLATE_JINJA) {
-                properties->tokenizer.set_chat_template(templateSource);
+                adjustAndSetChatTemplate(properties->tokenizer, templateSource, ChatTemplateAdjusterConfig::forJinja());
             }
             std::string errorMessage;
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Preparing selected chat template with Python Jinja");
@@ -269,9 +269,9 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
                 templateLoadError = errorMessage;
             }
         } else {
+            adjustAndSetChatTemplate(properties->tokenizer, templateSource, ChatTemplateAdjusterConfig::forMinja());
             if (selectedSource == ChatTemplateSource::CHAT_TEMPLATE_JINJA) {
                 SPDLOG_LOGGER_INFO(llm_calculator_logger, "Setting selected chat template on tokenizer for Minja");
-                properties->tokenizer.set_chat_template(templateSource);
                 templateSource = properties->tokenizer.get_chat_template();
             } else {
                 SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using GenAI-resolved chat template already set on tokenizer for Minja");
@@ -306,6 +306,11 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
     properties->inputProcessorContext.templateProcessor =
         properties->preparedChatTemplate.isPrepared() ? &properties->preparedChatTemplate : nullptr;
     return StatusCode::OK;
+}
+
+void GenAiServableInitializer::adjustAndSetChatTemplate(ov::genai::Tokenizer& tokenizer, std::string& templateSource, const ChatTemplateAdjusterConfig& adjusterConfig) {
+    ChatTemplateAdjuster(adjusterConfig).adjust(templateSource);
+    tokenizer.set_chat_template(templateSource);
 }
 
 ChatTemplateAnalysisResult GenAiServableInitializer::analyzeChatTemplate(std::shared_ptr<GenAiServableProperties> properties) {
