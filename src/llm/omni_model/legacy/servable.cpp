@@ -60,6 +60,9 @@ absl::Status OmniModelLegacyServable::validateEndpoint(Endpoint endpoint) const 
     if (endpoint == Endpoint::COMPLETIONS) {
         return absl::InvalidArgumentError("Omni Servable does not support the /completions endpoint. Use /chat/completions or /responses.");
     }
+    if (endpoint == Endpoint::DECISIONS) {
+        return absl::InvalidArgumentError("Omni Servable does not support the /decisions endpoint.");
+    }
     return absl::OkStatus();
 }
 

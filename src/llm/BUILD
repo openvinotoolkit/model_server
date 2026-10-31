@@ -133,6 +133,25 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "openai_decisions_api_handler",
+    hdrs = ["apis/openai_decisions.hpp"],
+    srcs = ["apis/openai_decisions.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "//src:libovmsprofiler",
+        "//src:libovmslogging",
+        ":openai_api_handler",
+        ":openai_request",
+        ":openai_completions_api_handler",
+        ":output_parsers",
+        ":video_utils",
+        "//third_party:genai",],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "openai_responses_handler",
     hdrs = ["apis/openai_responses.hpp"],
     srcs = ["apis/openai_responses.cpp"],
@@ -674,6 +693,7 @@ ovms_cc_library(
         ":llmcalculator_proto_headers",
         ":text_streamer",
         ":openai_completions_api_handler",
+        ":openai_decisions_api_handler",
         ":openai_responses_handler",
         ":generation_config_builders",
         ":chat_template_analyzer",
