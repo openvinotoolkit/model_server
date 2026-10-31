@@ -4636,6 +4636,7 @@ TEST(LLMChatTemplateEngine, UnsetSelectsMinjaWhenPythonRuntimeIsUnavailable) {
 TEST(LLMChatTemplateEngine, ExplicitMinjaDoesNotRequirePythonRuntime) {
     mediapipe::LLMCalculatorOptions nodeOptions;
     nodeOptions.set_chat_template_engine(mediapipe::LLMCalculatorOptions::MINJA);
+    EXPECT_EQ(GenAiServableInitializer::determineChatTemplateEngine(nodeOptions), ChatTemplateEngine::MINJA);
     EXPECT_EQ(GenAiServableInitializer::determineChatTemplateModeWithRuntimeContext(nodeOptions, false), ChatTemplateEngine::MINJA);
     EXPECT_EQ(GenAiServableInitializer::determineChatTemplateModeWithRuntimeContext(nodeOptions, true), ChatTemplateEngine::MINJA);
 }

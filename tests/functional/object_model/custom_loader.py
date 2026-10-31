@@ -87,7 +87,7 @@ class CustomLoader:
 
     def get_volume_mount(self):
         loader_container_path = self.loader_config.get_loader_container_path()
-        return {self.loader_host_path: {"bind": loader_container_path, "mode": "ro"}}
+        return {self.loader_host_path: {"bind": loader_container_path, "mode": "ro"}}  # pylint: disable=no-member
 
     def get_enable_file_name(self):
         return self._model_options["custom_loader_options"].get(CustomLoader.ModelOptions.ENABLE_FILE_KEY, "")
@@ -121,18 +121,18 @@ class CustomLoader:
         model_enable_file_path = os.path.join(model_path_on_host, self.get_enable_file_name())
         return model_enable_file_path
 
-    def enable_model(self, container_name, delete_enable_file=False, ovms_run=None):
+    def enable_model(self, container_name, delete_enable_file=False, ovms_run=None):  # pylint: disable=unused-argument
         logger.debug(f"Enable model {self.name} in container {container_name}")
         model_enable_file_path = self.get_model_enable_file_path(container_name)
         if delete_enable_file:
             Path(model_enable_file_path).unlink("")
         else:
-            Path(model_enable_file_path).write_text("")
+            Path(model_enable_file_path).write_text("", encoding="utf-8")
 
-    def disable_model(self, container_name, ovms_run=None):
+    def disable_model(self, container_name, ovms_run=None):  # pylint: disable=unused-argument
         logger.debug(f"Disable model {self.name} in container {container_name}")
         model_enable_file_path = self.get_model_enable_file_path(container_name)
-        Path(model_enable_file_path).write_text(CustomLoader.ENABLE_FILE_DISABLE_PHRASE)
+        Path(model_enable_file_path).write_text(CustomLoader.ENABLE_FILE_DISABLE_PHRASE, encoding="utf-8")
 
     def add_enable_file_entry(self, enable_file_value):
         self.model_options["custom_loader_options"]["enable_file"] = enable_file_value
@@ -148,7 +148,7 @@ class CustomLoader:
 
         def __init__(self, name: str, loader_container_path: str, loader_config_file: str = None):
             super().__init__()
-            config = dict()
+            config = {}
             config.update({self.LOADER_NAME_KEY: name, self.LIBRARY_PATH_KEY: loader_container_path})
             if loader_config_file:
                 config.update({self.LOADER_CONFIG_FILE_KEY: loader_config_file})
@@ -173,7 +173,7 @@ class CustomLoader:
 
         def __init__(self, loader_name: str = None, enable_file: str = None):
             super().__init__()
-            config = dict()
+            config = {}
             config.update({self.LOADER_NAME_KEY: loader_name})
             if enable_file:
                 config.update({self.ENABLE_FILE_KEY: enable_file})

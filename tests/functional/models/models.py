@@ -42,6 +42,7 @@ from tests.functional.object_model.shape import Shape
 from tests.functional.object_model.test_environment import TestEnvironment
 from tests.functional.utils.helpers import get_base_device
 from tests.functional.utils.logger import get_logger
+from tests.functional.utils.test_framework import copy_dir_tree
 
 logger = get_logger(__name__)
 
@@ -479,7 +480,7 @@ class ModelInfo:
                 target_model_dir = Path(resource_destination, *model_subpath)
             if not os.path.exists(target_model_dir):
                 logger.debug(f"Copying {self.name} to container: {target_model_dir}")
-                shutil.copytree(src_model_path, target_model_dir, dirs_exist_ok=True)
+                copy_dir_tree(src_model_path, target_model_dir)
                 for file in target_model_dir.glob("*"):
                     # resource files from shared folder should be read only.
                     # Add proper access for test container folder manipulations.

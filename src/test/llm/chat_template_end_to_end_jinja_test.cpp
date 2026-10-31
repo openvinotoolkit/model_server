@@ -187,21 +187,25 @@ TEST_F(ChatTemplateEndToEndJinjaTest, RuntimeInitializationRendersOriginalTokeni
     auto properties = std::make_shared<GenAiServableProperties>();
     properties->modelsPath = directoryPath;
     properties->chatTemplateEngine = ChatTemplateEngine::JINJA;
-    properties->chatTemplateEngineExplicit = true;
-    const std::string originalTemplateTokenizerPath = getGenericFullPathForSrcTest(
-        "/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct", false);
-    properties->tokenizer = ov::genai::Tokenizer(originalTemplateTokenizerPath);
-
-    const std::string originalTemplate = properties->tokenizer.get_original_chat_template();
-    ASSERT_FALSE(originalTemplate.empty()) << "Tokenizer fixture must provide an original chat template";
+    properties->tokenizer = ov::genai::Tokenizer(tokenizerModelPath);
+    const std::string originalTemplate = "{% if messages is string %}{{ messages }}{% else %}{% for content in messages %}{% if content['type'] == 'image' or 'image' in content or 'image_url' in content %}<|vision_start|><|image_pad|><|vision_end|>{% elif content['type'] == 'video' or 'video' in content %}<|vision_start|><|video_pad|><|vision_end|>{% elif 'text' in content %}{{ content['text'] }}{% endif %}{% endfor %}{% endif %}";
+    properties->tokenizer.set_chat_template(originalTemplate);
+    ASSERT_EQ(properties->tokenizer.get_original_chat_template(), originalTemplate);
+    ASSERT_NE(properties->tokenizer.get_chat_template(), originalTemplate);
 
     const auto loadStatus = GenAiServableInitializer::loadChatTemplate(properties, directoryPath);
     ASSERT_TRUE(loadStatus.ok()) << loadStatus.string();
+    ASSERT_EQ(properties->chatTemplateStatus, ChatTemplateStatus::AVAILABLE);
+    const auto analysisResult = GenAiServableInitializer::analyzeChatTemplate(properties);
+    GenAiServableInitializer::selectOutputParsers(properties, analysisResult);
+    EXPECT_EQ(properties->chatTemplateSource, ChatTemplateSource::GENAI_TOKENIZER);
     ASSERT_TRUE(properties->preparedChatTemplate.isPrepared());
+    EXPECT_EQ(properties->chatTemplateCaps.toString(), ChatTemplateAnalyzer::analyze(originalTemplate).caps.toString());
 
-    const std::string requestBody = R"({"messages":[{"role":"user","content":"Hello"}]})";
+    const std::string requestBody = R"({"messages":[{"type":"text","text":"Hello"}]})";
     std::string actualOutput;
     ASSERT_TRUE(properties->preparedChatTemplate.apply(requestBody, actualOutput)) << actualOutput;
+    EXPECT_EQ(actualOutput, "Hello");
 
     PreparedChatTemplateRuntime expectedTemplate;
     std::string prepareError;

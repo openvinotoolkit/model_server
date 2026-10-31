@@ -106,7 +106,7 @@ pipeline {
               if (git_diff =~ /(\n|^)client/) {
                   client_test_needed = "true"
               }
-              if (git_diff =~ /(\n|^)tests\/functional/) {
+              if (git_diff =~ /(\n|^)(tests\/functional|tests\/requirements\.txt)/) {
                   functional_tests_changed = "true"
               }
               if (git_diff =~ /(\n|^)(demos\/common\/export_models\/|prepare_llm_models\.sh$)/) {
@@ -231,6 +231,15 @@ pipeline {
                 }
               }
             }
+            stage('Pylint functional tests') {
+              agent {
+                label "${agent_name_linux}"
+              }
+              when { expression { functional_tests_changed == "true" } }
+              steps {
+                  sh 'python3 -m venv .venv-pylint && . .venv-pylint/bin/activate && pip install -r tests/requirements.txt && python3 -m pylint --rcfile=tests/functional/pylintrc tests/functional'
+              }
+            }
           }
         }
         stage('Cleanup node') {
@@ -314,9 +323,7 @@ pipeline {
                           windows.install_dependencies()
                           windows.clean()
                           windows.build()
-                          if ( test_doc_files_windows ) {
-                            stash name: 'ovms-windows-package', includes: 'dist\\windows\\ovms.zip'
-                          }
+                          stash name: 'ovms-windows-package', includes: 'dist\\windows\\ovms.zip'
                         } finally {
                           windows.archive_build_artifacts()
                         }
@@ -354,7 +361,7 @@ pipeline {
               } 
               }
             }
-            stage("Internal tests") {
+            stage("Functional tests") {
               agent {
                 label "${agent_name_linux}"
               }
@@ -362,27 +369,61 @@ pipeline {
               steps {
                 script {
                   timeout(time: 120, unit: 'MINUTES') {
-                  withGithubStageStatus('jenkins/oncommit/internal-tests', 'Internal tests') {
-                    dir ('internal_tests'){
-                      checkout scmGit(branches: [[name: validation_branch]], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
-                      sh "pwd"
-                      def pwd = sh(returnStdout:true, script: "pwd").strip()
-                      def cmd_venv = "make create-venv"
-                      def cmd_links = "rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional"
-                      def cmd_export = "TT_OVMS_C_REPO_PATH=../ TT_ON_COMMIT_TESTS=True TT_XDIST_WORKERS=10"
-                      def cmd_run_tests = "make tests"
-                      def cmd = ""
-                      if (image_build_needed == "true") {
-                        cmd = "${cmd_venv} && ${cmd_links} && ${cmd_export} TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True ${cmd_run_tests}"
-                      } else {
-                        cmd = "${cmd_venv} && ${cmd_links} && ${cmd_export} ${cmd_run_tests}"
-                      }
-                      sh cmd
+                  withGithubStageStatus('jenkins/oncommit/functional-tests', 'Functional tests') {
+                    println "Running on NODE = ${env.NODE_NAME}"
+                    def cmd_envs = "TT_XDIST_WORKERS=10 TT_DISABLE_DMESG_LOG_MONITOR=False"
+                    def cmd = ""
+                    if (image_build_needed == "true") {
+                      cmd = "make test_functional TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True ${cmd_envs}"
+                    } else {
+                      cmd = "make test_functional TT_OVMS_IMAGE_NAME=registry.toolbox.iotg.sclab.intel.com/openvino/model_server:ubuntu24_main ${cmd_envs}"
+                    }
+                    try {
+                      // bash + pipefail keeps the test exit code while tee writes the log
+                      sh "#!/bin/bash\nset -o pipefail\n${cmd} 2>&1 | tee functional_tests.log"
+                    } finally {
+                      archiveArtifacts allowEmptyArchive: true, artifacts: "functional_tests.log,report.xml,report.html"
                     }
                   }
                   }
                 }
               }            
+            }
+            stage("Extended functional tests") {
+              agent {
+                label "${agent_name_linux}"
+              }
+              when { expression { image_build_needed == "true" || functional_tests_changed == "true" } }
+              steps {
+                script {
+                  timeout(time: 120, unit: 'MINUTES') {
+                  withGithubStageStatus('jenkins/oncommit/extended-functional-tests', 'Extended functional tests') {
+                    println "Running on NODE = ${env.NODE_NAME}"
+                    dir ('extended_functional_tests') {
+                      checkout scmGit(branches: [[name: validation_branch]], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
+                      sh "pwd"
+                      def pwd = sh(returnStdout:true, script: "pwd").strip()
+                      def cmd_venv = "make create-venv TT_OVMS_C_REPO_PATH=../"
+                      def cmd_links = "rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional"
+                      def cmd_venv_activate = ". .venv/bin/activate"
+                      def cmd_export = "export TT_OVMS_C_REPO_PATH=../ && export TT_ON_COMMIT_TESTS=True && export TT_XDIST_WORKERS=10"
+                      def cmd_run_tests = "pytest tests -n 10 --dist loadgroup --ignore=tests/functional"
+                      def cmd = ""
+                      if (image_build_needed == "true") {
+                        cmd = "${cmd_venv} && ${cmd_links} && ${cmd_venv_activate} && ${cmd_export} && export TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} && export TT_OVMS_IMAGE_LOCAL=True && ${cmd_run_tests} --ignore=tests/functional"
+                      } else {
+                        cmd = "${cmd_venv} && ${cmd_links} && ${cmd_venv_activate} && ${cmd_export} && ${cmd_run_tests}"
+                      }
+                      try {
+                        sh "#!/bin/bash\nset -o pipefail\n${cmd} 2>&1 | tee extended_functional_tests.log"
+                      } finally {
+                        archiveArtifacts allowEmptyArchive: true, artifacts: "extended_functional_tests.log"
+                      }
+                    }
+                  }
+                  }
+                }
+              }
             }
             stage("Documentation tests") {
               agent none
@@ -395,6 +436,7 @@ pipeline {
                   timeout(time: 120, unit: 'MINUTES') {
                   script {
                     withGithubStageStatus('jenkins/oncommit/doc-tests-linux', 'Linux doc tests') {
+                      println "Running on NODE = ${env.NODE_NAME}"
                       checkout scm
                       dir ('documentation_tests') {
                         checkout scmGit(branches: [[name: validation_branch]], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
@@ -402,10 +444,10 @@ pipeline {
                         def pwd = sh(returnStdout:true, script: "pwd").strip()
                         def ovms_c_repo_path = sh(returnStdout:true, script: "cd .. && pwd").strip()
                         def test_doc_files_str = test_doc_files_linux.split('\n').collect { 'U-' + it }.join(' or ')
-                        sh "make create-venv && rm -f tests/functional && ln -s ${pwd}/../tests/functional tests/functional"
+                        sh "make create-venv TT_OVMS_C_REPO_PATH=${ovms_c_repo_path} && rm -f tests/functional && ln -s ${ovms_c_repo_path}/tests/functional tests/functional"
                         def cmd_venv_activate = ". .venv/bin/activate"
                         def cmd_export = "export TT_OVMS_C_REPO_PATH=../ && export TT_RUN_REGRESSION_TESTS=True && export TT_REGRESSION_WEEKLY_TESTS=True && export TT_TARGET_DEVICE=CPU,GPU,NPU && export TT_ENABLE_UAT_TESTS=True && export TT_ENABLE_SMOKE_TESTS=False && export TT_OVMS_C_REPO_PATH=${ovms_c_repo_path} && export TT_LOGGING_LEVEL_OVMS=DEBUG && export TT_WAIT_FOR_MESSAGES_TIMEOUT=1500 && export CORE_BRANCH=${env.CHANGE_BRANCH ?: 'main'}"
-                        def cmd_pytest = "pytest tests/non_functional/documentation -k '${test_doc_files_str}' -n 0 --dist loadgroup"
+                        def cmd_pytest = "pytest tests/non_functional/documentation -k 'test_links_ovms or ${test_doc_files_str}' -n 0 --dist loadgroup"
                         def cmd = ""
                         if ( image_build_needed == "true" ) {
                             unstash 'ovms-release-image'
@@ -417,11 +459,11 @@ pipeline {
                             cmd = "${cmd_venv_activate} && ${cmd_export} && ${cmd_pytest}"
                         }
                         try {
-                          sh cmd
+                          sh "#!/bin/bash\nset -o pipefail\n${cmd} 2>&1 | tee documentation_tests_linux.log"
                         } finally {
                           // Always save artifacts
                           zip zipFile: 'documentation_tests_linux_logs.zip', glob: 'test_log/**,tests/functional/test_log_build/**', overwrite: true
-                          archiveArtifacts(artifacts: 'documentation_tests_linux_logs.zip', allowEmptyArchive: true)
+                          archiveArtifacts(artifacts: 'documentation_tests_linux_logs.zip,documentation_tests_linux.log', allowEmptyArchive: true)
                         }
                       }
                     }
@@ -458,6 +500,41 @@ pipeline {
                   }
               }
             }
+            stage("Functional tests windows") {
+              agent {
+                label "${agent_name_windows}"
+              }
+              when { expression { win_image_build_needed == "true" || functional_tests_changed == "true" } }
+              steps {
+                  script {
+                    timeout(time: 120, unit: 'MINUTES') {
+                    withGithubStageStatus('jenkins/oncommit/functional-tests-windows', 'Windows functional tests') {
+                      def windows = load 'ci/loadWin.groovy'
+                      println "Running functional tests: NODE_NAME = ${env.NODE_NAME}"
+                      // Null means the package built in this run (restored by unstash)
+                      def artifactsPath = null
+                      if (win_image_build_needed == "true") {
+                          // Parallel stages on one node get separate workspaces, so restore the package built earlier
+                          unstash 'ovms-windows-package'
+                      } else {
+                          artifactsPath = '\\\\10.102.76.118\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms-windows-with_python-main-latest.zip'
+                      }
+                      if (windows != null) {
+                          try {
+                            windows.setup_bazel_remote_cache()
+                            windows.install_dependencies()
+                            windows.functional_test(artifactsPath)
+                          } finally {
+                            windows.archive_test_artifacts()
+                          }
+                      } else {
+                          error "Cannot load ci/loadWin.groovy file."
+                        }
+                    }
+                    }
+                  }
+              }
+            }
             stage("Documentation tests windows") {
               agent none
               when {
@@ -469,6 +546,7 @@ pipeline {
                   timeout(time: 120, unit: 'MINUTES') {
                   script {
                     withGithubStageStatus('jenkins/oncommit/doc-tests-windows', 'Windows doc tests') {
+                      println "Running on NODE = ${env.NODE_NAME}"
                       checkout scm
                       dir ('documentation_tests') {
                         checkout scmGit(branches: [[name: validation_branch]], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
@@ -476,7 +554,7 @@ pipeline {
                         def current_path = bat(returnStdout: true, script: 'cd').trim().split('\n').last().trim()
                         def ovms_c_repo_path = bat(returnStdout: true, script: 'cd .. && cd').trim().split('\n').last().trim()
                         def cmd_link_ovms = "(if exist ${current_path}\\tests\\functional rmdir ${current_path}\\tests\\functional) && mklink /D ${current_path}\\tests\\functional ${ovms_c_repo_path}\\tests\\functional"
-                        def cmd_requirements = "(if not exist .venv virtualenv .venv --python=python3.12) && call .venv\\Scripts\\activate.bat && pip install -r requirements.txt"
+                        def cmd_requirements = "(if not exist .venv virtualenv .venv --python=python3.12) && call .venv\\Scripts\\activate.bat && pip install -r ${ovms_c_repo_path}\\tests\\requirements.txt -r requirements.txt"
                         def cmd_export = "set \"TT_OVMS_C_REPO_PATH=../\" && set \"TT_LOGGING_LEVEL_OVMS=DEBUG\" && set \"TT_RUN_REGRESSION_TESTS=True\" && set \"TT_REGRESSION_WEEKLY_TESTS=True\" && set \"TT_TARGET_DEVICE=CPU,GPU,NPU\" && set \"TT_BASE_OS=windows\" && set \"TT_OVMS_TYPE=BINARY\" && set \"TT_ENABLE_UAT_TESTS=True\" && set \"TT_ENABLE_SMOKE_TESTS=False\" && set \"TT_DISABLE_DMESG_LOG_MONITOR=True\" && set \"TT_OVMS_C_REPO_PATH=${ovms_c_repo_path}\" && set \"TT_WAIT_FOR_MESSAGES_TIMEOUT=1500\" && set \"PYTHONUTF8=1\" && set \"PYTHONIOENCODING=utf-8\" && set \"CORE_BRANCH=${env.CHANGE_BRANCH ?: 'main'}\""
                         def cmd_pytest = "pytest tests/non_functional/documentation -k \"${test_doc_files_str}\" -n 0 --dist loadgroup --basetemp=\"C:\\tmp\\pytest-${BRANCH_NAME}-${BUILD_NUMBER}\""
                         def cmd = ""
@@ -487,14 +565,15 @@ pipeline {
                             cmd = "${cmd_link_ovms} && ${cmd_requirements} && ${cmd_export} && ${cmd_pytest}"
                         }
                         try {
-                          def exitCode = bat(returnStatus: true, script: cmd)
+                          // cmd.exe has no pipefail: redirect to the log, keep the exit code, then print the log
+                          def exitCode = bat(returnStatus: true, script: "${cmd} > documentation_tests_windows.log 2>&1\nset \"rc=%errorlevel%\"\n@if exist documentation_tests_windows.log type documentation_tests_windows.log\n@exit /b %rc%")
                           if (exitCode != 0) {
                               error "Documentation tests windows command failed with exit code ${exitCode}"
                           }
                         } finally {
                           // Always save artifacts
                           zip zipFile: 'documentation_tests_windows_logs.zip', glob: 'test_log/**,tests/functional/test_log_build/**', overwrite: true
-                          archiveArtifacts(artifacts: 'documentation_tests_windows_logs.zip', allowEmptyArchive: true)
+                          archiveArtifacts(artifacts: 'documentation_tests_windows_logs.zip,documentation_tests_windows.log', allowEmptyArchive: true)
                         }
                       }
                     }

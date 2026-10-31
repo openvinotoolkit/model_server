@@ -316,6 +316,7 @@ ovms_cc_library(
             "libovmslogging",
             "libovms_tensorinfo",
             "libovmsmodelversion",
+            "modelconfig",
             "requesttensorextractor",
             "predict_request_validation_utils_impl",
 ],
@@ -2436,6 +2437,15 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "python_runtime_path_test",
+    srcs = ["test/python_runtime_path_test.cpp"],
+    deps = PYBIND_DEPS + [
+        "//src/python:python_runtime_path",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_library(
     name = "test_test_models",
     hdrs = ["test/test_models.hpp",],
@@ -2865,6 +2875,8 @@ cc_library(
         ":test_light_test_utils",
         "//src/config_export_module:config_export",
         "//src:libovms_server_settings",
+        "//src:libovmsschema",
+        "@com_github_tencent_rapidjson//:rapidjson",
         "@com_google_googletest//:gtest",
     ],
     local_defines = COMMON_LOCAL_DEFINES,
@@ -3097,6 +3109,9 @@ cc_library(
     ),
     deps = [
         "@com_google_googletest//:gtest",
+        "@com_google_absl//absl/strings",
+        "@zlib//:zlib",
+        ":libtest_environment",
         ":test_platform_utils",
         ":test_wav_utils",
         "//src/llm:image_utils",
