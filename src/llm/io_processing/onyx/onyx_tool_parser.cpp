@@ -89,7 +89,7 @@ void OnyxToolParserImpl::addParameterToCurrentFunctionDoc(std::string& parameter
         if (paramIt != this->toolsParametersTypeMap.end()) {
             auto paramJt = paramIt->second.find(currentParameterName);
             if (paramJt != paramIt->second.end() && (paramJt->second == ParameterType::STRING)) {
-                enforceStringValue(valueCopy, allocator);
+                enforceStringValue(valueCopy, parameterValueAsString, allocator);
             }
         }
         if (!currentFunctionArgsDoc.HasMember(keyVal)) {

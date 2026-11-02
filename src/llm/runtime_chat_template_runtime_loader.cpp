@@ -32,7 +32,7 @@
 namespace ovms {
 namespace {
 
-using EnsurePythonInterpreterInitializedFn = bool (*)(const char** errorMessage);
+using EnsureChatTemplateRuntimeInitializedFn = bool (*)(const char** errorMessage);
 using CreatePreparedFn = bool (*)(const char*, const char*, const char*, const char*, void**, const char**);
 using ApplyPreparedFn = bool (*)(void*, const char*, const char**);
 using DestroyPreparedFn = void (*)(void*);
@@ -44,7 +44,7 @@ struct RuntimeChatTemplateRuntimeState {
 #else
     void* handle = nullptr;
 #endif
-    EnsurePythonInterpreterInitializedFn ensurePythonInterpreterInitialized = nullptr;
+    EnsureChatTemplateRuntimeInitializedFn ensureChatTemplateRuntimeInitialized = nullptr;
     CreatePreparedFn createPrepared = nullptr;
     ApplyPreparedFn applyPrepared = nullptr;
     DestroyPreparedFn destroyPrepared = nullptr;
@@ -130,14 +130,15 @@ void initializeRuntimeState() {
         return;
     }
 
-    state.ensurePythonInterpreterInitialized = reinterpret_cast<EnsurePythonInterpreterInitializedFn>(
-        resolveSymbol(state.handle, "OVMS_ensurePythonInterpreterInitialized"));
+    state.ensureChatTemplateRuntimeInitialized = reinterpret_cast<EnsureChatTemplateRuntimeInitializedFn>(
+        resolveSymbol(state.handle, "OVMS_ensureChatTemplateRuntimeInitialized"));
     state.createPrepared = reinterpret_cast<CreatePreparedFn>(resolveSymbol(state.handle, "OVMS_createPreparedChatTemplateRuntime"));
     state.applyPrepared = reinterpret_cast<ApplyPreparedFn>(resolveSymbol(state.handle, "OVMS_applyPreparedChatTemplateRuntime"));
     state.destroyPrepared = reinterpret_cast<DestroyPreparedFn>(resolveSymbol(state.handle, "OVMS_destroyPreparedChatTemplateRuntime"));
 
-    if (state.ensurePythonInterpreterInitialized == nullptr) {
-        SPDLOG_WARN("Python runtime library is missing OVMS_ensurePythonInterpreterInitialized");
+    if (state.ensureChatTemplateRuntimeInitialized == nullptr ||
+        state.createPrepared == nullptr || state.applyPrepared == nullptr || state.destroyPrepared == nullptr) {
+        SPDLOG_WARN("Python runtime library is missing chat template runtime symbols");
         return;
     }
 
@@ -154,7 +155,7 @@ bool ensurePythonRuntimeInitialized(std::string& errorMessage) {
         return false;
     }
     const char* runtimeError = nullptr;
-    if (!state.ensurePythonInterpreterInitialized(&runtimeError)) {
+    if (!state.ensureChatTemplateRuntimeInitialized(&runtimeError)) {
         errorMessage = runtimeError != nullptr ? runtimeError : "Python interpreter initialization failed";
         return false;
     }
@@ -202,7 +203,7 @@ bool PreparedChatTemplateRuntime::apply(const std::string& requestBody, std::str
         return false;
     }
     const char* runtimeOutput = nullptr;
-    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Executing Python jinja chat template processor to apply chat template");
+    SPDLOG_TRACE("Executing Python jinja chat template processor to apply chat template");
     const bool success = render(handle, requestBody.c_str(), &runtimeOutput);
     output = runtimeOutput != nullptr ? runtimeOutput : "Python chat template rendering failed";
     return success;

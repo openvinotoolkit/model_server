@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <exception>
 #include <memory>
 #include <string>
 #include <utility>
@@ -66,6 +67,9 @@ public:
         try {
             servable = std::make_shared<ImageGenerationPipelines>(std::get<ImageGenPipelineArgs>(statusOrArgs));
         } catch (ov::Exception& e) {
+            SPDLOG_ERROR("Failed to create Image Generation pipelines: {}. Error: {}", graphName, e.what());
+            return StatusCode::INTERNAL_ERROR;
+        } catch (const std::exception& e) {
             SPDLOG_ERROR("Failed to create Image Generation pipelines: {}. Error: {}", graphName, e.what());
             return StatusCode::INTERNAL_ERROR;
         } catch (...) {

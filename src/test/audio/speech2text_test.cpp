@@ -13,12 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <algorithm>
+#include <cctype>
 #include <string>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <drogon/drogon.h>
+
+#include "absl/status/status.h"
 #include "../../http_frontend/multi_part_parser_drogon_impl.hpp"
 #include "../../audio/audio_utils.hpp"
 #include "../../audio/speech_to_text/s2t_servable.hpp"
@@ -126,6 +130,34 @@ TEST(SttServableParseTemperatureTest, positiveTemperatureEnablesSampling) {
     EXPECT_FLOAT_EQ(config.temperature, 1.0f);
     EXPECT_TRUE(config.do_sample);
 }
+
+class SttServableParseMalformedTemperatureTest : public ::testing::TestWithParam<std::string> {};
+
+TEST_P(SttServableParseMalformedTemperatureTest, malformedTemperatureRejected) {
+    HttpPayload payload;
+    std::shared_ptr<MockedMultiPartParser> multipartParser = std::make_shared<MockedMultiPartParser>();
+    payload.multipartParser = multipartParser;
+    EXPECT_CALL(*multipartParser, getFieldByName("temperature"))
+        .WillOnce(::testing::Return(GetParam()));
+
+    ov::genai::ASRGenerationConfig config;
+    config.do_sample = false;
+
+    auto status = SttServable::parseTemperature(payload, config);
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_FALSE(config.do_sample);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    MalformedTemperatures,
+    SttServableParseMalformedTemperatureTest,
+    ::testing::Values("0.5x", "0abc", "1e400", "5 5"),
+    [](const ::testing::TestParamInfo<std::string>& info) {
+        std::string name = info.param;
+        std::replace_if(name.begin(), name.end(), [](char c) { return !std::isalnum(static_cast<unsigned char>(c)); }, '_');
+        return name;
+    });
 
 // ====================== Speech2Text Streaming Tests ======================
 

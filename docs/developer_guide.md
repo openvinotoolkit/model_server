@@ -63,13 +63,13 @@ In-case of problems, see [Debugging](#debugging).
 
 4. In the docker container context compile the source code via (choose distro `ubuntu` or `redhat` depending on the image type):
 	```bash
-	bazel build --//:distro=ubuntu --config=mp_on_py_on //src:ovms
+	bazel build --//:distro=ubuntu --config=mp_on //src:ovms
 > **NOTE**: There are several options that would disable specific parts of OVMS. For details check ovms bazel build files.
 	```
 
 5. From the container, run a single unit test (choose distro `ubuntu` or `redhat` depending on the image type):
 	```bash
-	bazel test --//:distro=ubuntu --config=mp_on_py_on --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
+	bazel test --//:distro=ubuntu --config=mp_on --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
 	```
 
 | Argument      | Description |
@@ -174,21 +174,19 @@ make test_functional
 
 - Configuration options are :
 
-| Variable    | Description |
-| :---        |    :----   |
-| `IMAGE`  | Docker image name for the tests.|
-| `TEST_DIR_CACHE`| Location from which models and test data are downloaded.|
-| `TEST_DIR` | Location to which models and test data are copied during tests.|
-| `TEST_DIR_CLEANUP` | Set to `True` to remove the directory under `TEST_DIR` after the tests.|
-| `LOG_LEVEL` | The log level.|
-| `BUILD_LOGS` | Path to save artifacts.|
-| `START_CONTAINER_COMMAND` | The command to start the OpenVINO Model Storage container.|
-| `CONTAINER_LOG_LINE` | The log line in the container that confirms the container started properly.|
+| Variable                  | Description                                                |
+|:--------------------------|:-----------------------------------------------------------|
+| `OVMS_CPP_DOCKER_IMAGE`   | Docker image name for the tests.                           |
+| `OVMS_CPP_IMAGE_TAG`      | Docker image tag for the tests.                            |
+| `TT_LOGGING_LEVEL`        | The log level for tests.                                   |
+| `TT_LOGGING_LEVEL_OVMS`   | The log level for OVMS.                                    |
+| `BUILD_LOGS`              | Path to save artifacts.                                    |
+| `START_CONTAINER_COMMAND` | The command to start the OpenVINO Model Storage container. |
 
 2. Add any configuration variables to the command line in this format :
 
 ```bash
-export IMAGE="openvino/model_server:latest"
+export TT_OVMS_IMAGE_NAME="openvino/model_server:latest"
 ```
 
 3. To make command repetition easier, create and store the configuration options in a file named `user_config.py`. Put this file in the main project directory.
@@ -196,7 +194,7 @@ export IMAGE="openvino/model_server:latest"
 - Example:
 
 ```python
-os.environ["IMAGE"] = "openvino/model_server"
+os.environ["TT_OVMS_IMAGE_NAME"] = "openvino/model_server:latest"
 ```
 </details>
 
@@ -323,7 +321,7 @@ sudo reboot
 To check code coverage of unit tests, execute the following command to create build image and run unit tests with code coverage enabled:
 
 ```
-make ovms_builder_image BASE_OS=ubuntu24 CHECK_COVERAGE=1 RUN_TESTS=1 MEDIAPIPE_DISABLE=0 PYTHON_DISABLE=0 OV_USE_BINARY=1 OVMS_CPP_DOCKER_IMAGE=ovms_coverage
+make ovms_builder_image BASE_OS=ubuntu24 CHECK_COVERAGE=1 RUN_TESTS=1 MEDIAPIPE_DISABLE=0 OV_USE_BINARY=1 OVMS_CPP_DOCKER_IMAGE=ovms_coverage
 ```
 
 Then run `get_coverage` target to extract report from the container:
@@ -357,7 +355,7 @@ Debugging options are available. Click on the required option :
 	mkdir -p /models/1 && wget -P /models/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin && wget -P /models/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml
 	```
 	```bash
-	bazel build --config=mp_on_py_on //src:ovms -c dbg
+	bazel build --config=mp_on //src:ovms -c dbg
 	```
 	```bash
 	gdb --args ./bazel-bin/src/ovms --model_name resnet --model_path /models --port 9178
@@ -464,7 +462,7 @@ Use OpenVINO Model Server build image because it installs the necessary tools.
 
 4. Run a test in this terminal. Change `TEST_PATH` to point to the test you want to debug:
 	```bash
-	make test_functional TEST_PATH=tests/functional/test_batching.py::TestBatchModelInference::test_run_inference_rest IMAGE=openvino/model_server-build:latest
+	make test_functional TEST_PATH=tests/functional/test_embeddings.py::TestEmbeddings::test_on_commit_embeddings_endpoints TT_OVMS_IMAGE_NAME=openvino/model_server-build:latest
 	```
 
 5. Open a second terminal.

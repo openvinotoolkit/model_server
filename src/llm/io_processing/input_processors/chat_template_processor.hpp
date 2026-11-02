@@ -27,7 +27,6 @@ class PreparedChatTemplateRuntime;
 
 // Applies the chat template to ChatHistory, producing req.promptText.
 // Active when: input is ChatHistory variant (CHAT_COMPLETIONS and RESPONSES).
-//
 // Uses Python Jinja when a processor is available; otherwise use Minja.
 class ChatTemplateProcessor : public BaseInputProcessor {
 public:

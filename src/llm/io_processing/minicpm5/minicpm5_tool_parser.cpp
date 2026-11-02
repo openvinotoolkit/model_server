@@ -64,12 +64,14 @@ void Minicpm5ToolParserImpl::addParameterToCurrentFunctionDoc(std::string& param
     rapidjson::Value valueCopy;
 
     rapidjson::Document temp;
+    bool isStringParameter = false;
     // Boolean normalisation (shared helper, same as qwen3coder)
     if (paramIt != this->toolsParametersTypeMap.end()) {
         auto paramJt = paramIt->second.find(currentParameterName);
         if (paramJt != paramIt->second.end() && paramJt->second == ParameterType::BOOLEAN) {
             normalizeBooleanString(parameterValueAsString);
         }
+        isStringParameter = paramJt != paramIt->second.end() && paramJt->second == ParameterType::STRING;
     }
 
     temp.Parse(parameterValueAsString.c_str());
@@ -77,7 +79,8 @@ void Minicpm5ToolParserImpl::addParameterToCurrentFunctionDoc(std::string& param
     bool parsingSucceeded = !temp.HasParseError();
 
     if (!parsingSucceeded) {
-        if (!parameterValueAsString.empty() &&
+        // A string parameter keeps the model's text as is, so the quote-conversion retry is skipped for it.
+        if (!isStringParameter && !parameterValueAsString.empty() &&
             (parameterValueAsString.front() == '{' || parameterValueAsString.front() == '[')) {
             std::string converted = replaceSingleWithDoubleQuotes(parameterValueAsString);
             retryDoc.Parse(converted.c_str());
@@ -100,7 +103,7 @@ void Minicpm5ToolParserImpl::addParameterToCurrentFunctionDoc(std::string& param
         if (paramIt != this->toolsParametersTypeMap.end()) {
             auto paramJt = paramIt->second.find(currentParameterName);
             if (paramJt != paramIt->second.end() && paramJt->second == ParameterType::STRING) {
-                enforceStringValue(valueCopy, allocator);
+                enforceStringValue(valueCopy, parameterValueAsString, allocator);
             }
         }
     }

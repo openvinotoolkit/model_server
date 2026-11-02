@@ -16,6 +16,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 
 #pragma warning(push)
@@ -27,6 +28,7 @@
 #pragma warning(pop)
 #include "src/llm/llm_calculator.pb.h"
 #include "src/llm/servable.hpp"
+#include "io_processing/chat_template/analyzer.hpp"
 
 namespace ovms {
 
@@ -49,11 +51,18 @@ class GenAiServableInitializer {
 public:
     virtual ~GenAiServableInitializer() = default;
     static Status loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
+    static ChatTemplateAnalysisResult analyzeChatTemplate(std::shared_ptr<GenAiServableProperties> properties);
+    static void selectOutputParsers(const std::shared_ptr<GenAiServableProperties>& properties,
+        const std::optional<ChatTemplateAnalysisResult>& analysisResult);
+    static Status validateChatTemplateAvailability(const std::shared_ptr<GenAiServableProperties>& properties);
     // Propagates the global --cache_dir (ServerSettings) into the pipeline plugin config
     // when the node did not set an explicit CACHE_DIR. Shared by every GenAI initializer
     // (continuous batching and legacy, LM and VLM) since they all construct GenAI pipelines
     // directly and would otherwise never apply the server-level cache_dir.
     static void applyGlobalCacheDir(std::shared_ptr<GenAiServableProperties> properties);
+    static ChatTemplateEngine determineChatTemplateEngine(const mediapipe::LLMCalculatorOptions& nodeOptions);
+    static ChatTemplateEngine determineChatTemplateModeWithRuntimeContext(const mediapipe::LLMCalculatorOptions& nodeOptions,
+        bool pythonRuntimeAvailable);
     /*
     initialize method implementation MUST fill servable with all required properties i.e. pipeline, tokenizer, configs etc. based on mediapipe node options.
     It is strictly connected with the servable, so implementation of this method in a derived class should be aware of the specific servable class structure

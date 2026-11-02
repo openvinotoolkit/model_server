@@ -106,6 +106,11 @@ private:
     bool isAllowCacheTrue = false;
 
     /**
+         * @brief Flag disabling enforcement of request inputs count to match model inputs
+         */
+    bool disableInputCountValidation = false;
+
+    /**
          * @brief Model version
          */
     model_version_t version = -1;
@@ -406,6 +411,24 @@ public:
          */
     void setAllowCache(const bool& allowCache) {
         this->isAllowCacheTrue = allowCache;
+    }
+
+    /**
+         * @brief Get the disable input count validation flag
+         *
+         * @return bool
+         */
+    bool isInputCountValidationDisabled() const {
+        return this->disableInputCountValidation;
+    }
+
+    /**
+         * @brief Set the disable input count validation flag
+         *
+         * @param disable input count validation flag
+         */
+    void setDisableInputCountValidation(bool disableInputCountValidation) {
+        this->disableInputCountValidation = disableInputCountValidation;
     }
 
     /**

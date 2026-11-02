@@ -68,8 +68,9 @@ void trimSurroundingQuotes(std::string& str);
 // Returns a human-readable name of the JSON value type (for tracing).
 const char* jsonTypeOf(const rapidjson::Value& val);
 
-// Re-serializes a JSON value and stores it back as a JSON string value.
-void enforceStringValue(rapidjson::Value& v, rapidjson::Document::AllocatorType& alloc);
+// Makes v a JSON string for a parameter declared as a string. A value already parsed as a JSON string
+// is kept; anything else is replaced with rawText, the value exactly as the model wrote it.
+void enforceStringValue(rapidjson::Value& v, const std::string& rawText, rapidjson::Document::AllocatorType& alloc);
 
 // Normalizes Python-style booleans ("True"/"TRUE" -> "true", "False"/"FALSE" -> "false") in place.
 void normalizeBooleanString(std::string& value);

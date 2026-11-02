@@ -237,7 +237,6 @@ struct ServerSettingsImpl {
     std::string logLevel = "INFO";
     std::string logPath;
     bool verboseResponse = false;
-    bool disableInputCountValidation = false;
     bool allowCredentials = false;
     uint64_t maxImageDecodePixels = OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS;
     // When false, images whose decoded size cannot be estimated are rejected; when true they are decoded anyway.
@@ -250,12 +249,12 @@ struct ServerSettingsImpl {
     std::string tracePath;
 #endif
     std::optional<size_t> grpcMemoryQuota;
+    std::optional<size_t> jsonMaxComplexity;
     std::string grpcChannelArguments;
     uint32_t filesystemPollWaitMilliseconds = 1000;
     uint32_t memoryTrimmingIntervalSeconds = 300;
     uint32_t idleUnloadTimeoutSeconds = 0;
     std::string cacheDir;
-    bool withPython = false;
     bool startedWithCLI = false;
     ConfigExportType exportConfigType = UNKNOWN_MODEL;
     HFSettingsImpl hfSettings;
@@ -277,6 +276,7 @@ struct ModelsSettingsImpl {
     std::optional<std::string> scale;
     std::optional<std::string> colorFormat;
     std::optional<std::string> precision;
+    std::optional<bool> disableInputCountValidation;
     std::string modelVersionPolicy;
     uint32_t nireq = 0;
     std::string targetDevice;

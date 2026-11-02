@@ -132,7 +132,7 @@ absl::Status GenAiServable::processTokenizeRequest(std::shared_ptr<GenAiServable
     }
 
     StringBuffer responseBuffer;
-    auto responseStatus = ovms::TokenizeParser::parseTokenizeResponse(responseBuffer, tokens, tokenizeRequest.parameters);
+    auto responseStatus = ovms::TokenizeParser::parseTokenizeResponse(responseBuffer, tokens, tokenizeRequest.parameters, tokenizeRequest.inputIsBatch);
 
     if (!responseStatus.ok()) {
         return responseStatus;
@@ -201,11 +201,36 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
 }
 
 absl::Status GenAiServable::validateInputCompatibility(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    const bool chatInput = std::holds_alternative<ov::genai::ChatHistory>(executionContext->inputRequest.input);
+
+    // Reject chat requests if the chat template is not available.
+    if (chatInput && getProperties()->chatTemplateStatus != ChatTemplateStatus::AVAILABLE) {
+        std::string reason;
+        switch (getProperties()->chatTemplateStatus) {
+        case ChatTemplateStatus::MISSING:
+            reason = "the model has no chat template";
+            break;
+        case ChatTemplateStatus::LOAD_FAILED:
+            reason = "the chat template could not be loaded";
+            break;
+        case ChatTemplateStatus::INCOMPATIBLE:
+            reason = "the chat template is incompatible with the selected engine";
+            break;
+        case ChatTemplateStatus::NOT_CHECKED:
+            reason = "chat template initialization has not completed";
+            break;
+        case ChatTemplateStatus::AVAILABLE:
+            break;
+        }
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Rejecting chat request: {}", reason);
+        return absl::InvalidArgumentError("Chat requests are unavailable because " + reason + ".");
+    }
+
     // LM servables reject requests containing image content. Images are preserved
     // as JsonContainer arrays in chatHistory. Reject if any message's content array
     // contains an image_url entry.
     if (!getProperties()->inputProcessorContext.config.isVLM &&
-        std::holds_alternative<ov::genai::ChatHistory>(executionContext->inputRequest.input)) {
+        chatInput) {
         const auto& ch = std::get<ov::genai::ChatHistory>(executionContext->inputRequest.input);
         for (size_t i = 0; i < ch.size(); i++) {
             const auto content = ch[i]["content"];
@@ -381,12 +406,18 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
     // OVMSTextStreamer::write() fires the callback for each flush event, pushing
     // Documents into executionContext->deltaChannel.
     executionContext->textStreamer->write(generationOutput.generated_ids);
+    if (executionContext->textStreamer->hadParserError()) {
+        return absl::InternalError(executionContext->textStreamer->parserErrorMessage());
+    }
 
     if (isFinishing) {
         OVMS_PROFILE_SCOPE("Generation of last streaming response");
         // end() flushes held-back tokens and calls parseChunk(STOP). Any resulting
         // Document is pushed into deltaChannel by the callback.
         executionContext->textStreamer->end();
+        if (executionContext->textStreamer->hadParserError()) {
+            return absl::InternalError(executionContext->textStreamer->parserErrorMessage());
+        }
     }
 
     // Drain all deltas accumulated during this write()/end() cycle.

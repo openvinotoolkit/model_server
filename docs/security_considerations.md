@@ -43,6 +43,7 @@ OpenVINO Model Server has a set of mechanisms preventing denial of service attac
     - `OPENCV_IO_MAX_IMAGE_PIXELS` - OpenCV's second validation layer for unestimatable formats allowed by the setting above. OpenCV applies this header-stage guard during decoding. It is read once at process startup and **separate** from the CLI parameter above (changing `--max_image_decode_pixels` does not change OpenCV's internal limit). It must be set before OVMS starts. The provided container images set it by default; on bare-metal set it yourself before launching OVMS.
 
   See [image input decode protection](parameters.md#image-input-decode-protection) for details.
+- validating incoming JSON request bodies with a lightweight RapidJSON SAX pre-scan that rejects malformed, overly deep, or overly complex payloads before building a full DOM document. The guard is configurable with `--json_max_complexity` and helps reduce CPU and memory exhaustion risks from adversarial or malformed inputs.
 
 ---
 

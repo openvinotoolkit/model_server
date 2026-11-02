@@ -52,6 +52,13 @@ set "PYTHONHOME=C:\opt\Python312"
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel, wget to PATH
 set "PATH=%setPath%"
 
+if defined GITHUB_TOKEN (
+    if not defined GIT_CONFIG_COUNT set "GIT_CONFIG_COUNT=0"
+    set "GIT_CONFIG_KEY_!GIT_CONFIG_COUNT!=url.https://x-access-token:!GITHUB_TOKEN!@github.com/.insteadOf"
+    set "GIT_CONFIG_VALUE_!GIT_CONFIG_COUNT!=https://github.com/"
+    set /a GIT_CONFIG_COUNT+=1 >nul
+)
+
 :: Bazel compilation settings
 set VS_2022_BT="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
 IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :msvc_error
@@ -161,12 +168,12 @@ for /f "usebackq eol=# tokens=1,3" %%A in ("%~dp0versions.mk") do (
     call :setifempty "%%A" "%%B"
 )
 echo [INFO]   OV_USE_BINARY=%OV_USE_BINARY%
-echo [INFO]   OV_SOURCE_BRANCH=%OV_SOURCE_BRANCH%
+echo [INFO]   OV_BRANCH=%OV_BRANCH%
 echo [INFO]   OV_TOKENIZERS_BRANCH=%OV_TOKENIZERS_BRANCH%
 echo [INFO]   OV_GENAI_BRANCH=%OV_GENAI_BRANCH%
-echo [INFO]   OV_SOURCE_ORG=%OV_SOURCE_ORG%
-echo [INFO]   OV_GENAI_ORG=%OV_GENAI_ORG%
-echo [INFO]   OV_TOKENIZERS_ORG=%OV_TOKENIZERS_ORG%
+echo [INFO]   OV_REPO=%OV_REPO%
+echo [INFO]   OV_GENAI_REPO=%OV_GENAI_REPO%
+echo [INFO]   OV_TOKENIZERS_REPO=%OV_TOKENIZERS_REPO%
 echo [INFO]   GENAI_PACKAGE_URL_WINDOWS=%GENAI_PACKAGE_URL_WINDOWS%
 
 echo [INFO] OV_USE_BINARY=%OV_USE_BINARY%
@@ -236,17 +243,17 @@ IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
     rmdir /S /Q %BAZEL_SHORT_PATH%\openvino
 )
 
-echo [INFO] Using OpenVINO source from %OV_SOURCE_ORG%
+echo [INFO] Using OpenVINO source from %OV_REPO%
 IF /I EXIST %BAZEL_SHORT_PATH%\openvino_src (
     rmdir /S /Q %BAZEL_SHORT_PATH%\openvino_src
 )
 
-git clone https://github.com/%OV_SOURCE_ORG%/openvino %BAZEL_SHORT_PATH%\openvino_src
+git clone https://github.com/%OV_REPO%.git %BAZEL_SHORT_PATH%\openvino_src
 
 set "BACK_CWD=%cd%"
 cd %BAZEL_SHORT_PATH%\openvino_src
 git fetch origin
-git checkout %OV_SOURCE_BRANCH%
+git checkout %OV_BRANCH%
 if !errorlevel! neq 0 exit /b !errorlevel!
 git submodule update --init --recursive
 if !errorlevel! neq 0 exit /b !errorlevel!
@@ -271,7 +278,7 @@ IF /I EXIST %BAZEL_SHORT_PATH%\openvino_tokenizers_src (
     rmdir /S /Q %BAZEL_SHORT_PATH%\openvino_tokenizers_src
 )
 
-git clone https://github.com/%OV_TOKENIZERS_ORG%/openvino_tokenizers.git %BAZEL_SHORT_PATH%\openvino_tokenizers_src
+git clone https://github.com/%OV_TOKENIZERS_REPO%.git %BAZEL_SHORT_PATH%\openvino_tokenizers_src
 cd %BAZEL_SHORT_PATH%\openvino_tokenizers_src
 git fetch origin
 git checkout %OV_TOKENIZERS_BRANCH%
@@ -295,7 +302,7 @@ IF /I EXIST %BAZEL_SHORT_PATH%\openvino_genai_src (
     rmdir /S /Q %BAZEL_SHORT_PATH%\openvino_genai_src
 )
 
-git clone https://github.com/%OV_GENAI_ORG%/openvino.genai.git %BAZEL_SHORT_PATH%\openvino_genai_src
+git clone https://github.com/%OV_GENAI_REPO%.git %BAZEL_SHORT_PATH%\openvino_genai_src
 cd %BAZEL_SHORT_PATH%\openvino_genai_src
 git fetch origin
 git checkout %OV_GENAI_BRANCH%

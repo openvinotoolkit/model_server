@@ -25,6 +25,7 @@
 
 #include "../capi_frontend/server_settings.hpp"
 #include "../utils/env_guard.hpp"
+#include "../utils/rapidjson_utils.hpp"
 #include "../config.hpp"
 #include "src/filesystem/filesystem.hpp"
 #include "../graph_export/embeddings_graph_cli_parser.hpp"
@@ -143,6 +144,36 @@ TEST_F(OvmsConfigDeathTest, negativeConfigPathWithShape) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Model parameters in CLI are exclusive with the config file");
 }
 
+TEST_F(OvmsConfigDeathTest, negativeConfigPathWithLayout) {
+    char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)"/path1", (char*)"--layout", (char*)"NCHW"};
+    int arg_count = 5;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Model parameters in CLI are exclusive with the config file");
+}
+
+TEST_F(OvmsConfigDeathTest, negativeConfigPathWithPrecision) {
+    char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)"/path1", (char*)"--precision", (char*)"FP32", (char*)"--layout", (char*)"NCHW"};
+    int arg_count = 7;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Model parameters in CLI are exclusive with the config file");
+}
+
+TEST_F(OvmsConfigDeathTest, negativeConfigPathWithColorFormat) {
+    char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)"/path1", (char*)"--color_format", (char*)"RGB:BGR", (char*)"--layout", (char*)"NCHW"};
+    int arg_count = 7;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Model parameters in CLI are exclusive with the config file");
+}
+
+TEST_F(OvmsConfigDeathTest, negativeConfigPathWithMean) {
+    char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)"/path1", (char*)"--mean", (char*)"111", (char*)"--layout", (char*)"NCHW"};
+    int arg_count = 7;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Model parameters in CLI are exclusive with the config file");
+}
+
+TEST_F(OvmsConfigDeathTest, negativeConfigPathWithScale) {
+    char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)"/path1", (char*)"--scale", (char*)"111", (char*)"--layout", (char*)"NCHW"};
+    int arg_count = 7;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Model parameters in CLI are exclusive with the config file");
+}
+
 TEST_F(OvmsConfigDeathTest, negativeConfigPathWithNireq) {
     const char* n_argv[] = {"ovms", "--config_path", "/path1", "--nireq", "3"};
     int arg_count = 5;
@@ -172,6 +203,18 @@ TEST_F(OvmsConfigDeathTest, negativeConfigPathWithPluginConfig) {
     const char* n_argv[] = {"ovms", "--config_path", "/path1", "--plugin_config", "setting"};
     int arg_count = 5;
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Model parameters in CLI are exclusive with the config file");
+}
+
+TEST_F(OvmsConfigDeathTest, negativeConfigPathWithDisableInputCountValidation) {
+    char* n_argv[] = {(char*)"ovms", (char*)"--config_path", (char*)"/path1", (char*)"--disable_input_count_validation"};
+    int arg_count = 4;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Model parameters in CLI are exclusive with the config file");
+}
+
+TEST_F(OvmsConfigDeathTest, disableInputCountValidationWithoutConfigPath) {
+    char* n_argv[] = {(char*)"ovms", (char*)"--rest_port", (char*)"8000", (char*)"--model_path", (char*)"/path1", (char*)"--model_name", (char*)"model", (char*)"--disable_input_count_validation"};
+    int arg_count = 8;
+    EXPECT_TRUE(ovms::Config::instance().parse(arg_count, n_argv).disableInputCountValidation());
 }
 
 TEST_F(OvmsConfigDeathTest, negativeMissingPathAndName) {
@@ -286,23 +329,13 @@ TEST_F(OvmsConfigDeathTest, missingParams) {
 TEST_F(OvmsConfigDeathTest, negativePortMin) {
     const char* n_argv[] = {"ovms", "--config_path", "/path1", "--port", "-1"};
     int arg_count = 5;
-#ifdef __linux__
-    std::string error = "‘-1’";
-#elif _WIN32
-    std::string error = "";
-#endif
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options: Argument " + error);
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options: Argument '-1' failed to parse");
 }
 
 TEST_F(OvmsConfigDeathTest, negativeRestPortMin) {
     const char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "-1"};
     int arg_count = 5;
-#ifdef __linux__
-    std::string error = "‘-1’";
-#elif _WIN32
-    std::string error = "";
-#endif
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options: Argument " + error);
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options: Argument '-1' failed to parse");
 }
 
 TEST_F(OvmsConfigDeathTest, negativePortRange) {
@@ -347,10 +380,16 @@ TEST_F(OvmsConfigDeathTest, nonExistingLogLevel) {
     EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "log_level should be one of");
 }
 
+TEST_F(OvmsConfigDeathTest, jsonMaxComplexityZero) {
+    const char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "8080", "--json_max_complexity", "0"};
+    int arg_count = 7;
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "json_max_complexity must be greater than 0");
+}
+
 TEST_F(OvmsConfigDeathTest, RestPortNegativeUint64Max) {
     const char* n_argv[] = {"ovms", "--config_path", "/path1", "--rest_port", "0xffffffffffffffff"};
     int arg_count = 5;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "rest_port number out of range from 0 to 65535");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "error parsing options: Argument '0xffffffffffffffff' failed to parse");
 }
 
 TEST_F(OvmsConfigDeathTest, NegativeListModelsWithoutModelRepositoryPath) {
@@ -2512,7 +2551,6 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--allowed_headers", "Content-Type",
         "--allowed_methods", "GET,POST",
         "--allowed_origins", "example.com,example.org",
-        "--disable_input_count_validation",
 #ifdef _WIN32
         "--grpc_workers", "1",
         "--cpu_extension", "tmp_cpu_extension_library_dir",
@@ -2527,9 +2565,10 @@ TEST(OvmsConfigTest, positiveMulti) {
         "--log_level", "ERROR",
         "--grpc_max_threads", "100",
         "--grpc_memory_quota", "1000000",
+        "--json_max_complexity", "123456",
         "--config_path", "/config.json"};
 
-    int arg_count = 45;
+    int arg_count = 46;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -2541,7 +2580,6 @@ TEST(OvmsConfigTest, positiveMulti) {
     EXPECT_EQ(config.grpcChannelArguments(), "grpc_channel_args");
     EXPECT_EQ(config.filesystemPollWaitMilliseconds(), 2000);
     EXPECT_EQ(config.memoryTrimmingIntervalSeconds(), 8);
-    EXPECT_TRUE(config.disableInputCountValidation());
 #ifdef _WIN32
     EXPECT_EQ(config.cpuExtensionLibraryPath(), cpu_extension_lib_path);
     EXPECT_EQ(config.grpcWorkers(), 1);
@@ -2563,6 +2601,7 @@ TEST(OvmsConfigTest, positiveMulti) {
     EXPECT_EQ(config.configPath(), "/config.json");
     EXPECT_EQ(config.grpcMaxThreads(), 100);
     EXPECT_EQ(config.grpcMemoryQuota(), (size_t)1000000);
+    EXPECT_EQ(config.jsonMaxComplexity(), (size_t)123456);
     EXPECT_TRUE(config.allowCredentials());
     EXPECT_EQ(config.allowedHeaders(), "Content-Type");
     EXPECT_EQ(config.allowedMethods(), "GET,POST");
@@ -2587,6 +2626,22 @@ TEST(OvmsConfigTest, disableInputCountValidationDefaultsToFalse) {
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
     EXPECT_FALSE(config.disableInputCountValidation());
+}
+
+TEST(OvmsConfigTest, jsonMaxComplexityDefaultsToBuiltInLimit) {
+    const char* n_argv[] = {
+        "ovms",
+        "--rest_port",
+        "45",
+        "--model_name",
+        "model",
+        "--model_path",
+        "/path",
+    };
+    int arg_count = 7;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+    EXPECT_EQ(config.jsonMaxComplexity(), ovms::DEFAULT_MAX_JSON_COMPLEXITY);
 }
 
 TEST(OvmsConfigTest, allowedLocalMediaPathRelativeIsNormalized) {
@@ -2667,6 +2722,7 @@ TEST(OvmsConfigTest, positiveSingle) {
         "BGR:RGB",
         "--precision",
         "FP16:INT16",
+        "--disable_input_count_validation",
         "--model_version_policy",
         "setting",
         "--nireq",
@@ -2679,7 +2735,7 @@ TEST(OvmsConfigTest, positiveSingle) {
         "--metrics_list",
         "ovms_streams,ovms_other",
     };
-    int arg_count = 56;
+    int arg_count = 57;
     ConstructorEnabledConfig config;
     config.parse(arg_count, n_argv);
 
@@ -2710,6 +2766,7 @@ TEST(OvmsConfigTest, positiveSingle) {
     EXPECT_EQ(config.scales(), "[58.395,57.12,57.375]");
     EXPECT_EQ(config.precision(), "FP16:INT16");
     EXPECT_EQ(config.colorFormat(), "BGR:RGB");
+    EXPECT_TRUE(config.disableInputCountValidation());
     EXPECT_EQ(config.modelVersionPolicy(), "setting");
     EXPECT_EQ(config.nireq(), 2);
     EXPECT_EQ(config.targetDevice(), "GPU");
@@ -3166,16 +3223,12 @@ TEST(OvmsGraphCliParserTest, chatTemplateEngineOptions) {
     EXPECT_EQ(std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings).chatTemplateEngine, "MINJA");
 }
 
-TEST(OvmsGraphCliParserTest, jinjaRequiresPythonSupport) {
+TEST(OvmsGraphCliParserTest, jinjaChatTemplateEngineIsAccepted) {
     ovms::HFSettingsImpl hfSettings;
     ovms::GraphCLIParser parser;
     parser.parse({"--chat_template_engine", "jinja"});
-#if (PYTHON_DISABLE == 0)
     parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model");
     EXPECT_EQ(std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings).chatTemplateEngine, "JINJA");
-#else
-    EXPECT_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"), std::invalid_argument);
-#endif
 }
 
 TEST(OvmsGraphCliParserTest, invalidChatTemplateEngineIsRejected) {

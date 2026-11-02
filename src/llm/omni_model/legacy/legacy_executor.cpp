@@ -56,8 +56,7 @@ void OmniModelLegacyExecutor::processRequest() {
                 requestExecutionContext->speechConfig,
                 requestExecutionContext->textStreamer,
                 requestExecutionContext->speechStreamer);
-            auto streamer = std::dynamic_pointer_cast<OVMSTextStreamer>(requestExecutionContext->textStreamer);
-            if (streamer != nullptr && streamer->hadParserError()) {
+            if (requestExecutionContext->textStreamer && requestExecutionContext->textStreamer->hadParserError()) {
                 requestExecutionContext->success = false;
             }
         } catch (std::exception& e) {

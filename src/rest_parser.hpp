@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <cstddef>
 #include <string>
 
 #include "src/port/rapidjson_document.hpp"
@@ -43,6 +44,7 @@ class KFSRestParser : RestParser {
 
 public:
     Status parse(const char* json);
+    Status parse(const char* json, std::size_t jsonLength);
     ::KFSRequest& getProto() { return requestProto; }
 };
 

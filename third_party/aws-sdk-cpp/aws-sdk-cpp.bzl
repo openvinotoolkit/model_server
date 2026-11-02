@@ -57,11 +57,16 @@ def _impl(repository_ctx):
     ubuntu20_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 20")
     ubuntu22_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 22")
     ubuntu24_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 24")
+    ubuntu26_count = result.stdout.count("PRETTY_NAME=\"Ubuntu 26")
 
-    if ubuntu24_count == 1 or ubuntu22_count == 1:
+    openssl_cache_entry = ""
+    if ubuntu24_count == 1 or ubuntu22_count == 1 or ubuntu26_count == 1:
         lib_path = "lib"
     else: # for redhat
         lib_path = "lib64"
+    if ubuntu26_count == 1:
+        # OpenSSLConfig.cmake found via /lib symlink resolves include dir to "/include"
+        openssl_cache_entry = "\"OpenSSL_DIR\": \"/usr/lib/x86_64-linux-gnu/cmake/OpenSSL\","
 
     # Note we need to escape '{/}' by doubling them due to call to format
     build_file_content = """
@@ -108,6 +113,7 @@ cmake(
         "FORCE_SHARED_CRT": "OFF",
         "SIMPLE_INSTALL": "OFF",
         "CMAKE_CXX_FLAGS": "-D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized\",
+        {openssl_cache_entry}
     }} | select({{
            "//conditions:default": dict(
                build_release
@@ -162,7 +168,7 @@ cc_library(
 )
 
 """
-    repository_ctx.file("BUILD", build_file_content.format(http_proxy=http_proxy, https_proxy=https_proxy, lib_path=lib_path))
+    repository_ctx.file("BUILD", build_file_content.format(http_proxy=http_proxy, https_proxy=https_proxy, lib_path=lib_path, openssl_cache_entry=openssl_cache_entry))
 
 aws_sdk_cpp_repository = repository_rule(
     implementation = _impl,

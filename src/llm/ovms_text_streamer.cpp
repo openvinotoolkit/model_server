@@ -293,7 +293,10 @@ ov::genai::StreamingStatus OVMSTextStreamer::flush_chunk(
             delta = m_output_parser->parseChunk(chunk, tokens, m_tools_available, finish_reason);
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Output parser failed, cancelling generation: {}", e.what());
-            m_had_parser_error = true;
+            if (!m_had_parser_error) {
+                m_had_parser_error = true;
+                m_parser_error_message = e.what();
+            }
             m_callback(FinishDelta{}, true);
             return ov::genai::StreamingStatus::CANCEL;
         }

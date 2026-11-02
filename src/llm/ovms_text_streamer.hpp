@@ -88,12 +88,14 @@ public:
     // In legacy executors, callers must check this after generate()
     // returns for proper error handling.
     bool hadParserError() const { return m_had_parser_error; }
+    const std::string& parserErrorMessage() const { return m_parser_error_message; }
 
 private:
     std::shared_ptr<OutputParser> m_output_parser;
     bool m_tools_available;
     Callback m_callback;
     bool m_had_parser_error = false;
+    std::string m_parser_error_message;
 
     // Whether the user's request specified skip_special_tokens=false.
     bool m_user_wants_special = false;

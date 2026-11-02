@@ -342,9 +342,7 @@ public:
     const std::shared_ptr<ModelInstance> findModelInstance(const std::string& name, model_version_t version = 0) const override;
 
 #if (MEDIAPIPE_DISABLE == 0)
-    Status createPipeline(std::unique_ptr<MediapipeGraphExecutor>& graph,
-        const std::string& name);
-    Status createPipelineHandle(std::unique_ptr<MediapipeGraphExecutorInterface>& graph,
+    Status createPipeline(std::unique_ptr<MediapipeGraphExecutorInterface>& graph,
         const std::string& name);
 #endif
 

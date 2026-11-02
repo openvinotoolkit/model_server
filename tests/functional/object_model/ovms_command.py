@@ -72,6 +72,7 @@ def create_ovms_command(
         "base_os": base_os,
         "allowed_local_media_path": parameters.allowed_local_media_path,
         "allowed_media_domains": parameters.allowed_media_domains,
+        "max_image_decode_pixels": parameters.max_image_decode_pixels,
         "pooling": pooling,
     }
     pull_parameters = {
@@ -92,32 +93,31 @@ def create_ovms_command(
         if add_to_config or remove_from_config:
             return OvmsCommand(config_path=config_path, model_name=model_name, **common_parameters, **pull_parameters)
         return OvmsCommand(config_path=config_path, **common_parameters)
-    else:
-        plugin_config = parameters.get_plugin_config_from_regular_models()
-        if enable_plugin_config_target_device:
-            plugin_config_target_device = Ovms.PLUGIN_CONFIG[get_base_device(parameters.target_device)]
-            plugin_config = (
-                {**plugin_config, **plugin_config_target_device}
-                if plugin_config is not None
-                else {**plugin_config_target_device}
-            )
-        use_parameter = not any([single_mediapipe_model_mode, list_models, add_to_config, remove_from_config])
-        return OvmsCommand(
-            model_path=model_path,
-            model_name=model_name,
-            plugin_config=plugin_config if use_parameter else None,
-            batchsize=batch_size if use_parameter else None,
-            nireq=parameters.nireq if use_parameter else None,
-            target_device=parameters.target_device if use_parameter else None,
-            shape=shape if use_parameter else None,
-            model_version_policy=parameters.model_version_policy if use_parameter else None,
-            **common_parameters,
-            **pull_parameters,
+    plugin_config = parameters.get_plugin_config_from_regular_models()
+    if enable_plugin_config_target_device:
+        plugin_config_target_device = Ovms.PLUGIN_CONFIG[get_base_device(parameters.target_device)]
+        plugin_config = (
+            {**plugin_config, **plugin_config_target_device}
+            if plugin_config is not None
+            else {**plugin_config_target_device}
         )
+    use_parameter = not any([single_mediapipe_model_mode, list_models, add_to_config, remove_from_config])
+    return OvmsCommand(
+        model_path=model_path,
+        model_name=model_name,
+        plugin_config=plugin_config if use_parameter else None,
+        batchsize=batch_size if use_parameter else None,
+        nireq=parameters.nireq if use_parameter else None,
+        target_device=parameters.target_device if use_parameter else None,
+        shape=shape if use_parameter else None,
+        model_version_policy=parameters.model_version_policy if use_parameter else None,
+        **common_parameters,
+        **pull_parameters,
+    )
 
 
 @dataclass
-class OvmsCommand(object):
+class OvmsCommand:
     logging_level: str = None
     model_path: str = None
     model_name: str = None
@@ -142,6 +142,7 @@ class OvmsCommand(object):
     base_os: str = None
     allowed_local_media_path: str = None
     allowed_media_domains: str = None
+    max_image_decode_pixels: int = None
     pull: bool = False
     source_model: str = None
     gguf_filename: str = None
@@ -263,6 +264,10 @@ class OvmsCommand(object):
             if self.allowed_media_domains is not None:
                 command_parts.append("--allowed_media_domains")
                 command_parts.append(self.allowed_media_domains)
+
+            if self.max_image_decode_pixels is not None:
+                command_parts.append("--max_image_decode_pixels")
+                command_parts.append(str(self.max_image_decode_pixels))
 
             if self.plugin_config is not None:
                 command_parts.append("--plugin_config")

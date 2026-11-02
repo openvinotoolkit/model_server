@@ -46,7 +46,6 @@ static std::variant<absl::Status, std::vector<std::string>> convert2Strings(cons
     } catch (...) {
         return absl::InternalError("Unknown error during image conversion");
     }
-    return absl::OkStatus();
 }
 
 std::variant<absl::Status, std::optional<resolution_t>> getDimensions(const std::string& dimensions) {
@@ -259,18 +258,30 @@ absl::Status ensureAcceptableForStatic(const ov::AnyMap& requestOptions, const o
     return absl::OkStatus();
 }
 
-absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOptions, const ovms::ImageGenPipelineArgs& args) {
-    // validate for static
-    if (args.staticReshapeSettings.has_value()) {
-        SPDLOG_DEBUG("Validating request options for static reshape settings");
-        auto status = ensureAcceptableForStatic(requestOptions, args);
-        if (!status.ok()) {
-            return status;
+absl::Status ensureCommonValidations(ov::AnyMap& requestOptions, const ovms::ImageGenPipelineArgs& args) {
+    // Basic sanity checks that apply to both static and dynamic modes
+    auto it = requestOptions.find("width");
+    if (it != requestOptions.end()) {
+        auto width = it->second.as<int64_t>();
+        if (width <= 0) {
+            return absl::InvalidArgumentError(absl::StrCat("requested width must be higher than 0, but got ", width));
+        }
+        if (width > args.maxResolution.first) {
+            return absl::InvalidArgumentError(absl::StrCat("requested width ", width, " exceeds maxResolution width: ", args.maxResolution.first));
+        }
+    }
+    it = requestOptions.find("height");
+    if (it != requestOptions.end()) {
+        auto height = it->second.as<int>();
+        if (height <= 0) {
+            return absl::InvalidArgumentError(absl::StrCat("requested height must be higher than 0, but got ", height));
+        }
+        if (height > args.maxResolution.second) {
+            return absl::InvalidArgumentError(absl::StrCat("requested height ", height, " exceeds maxResolution height: ", args.maxResolution.second));
         }
     }
 
-    // check if we have any unhandled parameters
-    auto it = requestOptions.find("num_images_per_prompt");
+    it = requestOptions.find("num_images_per_prompt");
     if (it != requestOptions.end()) {
         auto numImages = it->second.as<int>();
         if (numImages > args.maxNumImagesPerPrompt) {
@@ -280,6 +291,7 @@ absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOpt
             return absl::InvalidArgumentError(absl::StrCat("num_images_per_prompt/n must be higher than 0"));
         }
     }
+
     it = requestOptions.find("num_inference_steps");
     if (it != requestOptions.end()) {
         auto numInferenceSteps = it->second.as<int>();
@@ -292,20 +304,7 @@ absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOpt
     } else {
         requestOptions.insert({"num_inference_steps", args.defaultNumInferenceSteps});
     }
-    it = requestOptions.find("width");
-    if (it != requestOptions.end()) {
-        auto width = it->second.as<int>();
-        if (width <= 0) {
-            return absl::InvalidArgumentError(absl::StrCat("width must be higher than 0"));
-        }
-    }
-    it = requestOptions.find("height");
-    if (it != requestOptions.end()) {
-        auto height = it->second.as<int>();
-        if (height <= 0) {
-            return absl::InvalidArgumentError(absl::StrCat("height must be higher than 0"));
-        }
-    }
+
     it = requestOptions.find("strength");
     if (it != requestOptions.end()) {
         auto strength = it->second.as<float>();
@@ -314,6 +313,20 @@ absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOpt
         } else if (strength < 0.0f) {
             return absl::InvalidArgumentError(absl::StrCat("strength is less than minStrength: ", 0));
         }
+    }
+    return absl::OkStatus();
+}
+
+absl::Status ensureAcceptableAndDefaultsSetRequestOptions(ov::AnyMap& requestOptions, const ovms::ImageGenPipelineArgs& args) {
+    // Apply common validations first (basic sanity checks)
+    auto status = ensureCommonValidations(requestOptions, args);
+    if (!status.ok()) {
+        return status;
+    }
+    // validate for static
+    if (args.staticReshapeSettings.has_value()) {
+        SPDLOG_DEBUG("Validating request options for static reshape settings");
+        return ensureAcceptableForStatic(requestOptions, args);
     }
     return absl::OkStatus();
 }
@@ -401,6 +414,14 @@ std::variant<absl::Status, ov::AnyMap> getImageGenerationRequestOptions(const ra
         }
         if (requestOptions.find("width") == requestOptions.end()) {
             requestOptions.insert({"width", args.defaultResolution->first});
+        }
+    }
+    if (args.nativeResolution.has_value()) {
+        if (requestOptions.find("height") == requestOptions.end()) {
+            requestOptions.insert({"height", args.nativeResolution->second});
+        }
+        if (requestOptions.find("width") == requestOptions.end()) {
+            requestOptions.insert({"width", args.nativeResolution->first});
         }
     }
     // now check if in httpPaylod.parsedJson we have any fields other than the ones we accept

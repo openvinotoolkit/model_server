@@ -35,6 +35,7 @@ enum class StatusCode {
     MODEL_NOT_LOADED,
     JSON_INVALID,                /*!< The file/content is not valid json */
     JSON_NESTING_DEPTH_EXCEEDED, /*!< JSON nesting depth exceeds the allowed limit */
+    JSON_COMPLEXITY_EXCEEDED,    /*!< JSON structure exceeds the allowed complexity */
     JSON_SERIALIZATION_ERROR,    /*!< Data serialization to json format failed */
     MODELINSTANCE_NOT_FOUND,
     SHAPE_WRONG_FORMAT,                   /*!< The provided shape param is in wrong format */
