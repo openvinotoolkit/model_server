@@ -155,6 +155,28 @@ Required work:
 
 Status: confirmed by source inspection.
 
+### B6: Runtime Factory Archive Ordered Before Its Caller (Resolved)
+
+Functional CI failures reported missing MediaPipe runtime symbols and timed out
+waiting for graph readiness. A local branch startup reproduced the same error:
+the runtime library referenced an undefined
+`MediapipeFactory::MediapipeFactory(PythonBackend*)` despite compiling its object.
+
+The custom `runtime_plugin_deps` rule flattened each root's linker inputs
+separately. This placed the lazy factory archive before the C API object that
+references it, so the linker skipped the implementation. Merging all roots'
+`CcInfo` contexts before filtering preserves dependency order and resolves the
+constructor while still excluding the host-provided glog copy.
+
+The process regression now deploys an OpenCV-free passthrough graph and requires
+its ready endpoint, inference result, and the same `AVAILABLE after handling:
+ValidationPassedEvent` log used by functional tests. It passes both with OpenCV
+blocked and with the OpenCV decoder installed. All 3 focused Linux targets and
+32 test cases pass. The original CI image has not been rerun.
+
+Evidence: `test_log/mediapipe_graph_runtime.fixed.log` and
+`test_log/mediapipe_runtime_link_order.fixed.log`.
+
 ## Implementation Sequence
 
 1. Linux baseline repair: B3 and B4 are resolved.
@@ -212,9 +234,10 @@ the new OpenCV-required package smoke test. B2 and B5 have not been implemented;
 sequential work is paused at B1's native validation gate.
 
 Run the focused Linux targets inside the selected build container, not on the
-host:
+host or a release/runtime image. The following is a developer verification
+reference, not an executable runtime documentation example:
 
-```bash
+```text
 bazel test --config=mp_on --//:distro=ubuntu \
   --cache_test_results=no --test_output=errors --test_summary=detailed \
   //src/image_utils:kserve_image_conversion_test \

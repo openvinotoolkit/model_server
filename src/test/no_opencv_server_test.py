@@ -65,16 +65,33 @@ def check(root, auditor, executable, expect_opencv=False):
                     ET.SubElement(tensor_port, "dim").text = str(size)
         model.write(version / "dummy.xml")
         shutil.copyfile(root / "src/test/dummy/1/dummy.bin", version / "dummy.bin")
+        graph_path = Path(models) / "passthrough.pbtxt"
+        graph_path.write_text('''
+input_stream: "OVTENSOR:in"
+output_stream: "OVTENSOR:out"
+node {
+    calculator: "PassThroughCalculator"
+    input_stream: "in"
+    output_stream: "out"
+}
+''')
+        config_path = Path(models) / "config.json"
+        config_path.write_text(json.dumps({
+            "model_config_list": [{"config": {
+                "name": "image", "base_path": models, "layout": "NHWC",
+            }}],
+            "mediapipe_config_list": [{
+                "name": "passthrough", "base_path": models, "graph_path": str(graph_path),
+            }],
+        }))
         process = subprocess.Popen(
             [
                 str(executable),
-                "--model_name", "image",
-                "--model_path", models,
-                "--layout", "NHWC",
+                "--config_path", str(config_path),
                 "--rest_port", str(http_port),
                 "--port", str(grpc_port),
                 "--allow_unestimatable_image_formats",
-                "--log_level", "ERROR",
+                "--log_level", "INFO",
             ],
             env=environment,
             cwd=executable.parent,
@@ -94,6 +111,27 @@ def check(root, auditor, executable, expect_opencv=False):
                     time.sleep(0.1)
             else:
                 raise AssertionError("OVMS did not become ready")
+
+            with client.open(address + "/v2/models/passthrough/ready", timeout=10) as response:
+                assert response.status == 200
+            graph_request = urllib.request.Request(
+                address + "/v2/models/passthrough/infer",
+                data=json.dumps({
+                    "inputs": [{
+                        "name": "in", "datatype": "FP32", "shape": [1, 2],
+                        "data": [1.0, 2.0],
+                    }],
+                }).encode(),
+                headers={"Content-Type": "application/json"},
+            )
+            with client.open(graph_request, timeout=10) as response:
+                result = json.load(response)
+                assert result["outputs"][0]["data"] == [1.0, 2.0], result
+            log.seek(0)
+            startup_log = log.read()
+            assert "Mediapipe: passthrough state changed to: AVAILABLE after handling: ValidationPassedEvent" in startup_log
+            assert "In-process MediaPipe runtime symbols are unavailable" not in startup_log
+            print("PASS: MediaPipe graph ready, expected AVAILABLE log delivered, passthrough inference")
 
             def infer(encoded):
                 data = struct.pack("<I", len(encoded)) + encoded

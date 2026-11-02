@@ -20,15 +20,14 @@ def _runtime_plugin_deps_impl(ctx):
         for linker_input in host[CcInfo].linking_context.linker_inputs.to_list():
             host_owners[linker_input.owner] = True
 
-    plugin_inputs = []
-    cc_infos = []
-    for dep in ctx.attr.deps:
-        cc_infos.append(dep[CcInfo])
-        for linker_input in dep[CcInfo].linking_context.linker_inputs.to_list():
-            if linker_input.owner not in host_owners:
-                plugin_inputs.append(linker_input)
+    plugin_cc_info = cc_common.merge_cc_infos(cc_infos = [dep[CcInfo] for dep in ctx.attr.deps])
+    plugin_inputs = [
+        linker_input
+        for linker_input in plugin_cc_info.linking_context.linker_inputs.to_list()
+        if linker_input.owner not in host_owners
+    ]
     return [CcInfo(
-        compilation_context = cc_common.merge_cc_infos(cc_infos = cc_infos).compilation_context,
+        compilation_context = plugin_cc_info.compilation_context,
         linking_context = cc_common.create_linking_context(
             # C++ linker contexts use topological order. The default depset
             # order reverses archive traversal, placing proto/util archives
