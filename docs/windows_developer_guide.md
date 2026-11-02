@@ -43,7 +43,7 @@ Run commands in this prompt is not stated otherwise.
 ## Pull OpenVINO Model Server source
 > `Git` is required to complete this step. If you don't have it on your system, download it from https://git-scm.com/downloads/win and install before you continue.
 Run below commands in terminal to clone model server repository:
-```bat
+```text
 mkdir C:\git
 cd C:\git\
 git clone https://github.com/openvinotoolkit/model_server.git
@@ -56,12 +56,12 @@ This will install around 6 GB dependencies in the c:\opt directory:
 - wet.exe, msys2 tools, Openvinotoolkit for GenAI, OpenCL headers, BoringSSL, bazel, Python 3.12.10, OpenCV, Curl
 
 If error occurs during the script execution, please fix the error and rerun the script.
-```bat
+```text
 windows_install_build_dependencies.bat
 ```
 
 Optionally, you add parameter to the windows_install_build_dependencies.bat script
-```bat
+```text
 windows_install_build_dependencies.bat my_dir_on_c 1 1
 ```
 [arg1] - This way you can change default dependency install directory to c:\my_dir_on_c
@@ -70,12 +70,12 @@ windows_install_build_dependencies.bat my_dir_on_c 1 1
 
 ## COMPILE
 [WARNING] This step consumes up to 13GB of disk space. It can take up to 1h depending on host CPU and internet connection speed.
-```bat
+```text
 windows_build.bat
 ```
 
 Optionally, you add parameter to the windows_build.bat script
-```bat
+```text
 windows_build.bat my_dir_on_c --with_tests --integrity
 ```
 [arg1] - Change the default dependency location to `C:\my_dir_on_c`.
@@ -83,12 +83,12 @@ windows_build.bat my_dir_on_c --with_tests --integrity
 
 # Running unit tests - optional
 The script builds and runs the Python-enabled `ovms_test` binary, the Python runtime library test, and the Python interpreter lifecycle, backend-failure, and borrowed-interpreter tests. It also runs the Windows service tests and prepares the LLM test models (src\test\llm_testing).
-```bat
+```text
 windows_test.bat
 ```
 
 Optionally, pass the dependency location and a GoogleTest filter:
-```bat
+```text
 windows_test.bat my_dir_on_c PythonFlowTest.*
 ```
 [arg1] - Dependency location under `C:\`; defaults to `C:\opt`.
@@ -98,18 +98,18 @@ windows_test.bat my_dir_on_c PythonFlowTest.*
 The script runs pytest tests from `tests\functional` against the ovms.exe binary from a release package. It creates a `.venv` virtual environment, installs `tests\requirements.txt` and writes results to `pytest-functional.xml`.
 Create the deployment package first (see the next section) and pass the absolute path to the ovms.zip as the first argument.
 A HuggingFace token is required (some tests download gated models). Provide it with the `HF_TOKEN` environment variable, or with `HF_TOKEN_FILE_PATH` pointing to a file containing the token. `HF_TOKEN` takes priority. When `HF_TOKEN_FILE_PATH` is not set, `~\ovms_tokens\huggingface_token` is used.
-```bat
+```text
 set HF_TOKEN=<your_huggingface_token>
 windows_test_functional.bat c:\git\model_server\dist\windows\ovms.zip
 ```
 or
-```bat
+```text
 set HF_TOKEN_FILE_PATH=c:\path\to\huggingface_token_file
 windows_test_functional.bat c:\git\model_server\dist\windows\ovms.zip
 ```
 
 Optionally, you can add parameters to the windows_test_functional.bat script
-```bat
+```text
 windows_test_functional.bat c:\git\model_server\dist\windows\ovms.zip "tests/functional/test_embeddings.py -k on_commit" 2
 ```
 [arg1] - absolute path(s) to the OVMS release artifacts, comma-separated (required)  
@@ -117,7 +117,7 @@ windows_test_functional.bat c:\git\model_server\dist\windows\ovms.zip "tests/fun
 [arg3] - number of pytest-xdist workers. Default: 4
 
 Other test settings are read from `TT_*` environment variables set before running the script, for example:
-```bat
+```text
 set TT_TARGET_DEVICE=CPU,GPU
 set TT_LOGGING_LEVEL_OVMS=DEBUG
 set TT_ON_COMMIT_TESTS=False
@@ -127,12 +127,12 @@ windows_test_functional.bat c:\git\model_server\dist\windows\ovms.zip
 
 # Creating deployment package
 This step prepares ovms.zip deployment package from the build artifacts in the dist\windows\ directory. Run this script after successful compilation.
-```bat
+```text
 windows_create_package.bat
 ```
 
 To include the embedded Python runtime, pass `--with_python` after the dependency location:
-```bat
+```text
 windows_create_package.bat my_dir_on_c --with_python
 ```
 [arg1] - Dependency location under `C:\`; defaults to `C:\opt`.
@@ -144,37 +144,37 @@ You can follow the [baremetal deployment guide](deploying_server_baremetal.md) f
 # Developer Command Prompt
 For building ovms.exe and running ovms_test.exe with manual bazel commands you must setup proper environment variables.
 Run the batch script in new "Developer Command Prompt for VS 2022" terminal:
-```bat
+```text
 cd c:\git\model_server
 windows_setupvars.bat
 ```
 
 Build the unit-test and Python runtime test targets with the same configuration used by `windows_test.bat`:
-```bat
+```text
 bazel --output_user_root=c:\opt build --config=win_mp_on --action_env OpenVINO_DIR=c:\opt/openvino/runtime/cmake --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures //src:ovms_test //src:python_runtime_library_test //src/python:pythoninterpretermodule_lifecycle_test //src/python:pythoninterpretermodule_backend_failure_test //src/python:pythoninterpretermodule_borrowed_interpreter_test 2>&1 | tee win_build_test.log
 ```
 
 Download LLMs
-```bat
+```text
 %cd%\windows_prepare_llm_models.bat %cd%\src\test\llm_testing
 ```
 
 Change tests configs to windows:
-```bat
+```text
 python windows_change_test_configs.py
 ```
 
 Run specific unit tests by setting gtest_filter:
-```bat
+```text
 %cd%\bazel-bin\src\ovms_test.exe --gtest_filter=* 2>&1 | tee win_full_test.log
 ```
 
 Run the Python runtime library test:
-```bat
+```text
 %cd%\bazel-bin\src\python_runtime_library_test.exe --gtest_filter=*
 ```
 
 Run the Python interpreter module tests:
-```bat
+```text
 bazel --output_user_root=c:\opt test --config=win_mp_on --action_env OpenVINO_DIR=c:\opt/openvino/runtime/cmake --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=* //src/python:pythoninterpretermodule_lifecycle_test //src/python:pythoninterpretermodule_backend_failure_test //src/python:pythoninterpretermodule_borrowed_interpreter_test
 ```
