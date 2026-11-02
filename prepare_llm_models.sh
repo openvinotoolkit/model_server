@@ -51,12 +51,12 @@ echo "Downloading LLM testing models to directory $1"
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
 if [ "$2" = "docker" ]; then
     export PATH=$PATH:/opt/intel/openvino/python/bin
-    python3 -m pip install nncf sentence_transformers==5.3.0 sentencepiece requests protobuf==7.35.0 kokoro
+    python3 -m pip install sentence_transformers==5.3.0
 else
     python3 -m venv .venv
     . .venv/bin/activate
     pip3 install -U pip
-    pip3 install -U nncf sentence_transformers==5.3.0 sentencepiece requests protobuf==7.35.0 kokoro openvino-tokenizers
+    pip3 install -U sentence_transformers==5.3.0 openvino-tokenizers
 fi
 mkdir -p $1
 
