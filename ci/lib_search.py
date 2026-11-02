@@ -80,6 +80,7 @@ def check_dir(start_dir):
         '.webp',
         '.log',
         '.xml',
+        '.html',
         'Doxyfile',
         'LICENSE',
         'REST_age_gender.ipynb',
