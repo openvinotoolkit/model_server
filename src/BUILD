@@ -15,6 +15,7 @@
 #
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
+load("//src/mediapipe_internal:runtime_plugin.bzl", "runtime_plugin_deps")
 load("//:common_settings.bzl",
     "COMMON_STATIC_TEST_COPTS", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES",
     "PYBIND_HEADERS_ONLY", "COPTS_CLOUD", "COPTS_TESTS",
@@ -159,6 +160,16 @@ ovms_cc_library(
     linkstatic = 1,
 )
 
+runtime_plugin_deps(
+    name = "mediapipe_runtime_shared_deps",
+    deps = [
+        "//src/mediapipe_internal:libovms_mediapipe_runtime_owner",
+        "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
+        ":libovms_ov_version",
+    ],
+    provided_by = ["@com_github_glog_glog//:glog"],
+)
+
 # DO NOT REMOVE: loaded at runtime by mediapipe_runtime_api and plugin loader.
 # This is the runtime boundary for MediaPipe factory symbols and registration.
 # Build OVMS MediaPipe integration as a shared runtime component to avoid
@@ -167,11 +178,14 @@ cc_binary(
     name = "ovms_mediapipe_runtime_shared",
     srcs = [],
     data = [":ovms_optional_plugins"],
-    deps = [
-        "//src/mediapipe_internal:libovms_mediapipe_runtime_owner",
-        "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
-        ":libovms_ov_version",
-    ],
+    deps = select({
+        "//src:windows": [
+            "//src/mediapipe_internal:libovms_mediapipe_runtime_owner",
+            "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
+            ":libovms_ov_version",
+        ],
+        "//conditions:default": [":mediapipe_runtime_shared_deps"],
+    }),
     linkopts = select({
         "//conditions:default": ["-Wl,--allow-shlib-undefined"],
         "//src:windows": ["/FORCE:UNRESOLVED"],

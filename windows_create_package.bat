@@ -189,6 +189,13 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 :: Copy from bazel-out if the genai is from sources
 copy %cd%\bazel-out\x64_windows-opt\bin\src\opencv_world!opencv_dll_ver!.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
+set "opencv_decoder_src=%cd%\bazel-out\x64_windows-opt\bin\src\image_utils\ovms_opencv_image_decoder.dll"
+if not exist "!opencv_decoder_src!" (
+    echo Missing ovms_opencv_image_decoder.dll. Ensure //src/image_utils:opencv_image_decoder is built.
+    exit /b 1
+)
+copy /Y "!opencv_decoder_src!" dist\windows\ovms
+if !errorlevel! neq 0 exit /b !errorlevel!
 copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\openvino_genai.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\openvino_tokenizers.dll dist\windows\ovms
@@ -291,6 +298,9 @@ dist\windows\ovms\ovms.exe --version
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 dist\windows\ovms\ovms.exe --help
+if !errorlevel! neq 0 exit /b !errorlevel!
+
+python src\test\no_opencv_server_test.py "%cd%" - "%cd%\dist\windows\ovms\ovms.exe" --expect-opencv
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 if not exist dist\windows\ovms\libovmspython.dll (

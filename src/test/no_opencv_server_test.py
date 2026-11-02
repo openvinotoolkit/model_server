@@ -11,8 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Process-level KServe checks with every OpenCV library blocked by the OS loader."""
+"""Process-level KServe checks with OpenCV present or unavailable."""
 
+import argparse
 import json
 import os
 from pathlib import Path
@@ -34,12 +35,21 @@ def port():
         return listener.getsockname()[1]
 
 
-def check(root, auditor, executable):
+def check(root, auditor, executable, expect_opencv=False):
     http_port = port()
     grpc_port = port()
     while grpc_port == http_port:
         grpc_port = port()
-    environment = dict(os.environ, LD_AUDIT=str(auditor))
+    environment = dict(os.environ)
+    if auditor is not None:
+        environment["LD_AUDIT"] = str(auditor)
+    else:
+        environment.pop("LD_AUDIT", None)
+    if os.name == "nt":
+        environment["PATH"] = os.pathsep.join((
+            str(executable.parent),
+            str(Path(os.environ["SystemRoot"]) / "System32"),
+        ))
     with tempfile.TemporaryDirectory() as models, tempfile.TemporaryFile(mode="w+") as log:
         version = Path(models) / "1"
         version.mkdir()
@@ -67,6 +77,7 @@ def check(root, auditor, executable):
                 "--log_level", "ERROR",
             ],
             env=environment,
+            cwd=executable.parent,
             stdout=log,
             stderr=subprocess.STDOUT,
         )
@@ -82,7 +93,7 @@ def check(root, auditor, executable):
                 except (urllib.error.URLError, TimeoutError):
                     time.sleep(0.1)
             else:
-                raise AssertionError("OVMS did not become ready without OpenCV")
+                raise AssertionError("OVMS did not become ready")
 
             def infer(encoded):
                 data = struct.pack("<I", len(encoded)) + encoded
@@ -107,16 +118,22 @@ def check(root, auditor, executable):
                 assert result["outputs"][0]["shape"] == [1, 2, 2, 3], result
                 assert len(result["outputs"][0]["data"]) == 12, result
 
-            unsupported = b"Pf\n1 1\n-1.0\n" + struct.pack("<f", 0.5)
-            try:
-                client.open(infer(unsupported), timeout=10)
-            except urllib.error.HTTPError as error:
-                detail = error.read().decode()
-                assert error.code == 500, (error.code, detail)
-                assert "OpenCV" in detail and "missing" in detail, detail
-                assert "Install OpenCV" in detail, detail
+            pfm = b"PF\n2 2\n-1.0\n" + struct.pack("<12f", *([0.5] * 12))
+            if expect_opencv:
+                with client.open(infer(pfm), timeout=10) as response:
+                    result = json.load(response)
+                    assert result["outputs"][0]["shape"] == [1, 2, 2, 3], result
+                    assert result["outputs"][0]["data"] == [1.5] * 12, result
             else:
-                raise AssertionError("An unsupported image unexpectedly succeeded without OpenCV")
+                try:
+                    client.open(infer(pfm), timeout=10)
+                except urllib.error.HTTPError as error:
+                    detail = error.read().decode()
+                    assert error.code == 500, (error.code, detail)
+                    assert "OpenCV" in detail and "missing" in detail, detail
+                    assert "Install OpenCV" in detail, detail
+                else:
+                    raise AssertionError("An unsupported image unexpectedly succeeded without OpenCV")
 
             numeric = urllib.request.Request(
                 address + "/v2/models/image/infer",
@@ -131,7 +148,10 @@ def check(root, auditor, executable):
             with client.open(numeric, timeout=10) as response:
                 result = json.load(response)
                 assert result["outputs"][0]["data"] == [2.0] * 12, result
-            print("PASS: OpenCV-free startup, encoded JPEG inference, explicit missing-OpenCV HTTP error, numeric inference")
+            if expect_opencv:
+                print("PASS: OpenCV decoder loaded, encoded JPEG and PFM inference, numeric inference")
+            else:
+                print("PASS: OpenCV-free startup, encoded JPEG inference, explicit missing-OpenCV HTTP error, numeric inference")
         except Exception:
             log.seek(0)
             print(log.read(), file=sys.stderr)
@@ -146,4 +166,12 @@ def check(root, auditor, executable):
 
 
 if __name__ == "__main__":
-    check(Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve(), Path(sys.argv[3]).resolve())
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("root", type=Path)
+    parser.add_argument("auditor", help="LD_AUDIT library, or '-' to disable auditing")
+    parser.add_argument("executable", type=Path)
+    parser.add_argument("--expect-opencv", action="store_true")
+    arguments = parser.parse_args()
+    check(arguments.root.resolve(),
+          None if arguments.auditor == "-" else Path(arguments.auditor).resolve(),
+          arguments.executable.resolve(), arguments.expect_opencv)
