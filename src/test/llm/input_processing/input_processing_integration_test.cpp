@@ -58,7 +58,7 @@ using test_utils::buildWavBuffer;
 // Dummy model injects this default system turn when the first message
 // is not 'system' (verified from tokenizer_config.json chat_template).
 constexpr const char* LLM_DEFAULT_SYSTEM = "<|im_start|>system\\n"
-"You are Dummy, a helpful AI assistant that explains what OpenVINO is to users.<|im_end|>\n";
+                                           "You are Dummy, a helpful AI assistant that explains what OpenVINO is to users.<|im_end|>\n";
 
 // Minimal 1×1 PNG (same fixture used throughout the handler test suite).
 constexpr const char* TINY_PNG =
@@ -83,7 +83,7 @@ protected:
         const std::string chatTemplate{
             std::istreambuf_iterator<char>(templateFile), std::istreambuf_iterator<char>()};
         sharedTokenizer->set_chat_template(chatTemplate);
-        
+
         auto prepared = std::make_unique<PreparedChatTemplateRuntime>();
         std::string errorMessage;
         const bool preparedSuccessfully = prepared->prepare(

@@ -52,8 +52,7 @@ namespace {
 // Dummy model injects this default system turn when the first
 // message role is not 'system' (from tokenizer_config.json chat_template).
 constexpr const char* LLM_DEFAULT_SYSTEM = "<|im_start|>system\\n"
-"You are Dummy, a helpful AI assistant that explains what OpenVINO is to users.<|im_end|>\n";
-
+                                           "You are Dummy, a helpful AI assistant that explains what OpenVINO is to users.<|im_end|>\n";
 
 static InputRequest makeChatRequest(ov::genai::ChatHistory history) {
     InputRequest req;
