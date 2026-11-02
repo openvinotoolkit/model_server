@@ -75,6 +75,38 @@ static size_t appendChunkCallback(void* downloadedChunk, size_t size, size_t nme
     return static_cast<ImageDownloadContext*>(context)->append(downloadedChunk, size, nmemb);
 }
 
+const char* getDownloadFailureReason(CURLcode status) {
+    switch (status) {
+    case CURLE_URL_MALFORMAT:
+        return "invalid_url";
+    case CURLE_UNSUPPORTED_PROTOCOL:
+        return "unsupported_protocol";
+    case CURLE_COULDNT_RESOLVE_HOST:
+        return "dns_resolution_failed";
+    case CURLE_COULDNT_RESOLVE_PROXY:
+        return "proxy_resolution_failed";
+    case CURLE_COULDNT_CONNECT:
+        return "connect_failed";
+    case CURLE_OPERATION_TIMEDOUT:
+        return "timeout";
+    case CURLE_SSL_CONNECT_ERROR:
+        return "tls_connection_failed";
+    case CURLE_PEER_FAILED_VERIFICATION:
+        return "tls_verification_failed";
+    case CURLE_LOGIN_DENIED:
+        return "authentication_failed";
+    case CURLE_REMOTE_ACCESS_DENIED:
+        return "remote_access_denied";
+    case CURLE_TOO_MANY_REDIRECTS:
+        return "redirect_limit_exceeded";
+    case CURLE_SEND_ERROR:
+    case CURLE_RECV_ERROR:
+        return "io_failed";
+    default:
+        return "transfer_failed";
+    }
+}
+
 #define CURL_SETOPT(setopt)   \
     if (status == CURLE_OK) { \
         status = setopt;      \
@@ -129,8 +161,8 @@ absl::Status downloadImage(const char* url, std::string& image, const int64_t& s
             return absl::ResourceExhaustedError("Memory allocation failed while downloading image");
         }
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger,
-            "External image download failed: reason=transfer_failed curl_code={} curl_error={}",
-            static_cast<int>(status), curl_easy_strerror(status));
+            "External image download failed: reason={} curl_code={} curl_error={}",
+            getDownloadFailureReason(status), static_cast<int>(status), curl_easy_strerror(status));
         return absl::InvalidArgumentError("Failed to download image from external URL.");
     }
 
