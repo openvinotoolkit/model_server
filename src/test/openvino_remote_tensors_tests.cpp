@@ -1126,9 +1126,9 @@ TEST_F(CAPINonCopy, GStreamerOverlayEncodeVaPipeline) {
 }
 
 // P6c RTSP source: a paced fixture publisher feeds /cam while the overlay graph
-// reads it as an RTSP URL and publishes annotated output to /annotated. Set
-// OVMS_EXTERNAL_RTSP_SOURCE to use an already-running external publisher; that
-// mode leaves MediaMTX and the publisher under the caller's control.
+// reads it as an RTSP URL and publishes annotated output to /annotated. With an
+// external source, process a bounded clip and save the annotated video locally
+// unless OVMS_EXTERNAL_RTSP_OUTPUT selects an external RTSP destination.
 TEST_F(CAPINonCopy, GStreamerRtspSourceOverlayPipeline) {
 #ifndef BUILD_VAAPITESTS
     GTEST_SKIP() << "Test not enabled on UBI images";
@@ -1149,12 +1149,35 @@ TEST_F(CAPINonCopy, GStreamerRtspSourceOverlayPipeline) {
     const std::string inputUrl = useExternalSource
         ? externalSource : "rtsp://localhost:8554/cam";
     const char* externalOutput = std::getenv("OVMS_EXTERNAL_RTSP_OUTPUT");
-    const std::string outputUrl = externalOutput != nullptr && externalOutput[0] != '\0'
+    const bool hasExternalOutput = externalOutput != nullptr && externalOutput[0] != '\0';
+    const std::string outputUrl = hasExternalOutput
         ? externalOutput : "rtsp://localhost:8554/annotated";
-    const std::string pulledPath = "/tmp/pulled_rtsp_source.mp4";
+    const auto getEnvInt = [](const char* name, int fallback) {
+        const char* value = std::getenv(name);
+        return value != nullptr && value[0] != '\0' ? std::stoi(value) : fallback;
+    };
+    const int fullWidth = useExternalSource
+        ? getEnvInt("OVMS_EXTERNAL_RTSP_WIDTH", 640) : 1280;
+    const int fullHeight = useExternalSource
+        ? getEnvInt("OVMS_EXTERNAL_RTSP_HEIGHT", 480) : 720;
+    const int maxFrames = useExternalSource
+        ? getEnvInt("OVMS_EXTERNAL_RTSP_MAX_FRAMES", 300) : 0;
+    if (useExternalSource) {
+        ASSERT_GT(fullWidth, 0);
+        ASSERT_GT(fullHeight, 0);
+        ASSERT_EQ(fullWidth % 2, 0) << "overlay width must be even for NV12";
+        ASSERT_EQ(fullHeight % 2, 0) << "overlay height must be even for NV12";
+        ASSERT_GT(maxFrames, 0) << "external RTSP test requires a finite frame count";
+    }
+    const bool writeOutputToFile = useExternalSource && !hasExternalOutput;
+    const std::string pulledPath = writeOutputToFile
+        ? "/ovms/logs/rtsp_live_overlay.mp4" : "/tmp/pulled_rtsp_source.mp4";
+    const std::string graphOutputPath = writeOutputToFile ? pulledPath : outputUrl;
+    const std::string graphOutputMode = writeOutputToFile ? "file" : "rtsp";
     const std::string mediamtxCfg = "/tmp/mediamtx_rtsp_source.yml";
     const std::string publisherPid = "/tmp/gst_rtsp_source_publisher.pid";
-    std::remove(pulledPath.c_str());
+    if (!writeOutputToFile)
+        std::remove(pulledPath.c_str());
     const auto stopPublisher = [&publisherPid]() {
         const std::string command =
             "test ! -f " + publisherPid + " || kill $(cat " + publisherPid +
@@ -1248,17 +1271,17 @@ TEST_F(CAPINonCopy, GStreamerRtspSourceOverlayPipeline) {
         {"source_uri", mediapipe::MakePacket<std::string>(inputUrl)},
         {"width", mediapipe::MakePacket<int>(672)},
         {"height", mediapipe::MakePacket<int>(384)},
-        {"full_width", mediapipe::MakePacket<int>(1280)},
-        {"full_height", mediapipe::MakePacket<int>(720)},
+        {"full_width", mediapipe::MakePacket<int>(fullWidth)},
+        {"full_height", mediapipe::MakePacket<int>(fullHeight)},
         {"full_va_surface", mediapipe::MakePacket<bool>(false)},
         {"servable_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_MODEL_NAME)},
         {"servable_version", mediapipe::MakePacket<int>(1)},
         {"input_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_INPUT_NAME)},
         {"server", mediapipe::MakePacket<OVMS_Server*>(cserver)},
-        {"output_path", mediapipe::MakePacket<std::string>(outputUrl)},
-        {"output_mode", mediapipe::MakePacket<std::string>("rtsp")},
+        {"output_path", mediapipe::MakePacket<std::string>(graphOutputPath)},
+        {"output_mode", mediapipe::MakePacket<std::string>(graphOutputMode)},
         {"framerate", mediapipe::MakePacket<int>(30)},
-        {"max_frames", mediapipe::MakePacket<int>(0)},
+        {"max_frames", mediapipe::MakePacket<int>(maxFrames)},
     };
 
     std::future<int> puller;
@@ -1300,6 +1323,8 @@ TEST_F(CAPINonCopy, GStreamerRtspSourceOverlayPipeline) {
 
     if (!useExternalSource) {
         EXPECT_EQ(pullResult, 0) << "failed to pull annotated RTSP output";
+    }
+    if (!useExternalSource || writeOutputToFile) {
         std::ifstream pulled(pulledPath, std::ios::binary | std::ios::ate);
         const bool pulledReadable = pulled.good() && pulled.tellg() > 0;
         EXPECT_TRUE(pulledReadable) << "puller did not capture annotated RTSP output";
@@ -1323,7 +1348,8 @@ TEST_F(CAPINonCopy, GStreamerRtspSourceOverlayPipeline) {
         imp_context_destroy(vctx);
         }
     }
-    std::remove(pulledPath.c_str());
+    if (!writeOutputToFile)
+        std::remove(pulledPath.c_str());
     if (!useExternalSource)
         std::remove(mediamtxCfg.c_str());
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSetGlobalVADisplay(cserver, 0));
