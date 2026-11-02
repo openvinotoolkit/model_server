@@ -956,7 +956,7 @@ TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTaskUnreachableEndpoint) {
         "/some/path",
     };
     int arg_count = 5;
-    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Could not reach the model endpoint");
+    EXPECT_EXIT(ovms::Config::instance().parse(arg_count, n_argv), ::testing::ExitedWithCode(OVMS_EX_USAGE), "Failed to resolve source model");
 }
 
 TEST_F(OvmsConfigDeathTest, hfSourceModelWithoutTaskInvalidArchitectureLocal) {

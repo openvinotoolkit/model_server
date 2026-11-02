@@ -46,13 +46,14 @@ static std::string ensureTrailingSlash(std::string path) {
 }
 
 static std::string describeTaskMetadataFailure(const std::string& sourceModel, int httpCode) {
+    const std::string context = "Failed to resolve source model '" + sourceModel + "': ";
     if (httpCode == 401 || httpCode == 403 || httpCode == 404) {
-        return "Model '" + sourceModel + "' was not found locally and its task metadata is not accessible from the model endpoint (check whether it is private or the repo name is invalid).";
+        return context + "task metadata is not accessible from the model endpoint (check whether it is private or the repo name is invalid).";
     }
     if (httpCode == -1 || httpCode == 0) {
-        return "Could not reach the model endpoint to resolve task metadata for '" + sourceModel + "'. Check the internet connection or proxy configuration.";
+        return context + "could not reach the model endpoint. Check the internet connection or proxy configuration.";
     }
-    return "Could not retrieve task metadata for model '" + sourceModel + "' from the model endpoint (HTTP status " + std::to_string(httpCode) + ").";
+    return context + "could not retrieve task metadata from the model endpoint (HTTP status " + std::to_string(httpCode) + ").";
 }
 
 bool graphPbtxtExists(const std::string& modelPath) {

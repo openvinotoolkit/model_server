@@ -267,9 +267,9 @@ Status fetchUrlToString(const std::string& url, const std::string& authToken, st
         SPDLOG_ERROR("HTTP request to {} failed with cURL error: {}", url, curl_easy_strerror(curlStatus));
         return StatusCode::INTERNAL_ERROR;
     }
-    int32_t httpCodeValue = 0;
+    long httpCodeValue = 0;
     CHECK_CURL_CALL(curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCodeValue));
-    httpCode = httpCodeValue;
+    httpCode = static_cast<int>(httpCodeValue);
     if (httpCodeValue != 200) {
         SPDLOG_ERROR("HTTP request to {} failed with code: {}", url, httpCodeValue);
         return StatusCode::PATH_INVALID;
