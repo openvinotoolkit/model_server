@@ -118,6 +118,7 @@ cc_library(
         ":openvinoinferenceutils",
         ":openvinomodelserversessioncalculator_cc_proto",
         "//src:ovms_header",
+        "//src:libovmsstring_utils",
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
     ],

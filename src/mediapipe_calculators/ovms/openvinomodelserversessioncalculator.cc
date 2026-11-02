@@ -31,6 +31,7 @@
 #include <openvino/openvino.hpp>
 
 #include "ovms.h"  // NOLINT
+#include "src/stringutils.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_framework.h"
@@ -64,35 +65,6 @@ ov::Core UNUSED_OV_CORE;
             RET_CHECK(nullptr == err);                                                      \
         }                                                                                   \
     }
-
-// Function from ovms/src/string_utils.h
-void erase_spaces(std::string& str) {
-    str.erase(std::remove_if(str.begin(), str.end(),
-                  [](char c) -> bool {
-                      return std::isspace<char>(c, std::locale::classic());
-                  }),
-        str.end());
-}
-
-// Function from ovms/src/string_utils.h
-std::optional<uint32_t> stou32(const std::string& input) {
-    std::string str = input;
-    erase_spaces(str);
-
-    if (str.size() > 0 && str[0] == '-') {
-        return std::nullopt;
-    }
-
-    try {
-        uint64_t val = std::stoul(str);
-        if (val > std::numeric_limits<uint32_t>::max()) {
-            return std::nullopt;
-        }
-        return {static_cast<uint32_t>(val)};
-    } catch (...) {
-        return std::nullopt;
-    }
-}
 
 class SettingsGuard {
 public:
@@ -175,9 +147,18 @@ absl::Status OpenVINOModelServerSessionCalculator::Open(CalculatorContext* cc) {
         }
     }
     const std::string& servableName = options.servable_name();
-    const std::string& servableVersionStr = options.servable_version();
-    auto servableVersionOpt = stou32(servableVersionStr);
-    uint32_t servableVersion = servableVersionOpt.value_or(0);
+    uint32_t servableVersion = 0;
+    if (options.has_servable_version()) {
+        const std::string& servableVersionStr = options.servable_version();
+        auto servableVersionOpt = ::ovms::stou32(servableVersionStr);
+        if (!servableVersionOpt.has_value()) {
+            LOG(INFO) << "OpenVINOModelServerSessionCalculator: invalid servable_version: \"" << servableVersionStr << "\"";
+            return mediapipe::InvalidArgumentErrorBuilder(MEDIAPIPE_LOC)
+                   << "OpenVINOModelServerSessionCalculator: servable_version \""
+                   << servableVersionStr << "\" is not a valid non-negative integer";
+        }
+        servableVersion = servableVersionOpt.value();
+    }
     auto session = std::make_shared<OVMSInferenceAdapter>(servableName, servableVersion);
     try {
         session->loadModel(nullptr, UNUSED_OV_CORE, "UNUSED", {});
