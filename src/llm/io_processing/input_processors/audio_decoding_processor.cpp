@@ -81,14 +81,10 @@ absl::Status AudioDecodingProcessor::process(InputRequest& req) {
                         } else {
                             return absl::InvalidArgumentError("Unsupported audio format: " + format);
                         }
-                    } else {
-                        pcm = ovms::audio_utils::readWithoutResample(audioData, format);
-                    }
-
-                    if (resamplingRequired) {
                         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "AudioDecodingProcessor: decoded and resampled audio {} samples, format='{}'",
                             pcm.size(), format);
                     } else {
+                        pcm = ovms::audio_utils::readWithoutResample(audioData, format);
                         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "AudioDecodingProcessor: decoded audio {} samples, format='{}'",
                             pcm.size(), format);
                     }
