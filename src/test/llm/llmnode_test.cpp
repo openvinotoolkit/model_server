@@ -1949,10 +1949,12 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStoppedByMaxModelLength
         GTEST_SKIP();
     }
     std::string prompt;
-    // 131066 "hello " words + the dummy chat template's ~5 tokens of literal overhead
-    // ("User"/":"/"\n"/"Assistant"/":") yields exactly 131071 prompt tokens - one under the
+    const uint32_t overheadTokens = 41;
+    const uint32_t maxModelLength = 131072;
+    // 131066 "hello " words + the dummy chat template's ~41 tokens of literal overhead
+    // SYSTEM_PROMPT + ("User"/":"/"\n"/"Assistant"/":") yields exactly 131071 prompt tokens - one under the
     // dummy model's 131072 (128k) max length - leaving exactly 1 token of generation budget.
-    for (int i = 0; i < 131066; i++) {
+    for (int i = 0; i < (int)(maxModelLength - overheadTokens - 1); i++) {
         prompt += "hello ";
     }
     std::string requestBody = R"(

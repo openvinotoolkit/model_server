@@ -113,7 +113,7 @@ public:
         return createConfigFileWithContent(fileContents, jinjaConfigFilePath);
     }
     void CopyDefaultChatTemplate() {
-        std::string srcFilePath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov/chat_template.jinja");
+        std::string srcFilePath = getGenericFullPathForSrcTest("/ovms/src/test/llm/dummy_facebook_template.jinja");
         std::string dstFilePath = ovms::FileSystem::joinPath({directoryPath, "chat_template.jinja"});
         std::filesystem::copy_file(srcFilePath, dstFilePath, std::filesystem::copy_options::overwrite_existing);
     }
