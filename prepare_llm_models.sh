@@ -25,7 +25,7 @@ LEGACY_MODEL_FILE="1/model.bin"
 EMBEDDING_MODEL="OpenVINO/bge-base-en-v1.5-int8-ov"
 RERANK_MODEL="OpenVINO/bge-reranker-base-int8-ov"
 TTS_MODEL="OpenVINO/Kokoro-82M-int8-ov"
-TEXT_GENERATION_MODEL="OpenVINO/LFM2.5-350M-int8-ov" # TODO: change this model to int4  when it will be public on HF
+TEXT_GENERATION_MODEL="OpenVINO/LFM2.5-350M-int8-ov" # TODO: change this model to int4 when it will be public on HF
 # Dummy cyclic models used by LLM/VLM tests instead of real downloaded models;
 DUMMY_LLM_MODEL="mzeglars/dummy-cyclic-gpt2-ov"
 DUMMY_VLM_MODEL="mzeglars/dummy-cyclic-llava-ov"
