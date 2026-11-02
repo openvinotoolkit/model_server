@@ -40,12 +40,12 @@ struct SupportsAudioAddRequest : std::false_type {};
 
 template <typename Pipeline>
 struct SupportsAudioAddRequest<Pipeline, std::void_t<decltype(std::declval<Pipeline&>().add_request(
-                                           std::declval<uint64_t>(),
-                                           std::declval<const std::string&>(),
-                                           std::declval<const std::vector<ov::Tensor>&>(),
-                                           std::declval<const std::vector<ov::Tensor>&>(),
-                                           std::declval<const std::vector<ov::Tensor>&>(),
-                                           std::declval<const ov::genai::GenerationConfig&>()))>> : std::true_type {};
+                                             std::declval<uint64_t>(),
+                                             std::declval<const std::string&>(),
+                                             std::declval<const std::vector<ov::Tensor>&>(),
+                                             std::declval<const std::vector<ov::Tensor>&>(),
+                                             std::declval<const std::vector<ov::Tensor>&>(),
+                                             std::declval<const ov::genai::GenerationConfig&>()))>> : std::true_type {};
 
 template <typename Pipeline, typename GenerationHandle>
 absl::Status addVlmRequest(Pipeline& pipeline,

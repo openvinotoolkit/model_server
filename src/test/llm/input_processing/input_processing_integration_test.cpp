@@ -469,10 +469,10 @@ static std::string toBase64(const std::string& raw) {
 TEST_P(InputProcessingIntegrationTest, VlmAudioInput_DecodesWithoutOmni) {
     const std::string audioB64 = toBase64(buildWavBuffer(160));
     const std::string json = (GetParam() == Endpoint::CHAT_COMPLETIONS)
-        ? R"({"model":"m","messages":[{"role":"user","content":[{"type":"text","text":"Describe this audio."},{"type":"input_audio","input_audio":{"data":")" +
-            audioB64 + R"(","format":"wav"}}]}]})"
-        : R"({"model":"m","input":[{"type":"message","role":"user","content":[{"type":"input_text","text":"Describe this audio."},{"type":"input_audio","input_audio":{"data":")" +
-            audioB64 + R"(","format":"wav"}}]}]})";
+                                 ? R"({"model":"m","messages":[{"role":"user","content":[{"type":"text","text":"Describe this audio."},{"type":"input_audio","input_audio":{"data":")" +
+                                       audioB64 + R"(","format":"wav"}}]}]})"
+                                 : R"({"model":"m","input":[{"type":"message","role":"user","content":[{"type":"input_text","text":"Describe this audio."},{"type":"input_audio","input_audio":{"data":")" +
+                                       audioB64 + R"(","format":"wav"}}]}]})";
 
     auto result = runPipeline(json, /*isVLM=*/true, /*isOmni=*/false);
     ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
@@ -485,10 +485,10 @@ TEST_P(InputProcessingIntegrationTest, VlmAudioInput_DecodesWithoutOmni) {
 TEST_P(InputProcessingIntegrationTest, VlmAudioInput_ResamplesTo16Khz) {
     const std::string audioB64 = toBase64(buildWavBuffer(240, /*sampleRate=*/24000));
     const std::string json = (GetParam() == Endpoint::CHAT_COMPLETIONS)
-        ? R"({"model":"m","messages":[{"role":"user","content":[{"type":"input_audio","input_audio":{"data":")" +
-            audioB64 + R"(","format":"wav"}}]}]})"
-        : R"({"model":"m","input":[{"type":"message","role":"user","content":[{"type":"input_audio","input_audio":{"data":")" +
-            audioB64 + R"(","format":"wav"}}]}]})";
+                                 ? R"({"model":"m","messages":[{"role":"user","content":[{"type":"input_audio","input_audio":{"data":")" +
+                                       audioB64 + R"(","format":"wav"}}]}]})"
+                                 : R"({"model":"m","input":[{"type":"message","role":"user","content":[{"type":"input_audio","input_audio":{"data":")" +
+                                       audioB64 + R"(","format":"wav"}}]}]})";
 
     auto result = runPipeline(json, /*isVLM=*/true, /*isOmni=*/false);
     ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
