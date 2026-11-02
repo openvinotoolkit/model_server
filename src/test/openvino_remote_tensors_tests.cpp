@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <fstream>
+#include <array>
 #include <set>
 #include <sstream>
 #include <string>
@@ -357,7 +358,7 @@ const std::shared_ptr<ov::Model> preprocessModel(const std::shared_ptr<ov::Model
 
 const std::string FACE_DETECTION_ADAS_MODEL_CONFIG_JSON{"/ovms/src/test/configs/config_gpu_face_detection_adas.json"};
 const std::string FACE_DETECTION_ADAS_VA_DISPLAY_MODEL_CONFIG_JSON{"/ovms/src/test/configs/config_gpu_face_detection_adas_va_display.json"};
-const std::string FACE_DETECTION_ADAS_TEN_OVERLAYS_CONFIG_JSON{"/ovms/src/test/configs/config_gpu_face_detection_adas_ten_overlays.json"};
+const std::string FACE_DETECTION_ADAS_SIX_OVERLAYS_CONFIG_JSON{"/ovms/src/test/configs/config_gpu_face_detection_adas_six_overlays.json"};
 const std::string FACE_DETECTION_ADAS_MODEL_PATH{"/ovms/src/test/face_detection_adas/1/face-detection-adas-0001.xml"};
 const std::string FACE_DETECTION_ADAS_MODEL_NAME{"face_detection_adas"};
 const std::string FACE_DETECTION_ADAS_INPUT_NAME{"data"};
@@ -682,7 +683,7 @@ TEST_F(CAPINonCopy, DeployedGraphUsesModelManagerServable) {
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
 
-    const std::string graphPath = "/ovms/src/mediapipe_gst_calculators/gst_video_infer.pbtxt";
+    const std::string graphPath = "/ovms/src/test/mediapipe/calculators/graphs/gst_video_infer.pbtxt";
     std::ifstream graphFile(graphPath);
     ASSERT_TRUE(graphFile.good()) << "graph not found: " << graphPath;
     std::stringstream graphText;
@@ -733,10 +734,17 @@ TEST_F(CAPINonCopy, ConfiguredOverlayGraphsProduceIndependentOutputs) {
     struct OverlayGraph {
         const char* name;
         const char* outputPath;
+        int64_t colorR;
+        int64_t colorG;
+        int64_t colorB;
     };
-    const std::array<OverlayGraph, 2> graphs{{
-        {"gst_overlay_0", "/tmp/ovms_overlay_0.mp4"},
-        {"gst_overlay_1", "/tmp/ovms_overlay_1.mp4"},
+    const std::array<OverlayGraph, 6> graphs{{
+        {"gst_overlay_0", "/tmp/ovms_overlay_0.mp4", 0, 255, 0},
+        {"gst_overlay_1", "/tmp/ovms_overlay_1.mp4", 255, 0, 0},
+        {"gst_overlay_2", "/tmp/ovms_overlay_2.mp4", 0, 0, 255},
+        {"gst_overlay_3", "/tmp/ovms_overlay_3.mp4", 255, 255, 0},
+        {"gst_overlay_4", "/tmp/ovms_overlay_4.mp4", 0, 255, 255},
+        {"gst_overlay_5", "/tmp/ovms_overlay_5.mp4", 255, 0, 255},
     }};
     for (const auto& graph : graphs)
         std::remove(graph.outputPath);
@@ -748,7 +756,7 @@ TEST_F(CAPINonCopy, ConfiguredOverlayGraphsProduceIndependentOutputs) {
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
     ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, std::stoi(port)));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, FACE_DETECTION_ADAS_TEN_OVERLAYS_CONFIG_JSON.c_str()));
+    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, FACE_DETECTION_ADAS_SIX_OVERLAYS_CONFIG_JSON.c_str()));
     OVMS_Server* cserver = nullptr;
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
     ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
@@ -762,6 +770,10 @@ TEST_F(CAPINonCopy, ConfiguredOverlayGraphsProduceIndependentOutputs) {
         inputs_info_t inputs{{"trigger", {ovms::signed_shape_t{1}, ovms::Precision::FP32}}};
         preparePredictRequest(request, inputs, std::vector<float>{1.0f});
         request.mutable_model_name()->assign(graph.name);
+        request.mutable_parameters()->operator[]("output_path").set_string_param(graph.outputPath);
+        request.mutable_parameters()->operator[]("color_r").set_int64_param(graph.colorR);
+        request.mutable_parameters()->operator[]("color_g").set_int64_param(graph.colorG);
+        request.mutable_parameters()->operator[]("color_b").set_int64_param(graph.colorB);
         ASSERT_EQ(grpcService.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
         EXPECT_TRUE(std::ifstream(graph.outputPath, std::ios::binary | std::ios::ate).good())
             << "configured graph did not produce " << graph.outputPath;

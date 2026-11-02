@@ -2855,7 +2855,7 @@ cc_library(
         "test/configs/config_gpu_dummy.json",
         "test/configs/config_gpu_face_detection_adas.json",
         "test/configs/config_gpu_face_detection_adas_va_display.json",
-        "test/configs/config_gpu_face_detection_adas_ten_overlays.json",
+        "test/configs/config_gpu_face_detection_adas_six_overlays.json",
         "test/dummy/1/dummy.xml",
         "test/dummy/1/dummy.bin",
     ],

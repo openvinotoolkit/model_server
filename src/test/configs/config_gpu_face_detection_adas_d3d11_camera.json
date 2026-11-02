@@ -12,11 +12,11 @@
   "mediapipe_config_list": [
     {
       "name": "gst_camera_overlay",
-      "graph_path": "C:/git/model_server/src/mediapipe_gst_calculators/gst_video_camera_overlay.pbtxt"
+      "graph_path": "C:/git/model_server/src/test/mediapipe/calculators/graphs/gst_video_camera_overlay.pbtxt"
     },
     {
       "name": "gst_rtsp_overlay",
-      "graph_path": "C:/git/model_server/src/mediapipe_gst_calculators/gst_video_rtsp_overlay.pbtxt"
+      "graph_path": "C:/git/model_server/src/test/mediapipe/calculators/graphs/gst_video_rtsp_overlay.pbtxt"
     }
   ]
 }
