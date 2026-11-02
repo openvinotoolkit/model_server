@@ -292,6 +292,7 @@ COPY third_party /ovms/third_party
 
 # This path is required for namespace to setup Python dependencies for testing the binding
 COPY src/BUILD /ovms/src/BUILD
+COPY src/mediapipe_internal/BUILD src/mediapipe_internal/runtime_plugin.bzl /ovms/src/mediapipe_internal/
 COPY src/python/binding/BUILD /ovms/src/python/binding/BUILD
 COPY src/python/binding/tests/requirements.txt /ovms/src/python/binding/tests/requirements.txt
 
