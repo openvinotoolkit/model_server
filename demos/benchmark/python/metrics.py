@@ -121,7 +121,7 @@ class XMetrics(dict):
         mean_lat = ((N - 1) * self[f"{prefix}fail_mean_latency"] + other[f"{prefix}fail_mean_latency"]) / N
         try:
             self[f"{prefix}fail_stdev_latency"] = math.sqrt(mean_lat2 - mean_lat ** 2)
-            self[f"{prefix}fail_cv_latency"] = self[f"{prefix}pass_stdev_latency"] / mean_lat
+            self[f"{prefix}fail_cv_latency"] = self[f"{prefix}fail_stdev_latency"] / mean_lat
         except:
             self[f"{prefix}fail_stdev_latency"] = 0.0
             self[f"{prefix}fail_cv_latency"] = 0.0
