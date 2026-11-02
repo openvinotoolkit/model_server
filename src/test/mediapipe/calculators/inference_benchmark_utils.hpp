@@ -52,6 +52,16 @@ inline int repeatCount() {
     return count;
 }
 
+inline int sampleCount() {
+    const std::string value = environment("OVMS_BENCHMARK_SAMPLE_COUNT",
+        std::to_string(benchmark_config::kSampleCount));
+    size_t parsed = 0;
+    const int count = std::stoi(value, &parsed);
+    if (parsed != value.size() || count <= 0)
+        throw std::runtime_error("OVMS_BENCHMARK_SAMPLE_COUNT must be a positive integer");
+    return count;
+}
+
 inline int warmupFrames() {
     return benchmark_config::kWarmupFrames * repeatCount();
 }
@@ -133,7 +143,7 @@ inline void report(const std::string& name, const std::vector<double>& samples) 
         double variance = 0;
         for (double value : values)
             variance += (value - mean) * (value - mean);
-        const double deviation = std::sqrt(variance / (values.size() - 1));
+        const double deviation = values.size() > 1 ? std::sqrt(variance / (values.size() - 1)) : 0.0;
         std::cout << "SUMMARY case=" << name << " unit=" << unit << " samples=" << values.size()
                   << " mean=" << mean << " sample_stddev=" << deviation
                   << " cv_percent=" << 100.0 * deviation / mean << std::endl;

@@ -176,7 +176,7 @@ protected:
         const size_t bytesY = static_cast<size_t>(benchmark_config::kModelWidth) * benchmark_config::kModelHeight;
         const size_t bytesUv = bytesY / 2;
 
-        for (int sample = 0; sample < benchmark_config::kSampleCount; ++sample) {
+        for (int sample = 0; sample < bench::sampleCount(); ++sample) {
             bench::DecodeStream decode;
             decode.open();
             ov::Core core;
@@ -595,7 +595,7 @@ protected:
     void runFairFullPathComparison() {
         std::vector<double> directSamples;
         std::vector<double> capiSamples;
-        for (int sample = 0; sample < benchmark_config::kSampleCount; ++sample) {
+        for (int sample = 0; sample < bench::sampleCount(); ++sample) {
             FairPathResult direct;
             FairPathResult capi;
             const bool directFirst = sample % 2 == 0;

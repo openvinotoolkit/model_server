@@ -94,7 +94,7 @@ void reportCompiledProperties(const std::string& name, const ov::CompiledModel& 
               << " profiling=" << (collectNodeProfiles() ? "on" : "off")
               << " warmup=" << benchmark_config::kWarmupFrames
               << " measured=" << benchmark_config::kMeasuredFrames
-              << " samples=" << benchmark_config::kSampleCount << std::endl;
+              << " samples=" << bench::sampleCount() << std::endl;
 }
 
 struct NodeProfileTotals {
@@ -113,7 +113,7 @@ void reportCompiledProperties(const std::string&, const ov::CompiledModel&, cons
 template <typename Bind>
 void measure(const std::string& name, ov::CompiledModel& compiled, Bind bind) {
     std::vector<double> samples;
-    for (int sample = 0; sample < benchmark_config::kSampleCount; ++sample) {
+    for (int sample = 0; sample < bench::sampleCount(); ++sample) {
         ov::InferRequest request = compiled.create_infer_request();
         double fullPathElapsed = 0;
         double inferenceElapsed = 0;

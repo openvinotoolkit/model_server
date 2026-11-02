@@ -54,11 +54,17 @@ substitute for any of these baseline cases.
 ## Configuration and timing
 
 `performance_benchmark_config.hpp` centralizes model/input names, 672x384
-dimensions, 20 warm-up frames, 230 measured frames, five samples,
+dimensions, 20 warm-up frames, 230 measured frames, 10 samples by default,
 `PERFORMANCE_HINT=LATENCY`, `NUM_STREAMS=1`, and OVMS request-pool size 4.
 All paths execute synchronously with one outstanding request. The OVMS pool
 does not represent four concurrent benchmark workers. No model settings change
 between cases.
+
+Set `OVMS_BENCHMARK_SAMPLE_COUNT` to a positive integer to override the sample
+count (for example, `OVMS_BENCHMARK_SAMPLE_COUNT=1` for a checkpoint execution
+smoke). With one sample, the reported sample standard deviation is zero and is
+not a meaningful performance statistic. This setting is independent of
+`OVMS_BENCHMARK_REPEAT_COUNT`, which changes frames per sample.
 
 Set `OVMS_BENCHMARK_REPEAT_COUNT` to a positive integer to repeat the source
 and scale both the warm-up and measured frame counts by that value. For example,

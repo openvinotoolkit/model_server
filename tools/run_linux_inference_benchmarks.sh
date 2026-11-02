@@ -26,12 +26,18 @@ config=${BAZEL_BENCHMARK_CONFIG:-mp_on}
 artifact=${BENCHMARK_LOG:-$root/logs/panther_lake_inference_benchmark_raw.log}
 test_filter=${BENCHMARK_TEST_FILTER:-}
 repeat_count=${OVMS_BENCHMARK_REPEAT_COUNT:-1}
+sample_count=${OVMS_BENCHMARK_SAMPLE_COUNT:-10}
 mkdir -p "$root/logs"
 
 if ! [[ "$repeat_count" =~ ^[1-9][0-9]*$ ]]; then
     printf 'OVMS_BENCHMARK_REPEAT_COUNT must be a positive integer\n' >&2
     exit 1
 fi
+if ! [[ "$sample_count" =~ ^[1-9][0-9]*$ ]]; then
+    printf 'OVMS_BENCHMARK_SAMPLE_COUNT must be a positive integer\n' >&2
+    exit 1
+fi
+export OVMS_BENCHMARK_SAMPLE_COUNT="$sample_count"
 
 dimensions=()
 mapfile -t dimensions < <(awk '$3 == "kModelWidth" || $3 == "kModelHeight" {gsub(";", "", $5); print $5}' \
@@ -80,6 +86,7 @@ bazel test "--config=$config" --curses=no --color=no --nocache_test_results \
     --test_env=OVMS_MPI_E4_VA_SYNC \
     --test_env=OVMS_CAPI_LOG_LEVEL \
     --test_env=OVMS_BENCHMARK_REPEAT_COUNT \
+    --test_env=OVMS_BENCHMARK_SAMPLE_COUNT \
     "${targets[@]}" >"$artifact" 2>&1 || result=$?
 if (( result != 0 )); then
     printf 'Benchmark failed; inspect %s\n' "$artifact" >&2

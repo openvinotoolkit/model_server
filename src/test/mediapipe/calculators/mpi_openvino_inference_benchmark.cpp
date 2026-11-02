@@ -87,7 +87,7 @@ TEST(MpiOpenVinoBenchmark, Direct) {
     const std::string inputName = benchmark_config::kInputName;
     const std::string performanceHint = benchmark_config::kPerformanceHint;
     const uint32_t streams = std::stoi(benchmark_config::kNumStreams);
-    for (int sample = 0; sample < benchmark_config::kSampleCount; ++sample) {
+    for (int sample = 0; sample < bench::sampleCount(); ++sample) {
 #ifdef _WIN32
         bench::DecodeStream decode;
         decode.open();
@@ -269,7 +269,7 @@ TEST(MpiOpenVinoDiagnostics, DecodeSupply) {
         GTEST_SKIP() << "Set OVMS_MPI_E2_DIAGNOSTICS=stages for E2 decode supply timings";
 
     std::vector<double> samples;
-    for (int sample = 0; sample < benchmark_config::kSampleCount; ++sample) {
+    for (int sample = 0; sample < bench::sampleCount(); ++sample) {
         bench::DecodeStream decode;
         decode.open();
         int frames = 0;

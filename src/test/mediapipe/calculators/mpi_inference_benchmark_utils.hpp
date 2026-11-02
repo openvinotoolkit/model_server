@@ -100,7 +100,7 @@ inline mediapipe::CalculatorGraphConfig graphConfig(bool capi, bool split) {
 inline void measureGraph(const std::string& name, bool capi, bool split,
     std::map<std::string, mediapipe::Packet> extraPackets = {}) {
     std::vector<double> samples;
-    for (int sample = 0; sample < benchmark_config::kSampleCount; ++sample) {
+    for (int sample = 0; sample < sampleCount(); ++sample) {
         mediapipe::CalculatorGraph graph;
         auto status = graph.Initialize(graphConfig(capi, split));
         ASSERT_TRUE(status.ok()) << status;
