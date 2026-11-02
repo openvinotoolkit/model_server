@@ -132,6 +132,12 @@ TEST(TaskInferenceRemoteMetadataTest, ReportsHttpStatusFailuresWithoutFallback) 
     server.Get("/forbidden/resolve/main/config.json", [](const httplib::Request&, httplib::Response& response) {
         response.status = 403;
     });
+    server.Get("/missing/resolve/main/config.json", [](const httplib::Request&, httplib::Response& response) {
+        response.status = 404;
+    });
+    server.Get("/missing/resolve/main/model_index.json", [](const httplib::Request&, httplib::Response& response) {
+        response.status = 404;
+    });
     server.Get("/unavailable/resolve/main/config.json", [](const httplib::Request&, httplib::Response& response) {
         response.status = 503;
     });
@@ -153,8 +159,12 @@ TEST(TaskInferenceRemoteMetadataTest, ReportsHttpStatusFailuresWithoutFallback) 
     envGuard.unset("https_proxy");
     envGuard.unset("HTTP_PROXY");
     envGuard.unset("HTTPS_PROXY");
+    envGuard.unset("all_proxy");
+    envGuard.unset("ALL_PROXY");
+    envGuard.unset("no_proxy");
+    envGuard.unset("NO_PROXY");
 
-    for (const std::string& sourceModel : {"unauthorized", "forbidden"}) {
+    for (const std::string& sourceModel : {"unauthorized", "forbidden", "missing"}) {
         std::string errorMessage;
         const auto task = ovms::determineDefaultTaskParameter(
             std::nullopt, sourceModel, std::nullopt, &errorMessage);
@@ -195,6 +205,10 @@ TEST(TaskInferenceRemoteMetadataTest, FallsBackToModelIndexAfterConfigNotFound) 
     envGuard.unset("https_proxy");
     envGuard.unset("HTTP_PROXY");
     envGuard.unset("HTTPS_PROXY");
+    envGuard.unset("all_proxy");
+    envGuard.unset("ALL_PROXY");
+    envGuard.unset("no_proxy");
+    envGuard.unset("NO_PROXY");
 
     const auto task = ovms::determineDefaultTaskParameter(
         std::nullopt, "diffusers", std::nullopt);
