@@ -39,8 +39,8 @@ private:
     std::string graphPath;
 
     /**
-         * @brief Json config directory path
-         */
+     * @brief Json config directory path
+     */
     std::string rootDirectoryPath;
 
     /**
@@ -126,28 +126,28 @@ public:
     void setGraphPath(const std::string& graphPath);
 
     /**
-         * @brief Set the Base Path using RootDirectoryPath (when base_path is not defined)
-         *
-         * @param basePath
-         */
+     * @brief Set the Base Path using RootDirectoryPath (when base_path is not defined)
+     *
+     * @param basePath
+     */
     void setBasePathWithRootPath();
 
     void setBasePath(const std::string& basePath);
 
     /**
-         * @brief Get the ModelsConfig Path
-         *
-         * @return const std::string&
-         */
+     * @brief Get the ModelsConfig Path
+     *
+     * @return const std::string&
+     */
     const std::string& getSubconfigPath() const {
         return this->subconfigPath;
     }
 
     /**
-         * @brief Set the Models Config Path
-         *
-         * @param subconfigPath
-         */
+     * @brief Set the Models Config Path
+     *
+     * @param subconfigPath
+     */
     void setSubconfigPath(const std::string& subconfigPath);
 
     const std::string& getModelMeshSubconfigPath() const {
@@ -169,8 +169,8 @@ public:
 
     /**
      * @brief Populate the in-memory pbtxt buffer used in IN_MEMORY_GRAPH_MODE.
-      *        Called by ModelManager::startFromConfig. The value is stored in
-      *        this configuration; passing an rvalue allows its contents to be moved.
+     *        Called by ModelManager::startFromConfig. The value is stored in
+     *        this configuration; passing an rvalue allows its contents to be moved.
      */
     void setInMemoryGraphPbTxt(std::string pbtxt) {
         this->inMemoryGraphPbTxt = std::move(pbtxt);
@@ -230,10 +230,10 @@ public:
     bool isReloadRequired(const MediapipeGraphConfig& rhs) const;
 
     /**
-    * @brief  Parses all settings from a JSON node
-    *
-    * @return Status
-    */
+     * @brief  Parses all settings from a JSON node
+     *
+     * @return Status
+     */
     Status parseNode(const rapidjson::Value& v);
 
     void logGraphConfigContent() const;
