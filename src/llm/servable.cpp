@@ -226,9 +226,8 @@ absl::Status GenAiServable::validateInputCompatibility(std::shared_ptr<GenAiServ
         return absl::InvalidArgumentError("Chat requests are unavailable because " + reason + ".");
     }
 
-    // LM servables reject requests containing image content. Images are preserved
-    // as JsonContainer arrays in chatHistory. Reject if any message's content array
-    // contains an image_url entry.
+    // LM servables reject requests containing non-text content. Multimodal entries
+    // are preserved as JsonContainer arrays in chatHistory until compatibility is checked.
     if (!getProperties()->inputProcessorContext.config.isVLM &&
         chatInput) {
         const auto& ch = std::get<ov::genai::ChatHistory>(executionContext->inputRequest.input);
@@ -242,6 +241,9 @@ absl::Status GenAiServable::validateInputCompatibility(std::shared_ptr<GenAiServ
                     }
                     if (type == "video_url") {
                         return absl::Status(absl::StatusCode::kInvalidArgument, "This servable supports only text input, but video_url has been provided");
+                    }
+                    if (type == "input_audio") {
+                        return absl::Status(absl::StatusCode::kInvalidArgument, "This servable supports only text input, but input_audio has been provided");
                     }
                 }
             }
