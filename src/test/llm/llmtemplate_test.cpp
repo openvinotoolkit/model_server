@@ -293,6 +293,7 @@ TEST_F(LLMChatTemplateTest, MissingTemplateClearsDisabledParsers) {
     servable = std::make_shared<ContinuousBatchingServable>();
     auto properties = servable->getProperties();
     properties->tokenizer = ov::genai::Tokenizer(directoryPath);
+    properties->tokenizer.set_chat_template("");
     properties->chatTemplateEngine = ChatTemplateEngine::MINJA;
     properties->toolParserName = "none";
     properties->reasoningParserName = "none";
