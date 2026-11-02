@@ -1438,7 +1438,7 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsNonVlmWithAudioRejecte
 
     EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
         .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
-            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: This servable supports only text input, but input_audio has been provided\"}");
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: This servable does not support audio input\"}");
             rapidjson::Document d;
             rapidjson::ParseResult ok = d.Parse(response.c_str());
             ASSERT_EQ(ok.Code(), 0);

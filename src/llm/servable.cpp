@@ -226,24 +226,24 @@ absl::Status GenAiServable::validateInputCompatibility(std::shared_ptr<GenAiServ
         return absl::InvalidArgumentError("Chat requests are unavailable because " + reason + ".");
     }
 
-    // LM servables reject requests containing non-text content. Multimodal entries
-    // are preserved as JsonContainer arrays in chatHistory until compatibility is checked.
-    if (!getProperties()->inputProcessorContext.config.isVLM &&
-        chatInput) {
+    // Multimodal entries are preserved as JsonContainer arrays in chatHistory until
+    // compatibility is checked.
+    if (chatInput) {
+        const auto& inputProcessingConfig = getProperties()->inputProcessorContext.config;
         const auto& ch = std::get<ov::genai::ChatHistory>(executionContext->inputRequest.input);
         for (size_t i = 0; i < ch.size(); i++) {
             const auto content = ch[i]["content"];
             if (content.is_array()) {
                 for (size_t j = 0; j < content.size(); j++) {
                     const auto type = content[j]["type"].as_string().value_or("");
-                    if (type == "image_url") {
+                    if (type == "input_audio" && !inputProcessingConfig.supportsAudioInputs) {
+                        return absl::Status(absl::StatusCode::kInvalidArgument, "This servable does not support audio input");
+                    }
+                    if (!inputProcessingConfig.isVLM && type == "image_url") {
                         return absl::Status(absl::StatusCode::kInvalidArgument, "This servable supports only text input, but image_url has been provided");
                     }
-                    if (type == "video_url") {
+                    if (!inputProcessingConfig.isVLM && type == "video_url") {
                         return absl::Status(absl::StatusCode::kInvalidArgument, "This servable supports only text input, but video_url has been provided");
-                    }
-                    if (type == "input_audio") {
-                        return absl::Status(absl::StatusCode::kInvalidArgument, "This servable supports only text input, but input_audio has been provided");
                     }
                 }
             }

@@ -553,9 +553,8 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
     mediapipe::LLMCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
     Status status;
+    PipelineType pipelineType{PipelineType::LM_CB};
     if (nodeOptions.has_models_path()) {
-        // need to initialize pipelineType with some value to avoid compiler warning, determinePipelineType will set it properly
-        PipelineType pipelineType{PipelineType::LM_CB};
         status = determinePipelineType(pipelineType, nodeOptions, graphPath);
         if (status != StatusCode::OK) {
             return status;
@@ -629,6 +628,9 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         return StatusCode::INTERNAL_ERROR;
     }
     servable->determineDecodingMethod();
+    auto properties = servable->getProperties();
+    properties->inputProcessorContext.config.supportsAudioInputs =
+        pipelineType == PipelineType::OMNI || std::filesystem::exists(std::filesystem::path(properties->modelsPath) / "openvino_audio_embeddings_model.xml");
     return StatusCode::OK;
 }
 }  // namespace ovms

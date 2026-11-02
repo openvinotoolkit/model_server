@@ -19,12 +19,14 @@ namespace ovms {
 
 // Deployment-level configuration for InputProcessor, populated once at servable init.
 struct InputProcessingConfig {
-    // True for VLM servables. Enables image, video, and audio decoding;
+    // True for VLM servables. Enables image and video decoding;
     // TokenizationProcessor still runs (to populate inputIds for usage statistics
     // and max-length checks) but inputIds is not passed to the VLM pipeline.
     bool isVLM = false;
     // True for Omni servables, which are VLM servables with speech output.
     bool isOmni = false;
+    // True when the deployed model has an audio embeddings component or is an Omni model.
+    bool supportsAudioInputs = false;
 };
 
 }  // namespace ovms
