@@ -24,7 +24,12 @@ namespace ovms {
 // Active when: config.isVLM (including Omni) && input is ChatHistory variant.
 class AudioDecodingProcessor : public BaseInputProcessor {
 public:
+    explicit AudioDecodingProcessor(bool resamplingRequired = true) : resamplingRequired(resamplingRequired) {}
+
     absl::Status process(InputRequest& req) override;
+
+private:
+    bool resamplingRequired;
 };
 
 }  // namespace ovms

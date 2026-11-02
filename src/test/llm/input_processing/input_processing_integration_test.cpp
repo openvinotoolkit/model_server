@@ -497,6 +497,21 @@ TEST_P(InputProcessingIntegrationTest, VlmAudioInput_ResamplesTo16Khz) {
     EXPECT_EQ(result.req.inputAudios[0].get_shape()[0], 160u);
 }
 
+TEST_P(InputProcessingIntegrationTest, OmniAudioInput_PreservesNativeSampleRate) {
+    const std::string audioB64 = toBase64(buildWavBuffer(240, /*sampleRate=*/24000));
+    const std::string json = (GetParam() == Endpoint::CHAT_COMPLETIONS)
+                                 ? R"({"model":"m","messages":[{"role":"user","content":[{"type":"input_audio","input_audio":{"data":")" +
+                                       audioB64 + R"(","format":"wav"}}]}]})"
+                                 : R"({"model":"m","input":[{"type":"message","role":"user","content":[{"type":"input_audio","input_audio":{"data":")" +
+                                       audioB64 + R"(","format":"wav"}}]}]})";
+
+    auto result = runPipeline(json, /*isVLM=*/true, /*isOmni=*/true);
+    ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
+    ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
+    ASSERT_EQ(result.req.inputAudios.size(), 1u);
+    EXPECT_EQ(result.req.inputAudios[0].get_shape()[0], 240u);
+}
+
 TEST_P(InputProcessingIntegrationTest, TextImageAudio_AllModalitiesDecoded) {
     // Build a request with text + image + audio in a single message.
     const std::string audioB64 = toBase64(buildWavBuffer(160));

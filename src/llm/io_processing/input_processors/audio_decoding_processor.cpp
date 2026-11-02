@@ -73,15 +73,25 @@ absl::Status AudioDecodingProcessor::process(InputRequest& req) {
                 try {
                     const std::string_view audioData(decoded.data(), decoded.size());
                     std::vector<float> pcm;
-                    if (format == "wav") {
-                        pcm = ovms::audio_utils::readWav(audioData);
-                    } else if (format == "mp3") {
-                        pcm = ovms::audio_utils::readMp3(audioData);
+                    if (resamplingRequired) {
+                        if (format == "wav") {
+                            pcm = ovms::audio_utils::readWav(audioData);
+                        } else if (format == "mp3") {
+                            pcm = ovms::audio_utils::readMp3(audioData);
+                        } else {
+                            return absl::InvalidArgumentError("Unsupported audio format: " + format);
+                        }
                     } else {
-                        return absl::InvalidArgumentError("Unsupported audio format: " + format);
+                        pcm = ovms::audio_utils::readWithoutResample(audioData, format);
                     }
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "AudioDecodingProcessor: decoded and resampled audio {} samples, format='{}'",
-                        pcm.size(), format);
+
+                    if (resamplingRequired) {
+                        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "AudioDecodingProcessor: decoded and resampled audio {} samples, format='{}'",
+                            pcm.size(), format);
+                    } else {
+                        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "AudioDecodingProcessor: decoded audio {} samples, format='{}'",
+                            pcm.size(), format);
+                    }
                     ov::Tensor audioTensor(ov::element::f32, ov::Shape{pcm.size()});
                     std::memcpy(audioTensor.data<float>(), pcm.data(), pcm.size() * sizeof(float));
                     req.inputAudios.push_back(std::move(audioTensor));
