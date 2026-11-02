@@ -11,6 +11,7 @@ __pycache__/
 /config.json
 report.json
 report.xml
+report.html
 trace.json
 bazel-bin
 bazel-model_server/
