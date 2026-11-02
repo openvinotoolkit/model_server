@@ -230,7 +230,7 @@ TEST_F(ChatTemplateProcessorTest, EmptyStringContent_TemplateStillProducesOutput
 
 TEST(ChatTemplateProcessorNoChatTemplateTest, TokenizerWithoutChatTemplate_ReturnsError) {
     const std::string path = getGenericFullPathForSrcTest(
-        "/ovms/src/test/llm_testing/OpenVINO/bge-reranker-base/ov");
+        "/ovms/src/test/llm_testing/OpenVINO/bge-reranker-base-int8-ov");
     ov::genai::Tokenizer tokenizer(path);
 
     ov::genai::ChatHistory history;

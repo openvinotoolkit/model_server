@@ -87,7 +87,7 @@ protected:
         auto prepared = std::make_unique<PreparedChatTemplateRuntime>();
         std::string errorMessage;
         const bool preparedSuccessfully = prepared->prepare(
-            modelsPath,
+            modelPath,
             sharedTokenizer->get_chat_template(),
             sharedTokenizer->get_bos_token(),
             sharedTokenizer->get_eos_token(),

@@ -15,6 +15,8 @@
 # limitations under the License.
 #
 
+set -e
+
 if [ -z "$1" ]; then
   echo "Error: No directory specified."
   exit 1

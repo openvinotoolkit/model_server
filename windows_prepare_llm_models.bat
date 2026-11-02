@@ -68,10 +68,15 @@ if not exist "%~1" mkdir "%~1"
 
 :: Download exported models
 call :download_hf_model_if_missing "%TEXT_GENERATION_MODEL%" "%~1" "openvino_model.xml"
+if !errorlevel! neq 0 exit /b !errorlevel!
 call :download_hf_model_if_missing "%TTS_MODEL%" "%~1" "openvino_model.xml"
+if !errorlevel! neq 0 exit /b !errorlevel!
 call :download_hf_model_if_missing "%STT_MODEL%" "%~1" "openvino_tokenizer.bin"
+if !errorlevel! neq 0 exit /b !errorlevel!
 call :download_hf_model_if_missing "%EMBEDDING_MODEL%" "%~1" "openvino_tokenizer.bin"
+if !errorlevel! neq 0 exit /b !errorlevel!
 call :download_hf_model_if_missing "%RERANK_MODEL%" "%~1" "openvino_tokenizer.bin"
+if !errorlevel! neq 0 exit /b !errorlevel!
 call :download_hf_model "%DUMMY_LLM_MODEL%" "%~1"
 call :download_hf_model "%DUMMY_VLM_MODEL%" "%~1"
 
