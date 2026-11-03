@@ -16,6 +16,7 @@
 import os
 import sys
 import re
+import subprocess
 
 COPYRIGHT = re.compile(r'(C|c)opyright (\((c|C)\) )?(20(0|1|2)([0-9])-)?(20(0|1|2)([0-9]),)*20(0|1|2)([0-9])(,)? ([a-z]|[A-Z]|[0-9]| )*')
 FORBIDDEN_FUNCTIONS = re.compile(r'setjmp\(|longjmp\(|getwd\(|strlen\(|wcslen\(|gets\(|strcpy\(|wcscpy\(|strcat\(|wcscat\(|sprintf\(|vsprintf\(|asctime\(')
@@ -54,8 +55,28 @@ def check_function(fd):
     return detected
 
 
+def tracked_paths(start_dir):
+    try:
+        repo_root = subprocess.check_output(
+            ['git', '-C', os.path.abspath(start_dir), 'rev-parse', '--show-toplevel'],
+            text=True,
+        ).strip()
+        output = subprocess.check_output(
+            ['git', '-C', repo_root, 'ls-files', '-z'],
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+    return {
+        os.path.normcase(os.path.abspath(os.path.join(repo_root, path)))
+        for path in output.decode().split('\0')
+        if path
+    }
+
+
 def check_dir(start_dir):
     no_header = []
+    tracked = tracked_paths(start_dir)
     exclude_files = [
         '.user.bazelrc',
         '.bandit',
@@ -187,6 +208,9 @@ def check_dir(start_dir):
                 continue
 
             fpath = os.path.join(d_path, f_name)
+
+            if tracked is not None and os.path.normcase(os.path.abspath(fpath)) not in tracked:
+                continue
 
             if not [test for test in exclude_files if test in fpath]:
                 with open(fpath, 'r') as fd:
