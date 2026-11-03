@@ -39,9 +39,9 @@ In-case of problems, see [Debugging](#debugging).
    ```text
    make docker_build
    ```
-   or
+   or choose one of the supported operationg systems: ubuntu24(default), ubuntu26 or redhat
    ```
-   make docker_build DLDT_PACKAGE_URL=<URL>
+   make docker_build BASE_OS=ubuntu26 DLDT_PACKAGE_URL=<URL>
    ```
 
    > **Note**: URL to OpenVINO Toolkit package can be received after registration on [OpenVINO&trade; Toolkit website](https://software.intel.com/en-us/openvino-toolkit/choose-download)
@@ -64,17 +64,49 @@ In-case of problems, see [Debugging](#debugging).
 	docker run -it -v ${PWD}:/ovms --entrypoint bash -p 9178:9178 openvino/model_server-build:latest
 	```
 
-To work in this container from VS Code when it runs on another Linux host, install the Remote - SSH and Dev Containers extensions and connect to the host using Remote - SSH. In the remote VS Code window, run **Dev Containers: Attach to Running Container...** from the Command Palette and select the OVMS build container; the repository will be available at `/ovms`.
+To develop from a Windows laptop using a Linux host, install VS Code with the Remote - SSH and Dev Containers extensions, connect to the Linux host using Remote - SSH, and open the repository stored on that host. Docker must be available on the Linux host. In the remote terminal, from the repository root, build only the development image without running tests and start a reusable container with the host source code mounted at `/ovms`:
 
-4. In the docker container context compile the source code via (choose distro `ubuntu` or `redhat` depending on the image type):
+```text
+make ovms_builder_image RUN_TESTS=0
+docker run -dit --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -p 9178:9178 -p 9179:9179 -v "${PWD}":/ovms -w /ovms --entrypoint bash openvino/model_server-build:latest
+```
+
+Use this container instead of the interactive container above. In the remote VS Code window, run **Dev Containers: Attach to Running Container...** from the Command Palette, select the container using the `openvino/model_server-build:latest` image, and open `/ovms`. Edit features from the Windows laptop while running Bazel builds, tests, and GDB inside the Linux build container; edits persist in the Linux host repository through the bind mount, so no Windows source synchronization is needed. For a build with debug symbols, run the following in the attached container's terminal:
+
+```text
+bazel build //src:ovms -c dbg
+```
+
+To debug OVMS using a client in another container on the Linux host, start the built executable under GDB in the attached build container. Replace `<config_path>` with an example model configuration whose model paths are accessible inside the container, such as under the mounted `/ovms/models` directory. The `bazel-bin` path points to the executable in Bazel's output directory. Run the following and enter `run` at the GDB prompt; the published ports expose gRPC on `9178` and REST on `9179`:
+
+```text
+gdb --args ./bazel-bin/src/ovms --config_path <config_path> --port 9178 --rest_port 9179
+```
+
+From a separate terminal on the Linux host, run a client container with `--network=host` so it can reach OVMS at `localhost:9178` for gRPC or `http://localhost:9179` for REST. For example, check server readiness before sending inference requests:
+
+```text
+docker run --rm --network=host curlimages/curl:latest -i http://localhost:9179/v2/health/ready
+```
+
+Use unused host ports on a shared Linux server and update the client endpoints accordingly. Publish ports when creating the build container; an existing container without these mappings must be recreated to add them.
+
+Reuse the same container for later development sessions. If it is stopped, find its Docker-generated name with `docker ps -a` and run the following on the Linux host before attaching again, replacing `<container_name>` with that name:
+
+```text
+docker start <container_name>
+```
+
+4. In the docker container context compile the source code via:
 	```text
-	bazel build --//:distro=ubuntu --config=mp_on //src:ovms
-> **NOTE**: There are several options that would disable specific parts of OVMS. For details check ovms bazel build files.
+	bazel build //src:ovms
+> **NOTE**: There are several options that would disable specific parts of OVMS. For details check ovms bazel build files
+	For example (choose distro `ubuntu` or `redhat` depending on the image type with --distro=redhat)
 	```
 
-5. From the container, run a single unit test (choose distro `ubuntu` or `redhat` depending on the image type):
+5. From the container, run a single unit test:
 	```text
-	bazel test --//:distro=ubuntu --config=mp_on --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
+	bazel test --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
 	```
 
 | Argument      | Description |
@@ -328,13 +360,12 @@ matching that container. Python no longer has a separate on/off build
 configuration; use `--config=mp_on` for changes that require MediaPipe. Building
 `//src:ovms` links the MediaPipe runtime and host-side Python calculators into
 the executable, and includes `libovmspython`, `libpython_calculators`, and
-`pyovms` as runtime data dependencies. For Ubuntu:
+`pyovms` as runtime data dependencies:
 
 ```text
-bazel build --//:distro=ubuntu --config=mp_on \
-	//src:ovms
+bazel build //src:ovms
 
-bazel test --//:distro=ubuntu --config=mp_on \
+bazel test
 	//src:python_runtime_library_test \
 	//src/python:pythoninterpretermodule_lifecycle_test \
 	//src/python:pythoninterpretermodule_backend_failure_test \
@@ -345,8 +376,7 @@ Use `--//:distro=redhat` instead for a Red Hat build container. For changes to
 the Python binding itself, also run:
 
 ```text
-bazel test --//:distro=ubuntu --config=mp_on \
-	//src/python/binding:test_python_binding
+bazel test //src/python/binding:test_python_binding
 ```
 
 `python_runtime_library_test` checks the runtime library symbols and
