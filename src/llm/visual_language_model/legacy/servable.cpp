@@ -128,7 +128,7 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
         if (!legacyExecutionContext->apiHandler->getRequest().skipSpecialTokens) {
             streamerConfig.insert(ov::genai::skip_special_tokens(false));
         }
-        auto ovmsCallback = [& ctx = *legacyExecutionContext](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
+        auto ovmsCallback = [&ctx = *legacyExecutionContext](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
             if (ctx.clientDisconnected.load()) {
                 ctx.deltaChannel.signalComplete();
                 return ov::genai::StreamingStatus::CANCEL;

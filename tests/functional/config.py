@@ -13,9 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=pointless-string-statement
 
 import os
 import re
+
+from collections import defaultdict
 from pathlib import Path
 
 from tests.functional.constants.os_type import OsType
@@ -33,14 +36,14 @@ from tests.functional.utils.helpers import (
 
 try:
     # In user_config.py, user might export custom environment variables
-    import user_config
+    import user_config  # pylint: disable=unused-import
 except ImportError:
     pass
 
 
 def get_uses_mapping():
     _uses_mapping = get_list("TT_USES_MAPPING", fallback=[None])
-    _uses_mapping = list(set([str(x).upper() for x in _uses_mapping]))  # make upper & remove duplicates
+    _uses_mapping = list({str(x).upper() for x in _uses_mapping})  # make upper & remove duplicates
     # Reduce to True/False/None
     _uses_mapping = [x == "TRUE" if x in ["TRUE", "FALSE"] else None for x in _uses_mapping]
     validate_supported_values(_uses_mapping, [True, False, None])
@@ -52,17 +55,14 @@ def get_uses_mapping():
     Possible TT_USES_MAPPING values (case insensitive):
     - (empty)/""/NONE - Default leave mapping.json provided alongside model untouched (if exists).
     - FALSE - forcibly remove mapping.json if provided with model.
-    - TRUE - remove any previous mapping and add generic mapping.json 
+    - TRUE - remove any previous mapping and add generic mapping.json
             (see: ovms/object_model/ovms_mapping_config.py for details)
     - TRUE,FALSE,NONE - Iterate each test case from listed values in single test session.
 """
 uses_mapping = get_uses_mapping()
 
 """TEST_DIR -  location where models and test data should be copied from TEST_DIR_CACHE and deleted after tests"""
-test_dir = os.environ.get("TEST_DIR", "/tmp/{}".format(generate_test_object_name(prefix='ovms_models')))
-
-"""TEST_DIR_CACHE -  location where models and test data should be downloaded to and serve as cache for TEST_DIR"""
-test_dir_cache = os.environ.get("TEST_DIR_CACHE", "/tmp/ovms_models_cache")
+test_dir = os.environ.get("TEST_DIR", f"/tmp/{generate_test_object_name(prefix='ovms_models')}")
 
 """ TT_OVMS_C_REPO_PATH - path to ovms-c repository. Can be relative or absolute. """
 ovms_c_repo_path = get_path("TT_OVMS_C_REPO_PATH", get_path("PWD", "./"))
@@ -104,53 +104,32 @@ python_disable = False
 """ TT_WIN_PY_VERSION - Python version for virtualenv on Windows OS """
 windows_python_version = os.environ.get("TT_WIN_PY_VERSION", "3.12")
 
-""" TT_DOCKER_REGISTRY - Docker registry"""
+""" TT_DOCKER_REGISTRY - Docker registry """
 docker_registry = os.environ.get("TT_DOCKER_REGISTRY", None)
 
 """ OVMS_CPP_DOCKER_IMAGE """
-ovms_cpp_docker_image = os.environ.get("OVMS_CPP_DOCKER_IMAGE", None)
-
-""" TT_OVMS_IMAGE_NAME """
-ovms_image = os.environ.get("TT_OVMS_IMAGE_NAME", None)
+ovms_cpp_docker_image = os.environ.get("OVMS_CPP_DOCKER_IMAGE", "openvino/model_server")
 
 """ OVMS_CPP_IMAGE_TAG - tag of OVMS image to test (compatible with build parameter) """
-ovms_image_tag = os.environ.get("OVMS_CPP_IMAGE_TAG", None)
+ovms_image_tag = os.environ.get("OVMS_CPP_IMAGE_TAG", "latest")
+
+""" TT_DEFAULT_OVMS_IMAGE_TAG - default value of ovms image tag (based on OS) """
+ovms_image_tag_dict = defaultdict(lambda: ovms_image_tag)
+
+""" TT_OVMS_IMAGE_NAME - full image name (name + tag) """
+ovms_image = os.environ.get("TT_OVMS_IMAGE_NAME", None)
 
 """ TT_OVMS_TEST_IMAGE_NAME - image name for cpu extensions and custom nodes """
 ovms_test_image_name = os.environ.get("TT_OVMS_TEST_IMAGE_NAME", None)
 
-""" TT_FORCE_USE_OVMS_IMAGE - force to use TT_OVMS_IMAGE_NAME """
+""" TT_FORCE_USE_OVMS_IMAGE - force to use given image parameters (skip automatic suffix updates) """
 force_use_ovms_image = get_bool("TT_FORCE_USE_OVMS_IMAGE", False)
-
-""" TT_OVMS_C_RELEASE_ARTIFACTS_PATH - path to current release artifacts """
-# multiple local and remote location supported
-# example: TT_OVMS_C_RELEASE_ARTIFACTS_PATH="../ubuntu24/ovms.tar.gz,../redat/ovms.tar.gz"
-ovms_c_release_artifacts_path = get_list("TT_OVMS_C_RELEASE_ARTIFACTS_PATH")
 
 """START_CONTAINER_COMMAND - command to start ovms container"""
 start_container_command = os.environ.get("START_CONTAINER_COMMAND", "")
 
-"""CONTAINER_LOG_LINE - log line to check in container"""
-# For multiple log lines, pass them separated with ':'
-container_log_line = os.environ.get("CONTAINER_LOG_LINE", "Started model manager thread")
-container_log_line = container_log_line.split(":")
-
 """OVMS_BINARY_PATH - path to ovms binary file; when specified, tests are executed against provided binary."""
 ovms_binary_path = os.environ.get("OVMS_BINARY_PATH", None)
-
-"""LOG_LEVEL - set log level """
-log_level = os.environ.get("LOG_LEVEL", "INFO")
-
-path_to_mount = os.path.join(test_dir, "saved_models")
-os.makedirs(path_to_mount, exist_ok=True)
-
-path_to_mount_cache = os.path.join(test_dir_cache, "saved_models")
-
-""" TT_MINIO_IMAGE_NAME - Docker image for Minio"""
-minio_image = os.environ.get(
-    "TT_MINIO_IMAGE_NAME",
-    f"{docker_registry}/minio/minio:latest" if docker_registry is not None else "minio/minio:latest",
-)
 
 """ TT_TARGET_DEVICE - list of devices separated by a comma "CPU,GPU,NPU" """
 target_devices = get_target_devices()
@@ -254,7 +233,7 @@ logging_level_ovms = os.environ.get("TT_LOGGING_LEVEL_OVMS", "INFO")
 container_proxy = os.environ.get("TT_CONTAINER_PROXY", os.environ.get("http_proxy", ""))
 
 """TT_DISABLE_DMESG_LOG_MONITOR"""
-disable_dmesg_log_monitor = get_bool("TT_DISABLE_DMESG_LOG_MONITOR", False)
+disable_dmesg_log_monitor = get_bool("TT_DISABLE_DMESG_LOG_MONITOR", True)
 
 """ TT_MACHINE_IS_RESERVED_FOR_TEST_SESSION """
 machine_is_reserved_for_test_session = get_bool("TT_MACHINE_IS_RESERVED_FOR_TEST_SESSION", False)
@@ -327,6 +306,16 @@ base_os = get_list("TT_BASE_OS", fallback=[__base_os])
 base_image = os.environ.get("BASE_IMAGE", None)
 if base_image is not None:
     assert len(base_os) == 1, "If you wish to iterate by TT_BASE_OS: do not set BASE_IMAGE explicitly."
+
+""" TT_OVMS_C_RELEASE_ARTIFACTS_PATH - path to current release artifacts """
+# multiple local and remote location supported
+# example: TT_OVMS_C_RELEASE_ARTIFACTS_PATH="../ubuntu24/ovms.tar.gz,../redat/ovms.tar.gz"
+default_artifacts_path = (  # pylint: disable=invalid-name
+    [f"dist\\{base_os[0]}\\ovms.zip"]
+    if OsType.Windows in base_os
+    else [f"dist/{_base_os}/ovms.tar.gz" for _base_os in base_os]
+)
+ovms_c_release_artifacts_path = get_list("TT_OVMS_C_RELEASE_ARTIFACTS_PATH", fallback=default_artifacts_path)
 
 """ GLOBAL_TEMP_DIR - global temporary directory """
 global_tmp_dir_default = os.path.join("~", "AppData", "Local", "Temp") if OsType.Windows in base_os else "/tmp"
@@ -423,10 +412,18 @@ divide_target_device_per_worker = get_bool("TT_DIVIDE_TARGET_DEVICE_PER_WORKER",
 """ TT_PYTEST_KEYWORD_FILTER """
 pytest_keyword_filter = os.environ.get("TT_PYTEST_KEYWORD_FILTER", None)
 
-""" TT_HUGGINGFACE_TOKEN_FILE_PATH - path to file containing huggingface token """
+""" HF_TOKEN_FILE_PATH - path to file containing huggingface token """
 huggingface_token_file_path = get_path(
-    "TT_HUGGINGFACE_TOKEN_FILE_PATH", os.path.join("~", "ovms_tokens", "huggingface_token")
+    "HF_TOKEN_FILE_PATH", os.path.join("~", "ovms_tokens", "huggingface_token")
 )
 
-""" TT_HUGGINGFACE_TOKEN - huggingface token value. Env var takes priority, then file. """
-huggingface_token = os.environ.get("TT_HUGGINGFACE_TOKEN") or get_token_value(huggingface_token_file_path, "")
+""" HF_TOKEN - huggingface token value. Env var takes priority, then file. """
+huggingface_token = os.environ.get("HF_TOKEN") or get_token_value(huggingface_token_file_path, None)
+
+""" TT_ON_COMMIT_TESTS - False -> api-on-commit tests are not run,
+                        True -> api-on-commit tests are run, default: True """
+run_on_commit_tests = get_bool("TT_ON_COMMIT_TESTS", True)
+
+""" TT_RUN_REGRESSION_TESTS - False -> api-regression tests are not run,
+                             True -> api-regression tests are run, default: False """
+run_regression_tests = get_bool("TT_RUN_REGRESSION_TESTS", False)

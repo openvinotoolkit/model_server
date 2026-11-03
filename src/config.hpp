@@ -24,26 +24,26 @@
 namespace ovms {
 
 /**
-     * @brief Provides all the configuration options from command line
-     */
+ * @brief Provides all the configuration options from command line
+ */
 class Config {
 protected:
     /**
-         * @brief A default constructor is private
-         */
+     * @brief A default constructor is private
+     */
     Config() = default;
 
 private:
     /**
-         * @brief Private copying constructor
-         */
+     * @brief Private copying constructor
+     */
     Config(const Config&) = delete;
 
     bool hasModelParametersSetViaCLI() const;
 
     /**
-         * @brief 
-         */
+     * @brief
+     */
     const std::string empty;
 
 protected:
@@ -65,8 +65,8 @@ public:
         serverSettings.inMemoryGraphPbtxt = std::move(pbtxt);
     }
     /**
-         * @brief Gets the instance of the config
-         */
+     * @brief Gets the instance of the config
+     */
     static Config& instance() {
         static Config instance;
 
@@ -74,201 +74,201 @@ public:
     }
 
     /**
-         * @brief Parse the commandline parameters
-         * 
-         * @param argc 
-         * @param argv 
-         * @return Config& 
-         */
+     * @brief Parse the commandline parameters
+     *
+     * @param argc
+     * @param argv
+     * @return Config&
+     */
     Config& parse(int argc, const char* const* argv);
     bool parse(ServerSettingsImpl*, ModelsSettingsImpl*);
 
     /**
-         * @brief Validate passed arguments against config add/remove allowed parameters
-         * 
-         * @return bool 
-         */
+     * @brief Validate passed arguments against config add/remove allowed parameters
+     *
+     * @return bool
+     */
     static bool validateUserSettingsInConfigAddRemoveModel(const ModelsSettingsImpl& modelsSettings, ConfigExportType exportType);
     /**
-         * @brief Validate passed arguments
-         * 
-         * @return bool 
-         */
+     * @brief Validate passed arguments
+     *
+     * @return bool
+     */
     bool validate();
 
     /**
-         * @brief checks if input is a proper hostname or IP address value
-         *
-         * @return bool
-         */
+     * @brief checks if input is a proper hostname or IP address value
+     *
+     * @return bool
+     */
     static bool check_hostname_or_ip(const std::string& input);
     static bool is_ipv6(const std::string& input);
 
     /**
-         * @brief Get the config path
-         * 
-         * @return std::string 
-         */
+     * @brief Get the config path
+     *
+     * @return std::string
+     */
     const std::string& configPath() const;
 
     /**
-         * @brief Gets the grpc port
-         * 
-         * @return uint32_t
-         */
+     * @brief Gets the grpc port
+     *
+     * @return uint32_t
+     */
     uint32_t port() const;
 
     /**
-         * @brief Get the gRPC network interface address to bind to
-         * 
-         * @return const std::string
-         */
+     * @brief Get the gRPC network interface address to bind to
+     *
+     * @return const std::string
+     */
     const std::string cpuExtensionLibraryPath() const;
 
     /**
-         * @brief Get the gRPC network interface address to bind to
-         * 
-         * @return const std::string&
-         */
+     * @brief Get the gRPC network interface address to bind to
+     *
+     * @return const std::string&
+     */
     const std::string grpcBindAddress() const;
 
     /**
-         * @brief Gets the REST port
-         * 
-         * @return uint32_t
-         */
+     * @brief Gets the REST port
+     *
+     * @return uint32_t
+     */
     uint32_t restPort() const;
 
     /**
-         * @brief Get the rest network interface address to bind to
-         * 
-         * @return const std::string&
-         */
+     * @brief Get the rest network interface address to bind to
+     *
+     * @return const std::string&
+     */
     const std::string restBindAddress() const;
 
     /**
-         * @brief Gets the gRPC workers count
-         * 
-         * @return uint
-         */
+     * @brief Gets the gRPC workers count
+     *
+     * @return uint
+     */
     uint32_t grpcWorkers() const;
 
     /**
-         * @brief Set the threads resource quota on gRPC server
-         * 
-         * @return uint
-         */
+     * @brief Set the threads resource quota on gRPC server
+     *
+     * @return uint
+     */
     uint32_t grpcMaxThreads() const;
 
     /**
-         * @brief Set the memory resource quota on gRPC server
-         * 
-         * @return uint
-         */
+     * @brief Set the memory resource quota on gRPC server
+     *
+     * @return uint
+     */
     size_t grpcMemoryQuota() const;
 
     /**
-         * @brief Gets the maximum allowed JSON complexity for request parsing
-         *
-         * @return size_t
-         */
+     * @brief Gets the maximum allowed JSON complexity for request parsing
+     *
+     * @return size_t
+     */
     size_t jsonMaxComplexity() const;
 
     /**
-         * @brief Gets the rest workers count
-         * 
-         * @return size_t
-         */
+     * @brief Gets the rest workers count
+     *
+     * @return size_t
+     */
     uint32_t restWorkers() const;
 
     /**
-         * @brief Get the model name
-         * 
-         * @return const std::string&
-         */
+     * @brief Get the model name
+     *
+     * @return const std::string&
+     */
     const std::string& modelName() const;
 
     /**
-         * @brief Gets the model path
-         * 
-         * @return const std::string&
-         */
+     * @brief Gets the model path
+     *
+     * @return const std::string&
+     */
     const std::string& modelPath() const;
 
     /**
-         * @brief Gets the batch size
-         * 
-         * @return const std::string&
-         */
+     * @brief Gets the batch size
+     *
+     * @return const std::string&
+     */
     const std::string& batchSize() const;
 
     /**
-         * @brief Get the shape
-         * 
-         * @return const std::string&
-         */
+     * @brief Get the shape
+     *
+     * @return const std::string&
+     */
     const std::string& shape() const;
 
     /**
-         * @brief Get the layout
-         * 
-         * @return const std::string&
-         */
+     * @brief Get the layout
+     *
+     * @return const std::string&
+     */
     const std::string& layout() const;
 
     /**
-         * @brief Get means
-         * 
-         * @return const std::string
-         */
+     * @brief Get means
+     *
+     * @return const std::string
+     */
     const std::string means() const;
     /**
-         * @brief Get scales  
-         * 
-         * @return const std::string
-         */
+     * @brief Get scales
+     *
+     * @return const std::string
+     */
     const std::string scales() const;
 
     /**
-         * @brief Get color format  
-         * 
-         * @return const std::string
-         */
+     * @brief Get color format
+     *
+     * @return const std::string
+     */
     const std::string colorFormat() const;
 
     /**
-         * @brief Get precision  
-         * 
-         * @return const std::string
-         */
+     * @brief Get precision
+     *
+     * @return const std::string
+     */
     const std::string precision() const;
 
     /**
-         * @brief Get the shape
-         * 
-         * @return const std::string&
-         */
+     * @brief Get the shape
+     *
+     * @return const std::string&
+     */
     const std::string& modelVersionPolicy() const;
 
     /**
-         * @brief Get the nireq
-         *
-         * @return uint32_t 
-         */
+     * @brief Get the nireq
+     *
+     * @return uint32_t
+     */
     uint32_t nireq() const;
 
     /**
-         * @brief Get the target device
-         * 
-         * @return const std::string& 
-         */
+     * @brief Get the target device
+     *
+     * @return const std::string&
+     */
     const std::string& targetDevice() const;
 
     /**
-         * @brief Get the plugin config
-         * 
-         * @return const std::string& 
-         */
+     * @brief Get the plugin config
+     *
+     * @return const std::string&
+     */
     const std::string& pluginConfig() const;
 
     /**
@@ -279,52 +279,52 @@ public:
     bool metricsEnabled() const;
 
     /**
-        * @brief Get metrics list
-        *
-        * @return std::string
-        */
+     * @brief Get metrics list
+     *
+     * @return std::string
+     */
     std::string metricsList() const;
 
     /**
-        * @brief Get the log level
-        *
-        * @return const std::string&
-        */
+     * @brief Get the log level
+     *
+     * @return const std::string&
+     */
     const std::string& logLevel() const;
 
     /**
-        * @brief Get the log path
-         *
-        * @return const std::string&
-        */
+     * @brief Get the log path
+     *
+     * @return const std::string&
+     */
     const std::string& logPath() const;
 
 #ifdef MTR_ENABLED
     /**
-        * @brief Get the log path
-         *
-        * @return const std::string&
-        */
+     * @brief Get the log path
+     *
+     * @return const std::string&
+     */
     const std::string& tracePath() const;
 #endif
 
     /**
-        * @brief Get the plugin config
-        *
-        * @return const std::string&
-        */
+     * @brief Get the plugin config
+     *
+     * @return const std::string&
+     */
     const std::string& grpcChannelArguments() const;
 
     /**
      * @brief Get the filesystem poll wait time in milliseconds
-     * 
-     * @return uint32_t 
+     *
+     * @return uint32_t
      */
     uint32_t filesystemPollWaitMilliseconds() const;
 
     /**
      * @brief Get the resources cleanup poll wait time in seconds
-     * 
+     *
      * @return uint32_t
      */
     uint32_t memoryTrimmingIntervalSeconds() const;
@@ -341,10 +341,10 @@ public:
     const std::string& apiKey() const;
 
     /**
-         * @brief Model cache directory
-         * 
-         * @return const std::string& 
-         */
+     * @brief Model cache directory
+     *
+     * @return const std::string&
+     */
     const std::string cacheDir() const;
     bool startedFromCLI() {
         return serverSettings.startedWithCLI;

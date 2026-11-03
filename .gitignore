@@ -10,6 +10,8 @@ version
 __pycache__/
 /config.json
 report.json
+report.xml
+report.html
 trace.json
 bazel-bin
 bazel-model_server/
@@ -29,6 +31,7 @@ cppclean_src
 cppclean_test
 tags
 .venv-style/
+.windows_make_tools/
 src/test/llm_testing
 node_modules/
 yarn.*
