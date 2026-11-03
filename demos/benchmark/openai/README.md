@@ -10,7 +10,7 @@ usage event with `stream_options.include_usage=true`.
 
 ```bash
 git clone https://github.com/openvinotoolkit/model_server
-cd demos/benchmark/openai
+cd model_server/demos/benchmark/openai
 pip install -r requirements.txt
 mkdir -p "${HOME}/models"
 ```

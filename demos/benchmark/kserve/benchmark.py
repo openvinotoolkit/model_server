@@ -73,7 +73,7 @@ def parse_args(argv=None):
 def named_values(values, names, separator):
     result = {}
     for value in values:
-        name, found, content = value.partition(separator)
+        name, found, content = value.rpartition(separator) if separator == ":" else value.partition(separator)
         if not found:
             if len(names) != 1:
                 raise ValueError(f"Specify an input name using NAME{separator}VALUE for multiple inputs")
@@ -105,7 +105,7 @@ def prepare_inputs(metadata, shape_options, file_options):
     prepared = []
     for item in metadata["inputs"]:
         name, datatype = item["name"], item["datatype"]
-        model_shape = tuple(int(dimension) for dimension in item["shape"])
+        model_shape = tuple(int(dimension) for dimension in item.get("shape", []))
         path = Path(files[name]) if name in files else None
         binary_file = path is not None and (datatype == "BYTES" or path.suffix.lower() != ".npy")
         encoded_image = binary_file and datatype != "BYTES"
