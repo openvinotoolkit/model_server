@@ -3929,7 +3929,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "StringToUintCalculator",
         "TwoInputCalculator",
         "WarpAffineCalculator",
-        "WarpAffineCalculatorCpu" });
+        "WarpAffineCalculatorCpu"});
 
     ASSERT_THAT(mediapipe::CalculatorBaseRegistry::GetRegisteredNames(), UnorderedElementsAreArray(expected)) << readableSetError(mediapipe::CalculatorBaseRegistry::GetRegisteredNames(), expected);
 }

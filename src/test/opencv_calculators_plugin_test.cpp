@@ -84,7 +84,7 @@ TEST_F(MissingOpenCvPlugin, NonOpenCvGraphStillInitializes) {
         output_stream: "out"
         node { calculator: "PassThroughCalculator" input_stream: "in" output_stream: "out" }
     )")
-                    .ok());
+            .ok());
     ASSERT_TRUE(graph.validateReferencedNodesRegistered().ok());
     EXPECT_TRUE(graph.dryInitializeTest().ok());
 }
@@ -118,7 +118,7 @@ TEST_F(MissingOpenCvPlugin, NestedSubgraphErrorNamesOpenCvAndOperation) {
         output_stream: "out"
         node { calculator: "NestedOpenCvTestGraph" input_stream: "in" output_stream: "out" }
     )")
-                    .ok());
+            .ok());
     ASSERT_TRUE(graph.validateReferencedNodesRegistered().ok());
     const auto status = graph.dryInitializeTest();
     EXPECT_EQ(status.getCode(), StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
@@ -263,7 +263,7 @@ TEST(ImageFrameSerialization, CopiesPaddedRowsWithoutOpenCv) {
         KFSResponse response;
         ASSERT_TRUE(onPacketReadySerializeImpl("id", "model", "1", "output",
             mediapipe_packet_type_enum::MEDIAPIPE_IMAGE, packet, response)
-                        .ok());
+                .ok());
         ASSERT_EQ(response.raw_output_contents_size(), 1);
         EXPECT_EQ(response.raw_output_contents(0), expected);
         EXPECT_EQ(response.outputs(0).shape(0), 2);

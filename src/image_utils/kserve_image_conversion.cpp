@@ -161,8 +161,11 @@ std::shared_ptr<Preprocessor> getPreprocessor(const ov::Tensor& source,
     }
     // OpenCV saturates narrowing integer conversions instead of wrapping.
     if (precision == ov::element::i8 || precision == ov::element::i16 || precision == ov::element::u8 || precision == ov::element::u16) {
-        const double minimum = precision == ov::element::i8 ? -128 : precision == ov::element::i16 ? -32768 : 0;
-        const double maximum = precision == ov::element::i8 ? 127 : precision == ov::element::i16 ? 32767 : precision == ov::element::u8 ? 255 : 65535;
+        const double minimum = precision == ov::element::i8 ? -128 : precision == ov::element::i16 ? -32768
+                                                                                                   : 0;
+        const double maximum = precision == ov::element::i8 ? 127 : precision == ov::element::i16 ? 32767
+                                                                : precision == ov::element::u8    ? 255
+                                                                                                  : 65535;
         steps.custom([minimum, maximum](const ov::Output<ov::Node>& node) {
             return std::make_shared<ov::op::v0::Clamp>(node, minimum, maximum);
         });
@@ -216,7 +219,8 @@ Status decodeImage(std::string_view encoded, ov::Tensor& tensor, ImageDecoder de
     const int desiredChannels = channels == 2 ? 4 : 0;
     const bool is16 = stbi_is_16_bit_from_memory(data, size);
     const bool isHdr = stbi_is_hdr_from_memory(data, size);
-    void* pixels = isHdr ? static_cast<void*>(stbi_loadf_from_memory(data, size, &width, &height, &channels, desiredChannels)) : is16 ? static_cast<void*>(stbi_load_16_from_memory(data, size, &width, &height, &channels, desiredChannels)) : static_cast<void*>(stbi_load_from_memory(data, size, &width, &height, &channels, desiredChannels));
+    void* pixels = isHdr ? static_cast<void*>(stbi_loadf_from_memory(data, size, &width, &height, &channels, desiredChannels)) : is16 ? static_cast<void*>(stbi_load_16_from_memory(data, size, &width, &height, &channels, desiredChannels))
+                                                                                                                                      : static_cast<void*>(stbi_load_from_memory(data, size, &width, &height, &channels, desiredChannels));
     std::shared_ptr<void> owner(pixels, stbi_image_free);
     if (!pixels) {
         const char* reason = stbi_failure_reason();
@@ -228,7 +232,8 @@ Status decodeImage(std::string_view encoded, ov::Tensor& tensor, ImageDecoder de
     }
     if (desiredChannels)
         channels = desiredChannels;
-    const size_t channelBytes = isHdr ? sizeof(float) : is16 ? 2 : 1;
+    const size_t channelBytes = isHdr ? sizeof(float) : is16 ? 2
+                                                             : 1;
     const size_t pixelCount = static_cast<size_t>(width) * height;
     auto* output = static_cast<unsigned char*>(pixels);
     if (channels >= 3) {
@@ -237,7 +242,8 @@ Status decodeImage(std::string_view encoded, ov::Tensor& tensor, ImageDecoder de
                 std::swap(output[i * channels * channelBytes + j], output[(i * channels + 2) * channelBytes + j]);
         }
     }
-    tensor = ov::Tensor(isHdr ? ov::element::f32 : is16 ? ov::element::u16 : ov::element::u8,
+    tensor = ov::Tensor(isHdr ? ov::element::f32 : is16 ? ov::element::u16
+                                                        : ov::element::u8,
         ov::Shape{1, static_cast<size_t>(height), static_cast<size_t>(width), static_cast<size_t>(channels)},
         StbAllocator{std::move(owner), pixelCount * channels * channelBytes});
     return StatusCode::OK;

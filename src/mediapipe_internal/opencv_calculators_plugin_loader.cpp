@@ -274,7 +274,8 @@ std::string getOpenCvCalculatorsPluginDiagnostic() {
     }
 #ifdef _WIN32
     return " OpenCV-dependent calculator/operation or options require the optional "
-           "ovms_opencv_calculators.dll plugin and OpenCV libraries. Missing OpenCV/plugin: " + state.error;
+           "ovms_opencv_calculators.dll plugin and OpenCV libraries. Missing OpenCV/plugin: " +
+           state.error;
 #else
     return " OpenCV-dependent calculator/operation or options require the optional "
            "libovms_opencv_calculators.so plugin and OpenCV libraries. Missing OpenCV/plugin: " +

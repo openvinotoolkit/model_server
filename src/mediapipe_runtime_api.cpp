@@ -141,7 +141,7 @@ static void* loadMediapipeRuntimeLibrary() {
         candidates.push_back((modulePath.parent_path().parent_path() / "lib" / libraryName).string());
         candidates.push_back((modulePath.parent_path() /
                               (modulePath.filename().string() + ".runfiles/ovms/src/" + libraryName))
-                                 .string());
+                .string());
     }
     candidates.emplace_back(libraryName);
 
