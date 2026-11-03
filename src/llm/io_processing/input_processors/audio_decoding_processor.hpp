@@ -24,7 +24,8 @@ namespace ovms {
 // Active when: config.audioInputConfig has a value and input is a ChatHistory variant.
 class AudioDecodingProcessor : public BaseInputProcessor {
 public:
-    explicit AudioDecodingProcessor(bool resamplingRequired = true) : resamplingRequired(resamplingRequired) {}
+    explicit AudioDecodingProcessor(bool resamplingRequired = true) :
+        resamplingRequired(resamplingRequired) {}
 
     absl::Status process(InputRequest& req) override;
 
