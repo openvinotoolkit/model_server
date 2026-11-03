@@ -72,12 +72,12 @@ Use this parameter together with `OV_USE_BINARY=1`.
 ### `OV_USE_BINARY`
 
 By default set to `0`. With that setting, OpenVINO backend will be built from sources and `DLDT_PACKAGE_URL` will be omitted.
-Use `OV_SOURCE_BRANCH` and `OV_SOURCE_ORG` to select [OpenVINO repository](https://github.com/openvinotoolkit/openvino) branch and fork. By default the latest tested commit from `master` branch will be used and org `openvinotoolkit`.
+Use `OV_BRANCH` and `OV_REPO` to select the [OpenVINO repository](https://github.com/openvinotoolkit/openvino) branch and repository. Repository parameters use the full GitHub `owner/repository` name without a URL prefix or `.git` suffix, allowing forks with custom repository names. The defaults are `OV_REPO=openvinotoolkit/openvino`, `OV_TOKENIZERS_REPO=openvinotoolkit/openvino_tokenizers`, and `OV_GENAI_REPO=openvinotoolkit/openvino.genai`. Use `OV_TOKENIZERS_BRANCH` and `OV_GENAI_BRANCH` to select the corresponding revisions. By default the tested commits from `versions.mk` are used.
 When `OV_USE_BINARY=1`, the OpenVINO backend will be installed from the binary archive set in `DLDT_PACKAGE_URL`.
 
 Example:
 ```text
-make release_image OV_USE_BINARY=0 OV_SOURCE_BRANCH=master OV_SOURCE_ORG=openvinotoolkit
+make release_image OV_USE_BINARY=0 OV_BRANCH=master OV_REPO=my-org/custom-openvino OV_TOKENIZERS_REPO=my-org/custom-tokenizers OV_GENAI_REPO=my-org/custom-genai
 ```
 
 Running the unit tests will increase build time and consume more RAM
@@ -91,25 +91,14 @@ make release_image JOBS=2
 ```
 <hr />
 
-### `PYTHON_DISABLE`
-
-When set to `0`, OpenVINO&trade Model Server will be built with [Python Nodes](python_support/quickstart.md) support. Default value: `0`.
-
-Example:
-```text
-make release_image PYTHON_DISABLE=1
-```
-
 ### `MEDIAPIPE_DISABLE`
 
 When set to `0`, OpenVINO&trade Model Server will be built with [MediaPipe](mediapipe.md) support. Default value: `0`.
 
 Example:
 ```text
-make release_image MEDIAPIPE_DISABLE=1 PYTHON_DISABLE=1
+make release_image MEDIAPIPE_DISABLE=1
 ```
-
- > **Note**: In order to build the image with python nodes support (PYTHON_DISABLE=0) mediapipe have to be enabled (MEDIAPIPE_DISABLE=0)
 
 ### `GPU`
 
@@ -129,6 +118,14 @@ Example:
 make release_image TOKEN=<your_github_token>
 ```
 
+## Building minimal image
+
+To omit optional GPU drivers and MediaPipe support. Python runtime artifacts may still be packaged, but Python nodes and MediaPipe-based LLM endpoints are unavailable in this build only classic models serving:
+
+```bash
+make release_image GPU=0 MEDIAPIPE_DISABLE=1
+```
+
 ## Building Binary Package
 
 The binary packages includes the `ovms` executable and linked libraries for bare metal deployments. It includes also a shared library for the model server CAPI interface. Building `ovms.tar.gz` package is possible by using `targz_package` target:
@@ -136,7 +133,7 @@ The binary packages includes the `ovms` executable and linked libraries for bare
 ```text
 make targz_package
 tree dist/ubuntu24
-````
+```
 
 ```text
 dist/ubuntu24

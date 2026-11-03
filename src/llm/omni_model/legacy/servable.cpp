@@ -50,8 +50,6 @@
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
 #include "../../text_utils.hpp"
 #include "../../../tokenize/tokenize_parser.hpp"
-#if (PYTHON_DISABLE == 0)
-#endif
 #include "../../io_processing/generation_config_builder.hpp"
 #include "src/audio/audio_utils.hpp"
 #include "servable.hpp"
@@ -115,7 +113,7 @@ absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServable
             streamerConfig.insert(ov::genai::skip_special_tokens(false));
         }
         const bool audioRequested = omniExecutionContext->apiHandler->getRequest().audioOutputRequested;
-        auto ovmsCallback = [& ctx = *omniExecutionContext, audioRequested](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
+        auto ovmsCallback = [&ctx = *omniExecutionContext, audioRequested](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
             if (ctx.clientDisconnected.load()) {
                 ctx.deltaChannel.signalComplete();
                 return ov::genai::StreamingStatus::CANCEL;
@@ -136,7 +134,7 @@ absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServable
         if (userWantsSpecialTokens) {
             streamerConfig.insert(ov::genai::skip_special_tokens(false));
         }
-        auto unaryCallback = [& ctx = *omniExecutionContext](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
+        auto unaryCallback = [&ctx = *omniExecutionContext](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
             if (ctx.clientDisconnected.load()) {
                 return ov::genai::StreamingStatus::CANCEL;
             }
@@ -177,7 +175,7 @@ absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServable
 
     // Prepare speech streamer for streaming audio output via SSE
     if (req.audioOutputRequested && omniExecutionContext->textStreamer) {
-        omniExecutionContext->speechStreamer = [& ctx = *omniExecutionContext](const ov::Tensor& audio_chunk) -> ov::genai::StreamingStatus {
+        omniExecutionContext->speechStreamer = [&ctx = *omniExecutionContext](const ov::Tensor& audio_chunk) -> ov::genai::StreamingStatus {
             if (ctx.clientDisconnected.load()) {
                 return ov::genai::StreamingStatus::CANCEL;
             }

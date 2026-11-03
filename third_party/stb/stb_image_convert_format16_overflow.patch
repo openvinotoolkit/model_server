@@ -1,0 +1,15 @@
+diff --git a/stb_image.h b/stb_image.h
+--- a/stb_image.h
++++ b/stb_image.h
+@@ -1820 +1820,6 @@
+-   good = (stbi__uint16 *) stbi__malloc(req_comp * x * y * 2);
++   if (!stbi__mad3sizes_valid(req_comp * 2, x, y, 0)) {
++      STBI_FREE(data);
++      return (stbi__uint16 *) stbi__errpuc("too large", "Image too large to decode");
++   }
++
++   good = (stbi__uint16 *) stbi__malloc_mad3(req_comp * 2, x, y, 0);
+    if (good == NULL) {
+       STBI_FREE(data);
+       return (stbi__uint16 *) stbi__errpuc("outofmem", "Out of memory");
+    }

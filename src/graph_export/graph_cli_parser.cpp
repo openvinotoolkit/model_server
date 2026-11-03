@@ -203,11 +203,6 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
             if (engine != "JINJA" && engine != "MINJA") {
                 throw std::invalid_argument("Unsupported chat template engine: \"" + engine + "\". Supported engines are: jinja, minja");
             }
-#if (PYTHON_DISABLE == 1)
-            if (engine == "JINJA") {
-                throw std::invalid_argument("chat_template_engine=jinja requires Python support");
-            }
-#endif
             graphSettings.chatTemplateEngine = std::move(engine);
         }
         graphSettings.enableToolGuidedGeneration = result->operator[]("enable_tool_guided_generation").as<std::string>();

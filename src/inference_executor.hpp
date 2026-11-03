@@ -63,11 +63,7 @@ Status modelInferAsync(ModelInstance& instance, const RequestType* request,
         *request,
         instance.getInputsInfo(),
         instance.getOutputsInfo(),
-        instance.getName(),
-        instance.getVersion(),
-        instance.getOptionalInputNames(),
-        instance.getModelConfig().getBatchingMode(),
-        instance.getModelConfig().getShapes());
+        instance.getModelConfig());
     if (status.batchSizeChangeRequired() || status.reshapeRequired()) {
         // We are ensured that request shape is valid and convertible to model shape (non negative, non zero)
         // We can use it to perform reshape via shape=auto
@@ -231,11 +227,7 @@ Status infer(ModelInstance& instance, const RequestType* requestProto,
         *requestProto,
         instance.getInputsInfo(),
         instance.getOutputsInfo(),
-        instance.getName(),
-        instance.getVersion(),
-        instance.getOptionalInputNames(),
-        instance.getModelConfig().getBatchingMode(),
-        instance.getModelConfig().getShapes());
+        instance.getModelConfig());
     if (status.batchSizeChangeRequired() || status.reshapeRequired()) {
         // We are ensured that request shape is valid and convertible to model shape (non negative, non zero)
         // We can use it to perform reshape via shape=auto
@@ -314,7 +306,7 @@ Status infer(ModelInstance& instance, const RequestType* requestProto,
     SPDLOG_DEBUG("Postprocessing duration in model {}, version {}, nireq {}: {:.3f} ms",
         instance.getName(), instance.getVersion(), executingInferId, timer.elapsed<microseconds>(POSTPROCESS) / 1000);
     // TODO: Implement instance.logUsedDeviceIfDebug() - possible perf drop?
-    /*if (instance.getTargetDevice() == "AUTO") 
+    /*if (instance.getTargetDevice() == "AUTO")
         for (std::string device : compiledModel->get_property(ov::execution_devices))
             SPDLOG_DEBUG("Used device: {}", device);
     */

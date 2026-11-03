@@ -371,6 +371,7 @@ Status ModelManager::startFromConfig() {
     }
 
     ModelConfig& modelConfig = it->second;
+    modelConfig.setDisableInputCountValidation(config.disableInputCountValidation());
 
     status = modelConfig.parsePluginConfig(config.pluginConfig(), modelConfig.getPluginConfig());
     if (!status.ok()) {

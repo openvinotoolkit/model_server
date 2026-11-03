@@ -23,9 +23,7 @@ namespace ovms {
 void buildInputSidePackets(std::map<std::string, mediapipe::Packet>& inputSidePackets,
     const GraphSidePackets& sidePackets) {
     const auto ts = ::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE);
-#if (PYTHON_DISABLE == 0)
     inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(sidePackets.pythonNodeResourcesMap).At(ts);
-#endif
     inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiServableMap>(sidePackets.genAiServableMap).At(ts);
     inputSidePackets[LLM_EXECUTION_CONTEXT_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiExecutionContextMap>(sidePackets.genAiExecutionContextMap).At(ts);
     inputSidePackets[IMAGE_GEN_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<ImageGenerationPipelinesMap>(sidePackets.imageGenPipelinesMap).At(ts);

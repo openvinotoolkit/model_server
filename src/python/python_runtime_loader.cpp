@@ -17,11 +17,15 @@
 
 #include <memory>
 #include <stdexcept>
+#include <system_error>
 
 #ifdef __linux__
 #include <dlfcn.h>
 using PythonLibraryHandle = void*;
 #elif _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 using PythonLibraryHandle = HMODULE;
 #endif
@@ -43,7 +47,6 @@ PythonLibraryHandle pythonRuntimeHandle = nullptr;
 CreatePythonInterpreterModuleFn createPythonInterpreterModuleFn = nullptr;
 ValidatePythonEnvironmentFn validatePythonEnvironmentFn = nullptr;
 ConfigureRuntimeLoggingFn configureRuntimeLoggingFn = nullptr;
-
 void applyConfiguredLoggingToRuntimeLibrary() {
     if (configureRuntimeLoggingFn == nullptr) {
         return;

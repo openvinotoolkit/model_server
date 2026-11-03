@@ -249,14 +249,14 @@ class CommonProcess(AbstractProcess):
         try:
             parent_proc = psutil.Process(self._proc.pid)
             child_processes = parent_proc.children()
-        except psutil.NoSuchProcess as e:
+        except psutil.NoSuchProcess as _e:
             return not self.is_alive()
         for child_proc in child_processes:
             try:
                 child_proc.terminate()
-            except psutil.NoSuchProcess as e:
+            except psutil.NoSuchProcess:
                 pass
-            except psutil.AccessDenied as e:
+            except psutil.AccessDenied:
                 self._kill_by_shell(child_proc.pid, end_time=end_time, force=force, sudo=True)
 
             _, alive = psutil.wait_procs([child_proc],
@@ -334,7 +334,7 @@ class WindowsProcess(CommonProcess):
 class RemoteProcess(SSHClient, UnixProcess):
     def __init__(self, hostname, username=None, password=None, port=22):
         super(SSHClient, self).__init__()
-        super(RemoteProcess, self).__init__()
+        super().__init__()
         self._proc_stdout = None
         self._info = {'hostname': hostname,
                       'username': username,
@@ -457,7 +457,7 @@ PID_STATE_ZOMBIE = "Z (zombie)"
 
 def get_pid_details_as_dict(pid):
     try:
-        proc_status = Path(f"/proc/{pid}/status").read_text()
+        proc_status = Path(f"/proc/{pid}/status").read_text(encoding="utf-8")
         proc_status_dict = {}
         for line in proc_status.splitlines():
             key, *val = line.split(":")     # if value contains multiple ':'  len(val) > 1

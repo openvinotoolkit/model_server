@@ -70,53 +70,92 @@ windows_install_build_dependencies.bat my_dir_on_c 1 1
 
 ## COMPILE
 [WARNING] This step consumes up to 13GB of disk space. It can take up to 1h depending on host CPU and internet connection speed.
-This default command compiles ovms.exe without python dependencies, just C++ binary with limited support for chat template processing.
 ```bat
 windows_build.bat
 ```
 
 Optionally, you add parameter to the windows_build.bat script
 ```bat
-windows_build.bat my_dir_on_c --with_python --with_tests --integrity
+windows_build.bat my_dir_on_c --with_tests --integrity
 ```
-[arg1] This way you can change default dependency location directory to c:\my_dir_on_c
-[arg2] --with_python - this will build the ovms.exe with python dependency and support for python chat templates for GENAI LLM
-[arg3] --with_tests - this will also build ovms_test.exe target
-[arg4] --integrity - Add the compilation integrity flag to 0 or 1 - set the additional integritycheck compilation flag when compiling dependencies
+[arg1] - Change the default dependency location to `C:\my_dir_on_c`.
+[arg2..3] - Optional `--with_tests` and `--integrity` flags. They can be supplied individually or in either order.
 
 # Running unit tests - optional
-The script compiles ovms_test binary with C++ only, downloads and converts test LLM models (src\tests\llm_testing).
+The script compiles the Python-enabled ovms_test binary, downloads and converts test LLM models (src\tests\llm_testing), and installs Python torch and optimum.
 ```bat
 windows_test.bat
 ```
 
-The optional script compiles ovms_test binary with python support, downloads and converts test LLM models (src\tests\llm_testing) and installs Python torch and optimum.
+Optionally, pass the dependency location and a GoogleTest filter:
 ```bat
-windows_test.bat opt --with_python
+windows_test.bat my_dir_on_c PythonFlowTest.*
+```
+[arg1] - Dependency location under `C:\`; defaults to `C:\opt`.
+[arg2] - GoogleTest filter; defaults to `*`.
+
+# Running functional tests - optional
+The script runs pytest tests from `tests\functional` against the ovms.exe binary from a release package. It creates a `.venv` virtual environment, installs `tests\requirements.txt` and writes results to `pytest-functional.xml`.
+Create the deployment package first (see the next section) and pass the absolute path to the ovms.zip as the first argument.
+A HuggingFace token is required (some tests download gated models). Provide it with the `HF_TOKEN` environment variable, or with `HF_TOKEN_FILE_PATH` pointing to a file containing the token. `HF_TOKEN` takes priority. When `HF_TOKEN_FILE_PATH` is not set, `~\ovms_tokens\huggingface_token` is used.
+```bat
+set HF_TOKEN=<your_huggingface_token>
+windows_test_functional.bat c:\git\model_server\dist\windows\ovms.zip
+```
+or
+```bat
+set HF_TOKEN_FILE_PATH=c:\path\to\huggingface_token_file
+windows_test_functional.bat c:\git\model_server\dist\windows\ovms.zip
+```
+
+Optionally, you can add parameters to the windows_test_functional.bat script
+```bat
+windows_test_functional.bat c:\git\model_server\dist\windows\ovms.zip "tests/functional/test_embeddings.py -k on_commit" 2
+```
+[arg1] - absolute path(s) to the OVMS release artifacts, comma-separated (required)  
+[arg2] - pytest target(s) and options, quote when it contains spaces. Default: `tests/functional`  
+[arg3] - number of pytest-xdist workers. Default: 4
+
+Other test settings are read from `TT_*` environment variables set before running the script, for example:
+```bat
+set TT_TARGET_DEVICE=CPU,GPU
+set TT_LOGGING_LEVEL_OVMS=DEBUG
+set TT_ON_COMMIT_TESTS=False
+set TT_RUN_REGRESSION_TESTS=True
+windows_test_functional.bat c:\git\model_server\dist\windows\ovms.zip
 ```
 
 # Creating deployment package
 This step prepares ovms.zip deployment package from the build artifacts in the dist\windows\ directory. Run this script after successful compilation.
-The default version creates C++ only version without Python dependency.
 ```bat
 windows_create_package.bat
 ```
 
-Optionally you can create a package with Python dependency. Note that to create valid package with Python, you need to build using `--with_python` flag in the previous step as well.
+To include the embedded Python runtime, pass `--with_python` after the dependency location:
 ```bat
-windows_create_package.bat opt --with_python
+windows_create_package.bat my_dir_on_c --with_python
 ```
+[arg1] - Dependency location under `C:\`; defaults to `C:\opt`.
+[arg2] - `--with_python` includes the embedded Python runtime.
 
 # Test the Deployment
 You can follow the [baremetal deployment guide](deploying_server_baremetal.md) for information how to deploy and use the ovms.zip package.
 
 # Developer Command Prompt
 For building ovms.exe and running ovms_test.exe with manual bazel commands you must setup proper environment variables.
-Run the batch script in new "Developer Command Prompt for VS 2022" terminal:
+Run the batch script in a new "Developer Command Prompt for VS 2022" terminal from the repository root:
 ```bat
-cd c:\git\model_server
-windows_setupvars.bat
+cd /d c:\git\model_server
+call windows_setupvars.bat
 ```
+
+After the environment is initialized, use the repo-local Makefile targets from the same shell:
+```bat
+make style
+make sdl-check
+```
+
+These commands must be run after `windows_setupvars.bat` so that the local Python virtual environment, repo tool shims, and proxy/tool paths are available.
 
 Rebuild unit tests:
 ```bat

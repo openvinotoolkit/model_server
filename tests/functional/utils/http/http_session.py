@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=unused-argument
 
 """Wrapper for the Session class from the requests library."""
 
@@ -36,7 +37,7 @@ POOL_SIZE = 100
 logger = get_logger(__name__)
 
 
-class HttpSession(object, metaclass=ABCMeta):
+class HttpSession(metaclass=ABCMeta):
     """HttpSession is wrapper for the Session class from the requests library.
 
     It stores the information about the username, password, possible proxies and certificates.

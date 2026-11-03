@@ -63,13 +63,13 @@ In-case of problems, see [Debugging](#debugging).
 
 4. In the docker container context compile the source code via (choose distro `ubuntu` or `redhat` depending on the image type):
 	```bash
-	bazel build --//:distro=ubuntu --config=mp_on_py_on //src:ovms
+	bazel build --//:distro=ubuntu --config=mp_on //src:ovms
 > **NOTE**: There are several options that would disable specific parts of OVMS. For details check ovms bazel build files.
 	```
 
 5. From the container, run a single unit test (choose distro `ubuntu` or `redhat` depending on the image type):
 	```bash
-	bazel test --//:distro=ubuntu --config=mp_on_py_on --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
+	bazel test --//:distro=ubuntu --config=mp_on --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
 	```
 
 | Argument      | Description |
@@ -90,7 +90,6 @@ In-case of problems, see [Debugging](#debugging).
 	```
 	OVMS_CPP_DOCKER_IMAGE=<replace_with_unique_image_name> make docker_build
     OVMS_CPP_DOCKER_IMAGE=<replace_with_unique_image_name> make test_functional
-    OVMS_CPP_CONTAINER_PORT=<unique_network_port> make test_perf
 	```
 
 	* Without a Docker cache :
@@ -122,19 +121,20 @@ Click the test that needs to be run:
 
 <details><summary>Run test inference</summary>
 
-1. Download an exemplary model [ResNet50-binary model](https://github.com/openvinotoolkit/open_model_zoo/blob/releases/2022/1/models/intel/resnet50-binary-0001/README.md) :
+1. Download an exemplary model [ResNet50 model](https://huggingface.co/OpenVINO/resnet50-int8-ov) :
 
-	```bash
-	source tests/performance/download_model.sh
-	```
-
-	The script stores the model in the user home folder.
+```bash
+mkdir -p ${HOME}/models
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o ${HOME}/models/resnet50.bin
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o ${HOME}/models/resnet50.xml
+```
 
 2. Start OVMS docker container with downloaded model
 
 ```bash
-docker run -d --name server-test -v ~/resnet50-binary:/models/resnet50-binary -p 9178:9178 \
-openvino/model_server:latest --model_name resnet-binary --model_path /models/resnet50-binary --port 9178
+docker run -d --name server-test -u $(id -u) -v ${HOME}/models:/models -p 9178:9178 \
+openvino/model_server:latest --model_name resnet --model_path /models/resnet50.xml \
+--mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --port 9178
 ```
 
 3. The grpc client connects to the OpenVINO Model Server service that is running on port 9178.
@@ -142,22 +142,21 @@ openvino/model_server:latest --model_name resnet-binary --model_path /models/res
 	```bash
 	make venv
 	source .venv/bin/activate
-	pip3 install -r demos/common/python/requirements.txt
-	python tests/performance/grpc_latency.py --images_numpy_path tests/performance/imgs.npy --labels_numpy_path tests/performance/labels.npy \
-	--iteration 1000 --model_name resnet-binary --batchsize 1 --report_every 100 --input_name 0 --output_name 1463 --grpc_port 9178
+	cd client/python/kserve-api/samples/
+	pip3 install -r requirements.txt
+	python grpc_infer_resnet.py --grpc_port 9178 --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy --batchsize 1 --iterations 1000 --input_name image --output_name output --model_name resnet --transpose_input False
 	```
 
 Where:
 
 | Argument Used     | Description |
 | :---        |    :----   |
-| `images_numpy_path tests/performance/imgs.npy`  | The path to a numpy array. `imgs.npy` is the numpy array with a batch of input data.|
-| `labels_numpy_path tests/performance/labels.npy`| Includes a numpy array  named labels.npy. This array has image classification results       |
-| `iteration 1000` | Run the data 1000 times |
+| `images_numpy_path client/python/imgs.npy`  | The path to a numpy array. `imgs.npy` is the numpy array with a batch of input data.|
+| `labels_numpy_path client/python/labels.npy`| Includes a numpy array  named labels.npy. This array has image classification results       |
+| `iterations 1000` | Run the data 1000 times |
 | `batchsize 1` | Batch size to be used in the inference request |
-| `report_every 10` | Number of iterations followed by results summary report|
-| `input_name 0` | Name of the deployed model input called "0" |
-| `output_name 1463` | Name of the deployed model output called "1463"|
+| `input_name image` | Name of the deployed model input called "image" |
+| `output_name output` | Name of the deployed model output called "output"|
 
 </details>
 
@@ -174,21 +173,19 @@ make test_functional
 
 - Configuration options are :
 
-| Variable    | Description |
-| :---        |    :----   |
-| `IMAGE`  | Docker image name for the tests.|
-| `TEST_DIR_CACHE`| Location from which models and test data are downloaded.|
-| `TEST_DIR` | Location to which models and test data are copied during tests.|
-| `TEST_DIR_CLEANUP` | Set to `True` to remove the directory under `TEST_DIR` after the tests.|
-| `LOG_LEVEL` | The log level.|
-| `BUILD_LOGS` | Path to save artifacts.|
-| `START_CONTAINER_COMMAND` | The command to start the OpenVINO Model Storage container.|
-| `CONTAINER_LOG_LINE` | The log line in the container that confirms the container started properly.|
+| Variable                  | Description                                                |
+|:--------------------------|:-----------------------------------------------------------|
+| `OVMS_CPP_DOCKER_IMAGE`   | Docker image name for the tests.                           |
+| `OVMS_CPP_IMAGE_TAG`      | Docker image tag for the tests.                            |
+| `TT_LOGGING_LEVEL`        | The log level for tests.                                   |
+| `TT_LOGGING_LEVEL_OVMS`   | The log level for OVMS.                                    |
+| `BUILD_LOGS`              | Path to save artifacts.                                    |
+| `START_CONTAINER_COMMAND` | The command to start the OpenVINO Model Storage container. |
 
 2. Add any configuration variables to the command line in this format :
 
 ```bash
-export IMAGE="openvino/model_server:latest"
+export TT_OVMS_IMAGE_NAME="openvino/model_server:latest"
 ```
 
 3. To make command repetition easier, create and store the configuration options in a file named `user_config.py`. Put this file in the main project directory.
@@ -196,57 +193,7 @@ export IMAGE="openvino/model_server:latest"
 - Example:
 
 ```python
-os.environ["IMAGE"] = "openvino/model_server"
-```
-</details>
-
-<details><summary>Run performance tests</summary>
-
-Automated tests are configured to use the ResNet50 model.
-
-1. Execute command to run latency test
-```bash
-make test_perf
-```
-- Output
-```bash
-Running latency test
-[--] Starting iterations
-[--] Iteration   100/ 1000; Current latency: 10.52ms; Average latency: 11.35ms
-[--] Iteration   200/ 1000; Current latency: 10.99ms; Average latency: 11.03ms
-[--] Iteration   300/ 1000; Current latency: 9.60ms; Average latency: 11.02ms
-[--] Iteration   400/ 1000; Current latency: 10.20ms; Average latency: 10.93ms
-[--] Iteration   500/ 1000; Current latency: 10.45ms; Average latency: 10.84ms
-[--] Iteration   600/ 1000; Current latency: 10.70ms; Average latency: 10.82ms
-[--] Iteration   700/ 1000; Current latency: 9.47ms; Average latency: 10.88ms
-[--] Iteration   800/ 1000; Current latency: 10.70ms; Average latency: 10.83ms
-[--] Iteration   900/ 1000; Current latency: 11.09ms; Average latency: 10.85ms
-[--] Iterations:  1000; Final average latency: 10.86ms; Classification accuracy: 100.0%
-```
-
-2. Execute command to run throughput test
-```bash
-make test_throughput
-```
-- Output
-
-```bash
-Running throughput test
-[25] Starting iterations
-[23] Starting iterations
-...
-[11] Starting iterations
-[24] Iterations:   500; Final average latency: 20.50ms; Classification accuracy: 100.0%
-[25] Iterations:   500; Final average latency: 20.81ms; Classification accuracy: 100.0%
-[6 ] Iterations:   500; Final average latency: 20.80ms; Classification accuracy: 100.0%
-[26] Iterations:   500; Final average latency: 20.80ms; Classification accuracy: 100.0%
-...
-[11] Iterations:   500; Final average latency: 20.84ms; Classification accuracy: 100.0%
-
-real	0m13.397s
-user	1m22.277s
-sys	0m39.333s
-1076 FPS
+os.environ["TT_OVMS_IMAGE_NAME"] = "openvino/model_server:latest"
 ```
 </details>
 
@@ -323,7 +270,7 @@ sudo reboot
 To check code coverage of unit tests, execute the following command to create build image and run unit tests with code coverage enabled:
 
 ```
-make ovms_builder_image BASE_OS=ubuntu24 CHECK_COVERAGE=1 RUN_TESTS=1 MEDIAPIPE_DISABLE=0 PYTHON_DISABLE=0 OV_USE_BINARY=1 OVMS_CPP_DOCKER_IMAGE=ovms_coverage
+make ovms_builder_image BASE_OS=ubuntu24 CHECK_COVERAGE=1 RUN_TESTS=1 MEDIAPIPE_DISABLE=0 OV_USE_BINARY=1 OVMS_CPP_DOCKER_IMAGE=ovms_coverage
 ```
 
 Then run `get_coverage` target to extract report from the container:
@@ -354,13 +301,14 @@ Debugging options are available. Click on the required option :
 	```
 3.	Prepare resnet50 model for OVMS in /models catalog and recompile the OpenVINO Model Server in docker container with debug symbols using command:
 	```bash
-	mkdir -p /models/1 && wget -P /models/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin && wget -P /models/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml
+	mkdir -p /models/1 && curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o /models/1/resnet50.bin && curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o /models/1/resnet50.xml
 	```
 	```bash
-	bazel build --config=mp_on_py_on //src:ovms -c dbg
+	bazel build --config=mp_on //src:ovms -c dbg
 	```
 	```bash
-	gdb --args ./bazel-bin/src/ovms --model_name resnet --model_path /models --port 9178
+	gdb --args ./bazel-bin/src/ovms --model_name resnet --model_path /models \
+	--mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --port 9178
 	```
     > **NOTE**: For best results, use the makefile parameter `BAZEL_BUILD_TYPE=dbg` to build the dependencies in debug mode as shown above
 
@@ -382,7 +330,8 @@ Debugging options are available. Click on the required option :
 Download the model files and store them in the `models` directory
 ```bash
 mkdir -p models/resnet/1
-curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o models/resnet/1/resnet50.bin
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o models/resnet/1/resnet50.xml
 ```
 
 ### Option 1. Use OpenVINO Model Server build image.
@@ -405,7 +354,8 @@ bazel build --config=linux --copt="-DMTR_ENABLED" //src:ovms
 
 4. Run OVMS with `--trace_path` specifying where to save flame graph JSON file.
 ```bash
-bazel-bin/src/ovms --model_name resnet --model_path models/resnet --trace_path trace.json --port 9178
+bazel-bin/src/ovms --model_name resnet --model_path models/resnet \
+--mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --trace_path trace.json --port 9178
 ```
 
 5. During app exit, the trace info will be saved into `trace.json`.
@@ -425,7 +375,8 @@ make docker_build MINITRACE=ON
 mkdir traces
 chmod -R 777 traces
 
-docker run -it -v ${PWD}:/workspace:rw -p 9178:9178 openvino/model_server --model_name resnet --model_path /workspace/models/resnet --trace_path /workspace/traces/trace.json --port 9178
+docker run -it -v ${PWD}:/workspace:rw -p 9178:9178 openvino/model_server --model_name resnet --model_path /workspace/models/resnet \
+--mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --trace_path /workspace/traces/trace.json --port 9178
 ```
 
 3. During app exit, the trace info will be saved into `${PWD}/traces/trace.json`.
@@ -464,7 +415,7 @@ Use OpenVINO Model Server build image because it installs the necessary tools.
 
 4. Run a test in this terminal. Change `TEST_PATH` to point to the test you want to debug:
 	```bash
-	make test_functional TEST_PATH=tests/functional/test_batching.py::TestBatchModelInference::test_run_inference_rest IMAGE=openvino/model_server-build:latest
+	make test_functional TEST_PATH=tests/functional/test_embeddings.py::TestEmbeddings::test_on_commit_embeddings_endpoints TT_OVMS_IMAGE_NAME=openvino/model_server-build:latest
 	```
 
 5. Open a second terminal.
