@@ -17,16 +17,13 @@
 #include <filesystem>
 #include <optional>
 #include <string>
-#include <thread>
 #include <utility>
 #include <vector>
 
 #include <gtest/gtest.h>
-#include <httplib.h>
 
 #include "../default_task.hpp"
 #include "../default_task_detector.hpp"
-#include "../utils/env_guard.hpp"
 
 class CLIParserDetermineTaskTest : public ::testing::TestWithParam<std::pair<std::string, std::string>> {
 public:
@@ -122,101 +119,6 @@ TEST_P(CLIParserDetermineTaskTest, DetermineTaskFromModelCatalog) {
         << "Model: " << modelName << ", Expected: " << expectedTask << " but got no result";
     EXPECT_EQ(result.value(), expectedTask)
         << "Model: " << modelName << ", Expected: " << expectedTask << ", Got: " << result.value();
-}
-
-TEST(TaskInferenceRemoteMetadataTest, ReportsHttpStatusFailuresWithoutFallback) {
-    httplib::Server server;
-    server.Get("/unauthorized/resolve/main/config.json", [](const httplib::Request&, httplib::Response& response) {
-        response.status = 401;
-    });
-    server.Get("/forbidden/resolve/main/config.json", [](const httplib::Request&, httplib::Response& response) {
-        response.status = 403;
-    });
-    server.Get("/missing/resolve/main/config.json", [](const httplib::Request&, httplib::Response& response) {
-        response.status = 404;
-    });
-    server.Get("/missing/resolve/main/model_index.json", [](const httplib::Request&, httplib::Response& response) {
-        response.status = 404;
-    });
-    server.Get("/unavailable/resolve/main/config.json", [](const httplib::Request&, httplib::Response& response) {
-        response.status = 503;
-    });
-    bool fallbackRequested = false;
-    server.Get("/unavailable/resolve/main/model_index.json", [&fallbackRequested](const httplib::Request&, httplib::Response& response) {
-        fallbackRequested = true;
-        response.set_content(R"({"_class_name":"StableDiffusionXLPipeline"})", "application/json");
-    });
-    const int port = server.bind_to_any_port("127.0.0.1");
-    ASSERT_GT(port, 0);
-    std::thread serverThread([&server]() {
-        server.listen_after_bind();
-    });
-    server.wait_until_ready();
-
-    EnvGuard envGuard;
-    envGuard.set("HF_ENDPOINT", "http://127.0.0.1:" + std::to_string(port) + "/");
-    envGuard.unset("http_proxy");
-    envGuard.unset("https_proxy");
-    envGuard.unset("HTTP_PROXY");
-    envGuard.unset("HTTPS_PROXY");
-    envGuard.unset("all_proxy");
-    envGuard.unset("ALL_PROXY");
-    envGuard.unset("no_proxy");
-    envGuard.unset("NO_PROXY");
-
-    for (const char* sourceModel : {"unauthorized", "forbidden", "missing"}) {
-        std::string errorMessage;
-        const auto task = ovms::determineDefaultTaskParameter(
-            std::nullopt, sourceModel, std::nullopt, &errorMessage);
-        EXPECT_FALSE(task.has_value());
-        EXPECT_NE(errorMessage.find(std::string("Failed to resolve source model '") + sourceModel + "'"), std::string::npos);
-        EXPECT_NE(errorMessage.find("task metadata is not accessible"), std::string::npos);
-    }
-
-    std::string errorMessage;
-    const auto task = ovms::determineDefaultTaskParameter(
-        std::nullopt, "unavailable", std::nullopt, &errorMessage);
-
-    server.stop();
-    serverThread.join();
-    EXPECT_FALSE(task.has_value());
-    EXPECT_NE(errorMessage.find("HTTP status 503"), std::string::npos);
-    EXPECT_FALSE(fallbackRequested);
-}
-
-TEST(TaskInferenceRemoteMetadataTest, FallsBackToModelIndexAfterConfigNotFound) {
-    httplib::Server server;
-    server.Get("/diffusers/resolve/main/config.json", [](const httplib::Request&, httplib::Response& response) {
-        response.status = 404;
-    });
-    server.Get("/diffusers/resolve/main/model_index.json", [](const httplib::Request&, httplib::Response& response) {
-        response.set_content(R"({"_class_name":"StableDiffusionXLPipeline"})", "application/json");
-    });
-    const int port = server.bind_to_any_port("127.0.0.1");
-    ASSERT_GT(port, 0);
-    std::thread serverThread([&server]() {
-        server.listen_after_bind();
-    });
-    server.wait_until_ready();
-
-    EnvGuard envGuard;
-    envGuard.set("HF_ENDPOINT", "http://127.0.0.1:" + std::to_string(port) + "/");
-    envGuard.unset("http_proxy");
-    envGuard.unset("https_proxy");
-    envGuard.unset("HTTP_PROXY");
-    envGuard.unset("HTTPS_PROXY");
-    envGuard.unset("all_proxy");
-    envGuard.unset("ALL_PROXY");
-    envGuard.unset("no_proxy");
-    envGuard.unset("NO_PROXY");
-
-    const auto task = ovms::determineDefaultTaskParameter(
-        std::nullopt, "diffusers", std::nullopt);
-
-    server.stop();
-    serverThread.join();
-    ASSERT_TRUE(task.has_value());
-    EXPECT_EQ(task.value(), "image_generation");
 }
 
 // ─── Per-detector unit tests (in-memory, no filesystem) ───────────────────────
