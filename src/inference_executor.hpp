@@ -277,7 +277,8 @@ Status infer(ModelInstance& instance, const RequestType* requestProto,
     }
     if (outputKeeperTimingEnabled) {
         const auto outputKeeperMs = std::chrono::duration<double, std::milli>(
-            std::chrono::steady_clock::now() - outputKeeperStart).count();
+            std::chrono::steady_clock::now() - outputKeeperStart)
+                                        .count();
         SPDLOG_DEBUG("Inference executor OutputKeeper construction model={} duration_ms={:.6f}",
             instance.getName(), outputKeeperMs);
     }

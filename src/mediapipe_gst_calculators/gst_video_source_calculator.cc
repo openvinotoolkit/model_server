@@ -106,7 +106,7 @@ void* getServerOwnedVaDisplay() {
 }  // namespace
 
 class GstVideoSourceCalculator : public CalculatorBase {
- public:
+public:
     static absl::Status GetContract(CalculatorContract* cc) {
         if (cc->InputSidePackets().HasTag(kVideoPathTag))
             cc->InputSidePackets().Tag(kVideoPathTag).Set<std::string>();
@@ -153,7 +153,7 @@ class GstVideoSourceCalculator : public CalculatorBase {
         if (cc->InputSidePackets().HasTag(kSourceModeTag)) {
             std::string mode = cc->InputSidePackets().Tag(kSourceModeTag).Get<std::string>();
             std::transform(mode.begin(), mode.end(), mode.begin(),
-                           [](unsigned char c) { return std::tolower(c); });
+                [](unsigned char c) { return std::tolower(c); });
             if (mode == "file") {
                 source_type_ = IMP_SOURCE_FILE;
             } else if (mode == "camera") {
@@ -219,7 +219,7 @@ class GstVideoSourceCalculator : public CalculatorBase {
             const imp_tensor_memory_type_t expected =
                 use_d3d11_ ? IMP_MEM_D3D11_SURFACE : IMP_MEM_VA_SURFACE;
             absl::Status st = openStream(&infer_ctx_, &infer_stream_, width_, height_,
-                                         /*va_surface=*/true, &pending_infer_, expected);
+                /*va_surface=*/true, &pending_infer_, expected);
             if (!st.ok())
                 return st;
         }
@@ -230,7 +230,7 @@ class GstVideoSourceCalculator : public CalculatorBase {
                 full_va_surface_ ? (use_d3d11_ ? IMP_MEM_D3D11_SURFACE : IMP_MEM_VA_SURFACE)
                                  : IMP_MEM_SYSTEM;
             absl::Status st = openStream(&full_ctx_, &full_stream_, full_width_, full_height_,
-                                         /*va_surface=*/full_va_surface_, &pending_full_, expected_full);
+                /*va_surface=*/full_va_surface_, &pending_full_, expected_full);
             if (!st.ok())
                 return st;
         }
@@ -242,8 +242,7 @@ class GstVideoSourceCalculator : public CalculatorBase {
             if (cc->Outputs().HasTag(kCompletionTag)) {
                 ov::Tensor completion(ov::element::f32, {1});
                 completion.data<float>()[0] = 1.0f;
-                cc->Outputs().Tag(kCompletionTag).AddPacket(
-                    MakePacket<ov::Tensor>(std::move(completion)).At(Timestamp(frame_index_)));
+                cc->Outputs().Tag(kCompletionTag).AddPacket(MakePacket<ov::Tensor>(std::move(completion)).At(Timestamp(frame_index_)));
             }
             return tool::StatusStop();
         }
@@ -257,7 +256,7 @@ class GstVideoSourceCalculator : public CalculatorBase {
         }
         if (emit_full_) {
             full_tensor = nextFrame(shared_camera_stream_ ? infer_stream_ : full_stream_,
-                                   &pending_full_, shared_camera_stream_ ? 1 : 0);
+                &pending_full_, shared_camera_stream_ ? 1 : 0);
             if (!full_tensor) {
                 if (infer_tensor)
                     imp_tensor_release(infer_tensor);
@@ -292,11 +291,11 @@ class GstVideoSourceCalculator : public CalculatorBase {
         return absl::OkStatus();
     }
 
- private:
+private:
     absl::Status openStream(imp_context_t** ctx, imp_video_stream_t** stream,
-                            int w, int h, bool va_surface, imp_tensor_t** pending,
-                            imp_tensor_memory_type_t expected_first,
-                            const imp_video_branch_t* branches = nullptr, uint32_t branch_count = 0) {
+        int w, int h, bool va_surface, imp_tensor_t** pending,
+        imp_tensor_memory_type_t expected_first,
+        const imp_video_branch_t* branches = nullptr, uint32_t branch_count = 0) {
         if (imp_context_create(ctx, nullptr) != IMP_OK)
             return absl::InternalError("imp_context_create failed");
 
@@ -307,7 +306,7 @@ class GstVideoSourceCalculator : public CalculatorBase {
                 imp_video_source_set(src, "device", camera_device_.c_str());
         } else {
             imp_video_source_set(src, source_type_ == IMP_SOURCE_FILE ? "path" : "url",
-                         source_uri_.c_str());
+                source_uri_.c_str());
         }
         if (w > 0)
             imp_video_source_set(src, "width", std::to_string(w).c_str());

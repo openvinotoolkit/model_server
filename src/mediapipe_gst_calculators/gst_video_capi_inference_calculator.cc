@@ -58,7 +58,7 @@ absl::Status checkCapiStatus(OVMS_Status* status, const char* operation) {
 }  // namespace
 
 class GstVideoCapiInferenceCalculator : public CalculatorBase {
- public:
+public:
     static absl::Status GetContract(CalculatorContract* cc) {
         cc->InputSidePackets().Tag(kVideoPathTag).Set<std::string>();
         cc->InputSidePackets().Tag(kWidthTag).Set<int>();
@@ -93,11 +93,11 @@ class GstVideoCapiInferenceCalculator : public CalculatorBase {
         imp_video_source_set(source, "width", std::to_string(width).c_str());
         imp_video_source_set(source, "height", std::to_string(height).c_str());
         imp_video_decode_opts_t decode_options{};
-    #ifdef _WIN32
+#ifdef _WIN32
         decode_options.use_d3d11_surface_memory = true;
-    #else
+#else
         decode_options.use_va_surface_memory = true;
-    #endif
+#endif
         const imp_status_t status = imp_video_open(&stream_, source, context_, &decode_options);
         imp_video_source_destroy(source);
         if (status != IMP_OK)
@@ -130,24 +130,24 @@ class GstVideoCapiInferenceCalculator : public CalculatorBase {
         OVMS_BufferType buffer_type_uv;
         int width = 0;
         int height = 0;
-    #ifdef _WIN32
+#ifdef _WIN32
         void* decode_device = nullptr;
         uint32_t subresource = 0;
         if (imp_tensor_get_d3d11_texture(tensor.get(), &surface_handle, &decode_device, &subresource,
-                                         &width, &height) != IMP_OK)
+                &width, &height) != IMP_OK)
             return absl::InternalError("GstVideoCapiInferenceCalculator: expected D3D11 texture");
         RET_CHECK_EQ(subresource, 0u) << "D3D11 texture array slice is not importable by OpenVINO";
         buffer_type_y = OVMS_BUFFERTYPE_D3D11_TEXTURE_Y;
         buffer_type_uv = OVMS_BUFFERTYPE_D3D11_TEXTURE_UV;
-    #else
+#else
         uint32_t surface = 0;
         void* display = nullptr;
-    #ifndef _WIN32
+#ifndef _WIN32
         const auto surfaceStart = e4Timing_.mark();
-    #endif
+#endif
         if (imp_tensor_get_va_surface(tensor.get(), &surface, &display, &width, &height) != IMP_OK)
             return absl::InternalError("GstVideoCapiInferenceCalculator: expected VA-API surface");
-    #ifndef _WIN32
+#ifndef _WIN32
         e4Timing_.add(GstCapiStageTiming::Stage::SurfaceExtract, surfaceStart, e4Timing_.mark(), e4Measured);
         if (e4Timing_.surfaceSyncEnabled()) {
             const auto syncStart = e4Timing_.mark();
@@ -157,11 +157,11 @@ class GstVideoCapiInferenceCalculator : public CalculatorBase {
             if (syncStatus != VA_STATUS_SUCCESS)
                 return absl::InternalError("GstVideoCapiInferenceCalculator: vaSyncSurface failed");
         }
-    #endif
+#endif
         surface_handle = reinterpret_cast<void*>(static_cast<uintptr_t>(surface));
         buffer_type_y = OVMS_BUFFERTYPE_VASURFACE_Y;
         buffer_type_uv = OVMS_BUFFERTYPE_VASURFACE_UV;
-    #endif
+#endif
 
         const std::string y_name = input_name_ + "/y";
         const std::string uv_name = input_name_ + "/uv";
@@ -172,15 +172,18 @@ class GstVideoCapiInferenceCalculator : public CalculatorBase {
         absl::Status status;
         if (request_ == nullptr) {
             status = checkCapiStatus(OVMS_InferenceRequestNew(
-                &request_, server_, servable_name_.c_str(), servable_version_), "OVMS_InferenceRequestNew");
+                                         &request_, server_, servable_name_.c_str(), servable_version_),
+                "OVMS_InferenceRequestNew");
             if (!status.ok())
                 return status;
             status = checkCapiStatus(OVMS_InferenceRequestAddInput(request_, y_name.c_str(),
-                OVMS_DATATYPE_U8, shape_y, 4), "OVMS_InferenceRequestAddInput(Y)");
+                                         OVMS_DATATYPE_U8, shape_y, 4),
+                "OVMS_InferenceRequestAddInput(Y)");
             if (!status.ok())
                 return status;
             status = checkCapiStatus(OVMS_InferenceRequestAddInput(request_, uv_name.c_str(),
-                OVMS_DATATYPE_U8, shape_uv, 4), "OVMS_InferenceRequestAddInput(UV)");
+                                         OVMS_DATATYPE_U8, shape_uv, 4),
+                "OVMS_InferenceRequestAddInput(UV)");
             if (!status.ok())
                 return status;
             request_width_ = width;
@@ -188,9 +191,9 @@ class GstVideoCapiInferenceCalculator : public CalculatorBase {
         }
         RET_CHECK_EQ(width, request_width_);
         RET_CHECK_EQ(height, request_height_);
-    #ifndef _WIN32
+#ifndef _WIN32
         const auto removeStart = e4Timing_.mark();
-    #endif
+#endif
         if (request_has_bound_data_) {
             status = checkCapiStatus(OVMS_InferenceRequestInputRemoveData(request_, y_name.c_str()),
                 "OVMS_InferenceRequestInputRemoveData(Y)");
@@ -202,36 +205,38 @@ class GstVideoCapiInferenceCalculator : public CalculatorBase {
                 return status;
             request_has_bound_data_ = false;
         }
-        #ifndef _WIN32
-            e4Timing_.add(GstCapiStageTiming::Stage::RemoveData, removeStart, e4Timing_.mark(), e4Measured);
-            const auto setDataStart = e4Timing_.mark();
-        #endif
+#ifndef _WIN32
+        e4Timing_.add(GstCapiStageTiming::Stage::RemoveData, removeStart, e4Timing_.mark(), e4Measured);
+        const auto setDataStart = e4Timing_.mark();
+#endif
         status = checkCapiStatus(OVMS_InferenceRequestInputSetData(request_, y_name.c_str(),
-            surface_handle, bytes_y, buffer_type_y, 1), "OVMS_InferenceRequestInputSetData(Y)");
+                                     surface_handle, bytes_y, buffer_type_y, 1),
+            "OVMS_InferenceRequestInputSetData(Y)");
         if (!status.ok())
             return status;
         status = checkCapiStatus(OVMS_InferenceRequestInputSetData(request_, uv_name.c_str(),
-            surface_handle, bytes_uv, buffer_type_uv, 1), "OVMS_InferenceRequestInputSetData(UV)");
+                                     surface_handle, bytes_uv, buffer_type_uv, 1),
+            "OVMS_InferenceRequestInputSetData(UV)");
         if (!status.ok())
             return status;
         request_has_bound_data_ = true;
-        #ifndef _WIN32
-            const auto inferenceStart = e4Timing_.mark();
-        #endif
+#ifndef _WIN32
+        const auto inferenceStart = e4Timing_.mark();
+#endif
         OVMS_InferenceResponse* raw_response = nullptr;
         status = checkCapiStatus(OVMS_Inference(server_, request_, &raw_response), "OVMS_Inference");
         if (!status.ok())
             return status;
-        #ifndef _WIN32
-            const auto inferenceStop = e4Timing_.mark();
-            e4Timing_.add(GstCapiStageTiming::Stage::SetData, setDataStart, inferenceStart, e4Measured);
-            e4Timing_.add(GstCapiStageTiming::Stage::Inference, inferenceStart, inferenceStop, e4Measured);
-        #endif
+#ifndef _WIN32
+        const auto inferenceStop = e4Timing_.mark();
+        e4Timing_.add(GstCapiStageTiming::Stage::SetData, setDataStart, inferenceStart, e4Measured);
+        e4Timing_.add(GstCapiStageTiming::Stage::Inference, inferenceStart, inferenceStop, e4Measured);
+#endif
         std::unique_ptr<OVMS_InferenceResponse, decltype(&OVMS_InferenceResponseDelete)> response(
             raw_response, OVMS_InferenceResponseDelete);
-        #ifndef _WIN32
-            const auto responseAccessStart = e4Timing_.mark();
-        #endif
+#ifndef _WIN32
+        const auto responseAccessStart = e4Timing_.mark();
+#endif
         const void* output = nullptr;
         size_t output_bytes = 0;
         uint32_t output_id = 0;
@@ -242,8 +247,9 @@ class GstVideoCapiInferenceCalculator : public CalculatorBase {
         uint32_t output_device_id = 0;
         const char* output_name = nullptr;
         status = checkCapiStatus(OVMS_InferenceResponseOutput(response.get(), output_id, &output_name,
-            &output_type, &output_shape, &output_dimensions, &output, &output_bytes,
-            &output_buffer_type, &output_device_id), "OVMS_InferenceResponseOutput");
+                                     &output_type, &output_shape, &output_dimensions, &output, &output_bytes,
+                                     &output_buffer_type, &output_device_id),
+            "OVMS_InferenceResponseOutput");
         if (!status.ok())
             return status;
         RET_CHECK_EQ(output_type, OVMS_DATATYPE_FP32);
@@ -254,26 +260,25 @@ class GstVideoCapiInferenceCalculator : public CalculatorBase {
             if (values[result + 2] >= kFaceConfidenceThreshold)
                 ++detections;
         }
-    #ifndef _WIN32
+#ifndef _WIN32
         e4Timing_.add(GstCapiStageTiming::Stage::ResponseAccess, responseAccessStart, e4Timing_.mark(), e4Measured);
         if (e4Measured) {
             const auto responseDeleteStart = e4Timing_.mark();
             response.reset();
             e4Timing_.add(GstCapiStageTiming::Stage::ResponseDelete, responseDeleteStart, e4Timing_.mark(), true);
         }
-    #endif
-        cc->Outputs().Tag(kDetectionsTag).AddPacket(
-            MakePacket<int>(detections).At(Timestamp(frame_index_++)));
-    #ifndef _WIN32
+#endif
+        cc->Outputs().Tag(kDetectionsTag).AddPacket(MakePacket<int>(detections).At(Timestamp(frame_index_++)));
+#ifndef _WIN32
         e4Timing_.finishFrame(e4ProcessStart, e4Measured);
-    #endif
+#endif
         return absl::OkStatus();
     }
 
     absl::Status Close(CalculatorContext*) override {
-    #ifndef _WIN32
+#ifndef _WIN32
         e4Timing_.report("GstVideoCapiInferenceCalculator");
-    #endif
+#endif
         if (request_ != nullptr) {
             OVMS_InferenceRequestDelete(request_);
             request_ = nullptr;
@@ -285,7 +290,7 @@ class GstVideoCapiInferenceCalculator : public CalculatorBase {
         return absl::OkStatus();
     }
 
- private:
+private:
     imp_context_t* context_ = nullptr;
     imp_video_stream_t* stream_ = nullptr;
     OVMS_Server* server_ = nullptr;

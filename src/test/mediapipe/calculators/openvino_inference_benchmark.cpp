@@ -123,7 +123,7 @@ void measure(const std::string& name, ov::CompiledModel& compiled, Bind bind) {
         std::map<std::tuple<std::string, std::string, std::string>, NodeProfileTotals> nodeProfiles;
 #endif
         for (int frame = 0; frame < bench::totalFrames(); ++frame) {
-        const auto frameStart = bench::Clock::now();
+            const auto frameStart = bench::Clock::now();
 #ifndef _WIN32
             const auto bindStart = collectStageTimings() ? bench::Clock::now() : bench::Clock::time_point{};
 #endif
@@ -219,8 +219,8 @@ TEST(PureOpenVinoBenchmark, OpenClRemote) {
     ASSERT_FALSE(frames.empty());
     ASSERT_EQ(queue.enqueueWriteBuffer(yBuffer, CL_TRUE, 0, kWidth * kHeight, frames.front().data()), CL_SUCCESS);
     ASSERT_EQ(queue.enqueueWriteBuffer(uvBuffer, CL_TRUE, 0, kWidth * kHeight / 2,
-                      frames.front().data() + kWidth * kHeight),
-            CL_SUCCESS);
+                  frames.front().data() + kWidth * kHeight),
+        CL_SUCCESS);
     measure("pure_ov_GPU_opencl", compiled, [&](ov::InferRequest& request, int) {
         request.set_tensor(bench::kYInputName, yTensor);
         request.set_tensor(bench::kUvInputName, uvTensor);

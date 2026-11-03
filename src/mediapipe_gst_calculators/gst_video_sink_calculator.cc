@@ -57,7 +57,7 @@ constexpr char kOutputModeTag[] = "OUTPUT_MODE";
 }  // namespace
 
 class GstVideoSinkCalculator : public CalculatorBase {
- public:
+public:
     static absl::Status GetContract(CalculatorContract* cc) {
         cc->Inputs().Tag(kFrameTag).Set<GstVideoFramePacket>();
         if (cc->InputSidePackets().HasTag(kOutputPathTag))
@@ -81,7 +81,7 @@ class GstVideoSinkCalculator : public CalculatorBase {
                 } else if (mode.ValidateAsType<std::string>().ok()) {
                     std::string m = mode.Get<std::string>();
                     std::transform(m.begin(), m.end(), m.begin(),
-                                   [](unsigned char c) { return std::tolower(c); });
+                        [](unsigned char c) { return std::tolower(c); });
                     if (m == "file")
                         output_mode_ = IMP_OUTPUT_FILE;
                     else if (m == "rtsp")
@@ -95,10 +95,10 @@ class GstVideoSinkCalculator : public CalculatorBase {
                 }
             }
         }
-    #ifndef _WIN32
+#ifndef _WIN32
         if (output_mode_ == IMP_OUTPUT_PREVIEW)
             return absl::InvalidArgumentError("GstVideoSinkCalculator: preview output requires Windows");
-    #endif
+#endif
         if (output_mode_ != IMP_OUTPUT_PREVIEW && output_path_.empty())
             return absl::InvalidArgumentError("GstVideoSinkCalculator: empty OUTPUT_PATH");
         if (framerate_ <= 0)
@@ -129,7 +129,7 @@ class GstVideoSinkCalculator : public CalculatorBase {
             eopts.output_path = output_path_.c_str();
             eopts.output_mode = output_mode_;
             if (imp_video_encoder_create(&encoder_, static_cast<uint32_t>(frame.width),
-                                         static_cast<uint32_t>(frame.height), ctx_, &eopts) != IMP_OK)
+                    static_cast<uint32_t>(frame.height), ctx_, &eopts) != IMP_OK)
                 return absl::InternalError(std::string("imp_video_encoder_create failed: ") +
                                            imp_context_get_error(ctx_));
         }
@@ -163,7 +163,7 @@ class GstVideoSinkCalculator : public CalculatorBase {
         return absl::OkStatus();
     }
 
- private:
+private:
     std::string output_path_;
     int framerate_ = 0;
     imp_output_mode_t output_mode_ = IMP_OUTPUT_FILE;

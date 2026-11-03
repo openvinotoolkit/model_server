@@ -131,7 +131,7 @@ protected:
     std::shared_ptr<ov::CompiledModel> compiledModel;
 
 public:
-     ov::CompiledModel* getCompiledModel() const { return compiledModel.get(); }
+    ov::CompiledModel* getCompiledModel() const { return compiledModel.get(); }
 
     // TODO windows
 #ifdef __linux__

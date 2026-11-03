@@ -52,7 +52,8 @@ ov::Tensor VAAPITensorFactory::create(ov::element::Type_t type, const ov::Shape&
     ov::Tensor tensor = vaContext.create_tensor(type, shape, tensor_params);
     if (timingEnabled) {
         const auto createTensorMs = std::chrono::duration<double, std::milli>(
-            std::chrono::steady_clock::now() - createTensorStart).count();
+            std::chrono::steady_clock::now() - createTensorStart)
+                                        .count();
         SPDLOG_DEBUG("VAAPITensorFactory::create plane={} shape_rank={} duration_ms={:.6f}",
             vaPlaneId, shape.size(), createTensorMs);
     }

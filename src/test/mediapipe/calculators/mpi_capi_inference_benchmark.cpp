@@ -368,8 +368,8 @@ protected:
 
             const double scale = 1.0 / bench::measuredFrames();
             const double directMs = paired
-                ? std::chrono::duration<double, std::milli>(directWall).count() * scale
-                : 0.0;
+                                        ? std::chrono::duration<double, std::milli>(directWall).count() * scale
+                                        : 0.0;
             const double capiMs = std::chrono::duration<double, std::milli>(capiWall).count() * scale;
             if (paired)
                 directSamples.push_back(directMs);
@@ -416,22 +416,22 @@ protected:
                       << " response_delete_ms_per_frame=" << std::chrono::duration<double, std::milli>(capiResponseDelete).count() * scale
                       << " paired_path_ms_per_frame=" << capiMs
                       << " paired_path_fps=" << 1000.0 / capiMs << std::endl;
-                if (paired)
-                    std::cout << "E3_ORDER sample=" << sample + 1
-                     << " measured_direct_first_frames=" << directFirstFrames
-                     << " capi_first_frames=" << capiFirstFrames
-                     << " capi_infer_after_direct_ms_per_frame="
-                     << std::chrono::duration<double, std::milli>(capiInferenceDirectFirst).count() /
-                         std::max<size_t>(directFirstFrames, 1)
-                     << " capi_infer_before_direct_ms_per_frame="
-                     << std::chrono::duration<double, std::milli>(capiInferenceCapiFirst).count() /
-                         std::max<size_t>(capiFirstFrames, 1)
-                     << " capi_wall_after_direct_ms_per_frame="
-                     << std::chrono::duration<double, std::milli>(capiWallDirectFirst).count() /
-                         std::max<size_t>(directFirstFrames, 1)
-                     << " capi_wall_before_direct_ms_per_frame="
-                     << std::chrono::duration<double, std::milli>(capiWallCapiFirst).count() /
-                         std::max<size_t>(capiFirstFrames, 1)
+            if (paired)
+                std::cout << "E3_ORDER sample=" << sample + 1
+                          << " measured_direct_first_frames=" << directFirstFrames
+                          << " capi_first_frames=" << capiFirstFrames
+                          << " capi_infer_after_direct_ms_per_frame="
+                          << std::chrono::duration<double, std::milli>(capiInferenceDirectFirst).count() /
+                                 std::max<size_t>(directFirstFrames, 1)
+                          << " capi_infer_before_direct_ms_per_frame="
+                          << std::chrono::duration<double, std::milli>(capiInferenceCapiFirst).count() /
+                                 std::max<size_t>(capiFirstFrames, 1)
+                          << " capi_wall_after_direct_ms_per_frame="
+                          << std::chrono::duration<double, std::milli>(capiWallDirectFirst).count() /
+                                 std::max<size_t>(directFirstFrames, 1)
+                          << " capi_wall_before_direct_ms_per_frame="
+                          << std::chrono::duration<double, std::milli>(capiWallCapiFirst).count() /
+                                 std::max<size_t>(capiFirstFrames, 1)
                           << std::endl;
         }
         if (paired)

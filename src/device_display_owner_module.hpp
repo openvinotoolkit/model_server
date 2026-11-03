@@ -20,12 +20,12 @@
 namespace ovms {
 
 class DeviceDisplayOwnerModule : public Module {
- public:
+public:
     Status start(const Config& config) override;
     void shutdown() override;
-   ~DeviceDisplayOwnerModule() override;
+    ~DeviceDisplayOwnerModule() override;
 
- private:
+private:
     int renderNodeFd = -1;
     void* vaDisplay = nullptr;
     void* d3d11Device = nullptr;  // Windows: server-owned ID3D11Device (as void*).

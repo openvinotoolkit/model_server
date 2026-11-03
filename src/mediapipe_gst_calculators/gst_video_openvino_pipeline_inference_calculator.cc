@@ -105,15 +105,13 @@ static gboolean initializeInference(GstOvD3D11Inference* self, ID3D11Device* dev
         std::shared_ptr<ov::Model> model = self->state->core.read_model(
             self->model_path, {}, ov::AnyMap{{"ENABLE_MMAP", "NO"}});
         ov::preprocess::PrePostProcessor preprocessor(model);
-        preprocessor.input().tensor().set_element_type(ov::element::u8)
-            .set_color_format(ov::preprocess::ColorFormat::NV12_TWO_PLANES, {"y", "uv"})
-            .set_memory_type(ov::intel_gpu::memory_type::surface);
+        preprocessor.input().tensor().set_element_type(ov::element::u8).set_color_format(ov::preprocess::ColorFormat::NV12_TWO_PLANES, {"y", "uv"}).set_memory_type(ov::intel_gpu::memory_type::surface);
         preprocessor.input().preprocess().convert_color(ov::preprocess::ColorFormat::BGR);
         preprocessor.input().model().set_layout("NCHW");
         self->state->d3d_context = std::make_unique<ov::intel_gpu::ocl::D3DContext>(
             self->state->core, device);
         const ov::AnyMap config{{"PERFORMANCE_HINT", std::string(self->performance_hint)},
-                                {"NUM_STREAMS", std::to_string(self->num_streams)}};
+            {"NUM_STREAMS", std::to_string(self->num_streams)}};
         self->state->compiled_model = self->state->core.compile_model(
             preprocessor.build(), *self->state->d3d_context, config);
         self->state->infer_requests.reserve(self->request_count);
@@ -139,8 +137,8 @@ static GstFlowReturn gstOvD3D11InferenceTransformIp(GstBaseTransform* transform,
     ID3D11Resource* resource = gst_d3d11_memory_get_resource_handle(d3d_memory);
     ID3D11Texture2D* texture = static_cast<ID3D11Texture2D*>(resource);
     ID3D11Device* device = d3d_memory->device
-        ? gst_d3d11_device_get_device_handle(d3d_memory->device)
-        : nullptr;
+                               ? gst_d3d11_device_get_device_handle(d3d_memory->device)
+                               : nullptr;
     if (texture == nullptr || device == nullptr ||
         gst_d3d11_memory_get_subresource_index(d3d_memory) != 0) {
         g_printerr("ovd3d11infer received an unsupported D3D11 texture\n");
@@ -178,8 +176,7 @@ static GstFlowReturn gstOvD3D11InferenceTransformIp(GstBaseTransform* transform,
         gst_d3d11_device_unlock(d3d_memory->device);
         const ov::Shape shape_y{1, static_cast<size_t>(self->height), static_cast<size_t>(self->width), 1};
         const ov::Shape shape_uv{1, static_cast<size_t>(self->height / 2), static_cast<size_t>(self->width / 2), 2};
-        ov::InferRequest& infer_request = self->state->infer_requests[
-            self->state->request_index++ % self->state->infer_requests.size()];
+        ov::InferRequest& infer_request = self->state->infer_requests[self->state->request_index++ % self->state->infer_requests.size()];
         infer_request.set_tensor(std::string(self->input_name) + "/y",
             self->state->d3d_context->create_tensor(ov::element::u8, shape_y, inference_texture, 0));
         infer_request.set_tensor(std::string(self->input_name) + "/uv",
@@ -189,7 +186,8 @@ static GstFlowReturn gstOvD3D11InferenceTransformIp(GstBaseTransform* transform,
         infer_request.infer();
         if (self->diagnostics) {
             self->infer_ms_total += std::chrono::duration<double, std::milli>(
-                std::chrono::steady_clock::now() - infer_start).count();
+                std::chrono::steady_clock::now() - infer_start)
+                                        .count();
             ++self->infer_count;
         }
         const ov::Tensor output = infer_request.get_output_tensor(0);
@@ -210,7 +208,7 @@ static gboolean gstOvD3D11InferenceSetCaps(GstBaseTransform* transform, GstCaps*
 }
 
 static void gstOvD3D11InferenceSetProperty(GObject* object, guint property_id,
-                                            const GValue* value, GParamSpec*) {
+    const GValue* value, GParamSpec*) {
     GstOvD3D11Inference* self = GST_OV_D3D11_INFERENCE(object);
     switch (property_id) {
     case kPropertyModelPath:
@@ -258,16 +256,16 @@ static void gst_ov_d3d11_inference_class_init(GstOvD3D11InferenceClass* klass) {
     object_class->finalize = gstOvD3D11InferenceFinalize;
     g_object_class_install_property(object_class, kPropertyModelPath,
         g_param_spec_string("model-path", "Model path", "OpenVINO XML model path", nullptr,
-                            static_cast<GParamFlags>(G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY)));
+            static_cast<GParamFlags>(G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY)));
     g_object_class_install_property(object_class, kPropertyInputName,
         g_param_spec_string("input-name", "Input name", "OpenVINO model input name", "data",
-                            static_cast<GParamFlags>(G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY)));
+            static_cast<GParamFlags>(G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY)));
     g_object_class_install_property(object_class, kPropertyPerformanceHint,
         g_param_spec_string("performance-hint", "Performance hint", "OpenVINO performance hint", "LATENCY",
-                            static_cast<GParamFlags>(G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY)));
+            static_cast<GParamFlags>(G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY)));
     g_object_class_install_property(object_class, kPropertyNumStreams,
         g_param_spec_uint("num-streams", "Number of streams", "OpenVINO NUM_STREAMS", 1, G_MAXUINT, 1,
-                          static_cast<GParamFlags>(G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY)));
+            static_cast<GParamFlags>(G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY)));
     gst_element_class_set_static_metadata(element_class, "OpenVINO D3D11 inference",
         "Filter/Video", "Runs OpenVINO on D3D11 NV12 buffers", "Intel");
     GstCaps* caps = gst_caps_from_string("video/x-raw(memory:D3D11Memory),format=NV12");
@@ -315,7 +313,7 @@ bool registerOvD3D11InferenceElement() {
 namespace mediapipe {
 
 class GstVideoOpenVinoPipelineInferenceCalculator : public CalculatorBase {
- public:
+public:
     static absl::Status GetContract(CalculatorContract* cc) {
         cc->InputSidePackets().Tag(kVideoPathTag).Set<std::string>();
         cc->InputSidePackets().Tag(kWidthTag).Set<int>();
@@ -330,7 +328,7 @@ class GstVideoOpenVinoPipelineInferenceCalculator : public CalculatorBase {
 #ifndef _WIN32
         return absl::UnimplementedError("GstVideoOpenVinoPipelineInferenceCalculator supports Windows D3D11 only");
 #else
-    gst_init(nullptr, nullptr);
+        gst_init(nullptr, nullptr);
         if (!registerOvD3D11InferenceElement())
             return absl::InternalError("could not register ovd3d11infer GStreamer element");
         const GstOpenVinoInferenceCalculatorOptions& options =
@@ -347,10 +345,11 @@ class GstVideoOpenVinoPipelineInferenceCalculator : public CalculatorBase {
                 queue_depth = parsed_queue_depth;
         }
         filter_ = "queue max-size-buffers=" + std::to_string(queue_depth) +
-            " max-size-time=0 max-size-bytes=0 ! "
-            "ovd3d11infer model-path=\"" + options.model_path() + "\" input-name=\"" +
-            options.input_name() + "\" performance-hint=\"" + options.performance_hint() +
-            "\" num-streams=" + std::to_string(options.num_streams());
+                  " max-size-time=0 max-size-bytes=0 ! "
+                  "ovd3d11infer model-path=\"" +
+                  options.model_path() + "\" input-name=\"" +
+                  options.input_name() + "\" performance-hint=\"" + options.performance_hint() +
+                  "\" num-streams=" + std::to_string(options.num_streams());
         if (imp_context_create(&context_, nullptr) != IMP_OK)
             return absl::InternalError("imp_context_create failed");
         imp_video_source_t* source = nullptr;
@@ -395,7 +394,7 @@ class GstVideoOpenVinoPipelineInferenceCalculator : public CalculatorBase {
         return absl::OkStatus();
     }
 
- private:
+private:
     imp_context_t* context_ = nullptr;
     imp_video_stream_t* stream_ = nullptr;
     std::string filter_;

@@ -54,9 +54,9 @@ namespace mediapipe {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 static void nv12_to_bgr_float(const uint8_t* y_plane, const uint8_t* uv_plane,
-                               int src_w, int src_h,
-                               int dst_w, int dst_h,
-                               std::vector<float>& out_bgr) {
+    int src_w, int src_h,
+    int dst_w, int dst_h,
+    std::vector<float>& out_bgr) {
     // Simple nearest-neighbour resize + NV12→BGR
     out_bgr.resize(static_cast<size_t>(dst_h) * dst_w * 3);
 
@@ -65,20 +65,22 @@ static void nv12_to_bgr_float(const uint8_t* y_plane, const uint8_t* uv_plane,
 
     for (int dy = 0; dy < dst_h; dy++) {
         int sy = static_cast<int>(dy * scale_y);
-        if (sy >= src_h) sy = src_h - 1;
+        if (sy >= src_h)
+            sy = src_h - 1;
 
         int uv_row = (sy / 2) * src_w;  // UV plane row offset
 
         for (int dx = 0; dx < dst_w; dx++) {
             int sx = static_cast<int>(dx * scale_x);
-            if (sx >= src_w) sx = src_w - 1;
+            if (sx >= src_w)
+                sx = src_w - 1;
 
             // Y sample
             float Y = static_cast<float>(y_plane[sy * src_w + sx]) - 16.0f;
 
             // UV sample (interleaved: U at even index, V at odd)
             int uv_col = (sx / 2) * 2;
-            float U = static_cast<float>(uv_plane[uv_row + uv_col])     - 128.0f;
+            float U = static_cast<float>(uv_plane[uv_row + uv_col]) - 128.0f;
             float V = static_cast<float>(uv_plane[uv_row + uv_col + 1]) - 128.0f;
 
             // BT.601 limited range
@@ -103,7 +105,7 @@ static void nv12_to_bgr_float(const uint8_t* y_plane, const uint8_t* uv_plane,
 // ============================================================================
 
 class VideoDecodeInferCalculator : public CalculatorBase {
- public:
+public:
     static absl::Status GetContract(CalculatorContract* cc) {
         cc->InputSidePackets().Tag("VIDEO_PATH").Set<std::string>();
         cc->InputSidePackets().Tag("MODEL_PATH").Set<std::string>();
@@ -127,7 +129,7 @@ class VideoDecodeInferCalculator : public CalculatorBase {
         return absl::OkStatus();
     }
 
- private:
+private:
     std::string video_path_;
     std::string model_path_;
 
@@ -193,7 +195,7 @@ class VideoDecodeInferCalculator : public CalculatorBase {
         // ----------------------------------------------------------------
         // 4. Decode loop
         // ----------------------------------------------------------------
-        int frame_count      = 0;
+        int frame_count = 0;
         int total_detections = 0;
         const float detection_threshold = 0.5f;
 
@@ -202,13 +204,15 @@ class VideoDecodeInferCalculator : public CalculatorBase {
         for (;;) {
             imp_tensor_t* tensor = nullptr;
             st = imp_video_read_frame(&tensor, stream, 0);
-            if (st == IMP_ERROR_STREAM_END) break;
-            if (st != IMP_OK || !tensor) break;
+            if (st == IMP_ERROR_STREAM_END)
+                break;
+            if (st != IMP_OK || !tensor)
+                break;
 
             frame_count++;
 
             // Get NV12 plane pointers via public API (tensor struct is opaque)
-            const uint8_t* y_ptr  = nullptr;
+            const uint8_t* y_ptr = nullptr;
             const uint8_t* uv_ptr = nullptr;
             int fw = 0, fh = 0;
             if (imp_tensor_get_nv12_planes(tensor, &y_ptr, &uv_ptr, &fw, &fh) != IMP_OK) {
@@ -218,9 +222,9 @@ class VideoDecodeInferCalculator : public CalculatorBase {
 
             // NV12 → BGR float, resize to model input
             nv12_to_bgr_float(y_ptr, uv_ptr,
-                               fw, fh,
-                               model_w, model_h,
-                               bgr_buf);
+                fw, fh,
+                model_w, model_h,
+                bgr_buf);
 
             // NHWC → NCHW transpose
             std::vector<float> nchw(bgr_buf.size());
@@ -231,8 +235,8 @@ class VideoDecodeInferCalculator : public CalculatorBase {
                             bgr_buf[(y * model_w + x) * 3 + c];
 
             ov::Shape shape = {1, 3,
-                               static_cast<size_t>(model_h),
-                               static_cast<size_t>(model_w)};
+                static_cast<size_t>(model_h),
+                static_cast<size_t>(model_w)};
             ov::Tensor input_tensor(ov::element::f32, shape, nchw.data());
             req.set_input_tensor(input_tensor);
             req.infer();
@@ -245,7 +249,8 @@ class VideoDecodeInferCalculator : public CalculatorBase {
             int frame_dets = 0;
             for (size_t i = 0; i < num_dets; i++) {
                 float conf = det[i * 7 + 2];
-                if (conf > detection_threshold) frame_dets++;
+                if (conf > detection_threshold)
+                    frame_dets++;
             }
             total_detections += frame_dets;
 

@@ -54,7 +54,7 @@ constexpr float kFaceConfidenceThreshold = 0.5f;
 }  // namespace
 
 class GstOpenVinoInferenceCalculator : public CalculatorBase {
- public:
+public:
     static absl::Status GetContract(CalculatorContract* cc) {
         cc->Inputs().Tag(kFrameTag).Set<GstVideoFramePacket>();
         if (cc->InputSidePackets().HasTag(kPreinitializedInferenceTag))
@@ -121,11 +121,9 @@ class GstOpenVinoInferenceCalculator : public CalculatorBase {
                 emitBoxes ? &boxes : nullptr,
                 full_width_ > 0 ? full_width_ : frame.width,
                 full_height_ > 0 ? full_height_ : frame.height);
-            cc->Outputs().Tag(kDetectionsTag).AddPacket(
-                MakePacket<int>(detections).At(cc->InputTimestamp()));
+            cc->Outputs().Tag(kDetectionsTag).AddPacket(MakePacket<int>(detections).At(cc->InputTimestamp()));
             if (emitBoxes)
-                cc->Outputs().Tag(kDetectionBoxesTag).AddPacket(
-                    MakePacket<GstDetectionBoxes>(std::move(boxes)).At(cc->InputTimestamp()));
+                cc->Outputs().Tag(kDetectionBoxesTag).AddPacket(MakePacket<GstDetectionBoxes>(std::move(boxes)).At(cc->InputTimestamp()));
             return absl::OkStatus();
         } catch (const std::exception& exception) {
             return absl::InternalError(exception.what());
@@ -181,19 +179,16 @@ class GstOpenVinoInferenceCalculator : public CalculatorBase {
                 continue;
             ++detections;
             if (emitBoxes) {
-                boxes.push_back({
-                    score,
+                boxes.push_back({score,
                     std::clamp(values[result + 3] * fullWidth, 0.0f, fullWidth - 1.0f),
                     std::clamp(values[result + 4] * fullHeight, 0.0f, fullHeight - 1.0f),
                     std::clamp(values[result + 5] * fullWidth, 0.0f, fullWidth - 1.0f),
                     std::clamp(values[result + 6] * fullHeight, 0.0f, fullHeight - 1.0f)});
             }
         }
-        cc->Outputs().Tag(kDetectionsTag).AddPacket(
-            MakePacket<int>(detections).At(cc->InputTimestamp()));
+        cc->Outputs().Tag(kDetectionsTag).AddPacket(MakePacket<int>(detections).At(cc->InputTimestamp()));
         if (emitBoxes)
-            cc->Outputs().Tag(kDetectionBoxesTag).AddPacket(
-                MakePacket<GstDetectionBoxes>(std::move(boxes)).At(cc->InputTimestamp()));
+            cc->Outputs().Tag(kDetectionBoxesTag).AddPacket(MakePacket<GstDetectionBoxes>(std::move(boxes)).At(cc->InputTimestamp()));
         return absl::OkStatus();
 #endif
     }
@@ -207,7 +202,7 @@ class GstOpenVinoInferenceCalculator : public CalculatorBase {
         return absl::OkStatus();
     }
 
- private:
+private:
     static bool hasCompiledModel(const CalculatorContext* cc) {
 #ifndef _WIN32
         return cc->InputSidePackets().HasTag(kCompiledModelTag);
@@ -220,7 +215,8 @@ class GstOpenVinoInferenceCalculator : public CalculatorBase {
     absl::Status initializeModel() {
         try {
             std::shared_ptr<ov::Model> raw_model = core_.read_model(
-                model_path_, {}, ov::AnyMap{{"ENABLE_MMAP", "NO"}});
+                model_path_, {}, ov::AnyMap{{ "ENABLE_MMAP",
+                    "NO" }});
             ov::preprocess::PrePostProcessor preprocessor(raw_model);
             preprocessor.input()
                 .tensor()
@@ -231,7 +227,8 @@ class GstOpenVinoInferenceCalculator : public CalculatorBase {
             preprocessor.input().model().set_layout("NCHW");
             d3d_context_ = std::make_unique<ov::intel_gpu::ocl::D3DContext>(core_, device_.Get());
             const ov::AnyMap plugin_config{{"PERFORMANCE_HINT", performance_hint_},
-                                            {"NUM_STREAMS", std::to_string(num_streams_)}};
+                { "NUM_STREAMS",
+                    std::to_string(num_streams_) }};
             compiled_model_ = core_.compile_model(preprocessor.build(), *d3d_context_, plugin_config);
             infer_request_ = compiled_model_.create_infer_request();
             return absl::OkStatus();

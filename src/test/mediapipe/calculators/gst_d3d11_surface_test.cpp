@@ -118,8 +118,8 @@ TEST(GstD3D11Surface, DecodesOntoServerOwnedDevice) {
     uint32_t subresource = 0xffffffff;
     int fw = 0, fh = 0;
     ASSERT_EQ(imp_tensor_get_d3d11_texture(tensor, &texture, &decode_device,
-                                           &subresource, &fw, &fh),
-              IMP_OK);
+                  &subresource, &fw, &fh),
+        IMP_OK);
     ASSERT_NE(texture, nullptr);
 
     // The proof: GStreamer decoded onto the server-owned device.

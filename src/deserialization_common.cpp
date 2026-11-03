@@ -34,7 +34,8 @@ Status InputSink<ov::InferRequest&>::give(const std::string& name, ov::Tensor& t
         requester.set_tensor(name, tensor);
         if (timingEnabled) {
             const auto setTensorMs = std::chrono::duration<double, std::milli>(
-                std::chrono::steady_clock::now() - setTensorStart).count();
+                std::chrono::steady_clock::now() - setTensorStart)
+                                         .count();
             SPDLOG_DEBUG("Inference executor InputSink::give name={} set_tensor_ms={:.6f}", name, setTensorMs);
         }
         // OV implementation the ov::Exception is not

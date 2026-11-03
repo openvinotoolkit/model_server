@@ -30,7 +30,7 @@
 #include <vector>
 
 using Clock = std::chrono::high_resolution_clock;
-using Ms    = std::chrono::duration<double, std::milli>;
+using Ms = std::chrono::duration<double, std::milli>;
 
 #include <openvino/openvino.hpp>
 #include <openvino/runtime/intel_gpu/ocl/va.hpp>
@@ -44,10 +44,10 @@ using Ms    = std::chrono::duration<double, std::milli>;
 // Output: NCHW [3 × H × W] float, values [0,1]
 // ============================================================================
 static void nv12_to_bgr_float_nchw(const uint8_t* y_plane,
-                                    const uint8_t* uv_plane,
-                                    int src_w, int src_h,
-                                    int dst_w, int dst_h,
-                                    std::vector<float>& out_nchw) {
+    const uint8_t* uv_plane,
+    int src_w, int src_h,
+    int dst_w, int dst_h,
+    std::vector<float>& out_nchw) {
     out_nchw.resize(static_cast<size_t>(3) * dst_h * dst_w);
 
     const float scale_x = static_cast<float>(src_w) / dst_w;
@@ -60,17 +60,19 @@ static void nv12_to_bgr_float_nchw(const uint8_t* y_plane,
 
     for (int dy = 0; dy < dst_h; dy++) {
         int sy = static_cast<int>(dy * scale_y);
-        if (sy >= src_h) sy = src_h - 1;
+        if (sy >= src_h)
+            sy = src_h - 1;
         int uv_row = (sy / 2) * src_w;
 
         for (int dx = 0; dx < dst_w; dx++) {
             int sx = static_cast<int>(dx * scale_x);
-            if (sx >= src_w) sx = src_w - 1;
+            if (sx >= src_w)
+                sx = src_w - 1;
 
             float Y = static_cast<float>(y_plane[sy * src_w + sx]) - 16.0f;
 
             int uv_col = (sx / 2) * 2;
-            float U = static_cast<float>(uv_plane[uv_row + uv_col])     - 128.0f;
+            float U = static_cast<float>(uv_plane[uv_row + uv_col]) - 128.0f;
             float V = static_cast<float>(uv_plane[uv_row + uv_col + 1]) - 128.0f;
 
             float r = (1.164f * Y + 1.596f * V);
@@ -93,9 +95,9 @@ int main(int argc, char* argv[]) {
         std::cerr << "Usage: " << argv[0] << " <video_file> <model_xml> [threshold] [infer_device]\n";
         return 2;
     }
-    const char* video_path   = argv[1];
-    const char* model_path   = argv[2];
-    const float threshold    = (argc > 3) ? std::stof(argv[3]) : 0.5f;
+    const char* video_path = argv[1];
+    const char* model_path = argv[2];
+    const float threshold = (argc > 3) ? std::stof(argv[3]) : 0.5f;
     const std::string device = (argc > 4) ? argv[4] : "CPU";
 
     // ---- Open standalone context -----------------------------------------
@@ -125,7 +127,7 @@ int main(int argc, char* argv[]) {
     imp_video_source_set(src, "path", video_path);
     if (want_va) {
         // Output at model's resolution so vapostproc resizes on GPU.
-        imp_video_source_set(src, "width",  std::to_string(model_w).c_str());
+        imp_video_source_set(src, "width", std::to_string(model_w).c_str());
         imp_video_source_set(src, "height", std::to_string(model_h).c_str());
     }
 
@@ -163,8 +165,8 @@ int main(int argc, char* argv[]) {
         }
 
         uint32_t surf_id = 0;
-        void*    gst_va_disp = nullptr;
-        int      fw = 0, fh = 0;
+        void* gst_va_disp = nullptr;
+        int fw = 0, fh = 0;
         imp_tensor_get_va_surface(first_tensor, &surf_id, &gst_va_disp, &fw, &fh);
         std::cerr << "First frame: surface=" << surf_id
                   << " va_display=" << gst_va_disp
@@ -185,7 +187,7 @@ int main(int argc, char* argv[]) {
                 .tensor()
                 .set_element_type(ov::element::u8)
                 .set_color_format(ov::preprocess::ColorFormat::NV12_TWO_PLANES,
-                                  {"y", "uv"})
+                    {"y", "uv"})
                 .set_memory_type(ov::intel_gpu::memory_type::surface);
             ppp.input()
                 .preprocess()
@@ -221,7 +223,7 @@ int main(int argc, char* argv[]) {
     }
 
     // ---- Decode + infer loop ------------------------------------------------
-    int frame_count      = 0;
+    int frame_count = 0;
     int total_detections = 0;
     std::vector<float> nchw_buf;
     double t_decode_ms = 0, t_preproc_ms = 0, t_infer_ms = 0;
@@ -237,7 +239,8 @@ int main(int argc, char* argv[]) {
             auto t0 = Clock::now();
             st = imp_video_read_frame(&tensor, stream, 0);
             auto t1 = Clock::now();
-            if (st == IMP_ERROR_STREAM_END) break;
+            if (st == IMP_ERROR_STREAM_END)
+                break;
             if (st != IMP_OK || !tensor) {
                 std::cerr << "read_frame failed: " << st << "\n";
                 break;
@@ -252,8 +255,8 @@ int main(int argc, char* argv[]) {
         if (imp_tensor_get_memory_type(tensor) == IMP_MEM_VA_SURFACE) {
             // VA surface path: import surface directly into OV — zero copies.
             uint32_t surface_id = 0;
-            void*    va_disp    = nullptr;
-            int      fw = 0, fh = 0;
+            void* va_disp = nullptr;
+            int fw = 0, fh = 0;
             imp_tensor_get_va_surface(tensor, &surface_id, &va_disp, &fw, &fh);
 
             if (frame_count <= 3)
@@ -262,21 +265,21 @@ int main(int argc, char* argv[]) {
                           << " " << fw << "x" << fh << "\n";
 
             try {
-            auto nv12 = va_ctx_infer->create_tensor_nv12(
-                static_cast<size_t>(fh),
-                static_cast<size_t>(fw),
-                static_cast<uint32_t>(surface_id));
+                auto nv12 = va_ctx_infer->create_tensor_nv12(
+                    static_cast<size_t>(fh),
+                    static_cast<size_t>(fw),
+                    static_cast<uint32_t>(surface_id));
 
-            // NV12_TWO_PLANES: set y input (index 0) and uv input (index 1).
-            req.set_input_tensor(0, nv12.first);
-            req.set_input_tensor(1, nv12.second);
+                // NV12_TWO_PLANES: set y input (index 0) and uv input (index 1).
+                req.set_input_tensor(0, nv12.first);
+                req.set_input_tensor(1, nv12.second);
 
-            auto t3 = Clock::now();
-            t_preproc_ms += Ms(t3 - t2).count();  // essentially zero
+                auto t3 = Clock::now();
+                t_preproc_ms += Ms(t3 - t2).count();  // essentially zero
 
-            req.infer();
-            auto t4 = Clock::now();
-            t_infer_ms += Ms(t4 - t3).count();
+                req.infer();
+                auto t4 = Clock::now();
+                t_infer_ms += Ms(t4 - t3).count();
             } catch (const std::exception& e) {
                 std::cerr << "VA infer failed (frame " << frame_count
                           << ", surface=" << surface_id << "): " << e.what() << "\n";
@@ -285,7 +288,7 @@ int main(int argc, char* argv[]) {
 
         } else {
             // System-memory path: CPU NV12→BGR conversion then infer.
-            const uint8_t* y_ptr  = nullptr;
+            const uint8_t* y_ptr = nullptr;
             const uint8_t* uv_ptr = nullptr;
             int fw = 0, fh = 0;
             imp_tensor_get_nv12_planes(tensor, &y_ptr, &uv_ptr, &fw, &fh);
@@ -295,10 +298,10 @@ int main(int argc, char* argv[]) {
             t_preproc_ms += Ms(t3 - t2).count();
 
             ov::Tensor input_tensor(ov::element::f32,
-                                    {1, 3,
-                                     static_cast<size_t>(model_h),
-                                     static_cast<size_t>(model_w)},
-                                    nchw_buf.data());
+                {1, 3,
+                    static_cast<size_t>(model_h),
+                    static_cast<size_t>(model_w)},
+                nchw_buf.data());
             req.set_input_tensor(input_tensor);
             req.infer();
             auto t4 = Clock::now();
@@ -306,13 +309,14 @@ int main(int argc, char* argv[]) {
         }
 
         auto out = req.get_output_tensor(0);
-        const float* det  = out.data<const float>();
-        size_t num_dets   = out.get_shape()[2];
+        const float* det = out.data<const float>();
+        size_t num_dets = out.get_shape()[2];
 
         int frame_dets = 0;
         for (size_t i = 0; i < num_dets; i++) {
             float conf = det[i * 7 + 2];
-            if (conf > threshold) frame_dets++;
+            if (conf > threshold)
+                frame_dets++;
         }
         total_detections += frame_dets;
 
@@ -327,10 +331,10 @@ int main(int argc, char* argv[]) {
     std::cout << "Done: " << frame_count << " frames, "
               << "total detections=" << total_detections << "\n";
     std::cout << "\nPer-frame averages (ms):\n"
-              << "  decode      : " << t_decode_ms  / frame_count << "\n"
+              << "  decode      : " << t_decode_ms / frame_count << "\n"
               << "  preprocess  : " << t_preproc_ms / frame_count << "\n"
-              << "  infer       : " << t_infer_ms   / frame_count << "\n"
-              << "  total timed : " << t_total_ms   / frame_count << "\n"
+              << "  infer       : " << t_infer_ms / frame_count << "\n"
+              << "  total timed : " << t_total_ms / frame_count << "\n"
               << "  FPS (timed) : " << 1000.0 * frame_count / t_total_ms << "\n";
 
     imp_video_close(stream);

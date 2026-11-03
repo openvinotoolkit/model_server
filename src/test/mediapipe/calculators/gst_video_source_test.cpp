@@ -133,7 +133,8 @@ TEST(GstVideoSourceGraph, PerPacketSurfaceOwnership) {
     ::mediapipe::Packet packet;
     while (poller.Next(&packet)) {
         drained++;
-        if (drained > 100000) break;  // safety cap
+        if (drained > 100000)
+            break;  // safety cap
     }
 
     EXPECT_GT(drained, 0);

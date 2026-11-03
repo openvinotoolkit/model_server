@@ -115,11 +115,11 @@ TEST(MpiOpenVinoBenchmark, Direct) {
         int frames = 0;
 #ifndef _WIN32
         const bool collectE2 = e2DiagnosticsEnabled();
-    const bool synchronizeSurface = collectE2 &&
-        bench::environment("OVMS_MPI_E2_SURFACE_SYNC", "off") == "on";
+        const bool synchronizeSurface = collectE2 &&
+                                        bench::environment("OVMS_MPI_E2_SURFACE_SYNC", "off") == "on";
         std::chrono::nanoseconds readTime{};
         std::chrono::nanoseconds surfaceExtractionTime{};
-    std::chrono::nanoseconds surfaceSyncTime{};
+        std::chrono::nanoseconds surfaceSyncTime{};
         std::chrono::nanoseconds tensorImportTime{};
         std::chrono::nanoseconds tensorBindingTime{};
         std::chrono::nanoseconds inferCallTime{};
@@ -243,7 +243,8 @@ TEST(MpiOpenVinoBenchmark, Direct) {
             const double scale = 1.0 / bench::measuredFrames();
             const double wall = samples.back();
             const double stageSum = milliseconds(readTime + surfaceExtractionTime + surfaceSyncTime + tensorImportTime +
-                tensorBindingTime + inferCallTime + outputHandlingTime + releaseTime) * scale;
+                                                 tensorBindingTime + inferCallTime + outputHandlingTime + releaseTime) *
+                                    scale;
             std::cout << std::fixed << std::setprecision(6)
                       << "E2_DIRECT sample=" << sample + 1
                       << " measured=" << bench::measuredFrames()
@@ -377,7 +378,8 @@ TEST(MpiOpenVinoIntegration, CompiledModelSidePacket) {
                          detections += packet.Get<int>();
                          ++frames;
                          return absl::OkStatus();
-                     }).ok());
+                     })
+                    .ok());
     const absl::Status status = graph.StartRun({
         {"video_path", mediapipe::MakePacket<std::string>(bench::videoPath())},
         {"width", mediapipe::MakePacket<int>(benchmark_config::kModelWidth)},

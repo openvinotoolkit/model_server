@@ -66,8 +66,8 @@ constexpr char kInferOutputTag[] = "INFER_OUTPUT";
 // NV12 -> BGR float32, NCHW [3 x H x W], BT.601 limited range, nearest resize.
 // CPU fallback path only.
 void nv12_to_bgr_float_nchw(const uint8_t* y_plane, const uint8_t* uv_plane,
-                            int src_w, int src_h, int dst_w, int dst_h,
-                            std::vector<float>& out_nchw) {
+    int src_w, int src_h, int dst_w, int dst_h,
+    std::vector<float>& out_nchw) {
     out_nchw.resize(static_cast<size_t>(3) * dst_h * dst_w);
     const float scale_x = static_cast<float>(src_w) / dst_w;
     const float scale_y = static_cast<float>(src_h) / dst_h;
@@ -102,7 +102,7 @@ void nv12_to_bgr_float_nchw(const uint8_t* y_plane, const uint8_t* uv_plane,
 }  // namespace
 
 class VideoDecodeInferVACalculator : public CalculatorBase {
- public:
+public:
     static absl::Status GetContract(CalculatorContract* cc) {
         cc->Inputs().Tag(kTickTag).SetAny();
         cc->InputSidePackets().Tag(kVideoPathTag).Set<std::string>();
@@ -148,7 +148,7 @@ class VideoDecodeInferVACalculator : public CalculatorBase {
         return absl::OkStatus();
     }
 
- private:
+private:
     std::string video_path_;
     std::string model_path_;
     std::string device_ = "GPU";
@@ -305,9 +305,9 @@ class VideoDecodeInferVACalculator : public CalculatorBase {
                     imp_tensor_get_nv12_planes(tensor, &y_ptr, &uv_ptr, &fw, &fh);
                     nv12_to_bgr_float_nchw(y_ptr, uv_ptr, fw, fh, model_w, model_h, nchw_buf);
                     ov::Tensor input_tensor(ov::element::f32,
-                                            {1, 3, static_cast<size_t>(model_h),
-                                             static_cast<size_t>(model_w)},
-                                            nchw_buf.data());
+                        {1, 3, static_cast<size_t>(model_h),
+                            static_cast<size_t>(model_w)},
+                        nchw_buf.data());
                     req.set_input_tensor(input_tensor);
                     auto tp1 = Clock::now();
                     t_preproc_ms += Ms(tp1 - tp0).count();

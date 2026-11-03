@@ -935,17 +935,19 @@ TEST_F(CAPINonCopy, GStreamerOverlayEncodePipeline) {
     std::atomic<int> totalBoxes{0};
     std::atomic<int> framesWithBoxes{0};
     ASSERT_TRUE(graph.ObserveOutputStream("detection_boxes",
-        [&](const mediapipe::Packet& p) {
-            const auto& boxes = p.Get<mediapipe::GstDetectionBoxes>();
-            ++graphFrames;
-            totalBoxes += static_cast<int>(boxes.size());
-            if (!boxes.empty())
-                ++framesWithBoxes;
-            return absl::OkStatus();
-        }).ok());
+                         [&](const mediapipe::Packet& p) {
+                             const auto& boxes = p.Get<mediapipe::GstDetectionBoxes>();
+                             ++graphFrames;
+                             totalBoxes += static_cast<int>(boxes.size());
+                             if (!boxes.empty())
+                                 ++framesWithBoxes;
+                             return absl::OkStatus();
+                         })
+                    .ok());
     // Drain the count stream so the scheduler never blocks on it.
     ASSERT_TRUE(graph.ObserveOutputStream("detections",
-        [&](const mediapipe::Packet&) { return absl::OkStatus(); }).ok());
+                         [&](const mediapipe::Packet&) { return absl::OkStatus(); })
+                    .ok());
 
     std::map<std::string, mediapipe::Packet> sidePackets = {
         {"source_mode", mediapipe::MakePacket<std::string>("file")},
@@ -1061,16 +1063,18 @@ TEST_F(CAPINonCopy, GStreamerOverlayEncodeVaPipeline) {
     std::atomic<int> totalBoxes{0};
     std::atomic<int> framesWithBoxes{0};
     ASSERT_TRUE(graph.ObserveOutputStream("detection_boxes",
-        [&](const mediapipe::Packet& p) {
-            const auto& boxes = p.Get<mediapipe::GstDetectionBoxes>();
-            ++graphFrames;
-            totalBoxes += static_cast<int>(boxes.size());
-            if (!boxes.empty())
-                ++framesWithBoxes;
-            return absl::OkStatus();
-        }).ok());
+                         [&](const mediapipe::Packet& p) {
+                             const auto& boxes = p.Get<mediapipe::GstDetectionBoxes>();
+                             ++graphFrames;
+                             totalBoxes += static_cast<int>(boxes.size());
+                             if (!boxes.empty())
+                                 ++framesWithBoxes;
+                             return absl::OkStatus();
+                         })
+                    .ok());
     ASSERT_TRUE(graph.ObserveOutputStream("detections",
-        [&](const mediapipe::Packet&) { return absl::OkStatus(); }).ok());
+                         [&](const mediapipe::Packet&) { return absl::OkStatus(); })
+                    .ok());
 
     std::map<std::string, mediapipe::Packet> sidePackets = {
         {"source_mode", mediapipe::MakePacket<std::string>("file")},
@@ -1147,21 +1151,26 @@ TEST_F(CAPINonCopy, GStreamerRtspSourceOverlayPipeline) {
     if (!useExternalSource && access(mediamtxBin.c_str(), X_OK) != 0)
         GTEST_SKIP() << "mediamtx not found at " << mediamtxBin;
     const std::string inputUrl = useExternalSource
-        ? externalSource : "rtsp://localhost:8554/cam";
+                                     ? externalSource
+                                     : "rtsp://localhost:8554/cam";
     const char* externalOutput = std::getenv("OVMS_EXTERNAL_RTSP_OUTPUT");
     const bool hasExternalOutput = externalOutput != nullptr && externalOutput[0] != '\0';
     const std::string outputUrl = hasExternalOutput
-        ? externalOutput : "rtsp://localhost:8554/annotated";
+                                      ? externalOutput
+                                      : "rtsp://localhost:8554/annotated";
     const auto getEnvInt = [](const char* name, int fallback) {
         const char* value = std::getenv(name);
         return value != nullptr && value[0] != '\0' ? std::stoi(value) : fallback;
     };
     const int fullWidth = useExternalSource
-        ? getEnvInt("OVMS_EXTERNAL_RTSP_WIDTH", 640) : 1280;
+                              ? getEnvInt("OVMS_EXTERNAL_RTSP_WIDTH", 640)
+                              : 1280;
     const int fullHeight = useExternalSource
-        ? getEnvInt("OVMS_EXTERNAL_RTSP_HEIGHT", 480) : 720;
+                               ? getEnvInt("OVMS_EXTERNAL_RTSP_HEIGHT", 480)
+                               : 720;
     const int maxFrames = useExternalSource
-        ? getEnvInt("OVMS_EXTERNAL_RTSP_MAX_FRAMES", 300) : 0;
+                              ? getEnvInt("OVMS_EXTERNAL_RTSP_MAX_FRAMES", 300)
+                              : 0;
     if (useExternalSource) {
         ASSERT_GT(fullWidth, 0);
         ASSERT_GT(fullHeight, 0);
@@ -1171,7 +1180,8 @@ TEST_F(CAPINonCopy, GStreamerRtspSourceOverlayPipeline) {
     }
     const bool writeOutputToFile = useExternalSource && !hasExternalOutput;
     const std::string pulledPath = writeOutputToFile
-        ? "/ovms/logs/rtsp_live_overlay.mp4" : "/tmp/pulled_rtsp_source.mp4";
+                                       ? "/ovms/logs/rtsp_live_overlay.mp4"
+                                       : "/tmp/pulled_rtsp_source.mp4";
     const std::string graphOutputPath = writeOutputToFile ? pulledPath : outputUrl;
     const std::string graphOutputMode = writeOutputToFile ? "file" : "rtsp";
     const std::string mediamtxCfg = "/tmp/mediamtx_rtsp_source.yml";
@@ -1219,7 +1229,8 @@ TEST_F(CAPINonCopy, GStreamerRtspSourceOverlayPipeline) {
             "bash -c 'export PATH=/opt/gstreamer/bin:$PATH; "
             "export LD_LIBRARY_PATH=/opt/gstreamer/lib:/opt/gstreamer/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH; "
             "export GST_PLUGIN_PATH=/opt/gstreamer/lib/gstreamer-1.0; "
-            "exec gst-launch-1.0 -e filesrc location=" + videoPath +
+            "exec gst-launch-1.0 -e filesrc location=" +
+            videoPath +
             " ! decodebin ! videoconvert ! videorate ! video/x-raw,framerate=30/1 ! "
             "identity sync=true ! openh264enc ! h264parse ! rtspclientsink location=" +
             inputUrl + " protocols=tcp' >/tmp/gst_rtsp_source_publisher.log 2>&1 & echo $! > " +
@@ -1257,14 +1268,16 @@ TEST_F(CAPINonCopy, GStreamerRtspSourceOverlayPipeline) {
     std::atomic<int> graphFrames{0};
     std::atomic<int> totalBoxes{0};
     ASSERT_TRUE(graph.ObserveOutputStream("detection_boxes",
-        [&](const mediapipe::Packet& packet) {
-            const auto& boxes = packet.Get<mediapipe::GstDetectionBoxes>();
-            ++graphFrames;
-            totalBoxes += static_cast<int>(boxes.size());
-            return absl::OkStatus();
-        }).ok());
+                         [&](const mediapipe::Packet& packet) {
+                             const auto& boxes = packet.Get<mediapipe::GstDetectionBoxes>();
+                             ++graphFrames;
+                             totalBoxes += static_cast<int>(boxes.size());
+                             return absl::OkStatus();
+                         })
+                    .ok());
     ASSERT_TRUE(graph.ObserveOutputStream("detections",
-        [&](const mediapipe::Packet&) { return absl::OkStatus(); }).ok());
+                         [&](const mediapipe::Packet&) { return absl::OkStatus(); })
+                    .ok());
 
     std::map<std::string, mediapipe::Packet> sidePackets = {
         {"source_mode", mediapipe::MakePacket<std::string>("rtsp")},
@@ -1291,11 +1304,14 @@ TEST_F(CAPINonCopy, GStreamerRtspSourceOverlayPipeline) {
             "export LD_LIBRARY_PATH=/opt/gstreamer/lib:/opt/gstreamer/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH; "
             "export GST_PLUGIN_PATH=/opt/gstreamer/lib/gstreamer-1.0; "
             "for i in $(seq 1 5); do "
-            "timeout -s INT 8 gst-launch-1.0 -e rtspsrc location=" + outputUrl +
+            "timeout -s INT 8 gst-launch-1.0 -e rtspsrc location=" +
+            outputUrl +
             " protocols=tcp latency=0 ! rtph264depay ! h264parse ! mp4mux ! "
-            "filesink location=" + pulledPath + " >/tmp/gst_rtsp_source_pull.log 2>&1; "
-            "test -s " + pulledPath + " && exit 0; rm -f " + pulledPath + "; "
-            "done; exit 1'";
+            "filesink location=" +
+            pulledPath + " >/tmp/gst_rtsp_source_pull.log 2>&1; "
+                         "test -s " +
+            pulledPath + " && exit 0; rm -f " + pulledPath + "; "
+                                                             "done; exit 1'";
         puller = std::async(std::launch::async, [pullCommand]() {
             return std::system(pullCommand.c_str());
         });
@@ -1329,23 +1345,23 @@ TEST_F(CAPINonCopy, GStreamerRtspSourceOverlayPipeline) {
         const bool pulledReadable = pulled.good() && pulled.tellg() > 0;
         EXPECT_TRUE(pulledReadable) << "puller did not capture annotated RTSP output";
         if (pulledReadable) {
-        imp_context_t* vctx = nullptr;
-        ASSERT_EQ(imp_context_create(&vctx, nullptr), IMP_OK);
-        imp_video_source_t* vsrc = nullptr;
-        imp_video_source_create(&vsrc, IMP_SOURCE_FILE);
-        imp_video_source_set(vsrc, "path", pulledPath.c_str());
-        imp_video_decode_opts_t vopts{};
-        imp_video_stream_t* vstream = nullptr;
-        EXPECT_EQ(imp_video_open(&vstream, vsrc, vctx, &vopts), IMP_OK);
-        imp_video_source_destroy(vsrc);
-        if (vstream) {
-            imp_tensor_t* frame = nullptr;
-            EXPECT_EQ(imp_video_read_frame(&frame, vstream, 0), IMP_OK);
-            if (frame)
-                imp_tensor_release(frame);
-            imp_video_close(vstream);
-        }
-        imp_context_destroy(vctx);
+            imp_context_t* vctx = nullptr;
+            ASSERT_EQ(imp_context_create(&vctx, nullptr), IMP_OK);
+            imp_video_source_t* vsrc = nullptr;
+            imp_video_source_create(&vsrc, IMP_SOURCE_FILE);
+            imp_video_source_set(vsrc, "path", pulledPath.c_str());
+            imp_video_decode_opts_t vopts{};
+            imp_video_stream_t* vstream = nullptr;
+            EXPECT_EQ(imp_video_open(&vstream, vsrc, vctx, &vopts), IMP_OK);
+            imp_video_source_destroy(vsrc);
+            if (vstream) {
+                imp_tensor_t* frame = nullptr;
+                EXPECT_EQ(imp_video_read_frame(&frame, vstream, 0), IMP_OK);
+                if (frame)
+                    imp_tensor_release(frame);
+                imp_video_close(vstream);
+            }
+            imp_context_destroy(vctx);
         }
     }
     if (!writeOutputToFile)
@@ -1448,16 +1464,18 @@ TEST_F(CAPINonCopy, GStreamerOverlayEncodeRtspPipeline) {
     std::atomic<int> totalBoxes{0};
     std::atomic<int> framesWithBoxes{0};
     ASSERT_TRUE(graph.ObserveOutputStream("detection_boxes",
-        [&](const mediapipe::Packet& p) {
-            const auto& boxes = p.Get<mediapipe::GstDetectionBoxes>();
-            ++graphFrames;
-            totalBoxes += static_cast<int>(boxes.size());
-            if (!boxes.empty())
-                ++framesWithBoxes;
-            return absl::OkStatus();
-        }).ok());
+                         [&](const mediapipe::Packet& p) {
+                             const auto& boxes = p.Get<mediapipe::GstDetectionBoxes>();
+                             ++graphFrames;
+                             totalBoxes += static_cast<int>(boxes.size());
+                             if (!boxes.empty())
+                                 ++framesWithBoxes;
+                             return absl::OkStatus();
+                         })
+                    .ok());
     ASSERT_TRUE(graph.ObserveOutputStream("detections",
-        [&](const mediapipe::Packet&) { return absl::OkStatus(); }).ok());
+                         [&](const mediapipe::Packet&) { return absl::OkStatus(); })
+                    .ok());
 
     std::map<std::string, mediapipe::Packet> sidePackets = {
         {"source_mode", mediapipe::MakePacket<std::string>("file")},
@@ -1489,11 +1507,14 @@ TEST_F(CAPINonCopy, GStreamerOverlayEncodeRtspPipeline) {
         "export GST_PLUGIN_PATH=/opt/gstreamer/lib/gstreamer-1.0; "
         "for i in $(seq 1 40); do "
         "timeout -s INT 10 gst-launch-1.0 -e "
-        "rtspsrc location=" + rtspUrl + " protocols=tcp latency=0 ! "
-        "rtph264depay ! h264parse ! mp4mux ! filesink location=" + pulledPath +
+        "rtspsrc location=" +
+        rtspUrl + " protocols=tcp latency=0 ! "
+                  "rtph264depay ! h264parse ! mp4mux ! filesink location=" +
+        pulledPath +
         " >/tmp/pull_test.log 2>&1; "
-        "if [ -s " + pulledPath + " ]; then break; fi; sleep 0.2; "
-        "done' >/tmp/pull_loop.log 2>&1 & echo started";
+        "if [ -s " +
+        pulledPath + " ]; then break; fi; sleep 0.2; "
+                     "done' >/tmp/pull_loop.log 2>&1 & echo started";
     auto stopPuller = []() {
         int rc = std::system("pkill -f 'rtspsrc location=rtsp://localhost:8554/test' 2>/dev/null; "
                              "pkill -f 'seq 1 40' 2>/dev/null");

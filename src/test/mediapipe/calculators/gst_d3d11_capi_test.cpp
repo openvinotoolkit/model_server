@@ -86,8 +86,8 @@ ComPtr<ID3D11Device> createDevice() {
     ComPtr<ID3D11Device> device;
     D3D_FEATURE_LEVEL got{};
     HRESULT hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
-                                   D3D11_CREATE_DEVICE_VIDEO_SUPPORT, nullptr, 0,
-                                   D3D11_SDK_VERSION, device.GetAddressOf(), &got, nullptr);
+        D3D11_CREATE_DEVICE_VIDEO_SUPPORT, nullptr, 0,
+        D3D11_SDK_VERSION, device.GetAddressOf(), &got, nullptr);
     return SUCCEEDED(hr) ? device : nullptr;
 }
 
@@ -450,4 +450,3 @@ TEST_F(D3D11ServerFixture, SplitGraphMultipleInFlight) {
 }
 
 }  // namespace
-

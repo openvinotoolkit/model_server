@@ -89,7 +89,7 @@ nv12overlay::Color rgbToNv12(int red, int green, int blue) {
 }  // namespace
 
 class GstDetectionOverlayCalculator : public CalculatorBase {
- public:
+public:
     static absl::Status GetContract(CalculatorContract* cc) {
         cc->Inputs().Tag(kFrameFullTag).Set<GstVideoFramePacket>();
         cc->Inputs().Tag(kDetectionBoxesTag).Set<GstDetectionBoxes>();
@@ -111,8 +111,8 @@ class GstDetectionOverlayCalculator : public CalculatorBase {
             << "COLOR_R, COLOR_G, and COLOR_B must be provided together";
         if (hasRed) {
             color_ = rgbToNv12(readColorComponent(cc->InputSidePackets().Tag(kColorRTag)),
-                               readColorComponent(cc->InputSidePackets().Tag(kColorGTag)),
-                               readColorComponent(cc->InputSidePackets().Tag(kColorBTag)));
+                readColorComponent(cc->InputSidePackets().Tag(kColorGTag)),
+                readColorComponent(cc->InputSidePackets().Tag(kColorBTag)));
         }
         return absl::OkStatus();
     }
@@ -149,9 +149,9 @@ class GstDetectionOverlayCalculator : public CalculatorBase {
         return absl::OkStatus();
     }
 
- private:
+private:
     static absl::Status drawOnHost(imp_tensor_t* tensor, const GstDetectionBoxes& boxes,
-                                   const nv12overlay::Color& color) {
+        const nv12overlay::Color& color) {
         const uint8_t* y_const = nullptr;
         const uint8_t* uv_const = nullptr;
         int w = 0, h = 0;
@@ -170,7 +170,7 @@ class GstDetectionOverlayCalculator : public CalculatorBase {
 
 #ifdef OVMS_ENABLE_VA_OVERLAY
     static absl::Status drawOnSurface(imp_tensor_t* tensor, const GstDetectionBoxes& boxes,
-                                      const nv12overlay::Color& color) {
+        const nv12overlay::Color& color) {
         uint32_t surface_id = 0;
         void* disp = nullptr;
         int w = 0, h = 0;

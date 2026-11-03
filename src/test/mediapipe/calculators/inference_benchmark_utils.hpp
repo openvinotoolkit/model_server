@@ -120,7 +120,7 @@ inline std::vector<std::vector<uint8_t>> frames() {
     }
     if (result.size() != static_cast<size_t>(totalFrames()))
         throw std::runtime_error("Benchmark requires " + std::to_string(totalFrames()) +
-            " NV12 frames, got " + std::to_string(result.size()));
+                                 " NV12 frames, got " + std::to_string(result.size()));
     return result;
 }
 

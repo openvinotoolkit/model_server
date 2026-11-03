@@ -55,8 +55,8 @@ bool isAvailable();
  * @return true on success, false if MPI is unavailable or decode fails.
  */
 bool decodeAudioBuffer(const std::string_view& audioData,
-                       uint32_t sampleRate,
-                       std::vector<float>& pcm);
+    uint32_t sampleRate,
+    std::vector<float>& pcm);
 
 /**
  * Encode float PCM samples to a WAV buffer in memory.
@@ -68,9 +68,9 @@ bool decodeAudioBuffer(const std::string_view& audioData,
  * @return true on success.
  */
 bool encodeToWav(const std::vector<float>& pcm,
-                 uint32_t sampleRate,
-                 uint16_t bitsPerSample,
-                 std::vector<uint8_t>& wavData);
+    uint32_t sampleRate,
+    uint16_t bitsPerSample,
+    std::vector<uint8_t>& wavData);
 
 /**
  * Encode float PCM samples to the specified audio format.
@@ -88,11 +88,11 @@ bool encodeToWav(const std::vector<float>& pcm,
  * @return true on success.
  */
 bool encodeAudioBuffer(const float* samples,
-                       size_t numSamples,
-                       uint32_t sampleRate,
-                       uint16_t bitsPerSample,
-                       const std::string& format,
-                       std::vector<uint8_t>& output);
+    size_t numSamples,
+    uint32_t sampleRate,
+    uint16_t bitsPerSample,
+    const std::string& format,
+    std::vector<uint8_t>& output);
 
 }  // namespace imp
 }  // namespace ovms

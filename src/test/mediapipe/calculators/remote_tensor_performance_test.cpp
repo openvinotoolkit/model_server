@@ -134,8 +134,8 @@ ComPtr<ID3D11Device> createDevice() {
     ComPtr<ID3D11Device> device;
     D3D_FEATURE_LEVEL got{};
     HRESULT hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
-                                   D3D11_CREATE_DEVICE_VIDEO_SUPPORT, nullptr, 0,
-                                   D3D11_SDK_VERSION, device.GetAddressOf(), &got, nullptr);
+        D3D11_CREATE_DEVICE_VIDEO_SUPPORT, nullptr, 0,
+        D3D11_SDK_VERSION, device.GetAddressOf(), &got, nullptr);
     return SUCCEEDED(hr) ? device : nullptr;
 }
 
@@ -186,10 +186,10 @@ std::string writeTempConfig() {
     const std::string cfgPath = repoRoot() + "\\src\\test\\remote_tensor_performance_tmp.json";
     std::ofstream f(cfgPath);
     f << "{\"model_config_list\":[{\"config\":{\"name\":\"" << kModelName
-            << "\",\"base_path\":\"" << configuredModelDir
-            << "\",\"target_device\":\"GPU\",\"nireq\":4,\"plugin_config\":{\"PERFORMANCE_HINT\":\""
-            << benchmark_config::kPerformanceHint << "\",\"NUM_STREAMS\":\""
-            << benchmark_config::kNumStreams << "\"}}}]}";
+      << "\",\"base_path\":\"" << configuredModelDir
+      << "\",\"target_device\":\"GPU\",\"nireq\":4,\"plugin_config\":{\"PERFORMANCE_HINT\":\""
+      << benchmark_config::kPerformanceHint << "\",\"NUM_STREAMS\":\""
+      << benchmark_config::kNumStreams << "\"}}}]}";
     f.close();
     return cfgPath;
 }
@@ -300,14 +300,14 @@ struct WindowsD3D11RemoteTensorFixture : public ::testing::Test {
     }
 
     int runReusableCapiInference(OVMS_InferenceRequest* request, bool* hasBoundData,
-                                 void* texture, int w, int h) {
+        void* texture, int w, int h) {
         const std::string yName = std::string(kInputName) + "/y";
         const std::string uvName = std::string(kInputName) + "/uv";
         const size_t bytesY = static_cast<size_t>(w) * h;
         const size_t bytesUV = bytesY / 2;
         if ((*hasBoundData &&
-             (!capiOk(OVMS_InferenceRequestInputRemoveData(request, yName.c_str())) ||
-              !capiOk(OVMS_InferenceRequestInputRemoveData(request, uvName.c_str())))) ||
+                (!capiOk(OVMS_InferenceRequestInputRemoveData(request, yName.c_str())) ||
+                    !capiOk(OVMS_InferenceRequestInputRemoveData(request, uvName.c_str())))) ||
             !capiOk(OVMS_InferenceRequestInputSetData(
                 request, yName.c_str(), texture, bytesY, OVMS_BUFFERTYPE_D3D11_TEXTURE_Y, 1)) ||
             !capiOk(OVMS_InferenceRequestInputSetData(
@@ -329,7 +329,8 @@ struct WindowsD3D11RemoteTensorFixture : public ::testing::Test {
         const char* oname = nullptr;
         int detections = -1;
         if (capiOk(OVMS_InferenceResponseOutput(response, id, &oname, &dt, &shape, &dims,
-                                                  &out, &bytes, &bt, &did)) && out) {
+                &out, &bytes, &bt, &did)) &&
+            out) {
             detections = 0;
             const float* values = static_cast<const float*>(out);
             for (size_t result = 0; result + 7 <= bytes / sizeof(float); result += 7) {
@@ -371,7 +372,8 @@ TEST_F(WindowsD3D11RemoteTensorFixture, DecoderAndOvmsCapiInferenceUseSameRegist
         uint32_t subresource = 0;
         int frameWidth = 0, frameHeight = 0;
         ASSERT_EQ(imp_tensor_get_d3d11_texture(tensor, &texture, &decodeDevice, &subresource,
-            &frameWidth, &frameHeight), IMP_OK);
+                      &frameWidth, &frameHeight),
+            IMP_OK);
         EXPECT_EQ(decodeDevice, static_cast<void*>(device.Get())) << "decoded on a different device than the server owns";
         EXPECT_EQ(subresource, 0u);
         EXPECT_GE(runCapiInference(texture, frameWidth, frameHeight), 1)
@@ -449,9 +451,9 @@ TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithOvmsCapiInferencePerforman
                 ASSERT_EQ(subresource, 0u);
                 const auto capiStart = Clock::now();
                 const int detections = reuseRequest
-                    ? runReusableCapiInference(reusableRequest, &reusableRequestHasBoundData,
-                        texture, frameWidth, frameHeight)
-                    : runCapiInference(texture, frameWidth, frameHeight);
+                                           ? runReusableCapiInference(reusableRequest, &reusableRequestHasBoundData,
+                                                 texture, frameWidth, frameHeight)
+                                           : runCapiInference(texture, frameWidth, frameHeight);
                 ASSERT_GE(detections, 0);
                 const auto capiStop = Clock::now();
                 if (frameIndex >= warmupFrames)
@@ -472,7 +474,8 @@ TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithOvmsCapiInferencePerforman
         const double capiSum = std::accumulate(capiMs.begin(), capiMs.end(), 0.0);
         const double stageSum = decodeSum + capiSum;
         const double loopWallMs = std::chrono::duration<double, std::milli>(
-            measuredStop - measuredStart).count();
+            measuredStop - measuredStart)
+                                      .count();
         std::cout << std::fixed << std::setprecision(3)
                   << "REMOTE_TENSOR_DIRECT_D3D11 mode=" << (runInference ? (reuseRequest ? "decode_plus_capi_reuse_request" : "decode_plus_capi_new_request") : (boundedDecode ? "decode_only_bounded" : "decode_only"))
                   << " trial=" << trial
@@ -588,7 +591,8 @@ TEST_F(WindowsD3D11RemoteTensorFixture, OvmsCapiInferenceWithD3D11Nv12Performanc
             int frameWidth = 0;
             int frameHeight = 0;
             ASSERT_EQ(imp_tensor_get_d3d11_texture(tensor, &texture, &decodeDevice, &subresource,
-                &frameWidth, &frameHeight), IMP_OK);
+                          &frameWidth, &frameHeight),
+                IMP_OK);
             ASSERT_EQ(decodeDevice, static_cast<void*>(device.Get()));
             ASSERT_EQ(subresource, 0u);
             const auto start = Clock::now();
@@ -629,33 +633,33 @@ TEST_F(WindowsD3D11RemoteTensorFixture, MediaPipeFileSourceAndOvmsCapiInferenceC
     constexpr int totalFrames = warmupFrames + measuredFrames;
     using Clock = std::chrono::steady_clock;
     const std::string graphText = R"pb(
-input_side_packet: "VIDEO_PATH:video_path"
-input_side_packet: "WIDTH:width"
-input_side_packet: "HEIGHT:height"
-input_side_packet: "MAX_FRAMES:max_frames"
-input_side_packet: "SERVABLE_NAME:servable_name"
-input_side_packet: "SERVABLE_VERSION:servable_version"
-input_side_packet: "INPUT_NAME:input_name"
-input_side_packet: "SERVER:server"
-output_stream: "DETECTIONS:detections"
-node {
-  calculator: "GstVideoSourceCalculator"
-  input_side_packet: "VIDEO_PATH:video_path"
-  input_side_packet: "WIDTH:width"
-  input_side_packet: "HEIGHT:height"
-  input_side_packet: "MAX_FRAMES:max_frames"
-  output_stream: "FRAME:frame"
-}
-node {
-  calculator: "GstCapiInferenceCalculator"
-  input_stream: "FRAME:frame"
-  input_side_packet: "SERVABLE_NAME:servable_name"
-  input_side_packet: "SERVABLE_VERSION:servable_version"
-  input_side_packet: "INPUT_NAME:input_name"
-  input_side_packet: "SERVER:server"
-  output_stream: "DETECTIONS:detections"
-}
-)pb";
+        input_side_packet: "VIDEO_PATH:video_path"
+        input_side_packet: "WIDTH:width"
+        input_side_packet: "HEIGHT:height"
+        input_side_packet: "MAX_FRAMES:max_frames"
+        input_side_packet: "SERVABLE_NAME:servable_name"
+        input_side_packet: "SERVABLE_VERSION:servable_version"
+        input_side_packet: "INPUT_NAME:input_name"
+        input_side_packet: "SERVER:server"
+        output_stream: "DETECTIONS:detections"
+        node {
+          calculator: "GstVideoSourceCalculator"
+          input_side_packet: "VIDEO_PATH:video_path"
+          input_side_packet: "WIDTH:width"
+          input_side_packet: "HEIGHT:height"
+          input_side_packet: "MAX_FRAMES:max_frames"
+          output_stream: "FRAME:frame"
+        }
+        node {
+          calculator: "GstCapiInferenceCalculator"
+          input_stream: "FRAME:frame"
+          input_side_packet: "SERVABLE_NAME:servable_name"
+          input_side_packet: "SERVABLE_VERSION:servable_version"
+          input_side_packet: "INPUT_NAME:input_name"
+          input_side_packet: "SERVER:server"
+          output_stream: "DETECTIONS:detections"
+        }
+    )pb";
     const auto config = ::mediapipe::ParseTextProtoOrDie<::mediapipe::CalculatorGraphConfig>(graphText);
 
     std::cout << "REMOTE_TENSOR_TWO_CALCULATOR_GRAPH graph=source_plus_capi_inference "
@@ -704,15 +708,20 @@ node {
         ASSERT_EQ(frames, totalFrames);
         EXPECT_GE(detections, totalFrames);
         const double initializeMs = std::chrono::duration<double, std::milli>(
-            initializeStop - initializeStart).count();
+            initializeStop - initializeStart)
+                                        .count();
         const double sourceOpenMs = std::chrono::duration<double, std::milli>(
-            startRunStop - startRunStart).count();
+            startRunStop - startRunStart)
+                                        .count();
         const double firstFrameMs = std::chrono::duration<double, std::milli>(
-            firstOutputStop - startRunStop).count();
+            firstOutputStop - startRunStop)
+                                        .count();
         const double steadyMs = std::chrono::duration<double, std::milli>(
-            measuredStop - measuredStart).count();
+            measuredStop - measuredStart)
+                                    .count();
         const double drainMs = std::chrono::duration<double, std::milli>(
-            drainStop - drainStart).count();
+            drainStop - drainStart)
+                                   .count();
         std::cout << std::fixed << std::setprecision(3)
                   << "REMOTE_TENSOR_TWO_CALCULATOR_GRAPH trial=" << trial
                   << " frames=" << measuredFrames
@@ -734,20 +743,20 @@ TEST_F(WindowsD3D11RemoteTensorFixture, PureOpenVinoInferenceWithD3D11Nv12InCalc
     using Clock = std::chrono::steady_clock;
     const std::string configuredModelPath = std::filesystem::path(modelXmlPath()).generic_string();
     const std::string graphText = R"pb(
-input_stream: "FRAME:frame"
-output_stream: "DETECTIONS:detections"
-node {
-  calculator: "GstOpenVinoInferenceCalculator"
-  input_stream: "FRAME:frame"
-  output_stream: "DETECTIONS:detections"
-  options {
-    [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
-      model_path: ")pb" + configuredModelPath + R"pb("
+                                      input_stream: "FRAME:frame"
+                                      output_stream: "DETECTIONS:detections"
+                                      node {
+                                        calculator: "GstOpenVinoInferenceCalculator"
+                                        input_stream: "FRAME:frame"
+                                        output_stream: "DETECTIONS:detections"
+                                        options {
+                                                [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
+                                                  model_path: ")pb" + configuredModelPath + R"pb(                                                                                                  "
       input_name: "data"
       performance_hint: "LATENCY"
       num_streams: 1
     }
-  }
+                                                                                                                                                                                                    }
 }
 )pb";
     const auto config = ::mediapipe::ParseTextProtoOrDie<::mediapipe::CalculatorGraphConfig>(graphText);
@@ -790,7 +799,8 @@ node {
             int frameWidth = 0;
             int frameHeight = 0;
             ASSERT_EQ(imp_tensor_get_d3d11_texture(tensor, &texture, &decodeDevice, &subresource,
-                &frameWidth, &frameHeight), IMP_OK);
+                          &frameWidth, &frameHeight),
+                IMP_OK);
             ASSERT_EQ(decodeDevice, static_cast<void*>(device.Get()));
             ASSERT_EQ(subresource, 0u);
             ::mediapipe::GstVideoFramePacket frame;
@@ -801,9 +811,9 @@ node {
 
             const auto calculatorStart = Clock::now();
             ASSERT_TRUE(graph.AddPacketToInputStream(
-                                  "frame", ::mediapipe::MakePacket<::mediapipe::GstVideoFramePacket>(
-                                               std::move(frame))
-                                               .At(::mediapipe::Timestamp(frameIndex)))
+                                 "frame", ::mediapipe::MakePacket<::mediapipe::GstVideoFramePacket>(
+                                              std::move(frame))
+                                              .At(::mediapipe::Timestamp(frameIndex)))
                             .ok());
             ::mediapipe::Packet output;
             ASSERT_TRUE(poller.Next(&output));
@@ -811,7 +821,8 @@ node {
             detections += output.Get<int>();
             if (frameIndex >= warmupFrames) {
                 calculatorMs.push_back(std::chrono::duration<double, std::milli>(
-                    calculatorStop - calculatorStart).count());
+                    calculatorStop - calculatorStart)
+                                           .count());
             }
         }
         ASSERT_TRUE(graph.CloseInputStream("frame").ok());
@@ -844,22 +855,22 @@ TEST_F(WindowsD3D11RemoteTensorFixture, OvmsCapiInferenceWithD3D11Nv12InCalculat
     const int trialCount = performanceTrialCount();
     using Clock = std::chrono::steady_clock;
     const std::string graphText = R"pb(
-input_stream: "FRAME:frame"
-input_side_packet: "SERVABLE_NAME:servable_name"
-input_side_packet: "SERVABLE_VERSION:servable_version"
-input_side_packet: "INPUT_NAME:input_name"
-input_side_packet: "SERVER:server"
-output_stream: "DETECTIONS:detections"
-node {
-  calculator: "GstCapiInferenceCalculator"
-  input_stream: "FRAME:frame"
-  input_side_packet: "SERVABLE_NAME:servable_name"
-  input_side_packet: "SERVABLE_VERSION:servable_version"
-  input_side_packet: "INPUT_NAME:input_name"
-  input_side_packet: "SERVER:server"
-  output_stream: "DETECTIONS:detections"
-}
-)pb";
+        input_stream: "FRAME:frame"
+        input_side_packet: "SERVABLE_NAME:servable_name"
+        input_side_packet: "SERVABLE_VERSION:servable_version"
+        input_side_packet: "INPUT_NAME:input_name"
+        input_side_packet: "SERVER:server"
+        output_stream: "DETECTIONS:detections"
+        node {
+          calculator: "GstCapiInferenceCalculator"
+          input_stream: "FRAME:frame"
+          input_side_packet: "SERVABLE_NAME:servable_name"
+          input_side_packet: "SERVABLE_VERSION:servable_version"
+          input_side_packet: "INPUT_NAME:input_name"
+          input_side_packet: "SERVER:server"
+          output_stream: "DETECTIONS:detections"
+        }
+    )pb";
     const auto config = ::mediapipe::ParseTextProtoOrDie<::mediapipe::CalculatorGraphConfig>(graphText);
 
     std::cout << "REMOTE_TENSOR_OVMS_CAPI_CALCULATOR input=D3D11_NV12 config=LATENCY streams=1 "
@@ -906,7 +917,8 @@ node {
             int frameWidth = 0;
             int frameHeight = 0;
             ASSERT_EQ(imp_tensor_get_d3d11_texture(tensor, &texture, &decodeDevice, &subresource,
-                &frameWidth, &frameHeight), IMP_OK);
+                          &frameWidth, &frameHeight),
+                IMP_OK);
             ASSERT_EQ(decodeDevice, static_cast<void*>(device.Get()));
             ASSERT_EQ(subresource, 0u);
             ::mediapipe::GstVideoFramePacket frame;
@@ -917,9 +929,9 @@ node {
 
             const auto calculatorStart = Clock::now();
             ASSERT_TRUE(graph.AddPacketToInputStream(
-                                  "frame", ::mediapipe::MakePacket<::mediapipe::GstVideoFramePacket>(
-                                               std::move(frame))
-                                               .At(::mediapipe::Timestamp(frameIndex)))
+                                 "frame", ::mediapipe::MakePacket<::mediapipe::GstVideoFramePacket>(
+                                              std::move(frame))
+                                              .At(::mediapipe::Timestamp(frameIndex)))
                             .ok());
             ::mediapipe::Packet output;
             ASSERT_TRUE(poller.Next(&output));
@@ -927,7 +939,8 @@ node {
             detections += output.Get<int>();
             if (frameIndex >= warmupFrames) {
                 calculatorMs.push_back(std::chrono::duration<double, std::milli>(
-                    calculatorStop - calculatorStart).count());
+                    calculatorStop - calculatorStart)
+                                           .count());
             }
         }
         ASSERT_TRUE(graph.CloseInputStream("frame").ok());
@@ -962,31 +975,31 @@ TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithOpenVinoSourceAndInference
     using Clock = std::chrono::steady_clock;
     const std::string configuredModelPath = std::filesystem::path(modelXmlPath()).generic_string();
     const std::string graphText = R"pb(
-input_side_packet: "VIDEO_PATH:video_path"
-input_side_packet: "WIDTH:width"
-input_side_packet: "HEIGHT:height"
-input_side_packet: "MAX_FRAMES:max_frames"
-output_stream: "DETECTIONS:detections"
-node {
-  calculator: "GstVideoSourceCalculator"
-  input_side_packet: "VIDEO_PATH:video_path"
-  input_side_packet: "WIDTH:width"
-  input_side_packet: "HEIGHT:height"
-  input_side_packet: "MAX_FRAMES:max_frames"
-  output_stream: "FRAME:frame"
-}
-node {
-  calculator: "GstOpenVinoInferenceCalculator"
-  input_stream: "FRAME:frame"
-  output_stream: "DETECTIONS:detections"
-  options {
-    [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
-      model_path: ")pb" + configuredModelPath + R"pb("
+                                      input_side_packet: "VIDEO_PATH:video_path"
+                                      input_side_packet: "WIDTH:width"
+                                      input_side_packet: "HEIGHT:height"
+                                      input_side_packet: "MAX_FRAMES:max_frames"
+                                      output_stream: "DETECTIONS:detections"
+                                      node {
+                                        calculator: "GstVideoSourceCalculator"
+                                        input_side_packet: "VIDEO_PATH:video_path"
+                                        input_side_packet: "WIDTH:width"
+                                        input_side_packet: "HEIGHT:height"
+                                        input_side_packet: "MAX_FRAMES:max_frames"
+                                        output_stream: "FRAME:frame"
+                                      }
+                                      node {
+                                        calculator: "GstOpenVinoInferenceCalculator"
+                                        input_stream: "FRAME:frame"
+                                        output_stream: "DETECTIONS:detections"
+                                        options {
+                                                [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
+                                                  model_path: ")pb" + configuredModelPath + R"pb(                                                                                                  "
       input_name: "data"
       performance_hint: "LATENCY"
       num_streams: 1
     }
-  }
+                                                                                                                                                                                                    }
 }
 )pb";
     const auto config = ::mediapipe::ParseTextProtoOrDie<::mediapipe::CalculatorGraphConfig>(graphText);
@@ -1033,15 +1046,20 @@ node {
         ASSERT_EQ(frames, totalFrames);
         EXPECT_GE(detections, totalFrames);
         const double initializeMs = std::chrono::duration<double, std::milli>(
-            initializeStop - initializeStart).count();
+            initializeStop - initializeStart)
+                                        .count();
         const double sourceOpenMs = std::chrono::duration<double, std::milli>(
-            startRunStop - startRunStart).count();
+            startRunStop - startRunStart)
+                                        .count();
         const double firstFrameMs = std::chrono::duration<double, std::milli>(
-            firstOutputStop - startRunStop).count();
+            firstOutputStop - startRunStop)
+                                        .count();
         const double steadyMs = std::chrono::duration<double, std::milli>(
-            measuredStop - measuredStart).count();
+            measuredStop - measuredStart)
+                                    .count();
         const double drainMs = std::chrono::duration<double, std::milli>(
-            drainStop - drainStart).count();
+            drainStop - drainStart)
+                                   .count();
         std::cout << std::fixed << std::setprecision(3)
                   << "REMOTE_TENSOR_TWO_CALCULATOR_DIRECT_OV_GRAPH trial=" << trial
                   << " frames=" << measuredFrames
@@ -1064,26 +1082,26 @@ TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithOpenVinoSingleCalculatorPe
     using Clock = std::chrono::steady_clock;
     const std::string configuredModelPath = std::filesystem::path(modelXmlPath()).generic_string();
     const std::string graphText = R"pb(
-input_side_packet: "VIDEO_PATH:video_path"
-input_side_packet: "WIDTH:width"
-input_side_packet: "HEIGHT:height"
-input_side_packet: "MAX_FRAMES:max_frames"
-output_stream: "DETECTIONS:detections"
-node {
-  calculator: "GstVideoOpenVinoInferenceCalculator"
-  input_side_packet: "VIDEO_PATH:video_path"
-  input_side_packet: "WIDTH:width"
-  input_side_packet: "HEIGHT:height"
-  input_side_packet: "MAX_FRAMES:max_frames"
-  output_stream: "DETECTIONS:detections"
-  options {
-    [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
-      model_path: ")pb" + configuredModelPath + R"pb("
+                                      input_side_packet: "VIDEO_PATH:video_path"
+                                      input_side_packet: "WIDTH:width"
+                                      input_side_packet: "HEIGHT:height"
+                                      input_side_packet: "MAX_FRAMES:max_frames"
+                                      output_stream: "DETECTIONS:detections"
+                                      node {
+                                        calculator: "GstVideoOpenVinoInferenceCalculator"
+                                        input_side_packet: "VIDEO_PATH:video_path"
+                                        input_side_packet: "WIDTH:width"
+                                        input_side_packet: "HEIGHT:height"
+                                        input_side_packet: "MAX_FRAMES:max_frames"
+                                        output_stream: "DETECTIONS:detections"
+                                        options {
+                                                [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
+                                                  model_path: ")pb" + configuredModelPath + R"pb(                                                                                                  "
       input_name: "data"
       performance_hint: "LATENCY"
       num_streams: 1
     }
-  }
+                                                                                                                                                                                                    }
 }
 )pb";
     const auto config = ::mediapipe::ParseTextProtoOrDie<::mediapipe::CalculatorGraphConfig>(graphText);
@@ -1130,15 +1148,20 @@ node {
         ASSERT_EQ(frames, totalFrames);
         EXPECT_GE(detections, totalFrames);
         const double initializeMs = std::chrono::duration<double, std::milli>(
-            initializeStop - initializeStart).count();
+            initializeStop - initializeStart)
+                                        .count();
         const double sourceOpenMs = std::chrono::duration<double, std::milli>(
-            startRunStop - startRunStart).count();
+            startRunStop - startRunStart)
+                                        .count();
         const double firstFrameMs = std::chrono::duration<double, std::milli>(
-            firstOutputStop - startRunStop).count();
+            firstOutputStop - startRunStop)
+                                        .count();
         const double steadyMs = std::chrono::duration<double, std::milli>(
-            measuredStop - measuredStart).count();
+            measuredStop - measuredStart)
+                                    .count();
         const double drainMs = std::chrono::duration<double, std::milli>(
-            drainStop - drainStart).count();
+            drainStop - drainStart)
+                                   .count();
         std::cout << std::fixed << std::setprecision(3)
                   << "REMOTE_TENSOR_SINGLE_CALCULATOR_DIRECT_OV trial=" << trial
                   << " frames=" << measuredFrames
@@ -1161,26 +1184,26 @@ TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithOpenVinoGstreamerElementPe
     using Clock = std::chrono::steady_clock;
     const std::string configuredModelPath = std::filesystem::path(modelXmlPath()).generic_string();
     const std::string graphText = R"pb(
-input_side_packet: "VIDEO_PATH:video_path"
-input_side_packet: "WIDTH:width"
-input_side_packet: "HEIGHT:height"
-input_side_packet: "MAX_FRAMES:max_frames"
-output_stream: "FRAMES:frames"
-node {
-  calculator: "GstVideoOpenVinoPipelineInferenceCalculator"
-  input_side_packet: "VIDEO_PATH:video_path"
-  input_side_packet: "WIDTH:width"
-  input_side_packet: "HEIGHT:height"
-  input_side_packet: "MAX_FRAMES:max_frames"
-  output_stream: "FRAMES:frames"
-  options {
-    [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
-      model_path: ")pb" + configuredModelPath + R"pb("
+                                      input_side_packet: "VIDEO_PATH:video_path"
+                                      input_side_packet: "WIDTH:width"
+                                      input_side_packet: "HEIGHT:height"
+                                      input_side_packet: "MAX_FRAMES:max_frames"
+                                      output_stream: "FRAMES:frames"
+                                      node {
+                                        calculator: "GstVideoOpenVinoPipelineInferenceCalculator"
+                                        input_side_packet: "VIDEO_PATH:video_path"
+                                        input_side_packet: "WIDTH:width"
+                                        input_side_packet: "HEIGHT:height"
+                                        input_side_packet: "MAX_FRAMES:max_frames"
+                                        output_stream: "FRAMES:frames"
+                                        options {
+                                                [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
+                                                  model_path: ")pb" + configuredModelPath + R"pb(                                                                                                  "
       input_name: "data"
       performance_hint: "LATENCY"
       num_streams: 1
     }
-  }
+                                                                                                                                                                                                    }
 }
 )pb";
     const auto config = ::mediapipe::ParseTextProtoOrDie<::mediapipe::CalculatorGraphConfig>(graphText);
@@ -1219,7 +1242,8 @@ node {
         ASSERT_EQ(frames, totalFrames);
         ASSERT_EQ(inferredFrames, totalFrames);
         const double steadyMs = std::chrono::duration<double, std::milli>(
-            measuredStop - measuredStart).count();
+            measuredStop - measuredStart)
+                                    .count();
         std::cout << std::fixed << std::setprecision(3)
                   << "REMOTE_TENSOR_GSTREAMER_ELEMENT_DIRECT_OV trial=" << trial
                   << " frames=" << measuredFrames
@@ -1237,28 +1261,28 @@ TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithOvmsCapiSingleCalculatorPe
     constexpr int totalFrames = warmupFrames + measuredFrames;
     using Clock = std::chrono::steady_clock;
     const std::string graphText = R"pb(
-input_side_packet: "VIDEO_PATH:video_path"
-input_side_packet: "WIDTH:width"
-input_side_packet: "HEIGHT:height"
-input_side_packet: "MAX_FRAMES:max_frames"
-input_side_packet: "SERVABLE_NAME:servable_name"
-input_side_packet: "SERVABLE_VERSION:servable_version"
-input_side_packet: "INPUT_NAME:input_name"
-input_side_packet: "SERVER:server"
-output_stream: "DETECTIONS:detections"
-node {
-  calculator: "GstVideoCapiInferenceCalculator"
-  input_side_packet: "VIDEO_PATH:video_path"
-  input_side_packet: "WIDTH:width"
-  input_side_packet: "HEIGHT:height"
-  input_side_packet: "MAX_FRAMES:max_frames"
-  input_side_packet: "SERVABLE_NAME:servable_name"
-  input_side_packet: "SERVABLE_VERSION:servable_version"
-  input_side_packet: "INPUT_NAME:input_name"
-  input_side_packet: "SERVER:server"
-  output_stream: "DETECTIONS:detections"
-}
-)pb";
+        input_side_packet: "VIDEO_PATH:video_path"
+        input_side_packet: "WIDTH:width"
+        input_side_packet: "HEIGHT:height"
+        input_side_packet: "MAX_FRAMES:max_frames"
+        input_side_packet: "SERVABLE_NAME:servable_name"
+        input_side_packet: "SERVABLE_VERSION:servable_version"
+        input_side_packet: "INPUT_NAME:input_name"
+        input_side_packet: "SERVER:server"
+        output_stream: "DETECTIONS:detections"
+        node {
+          calculator: "GstVideoCapiInferenceCalculator"
+          input_side_packet: "VIDEO_PATH:video_path"
+          input_side_packet: "WIDTH:width"
+          input_side_packet: "HEIGHT:height"
+          input_side_packet: "MAX_FRAMES:max_frames"
+          input_side_packet: "SERVABLE_NAME:servable_name"
+          input_side_packet: "SERVABLE_VERSION:servable_version"
+          input_side_packet: "INPUT_NAME:input_name"
+          input_side_packet: "SERVER:server"
+          output_stream: "DETECTIONS:detections"
+        }
+    )pb";
     const auto config = ::mediapipe::ParseTextProtoOrDie<::mediapipe::CalculatorGraphConfig>(graphText);
 
     std::cout << "REMOTE_TENSOR_SINGLE_CALCULATOR_OVMS_CAPI graph=decode_plus_capi_inference "
@@ -1298,7 +1322,8 @@ node {
         ASSERT_EQ(frames, totalFrames);
         EXPECT_GE(detections, totalFrames);
         const double steadyMs = std::chrono::duration<double, std::milli>(
-            measuredStop - measuredStart).count();
+            measuredStop - measuredStart)
+                                    .count();
         std::cout << std::fixed << std::setprecision(3)
                   << "REMOTE_TENSOR_SINGLE_CALCULATOR_OVMS_CAPI trial=" << trial
                   << " frames=" << measuredFrames
@@ -1416,7 +1441,8 @@ TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeAndOpenVinoD3D11RemoteTensorIn
             return inferMs[static_cast<size_t>(fraction * (inferMs.size() - 1))];
         };
         const double loopWallMs = std::chrono::duration<double, std::milli>(
-            measuredStop - measuredStart).count();
+            measuredStop - measuredStart)
+                                      .count();
         std::cout << std::fixed << std::setprecision(3)
                   << "REMOTE_TENSOR_PURE_OV_D3D11 trial=" << trial
                   << " frames=" << measuredFrames
@@ -1518,9 +1544,9 @@ TEST_F(WindowsD3D11RemoteTensorFixture, OpenVinoHostNv12GpuPreprocessingInferenc
             auto& request = requests[frameIndex % requests.size()];
             const auto bindStart = Clock::now();
             request.set_tensor("data/y", ov::Tensor(ov::element::u8, shapeY,
-                const_cast<uint8_t*>(frame.y.data())));
+                                             const_cast<uint8_t*>(frame.y.data())));
             request.set_tensor("data/uv", ov::Tensor(ov::element::u8, shapeUv,
-                const_cast<uint8_t*>(frame.uv.data())));
+                                              const_cast<uint8_t*>(frame.uv.data())));
             const auto bindStop = Clock::now();
             const auto inferStart = Clock::now();
             request.infer();
@@ -1754,7 +1780,8 @@ TEST_F(WindowsD3D11RemoteTensorFixture, CameraDecodeOvmsCapiInferenceAndMp4Encod
             uint32_t subresource = 0;
             int frameWidth = 0, frameHeight = 0;
             ASSERT_EQ(imp_tensor_get_d3d11_texture(inferTensor, &texture, &decodeDevice,
-                &subresource, &frameWidth, &frameHeight), IMP_OK);
+                          &subresource, &frameWidth, &frameHeight),
+                IMP_OK);
             EXPECT_EQ(decodeDevice, static_cast<void*>(device.Get()));
             EXPECT_EQ(subresource, 0u);
             EXPECT_GE(runCapiInference(texture, frameWidth, frameHeight), 0);
@@ -1768,7 +1795,8 @@ TEST_F(WindowsD3D11RemoteTensorFixture, CameraDecodeOvmsCapiInferenceAndMp4Encod
             if (frameIndex == 0) {
                 const uint8_t* retainedUv = nullptr;
                 ASSERT_EQ(imp_tensor_get_nv12_planes(hostTensor, &retainedY, &retainedUv,
-                    &frameWidth, &frameHeight), IMP_OK);
+                              &frameWidth, &frameHeight),
+                    IMP_OK);
                 ASSERT_NE(retainedY, nullptr);
                 retainedPixels.assign(retainedY, retainedY + 256);
                 retainedHost = hostTensor;

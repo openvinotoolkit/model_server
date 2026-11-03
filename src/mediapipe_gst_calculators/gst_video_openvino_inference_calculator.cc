@@ -46,7 +46,7 @@ constexpr float kFaceConfidenceThreshold = 0.5f;
 }  // namespace
 
 class GstVideoOpenVinoInferenceCalculator : public CalculatorBase {
- public:
+public:
     static absl::Status GetContract(CalculatorContract* cc) {
         cc->InputSidePackets().Tag(kVideoPathTag).Set<std::string>();
         cc->InputSidePackets().Tag(kWidthTag).Set<int>();
@@ -114,7 +114,7 @@ class GstVideoOpenVinoInferenceCalculator : public CalculatorBase {
         int width = 0;
         int height = 0;
         if (imp_tensor_get_d3d11_texture(tensor.get(), &texture_handle, &decode_device, &subresource,
-                                         &width, &height) != IMP_OK)
+                &width, &height) != IMP_OK)
             return absl::InternalError("GstVideoOpenVinoInferenceCalculator: expected D3D11 texture");
         RET_CHECK_EQ(subresource, 0u) << "D3D11 texture array slice is not importable by OpenVINO";
         ID3D11Texture2D* texture = static_cast<ID3D11Texture2D*>(texture_handle);
@@ -130,9 +130,9 @@ class GstVideoOpenVinoInferenceCalculator : public CalculatorBase {
         const ov::Shape shape_y{1, static_cast<size_t>(height), static_cast<size_t>(width), 1};
         const ov::Shape shape_uv{1, static_cast<size_t>(height / 2), static_cast<size_t>(width / 2), 2};
         infer_request_.set_tensor(input_name_ + "/y", d3d_context_->create_tensor(
-            ov::element::u8, shape_y, texture, 0));
+                                                          ov::element::u8, shape_y, texture, 0));
         infer_request_.set_tensor(input_name_ + "/uv", d3d_context_->create_tensor(
-            ov::element::u8, shape_uv, texture, 1));
+                                                           ov::element::u8, shape_uv, texture, 1));
         try {
             infer_request_.infer();
         } catch (const std::exception& exception) {
@@ -145,8 +145,7 @@ class GstVideoOpenVinoInferenceCalculator : public CalculatorBase {
             if (values[result + 2] >= kFaceConfidenceThreshold)
                 ++detections;
         }
-        cc->Outputs().Tag(kDetectionsTag).AddPacket(
-            MakePacket<int>(detections).At(Timestamp(frame_index_++)));
+        cc->Outputs().Tag(kDetectionsTag).AddPacket(MakePacket<int>(detections).At(Timestamp(frame_index_++)));
         return absl::OkStatus();
 #endif
     }
@@ -159,21 +158,21 @@ class GstVideoOpenVinoInferenceCalculator : public CalculatorBase {
         return absl::OkStatus();
     }
 
- private:
+private:
 #ifdef _WIN32
     absl::Status initializeModel() {
         try {
             std::shared_ptr<ov::Model> raw_model = core_.read_model(
-                model_path_, {}, ov::AnyMap{{"ENABLE_MMAP", "NO"}});
+                model_path_, {}, ov::AnyMap{{ "ENABLE_MMAP",
+                    "NO" }});
             ov::preprocess::PrePostProcessor preprocessor(raw_model);
-            preprocessor.input().tensor().set_element_type(ov::element::u8)
-                .set_color_format(ov::preprocess::ColorFormat::NV12_TWO_PLANES, {"y", "uv"})
-                .set_memory_type(ov::intel_gpu::memory_type::surface);
+            preprocessor.input().tensor().set_element_type(ov::element::u8).set_color_format(ov::preprocess::ColorFormat::NV12_TWO_PLANES, {"y", "uv"}).set_memory_type(ov::intel_gpu::memory_type::surface);
             preprocessor.input().preprocess().convert_color(ov::preprocess::ColorFormat::BGR);
             preprocessor.input().model().set_layout("NCHW");
             d3d_context_ = std::make_unique<ov::intel_gpu::ocl::D3DContext>(core_, device_.Get());
             const ov::AnyMap plugin_config{{"PERFORMANCE_HINT", performance_hint_},
-                                            {"NUM_STREAMS", std::to_string(num_streams_)}};
+                { "NUM_STREAMS",
+                    std::to_string(num_streams_) }};
             compiled_model_ = core_.compile_model(preprocessor.build(), *d3d_context_, plugin_config);
             infer_request_ = compiled_model_.create_infer_request();
             return absl::OkStatus();

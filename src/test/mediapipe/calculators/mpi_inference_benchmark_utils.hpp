@@ -47,7 +47,7 @@ struct DecodeStream {
         options.use_d3d11_surface_memory = true;
 #else
         options.use_va_surface_memory = true;
-    options.sync_appsink = environment("OVMS_MPI_E2_SYNC_APPSINK", "off") == "on";
+        options.sync_appsink = environment("OVMS_MPI_E2_SYNC_APPSINK", "off") == "on";
 #endif
         if (imp_video_open(&stream, source.get(), context, &options) != IMP_OK)
             throw std::runtime_error(imp_context_get_error(context));

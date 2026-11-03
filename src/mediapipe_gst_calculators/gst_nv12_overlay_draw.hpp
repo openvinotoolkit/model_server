@@ -43,8 +43,8 @@ constexpr int kBorderThickness = 3;
 // Fill an inclusive rectangle in an NV12 frame. y_stride/uv_stride are the
 // per-plane row pitches (== width for packed host NV12).
 inline void fillRect(uint8_t* y, int y_stride, uint8_t* uv, int uv_stride,
-                     int w, int h, int x1, int y1, int x2, int y2,
-                     uint8_t fy, uint8_t fu, uint8_t fv) {
+    int w, int h, int x1, int y1, int x2, int y2,
+    uint8_t fy, uint8_t fu, uint8_t fv) {
     x1 = std::clamp(x1, 0, w - 1);
     y1 = std::clamp(y1, 0, h - 1);
     x2 = std::clamp(x2, 0, w - 1);
@@ -66,8 +66,8 @@ inline void fillRect(uint8_t* y, int y_stride, uint8_t* uv, int uv_stride,
 // Draw green box borders (thickness 3) for every detection plus a confidence
 // bar for the top box, matching the reference POC.
 inline void drawDetections(uint8_t* y, int y_stride, uint8_t* uv, int uv_stride,
-                           int w, int h, const GstDetectionBoxes& boxes,
-                           const Color& color = kGreen) {
+    int w, int h, const GstDetectionBoxes& boxes,
+    const Color& color = kGreen) {
     if (boxes.empty())
         return;
     for (const auto& d : boxes) {

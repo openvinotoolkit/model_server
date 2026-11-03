@@ -147,8 +147,8 @@ Status DeviceDisplayOwnerModule::start(const Config& config) {
     ID3D11Device* device = nullptr;
     D3D_FEATURE_LEVEL featureLevel{};
     HRESULT hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
-                                   D3D11_CREATE_DEVICE_VIDEO_SUPPORT, nullptr, 0,
-                                   D3D11_SDK_VERSION, &device, &featureLevel, nullptr);
+        D3D11_CREATE_DEVICE_VIDEO_SUPPORT, nullptr, 0,
+        D3D11_SDK_VERSION, &device, &featureLevel, nullptr);
     if (FAILED(hr) || device == nullptr) {
         return Status(StatusCode::INTERNAL_ERROR, "Cannot create server-owned D3D11 device for d3d11_device");
     }

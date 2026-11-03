@@ -116,8 +116,7 @@ public:
                 continue;
             ++detections;
             if (detectionBoxes) {
-                detectionBoxes->push_back({
-                    score,
+                detectionBoxes->push_back({score,
                     std::clamp(values[result + 3] * outputWidth, 0.0f, outputWidth - 1.0f),
                     std::clamp(values[result + 4] * outputHeight, 0.0f, outputHeight - 1.0f),
                     std::clamp(values[result + 5] * outputWidth, 0.0f, outputWidth - 1.0f),

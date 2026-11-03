@@ -81,7 +81,7 @@ TEST(MpiOpenVinoIntegration, ModelManagerCompiledModelSidePacket) {
         GTEST_SKIP() << "OVMS face detection test model is not prepared: " << modelPath;
 
     const std::filesystem::path configPath = std::filesystem::temp_directory_path() /
-        ("ovms_mpi_va_config_" + std::to_string(::getpid()) + ".json");
+                                             ("ovms_mpi_va_config_" + std::to_string(::getpid()) + ".json");
     struct ConfigFileCleanup {
         std::filesystem::path path;
         ~ConfigFileCleanup() {
@@ -133,7 +133,8 @@ TEST(MpiOpenVinoIntegration, ModelManagerCompiledModelSidePacket) {
                              detections += packet.Get<int>();
                              ++frames;
                              return absl::OkStatus();
-                         }).ok());
+                         })
+                        .ok());
         const absl::Status status = graph.StartRun({
             {"video_path", mediapipe::MakePacket<std::string>(bench::videoPath())},
             {"width", mediapipe::MakePacket<int>(benchmark_config::kModelWidth)},

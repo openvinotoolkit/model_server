@@ -67,7 +67,7 @@ struct GstFunctionTable {
     GstElement* (*gst_parse_launch)(const gchar*, GError**);
     GstStateChangeReturn (*gst_element_set_state)(GstElement*, GstState);
     GstStateChangeReturn (*gst_element_get_state)(GstElement*, GstState*,
-                                                   GstState*, GstClockTime);
+        GstState*, GstClockTime);
     GstElement* (*gst_bin_get_by_name)(GstBin*, const gchar*);
     GstPad* (*gst_element_get_static_pad)(GstElement*, const gchar*);
     GstCaps* (*gst_pad_get_current_caps)(GstPad*);
@@ -79,7 +79,7 @@ struct GstFunctionTable {
     gboolean (*gst_element_send_event)(GstElement*, GstEvent*);
     GstEvent* (*gst_event_new_eos)(void);
     GstMessage* (*gst_bus_timed_pop_filtered)(GstBus*, GstClockTime,
-                                               GstMessageType);
+        GstMessageType);
     void (*gst_message_unref)(GstMessage*);
 
     // gstapp-1.0
@@ -99,7 +99,7 @@ struct GstFunctionTable {
     // gstvideo-1.0
     gboolean (*gst_video_info_from_caps)(GstVideoInfo*, const GstCaps*);
     gboolean (*gst_video_frame_map)(GstVideoFrame*, GstVideoInfo*,
-                                     GstBuffer*, GstMapFlags);
+        GstBuffer*, GstMapFlags);
     void (*gst_video_frame_unmap)(GstVideoFrame*);
 
     // glib-2.0
@@ -115,83 +115,83 @@ struct GstFunctionTable {
 
     // libgstva-1.0 — external display injection (Option B: OVMS owns the VADisplay
     // and shares it with GStreamer so decode happens on the server's display).
-    void* (*gst_va_display_wrapped_new)(void*);             // (VADisplay) -> GstVaDisplay*
-    void  (*gst_context_set_va_display)(GstContext*, void*); // populates gst.va.display.handle
+    void* (*gst_va_display_wrapped_new)(void*);              // (VADisplay) -> GstVaDisplay*
+    void (*gst_context_set_va_display)(GstContext*, void*);  // populates gst.va.display.handle
 
     // gstreamer-1.0 — GstContext plumbing to push the display into the pipeline.
-    GstContext*   (*gst_context_new)(const gchar*, gboolean);
-    void          (*gst_element_set_context)(GstElement*, GstContext*);
-    void          (*gst_mini_object_unref)(GstMiniObject*);
-    void          (*gst_message_parse_context_type)(GstMessage*, const gchar**);
-    void          (*gst_bus_set_sync_handler)(GstBus*, GstBusSyncHandler,
-                                              gpointer, GDestroyNotify);
+    GstContext* (*gst_context_new)(const gchar*, gboolean);
+    void (*gst_element_set_context)(GstElement*, GstContext*);
+    void (*gst_mini_object_unref)(GstMiniObject*);
+    void (*gst_message_parse_context_type)(GstMessage*, const gchar**);
+    void (*gst_bus_set_sync_handler)(GstBus*, GstBusSyncHandler,
+        gpointer, GDestroyNotify);
 };
 
-static GstFunctionTable s_fns       = {};
-static bool s_available             = false;
-static bool s_initialized           = false;
-static bool s_va_available          = false;  // true when vapostproc element found
-static bool s_va_surface_capable    = false;  // true when gst_va + libva dlopen succeeded
-static void* s_va_display           = nullptr; // externally-owned VADisplay
-static void* s_injected_va_display  = nullptr; // external VADisplay to push into GStreamer (Option B)
+static GstFunctionTable s_fns = {};
+static bool s_available = false;
+static bool s_initialized = false;
+static bool s_va_available = false;            // true when vapostproc element found
+static bool s_va_surface_capable = false;      // true when gst_va + libva dlopen succeeded
+static void* s_va_display = nullptr;           // externally-owned VADisplay
+static void* s_injected_va_display = nullptr;  // external VADisplay to push into GStreamer (Option B)
 
 // ============================================================================
 // Symbol loading helpers
 // ============================================================================
 
-#define LOAD_SYM(handle, sym)                                           \
-    do {                                                                \
-        s_fns.sym = reinterpret_cast<decltype(s_fns.sym)>(             \
-            dlsym((handle), #sym));                                     \
-        if (!s_fns.sym) {                                               \
-            std::cerr << "[GstLoader] Missing symbol: " #sym "\n";     \
-            return false;                                               \
-        }                                                               \
+#define LOAD_SYM(handle, sym)                                      \
+    do {                                                           \
+        s_fns.sym = reinterpret_cast<decltype(s_fns.sym)>(         \
+            dlsym((handle), #sym));                                \
+        if (!s_fns.sym) {                                          \
+            std::cerr << "[GstLoader] Missing symbol: " #sym "\n"; \
+            return false;                                          \
+        }                                                          \
     } while (0)
 
 static bool load_symbols(void* gst_h, void* app_h,
-                         void* vid_h, void* glib_h) {
-    LOAD_SYM(gst_h,  gst_init);
-    LOAD_SYM(gst_h,  gst_parse_launch);
-    LOAD_SYM(gst_h,  gst_element_set_state);
-    LOAD_SYM(gst_h,  gst_element_get_state);
-    LOAD_SYM(gst_h,  gst_bin_get_by_name);
-    LOAD_SYM(gst_h,  gst_element_get_static_pad);
-    LOAD_SYM(gst_h,  gst_pad_get_current_caps);
-    LOAD_SYM(gst_h,  gst_caps_get_structure);
-    LOAD_SYM(gst_h,  gst_structure_get_int);
-    LOAD_SYM(gst_h,  gst_caps_unref);
-    LOAD_SYM(gst_h,  gst_object_unref);
-    LOAD_SYM(gst_h,  gst_element_get_bus);
-    LOAD_SYM(gst_h,  gst_element_send_event);
-    LOAD_SYM(gst_h,  gst_event_new_eos);
-    LOAD_SYM(gst_h,  gst_bus_timed_pop_filtered);
-    LOAD_SYM(gst_h,  gst_message_unref);
+    void* vid_h, void* glib_h) {
+    LOAD_SYM(gst_h, gst_init);
+    LOAD_SYM(gst_h, gst_parse_launch);
+    LOAD_SYM(gst_h, gst_element_set_state);
+    LOAD_SYM(gst_h, gst_element_get_state);
+    LOAD_SYM(gst_h, gst_bin_get_by_name);
+    LOAD_SYM(gst_h, gst_element_get_static_pad);
+    LOAD_SYM(gst_h, gst_pad_get_current_caps);
+    LOAD_SYM(gst_h, gst_caps_get_structure);
+    LOAD_SYM(gst_h, gst_structure_get_int);
+    LOAD_SYM(gst_h, gst_caps_unref);
+    LOAD_SYM(gst_h, gst_object_unref);
+    LOAD_SYM(gst_h, gst_element_get_bus);
+    LOAD_SYM(gst_h, gst_element_send_event);
+    LOAD_SYM(gst_h, gst_event_new_eos);
+    LOAD_SYM(gst_h, gst_bus_timed_pop_filtered);
+    LOAD_SYM(gst_h, gst_message_unref);
 
-    LOAD_SYM(app_h,  gst_app_sink_try_pull_sample);
-    LOAD_SYM(app_h,  gst_sample_get_buffer);
-    LOAD_SYM(app_h,  gst_sample_get_caps);
-    LOAD_SYM(app_h,  gst_sample_unref);
-    LOAD_SYM(app_h,  gst_app_src_push_buffer);
+    LOAD_SYM(app_h, gst_app_sink_try_pull_sample);
+    LOAD_SYM(app_h, gst_sample_get_buffer);
+    LOAD_SYM(app_h, gst_sample_get_caps);
+    LOAD_SYM(app_h, gst_sample_unref);
+    LOAD_SYM(app_h, gst_app_src_push_buffer);
 
-    LOAD_SYM(gst_h,  gst_buffer_new_allocate);
-    LOAD_SYM(gst_h,  gst_buffer_map);
-    LOAD_SYM(gst_h,  gst_buffer_unmap);
-    LOAD_SYM(gst_h,  gst_buffer_unref);
-    LOAD_SYM(gst_h,  gst_buffer_ref);
+    LOAD_SYM(gst_h, gst_buffer_new_allocate);
+    LOAD_SYM(gst_h, gst_buffer_map);
+    LOAD_SYM(gst_h, gst_buffer_unmap);
+    LOAD_SYM(gst_h, gst_buffer_unref);
+    LOAD_SYM(gst_h, gst_buffer_ref);
 
-    LOAD_SYM(vid_h,  gst_video_info_from_caps);
-    LOAD_SYM(vid_h,  gst_video_frame_map);
-    LOAD_SYM(vid_h,  gst_video_frame_unmap);
+    LOAD_SYM(vid_h, gst_video_info_from_caps);
+    LOAD_SYM(vid_h, gst_video_frame_map);
+    LOAD_SYM(vid_h, gst_video_frame_unmap);
 
     LOAD_SYM(glib_h, g_error_free);
 
     // GstContext plumbing (core gstreamer) for external VADisplay injection.
-    LOAD_SYM(gst_h,  gst_context_new);
-    LOAD_SYM(gst_h,  gst_element_set_context);
-    LOAD_SYM(gst_h,  gst_mini_object_unref);
-    LOAD_SYM(gst_h,  gst_message_parse_context_type);
-    LOAD_SYM(gst_h,  gst_bus_set_sync_handler);
+    LOAD_SYM(gst_h, gst_context_new);
+    LOAD_SYM(gst_h, gst_element_set_context);
+    LOAD_SYM(gst_h, gst_mini_object_unref);
+    LOAD_SYM(gst_h, gst_message_parse_context_type);
+    LOAD_SYM(gst_h, gst_bus_set_sync_handler);
 
     return true;
 }
@@ -203,9 +203,10 @@ static bool load_symbols(void* gst_h, void* app_h,
 // ============================================================================
 
 static void try_load_va_symbols() {
-    void* gstva_h   = dlopen("libgstva-1.0.so.0",  RTLD_LAZY | RTLD_GLOBAL);
+    void* gstva_h = dlopen("libgstva-1.0.so.0", RTLD_LAZY | RTLD_GLOBAL);
 
-    if (!gstva_h) return;
+    if (!gstva_h)
+        return;
 
     auto* get_surf = reinterpret_cast<decltype(s_fns.gst_va_buffer_get_surface)>(
         dlsym(gstva_h, "gst_va_buffer_get_surface"));
@@ -213,11 +214,12 @@ static void try_load_va_symbols() {
         dlsym(gstva_h, "gst_va_buffer_peek_display"));
     auto* get_va_dpy = reinterpret_cast<decltype(s_fns.gst_va_display_get_va_dpy)>(
         dlsym(gstva_h, "gst_va_display_get_va_dpy"));
-    if (!get_surf) return;
+    if (!get_surf)
+        return;
 
-    s_fns.gst_va_buffer_get_surface  = get_surf;
+    s_fns.gst_va_buffer_get_surface = get_surf;
     s_fns.gst_va_buffer_peek_display = peek_disp;  // may be null on older gst
-    s_fns.gst_va_display_get_va_dpy  = get_va_dpy; // may be null on older gst
+    s_fns.gst_va_display_get_va_dpy = get_va_dpy;  // may be null on older gst
     s_va_surface_capable = get_surf && peek_disp && get_va_dpy;
     // Optional: symbols needed to push an externally-owned VADisplay into the
     // pipeline (Option B). Non-fatal when missing — injection simply stays off.
@@ -225,7 +227,6 @@ static void try_load_va_symbols() {
         dlsym(gstva_h, "gst_va_display_wrapped_new"));
     s_fns.gst_context_set_va_display = reinterpret_cast<decltype(s_fns.gst_context_set_va_display)>(
         dlsym(gstva_h, "gst_context_set_va_display"));
-
 }
 
 // ============================================================================
@@ -233,13 +234,14 @@ static void try_load_va_symbols() {
 // ============================================================================
 
 bool gst_loader_init() {
-    if (s_initialized) return s_available;
+    if (s_initialized)
+        return s_available;
     s_initialized = true;
 
-    void* gst_h  = dlopen("libgstreamer-1.0.so.0",  RTLD_LAZY | RTLD_GLOBAL);
-    void* app_h  = dlopen("libgstapp-1.0.so.0",     RTLD_LAZY | RTLD_GLOBAL);
-    void* vid_h  = dlopen("libgstvideo-1.0.so.0",   RTLD_LAZY | RTLD_GLOBAL);
-    void* glib_h = dlopen("libglib-2.0.so.0",       RTLD_LAZY | RTLD_GLOBAL);
+    void* gst_h = dlopen("libgstreamer-1.0.so.0", RTLD_LAZY | RTLD_GLOBAL);
+    void* app_h = dlopen("libgstapp-1.0.so.0", RTLD_LAZY | RTLD_GLOBAL);
+    void* vid_h = dlopen("libgstvideo-1.0.so.0", RTLD_LAZY | RTLD_GLOBAL);
+    void* glib_h = dlopen("libglib-2.0.so.0", RTLD_LAZY | RTLD_GLOBAL);
 
     if (!gst_h || !app_h || !vid_h || !glib_h) {
         std::cerr << "[GstLoader] GStreamer not available: " << dlerror() << "\n"
@@ -282,17 +284,24 @@ bool gst_loader_init() {
 
     bool plugin_found = false;
     for (int i = 0; va_plugin_paths[i]; i++) {
-        if (file_exists(va_plugin_paths[i])) { plugin_found = true; break; }
+        if (file_exists(va_plugin_paths[i])) {
+            plugin_found = true;
+            break;
+        }
     }
     bool driver_found = false;
     for (int i = 0; va_driver_paths[i]; i++) {
-        if (file_exists(va_driver_paths[i])) { driver_found = true; break; }
+        if (file_exists(va_driver_paths[i])) {
+            driver_found = true;
+            break;
+        }
     }
 
     if (plugin_found && driver_found) {
         s_va_available = true;
-        std::cerr << "[GstLoader] VA-API available — GPU decode enabled.\n";        // Try to also enable VA surface sharing (needs libgstva + libva).
-        try_load_va_symbols();    } else {
+        std::cerr << "[GstLoader] VA-API available — GPU decode enabled.\n";  // Try to also enable VA surface sharing (needs libgstva + libva).
+        try_load_va_symbols();
+    } else {
         std::cerr << "[GstLoader] VA-API not available"
                   << (plugin_found ? "" : " (libgstva.so missing)")
                   << (driver_found ? "" : " (VA driver missing)")
@@ -302,9 +311,9 @@ bool gst_loader_init() {
     return true;
 }
 
-bool gst_loader_available()    { return s_available; }
+bool gst_loader_available() { return s_available; }
 bool gst_loader_va_available() { return s_va_available; }
-void* gst_loader_va_display()  { return s_va_display; }
+void* gst_loader_va_display() { return s_va_display; }
 
 void gst_loader_set_va_display(void* va_display) {
     // Allow the caller (e.g. after OV VAContext creation) to replace the
@@ -316,7 +325,7 @@ void gst_loader_set_va_display(void* va_display) {
     s_va_display = va_display;
     s_injected_va_display = va_display;
     s_va_surface_capable = s_fns.gst_va_buffer_get_surface &&
-        s_fns.gst_va_buffer_peek_display && s_fns.gst_va_display_get_va_dpy;
+                           s_fns.gst_va_buffer_peek_display && s_fns.gst_va_display_get_va_dpy;
 }
 
 // ============================================================================
@@ -329,21 +338,22 @@ void gst_loader_set_va_display(void* va_display) {
 // ============================================================================
 
 static bool read_frame_borrow(imp_branch_info_t& branch,
-                               imp_tensor_s& out,
-                               double& total_ms,
-                               double& pull_ms,
-                               double& copy_ms) {
+    imp_tensor_s& out,
+    double& total_ms,
+    double& pull_ms,
+    double& copy_ms) {
     const auto& f = s_fns;
 
     auto t0 = chrono::high_resolution_clock::now();
     GstSample* sample = f.gst_app_sink_try_pull_sample(
         GST_APP_SINK(branch.appsink), GST_SECOND);
     auto t1 = chrono::high_resolution_clock::now();
-    if (!sample) return false;
+    if (!sample)
+        return false;
     pull_ms += chrono::duration<double, std::milli>(t1 - t0).count();
 
     GstBuffer* buffer = f.gst_sample_get_buffer(sample);
-    GstCaps*   caps   = f.gst_sample_get_caps(sample);
+    GstCaps* caps = f.gst_sample_get_caps(sample);
 
     GstVideoInfo info;
     f.gst_video_info_from_caps(&info, caps);
@@ -357,18 +367,18 @@ static bool read_frame_borrow(imp_branch_info_t& branch,
         return false;
     }
 
-    uint8_t* y_ptr    = static_cast<uint8_t*>(GST_VIDEO_FRAME_PLANE_DATA(vframe, 0));
-    int      y_stride = GST_VIDEO_FRAME_PLANE_STRIDE(vframe, 0);
-    uint8_t* uv_ptr   = static_cast<uint8_t*>(GST_VIDEO_FRAME_PLANE_DATA(vframe, 1));
-    int      uv_stride = GST_VIDEO_FRAME_PLANE_STRIDE(vframe, 1);
+    uint8_t* y_ptr = static_cast<uint8_t*>(GST_VIDEO_FRAME_PLANE_DATA(vframe, 0));
+    int y_stride = GST_VIDEO_FRAME_PLANE_STRIDE(vframe, 0);
+    uint8_t* uv_ptr = static_cast<uint8_t*>(GST_VIDEO_FRAME_PLANE_DATA(vframe, 1));
+    int uv_stride = GST_VIDEO_FRAME_PLANE_STRIDE(vframe, 1);
 
     bool packed = (y_stride == info.width) && (uv_stride == info.width);
 
     if (packed) {
         // Zero-copy: tensor points directly into the mapped GstBuffer memory,
         // which this tensor now owns (released in imp_tensor_release).
-        out.y_data           = y_ptr;
-        out.uv_data          = uv_ptr;
+        out.y_data = y_ptr;
+        out.uv_data = uv_ptr;
         out.owned_gst_sample = sample;
         out.owned_gst_vframe = vframe;
     } else {
@@ -377,25 +387,25 @@ static bool read_frame_borrow(imp_branch_info_t& branch,
         out.owned_y.resize(static_cast<size_t>(info.width) * info.height);
         out.owned_uv.resize(static_cast<size_t>(info.width) * (info.height / 2));
         for (int row = 0; row < info.height; row++)
-            memcpy(out.owned_y.data()  + row * info.width,
-                   y_ptr  + row * y_stride, info.width);
+            memcpy(out.owned_y.data() + row * info.width,
+                y_ptr + row * y_stride, info.width);
         for (int row = 0; row < info.height / 2; row++)
             memcpy(out.owned_uv.data() + row * info.width,
-                   uv_ptr + row * uv_stride, info.width);
-        out.y_data  = out.owned_y.data();
+                uv_ptr + row * uv_stride, info.width);
+        out.y_data = out.owned_y.data();
         out.uv_data = out.owned_uv.data();
         f.gst_video_frame_unmap(vframe);
         delete vframe;
         f.gst_sample_unref(sample);
     }
 
-    out.width       = info.width;
-    out.height      = info.height;
-    out.valid       = true;
+    out.width = info.width;
+    out.height = info.height;
+    out.valid = true;
     out.memory_type = IMP_MEM_SYSTEM;
 
     auto t3 = chrono::high_resolution_clock::now();
-    copy_ms  += chrono::duration<double, std::milli>(t3 - t2).count();
+    copy_ms += chrono::duration<double, std::milli>(t3 - t2).count();
     total_ms += chrono::duration<double, std::milli>(t3 - t0).count();
     return true;
 }
@@ -409,18 +419,19 @@ static bool read_frame_borrow(imp_branch_info_t& branch,
 // ============================================================================
 
 static bool read_frame_va_surface(imp_branch_info_t& branch,
-                                   imp_tensor_s& out,
-                                   void* va_display,
-                                   double& total_ms,
-                                   double& pull_ms,
-                                   double& /*copy_ms*/) {
+    imp_tensor_s& out,
+    void* va_display,
+    double& total_ms,
+    double& pull_ms,
+    double& /*copy_ms*/) {
     const auto& f = s_fns;
 
     auto t0 = chrono::high_resolution_clock::now();
     GstSample* sample = f.gst_app_sink_try_pull_sample(
         GST_APP_SINK(branch.appsink), GST_SECOND);
     auto t1 = chrono::high_resolution_clock::now();
-    if (!sample) return false;
+    if (!sample)
+        return false;
     pull_ms += chrono::duration<double, std::milli>(t1 - t0).count();
 
     GstBuffer* buffer = f.gst_sample_get_buffer(sample);
@@ -444,14 +455,14 @@ static bool read_frame_va_surface(imp_branch_info_t& branch,
     // imp_tensor_release() unrefs it. Each frame owns its own surface.
     out.owned_gst_sample = sample;
 
-    out.y_data       = nullptr;
-    out.uv_data      = nullptr;
-    out.width        = branch.width;
-    out.height       = branch.height;
-    out.valid        = true;
-    out.memory_type  = IMP_MEM_VA_SURFACE;
+    out.y_data = nullptr;
+    out.uv_data = nullptr;
+    out.width = branch.width;
+    out.height = branch.height;
+    out.valid = true;
+    out.memory_type = IMP_MEM_VA_SURFACE;
     out.va_surface_id = surface_id;
-    out.va_display    = native_va_display;
+    out.va_display = native_va_display;
 
     auto t2 = chrono::high_resolution_clock::now();
     total_ms += chrono::duration<double, std::milli>(t2 - t0).count();
@@ -470,8 +481,8 @@ static void gst_inject_va_display_context(GstElement* target) {
     if (!s_injected_va_display || !target)
         return;
     if (!(f.gst_va_display_wrapped_new && f.gst_context_set_va_display &&
-          f.gst_context_new && f.gst_element_set_context &&
-          f.gst_mini_object_unref))
+            f.gst_context_new && f.gst_element_set_context &&
+            f.gst_mini_object_unref))
         return;
     void* gst_disp = f.gst_va_display_wrapped_new(s_injected_va_display);
     if (!gst_disp)
@@ -487,8 +498,8 @@ static void gst_inject_va_display_context(GstElement* target) {
 // create their own display if the app does not answer in the SAME thread, so
 // an async bus poll is too late — we must inject here, synchronously.
 static GstBusSyncReply gst_va_sync_bus_handler(GstBus* /*bus*/,
-                                               GstMessage* msg,
-                                               gpointer /*user_data*/) {
+    GstMessage* msg,
+    gpointer /*user_data*/) {
     const auto& f = s_fns;
     if (GST_MESSAGE_TYPE(msg) == GST_MESSAGE_NEED_CONTEXT) {
         const gchar* ctype = nullptr;
@@ -505,10 +516,11 @@ static GstBusSyncReply gst_va_sync_bus_handler(GstBus* /*bus*/,
 // ============================================================================
 
 imp_status_t linux_video_open(imp_video_stream_t** stream,
-                               imp_video_source_t* source,
-                               imp_context_t* ctx,
-                               const imp_video_decode_opts_t* opts) {
-    if (!stream || !source || !ctx) return IMP_ERROR_INVALID_ARGUMENT;
+    imp_video_source_t* source,
+    imp_context_t* ctx,
+    const imp_video_decode_opts_t* opts) {
+    if (!stream || !source || !ctx)
+        return IMP_ERROR_INVALID_ARGUMENT;
 
     if (!gst_loader_available()) {
         ctx->last_error = "GStreamer not available; use an image built with extras/gstreamer/Dockerfile.ubuntu "
@@ -526,17 +538,21 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
 
     f.gst_init(nullptr, nullptr);
 
-    auto* s   = new imp_video_stream_s();
+    auto* s = new imp_video_stream_s();
     s->timing = &ctx->timing;
 
-    int src_w = (source->width  > 0) ? source->width  : 1280;
+    int src_w = (source->width > 0) ? source->width : 1280;
     int src_h = (source->height > 0) ? source->height : 720;
 
     const bool is_file = (source->type == IMP_SOURCE_FILE);
     const bool is_url = (source->type == IMP_SOURCE_URL);
 
     // Build branch list (single branch only for initial Linux impl)
-    struct resolved_branch { int width; int height; std::string name; };
+    struct resolved_branch {
+        int width;
+        int height;
+        std::string name;
+    };
     std::vector<resolved_branch> resolved;
 
     if (opts && opts->branches && opts->branch_count > 0) {
@@ -545,18 +561,18 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
             int bw = static_cast<int>(opts->branches[i].width);
             int bh = static_cast<int>(opts->branches[i].height);
             if (bw > 0 && bh > 0) {
-                rb.width  = bw;
+                rb.width = bw;
                 rb.height = bh;
             } else if (ctx->model_w > 0 && ctx->model_h > 0) {
-                rb.width  = ctx->model_w;
+                rb.width = ctx->model_w;
                 rb.height = ctx->model_h;
             } else {
-                rb.width  = src_w;
+                rb.width = src_w;
                 rb.height = src_h;
             }
             rb.name = opts->branches[i].name
-                      ? opts->branches[i].name
-                      : ("branch_" + std::to_string(i));
+                          ? opts->branches[i].name
+                          : ("branch_" + std::to_string(i));
             resolved.push_back(rb);
         }
     } else {
@@ -565,8 +581,8 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
 
     // appsink properties
     std::string sink_props = is_file
-        ? "emit-signals=false sync=false max-buffers=0 drop=false"
-        : "emit-signals=false sync=false max-buffers=2 drop=true";
+                                 ? "emit-signals=false sync=false max-buffers=0 drop=false"
+                                 : "emit-signals=false sync=false max-buffers=2 drop=true";
 
     if (is_file && opts && opts->sync_appsink) {
         sink_props = "emit-signals=false sync=false max-buffers=1 drop=false";
@@ -603,8 +619,7 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
     //     - GPU decode + borrow from GstBuffer: one unavoidable DMA copy VA→RAM,
     //       but our own memcpy is eliminated.
     //   CPU fallback (borrow):       decodebin ! videoconvert ! videoscale ! video/x-raw,format=NV12 ! appsink
-    const bool want_va_surface = s_va_available && s_va_surface_capable
-                                 && opts && opts->use_va_surface_memory;
+    const bool want_va_surface = s_va_available && s_va_surface_capable && opts && opts->use_va_surface_memory;
     const bool use_va = s_va_available;
 
     auto make_source_head = [&](const std::string& loc) -> std::string {
@@ -612,46 +627,47 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
             return "filesrc location=\"" + loc + "\" ! decodebin ! ";
         // TODO: add bounded reconnect handling for RTSP sources.
         return "rtspsrc location=\"" + loc + "\" latency=0 protocols=tcp ! "
-               "rtph264depay ! h264parse ! " +
+                                             "rtph264depay ! h264parse ! " +
                (want_va_surface ? "vah264dec ! " : "decodebin ! ");
     };
 
     auto make_branch_pipeline = [&](const std::string& loc,
-                                     int w, int h,
-                                     const std::string& sink_name,
-                                     const std::string& sp) -> std::string {
+                                    int w, int h,
+                                    const std::string& sink_name,
+                                    const std::string& sp) -> std::string {
         // VA surface path: keep frame in GPU memory (no DMA copy).
         if (want_va_surface) {
             std::string caps =
                 "video/x-raw(memory:VAMemory),format=NV12,width=" + std::to_string(w) +
                 ",height=" + std::to_string(h);
-                 return make_source_head(loc) +
-                   "vapostproc ! "
-                   + caps + " ! "
-                   "appsink name=" + sink_name + " " + sp;
+            return make_source_head(loc) +
+                   "vapostproc ! " + caps + " ! "
+                                            "appsink name=" +
+                   sink_name + " " + sp;
         }
         // System-memory paths (borrow or CPU decode).
         std::string caps =
             "video/x-raw,format=NV12,width=" + std::to_string(w) +
             ",height=" + std::to_string(h);
         if (use_va) {
-                 return make_source_head(loc) +
-                   "vapostproc ! "
-                   + caps + " ! "
-                   "appsink name=" + sink_name + " " + sp;
+            return make_source_head(loc) +
+                   "vapostproc ! " + caps + " ! "
+                                            "appsink name=" +
+                   sink_name + " " + sp;
         } else {
-                 return make_source_head(loc) +
+            return make_source_head(loc) +
                    "videoconvert ! "
-                   "videoscale ! "
-                   + caps + " ! "
-                   "appsink name=" + sink_name + " " + sp;
+                   "videoscale ! " +
+                   caps + " ! "
+                          "appsink name=" +
+                   sink_name + " " + sp;
         }
     };
 
     if (resolved.size() == 1) {
         const auto& rb = resolved[0];
         pipeline_str = make_branch_pipeline(path, rb.width, rb.height,
-                                             "branch_0", sink_props);
+            "branch_0", sink_props);
     } else {
         // Multi-branch via tee — VA path uses vapostproc per branch
         std::string convert_scale;
@@ -668,12 +684,13 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
             const auto& rb = resolved[i];
             std::string sink_name = "branch_" + std::to_string(i);
             std::string mem_caps = want_va_surface
-                ? "video/x-raw(memory:VAMemory),format=NV12,width=" + std::to_string(rb.width) + ",height=" + std::to_string(rb.height)
-                : "video/x-raw,format=NV12,width=" + std::to_string(rb.width) + ",height=" + std::to_string(rb.height);
+                                       ? "video/x-raw(memory:VAMemory),format=NV12,width=" + std::to_string(rb.width) + ",height=" + std::to_string(rb.height)
+                                       : "video/x-raw,format=NV12,width=" + std::to_string(rb.width) + ",height=" + std::to_string(rb.height);
             pipeline_str +=
                 " t. ! queue ! " + convert_scale + " ! " +
                 mem_caps + " ! "
-                "appsink name=" + sink_name + " " + sink_props;
+                           "appsink name=" +
+                sink_name + " " + sink_props;
         }
     }
 
@@ -683,7 +700,8 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
     s->pipeline = f.gst_parse_launch(pipeline_str.c_str(), &error);
     if (error || !s->pipeline) {
         ctx->last_error = error ? error->message : "pipeline creation failed";
-        if (error) f.g_error_free(error);
+        if (error)
+            f.g_error_free(error);
         delete s;
         return IMP_ERROR_DECODE_FAILED;
     }
@@ -699,9 +717,9 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
             delete s;
             return IMP_ERROR_DECODE_FAILED;
         }
-        s->branches[i].width  = resolved[i].width;
+        s->branches[i].width = resolved[i].width;
         s->branches[i].height = resolved[i].height;
-        s->branches[i].name   = resolved[i].name;
+        s->branches[i].name = resolved[i].name;
         s->branches[i].frame.allocate(resolved[i].width, resolved[i].height);
     }
 
@@ -720,7 +738,7 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
         GstBus* bus = f.gst_element_get_bus(s->pipeline);
         if (bus) {
             f.gst_bus_set_sync_handler(bus, gst_va_sync_bus_handler,
-                                       nullptr, nullptr);
+                nullptr, nullptr);
             f.gst_object_unref(bus);
         }
         std::cout << "[linux_video_open] External VADisplay "
@@ -733,7 +751,8 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
     if (ret == GST_STATE_CHANGE_FAILURE) {
         ctx->last_error = "pipeline failed to start";
         for (auto& b : s->branches) {
-            if (b.appsink) f.gst_object_unref(b.appsink);
+            if (b.appsink)
+                f.gst_object_unref(b.appsink);
         }
         f.gst_object_unref(s->pipeline);
         delete s;
@@ -747,26 +766,28 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
         if (caps) {
             GstStructure* st = f.gst_caps_get_structure(caps, 0);
             int actual_w = 0, actual_h = 0;
-            f.gst_structure_get_int(st, "width",  &actual_w);
+            f.gst_structure_get_int(st, "width", &actual_w);
             f.gst_structure_get_int(st, "height", &actual_h);
-            if (actual_w > 0) s->branches[0].width  = actual_w;
-            if (actual_h > 0) s->branches[0].height = actual_h;
+            if (actual_w > 0)
+                s->branches[0].width = actual_w;
+            if (actual_h > 0)
+                s->branches[0].height = actual_h;
             f.gst_caps_unref(caps);
         }
         f.gst_object_unref(pad);
     }
 
-    s->use_hw_decode         = use_va;
+    s->use_hw_decode = use_va;
     s->use_va_surface_memory = want_va_surface;
-    s->va_display            = want_va_surface ? s_va_display : nullptr;
+    s->va_display = want_va_surface ? s_va_display : nullptr;
 
     auto end = chrono::high_resolution_clock::now();
     ctx->timing.video_open_ms =
         chrono::duration<double, std::milli>(end - start).count();
 
     const char* decode_mode = want_va_surface ? "VA-API/GPU surface"
-                            : use_va          ? "VA-API/GPU"
-                            :                   "CPU";
+                                              : use_va ? "VA-API/GPU"
+                                                       : "CPU";
     for (size_t i = 0; i < s->branches.size(); i++) {
         const auto& b = s->branches[i];
         std::cout << "[linux_video_open] Branch " << i
@@ -784,8 +805,8 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
 // ============================================================================
 
 imp_status_t linux_video_read_frame(imp_tensor_t** tensor,
-                                     imp_video_stream_t* stream,
-                                     uint32_t branch_index) {
+    imp_video_stream_t* stream,
+    uint32_t branch_index) {
     if (!stream || branch_index >= static_cast<uint32_t>(stream->branches.size()))
         return IMP_ERROR_INVALID_ARGUMENT;
 
@@ -818,7 +839,8 @@ imp_status_t linux_video_read_frame(imp_tensor_t** tensor,
     }
 
     t->device_type = IMP_DEVICE_CPU;
-    if (tensor) *tensor = t;
+    if (tensor)
+        *tensor = t;
     return IMP_OK;
 }
 
@@ -842,7 +864,8 @@ void gst_loader_release_natives(void* gst_sample, void* gst_vframe) {
 // ============================================================================
 
 void linux_video_close(imp_video_stream_t* stream) {
-    if (!stream) return;
+    if (!stream)
+        return;
     const auto& f = s_fns;
 
     // Release any live borrowed/VA frames BEFORE stopping the pipeline —
@@ -866,7 +889,8 @@ void linux_video_close(imp_video_stream_t* stream) {
     if (stream->pipeline) {
         f.gst_element_set_state(stream->pipeline, GST_STATE_NULL);
         for (auto& b : stream->branches) {
-            if (b.appsink) f.gst_object_unref(b.appsink);
+            if (b.appsink)
+                f.gst_object_unref(b.appsink);
         }
         f.gst_object_unref(stream->pipeline);
     }
@@ -878,16 +902,18 @@ void linux_video_close(imp_video_stream_t* stream) {
 // ============================================================================
 
 imp_status_t linux_video_encoder_create(imp_video_encoder_t** encoder,
-                                        uint32_t width, uint32_t height,
-                                        imp_context_t* ctx,
-                                        const imp_video_encode_opts_t* opts) {
-    if (!encoder || !ctx) return IMP_ERROR_INVALID_ARGUMENT;
-    if (!s_available) return IMP_ERROR_DEVICE_NOT_AVAILABLE;
+    uint32_t width, uint32_t height,
+    imp_context_t* ctx,
+    const imp_video_encode_opts_t* opts) {
+    if (!encoder || !ctx)
+        return IMP_ERROR_INVALID_ARGUMENT;
+    if (!s_available)
+        return IMP_ERROR_DEVICE_NOT_AVAILABLE;
     const auto& f = s_fns;
 
     auto* e = new imp_video_encoder_s();
-    e->width   = static_cast<int>(width);
-    e->height  = static_cast<int>(height);
+    e->width = static_cast<int>(width);
+    e->height = static_cast<int>(height);
     e->fps_num = (opts && opts->framerate > 0) ? static_cast<int>(opts->framerate) : 30;
     e->fps_den = 1;
 
@@ -913,19 +939,23 @@ imp_status_t linux_video_encoder_create(imp_video_encoder_t** encoder,
     if (gpu) {
         pipeline =
             "appsrc name=src format=time do-timestamp=true is-live=false ! "
-            "video/x-raw(memory:VAMemory),format=NV12,width=" + std::to_string(width) +
+            "video/x-raw(memory:VAMemory),format=NV12,width=" +
+            std::to_string(width) +
             ",height=" + std::to_string(height) +
             ",framerate=" + std::to_string(e->fps_num) + "/" + std::to_string(e->fps_den) + " ! "
-            "vah264lpenc ! h264parse ! " + terminus;
+                                                                                            "vah264lpenc ! h264parse ! " +
+            terminus;
     } else {
         // TODO: expose source latency and encoder bitrate/complexity through
         // graph configuration when the test harness gains a production lifecycle.
         pipeline =
             "appsrc name=src format=time do-timestamp=false is-live=false ! "
-            "video/x-raw,format=NV12,width=" + std::to_string(width) +
+            "video/x-raw,format=NV12,width=" +
+            std::to_string(width) +
             ",height=" + std::to_string(height) +
             ",framerate=" + std::to_string(e->fps_num) + "/" + std::to_string(e->fps_den) + " ! "
-            "videoconvert ! openh264enc bitrate=8000000 complexity=high ! h264parse ! " + terminus;
+                                                                                            "videoconvert ! openh264enc bitrate=8000000 complexity=high ! h264parse ! " +
+            terminus;
     }
 
     GError* error = nullptr;
@@ -951,15 +981,15 @@ imp_status_t linux_video_encoder_create(imp_video_encoder_t** encoder,
         return IMP_ERROR_ENCODE_FAILED;
     }
 
-    e->encoder_name   = gpu ? "vah264lpenc" : "openh264enc";
+    e->encoder_name = gpu ? "vah264lpenc" : "openh264enc";
     e->is_gpu_encoder = gpu;
-    e->initialized    = true;
+    e->initialized = true;
     *encoder = e;
     return IMP_OK;
 }
 
 imp_status_t linux_video_encoder_write(imp_video_encoder_t* encoder,
-                                       imp_tensor_t* tensor) {
+    imp_tensor_t* tensor) {
     if (!encoder || !encoder->initialized || !tensor || !tensor->valid)
         return IMP_ERROR_INVALID_ARGUMENT;
     const auto& f = s_fns;
@@ -970,7 +1000,8 @@ imp_status_t linux_video_encoder_write(imp_video_encoder_t* encoder,
             return IMP_ERROR_INVALID_ARGUMENT;
         GstBuffer* src_buf =
             f.gst_sample_get_buffer(static_cast<GstSample*>(tensor->owned_gst_sample));
-        if (!src_buf) return IMP_ERROR_ENCODE_FAILED;
+        if (!src_buf)
+            return IMP_ERROR_ENCODE_FAILED;
         // Give appsrc its own ref; the tensor keeps owning the sample/surface.
         GstBuffer* buf = f.gst_buffer_ref(src_buf);
         if (f.gst_app_src_push_buffer(GST_APP_SRC(encoder->appsrc), buf) != GST_FLOW_OK)
@@ -985,11 +1016,12 @@ imp_status_t linux_video_encoder_write(imp_video_encoder_t* encoder,
 
     const int w = tensor->width;
     const int h = tensor->height;
-    const size_t y_size  = static_cast<size_t>(w) * h;
+    const size_t y_size = static_cast<size_t>(w) * h;
     const size_t uv_size = static_cast<size_t>(w) * (h / 2);
 
     GstBuffer* buffer = f.gst_buffer_new_allocate(nullptr, y_size + uv_size, nullptr);
-    if (!buffer) return IMP_ERROR_ENCODE_FAILED;
+    if (!buffer)
+        return IMP_ERROR_ENCODE_FAILED;
 
     GstMapInfo map;
     if (!f.gst_buffer_map(buffer, &map, GST_MAP_WRITE)) {
@@ -1002,7 +1034,7 @@ imp_status_t linux_video_encoder_write(imp_video_encoder_t* encoder,
 
     const GstClockTime duration =
         GST_SECOND * static_cast<uint64_t>(encoder->fps_den) / encoder->fps_num;
-    GST_BUFFER_PTS(buffer)      = encoder->frame_count * duration;
+    GST_BUFFER_PTS(buffer) = encoder->frame_count * duration;
     GST_BUFFER_DURATION(buffer) = duration;
 
     if (f.gst_app_src_push_buffer(GST_APP_SRC(encoder->appsrc), buffer) != GST_FLOW_OK)
@@ -1013,7 +1045,8 @@ imp_status_t linux_video_encoder_write(imp_video_encoder_t* encoder,
 }
 
 void linux_video_encoder_close(imp_video_encoder_t* encoder) {
-    if (!encoder || !encoder->initialized) return;
+    if (!encoder || !encoder->initialized)
+        return;
     const auto& f = s_fns;
 
     // Signal end-of-stream and wait for the muxer to finalize the file.
@@ -1024,7 +1057,8 @@ void linux_video_encoder_close(imp_video_encoder_t* encoder) {
         GstMessage* msg = f.gst_bus_timed_pop_filtered(
             bus, 10 * GST_SECOND,
             static_cast<GstMessageType>(GST_MESSAGE_EOS | GST_MESSAGE_ERROR));
-        if (msg) f.gst_message_unref(msg);
+        if (msg)
+            f.gst_message_unref(msg);
         f.gst_object_unref(bus);
     }
 

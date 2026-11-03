@@ -31,7 +31,7 @@
 
 #ifdef INTEL_MPI_AVAILABLE
 
-#include "intel_mpi.h"          // MPI C API
+#include "intel_mpi.h"  // MPI C API
 
 #include <openvino/openvino.hpp>  // ov::Tensor for data extraction
 #include <cstring>
@@ -50,16 +50,17 @@ bool isAvailable() {
 }
 
 bool decodeAudioBuffer(const std::string_view& audioData,
-                       uint32_t sampleRate,
-                       std::vector<float>& pcm) {
-    if (audioData.empty()) return false;
+    uint32_t sampleRate,
+    std::vector<float>& pcm) {
+    if (audioData.empty())
+        return false;
 
     // Configure decode options
     imp_audio_decode_opts_t opts{};
     opts.sample_rate = sampleRate;
-    opts.channels    = 1;          // mono output for speech models
+    opts.channels = 1;  // mono output for speech models
     opts.output_type = IMP_TYPE_FP32;
-    opts.normalize   = true;
+    opts.normalize = true;
 
     // Decode via Intel MPI (context = NULL → no GPU, pure media decode)
     imp_tensor_t* tensor = nullptr;
@@ -67,13 +68,14 @@ bool decodeAudioBuffer(const std::string_view& audioData,
         &tensor,
         audioData.data(),
         audioData.size(),
-        nullptr,           // ctx — not needed for CPU audio decode
+        nullptr,  // ctx — not needed for CPU audio decode
         &opts,
-        nullptr,           // callback — synchronous
-        nullptr);          // user_data
+        nullptr,   // callback — synchronous
+        nullptr);  // user_data
 
     if (status != IMP_OK || !tensor) {
-        if (tensor) imp_tensor_release(tensor);
+        if (tensor)
+            imp_tensor_release(tensor);
         return false;
     }
 
@@ -110,12 +112,13 @@ bool decodeAudioBuffer(const std::string_view& audioData,
 }
 
 bool encodeToWav(const std::vector<float>& pcm,
-                 uint32_t sampleRate,
-                 uint16_t bitsPerSample,
-                 std::vector<uint8_t>& wavData) {
+    uint32_t sampleRate,
+    uint16_t bitsPerSample,
+    std::vector<uint8_t>& wavData) {
     // WAV encoding is trivial — no need to route through GStreamer.
     // Keep this self-contained for minimal overhead.
-    if (pcm.empty()) return false;
+    if (pcm.empty())
+        return false;
     (void)bitsPerSample;  // always output 32-bit float WAV
 
     uint32_t numChannels = 1;
@@ -129,8 +132,10 @@ bool encodeToWav(const std::vector<float>& pcm,
 
     auto write16 = [&](uint16_t v) { wavData.push_back(v & 0xFF); wavData.push_back((v >> 8) & 0xFF); };
     auto write32 = [&](uint32_t v) {
-        wavData.push_back(v & 0xFF); wavData.push_back((v >> 8) & 0xFF);
-        wavData.push_back((v >> 16) & 0xFF); wavData.push_back((v >> 24) & 0xFF);
+        wavData.push_back(v & 0xFF);
+        wavData.push_back((v >> 8) & 0xFF);
+        wavData.push_back((v >> 16) & 0xFF);
+        wavData.push_back((v >> 24) & 0xFF);
     };
     auto writeStr = [&](const char* s, size_t n) { wavData.insert(wavData.end(), s, s + n); };
 
@@ -138,13 +143,13 @@ bool encodeToWav(const std::vector<float>& pcm,
     write32(chunkSize);
     writeStr("WAVE", 4);
     writeStr("fmt ", 4);
-    write32(16);              // subchunk1 size
-    write16(3);               // IEEE float format
+    write32(16);  // subchunk1 size
+    write16(3);   // IEEE float format
     write16(static_cast<uint16_t>(numChannels));
     write32(sampleRate);
     write32(byteRate);
     write16(static_cast<uint16_t>(blockAlign));
-    write16(32);              // bits per sample
+    write16(32);  // bits per sample
     writeStr("data", 4);
     write32(dataSize);
 
@@ -155,12 +160,13 @@ bool encodeToWav(const std::vector<float>& pcm,
 }
 
 bool encodeAudioBuffer(const float* samples,
-                       size_t numSamples,
-                       uint32_t sampleRate,
-                       uint16_t bitsPerSample,
-                       const std::string& format,
-                       std::vector<uint8_t>& output) {
-    if (!samples || numSamples == 0) return false;
+    size_t numSamples,
+    uint32_t sampleRate,
+    uint16_t bitsPerSample,
+    const std::string& format,
+    std::vector<uint8_t>& output) {
+    if (!samples || numSamples == 0)
+        return false;
 
     // For WAV we can use the local writer (fast, no GStreamer init)
     if (format == "wav") {
@@ -170,22 +176,23 @@ bool encodeAudioBuffer(const float* samples,
 
     // Route everything else through the MPI C API
     imp_audio_encode_opts_t opts{};
-    opts.codec       = format.c_str();
+    opts.codec = format.c_str();
     opts.sample_rate = sampleRate;
-    opts.channels    = 1;
+    opts.channels = 1;
     opts.bitrate_kbps = 192;  // reasonable default for speech
-    opts.output_path  = nullptr;
+    opts.output_path = nullptr;
 
-    void*  data = nullptr;
+    void* data = nullptr;
     size_t dataSize = 0;
     imp_status_t st = imp_encode_audio(&data, &dataSize, samples, numSamples, &opts);
     if (st != IMP_OK || !data) {
-        if (data) imp_free(data);
+        if (data)
+            imp_free(data);
         return false;
     }
 
     output.assign(static_cast<uint8_t*>(data),
-                  static_cast<uint8_t*>(data) + dataSize);
+        static_cast<uint8_t*>(data) + dataSize);
     imp_free(data);
     return true;
 }
@@ -203,24 +210,24 @@ namespace imp {
 bool isAvailable() { return false; }
 
 bool decodeAudioBuffer(const std::string_view& /*audioData*/,
-                       uint32_t /*sampleRate*/,
-                       std::vector<float>& /*pcm*/) {
+    uint32_t /*sampleRate*/,
+    std::vector<float>& /*pcm*/) {
     return false;
 }
 
 bool encodeToWav(const std::vector<float>& /*pcm*/,
-                 uint32_t /*sampleRate*/,
-                 uint16_t /*bitsPerSample*/,
-                 std::vector<uint8_t>& /*wavData*/) {
+    uint32_t /*sampleRate*/,
+    uint16_t /*bitsPerSample*/,
+    std::vector<uint8_t>& /*wavData*/) {
     return false;
 }
 
 bool encodeAudioBuffer(const float* /*samples*/,
-                       size_t /*numSamples*/,
-                       uint32_t /*sampleRate*/,
-                       uint16_t /*bitsPerSample*/,
-                       const std::string& /*format*/,
-                       std::vector<uint8_t>& /*output*/) {
+    size_t /*numSamples*/,
+    uint32_t /*sampleRate*/,
+    uint16_t /*bitsPerSample*/,
+    const std::string& /*format*/,
+    std::vector<uint8_t>& /*output*/) {
     return false;
 }
 
