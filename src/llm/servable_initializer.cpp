@@ -164,7 +164,7 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
     }
 
     if (properties->chatTemplateEngine == ChatTemplateEngine::JINJA && properties->preparedChatTemplate.isPrepared()) {
-        if (!probeChatTemplateCapsJinja([& templateProcessor = properties->preparedChatTemplate](const std::string& body, std::string& output) {
+        if (!probeChatTemplateCapsJinja([&templateProcessor = properties->preparedChatTemplate](const std::string& body, std::string& output) {
                 return templateProcessor.apply(body, output);
             },
                 properties->chatTemplateCaps)) {
