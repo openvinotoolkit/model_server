@@ -1,3 +1,17 @@
+// Copyright (c) 2026 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 /**
  * Intel MPI - Internal Implementation Structures
  * 
@@ -7,8 +21,7 @@
  * Only intel_mpi.cpp and gst_loader.cpp should include this file.
  */
 
-#ifndef IMP_MPI_IMPL_H
-#define IMP_MPI_IMPL_H
+#pragma once
 
 #include <string>
 #include <vector>
@@ -53,7 +66,7 @@ typedef struct _GstMessage   GstMessage;
 #endif  // _WIN32
 
 // Public API types
-#include "intel_mpi.h"
+#include "intel_mpi.h"  // NOLINT
 
 //////////////////////////////////////////////////////////////////////////////
 // NV12 frame buffer (used internally for CPU-side NV12 data)
@@ -77,7 +90,6 @@ struct imp_nv12_frame_t {
         valid = false;
     }
 };
-
 //////////////////////////////////////////////////////////////////////////////
 // Timing data (accumulated per-context for benchmarking)
 //////////////////////////////////////////////////////////////////////////////
@@ -104,7 +116,6 @@ struct imp_timing_data_t {
     int    async_overlaps              = 0;
     int    frame_count                 = 0;
 };
-
 //////////////////////////////////////////////////////////////////////////////
 // Context — wraps a compiled model + infer requests
 //
@@ -221,9 +232,9 @@ struct imp_video_stream_s {
     GstElement* pipeline = nullptr;
     bool use_hw_decode        = false;
     bool use_va_surface_memory = false;  // true when VA surface output requested
-    void* va_display          = nullptr; // VADisplay shared across branches (borrowed from gst_loader)
-    bool use_d3d11_surface_memory = false; // true when D3D11 texture output requested (Windows)
-    void* d3d11_device        = nullptr; // ID3D11Device injected into the pipeline (borrowed)
+    void* va_display          = nullptr;  // VADisplay shared across branches (borrowed from gst_loader)
+    bool use_d3d11_surface_memory = false;  // true when D3D11 texture output requested (Windows)
+    void* d3d11_device        = nullptr;  // ID3D11Device injected into the pipeline (borrowed)
 
     // Dynamic branches (replaces fixed fullres + small appsinks)
     std::vector<imp_branch_info_t> branches;
@@ -252,7 +263,7 @@ struct imp_video_encoder_s {
     imp_timing_data_t* timing = nullptr;
 };
 
-////////////////////////////////////////////////////////////////////////////// 
+//////////////////////////////////////////////////////////////////////////////
 // Video source configuration
 //////////////////////////////////////////////////////////////////////////////
 
@@ -288,25 +299,24 @@ struct imp_detection_t {
 struct imp_audio_encoder_s {
     GstElement* pipeline = nullptr;
     GstElement* appsrc   = nullptr;
-    
+
     // Output configuration
     std::string output_path;
     std::string codec;                  // "mp3", "aac", "flac", "wav", "opus"
     uint32_t bitrate_kbps = 192;
     uint32_t sample_rate  = 44100;
     uint32_t channels     = 2;
-    
+
     // Callback for completion notification
     imp_encode_callback_t callback = nullptr;
     void* user_data = nullptr;
-    
+
     // State
     bool initialized = false;
     int64_t samples_written = 0;
-    
+
     std::string last_error;
 };
-
 //////////////////////////////////////////////////////////////////////////////
 // Audio stream — internal state for decode→encode pipeline
 //////////////////////////////////////////////////////////////////////////////
@@ -314,29 +324,27 @@ struct imp_audio_encoder_s {
 struct imp_audio_stream_s {
     // Input
     std::string input_path;
-    
+
     // Output
     std::string output_path;
     std::string output_codec;
     uint32_t    output_sample_rate  = 44100;
     uint32_t    output_channels     = 2;
     uint32_t    output_bitrate_kbps = 192;
-    
+
     // Discovered info
     uint32_t    sample_rate  = 0;
     uint32_t    channels     = 0;
     double      duration_sec = 0.0;
     int64_t     num_samples  = 0;
-    
+
     // Pipeline
     GstElement* pipeline = nullptr;
-    
+
     // State
     bool        initialized  = false;
     bool        processed    = false;
     double      wall_time_sec = 0.0;
-    
+
     std::string last_error;
 };
-
-#endif // IMP_MPI_IMPL_H

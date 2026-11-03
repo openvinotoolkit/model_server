@@ -18,6 +18,8 @@
 #include <cstdlib>
 #include <map>
 #include <memory>
+#include <string>
+#include <vector>
 #include <gtest/gtest.h>
 #include "mediapipe/framework/calculator_framework.h"
 #include "src/mediapipe_gst_calculators/gst_openvino_inference_calculator.pb.h"
@@ -48,7 +50,8 @@ struct DecodeStream {
 #else
         options.use_va_surface_memory = true;
         options.sync_appsink = environment("OVMS_MPI_E2_SYNC_APPSINK", "off") == "on";
-#endif
+#endif  // SRC_TEST_MEDIAPIPE_CALCULATORS_MPI_INFERENCE_BENCHMARK_UTILS_HPP_
+
         if (imp_video_open(&stream, source.get(), context, &options) != IMP_OK)
             throw std::runtime_error(imp_context_get_error(context));
     }
@@ -136,4 +139,4 @@ inline void measureGraph(const std::string& name, bool capi, bool split,
     report(name, samples);
 }
 }  // namespace inference_benchmark
-#endif
+#endif  // SRC_TEST_MEDIAPIPE_CALCULATORS_MPI_INFERENCE_BENCHMARK_UTILS_HPP_

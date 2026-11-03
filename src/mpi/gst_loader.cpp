@@ -26,6 +26,8 @@
 
 #ifndef _WIN32
 
+#include "gst_loader.h"  // NOLINT
+
 // ---- GStreamer headers (compile-time type definitions and macros) ----------
 // These are only needed here because we use GstVideoFrame / GstVideoInfo by
 // value (for GST_VIDEO_FRAME_PLANE_DATA / _STRIDE macros which are struct
@@ -48,12 +50,12 @@
 #include <cstdlib>
 
 // ---- Intel MPI public API ---------------------------------------------------
-#include "intel_mpi.h"
+#include "intel_mpi.h"  // NOLINT
 
 // ---- Internal structs (needed for branch / stream layout) ------------------
 // We include only what's needed for the Linux video path; Windows-only
 // sections (D3D11, etc.) are guarded in imp_mpi_impl.h.
-#include "imp_mpi_impl.h"
+#include "imp_mpi_impl.h"  // NOLINT
 
 namespace chrono = std::chrono;
 

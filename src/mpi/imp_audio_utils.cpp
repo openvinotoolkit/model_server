@@ -31,7 +31,7 @@
 
 #ifdef INTEL_MPI_AVAILABLE
 
-#include "intel_mpi.h"  // MPI C API
+#include "intel_mpi.h"  // MPI C API  // NOLINT
 
 #include <openvino/openvino.hpp>  // ov::Tensor for data extraction
 #include <cstring>

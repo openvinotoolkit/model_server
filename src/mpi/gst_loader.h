@@ -30,8 +30,7 @@
  * All GStreamer types exposed in the public API are forward-declared below.
  */
 
-#ifndef GST_LOADER_H
-#define GST_LOADER_H
+#pragma once
 
 #ifndef _WIN32
 
@@ -43,7 +42,7 @@
 typedef struct _GstElement GstElement;
 
 // Intel MPI public API — provides all imp_* types and status codes.
-#include "intel_mpi.h"
+#include "intel_mpi.h"  // NOLINT
 
 /**
  * Attempt to dlopen GStreamer shared libraries and resolve all required
@@ -145,4 +144,3 @@ imp_status_t linux_video_encoder_write(imp_video_encoder_t* encoder,
 void linux_video_encoder_close(imp_video_encoder_t* encoder);
 
 #endif  // !_WIN32
-#endif  // GST_LOADER_H

@@ -23,6 +23,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <memory>
 #include <numeric>
 #include <stdexcept>
 #include <string>
@@ -152,4 +153,4 @@ inline void report(const std::string& name, const std::vector<double>& samples) 
     summarize(fps, "fps");
 }
 }  // namespace inference_benchmark
-#endif
+#endif  // SRC_TEST_MEDIAPIPE_CALCULATORS_INFERENCE_BENCHMARK_UTILS_HPP_

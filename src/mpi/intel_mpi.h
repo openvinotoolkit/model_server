@@ -1,3 +1,17 @@
+// Copyright (c) 2026 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 /**
  * Intel Media Processing Interface (Intel MPI)
  * 
@@ -7,13 +21,11 @@
  * Version: 0.1.0
  */
 
-#ifndef INTEL_MPI_H
-#define INTEL_MPI_H
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -116,7 +128,7 @@ typedef enum {
 typedef enum {
     IMP_MEM_SYSTEM       = 0,  // host RAM — y_data/uv_data valid
     IMP_MEM_VA_SURFACE   = 1,  // VA surface on GPU — va_surface_id/va_display valid
-    IMP_MEM_D3D11_SURFACE = 2, // D3D11 NV12 texture on GPU (Windows) — d3d11 fields valid
+    IMP_MEM_D3D11_SURFACE = 2,  // D3D11 NV12 texture on GPU (Windows) — d3d11 fields valid
 } imp_tensor_memory_type_t;
 
 typedef enum {
@@ -138,12 +150,12 @@ typedef struct imp_context_s imp_context_t;
 /**
  * Create context from OpenVINO compiled model
  * Extracts GPU context from model for zero-copy tensor sharing.
- * 
+ *
  * @param ctx Output: context handle pointer
  * @param compiled_model OpenVINO compiled model (must be GPU-compiled)
  * @return Status code
  */
-imp_status_t imp_context_create(imp_context_t** ctx, 
+imp_status_t imp_context_create(imp_context_t** ctx,
                                 ov_compiled_model_t* compiled_model);
 
 /**
@@ -328,7 +340,7 @@ typedef struct {
     const char* output_device;          // Where result tensor is placed: NULL = same as decode_device
     uint32_t buffer_count;              // Frame buffer pool size (default: 4)
     int64_t timeout_ms;                 // Read timeout, -1 = infinite
-    const imp_video_branch_t* branches; // Array of output branches (NULL = single branch at source res) // TODO FIXME do we need more than one?
+    const imp_video_branch_t* branches;  // Array of output branches (NULL = single branch at source res) // TODO FIXME do we need more than one?
     uint32_t branch_count;              // Number of branches (0 = single branch at source res)
     bool sync_appsink;                  // If true (file mode): force single-buffer queue+appsink (disable pre-buffering)
     uint32_t queue_depth;               // If nonzero (file mode): bound queue + appsink max-buffers to N (overrides sync_appsink)
@@ -1164,5 +1176,3 @@ void imp_video_set_d3d11_device(void* d3d11_device);
 #ifdef __cplusplus
 }
 #endif
-
-#endif // INTEL_MPI_H

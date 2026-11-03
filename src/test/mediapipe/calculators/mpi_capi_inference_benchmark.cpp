@@ -37,7 +37,6 @@
 #include <unistd.h>
 #include <va/va.h>
 #include <va/va_drm.h>
-#include <openvino/runtime/intel_gpu/ocl/va.hpp>
 #endif
 #include "src/ovms.h"
 #include "mpi_inference_benchmark_utils.hpp"

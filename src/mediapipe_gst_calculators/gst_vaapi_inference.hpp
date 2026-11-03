@@ -142,4 +142,4 @@ private:
     ov::InferRequest request_;
 };
 }  // namespace mediapipe
-#endif
+#endif  // SRC_MEDIAPIPE_GST_CALCULATORS_GST_VAAPI_INFERENCE_HPP_

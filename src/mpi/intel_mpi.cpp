@@ -1,3 +1,17 @@
+// Copyright (c) 2026 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 /**
  * Intel MPI - API Implementation (v8 — Layer 1 Media I/O)
  *
@@ -28,19 +42,23 @@
 #endif
 #endif  // _WIN32
 
-#include "imp_mpi_impl.h"  // same directory
+#include "intel_mpi.h"  // NOLINT
+#include "imp_mpi_impl.h"  // NOLINT
 
 #ifdef _WIN32
 #include <d3d11_4.h>
 #endif
 
 #ifndef _WIN32
-#include "gst_loader.h"
+#include "gst_loader.h"  // NOLINT
 #endif
 
 #include <iostream>
 #include <algorithm>
 #include <chrono>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace chrono = std::chrono;
 
@@ -2553,8 +2571,8 @@ static imp_status_t imp_encode_audio_wav(void** data, size_t* data_size,
     if (!buf)
         return IMP_ERROR_INTERNAL;
 
-    auto w16 = [](uint8_t* p, uint16_t v) { p[0]=v&0xFF; p[1]=(v>>8)&0xFF; };
-    auto w32 = [](uint8_t* p, uint32_t v) { p[0]=v&0xFF; p[1]=(v>>8)&0xFF; p[2]=(v>>16)&0xFF; p[3]=(v>>24)&0xFF; };
+    auto w16 = [](uint8_t* p, uint16_t v) { p[0] = v & 0xFF; p[1] = (v >> 8) & 0xFF; };
+    auto w32 = [](uint8_t* p, uint32_t v) { p[0] = v & 0xFF; p[1] = (v >> 8) & 0xFF; p[2] = (v >> 16) & 0xFF; p[3] = (v >> 24) & 0xFF; };
 
     memcpy(buf, "RIFF", 4);
     w32(buf + 4, chunkSize);
