@@ -142,7 +142,7 @@ protected:
             << "Failed to load Python Jinja template processor";
 
         // Step 3a: Probe tool caps using Python Jinja (same function used in production)
-        if (!probeChatTemplateCapsJinja([& templateProcessor = servable->getProperties()->preparedChatTemplate](const std::string& body, std::string& output) {
+        if (!probeChatTemplateCapsJinja([&templateProcessor = servable->getProperties()->preparedChatTemplate](const std::string& body, std::string& output) {
                 return templateProcessor.apply(body, output);
             },
                 caps)) {
