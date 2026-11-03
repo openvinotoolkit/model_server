@@ -32,21 +32,19 @@ import multiprocessing
 try:
     from ovms_benchmark_client.metrics import XMetrics
     from ovms_benchmark_client.client import BaseClient
-    from ovms_benchmark_client.client_tfs import TFS_Client
     from ovms_benchmark_client.client_kfs import KFS_Client
     from ovms_benchmark_client.db_exporter import DBExporter
 except ModuleNotFoundError:
     from metrics import XMetrics
     from client import BaseClient
-    from client_tfs import TFS_Client
     from client_kfs import KFS_Client
     from db_exporter import DBExporter
 
 def get_client(xargs):
-    if xargs["api"] == "TFS": return TFS_Client
-    elif xargs["api"] == "KFS": return KFS_Client
+    if xargs["api"] == "GRPC": return KFS_Client
     elif xargs["api"] == "REST": raise NotImplementedError("TODO - add REST support")
-    else: return TFS_Client # default client API
+    elif xargs["api"] == "TFS": raise NotImplementedError("TFS is deprecated use KFS instead")
+    else: return KFS_Client # default client API
 
 
 # Version used for print only...
@@ -201,7 +199,7 @@ class Unbuffered(object):
 
 if __name__ == "__main__":
     description = """
-    This is benchmarking client which uses TFS/KFS API to communicate with OVMS/TFS/KFS-based-services.
+    This is benchmarking client which uses KFS API to communicate with OVMS/KFS-based-services.
     """
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("-i", "--id", required=False, default="worker",
@@ -288,7 +286,7 @@ if __name__ == "__main__":
                         help="flag to print internal version")
     parser.add_argument("--unbuffered", required=False, action="store_true",
                         help="flag to print stdout/stderr immediately rather than buffer")
-    parser.add_argument("--api", required=False, default="TFS", choices=["TFS", "KFS", "REST"],
+    parser.add_argument("--api", required=False, default="GRPC", choices=["GRPC", "REST"],
                         help="flag to choose which API to use")
     xargs = vars(parser.parse_args())
     if xargs["internal_version"]:
