@@ -169,7 +169,7 @@ TEST(TaskInferenceRemoteMetadataTest, ReportsHttpStatusFailuresWithoutFallback) 
         const auto task = ovms::determineDefaultTaskParameter(
             std::nullopt, sourceModel, std::nullopt, &errorMessage);
         EXPECT_FALSE(task.has_value());
-        EXPECT_NE(errorMessage.find("Failed to resolve source model '" + sourceModel + "'"), std::string::npos);
+        EXPECT_NE(errorMessage.find(std::string("Failed to resolve source model '") + sourceModel + "'"), std::string::npos);
         EXPECT_NE(errorMessage.find("task metadata is not accessible"), std::string::npos);
     }
 
