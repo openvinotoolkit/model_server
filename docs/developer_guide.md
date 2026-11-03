@@ -157,9 +157,11 @@ For a standalone ResNet example, download the model and start GDB inside the bui
 
 ```text
 mkdir -p models/resnet/1
-curl -fL https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.bin
-curl -fL https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.xml
-gdb --args ./bazel-bin/src/ovms --model_name resnet --model_path /ovms/models/resnet --port 9178 --rest_port 9179
+curl -fL https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o models/resnet/1/resnet50.bin
+curl -fL https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o models/resnet/1/resnet50.xml
+gdb --args ./bazel-bin/src/ovms --model_name resnet --model_path /ovms/models/resnet \
+    --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" \
+    --port 9178 --rest_port 9179
 ```
 
 To build the builder's OVMS artifacts in debug mode as well, run on the Linux host:
@@ -204,7 +206,9 @@ For iterative development, enable minitrace and start OVMS inside the build cont
 
 ```text
 bazel build --config=linux --copt="-DMTR_ENABLED" //src:ovms
-./bazel-bin/src/ovms --model_name resnet --model_path /ovms/models/resnet --trace_path /ovms/trace.json --port 9178
+./bazel-bin/src/ovms --model_name resnet --model_path /ovms/models/resnet \
+	--mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" \
+	--trace_path /ovms/trace.json --port 9178
 ```
 
 Stop OVMS gracefully so it writes `trace.json`. Open the file with Chrome's `chrome://tracing` tool.
@@ -221,6 +225,7 @@ The model and trace directories must exist on the host. Ensure the container use
 mkdir -p traces
 docker run -it -v "${PWD}":/workspace:rw -p 9180:9178 \
     openvino/model_server:latest --model_name resnet --model_path /workspace/models/resnet \
+	--mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" \
     --trace_path /workspace/traces/trace.json --port 9178
 ```
 
@@ -338,41 +343,59 @@ Package installation requires root in the container. The startup message lets th
 
 ### Run an Inference Client
 
-For the standalone release-image example, download the [ResNet50-binary model](https://github.com/openvinotoolkit/open_model_zoo/blob/releases/2022/1/models/intel/resnet50-binary-0001/README.md) on the Linux host:
+For the standalone release-image example, download the [ResNet50 model](https://huggingface.co/OpenVINO/resnet50-int8-ov) on the Linux host, from the repository root:
 
 ```text
-source tests/performance/download_model.sh
+mkdir -p models/resnet/1
+curl -fL https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o models/resnet/1/resnet50.bin
+curl -fL https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o models/resnet/1/resnet50.xml
 ```
 
-The script stores the model in the user's home directory. Run on the Linux host to start a release container. This example uses host port `9180` to avoid the build container's `9178`:
+Run on the Linux host to start a release container. This example uses host port `9180` to avoid the build container's `9178`:
 
 ```text
-docker run -d -v ~/resnet50-binary:/models/resnet50-binary -p 9180:9178 \
-    openvino/model_server:latest --model_name resnet-binary --model_path /models/resnet50-binary --port 9178
+docker run -d -u "$(id -u)" -v "${PWD}/models":/models -p 9180:9178 \
+	openvino/model_server:latest --model_name resnet --model_path /models/resnet \
+	--mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --port 9178
 ```
 
 Run the client on the Linux host in the activated Python environment:
 
 ```text
-pip3 install -r demos/common/python/requirements.txt
-python tests/performance/grpc_latency.py \
-    --images_numpy_path tests/performance/imgs.npy --labels_numpy_path tests/performance/labels.npy \
-    --iteration 1000 --model_name resnet-binary --batchsize 1 --report_every 100 \
-    --input_name 0 --output_name 1463 --grpc_port 9180
+pip3 install -r client/python/kserve-api/samples/requirements.txt
+python client/python/kserve-api/samples/grpc_infer_resnet.py \
+	--images_numpy_path client/python/imgs_nhwc.npy --labels_numpy_path client/python/lbs.npy \
+	--iterations 1000 --model_name resnet --batchsize 1 \
+	--input_name image --output_name output --transpose_input False --grpc_port 9180
 ```
 
-The client reads the image and label arrays, sends batches to `resnet-binary`, and reports latency every 100 iterations. Stop and remove the release container when finished using its Docker-generated name.
+The client reads NHWC image arrays and labels and sends batches to `resnet`. Stop and remove the release container when finished using its Docker-generated name.
+
+| Argument | Purpose |
+|---|---|
+| `--images_numpy_path` | Path to the NHWC input image array. |
+| `--labels_numpy_path` | Path to the expected labels. |
+| `--iterations 1000` | Number of inference iterations. |
+| `--batchsize 1` | Number of images per request. |
+| `--input_name image` | Model input name. |
+| `--output_name output` | Model output name. |
+| `--transpose_input False` | Keep NHWC input to match the server's layout configuration. |
 
 ### Run Performance Tests
 
-The Make targets prepare their own test containers. Run on the Linux host:
+Use the [Python benchmark client](../demos/benchmark/python/README.md) for latency and throughput measurements. The legacy `tests/performance` scripts and their Make targets are no longer available. Build the client image on the Linux host, from the repository root:
 
 ```text
-make test_perf
-make test_throughput
+docker build -t benchmark_client demos/benchmark/python
 ```
 
-Latency tests report request timing; throughput tests report iterations and frames per second. Use `OVMS_CPP_CONTAINER_PORT=<unused_host_port>` when the default port is already occupied. Performance measurements should use release builds, not GDB or minitrace builds.
+With the release container from [Run an Inference Client](#run-an-inference-client) running, execute the benchmark on the Linux host:
+
+```text
+docker run --rm --network=host benchmark_client -a localhost -p 9180 -m resnet --api GRPC -b 1 -c 1 -t 30
+```
+
+The benchmark reports latency and throughput without validating classification accuracy. Increase `-c` for concurrency measurements and adjust `-p` to the published host port. Performance measurements should use release builds, not GDB or minitrace builds. For a request-reproduction workload rather than a performance measurement, point the client at the build container's `9178` instead.
 
 ### Test a Packaged Binary
 
@@ -444,7 +467,6 @@ On shared hosts, use a unique image base name and unused ports. Run on the Linux
 ```text
 make docker_build OVMS_CPP_DOCKER_IMAGE=<unique_image_name>
 make test_functional OVMS_CPP_DOCKER_IMAGE=<unique_image_name>
-make test_perf OVMS_CPP_CONTAINER_PORT=<unused_host_port>
 ```
 
 The builder image is named `<unique_image_name>-build:latest`; debug builds use `<unique_image_name>-dbg-build:latest`. Use the matching image when starting containers.

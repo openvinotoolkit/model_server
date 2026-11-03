@@ -143,11 +143,19 @@ You can follow the [baremetal deployment guide](deploying_server_baremetal.md) f
 
 # Developer Command Prompt
 For building ovms.exe and running ovms_test.exe with manual bazel commands you must setup proper environment variables.
-Run the batch script in new "Developer Command Prompt for VS 2022" terminal:
+Run the batch script in a new "Developer Command Prompt for VS 2022" terminal from the repository root:
 ```text
-cd c:\git\model_server
-windows_setupvars.bat
+cd /d c:\git\model_server
+call windows_setupvars.bat
 ```
+
+After the environment is initialized, use the repo-local Makefile targets from the same shell:
+```text
+make style
+make sdl-check
+```
+
+These commands must be run after `windows_setupvars.bat` so that the local Python virtual environment, repo tool shims, and proxy/tool paths are available.
 
 Build the unit-test and Python runtime test targets with the same configuration used by `windows_test.bat`:
 ```text
