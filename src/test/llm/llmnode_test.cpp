@@ -50,7 +50,6 @@
 #include "../../llm/servable.hpp"
 #include "../../llm/servable_initializer.hpp"
 #include "../../llm/text_utils.hpp"
-#include "../../llm/tomato_metric.hpp"
 #include "../../mediapipe_internal/mediapipefactory.hpp"
 #include "../../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../../metrics/llm_metric_reporter.hpp"
@@ -70,65 +69,6 @@
 #include "src/test/environment.hpp"
 
 using namespace ovms;
-
-class TomatoMetricTest : public ::testing::Test {
-protected:
-    MetricRegistry registry;
-    CalculatorMetrics metrics{&registry, "graph", "llm"};
-    std::shared_ptr<CalculatorCounter> counter = metrics.registerCounter("custom_tomato_total", "Tomatoes.");
-    TomatoMetric matcher{counter};
-};
-
-TEST_F(TomatoMetricTest, CountsCaseInsensitiveWholeWordsNotSubstrings) {
-    matcher.consume("tomato TOMATO Tomato! tomatoes _tomato tomato_ tomato2 2tomato tomatotomato", true);
-    EXPECT_THAT(registry.collect(), testing::HasSubstr("custom_tomato_total{name=\"graph\",node=\"llm\"} 3\n"));
-}
-
-TEST_F(TomatoMetricTest, EveryChunkBoundaryHasSameResult) {
-    const std::string text = "tomato, TOMATO tomatoes tomato";
-    for (size_t split = 0; split <= text.size(); ++split) {
-        matcher.consume(std::string_view(text).substr(0, split), false);
-        matcher.consume(std::string_view(text).substr(split), true);
-    }
-    EXPECT_THAT(registry.collect(), testing::HasSubstr("custom_tomato_total{name=\"graph\",node=\"llm\"} " + std::to_string(3 * (text.size() + 1)) + "\n"));
-}
-
-TEST_F(TomatoMetricTest, DelaysUntilBoundaryAndFlushesOnlyOnce) {
-    matcher.consume("tom", false);
-    matcher.consume("ato", false);
-    EXPECT_THAT(registry.collect(), testing::HasSubstr("custom_tomato_total{name=\"graph\",node=\"llm\"} 0\n"));
-    matcher.consume("", true);
-    matcher.consume("", true);
-    EXPECT_THAT(registry.collect(), testing::HasSubstr("custom_tomato_total{name=\"graph\",node=\"llm\"} 1\n"));
-}
-
-TEST_F(TomatoMetricTest, DoesNotTreatNonAsciiBytesAsWordBoundaries) {
-    matcher.consume("tomato\xc3\xa9 \xc3\xa9tomato tomato", true);
-    EXPECT_THAT(registry.collect(), testing::HasSubstr("custom_tomato_total{name=\"graph\",node=\"llm\"} 1\n"));
-}
-
-TEST_F(TomatoMetricTest, RequestsHaveIndependentMatchingState) {
-    TomatoMetric other(counter);
-    matcher.consume("tom", false);
-    other.consume("ato", true);
-    matcher.consume("ato", true);
-    EXPECT_THAT(registry.collect(), testing::HasSubstr("custom_tomato_total{name=\"graph\",node=\"llm\"} 1\n"));
-}
-
-TEST_F(TomatoMetricTest, AbortedStreamRetainsCompletedWordsWithoutFlushingPartialWord) {
-    matcher.consume("tomato tomato", false);
-    EXPECT_THAT(registry.collect(), testing::HasSubstr("custom_tomato_total{name=\"graph\",node=\"llm\"} 1\n"));
-}
-
-TEST_F(TomatoMetricTest, ObservesOnlyContentAndSeparatesSequences) {
-    ContinuousBatchingServableExecutionContext context;
-    context.generatedTextObserver = [&](std::string_view text, bool finish) { matcher.consume(text, finish); };
-    context.observeGeneratedText({ContentDelta{"tom"}, ReasoningDelta{"tomato"}, FinishDelta{}}, false);
-    context.observeGeneratedText({ContentDelta{"ato"}}, true);
-    context.observeGeneratedText({ContentDelta{"tom"}}, true);
-    context.observeGeneratedText({ContentDelta{"ato"}}, true);
-    EXPECT_THAT(registry.collect(), testing::HasSubstr("custom_tomato_total{name=\"graph\",node=\"llm\"} 1\n"));
-}
 
 class LLMPrefillMetricsTest : public ::testing::Test {
 protected:

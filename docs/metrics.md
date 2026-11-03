@@ -377,51 +377,6 @@ No registry lookup, metric-name construction or registration is needed in
 `Process`. Scrapes do not reset counters; use Prometheus `rate()` or `increase()`
 to calculate changes over time.
 
-### Tomato example in HttpLLMCalculator
-
-The existing `HttpLLMCalculator` contains an opt-in example. Add
-`input_side_packet: "CALCULATOR_METRICS:calculator_metrics"` to its node and
-enable metrics. No LLM model changes are required.
-
-In `Open`, the calculator registers:
-
-```cpp
-tomatoCounter = scope->second->registerCounter(
-    "custom_llm_tomato_occurrences_total",
-    "Whole-word tomato occurrences in generated content, ignoring ASCII case.");
-```
-
-Each request gets an independent matcher. The LLM response preparation code calls
-the request's `generatedTextObserver` with content text before JSON/SSE
-serialization; reasoning, tool-call arguments, prompt text, JSON metadata and
-audio are excluded. The observer feeds `TomatoMetric`, which calls
-`tomatoCounter->increment(occurrences)`.
-
-The matcher counts `tomato`, `Tomato`, and `TOMATO`, but not `tomatoes`,
-`tomato2` or `_tomato`. ASCII letters, digits, underscore and non-ASCII bytes
-are treated as word characters; this is not a Unicode word-segmentation API.
-It preserves unfinished-word state across streaming chunks, so `"tom"` followed
-by `"ato "` counts once. The last word is flushed at normal sequence completion.
-Unary responses count every returned choice separately. The matcher uses constant
-memory and does not retain the full generated response.
-
-Counts describe generated content observed by the calculator, **not guaranteed
-client delivery**. Matches already counted remain if a later error or
-disconnection occurs; an unfinished word is not flushed on an aborted stream.
-Without the side packet, the example does not register a metric or scan text.
-
-For example:
-
-```text
-# TYPE custom_llm_tomato_occurrences_total counter
-custom_llm_tomato_occurrences_total{name="small_llm",node="LLMExecutor"} 3
-```
-
-Inspect the example in
-[`http_llm_calculator.cc`](../src/llm/http_llm_calculator.cc) and
-[`tomato_metric.cpp`](../src/llm/tomato_metric.cpp), or reuse the same
-register/update API for unrelated events in another calculator.
-
 ### Naming, configuration and lifetime
 
 - Names must match `custom_<name>_total`, containing only ASCII letters, digits

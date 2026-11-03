@@ -785,13 +785,11 @@ TEST_P(LLMMetricsFlowTest, PublishesAtInfoLevelAndResetsAfterIdleUnload) {
         EXPECT_THAT(scrape, HasSubstr("ovms_llm_kv_cache_utilization_percent{name=\"metrics_llm\",node=\"llmNode1\"} "));
         EXPECT_THAT(scrape, HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"metrics_llm\",node=\"llmNode1\"} " + std::to_string(i) + "\n"));
         EXPECT_THAT(scrape, Not(HasSubstr("ovms_llm_prefill_speed_tokens_per_second_sum{name=\"metrics_llm\",node=\"llmNode1\"} 0\n")));
-        EXPECT_THAT(scrape, HasSubstr("custom_llm_tomato_occurrences_total{name=\"metrics_llm\",node=\"llmNode1\"} "));
     }
     auto& manager = server.getManager();
     auto& factory = manager.getMediapipeFactory();
     ASSERT_EQ(factory.putToSleepDefinition("metrics_llm"), StatusCode::OK);
     EXPECT_THAT(server.collect(), Not(HasSubstr("ovms_llm_")));
-    EXPECT_THAT(server.collect(), Not(HasSubstr("custom_llm_tomato_occurrences_total")));
     ASSERT_EQ(factory.wakeUpDefinition("metrics_llm", manager), StatusCode::OK);
     EXPECT_THAT(server.collect(), HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"metrics_llm\",node=\"llmNode1\"} 0\n"));
 }
