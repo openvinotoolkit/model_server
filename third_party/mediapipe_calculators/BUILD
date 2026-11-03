@@ -127,3 +127,19 @@ cc_library(
     ],
     linkstatic = 1,
 )
+
+# Keep calculator option extensions in the Windows host protobuf registry while
+# the OpenCV calculator implementations remain in an optional DLL.
+cc_library(
+    name = "opencv_calculator_options",
+    deps = [
+        "@mediapipe//mediapipe/calculators/image:image_cropping_calculator_cc_proto",
+        "@mediapipe//mediapipe/calculators/image:image_transformation_calculator_cc_proto",
+        "@mediapipe//mediapipe/calculators/image:opencv_encoded_image_to_image_frame_calculator_cc_proto",
+        "@mediapipe//mediapipe/calculators/image:opencv_image_encoder_calculator_cc_proto",
+        "@mediapipe//mediapipe/calculators/image:segmentation_smoothing_calculator_cc_proto",
+        "@mediapipe//mediapipe/calculators/image:warp_affine_calculator_cc_proto",
+        "@mediapipe//mediapipe/calculators/tensor:image_to_tensor_calculator_cc_proto",
+        "@mediapipe//mediapipe/calculators/util:annotation_overlay_calculator_cc_proto",
+    ],
+)

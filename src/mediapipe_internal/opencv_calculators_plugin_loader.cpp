@@ -15,24 +15,36 @@
 //*****************************************************************************
 #include "opencv_calculators_plugin_loader.hpp"
 
+#include <cstdlib>
+#include <filesystem>
 #include <mutex>
 #include <string>
+#include <vector>
 
+#include "mediapipe/framework/calculator_base.h"
 #include "src/logging.hpp"
 
 #ifdef __linux__
 #include <array>
 #include <climits>
-#include <filesystem>
-#include <vector>
 
 #include <dlfcn.h>
 #include <unistd.h>
 
-#include "mediapipe/framework/calculator_base.h"
-#include "mediapipe/framework/subgraph.h"
 #include "src/utils/env_guard.hpp"
+#elif _WIN32
+#include <windows.h>
+#include "mediapipe/calculators/image/image_cropping_calculator.pb.h"
+#include "mediapipe/calculators/image/image_transformation_calculator.pb.h"
+#include "mediapipe/calculators/image/opencv_encoded_image_to_image_frame_calculator.pb.h"
+#include "mediapipe/calculators/image/opencv_image_encoder_calculator.pb.h"
+#include "mediapipe/calculators/image/segmentation_smoothing_calculator.pb.h"
+#include "mediapipe/calculators/image/warp_affine_calculator.pb.h"
+#include "mediapipe/calculators/tensor/image_to_tensor_calculator.pb.h"
+#include "mediapipe/calculators/util/annotation_overlay_calculator.pb.h"
 #endif
+
+#include "mediapipe/framework/subgraph.h"
 
 namespace ovms {
 namespace {
@@ -40,6 +52,7 @@ namespace {
 struct PluginState {
     std::mutex mutex;
     void* handle = nullptr;
+    bool loaded = false;
     std::string error = "OpenCV calculator plugin is not loaded";
 };
 
@@ -47,6 +60,19 @@ PluginState& pluginState() {
     static PluginState state;
     return state;
 }
+
+#ifdef _WIN32
+void retainOpenCvCalculatorOptionDescriptors() {
+    (void)mediapipe::ImageCroppingCalculatorOptions::ext.number();
+    (void)mediapipe::ImageTransformationCalculatorOptions::ext.number();
+    (void)mediapipe::OpenCvEncodedImageToImageFrameCalculatorOptions::ext.number();
+    (void)mediapipe::OpenCvImageEncoderCalculatorOptions::ext.number();
+    (void)mediapipe::SegmentationSmoothingCalculatorOptions::ext.number();
+    (void)mediapipe::WarpAffineCalculatorOptions::ext.number();
+    (void)mediapipe::ImageToTensorCalculatorOptions::ext.number();
+    (void)mediapipe::AnnotationOverlayCalculatorOptions::ext.number();
+}
+#endif
 
 #ifdef __linux__
 std::vector<std::string> pluginCandidates() {
@@ -96,6 +122,49 @@ bool exposeHostSymbols(std::string& error) {
     }
     return true;
 }
+#elif _WIN32
+std::vector<std::string> pluginCandidates() {
+    if (const char* overridePath = std::getenv("OVMS_OPENCV_CALCULATORS_PLUGIN_PATH");
+        overridePath != nullptr && overridePath[0] != '\0') {
+        return {overridePath};
+    }
+
+    std::vector<std::string> candidates;
+    std::vector<HMODULE> modules;
+    HMODULE loaderModule = nullptr;
+    if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            reinterpret_cast<LPCSTR>(&loadOpenCvCalculatorsPlugin), &loaderModule)) {
+        modules.emplace_back(loaderModule);
+    }
+    if (HMODULE executableModule = GetModuleHandleA(nullptr); executableModule != nullptr) {
+        modules.emplace_back(executableModule);
+    }
+
+    std::vector<char> modulePath(32768);
+    for (const auto module : modules) {
+        const DWORD pathLength = GetModuleFileNameA(module, modulePath.data(), static_cast<DWORD>(modulePath.size()));
+        if (pathLength == 0 || static_cast<size_t>(pathLength) >= modulePath.size()) {
+            continue;
+        }
+        const auto directory = std::filesystem::path(std::string(modulePath.data(), pathLength)).parent_path();
+        candidates.emplace_back((directory / "ovms_opencv_calculators.dll").string());
+        candidates.emplace_back((directory / "lib" / "ovms_opencv_calculators.dll").string());
+    }
+
+    if (const char* runfilesDirectory = std::getenv("RUNFILES_DIR");
+        runfilesDirectory != nullptr && runfilesDirectory[0] != '\0') {
+        const char* workspace = std::getenv("TEST_WORKSPACE");
+        const std::string workspacePath = workspace != nullptr && workspace[0] != '\0' ? workspace : "ovms";
+        candidates.emplace_back((std::filesystem::path(runfilesDirectory) / workspacePath / "src/lib/ovms_opencv_calculators.dll").string());
+    }
+    if (const char* testSourceDirectory = std::getenv("TEST_SRCDIR");
+        testSourceDirectory != nullptr && testSourceDirectory[0] != '\0') {
+        const char* workspace = std::getenv("TEST_WORKSPACE");
+        const std::string workspacePath = workspace != nullptr && workspace[0] != '\0' ? workspace : "ovms";
+        candidates.emplace_back((std::filesystem::path(testSourceDirectory) / workspacePath / "src/lib/ovms_opencv_calculators.dll").string());
+    }
+    return candidates;
+}
 #endif
 
 }  // namespace
@@ -103,7 +172,7 @@ bool exposeHostSymbols(std::string& error) {
 bool loadOpenCvCalculatorsPlugin() {
     auto& state = pluginState();
     std::lock_guard<std::mutex> lock(state.mutex);
-    if (state.handle != nullptr) {
+    if (state.loaded) {
         return true;
     }
 #ifdef __linux__
@@ -127,6 +196,7 @@ bool loadOpenCvCalculatorsPlugin() {
                 continue;
             }
             state.handle = handle;
+            state.loaded = true;
             state.error.clear();
             SPDLOG_DEBUG("OpenCV calculators plugin loaded from: {}", candidate);
             return true;
@@ -137,8 +207,41 @@ bool loadOpenCvCalculatorsPlugin() {
         }
         state.error += candidate + ": " + (error ? error : "dynamic loader failed");
     }
-#else
-    state.error = "runtime OpenCV calculator plugins are not supported on this platform";
+#elif _WIN32
+    state.error.clear();
+    retainOpenCvCalculatorOptionDescriptors();
+    const auto candidates = pluginCandidates();
+    if (candidates.empty()) {
+        state.error = "cannot locate the OVMS module directory or OpenCV calculator plugin";
+    }
+    for (const auto& candidate : candidates) {
+        HMODULE handle = LoadLibraryExA(candidate.c_str(), nullptr,
+            LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+        if (handle == nullptr) {
+            if (!state.error.empty()) {
+                state.error += "; ";
+            }
+            state.error += candidate + ": Windows loader error " + std::to_string(GetLastError());
+            continue;
+        }
+
+        using RegisterFactories = bool (*)(void*, void*);
+        auto registerFactories = reinterpret_cast<RegisterFactories>(GetProcAddress(handle, "OVMS_RegisterOpenCvCalculators"));
+        if (registerFactories == nullptr ||
+            !registerFactories(mediapipe::CalculatorBaseRegistry::functions(), mediapipe::SubgraphRegistry::functions())) {
+            if (!state.error.empty()) {
+                state.error += "; ";
+            }
+            state.error += candidate + ": missing or incompatible OVMS_RegisterOpenCvCalculators entry point";
+            continue;
+        }
+
+        state.handle = handle;
+        state.loaded = true;
+        state.error.clear();
+        SPDLOG_DEBUG("OpenCV calculators plugin loaded from: {}", candidate);
+        return true;
+    }
 #endif
     SPDLOG_DEBUG("OpenCV calculators plugin unavailable: {}", state.error);
     return false;
@@ -147,12 +250,17 @@ bool loadOpenCvCalculatorsPlugin() {
 std::string getOpenCvCalculatorsPluginDiagnostic() {
     auto& state = pluginState();
     std::lock_guard<std::mutex> lock(state.mutex);
-    if (state.handle != nullptr) {
+    if (state.loaded) {
         return {};
     }
+#ifdef _WIN32
+    return " OpenCV-dependent calculator/operation or options require the optional "
+           "ovms_opencv_calculators.dll plugin and OpenCV libraries. Missing OpenCV/plugin: " + state.error;
+#else
     return " OpenCV-dependent calculator/operation or options require the optional "
            "libovms_opencv_calculators.so plugin and OpenCV libraries. Missing OpenCV/plugin: " +
            state.error;
+#endif
 }
 
 }  // namespace ovms

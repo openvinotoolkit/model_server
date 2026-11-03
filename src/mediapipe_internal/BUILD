@@ -27,11 +27,11 @@ ovms_cc_library(
     srcs = ["opencv_calculators_plugin_loader.cpp"],
     deps = [
         "//src:libovmslogging",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe//mediapipe/framework:subgraph",
     ] + select({
-        "//src:windows": [],
+        "//src:windows": ["@mediapipe_calculators//:opencv_calculator_options"],
         "//conditions:default": [
-            "@mediapipe//mediapipe/framework:calculator_framework",
-            "@mediapipe//mediapipe/framework:subgraph",
             "//src/utils:env_guard",
         ],
     }),

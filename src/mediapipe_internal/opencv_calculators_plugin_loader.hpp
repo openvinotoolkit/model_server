@@ -19,9 +19,8 @@
 
 namespace ovms {
 
-// On Linux, loads upstream calculator and option registrations into the host registries.
-// Returns false on unsupported platforms.
-// The handle is retained for the process lifetime; absence is not a server error.
+// Ensures upstream calculator and option registrations are available to the host.
+// Loads the optional platform plugin and retains its handle for process lifetime.
 bool loadOpenCvCalculatorsPlugin();
 
 // Empty after successful loading, otherwise explains the missing OpenCV plugin.

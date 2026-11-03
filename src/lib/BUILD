@@ -21,6 +21,7 @@
 
 load("//:common_settings.bzl", "COMMON_LOCAL_DEFINES", "COMMON_STATIC_LIBS_LINKOPTS")
 load("//src/mediapipe_internal:runtime_plugin.bzl", "runtime_plugin_deps")
+load("@aspect_bazel_lib//:e2e/copy_action/copy.bzl", "simple_copy_file")
 
 # Resolve common framework, protobuf and registry references against the host.
 # Do not statically embed a second copy of any of their registration objects.
@@ -35,19 +36,40 @@ runtime_plugin_deps(
 )
 
 cc_binary(
-    name = "ovms_opencv_calculators",
+    name = "libovms_opencv_calculators.so",
     srcs = ["//src/mediapipe_internal:opencv_calculators_plugin_src"],
-    deps = [":opencv_calculators_plugin_deps"],
-    linkopts = [
-        "-Wl,--allow-shlib-undefined",
-        "-Wl,-rpath,$$ORIGIN",
-    ],
+    deps = select({
+        "//src:windows": ["@mediapipe_calculators//:opencv_calculators"],
+        "//conditions:default": [":opencv_calculators_plugin_deps"],
+    }),
+    linkopts = select({
+        "//src:windows": [],
+        "//conditions:default": [
+            "-Wl,--allow-shlib-undefined",
+            "-Wl,-rpath,$$ORIGIN",
+        ],
+    }),
     linkshared = True,
     linkstatic = True,
-    copts = ["-Wno-deprecated-declarations"],
-    target_compatible_with = select({
-        "//src:windows": ["@platforms//:incompatible"],
-        "//conditions:default": [],
+    copts = select({
+        "//src:windows": [],
+        "//conditions:default": ["-Wno-deprecated-declarations"],
+    }),
+    visibility = ["//visibility:public"],
+)
+
+simple_copy_file(
+    name = "copy_ovms_opencv_calculators",
+    src = "libovms_opencv_calculators.so",
+    out = "ovms_opencv_calculators.dll",
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "ovms_opencv_calculators_plugin",
+    srcs = select({
+        "//src:windows": [":copy_ovms_opencv_calculators"],
+        "//conditions:default": [":libovms_opencv_calculators.so"],
     }),
     visibility = ["//visibility:public"],
 )

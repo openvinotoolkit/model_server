@@ -41,7 +41,13 @@ void registerFactories(decltype(Registry::functions()) hostRegistry) {
 
 }  // namespace
 
-extern "C" __attribute__((visibility("default"))) bool OVMS_RegisterOpenCvCalculators(
+#ifdef _WIN32
+#define OVMS_OPENCV_CALCULATORS_EXPORT __declspec(dllexport)
+#else
+#define OVMS_OPENCV_CALCULATORS_EXPORT __attribute__((visibility("default")))
+#endif
+
+extern "C" OVMS_OPENCV_CALCULATORS_EXPORT bool OVMS_RegisterOpenCvCalculators(
     void* calculatorRegistry, void* subgraphRegistry) {
     if (calculatorRegistry == nullptr || subgraphRegistry == nullptr) {
         return false;

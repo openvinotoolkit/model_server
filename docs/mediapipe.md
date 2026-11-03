@@ -50,13 +50,13 @@ Check their [documentation](https://github.com/openvinotoolkit/mediapipe/blob/ma
 
 ### Optional OpenCV calculators
 
-OpenCV-dependent image calculators are isolated from the always-loaded server and registered when a graph requiring them is deployed. Their upstream calculator sources are unchanged. OpenCV-free graphs and raw `IMAGE` stream transport do not require OpenCV.
+OpenCV-dependent image calculators use an optional runtime plugin on both Linux and Windows. Their upstream calculator sources are unchanged.
 
-On Linux, install the optional calculator plugin and its OpenCV dependencies from the same OVMS release. A graph that needs an OpenCV calculator fails deployment with an explicit OpenCV dependency diagnostic if the plugin or its dependencies cannot be loaded. Other graphs remain usable. Calculator plugins remain loaded for the process lifetime, even after the graph is unloaded.
+Install the matching calculator plugin and OpenCV dependencies from the same OVMS release. A graph that needs an OpenCV calculator fails deployment with an explicit dependency diagnostic if the plugin or its dependencies cannot be loaded. Other graphs remain usable. The plugin remains loaded for the process lifetime, even after the graph is unloaded. Numeric models and graphs that do not use OpenCV calculators do not require the plugin.
 
 When OVMS is embedded as a locally loaded shared library, the calculator loader promotes the already-loaded host library to global symbol visibility before loading the plugin. This allows the plugin to share the host's MediaPipe registries and types without requiring callers to load OVMS with `RTLD_GLOBAL`. Failure to promote the host is reported as a deployment error.
 
-The OpenCV calculator plugin is currently Linux-only. Deploying a graph requiring it on an unsupported platform reports that limitation explicitly. The stb fallback for [encoded model inputs](./binary_input.md) does not replace operations inside upstream MediaPipe calculators.
+On Windows, the DLL is loaded from the OVMS package directory and registers calculator factories into the host MediaPipe registries. The DLL and OpenCV libraries may be omitted when deploying only models and graphs that do not use OpenCV calculators. The stb fallback for [encoded model inputs](./binary_input.md) does not replace operations inside upstream MediaPipe calculators.
 
 ## PythonExecutorCalculator
 

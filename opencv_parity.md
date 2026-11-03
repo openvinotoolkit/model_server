@@ -15,9 +15,10 @@ The branch separates two responsibilities:
 - MediaPipe image operations: upstream OpenCV-dependent calculators moved behind
   a separate optional plugin. stb_image does not replace these calculators.
 
-The goal is that numeric inference and OpenCV-free graphs remain usable without
-OpenCV, while installing the matching optional components restores image formats
-and calculator functionality on both platforms.
+The goal is that numeric inference and graphs that do not use OpenCV calculators
+remain usable without the OpenCV runtime on both platforms. Installing the
+matching optional decoder and calculator plugins restores OpenCV image formats
+and MediaPipe image operations.
 
 ## Current Implementation
 
@@ -26,9 +27,10 @@ and calculator functionality on both platforms.
 | Image decoder | `libovms_opencv_image_decoder.so` | `ovms_opencv_image_decoder.dll` target and loader exist |
 | Decoder packaging | Staged and checked by `create_package.sh` | DLL staging and positive package smoke gate implemented; native validation pending |
 | stb_image fallback | Implemented | Implemented, but packaged runtime behavior is unverified |
-| OpenCV calculator plugin | Execution tests pass after applying the type-identity patch | Excluded from the build; loader reports unsupported |
-| MediaPipe runtime ownership | Separate runtime shared library | Primarily in-process in `ovms.exe` |
-| OpenCV-free process tests | Passing after the glog ownership fix | No equivalent process-level validation |
+| OpenCV calculator registration | Optional runtime plugin; execution tests pass | Optional DLL loaded into the in-process MediaPipe registries |
+| OpenCV runtime dependency | Optional on server startup | Optional until an OpenCV calculator graph is deployed |
+| MediaPipe runtime ownership | Separate runtime shared library | In-process in `ovms.exe`; optional calculators are a separate DLL |
+| OpenCV-free process tests | Passing after the glog ownership fix | DLL loader and graph execution covered by `ovms_test`; process-level missing-DLL test pending |
 
 Building the server successfully is not sufficient validation: the original
 Linux runtime failures occurred after compilation and linking succeeded.
@@ -59,35 +61,59 @@ OpenCV-free test modes pass on Linux. Native Windows package execution remains
 required before B1 can be marked resolved; no Windows runner is available in
 this session.
 
-### B2: Windows Loses OpenCV MediaPipe Calculators (P1)
+### B2: Windows OpenCV MediaPipe Calculators (Implementation Added; Native Validation Pending)
 
 `third_party/mediapipe_calculators/BUILD` moves the OpenCV-dependent calculators
-out of the common registration set. `src/lib/BUILD` excludes their plugin on
-Windows, and `opencv_calculators_plugin_loader.cpp` returns unsupported outside
-Linux. There is no Windows registration fallback.
+out of the common registration set. Windows now builds the same optional
+calculator target as a DLL and loads it with `LoadLibraryEx`, installing factories
+into the in-process MediaPipe registries through the exported C registration API.
 
-Affected functionality includes image decoding/encoding, text and annotation
-overlays, cropping, transformation, image-to-tensor conversion, segmentation
-smoothing, and affine warping. The registry test explicitly removes these
-calculators from Windows expectations, so that test does not protect parity.
+This restores availability for the affected image decode/encode, text and
+annotation overlays, crop/transform, image-to-tensor, segmentation smoothing,
+and affine warp calculators without linking their implementations into the
+Windows server executable. The decoder and calculator DLLs load OpenCV from their
+own directory; deployments that do not use these features can omit the plugin
+DLLs and OpenCV runtime.
 
-Required decision: choose a Windows DLL boundary with explicit host/plugin API
-and shared registration ownership, or an alternative implementation that retains
-the required functionality without making OpenCV a startup dependency. A static
-fallback can restore calculator availability temporarily, but is not full
-optional-dependency parity if it forces OpenCV to load at startup.
+Implemented:
 
-Required work:
+- Build the upstream OpenCV calculator set as a Windows DLL and export its C
+  registration entry point.
+- Load the DLL beside OVMS or from its `lib` directory, with an environment path
+  override for embedding and diagnostics when it is unavailable.
+- Keep calculator option protos in the Windows host so graph config parsing uses
+  the host registry while calculator factories live in the optional DLL.
+- Remove the test code that erased the OpenCV calculator names from Windows
+  registry expectations.
+- Add a cross-platform `ovms_test` that parses calculator options and executes a
+  one-pixel encoded-image graph through the loaded plugin.
+- Update the MediaPipe documentation with the platform-specific dependency model.
 
-- Implement the chosen Windows build, loading, registration, and packaging path.
-- Support actionable missing/incompatible dependency diagnostics.
-- Validate calculator options, nested graphs, and packet exchange across the
-  chosen boundary.
-- Restore positive Windows calculator coverage instead of only erasing registry
-  expectations.
-- Update the currently documented Linux-only limitation when support is verified.
+TODO: add a package-level Windows graph smoke after the package is extracted. The
+current package script checks that the calculator DLL is present, and its image
+smoke validates the decoder, but neither proves that a MediaPipe graph can load
+the calculator DLL from the packaged directory.
 
-Status: confirmed by source inspection and documented as a current limitation.
+The current Windows CI build/package commands are:
+
+```bat
+windows_build.bat <short_bazel_path> --with_tests
+windows_create_package.bat <short_bazel_path> [--with_python]
+```
+
+The first command runs `//src:ovms_test`, including the new option-parsing and
+decoder-graph test from Bazel runfiles. The second creates `dist\windows\ovms.zip`
+and runs the existing packaged decoder smoke. Extend the package stage with a
+MediaPipe graph that uses `OpenCvEncodedImageToImageFrameCalculator`, then assert
+the graph reaches `AVAILABLE` and returns the decoded packet from the extracted
+package. That is the missing packaged-DLL check.
+
+Status: Windows DLL build, load, registration, option-proto anchoring, packaging,
+and a graph-execution gtest are implemented. Linux plugin regression tests pass.
+Windows `cquery` selects `ovms_opencv_calculators.dll` and host option protos when
+MediaPipe is enabled, and excludes the option protos when disabled. Native
+Windows compilation, DLL loading, option parsing, graph execution, and package
+validation are still required.
 
 ### B3: Linux Plugin Packet Types Do Not Match the Host (Resolved)
 
@@ -138,22 +164,69 @@ the passing result is in `test_log/no_opencv_runtime_test.fixed.log`.
 
 ### B5: Integration Coverage Is Not Gated in CI (P2)
 
-The explicit test lists in `run_unit_tests.sh` and `windows_test.bat` do not include
-the new dedicated calculator-plugin or OpenCV-free runtime targets. The latter
-uses Linux `LD_AUDIT`; both integration targets exclude Windows.
+The Linux-only dedicated calculator-plugin and OpenCV-free process targets are not
+in the `run_unit_tests.sh` target list. Windows `windows_test.bat` runs
+`//src:ovms_test`, which now includes the DLL registration and decoder graph test,
+but there is no Windows process-level missing-plugin test. Native Windows
+execution is still required.
 
 The shared image-conversion tests allow the decoder to be unavailable, so passing
 them alone does not establish that the packaged OpenCV backend works.
 
 Required work:
 
-- Add the focused Linux integration targets to the appropriate CI configuration.
-- Add a Windows process-level equivalent that runs without OpenCV dependencies.
+- Add the focused Linux plugin and OpenCV-free integration targets to CI.
+- Add a Windows process-level missing-plugin test that verifies non-OpenCV
+  workloads still start and serve inference without the optional DLLs.
 - Add a separate positive test that requires the decoder to load and decode an
   OpenCV-only format.
 - Test clean extracted packages as well as Bazel build/runfiles layouts.
 
 Status: confirmed by source inspection.
+
+### Windows Decoder Performance Validation (TODO)
+
+`//src/image_utils:image_decode_benchmark` currently compares direct OpenCV
+decoding, stb decoding with BGR conversion, and the OpenCV path including the
+encoded-buffer copy. It reports CSV rows with median/p95 microseconds and images
+per second. This compares decoder throughput, but because the benchmark binary
+links OpenCV directly it does not measure optional-DLL discovery or startup with
+OpenCV libraries absent.
+
+On a Windows build machine with the dependencies configured as in
+`windows_build.bat`, build and run it against the same representative image set:
+
+```bat
+set /p bazelVersion=<.bazelversion
+call C:\opt\openvino\setupvars.bat
+call C:\opt\opencv_4.14.0\setup_vars_opencv4.cmd
+C:\opt\bazel-%bazelVersion%-windows-x86_64.exe --output_user_root=C:\opt build --config=win_mp_on --action_env OpenVINO_DIR=C:/opt/openvino/runtime/cmake //src/image_utils:image_decode_benchmark
+bazel-out\x64_windows-opt\bin\src\image_utils\image_decode_benchmark.exe src\test\images\rgb.jpg src\test\images\gray16.png
+```
+
+Save the CSV output and compare the `opencv` and `stb_bgr` rows over repeated
+runs. Use identical image files, machine, and build configuration; compare the
+median and p95, and confirm the reported output difference. This benchmark only
+measures decoding (not image encoding).
+
+Also verify optional runtime behavior using the packaged process smoke. The
+normal `windows_create_package.bat` run exercises the DLL-present path via
+`--expect-opencv`. For the DLL-absent case, copy `dist\windows\ovms` to a
+temporary directory, remove `ovms_opencv_image_decoder.dll`,
+`ovms_opencv_calculators.dll`, and `opencv_world*.dll`, then run:
+
+```bat
+python src\test\no_opencv_server_test.py . - C:\path\to\temporary\ovms\ovms.exe
+```
+
+The second run must start OVMS, decode JPEG through stb, return an explicit
+missing-OpenCV error for PFM, and serve numeric inference. It is a functional
+fallback check, not a throughput measurement.
+
+TODO: add an optional-plugin mode to `image_decode_benchmark` that times the
+actual `decodeImage(AUTO)` path, then run that mode once with the package DLLs
+present and once with them removed. This is needed to measure plugin dispatch and
+the true no-OpenCV runtime path rather than only direct OpenCV versus stb codecs.
 
 ### B6: Runtime Factory Archive Ordered Before Its Caller (Resolved)
 
@@ -179,19 +252,17 @@ Evidence: `test_log/mediapipe_graph_runtime.fixed.log` and
 
 ## Implementation Sequence
 
-1. Linux baseline repair: B3 and B4 are resolved.
-2. Windows decoder packaging and positive package test: implemented; validate B1
-  on a native Windows runner before declaring it complete.
-3. Decide and implement Windows calculator ownership/loading for B2. Do not copy
-   the ELF unresolved-symbol strategy directly into the Windows DLL design.
-4. Add the positive and negative runtime gates in B5 for both platforms.
-5. Run Linux C API `mp_off` smoke coverage and the normal MediaPipe-enabled server
+1. Linux baseline repair: B3, B4, and B6 are resolved.
+2. Validate B1 and B2 with a native Windows build, graph execution, and package run.
+3. Add positive and negative runtime gates in B5 on both platforms.
+4. Run Linux C API `mp_off` smoke coverage and the normal MediaPipe-enabled server
    checks, then validate Windows release behavior and update the documentation.
 
 ## Acceptance Criteria
 
-- Numeric inference and an OpenCV-free MediaPipe graph work without OpenCV on
-  both platforms.
+- Numeric inference and a graph without OpenCV calculators work without the
+  OpenCV runtime on both platforms when the optional plugin DLLs and OpenCV
+  libraries are absent.
 - Encoded JPEG/PNG inputs use stb_image successfully when OpenCV is absent.
 - With the matching decoder installed, a positive test proves OpenCV is selected
   and decodes an OpenCV-only format.
@@ -203,8 +274,8 @@ Evidence: `test_log/mediapipe_graph_runtime.fixed.log` and
   graphs remain usable.
 - Local/shared C API hosts and normal executables both resolve their optional
   components from the supported package layout.
-- Neither platform has an unavoidable OpenCV startup dependency, including through
-  transitively loaded runtime libraries.
+- Neither platform has an unavoidable OpenCV startup dependency, including
+  through transitively loaded runtime libraries.
 - No duplicate glog, protobuf, or MediaPipe registrations occur at startup or
   plugin load time.
 - CI exercises the positive and negative paths rather than accepting a missing
@@ -221,9 +292,10 @@ OpenVINO/GenAI `2026.5.0.0.dev20261029`.
 | C API benchmark with `mp_off` and dummy-only config | Passed |
 | `//src/image_utils:kserve_image_conversion_test` | 12 tests passed |
 | `//src:opencv_calculators_plugin_test` | All 8 passed after the type-identity patch |
+| `WhitelistRegistered.MediapipeCalculatorsList` | Passed after making the test require the full calculator registry |
 | `//src/image_utils:no_opencv_runtime_test` | Passed after the glog ownership fix; 12 conversion tests and the server smoke checks passed |
 | OpenCV-required process smoke | Passed: JPEG, OpenCV-only PFM, and numeric inference |
-| Windows build and runtime/package tests | Not run; source inspection only |
+| Windows build and runtime/package tests | Not run; Windows-configured Bazel analysis only |
 
 The latest complete Linux run passed all 3 targets and 32 test cases. Its log is
 `test_log/opencv_parity_linux_fixed.log`; the corrected calculator execution log

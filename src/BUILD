@@ -47,6 +47,12 @@ config_setting(
     visibility = ["//visibility:public"],
 )
 
+config_setting(
+    name = "windows_with_mediapipe",
+    values = {"cpu": "x64_windows"},
+    define_values = {"MEDIAPIPE_DISABLE": "0"},
+)
+
 ovms_cc_library(
     name = "executor_base",
     hdrs = ["executor_base.hpp"],
@@ -63,7 +69,7 @@ filegroup(
         "//src/image_utils:opencv_image_decoder",
     ] + selects.with_or({
         ("//src:windows", "//:disable_mediapipe"): [],
-        "//conditions:default": ["//src/lib:ovms_opencv_calculators"],
+        "//conditions:default": ["//src/lib:ovms_opencv_calculators_plugin"],
     }),
     visibility = ["//visibility:public"],
 )
@@ -155,6 +161,9 @@ ovms_cc_library(
             "@mediapipe_calculators//:mediapipe_calculators",
         ],
         "//:disable_mediapipe": [],
+    }) + select({
+        ":windows_with_mediapipe": ["@mediapipe_calculators//:opencv_calculator_options"],
+        "//conditions:default": [],
     }),
     visibility = ["//visibility:public"],
     linkstatic = 1,
@@ -2416,8 +2425,8 @@ cc_test(
     ],
     local_defines = COMMON_LOCAL_DEFINES,
     linkstatic = 1,
-    target_compatible_with = selects.with_or({
-        ("//src:windows", "//:disable_mediapipe"): ["@platforms//:incompatible"],
+    target_compatible_with = select({
+        "//src:windows": ["@platforms//:incompatible"],
         "//conditions:default": [],
     }),
 )

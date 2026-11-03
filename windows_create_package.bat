@@ -196,6 +196,13 @@ if not exist "!opencv_decoder_src!" (
 )
 copy /Y "!opencv_decoder_src!" dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
+set "opencv_calculators_src=%cd%\bazel-out\x64_windows-opt\bin\src\lib\ovms_opencv_calculators.dll"
+if not exist "!opencv_calculators_src!" (
+    echo Missing ovms_opencv_calculators.dll. Ensure //src/lib:ovms_opencv_calculators is built.
+    exit /b 1
+)
+copy /Y "!opencv_calculators_src!" dist\windows\ovms
+if !errorlevel! neq 0 exit /b !errorlevel!
 copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\openvino_genai.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\openvino_tokenizers.dll dist\windows\ovms
@@ -309,6 +316,14 @@ if not exist dist\windows\ovms\libovmspython.dll (
 )
 if not exist dist\windows\ovms\libpython_calculators.dll (
     echo Packaging validation failed: libpython_calculators.dll is missing from dist\windows\ovms.
+    exit /b 1
+)
+if not exist dist\windows\ovms\ovms_opencv_image_decoder.dll (
+    echo Packaging validation failed: ovms_opencv_image_decoder.dll is missing from dist\windows\ovms.
+    exit /b 1
+)
+if not exist dist\windows\ovms\ovms_opencv_calculators.dll (
+    echo Packaging validation failed: ovms_opencv_calculators.dll is missing from dist\windows\ovms.
     exit /b 1
 )
 
