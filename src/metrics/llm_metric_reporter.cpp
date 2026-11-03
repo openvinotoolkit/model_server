@@ -96,7 +96,11 @@ void LLMMetricReporter::setCacheUtilization(double percent) {
         return;
     }
     if (!std::isfinite(percent) || percent < 0.0 || percent > 100.0) {
+#if (MEDIAPIPE_DISABLE == 0)
         SPDLOG_LOGGER_WARN(llm_executor_logger, "Ignoring invalid GenAI KV cache utilization: {}", percent);
+#else
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Ignoring invalid GenAI KV cache utilization: {}", percent);
+#endif
         return;
     }
     cacheUtilization->set(percent);
@@ -108,7 +112,11 @@ void LLMMetricReporter::observePrefillSpeed(double tokensPerSecond) {
         return;
     }
     if (!std::isfinite(tokensPerSecond) || tokensPerSecond <= 0.0) {
+#if (MEDIAPIPE_DISABLE == 0)
         SPDLOG_LOGGER_WARN(llm_calculator_logger, "Ignoring invalid TTFT-derived prefill speed: {}", tokensPerSecond);
+#else
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Ignoring invalid TTFT-derived prefill speed: {}", tokensPerSecond);
+#endif
         return;
     }
     prefillSpeed->observe(tokensPerSecond);
