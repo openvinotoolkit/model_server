@@ -56,12 +56,11 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
             processors.emplace_back(std::make_unique<VideoFramesProcessor>(
                 settings.allowedLocalMediaPath,
                 settings.allowedMediaDomains));
-            if (context.config.audioInputConfig.has_value()) {
-                processors.emplace_back(std::make_unique<AudioDecodingProcessor>(
-                    context.config.audioInputConfig->resamplingRequired));
-            }
         }
-
+        if (context.config.audioInputConfig.has_value()) {
+            processors.emplace_back(std::make_unique<AudioDecodingProcessor>(
+                context.config.audioInputConfig->resamplingRequired));
+        }
         processors.emplace_back(std::make_unique<TextContentNormalizationProcessor>());
 
         if (context.chatTemplateCaps.needsWorkarounds()) {
