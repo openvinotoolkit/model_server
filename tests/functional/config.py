@@ -427,3 +427,12 @@ run_on_commit_tests = get_bool("TT_ON_COMMIT_TESTS", True)
 """ TT_RUN_REGRESSION_TESTS - False -> api-regression tests are not run,
                              True -> api-regression tests are run, default: False """
 run_regression_tests = get_bool("TT_RUN_REGRESSION_TESTS", False)
+
+""" TT_OVMS_GRPC_PORT - ovms grpc port to be used for tests """
+ovms_grpc_port = get_int("TT_OVMS_GRPC_PORT", None)
+
+""" TT_OVMS_REST_PORT - ovms rest port to be used for tests """
+ovms_rest_port = get_int("TT_OVMS_REST_PORT", None)
+
+""" TT_OVMS_IP_ADDRESS - ovms ip address to be used for tests """
+ovms_ip_address = os.environ.get("TT_OVMS_IP_ADDRESS", "localhost")

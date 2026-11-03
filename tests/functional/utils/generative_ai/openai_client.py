@@ -24,7 +24,7 @@ from openai import OpenAI
 
 
 def run_inference(parameters):
-    base_url = f"http://localhost:{parameters.port}/v3"
+    base_url = f"http://{parameters.ip_address}:{parameters.port}/v1"
     client = OpenAI(
         base_url=base_url,
         api_key=base_url
@@ -116,6 +116,11 @@ def run_inference(parameters):
 
 if __name__ == '__main__':
     parser = ArgumentParser(description="Python script for running inference using OpenAI client")
+    parser.add_argument(
+        "--ip_address",
+        help="ip address",
+        required=True,
+    )
     parser.add_argument(
         "--port",
         help="port",

@@ -29,6 +29,8 @@ from tests.functional.config import (
     kv_cache_size_value,
     kv_cache_precision_value,
     ovms_c_repo_path,
+    ovms_ip_address,
+    ovms_rest_port,
 )
 from tests.functional.constants.generative_ai import GenerativeAIPluginConfig
 from tests.functional.constants.os_type import OsType
@@ -178,14 +180,20 @@ class GenerativeAIUtils:
             enable_word_timestamps=enable_word_timestamps,
         )
 
-        step("Start OVMS")
-        result = start_ovms(
-            context,
-            OvmsParams(models=[model], use_config=True, use_subconfig=model.use_subconfig, log_level=log_level,
-                       allowed_local_media_path=allowed_local_media_path, allowed_media_domains=allowed_media_domains),
-            timeout=model.model_timeout, environment=env,
-        )
-        port = result.ovms.get_port(openai_rest_api_type)
+        if ovms_rest_port is None:
+            step("Start OVMS")
+            result = start_ovms(
+                context,
+                OvmsParams(
+                    models=[model], use_config=True, use_subconfig=model.use_subconfig, log_level=log_level,
+                    allowed_local_media_path=allowed_local_media_path, allowed_media_domains=allowed_media_domains
+                ),
+                timeout=model.model_timeout, environment=env,
+            )
+            port = result.ovms.get_port(openai_rest_api_type)
+        else:
+            result = None
+            port = ovms_rest_port
 
         request_params = cls.prepare_request_params(endpoint, **request_params_kwargs)
 
@@ -194,6 +202,9 @@ class GenerativeAIUtils:
     @staticmethod
     def unload_model_and_verify(model, result, port, openai_rest_api_type, endpoint, request_parameters,
                                 dataset=None, error_type=NotFoundError):
+        if result is None:
+            return
+
         step("Unload model")
         ovms_log_monitor = result.ovms.create_log(False)
         result.ovms.unload_all_models()
@@ -215,7 +226,8 @@ class GenerativeAIUtils:
 
     @staticmethod
     def prepare_python_script_command(
-            context, tmp_path, port, model, endpoint, input_data, request_parameters, image_path=None, timeout=900
+            context, tmp_path, port, model, endpoint, input_data, request_parameters, ip_address=ovms_ip_address,
+            image_path=None, timeout=900
     ):
         input_data_json_path = os.path.join(tmp_path, "input_data.json")
         with open(input_data_json_path, "w", encoding='utf-8') as fo:
@@ -227,8 +239,10 @@ class GenerativeAIUtils:
             ovms_c_repo_path, "tests", "functional", "utils", "generative_ai", "openai_client.py")
         request_params_dict = request_parameters.prepare_dict(use_extra_body=False)
         request_params_str = " ".join(f"--{key} {value}" for key, value in request_params_dict.items())
-        cmd = (f"{venv_cmd} && python3 {script_path} --port {port} --model {model.name} --endpoint {endpoint} "
-               f"--input_data_file {input_data_json_path} {request_params_str} --timeout {timeout}")
+
+        cmd = (f"{venv_cmd} && python3 {script_path} --ip_address {ip_address} --port {port} --model {model.name} "
+               f"--endpoint {endpoint} --input_data_file {input_data_json_path} {request_params_str} "
+               f"--timeout {timeout}")
         if image_path is not None:
             cmd += f" --image_path {image_path}"
         return cmd
@@ -281,6 +295,9 @@ class GenerativeAIUtils:
             cos_sim_reference=0.7,
             embeddings_model_type=Qwen3Embedding06BFp16OvHf,
     ):
+        if result is None:
+            return
+
         step("Check Similarity")
         embeddings_model = GenerativeAIUtils.prepare_model(embeddings_model_type)
         cls.load_llm_model_and_verify(embeddings_model, result, context, port)

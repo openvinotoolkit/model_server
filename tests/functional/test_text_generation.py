@@ -130,7 +130,7 @@ class TestTextGeneration:
     @pytest.mark.parametrize("ovms_log_level", [Ovms.LOG_LEVEL_INFO, Ovms.LOG_LEVEL_DEBUG, Ovms.LOG_LEVEL_TRACE])
     @pytest.mark.parametrize("pipeline_type", PipelineType.TEXT_GENERATION)
     @pytest.mark.timeout(calculate_generative_test_timeout(960))
-    def test_text_generation_multiple_requests(
+    def test_on_commit_text_generation_endpoints_multiple_requests(
             self,
             context: Context,
             tmp_path,
