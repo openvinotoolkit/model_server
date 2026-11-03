@@ -23,7 +23,7 @@ import math
 import os
 import shutil
 import stat
-from dataclasses import dataclass
+from dataclasses import dataclass, field, make_dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -127,6 +127,7 @@ class ModelInfo:
     predict_timeout: Optional[int] = None
     copy_all_model_versions: bool = False
     cpu_extension: CpuExtension = None
+    is_dummy: bool = False
 
     def __post_init__(self):
         if self.use_relative_paths:
@@ -599,3 +600,32 @@ class ModelInfo:
         data[dst_name] = data[src_name]
         del data[src_name]
         return data
+
+
+class PipelineType:
+    """Values accepted by `pipeline_type` in the LLM graph node_options."""
+
+    LM = "LM"
+    LM_CB = "LM_CB"
+    VLM = "VLM"
+    VLM_CB = "VLM_CB"
+
+    TEXT_GENERATION = (LM, LM_CB, VLM, VLM_CB)
+    CONTINUOUS_BATCHING = (LM_CB, VLM_CB)
+
+    @classmethod
+    def supported_for_model(cls, model_type, target_device=None):
+        supported = (cls.VLM, cls.VLM_CB) if getattr(model_type, "is_vision_language", False) else (cls.LM, cls.LM_CB)
+        if target_device == TargetDevice.NPU:
+            # NPU has no continuous batching support.
+            supported = tuple(item for item in supported if item not in cls.CONTINUOUS_BATCHING)
+        return supported
+
+
+def model_with_pipeline_type(model_type, pipeline_type):
+    """Model class variant that forces `pipeline_type` in the generated LLM graph."""
+    return make_dataclass(
+        f"{model_type.__name__}{pipeline_type}",
+        [("pipeline_type", str, field(default=pipeline_type))],
+        bases=(model_type,),
+    )

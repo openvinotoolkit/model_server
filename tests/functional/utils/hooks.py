@@ -93,6 +93,7 @@ from tests.functional.constants.ovms_type import (
 from tests.functional.constants.paths import Paths
 from tests.functional.constants.target_device import MAX_WORKERS_PER_TARGET_DEVICE, TargetDevice
 from tests.functional.constants.ovms_binaries import calculate_ovms_binary_name
+from tests.functional.models.models import PipelineType
 from tests.functional.models.models_library import ModelsLib, ModelsLibrary
 from tests.functional.object_model.dmesg_log_monitor import DmesgLogMonitor
 from tests.functional.object_model.ovms_info import OvmsInfo
@@ -1063,6 +1064,12 @@ def generic_test_deselect(item):
     # Disable completions endpoint for VLM models
     if model_type is not None and model_type.is_vision_language and endpoint == OpenAIWrapper.COMPLETIONS:
         return True
+
+    # LM* pipeline types apply only to language models, VLM* only to vision language models.
+    pipeline_type = item.callspec.params.get("pipeline_type", None)
+    if pipeline_type in PipelineType.TEXT_GENERATION and model_type is not None:
+        if pipeline_type not in PipelineType.supported_for_model(model_type, target_device):
+            return True
 
     return False
 

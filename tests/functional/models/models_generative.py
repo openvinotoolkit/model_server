@@ -204,32 +204,17 @@ class BgeRerankerBaseFp16OvHf(GenerativeModelHuggingFace, RerankModel):
 
 
 @dataclass
-class Gemma34bItInt4OvHf(GenerativeModelHuggingFace, VisionLanguageModel):
-    name: str = "OpenVINO/gemma-3-4b-it-int4-ov"
+class DummyCyclicGpt2OvHf(GenerativeModelHuggingFace, LargeLanguageModel):
+    name: str = "mzeglars/dummy-cyclic-gpt2-ov"
     is_local: bool = True
+    is_dummy: bool = True
 
 
 @dataclass
-class Gemma34bItInt4CwOvHf(GenerativeModelHuggingFace, VisionLanguageModel):
-    name: str = "OpenVINO/gemma-3-4b-it-int4-cw-ov"
+class DummyCyclicLlavaOvHf(GenerativeModelHuggingFace, VisionLanguageModel):
+    name: str = "mzeglars/dummy-cyclic-llava-ov"
     is_local: bool = True
-
-
-@dataclass
-class LFM25350MInt8OvHf(GenerativeModelHuggingFace, LargeLanguageModel):
-    name: str = "OpenVINO/LFM2.5-350M-int8-ov"
-    precision: str = "INT8"
-    tool_parser: str = "lfm2"
-    is_agentic: bool = True
-    gorilla_patch_name: str = "ovms-model"
-    pipeline_type: str = "LM"
-    is_local: bool = True
-
-
-@dataclass
-class Phi35MiniInstructInt4CwOvHf(GenerativeModelHuggingFace, LargeLanguageModel):
-    name: str = "OpenVINO/Phi-3.5-mini-instruct-int4-cw-ov"
-    is_local: bool = True
+    is_dummy: bool = True
 
 
 @dataclass
