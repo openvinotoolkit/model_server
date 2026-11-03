@@ -30,8 +30,6 @@
 
 #include <dlfcn.h>
 #include <unistd.h>
-
-#include "src/utils/env_guard.hpp"
 #elif _WIN32
 #include <windows.h>
 #include "mediapipe/calculators/image/image_cropping_calculator.pb.h"
@@ -53,6 +51,7 @@ struct PluginState {
     std::mutex mutex;
     void* handle = nullptr;
     bool loaded = false;
+    std::string testCandidatePath;
     std::string error = "OpenCV calculator plugin is not loaded";
 };
 
@@ -76,10 +75,6 @@ void retainOpenCvCalculatorOptionDescriptors() {
 
 #ifdef __linux__
 std::vector<std::string> pluginCandidates() {
-    const std::string overridePath = GetEnvVar("OVMS_OPENCV_CALCULATORS_PLUGIN_PATH");
-    if (!overridePath.empty()) {
-        return {overridePath};
-    }
     std::vector<std::string> candidates;
     // Also support a C API host whose executable is outside the OVMS package.
     Dl_info info{};
@@ -124,11 +119,6 @@ bool exposeHostSymbols(std::string& error) {
 }
 #elif _WIN32
 std::vector<std::string> pluginCandidates() {
-    if (const char* overridePath = std::getenv("OVMS_OPENCV_CALCULATORS_PLUGIN_PATH");
-        overridePath != nullptr && overridePath[0] != '\0') {
-        return {overridePath};
-    }
-
     std::vector<std::string> candidates;
     std::vector<HMODULE> modules;
     HMODULE loaderModule = nullptr;
@@ -149,27 +139,18 @@ std::vector<std::string> pluginCandidates() {
         const auto directory = std::filesystem::path(std::string(modulePath.data(), pathLength)).parent_path();
         candidates.emplace_back((directory / "ovms_opencv_calculators.dll").string());
         candidates.emplace_back((directory / "lib" / "ovms_opencv_calculators.dll").string());
+
+        const auto runfilesDirectory = std::filesystem::path(std::string(modulePath.data(), pathLength) + ".runfiles");
+        for (const char* workspace : {"ovms", "_main", "model_server"}) {
+            candidates.emplace_back((runfilesDirectory / workspace / "src/lib/ovms_opencv_calculators.dll").string());
+        }
     }
 
-    if (const char* runfilesDirectory = std::getenv("RUNFILES_DIR");
-        runfilesDirectory != nullptr && runfilesDirectory[0] != '\0') {
-        const char* workspace = std::getenv("TEST_WORKSPACE");
-        const std::string workspacePath = workspace != nullptr && workspace[0] != '\0' ? workspace : "ovms";
-        candidates.emplace_back((std::filesystem::path(runfilesDirectory) / workspacePath / "src/lib/ovms_opencv_calculators.dll").string());
-    }
-    if (const char* testSourceDirectory = std::getenv("TEST_SRCDIR");
-        testSourceDirectory != nullptr && testSourceDirectory[0] != '\0') {
-        const char* workspace = std::getenv("TEST_WORKSPACE");
-        const std::string workspacePath = workspace != nullptr && workspace[0] != '\0' ? workspace : "ovms";
-        candidates.emplace_back((std::filesystem::path(testSourceDirectory) / workspacePath / "src/lib/ovms_opencv_calculators.dll").string());
-    }
     return candidates;
 }
 #endif
 
-}  // namespace
-
-bool loadOpenCvCalculatorsPlugin() {
+bool loadOpenCvCalculatorsPluginFromCandidates(const std::vector<std::string>& candidates) {
     auto& state = pluginState();
     std::lock_guard<std::mutex> lock(state.mutex);
     if (state.loaded) {
@@ -181,7 +162,7 @@ bool loadOpenCvCalculatorsPlugin() {
         SPDLOG_ERROR("OpenCV calculators plugin host promotion failed: {}", state.error);
         return false;
     }
-    for (const auto& candidate : pluginCandidates()) {
+    for (const auto& candidate : candidates) {
         void* handle = dlopen(candidate.c_str(), RTLD_NOW | RTLD_GLOBAL);
         if (handle != nullptr) {
             using RegisterFactories = bool (*)(void*, void*);
@@ -210,7 +191,6 @@ bool loadOpenCvCalculatorsPlugin() {
 #elif _WIN32
     state.error.clear();
     retainOpenCvCalculatorOptionDescriptors();
-    const auto candidates = pluginCandidates();
     if (candidates.empty()) {
         state.error = "cannot locate the OVMS module directory or OpenCV calculator plugin";
     }
@@ -245,6 +225,45 @@ bool loadOpenCvCalculatorsPlugin() {
 #endif
     SPDLOG_DEBUG("OpenCV calculators plugin unavailable: {}", state.error);
     return false;
+}
+
+}  // namespace
+
+bool loadOpenCvCalculatorsPlugin() {
+    auto& state = pluginState();
+    std::vector<std::string> candidates;
+    {
+        std::lock_guard<std::mutex> lock(state.mutex);
+        if (state.loaded) {
+            return true;
+        }
+        if (!state.testCandidatePath.empty()) {
+            candidates.emplace_back(state.testCandidatePath);
+        }
+    }
+    if (candidates.empty()) {
+        candidates = pluginCandidates();
+    }
+    return loadOpenCvCalculatorsPluginFromCandidates(candidates);
+}
+
+bool loadOpenCvCalculatorsPluginForTesting(const std::string& candidatePath) {
+    auto& state = pluginState();
+    {
+        std::lock_guard<std::mutex> lock(state.mutex);
+        if (state.loaded) {
+            state.error = "cannot override the OpenCV calculator plugin after it has loaded";
+            return false;
+        }
+        state.testCandidatePath = candidatePath;
+    }
+    return loadOpenCvCalculatorsPlugin();
+}
+
+void clearOpenCvCalculatorsPluginTestCandidate() {
+    auto& state = pluginState();
+    std::lock_guard<std::mutex> lock(state.mutex);
+    state.testCandidatePath.clear();
 }
 
 std::string getOpenCvCalculatorsPluginDiagnostic() {

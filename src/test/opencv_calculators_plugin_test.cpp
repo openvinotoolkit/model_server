@@ -67,12 +67,13 @@ REGISTER_MEDIAPIPE_GRAPH(NestedOpenCvTestGraph);
 
 class MissingOpenCvPlugin : public ::testing::Test {
 protected:
-    EnvGuard environment;
-
     void SetUp() override {
         spdlog::set_level(spdlog::level::off);
-        environment.set("OVMS_OPENCV_CALCULATORS_PLUGIN_PATH", "/ovms/nonexistent-opencv-calculators-plugin.so");
-        ASSERT_FALSE(loadOpenCvCalculatorsPlugin());
+        ASSERT_FALSE(loadOpenCvCalculatorsPluginForTesting("/ovms/nonexistent-opencv-calculators-plugin.so"));
+    }
+
+    void TearDown() override {
+        clearOpenCvCalculatorsPluginTestCandidate();
     }
 };
 
@@ -131,7 +132,7 @@ TEST(OpenCvPluginDeployment, RegistersOptionsAndExecutesDecoderGraph) {
     EXPECT_EXIT(
         {
             const int result = []() {
-                UnSetEnvironmentVar("OVMS_OPENCV_CALCULATORS_PLUGIN_PATH");
+                clearOpenCvCalculatorsPluginTestCandidate();
                 if (!loadOpenCvCalculatorsPlugin()) {
                     std::cerr << getOpenCvCalculatorsPluginDiagnostic();
                     return 1;
@@ -218,7 +219,6 @@ TEST(OpenCvPluginDeployment, CtypesLocalSharedHostExecutesDecoderGraph) {
                              GetEnvVar("TEST_WORKSPACE") + "/src/opencv_calculators_local_host.so";
     EXPECT_EXIT(
         {
-            UnSetEnvironmentVar("OVMS_OPENCV_CALCULATORS_PLUGIN_PATH");
             const char* script =
                 "import ctypes,sys; host=ctypes.CDLL(sys.argv[1], mode=ctypes.RTLD_LOCAL); "
                 "sys.exit(host.OVMS_TestLocalOpenCvHost())";
@@ -234,7 +234,6 @@ TEST(OpenCvPluginDeployment, CtypesLocalSharedHostReportsMissingOpenCvLibraries)
     const std::string audit = root + "/src/image_utils/libno_opencv_audit.so";
     EXPECT_EXIT(
         {
-            UnSetEnvironmentVar("OVMS_OPENCV_CALCULATORS_PLUGIN_PATH");
             SetEnvironmentVar("LD_AUDIT", audit);
             const char* script =
                 "import ctypes,sys; host=ctypes.CDLL(sys.argv[1], mode=ctypes.RTLD_LOCAL); "

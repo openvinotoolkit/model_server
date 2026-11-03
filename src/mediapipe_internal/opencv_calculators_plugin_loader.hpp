@@ -23,6 +23,10 @@ namespace ovms {
 // Loads the optional platform plugin and retains its handle for process lifetime.
 bool loadOpenCvCalculatorsPlugin();
 
+// Test-only candidate override. Clear it after the test to restore production discovery.
+bool loadOpenCvCalculatorsPluginForTesting(const std::string& candidatePath);
+void clearOpenCvCalculatorsPluginTestCandidate();
+
 // Empty after successful loading, otherwise explains the missing OpenCV plugin.
 std::string getOpenCvCalculatorsPluginDiagnostic();
 
