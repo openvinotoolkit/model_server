@@ -46,179 +46,179 @@ using float_vec_or_value_t = std::variant<std::vector<float>, float>;
 extern const std::string MAPPING_CONFIG_JSON;
 
 /**
-     * @brief This class represents model configuration
-     */
+ * @brief This class represents model configuration
+ */
 class ModelConfig {
 private:
     /**
-         * @brief Model name
-         */
+     * @brief Model name
+     */
     std::string name;
 
     /**
-         * @brief Model uri path
-         */
+     * @brief Model uri path
+     */
     std::string basePath;
 
     /**
-         * @brief Json config directory path
-         */
+     * @brief Json config directory path
+     */
     std::string rootDirectoryPath;
 
     /**
-         * @brief Model local destination path on disk after downloading from online storage
-         */
+     * @brief Model local destination path on disk after downloading from online storage
+     */
     std::string localPath;
 
     /**
-         * @brief Target device
-         */
+     * @brief Target device
+     */
     std::string targetDevice;
 
     /**
-         * @brief Batching mode
-         */
+     * @brief Batching mode
+     */
     Mode batchingMode;
 
     /**
-         * @brief Batch size
-         */
+     * @brief Batch size
+     */
     std::optional<Dimension> batchSize;
 
     /**
-         * @brief Model version policy
-         */
+     * @brief Model version policy
+     */
     std::shared_ptr<ModelVersionPolicy> modelVersionPolicy;
 
     /**
-         * @brief Nireq
-         */
+     * @brief Nireq
+     */
     uint32_t nireq;
 
     /**
-         * @brief Model cache directory
-         */
+     * @brief Model cache directory
+     */
     std::string cacheDir;
 
     /**
-         * @brief Flag determining if allow cache option is set to true
-         */
+     * @brief Flag determining if allow cache option is set to true
+     */
     bool isAllowCacheTrue = false;
 
     /**
-         * @brief Flag disabling enforcement of request inputs count to match model inputs
-         */
+     * @brief Flag disabling enforcement of request inputs count to match model inputs
+     */
     bool disableInputCountValidation = false;
 
     /**
-         * @brief Model version
-         */
+     * @brief Model version
+     */
     model_version_t version = -1;
 
     /**
-         * @brief Plugin config
-         */
+     * @brief Plugin config
+     */
     plugin_config_t pluginConfig;
 
     /**
-     * 
-         * @brief Layout for single input
-         */
+     *
+     * @brief Layout for single input
+     */
     LayoutConfiguration layout;
 
     /**
-         * @brief Map of shapes
-         */
+     * @brief Map of shapes
+     */
     shapes_info_map_t shapes;
 
     /**
-         * @brief Map of layouts
-         */
+     * @brief Map of layouts
+     */
     layout_configurations_map_t layouts;
 
     /**
-         * @brief Input mapping configuration
-         */
+     * @brief Input mapping configuration
+     */
     mapping_config_t mappingInputs;
 
     /**
-         * @brief Output mapping configuration
-         */
+     * @brief Output mapping configuration
+     */
     mapping_config_t mappingOutputs;
 
     /**
-         * @brief Reversed input mapping configuration
-         */
+     * @brief Reversed input mapping configuration
+     */
     mapping_config_t reversedMappingInputs;
     /**
-         * @brief Reversed output mapping configuration
-         */
+     * @brief Reversed output mapping configuration
+     */
     mapping_config_t reversedMappingOutputs;
 
     /**
-         * @brief Shape left opening bracket in string format
-         */
+     * @brief Shape left opening bracket in string format
+     */
     static const char shapeLeft = '(';
 
     /**
-         * @brief Shape right opening bracket in string format
-         */
+     * @brief Shape right opening bracket in string format
+     */
     static const char shapeRight = ')';
 
     /**
-         * @brief Shape delimiter in string format
-         */
+     * @brief Shape delimiter in string format
+     */
     static const char shapeDelimeter = ',';
 
     /**
-         * @brief Allowed configurable layouts
-         */
+     * @brief Allowed configurable layouts
+     */
 
     /**
-         * @brief custom_loader_options config as map
-         */
+     * @brief custom_loader_options config as map
+     */
     custom_loader_options_config_t customLoaderOptionsConfigMap;
 
     /**
-         * @brief custom_loader_options config as string
-         */
+     * @brief custom_loader_options config as string
+     */
     std::string customLoaderOptionsStr;
 
     /**
-         * @brief meanValues mean preprocessing parameters
-         */
+     * @brief meanValues mean preprocessing parameters
+     */
     std::optional<float_vec_or_value_t> meanValues;
 
     /**
-         * @brief scaleValues scale preprocessing parameters
-         */
+     * @brief scaleValues scale preprocessing parameters
+     */
     std::optional<float_vec_or_value_t> scaleValues;
 
     /**
-         * @brief colorFormat color format preprocessing parameter
-         */
+     * @brief colorFormat color format preprocessing parameter
+     */
     std::optional<ovms::ColorFormatConfiguration> colorFormat;
 
     /**
-         * @brief precision precision preprocessing parameter
-         */
+     * @brief precision precision preprocessing parameter
+     */
     std::optional<ovms::PrecisionConfiguration> precision;
 
     /**
-         * @brief Group name for idle model management. Defaults to model name.
-         */
+     * @brief Group name for idle model management. Defaults to model name.
+     */
     std::string groupName;
 
 public:
     /**
-         * @brief Construct a new Model Config object
-         * 
-         * @param name 
-         * @param basePath 
-         * @param targetDevice 
-         * @param configBatchSize 
-         * @param nireq 
-         */
+     * @brief Construct a new Model Config object
+     *
+     * @param name
+     * @param basePath
+     * @param targetDevice
+     * @param configBatchSize
+     * @param nireq
+     */
     ModelConfig(const std::string& name = "",
         const std::string& basePath = "",
         const std::string& targetDevice = "",
@@ -229,213 +229,213 @@ public:
         const std::string& localPath = "");
 
     /**
-         * @brief Compares two ModelConfig instances and decides if models should be reloaded
-         * 
-         * @param rhs
-         *  
-         * @return true if configs are equal false otherwise
-         */
+     * @brief Compares two ModelConfig instances and decides if models should be reloaded
+     *
+     * @param rhs
+     *
+     * @return true if configs are equal false otherwise
+     */
     bool isReloadRequired(const ModelConfig& rhs) const;
 
     /**
-         * @brief Compares two ModelConfig instances and decides if customloader configuration changed
-         *
-         * @param rhs
-         *
-         * @return true if customloader configuration has changed
-         */
+     * @brief Compares two ModelConfig instances and decides if customloader configuration changed
+     *
+     * @param rhs
+     *
+     * @return true if customloader configuration has changed
+     */
     bool isCustomLoaderConfigChanged(const ModelConfig& rhs) const;
 
     /**
-         * @brief Compares two ModelConfig instances for batch size configuration
-         * 
-         * @param rhs
-         *  
-         * @return true if configurations are equal false otherwise
-         */
+     * @brief Compares two ModelConfig instances for batch size configuration
+     *
+     * @param rhs
+     *
+     * @return true if configurations are equal false otherwise
+     */
     bool isBatchSizeConfigurationEqual(const ModelConfig& rhs) const;
 
     /**
-         * @brief Compares two ModelConfig instances for layout configuration
-         * 
-         * @param rhs
-         *  
-         * @return true if configurations are equal false otherwise
-         */
+     * @brief Compares two ModelConfig instances for layout configuration
+     *
+     * @param rhs
+     *
+     * @return true if configurations are equal false otherwise
+     */
     bool isLayoutConfigurationEqual(const ModelConfig& rhs) const;
 
     /**
-         * @brief Compares two ModelConfig instances for shape configuration
-         * 
-         * @param rhs
-         *  
-         * @return true if configurations are equal false otherwise
-         */
+     * @brief Compares two ModelConfig instances for shape configuration
+     *
+     * @param rhs
+     *
+     * @return true if configurations are equal false otherwise
+     */
     bool isShapeConfigurationEqual(const ModelConfig& rhs) const;
 
     /**
-         * @brief Get the name 
-         * 
-         * @return const std::string& 
-         */
+     * @brief Get the name
+     *
+     * @return const std::string&
+     */
     const std::string& getName() const {
         return this->name;
     }
 
     /**
-         * @brief Set the name
-         * 
-         * @param name 
-         */
+     * @brief Set the name
+     *
+     * @param name
+     */
     void setName(const std::string& name) {
         this->name = name;
     }
 
     /**
-         * @brief Get the group name
-         *
-         * @return const std::string&
-         */
+     * @brief Get the group name
+     *
+     * @return const std::string&
+     */
     const std::string& getGroupName() const {
         return this->groupName;
     }
 
     /**
-         * @brief Set the group name
-         *
-         * @param groupName
-         */
+     * @brief Set the group name
+     *
+     * @param groupName
+     */
     void setGroupName(const std::string& groupName) {
         this->groupName = groupName;
     }
 
     /**
-         * @brief Get local path to specific model version where .xml and .bin is located for loading
-         * 
-         * @return std::string
-         * */
+     * @brief Get local path to specific model version where .xml and .bin is located for loading
+     *
+     * @return std::string
+     * */
     const std::string getPath() const;
 
     /**
-         * @brief Get the base path
-         * 
-         * @return const std::string& 
-         */
+     * @brief Get the base path
+     *
+     * @return const std::string&
+     */
     const std::string& getBasePath() const {
         return this->basePath;
     }
 
     /**
-         * @brief Set the base path
-         * 
-         * @param basePath 
-         */
+     * @brief Set the base path
+     *
+     * @param basePath
+     */
     void setBasePath(const std::string& basePath);
 
     /**
-         * @brief Set root directory path
-         *
-         * @param rootDirectoryPath
-         */
+     * @brief Set root directory path
+     *
+     * @param rootDirectoryPath
+     */
     void setRootDirectoryPath(const std::string& rootDirectoryPath) {
         this->rootDirectoryPath = rootDirectoryPath;
     }
 
     /**
-         * @brief Get the local path
-         * 
-         * @return const std::string& 
-         */
+     * @brief Get the local path
+     *
+     * @return const std::string&
+     */
     const std::string& getLocalPath() const {
         return this->localPath;
     }
 
     /**
-         * @brief Set the local path
-         * 
-         * @param localPath 
-         */
+     * @brief Set the local path
+     *
+     * @param localPath
+     */
     void setLocalPath(const std::string& localPath) {
         this->localPath = localPath;
     }
 
     /**
-         * @brief Get the target device
-         * 
-         * @return const std::string& 
-         */
+     * @brief Get the target device
+     *
+     * @return const std::string&
+     */
     const std::string& getTargetDevice() const {
         return this->targetDevice;
     }
 
     /**
-         * @brief Set the target device
-         * 
-         * @param target device 
-         */
+     * @brief Set the target device
+     *
+     * @param target device
+     */
     void setTargetDevice(const std::string& targetDevice) {
         this->targetDevice = targetDevice;
     }
 
     /**
-         * @brief Get the cache directory
-         * 
-         * @return const std::string& 
-         */
+     * @brief Get the cache directory
+     *
+     * @return const std::string&
+     */
     const std::string& getCacheDir() const {
         return this->cacheDir;
     }
 
     /**
-         * @brief Set the cache directory
-         * 
-         * @param cache directory
-         */
+     * @brief Set the cache directory
+     *
+     * @param cache directory
+     */
     void setCacheDir(const std::string& cacheDir) {
         this->cacheDir = cacheDir;
     }
 
     /**
-         * @brief Get the allow cache flag
-         * 
-         * @return bool
-         */
+     * @brief Get the allow cache flag
+     *
+     * @return bool
+     */
     bool isAllowCacheSetToTrue() const {
         return this->isAllowCacheTrue;
     }
 
     /**
-         * @brief Set the allow cache flag
-         * 
-         * @param allow cache flag
-         */
+     * @brief Set the allow cache flag
+     *
+     * @param allow cache flag
+     */
     void setAllowCache(const bool& allowCache) {
         this->isAllowCacheTrue = allowCache;
     }
 
     /**
-         * @brief Get the disable input count validation flag
-         *
-         * @return bool
-         */
+     * @brief Get the disable input count validation flag
+     *
+     * @return bool
+     */
     bool isInputCountValidationDisabled() const {
         return this->disableInputCountValidation;
     }
 
     /**
-         * @brief Set the disable input count validation flag
-         *
-         * @param disable input count validation flag
-         */
+     * @brief Set the disable input count validation flag
+     *
+     * @param disable input count validation flag
+     */
     void setDisableInputCountValidation(bool disableInputCountValidation) {
         this->disableInputCountValidation = disableInputCountValidation;
     }
 
     /**
-         * @brief Checks if given device is used as single target device.
-         * 
-         * @param bool
-         */
+     * @brief Checks if given device is used as single target device.
+     *
+     * @param bool
+     */
     bool isSingleDeviceUsed(const std::string& device) const {
         return this->targetDevice == device;
     }
@@ -443,10 +443,10 @@ public:
     bool isDeviceUsed(const std::string& device) const;
 
     /**
-         * @brief Get the batching mode
-         * 
-         * @return ovms::Mode 
-         */
+     * @brief Get the batching mode
+     *
+     * @return ovms::Mode
+     */
     Mode getBatchingMode() const {
         return this->batchingMode;
     }
@@ -456,47 +456,47 @@ public:
     }
 
     /**
-         * @brief Get the batch size 
-         * 
-         * @return size_t 
-         */
+     * @brief Get the batch size
+     *
+     * @return size_t
+     */
     std::optional<Dimension> getBatchSize() const {
         return this->batchSize;
     }
 
     /**
-         * @brief Set the batching mode
-         * 
-         * @param batchingMode 
-         */
+     * @brief Set the batching mode
+     *
+     * @param batchingMode
+     */
     void setBatchingMode(Mode batchingMode) {
         this->batchingMode = batchingMode;
     }
 
     /**
-         * @brief Set the batch size
-         * 
-         * @param batchSize 
-         */
+     * @brief Set the batch size
+     *
+     * @param batchSize
+     */
     void setBatchSize(std::optional<Dimension> batchSize) {
         this->batchSize = batchSize;
     }
 
     /**
-         * @brief Set batching mode to FIXED and batch size to value provided in a parameter. 
-         * 
-         * @param configBatchSize 
-         */
+     * @brief Set batching mode to FIXED and batch size to value provided in a parameter.
+     *
+     * @param configBatchSize
+     */
     void setBatchingParams(size_t configBatchSize) {
         setBatchingMode(FIXED);
         setBatchSize(configBatchSize);
     }
 
     /**
-         * @brief Extracts batching mode and batch size value from string provided in a parameter.
-         * 
-         * @param configBatchSize 
-         */
+     * @brief Extracts batching mode and batch size value from string provided in a parameter.
+     *
+     * @param configBatchSize
+     */
     void setBatchingParams(const std::string& configBatchSize) {
         auto [batchingMode, effectiveBatchSize] = extractBatchingParams(configBatchSize);
         setBatchingMode(batchingMode);
@@ -504,33 +504,33 @@ public:
     }
 
     /**
-         * @brief Extract batching mode and effective batch size from string.
-         * 
-         * @param configBatchSize 
-         */
+     * @brief Extract batching mode and effective batch size from string.
+     *
+     * @param configBatchSize
+     */
     static std::tuple<Mode, std::optional<Dimension>> extractBatchingParams(std::string configBatchSize);
 
     /**
-         * @brief Get the model version policy
-         * 
-         * @return std::shared_ptr<ModelVersionPolicy>
-         */
+     * @brief Get the model version policy
+     *
+     * @return std::shared_ptr<ModelVersionPolicy>
+     */
     std::shared_ptr<ModelVersionPolicy> getModelVersionPolicy() {
         return this->modelVersionPolicy;
     }
 
     /**
-         * @brief Set the model version policy
-         * 
-         * @param modelVersionPolicy 
-         */
+     * @brief Set the model version policy
+     *
+     * @param modelVersionPolicy
+     */
     void setModelVersionPolicy(std::shared_ptr<ModelVersionPolicy> modelVersionPolicy) {
         this->modelVersionPolicy = modelVersionPolicy;
     }
 
     /**
          * @brief Parses string for model version policy
-         * 
+         *
          * @param string representing model version policy configuration
 
          * @return status
@@ -538,180 +538,180 @@ public:
     Status parseModelVersionPolicy(std::string command);
 
     /**
-         * @brief Get the nireq
-         * 
-         * @return uint32_t 
-         */
+     * @brief Get the nireq
+     *
+     * @return uint32_t
+     */
     uint32_t getNireq() const {
         return this->nireq;
     }
 
     /**
-         * @brief Set the nireq
-         * 
-         * @param nireq 
-         */
+     * @brief Set the nireq
+     *
+     * @param nireq
+     */
     void setNireq(const uint32_t nireq) {
         this->nireq = nireq;
     }
 
     /**
-         * @brief Get the plugin config
-         * 
-         * @return const std::string&
-         */
+     * @brief Get the plugin config
+     *
+     * @return const std::string&
+     */
     const plugin_config_t& getPluginConfig() const {
         return this->pluginConfig;
     }
 
     /**
-         * @brief Get the plugin config
-         * 
-         * @return const std::string&
-         */
+     * @brief Get the plugin config
+     *
+     * @return const std::string&
+     */
     plugin_config_t& getPluginConfig() {
         return this->pluginConfig;
     }
 
     /**
-         * @brief Set the plugin config
-         * 
-         * @param pluginConfig 
-         */
+     * @brief Set the plugin config
+     *
+     * @param pluginConfig
+     */
     void setPluginConfig(const plugin_config_t& pluginConfig) {
         this->pluginConfig = pluginConfig;
     }
 
     /**
-         * @brief Parses json node for plugin config keys and values
-         * 
-         * @param json node representing plugin_config
-         * 
-         * @return status
-         */
+     * @brief Parses json node for plugin config keys and values
+     *
+     * @param json node representing plugin_config
+     *
+     * @return status
+     */
     Status parsePluginConfig(const rapidjson::Value& node, plugin_config_t& pluginConfig);
 
     /**
-        * @brief Parses string for plugin config keys and values
-        * 
-        * @param string representing plugin_config
-        * 
-        * @return status
-        */
+     * @brief Parses string for plugin config keys and values
+     *
+     * @param string representing plugin_config
+     *
+     * @return status
+     */
     Status parsePluginConfig(std::string command, plugin_config_t& pluginConfig);
 
     /**
-         * @brief Parses value from json and extracts shapes info
-         * 
-         * @param rapidjson::Value& node
-         * 
-         * @return status
-         */
+     * @brief Parses value from json and extracts shapes info
+     *
+     * @param rapidjson::Value& node
+     *
+     * @return status
+     */
     Status parseShapeParameter(const rapidjson::Value& node);
 
     /**
-         * @brief Parses value from string and extracts shapes info
-         * 
-         * @param string
-         * 
-         * @return status
-         */
+     * @brief Parses value from string and extracts shapes info
+     *
+     * @param string
+     *
+     * @return status
+     */
     Status parseShapeParameter(const std::string& command);
 
     /**
-         * @brief Parses value from json and extracts layouts info
-         * 
-         * @param rapidjson::Value& node
-         * 
-         * @return status
-         */
+     * @brief Parses value from json and extracts layouts info
+     *
+     * @param rapidjson::Value& node
+     *
+     * @return status
+     */
     Status parseLayoutParameter(const rapidjson::Value& node);
 
     /**
-         * @brief Parses value from string and extracts layouts info
-         * 
-         * @param string
-         * 
-         * @return status
-         */
+     * @brief Parses value from string and extracts layouts info
+     *
+     * @param string
+     *
+     * @return status
+     */
     Status parseLayoutParameter(const std::string& command);
 
     /**
-         * @brief Parses value from string and extracts means info
-         * 
-         * @param string
-         * 
-         * @return status
-         */
+     * @brief Parses value from string and extracts means info
+     *
+     * @param string
+     *
+     * @return status
+     */
     Status parseMean(const std::string& command);
 
     /**
-          * @brief Parses value from string and extracts scales info
-          * 
-          * @param string
-          * 
-          * @return status
-          */
+     * @brief Parses value from string and extracts scales info
+     *
+     * @param string
+     *
+     * @return status
+     */
     Status parseScale(const std::string& command);
 
     /**
-          * @brief Parses value from string and extracts color format
-          * 
-          * @param string
-          * 
-          * @return status
-          */
+     * @brief Parses value from string and extracts color format
+     *
+     * @param string
+     *
+     * @return status
+     */
     Status parseColorFormat(const std::string& command);
 
     /**
-          * @brief Parses value from string and extracts precision
-          * 
-          * @param string
-          * 
-          * @return status
-          */
+     * @brief Parses value from string and extracts precision
+     *
+     * @param string
+     *
+     * @return status
+     */
     Status parsePrecision(const std::string& command);
 
     /**
-          * @brief Parses value from string and extracts float value or array of float values
-          * 
-          * @param string
-          * @param value
-          * 
-          * @return status
-          */
+     * @brief Parses value from string and extracts float value or array of float values
+     *
+     * @param string
+     * @param value
+     *
+     * @return status
+     */
     Status parseFloatArrayOrValue(const std::string& str, std::optional<float_vec_or_value_t>& values);
 
     /**
-         * @brief Returns true if any input shape specified in shapes map is in AUTO mode
-         * 
-         * @return bool
-         */
+     * @brief Returns true if any input shape specified in shapes map is in AUTO mode
+     *
+     * @return bool
+     */
     bool anyShapeSetToAuto() const;
 
     /**
-         * @brief Get the shapes
-         * 
-         * @return const shapes_map_t& 
-         */
+     * @brief Get the shapes
+     *
+     * @return const shapes_map_t&
+     */
     const shapes_info_map_t& getShapes() const {
         return this->shapes;
     }
 
     /**
-         * @brief Set the shapes
-         * 
-         * @param shapes 
-         */
+     * @brief Set the shapes
+     *
+     * @param shapes
+     */
     void setShapes(const shapes_info_map_t& shapes) {
         this->shapes = shapes;
     }
 
     /**
-        * @brief Returns true if shape with certain name is in AUTO mode
-         * 
-         * @return bool
-         */
+     * @brief Returns true if shape with certain name is in AUTO mode
+     *
+     * @return bool
+     */
     bool isShapeAuto(const std::string& name) const;
     bool isShapeAnonymous() const;
     bool isShapeAnonymousFixed() const;
@@ -721,20 +721,20 @@ public:
     }
 
     /**
-         * @brief Sets the shape from the string representation
-         *
-         * @param shape
-         * @param str
-         * @return Status
-         */
+     * @brief Sets the shape from the string representation
+     *
+     * @param shape
+     * @param str
+     * @return Status
+     */
     static Status parseShape(ShapeInfo& shapeInfo, const std::string& str);
 
     /**
-         * @brief Add a single named shape
-         * 
-         * @param name 
-         * @param shape 
-         */
+     * @brief Add a single named shape
+     *
+     * @param name
+     * @param shape
+     */
     void addShape(const std::string& name, const ShapeInfo& shapeInfo) {
         this->shapes[name] = shapeInfo;
     }
@@ -744,271 +744,271 @@ public:
     }
 
     /**
-         * @brief Get the layouts
-         * 
-         * @return const std::string& 
-         */
+     * @brief Get the layouts
+     *
+     * @return const std::string&
+     */
     const LayoutConfiguration& getLayout() const {
         return this->layout;
     }
 
     /**
-         * @brief Set the layout
-         * 
-         * @param layout
-         */
+     * @brief Set the layout
+     *
+     * @param layout
+     */
     void setLayout(const LayoutConfiguration& layout) {
         this->layout = layout;
         this->layouts.clear();
     }
 
     /**
-         * @brief Get the layouts
-         * 
-         * @return const layout_configurations_map_t& 
-         */
+     * @brief Get the layouts
+     *
+     * @return const layout_configurations_map_t&
+     */
     const layout_configurations_map_t& getLayouts() const {
         return this->layouts;
     }
 
     /**
-         * @brief Set the layouts
-         * 
-         * @param layouts 
-         */
+     * @brief Set the layouts
+     *
+     * @param layouts
+     */
     void setLayouts(const layout_configurations_map_t& layouts) {
         this->layouts = layouts;
         this->layout = LayoutConfiguration();
     }
 
     /**
-         * @brief Get the get scales
-         * 
-         * @return const std::optional<float_vec_or_value_t>& 
-         */
+     * @brief Get the get scales
+     *
+     * @return const std::optional<float_vec_or_value_t>&
+     */
     const std::optional<float_vec_or_value_t>& getScales() const {
         return this->scaleValues;
     }
 
     /**
-         * @brief Get the get means
-         * 
-         * @return const std::optional<float_vec_or_value_t>& 
-         */
+     * @brief Get the get means
+     *
+     * @return const std::optional<float_vec_or_value_t>&
+     */
     const std::optional<float_vec_or_value_t>& getMeans() const {
         return this->meanValues;
     }
 
     /**
-         * @brief Get the get color format
-         * 
-         * @return const std::optional<ovms::ColorFormatConfiguration>& 
-         */
+     * @brief Get the get color format
+     *
+     * @return const std::optional<ovms::ColorFormatConfiguration>&
+     */
     const std::optional<ovms::ColorFormatConfiguration>& getColorFormat() const {
         return this->colorFormat;
     }
 
     /**
-         * @brief Get the get precision
-         * 
-         * @return const std::optional<ovms::PrecisionConfiguration>& 
-         */
+     * @brief Get the get precision
+     *
+     * @return const std::optional<ovms::PrecisionConfiguration>&
+     */
     const std::optional<ovms::PrecisionConfiguration>& getPrecision() const {
         return this->precision;
     }
 
     /**
-         * @brief Get the version
-         * 
-         * @return const model_version_t& 
-         */
+     * @brief Get the version
+     *
+     * @return const model_version_t&
+     */
     const model_version_t& getVersion() const {
         return this->version;
     }
 
     /**
-         * @brief Set the version
-         * 
-         * @param version 
-         */
+     * @brief Set the version
+     *
+     * @param version
+     */
     void setVersion(const model_version_t& version) {
         this->version = version;
     }
 
     /**
-         * @brief Get the mapping for inputs
-         * 
-         * @return const mapping_config_t& 
-         */
+     * @brief Get the mapping for inputs
+     *
+     * @return const mapping_config_t&
+     */
     const mapping_config_t& getMappingInputs() const {
         return this->mappingInputs;
     }
 
     /**
-         * @brief Get the mapping for outputs
-         * 
-         * @return const mapping_config_t& 
-         */
+     * @brief Get the mapping for outputs
+     *
+     * @return const mapping_config_t&
+     */
     const mapping_config_t& getMappingOutputs() const {
         return this->mappingOutputs;
     }
 
     /**
-         * @brief Get the reversed mapping for inputs
-         * 
-         * @return const mapping_config_t& 
-         */
+     * @brief Get the reversed mapping for inputs
+     *
+     * @return const mapping_config_t&
+     */
     const mapping_config_t& getRealMappingInputs() const {
         return this->reversedMappingInputs;
     }
 
     /**
-         * @brief Get the reversed mapping for outputs
-         * 
-         * @return const mapping_config_t& 
-         */
+     * @brief Get the reversed mapping for outputs
+     *
+     * @return const mapping_config_t&
+     */
     const mapping_config_t& getRealMappingOutputs() const {
         return this->reversedMappingOutputs;
     }
 
     /**
-         * @brief Get the mapping inputs by key
-         * 
-         * @param key 
-         * @return const std::string 
-         */
+     * @brief Get the mapping inputs by key
+     *
+     * @param key
+     * @return const std::string
+     */
     const std::string getMappingInputByKey(const std::string& key) const {
         auto it = mappingInputs.find(key);
         return it != mappingInputs.end() ? it->second : "";
     }
 
     /**
-         * @brief Get the mapping outputs by key
-         * 
-         * @param key 
-         * @return const std::string 
-         */
+     * @brief Get the mapping outputs by key
+     *
+     * @param key
+     * @return const std::string
+     */
     const std::string getMappingOutputByKey(const std::string& key) const {
         auto it = mappingOutputs.find(key);
         return it != mappingOutputs.end() ? it->second : "";
     }
 
     /**
-         * @brief Get the real inputs by value
-         * 
-         * @param value 
-         * @return const std::string 
-         */
+     * @brief Get the real inputs by value
+     *
+     * @param value
+     * @return const std::string
+     */
     const std::string getRealInputNameByValue(const std::string& value) const {
         auto it = reversedMappingInputs.find(value);
         return it != reversedMappingInputs.end() ? it->second : "";
     }
 
     /**
-         * @brief Get the real outputs by value
-         * 
-         * @param value 
-         * @return const std::string 
-         */
+     * @brief Get the real outputs by value
+     *
+     * @param value
+     * @return const std::string
+     */
     const std::string getRealOutputNameByValue(const std::string& value) const {
         auto it = reversedMappingOutputs.find(value);
         return it != reversedMappingOutputs.end() ? it->second : "";
     }
 
     /**
-         * @brief Set the mapping inputs
-         * 
-         * @param mapping 
-         */
+     * @brief Set the mapping inputs
+     *
+     * @param mapping
+     */
     void setMappingInputs(const mapping_config_t& mapping) {
         this->mappingInputs = mapping;
     }
 
     /**
-         * @brief Set the mapping outputs
-         * 
-         * @param mapping 
-         */
+     * @brief Set the mapping outputs
+     *
+     * @param mapping
+     */
     void setMappingOutputs(const mapping_config_t& mapping) {
         this->mappingOutputs = mapping;
     }
 
     /**
-         * @brief Set the reversed mapping inputs
-         * 
-         * @param mapping 
-         */
+     * @brief Set the reversed mapping inputs
+     *
+     * @param mapping
+     */
     void setRealMappingInputs(const mapping_config_t& mapping) {
         this->reversedMappingInputs = mapping;
     }
 
     /**
-         * @brief Set the reversed mapping outputs
-         * 
-         * @param mapping 
-         */
+     * @brief Set the reversed mapping outputs
+     *
+     * @param mapping
+     */
     void setRealMappingOutputs(const mapping_config_t& mapping) {
         this->reversedMappingOutputs = mapping;
     }
 
     /**
-         * @brief  Parses mapping_config.json for mapping input/outputs in the model
-         * 
-         * @return Status 
-         */
+     * @brief  Parses mapping_config.json for mapping input/outputs in the model
+     *
+     * @return Status
+     */
     Status parseModelMapping();
 
     /**
      * @brief  Parses all settings from a JSON node
-        * 
-        * @return Status 
-        */
+     *
+     * @return Status
+     */
     Status parseNode(const rapidjson::Value& v);
 
     /**
-        * @brief Returns true if model requires a custom loader to load
-         *
-         * @return bool
-         */
+     * @brief Returns true if model requires a custom loader to load
+     *
+     * @return bool
+     */
     const bool isCustomLoaderRequiredToLoadModel() const {
         return (this->customLoaderOptionsConfigMap.size() > 0);
     }
 
     /**
-         * @brief Get the custom loader option config
-         *
-         * @return const custom_loader_options_config_t&
-         */
+     * @brief Get the custom loader option config
+     *
+     * @return const custom_loader_options_config_t&
+     */
     const custom_loader_options_config_t& getCustomLoaderOptionsConfigMap() const {
         return this->customLoaderOptionsConfigMap;
     }
 
     /**
-      * @brief Add custom loader option
-      * 
-      * @param name
-      * @param value
-      */
+     * @brief Add custom loader option
+     *
+     * @param name
+     * @param value
+     */
     void addCustomLoaderOption(const std::string& name, const std::string& value) {
         customLoaderOptionsConfigMap[name] = value;
     }
 
     /**
-         * @brief Get the custom loader option config
-         *
-         * @return const std::string
-         */
+     * @brief Get the custom loader option config
+     *
+     * @return const std::string
+     */
     const std::string& getCustomLoaderOptionsConfigStr() const {
         return this->customLoaderOptionsStr;
     }
 
     /**
-         * @brief Parses json node for custom_loader_options config keys and values
-         *
-         * @param json node representing custom_loader_options_config
-         *
-         * @return status
-         */
+     * @brief Parses json node for custom_loader_options config keys and values
+     *
+     * @param json node representing custom_loader_options_config
+     *
+     * @return status
+     */
     Status parseCustomLoaderOptionsConfig(const rapidjson::Value& node);
 
     std::string layoutConfigurationToString() const;

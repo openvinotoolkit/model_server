@@ -208,14 +208,14 @@ absl::Status OpenVINOInferenceCalculator::Open(CalculatorContext* cc) {
                   .Tag(SESSION_TAG.c_str())
                   .Get<std::shared_ptr<::InferenceAdapter>>();
     for (CollectionItemId id = cc->Inputs().BeginId();
-         id < cc->Inputs().EndId(); ++id) {
+        id < cc->Inputs().EndId(); ++id) {
         if (!cc->Inputs().Get(id).Header().IsEmpty()) {
             cc->Outputs().Get(id).SetHeader(cc->Inputs().Get(id).Header());
         }
     }
     if (cc->OutputSidePackets().NumEntries() != 0) {
         for (CollectionItemId id = cc->InputSidePackets().BeginId();
-             id < cc->InputSidePackets().EndId(); ++id) {
+            id < cc->InputSidePackets().EndId(); ++id) {
             cc->OutputSidePackets().Get(id).Set(cc->InputSidePackets().Get(id));
         }
     }

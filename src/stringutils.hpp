@@ -26,28 +26,28 @@ std::string joins(const std::vector<std::string>& listOfStrings, const std::stri
 
 /**
  * @brief Trims the string on the left side
- * 
+ *
  * @param std::string&
  */
 void ltrim(std::string& str);
 
 /**
  * @brief Trims the string on the right side
- * 
+ *
  * @param str
  */
 void rtrim(std::string& str);
 
 /**
  * @brief Trims the string
- * 
+ *
  * @param str
  */
 void trim(std::string& str);
 
 /**
  * @brief Trims the string's copy
- * 
+ *
  * @param str
  * @return trimmed string
  */
@@ -55,17 +55,17 @@ std::string trim_copy(std::string str);
 
 /**
  * @brief Erases all whitespace characters from string
- * 
+ *
  * @param str
  */
 void erase_spaces(std::string& str);
 
 /**
  * @brief Tokenizes a string into a vector of tokens
- * 
- * @param str 
- * @param delimiter 
- * @return std::vector<std::string> 
+ *
+ * @param str
+ * @param delimiter
+ * @return std::vector<std::string>
  */
 std::vector<std::string> tokenize(const std::string& str, const char delimiter);
 
@@ -119,7 +119,7 @@ std::optional<float> stof(const std::string& str);
  * @param string input
  * @param default value
  * @return converted value and result indicating if conversion succeeded
-*/
+ */
 
 std::optional<std::vector<float>> stringToFloatVector(const std::string& str, char delimiter);
 

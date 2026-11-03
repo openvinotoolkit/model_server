@@ -60,6 +60,10 @@ IF "%TT_RUN_REGRESSION_TESTS%"=="" set "TT_RUN_REGRESSION_TESTS=False"
 set "baseTemp=C:\tmp\pytest-functional"
 if exist "%baseTemp%" rmdir /s /q "%baseTemp%"
 
+:: The venv must be authoritative; do not inherit stale Python runtime values from setup scripts.
+if defined PYTHONHOME set "PYTHONHOME="
+if defined PYTHONPATH set "PYTHONPATH="
+
 :: Prefer the Python installed by windows_install_build_dependencies.bat
 IF EXIST "C:\opt\Python312\python.exe" (
     set "PATH=C:\opt\Python312\;C:\opt\Python312\Scripts\;%PATH%"

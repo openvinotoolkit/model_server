@@ -64,8 +64,10 @@ set "setOvmsVersionCmd=python windows_set_ovms_version.py"
 :: When changing the values here you can print the node default PATH value and base your changes on it.
 set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
 set "PYTHONHOME=C:\opt\Python312"
+set "PYTHONPATH=C:\opt\Python312"
 set "envPath=win_environment.log"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
+set "basePythonPath=C:\opt\Python312;%setPythonPath%"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Load chosen dependency versions from versions.mk
@@ -96,11 +98,15 @@ set "PATH=%setPath%"
 set "openvinoBatch=call !BAZEL_SHORT_PATH!\openvino\setupvars.bat"
 set "opencvBatch=call C:\opt\opencv_!opencv_version!\setup_vars_opencv4.cmd"
 
-:: Set required libraries paths
+:: OpenVINO and OpenCV setup scripts are used only for dependency DLLs and library paths.
+:: Their Python environment is not the repo runtime; pin the canonical Python 3.12 once.
 %openvinoBatch%
 if !errorlevel! neq 0 exit /b !errorlevel!
 %opencvBatch%
-set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
+if !errorlevel! neq 0 exit /b !errorlevel!
+
+set "PYTHONHOME=C:\opt\Python312"
+set "PYTHONPATH=%basePythonPath%"
 
 :: Log all environment variables
 set > %envPath%

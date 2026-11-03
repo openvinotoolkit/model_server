@@ -3193,9 +3193,7 @@ TEST(OvmsGraphCliParserTest, invalidToolParserNameThrowsInvalidArgument) {
             EXPECT_NE(std::string(e.what()).find("Unsupported tool_parser"), std::string::npos);
             EXPECT_NE(std::string(e.what()).find("nonexistent_parser"), std::string::npos);
             throw;
-        }
-    },
-        std::invalid_argument);
+        } }, std::invalid_argument);
 }
 
 TEST(OvmsGraphCliParserTest, invalidReasoningParserNameThrowsInvalidArgument) {
@@ -3210,9 +3208,7 @@ TEST(OvmsGraphCliParserTest, invalidReasoningParserNameThrowsInvalidArgument) {
             EXPECT_NE(std::string(e.what()).find("Unsupported reasoning_parser"), std::string::npos);
             EXPECT_NE(std::string(e.what()).find("nonexistent_parser"), std::string::npos);
             throw;
-        }
-    },
-        std::invalid_argument);
+        } }, std::invalid_argument);
 }
 
 TEST(OvmsGraphCliParserTest, chatTemplateEngineOptions) {
@@ -3249,9 +3245,7 @@ TEST(OvmsGraphCliParserTest, embeddingsMaxLengthZeroThrowsInvalidArgument) {
         } catch (const std::invalid_argument& e) {
             EXPECT_NE(std::string(e.what()).find("max_length must be greater than 0"), std::string::npos);
             throw;
-        }
-    },
-        std::invalid_argument);
+        } }, std::invalid_argument);
 }
 
 TEST(OvmsGraphCliParserTest, embeddingsMaxLengthNonZeroIsAccepted) {
@@ -3366,9 +3360,7 @@ TEST(OvmsGraphCliParserTest, draftModelPathAndDraftSourceModelAreMutuallyExclusi
         } catch (const std::invalid_argument& e) {
             EXPECT_NE(std::string(e.what()).find("mutually exclusive"), std::string::npos);
             throw;
-        }
-    },
-        std::invalid_argument);
+        } }, std::invalid_argument);
 }
 
 TEST_F(OvmsInferredTaskTest, positiveConfigureModeInfersTaskFromModel) {

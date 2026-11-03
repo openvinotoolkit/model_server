@@ -34,8 +34,8 @@ template <typename T>
 class Queue {
 public:
     /**
-    * @brief Allocating idle stream for execution
-    */
+     * @brief Allocating idle stream for execution
+     */
     std::future<int> getIdleStream() {
         // OVMS_PROFILE_FUNCTION();
         int value;
@@ -71,8 +71,8 @@ public:
     }
 
     /**
-    * @brief Release stream after execution
-    */
+     * @brief Release stream after execution
+     */
     void returnStream(int streamID) {
         // OVMS_PROFILE_FUNCTION();
         std::unique_lock<std::mutex> lk(queue_mutex);
@@ -93,8 +93,8 @@ public:
     }
 
     /**
-    * @brief Constructor with initialization
-    */
+     * @brief Constructor with initialization
+     */
     Queue(int streamsLength) :
         streams(streamsLength),
         front_idx{0},
@@ -113,27 +113,27 @@ public:
 
 protected:
     /**
-    * @brief Vector representing circular buffer for infer queue
-    */
+     * @brief Vector representing circular buffer for infer queue
+     */
     std::vector<int> streams;
 
     /**
-    * @brief Index of the front of the idle streams list
-    */
+     * @brief Index of the front of the idle streams list
+     */
     std::uint32_t front_idx;
 
     /**
-    * @brief Index of the back of the idle streams list
-    */
+     * @brief Index of the back of the idle streams list
+     */
     std::atomic<std::uint32_t> back_idx;
 
     /**
-    * @brief Vector representing OV streams and used for notification about completed inference operations
-    */
+     * @brief Vector representing OV streams and used for notification about completed inference operations
+     */
     std::mutex front_mut;
     std::mutex queue_mutex;
     /**
-     * 
+     *
      */
     std::vector<T> inferRequests;
     std::queue<std::promise<int>> promises;
