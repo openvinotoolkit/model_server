@@ -236,13 +236,13 @@ absl::Status GenAiServable::validateInputCompatibility(std::shared_ptr<GenAiServ
             if (content.is_array()) {
                 for (size_t j = 0; j < content.size(); j++) {
                     const auto type = content[j]["type"].as_string().value_or("");
-                    if (type == "input_audio" && !inputProcessingConfig.supportsAudioInputs) {
+                    if (type == "input_audio" && !inputProcessingConfig.audioInputConfig.has_value()) {
                         return absl::Status(absl::StatusCode::kInvalidArgument, "This servable does not support audio input");
                     }
-                    if (!inputProcessingConfig.isVLM && type == "image_url") {
+                    if (!inputProcessingConfig.supportsVisualInputs && type == "image_url") {
                         return absl::Status(absl::StatusCode::kInvalidArgument, "This servable supports only text input, but image_url has been provided");
                     }
-                    if (!inputProcessingConfig.isVLM && type == "video_url") {
+                    if (!inputProcessingConfig.supportsVisualInputs && type == "video_url") {
                         return absl::Status(absl::StatusCode::kInvalidArgument, "This servable supports only text input, but video_url has been provided");
                     }
                 }

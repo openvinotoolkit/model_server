@@ -111,7 +111,9 @@ protected:
         std::shared_ptr<rapidjson::Document> doc;  // keeps handler's reference alive
     };
 
-    RunResult runPipeline(const std::string& json, bool isVLM = false, bool isOmni = false) {
+    RunResult runPipeline(const std::string& json,
+        bool supportsVisualInputs = false,
+        std::optional<AudioInputConfig> audioInputConfig = std::nullopt) {
         RunResult result;
 
         result.doc = std::make_shared<rapidjson::Document>();
@@ -150,8 +152,8 @@ protected:
         result.req = std::move(*reqResult);
 
         InputProcessorContext ctx;
-        ctx.config.isVLM = isVLM;
-        ctx.config.isOmni = isOmni;
+        ctx.config.supportsVisualInputs = supportsVisualInputs;
+        ctx.config.audioInputConfig = audioInputConfig;
         ctx.tokenizer = *sharedTokenizer;
         ctx.templateProcessor = sharedPreparedRuntimeTemplate.get();
 
@@ -474,7 +476,7 @@ TEST_P(InputProcessingIntegrationTest, VlmAudioInput_DecodesWithoutOmni) {
                                  : R"({"model":"m","input":[{"type":"message","role":"user","content":[{"type":"input_text","text":"Describe this audio."},{"type":"input_audio","input_audio":{"data":")" +
                                        audioB64 + R"(","format":"wav"}}]}]})";
 
-    auto result = runPipeline(json, /*isVLM=*/true, /*isOmni=*/false);
+    auto result = runPipeline(json, /*supportsVisualInputs=*/true, AudioInputConfig{true});
     ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
     ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
     ASSERT_EQ(result.req.inputAudios.size(), 1u);
@@ -490,7 +492,7 @@ TEST_P(InputProcessingIntegrationTest, VlmAudioInput_ResamplesTo16Khz) {
                                  : R"({"model":"m","input":[{"type":"message","role":"user","content":[{"type":"input_audio","input_audio":{"data":")" +
                                        audioB64 + R"(","format":"wav"}}]}]})";
 
-    auto result = runPipeline(json, /*isVLM=*/true, /*isOmni=*/false);
+    auto result = runPipeline(json, /*supportsVisualInputs=*/true, AudioInputConfig{true});
     ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
     ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
     ASSERT_EQ(result.req.inputAudios.size(), 1u);
@@ -505,7 +507,7 @@ TEST_P(InputProcessingIntegrationTest, OmniAudioInput_PreservesNativeSampleRate)
                                  : R"({"model":"m","input":[{"type":"message","role":"user","content":[{"type":"input_audio","input_audio":{"data":")" +
                                        audioB64 + R"(","format":"wav"}}]}]})";
 
-    auto result = runPipeline(json, /*isVLM=*/true, /*isOmni=*/true);
+    auto result = runPipeline(json, /*supportsVisualInputs=*/true, AudioInputConfig{});
     ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
     ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
     ASSERT_EQ(result.req.inputAudios.size(), 1u);
@@ -533,7 +535,7 @@ TEST_P(InputProcessingIntegrationTest, TextImageAudio_AllModalitiesDecoded) {
                audioB64 + R"(","format":"wav"}}]}]})";
     }
 
-    auto result = runPipeline(json, /*isVLM=*/true, /*isOmni=*/true);
+    auto result = runPipeline(json, /*supportsVisualInputs=*/true, AudioInputConfig{});
 
     ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
     ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
@@ -572,7 +574,7 @@ TEST_P(InputProcessingIntegrationTest, MultiTurnAudio_PreservesPlacement) {
                R"(,{"type":"input_text","text":"After."}]}]})";
     }
 
-    auto result = runPipeline(json, /*isVLM=*/true, /*isOmni=*/true);
+    auto result = runPipeline(json, /*supportsVisualInputs=*/true, AudioInputConfig{});
     ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
     ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
     ASSERT_EQ(result.req.inputAudios.size(), 2u);
@@ -593,7 +595,7 @@ TEST_P(InputProcessingIntegrationTest, MultiTurnAudio_PreservesPlacement) {
 }
 
 TEST_P(InputProcessingIntegrationTest, AudioTagInUserTextRejected) {
-    auto result = runPipeline(textJson("<ov_genai_audio_0>"), /*isVLM=*/true, /*isOmni=*/true);
+    auto result = runPipeline(textJson("<ov_genai_audio_0>"), /*supportsVisualInputs=*/true, AudioInputConfig{});
     ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
     EXPECT_EQ(result.processStatus.code(), absl::StatusCode::kInvalidArgument);
 }
@@ -754,7 +756,7 @@ TEST(InputProcessingEquivalenceTest, ChatAndResponsesProduceSamePromptAndImages)
         auto req = std::move(*reqResult);
 
         InputProcessorContext ctx;
-        ctx.config.isVLM = true;
+        ctx.config.supportsVisualInputs = true;
         ctx.tokenizer = tokenizer;
         ctx.templateProcessor = &preparedRuntimeTemplate;
 
