@@ -78,23 +78,3 @@ cc_library(
     }),
     visibility = ["//visibility:public"],
 )
-
-# Thin audio-decode/encode utilities that wrap Intel MPI for OVMS calculators.
-# On Linux this is a stub (all functions return false → callers fall back to dr_libs).
-ovms_cc_library(
-    name = "imp_audio_utils",
-    srcs = ["imp_audio_utils.cpp"],
-    hdrs = ["imp_audio_utils.hpp"],
-    local_defines = COMMON_LOCAL_DEFINES + select({
-        "//src:windows": ["INTEL_MPI_AVAILABLE=1"],
-        "//conditions:default": [],
-    }),
-    deps = select({
-        "//src:windows": [
-            ":intel_mpi",
-            "//third_party:openvino",
-        ],
-        "//conditions:default": [],
-    }),
-    visibility = ["//visibility:public"],
-)
