@@ -164,7 +164,7 @@ TEST(TaskInferenceRemoteMetadataTest, ReportsHttpStatusFailuresWithoutFallback) 
     envGuard.unset("no_proxy");
     envGuard.unset("NO_PROXY");
 
-    for (const std::string& sourceModel : {"unauthorized", "forbidden", "missing"}) {
+    for (const char* sourceModel : {"unauthorized", "forbidden", "missing"}) {
         std::string errorMessage;
         const auto task = ovms::determineDefaultTaskParameter(
             std::nullopt, sourceModel, std::nullopt, &errorMessage);

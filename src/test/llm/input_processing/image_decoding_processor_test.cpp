@@ -319,6 +319,8 @@ TEST(ImageDecodingProcessorTest, HttpRedirectWithoutPermissionReturnsConfigurati
     envGuard.unset("https_proxy");
     envGuard.unset("HTTP_PROXY");
     envGuard.unset("HTTPS_PROXY");
+    envGuard.unset("all_proxy");
+    envGuard.unset("ALL_PROXY");
     InputRequest req = makeImageUrlRequest("http://127.0.0.1:" + std::to_string(port) + "/redirect");
     ImageDecodingProcessor processor(std::nullopt, std::vector<std::string>{"127.0.0.1"});
 
