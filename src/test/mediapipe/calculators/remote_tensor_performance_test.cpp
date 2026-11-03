@@ -751,12 +751,12 @@ TEST_F(WindowsD3D11RemoteTensorFixture, PureOpenVinoInferenceWithD3D11Nv12InCalc
                                         output_stream: "DETECTIONS:detections"
                                         options {
                                                 [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
-                                                  model_path: ")pb" + configuredModelPath + R"pb(                                                                                                  "
+                                                  model_path: ")pb" + configuredModelPath + R"pb(                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              "
       input_name: "data"
       performance_hint: "LATENCY"
       num_streams: 1
     }
-                                                                                                                                                                                                    }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                }
 }
 )pb";
     const auto config = ::mediapipe::ParseTextProtoOrDie<::mediapipe::CalculatorGraphConfig>(graphText);
@@ -994,12 +994,12 @@ TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithOpenVinoSourceAndInference
                                         output_stream: "DETECTIONS:detections"
                                         options {
                                                 [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
-                                                  model_path: ")pb" + configuredModelPath + R"pb(                                                                                                  "
+                                                  model_path: ")pb" + configuredModelPath + R"pb(                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              "
       input_name: "data"
       performance_hint: "LATENCY"
       num_streams: 1
     }
-                                                                                                                                                                                                    }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                }
 }
 )pb";
     const auto config = ::mediapipe::ParseTextProtoOrDie<::mediapipe::CalculatorGraphConfig>(graphText);
@@ -1096,12 +1096,12 @@ TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithOpenVinoSingleCalculatorPe
                                         output_stream: "DETECTIONS:detections"
                                         options {
                                                 [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
-                                                  model_path: ")pb" + configuredModelPath + R"pb(                                                                                                  "
+                                                  model_path: ")pb" + configuredModelPath + R"pb(                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              "
       input_name: "data"
       performance_hint: "LATENCY"
       num_streams: 1
     }
-                                                                                                                                                                                                    }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                }
 }
 )pb";
     const auto config = ::mediapipe::ParseTextProtoOrDie<::mediapipe::CalculatorGraphConfig>(graphText);
@@ -1198,12 +1198,12 @@ TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithOpenVinoGstreamerElementPe
                                         output_stream: "FRAMES:frames"
                                         options {
                                                 [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
-                                                  model_path: ")pb" + configuredModelPath + R"pb(                                                                                                  "
+                                                  model_path: ")pb" + configuredModelPath + R"pb(                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              "
       input_name: "data"
       performance_hint: "LATENCY"
       num_streams: 1
     }
-                                                                                                                                                                                                    }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                }
 }
 )pb";
     const auto config = ::mediapipe::ParseTextProtoOrDie<::mediapipe::CalculatorGraphConfig>(graphText);
