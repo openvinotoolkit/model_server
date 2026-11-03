@@ -4,6 +4,8 @@
 
 This guide describes developing, building, testing, and debugging OVMS on a Linux host. You can work locally or use VS Code on a Windows laptop connected through Remote - SSH and Dev Containers. Run Docker and Make commands on the Linux host, and run Bazel and GDB inside the build container.
 
+Unless stated otherwise, run host commands from the repository root and build-container commands from `/ovms`. Model downloads use paths relative to these directories.
+
 - [Prerequisites](#prerequisites)
 - [Build Environment](#build-environment)
 - [Remote Development With VS Code](#remote-development-with-vs-code)
@@ -33,6 +35,8 @@ make ovms_builder_image RUN_TESTS=0
 ```
 
 This creates `openvino/model_server-build:latest` using Ubuntu 24 by default, without running unit tests. Reuse an existing compatible builder image when available. Unlike `make docker_build`, this target does not also package OVMS and create release images. Other operating systems and image names are covered in [Optional Configuration](#optional-configuration).
+
+When reusing an older builder, ensure it provides the Bazel version required by the repository's `.bazelversion`. If Bazel reports that the required version is missing, install that version inside the builder or rebuild the builder image before compiling OVMS. Install client Python dependencies separately in the environment used to run the client; the builder does not necessarily include them.
 
 ### Start the Build Container
 
@@ -144,7 +148,7 @@ bazel test //src/python/binding:test_python_binding
 
 ### Debug OVMS With GDB
 
-Use the running build container prepared above. Run inside the build container:
+Use the running build container prepared above. Run inside the build container, from `/ovms`:
 
 ```text
 bazel build //src:ovms -c dbg
@@ -153,7 +157,7 @@ gdb --args ./bazel-bin/src/ovms --config_path <config_path> --port 9178 --rest_p
 
 Replace `<config_path>` with your model configuration. Its model paths must be accessible inside the container, for example under `/ovms/models`. `bazel-bin` points to the executable in Bazel's output directory. Set breakpoints in GDB, then enter `run` to start OVMS.
 
-For a standalone ResNet example, download the model and start GDB inside the build container:
+For a standalone ResNet example, download the model and start GDB inside the build container, from `/ovms`:
 
 ```text
 mkdir -p models/resnet/1
@@ -184,6 +188,14 @@ Run on the Linux host to check readiness:
 ```text
 docker run --rm --network=host curlimages/curl:latest -i http://localhost:9179/v2/health/ready
 ```
+
+Expect HTTP `200 OK` once OVMS is ready and the model state is `AVAILABLE` in the server log. For an existing build container without published ports, share its network namespace instead. Run on the Linux host, replacing `<container_name>` with the running build container's name:
+
+```text
+docker run --rm --network=container:<container_name> curlimages/curl:latest --noproxy '*' -i http://localhost:9179/v2/health/ready
+```
+
+With this network setting, `localhost` refers to the build container, so no host port mapping is required. Use `localhost:9178` for a gRPC client sharing the same network namespace.
 
 Then run your inference client container with the same network setting and the matching endpoint. Requests can wait or time out while OVMS is paused at a breakpoint. Host networking here refers to the Linux server, not the Windows laptop.
 
@@ -359,17 +371,21 @@ docker run -d -u "$(id -u)" -v "${PWD}/models":/models -p 9180:9178 \
 	--mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --port 9178
 ```
 
-Run the client on the Linux host in the activated Python environment:
+Run the client on the Linux host in the activated Python environment. Change to the samples directory because the script imports helper modules using paths relative to its working directory. Return to the repository root afterward:
 
 ```text
-pip3 install -r client/python/kserve-api/samples/requirements.txt
-python client/python/kserve-api/samples/grpc_infer_resnet.py \
-	--images_numpy_path client/python/imgs_nhwc.npy --labels_numpy_path client/python/lbs.npy \
+cd client/python/kserve-api/samples
+pip3 install -r requirements.txt
+python grpc_infer_resnet.py \
+    --images_numpy_path ../../imgs_nhwc.npy --labels_numpy_path ../../lbs.npy \
 	--iterations 1000 --model_name resnet --batchsize 1 \
 	--input_name image --output_name output --transpose_input False --grpc_port 9180
+cd ../../../..
 ```
 
 The client reads NHWC image arrays and labels and sends batches to `resnet`. Stop and remove the release container when finished using its Docker-generated name.
+
+In a CPU smoke test with freshly built OVMS and OpenVINO 2026.5.0, all 1,000 requests succeeded and classification accuracy was 90% on the repeated ten-image sample set. The first image was recognized as `airliner` (class `404`), matching its label. These are observed results, not guaranteed accuracy or performance values. When testing OVMS inside the build container instead of the release container above, use port `9178` and install the client requirements in the Python environment used inside that container.
 
 | Argument | Purpose |
 |---|---|
