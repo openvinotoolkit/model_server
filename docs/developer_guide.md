@@ -2,549 +2,459 @@
 
 ## Introduction
 
-This document gives information and steps to run and debug tests. It gives information about following points :
+This guide describes developing, building, testing, and debugging OVMS on a Linux host. You can work locally or use VS Code on a Windows laptop connected through Remote - SSH and Dev Containers. Run Docker and Make commands on the Linux host, and run Bazel and GDB inside the build container.
 
-- [OpenVINO™ Model Server Developer Guide](#openvino-model-server-developer-guide)
-	- [Introduction](#introduction)
-	- [Set up the Development Environment](#set-up-the-development-environment)
-	- [Prepare Environment to Use the Tests](#prepare-environment-to-use-the-tests)
-		- [Step 1: Compile source code](#step-1-compile-source-code)
-		- [Step 2: Install software](#step-2-install-software)
-	- [Run the Tests](#run-the-tests)
-	- [Run unit tests](#run-unit-tests)
-	- [Develop Python runtime support](#develop-python-runtime-support)
-	- [Debugging](#debugging)
-		- [Option 1. Use OpenVINO Model Server build image.](#option-1-use-openvino-model-server-build-image)
-		- [Option 2. Build OVMS image with minitrace enabled](#option-2-build-ovms-image-with-minitrace-enabled)
-		- [Profiling macros](#profiling-macros)
+- [Prerequisites](#prerequisites)
+- [Build Environment](#build-environment)
+- [Remote Development With VS Code](#remote-development-with-vs-code)
+- [Build and Test](#build-and-test)
+- [Debugging](#debugging)
+- [Functional and Performance Tests](#functional-and-performance-tests)
+- [Optional Configuration](#optional-configuration)
 
-## Set up the Development Environment
+## Prerequisites
 
-Use Python 3.12 for the host functional-test environment; `make venv` uses the `python3` interpreter on `PATH` to create it. Run Bazel builds and unit tests inside the OVMS build container.
+The Linux host needs Git, Make, Docker, and permission to run Docker commands. Keep the repository on the Linux host, not on the Windows laptop. Image builds and model downloads require network access; configure proxy variables if your network requires them.
 
-To add a skill for GitHub Copilot in VS Code, create `.github/skills/<skill-name>/SKILL.md` in the repository. Add YAML frontmatter with a unique `name` and a concise `description` that explains when to use the skill, then write its instructions below. Copilot Agent discovers repository skills from this directory when the workspace is open. You can then use them with parameters by invoking `/<skill-name> <parameters>` in the copilot chat.
+For remote development, install VS Code with the Remote - SSH and Dev Containers extensions on the Windows laptop. Connect to the Linux host using Remote - SSH before running the host commands below.
 
-In-case of problems, see [Debugging](#debugging).
+Python 3.12 is required on the Linux host only for model-preparation scripts and Python-based functional/client tests. Ensure `python3` on `PATH` points to that installation. `make venv` creates the host test environment using that interpreter; Python development inside the builder uses the container's environment.
 
-## Prepare Environment to Use the Tests
+## Build Environment
 
-   ```text
-   git clone https://github.com/openvinotoolkit/model_server.git
-   cd model_server
-   ```
+### Prepare the Builder Image
 
-### Step 1: Compile source code
-1. Build the development `openvino/model_server-build` Docker* image
-
-   ```text
-   make docker_build
-   ```
-   or choose one of the supported operationg systems: ubuntu24(default), ubuntu26 or redhat
-   ```
-   make docker_build BASE_OS=ubuntu26 DLDT_PACKAGE_URL=<URL>
-   ```
-
-   > **Note**: URL to OpenVINO Toolkit package can be received after registration on [OpenVINO&trade; Toolkit website](https://software.intel.com/en-us/openvino-toolkit/choose-download)
-
-   `docker_build` target by default builds multiple docker images:
-   - `openvino/model_server:latest` - smallest release image containing only necessary files to run model server on CPU
-   - `openvino/model_server:latest-gpu` - release image containing support for Intel GPU and CPU
-   - `openvino/model_server:latest-nginx-mtls` - release image containing exemplary NGINX MTLS configuration
-   - `openvino/model_server-build:latest` - image with builder environment containing all the tools to build OVMS
-
-   > **Note**: docker_build target accepts the same set of parameters as release_image target described here: [build_from_source.md](./build_from_source.md)
-
-2. Download test LLM models
-   ```text
-   ./prepare_llm_models.sh ./src/test/llm_testing
-   ```
-
-3. Mount the source code in the Docker container :
-	```text
-	docker run -it -v ${PWD}:/ovms --entrypoint bash -p 9178:9178 openvino/model_server-build:latest
-	```
-
-To develop from a Windows laptop using a Linux host, install VS Code with the Remote - SSH and Dev Containers extensions, connect to the Linux host using Remote - SSH, and open the repository stored on that host. Docker must be available on the Linux host. In the remote terminal, from the repository root, build only the development image without running tests and start a reusable container with the host source code mounted at `/ovms`:
+Run on the Linux host:
 
 ```text
+git clone https://github.com/openvinotoolkit/model_server.git
+cd model_server
 make ovms_builder_image RUN_TESTS=0
-docker run -dit --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -p 9178:9178 -p 9179:9179 -v "${PWD}":/ovms -w /ovms --entrypoint bash openvino/model_server-build:latest
 ```
 
-Use this container instead of the interactive container above. In the remote VS Code window, run **Dev Containers: Attach to Running Container...** from the Command Palette, select the container using the `openvino/model_server-build:latest` image, and open `/ovms`. Edit features from the Windows laptop while running Bazel builds, tests, and GDB inside the Linux build container; edits persist in the Linux host repository through the bind mount, so no Windows source synchronization is needed. For a build with debug symbols, run the following in the attached container's terminal:
+This creates `openvino/model_server-build:latest` using Ubuntu 24 by default, without running unit tests. Reuse an existing compatible builder image when available. Unlike `make docker_build`, this target does not also package OVMS and create release images. Other operating systems and image names are covered in [Optional Configuration](#optional-configuration).
+
+### Start the Build Container
+
+Run on the Linux host, from the repository root:
 
 ```text
-bazel build //src:ovms -c dbg
+docker run -dit --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
+    -p 9178:9178 -p 9179:9179 -v "${PWD}":/ovms -w /ovms \
+    --entrypoint bash openvino/model_server-build:latest
 ```
 
-To debug OVMS using a client in another container on the Linux host, start the built executable under GDB in the attached build container. Replace `<config_path>` with an example model configuration whose model paths are accessible inside the container, such as under the mounted `/ovms/models` directory. The `bazel-bin` path points to the executable in Bazel's output directory. Run the following and enter `run` at the GDB prompt; the published ports expose gRPC on `9178` and REST on `9179`:
+The repository is mounted at `/ovms`. Docker assigns the container name automatically. The debugging permissions allow GDB to inspect processes; use this container for development, not production. The published ports expose gRPC on `9178` and REST on `9179` when OVMS is started with those ports.
+
+On a shared host, choose unused host ports and update client endpoints accordingly. Publish ports when creating the container; an existing container without these mappings must be recreated to add them. Do not start another server on the same host ports while this container is running.
+
+For a terminal-only workflow, find the container name and open its shell. Run on the Linux host, replacing `<container_name>` with the Docker-generated name:
 
 ```text
-gdb --args ./bazel-bin/src/ovms --config_path <config_path> --port 9178 --rest_port 9179
+docker ps
+docker exec -it <container_name> bash
 ```
 
-From a separate terminal on the Linux host, run a client container with `--network=host` so it can reach OVMS at `localhost:9178` for gRPC or `http://localhost:9179` for REST. For example, check server readiness before sending inference requests:
+## Remote Development With VS Code
+
+In the Remote - SSH window connected to the Linux host, run **Dev Containers: Attach to Running Container...** from the Command Palette. Select the container using `openvino/model_server-build:latest` and open `/ovms`.
+
+Edit features from the Windows laptop while running Bazel builds, tests, and GDB in the attached container's terminal. Edits persist in the Linux host repository through the bind mount; no Windows source synchronization is needed. Docker and Make commands still run in a separate Linux-host terminal, not in the attached container.
+
+Reuse the container across development sessions. If it is stopped, run on the Linux host, replacing `<container_name>` with its name from `docker ps -a`:
 
 ```text
-docker run --rm --network=host curlimages/curl:latest -i http://localhost:9179/v2/health/ready
-```
-
-Use unused host ports on a shared Linux server and update the client endpoints accordingly. Publish ports when creating the build container; an existing container without these mappings must be recreated to add them.
-
-Reuse the same container for later development sessions. If it is stopped, find its Docker-generated name with `docker ps -a` and run the following on the Linux host before attaching again, replacing `<container_name>` with that name:
-
-```text
+docker ps -a
 docker start <container_name>
 ```
 
-4. In the docker container context compile the source code via:
-	```text
-	bazel build //src:ovms
-> **NOTE**: There are several options that would disable specific parts of OVMS. For details check ovms bazel build files
-	For example (choose distro `ubuntu` or `redhat` depending on the image type with --distro=redhat)
-	```
+Attach VS Code again and open `/ovms`.
 
-5. From the container, run a single unit test:
-	```text
-	bazel test --test_summary=detailed --test_output=all --test_filter='ModelVersionStatus.*' //src:ovms_test
-	```
+## Build and Test
 
-| Argument      | Description |
-| :---        |    :----   |
-| `test`       | builds and runs the specified test target       |
-| `--test_summary=detailed`   |   the output includes failure information       |
-| `--test_output=all` | log all tests stdout at the end |
-| `--test_filter='ModelVersionStatus.*'` | limits the tests run to the indicated test  |
-| `//src:ovms_test` | the test source |
-> **NOTE**: For more information, see the [bazel command-line reference](https://docs.bazel.build/versions/master/command-line-reference.html)
-> **NOTE**: If container has access to Intel GPU device and test models, add `--test_env RUN_GPU_TESTS=1` to run GPU unit tests.
+### Compile OVMS
 
-
-6. Select one of these options to change the target image name or network port to be used in tests. It might be helpful on a shared development host:
-
-	* With a Docker cache :
-
-	```
-	OVMS_CPP_DOCKER_IMAGE=<replace_with_unique_image_name> make docker_build
-    OVMS_CPP_DOCKER_IMAGE=<replace_with_unique_image_name> make test_functional
-    OVMS_CPP_CONTAINER_PORT=<unique_network_port> make test_perf
-	```
-
-	* Without a Docker cache :
-
-	```
-	make docker_build NO_DOCKER_CACHE=true
-	```
-
-
-### Step 2: Install software
-
-1. Install Python 3.12 and ensure `python3` on `PATH` points to that installation.
-
-> **NOTE**: Python is only necessary to complete the functional tests in this guide.
-
-2. Install the `virtualenv` package :
-
-	```
-	pip3 install virtualenv
-	```
-
-Now the tests can be run.
-
-## Run the Tests
-
-Use the tests below depending on the requirement.
-
-Click the test that needs to be run:
-
-<details><summary>Run test inference</summary>
-
-1. Download an exemplary model [ResNet50-binary model](https://github.com/openvinotoolkit/open_model_zoo/blob/releases/2022/1/models/intel/resnet50-binary-0001/README.md) :
-
-	```text
-	source tests/performance/download_model.sh
-	```
-
-	The script stores the model in the user home folder.
-
-2. Start OVMS docker container with downloaded model
-
-```text
-docker run -d --name server-test -v ~/resnet50-binary:/models/resnet50-binary -p 9178:9178 \
-openvino/model_server:latest --model_name resnet-binary --model_path /models/resnet50-binary --port 9178
-```
-
-3. The grpc client connects to the OpenVINO Model Server service that is running on port 9178.
-
-	```text
-	make venv
-	source .venv/bin/activate
-	pip3 install -r demos/common/python/requirements.txt
-	python tests/performance/grpc_latency.py --images_numpy_path tests/performance/imgs.npy --labels_numpy_path tests/performance/labels.npy \
-	--iteration 1000 --model_name resnet-binary --batchsize 1 --report_every 100 --input_name 0 --output_name 1463 --grpc_port 9178
-	```
-
-Where:
-
-| Argument Used     | Description |
-| :---        |    :----   |
-| `images_numpy_path tests/performance/imgs.npy`  | The path to a numpy array. `imgs.npy` is the numpy array with a batch of input data.|
-| `labels_numpy_path tests/performance/labels.npy`| Includes a numpy array  named labels.npy. This array has image classification results       |
-| `iteration 1000` | Run the data 1000 times |
-| `batchsize 1` | Batch size to be used in the inference request |
-| `report_every 10` | Number of iterations followed by results summary report|
-| `input_name 0` | Name of the deployed model input called "0" |
-| `output_name 1463` | Name of the deployed model output called "1463"|
-
-</details>
-
-<details><summary>Run functional tests</summary>
-
-The functional tests are written in Python 3.12. Ensure `python3` on `PATH` is Python 3.12, then use the repository virtual environment created by `make venv` to install and run their dependencies.
-> **NOTE**: In-case of additional problems, see the [debugging section](#debugging).
-
-1. Run command
-
-```text
-make test_functional
-```
-
-- Configuration options are :
-
-| Variable                  | Description                                                |
-|:--------------------------|:-----------------------------------------------------------|
-| `OVMS_CPP_DOCKER_IMAGE`   | Docker image name for the tests.                           |
-| `OVMS_CPP_IMAGE_TAG`      | Docker image tag for the tests.                            |
-| `TT_LOGGING_LEVEL`        | The log level for tests.                                   |
-| `TT_LOGGING_LEVEL_OVMS`   | The log level for OVMS.                                    |
-| `BUILD_LOGS`              | Path to save artifacts.                                    |
-| `START_CONTAINER_COMMAND` | The command to start the OpenVINO Model Storage container. |
-
-2. Add any configuration variables to the command line in this format :
-
-```text
-export TT_OVMS_IMAGE_NAME="openvino/model_server:latest"
-```
-
-3. To make command repetition easier, create and store the configuration options in a file named `user_config.py`. Put this file in the main project directory.
-
-- Example:
-
-```python
-os.environ["TT_OVMS_IMAGE_NAME"] = "openvino/model_server:latest"
-```
-</details>
-
-<details><summary>Run performance tests</summary>
-
-Automated tests are configured to use the ResNet50 model.
-
-1. Execute command to run latency test
-```text
-make test_perf
-```
-- Output
-```text
-Running latency test
-[--] Starting iterations
-[--] Iteration   100/ 1000; Current latency: 10.52ms; Average latency: 11.35ms
-[--] Iteration   200/ 1000; Current latency: 10.99ms; Average latency: 11.03ms
-[--] Iteration   300/ 1000; Current latency: 9.60ms; Average latency: 11.02ms
-[--] Iteration   400/ 1000; Current latency: 10.20ms; Average latency: 10.93ms
-[--] Iteration   500/ 1000; Current latency: 10.45ms; Average latency: 10.84ms
-[--] Iteration   600/ 1000; Current latency: 10.70ms; Average latency: 10.82ms
-[--] Iteration   700/ 1000; Current latency: 9.47ms; Average latency: 10.88ms
-[--] Iteration   800/ 1000; Current latency: 10.70ms; Average latency: 10.83ms
-[--] Iteration   900/ 1000; Current latency: 11.09ms; Average latency: 10.85ms
-[--] Iterations:  1000; Final average latency: 10.86ms; Classification accuracy: 100.0%
-```
-
-2. Execute command to run throughput test
-```text
-make test_throughput
-```
-- Output
-
-```text
-Running throughput test
-[25] Starting iterations
-[23] Starting iterations
-...
-[11] Starting iterations
-[24] Iterations:   500; Final average latency: 20.50ms; Classification accuracy: 100.0%
-[25] Iterations:   500; Final average latency: 20.81ms; Classification accuracy: 100.0%
-[6 ] Iterations:   500; Final average latency: 20.80ms; Classification accuracy: 100.0%
-[26] Iterations:   500; Final average latency: 20.80ms; Classification accuracy: 100.0%
-...
-[11] Iterations:   500; Final average latency: 20.84ms; Classification accuracy: 100.0%
-
-real	0m13.397s
-user	1m22.277s
-sys	0m39.333s
-1076 FPS
-```
-</details>
-
-<details><summary>Run tests on an OpenVINO Model Server binary file</summary>
-
-1. To run tests on an OpenVINO Model Server binary file, use export to specify the following variable in `user_config.py` or in the environment.
-Replace `"/home/<example_path>/dist/<os_name>/ovms/bin/ovms"` with the path to your binary file:
-
-```text
-tar -xvzf dist/<os_name>/ovms.tar.gz -C dist/<os_name>/
-```
-
-```text
-os.environ["OVMS_BINARY_PATH"] = "'${PWD}'/dist/<os_name>/ovms/bin/ovms"
-```
-
-```text
-export OVMS_BINARY_PATH="'${PWD}'/dist/<os_name>/ovms/bin/ovms"
-```
-
-2. The following command executed in the of OpenVINO Model Server binary file should return paths to the unpacked `lib` directory included in `ovms.tar.gz` (`ovms/bin/./../lib`).
-```text
-ldd dist/<os_name>/ovms/bin/ovms
-```
-
-3. Otherwise use export to specify the following variable in `user_config.py` file or in the environment :
-
-```python
-os.environ["LD_LIBRARY_PATH"] = "'${PWD}'/dist/<os_name>/ovms/lib"
-```
-
-```text
-export LD_LIBRARY_PATH="'${PWD}'/dist/<os_name>/ovms/lib"
-```
-
-</details>
-
-> **NOTE**: For additional problems, see the [debugging section](#debugging).
-
-
-## Run unit tests
-
-Executing the unit tests require building the ovms build image. All unit tests are expected to be started in a container using model server build image. Some unit tests require test models to be pulled and attached to the container.
-The following commands create the build image and start the unit tests:
-
-```
-make ovms_builder_image
-make run_unit_tests
-```
-
-To run unit tests, verifying integration with Intel GPUs, add `RUN_GPU_TESTS=1` parameter:
-```
-make run_unit_tests RUN_GPU_TESTS=1
-```
-
-> NOTE: It is required to follow [this guide](https://dgpu-docs.intel.com/driver/installation.html#ubuntu) to prepare host machine to work with VA API (Ubuntu).
-
-On bare metal, run (just once):
-```
-sudo apt install -y \
-    linux-headers-$(uname -r) \
-    linux-modules-extra-$(uname -r) \
-    flex bison \
-    intel-fw-gpu intel-i915-dkms xpu-smi
-sudo reboot
-```
-
-> NOTE: It is required to execute unit tests on machine with Intel Data Center GPU.
-
-> NOTE: For RedHat base OS unit tests, which require VA API, are skipped.
-
-### Build and test the split runtime
-
-Run Bazel commands inside the repository's build container. Use the distro flag
-matching that container. Python no longer has a separate on/off build
-configuration; use `--config=mp_on` for changes that require MediaPipe. Building
-`//src:ovms` links the MediaPipe runtime and host-side Python calculators into
-the executable, and includes `libovmspython`, `libpython_calculators`, and
-`pyovms` as runtime data dependencies:
+Run inside the build container, from `/ovms`:
 
 ```text
 bazel build //src:ovms
-
-bazel test
-	//src:python_runtime_library_test \
-	//src/python:pythoninterpretermodule_lifecycle_test \
-	//src/python:pythoninterpretermodule_backend_failure_test \
-	//src/python:pythoninterpretermodule_borrowed_interpreter_test
 ```
 
-Use `--//:distro=redhat` instead for a Red Hat build container. For changes to
-the Python binding itself, also run:
+For changes requiring MediaPipe, add `--config=mp_on`. For Red Hat containers, add `--//:distro=redhat` to every Bazel build and test command. Ubuntu is the default distro. See the repository Bazel configuration for other feature flags.
+
+### Prepare Test Models
+
+Some tests require downloaded models. Prepare only the models needed by your tests before running them; model preparation can take significant time. Run on the Linux host, from the repository root:
+
+```text
+make prepare_models
+```
+
+To prepare only the LLM test models, run on the Linux host:
+
+```text
+./prepare_llm_models.sh ./src/test/llm_testing
+```
+
+The mounted repository makes these models available inside the build container.
+
+### Run Unit Tests
+
+During development, start with a focused fixture. Run inside the build container:
+
+```text
+bazel test --test_summary=detailed --test_output=all \
+    --test_filter='ModelVersionStatus.*' //src:ovms_test
+```
+
+`bazel test` builds and runs the target. `--test_filter` selects the fixture or test, `--test_summary=detailed` reports failures, and `--test_output=all` includes test output. See the [Bazel command-line reference](https://bazel.build/reference/command-line-reference).
+
+After relevant focused tests pass, run the broader unit-test workflow on the Linux host:
+
+```text
+make run_unit_tests
+```
+
+This uses the builder image. GPU-specific tests and host driver requirements are optional and described under [GPU Access and Tests](#gpu-access-and-tests).
+
+### Build and Test the Split Python Runtime
+
+Python no longer has a separate on/off build configuration. Building `//src:ovms` links the MediaPipe runtime and host-side Python calculators into the executable and includes `libovmspython`, `libpython_calculators`, and `pyovms` as runtime data dependencies. Use `--config=mp_on` for changes that require MediaPipe.
+
+Run inside the build container:
+
+```text
+bazel build //src:ovms
+bazel test \
+    //src:python_runtime_library_test \
+    //src/python:pythoninterpretermodule_lifecycle_test \
+    //src/python:pythoninterpretermodule_backend_failure_test \
+    //src/python:pythoninterpretermodule_borrowed_interpreter_test
+```
+
+For changes to the Python binding itself, run inside the build container:
 
 ```text
 bazel test //src/python/binding:test_python_binding
 ```
 
-`python_runtime_library_test` checks the runtime library symbols and
-`pyovms` importability. The interpreter module tests cover lifecycle,
-initialization failure, and borrowed-interpreter behavior.
-`./run_unit_tests.sh` runs the standard build-container suite, including
-`//src:ovms_test` and these Python runtime tests. Use focused Bazel tests while
-iterating, then run the script before submitting broader runtime changes.
+`python_runtime_library_test` checks runtime library symbols and `pyovms` importability. The interpreter module tests cover lifecycle, initialization failure, and borrowed-interpreter behavior. `./run_unit_tests.sh`, run inside the build container, executes the standard suite, including `//src:ovms_test` and these runtime tests. Use focused tests while iterating and the standard suite before submitting broader runtime changes.
 
 ## Debugging
 
-Debugging options are available. Click on the required option :
+### Debug OVMS With GDB
 
-<details><summary>Use gdb to debug in Docker</summary>
+Use the running build container prepared above. Run inside the build container:
 
-1. Build a project in a debug mode :
-	```text
-	make docker_build BAZEL_BUILD_TYPE=dbg
-	```
+```text
+bazel build //src:ovms -c dbg
+gdb --args ./bazel-bin/src/ovms --config_path <config_path> --port 9178 --rest_port 9179
+```
 
-	> **NOTE**: You can build also the debug version of the major dependencies like OpenVINO Runtime using extra flag `CMAKE_BUILD_TYPE=Debug`.
+Replace `<config_path>` with your model configuration. Its model paths must be accessible inside the container, for example under `/ovms/models`. `bazel-bin` points to the executable in Bazel's output directory. Set breakpoints in GDB, then enter `run` to start OVMS.
 
-2. Run the container :
-	```text
-	docker run -it --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -v ${PWD}:/ovms -p 9178:9178 --entrypoint bash openvino/model_server-build:latest
-	```
-3.	Prepare resnet50 model for OVMS in /models catalog and recompile the OpenVINO Model Server in docker container with debug symbols using command:
-	```text
-	mkdir -p /models/1 && wget -P /models/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin && wget -P /models/1 https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml
-	```
-	```text
-	bazel build --config=mp_on //src:ovms -c dbg
-	```
-	```text
-	gdb --args ./bazel-bin/src/ovms --model_name resnet --model_path /models --port 9178
-	```
-    > **NOTE**: For best results, use the makefile parameter `BAZEL_BUILD_TYPE=dbg` to build the dependencies in debug mode as shown above
+For a standalone ResNet example, download the model and start GDB inside the build container:
 
-
-- For unit test debugging, run command :
-	```text
-	gdb --args ./bazel-bin/src/./ovms_test --gtest_filter='OvmsConfigTest.emptyInput'
-	```
-
-- For forking tests debugging, enable fork follow mode by running command:
-	```
-	# (in gdb cli) set follow-fork-mode child
-	```
-- For tracing what OpenVINO calls are used underneath you can use `--define OV_TRACE=1` option when building ovms with bazel or its tests.
-</details>
-
-<details><summary>Use minitrace to display flame graph</summary>
-
-Download the model files and store them in the `models` directory
 ```text
 mkdir -p models/resnet/1
-curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
+curl -fL https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.bin
+curl -fL https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.xml
+gdb --args ./bazel-bin/src/ovms --model_name resnet --model_path /ovms/models/resnet --port 9178 --rest_port 9179
 ```
 
-### Option 1. Use OpenVINO Model Server build image.
-This is convenient way during development in case it is needed to add new or remove already existing traces.
+To build the builder's OVMS artifacts in debug mode as well, run on the Linux host:
 
-1. Build OVMS build image locally.
 ```text
-make docker_build
+make ovms_builder_image RUN_TESTS=0 BAZEL_BUILD_TYPE=dbg
+docker run -dit --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
+    -p 9178:9178 -p 9179:9179 -v "${PWD}":/ovms -w /ovms \
+    --entrypoint bash openvino/model_server-dbg-build:latest
 ```
 
-2. Start the container.
+Use this container instead of the standard builder, not alongside it on the same ports. `BAZEL_BUILD_TYPE=dbg` adds `-dbg` to the image base name. To build applicable source-built dependencies in debug mode, also use `CMAKE_BUILD_TYPE=Debug`; this does not change prebuilt dependencies.
+
+### Connect an External Client Container
+
+Start OVMS under GDB as above and enter `run`. From a separate terminal on the Linux host, use `--network=host` for the client container. This makes the published OVMS endpoints available at `localhost:9178` for gRPC and `http://localhost:9179` for REST.
+
+Run on the Linux host to check readiness:
+
 ```text
-docker run -it -v ${PWD}:/ovms --entrypoint bash -p 9178:9178 openvino/model_server-build:latest
+docker run --rm --network=host curlimages/curl:latest -i http://localhost:9179/v2/health/ready
 ```
 
-3. Build OVMS with minitrace enabled.
+Then run your inference client container with the same network setting and the matching endpoint. Requests can wait or time out while OVMS is paused at a breakpoint. Host networking here refers to the Linux server, not the Windows laptop.
+
+### Debug Unit Tests
+
+Build the test binary and launch a focused test inside the build container:
+
+```text
+bazel build //src:ovms_test -c dbg
+gdb --args ./bazel-bin/src/ovms_test --gtest_filter='OvmsConfigTest.emptyInput'
+```
+
+For tests that fork, enter `set follow-fork-mode child` at the GDB prompt before `run`. To trace OpenVINO calls, add `--define OV_TRACE=1` when building OVMS or its tests.
+
+### Profile With Minitrace
+
+Prepare the ResNet model using the download commands in [Debug OVMS With GDB](#debug-ovms-with-gdb).
+
+For iterative development, enable minitrace and start OVMS inside the build container:
+
 ```text
 bazel build --config=linux --copt="-DMTR_ENABLED" //src:ovms
+./bazel-bin/src/ovms --model_name resnet --model_path /ovms/models/resnet --trace_path /ovms/trace.json --port 9178
 ```
 
-4. Run OVMS with `--trace_path` specifying where to save flame graph JSON file.
-```text
-bazel-bin/src/ovms --model_name resnet --model_path models/resnet --trace_path trace.json --port 9178
-```
+Stop OVMS gracefully so it writes `trace.json`. Open the file with Chrome's `chrome://tracing` tool.
 
-5. During app exit, the trace info will be saved into `trace.json`.
+For tracing with a release image instead, build on the Linux host:
 
-6. Use Chrome web browser `chrome://tracing` tool to display the graph.
-
-### Option 2. Build OVMS image with minitrace enabled
-This is convenient when final image has to be used on different machine and no changes to existing traces do not need to be modified for debugging.
-
-1. Build OVMS with minitrace enabled locally.
 ```text
 make docker_build MINITRACE=ON
 ```
 
-2. Run OVMS with minitrace enabled and `--trace_path` to specify where to save trace JSON file. Since the file is flushed and saved at container shutdown, mount the host directory with write access to persist the file after container stops.
-```text
-mkdir traces
-chmod -R 777 traces
+The model and trace directories must exist on the host. Ensure the container user can write to the trace directory; avoid making the entire repository world-writable. Run on the Linux host, using different ports if the build container is still running:
 
-docker run -it -v ${PWD}:/workspace:rw -p 9178:9178 openvino/model_server --model_name resnet --model_path /workspace/models/resnet --trace_path /workspace/traces/trace.json --port 9178
+```text
+mkdir -p traces
+docker run -it -v "${PWD}":/workspace:rw -p 9180:9178 \
+    openvino/model_server:latest --model_name resnet --model_path /workspace/models/resnet \
+    --trace_path /workspace/traces/trace.json --port 9178
 ```
 
-3. During app exit, the trace info will be saved into `${PWD}/traces/trace.json`.
+Stop OVMS gracefully to persist `traces/trace.json`, then open it with the same tracing tool.
 
-4. Use Chrome web browser `chrome://tracing` tool to display the graph, similarly to Option 1.
+### Profiling Macros
 
-### Profiling macros
-| Macro | Description | Example Usage |
+| Macro | Description | Example |
 |---|---|---|
-| OVMS_PROFILE_FUNCTION | Add this macro at the very beginning of a function. This will automatically add function name to trace marker. | `OVMS_PROFILER_FUNCTION();`  |
-| OVMS_PROFILE_SCOPE | Add this macro at the beginning of a code scope and add marker name. This will automatically add ending marker at the end of code scope.  | `OVMS_PROFILER_SCOPE("My Code Scope Marker");`  |
-| OVMS_PROFILE_SYNC_BEGIN | For custom start and end markers, use this macro to mark beginning of synchronous event. Remember to use the same marker name for beginning and end. | `OVMS_PROFILER_SYNC_BEGIN("My Synchronous Event");` |
-| OVMS_PROFILE_SYNC_END | For custom start and end markers, use this macro to mark ending of synchronous event. Remember to use the same marker name for beginning and end. | `OVMS_PROFILER_SYNC_END("My Synchronous Event");` |
-| OVMS_PROFILE_ASYNC_BEGIN | For custom start and end markers, use this macro to mark beginning of asynchronous event. Remember to use the same marker name and id for beginning and end. Asynchronous markers need an identifier to correctly match events. | `OVMS_PROFILER_ASYNC_BEGIN("My Asynchronous Event", unique_id);` |
-| OVMS_PROFILE_ASYNC_END | For custom start and end markers, use this macro to mark end of asynchronous event. Remember to use the same marker name and id for beginning and end. Asynchronous markers need an identifier to correctly match events. | `OVMS_PROFILER_ASYNC_END("My Asynchronous Event", unique_id);` |
+| OVMS_PROFILER_FUNCTION | Trace the current function. | `OVMS_PROFILER_FUNCTION();` |
+| OVMS_PROFILER_SCOPE | Trace a named scope. | `OVMS_PROFILER_SCOPE("My Code Scope");` |
+| OVMS_PROFILER_SYNC_BEGIN | Begin a synchronous event. | `OVMS_PROFILER_SYNC_BEGIN("My Event");` |
+| OVMS_PROFILER_SYNC_END | End the matching synchronous event. | `OVMS_PROFILER_SYNC_END("My Event");` |
+| OVMS_PROFILER_ASYNC_BEGIN | Begin an asynchronous event with an identifier. | `OVMS_PROFILER_ASYNC_BEGIN("My Event", unique_id);` |
+| OVMS_PROFILER_ASYNC_END | End the event with the same name and identifier. | `OVMS_PROFILER_ASYNC_END("My Event", unique_id);` |
 
-More information can be found in [profiler.hpp](../src/profiler.hpp) file.
+See [profiler.hpp](../src/profiler.hpp) for details.
 
-</details>
+## Functional and Performance Tests
 
-<details><summary>Debug functional tests</summary>
+These workflows run on the Linux host and are separate from incremental Bazel development. Prepare the required release image using [Full Release Builds](#full-release-builds) before running tests against it.
 
-Use OpenVINO Model Server build image because it installs the necessary tools.
+### Host Python Environment
 
-1. Add the ENTRYPOINT line in Dockerfile.ubuntu:
-	```text
-	echo 'ENTRYPOINT ["/bin/bash", "-c", "sleep 3600; echo Server started on port; sleep 100000"]' >> Dockerfile.ubuntu
-	```
+With Python 3.12 available as `python3`, run on the Linux host:
 
-2. Build the project in debug mode :
-	```text
-	make docker_build BAZEL_BUILD_TYPE=dbg
-	```
+```text
+make venv
+source .venv/bin/activate
+```
 
-3. Open a terminal.
+Use this environment for host Python clients and tests.
 
-4. Run a test in this terminal. Change `TEST_PATH` to point to the test you want to debug:
-	```text
-	make test_functional TEST_PATH=tests/functional/test_embeddings.py::TestEmbeddings::test_on_commit_embeddings_endpoints TT_OVMS_IMAGE_NAME=openvino/model_server-build:latest
-	```
+### Run Functional Tests
 
-5. Open a second terminal.
+Run on the Linux host:
 
-6. In this terminal identify the ID/hash of a running Docker container:
-	```text
-	docker ps
-	```
+```text
+make test_functional
+```
 
-7. Use the ID to execute a new bash shell into this container and start gdb. Make sure the parameters you pass to the OpenVINO Model Server match the parameters in the test code :
-	```text
-	docker exec -ti HASH bash
-	```
-	In docker container:
-	```text
-	cd /ovms/bazel-bin/src/ ; gdb --args ./ovms  --model_name age_gender --model_path /opt/ml/age_gender --port 9000 --rest_port 5500 --log_level TRACE
-	```
+To select one test and an image, run on the Linux host:
 
-8. Open a third terminal.
+```text
+make test_functional TEST_PATH=tests/functional/test_embeddings.py::TestEmbeddings::test_on_commit_embeddings_endpoints TT_OVMS_IMAGE_NAME=openvino/model_server:latest
+```
 
-9. In this terminal use the Docker container ID/hash to stop the sleep process that is preventing the tests from starting. These tests are waiting for stdout text "Server started on port" :
-	```text
-	docker exec -ti HASH bash
-	```
-	In docker container:
-	```text
-	yum install psmisc; killall sleep
-	```
+| Variable | Purpose |
+|---|---|
+| `OVMS_CPP_DOCKER_IMAGE` | Image base name. |
+| `OVMS_CPP_IMAGE_TAG` | Image tag. |
+| `TT_OVMS_IMAGE_NAME` | Complete image name for the test environment. |
+| `TT_LOGGING_LEVEL` | Test logging level. |
+| `TT_LOGGING_LEVEL_OVMS` | OVMS logging level. |
+| `BUILD_LOGS` | Artifact directory. |
+| `START_CONTAINER_COMMAND` | Test-harness container startup command. |
 
-10. Return to the first terminal to debug the test execution.
+Set configuration variables in the host environment before running tests. For example, run on the Linux host:
 
-</details>
+```text
+export TT_OVMS_IMAGE_NAME="openvino/model_server:latest"
+```
+
+Alternatively, set them in the test harness's `user_config.py` using Python's `os.environ`. Keep local configuration separate from shared test defaults.
+
+### Debug Functional Tests
+
+The preferred starting point is [Debug OVMS With GDB](#debug-ovms-with-gdb) with an external client reproducing the failing request. A functional test may launch its own OVMS container with different models and ports; match that test's configuration rather than assuming the development container is used automatically.
+
+For the advanced startup-delay workflow, temporarily add the following Dockerfile instruction at the end of the `build` stage in `Dockerfile.ubuntu`, before the next `FROM` instruction. Do not append it to the end of the multi-stage Dockerfile, which changes the release stage instead:
+
+```dockerfile
+ENTRYPOINT ["/bin/bash", "-c", "sleep 3600; echo Server started on port; sleep 100000"]
+```
+
+Run on the Linux host to rebuild and launch the selected test:
+
+```text
+make ovms_builder_image RUN_TESTS=0 BAZEL_BUILD_TYPE=dbg
+make test_functional TEST_PATH=tests/functional/test_embeddings.py::TestEmbeddings::test_on_commit_embeddings_endpoints TT_OVMS_IMAGE_NAME=openvino/model_server-dbg-build:latest
+```
+
+This workaround requires a test harness that honors the image entrypoint and waits for the startup message. Ensure its container startup configuration grants `SYS_PTRACE` and permits debugging with `seccomp=unconfined`. Remove the temporary Dockerfile change after debugging.
+
+In a second Linux-host terminal, find and enter the test-created container, replacing `<container_name>` with its name:
+
+```text
+docker ps
+docker exec -it <container_name> bash
+```
+
+Run inside that test container. Replace the example model and ports with those expected by the selected test, then enter `run` at the GDB prompt:
+
+```text
+cd /ovms
+gdb --args ./bazel-bin/src/ovms --model_name age_gender --model_path /opt/ml/age_gender --port 9000 --rest_port 5500 --log_level TRACE
+```
+
+In another terminal inside the same test container, release the startup delay. On Ubuntu, run:
+
+```text
+apt-get update
+apt-get install -y psmisc
+killall sleep
+```
+
+On Red Hat, use the corresponding package manager instead:
+
+```text
+dnf install -y psmisc
+killall sleep
+```
+
+Package installation requires root in the container. The startup message lets the waiting test continue. Control GDB in the second terminal and observe results in the original test terminal.
+
+### Run an Inference Client
+
+For the standalone release-image example, download the [ResNet50-binary model](https://github.com/openvinotoolkit/open_model_zoo/blob/releases/2022/1/models/intel/resnet50-binary-0001/README.md) on the Linux host:
+
+```text
+source tests/performance/download_model.sh
+```
+
+The script stores the model in the user's home directory. Run on the Linux host to start a release container. This example uses host port `9180` to avoid the build container's `9178`:
+
+```text
+docker run -d -v ~/resnet50-binary:/models/resnet50-binary -p 9180:9178 \
+    openvino/model_server:latest --model_name resnet-binary --model_path /models/resnet50-binary --port 9178
+```
+
+Run the client on the Linux host in the activated Python environment:
+
+```text
+pip3 install -r demos/common/python/requirements.txt
+python tests/performance/grpc_latency.py \
+    --images_numpy_path tests/performance/imgs.npy --labels_numpy_path tests/performance/labels.npy \
+    --iteration 1000 --model_name resnet-binary --batchsize 1 --report_every 100 \
+    --input_name 0 --output_name 1463 --grpc_port 9180
+```
+
+The client reads the image and label arrays, sends batches to `resnet-binary`, and reports latency every 100 iterations. Stop and remove the release container when finished using its Docker-generated name.
+
+### Run Performance Tests
+
+The Make targets prepare their own test containers. Run on the Linux host:
+
+```text
+make test_perf
+make test_throughput
+```
+
+Latency tests report request timing; throughput tests report iterations and frames per second. Use `OVMS_CPP_CONTAINER_PORT=<unused_host_port>` when the default port is already occupied. Performance measurements should use release builds, not GDB or minitrace builds.
+
+### Test a Packaged Binary
+
+On the Linux host, unpack the release archive and inspect its shared-library dependencies. Replace `<os_name>` with the package directory:
+
+```text
+tar -xvzf dist/<os_name>/ovms.tar.gz -C dist/<os_name>/
+ldd dist/<os_name>/ovms/bin/ovms
+export OVMS_BINARY_PATH="${PWD}/dist/<os_name>/ovms/bin/ovms"
+```
+
+Dependencies should resolve to the packaged `ovms/lib` directory where applicable. If needed, configure the library search path on the Linux host before running binary-mode tests:
+
+```text
+export LD_LIBRARY_PATH="${PWD}/dist/<os_name>/ovms/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+```
+
+Configure the test harness to use binary mode and `OVMS_BINARY_PATH` instead of a Docker image. These values can also be set through `os.environ` in its local Python configuration.
+
+## Optional Configuration
+
+### Operating Systems and Proxies
+
+Supported `BASE_OS` values include `ubuntu24` (default), `ubuntu22`, `ubuntu26`, and `redhat`. Use a matching OpenVINO package when overriding the distro. See [Building From Source](./build_from_source.md) for package and build options.
+
+Run on the Linux host, replacing `<URL>` with the matching package URL:
+
+```text
+make ovms_builder_image RUN_TESTS=0 BASE_OS=ubuntu26 DLDT_PACKAGE_URL=<URL>
+```
+
+For Red Hat, run on the Linux host:
+
+```text
+make ovms_builder_image RUN_TESTS=0 BASE_OS=redhat
+```
+
+Use `--//:distro=redhat` for Bazel commands inside that container. Keep Ubuntu and Red Hat images distinguishable on shared hosts using custom image names. Forward required `http_proxy`, `https_proxy`, and `no_proxy` environment variables when starting containers that need network access.
+
+### GPU Access and Tests
+
+CPU development does not require GPU drivers or a GPU-enabled container. For GPU or VA API tests, first prepare the Linux host using the [Intel GPU installation guide](https://dgpu-docs.intel.com/driver/installation.html#ubuntu). The required packages depend on the host OS and GPU; follow that guide rather than treating one driver package list as universal.
+
+Create the build container with access to the required devices, for example by adding `--device=/dev/dri` to the startup command. Ensure the container user has permission to access those devices and prepare the GPU test models.
+
+Run on the Linux host:
+
+```text
+make prepare_models RUN_GPU_TESTS=1
+make run_unit_tests RUN_GPU_TESTS=1
+```
+
+For a focused GPU test, add `--test_env RUN_GPU_TESTS=1` to the Bazel test command inside the GPU-enabled build container. Tests requiring an Intel Data Center GPU need suitable hardware. VA API unit tests are skipped for Red Hat builds.
+
+### Full Release Builds
+
+Build packaged artifacts and release images only when needed for deployment or container-based tests. Run on the Linux host:
+
+```text
+make docker_build RUN_TESTS=0
+```
+
+This includes the builder, package, and release-image stages. The default images include `openvino/model_server:latest`, the GPU image/tag, the NGINX MTLS image, and `openvino/model_server-build:latest`. See [Building From Source](./build_from_source.md) for detailed options. Use `RUN_TESTS=1` when tests should run as part of the image build.
+
+### Custom Images and Cache
+
+On shared hosts, use a unique image base name and unused ports. Run on the Linux host, replacing the placeholders:
+
+```text
+make docker_build OVMS_CPP_DOCKER_IMAGE=<unique_image_name>
+make test_functional OVMS_CPP_DOCKER_IMAGE=<unique_image_name>
+make test_perf OVMS_CPP_CONTAINER_PORT=<unused_host_port>
+```
+
+The builder image is named `<unique_image_name>-build:latest`; debug builds use `<unique_image_name>-dbg-build:latest`. Use the matching image when starting containers.
+
+To rebuild without Docker cache, run on the Linux host:
+
+```text
+make ovms_builder_image RUN_TESTS=0 NO_DOCKER_CACHE=true
+```
+
+### Copilot Skills
+
+To add a repository skill for GitHub Copilot in VS Code, create `.github/skills/<skill-name>/SKILL.md` with YAML frontmatter containing a unique `name` and a concise `description`, followed by the workflow instructions. Copilot discovers repository skills when the workspace is open. Describe the workflow in chat so the matching skill can be selected.
