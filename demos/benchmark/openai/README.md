@@ -37,10 +37,10 @@ model aliases; these can be omitted when `/v1/models` returns exactly one model.
 | Use case | Source model | Script backend | Endpoint |
 |---|---|---|---|
 | VLM | `OpenVINO/LFM3-VL-2B-int4-ov` | `ovms-vlm` | `/v1/chat/completions` |
-| Embeddings | `OpenVINO/Qwen3-Embedding-0.6B-int8-ov` | `ovms-embeddings` | `/v3/embeddings` |
-| Reranking | `OpenVINO/bge-reranker-base-int8-ov` | `ovms_rerank` | `/v3/rerank` |
-| Speech generation | `OpenVINO/Kokoro-82M-int8-ov` | `text2speech` | `/v3/audio/speech` |
-| Speech transcription | `OpenVINO/whisper-large-v3-turbo-fp16-ov` | `speech2text` | `/v3/audio/transcriptions` |
+| Embeddings | `OpenVINO/Qwen3-Embedding-0.6B-int8-ov` | `ovms-embeddings` | `/v1/embeddings` |
+| Reranking | `OpenVINO/bge-reranker-base-int8-ov` | `ovms_rerank` | `/v1/rerank` |
+| Speech generation | `OpenVINO/Kokoro-82M-int8-ov` | `text2speech` | `/v1/audio/speech` |
+| Speech transcription | `OpenVINO/whisper-large-v3-turbo-fp16-ov` | `speech2text` | `/v1/audio/transcriptions` |
 
 ## VLM Requests
 
@@ -139,12 +139,17 @@ docker run -d --rm --name ovms \
 After the readiness check, benchmark synthetic text without downloading a dataset:
 
 ```bash
-python benchmark.py --backend ovms-embeddings --api_url http://localhost:8000/v3/embeddings --dataset synthetic --synthetic_length 64 --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
+python benchmark.py --backend ovms-embeddings --api_url http://localhost:8000/v1/embeddings --dataset synthetic --synthetic_length 64 --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
 ```
 
 This sends 10 requests with 16 documents each. `--synthetic_length` repeats the
 word `hi`; it is not an exact token count. The report counts the actual document
 tokens through `/v1/tokenize` and reports tokens/second and mean/median latency.
+To use real text instead, load a dataset such as Cohere Wikipedia:
+
+```bash
+python benchmark.py --backend ovms-embeddings --api_url http://localhost:8000/v1/embeddings --dataset Cohere/wikipedia-2023-11-embed-multilingual-v3 --hf-subset simple --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
+```
 
 ## Documents Reranking
 
@@ -164,12 +169,17 @@ docker run -d --rm --name ovms \
 Wait for the model, then run:
 
 ```bash
-python benchmark.py --backend ovms_rerank --api_url http://localhost:8000/v3/rerank --dataset synthetic --synthetic_length 64 --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
+python benchmark.py --backend ovms_rerank --api_url http://localhost:8000/v1/rerank --dataset synthetic --synthetic_length 64 --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
 ```
 
 Each request ranks 16 documents against the script's fixed query `Hello`. Reported
 tokens/second counts document tokens only, excluding that query and any server
 template tokens. This is load generation, not a relevance-quality evaluation.
+To benchmark real documents instead of synthetic text:
+
+```bash
+python benchmark.py --backend ovms_rerank --api_url http://localhost:8000/v1/rerank --dataset Cohere/wikipedia-2023-11-embed-multilingual-v3 --hf-subset simple --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
+```
 
 ## Speech Generation
 
@@ -187,13 +197,19 @@ docker run -d --rm --name ovms \
 After the readiness check, use one text per request and a Kokoro voice:
 
 ```bash
-python benchmark.py --backend text2speech --api_url http://localhost:8000/v3/audio/speech --dataset synthetic --synthetic_length 32 --batch_size 1 --limit 10 --max_concurrency 2 --request_rate inf --voice af_alloy
+python benchmark.py --backend text2speech --api_url http://localhost:8000/v1/audio/speech --dataset synthetic --synthetic_length 32 --batch_size 1 --limit 10 --max_concurrency 2 --request_rate inf --voice af_alloy
 ```
 
 The backend is spelled `text2speech`. The voice `af_alloy` corresponds to a file in
 the model's `voices/` directory. The script decodes the returned WAV to report mean
 and median RTFx (`generated audio seconds / request latency`), plus success rate
 and request latency. RTFx above 1 means faster-than-real-time generation.
+For a real text corpus, for example AMI's individual head microphone transcripts,
+run:
+
+```bash
+python benchmark.py --backend text2speech --api_url http://localhost:8000/v1/audio/speech --dataset edinburghcstr/ami --hf-subset ihm --batch_size 1 --limit 10 --max_concurrency 2 --request_rate inf --voice af_alloy
+```
 
 ## Speech Transcription
 
@@ -221,7 +237,7 @@ python -m pip install "datasets[audio]==3.6.0"
 Wait for the model, then use a small real-audio dataset:
 
 ```bash
-python benchmark.py --backend speech2text --api_url http://localhost:8000/v3/audio/transcriptions --dataset hf-internal-testing/librispeech_asr_dummy --hf-subset clean --split validation --batch_size 1 --limit 10 --max_concurrency 2 --request_rate inf --tokenizer openai/whisper-large-v3-turbo
+python benchmark.py --backend speech2text --api_url http://localhost:8000/v1/audio/transcriptions --dataset hf-internal-testing/librispeech_asr_dummy --hf-subset clean --split validation --batch_size 1 --limit 10 --max_concurrency 2 --request_rate inf --tokenizer openai/whisper-large-v3-turbo
 ```
 
 This downloads audio clips from Hugging Face and uploads WAV data as multipart

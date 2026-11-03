@@ -10,11 +10,6 @@ OpenAI Benchmarks <ovms_demo_benchmark_openai>
 KServe Benchmarks <ovms_demo_benchmark_kserve>
 ```
 
-## Python
-| Demo | Description |
-|---|---|
-|[Benchmark App](python/README.md)|Generate traffic and measure performance of the model served in OpenVINO Model Server.|
-
 ## OpenAI
 | Demo | Description |
 |---|---|
