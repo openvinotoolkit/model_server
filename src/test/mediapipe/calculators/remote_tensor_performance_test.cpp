@@ -130,6 +130,12 @@ std::string modelXmlPath() {
     return envOr("OVMS_PERF_MODEL_XML", modelDir() + "\\1\\face-detection-adas-0001.xml");
 }
 
+void replaceConfiguredModelPath(std::string& graphText, const std::string& modelPath) {
+    const auto position = graphText.find("MODEL_PATH");
+    if (position != std::string::npos)
+        graphText.replace(position, sizeof("MODEL_PATH") - 1, modelPath);
+}
+
 ComPtr<ID3D11Device> createDevice() {
     ComPtr<ID3D11Device> device;
     D3D_FEATURE_LEVEL got{};
@@ -743,22 +749,22 @@ TEST_F(WindowsD3D11RemoteTensorFixture, PureOpenVinoInferenceWithD3D11Nv12InCalc
     using Clock = std::chrono::steady_clock;
     const std::string configuredModelPath = std::filesystem::path(modelXmlPath()).generic_string();
     const std::string graphText = R"pb(
-                                      input_stream: "FRAME:frame"
-                                      output_stream: "DETECTIONS:detections"
-                                      node {
-                                        calculator: "GstOpenVinoInferenceCalculator"
-                                        input_stream: "FRAME:frame"
-                                        output_stream: "DETECTIONS:detections"
-                                        options {
-                                                [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
-                                                  model_path: ")pb" + configuredModelPath + R"pb(                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "
-      input_name: "data"
-      performance_hint: "LATENCY"
-      num_streams: 1
-    }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      }
-}
-)pb";
+        input_stream: "FRAME:frame"
+        output_stream: "DETECTIONS:detections"
+        node {
+          calculator: "GstOpenVinoInferenceCalculator"
+          input_stream: "FRAME:frame"
+          output_stream: "DETECTIONS:detections"
+          options {
+                  [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
+                    model_path: "MODEL_PATH"
+                    input_name: "data"
+                    performance_hint: "LATENCY"
+                    num_streams: 1
+                  }}
+        }
+    )pb";
+    replaceConfiguredModelPath(graphText, configuredModelPath);
     const auto config = ::mediapipe::ParseTextProtoOrDie<::mediapipe::CalculatorGraphConfig>(graphText);
 
     std::cout << "REMOTE_TENSOR_PURE_OV_CALCULATOR input=D3D11_NV12 config=LATENCY streams=1 "
@@ -975,33 +981,33 @@ TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithOpenVinoSourceAndInference
     using Clock = std::chrono::steady_clock;
     const std::string configuredModelPath = std::filesystem::path(modelXmlPath()).generic_string();
     const std::string graphText = R"pb(
-                                      input_side_packet: "VIDEO_PATH:video_path"
-                                      input_side_packet: "WIDTH:width"
-                                      input_side_packet: "HEIGHT:height"
-                                      input_side_packet: "MAX_FRAMES:max_frames"
-                                      output_stream: "DETECTIONS:detections"
-                                      node {
-                                        calculator: "GstVideoSourceCalculator"
-                                        input_side_packet: "VIDEO_PATH:video_path"
-                                        input_side_packet: "WIDTH:width"
-                                        input_side_packet: "HEIGHT:height"
-                                        input_side_packet: "MAX_FRAMES:max_frames"
-                                        output_stream: "FRAME:frame"
-                                      }
-                                      node {
-                                        calculator: "GstOpenVinoInferenceCalculator"
-                                        input_stream: "FRAME:frame"
-                                        output_stream: "DETECTIONS:detections"
-                                        options {
-                                                [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
-                                                  model_path: ")pb" + configuredModelPath + R"pb(                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "
-      input_name: "data"
-      performance_hint: "LATENCY"
-      num_streams: 1
-    }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      }
-}
-)pb";
+        input_side_packet: "VIDEO_PATH:video_path"
+        input_side_packet: "WIDTH:width"
+        input_side_packet: "HEIGHT:height"
+        input_side_packet: "MAX_FRAMES:max_frames"
+        output_stream: "DETECTIONS:detections"
+        node {
+          calculator: "GstVideoSourceCalculator"
+          input_side_packet: "VIDEO_PATH:video_path"
+          input_side_packet: "WIDTH:width"
+          input_side_packet: "HEIGHT:height"
+          input_side_packet: "MAX_FRAMES:max_frames"
+          output_stream: "FRAME:frame"
+        }
+        node {
+          calculator: "GstOpenVinoInferenceCalculator"
+          input_stream: "FRAME:frame"
+          output_stream: "DETECTIONS:detections"
+          options {
+                  [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
+                    model_path: "MODEL_PATH"
+                    input_name: "data"
+                    performance_hint: "LATENCY"
+                    num_streams: 1
+                  }}
+        }
+    )pb";
+    replaceConfiguredModelPath(graphText, configuredModelPath);
     const auto config = ::mediapipe::ParseTextProtoOrDie<::mediapipe::CalculatorGraphConfig>(graphText);
 
     std::cout << "REMOTE_TENSOR_TWO_CALCULATOR_DIRECT_OV_GRAPH graph=source_plus_openvino_inference "
@@ -1082,28 +1088,28 @@ TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithOpenVinoSingleCalculatorPe
     using Clock = std::chrono::steady_clock;
     const std::string configuredModelPath = std::filesystem::path(modelXmlPath()).generic_string();
     const std::string graphText = R"pb(
-                                      input_side_packet: "VIDEO_PATH:video_path"
-                                      input_side_packet: "WIDTH:width"
-                                      input_side_packet: "HEIGHT:height"
-                                      input_side_packet: "MAX_FRAMES:max_frames"
-                                      output_stream: "DETECTIONS:detections"
-                                      node {
-                                        calculator: "GstVideoOpenVinoInferenceCalculator"
-                                        input_side_packet: "VIDEO_PATH:video_path"
-                                        input_side_packet: "WIDTH:width"
-                                        input_side_packet: "HEIGHT:height"
-                                        input_side_packet: "MAX_FRAMES:max_frames"
-                                        output_stream: "DETECTIONS:detections"
-                                        options {
-                                                [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
-                                                  model_path: ")pb" + configuredModelPath + R"pb(                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "
-      input_name: "data"
-      performance_hint: "LATENCY"
-      num_streams: 1
-    }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      }
-}
-)pb";
+        input_side_packet: "VIDEO_PATH:video_path"
+        input_side_packet: "WIDTH:width"
+        input_side_packet: "HEIGHT:height"
+        input_side_packet: "MAX_FRAMES:max_frames"
+        output_stream: "DETECTIONS:detections"
+        node {
+          calculator: "GstVideoOpenVinoInferenceCalculator"
+          input_side_packet: "VIDEO_PATH:video_path"
+          input_side_packet: "WIDTH:width"
+          input_side_packet: "HEIGHT:height"
+          input_side_packet: "MAX_FRAMES:max_frames"
+          output_stream: "DETECTIONS:detections"
+          options {
+                  [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
+                    model_path: "MODEL_PATH"
+                    input_name: "data"
+                    performance_hint: "LATENCY"
+                    num_streams: 1
+                  }}
+        }
+    )pb";
+    replaceConfiguredModelPath(graphText, configuredModelPath);
     const auto config = ::mediapipe::ParseTextProtoOrDie<::mediapipe::CalculatorGraphConfig>(graphText);
 
     std::cout << "REMOTE_TENSOR_SINGLE_CALCULATOR_DIRECT_OV graph=decode_plus_openvino_inference "
@@ -1184,28 +1190,28 @@ TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithOpenVinoGstreamerElementPe
     using Clock = std::chrono::steady_clock;
     const std::string configuredModelPath = std::filesystem::path(modelXmlPath()).generic_string();
     const std::string graphText = R"pb(
-                                      input_side_packet: "VIDEO_PATH:video_path"
-                                      input_side_packet: "WIDTH:width"
-                                      input_side_packet: "HEIGHT:height"
-                                      input_side_packet: "MAX_FRAMES:max_frames"
-                                      output_stream: "FRAMES:frames"
-                                      node {
-                                        calculator: "GstVideoOpenVinoPipelineInferenceCalculator"
-                                        input_side_packet: "VIDEO_PATH:video_path"
-                                        input_side_packet: "WIDTH:width"
-                                        input_side_packet: "HEIGHT:height"
-                                        input_side_packet: "MAX_FRAMES:max_frames"
-                                        output_stream: "FRAMES:frames"
-                                        options {
-                                                [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
-                                                  model_path: ")pb" + configuredModelPath + R"pb(                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "
-      input_name: "data"
-      performance_hint: "LATENCY"
-      num_streams: 1
-    }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      }
-}
-)pb";
+        input_side_packet: "VIDEO_PATH:video_path"
+        input_side_packet: "WIDTH:width"
+        input_side_packet: "HEIGHT:height"
+        input_side_packet: "MAX_FRAMES:max_frames"
+        output_stream: "FRAMES:frames"
+        node {
+          calculator: "GstVideoOpenVinoPipelineInferenceCalculator"
+          input_side_packet: "VIDEO_PATH:video_path"
+          input_side_packet: "WIDTH:width"
+          input_side_packet: "HEIGHT:height"
+          input_side_packet: "MAX_FRAMES:max_frames"
+          output_stream: "FRAMES:frames"
+          options {
+                  [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
+                    model_path: "MODEL_PATH"
+                    input_name: "data"
+                    performance_hint: "LATENCY"
+                    num_streams: 1
+                  }}
+        }
+    )pb";
+    replaceConfiguredModelPath(graphText, configuredModelPath);
     const auto config = ::mediapipe::ParseTextProtoOrDie<::mediapipe::CalculatorGraphConfig>(graphText);
 
     std::cout << "REMOTE_TENSOR_GSTREAMER_ELEMENT_DIRECT_OV graph=d3d11convert_plus_ovd3d11infer "
