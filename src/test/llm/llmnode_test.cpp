@@ -7205,6 +7205,7 @@ TEST_F(LLMGraphMetadataTest, FailedReloadLeavesNoMetadata) {
     ASSERT_EQ(def.validate(manager), StatusCode::OK);
     ASSERT_NE(def.getMetadata(), nullptr);
 
+    // Metadata is cleared on a failed reload, whichever stage fails
     def.inputConfig = buildPbtxt((std::filesystem::path(directoryPath) / "nonexistent").string());
     EXPECT_FALSE(def.reload(manager, mgc).ok());
     EXPECT_EQ(def.getMetadata(), nullptr);
@@ -7222,11 +7223,24 @@ TEST_F(LLMGraphMetadataTest, MetadataKeptWhileSleepingAndRestoredOnWakeUp) {
     ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
     EXPECT_EQ(def.getMetadata(), before);
 
-    ASSERT_EQ(def.wakeUpIfSleeping(manager), StatusCode::OK);
+    std::atomic<bool> stop{false};
+    std::atomic<uint64_t> blankReads{0};
+    std::thread reader([&]() {
+        while (!stop) {
+            if (maxModelLenOf(def.getMetadata()) != std::optional<int64_t>(4096)) {
+                ++blankReads;
+            }
+        }
+    });
+    const Status wakeUpStatus = def.wakeUpIfSleeping(manager);
+    stop = true;
+    reader.join();
+    ASSERT_EQ(wakeUpStatus, StatusCode::OK);
+    EXPECT_EQ(blankReads, 0u);
     EXPECT_EQ(maxModelLenOf(def.getMetadata()), std::optional<int64_t>(4096));
 }
 
-TEST_F(LLMGraphMetadataTest, ReadersSeeCompleteSnapshotsDuringReloads) {
+TEST_F(LLMGraphMetadataTest, ReadersSeeOldOrNewSnapshotDuringReloads) {
     const std::string pbtxt4096 = buildPbtxt(createModelCopy("model4096", 4096));
     const std::string pbtxt8192 = buildPbtxt(createModelCopy("model8192", 8192));
     ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
@@ -7240,13 +7254,10 @@ TEST_F(LLMGraphMetadataTest, ReadersSeeCompleteSnapshotsDuringReloads) {
     for (int i = 0; i < 4; ++i) {
         readers.emplace_back([&]() {
             while (!stop) {
-                auto metadata = def.getMetadata();
-                // A snapshot is either absent (reload in progress) or complete
-                if (metadata) {
-                    auto value = maxModelLenOf(metadata);
-                    if (!value.has_value() || (value.value() != 4096 && value.value() != 8192)) {
-                        ++unexpected;
-                    }
+                // Always the old or the new complete snapshot, never an empty one
+                auto value = maxModelLenOf(def.getMetadata());
+                if (!value.has_value() || (value.value() != 4096 && value.value() != 8192)) {
+                    ++unexpected;
                 }
                 ++reads;
             }
