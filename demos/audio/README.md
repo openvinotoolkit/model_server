@@ -88,6 +88,70 @@ print("Generation finished")
 
 Play speech.wav file to check generated speech.
 
+### Qwen3 TTS
+
+The locally exported `Qwen3-TTS-12Hz-1.7B-CustomVoice` and
+`Qwen3-TTS-12Hz-1.7B-VoiceDesign` models use the same endpoint. Configure each
+export directory as the `models_path` of a `T2sCalculator` MediaPipe graph, then
+use the graph name as the request model. The client below defaults to the export
+directory names, which is convenient when the graph names match them.
+
+```bash
+python qwen3_tts_client.py \
+  --variant custom-voice \
+  --voice Vivian \
+  --input "The quick brown fox jumped over the lazy dog."
+
+python qwen3_tts_client.py \
+  --variant voice-design \
+  --instructions "Speak warmly and slowly." \
+  --language English \
+  --input "The quick brown fox jumped over the lazy dog." \
+  --output voice_design.wav
+```
+
+For `CustomVoice`, `--voice` is required and `--instructions` is optional. For
+`VoiceDesign`, `--instructions` is required and no voice is sent. The defaults
+are `http://localhost:8120/v3/audio/speech`, model `qwen`, language `Auto`, and
+output `custom_voice.wav`. Override them with `--url`, `--model`, `--language`,
+and `--output` when needed.
+
+After a successful request, the client prints the end-to-end request time, WAV
+duration, real-time factor (`RTF = request time / audio duration`), and the
+benchmark-compatible inverse `RTFx`. An `RTF` below `1.0` and `RTFx` above
+`1.0x` indicate faster-than-real-time generation.
+
+## Gemma 4 Audio Chat
+
+`gemma4_audio_chat_client.py` tests the audio-input capability of a locally
+exported `gemma-4-E4B-it` model. Start OVMS with the export directory mounted
+under `/models`:
+
+```bash
+docker run -d --rm -p 8000:8000 \
+  -v "${PWD}:/models:ro" \
+  openvino/model_server:latest \
+  --rest_port 8000 \
+  --model_repository_path /models \
+  --source_model /models/gemma-4-E4B-it \
+  --model_name gemma-4-E4B-it \
+  --task text_generation \
+  --pipeline_type VLM \
+  --target_device CPU
+```
+
+Send a WAV or MP3 recording and a question. The client base64-encodes the audio
+as an OpenAI-compatible `input_audio` message part.
+
+```bash
+python3 gemma4_audio_chat_client.py \
+  --audio how_are_you_doing_today.wav \
+  --prompt "What is said in this recording?"
+```
+
+The defaults target `http://localhost:8000/v3/chat/completions` and model
+`gemma-4-E4B-it`; use `--url` and `--model` for another OVMS deployment.
+
 ## Benchmarking speech generation
 An asynchronous benchmarking client can be used to access the model server performance with various load conditions. Below are execution examples captured on Intel(R) Core(TM) Ultra 7 258V.
 
@@ -353,6 +417,7 @@ Clone the repository:
 ```text
 git clone https://github.com/huggingface/open_asr_leaderboard.git
 cd open_asr_leaderboard
+git checkout e224edd2b4ad48c94ec68c2e1183401a2e5c3006
 ```
 
 Download and apply OVMS API compatibility patch:

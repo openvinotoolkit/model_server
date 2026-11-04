@@ -161,6 +161,12 @@ public:
             if (streamField == "true" && !hasLoopback_) {
                 return absl::InvalidArgumentError("streaming is not supported for this graph configuration (LOOPBACK not configured)");
             }
+            if (streamField == "true" && !pipe->supportsStreaming()) {
+                return absl::InvalidArgumentError("streaming is not supported for this model");
+            }
+            if (endpoint == Endpoint::TRANSLATIONS && !pipe->supportsTranslations()) {
+                return absl::InvalidArgumentError("translations are not supported for this model");
+            }
 
             std::string_view file = payload.multipartParser->getFileContentByFieldName("file");
             if (file.empty()) {
@@ -181,12 +187,14 @@ public:
             }
 
             if (requestStreaming) {
-                ov::genai::ASRGenerationConfig config = pipe->sttPipeline->get_generation_config();
+                auto asrPipe = std::dynamic_pointer_cast<ovms::AsrPipelineServable>(pipe);
+                RET_CHECK(asrPipe != nullptr) << "Streaming STT implementation is missing ASR pipeline support";
+                ov::genai::ASRGenerationConfig config = asrPipe->sttPipeline->get_generation_config();
                 auto status = ovms::SttServable::updateTranscriptionConfig(config, pipe, payload);
                 if (status != absl::OkStatus()) {
                     return status;
                 }
-                status = streamingHandler_.start(pipe, payload, std::move(rawSpeech), config);
+                status = streamingHandler_.start(asrPipe, payload, std::move(rawSpeech), config);
                 if (status != absl::OkStatus()) {
                     return status;
                 }
@@ -197,7 +205,11 @@ public:
             return processUnaryRequest(cc, pipe, endpoint, payload, rawSpeech);
         } catch (ov::AssertFailure& e) {
             return absl::InvalidArgumentError(e.what());
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_ERROR(s2t_calculator_logger, "Speech-to-text generation failed [Node: {}]: {}", cc->NodeName(), e.what());
+            return absl::InvalidArgumentError(e.what());
         } catch (...) {
+            SPDLOG_LOGGER_ERROR(s2t_calculator_logger, "Speech-to-text generation failed with an unknown exception [Node: {}]", cc->NodeName());
             return absl::InvalidArgumentError("Response generation failed");
         }
         return absl::OkStatus();
@@ -207,46 +219,41 @@ private:
     absl::Status processUnaryRequest(CalculatorContext* cc, std::shared_ptr<ovms::SttServable> pipe,
         Endpoint endpoint, const ovms::HttpPayload& payload, const std::vector<float>& rawSpeech) {
         auto client = payload.client;
-        auto disconnectCallback = [client](std::string) -> ov::genai::StreamingStatus {
-            if (client && client->isDisconnected()) {
-                return ov::genai::StreamingStatus::CANCEL;
-            }
-            return ov::genai::StreamingStatus::RUNNING;
-        };
+        auto isClientDisconnected = [client] { return client && client->isDisconnected(); };
         rapidjson::StringBuffer buffer;
         rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
         writer.StartObject();
         writer.String("text");
         if (endpoint == Endpoint::TRANSCRIPTIONS) {
-            ov::genai::ASRGenerationConfig config = pipe->sttPipeline->get_generation_config();
-            auto status = ovms::SttServable::updateTranscriptionConfig(config, pipe, payload);
-            if (status != absl::OkStatus())
-                return status;
-
-            std::unique_lock lock(pipe->sttPipelineMutex);
             auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before transcription");
             if (!disconnectStatus.ok())
                 return disconnectStatus;
-            const ov::genai::ASRDecodedResults result = pipe->sttPipeline->generate(rawSpeech, config, disconnectCallback);
-            lock.unlock();
+            ovms::SttTranscriptionResult result;
+            auto status = pipe->transcribe(rawSpeech, payload, isClientDisconnected, result);
+            if (!status.ok())
+                return status;
             disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "after transcription");
             if (!disconnectStatus.ok())
                 return disconnectStatus;
-            const std::string generatedText = result;
-            writer.String(generatedText.c_str());
-            serializeTimestamps(writer, result, config);
+            writer.String(result.text.c_str());
+            serializeTimestamps(writer, result);
         }
         if (endpoint == Endpoint::TRANSLATIONS) {
-            ov::genai::ASRGenerationConfig config = pipe->sttPipeline->get_generation_config();
+            auto asrPipe = std::dynamic_pointer_cast<ovms::AsrPipelineServable>(pipe);
+            RET_CHECK(asrPipe != nullptr) << "Translation STT implementation is missing ASR pipeline support";
+            ov::genai::ASRGenerationConfig config = asrPipe->sttPipeline->get_generation_config();
             config.task = "translate";
             auto status = ovms::SttServable::parseTemperature(payload, config);
             if (status != absl::OkStatus())
                 return status;
-            std::unique_lock lock(pipe->sttPipelineMutex);
+            std::unique_lock lock(asrPipe->sttPipelineMutex);
             auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before translation");
             if (!disconnectStatus.ok())
                 return disconnectStatus;
-            const ov::genai::ASRDecodedResults result = pipe->sttPipeline->generate(rawSpeech, config, disconnectCallback);
+            auto disconnectCallback = [isClientDisconnected](std::string) -> ov::genai::StreamingStatus {
+                return isClientDisconnected() ? ov::genai::StreamingStatus::CANCEL : ov::genai::StreamingStatus::RUNNING;
+            };
+            const ov::genai::ASRDecodedResults result = asrPipe->sttPipeline->generate(rawSpeech, config, disconnectCallback);
             lock.unlock();
             disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "after translation");
             if (!disconnectStatus.ok())
@@ -262,42 +269,34 @@ private:
     }
 
     static void serializeTimestamps(rapidjson::Writer<rapidjson::StringBuffer>& writer,
-        const ov::genai::ASRDecodedResults& result, const ov::genai::ASRGenerationConfig& config) {
-        if (config.word_timestamps) {
+        const ovms::SttTranscriptionResult& result) {
+        if (result.wordTimestampsRequested) {
             writer.String("words");
             writer.StartArray();
-            if (result.words.has_value()) {
-                for (const auto& wordGroup : result.words.value()) {
-                    for (const auto& word : wordGroup) {
-                        writer.StartObject();
-                        writer.String("word");
-                        writer.String(word.text.c_str());
-                        writer.String("start");
-                        writer.Double(word.start_ts);
-                        writer.String("end");
-                        writer.Double(word.end_ts);
-                        writer.EndObject();
-                    }
-                }
+            for (const auto& word : result.words) {
+                writer.StartObject();
+                writer.String("word");
+                writer.String(word.text.c_str());
+                writer.String("start");
+                writer.Double(word.start);
+                writer.String("end");
+                writer.Double(word.end);
+                writer.EndObject();
             }
             writer.EndArray();
         }
-        if (config.return_timestamps) {
+        if (result.segmentTimestampsRequested) {
             writer.String("segments");
             writer.StartArray();
-            if (result.chunks.has_value()) {
-                for (const auto& chunkGroup : result.chunks.value()) {
-                    for (const auto& chunk : chunkGroup) {
-                        writer.StartObject();
-                        writer.String("text");
-                        writer.String(chunk.text.c_str());
-                        writer.String("start");
-                        writer.Double(chunk.start_ts);
-                        writer.String("end");
-                        writer.Double(chunk.end_ts);
-                        writer.EndObject();
-                    }
-                }
+            for (const auto& chunk : result.segments) {
+                writer.StartObject();
+                writer.String("text");
+                writer.String(chunk.text.c_str());
+                writer.String("start");
+                writer.Double(chunk.start);
+                writer.String("end");
+                writer.Double(chunk.end);
+                writer.EndObject();
             }
             writer.EndArray();
         }

@@ -38,6 +38,7 @@ class ASRGenerationConfig;
 namespace ovms {
 class StreamingTextQueue;
 struct SttServable;
+struct AsrPipelineServable;
 struct SttServableExecutionContext;
 }  // namespace ovms
 
@@ -51,7 +52,7 @@ public:
     static std::string serializeDeltaEvent(const std::string& delta);
     static std::string serializeDoneEvent(const std::string& text);
 
-    absl::Status start(std::shared_ptr<ovms::SttServable> pipe,
+    absl::Status start(std::shared_ptr<ovms::AsrPipelineServable> pipe,
         const ovms::HttpPayload& payload,
         std::vector<float> rawSpeech,
         const ov::genai::ASRGenerationConfig& config);
