@@ -60,7 +60,7 @@ public:
             imp_video_source_set(source.get(), "height", height.c_str()) != IMP_OK)
             return absl::InvalidArgumentError("MPI source configuration failed");
         imp_video_decode_opts_t decode{};
-        decode.use_va_surface_memory = true;
+        decode.output_memory = IMP_VIDEO_MEMORY_NATIVE;
         if (imp_video_open(&stream_, source.get(), context_, &decode) != IMP_OK)
             return absl::InternalError(imp_context_get_error(context_));
         inference_ = std::make_unique<GstVaapiInference>();

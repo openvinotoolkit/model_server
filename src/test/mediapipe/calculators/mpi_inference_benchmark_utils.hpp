@@ -45,10 +45,8 @@ struct DecodeStream {
             imp_video_source_set(source.get(), "height", height.c_str()) != IMP_OK)
             throw std::runtime_error("MPI source configuration failed");
         imp_video_decode_opts_t options{};
-#ifdef _WIN32
-        options.use_d3d11_surface_memory = true;
-#else
-        options.use_va_surface_memory = true;
+        options.output_memory = IMP_VIDEO_MEMORY_NATIVE;
+#ifndef _WIN32
         options.sync_appsink = environment("OVMS_MPI_E2_SYNC_APPSINK", "off") == "on";
 #endif  // SRC_TEST_MEDIAPIPE_CALCULATORS_MPI_INFERENCE_BENCHMARK_UTILS_HPP_
 

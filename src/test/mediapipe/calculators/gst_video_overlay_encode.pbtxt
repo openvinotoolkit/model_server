@@ -17,9 +17,9 @@
 #   source{FRAME_INFER}  -> inference -> DETECTION_BOXES ─┐
 #   source{FRAME_FULL}  ────────────────────────────────── overlay -> FRAME_OVERLAID -> sink -> file
 #
-# FRAME_INFER is always a model-res VA surface (zero-copy inference). FRAME_FULL
-# is selected by the FULL_VA_SURFACE side packet: false -> full-res host NV12 for
-# the CPU overlay (P6a.1); true -> full-res GPU VA surface kept end to end so the
+# FRAME_INFER is always a model-res native surface (zero-copy inference). FRAME_FULL
+# is selected by the FULL_NATIVE_SURFACE side packet: false -> full-res host NV12 for
+# the CPU overlay (P6a.1); true -> full-res GPU native surface kept end to end so the
 # overlay maps it in place and the sink encodes it with no GPU->CPU download
 # (P6a.2). GstDetectionOverlayCalculator auto-detects the frame memory type, so
 # one graph serves both paths.
@@ -30,7 +30,7 @@ input_side_packet: "WIDTH:width"
 input_side_packet: "HEIGHT:height"
 input_side_packet: "FULL_WIDTH:full_width"
 input_side_packet: "FULL_HEIGHT:full_height"
-input_side_packet: "FULL_VA_SURFACE:full_va_surface"
+input_side_packet: "FULL_NATIVE_SURFACE:full_native_surface"
 input_side_packet: "SERVABLE_NAME:servable_name"
 input_side_packet: "SERVABLE_VERSION:servable_version"
 input_side_packet: "INPUT_NAME:input_name"
@@ -50,7 +50,7 @@ node {
   input_side_packet: "HEIGHT:height"
   input_side_packet: "FULL_WIDTH:full_width"
   input_side_packet: "FULL_HEIGHT:full_height"
-  input_side_packet: "FULL_VA_SURFACE:full_va_surface"
+  input_side_packet: "FULL_NATIVE_SURFACE:full_native_surface"
   input_side_packet: "MAX_FRAMES:max_frames"
   output_stream: "FRAME_INFER:frame_infer"
   output_stream: "FRAME_FULL:frame_full"

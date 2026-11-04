@@ -614,14 +614,15 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
         std::replace(path.begin(), path.end(), '\\', '/');
 
     // Choose decode pipeline:
-    //   VA surface (GPU, zero-copy): decodebin ! vapostproc ! video/x-raw(memory:VAMemory) ! appsink
+    //   Native surface (GPU, zero-copy): decodebin ! vapostproc ! video/x-raw(memory:VAMemory) ! appsink
     //     - Decoded frame stays in GPU VA surface memory; no DMA copy.
     //     - Use imp_tensor_get_va_surface() + OV VAContext for inference.
     //   VA system (GPU, borrow):     decodebin ! vapostproc ! video/x-raw,format=NV12 ! appsink
     //     - GPU decode + borrow from GstBuffer: one unavoidable DMA copy VA→RAM,
     //       but our own memcpy is eliminated.
     //   CPU fallback (borrow):       decodebin ! videoconvert ! videoscale ! video/x-raw,format=NV12 ! appsink
-    const bool want_va_surface = s_va_available && s_va_surface_capable && opts && opts->use_va_surface_memory;
+    const bool want_va_surface = s_va_available && s_va_surface_capable && opts &&
+                                 opts->output_memory == IMP_VIDEO_MEMORY_NATIVE;
     const bool use_va = s_va_available;
 
     auto make_source_head = [&](const std::string& loc) -> std::string {
@@ -780,7 +781,8 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
     }
 
     s->use_hw_decode = use_va;
-    s->use_va_surface_memory = want_va_surface;
+    s->use_native_surface_memory = want_va_surface;
+    s->output_memory = want_va_surface ? IMP_VIDEO_MEMORY_NATIVE : IMP_VIDEO_MEMORY_SYSTEM;
     s->va_display = want_va_surface ? s_va_display : nullptr;
 
     auto end = chrono::high_resolution_clock::now();
@@ -821,7 +823,7 @@ imp_status_t linux_video_read_frame(imp_tensor_t** tensor,
     t->format = IMP_FORMAT_NV12;
 
     bool ok;
-    if (stream->use_va_surface_memory) {
+    if (stream->use_native_surface_memory) {
         ok = read_frame_va_surface(
             branch, *t, stream->va_display,
             branch.total_decode_ms,

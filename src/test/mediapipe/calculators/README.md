@@ -146,6 +146,12 @@ cross-host remote-cache hits were not verified. Existing named disk-cache
 settings are preserved. Configure an actual remote-cache endpoint separately
 if cross-host action reuse is required.
 
+`make prepare_models` downloads the checksum-verified MPI video to
+`models/mpi/ceo_pat_gelsinger.mp4`. GPU unit-test containers mount it at
+`/ovms/testdata/mpi_video.mp4`, the default for MPI-focused tests. Preserve a
+raw recording workflow with `VIDEO_PATH=/absolute/path/to/recording_3_raw.avi make run_unit_tests RUN_GPU_TESTS=1`; the supplied host file is mounted at the
+same container path.
+
 Overrides: `VIDEO_PATH`, `OVMS_REPO_ROOT`, `OVMS_PERF_MODEL_XML`,
 `OVMS_PERF_NV12_PATH`, `OVMS_PERF_RENDER_NODE`, `LIBVA_DRIVERS_PATH`,
 `GST_PLUGIN_PATH`, `GST_REGISTRY`, `BAZEL_BENCHMARK_CONFIG`, `BENCHMARK_LOG`.

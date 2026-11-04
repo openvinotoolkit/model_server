@@ -203,7 +203,7 @@ struct imp_branch_info_t {
     int              width   = 0;
     int              height  = 0;
     std::string      name;
-    bool use_system_memory = false;
+    imp_video_memory_mode_t output_memory = IMP_VIDEO_MEMORY_SYSTEM;
     imp_nv12_frame_t frame;             // fallback compact-copy buffer (stride ≠ width)
     imp_tensor_s     tensor_cache;      // reusable tensor wrapper
 
@@ -231,9 +231,9 @@ struct imp_branch_info_t {
 struct imp_video_stream_s {
     GstElement* pipeline = nullptr;
     bool use_hw_decode        = false;
-    bool use_va_surface_memory = false;  // true when VA surface output requested
+    bool use_native_surface_memory = false;  // true when native surface output requested
+    imp_video_memory_mode_t output_memory = IMP_VIDEO_MEMORY_SYSTEM;
     void* va_display          = nullptr;  // VADisplay shared across branches (borrowed from gst_loader)
-    bool use_d3d11_surface_memory = false;  // true when D3D11 texture output requested (Windows)
     void* d3d11_device        = nullptr;  // ID3D11Device injected into the pipeline (borrowed)
 
     // Dynamic branches (replaces fixed fullres + small appsinks)

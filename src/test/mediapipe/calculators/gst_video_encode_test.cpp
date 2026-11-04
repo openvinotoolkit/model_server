@@ -56,7 +56,7 @@ TEST(GstVideoEncode, DecodeReencodeReadable) {
     imp_video_source_set(src, "path", video_path.c_str());
 
     imp_video_decode_opts_t vopts{};
-    vopts.use_va_surface_memory = false;  // host NV12 planes for the encoder
+    vopts.output_memory = IMP_VIDEO_MEMORY_SYSTEM;  // host NV12 planes for the encoder
     imp_video_stream_t* stream = nullptr;
     imp_status_t st = imp_video_open(&stream, src, ctx, &vopts);
     imp_video_source_destroy(src);
@@ -114,17 +114,17 @@ TEST(GstVideoEncode, DecodeReencodeReadable) {
     std::remove(out_path.c_str());
 }
 
-// GPU zero-copy encode: decode VA surfaces and push them straight into the VA
-// encoder (no host copy), then verify the output is readable.
-TEST(GstVideoEncode, GpuVaEncodeReadable) {
+// GPU zero-copy encode: decode native surfaces and push them straight into the
+// native encoder (no host copy), then verify the output is readable.
+TEST(GstVideoEncode, GpuNativeEncodeReadable) {
     const std::string video_path = envOr("VIDEO_PATH", "/ovms/recording_3_raw.avi");
     const std::string out_path = envOr("OUT_PATH_GPU", "/tmp/imp_encode_gpu.mp4");
     constexpr int kMaxFrames = 30;
 
     if (!fileExists(video_path))
         GTEST_SKIP() << "video not found: " << video_path;
-    if (!imp_video_va_available())
-        GTEST_SKIP() << "VA/GPU not available on this host";
+    if (!imp_video_va_available() && !imp_video_d3d11_available())
+        GTEST_SKIP() << "native GPU video backend not available on this host";
 
     imp_context_t* ctx = nullptr;
     ASSERT_EQ(imp_context_create(&ctx, nullptr), IMP_OK);
@@ -134,13 +134,13 @@ TEST(GstVideoEncode, GpuVaEncodeReadable) {
     imp_video_source_set(src, "path", video_path.c_str());
 
     imp_video_decode_opts_t vopts{};
-    vopts.use_va_surface_memory = true;  // VA surfaces for zero-copy encode
+    vopts.output_memory = IMP_VIDEO_MEMORY_NATIVE;
     imp_video_stream_t* stream = nullptr;
     imp_status_t st = imp_video_open(&stream, src, ctx, &vopts);
     imp_video_source_destroy(src);
     if (st != IMP_OK) {
         imp_context_destroy(ctx);
-        GTEST_SKIP() << "GStreamer VA decode unavailable: " << st;
+        GTEST_SKIP() << "GStreamer native decode unavailable: " << st;
     }
 
     uint32_t w = 0, h = 0;
@@ -151,7 +151,7 @@ TEST(GstVideoEncode, GpuVaEncodeReadable) {
     imp_video_encode_opts_t eopts{};
     eopts.codec = "h264";
     eopts.framerate = 30;
-    eopts.encode_device = "GPU";  // VA zero-copy encode path
+    eopts.encode_device = "GPU";  // native zero-copy encode path
     eopts.output_path = out_path.c_str();
 
     imp_video_encoder_t* enc = nullptr;

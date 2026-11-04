@@ -565,7 +565,7 @@ TEST_F(CAPINonCopy, GStreamerDecodesOntoServerOwnedVADisplay) {
     imp_video_source_set(src, "path", videoPath.c_str());
 
     imp_video_decode_opts_t vopts{};
-    vopts.use_va_surface_memory = true;
+    vopts.output_memory = IMP_VIDEO_MEMORY_NATIVE;
 
     imp_video_stream_t* stream = nullptr;
     imp_status_t st = imp_video_open(&stream, src, ctx, &vopts);
@@ -635,7 +635,7 @@ TEST_F(CAPINonCopy, ServerStartupOwnsConfiguredVaDisplay) {
     imp_video_source_set(src, "width", std::to_string(modelW).c_str());
     imp_video_source_set(src, "height", std::to_string(modelH).c_str());
     imp_video_decode_opts_t vopts{};
-    vopts.use_va_surface_memory = true;
+    vopts.output_memory = IMP_VIDEO_MEMORY_NATIVE;
     imp_video_stream_t* stream = nullptr;
     ASSERT_EQ(imp_video_open(&stream, src, ctx, &vopts), IMP_OK) << imp_context_get_error(ctx);
     imp_video_source_destroy(src);
@@ -722,12 +722,16 @@ TEST_F(CAPINonCopy, ConfiguredOverlayGraphsProduceIndependentOutputs) {
 #ifndef BUILD_VAAPITESTS
     GTEST_SKIP() << "Test not enabled on UBI images";
 #else
+    const char* configuredVideoPath = std::getenv("VIDEO_PATH");
+    const std::string videoPath = configuredVideoPath != nullptr && configuredVideoPath[0] != '\0'
+                                      ? configuredVideoPath
+                                      : "/ovms/testdata/mpi_video.mp4";
     if (std::getenv("RUN_GPU_TESTS") == nullptr || std::string(std::getenv("RUN_GPU_TESTS")) != "1")
         GTEST_SKIP() << "set RUN_GPU_TESTS=1 to run the configured overlay graph test";
     if (access("/dev/dri/renderD128", R_OK | W_OK) != 0)
         GTEST_SKIP() << "configured render node is not usable";
-    if (!std::ifstream("/ovms/recording_3_raw.avi").good())
-        GTEST_SKIP() << "test video not found";
+    if (!std::ifstream(videoPath).good())
+        GTEST_SKIP() << "test video not found: " << videoPath;
     if (!imp_video_va_available())
         GTEST_SKIP() << "VA/GPU surface sharing not available on this host";
 
@@ -770,6 +774,7 @@ TEST_F(CAPINonCopy, ConfiguredOverlayGraphsProduceIndependentOutputs) {
         inputs_info_t inputs{{"trigger", {ovms::signed_shape_t{1}, ovms::Precision::FP32}}};
         preparePredictRequest(request, inputs, std::vector<float>{1.0f});
         request.mutable_model_name()->assign(graph.name);
+        request.mutable_parameters()->operator[]("video_path").set_string_param(videoPath);
         request.mutable_parameters()->operator[]("output_path").set_string_param(graph.outputPath);
         request.mutable_parameters()->operator[]("color_r").set_int64_param(graph.colorR);
         request.mutable_parameters()->operator[]("color_g").set_int64_param(graph.colorG);
@@ -956,7 +961,7 @@ TEST_F(CAPINonCopy, GStreamerOverlayEncodePipeline) {
         {"height", mediapipe::MakePacket<int>(modelH)},
         {"full_width", mediapipe::MakePacket<int>(fullW)},
         {"full_height", mediapipe::MakePacket<int>(fullH)},
-        {"full_va_surface", mediapipe::MakePacket<bool>(false)},
+        {"full_native_surface", mediapipe::MakePacket<bool>(false)},
         {"servable_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_MODEL_NAME)},
         {"servable_version", mediapipe::MakePacket<int>(1)},
         {"input_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_INPUT_NAME)},
@@ -1000,7 +1005,7 @@ TEST_F(CAPINonCopy, GStreamerOverlayEncodePipeline) {
 }
 
 // P6a.2 zero-copy variant of the overlay pipeline: the full-res branch stays a
-// GPU VA surface end to end (FULL_VA_SURFACE=true). The overlay maps the surface
+// GPU native surface end to end (FULL_NATIVE_SURFACE=true). The overlay maps the surface
 // in place (no host NV12 branch, no full-frame download) and the sink encodes it
 // with the hardware encoder. Proves the annotated MP4 is still readable.
 //
@@ -1010,7 +1015,7 @@ TEST_F(CAPINonCopy, GStreamerOverlayEncodePipeline) {
 // 032d40685 (the commit that FIRST introduced this test; it does not exist in
 // the parent, so it has never passed here) with NONE of the P6b/RTSP changes
 // present. The sibling SW-encode test (GStreamerOverlayEncodePipeline,
-// full_va_surface=false, openh264enc) finalizes fine, isolating the fault to the
+// full_native_surface=false, openh264enc) finalizes fine, isolating the fault to the
 // VA hardware-encode path. Logs show inference + overlay run (frames produced),
 // then WaitUntilDone() returns a non-OK status with no explicit GStreamer error
 // surfaced (the status string is swallowed). Root cause of the vah264lpenc EOS
@@ -1083,7 +1088,7 @@ TEST_F(CAPINonCopy, GStreamerOverlayEncodeVaPipeline) {
         {"height", mediapipe::MakePacket<int>(modelH)},
         {"full_width", mediapipe::MakePacket<int>(fullW)},
         {"full_height", mediapipe::MakePacket<int>(fullH)},
-        {"full_va_surface", mediapipe::MakePacket<bool>(true)},
+        {"full_native_surface", mediapipe::MakePacket<bool>(true)},
         {"servable_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_MODEL_NAME)},
         {"servable_version", mediapipe::MakePacket<int>(1)},
         {"input_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_INPUT_NAME)},
@@ -1286,7 +1291,7 @@ TEST_F(CAPINonCopy, GStreamerRtspSourceOverlayPipeline) {
         {"height", mediapipe::MakePacket<int>(384)},
         {"full_width", mediapipe::MakePacket<int>(fullWidth)},
         {"full_height", mediapipe::MakePacket<int>(fullHeight)},
-        {"full_va_surface", mediapipe::MakePacket<bool>(false)},
+        {"full_native_surface", mediapipe::MakePacket<bool>(false)},
         {"servable_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_MODEL_NAME)},
         {"servable_version", mediapipe::MakePacket<int>(1)},
         {"input_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_INPUT_NAME)},
@@ -1484,7 +1489,7 @@ TEST_F(CAPINonCopy, GStreamerOverlayEncodeRtspPipeline) {
         {"height", mediapipe::MakePacket<int>(modelH)},
         {"full_width", mediapipe::MakePacket<int>(fullW)},
         {"full_height", mediapipe::MakePacket<int>(fullH)},
-        {"full_va_surface", mediapipe::MakePacket<bool>(false)},
+        {"full_native_surface", mediapipe::MakePacket<bool>(false)},
         {"servable_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_MODEL_NAME)},
         {"servable_version", mediapipe::MakePacket<int>(1)},
         {"input_name", mediapipe::MakePacket<std::string>(FACE_DETECTION_ADAS_INPUT_NAME)},

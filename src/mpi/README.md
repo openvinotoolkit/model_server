@@ -91,13 +91,17 @@ surface ID zero is valid; `UINT32_MAX` is the invalid sentinel.
 
 MPI API/backend locations are `intel_mpi.h`, `intel_mpi.cpp`,
 `imp_mpi_impl.h`, and Linux `gst_loader.cpp` / `gst_loader.h`. Target:
-`//src/mpi:intel_mpi`. Use `use_va_surface_memory=true` with
-`imp_tensor_get_va_surface()` to obtain both surface and owning display.
+`//src/mpi:intel_mpi`. Set `output_memory=IMP_VIDEO_MEMORY_NATIVE` to request
+platform-native output: Linux returns `IMP_MEM_VA_SURFACE`, retrieved with
+`imp_tensor_get_va_surface()`, while Windows returns `IMP_MEM_D3D11_SURFACE`,
+retrieved with `imp_tensor_get_d3d11_texture()`. `SYSTEM` (and the default)
+returns `IMP_MEM_SYSTEM`; per-branch `DEFAULT` inherits the stream intent.
 Native output capability is detected from loaded extraction APIs even without
 an injected server display. `imp_video_set_va_display()` optionally shares an
-externally owned display with decode; resetting it does not disable independent
-native VA support. Windows uses `use_d3d11_surface_memory=true` and
-`imp_tensor_get_d3d11_texture()` instead.
+externally owned display with Linux decode; resetting it does not disable
+independent native support. `d3d11_filter` remains a backend-specific public
+option for the active Windows inference pipeline and is deferred for a future
+Windows-host cleanup.
 
 Test-only `VideoDecodeInferCalculator` and `VideoDecodeInferVaCalculator` live
 in `src/test/mediapipe/calculators/video_decode_infer_calculator.cc` and

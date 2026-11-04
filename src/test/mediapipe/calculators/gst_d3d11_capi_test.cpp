@@ -379,7 +379,7 @@ TEST_F(D3D11ServerFixture, OneTextureCapiInference) {
     imp_video_source_set(src, "width", std::to_string(kModelW).c_str());
     imp_video_source_set(src, "height", std::to_string(kModelH).c_str());
     imp_video_decode_opts_t vopts{};
-    vopts.use_d3d11_surface_memory = true;
+    vopts.output_memory = IMP_VIDEO_MEMORY_NATIVE;
     imp_video_stream_t* stream = nullptr;
     ASSERT_EQ(imp_video_open(&stream, src, ctx, &vopts), IMP_OK) << imp_context_get_error(ctx);
     imp_video_source_destroy(src);

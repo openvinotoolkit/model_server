@@ -19,6 +19,7 @@ input_side_packet: "OUTPUT_PATH:output_path"
 input_side_packet: "COLOR_R:color_r"
 input_side_packet: "COLOR_G:color_g"
 input_side_packet: "COLOR_B:color_b"
+input_side_packet: "VIDEO_PATH:video_path"
 
 node {
   calculator: "PassThroughCalculator"
@@ -28,20 +29,18 @@ node {
 
 node {
   calculator: "ConstantSidePacketCalculator"
-  output_side_packet: "PACKET:0:video_path"
-  output_side_packet: "PACKET:1:width"
-  output_side_packet: "PACKET:2:height"
-  output_side_packet: "PACKET:3:full_width"
-  output_side_packet: "PACKET:4:full_height"
-  output_side_packet: "PACKET:5:full_va_surface"
-  output_side_packet: "PACKET:6:max_frames"
-  output_side_packet: "PACKET:7:framerate"
-  output_side_packet: "PACKET:8:servable_name"
-  output_side_packet: "PACKET:9:servable_version"
-  output_side_packet: "PACKET:10:input_name"
+  output_side_packet: "PACKET:0:width"
+  output_side_packet: "PACKET:1:height"
+  output_side_packet: "PACKET:2:full_width"
+  output_side_packet: "PACKET:3:full_height"
+  output_side_packet: "PACKET:4:full_native_surface"
+  output_side_packet: "PACKET:5:max_frames"
+  output_side_packet: "PACKET:6:framerate"
+  output_side_packet: "PACKET:7:servable_name"
+  output_side_packet: "PACKET:8:servable_version"
+  output_side_packet: "PACKET:9:input_name"
   options: {
     [mediapipe.ConstantSidePacketCalculatorOptions.ext]: {
-      packet { string_value: "/ovms/recording_3_raw.avi" }
       packet { int_value: 672 }
       packet { int_value: 384 }
       packet { int_value: 1280 }
@@ -63,7 +62,7 @@ node {
   input_side_packet: "HEIGHT:height"
   input_side_packet: "FULL_WIDTH:full_width"
   input_side_packet: "FULL_HEIGHT:full_height"
-  input_side_packet: "FULL_VA_SURFACE:full_va_surface"
+  input_side_packet: "FULL_NATIVE_SURFACE:full_native_surface"
   input_side_packet: "MAX_FRAMES:max_frames"
   output_stream: "FRAME_INFER:frame_infer"
   output_stream: "FRAME_FULL:frame_full"

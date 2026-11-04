@@ -442,7 +442,7 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
         int width;
         int height;
         std::string name;
-        bool use_system_memory = false;
+        imp_video_memory_mode_t output_memory = IMP_VIDEO_MEMORY_DEFAULT;
     };
     std::vector<resolved_branch> resolved;
 
@@ -466,7 +466,7 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
 
             rb.name = opts->branches[i].name ? opts->branches[i].name
                                              : ("branch_" + std::to_string(i));
-            rb.use_system_memory = opts->branches[i].use_system_memory;
+            rb.output_memory = opts->branches[i].output_memory;
             resolved.push_back(rb);
         }
     } else {
@@ -480,7 +480,17 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
     // Zero-copy D3D11 surface output: keep buffers in memory:D3D11Memory and skip
     // d3d11download (the explicit CPU fallback). Each appsink then yields an
     // ID3D11Texture2D imported straight into the model's D3DContext.
-    bool d3d11_surface = (opts && opts->use_d3d11_surface_memory);
+    const imp_video_memory_mode_t output_memory =
+        (opts && opts->output_memory == IMP_VIDEO_MEMORY_NATIVE)
+            ? IMP_VIDEO_MEMORY_NATIVE
+            : IMP_VIDEO_MEMORY_SYSTEM;
+    bool d3d11_surface = output_memory == IMP_VIDEO_MEMORY_NATIVE;
+    for (const resolved_branch& branch : resolved) {
+        if (branch.output_memory == IMP_VIDEO_MEMORY_NATIVE) {
+            d3d11_surface = true;
+            break;
+        }
+    }
 
     // Build GStreamer pipeline string
     std::string pipeline_str;
@@ -584,7 +594,9 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
                     std::to_string(rb.width) + ",height=" + std::to_string(rb.height) + " ! ";
             }
 
-            if (d3d11_surface && !rb.use_system_memory) {
+            const imp_video_memory_mode_t branch_memory =
+                rb.output_memory == IMP_VIDEO_MEMORY_DEFAULT ? output_memory : rb.output_memory;
+            if (branch_memory == IMP_VIDEO_MEMORY_NATIVE) {
                 // Buffers are already D3D11 NV12 from convert/scale above; feed
                 // the texture straight to appsink (no download, no extra caps).
                 pipeline_str += d3d11_filter + " ! appsink name=" + sink_name + " " + sink_props;
@@ -610,7 +622,9 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
                 std::to_string(rb.width) + ",height=" + std::to_string(rb.height);
         }
 
-        if (d3d11_surface && !rb.use_system_memory) {
+        const imp_video_memory_mode_t branch_memory =
+            rb.output_memory == IMP_VIDEO_MEMORY_DEFAULT ? output_memory : rb.output_memory;
+        if (branch_memory == IMP_VIDEO_MEMORY_NATIVE) {
             // Buffers are already D3D11 NV12 from convert/scale above; feed the
             // texture straight to appsink (no download, no extra caps filter).
             pipeline_str += d3d11_filter + " ! appsink name=branch_0 " + sink_props;
@@ -637,8 +651,8 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
         return IMP_ERROR_DECODE_FAILED;
     }
 
-    s->use_va_surface_memory = false;
-    s->use_d3d11_surface_memory = d3d11_surface;
+    s->use_native_surface_memory = d3d11_surface;
+    s->output_memory = output_memory;
     s->d3d11_device = s_injected_d3d11_device;
 
     // Inject the server-owned D3D11 device (Option B). A synchronous bus handler
@@ -667,7 +681,10 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
         s->branches[i].width = resolved[i].width;
         s->branches[i].height = resolved[i].height;
         s->branches[i].name = resolved[i].name;
-        s->branches[i].use_system_memory = resolved[i].use_system_memory;
+        s->branches[i].output_memory =
+            resolved[i].output_memory == IMP_VIDEO_MEMORY_DEFAULT
+                ? output_memory
+                : resolved[i].output_memory;
         s->branches[i].frame.allocate(resolved[i].width, resolved[i].height);
     }
 
@@ -749,7 +766,8 @@ imp_status_t imp_video_read_frame(imp_tensor_t** tensor,
     // Zero-copy D3D11 surface path: heap-allocate a per-frame tensor that owns
     // its GstSample (texture), so N in-flight frames keep distinct, valid
     // textures until each is released (VA path parity).
-    if (stream->use_d3d11_surface_memory && !branch.use_system_memory) {
+    if (stream->use_native_surface_memory &&
+        branch.output_memory == IMP_VIDEO_MEMORY_NATIVE) {
         auto* t = new imp_tensor_s();
         bool ok = read_frame_d3d11_surface(
             branch, *t, branch.total_decode_ms, branch.total_decode_pull_ms);

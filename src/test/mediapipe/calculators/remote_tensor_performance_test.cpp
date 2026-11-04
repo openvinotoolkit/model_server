@@ -356,7 +356,7 @@ TEST_F(WindowsD3D11RemoteTensorFixture, DecoderAndOvmsCapiInferenceUseSameRegist
     imp_video_source_set(src, "width", std::to_string(kModelW).c_str());
     imp_video_source_set(src, "height", std::to_string(kModelH).c_str());
     imp_video_decode_opts_t vopts{};
-    vopts.use_d3d11_surface_memory = true;
+    vopts.output_memory = IMP_VIDEO_MEMORY_NATIVE;
     imp_video_stream_t* stream = nullptr;
     ASSERT_EQ(imp_video_open(&stream, src, ctx, &vopts), IMP_OK) << imp_context_get_error(ctx);
     imp_video_source_destroy(src);
@@ -402,7 +402,7 @@ TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithOvmsCapiInferencePerforman
         ASSERT_EQ(imp_video_source_set(src, "width", std::to_string(kModelW).c_str()), IMP_OK);
         ASSERT_EQ(imp_video_source_set(src, "height", std::to_string(kModelH).c_str()), IMP_OK);
         imp_video_decode_opts_t options{};
-        options.use_d3d11_surface_memory = true;
+        options.output_memory = IMP_VIDEO_MEMORY_NATIVE;
         options.sync_appsink = boundedDecode;
         imp_video_stream_t* stream = nullptr;
         ASSERT_EQ(imp_video_open(&stream, src, ctx, &options), IMP_OK) << imp_context_get_error(ctx);
@@ -519,7 +519,7 @@ TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithD3D11Nv12SurfacePerformanc
         ASSERT_EQ(imp_video_source_set(source, "width", std::to_string(kModelW).c_str()), IMP_OK);
         ASSERT_EQ(imp_video_source_set(source, "height", std::to_string(kModelH).c_str()), IMP_OK);
         imp_video_decode_opts_t options{};
-        options.use_d3d11_surface_memory = true;
+        options.output_memory = IMP_VIDEO_MEMORY_NATIVE;
         imp_video_stream_t* stream = nullptr;
         ASSERT_EQ(imp_video_open(&stream, source, context, &options), IMP_OK)
             << imp_context_get_error(context);
@@ -563,7 +563,7 @@ TEST_F(WindowsD3D11RemoteTensorFixture, OvmsCapiInferenceWithD3D11Nv12Performanc
         ASSERT_EQ(imp_video_source_set(source, "width", std::to_string(kModelW).c_str()), IMP_OK);
         ASSERT_EQ(imp_video_source_set(source, "height", std::to_string(kModelH).c_str()), IMP_OK);
         imp_video_decode_opts_t options{};
-        options.use_d3d11_surface_memory = true;
+        options.output_memory = IMP_VIDEO_MEMORY_NATIVE;
         imp_video_stream_t* stream = nullptr;
         ASSERT_EQ(imp_video_open(&stream, source, context, &options), IMP_OK)
             << imp_context_get_error(context);
@@ -751,12 +751,12 @@ TEST_F(WindowsD3D11RemoteTensorFixture, PureOpenVinoInferenceWithD3D11Nv12InCalc
                                         output_stream: "DETECTIONS:detections"
                                         options {
                                                 [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
-                                                  model_path: ")pb" + configuredModelPath + R"pb(                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              "
+                                                  model_path: ")pb" + configuredModelPath + R"pb(                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "
       input_name: "data"
       performance_hint: "LATENCY"
       num_streams: 1
     }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      }
 }
 )pb";
     const auto config = ::mediapipe::ParseTextProtoOrDie<::mediapipe::CalculatorGraphConfig>(graphText);
@@ -773,7 +773,7 @@ TEST_F(WindowsD3D11RemoteTensorFixture, PureOpenVinoInferenceWithD3D11Nv12InCalc
         ASSERT_EQ(imp_video_source_set(source, "width", std::to_string(kModelW).c_str()), IMP_OK);
         ASSERT_EQ(imp_video_source_set(source, "height", std::to_string(kModelH).c_str()), IMP_OK);
         imp_video_decode_opts_t options{};
-        options.use_d3d11_surface_memory = true;
+        options.output_memory = IMP_VIDEO_MEMORY_NATIVE;
         imp_video_stream_t* stream = nullptr;
         ASSERT_EQ(imp_video_open(&stream, source, context, &options), IMP_OK)
             << imp_context_get_error(context);
@@ -885,7 +885,7 @@ TEST_F(WindowsD3D11RemoteTensorFixture, OvmsCapiInferenceWithD3D11Nv12InCalculat
         ASSERT_EQ(imp_video_source_set(source, "width", std::to_string(kModelW).c_str()), IMP_OK);
         ASSERT_EQ(imp_video_source_set(source, "height", std::to_string(kModelH).c_str()), IMP_OK);
         imp_video_decode_opts_t options{};
-        options.use_d3d11_surface_memory = true;
+        options.output_memory = IMP_VIDEO_MEMORY_NATIVE;
         imp_video_stream_t* stream = nullptr;
         ASSERT_EQ(imp_video_open(&stream, source, context, &options), IMP_OK)
             << imp_context_get_error(context);
@@ -994,12 +994,12 @@ TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithOpenVinoSourceAndInference
                                         output_stream: "DETECTIONS:detections"
                                         options {
                                                 [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
-                                                  model_path: ")pb" + configuredModelPath + R"pb(                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              "
+                                                  model_path: ")pb" + configuredModelPath + R"pb(                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "
       input_name: "data"
       performance_hint: "LATENCY"
       num_streams: 1
     }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      }
 }
 )pb";
     const auto config = ::mediapipe::ParseTextProtoOrDie<::mediapipe::CalculatorGraphConfig>(graphText);
@@ -1096,12 +1096,12 @@ TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithOpenVinoSingleCalculatorPe
                                         output_stream: "DETECTIONS:detections"
                                         options {
                                                 [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
-                                                  model_path: ")pb" + configuredModelPath + R"pb(                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              "
+                                                  model_path: ")pb" + configuredModelPath + R"pb(                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "
       input_name: "data"
       performance_hint: "LATENCY"
       num_streams: 1
     }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      }
 }
 )pb";
     const auto config = ::mediapipe::ParseTextProtoOrDie<::mediapipe::CalculatorGraphConfig>(graphText);
@@ -1198,12 +1198,12 @@ TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeWithOpenVinoGstreamerElementPe
                                         output_stream: "FRAMES:frames"
                                         options {
                                                 [mediapipe.GstOpenVinoInferenceCalculatorOptions.ext] {
-                                                  model_path: ")pb" + configuredModelPath + R"pb(                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              "
+                                                  model_path: ")pb" + configuredModelPath + R"pb(                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "
       input_name: "data"
       performance_hint: "LATENCY"
       num_streams: 1
     }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      }
 }
 )pb";
     const auto config = ::mediapipe::ParseTextProtoOrDie<::mediapipe::CalculatorGraphConfig>(graphText);
@@ -1372,7 +1372,7 @@ TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeAndOpenVinoD3D11RemoteTensorIn
         ASSERT_EQ(imp_video_source_set(src, "width", std::to_string(kModelW).c_str()), IMP_OK);
         ASSERT_EQ(imp_video_source_set(src, "height", std::to_string(kModelH).c_str()), IMP_OK);
         imp_video_decode_opts_t options{};
-        options.use_d3d11_surface_memory = true;
+        options.output_memory = IMP_VIDEO_MEMORY_NATIVE;
         imp_video_stream_t* stream = nullptr;
         ASSERT_EQ(imp_video_open(&stream, src, ctx, &options), IMP_OK) << imp_context_get_error(ctx);
         imp_video_source_destroy(src);
@@ -1706,7 +1706,7 @@ TEST_F(WindowsD3D11RemoteTensorFixture, FileDecodeReachesEosAndReleasesResources
     imp_video_source_set(src, "width", std::to_string(kModelW).c_str());
     imp_video_source_set(src, "height", std::to_string(kModelH).c_str());
     imp_video_decode_opts_t vopts{};
-    vopts.use_d3d11_surface_memory = true;
+    vopts.output_memory = IMP_VIDEO_MEMORY_NATIVE;
     imp_video_stream_t* stream = nullptr;
     ASSERT_EQ(imp_video_open(&stream, src, ctx, &vopts), IMP_OK) << imp_context_get_error(ctx);
     imp_video_source_destroy(src);
@@ -1750,9 +1750,9 @@ TEST_F(WindowsD3D11RemoteTensorFixture, CameraDecodeOvmsCapiInferenceAndMp4Encod
         branches[0].height = kModelH;
         branches[1].width = 1280;
         branches[1].height = 720;
-        branches[1].use_system_memory = true;
+        branches[1].output_memory = IMP_VIDEO_MEMORY_SYSTEM;
         imp_video_decode_opts_t vopts{};
-        vopts.use_d3d11_surface_memory = true;
+        vopts.output_memory = IMP_VIDEO_MEMORY_NATIVE;
         vopts.branches = branches;
         vopts.branch_count = 2;
         imp_video_stream_t* stream = nullptr;
@@ -1829,7 +1829,7 @@ TEST_F(WindowsD3D11RemoteTensorFixture, RtspDecodeUsesRegisteredD3D11Device) {
     imp_video_source_set(src, "width", std::to_string(kModelW).c_str());
     imp_video_source_set(src, "height", std::to_string(kModelH).c_str());
     imp_video_decode_opts_t vopts{};
-    vopts.use_d3d11_surface_memory = true;
+    vopts.output_memory = IMP_VIDEO_MEMORY_NATIVE;
     imp_video_stream_t* stream = nullptr;
     ASSERT_EQ(imp_video_open(&stream, src, ctx, &vopts), IMP_OK) << imp_context_get_error(ctx);
     imp_video_source_destroy(src);

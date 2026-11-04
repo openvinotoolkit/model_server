@@ -132,7 +132,7 @@ int main(int argc, char* argv[]) {
     }
 
     imp_video_decode_opts_t vopts{};
-    vopts.use_va_surface_memory = want_va;
+    vopts.output_memory = want_va ? IMP_VIDEO_MEMORY_NATIVE : IMP_VIDEO_MEMORY_SYSTEM;
 
     imp_video_stream_t* stream = nullptr;
     st = imp_video_open(&stream, src, ctx, &vopts);

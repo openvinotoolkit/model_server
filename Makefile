@@ -79,6 +79,9 @@ include versions.mk
 
 TEST_LLM_PATH ?= "src/test/llm_testing"
 GPU_MODEL_PATH ?= "/tmp/face_detection_adas"
+MPI_VIDEO_DEFAULT_PATH := models/mpi/ceo_pat_gelsinger.mp4
+MPI_VIDEO_PATH ?= $(MPI_VIDEO_DEFAULT_PATH)
+GPU_TEST_VIDEO_PATH := $(if $(strip $(VIDEO_PATH)),$(VIDEO_PATH),$(MPI_VIDEO_PATH))
 
 APT_OV_PACKAGE ?= openvino-2022.1.0
 # opt, dbg:
@@ -674,9 +677,8 @@ cpu_extension:
 
 prepare_models:
 	./prepare_llm_models.sh ${TEST_LLM_PATH}
-ifeq ($(RUN_GPU_TESTS),1)
+	./prepare_mpi_video.sh ${MPI_VIDEO_DEFAULT_PATH}
 	./prepare_gpu_models.sh ${GPU_MODEL_PATH}
-endif
 
 run_unit_tests: prepare_models
 	docker rm -f $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
@@ -688,11 +690,13 @@ ifeq ($(RUN_GPU_TESTS),1)
 		-u 0 \
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
 		-v $(shell realpath ${GPU_MODEL_PATH}):/ovms/src/test/face_detection_adas/1:ro \
+		-v $(shell realpath ${GPU_TEST_VIDEO_PATH}):/ovms/testdata/mpi_video.mp4:ro \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
 		$(GIT_CONFIG_MOUNT) \
 		-e https_proxy=${https_proxy} \
 		-e RUN_TESTS=1 \
 		-e RUN_GPU_TESTS=$(RUN_GPU_TESTS) \
+		-e VIDEO_PATH=/ovms/testdata/mpi_video.mp4 \
 		-e JOBS=$(JOBS) \
 		-e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} \
 		$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \

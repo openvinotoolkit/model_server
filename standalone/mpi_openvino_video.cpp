@@ -114,8 +114,8 @@ int main(int argc, char** argv) {
         sidePackets.emplace("full_width", mediapipe::MakePacket<int>(width));
     if (hasInputSidePacket("FULL_HEIGHT:full_height"))
         sidePackets.emplace("full_height", mediapipe::MakePacket<int>(height));
-    if (hasInputSidePacket("FULL_VA_SURFACE:full_va_surface"))
-        sidePackets.emplace("full_va_surface", mediapipe::MakePacket<bool>(true));
+    if (hasInputSidePacket("FULL_NATIVE_SURFACE:full_native_surface"))
+        sidePackets.emplace("full_native_surface", mediapipe::MakePacket<bool>(true));
     if (hasInputSidePacket("OUTPUT_PATH:output_path"))
         sidePackets.emplace("output_path", mediapipe::MakePacket<std::string>(argc == 7 ? argv[6] : "mpi_openvino_overlay.mp4"));
     if (hasInputSidePacket("FRAMERATE:framerate"))

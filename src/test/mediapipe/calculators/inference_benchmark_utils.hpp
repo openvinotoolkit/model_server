@@ -85,7 +85,7 @@ inline std::string modelPath() {
 }
 
 inline std::string videoPath() {
-    return environment("VIDEO_PATH", (root() / "recording_3_raw.avi").string());
+    return environment("VIDEO_PATH", "/ovms/testdata/mpi_video.mp4");
 }
 
 inline ov::AnyMap properties() {

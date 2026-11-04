@@ -99,7 +99,7 @@ TEST(GstD3D11Surface, DecodesOntoServerOwnedDevice) {
     imp_video_source_set(src, "height", std::to_string(height).c_str());
 
     imp_video_decode_opts_t vopts{};
-    vopts.use_d3d11_surface_memory = true;
+    vopts.output_memory = IMP_VIDEO_MEMORY_NATIVE;
 
     imp_video_stream_t* stream = nullptr;
     imp_status_t st = imp_video_open(&stream, src, ctx, &vopts);

@@ -85,7 +85,7 @@ public:
         imp_video_source_set(source, "width", std::to_string(width).c_str());
         imp_video_source_set(source, "height", std::to_string(height).c_str());
         imp_video_decode_opts_t decode_options{};
-        decode_options.use_d3d11_surface_memory = true;
+        decode_options.output_memory = IMP_VIDEO_MEMORY_NATIVE;
         const imp_status_t status = imp_video_open(&stream_, source, context_, &decode_options);
         imp_video_source_destroy(source);
         if (status != IMP_OK)

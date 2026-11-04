@@ -131,6 +131,16 @@ typedef enum {
     IMP_MEM_D3D11_SURFACE = 2,  // D3D11 NV12 texture on GPU (Windows) — d3d11 fields valid
 } imp_tensor_memory_type_t;
 
+/**
+ * Requested output-memory location. NATIVE resolves to VA surface memory on
+ * Linux and D3D11 texture memory on Windows; result types remain backend-specific.
+ */
+typedef enum {
+    IMP_VIDEO_MEMORY_DEFAULT = 0,  // branch inherits stream intent
+    IMP_VIDEO_MEMORY_SYSTEM = 1,   // host RAM (IMP_MEM_SYSTEM)
+    IMP_VIDEO_MEMORY_NATIVE = 2,   // platform-native GPU memory
+} imp_video_memory_mode_t;
+
 typedef enum {
     IMP_LAYOUT_NHWC = 0,        // [batch, height, width, channels]
     IMP_LAYOUT_NCHW = 1,        // [batch, channels, height, width]
@@ -323,7 +333,7 @@ typedef struct {
     uint32_t height;                    // Output height (0 = deduce from model, or source res)
     imp_pixel_format_t format;          // Output format (default: NV12)
     const char* name;                   // Optional branch name (for imp_video_read_frame_by_name)
-    bool use_system_memory;            // Windows: explicitly download this branch even when D3D11 surfaces are enabled
+    imp_video_memory_mode_t output_memory;  // DEFAULT inherits the stream output_memory
 } imp_video_branch_t;
 
 /**
@@ -344,16 +354,12 @@ typedef struct {
     uint32_t branch_count;              // Number of branches (0 = single branch at source res)
     bool sync_appsink;                  // If true (file mode): force single-buffer queue+appsink (disable pre-buffering)
     uint32_t queue_depth;               // If nonzero (file mode): bound queue + appsink max-buffers to N (overrides sync_appsink)
-    // When true AND VA-API GPU decode is available: decoded frames stay in VA surface memory
-    // (IMP_MEM_VA_SURFACE). Use imp_tensor_get_va_surface() to obtain VASurfaceID for
-    // zero-copy import into an OpenVINO VAContext. No DMA copy to system RAM occurs.
-    // When false (default): frames are delivered as system-memory NV12 (IMP_MEM_SYSTEM).
-    bool use_va_surface_memory;
-    // Windows D3D11 analog of use_va_surface_memory: when true AND D3D11 GPU decode is
-    // available, decoded frames stay in D3D11 texture memory (IMP_MEM_D3D11_SURFACE).
-    // Use imp_tensor_get_d3d11_texture() to obtain the ID3D11Texture2D for zero-copy
-    // import into an OpenVINO D3DContext. When false (default): host NV12 (IMP_MEM_SYSTEM).
-    bool use_d3d11_surface_memory;
+    // SYSTEM (or DEFAULT, the default) produces host NV12 (IMP_MEM_SYSTEM).
+    // NATIVE keeps frames in the platform backend: IMP_MEM_VA_SURFACE on Linux
+    // and IMP_MEM_D3D11_SURFACE on Windows. The backend-specific getters expose
+    // the returned resource for zero-copy OpenVINO import.
+    imp_video_memory_mode_t output_memory;
+    // FIXME @atobiszei: backend-specific and deferred for a Windows-host cleanup.
     // Optional registered GStreamer element fragment inserted after D3D11 NV12 conversion
     // and before each appsink. The caller owns the string for the imp_video_open duration.
     const char* d3d11_filter;
@@ -898,7 +904,8 @@ void* imp_video_va_display(void);
 
 /**
  * Override the VADisplay used by gst_loader for VA surface sharing.
- * Call this BEFORE imp_video_open() when using use_va_surface_memory=true.
+ * Call this BEFORE imp_video_open() when requesting IMP_VIDEO_MEMORY_NATIVE
+ * output on Linux.
  *
  * Purpose: OpenVINO creates its own internal VADisplay when you call
  * compile_model("GPU").  Passing that display here ensures GStreamer VA
@@ -917,7 +924,8 @@ bool imp_video_d3d11_available(void);
 
 /**
  * Inject a server-owned ID3D11Device into the GStreamer D3D11 pipeline.
- * Call this BEFORE imp_video_open() when using use_d3d11_surface_memory=true.
+ * Call this BEFORE imp_video_open() when requesting IMP_VIDEO_MEMORY_NATIVE
+ * output on Windows.
  *
  * Mirrors imp_video_set_va_display on the Windows D3D11 path: GStreamer decodes
  * onto this exact device, so the decoded NV12 texture is valid in the model's

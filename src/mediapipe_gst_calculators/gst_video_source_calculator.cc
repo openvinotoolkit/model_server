@@ -13,26 +13,26 @@
 // limitations under the License.
 
 /**
- * GstVideoSourceCalculator — split-out video source (GPU VA path).
+ * GstVideoSourceCalculator — split-out video source (native GPU path).
  *
- * A MediaPipe source calculator: decodes a video with GStreamer/VA and emits one
+ * A MediaPipe source calculator: decodes a video with GStreamer and emits one
  * GstVideoFramePacket per frame, each owning its native frame resource. No
  * inference here — that is the downstream calculator's job. The packet carries
  * a backend-specific resource descriptor, not an OpenVINO tensor or context.
  *
  * Two output modes, selected by which output tags the graph wires:
- *   FRAME       — single model-res GPU surface stream (legacy P6a inference graph).
- *   FRAME_INFER — same model-res GPU surface, for the overlay pipeline's
+ *   FRAME       — single model-res native GPU surface stream (legacy P6a inference graph).
+ *   FRAME_INFER — same model-res native GPU surface, for the overlay pipeline's
  *                 zero-copy inference branch.
  *   FRAME_FULL  — full-res frame for the overlay/encode branch. By default a
  *                 host NV12 frame (IMP_MEM_SYSTEM) for a CPU plane overlay. If
- *                 the FULL_VA_SURFACE side packet is true, it is instead a GPU
- *                 VA surface so the overlay/encode branch stays zero-copy
+ *                 the FULL_NATIVE_SURFACE side packet is true, it is instead a GPU
+ *                 native surface so the overlay/encode branch stays zero-copy
  *                 (P6a.2): the overlay draws by mapping the surface in place.
  *
  * Because an imp_video_stream carries a single surface-memory mode for all its
- * branches, the dual-resolution / dual-memory contract (VA surface + host NV12)
- * is served by opening two streams on the same file: one VA-surface stream at
+ * branches, the dual-resolution / dual-memory contract (native surface + host NV12)
+ * is served by opening two streams on the same file: one native-surface stream at
  * model res, one host-NV12 stream at full res. Both are read in lockstep and
  * emitted with identical Timestamp(frame_index) so the overlay can join them.
  *
@@ -46,7 +46,7 @@
  *   HEIGHT          : int         — model-res decode height (inference surface).
  *   FULL_WIDTH      : int (opt)   — full-res decode width  (overlay frame; 0 = source res).
  *   FULL_HEIGHT     : int (opt)   — full-res decode height (overlay frame; 0 = source res).
- *   FULL_VA_SURFACE : bool (opt)  — emit FRAME_FULL as a GPU VA surface (zero-copy overlay).
+ *   FULL_NATIVE_SURFACE : bool (opt)  — emit FRAME_FULL as a native GPU surface (zero-copy overlay).
  *   MAX_FRAMES      : int (opt)   — stop after N frames (0/absent = whole stream).
  */
 
@@ -81,7 +81,7 @@ constexpr char kWidthTag[] = "WIDTH";
 constexpr char kHeightTag[] = "HEIGHT";
 constexpr char kFullWidthTag[] = "FULL_WIDTH";
 constexpr char kFullHeightTag[] = "FULL_HEIGHT";
-constexpr char kFullVaSurfaceTag[] = "FULL_VA_SURFACE";
+constexpr char kFullNativeSurfaceTag[] = "FULL_NATIVE_SURFACE";
 constexpr char kMaxFramesTag[] = "MAX_FRAMES";
 constexpr char kFrameTag[] = "FRAME";
 constexpr char kFrameInferTag[] = "FRAME_INFER";
@@ -126,8 +126,8 @@ public:
             cc->InputSidePackets().Tag(kFullWidthTag).Set<int>();
         if (cc->InputSidePackets().HasTag(kFullHeightTag))
             cc->InputSidePackets().Tag(kFullHeightTag).Set<int>();
-        if (cc->InputSidePackets().HasTag(kFullVaSurfaceTag))
-            cc->InputSidePackets().Tag(kFullVaSurfaceTag).Set<bool>();
+        if (cc->InputSidePackets().HasTag(kFullNativeSurfaceTag))
+            cc->InputSidePackets().Tag(kFullNativeSurfaceTag).Set<bool>();
         if (cc->InputSidePackets().HasTag(kMaxFramesTag))
             cc->InputSidePackets().Tag(kMaxFramesTag).SetOneOf<int, int64_t>();
         if (cc->Outputs().HasTag(kFrameTag))
@@ -172,8 +172,8 @@ public:
             full_width_ = cc->InputSidePackets().Tag(kFullWidthTag).Get<int>();
         if (cc->InputSidePackets().HasTag(kFullHeightTag))
             full_height_ = cc->InputSidePackets().Tag(kFullHeightTag).Get<int>();
-        if (cc->InputSidePackets().HasTag(kFullVaSurfaceTag))
-            full_va_surface_ = cc->InputSidePackets().Tag(kFullVaSurfaceTag).Get<bool>();
+        if (cc->InputSidePackets().HasTag(kFullNativeSurfaceTag))
+            full_native_surface_ = cc->InputSidePackets().Tag(kFullNativeSurfaceTag).Get<bool>();
         if (cc->InputSidePackets().HasTag(kMaxFramesTag)) {
             const auto& limit = cc->InputSidePackets().Tag(kMaxFramesTag);
             max_frames_ = limit.ValidateAsType<int64_t>().ok() ? limit.Get<int64_t>() : limit.Get<int>();
@@ -204,7 +204,9 @@ public:
             branches[1].width = full_width_;
             branches[1].height = full_height_;
             branches[1].name = "overlay";
-            branches[1].use_system_memory = !full_va_surface_;
+            branches[1].output_memory = full_native_surface_
+                                            ? IMP_VIDEO_MEMORY_DEFAULT
+                                            : IMP_VIDEO_MEMORY_SYSTEM;
             absl::Status status = openStream(&infer_ctx_, &infer_stream_, full_width_, full_height_,
                 true, &pending_infer_, IMP_MEM_D3D11_SURFACE, branches, 2);
             if (!status.ok())
@@ -219,18 +221,18 @@ public:
             const imp_tensor_memory_type_t expected =
                 use_d3d11_ ? IMP_MEM_D3D11_SURFACE : IMP_MEM_VA_SURFACE;
             absl::Status st = openStream(&infer_ctx_, &infer_stream_, width_, height_,
-                /*va_surface=*/true, &pending_infer_, expected);
+                /*native_surface=*/true, &pending_infer_, expected);
             if (!st.ok())
                 return st;
         }
         if (emit_full_) {
-            // Overlay/encode branch. VA surface (zero-copy, P6a.2) if requested,
+            // Overlay/encode branch. Native surface (zero-copy, P6a.2) if requested,
             // otherwise an explicit host NV12 (GPU->CPU) frame.
             const imp_tensor_memory_type_t expected_full =
-                full_va_surface_ ? (use_d3d11_ ? IMP_MEM_D3D11_SURFACE : IMP_MEM_VA_SURFACE)
-                                 : IMP_MEM_SYSTEM;
+                full_native_surface_ ? (use_d3d11_ ? IMP_MEM_D3D11_SURFACE : IMP_MEM_VA_SURFACE)
+                                     : IMP_MEM_SYSTEM;
             absl::Status st = openStream(&full_ctx_, &full_stream_, full_width_, full_height_,
-                /*va_surface=*/full_va_surface_, &pending_full_, expected_full);
+                /*native_surface=*/full_native_surface_, &pending_full_, expected_full);
             if (!st.ok())
                 return st;
         }
@@ -275,8 +277,8 @@ public:
                 cc->Outputs().Tag(kFrameInferTag).Add(pkt.release(), ts);
         }
         if (full_tensor) {
-            auto pkt = full_va_surface_ ? makeSurfacePacket(full_tensor)
-                                        : makeHostNv12Packet(full_tensor);
+            auto pkt = full_native_surface_ ? makeSurfacePacket(full_tensor)
+                                            : makeHostNv12Packet(full_tensor);
             if (!pkt)
                 return absl::InternalError("GstVideoSourceCalculator: full frame build failed");
             cc->Outputs().Tag(kFrameFullTag).Add(pkt.release(), ts);
@@ -293,7 +295,7 @@ public:
 
 private:
     absl::Status openStream(imp_context_t** ctx, imp_video_stream_t** stream,
-        int w, int h, bool va_surface, imp_tensor_t** pending,
+        int w, int h, bool native_surface, imp_tensor_t** pending,
         imp_tensor_memory_type_t expected_first,
         const imp_video_branch_t* branches = nullptr, uint32_t branch_count = 0) {
         if (imp_context_create(ctx, nullptr) != IMP_OK)
@@ -316,8 +318,7 @@ private:
         imp_video_decode_opts_t vopts{};
         vopts.branches = branches;
         vopts.branch_count = branch_count;
-        vopts.use_va_surface_memory = va_surface && !use_d3d11_;
-        vopts.use_d3d11_surface_memory = va_surface && use_d3d11_;
+        vopts.output_memory = native_surface ? IMP_VIDEO_MEMORY_NATIVE : IMP_VIDEO_MEMORY_SYSTEM;
         imp_status_t st = imp_video_open(stream, src, *ctx, &vopts);
         imp_video_source_destroy(src);
         if (st != IMP_OK)
@@ -413,7 +414,7 @@ private:
     int height_ = 0;
     int full_width_ = 0;
     int full_height_ = 0;
-    bool full_va_surface_ = false;
+    bool full_native_surface_ = false;
     int64_t max_frames_ = 0;
     int64_t frame_index_ = 0;
     bool use_d3d11_ = false;
