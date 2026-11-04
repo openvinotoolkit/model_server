@@ -31,6 +31,7 @@
 #include "../filesystem/filesystem.hpp"
 #include "../llm/apis/openai_completions.hpp"
 #include "../llm/apis/openai_responses.hpp"
+#include "../llm/apis/openai_transcriptions.hpp"
 #include "../llm/io_processing/video_utils.hpp"
 #include "../llm/io_processing/output_parser.hpp"
 #include "../llm/language_model/legacy/servable.hpp"
@@ -1260,6 +1261,52 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseDeltasContentConcaten
     ASSERT_FALSE(response.HasParseError());
     EXPECT_EQ(response["usage"]["prompt_tokens_details"]["cached_tokens"].GetUint64(), 4);
     EXPECT_EQ(response["usage"]["total_tokens"].GetUint64(), 15);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseTranscriptionRemovesQwenProtocolPrefix) {
+    std::string json = R"({"model":"qwen3-asr"})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAITranscriptionsHandler>(
+        doc, ovms::Endpoint::TRANSCRIPTIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseRequest(100, 0, std::nullopt), absl::OkStatus());
+    const auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 1u);
+    EXPECT_EQ(chatHistory[0]["content"][0]["type"].as_string().value_or(""), "audio");
+
+    std::vector<ovms::Delta> deltas;
+    deltas.push_back(makeContentDelta("language English<asr_text>Transcribed speech."));
+    const std::string serialized = apiHandler->serializeUnaryResponse(
+        deltas, ov::genai::GenerationFinishReason::STOP);
+
+    rapidjson::Document response;
+    response.Parse(serialized.c_str());
+    ASSERT_FALSE(response.HasParseError());
+    ASSERT_TRUE(response.HasMember("text"));
+    EXPECT_STREQ(response["text"].GetString(), "Transcribed speech.");
+    EXPECT_FALSE(response.HasMember("choices"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeContinuousBatchingTranscriptionRemovesQwenProtocolPrefix) {
+    std::string json = R"({"model":"qwen3-asr"})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAITranscriptionsHandler>(
+        doc, ovms::Endpoint::TRANSCRIPTIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseRequest(100, 0, std::nullopt), absl::OkStatus());
+
+    std::vector<std::vector<ovms::Delta>> allDeltas = {{makeContentDelta("language English<asr_text>Transcribed speech.")}};
+    const std::string serialized = apiHandler->serializeUnaryResponse(
+        allDeltas, {ov::genai::GenerationFinishReason::STOP}, {});
+
+    rapidjson::Document response;
+    response.Parse(serialized.c_str());
+    ASSERT_FALSE(response.HasParseError());
+    ASSERT_TRUE(response.HasMember("text"));
+    EXPECT_STREQ(response["text"].GetString(), "Transcribed speech.");
+    EXPECT_FALSE(response.HasMember("choices"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseIgnoresAudioDeltas) {

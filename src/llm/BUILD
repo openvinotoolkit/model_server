@@ -133,6 +133,21 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "openai_transcriptions_handler",
+    hdrs = ["apis/openai_transcriptions.hpp"],
+    srcs = ["apis/openai_transcriptions.cpp"],
+    deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "@com_google_absl//absl/status",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
+        ":openai_api_handler",
+        "//third_party:genai",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "openai_responses_handler",
     hdrs = ["apis/openai_responses.hpp"],
     srcs = ["apis/openai_responses.cpp"],
@@ -213,6 +228,7 @@ ovms_cc_library(
     name = "io_processing_input_processors",
     hdrs = ["io_processing/input_processors/image_decoding_processor.hpp",
             "io_processing/input_processors/audio_decoding_processor.hpp",
+            "io_processing/input_processors/multipart_audio_decoding_processor.hpp",
             "io_processing/input_processors/video_frames_processor.hpp",
             "io_processing/input_processors/chat_template_processor.hpp",
             "io_processing/input_processors/chat_template_adapter.hpp",
@@ -224,6 +240,7 @@ ovms_cc_library(
             "io_processing/input_processors/tokenization_processor.hpp"],
     srcs = ["io_processing/input_processors/image_decoding_processor.cpp",
             "io_processing/input_processors/audio_decoding_processor.cpp",
+            "io_processing/input_processors/multipart_audio_decoding_processor.cpp",
             "io_processing/input_processors/video_frames_processor.cpp",
             "io_processing/input_processors/chat_template_processor.cpp",
             "io_processing/input_processors/chat_template_adapter.cpp",
@@ -675,6 +692,7 @@ ovms_cc_library(
         ":text_streamer",
         ":openai_completions_api_handler",
         ":openai_responses_handler",
+        ":openai_transcriptions_handler",
         ":generation_config_builders",
         ":chat_template_analyzer",
         ":chat_template_probe",

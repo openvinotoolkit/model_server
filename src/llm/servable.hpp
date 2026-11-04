@@ -205,6 +205,7 @@ struct GenAiServableProperties {
     ov::AnyMap pluginConfig;
     ov::AnyMap tokenizerPluginConfig;
     bool enableToolGuidedGeneration = false;
+    bool supportsTranscriptions = false;
     ChatTemplateEngine chatTemplateEngine = ChatTemplateEngine::NONE;
     ChatTemplateStatus chatTemplateStatus = ChatTemplateStatus::NOT_CHECKED;
     ChatTemplateSource chatTemplateSource = ChatTemplateSource::NONE;

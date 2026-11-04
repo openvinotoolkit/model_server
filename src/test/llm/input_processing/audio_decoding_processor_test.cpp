@@ -142,6 +142,21 @@ TEST(AudioDecodingProcessorTest, AudioPartReplacedWithIndexedTag) {
     EXPECT_EQ(content[2]["text"].as_string().value_or(""), "after");
 }
 
+TEST(AudioDecodingProcessorTest, QwenAsrAudioPartRemainsVisibleToChatTemplate) {
+    const std::string wavData = buildWavBuffer(16);
+    InputRequest req = makeAudioRequest(toBase64(wavData), "wav");
+    AudioDecodingProcessor processor(true, true);
+
+    ASSERT_TRUE(processor.process(req).ok());
+    ASSERT_EQ(req.inputAudios.size(), 1u);
+
+    const auto& result = std::get<ov::genai::ChatHistory>(req.input);
+    const auto content = result[0]["content"];
+    ASSERT_TRUE(content.is_array());
+    ASSERT_EQ(content.size(), 1u);
+    EXPECT_EQ(content[0]["type"].as_string().value_or(""), "audio");
+}
+
 TEST(AudioDecodingProcessorTest, EmptyDataFieldRejected) {
     InputRequest req = makeAudioRequest("", "wav");
     AudioDecodingProcessor processor;

@@ -26,7 +26,7 @@ namespace ovms::audio_utils {
 static constexpr uint32_t S2T_PIPELINE_SUPPORTED_SAMPLE_RATE = 16000;
 static constexpr uint32_t DISABLED_RESAMPLING_SAMPLE_RATE = 0;
 
-bool isWavBuffer(const std::string buf);
+bool isWavBuffer(std::string_view buf);
 
 // Decode WAV data into mono float32 PCM samples.
 // If targetSampleRate > 0, resamples to that rate. Otherwise returns at native sample rate.

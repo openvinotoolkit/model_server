@@ -34,7 +34,7 @@ namespace ovms::audio_utils {
 
 static void validateAudioFileSizeAgainstMaxValue(size_t fileSize);
 
-bool isWavBuffer(const std::string buf) {
+bool isWavBuffer(std::string_view buf) {
     // RIFF ref: https://en.wikipedia.org/wiki/Resource_Interchange_File_Format
     // WAV ref: https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html
     SPDLOG_TRACE("isWavBuffer: buf {}", buf.substr(0, 12));
