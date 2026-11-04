@@ -19,7 +19,7 @@ load("//:common_settings.bzl", "COMMON_LOCAL_DEFINES", "ovms_cc_library")
 package(default_visibility = ["//visibility:public"])
 
 # Intel Media Processing Interface (Intel MPI) library
-# Windows: direct GStreamer linking with D3D11 HW pipeline.
+# Windows: delay-loaded GStreamer imports with D3D11 HW pipeline.
 # Linux:   GStreamer loaded at runtime via dlopen (gst_loader.cpp).
 #          CPU decode only; VA-API GPU path deferred.
 

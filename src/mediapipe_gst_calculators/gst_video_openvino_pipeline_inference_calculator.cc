@@ -328,6 +328,8 @@ public:
 #ifndef _WIN32
         return absl::UnimplementedError("GstVideoOpenVinoPipelineInferenceCalculator supports Windows D3D11 only");
 #else
+        if (!imp_video_d3d11_available())
+            return absl::UnavailableError("GStreamer runtime is not installed or not on PATH");
         gst_init(nullptr, nullptr);
         if (!registerOvD3D11InferenceElement())
             return absl::InternalError("could not register ovd3d11infer GStreamer element");

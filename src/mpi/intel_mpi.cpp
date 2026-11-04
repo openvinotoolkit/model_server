@@ -27,7 +27,8 @@
  * NO inference logic lives here. Inference helpers belong in the demo/OVMS layer.
  *
  * Platform notes:
- *   Windows — direct GStreamer linking via import libs; D3D11 HW pipeline.
+ *   Windows — GStreamer import libs are delay-loaded and probed at runtime;
+ *             D3D11 HW pipeline when the runtime is available.
  *   Linux   — GStreamer loaded at runtime via dlopen (gst_loader.cpp);
  *             CPU decode pipeline only (VA-API GPU path deferred).
  *             Image / audio encode-decode functions are Windows-only for now
@@ -46,6 +47,7 @@
 #include "imp_mpi_impl.h"  // NOLINT
 
 #ifdef _WIN32
+#include <windows.h>
 #include <d3d11_4.h>
 #endif
 
@@ -61,6 +63,35 @@
 #include <vector>
 
 namespace chrono = std::chrono;
+
+#ifdef _WIN32
+static bool windows_gstreamer_available() {
+    static constexpr const wchar_t* dll_names[] = {
+        L"gstreamer-1.0-0.dll",
+        L"gstapp-1.0-0.dll",
+        L"gstvideo-1.0-0.dll",
+        L"gstd3d11-1.0-0.dll",
+        L"gstpbutils-1.0-0.dll",
+        L"gstbase-1.0-0.dll",
+        L"gstaudio-1.0-0.dll",
+        L"glib-2.0-0.dll",
+        L"gobject-2.0-0.dll",
+    };
+    static HMODULE dll_handles[9] = {};
+    static const bool available = [] {
+        for (size_t i = 0; i < 9; ++i) {
+            dll_handles[i] = LoadLibraryW(dll_names[i]);
+            if (!dll_handles[i]) {
+                std::wcerr << L"[GstLoader] GStreamer runtime unavailable: "
+                           << dll_names[i] << L" (Windows error " << GetLastError() << L")\n";
+                return false;
+            }
+        }
+        return true;
+    }();
+    return available;
+}
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 // Version
@@ -421,6 +452,11 @@ imp_status_t imp_video_open(imp_video_stream_t** stream,
     const imp_video_decode_opts_t* opts) {
     if (!stream || !source || !ctx)
         return IMP_ERROR_INVALID_ARGUMENT;
+
+    if (!windows_gstreamer_available()) {
+        ctx->last_error = "GStreamer runtime is not installed or not on PATH";
+        return IMP_ERROR_DEVICE_NOT_AVAILABLE;
+    }
 
     auto start = chrono::high_resolution_clock::now();
 
@@ -883,6 +919,11 @@ imp_status_t imp_video_encoder_create(imp_video_encoder_t** encoder,
     if (!encoder || !ctx)
         return IMP_ERROR_INVALID_ARGUMENT;
 
+    if (!windows_gstreamer_available()) {
+        ctx->last_error = "GStreamer runtime is not installed or not on PATH";
+        return IMP_ERROR_DEVICE_NOT_AVAILABLE;
+    }
+
     auto* e = new imp_video_encoder_s();
     e->width = (int)width;
     e->height = (int)height;
@@ -1240,7 +1281,7 @@ void imp_video_set_va_display(void* /*va_display*/) {}
 #endif
 
 #ifdef _WIN32
-bool imp_video_d3d11_available(void) { return true; }
+bool imp_video_d3d11_available(void) { return windows_gstreamer_available(); }
 void imp_video_set_d3d11_device(void* d3d11_device) {
     s_injected_d3d11_device = static_cast<ID3D11Device*>(d3d11_device);
     if (s_injected_d3d11_device) {
@@ -1454,6 +1495,12 @@ imp_status_t imp_decode_image_file(imp_tensor_t** t, const char* f,
     if (!t || !f)
         return IMP_ERROR_INVALID_ARGUMENT;
 
+    if (!windows_gstreamer_available()) {
+        if (c)
+            c->last_error = "GStreamer runtime is not installed or not on PATH";
+        return IMP_ERROR_DEVICE_NOT_AVAILABLE;
+    }
+
     gst_init(nullptr, nullptr);
 
     imp_pixel_format_t fmt = (o && o->output_format) ? o->output_format : IMP_FORMAT_RGB;
@@ -1512,6 +1559,12 @@ imp_status_t imp_decode_image(imp_tensor_t** t, const void* d, size_t s,
 
     if (!t || !d || s == 0)
         return IMP_ERROR_INVALID_ARGUMENT;
+
+    if (!windows_gstreamer_available()) {
+        if (c)
+            c->last_error = "GStreamer runtime is not installed or not on PATH";
+        return IMP_ERROR_DEVICE_NOT_AVAILABLE;
+    }
 
     gst_init(nullptr, nullptr);
 
@@ -1770,6 +1823,12 @@ imp_status_t imp_encode_image(void** d, size_t* s, imp_tensor_t* t,
     if (!d || !s || !t || !t->valid)
         return IMP_ERROR_INVALID_ARGUMENT;
 
+    if (!windows_gstreamer_available()) {
+        if (c)
+            c->last_error = "GStreamer runtime is not installed or not on PATH";
+        return IMP_ERROR_DEVICE_NOT_AVAILABLE;
+    }
+
     gst_init(nullptr, nullptr);
 
     std::string format_str = (o && o->format) ? o->format : "jpeg";
@@ -1881,6 +1940,12 @@ imp_status_t imp_encode_image_file(const char* f, imp_tensor_t* t,
 
     if (!f || !t || !t->valid)
         return IMP_ERROR_INVALID_ARGUMENT;
+
+    if (!windows_gstreamer_available()) {
+        if (c)
+            c->last_error = "GStreamer runtime is not installed or not on PATH";
+        return IMP_ERROR_DEVICE_NOT_AVAILABLE;
+    }
 
     gst_init(nullptr, nullptr);
 

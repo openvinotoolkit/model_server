@@ -127,6 +127,16 @@ cc_library(
     linkopts = [
         "d3d11.lib",
         "dxgi.lib",
+        "delayimp.lib",
+        "/DELAYLOAD:gstreamer-1.0-0.dll",
+        "/DELAYLOAD:gstapp-1.0-0.dll",
+        "/DELAYLOAD:gstvideo-1.0-0.dll",
+        "/DELAYLOAD:gstd3d11-1.0-0.dll",
+        "/DELAYLOAD:gstpbutils-1.0-0.dll",
+        "/DELAYLOAD:gstbase-1.0-0.dll",
+        "/DELAYLOAD:gstaudio-1.0-0.dll",
+        "/DELAYLOAD:glib-2.0-0.dll",
+        "/DELAYLOAD:gobject-2.0-0.dll",
     ],
     visibility = ["//visibility:public"],
 )

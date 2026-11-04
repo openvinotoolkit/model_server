@@ -942,8 +942,9 @@ void* imp_video_va_display(void);
 void imp_video_set_va_display(void* va_display);
 
 /**
- * Returns true if D3D11 GPU decode / surface sharing is available (Windows).
- * Always false on Linux. Safe to call before imp_context_create().
+ * Returns true if the Windows GStreamer runtime can be loaded for D3D11 video.
+ * Runtime DLLs are resolved using the Windows DLL search path, including PATH.
+ * Always false on Linux. Safe to call before context creation.
  */
 bool imp_video_d3d11_available(void);
 
