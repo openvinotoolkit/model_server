@@ -21,6 +21,7 @@
 #include "src/stringutils.hpp"
 #include "src/timer.hpp"
 #include "src/logging.hpp"
+#include <cstring>
 #include <cstdlib>
 #include <limits>
 #include <stdexcept>
@@ -34,7 +35,7 @@ namespace ovms::audio_utils {
 
 static void validateAudioFileSizeAgainstMaxValue(size_t fileSize);
 
-bool isWavBuffer(const std::string buf) {
+bool isWavBuffer(std::string_view buf) {
     // RIFF ref: https://en.wikipedia.org/wiki/Resource_Interchange_File_Format
     // WAV ref: https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html
     SPDLOG_TRACE("isWavBuffer: buf {}", buf.substr(0, 12));
@@ -42,7 +43,8 @@ bool isWavBuffer(const std::string buf) {
         return false;
     }
 
-    uint32_t chunk_size = *reinterpret_cast<const uint32_t*>(buf.data() + 4);
+    uint32_t chunk_size;
+    std::memcpy(&chunk_size, buf.data() + 4, sizeof(chunk_size));
     SPDLOG_TRACE("isWavBuffer: chunk_size {}", chunk_size);
     if (chunk_size + 8 != buf.size()) {
         return false;

@@ -57,6 +57,7 @@ enum class Endpoint {
     CHAT_COMPLETIONS,
     COMPLETIONS,
     RESPONSES,
+    TRANSCRIPTIONS,
     TOKENIZE,
 };
 
