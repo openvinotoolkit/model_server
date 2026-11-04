@@ -56,15 +56,15 @@ def create_ovms_command(
 ):
     layout = parameters.get_layout_from_regular_models()
 
-    MODEL_MAX_LENGTH_OVERRIDES = {
+    model_max_length = {
         "Qwen3Embedding06BInt8OvHf": 1000,
     }
     max_length = None
     for model in parameters.models or []:
         wrapped_model = getattr(model, "model", model)
         model_class_name = type(wrapped_model).__name__
-        if model_class_name in MODEL_MAX_LENGTH_OVERRIDES:
-            max_length = MODEL_MAX_LENGTH_OVERRIDES[model_class_name]
+        if model_class_name in model_max_length:
+            max_length = model_max_length[model_class_name]
             break
 
     common_parameters = {
