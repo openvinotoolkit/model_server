@@ -24,7 +24,9 @@
 
 #include "pull_module/curl_downloader.hpp"
 #include "pull_module/hf_env_vars.hpp"
+#include "capi_frontend/server_settings.hpp"
 #include "default_task_detector.hpp"
+#include "logging.hpp"
 #include "status.hpp"
 
 namespace ovms {
@@ -74,6 +76,11 @@ std::optional<std::string> determineDefaultTaskParameter(const std::optional<std
     }
 
     if (!sourceModel.has_value() || sourceModel->empty()) {
+        return std::nullopt;
+    }
+
+    if (isOciDownload(*sourceModel)) {
+        SPDLOG_DEBUG("Task cannot be inferred for OCI reference {} - --task has to be provided explicitly", *sourceModel);
         return std::nullopt;
     }
 

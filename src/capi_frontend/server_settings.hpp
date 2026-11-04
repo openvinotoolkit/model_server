@@ -37,6 +37,7 @@ enum ModelDownlaodType : unsigned int {
     GIT_CLONE_DOWNLOAD,
     OPTIMUM_CLI_DOWNLOAD,
     GGUF_DOWNLOAD,
+    OCI_DOWNLOAD,
     UNKNOWN_DOWNLOAD
 };
 
@@ -83,6 +84,10 @@ const std::map<std::string, ConfigExportType> stringToConfigExportType = {
 std::string enumToString(ConfigExportType type);
 ConfigExportType stringToConfigExportEnum(const std::string& inString);
 bool isOptimumCliDownload(const std::string& sourceModel, std::optional<std::string> ggufFilename);
+constexpr const char* OCI_SCHEME = "oci://";
+bool isOciDownload(const std::string& sourceModel);
+std::string stripOciScheme(const std::string& sourceModel);
+std::string localModelDirectoryName(const std::string& sourceModel);
 
 enum OvmsServerMode : int {
     SERVING_MODELS_MODE,
@@ -199,6 +204,7 @@ struct ExportSettings {
     std::string modelName = "";
     std::string modelPath = "./";
     std::string targetDevice;
+    bool trustRemoteCode = false;
     std::optional<uint32_t> restWorkers;
     std::optional<std::string> extraQuantizationParams;
     std::optional<std::string> vocoder;

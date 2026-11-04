@@ -20,4 +20,5 @@
 namespace ovms {
 std::string exec_cmd(const std::string& command, int& returnCode);
 std::string exec_cmd_utf8(const std::string& command, int& returnCode);
+std::string quote_cmd_arg(const std::string& arg);
 }  // namespace ovms

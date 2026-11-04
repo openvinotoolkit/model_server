@@ -234,4 +234,52 @@ std::string exec_cmd_utf8(const std::string& command, int& returnCode) {
     return exec_secure_internal(command, returnCode, true);
 }
 
+std::string quote_cmd_arg(const std::string& arg) {
+#ifdef _WIN32
+    if (!arg.empty() && arg.find_first_of(" \t\r\n\"") == std::string::npos) {
+        return arg;
+    }
+
+    // Match the Windows CRT argv parser: backslashes are literal except when
+    // they precede a quote or the closing quote. Double those runs and add one
+    // extra backslash before an embedded quote.
+    std::string quoted = "\"";
+    size_t backslashCount = 0;
+    for (char c : arg) {
+        if (c == '\\') {
+            ++backslashCount;
+            continue;
+        }
+        if (c == '"') {
+            quoted.append(backslashCount * 2 + 1, '\\');
+            quoted += '"';
+        } else {
+            quoted.append(backslashCount, '\\');
+            quoted += c;
+        }
+        backslashCount = 0;
+    }
+    quoted.append(backslashCount * 2, '\\');
+    quoted += '"';
+    return quoted;
+#else
+    if (arg.find_first_of(" \t\r\n\"'") == std::string::npos) {
+        return arg;
+    }
+    std::string quoted = "\"";
+    for (char c : arg) {
+        // parseCommand() treats a backslash as an escape inside double quotes.
+        if (c == '\\') {
+            quoted += '\\';
+        }
+        if (c == '"') {
+            quoted += '\\';
+        }
+        quoted += c;
+    }
+    quoted += '"';
+    return quoted;
+#endif
+}
+
 }  // namespace ovms
