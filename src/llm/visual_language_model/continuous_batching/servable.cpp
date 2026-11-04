@@ -81,7 +81,7 @@ std::shared_ptr<GenAiServableProperties> VisualLanguageModelServable::getPropert
 absl::Status VisualLanguageModelServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto status = GenAiServable::prepareCompleteResponse(executionContext);
     if (status.ok()) {
-        recordPrefillMetrics(*executionContext);
+        recordCompletedRequestMetrics(*executionContext);
     }
     if (status.ok() && llm_calculator_logger->should_log(spdlog::level::debug)) {
         auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
@@ -98,7 +98,7 @@ absl::Status VisualLanguageModelServable::preparePartialResponse(std::shared_ptr
         return status;
     }
     if (!executionContext->sendLoopbackSignal) {
-        recordPrefillMetrics(*executionContext);
+        recordCompletedRequestMetrics(*executionContext);
     }
     if (status.ok() &&
         !executionContext->sendLoopbackSignal &&

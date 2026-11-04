@@ -53,6 +53,33 @@ LLMMetricReporter::LLMMetricReporter(const MetricConfig* config, MetricRegistry*
                 {1, 10, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000});
             prefillEnabled.store(true, std::memory_order_relaxed);
         }
+        if (config->isFamilyEnabled(METRIC_NAME_LLM_SCHEDULED_REQUESTS)) {
+            scheduledFamily = registry->createFamily<MetricGauge>(METRIC_NAME_LLM_SCHEDULED_REQUESTS,
+                "Number of requests scheduled in GenAI's last generation step, or zero when idle.");
+            if (!scheduledFamily) {
+                throw std::logic_error("Cannot create LLM scheduled requests metric family");
+            }
+            scheduledRequests = scheduledFamily->addMetric(labels);
+            scheduledEnabled.store(true, std::memory_order_relaxed);
+        }
+        if (config->isFamilyEnabled(METRIC_NAME_LLM_GENERATED_TOKENS)) {
+            generatedTokensFamily = registry->createFamily<MetricCounter>(METRIC_NAME_LLM_GENERATED_TOKENS,
+                "Generated output tokens from successfully completed requests; excludes partial output from failed or cancelled requests.");
+            if (!generatedTokensFamily) {
+                throw std::logic_error("Cannot create LLM generated tokens metric family");
+            }
+            generatedTokens = generatedTokensFamily->addMetric(labels);
+        }
+        if (config->isFamilyEnabled(METRIC_NAME_LLM_TTFT)) {
+            ttftFamily = registry->createFamily<MetricHistogram>(METRIC_NAME_LLM_TTFT,
+                "GenAI time to first token in milliseconds for successfully completed requests, excluding VLM embedding preparation.");
+            if (!ttftFamily) {
+                throw std::logic_error("Cannot create LLM TTFT metric family");
+            }
+            ttft = ttftFamily->addMetric(labels,
+                {1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 30000, 60000});
+        }
+        completedRequestEnabled.store(generatedTokens || ttft, std::memory_order_relaxed);
     } catch (const std::exception& e) {
         removeMetrics();
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to register LLM metrics for graph {} node {}: {}", graphName, nodeName, e.what());
@@ -68,6 +95,8 @@ void LLMMetricReporter::deactivate() {
     std::lock_guard<std::mutex> lock(mutex);
     cacheEnabled.store(false, std::memory_order_relaxed);
     prefillEnabled.store(false, std::memory_order_relaxed);
+    scheduledEnabled.store(false, std::memory_order_relaxed);
+    completedRequestEnabled.store(false, std::memory_order_relaxed);
     removeMetrics();
 }
 
@@ -80,6 +109,52 @@ void LLMMetricReporter::removeMetrics() {
         prefillFamily->remove(prefillSpeed);
         prefillSpeed.reset();
     }
+    if (scheduledRequests) {
+        scheduledFamily->remove(scheduledRequests);
+        scheduledRequests.reset();
+    }
+    if (generatedTokens) {
+        generatedTokensFamily->remove(generatedTokens);
+        generatedTokens.reset();
+    }
+    if (ttft) {
+        ttftFamily->remove(ttft);
+        ttft.reset();
+    }
+}
+
+bool LLMMetricReporter::isScheduledRequestsEnabled() const {
+    return scheduledEnabled.load(std::memory_order_relaxed);
+}
+
+bool LLMMetricReporter::isCompletedRequestEnabled() const {
+    return completedRequestEnabled.load(std::memory_order_relaxed);
+}
+
+void LLMMetricReporter::setScheduledRequests(size_t requests) {
+    std::lock_guard<std::mutex> lock(mutex);
+    if (scheduledRequests) {
+        scheduledRequests->set(requests);
+    }
+}
+
+void LLMMetricReporter::observeCompletedRequest(size_t outputTokens, double ttftMilliseconds) {
+    std::lock_guard<std::mutex> lock(mutex);
+    if (generatedTokens) {
+        generatedTokens->increment(outputTokens);
+    }
+    if (!ttft) {
+        return;
+    }
+    if (!std::isfinite(ttftMilliseconds) || ttftMilliseconds <= 0.0) {
+#if (MEDIAPIPE_DISABLE == 0)
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Ignoring invalid GenAI TTFT in milliseconds: {}", ttftMilliseconds);
+#else
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Ignoring invalid GenAI TTFT in milliseconds: {}", ttftMilliseconds);
+#endif
+        return;
+    }
+    ttft->observe(ttftMilliseconds);
 }
 
 bool LLMMetricReporter::isCacheUtilizationEnabled() const {

@@ -41,16 +41,24 @@
 
 namespace ovms {
 
-void ContinuousBatchingServable::recordPrefillMetrics(GenAiServableExecutionContext& executionContext) {
+void ContinuousBatchingServable::recordCompletedRequestMetrics(GenAiServableExecutionContext& executionContext) {
     auto& cbExecutionContext = static_cast<ContinuousBatchingServableExecutionContext&>(executionContext);
-    if (!properties->metricReporter || !properties->metricReporter->isPrefillSpeedEnabled() ||
-        !executionContext.perfMetrics || cbExecutionContext.prefillMetricsRecorded) {
+    if (!properties->metricReporter ||
+        (!properties->metricReporter->isPrefillSpeedEnabled() && !properties->metricReporter->isCompletedRequestEnabled()) ||
+        !executionContext.perfMetrics || cbExecutionContext.completedMetricsRecorded) {
         return;
     }
-    cbExecutionContext.prefillMetricsRecorded = true;
+    // Called only on successful completion; partial output from cancelled/failed requests is not accounted for.
+    cbExecutionContext.completedMetricsRecorded = true;
     auto& perfMetrics = *executionContext.perfMetrics;
-    properties->metricReporter->observePrefillSpeed(
-        calculatePrefillSpeed(perfMetrics.get_num_input_tokens(), perfMetrics.get_ttft().mean));
+    const double ttftMilliseconds = perfMetrics.get_ttft().mean;
+    if (properties->metricReporter->isPrefillSpeedEnabled()) {
+        properties->metricReporter->observePrefillSpeed(
+            calculatePrefillSpeed(perfMetrics.get_num_input_tokens(), ttftMilliseconds));
+    }
+    if (properties->metricReporter->isCompletedRequestEnabled()) {
+        properties->metricReporter->observeCompletedRequest(perfMetrics.get_num_generated_tokens(), ttftMilliseconds);
+    }
 }
 
 void ContinuousBatchingServable::logPerfMetrics(ov::genai::PerfMetrics& perfMetrics) {
@@ -185,7 +193,7 @@ absl::Status ContinuousBatchingServable::readPartialExecutionResults(std::shared
 absl::Status ContinuousBatchingServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto status = GenAiServable::prepareCompleteResponse(executionContext);
     if (status.ok()) {
-        recordPrefillMetrics(*executionContext);
+        recordCompletedRequestMetrics(*executionContext);
     }
     if (status.ok() && executionContext->perfMetrics && llm_calculator_logger->should_log(spdlog::level::debug)) {
         logPerfMetrics(*executionContext->perfMetrics);
@@ -200,7 +208,7 @@ absl::Status ContinuousBatchingServable::preparePartialResponse(std::shared_ptr<
         return status;
     }
     if (!executionContext->sendLoopbackSignal) {
-        recordPrefillMetrics(*executionContext);
+        recordCompletedRequestMetrics(*executionContext);
     }
     if (status.ok() &&
         !executionContext->sendLoopbackSignal &&

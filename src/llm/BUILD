@@ -34,6 +34,7 @@ ovms_cc_library(
         "//src:httppayload",
         "//third_party:genai",
         "//src/mediapipe_internal:node_initializer",
+        "//src/metrics:libovmsmetrics",
         "//src:libovmslogging",
         "//src:libovmsstring_utils",],
     visibility = ["//visibility:public"],

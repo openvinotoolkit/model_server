@@ -68,6 +68,9 @@ const std::string METRIC_NAME_REQUEST_LATENCY = "ovms_graph_request_latency_us";
 
 const std::string METRIC_NAME_LLM_KV_CACHE_UTILIZATION = "ovms_llm_kv_cache_utilization_percent";
 const std::string METRIC_NAME_LLM_PREFILL_SPEED = "ovms_llm_prefill_speed_tokens_per_second";
+const std::string METRIC_NAME_LLM_GENERATED_TOKENS = "ovms_llm_generated_tokens_total";
+const std::string METRIC_NAME_LLM_SCHEDULED_REQUESTS = "ovms_llm_scheduled_requests";
+const std::string METRIC_NAME_LLM_TTFT = "ovms_llm_ttft_milliseconds";
 
 bool MetricConfig::validateEndpointPath(const std::string& endpoint) {
     std::regex valid_endpoint_regex("^/[a-zA-Z0-9]*$");

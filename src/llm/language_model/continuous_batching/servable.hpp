@@ -29,7 +29,7 @@ class LLMMetricReporter;
 
 struct ContinuousBatchingServableExecutionContext : public GenAiServableExecutionContext {
     ov::genai::GenerationHandle generationHandle;
-    bool prefillMetricsRecorded = false;
+    bool completedMetricsRecorded = false;
 };
 
 struct ContinuousBatchingServableProperties : public GenAiServableProperties {
@@ -44,7 +44,7 @@ protected:
     std::shared_ptr<ContinuousBatchingServableProperties> properties;
     void notifyExecutorThread();
     void logPerfMetrics(ov::genai::PerfMetrics& perfMetrics);
-    void recordPrefillMetrics(GenAiServableExecutionContext& executionContext);
+    void recordCompletedRequestMetrics(GenAiServableExecutionContext& executionContext);
     void stopGenerationOnResponseError(const std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext);
 
 public:

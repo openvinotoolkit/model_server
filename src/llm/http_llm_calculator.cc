@@ -34,6 +34,7 @@
 #include "../logging.hpp"
 #include "../mediapipe_internal/graph_side_packets.hpp"
 #include "../mediapipe_calculators/utils/timestamp_advance_guard.hpp"
+#include "../metrics/calculator_metrics.hpp"
 #include "../profiler.hpp"
 #include "apis/openai_completions.hpp"
 #include "servable.hpp"
@@ -49,6 +50,8 @@ class HttpLLMCalculator : public CalculatorBase {
     std::shared_ptr<GenAiServable> servable;
     std::shared_ptr<GenAiExecutionContextHolder> executionContextHolder;
     std::shared_ptr<GenAiServableExecutionContext> executionContext;
+    // Null unless the graph node declares CALCULATOR_METRICS:calculator_metrics.
+    std::shared_ptr<ovms::CalculatorMetrics> calculatorMetrics;
 
     static const std::string INPUT_TAG_NAME;
     static const std::string OUTPUT_TAG_NAME;
@@ -63,6 +66,9 @@ public:
         cc->Inputs().Tag(INPUT_TAG_NAME).Set<ovms::HttpPayload>();
         cc->Inputs().Tag(LOOPBACK_TAG_NAME).Set<bool>();
         cc->InputSidePackets().Tag(LLM_SESSION_SIDE_PACKET_TAG).Set<ovms::GenAiServableMap>();
+        if (cc->InputSidePackets().HasTag(ovms::CALCULATOR_METRICS_TAG)) {
+            cc->InputSidePackets().Tag(ovms::CALCULATOR_METRICS_TAG).Set<ovms::CalculatorMetricsMap>();
+        }
         if (cc->InputSidePackets().HasTag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG)) {
             cc->InputSidePackets().Tag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG).Set<ovms::GenAiExecutionContextMap>();
         }
@@ -84,6 +90,12 @@ public:
         auto it = servableMap.find(cc->NodeName());
         RET_CHECK(it != servableMap.end()) << "Could not find initialized LLM node named: " << cc->NodeName();
         this->servable = it->second;
+        if (cc->InputSidePackets().HasTag(ovms::CALCULATOR_METRICS_TAG)) {
+            const auto& scopes = cc->InputSidePackets().Tag(ovms::CALCULATOR_METRICS_TAG).Get<ovms::CalculatorMetricsMap>();
+            const auto scope = scopes.find(cc->NodeName());
+            RET_CHECK(scope != scopes.end()) << "Missing metrics scope for node: " << cc->NodeName();
+            calculatorMetrics = scope->second;
+        }
 
         if (cc->InputSidePackets().HasTag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG) && !cc->InputSidePackets().Tag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG).IsEmpty()) {
             ovms::GenAiExecutionContextMap executionContextMap = cc->InputSidePackets().Tag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG).Get<ovms::GenAiExecutionContextMap>();

@@ -48,6 +48,9 @@ Optional metrics
 | gauge      | ovms_infer_req_active | name,version | Number of currently consumed inference requests from the processing queue that are now either in the data loading or inference process. |
 | gauge      | ovms_llm_kv_cache_utilization_percent | name,node | GenAI-reported cache utilization (0-100) for a continuous-batching LLM or VLM pipeline. |
 | histogram      | ovms_llm_prefill_speed_tokens_per_second | name,node | Per-request input token count divided by GenAI time to first token in seconds, for continuous-batching LLM and VLM pipelines. |
+| counter      | ovms_llm_generated_tokens_total | name,node | Generated output tokens from successfully completed continuous-batching LLM/VLM requests; excludes partial output from failed or cancelled requests. |
+| gauge      | ovms_llm_scheduled_requests | name,node | Number of requests scheduled in the last continuous-batching generation step; set to zero when the executor becomes idle. |
+| histogram      | ovms_llm_ttft_milliseconds | name,node | GenAI time to first token in milliseconds for successfully completed continuous-batching LLM/VLM requests, excluding VLM embedding preparation. |
 
 > **Note**: While `ovms_current_requests` and `ovms_infer_req_active` both indicate how much resources are engaged in the requests processing, they are quite distinct. A request is counted in `ovms_current_requests` metric starting as soon as it's received by the server and stays there until the response is sent back to the user. The `ovms_infer_req_active` counter informs about the number of OpenVINO Infer Requests that are bound to user requests and are either loading the data or already running inference. 
 
@@ -63,13 +66,13 @@ Labels description
 
 ## LLM-specific metrics
 
-The two `ovms_llm_*` families are optional and supported for continuous-batching
+The five `ovms_llm_*` families are optional and supported for continuous-batching
 language and vision-language models, not legacy/NPU or Omni pipelines. Enable them
 with a REST port and an explicit metrics list:
 
 ```bash
 ovms --config_path /models/config.json --rest_port 8000 --metrics_enable \
-    --metrics_list ovms_llm_kv_cache_utilization_percent,ovms_llm_prefill_speed_tokens_per_second
+    --metrics_list ovms_llm_kv_cache_utilization_percent,ovms_llm_prefill_speed_tokens_per_second,ovms_llm_generated_tokens_total,ovms_llm_scheduled_requests,ovms_llm_ttft_milliseconds
 curl http://localhost:8000/metrics
 ```
 
@@ -106,6 +109,34 @@ retained in the in-memory registry between scrapes; scraping does not query the
 GenAI pipeline. Series are deactivated and removed when the graph unloads or
 reloads, even if an in-flight request still retains the old pipeline. Replacement
 pipelines start fresh series; late updates from the old pipeline are ignored.
+
+Generated tokens and TTFT use the same successful-completion accounting as prefill
+speed, independently of the log level. Streaming requests are recorded once, when
+the final response is prepared, not once per chunk. Partial output from cancelled
+or failed requests is not counted. The token counter uses GenAI's generated-token
+count, not characters or HTTP response chunks. An invalid TTFT sample is skipped
+with a warning without discarding the request's generated-token count.
+
+TTFT is GenAI's request timing, not HTTP end-to-end latency. For VLMs it excludes
+embedding preparation, matching the timing used for the existing prefill-speed
+metric. Its finite histogram bucket boundaries, in milliseconds, are
+`1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 30000, 60000`.
+Only finite, strictly positive TTFT samples are observed.
+
+Scheduled requests are published after each generation step, using GenAI's
+`scheduled_requests` value for the previous step. The gauge is set to zero before
+the executor waits for new requests. It is not the waiting queue size or the total
+number of requests accepted by the server.
+
+For example, the generated-token rate accounted for at successful request
+completion, averaged over five minutes, is:
+
+```promql
+sum by (name, node) (rate(ovms_llm_generated_tokens_total[5m]))
+```
+
+Because tokens are counted at completion, this rate is not a live measurement of
+tokens emitted by still-running requests.
 
 ## Enable metrics
 
@@ -356,8 +387,7 @@ absl::Status Open(mediapipe::CalculatorContext* cc) override {
 
 Use the normal MediaPipe headers for these methods, plus `<memory>` and
 `<exception>`. For an optional integration, guard both contract declaration and
-`Open` lookup with `cc->InputSidePackets().HasTag(ovms::CALCULATOR_METRICS_TAG)`;
-the built-in LLM example follows that pattern.
+`Open` lookup with `cc->InputSidePackets().HasTag(ovms::CALCULATOR_METRICS_TAG)`.
 
 Registration is idempotent: identical registrations from concurrent calculator
 instances in the same graph/node return the same counter. Register in `Open`,

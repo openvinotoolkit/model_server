@@ -725,9 +725,6 @@ protected:
         const std::string sourceGraphPath = getGenericFullPathForSrcTest(std::get<0>(GetParam()) ? "/ovms/src/test/llm/visual_language_model/vlm_cb_regular.pbtxt" : "/ovms/src/test/llm/lm_cb_regular.pbtxt");
         std::ifstream graphFile(sourceGraphPath);
         std::string graphContent{std::istreambuf_iterator<char>(graphFile), std::istreambuf_iterator<char>()};
-        const size_t nodeStart = graphContent.find("node {");
-        ASSERT_NE(nodeStart, std::string::npos);
-        graphContent.insert(nodeStart + 6, "\n    input_side_packet: \"CALCULATOR_METRICS:calculator_metrics\"\n");
         graphContent.insert(0, std::get<2>(GetParam()) ? "# OVMS_GRAPH_QUEUE_MAX_SIZE: 2\n" : "# OVMS_GRAPH_QUEUE_MAX_SIZE: 0\n");
         const std::string graphPath = directoryPath + "/graph.pbtxt";
         ASSERT_TRUE(createConfigFileWithContent(graphContent, graphPath));
@@ -739,7 +736,10 @@ protected:
                 "enable": true,
                 "metrics_list": [
                     "ovms_llm_kv_cache_utilization_percent",
-                    "ovms_llm_prefill_speed_tokens_per_second"
+                    "ovms_llm_prefill_speed_tokens_per_second",
+                    "ovms_llm_generated_tokens_total",
+                    "ovms_llm_scheduled_requests",
+                    "ovms_llm_ttft_milliseconds"
                 ]
             }}
         })";
@@ -785,6 +785,11 @@ TEST_P(LLMMetricsFlowTest, PublishesAtInfoLevelAndResetsAfterIdleUnload) {
         EXPECT_THAT(scrape, HasSubstr("ovms_llm_kv_cache_utilization_percent{name=\"metrics_llm\",node=\"llmNode1\"} "));
         EXPECT_THAT(scrape, HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"metrics_llm\",node=\"llmNode1\"} " + std::to_string(i) + "\n"));
         EXPECT_THAT(scrape, Not(HasSubstr("ovms_llm_prefill_speed_tokens_per_second_sum{name=\"metrics_llm\",node=\"llmNode1\"} 0\n")));
+        EXPECT_THAT(scrape, HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"metrics_llm\",node=\"llmNode1\"} " + std::to_string(i) + "\n"));
+        EXPECT_THAT(scrape, Not(HasSubstr("ovms_llm_ttft_milliseconds_sum{name=\"metrics_llm\",node=\"llmNode1\"} 0\n")));
+        EXPECT_THAT(scrape, HasSubstr("ovms_llm_scheduled_requests{name=\"metrics_llm\",node=\"llmNode1\"} "));
+        EXPECT_THAT(scrape, HasSubstr("ovms_llm_generated_tokens_total{name=\"metrics_llm\",node=\"llmNode1\"} "));
+        EXPECT_THAT(scrape, Not(HasSubstr("ovms_llm_generated_tokens_total{name=\"metrics_llm\",node=\"llmNode1\"} 0\n")));
     }
     auto& manager = server.getManager();
     auto& factory = manager.getMediapipeFactory();
@@ -792,6 +797,9 @@ TEST_P(LLMMetricsFlowTest, PublishesAtInfoLevelAndResetsAfterIdleUnload) {
     EXPECT_THAT(server.collect(), Not(HasSubstr("ovms_llm_")));
     ASSERT_EQ(factory.wakeUpDefinition("metrics_llm", manager), StatusCode::OK);
     EXPECT_THAT(server.collect(), HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"metrics_llm\",node=\"llmNode1\"} 0\n"));
+    EXPECT_THAT(server.collect(), HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"metrics_llm\",node=\"llmNode1\"} 0\n"));
+    EXPECT_THAT(server.collect(), HasSubstr("ovms_llm_generated_tokens_total{name=\"metrics_llm\",node=\"llmNode1\"} 0\n"));
+    EXPECT_THAT(server.collect(), HasSubstr("ovms_llm_scheduled_requests{name=\"metrics_llm\",node=\"llmNode1\"} 0\n"));
 }
 
 INSTANTIATE_TEST_SUITE_P(LLMAndVLM, LLMMetricsFlowTest,

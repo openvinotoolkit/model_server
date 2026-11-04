@@ -53,12 +53,18 @@ struct LLMExecutor {
     void step() {
         OVMS_PROFILE_FUNCTION();
         pipe->step();
-        publishCacheUtilization();
+        publishPipelineMetrics();
     }
 
-    void publishCacheUtilization() {
-        if (metricReporter && metricReporter->isCacheUtilizationEnabled()) {
-            metricReporter->setCacheUtilization(pipe->get_metrics().cache_usage);
+    void publishPipelineMetrics(bool idle = false) {
+        if (metricReporter && (metricReporter->isCacheUtilizationEnabled() || metricReporter->isScheduledRequestsEnabled())) {
+            const auto metrics = pipe->get_metrics();
+            if (metricReporter->isCacheUtilizationEnabled()) {
+                metricReporter->setCacheUtilization(metrics.cache_usage);
+            }
+            if (metricReporter->isScheduledRequestsEnabled()) {
+                metricReporter->setScheduledRequests(idle ? 0 : metrics.scheduled_requests);
+            }
         }
     }
 
@@ -135,7 +141,7 @@ class LLMExecutorWrapper {
                     stepCounter++;
                     llmExecutor->step();
                 } else {
-                    llmExecutor->publishCacheUtilization();
+                    llmExecutor->publishPipelineMetrics(true);
                     SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {}; Scheduled requests: {};", 0, 0);
                     llmExecutor->waitForRequests(receivedEndSignal);
                 }

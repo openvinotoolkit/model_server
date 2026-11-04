@@ -54,6 +54,9 @@ extern const std::string METRIC_NAME_REQUEST_LATENCY;
 
 extern const std::string METRIC_NAME_LLM_KV_CACHE_UTILIZATION;
 extern const std::string METRIC_NAME_LLM_PREFILL_SPEED;
+extern const std::string METRIC_NAME_LLM_GENERATED_TOKENS;
+extern const std::string METRIC_NAME_LLM_SCHEDULED_REQUESTS;
+extern const std::string METRIC_NAME_LLM_TTFT;
 
 class Status;
 /**
@@ -95,7 +98,10 @@ private:
         {METRIC_NAME_INFER_REQ_QUEUE_SIZE},
         {METRIC_NAME_INFER_REQ_ACTIVE},
         {METRIC_NAME_LLM_KV_CACHE_UTILIZATION},
-        {METRIC_NAME_LLM_PREFILL_SPEED}};
+        {METRIC_NAME_LLM_PREFILL_SPEED},
+        {METRIC_NAME_LLM_GENERATED_TOKENS},
+        {METRIC_NAME_LLM_SCHEDULED_REQUESTS},
+        {METRIC_NAME_LLM_TTFT}};
 
     std::unordered_set<std::string> defaultMetricFamilies = {
         {METRIC_NAME_CURRENT_REQUESTS},
