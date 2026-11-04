@@ -112,6 +112,16 @@ const char* getDownloadFailureReason(CURLcode status) {
         status = setopt;      \
     }
 
+absl::Status validateHttpImageDownloadResponse(long httpCode, bool redirectsAllowed) {
+    if (httpCode >= 300 && httpCode < 400 && !redirectsAllowed) {
+        return absl::InvalidArgumentError("Failed to download image from external URL because redirects are not allowed. Set OVMS_MEDIA_URL_ALLOW_REDIRECTS=1 environment variable to allow redirects.");
+    }
+    if (httpCode < 200 || httpCode >= 300) {
+        return absl::InvalidArgumentError("Failed to download image from external URL: HTTP status " + std::to_string(httpCode) + ".");
+    }
+    return absl::OkStatus();
+}
+
 absl::Status downloadImage(const char* url, std::string& image, const int64_t& sizeLimit) {
     CURL* curl_handle = curl_easy_init();
     if (!curl_handle) {
@@ -180,13 +190,11 @@ absl::Status downloadImage(const char* url, std::string& image, const int64_t& s
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger,
                 "External image download failed: reason=redirect_disallowed http_status={} redirects_allowed=false",
                 httpCode);
-            return absl::InvalidArgumentError("Failed to download image from external URL because redirects are not allowed. Set OVMS_MEDIA_URL_ALLOW_REDIRECTS=1 environment variable to allow redirects.");
-        }
-        if (httpCode < 200 || httpCode >= 300) {
+        } else if (httpCode < 200 || httpCode >= 300) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger,
                 "External image download failed: reason=http_status http_status={}", httpCode);
-            return absl::InvalidArgumentError("Failed to download image from external URL: HTTP status " + std::to_string(httpCode) + ".");
         }
+        return validateHttpImageDownloadResponse(httpCode, redirectsAllowed);
     }
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloading image succeeded, {} bytes retrieved", image.size());
     return absl::OkStatus();

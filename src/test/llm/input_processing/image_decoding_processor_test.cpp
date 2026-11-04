@@ -20,11 +20,9 @@
 #include <stdexcept>
 #include <string>
 #include <system_error>
-#include <thread>
 
 #include "absl/strings/escaping.h"
 #include <gtest/gtest.h>
-#include <httplib.h>
 #include <openvino/genai/chat_history.hpp>
 #include <zlib.h>
 
@@ -33,7 +31,6 @@
 #include "../../../llm/io_processing/input_request.hpp"
 #include "src/config.hpp"
 #include "src/test/environment.hpp"
-#include "src/utils/env_guard.hpp"
 
 using namespace ovms;
 
@@ -302,32 +299,8 @@ TEST(ImageDecodingProcessorTest, HttpUrlWithNoAllowedDomainsConfiguredRejected) 
 }
 
 TEST(ImageDecodingProcessorTest, HttpRedirectWithoutPermissionReturnsConfigurationGuidance) {
-    httplib::Server server;
-    server.Get("/redirect", [](const httplib::Request&, httplib::Response& response) {
-        response.set_redirect("/image", 302);
-    });
-    const int port = server.bind_to_any_port("127.0.0.1");
-    ASSERT_GT(port, 0);
-    std::thread serverThread([&server]() {
-        server.listen_after_bind();
-    });
-    server.wait_until_ready();
+    const auto status = validateHttpImageDownloadResponse(302, false);
 
-    EnvGuard envGuard;
-    envGuard.unset("OVMS_MEDIA_URL_ALLOW_REDIRECTS");
-    envGuard.unset("http_proxy");
-    envGuard.unset("https_proxy");
-    envGuard.unset("HTTP_PROXY");
-    envGuard.unset("HTTPS_PROXY");
-    envGuard.unset("all_proxy");
-    envGuard.unset("ALL_PROXY");
-    InputRequest req = makeImageUrlRequest("http://127.0.0.1:" + std::to_string(port) + "/redirect");
-    ImageDecodingProcessor processor(std::nullopt, std::vector<std::string>{"127.0.0.1"});
-
-    const auto status = processor.process(req);
-
-    server.stop();
-    serverThread.join();
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
     EXPECT_EQ(status.message(), "Failed to download image from external URL because redirects are not allowed. Set OVMS_MEDIA_URL_ALLOW_REDIRECTS=1 environment variable to allow redirects.");
 }

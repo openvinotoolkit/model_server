@@ -25,6 +25,7 @@
 #include "pull_module/curl_downloader.hpp"
 #include "pull_module/hf_env_vars.hpp"
 #include "default_task_detector.hpp"
+#include "logging.hpp"
 #include "status.hpp"
 
 namespace ovms {
@@ -54,6 +55,14 @@ static std::string describeTaskMetadataFailure(const std::string& sourceModel, i
         return context + "could not reach the model endpoint. Check the internet connection or proxy configuration.";
     }
     return context + "could not retrieve task metadata from the model endpoint (HTTP status " + std::to_string(httpCode) + ").";
+}
+
+static void reportTaskMetadataFailure(const std::string& sourceModel, int httpCode, std::string* errorMessage) {
+    const std::string message = describeTaskMetadataFailure(sourceModel, httpCode);
+    SPDLOG_ERROR("{}", message);
+    if (errorMessage != nullptr) {
+        *errorMessage = message;
+    }
 }
 
 bool graphPbtxtExists(const std::string& modelPath) {
@@ -119,9 +128,7 @@ std::optional<std::string> determineDefaultTaskParameter(const std::optional<std
         ctx.addContent("config.json", std::move(configBody));
     } else {
         if (configHttpCode != 404) {
-            if (errorMessage != nullptr) {
-                *errorMessage = describeTaskMetadataFailure(*sourceModel, configHttpCode);
-            }
+            reportTaskMetadataFailure(*sourceModel, configHttpCode, errorMessage);
             return std::nullopt;
         }
         // config.json not available — try model_index.json (Diffusers repos)
@@ -132,9 +139,7 @@ std::optional<std::string> determineDefaultTaskParameter(const std::optional<std
         if (indexStatus.ok()) {
             ctx.addContent("model_index.json", std::move(indexBody));
         } else {
-            if (errorMessage != nullptr) {
-                *errorMessage = describeTaskMetadataFailure(*sourceModel, indexHttpCode);
-            }
+            reportTaskMetadataFailure(*sourceModel, indexHttpCode, errorMessage);
             return std::nullopt;
         }
     }
