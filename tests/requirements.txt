@@ -9,7 +9,7 @@ grpcio==1.85.0
 huggingface-hub==2.4.0
 Jinja2==3.1.6
 jiwer>=4.0.0
-openai==3.41.0
+openai==2.54.0
 opencv-python==5.0.0.93
 paramiko==5.1.0
 Pillow==12.3.0
