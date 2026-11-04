@@ -338,6 +338,9 @@ IF /I EXIST %opencl_dir% (
     git clone --depth 1 --branch %opencl_ver% %opencl_git% %opencl_dir%
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
+:: The SDK stores the OpenCL C and C++ headers as submodules.
+git -C %opencl_dir% submodule update --init --recursive
+if !errorlevel! neq 0 exit /b !errorlevel!
 echo [INFO] OpenCL headers installed: %opencl_dir%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Install in c:\opt\ section started - ONE per system, not per BUILD, reinstalled only with expunge clean :::::::::::::::::::::::
