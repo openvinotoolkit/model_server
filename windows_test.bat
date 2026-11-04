@@ -65,7 +65,7 @@ for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
 
 :: Setting PATH environment variable based on default windows node settings: Added ovms_windows specific python settings and c:/opt and removed unused Nvidia and OCL specific tools.
 :: When changing the values here you can print the node default PATH value and base your changes on it.
-set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-!curl_version!-win64-mingw\bin;c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-!curl_version!-win64-mingw\bin;C:\opt\gstreamer\1.0\msvc_x86_64\bin;c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\;%PATH%;"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
@@ -128,6 +128,15 @@ if !errorlevel! neq 0 (
     echo [ERROR] windows_prepare_llm_models.bat failed with error code !errorlevel! >> win_full_test.log
     exit /b !errorlevel!
 )
+
+:: Download the test video used by the GStreamer/D3D11 video tests.
+:: Tests that consume it read VIDEO_PATH and skip gracefully when it is absent.
+call %cd%\windows_prepare_video.bat %cd%\models\mpi\ceo_pat_gelsinger.mp4
+if !errorlevel! neq 0 (
+    echo [ERROR] windows_prepare_video.bat failed with error code !errorlevel! >> win_full_test.log
+    exit /b !errorlevel!
+)
+set "VIDEO_PATH=%cd%\models\mpi\ceo_pat_gelsinger.mp4"
 
 :: Run install_ovms_service.bat unit tests
 echo Running install_ovms_service.bat unit tests...

@@ -365,6 +365,66 @@ IF /I EXIST %boringssl_dir% (
 )
 echo [INFO] BoringSSL installed: %boringssl_dir%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: GStreamer (pre-built MSVC runtime + development installers)
+:: Kept under C:\opt like every other dependency. The MSI default install location is
+:: C:\gstreamer, so instead of a machine-wide install we do an administrative extract
+:: (msiexec /a: file copy only, no elevation, no registry) into a temp dir and move the
+:: payload to C:\opt\gstreamer. WORKSPACE @windows_gstreamer points at
+:: C:\opt\gstreamer\1.0\msvc_x86_64. Two packages are required: runtime (plugins, DLLs)
+:: and development (headers, import .libs).
+echo [INFO] Installing GStreamer %GSTREAMER_VERSION% ...
+set "gstreamer_install_dir=%opt_install_dir%\gstreamer\1.0\msvc_x86_64"
+set "gstreamer_extract_dir=%opt_install_dir%\gstreamer_extract"
+set "gstreamer_base_url=https://gstreamer.freedesktop.org/data/pkg/windows/%GSTREAMER_VERSION%/msvc"
+set "gstreamer_runtime_msi=gstreamer-1.0-msvc-x86_64-%GSTREAMER_VERSION%.msi"
+set "gstreamer_devel_msi=gstreamer-1.0-devel-msvc-x86_64-%GSTREAMER_VERSION%.msi"
+IF /I EXIST %gstreamer_install_dir%\lib\gstreamer-1.0.lib (
+    if %expunge% EQU 1 (
+        rmdir /S /Q %opt_install_dir%\gstreamer
+        if !errorlevel! neq 0 exit /b !errorlevel!
+        goto :install_gstreamer
+    ) else (
+        echo [INFO] ::::::::::::::::::::::: GStreamer already installed in %gstreamer_install_dir%
+        goto :gstreamer_installed
+    )
+)
+:install_gstreamer
+:: Download runtime package
+IF /I NOT EXIST %opt_install_dir%\%gstreamer_runtime_msi% (
+    %wget_path% -P %opt_install_dir%\ %gstreamer_base_url%/%gstreamer_runtime_msi%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+:: Download development package
+IF /I NOT EXIST %opt_install_dir%\%gstreamer_devel_msi% (
+    %wget_path% -P %opt_install_dir%\ %gstreamer_base_url%/%gstreamer_devel_msi%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+:: Administrative extract (file copy only) of both packages into the same temp tree
+IF /I EXIST %gstreamer_extract_dir% (
+    rmdir /S /Q %gstreamer_extract_dir%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+echo [INFO] Extracting GStreamer runtime package ...
+msiexec /a %opt_install_dir%\%gstreamer_runtime_msi% /qn TARGETDIR=%gstreamer_extract_dir%
+if !errorlevel! neq 0 exit /b !errorlevel!
+echo [INFO] Extracting GStreamer development package ...
+msiexec /a %opt_install_dir%\%gstreamer_devel_msi% /qn TARGETDIR=%gstreamer_extract_dir%
+if !errorlevel! neq 0 exit /b !errorlevel!
+:: Normalize layout: temp\PFiles64\gstreamer\1.0\msvc_x86_64 -> C:\opt\gstreamer\1.0\msvc_x86_64
+IF /I EXIST %opt_install_dir%\gstreamer (
+    rmdir /S /Q %opt_install_dir%\gstreamer
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+move %gstreamer_extract_dir%\PFiles64\gstreamer %opt_install_dir%\gstreamer
+if !errorlevel! neq 0 exit /b !errorlevel!
+rmdir /S /Q %gstreamer_extract_dir%
+IF /I NOT EXIST %gstreamer_install_dir%\lib\gstreamer-1.0.lib (
+    echo [ERROR] GStreamer installation failed: %gstreamer_install_dir%\lib\gstreamer-1.0.lib not found
+    exit /b 1
+)
+:gstreamer_installed
+echo [INFO] GStreamer installed: %gstreamer_install_dir%
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Install bazel
 echo [INFO] Installing bazel ...
 set /p bazel_version=<"%~dp0.bazelversion"

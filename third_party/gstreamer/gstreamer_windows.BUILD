@@ -16,7 +16,8 @@
 
 # GStreamer pre-built import for Windows (msvc_x86_64 installer layout)
 #
-# Expected install location: C:\Program Files\gstreamer\1.0\msvc_x86_64
+# Expected install location: C:\opt\gstreamer\1.0\msvc_x86_64
+# (installed by windows_install_build_dependencies.bat via msiexec /a extract).
 # The new_local_repository in WORKSPACE points "path" there;
 # this BUILD file maps headers and import libs for Bazel consumption.
 

@@ -33,7 +33,7 @@ if ($BenchmarkTrialCount -lt 1) {
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $bazel = "C:\opt\bazel.exe"
 $env:BAZEL_SH = "C:\opt\msys64\usr\bin\bash.exe"
-$env:PATH = "C:\opt\python312;C:\opt\msys64\usr\bin;C:\opt\openvino\runtime\bin\intel64\Release;C:\opt\openvino\runtime\3rdparty\tbb\bin;C:\Program Files\gstreamer\1.0\msvc_x86_64\bin;$env:PATH"
+$env:PATH = "C:\opt\python312;C:\opt\msys64\usr\bin;C:\opt\openvino\runtime\bin\intel64\Release;C:\opt\openvino\runtime\3rdparty\tbb\bin;C:\opt\gstreamer\1.0\msvc_x86_64\bin;$env:PATH"
 
 if (-not (Test-Path $bazel)) {
     throw "Bazel was not found at $bazel"

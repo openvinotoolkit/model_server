@@ -163,7 +163,7 @@ new_local_repository(
 
 new_local_repository(
     name = "windows_gstreamer",
-    path = "C:\\gstreamer\\1.0\\msvc_x86_64",
+    path = "C:\\opt\\gstreamer\\1.0\\msvc_x86_64",
     build_file = "@//third_party/gstreamer:gstreamer_windows.BUILD",
 )
 

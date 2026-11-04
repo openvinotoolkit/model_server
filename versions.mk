@@ -37,3 +37,6 @@ GENAI_PACKAGE_URL_WINDOWS ?= https://storage.openvinotoolkit.org/repositories/op
 # Third-party dependency versions (used for binary builds)
 OPENCV_VERSION ?= 4.14.0
 CURL_VERSION ?= 8.22.0_2
+# GStreamer version. Linux builds GStreamer from source (see GST_VERSION in Dockerfile.ubuntu);
+# Windows installs the matching pre-built MSVC installers from gstreamer.freedesktop.org.
+GSTREAMER_VERSION ?= 1.26.9
