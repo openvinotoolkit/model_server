@@ -341,7 +341,31 @@ IF /I EXIST %opencl_dir% (
 :: The SDK stores the OpenCL C and C++ headers as submodules.
 git -C %opencl_dir% submodule update --init --recursive
 if !errorlevel! neq 0 exit /b !errorlevel!
-echo [INFO] OpenCL headers installed: %opencl_dir%
+:: Generate the OpenCL ICD import library used by the Windows OpenVINO target.
+set "opencl_def=%opencl_dir%\external\OpenCL-ICD-Loader\loader\windows\OpenCL.def"
+set "opencl_lib=%opencl_dir%\OpenCL.lib"
+IF /I NOT EXIST "!opencl_lib!" (
+    IF /I NOT EXIST "!opencl_def!" (
+        echo [ERROR] OpenCL loader definition not found: !opencl_def!
+        exit /b 1
+    )
+    set "OPENCL_LIB_PATH=%BAZEL_VS:"=%\VC\Tools\MSVC\*"
+    for /d %%F in ("!OPENCL_LIB_PATH!") do (
+        set "OPENCL_LIB_EXE=%%F\bin\Hostx64\x64\lib.exe"
+        goto :create_opencl_import_lib
+    )
+    echo [ERROR] Required MSVC lib.exe not found
+    exit /b 1
+    :create_opencl_import_lib
+    IF /I EXIST "!OPENCL_LIB_EXE!" (
+        "!OPENCL_LIB_EXE!" /def:"!opencl_def!" /out:"!opencl_lib!" /MACHINE:x64
+        if !errorlevel! neq 0 exit /b !errorlevel!
+    ) ELSE (
+        echo [ERROR] Required MSVC lib.exe not found: !OPENCL_LIB_EXE!
+        exit /b 1
+    )
+)
+echo [INFO] OpenCL headers and import library installed: %opencl_dir%
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Install in c:\opt\ section started - ONE per system, not per BUILD, reinstalled only with expunge clean :::::::::::::::::::::::
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
