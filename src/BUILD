@@ -2266,6 +2266,7 @@ cc_test(
                 "//src/rerank:rerank_api_handler",
                 ":embeddings_handler_tests",
                 ":test_idle_mediapipe_test",
+                ":test_graph_metadata_test",
                 "//src/mediapipe_internal:mediapipe_utils",
                 "//src/llm:llmcalculator_proto_owner",
             ],
@@ -2486,6 +2487,21 @@ ovms_cc_test_library(
         "//src/mediapipe_internal:pipelinedefinitionstatus",
         "//src/mediapipe_internal:libovms_mediapipe",
         "//src/mediapipe_internal:mediapipegraphconfig",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+ovms_cc_test_library(
+    name = "test_graph_metadata_test",
+    srcs = ["test/graph_metadata_test.cpp"],
+    deps = [
+        ":test_constructor_enabled_model_manager",
+        ":test_utils",
+        "//src:libovms_graph_metadata",
+        "//src:libovms_servable_definition",
+        "//src/mediapipe_internal:libovms_mediapipe",
+        "//src/mediapipe_internal:mediapipegraphconfig",
+        "//src/port:rapidjson_document",
         "@com_google_googletest//:gtest",
     ],
 )
