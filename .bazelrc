@@ -160,6 +160,10 @@ build:windows --host_copt=-DWIN32_LEAN_AND_MEAN
 build:windows --copt=-DNOGDI
 build:windows --host_copt=-DNOGDI
 
+# glog's abbreviated-severity macro can be injected on the compiler command line
+build:windows --copt=-UGLOG_NO_ABBREVIATED_SEVERITIES
+build:windows --host_copt=-UGLOG_NO_ABBREVIATED_SEVERITIES
+
 # MSVC (Windows): Standards-conformant preprocessor mode
 # See https://docs.microsoft.com/en-us/cpp/preprocessor/preprocessor-experimental-overview
 build:windows --copt=/Zc:preprocessor
