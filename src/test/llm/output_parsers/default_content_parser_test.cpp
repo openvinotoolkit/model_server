@@ -26,9 +26,9 @@
 using namespace ovms;
 
 #ifdef _WIN32
-const std::string tokenizerPathDCP = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\facebook\\opt-125m";
+const std::string tokenizerPathDCP = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\mzeglars\\dummy-cyclic-gpt2-ov";
 #else
-const std::string tokenizerPathDCP = "/ovms/src/test/llm_testing/facebook/opt-125m";
+const std::string tokenizerPathDCP = "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov";
 #endif
 
 class DefaultContentParserTest : public ::testing::Test {

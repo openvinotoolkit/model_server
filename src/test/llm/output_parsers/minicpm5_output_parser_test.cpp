@@ -28,9 +28,9 @@
 using namespace ovms;
 
 #ifdef _WIN32
-const std::string minicpm5TokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\openbmb\\MiniCPM5-1B";
+const std::string minicpm5TokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\OpenVINO\\MiniCPM5-1B-int4-ov";
 #else
-const std::string minicpm5TokenizerPath = "/ovms/src/test/llm_testing/openbmb/MiniCPM5-1B";
+const std::string minicpm5TokenizerPath = "/ovms/src/test/llm_testing/OpenVINO/MiniCPM5-1B-int4-ov";
 #endif
 
 using ovms::ParameterType;

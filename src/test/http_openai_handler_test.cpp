@@ -408,7 +408,7 @@ TEST_F(HttpOpenAIHandlerTest, GraphWithANameDoesNotExist) {
 class HttpOpenAIHandlerParsingTest : public ::testing::Test {
 protected:
     rapidjson::Document doc;
-    std::shared_ptr<ov::genai::Tokenizer> tokenizer = std::make_shared<ov::genai::Tokenizer>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m"));
+    std::shared_ptr<ov::genai::Tokenizer> tokenizer = std::make_shared<ov::genai::Tokenizer>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov"));
 
     std::shared_ptr<ovms::OpenAIApiHandler> createHandler(ovms::Endpoint ep,
         const std::string& toolParserName = "", const std::string& reasoningParserName = "") {

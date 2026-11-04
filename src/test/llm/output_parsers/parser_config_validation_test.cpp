@@ -26,9 +26,9 @@
 using namespace ovms;
 
 #ifdef _WIN32
-const std::string parserConfigValidationTokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\microsoft\\Phi-4-mini-instruct";
+const std::string parserConfigValidationTokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\OpenVINO\\Phi-4-mini-instruct-int4-ov";
 #else
-const std::string parserConfigValidationTokenizerPath = "/ovms/src/test/llm_testing/microsoft/Phi-4-mini-instruct";
+const std::string parserConfigValidationTokenizerPath = "/ovms/src/test/llm_testing/OpenVINO/Phi-4-mini-instruct-int4-ov";
 #endif
 
 static ovms::ToolsSchemas_t PARSER_CONFIG_VALIDATION_EMPTY_TOOLS_SCHEMA = {};

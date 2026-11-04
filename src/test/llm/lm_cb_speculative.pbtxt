@@ -29,10 +29,10 @@ node {
     }
     node_options: {
         [type.googleapis.com/mediapipe.LLMCalculatorOptions]: {
-          models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
+          models_path: "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov"
           cache_size: 1
           plugin_config: '{"INFERENCE_PRECISION_HINT": "f32"}'
-          draft_models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
+          draft_models_path: "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov"
         }
     }
     input_stream_handler {
