@@ -266,9 +266,21 @@ TEST_F(LLMMetricsTest, CompletedRequestMetricsAccumulateAcrossScrapes) {
     EXPECT_THAT(scrape, HasSubstr("ovms_llm_generated_tokens_total{name=\"model\",node=\"llm\"} 12\n"));
     EXPECT_THAT(scrape, HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"model\",node=\"llm\"} 3\n"));
     EXPECT_THAT(scrape, HasSubstr("ovms_llm_ttft_milliseconds_sum{name=\"model\",node=\"llm\"} 320\n"));
-    EXPECT_THAT(scrape, HasSubstr("ovms_llm_ttft_milliseconds_bucket{name=\"model\",node=\"llm\",le=\"25\"} 1\n"));
-    EXPECT_THAT(scrape, HasSubstr("ovms_llm_ttft_milliseconds_bucket{name=\"model\",node=\"llm\",le=\"100\"} 2\n"));
+    EXPECT_THAT(scrape, HasSubstr("ovms_llm_ttft_milliseconds_bucket{name=\"model\",node=\"llm\",le=\"20\"} 1\n"));
+    EXPECT_THAT(scrape, HasSubstr("ovms_llm_ttft_milliseconds_bucket{name=\"model\",node=\"llm\",le=\"250\"} 3\n"));
     EXPECT_EQ(registry.collect(), scrape);
+}
+
+TEST_F(LLMMetricsTest, TTFTHistogramUsesVllmSecondBucketsConvertedToMilliseconds) {
+    LLMMetricReporter reporter(&config, &registry, "model", "llm");
+    const std::string scrape = registry.collect();
+    const std::vector<int> expectedBoundaries{1, 5, 10, 20, 40, 60, 80, 100, 250, 500, 750, 1000,
+        2500, 5000, 7500, 10000, 20000, 40000, 80000, 160000, 640000, 2560000};
+
+    for (const int boundary : expectedBoundaries) {
+        EXPECT_THAT(scrape, HasSubstr("ovms_llm_ttft_milliseconds_bucket{name=\"model\",node=\"llm\",le=\"" +
+                                         std::to_string(boundary) + "\"} 0\n"));
+    }
 }
 
 TEST_F(LLMMetricsTest, ScheduledRequestsRetainLatestValueAndCanReturnToIdle) {

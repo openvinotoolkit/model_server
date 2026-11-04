@@ -77,7 +77,8 @@ LLMMetricReporter::LLMMetricReporter(const MetricConfig* config, MetricRegistry*
                 throw std::logic_error("Cannot create LLM TTFT metric family");
             }
             ttft = ttftFamily->addMetric(labels,
-                {1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 30000, 60000});
+                {1, 5, 10, 20, 40, 60, 80, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000,
+                    20000, 40000, 80000, 160000, 640000, 2560000});
         }
         completedRequestEnabled.store(generatedTokens || ttft, std::memory_order_relaxed);
     } catch (const std::exception& e) {
