@@ -67,10 +67,8 @@ filegroup(
     name = "ovms_optional_plugins",
     srcs = [
         "//src/image_utils:opencv_image_decoder",
-    ] + selects.with_or({
-        ("//src:windows", "//:disable_mediapipe"): [],
-        "//conditions:default": ["//src/lib:ovms_opencv_calculators_plugin"],
-    }),
+        "//src/lib:ovms_opencv_calculators_plugin",
+    ],
     visibility = ["//visibility:public"],
 )
 

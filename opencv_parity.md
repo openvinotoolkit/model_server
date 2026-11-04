@@ -15,6 +15,9 @@ The branch separates two responsibilities:
 - MediaPipe image operations: upstream OpenCV-dependent calculators moved behind
   a separate optional plugin. stb_image does not replace these calculators.
 
+The package boundary is different from the runtime dependency boundary: OVMS
+packages must always ship the OpenCV decoder and calculator plugins, while the
+OpenCV runtime itself remains optional for downstream deployments and clients.
 The goal is that numeric inference and graphs that do not use OpenCV calculators
 remain usable without the OpenCV runtime on both platforms. Installing the
 matching optional decoder and calculator plugins restores OpenCV image formats
@@ -37,18 +40,20 @@ Linux runtime failures occurred after compilation and linking succeeded.
 
 ## Current Blockers
 
-### B1: Windows Release Omits the Decoder DLL (Native Validation Pending)
+### B1: Windows Release Must Always Ship the OpenCV Decoder DLL
 
-Originally, `src/image_utils/BUILD` defined the Windows decoder and included it in
-the server's optional plugin data, but `windows_create_package.bat` copied only the
-OpenCV runtime DLL, not `ovms_opencv_image_decoder.dll`.
+The package must include the OpenCV decoder plugin even though the OpenCV runtime
+remains optional for downstream clients. The distribution boundary is the
+supported install layout, not the client environment that may omit OpenCV.
 
-Impact: a clean Windows release package falls back to stb_image despite shipping
-OpenCV. Formats supported only by OpenCV are unavailable.
+Impact: a clean Windows release package falls back to stb_image if the plugin is
+not shipped alongside the executable. Formats supported only by OpenCV become
+unavailable even though the package was built with OpenCV support.
 
-Implemented:
+Implementation:
 
-- Stage the matching decoder DLL alongside the packaged OVMS executable.
+- Always build the decoder plugin as an OVMS dependency.
+- Always stage the matching decoder DLL alongside the packaged OVMS executable.
 - Fail packaging if the expected decoder artifact is missing.
 - Run the existing process-level image test in a new OpenCV-required mode against
   the staged Windows package. PFM inference must succeed, proving that the decoder
@@ -56,12 +61,10 @@ Implemented:
 - Run the child server from the package directory with only that directory and
   Windows System32 on PATH, excluding developer dependency directories.
 
-Status: packaging changes and positive test implemented. Both positive and
-OpenCV-free test modes pass on Linux. Native Windows package execution remains
-required before B1 can be marked resolved; no Windows runner is available in
-this session.
+Status: the build/package model is corrected to ship the plugin with OVMS. Native
+Windows package execution remains required before full validation is complete.
 
-### B2: Windows OpenCV MediaPipe Calculators (Implementation Added; Native Validation Pending)
+### B2: Windows OpenCV MediaPipe Calculators Must Be Bundled With the OVMS Package
 
 `third_party/mediapipe_calculators/BUILD` moves the OpenCV-dependent calculators
 out of the common registration set. Windows now builds the same optional
