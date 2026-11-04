@@ -151,9 +151,14 @@ GenAiServableProperties::DraftModelStrategy detectDraftModelStrategy(const std::
 static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Chat template is unavailable. Servable will not respond to /chat/completions endpoint.";
 
 static void configureInputProcessingCapabilities(const std::shared_ptr<GenAiServableProperties>& properties) {
+    const std::filesystem::path modelsPath(properties->modelsPath);
     if (!properties->inputProcessorContext.config.audioInputConfig.has_value() &&
-        std::filesystem::exists(std::filesystem::path(properties->modelsPath) / "openvino_audio_embeddings_model.xml")) {
+        std::filesystem::exists(modelsPath / "openvino_audio_embeddings_model.xml")) {
         properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig{true};
+    }
+    if (!properties->inputProcessorContext.config.audioInputConfig.has_value() &&
+        std::filesystem::exists(modelsPath / "openvino_audio_encoder_model.xml")) {
+        properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig{true, true};
     }
 }
 
@@ -496,10 +501,15 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
 
     // Existence of talker model indicates omni pipeline
     bool hasTalkerModel = std::filesystem::exists(parsedModelsPathFs / "openvino_talker_model.xml");
-    bool hasVlmModels = (std::filesystem::exists(parsedModelsPathFs / "openvino_text_embeddings_model.xml") &&
-                         std::filesystem::exists(parsedModelsPathFs / "openvino_vision_embeddings_model.bin"));
+    const bool hasTextEmbeddingsModel = std::filesystem::exists(parsedModelsPathFs / "openvino_text_embeddings_model.xml");
+    const bool hasVisionEmbeddingsModel = std::filesystem::exists(parsedModelsPathFs / "openvino_vision_embeddings_model.bin");
+    const bool hasAudioEmbeddingsModel = std::filesystem::exists(parsedModelsPathFs / "openvino_audio_embeddings_model.xml");
+    const bool hasQwenAsrAudioEncoder = std::filesystem::exists(parsedModelsPathFs / "openvino_audio_encoder_model.xml");
+    const bool hasVlmModels = hasTextEmbeddingsModel &&
+                              (hasVisionEmbeddingsModel || hasAudioEmbeddingsModel || hasQwenAsrAudioEncoder);
 
-    // Existence of text embeddings and vision embeddings models indicates we are dealing with VLM pipeline
+    // Text embeddings plus vision embeddings, audio embeddings, or the Qwen3-ASR audio
+    // encoder indicates a VLM pipeline.
     // But if it has talker model, it means it is Omni pipeline which is built out of VLM Pipeline and Talker
     bool isOmni = hasTalkerModel && hasVlmModels;
     bool isVLM = !hasTalkerModel && hasVlmModels;
@@ -637,7 +647,9 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         return StatusCode::INTERNAL_ERROR;
     }
     servable->determineDecodingMethod();
-    configureInputProcessingCapabilities(servable->getProperties());
+    auto properties = servable->getProperties();
+    properties->supportsTranscriptions = nodeOptions.supports_transcriptions();
+    configureInputProcessingCapabilities(properties);
     return StatusCode::OK;
 }
 }  // namespace ovms

@@ -91,8 +91,12 @@ absl::Status AudioDecodingProcessor::process(InputRequest& req) {
                     ov::Tensor audioTensor(ov::element::f32, ov::Shape{pcm.size()});
                     std::memcpy(audioTensor.data<float>(), pcm.data(), pcm.size() * sizeof(float));
                     req.inputAudios.push_back(std::move(audioTensor));
-                    const std::string tag = "<ov_genai_audio_" + std::to_string(req.inputAudios.size() - 1) + ">";
-                    content[j] = ov::genai::JsonContainer({{"type", "text"}, {"text", tag}});
+                    if (useAudioContentPart) {
+                        content[j] = ov::genai::JsonContainer({{"type", "audio"}});
+                    } else {
+                        const std::string tag = "<ov_genai_audio_" + std::to_string(req.inputAudios.size() - 1) + ">";
+                        content[j] = ov::genai::JsonContainer({{"type", "text"}, {"text", tag}});
+                    }
                 } catch (const std::exception& e) {
                     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Audio decoding failed: {}", e.what());
                     return absl::InvalidArgumentError(std::string("Audio decoding failed: ") + e.what());
