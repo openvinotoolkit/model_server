@@ -20,7 +20,10 @@ package(
 
 cc_library(
     name = "opencl2",
-    hdrs = glob(["CL/**/*.h"]),
+    hdrs = glob([
+        "CL/**/*.h",
+        "CL/**/*.hpp",
+    ]),
     visibility = ["//visibility:public"],
 )
 
