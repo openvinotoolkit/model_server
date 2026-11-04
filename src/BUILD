@@ -2039,6 +2039,7 @@ cc_test(
                 "test/llm/assisted_decoding_test.cpp",
                 "test/llm/llmnode_test.cpp",
                 "test/llm/tokenize_endpoint_test.cpp",
+                "test/llm/decisions_endpoint_test.cpp",
                 "test/llm/max_model_length_test.cpp",
                 "test/llm/text_streamer_test.cpp",
                 "test/llm/visual_language_model/complete_flow_test.cpp",

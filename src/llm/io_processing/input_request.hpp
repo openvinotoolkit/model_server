@@ -44,6 +44,12 @@ struct InputRequest {
     std::vector<ov::Tensor> inputVideos;
     std::vector<ov::Tensor> inputAudios;
 
+    // Decisions: media decoded once for the first question and reused by the rest
+    // (ov::Tensor is ref-counted, so the copies share the buffers). Consumed by the
+    // Image/VideoFrames processors by part index.
+    std::vector<ov::Tensor> preDecodedImages;
+    std::vector<ov::Tensor> preDecodedVideos;
+
     // Running total of decoded pixels across all image_url and video_url parts in
     // this request.
     size_t totalDecodedPixels = 0;

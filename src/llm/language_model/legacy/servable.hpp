@@ -28,6 +28,9 @@ namespace ovms {
 
 struct LegacyServableExecutionContext : public LegacyServableExecutionContextBase {
     ov::genai::EncodedResults results;
+    // Decisions endpoint only: one EncodedResults per question, filled by the executor
+    // (one greedy forward pass per question). Empty for every other endpoint.
+    std::vector<ov::genai::EncodedResults> decisionsResults;
     // readySignal, finished, success are inherited from LegacyServableExecutionContextBase
     // Workaround needed to pass generation config to the executor that requires it
     ov::genai::GenerationConfig baseGenerationConfig;
@@ -75,6 +78,14 @@ public:
     // Interface methods
     std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() override;
     std::shared_ptr<GenAiServableProperties> getProperties() override;
+    // The decisions endpoint runs on the legacy one-shot pipeline: one greedy forward
+    // pass per question, serialized from the requested-token logprobs.
+    absl::Status validateEndpoint(Endpoint endpoint) const override {
+        if (endpoint == Endpoint::DECISIONS) {
+            return absl::OkStatus();
+        }
+        return GenAiServable::validateEndpoint(endpoint);
+    }
     absl::Status parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;

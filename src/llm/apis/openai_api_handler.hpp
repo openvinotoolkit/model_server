@@ -59,6 +59,7 @@ enum class Endpoint {
     CHAT_COMPLETIONS,
     COMPLETIONS,
     RESPONSES,
+    DECISIONS,
     TOKENIZE,
 };
 
@@ -93,6 +94,9 @@ struct CompletionUsageStatistics {
 struct UnaryChoiceLogprobs {
     std::vector<int64_t> generatedIds;
     std::vector<float> logProbs;
+    // Per-position logprobs of GenerationConfig::logprob_token_ids (decisions endpoint);
+    // parallel to generatedIds.
+    std::vector<std::vector<std::pair<int64_t, float>>> requestedTokenLogprobs;
 };
 
 // Abstract base class for OpenAI API handlers.
@@ -183,7 +187,19 @@ public:
     // Builds a complete InputRequest: runs the full generation config pipeline
     // (parse → adjust → validate) on the provided builder using this handler's
     // request and tokenizer, then populates input from the parsed request.
-    absl::StatusOr<InputRequest> extractInputRequest(GenerationConfigBuilder& configBuilder);
+    virtual absl::StatusOr<InputRequest> extractInputRequest(GenerationConfigBuilder& configBuilder);
+
+    // Plural form: one InputRequest per engine request. The base implementation
+    // returns a single request; the decisions endpoint overrides it to emit one
+    // request per question (per-question prompt + per-question label token ids).
+    virtual absl::StatusOr<std::vector<InputRequest>> extractInputRequests(GenerationConfigBuilder& configBuilder);
+
+    // Whether the complete unary response requires per-choice logprob data.
+    virtual bool requiresLogprobData() const { return request.logprobschat || request.logprobs; }
+
+    // Endpoint-specific validation of the per-position logprob data before unary
+    // serialization. Default: nothing to validate.
+    virtual absl::Status validateLogprobData(const std::vector<UnaryChoiceLogprobs>& logprobData) const { return absl::OkStatus(); }
 
     // Verbose response configuration
     void enableVerboseResponse(const std::string& promptAfterTemplate) {
