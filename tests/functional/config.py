@@ -98,7 +98,7 @@ language_models_enabled = get_bool("TT_LANGUAGE_MODELS_ENABLED", True)
 """ MEDIAPIE_DISABLE - if OVMS image has mediapipe feature """
 mediapipe_disable = bool(get_int("MEDIAPIPE_DISABLE", 0))
 
-# Kept for external test suites; Python support is always enabled.
+# Kept for external test suites. Python support is always enabled.
 PYTHON_DISABLE = False
 
 """ TT_WIN_PY_VERSION - Python version for virtualenv on Windows OS """
