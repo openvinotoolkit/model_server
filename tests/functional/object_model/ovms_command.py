@@ -56,6 +56,17 @@ def create_ovms_command(
 ):
     layout = parameters.get_layout_from_regular_models()
 
+    MODEL_MAX_LENGTH_OVERRIDES = {
+        "Qwen3Embedding06BInt8OvHf": 1000,
+    }
+    max_length = None
+    for model in parameters.models or []:
+        wrapped_model = getattr(model, "model", model)
+        model_class_name = type(wrapped_model).__name__
+        if model_class_name in MODEL_MAX_LENGTH_OVERRIDES:
+            max_length = MODEL_MAX_LENGTH_OVERRIDES[model_class_name]
+            break
+
     common_parameters = {
         "grpc_port": parameters.grpc_port,
         "rest_port": parameters.rest_port,
@@ -74,6 +85,7 @@ def create_ovms_command(
         "allowed_media_domains": parameters.allowed_media_domains,
         "max_image_decode_pixels": parameters.max_image_decode_pixels,
         "pooling": pooling,
+        "max_length": max_length,
     }
     pull_parameters = {
         "pull": pull,
@@ -156,6 +168,7 @@ class OvmsCommand:
     resolution: str = None
     cache_size: int = None
     pooling: str = None
+    max_length: int = None
 
     def to_list(self):
         ovms_command, _ = Ovms.get_ovms_binary_paths(self.ovms_type, self.base_os)
@@ -311,6 +324,10 @@ class OvmsCommand:
             if self.pooling is not None:
                 command_parts.append("--pooling")
                 command_parts.append(str(self.pooling))
+
+            if self.max_length is not None:
+                command_parts.append("--max_length")
+                command_parts.append(str(self.max_length))
 
         return command_parts
 
