@@ -33,12 +33,13 @@ namespace ovms {
 class DrogonMultiPartParser : public MultiPartParser {
     bool hasParseError_{true};
     const drogon::HttpRequestPtr request{nullptr};
-    const std::shared_ptr<drogon::MultiPartParser> parser{nullptr};
+    drogon::MultiPartParser parser;
 
 public:
     DrogonMultiPartParser(const drogon::HttpRequestPtr& request) :
-        request(request),
-        parser(std::make_shared<drogon::MultiPartParser>()) {}
+        request(request) {}
+
+    ~DrogonMultiPartParser() override = default;
 
     bool parse() override;
 
