@@ -66,19 +66,22 @@ Labels description
 
 ## LLM-specific metrics
 
-The five `ovms_llm_*` families are optional and supported for continuous-batching
-language and vision-language models, not legacy/NPU or Omni pipelines. Enable them
-with a REST port and an explicit metrics list:
+The five currently supported `ovms_llm_*` families are optional and supported
+for continuous-batching language and vision-language models, not legacy/NPU or
+Omni pipelines. Use the `all_llm` preset in the metrics list to enable all five,
+or list individual families:
 
 ```bash
 ovms --config_path /models/config.json --rest_port 8000 --metrics_enable \
-    --metrics_list ovms_llm_kv_cache_utilization_percent,ovms_llm_prefill_speed_tokens_per_second,ovms_llm_generated_tokens_total,ovms_llm_scheduled_requests,ovms_llm_ttft_milliseconds
+    --metrics_list all_llm
 curl http://localhost:8000/metrics
 ```
 
-An explicit list selects only the listed families. Include other metric names if
-you also need the default serving metrics. The same names can be selected in
-`monitoring.metrics.metrics_list` in the configuration file instead of the CLI.
+The preset can also be used in `monitoring.metrics.metrics_list` in the
+configuration file. An explicit list selects only the listed families; include
+other metric names if you also need the default serving metrics. The preset
+includes only currently supported LLM metric families; it does not enable
+proposed or future LLM metrics automatically.
 
 Cache utilization is published by the executor after each generation step and
 before waiting for new requests. It is GenAI's last-step maximum cache utilization

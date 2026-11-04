@@ -128,6 +128,13 @@ Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
     for (auto& sh : v.GetArray()) {
         std::string metric = std::string(sh.GetString());
 
+        if (metric == "all_llm") {
+            for (const auto& family : this->llmMetricFamilies) {
+                this->enabledFamiliesList.insert(family);
+            }
+            continue;
+        }
+
         const size_t listSize = this->enabledFamiliesList.size();
 
         for (const auto& family : this->defaultMetricFamilies) {

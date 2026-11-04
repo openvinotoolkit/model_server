@@ -103,6 +103,13 @@ private:
         {METRIC_NAME_LLM_SCHEDULED_REQUESTS},
         {METRIC_NAME_LLM_TTFT}};
 
+    std::unordered_set<std::string> llmMetricFamilies = {
+        {METRIC_NAME_LLM_KV_CACHE_UTILIZATION},
+        {METRIC_NAME_LLM_PREFILL_SPEED},
+        {METRIC_NAME_LLM_GENERATED_TOKENS},
+        {METRIC_NAME_LLM_SCHEDULED_REQUESTS},
+        {METRIC_NAME_LLM_TTFT}};
+
     std::unordered_set<std::string> defaultMetricFamilies = {
         {METRIC_NAME_CURRENT_REQUESTS},
         {METRIC_NAME_REQUESTS_SUCCESS},
