@@ -89,6 +89,7 @@ typedef enum {
     IMP_ERROR_CONTEXT_MISMATCH = -7,
     IMP_ERROR_STREAM_END = -8,
     IMP_ERROR_TIMEOUT = -9,
+    IMP_ERROR_NOT_IMPLEMENTED = -10,
     IMP_ERROR_INTERNAL = -99
 } imp_status_t;
 
@@ -171,6 +172,7 @@ imp_status_t imp_context_create(imp_context_t** ctx,
 /**
  * Create context from OpenVINO remote context
  * Use when sharing context between multiple models.
+ * TODO: Currently unused in OVMS.
  * 
  * @param ctx Output: context handle pointer
  * @param remote_ctx OpenVINO remote context
@@ -183,6 +185,7 @@ imp_status_t imp_context_create_from_remote(imp_context_t** ctx,
 
 /**
  * Get underlying native handle
+ * TODO: Currently unused in OVMS.
  * 
  * @param ctx Context handle
  * @param type Output: context type
@@ -195,6 +198,7 @@ imp_status_t imp_context_get_native(imp_context_t* ctx,
 
 /**
  * Get OpenVINO remote context
+ * TODO: Currently unused in OVMS.
  * 
  * @param ctx Context handle
  * @param remote_ctx Output: OpenVINO remote context
@@ -205,6 +209,7 @@ imp_status_t imp_context_get_ov_remote(imp_context_t* ctx,
 
 /**
  * Get device type the context is configured for
+ * TODO: Currently unused in OVMS.
  * 
  * @param ctx Context handle
  * @param device_type Output: device type
@@ -215,6 +220,7 @@ imp_status_t imp_context_get_device_type(imp_context_t* ctx,
 
 /**
  * Get device name (e.g., "GPU.0", "GPU.1", "CPU", "NPU")
+ * TODO: Currently unused in OVMS.
  * 
  * @param ctx Context handle
  * @param device_name Output: device name string (valid until context destroyed)
@@ -402,7 +408,7 @@ typedef struct {
 } imp_video_encode_opts_t;
 
 //////////////////////////////////////////////////////////////////////////////
-// Async Callback Types
+// Completion Callback Types
 //////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -417,8 +423,8 @@ typedef void (*imp_decode_callback_t)(imp_status_t status,
                                       void* user_data);
 
 /**
- * Video frame callback (for streaming)
- * 
+ * Video frame callback for streaming.
+ *
  * @param status Operation status (IMP_ERROR_STREAM_END when done)
  * @param tensor Frame tensor (valid only during callback)
  * @param frame_index Frame number (0-based)
@@ -451,15 +457,16 @@ typedef void (*imp_encode_callback_t)(imp_status_t status,
 
 /**
  * Decode image from memory buffer
+ * TODO: Currently unused in OVMS.
  * 
  * @param tensor Output: tensor handle pointer (CPU or GPU depending on context/options)
  * @param data Encoded image data (JPEG, PNG, etc.)
  * @param size Data size in bytes
  * @param ctx Context handle
  * @param opts Decode options (NULL for defaults)
- * @param callback Async callback (NULL for synchronous)
+ * @param callback callback (returns IMP_ERROR_NOT_IMPLEMENTED when non-NULL)
  * @param user_data User data for callback
- * @return Status code (IMP_OK if async started successfully)
+ * @return Status code
  */
 imp_status_t imp_decode_image(imp_tensor_t** tensor,
                               const void* data,
@@ -471,12 +478,13 @@ imp_status_t imp_decode_image(imp_tensor_t** tensor,
 
 /**
  * Decode image from file
+ * TODO: Currently unused in OVMS.
  * 
  * @param tensor Output: tensor handle pointer (CPU or GPU depending on context/options)
  * @param file_path Path to image file
  * @param ctx Context handle
  * @param opts Decode options (NULL for defaults)
- * @param callback Async callback (NULL for synchronous)
+ * @param callback Async callback (returns IMP_ERROR_NOT_IMPLEMENTED when non-NULL)
  * @param user_data User data for callback
  * @return Status code
  */
@@ -527,6 +535,7 @@ imp_status_t imp_video_read_frame(imp_tensor_t** tensor,
 
 /**
  * Read next frame from a named branch
+ * TODO: Currently unused in OVMS.
  * 
  * @param tensor Output: frame tensor pointer (NV12 data, CPU side)
  * @param stream Stream handle
@@ -538,20 +547,22 @@ imp_status_t imp_video_read_frame_by_name(imp_tensor_t** tensor,
                                           const char* branch_name);
 
 /**
- * Start async frame processing with callback
- * 
+ * Start asynchronous frame processing.
+ * TODO: Currently unused in OVMS; asynchronous processing is not implemented.
+ *
  * @param stream Stream handle
  * @param callback Frame callback
  * @param user_data User data for callback
- * @return Status code
+ * @return IMP_ERROR_NOT_IMPLEMENTED
  */
 imp_status_t imp_video_start_async(imp_video_stream_t* stream,
                                    imp_video_frame_callback_t callback,
                                    void* user_data);
 
 /**
- * Stop async processing
- * 
+ * Stop asynchronous frame processing.
+ * TODO: Currently unused in OVMS; asynchronous processing is not implemented.
+ *
  * @param stream Stream handle
  */
 void imp_video_stop(imp_video_stream_t* stream);
@@ -581,6 +592,7 @@ void imp_video_close(imp_video_stream_t* stream);
 
 /**
  * Query video file metadata
+ * TODO: Currently unused in OVMS.
  * 
  * Use before decode to determine file properties.
  * 
@@ -610,13 +622,14 @@ imp_status_t imp_video_file_info(const char* file_path,
 
 /**
  * Encode tensor to image format
+ * TODO: Currently unused in OVMS.
  * 
  * @param data Output: encoded data (caller must free with imp_free)
  * @param size Output: data size
  * @param tensor Input tensor
  * @param ctx Context handle
  * @param opts Encode options (NULL for defaults: JPEG quality 90)
- * @param callback Async callback (NULL for synchronous)
+ * @param callback callback (returns IMP_ERROR_NOT_IMPLEMENTED when non-NULL)
  * @param user_data User data for callback
  * @return Status code
  */
@@ -630,12 +643,13 @@ imp_status_t imp_encode_image(void** data,
 
 /**
  * Encode tensor to image file
+ * TODO: Currently unused in OVMS.
  * 
  * @param file_path Output file path (format inferred from extension)
  * @param tensor Input tensor
  * @param ctx Context handle
  * @param opts Encode options (NULL for defaults)
- * @param callback Async callback (NULL for synchronous)
+ * @param callback callback (returns IMP_ERROR_NOT_IMPLEMENTED when non-NULL)
  * @param user_data User data for callback
  * @return Status code
  */
@@ -701,6 +715,7 @@ void imp_video_encoder_close(imp_video_encoder_t* encoder);
 
 /**
  * Get tensor's device type
+ * TODO: Currently unused in OVMS.
  * 
  * @param tensor Tensor handle
  * @param device_type Output: device type (CPU, GPU, NPU)
@@ -711,6 +726,7 @@ imp_status_t imp_tensor_get_device_type(imp_tensor_t* tensor,
 
 /**
  * Get tensor's device name (e.g., "GPU.0", "GPU.1", "CPU", "NPU")
+ * TODO: Currently unused in OVMS.
  * 
  * @param tensor Tensor handle
  * @param device_name Output: device name string
@@ -722,6 +738,7 @@ imp_status_t imp_tensor_get_device_name(imp_tensor_t* tensor,
 /**
  * Get tensor's context type (for GPU/NPU tensors)
  * Returns IMP_ERROR_INVALID_ARGUMENT for CPU tensors.
+ * TODO: Currently unused in OVMS.
  * 
  * @param tensor Tensor handle
  * @param context_type Output: context type (OpenCL, D3D11, VA-API)
@@ -732,6 +749,7 @@ imp_status_t imp_tensor_get_context_type(imp_tensor_t* tensor,
 
 /**
  * Get underlying OpenVINO tensor pointer
+ * TODO: Currently unused in OVMS.
  * 
  * @param tensor Tensor handle
  * @param ov_tensor Output: pointer to underlying OV tensor (ov::Tensor* or ov::RemoteTensor*)
@@ -744,6 +762,7 @@ imp_status_t imp_tensor_get_ov(imp_tensor_t* tensor,
 
 /**
  * Get tensor shape
+ * TODO: Currently unused in OVMS.
  * 
  * @param tensor Tensor handle
  * @param dims Output: dimension array (caller provides)
@@ -756,6 +775,7 @@ imp_status_t imp_tensor_get_shape(imp_tensor_t* tensor,
 
 /**
  * Get tensor element type
+ * TODO: Currently unused in OVMS.
  * 
  * @param tensor Tensor handle
  * @param type Output: element type
@@ -776,11 +796,11 @@ imp_tensor_memory_type_t imp_tensor_get_memory_type(imp_tensor_t* tensor);
  * Get NV12 plane pointers and dimensions for CPU-side NV12 tensors.
  * Only valid when imp_tensor_get_memory_type() == IMP_MEM_SYSTEM.
  *
- * @param tensor     Tensor handle (must be format IMP_FORMAT_NV12, device CPU)
- * @param y_data     Output: pointer to Y plane (width * height bytes)
- * @param uv_data    Output: pointer to interleaved UV plane (width * height/2 bytes)
- * @param width      Output: frame width in pixels
- * @param height     Output: frame height in pixels
+ * @param tensor Tensor handle (must be format IMP_FORMAT_NV12, device CPU)
+ * @param y_data Output: pointer to Y plane (width * height bytes)
+ * @param uv_data Output: pointer to interleaved UV plane (width * height/2 bytes)
+ * @param width Output: frame width in pixels
+ * @param height Output: frame height in pixels
  * @return IMP_OK on success, IMP_ERROR_INVALID_ARGUMENT if tensor is not NV12/CPU
  */
 imp_status_t imp_tensor_get_nv12_planes(imp_tensor_t* tensor,
@@ -797,18 +817,18 @@ imp_status_t imp_tensor_get_nv12_planes(imp_tensor_t* tensor,
  * this tensor. Each frame owns its own surface, so distinct in-flight tensors
  * return distinct, simultaneously valid surface IDs.
  *
- * @param tensor      Tensor handle
- * @param surface_id  Output: VASurfaceID (cast from uint32_t)
- * @param va_display  Output: VADisplay used for this surface (cast from void*)
- * @param width       Output: frame width in pixels
- * @param height      Output: frame height in pixels
+ * @param tensor Tensor handle
+ * @param surface_id Output: VASurfaceID (cast from uint32_t)
+ * @param va_display Output: VADisplay used for this surface (cast from void*)
+ * @param width Output: frame width in pixels
+ * @param height Output: frame height in pixels
  * @return IMP_OK on success, IMP_ERROR_INVALID_ARGUMENT if not a VA surface tensor
  */
 imp_status_t imp_tensor_get_va_surface(imp_tensor_t* tensor,
                                        uint32_t* surface_id,
-                                       void**    va_display,
-                                       int*      width,
-                                       int*      height);
+                                       void** va_display,
+                                       int* width,
+                                       int* height);
 
 /**
  * Get the D3D11 NV12 texture for GPU-resident tensors (Windows).
@@ -852,6 +872,7 @@ void imp_tensor_release(imp_tensor_t* tensor);
 
 /**
  * Free memory allocated by IMP functions
+ * TODO: Currently unused in OVMS.
  * 
  * @param ptr Pointer to free
  */
@@ -863,6 +884,7 @@ void imp_free(void* ptr);
 
 /**
  * Get API version
+ * TODO: Currently unused in OVMS.
  * 
  * @param major Output: major version
  * @param minor Output: minor version  
@@ -872,6 +894,7 @@ void imp_get_version(int* major, int* minor, int* patch);
 
 /**
  * Check hardware decode support
+ * TODO: Currently unused in OVMS.
  * 
  * @param ctx Context handle
  * @param supported Output: true if HW decode available
@@ -881,6 +904,7 @@ imp_status_t imp_hw_decode_supported(imp_context_t* ctx, bool* supported);
 
 /**
  * Check hardware encode support
+ * TODO: Currently unused in OVMS.
  * 
  * @param ctx Context handle
  * @param supported Output: true if HW encode available
@@ -899,6 +923,7 @@ bool imp_video_va_available(void);
  * ov::intel_gpu::ocl::VAContext.  Only valid when imp_video_va_available()
  * returns true AND VA surface sharing was successfully initialised.
  * Returns nullptr otherwise.
+ * TODO: Currently unused in OVMS.
  */
 void* imp_video_va_display(void);
 

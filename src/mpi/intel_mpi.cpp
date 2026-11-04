@@ -828,7 +828,7 @@ imp_status_t imp_video_start_async(imp_video_stream_t* stream,
     (void)stream;
     (void)callback;
     (void)user_data;
-    return IMP_ERROR_INTERNAL;  // Not yet implemented
+    return IMP_ERROR_NOT_IMPLEMENTED;
 }
 
 void imp_video_stop(imp_video_stream_t* stream) {
@@ -1447,8 +1447,9 @@ static imp_status_t imp_image_decode_pull(GstElement* pipeline,
 imp_status_t imp_decode_image_file(imp_tensor_t** t, const char* f,
     imp_context_t* c, const imp_image_decode_opts_t* o,
     imp_decode_callback_t cb, void* ud) {
-    (void)cb;
     (void)ud;
+    if (cb != nullptr)
+        return IMP_ERROR_NOT_IMPLEMENTED;
 
     if (!t || !f)
         return IMP_ERROR_INVALID_ARGUMENT;
@@ -1505,8 +1506,9 @@ imp_status_t imp_decode_image_file(imp_tensor_t** t, const char* f,
 imp_status_t imp_decode_image(imp_tensor_t** t, const void* d, size_t s,
     imp_context_t* c, const imp_image_decode_opts_t* o,
     imp_decode_callback_t cb, void* ud) {
-    (void)cb;
     (void)ud;
+    if (cb != nullptr)
+        return IMP_ERROR_NOT_IMPLEMENTED;
 
     if (!t || !d || s == 0)
         return IMP_ERROR_INVALID_ARGUMENT;
@@ -1761,8 +1763,9 @@ static GstBuffer* imp_image_prepare_encode_buffer(imp_tensor_t* t,
 imp_status_t imp_encode_image(void** d, size_t* s, imp_tensor_t* t,
     imp_context_t* c, const imp_image_encode_opts_t* o,
     imp_encode_callback_t cb, void* ud) {
-    (void)cb;
     (void)ud;
+    if (cb != nullptr)
+        return IMP_ERROR_NOT_IMPLEMENTED;
 
     if (!d || !s || !t || !t->valid)
         return IMP_ERROR_INVALID_ARGUMENT;
@@ -1872,8 +1875,9 @@ imp_status_t imp_encode_image(void** d, size_t* s, imp_tensor_t* t,
 imp_status_t imp_encode_image_file(const char* f, imp_tensor_t* t,
     imp_context_t* c, const imp_image_encode_opts_t* o,
     imp_encode_callback_t cb, void* ud) {
-    (void)cb;
     (void)ud;
+    if (cb != nullptr)
+        return IMP_ERROR_NOT_IMPLEMENTED;
 
     if (!f || !t || !t->valid)
         return IMP_ERROR_INVALID_ARGUMENT;
@@ -2001,8 +2005,9 @@ imp_status_t imp_decode_image_file(imp_tensor_t** t, const char* f,
     (void)f;
     (void)c;
     (void)o;
-    (void)cb;
     (void)ud;
+    if (cb != nullptr)
+        return IMP_ERROR_NOT_IMPLEMENTED;
     return IMP_ERROR_INTERNAL;  // Not yet implemented on Linux
 }
 
@@ -2015,8 +2020,9 @@ imp_status_t imp_decode_image(imp_tensor_t** t, const void* d, size_t s,
     (void)s;
     (void)c;
     (void)o;
-    (void)cb;
     (void)ud;
+    if (cb != nullptr)
+        return IMP_ERROR_NOT_IMPLEMENTED;
     return IMP_ERROR_INTERNAL;
 }
 
@@ -2029,8 +2035,9 @@ imp_status_t imp_encode_image(void** d, size_t* s, imp_tensor_t* t,
     (void)t;
     (void)c;
     (void)o;
-    (void)cb;
     (void)ud;
+    if (cb != nullptr)
+        return IMP_ERROR_NOT_IMPLEMENTED;
     return IMP_ERROR_INTERNAL;
 }
 
@@ -2042,8 +2049,9 @@ imp_status_t imp_encode_image_file(const char* f, imp_tensor_t* t,
     (void)t;
     (void)c;
     (void)o;
-    (void)cb;
     (void)ud;
+    if (cb != nullptr)
+        return IMP_ERROR_NOT_IMPLEMENTED;
     return IMP_ERROR_INTERNAL;
 }
 
