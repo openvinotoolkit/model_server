@@ -44,7 +44,7 @@ struct ImageDownloadContext {
     size_t append(const void* downloadedChunk, size_t size, size_t nmemb) noexcept;
 };
 
-absl::Status validateHttpImageDownloadResponse(long httpCode, bool redirectsAllowed);
+absl::Status validateHttpImageDownloadResponse(int64_t httpCode, bool redirectsAllowed);
 
 absl::StatusOr<ov::Tensor> fetchAndDecodeImage(const std::string& imageSource,
     const std::optional<std::string>& allowedLocalMediaPath,
