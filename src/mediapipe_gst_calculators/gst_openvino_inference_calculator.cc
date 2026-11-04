@@ -57,8 +57,10 @@ class GstOpenVinoInferenceCalculator : public CalculatorBase {
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
         cc->Inputs().Tag(kFrameTag).Set<GstVideoFramePacket>();
+#ifndef _WIN32
         if (cc->InputSidePackets().HasTag(kPreinitializedInferenceTag))
             cc->InputSidePackets().Tag(kPreinitializedInferenceTag).Set<std::shared_ptr<GstVaapiInference>>();
+#endif
 #ifndef _WIN32
         if (cc->InputSidePackets().HasTag(kCompiledModelTag))
             cc->InputSidePackets().Tag(kCompiledModelTag).Set<std::shared_ptr<ov::CompiledModel>>();
