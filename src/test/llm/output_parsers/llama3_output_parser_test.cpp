@@ -152,7 +152,7 @@ TEST_F(Llama3OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) 
     generatedTokens.insert(generatedTokens.end(), generatedContentTokens.begin(), generatedContentTokens.end());
     generatedTokens.insert(generatedTokens.end(), botTokenId);
     generatedTokens.insert(generatedTokens.end(), generatedToolCallTokens.begin(), generatedToolCallTokens.end());
-    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*llama3Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*llama3Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, false);
     EXPECT_EQ(parsedOutput.content, "This is a content part and next will be a tool call.");
     EXPECT_EQ(parsedOutput.reasoning, "");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
