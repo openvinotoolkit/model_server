@@ -32,6 +32,8 @@ typedef struct imp_tensor_s imp_tensor_t;
 
 namespace mediapipe {
 
+// resource: non-owning native handle snapshot. The inference calculators read
+// it to bind VA/D3D11 surfaces without depending on //src/mpi.
 struct VaSurfaceFrame {
     uint32_t surface_id = 0;
     void* display = nullptr;
@@ -42,6 +44,9 @@ struct D3D11Frame {
     uint32_t subresource = 0;
 };
 
+// Host-memory discriminant only: sink/overlay read planes from owner via
+// imp_tensor_get_nv12_planes(), so these fields are currently unused.
+// TODO @atobiszei: confirm these fields are used with CPU frames
 struct CpuNv12Frame {
     const uint8_t* y = nullptr;
     const uint8_t* uv = nullptr;
@@ -51,9 +56,9 @@ struct CpuNv12Frame {
 
 using GstVideoFrameResource = std::variant<VaSurfaceFrame, D3D11Frame, CpuNv12Frame>;
 
-// The native frame resource stays alive through owner until all packet consumers
-// finish. owner holds the decoded imp_tensor_t so a sink can resubmit it to the
-// encoder (imp_video_encoder_write) without a host copy.
+// owner owns the decoded frame (shared_ptr with imp_tensor_release) and is the
+// canonical data accessor for overlay/sink/encode. resource is a non-owning
+// handle/tag for the inference calculators and must not outlive owner.
 struct GstVideoFramePacket {
     GstVideoFrameResource resource = VaSurfaceFrame{};
     std::shared_ptr<imp_tensor_t> owner;
