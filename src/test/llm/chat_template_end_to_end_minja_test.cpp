@@ -40,7 +40,7 @@ using namespace ovms;
 class ChatTemplateEndToEndMinjaTest : public ::testing::Test {
 protected:
     // Any tokenizer will do the job, the only thing we need to do is to change chat template content before use
-    const std::string& tokenizerPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m", false);
+    const std::string& tokenizerPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov", false);
     const std::string& chatTemplatesPath = getGenericFullPathForSrcTest("/ovms/src/test/llm/chat_templates", false);
 
     std::string savedLogLevel;
@@ -494,7 +494,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Mistral7B_ToolCallWithStringArgs) {
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
-    std::string expectedOutput = R"(</s>[INST] What's the weather in Paris?[/INST][TOOL_CALLS] [{"name": "get_weather", "arguments": {"location": "Paris", "unit": "celsius"}, "id": "abc123def"}]</s>)";
+    std::string expectedOutput = R"(<|endoftext|>[INST] What's the weather in Paris?[/INST][TOOL_CALLS] [{"name": "get_weather", "arguments": {"location": "Paris", "unit": "celsius"}, "id": "abc123def"}]<|endoftext|>)";
     EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
@@ -520,7 +520,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM2_ToolCallWithStringArgs) {
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
-    std::string expectedOutput = R"(</s><|im_start|>user
+    std::string expectedOutput = R"(<|endoftext|><|im_start|>user
 What's the weather in Paris?<|im_end|>
 <|im_start|>assistant
 <|tool_call_start|>[get_weather(location='Paris', unit='celsius')]<|tool_call_end|><|im_end|>
@@ -551,7 +551,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ToolCallWithStringArgs) {
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_EQ(caps.missnamedReasoningField, "thinking");
 
-    std::string expectedOutput = R"(</s><|im_start|>user
+    std::string expectedOutput = R"(<|endoftext|><|im_start|>user
 What's the weather in Paris?<|im_end|>
 <|im_start|>assistant
 <|tool_call_start|>[get_weather(location='Paris', unit='celsius')]<|tool_call_end|><|im_end|>
@@ -582,7 +582,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ToolCallWithStringArgsAndReasoning) 
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_EQ(caps.missnamedReasoningField, "thinking");
 
-    std::string expectedOutput = R"(</s><|im_start|>user
+    std::string expectedOutput = R"(<|endoftext|><|im_start|>user
 What's the weather in Paris?<|im_end|>
 <|im_start|>assistant
 <think>Here is some reasoning content</think><|tool_call_start|>[get_weather(location='Paris', unit='celsius')]<|tool_call_end|><|im_end|>
@@ -613,7 +613,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ReasoningAndEmptyToolCalls) {
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_EQ(caps.missnamedReasoningField, "thinking");
 
-    std::string expectedOutput = R"(</s><|im_start|>user
+    std::string expectedOutput = R"(<|endoftext|><|im_start|>user
 What's the weather in Paris?<|im_end|>
 <|im_start|>assistant
 <think>Here is some reasoning content</think><|im_end|>

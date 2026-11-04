@@ -1061,7 +1061,7 @@ def generic_test_deselect(item):
     endpoint = item.callspec.params.get(ENDPOINT_PARAM_NAME, None)
 
     # Disable completions endpoint for VLM models
-    if model_type is not None and model_type.is_vision_language and endpoint == OpenAIWrapper.COMPLETIONS:
+    if endpoint == OpenAIWrapper.COMPLETIONS and getattr(model_type, "is_vision_language", False):
         return True
 
     return False
