@@ -2086,6 +2086,7 @@ cc_test(
         "test/configs/emptyConfigWithMetrics.json",
         "test/llm/config.json",
         "test/llm/config_queue.json",
+        "test/llm/config_models_endpoint.json",
         "test/llm/assisted_decoding_config.json",
         "test/llm/lm_cb_regular.pbtxt",
         "test/llm/lm_cb_prefix_caching.pbtxt",
