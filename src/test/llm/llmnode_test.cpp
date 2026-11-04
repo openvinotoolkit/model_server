@@ -2056,10 +2056,12 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStoppedByMaxModelLength
         GTEST_SKIP();
     }
     std::string prompt;
-    // 131030 "hello " words yield exactly 131071 prompt tokens with the current
-    // chat template - one under the dummy model's 131072 (128k) max length,
-    // leaving exactly 1 token of generation budget.
-    for (int i = 0; i < 131030; i++) {
+    const uint32_t overheadTokens = 41;
+    const uint32_t maxModelLength = 131072;
+    // 131066 "hello " words + the dummy chat template's ~41 tokens of literal overhead
+    // SYSTEM_PROMPT + ("User"/":"/"\n"/"Assistant"/":") yields exactly 131071 prompt tokens - one under the
+    // dummy model's 131072 (128k) max length - leaving exactly 1 token of generation budget.
+    for (int i = 0; i < (int)(maxModelLength - overheadTokens - 1); i++) {
         prompt += "hello ";
     }
     std::string requestBody = R"(
@@ -6036,11 +6038,8 @@ TEST_F(IsolatedServableTests, PromtSizeBetweenDefaultAndNonDefaultMaxPromptLenNP
 class LLMStartWithTaskParameter : public ::testing::Test {
 protected:
     static std::unique_ptr<std::thread> t;
-    // Not migrated to the dummy LLM model: --task text_generation auto-detection
-    // (TextGenerationDetector::scan in src/default_task_detector.cpp) only
-    // recognizes architectures ending in ForCausalLM/ForConditionalGeneration;
-    // the dummy model reports GPT2LMHeadModel, which isn't matched.
-    std::string srcModelDir = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct");
+
+    std::string srcModelDir = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov");
 #ifdef __linux__
     std::string tempDir;
     std::string modelDir;
@@ -6050,6 +6049,7 @@ protected:
     std::string graphPath = modelDir + "/graph.pbtxt";
     std::string graphPathRenamed = modelDir + "/graph.pbtxt.bak";
 #endif
+    bool graphFileCreatedByTest = false;
 
     void SetUp() override {
         ovms::Config::instance().setInMemoryGraphPbtxt(std::nullopt);
@@ -6060,6 +6060,11 @@ protected:
         modelDir = tempDir;
         graphPath = modelDir + "/graph.pbtxt";
 #endif
+        if (!std::filesystem::exists(graphPath)) {
+            std::ofstream graphFile(graphPath);
+            ASSERT_TRUE(graphFile.is_open()) << "Failed to create " << graphPath;
+            graphFileCreatedByTest = true;
+        }
     }
     void TearDown() override {
         ovms::Server& server = ovms::Server::instance();
@@ -6077,6 +6082,9 @@ protected:
                 std::filesystem::remove(graphPath);
             }
             std::filesystem::rename(graphPathRenamed, graphPath);
+        }
+        if (graphFileCreatedByTest && std::filesystem::exists(graphPath)) {
+            std::filesystem::remove(graphPath);
         }
 #endif
     }
@@ -6099,7 +6107,7 @@ TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskWithoutGraphFile) {
     ovms::Server& server = ovms::Server::instance();
     ::SetUpServer(t, server, port,
         modelDir.c_str(),
-        "SmolLM2",
+        "dummy",
         60,
         "text_generation");
     ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED);
@@ -6114,7 +6122,7 @@ TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskDoesNotModifyExisting
     ovms::Server& server = ovms::Server::instance();
     ::SetUpServer(t, server, port,
         modelDir.c_str(),
-        "SmolLM2",
+        "dummy",
         60,
         "text_generation");
     ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED);
@@ -6130,7 +6138,7 @@ TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskAndValidPipelineType)
     randomizeAndEnsureFree(port);
     std::string fullModelPath = getGenericFullPathForSrcTest(modelDir.c_str());
     char* argv[] = {(char*)"ovms",
-        (char*)"--model_name", (char*)"SmolLM2",
+        (char*)"--model_name", (char*)"dummy",
         (char*)"--model_path", (char*)fullModelPath.c_str(),
         (char*)"--port", (char*)port.c_str(),
         (char*)"--task", (char*)"text_generation",
@@ -6150,7 +6158,7 @@ TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskAndInvalidPipelineTyp
     randomizeAndEnsureFree(port);
     std::string fullModelPath = getGenericFullPathForSrcTest(modelDir.c_str());
     char* argv[] = {(char*)"ovms",
-        (char*)"--model_name", (char*)"SmolLM2",
+        (char*)"--model_name", (char*)"dummy",
         (char*)"--model_path", (char*)fullModelPath.c_str(),
         (char*)"--port", (char*)port.c_str(),
         (char*)"--task", (char*)"text_generation",
