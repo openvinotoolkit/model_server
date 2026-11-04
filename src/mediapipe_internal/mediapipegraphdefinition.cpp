@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "src/execution_context.hpp"
+#include "src/graph_metadata.hpp"
 #include "../config.hpp"
 #include "../llm/llm_calculators_plugin_loader.hpp"
 #include "src/utils/env_guard.hpp"
@@ -68,6 +69,11 @@ const tensor_map_t MediapipeGraphDefinition::getInputsInfo() const {
 const tensor_map_t MediapipeGraphDefinition::getOutputsInfo() const {
     std::shared_lock lock(metadataMtx);
     return this->outputsInfo;
+}
+
+std::shared_ptr<const GraphMetadata> MediapipeGraphDefinition::getMetadata() const {
+    std::shared_lock lock(metadataMtx);
+    return this->metadata;
 }
 
 Status MediapipeGraphDefinition::validateForConfigFileExistence() {
@@ -592,6 +598,10 @@ Status MediapipeGraphDefinition::reload(const ServableNameChecker& checker, cons
     idleUnloadTimeoutSecondsCache.store(this->mgconfig.getIdleUnloadTimeoutSeconds(), std::memory_order_relaxed);
     this->queue.reset();
     this->sidePacketMaps = std::make_shared<GraphSidePackets>();
+    {
+        std::unique_lock metadataLock(metadataMtx);
+        this->metadata.reset();
+    }
     return validate(checker);
 }
 
@@ -600,6 +610,8 @@ void MediapipeGraphDefinition::retire() {
     // Block creating new unloadGuards
     this->status.handle(RetireEvent());
     unloadComponentsAfterPendingExecutorsAreCreated();
+    std::unique_lock metadataLock(metadataMtx);
+    this->metadata.reset();
 }
 
 bool MediapipeGraphDefinition::isIdleUnloadEnabled() const {
@@ -738,6 +750,8 @@ Status MediapipeGraphDefinition::initializeNodes() {
         }
     } guard{*sidePacketMaps, success};
 
+    // Callers hold metadataMtx exclusively
+    this->metadata.reset();
     auto& registry = NodeInitializerRegistry::instance();
     for (int i = 0; i < config.node().size(); i++) {
         const auto& node = config.node(i);
@@ -753,6 +767,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
     // Register LoRA aliases for routing from initialized image gen pipelines
     this->loraAliases = sidePacketMaps->loraAliases;
     this->hideBaseModelInRouting = sidePacketMaps->hideBaseModelInRouting;
+    this->metadata = std::make_shared<const GraphMetadata>(sidePacketMaps->metadata);
     success = true;
     return StatusCode::OK;
 }

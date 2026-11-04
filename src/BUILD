@@ -178,6 +178,16 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
+    name = "libovms_graph_metadata",
+    srcs = ["graph_metadata.cpp"],
+    hdrs = ["graph_metadata.hpp"],
+    deps = [
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
+    ],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
     name = "libovms_single_version_servable_definition",
     srcs = [
         "servable_definition_unload_guard.cpp",
@@ -877,6 +887,7 @@ ovms_cc_library(
             "//src/metrics:libovms_metric_provider",
             "libovms_model_instance_provider",
             "libovms_servable_definition",
+            "libovms_graph_metadata",
             "libovms_single_version_servable_definition",
             "kfs_python_tensor_bridge",
             "copyable_object_wrapper",
