@@ -25,7 +25,6 @@
 #include "pull_module/curl_downloader.hpp"
 #include "pull_module/hf_env_vars.hpp"
 #include "default_task_detector.hpp"
-#include "logging.hpp"
 #include "status.hpp"
 
 namespace ovms {
@@ -59,7 +58,6 @@ static std::string describeTaskMetadataFailure(const std::string& sourceModel, i
 
 static void reportTaskMetadataFailure(const std::string& sourceModel, int httpCode, std::string* errorMessage) {
     const std::string message = describeTaskMetadataFailure(sourceModel, httpCode);
-    SPDLOG_ERROR("{}", message);
     if (errorMessage != nullptr) {
         *errorMessage = message;
     }
