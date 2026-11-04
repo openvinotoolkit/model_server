@@ -274,7 +274,7 @@ TEST(ImageDecodingProcessorTest, Large16BitDataUrlWithRaisedBudgetIsRejected) {
 
     EXPECT_FALSE(status.ok());
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
-    EXPECT_EQ(status.message(), "Image parsing failed");
+    EXPECT_EQ(std::string(status.message()).find("Image parsing failed:"), 0u);
     EXPECT_TRUE(req.inputImages.empty());
     EXPECT_EQ(req.totalDecodedPixels, 0u);
 }
@@ -296,6 +296,13 @@ TEST(ImageDecodingProcessorTest, HttpUrlWithNoAllowedDomainsConfiguredRejected) 
     EXPECT_FALSE(status.ok());
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
     EXPECT_EQ(status.message(), "Given url does not match any allowed domain from allowed_media_domains");
+}
+
+TEST(ImageDecodingProcessorTest, HttpRedirectWithoutPermissionReturnsConfigurationGuidance) {
+    const auto status = validateHttpImageDownloadResponse(302, false);
+
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_EQ(status.message(), "Failed to download image from external URL because redirects are not allowed. Set OVMS_MEDIA_URL_ALLOW_REDIRECTS=1 environment variable to allow redirects.");
 }
 
 TEST(ImageDecodingProcessorTest, ChunkedImageLargerThanLimitRejected) {
