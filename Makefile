@@ -450,7 +450,7 @@ endif
 	@set -e; \
 	container_id=$$(docker create $(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)); \
 	trap 'docker rm -f "$$container_id" >/dev/null' EXIT; \
-	docker cp "$$container_id:/ovms/linux_build.log.gz" ./linux_build.log.gz
+	docker cp "$$container_id:/ovms/linux_build.log" ./linux_build.log
 
 targz_package:
 	docker $(BUILDX) build -f Dockerfile.$(DIST_OS) . \
