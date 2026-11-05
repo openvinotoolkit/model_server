@@ -23,6 +23,7 @@ from tests.functional.config import enable_plugin_config_target_device
 from tests.functional.constants.metrics import MetricsPolicy
 from tests.functional.constants.ovms import Ovms, set_plugin_config_boolean_value
 from tests.functional.constants.ovms_openai import ImagesRequestParamsValues
+from tests.functional.constants.generative_ai import MODEL_MAX_LENGTH_OVERRIDES
 from tests.functional.constants.paths import Paths
 from tests.functional.utils.helpers import get_base_device
 
@@ -56,15 +57,18 @@ def create_ovms_command(
 ):
     layout = parameters.get_layout_from_regular_models()
 
-    model_max_length = {
-        "Qwen3Embedding06BInt8OvHf": 1000,
-    }
+    # --max_length is an embeddings graph-generation CLI option. It is only valid
+    # when OVMS is started directly with --model_path/--model_name (config-less
+    # launch). When a config file is used (config_path is not None) the override
+    # must instead be embedded into the generated embeddings graph itself
+    # (see EmbeddingsCalculatorOV), otherwise the CLI rejects the unmatched argument.
     max_length = None
-    for model in parameters.models or []:
-        model_class_name = type(model).__name__
-        if model_class_name in model_max_length:
-            max_length = model_max_length[model_class_name]
-            break
+    if config_path is None:
+        for model in parameters.models or []:
+            model_class_name = type(model).__name__
+            if model_class_name in MODEL_MAX_LENGTH_OVERRIDES:
+                max_length = MODEL_MAX_LENGTH_OVERRIDES[model_class_name]
+                break
 
     common_parameters = {
         "grpc_port": parameters.grpc_port,

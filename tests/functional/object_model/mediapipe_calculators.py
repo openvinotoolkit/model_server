@@ -25,7 +25,7 @@ from typing import List
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.test_framework import copy_dir_tree
 
-from tests.functional.constants.generative_ai import GenerativeAIPluginConfig
+from tests.functional.constants.generative_ai import GenerativeAIPluginConfig, MODEL_MAX_LENGTH_OVERRIDES
 from tests.functional.config import (
     enable_prefix_caching_config,
     kv_cache_size_value,
@@ -810,6 +810,12 @@ class EmbeddingsCalculatorOV(LLMCalculator):
         if model_obj is not None and getattr(model_obj, "pooling", None) is not None:
             pooling_str = f'pooling: {model_obj.pooling},'
 
+        max_length_str = ""
+        if model_obj is not None:
+            model_max_length = MODEL_MAX_LENGTH_OVERRIDES.get(type(model_obj).__name__)
+            if model_max_length is not None:
+                max_length_str = f'max_length: {model_max_length},'
+
         target_device_str = f'target_device: "{self.device if self.device is not None else TargetDevice.CPU}",'
         num_streams = 2 if get_base_device(self.device) == TargetDevice.GPU else 1
         plugin_config_str = f'plugin_config: \'{{ "NUM_STREAMS": "{num_streams}" }}\','
@@ -827,6 +833,7 @@ node {{
             normalize_embeddings: {self.normalize_embeddings},
             truncate: {self.truncate},
             {pooling_str}
+            {max_length_str}
             {target_device_str}
             {plugin_config_str}
         }}
