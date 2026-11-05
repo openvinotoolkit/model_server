@@ -101,6 +101,18 @@ TEST(MetricsListPresetTest, AllLLMMetrics) {
     EXPECT_FALSE(metricConfig.isFamilyEnabled(METRIC_NAME_REQUESTS_SUCCESS));
 }
 
+TEST(MetricsListPresetTest, AllLLMAndIndividualFamilyAreOrderIndependent) {
+    const std::string llmMetric = METRIC_NAME_LLM_TTFT;
+    for (const std::string& metricsList : {
+             "all_llm," + llmMetric,
+             llmMetric + ",all_llm"}) {
+        MetricConfig metricConfig;
+        ASSERT_EQ(metricConfig.loadFromCLIString(true, metricsList), StatusCode::OK)
+            << "metrics_list: " << metricsList;
+        EXPECT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_LLM_TTFT));
+    }
+}
+
 std::string createModelMetricsChangedConfig() {
     return R"(
 {

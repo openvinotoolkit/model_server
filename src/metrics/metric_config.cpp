@@ -135,21 +135,23 @@ Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
             continue;
         }
 
-        const size_t listSize = this->enabledFamiliesList.size();
+        bool supported = false;
 
         for (const auto& family : this->defaultMetricFamilies) {
             if (metric == family) {
                 this->enabledFamiliesList.insert(family);
+                supported = true;
             }
         }
 
         for (const auto& family : this->additionalMetricFamilies) {
             if (metric == family) {
                 this->enabledFamiliesList.insert(family);
+                supported = true;
             }
         }
 
-        if (this->enabledFamiliesList.size() == listSize) {
+        if (!supported) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Metrics family name not supported: {}", metric);
             return StatusCode::INVALID_METRICS_FAMILY_NAME;
         }
