@@ -609,11 +609,17 @@ set "opencv_install=%opt_install_dir%\opencv_%opencv_ver%"
 set "opencv_flags=-D BUILD_LIST=core,improc,imgcodecs,calib3d,features2d,highgui,imgproc,video,videoio,optflow -D CMAKE_BUILD_TYPE=Release -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_opencv_ts=OFF -D BUILD_opencv_aruco=OFF -D BUILD_opencv_bgsegm=OFF -D BUILD_opencv_bioinspired=OFF -D BUILD_opencv_ccalib=OFF -D BUILD_opencv_datasets=OFF -D BUILD_opencv_dnn=OFF -D BUILD_opencv_dnn_objdetect=OFF -D BUILD_opencv_dpm=OFF -D BUILD_opencv_face=OFF -D BUILD_opencv_fuzzy=OFF -D BUILD_opencv_hfs=OFF -D BUILD_opencv_img_hash=OFF -D BUILD_opencv_js=OFF -D BUILD_opencv_line_descriptor=OFF -D BUILD_opencv_phase_unwrapping=OFF -D BUILD_opencv_plot=OFF -D BUILD_opencv_quality=OFF -D BUILD_opencv_reg=OFF -D BUILD_opencv_rgbd=OFF -D BUILD_opencv_saliency=OFF -D BUILD_opencv_shape=OFF -D BUILD_opencv_structured_light=OFF -D BUILD_opencv_surface_matching=OFF -D BUILD_opencv_world=ON -D BUILD_opencv_xobjdetect=OFF -D BUILD_opencv_xphoto=OFF -D BUILD_opencv_python=OFF -D BUILD_opencv_python3=OFF -D BUILD_opencv_python_bindings_generator=OFF -D CV_ENABLE_INTRINSICS=ON -D WITH_EIGEN=ON -D WITH_PTHREADS=ON -D WITH_JPEG=ON -D WITH_PNG=ON -D WITH_TIFF=OFF -D WITH_OPENEXR=OFF -D WITH_NASM=ON -D CMAKE_ASM_NASM_COMPILER=%msys_path%\usr\bin\nasm.exe -D Python3_EXECUTABLE=C:/opt/Python312/python.exe"
 
 echo [INFO] Installing OpenCV %opencv_ver% ...
+set "opencv_bin=%opencv_install%\x64\vc17\bin\opencv_world%opencv_ver%.dll"
+set "opencv_lib=%opencv_install%\x64\vc17\lib\opencv_world%opencv_ver%.lib"
+IF /I EXIST %opencv_bin% IF /I EXIST %opencv_lib% (
+    echo [INFO] OpenCV layout verified in %opencv_install%
+    goto :exit_dependencies
+)
+
 IF /I EXIST %opencv_install% (
-    if %expunge% EQU 1 (rmdir /S /Q %opencv_install%) else (
-        echo "[INFO] OpenCV installed in: "%opencv_install%
-        goto :exit_dependencies
-    )
+    echo [WARN] OpenCV directory exists but is incomplete or stale; reinstalling: %opencv_install%
+    rmdir /S /Q %opencv_install%
+    if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
 :: Clone OpenCL
