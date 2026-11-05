@@ -26,10 +26,10 @@
 using namespace ovms;
 
 #ifdef _WIN32
-const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\Qwen\\Qwen3-8B";
+const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\OpenVINO\\Qwen3-8B-int4-ov";
 #else
 // Hardcoded for usage in docker container
-const std::string tokenizerPath = "/ovms/src/test/llm_testing/Qwen/Qwen3-8B";
+const std::string tokenizerPath = "/ovms/src/test/llm_testing/OpenVINO/Qwen3-8B-int4-ov";
 #endif
 
 static ovms::ToolsSchemas_t EMPTY_TOOLS_SCHEMA = {};  // not used for Qwen3

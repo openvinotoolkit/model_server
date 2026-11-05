@@ -3,13 +3,13 @@
         {
             "config": {
                 "name": "tokenizer_model",
-                "base_path": "/ovms/src/test/llm_testing/BAAI/bge-reranker-base/tokenizer"
+                "base_path": "/ovms/src/test/llm_testing/OpenVINO/bge-reranker-base-int8-ov"
             }
         },
         {
             "config": {
                 "name": "rerank_model",
-                "base_path": "/ovms/src/test/llm_testing/BAAI/bge-reranker-base/rerank",
+                "base_path": "/ovms/src/test/llm_testing/OpenVINO/bge-reranker-base-int8-ov",
                 "target_device": "CPU",
                 "plugin_config": {
                     "NUM_STREAMS": 1
