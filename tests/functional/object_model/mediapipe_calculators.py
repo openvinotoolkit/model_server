@@ -25,7 +25,7 @@ from typing import List
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.test_framework import copy_dir_tree
 
-from tests.functional.constants.generative_ai import GenerativeAIPluginConfig, MODEL_MAX_LENGTH_OVERRIDES
+from tests.functional.constants.generative_ai import GenerativeAIPluginConfig
 from tests.functional.config import (
     enable_prefix_caching_config,
     kv_cache_size_value,
@@ -812,7 +812,7 @@ class EmbeddingsCalculatorOV(LLMCalculator):
 
         max_length_str = ""
         if model_obj is not None:
-            model_max_length = MODEL_MAX_LENGTH_OVERRIDES.get(type(model_obj).__name__)
+            model_max_length = getattr(model_obj, "max_length", None)
             if model_max_length is not None:
                 max_length_str = f'max_length: {model_max_length},'
 

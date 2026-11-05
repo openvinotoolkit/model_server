@@ -23,7 +23,6 @@ from tests.functional.config import enable_plugin_config_target_device
 from tests.functional.constants.metrics import MetricsPolicy
 from tests.functional.constants.ovms import Ovms, set_plugin_config_boolean_value
 from tests.functional.constants.ovms_openai import ImagesRequestParamsValues
-from tests.functional.constants.generative_ai import MODEL_MAX_LENGTH_OVERRIDES
 from tests.functional.constants.paths import Paths
 from tests.functional.utils.helpers import get_base_device
 
@@ -65,9 +64,9 @@ def create_ovms_command(
     max_length = None
     if config_path is None:
         for model in parameters.models or []:
-            model_class_name = type(model).__name__
-            if model_class_name in MODEL_MAX_LENGTH_OVERRIDES:
-                max_length = MODEL_MAX_LENGTH_OVERRIDES[model_class_name]
+            model_max_length = getattr(model, "max_length", None)
+            if model_max_length is not None:
+                max_length = model_max_length
                 break
 
     common_parameters = {

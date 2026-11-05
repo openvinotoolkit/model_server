@@ -20,14 +20,6 @@ class GenerativeAIFiles:
     TOKENIZER_CONFIG_JSON = "tokenizer_config.json"
 
 
-# Per-model override for embeddings "max_length".
-# Applied both to CLI-based launches (via --max_length) and to config-based
-# launches (embedded into the generated EmbeddingsCalculatorOVOptions graph node).
-MODEL_MAX_LENGTH_OVERRIDES = {
-    "Qwen3Embedding06BInt8OvHf": 1000,
-}
-
-
 class GenerativeAIPluginConfig:
     INFERENCE_PRECISION_HINT = "INFERENCE_PRECISION_HINT"
     KV_CACHE_PRECISION = "KV_CACHE_PRECISION"
