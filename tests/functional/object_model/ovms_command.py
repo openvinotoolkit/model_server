@@ -61,8 +61,7 @@ def create_ovms_command(
     }
     max_length = None
     for model in parameters.models or []:
-        wrapped_model = getattr(model, "model", model)
-        model_class_name = type(wrapped_model).__name__
+        model_class_name = type(model).__name__
         if model_class_name in model_max_length:
             max_length = model_max_length[model_class_name]
             break
