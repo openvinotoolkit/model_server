@@ -315,7 +315,7 @@ IF /I NOT EXIST build (
     mkdir build
 )
 cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake -G "Visual Studio 17 2022" -A x64 -T v143 -DCMAKE_BUILD_TYPE=Release ..
 if !errorlevel! neq 0 exit /b !errorlevel!
 cmake --build . --config Release --verbose -j
 if !errorlevel! neq 0 exit /b !errorlevel!
@@ -339,7 +339,7 @@ IF /I NOT EXIST build (
     mkdir build
 )
 cd build
-cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TOKENIZERS=OFF -DENABLE_SAMPLES=OFF -DENABLE_TOOLS=OFF -DENABLE_TESTS=OFF -DENABLE_XGRAMMAR=ON ..
+cmake -G "Visual Studio 17 2022" -A x64 -T v143 -DCMAKE_BUILD_TYPE=Release -DBUILD_TOKENIZERS=OFF -DENABLE_SAMPLES=OFF -DENABLE_TOOLS=OFF -DENABLE_TESTS=OFF -DENABLE_XGRAMMAR=ON ..
 if !errorlevel! neq 0 exit /b !errorlevel!
 cmake --build . --config Release --verbose -j
 if !errorlevel! neq 0 exit /b !errorlevel!
@@ -611,9 +611,22 @@ set "opencv_flags=-D BUILD_LIST=core,improc,imgcodecs,calib3d,features2d,highgui
 echo [INFO] Installing OpenCV %opencv_ver% ...
 set "opencv_bin=%opencv_install%\x64\vc17\bin\opencv_world%opencv_ver%.dll"
 set "opencv_lib=%opencv_install%\x64\vc17\lib\opencv_world%opencv_ver%.lib"
+set "opencv_wrong_toolset=%opencv_install%\x64\vc16"
+set "opencv_wrong_toolset_legacy=%opencv_install%\x64\vc15"
+
 IF /I EXIST %opencv_bin% IF /I EXIST %opencv_lib% (
     echo [INFO] OpenCV layout verified in %opencv_install%
     goto :exit_dependencies
+)
+
+IF /I EXIST %opencv_wrong_toolset% (
+    echo [WARN] OpenCV was built with the wrong toolset layout (%opencv_wrong_toolset%); reinstalling: %opencv_install%
+    rmdir /S /Q %opencv_install%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+) ELSE IF /I EXIST %opencv_wrong_toolset_legacy% (
+    echo [WARN] OpenCV was built with a legacy toolset layout (%opencv_wrong_toolset_legacy%); reinstalling: %opencv_install%
+    rmdir /S /Q %opencv_install%
+    if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
 IF /I EXIST %opencv_install% (
@@ -649,8 +662,9 @@ if "%ENABLE_INTEGRITYCHECK%"=="1" (
     set "SDL_OPS=/GS /sdl /guard:cf /DYNAMICBASE /NXCOMPAT /W4 /WX /LTCG"
 )
 
-:: Expected compilers in CI - -G "Visual Studio 16 2019", local -G "Visual Studio 17 2022" as default
-cmake -T v142 .. -D CMAKE_INSTALL_PREFIX=%opencv_install% -D OPENCV_EXTRA_MODULES_PATH=%opencv_contrib_dir%\modules %opencv_flags% %SDL_OPS%
+:: OpenCV must be built with the Visual Studio 2022 toolset so the generated layout matches
+:: the Bazel import rule used in third_party/opencv/opencv_windows.BUILD (x64/vc17).
+cmake -G "Visual Studio 17 2022" -A x64 -T v143 .. -D CMAKE_INSTALL_PREFIX=%opencv_install% -D OPENCV_EXTRA_MODULES_PATH=%opencv_contrib_dir%\modules %opencv_flags% %SDL_OPS%
 if !errorlevel! neq 0 exit /b !errorlevel!
 cmake --build . --config Release -j %NUMBER_OF_PROCESSORS%
 if !errorlevel! neq 0 exit /b !errorlevel!
