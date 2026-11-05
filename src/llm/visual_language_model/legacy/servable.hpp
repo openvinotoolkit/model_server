@@ -69,7 +69,7 @@ protected:
 public:
     VisualLanguageModelLegacyServable() {
         properties = std::make_shared<VisualLanguageModelLegacyServableProperties>();
-        properties->inputProcessorContext.config.isVLM = true;
+        properties->inputProcessorContext.config.supportsVisualInputs = true;
     }
 
     // Interface methods

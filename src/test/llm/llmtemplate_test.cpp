@@ -289,6 +289,22 @@ TEST_F(LLMChatTemplateTest, MissingTemplateRejectsChatInputButAllowsCompletionIn
     EXPECT_TRUE(servable->validateInputCompatibility(completionContext).ok());
 }
 
+TEST_F(LLMChatTemplateTest, VlmWithoutAudioCapabilityRejectsAudioInput) {
+    servable = std::make_shared<ContinuousBatchingServable>();
+    auto properties = servable->getProperties();
+    properties->chatTemplateStatus = ChatTemplateStatus::AVAILABLE;
+    properties->inputProcessorContext.config.supportsVisualInputs = true;
+
+    auto context = servable->createExecutionContext();
+    ov::genai::ChatHistory history;
+    history.push_back({{"role", "user"}, {"content", ov::genai::JsonContainer::from_json_string(R"([{"type":"input_audio","input_audio":{"data":"audio"}}])")}});
+    context->inputRequest.input = std::move(history);
+
+    const auto status = servable->validateInputCompatibility(context);
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_EQ(status.message(), "This servable does not support audio input");
+}
+
 TEST_F(LLMChatTemplateTest, MissingTemplateClearsDisabledParsers) {
     servable = std::make_shared<ContinuousBatchingServable>();
     auto properties = servable->getProperties();
