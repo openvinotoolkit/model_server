@@ -445,6 +445,7 @@ ovms_cc_library(
     srcs = ["default_task.cpp"],
     deps = [
         "libovms_default_task_detector",
+        "libovmslogging",
         "libovmsstatus",
         "//src/pull_module:curl_downloader",
         "//src/pull_module:hf_env_vars",

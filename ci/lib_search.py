@@ -201,6 +201,8 @@ def check_dir(start_dir):
         'ovms_plugin_type_identity.diff',
         'ovms_no_litert.diff',
         'ovms_strip.diff',
+        "demos/integration_with_OpenHands/docker-compose.template.yml",
+        "demos/integration_with_OpenHands/scripts/deploy_model_ovms.sh",
         ]
 
     for (d_path, dir_names, file_set) in os.walk(start_dir):
