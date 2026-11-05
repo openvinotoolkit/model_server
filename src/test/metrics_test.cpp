@@ -279,7 +279,7 @@ TEST_F(LLMMetricsTest, TTFTHistogramUsesVllmSecondBucketsConvertedToMilliseconds
 
     for (const int boundary : expectedBoundaries) {
         EXPECT_THAT(scrape, HasSubstr("ovms_llm_ttft_milliseconds_bucket{name=\"model\",node=\"llm\",le=\"" +
-                                         std::to_string(boundary) + "\"} 0\n"));
+                                      std::to_string(boundary) + "\"} 0\n"));
     }
 }
 
