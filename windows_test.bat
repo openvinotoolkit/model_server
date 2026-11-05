@@ -47,8 +47,9 @@ IF "%~2"=="" (
 )
 
 set "bazelBuildArgs=--config=win_mp_on --action_env OpenVINO_DIR=%openvino_dir%"
-set "testTargets=//src:ovms_test //src:python_runtime_library_test //src/python:pythoninterpretermodule_lifecycle_test //src/python:pythoninterpretermodule_backend_failure_test //src/python:pythoninterpretermodule_borrowed_interpreter_test"
+set "testTargets=//src:ovms_test //src:python_runtime_library_test //src/python:pythoninterpretermodule_lifecycle_test //src/python:pythoninterpretermodule_backend_failure_test //src/python:pythoninterpretermodule_borrowed_interpreter_test //src/test/mediapipe/calculators:gst_d3d11_p9_test"
 set "runPythonRuntimeTest=%cd%\bazel-bin\src\python_runtime_library_test.exe --gtest_filter=!gtestFilter!"
+set "runGstreamerD3D11Test=%cd%\bazel-bin\src\test\mediapipe\calculators\gst_d3d11_p9_test.exe --gtest_filter=P9ServerFixture.FileSourceEosReleasesCleanly"
 set "runPythonInterpreterLifecycleTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=!gtestFilter! //src/python:pythoninterpretermodule_lifecycle_test"
 set "runPythonInterpreterBackendFailureTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=!gtestFilter! //src/python:pythoninterpretermodule_backend_failure_test"
 set "runPythonInterpreterBorrowedTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=!gtestFilter! //src/python:pythoninterpretermodule_borrowed_interpreter_test"
@@ -159,6 +160,9 @@ set "testExitCode=!errorlevel!"
 echo Running: %runPythonRuntimeTest%
 %runPythonRuntimeTest% >> win_full_test.log 2>&1
 set "pythonTestExitCode=!errorlevel!"
+echo Running: %runGstreamerD3D11Test%
+%runGstreamerD3D11Test% >> win_full_test.log 2>&1
+set "gstreamerD3D11TestExitCode=!errorlevel!"
 echo Running: %runPythonInterpreterLifecycleTest%
 %runPythonInterpreterLifecycleTest% >> win_full_test.log 2>&1
 set "pythonInterpreterLifecycleExitCode=!errorlevel!"
@@ -189,6 +193,10 @@ grep -a -q "\[  PASSED  \] " win_full_test.log
 set "hasPassed=!errorlevel!"
 grep -a -q "\[  FAILED  \] " win_full_test.log
 set "hasFailed=!errorlevel!"
+if !gstreamerD3D11TestExitCode! neq 0 (
+    echo [ERROR] GStreamer D3D11 lifecycle test failed with exit code !gstreamerD3D11TestExitCode!.
+    exit /b !gstreamerD3D11TestExitCode!
+)
 if !hasPassed! equ 0 if !hasFailed! neq 0 (
     echo [INFO] Tests finished with no failures. Check the summary in win_test_summary.log.
     exit /b 0
