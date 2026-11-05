@@ -72,6 +72,24 @@ TEST(ReasoningContextTest, DefaultMetadataDetectsReasoningWithoutParserInstances
     EXPECT_TRUE(context.begin.empty());
 }
 
+TEST(ReasoningContextTest, EmptyMetadataReturnsEmptyContext) {
+    const auto context = determineReasoningContext({}, std::string(10000, 'x'));
+    EXPECT_TRUE(context.begin.empty());
+    EXPECT_TRUE(context.end.empty());
+    EXPECT_FALSE(context.implicitStart);
+    EXPECT_FALSE(context.completedInPrompt);
+}
+
+TEST(ReasoningContextTest, EndOnlyMetadataStillDetectsCompletedReasoning) {
+    OutputParsingConfig config;
+    config.endTags = {"</think>"};
+    const auto context = determineReasoningContext(config, "reasoning</think>\n");
+    EXPECT_TRUE(context.begin.empty());
+    EXPECT_EQ(context.end, "</think>");
+    EXPECT_FALSE(context.implicitStart);
+    EXPECT_TRUE(context.completedInPrompt);
+}
+
 TEST_F(Qwen3OutputParserTest, ParseToolCallOutputWithSingleToolCallNoThinking) {
     std::string input = "<tool_call>{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>";
     auto generatedTensor = qwen3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;

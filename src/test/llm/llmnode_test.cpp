@@ -6338,6 +6338,22 @@ TEST_P(ToolGuidanceConfigTest, ToolAndResponseFormatReplaceModelGrammarWithToolG
     EXPECT_EQ(tags(builder.getConfig())->tags.size(), 1);
 }
 
+TEST_P(ToolGuidanceConfigTest, ToolOnlyRequestReplacesModelGrammar) {
+    for (const std::string choice : {"auto", "required", "weather"}) {
+        ov::genai::GenerationConfig baseConfig;
+        baseConfig.structured_output_config.emplace();
+        baseConfig.structured_output_config->regex = "model-default";
+        GenerationConfigBuilder builder{baseConfig, GetParam(), true, DecodingMethod::STANDARD};
+        configure(builder, toolRequest(choice));
+        ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
+        EXPECT_FALSE(builder.getConfig().structured_output_config->regex.has_value());
+        const auto grammar = tags(builder.getConfig());
+        EXPECT_EQ(grammar->tags.size(), 1);
+        EXPECT_EQ(grammar->at_least_one, choice != "auto");
+        EXPECT_EQ(grammar->stop_after_first, choice == "weather");
+    }
+}
+
 TEST(ToolGuidanceSelectionTest, UnsupportedToolFormatsStillApplyResponseFormat) {
     for (const std::string choice : {"auto", "required", "weather"}) {
         GenerationConfigBuilder builder{{}, "", true, DecodingMethod::STANDARD};

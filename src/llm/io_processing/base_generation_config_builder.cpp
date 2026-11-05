@@ -156,9 +156,7 @@ bool BaseGenerationConfigBuilder::shouldApplyResponseFormatGuidance(const OpenAI
 // Accepts tags built by either the common format helper or custom logic (e.g. Phi4's array schema),
 // applying the same call-count policy regardless of how the grammar was constructed.
 void BaseGenerationConfigBuilder::setToolGrammar(const OpenAIRequest& request, const std::shared_ptr<ov::genai::StructuredOutputConfig::TriggeredTags>& tags) {
-    if (request.responseFormat) {
-        config.structured_output_config.emplace();
-    }
+    config.structured_output_config.emplace();
     const bool namedChoice = requiresNamedToolCall(request);
     tags->at_least_one = request.toolChoice == "required" || namedChoice;
     tags->stop_after_first = namedChoice;

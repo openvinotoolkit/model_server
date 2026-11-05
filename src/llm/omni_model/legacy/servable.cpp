@@ -164,8 +164,8 @@ void OmniModelLegacyServable::initializeTextStreamer(std::shared_ptr<GenAiServab
         };
         omniExecutionContext->textStreamer = std::make_shared<OVMSTextStreamer>(
             getProperties()->tokenizer,
-            nullptr,
-            false,
+            omniExecutionContext->apiHandler->getOutputParser(),
+            omniExecutionContext->apiHandler->areToolsAvailable(),
             std::move(unaryCallback),
             streamerConfig);
     }

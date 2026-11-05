@@ -18,10 +18,10 @@
 #include <string>
 #include <utility>
 #include <openvino/genai/generation_config.hpp>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
 
 #include "src/port/rapidjson_document.hpp"
+#include "src/port/rapidjson_stringbuffer.hpp"
+#include "src/port/rapidjson_writer.hpp"
 #include "generation_config_builder.hpp"
 
 namespace ovms {

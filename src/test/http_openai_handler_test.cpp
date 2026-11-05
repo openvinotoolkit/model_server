@@ -5866,7 +5866,8 @@ TEST_F(HttpOpenAIHandlerParsingTest, legacyServablePreparePartialResponseChatCom
 }
 
 static std::shared_ptr<ovms::OmniModelLegacyServableExecutionContext> makeOmniChatContext(
-    const std::shared_ptr<ov::genai::Tokenizer>& tok, const std::string& requestJson) {
+    const std::shared_ptr<ov::genai::Tokenizer>& tok, const std::string& requestJson,
+    std::string toolParserName = "", std::string reasoningParserName = "") {
     auto ctx = std::make_shared<ovms::OmniModelLegacyServableExecutionContext>();
     ctx->payload.client = std::make_shared<NeverDisconnectedClient>();
     ctx->payload.parsedJson = std::make_shared<rapidjson::Document>();
@@ -5875,7 +5876,7 @@ static std::shared_ptr<ovms::OmniModelLegacyServableExecutionContext> makeOmniCh
 
     auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(
         *ctx->payload.parsedJson, ovms::Endpoint::CHAT_COMPLETIONS,
-        std::chrono::system_clock::now(), *tok);
+        std::chrono::system_clock::now(), *tok, toolParserName, reasoningParserName);
     if (!apiHandler->parseRequest(100, 0, std::nullopt).ok()) {
         return nullptr;
     }
@@ -5888,6 +5889,65 @@ static std::shared_ptr<ovms::OmniModelLegacyServableExecutionContext> makeOmniCh
     ctx->success = true;
     ctx->readySignal.set_value();
     return ctx;
+}
+
+class TestableOmniModelLegacyServable : public ovms::OmniModelLegacyServable {
+public:
+    using ovms::OmniModelLegacyServable::initializeTextStreamer;
+};
+
+TEST_F(HttpOpenAIHandlerParsingTest, OmniUnaryStreamerSeparatesReasoningAndPreservesAudioTranscript) {
+    auto ctx = makeOmniChatContext(tokenizer,
+        R"({"model":"llama","messages":[{"role":"user","content":"hi"}],"response_format":{"type":"json_object"},"modalities":["text","audio"],"audio":{"format":"pcm16"}})", "", "qwen3");
+    ASSERT_NE(ctx, nullptr);
+    const auto reasoningContext = ovms::determineReasoningContext(
+        ovms::getDefaultReasoningParsingConfig("qwen3"), "<think>\n");
+    ctx->apiHandler->initOutputParser(reasoningContext);
+    ctx->audioOutputRequested = true;
+    ctx->audioFormat = ovms::OpenAIRequest::AudioFormat::PCM16;
+    ov::Tensor waveform(ov::element::f32, {2});
+    waveform.data<float>()[0] = 0.0f;
+    waveform.data<float>()[1] = 0.0f;
+    ctx->results.speech_result.waveforms.push_back(waveform);
+    std::shared_ptr<ovms::GenAiServableExecutionContext> ctxBase = ctx;
+    TestableOmniModelLegacyServable servable;
+    servable.getProperties()->tokenizer = *tokenizer;
+    servable.initializeTextStreamer(ctxBase);
+    const auto encoded = tokenizer->encode(R"(analysis</think>{"answer":"yes"})", ov::genai::add_special_tokens(false)).input_ids;
+    const std::vector<int64_t> tokens(encoded.data<int64_t>(), encoded.data<int64_t>() + encoded.get_size());
+    ctx->textStreamer->write(tokens);
+    ctx->textStreamer->end();
+    ASSERT_EQ(servable.prepareCompleteResponse(ctxBase), absl::OkStatus());
+    rapidjson::Document response;
+    response.Parse(ctxBase->response.c_str());
+    ASSERT_FALSE(response.HasParseError());
+    const auto& message = response["choices"][0]["message"];
+    EXPECT_STREQ(message["reasoning_content"].GetString(), "analysis");
+    EXPECT_STREQ(message["content"].GetString(), R"({"answer":"yes"})");
+    EXPECT_STREQ(message["audio"]["transcript"].GetString(), R"({"answer":"yes"})");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, OmniUnaryStreamerParsesToolCalls) {
+    auto ctx = makeOmniChatContext(tokenizer,
+        R"({"model":"llama","messages":[{"role":"user","content":"hi"}],"tools":[{"type":"function","function":{"name":"weather"}}],"tool_choice":"required"})", "hermes3", "");
+    ASSERT_NE(ctx, nullptr);
+    ctx->apiHandler->initOutputParser({});
+    std::shared_ptr<ovms::GenAiServableExecutionContext> ctxBase = ctx;
+    TestableOmniModelLegacyServable servable;
+    servable.getProperties()->tokenizer = *tokenizer;
+    servable.initializeTextStreamer(ctxBase);
+    const auto encoded = tokenizer->encode(R"(<tool_call>{"name":"weather","arguments":{}}</tool_call>)", ov::genai::add_special_tokens(false)).input_ids;
+    const std::vector<int64_t> tokens(encoded.data<int64_t>(), encoded.data<int64_t>() + encoded.get_size());
+    ctx->textStreamer->write(tokens);
+    ctx->textStreamer->end();
+    ASSERT_EQ(servable.prepareCompleteResponse(ctxBase), absl::OkStatus());
+    rapidjson::Document response;
+    response.Parse(ctxBase->response.c_str());
+    ASSERT_FALSE(response.HasParseError());
+    const auto& calls = response["choices"][0]["message"]["tool_calls"];
+    ASSERT_EQ(calls.Size(), 1);
+    EXPECT_STREQ(calls[0]["function"]["name"].GetString(), "weather");
+    EXPECT_STREQ(calls[0]["function"]["arguments"].GetString(), "{}");
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, omniLegacyServablePrepareCompleteResponseChatCompletionsHasCachedTokens) {

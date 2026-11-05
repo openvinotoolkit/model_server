@@ -56,6 +56,9 @@ OutputParsingConfig getDefaultReasoningParsingConfig(const std::string& parserNa
 
 ReasoningGenerationContext determineReasoningContext(const OutputParsingConfig& config, const std::string& renderedPrompt) {
     ReasoningGenerationContext context;
+    if (config.startTags.empty() && config.endTags.empty()) {
+        return context;
+    }
     std::string trimmed = renderedPrompt;
     rtrim(trimmed);
     const auto start = std::find_if(config.startTags.begin(), config.startTags.end(),
