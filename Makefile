@@ -659,6 +659,7 @@ ifeq ($(RUN_GPU_TESTS),1)
 		--group-add=$(shell stat -c "%g" /dev/dri/render* | head -n 1) \
 		-u 0 \
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
+		-v $(shell realpath ./standalone):/ovms/standalone:ro \
 		-v $(shell realpath ${GPU_MODEL_PATH}):/ovms/src/test/face_detection_adas/1:ro \
 		-v $(shell realpath ${GPU_TEST_VIDEO_PATH}):/ovms/testdata/mpi_video.mp4:ro \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
@@ -680,6 +681,7 @@ else
 	docker run \
 		--name $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
+		-v $(shell realpath ./standalone):/ovms/standalone:ro \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
 		$(GIT_CONFIG_MOUNT) \
 		-e https_proxy=${https_proxy} \

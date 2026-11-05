@@ -93,8 +93,8 @@ ComPtr<ID3D11Device> createDevice() {
     ComPtr<ID3D11Device> device;
     D3D_FEATURE_LEVEL got{};
     HRESULT hr = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
-                                   D3D11_CREATE_DEVICE_VIDEO_SUPPORT, nullptr, 0,
-                                   D3D11_SDK_VERSION, device.GetAddressOf(), &got, nullptr);
+        D3D11_CREATE_DEVICE_VIDEO_SUPPORT, nullptr, 0,
+        D3D11_SDK_VERSION, device.GetAddressOf(), &got, nullptr);
     return SUCCEEDED(hr) ? device : nullptr;
 }
 
@@ -103,8 +103,8 @@ std::string writeTempConfig() {
     const std::string cfgPath = repoRoot() + "\\src\\test\\d3d11_p9_tmp.json";
     std::ofstream f(cfgPath);
     f << "{\"model_config_list\":[{\"config\":{\"name\":\"" << kModelName
-            << "\",\"base_path\":\"" << modelDir
-            << "\",\"target_device\":\"GPU\",\"nireq\":4,\"plugin_config\":{\"PERFORMANCE_HINT\":\"LATENCY\",\"NUM_STREAMS\":\"1\"}}}]}";
+      << "\",\"base_path\":\"" << modelDir
+      << "\",\"target_device\":\"GPU\",\"nireq\":4,\"plugin_config\":{\"PERFORMANCE_HINT\":\"LATENCY\",\"NUM_STREAMS\":\"1\"}}}]}";
     f.close();
     return cfgPath;
 }
@@ -220,14 +220,14 @@ struct P9ServerFixture : public ::testing::Test {
     }
 
     int runReusableCapiInference(OVMS_InferenceRequest* request, bool* hasBoundData,
-                                 void* texture, int w, int h) {
+        void* texture, int w, int h) {
         const std::string yName = std::string(kInputName) + "/y";
         const std::string uvName = std::string(kInputName) + "/uv";
         const size_t bytesY = static_cast<size_t>(w) * h;
         const size_t bytesUV = bytesY / 2;
         if ((*hasBoundData &&
-             (!capiOk(OVMS_InferenceRequestInputRemoveData(request, yName.c_str())) ||
-              !capiOk(OVMS_InferenceRequestInputRemoveData(request, uvName.c_str())))) ||
+                (!capiOk(OVMS_InferenceRequestInputRemoveData(request, yName.c_str())) ||
+                    !capiOk(OVMS_InferenceRequestInputRemoveData(request, uvName.c_str())))) ||
             !capiOk(OVMS_InferenceRequestInputSetData(
                 request, yName.c_str(), texture, bytesY, OVMS_BUFFERTYPE_D3D11_TEXTURE_Y, 1)) ||
             !capiOk(OVMS_InferenceRequestInputSetData(
@@ -249,7 +249,8 @@ struct P9ServerFixture : public ::testing::Test {
         const char* oname = nullptr;
         int detections = -1;
         if (capiOk(OVMS_InferenceResponseOutput(response, id, &oname, &dt, &shape, &dims,
-                                                  &out, &bytes, &bt, &did)) && out) {
+                &out, &bytes, &bt, &did)) &&
+            out) {
             detections = 0;
             const float* values = static_cast<const float*>(out);
             for (size_t result = 0; result + 7 <= bytes / sizeof(float); result += 7) {
@@ -294,7 +295,8 @@ TEST_F(P9ServerFixture, DecodeAndInferShareOwnedDevice) {
         uint32_t subresource = 0;
         int frameWidth = 0, frameHeight = 0;
         ASSERT_EQ(imp_tensor_get_d3d11_texture(tensor, &texture, &decodeDevice, &subresource,
-            &frameWidth, &frameHeight), IMP_OK);
+                      &frameWidth, &frameHeight),
+            IMP_OK);
         EXPECT_EQ(decodeDevice, static_cast<void*>(device.Get())) << "decoded on a different device than the server owns";
         EXPECT_EQ(subresource, 0u);
         EXPECT_GE(runCapiInference(texture, frameWidth, frameHeight), 1)
@@ -374,9 +376,9 @@ TEST_F(P9ServerFixture, FileSourceDirectCapiPerformance) {
                 ASSERT_EQ(subresource, 0u);
                 const auto capiStart = Clock::now();
                 const int detections = reuseRequest
-                    ? runReusableCapiInference(reusableRequest, &reusableRequestHasBoundData,
-                        texture, frameWidth, frameHeight)
-                    : runCapiInference(texture, frameWidth, frameHeight);
+                                           ? runReusableCapiInference(reusableRequest, &reusableRequestHasBoundData,
+                                                 texture, frameWidth, frameHeight)
+                                           : runCapiInference(texture, frameWidth, frameHeight);
                 ASSERT_GE(detections, 0);
                 const auto capiStop = Clock::now();
                 if (frameIndex >= warmupFrames)
@@ -397,7 +399,8 @@ TEST_F(P9ServerFixture, FileSourceDirectCapiPerformance) {
         const double capiSum = std::accumulate(capiMs.begin(), capiMs.end(), 0.0);
         const double stageSum = decodeSum + capiSum;
         const double loopWallMs = std::chrono::duration<double, std::milli>(
-            measuredStop - measuredStart).count();
+            measuredStop - measuredStart)
+                                      .count();
         std::cout << std::fixed << std::setprecision(3)
                   << "P11_DIRECT_D3D11 mode=" << (runInference ? (reuseRequest ? "decode_plus_capi_reuse_request" : "decode_plus_capi_new_request") : (boundedDecode ? "decode_only_bounded" : "decode_only"))
                   << " trial=" << trial
@@ -444,7 +447,7 @@ TEST_F(P9ServerFixture, FileSourcePureOpenVinoD3D11Performance) {
     using Clock = std::chrono::steady_clock;
 
     const std::filesystem::path modelPath = std::filesystem::path(repoRoot()) /
-        "src/test/face_detection_adas/1/face-detection-adas-0001.xml";
+                                            "src/test/face_detection_adas/1/face-detection-adas-0001.xml";
     ASSERT_TRUE(std::filesystem::exists(modelPath));
 
     ov::Core core;
@@ -545,7 +548,8 @@ TEST_F(P9ServerFixture, FileSourcePureOpenVinoD3D11Performance) {
             return inferMs[static_cast<size_t>(fraction * (inferMs.size() - 1))];
         };
         const double loopWallMs = std::chrono::duration<double, std::milli>(
-            measuredStop - measuredStart).count();
+            measuredStop - measuredStart)
+                                      .count();
         std::cout << std::fixed << std::setprecision(3)
                   << "P10_PURE_OV_D3D11 trial=" << trial
                   << " frames=" << measuredFrames
@@ -618,7 +622,7 @@ TEST_F(P9ServerFixture, HostTensorGpuNv12PreprocessPerformance) {
     imp_context_destroy(ctx);
 
     const std::filesystem::path modelPath = std::filesystem::path(repoRoot()) /
-        "src/test/face_detection_adas/1/face-detection-adas-0001.xml";
+                                            "src/test/face_detection_adas/1/face-detection-adas-0001.xml";
     ASSERT_TRUE(std::filesystem::exists(modelPath));
     ov::Core core;
     auto rawModel = core.read_model(modelPath.string(), {}, ov::AnyMap{{"ENABLE_MMAP", "NO"}});
@@ -651,9 +655,9 @@ TEST_F(P9ServerFixture, HostTensorGpuNv12PreprocessPerformance) {
             auto& request = requests[frameIndex % requests.size()];
             const auto bindStart = Clock::now();
             request.set_tensor("data/y", ov::Tensor(ov::element::u8, shapeY,
-                const_cast<uint8_t*>(frame.y.data())));
+                                             const_cast<uint8_t*>(frame.y.data())));
             request.set_tensor("data/uv", ov::Tensor(ov::element::u8, shapeUv,
-                const_cast<uint8_t*>(frame.uv.data())));
+                                              const_cast<uint8_t*>(frame.uv.data())));
             const auto bindStop = Clock::now();
             const auto inferStart = Clock::now();
             request.infer();
@@ -780,7 +784,8 @@ TEST_F(P9ServerFixture, CameraCaptureInferenceAndMp4) {
             uint32_t subresource = 0;
             int frameWidth = 0, frameHeight = 0;
             ASSERT_EQ(imp_tensor_get_d3d11_texture(inferTensor, &texture, &decodeDevice,
-                &subresource, &frameWidth, &frameHeight), IMP_OK);
+                          &subresource, &frameWidth, &frameHeight),
+                IMP_OK);
             EXPECT_EQ(decodeDevice, static_cast<void*>(device.Get()));
             EXPECT_EQ(subresource, 0u);
             EXPECT_GE(runCapiInference(texture, frameWidth, frameHeight), 0);
@@ -794,7 +799,8 @@ TEST_F(P9ServerFixture, CameraCaptureInferenceAndMp4) {
             if (frameIndex == 0) {
                 const uint8_t* retainedUv = nullptr;
                 ASSERT_EQ(imp_tensor_get_nv12_planes(hostTensor, &retainedY, &retainedUv,
-                    &frameWidth, &frameHeight), IMP_OK);
+                              &frameWidth, &frameHeight),
+                    IMP_OK);
                 ASSERT_NE(retainedY, nullptr);
                 retainedPixels.assign(retainedY, retainedY + 256);
                 retainedHost = hostTensor;
