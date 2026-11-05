@@ -24,6 +24,30 @@
 #include "metric_registry.hpp"
 
 namespace ovms {
+namespace {
+
+bool isValidCustomCounterName(const std::string& name) {
+    if (name.size() <= 13 || name.compare(0, 7, "custom_") != 0 ||
+        name.compare(name.size() - 6, 6, "_total") != 0) {
+        return false;
+    }
+    for (char c : name) {
+        const bool isAllowed = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                               (c >= '0' && c <= '9') || c == '_';
+        if (!isAllowed) {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::string conflictingHelpMessage(const std::string& name) {
+    return "Custom counter '" + name +
+           "' was registered with different help text; "
+           "all registrations for the same metric name must use identical help text";
+}
+
+}  // namespace
 
 CalculatorCounter::CalculatorCounter(MetricRegistry* registry, const std::string& name, const std::string& help,
     const std::string& graphName, const std::string& nodeName) {
@@ -71,19 +95,13 @@ std::shared_ptr<CalculatorCounter> CalculatorMetrics::registerCounter(const std:
         if (!active) {
             throw std::logic_error("Cannot register a custom counter after graph unload");
         }
-        bool validName = name.size() > 13 && name.compare(0, 7, "custom_") == 0 &&
-                         name.compare(name.size() - 6, 6, "_total") == 0;
-        for (char c : name) {
-            validName = validName && ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-                                         (c >= '0' && c <= '9') || c == '_');
-        }
-        if (!validName || help.empty()) {
+        if (!isValidCustomCounterName(name) || help.empty()) {
             throw std::invalid_argument("Custom counter requires a custom_<name>_total name and non-empty help");
         }
         const auto it = counters.find(name);
         if (it != counters.end()) {
             if (it->second.help != help) {
-                throw std::invalid_argument("Custom counter registered with conflicting help");
+                throw std::invalid_argument(conflictingHelpMessage(name));
             }
             return it->second.counter;
         }

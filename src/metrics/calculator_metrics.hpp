@@ -61,7 +61,8 @@ public:
     CalculatorMetrics(MetricRegistry* registry, const std::string& graphName, const std::string& nodeName);
     ~CalculatorMetrics();
     /// Register once (usually in Open). Repeated identical registration returns
-    /// the same handle. Names must start with custom_ and end with _total.
+    /// the same handle. A metric name must use the same help text across scopes.
+    /// Names must start with custom_ and end with _total.
     /// Disabled metrics return a valid no-op handle; malformed registrations throw.
     std::shared_ptr<CalculatorCounter> registerCounter(const std::string& name, const std::string& help);
     /// Remove this scope's series and make retained handles safe no-ops.

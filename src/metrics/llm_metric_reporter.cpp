@@ -25,6 +25,15 @@
 #include "metric_registry.hpp"
 
 namespace ovms {
+namespace {
+
+const BucketBoundaries PREFILL_SPEED_BUCKETS{
+    1, 10, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000};
+const BucketBoundaries TTFT_BUCKETS{
+    1, 5, 10, 20, 40, 60, 80, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000,
+    20000, 40000, 80000, 160000, 640000, 2560000};
+
+}  // namespace
 
 LLMMetricReporter::LLMMetricReporter(const MetricConfig* config, MetricRegistry* registry,
     const std::string& graphName, const std::string& nodeName) {
@@ -49,8 +58,7 @@ LLMMetricReporter::LLMMetricReporter(const MetricConfig* config, MetricRegistry*
             if (!prefillFamily) {
                 throw std::logic_error("Cannot create LLM prefill speed metric family");
             }
-            prefillSpeed = prefillFamily->addMetric(labels,
-                {1, 10, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000});
+            prefillSpeed = prefillFamily->addMetric(labels, PREFILL_SPEED_BUCKETS);
             prefillEnabled.store(true, std::memory_order_relaxed);
         }
         if (config->isFamilyEnabled(METRIC_NAME_LLM_SCHEDULED_REQUESTS)) {
@@ -76,9 +84,7 @@ LLMMetricReporter::LLMMetricReporter(const MetricConfig* config, MetricRegistry*
             if (!ttftFamily) {
                 throw std::logic_error("Cannot create LLM TTFT metric family");
             }
-            ttft = ttftFamily->addMetric(labels,
-                {1, 5, 10, 20, 40, 60, 80, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000,
-                    20000, 40000, 80000, 160000, 640000, 2560000});
+            ttft = ttftFamily->addMetric(labels, TTFT_BUCKETS);
         }
         completedRequestEnabled.store(generatedTokens || ttft, std::memory_order_relaxed);
     } catch (const std::exception& e) {

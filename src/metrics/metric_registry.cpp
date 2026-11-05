@@ -32,7 +32,9 @@ std::shared_ptr<MetricFamily<MetricCounter>> MetricRegistry::registerCustomCount
     const auto existing = customCounterFamilies.find(name);
     if (existing != customCounterFamilies.end()) {
         if (existing->second.first != help) {
-            throw std::invalid_argument("Custom counter registered with conflicting help");
+            throw std::invalid_argument("Custom counter '" + name +
+                                        "' was registered with different help text; "
+                                        "all registrations for the same metric name must use identical help text");
         }
         return existing->second.second;
     }

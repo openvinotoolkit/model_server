@@ -52,7 +52,7 @@ public:
     // Returns all collected metrics in "Prometheus Text Exposition Format".
     std::string collect() const;
 
-    /// Register a custom counter family, enforcing consistent help across scopes.
+    /// Register a custom counter family. Every registration of a metric name must use identical help text.
     std::shared_ptr<MetricFamily<MetricCounter>> registerCustomCounterFamily(const std::string& name, const std::string& help);
 
 private:
