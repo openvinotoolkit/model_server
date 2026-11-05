@@ -49,7 +49,7 @@ set "opt_install_dir=C:\opt"
 :: Python 312 needs to be first in the windows path, as well as MSYS tools
 set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\;%PATH%;"
 set "PYTHONHOME=C:\opt\Python312"
-:: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel, wget to PATH
+:: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel and MSYS/CMake tools to PATH
 set "PATH=%setPath%"
 
 if defined GITHUB_TOKEN (
@@ -86,23 +86,6 @@ IF /I EXIST %opt_install_dir% (
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::: Installing wget
-echo [INFO] Installing wget ...
-set "wget_path=%opt_install_dir%\wget.exe"
-IF /I EXIST %wget_path% (
-    if %expunge% EQU 1 (
-        rmdir /S /Q %wget_path%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-        curl -k -o %wget_path% https://eternallybored.org/misc/wget/1.21.4/64/wget.exe
-        if !errorlevel! neq 0 exit /b !errorlevel!
-    ) else ( echo [INFO] ::::::::::::::::::::::: wget installed already in %wget_path% )
-) ELSE (
-    curl -k -o %wget_path% https://eternallybored.org/misc/wget/1.21.4/64/wget.exe
-    if !errorlevel! neq 0 exit /b !errorlevel!
-)
-echo [INFO] Wget installed in %wget_path%
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Msys bash
 echo Installing msys ...
 set "bash_path=%opt_install_dir%\msys64\usr\bin\bash.exe"
@@ -121,7 +104,7 @@ IF /I EXIST %bash_path% (
         if !errorlevel! neq 0 exit /b !errorlevel!
     )
     IF /I NOT EXIST %msys_install% (
-        %wget_path% -P %opt_install_dir%\ %msys_url%
+        curl -k -L -o "%msys_install%" "%msys_url%"
         if !errorlevel! neq 0 exit /b !errorlevel!
     )
 
@@ -232,14 +215,14 @@ echo [INFO] Installing GenAI: %genai_dir% ...
 :: Download GenAi
 IF /I EXIST %genai_zip% (
     if %expunge% EQU 1 (
-        del /S /Q %genai_zip%
+        del /S /Q "%genai_zip%"
         if !errorlevel! neq 0 exit /b !errorlevel!
-        %wget_path% -P %BAZEL_SHORT_PATH%\ %GENAI_PACKAGE_URL%
+        curl -k -L -o "%genai_zip%" "%GENAI_PACKAGE_URL%"
         if !errorlevel! neq 0 exit /b !errorlevel!
     ) else ( echo [INFO] file exists %genai_zip% )
     
 ) ELSE (
-    %wget_path% -P %BAZEL_SHORT_PATH%\ %GENAI_PACKAGE_URL%
+    curl -k -L -o "%genai_zip%" "%GENAI_PACKAGE_URL%"
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 :: Extract GenAi
@@ -414,7 +397,7 @@ IF /I EXIST %bazel_path% (
     )
 )
 IF /I NOT EXIST %bazel_path% (
-    %wget_path% -P %opt_install_dir%\ %bazel_url%
+    curl -k -L -o "%bazel_path%" "%bazel_url%"
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 echo [INFO] Bazel installed: %bazel_file%
@@ -550,12 +533,12 @@ IF /I EXIST %curl_zip% (
     if %expunge% EQU 1 (
         del /S /Q %curl_zip%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        %wget_path% -P %opt_install_dir%\ %curl_http%%curl_ver%
+        curl -k -L -o "%curl_zip%" "%curl_http%%curl_ver%"
         if !errorlevel! neq 0 exit /b !errorlevel!
     ) else ( echo [INFO] file exists %curl_zip% )
     
 ) ELSE (
-    %wget_path% -P %opt_install_dir%\ %curl_http%%curl_ver%
+    curl -k -L -o "%curl_zip%" "%curl_http%%curl_ver%"
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 :: Extract curl
@@ -620,17 +603,17 @@ IF /I EXIST %opencv_bin% IF /I EXIST %opencv_lib% (
 )
 
 IF /I EXIST %opencv_wrong_toolset% (
-    echo [WARN] OpenCV was built with the wrong toolset layout (%opencv_wrong_toolset%); reinstalling: %opencv_install%
+    echo [WARN] OpenCV was built with the wrong toolset layout [%opencv_wrong_toolset%] - reinstalling: %opencv_install%
     rmdir /S /Q %opencv_install%
     if !errorlevel! neq 0 exit /b !errorlevel!
 ) ELSE IF /I EXIST %opencv_wrong_toolset_legacy% (
-    echo [WARN] OpenCV was built with a legacy toolset layout (%opencv_wrong_toolset_legacy%); reinstalling: %opencv_install%
+    echo [WARN] OpenCV was built with a legacy toolset layout [%opencv_wrong_toolset_legacy%] - reinstalling: %opencv_install%
     rmdir /S /Q %opencv_install%
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
 IF /I EXIST %opencv_install% (
-    echo [WARN] OpenCV directory exists but is incomplete or stale; reinstalling: %opencv_install%
+    echo [WARN] OpenCV directory exists but is incomplete or stale - reinstalling: %opencv_install%
     rmdir /S /Q %opencv_install%
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
