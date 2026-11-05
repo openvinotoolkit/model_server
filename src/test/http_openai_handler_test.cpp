@@ -923,8 +923,12 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ResponseFormatAllowsExplici
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ResponseFormatUnchangedWhenThinkingDisabledOrCompleted) {
     for (const std::string& prompt : {std::string("<|im_start|>assistant\n"), std::string("<|im_start|>assistant\n<think>\n\n</think>\n\n")}) {
-        auto apiHandler = parseCurrentRequest(responseFormatRequest(R"(,"chat_template_kwargs":{"enable_thinking":false})"), "", "qwen3");
+        const bool completedPrompt = prompt.find("</think>") != std::string::npos;
+        auto apiHandler = parseCurrentRequest(responseFormatRequest(
+                                                  completedPrompt ? "" : R"(,"chat_template_kwargs":{"enable_thinking":false})"),
+            "", "qwen3");
         ASSERT_NE(apiHandler, nullptr);
+        EXPECT_EQ(apiHandler->getRequest().enableThinking.has_value(), !completedPrompt);
         ovms::GenerationConfigBuilder builder{{}, "", false, ovms::DecodingMethod::STANDARD};
         auto result = apiHandler->extractInputRequest();
         ASSERT_TRUE(result.ok()) << result.status();
