@@ -21,7 +21,7 @@ pipeline {
               env
               """
               echo shortCommit
-              build job: "ovmsc/ubuntu/ubuntu26-ovms-recompile-main", parameters: [[$class: 'StringParameterValue', name: 'OVMSCCOMMIT', value: shortCommit], [$class: 'StringParameterValue', name: 'TT_ENABLE_CACHE', value: 'true']]
+              build job: "ovmsc/ubuntu/ubuntu26-ovms-recompile-main", parameters: [[$class: 'StringParameterValue', name: 'OVMSCCOMMIT', value: shortCommit]]
           }
         }
 
@@ -32,7 +32,7 @@ pipeline {
               env
               """
               echo shortCommit
-              build job: "ovmsc/ubuntu/ubuntu24-ovms-recompile-main", parameters: [[$class: 'StringParameterValue', name: 'OVMSCCOMMIT', value: shortCommit], [$class: 'StringParameterValue', name: 'TT_ENABLE_CACHE', value: 'true']]
+              build job: "ovmsc/ubuntu/ubuntu24-ovms-recompile-main", parameters: [[$class: 'StringParameterValue', name: 'OVMSCCOMMIT', value: shortCommit]]
           }
         }
 
@@ -42,7 +42,7 @@ pipeline {
               env
               """
               echo shortCommit
-              build job: "ovmsc/redhat/redhat-ovms-recompile-main", parameters: [[$class: 'StringParameterValue', name: 'OVMSCCOMMIT', value: shortCommit], [$class: 'StringParameterValue', name: 'TT_ENABLE_CACHE', value: 'true']]
+              build job: "ovmsc/redhat/redhat-ovms-recompile-main", parameters: [[$class: 'StringParameterValue', name: 'OVMSCCOMMIT', value: shortCommit]]
           }    
         }
 
@@ -52,7 +52,7 @@ pipeline {
               env
               """
               echo shortCommit
-              build job: "ovmsc/OVMS_Validation/daily/windows_py", parameters: [[$class: 'StringParameterValue', name: 'BRANCH_NAME', value: "${env.BRANCH_NAME}"], [$class: 'StringParameterValue', name: 'TT_ENABLE_CACHE', value: 'true']]
+              build job: "ovmsc/OVMS_Validation/daily/windows_py", parameters: [[$class: 'StringParameterValue', name: 'BRANCH_NAME', value: "${env.BRANCH_NAME}"]]
           }    
         }
     }
