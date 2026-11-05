@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=no-member
 
 import os
 import re
@@ -48,7 +49,7 @@ def transpose_input(images, axes):
 
 
 def crop_resize(img, cropx, cropy):
-    y, x, c = img.shape
+    y, x, _c = img.shape
     if y < cropy:
         img = cv2.resize(img, (x, cropy))
         y = cropy
@@ -75,10 +76,9 @@ def load_labels(path):
     labels_extension = path.split(sep=".")[-1]
     if labels_extension == "npy":
         return load_npy_labels(path=path)
-    elif labels_extension in ["txt", "json"]:
+    if labels_extension in ["txt", "json"]:
         raise NotImplementedError()
-    else:
-        raise RuntimeError(f"Incorrect label data type: {labels_extension}")
+    raise RuntimeError(f"Incorrect label data type: {labels_extension}")
 
 
 def load_images(data_path, height, width, ids):
@@ -88,7 +88,7 @@ def load_images(data_path, height, width, ids):
         assert file_extension in ['jpg', 'jpeg']
         inputs = load_jpeg(data_path, height, width, ids)
         return inputs
-    elif os.path.isdir(data_path):
+    if os.path.isdir(data_path):
         inputs = []
         images = list(filter(lambda x: re.match(r".+\.jpe?g", x.lower()), os.listdir(data_path)))
         for img in images:
@@ -107,7 +107,7 @@ def load_images(data_path, height, width, ids):
 
 def load_numpy(data_path):
     assert os.path.isfile(data_path)
-    file_extension = os.path.basename(data_path).split(sep=".")[-1]
+    _file_extension = os.path.basename(data_path).split(sep=".")[-1]
     # optional preprocessing depending on the model
     data = np.load(data_path, mmap_mode='r+', allow_pickle=False)
     data = data - np.min(data)  # Normalization 0-255
@@ -120,7 +120,7 @@ def load_numpy(data_path):
 
 
 def prepare_data(data_path, expected_shape, batch_size, transpose_axes=None, expected_layout=None, data_layout=None):
-    filename, file_extension = os.path.splitext(data_path)
+    _filename, file_extension = os.path.splitext(data_path)
     if file_extension == '.npy':
         data = load_numpy(data_path)
     else:

@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=unused-argument
 
 import os
 from abc import ABC, abstractmethod
@@ -128,12 +129,13 @@ class LogMonitor(ABC):
         break_msg_list=None,
         raise_exception_if_not_found=True,
         timeout=None,
-        callbacks=[],
+        callbacks=None,
         ovms_instance=None,
         check_ovms_running=True,
         all_messages=False,
     ):
         break_msg_list = [] if break_msg_list is None else break_msg_list
+        callbacks = callbacks or []
         if timeout is None:
             timeout = wait_for_messages_timeout
 
@@ -165,7 +167,7 @@ class LogMonitor(ABC):
                             if found_lines:
                                 recent = found_lines[-5:]
                                 logger.debug(
-                                    f"[wait_for_messages] Last OVMS output:\n"
+                                    "[wait_for_messages] Last OVMS output:\n"
                                     + "\n".join(f"  {line}" for line in recent)
                                 )
                             last_progress_log_time = now
@@ -174,8 +176,8 @@ class LogMonitor(ABC):
 
                     found_lines.append(log_line)
 
-                    for specific_msg in messages_to_find_vs_results_map:
-                        if messages_to_find_vs_results_map[specific_msg] is None:
+                    for specific_msg, result in messages_to_find_vs_results_map.items():
+                        if result is None:
                             if isinstance(specific_msg, str):
                                 messages_to_find_vs_results_map[specific_msg] = log_line if specific_msg in log_line \
                                     else None
@@ -257,14 +259,13 @@ class LogMonitor(ABC):
                 log_line = self._read_log_line()
                 if log_line is None:
                     break
-                else:
-                    found_lines.append(log_line)
+                found_lines.append(log_line)
 
-                for specific_msg in messages_to_find_vs_results_map:
-                    if messages_to_find_vs_results_map[specific_msg] is None:
+                for specific_msg, result in messages_to_find_vs_results_map.items():
+                    if result is None:
                         messages_to_find_vs_results_map[specific_msg] = log_line if specific_msg in log_line else None
 
-                all_messages_found = all([x for x in messages_to_find_vs_results_map.values()])
+                all_messages_found = all(messages_to_find_vs_results_map.values())
             self._log_search_info(
                 raise_exception_if_not_found, all_messages_found, found_lines, messages_to_find_vs_results_map
             )
@@ -309,6 +310,6 @@ class LogMonitor(ABC):
         head = found_lines[:head_count]
         tail = found_lines[-tail_count:]
         return "\n".join(head + [f"\n... [{omitted} lines omitted] ...\n"] + tail)
-    
+
     def is_ovms_running(self):
         return True

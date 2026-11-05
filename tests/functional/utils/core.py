@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=no-member,abstract-method
 
 import inspect
 import json
@@ -22,10 +23,11 @@ import time
 from collections import defaultdict
 from datetime import datetime, timedelta
 from enum import Enum
-from filelock import UnixFileLock, WindowsFileLock
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
+
+from filelock import UnixFileLock, WindowsFileLock
 
 from tests.functional.constants.os_type import get_host_os, OsType
 
@@ -46,7 +48,7 @@ def get_children_from_module(parent, module):
 
 def get_token_value(token_file_path, fallback_value=None):
     if os.path.exists(token_file_path):
-        token_value = Path(token_file_path).read_text().strip()
+        token_value = Path(token_file_path).read_text(encoding="utf-8").strip()
         return token_value
     return fallback_value
 
@@ -54,7 +56,7 @@ def get_token_value(token_file_path, fallback_value=None):
 def get_username():
     try:
         user_name = os.getlogin()
-    except OSError as e:
+    except OSError as _e:
         user = os.environ.get("USER", "not_known_user")
         logname = os.environ.get("LOGNAME", user)
         user_name = os.environ.get("USERNAME", logname)
@@ -82,7 +84,7 @@ class SelfDeletingCommonFileLock:
     def acquire_no_raise(self, timeout):
         try:
             self.acquire(timeout=timeout)
-        except TimeoutError as e:
+        except TimeoutError as _e:
             return False
         return True
 
@@ -106,7 +108,7 @@ class SelfDeletingUnixFileLock(SelfDeletingCommonFileLock, UnixFileLock):
     def acquire_no_raise(self, timeout):
         try:
             self.acquire(timeout=timeout)
-        except TimeoutError as e:
+        except TimeoutError as _e:
             return False
         return True
 
@@ -160,7 +162,6 @@ class ComplexEncoder(json.JSONEncoder):
     def default(self, obj):
         if hasattr(obj, 'to_str'):
             return obj.to_str()
-        elif isinstance(obj, type):
+        if isinstance(obj, type):
             return str(obj)
-        else:
-            return json.JSONEncoder.default(self, obj)
+        return json.JSONEncoder.default(self, obj)

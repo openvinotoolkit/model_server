@@ -69,6 +69,7 @@ public:
     std::optional<int> getMaxChunksPerDoc() const;
 
     absl::Status parseRequest();
+    absl::Status validateDocumentsCanBeRanked() const;
     absl::Status parseResponse(StringBuffer& buffer, std::vector<float>& scores);
 };
 
