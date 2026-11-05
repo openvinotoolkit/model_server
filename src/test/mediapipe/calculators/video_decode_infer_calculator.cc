@@ -125,7 +125,7 @@ public:
         cc->Outputs()
             .Tag("DETECTIONS")
             .AddPacket(MakePacket<int>(total_detections)
-                           .At(cc->InputTimestamp()));
+                    .At(cc->InputTimestamp()));
         return absl::OkStatus();
     }
 

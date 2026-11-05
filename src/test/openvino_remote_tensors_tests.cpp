@@ -948,11 +948,11 @@ TEST_F(CAPINonCopy, GStreamerOverlayEncodePipeline) {
                                  ++framesWithBoxes;
                              return absl::OkStatus();
                          })
-                    .ok());
+            .ok());
     // Drain the count stream so the scheduler never blocks on it.
     ASSERT_TRUE(graph.ObserveOutputStream("detections",
                          [&](const mediapipe::Packet&) { return absl::OkStatus(); })
-                    .ok());
+            .ok());
 
     std::map<std::string, mediapipe::Packet> sidePackets = {
         {"source_mode", mediapipe::MakePacket<std::string>("file")},
@@ -1076,10 +1076,10 @@ TEST_F(CAPINonCopy, GStreamerOverlayEncodeVaPipeline) {
                                  ++framesWithBoxes;
                              return absl::OkStatus();
                          })
-                    .ok());
+            .ok());
     ASSERT_TRUE(graph.ObserveOutputStream("detections",
                          [&](const mediapipe::Packet&) { return absl::OkStatus(); })
-                    .ok());
+            .ok());
 
     std::map<std::string, mediapipe::Packet> sidePackets = {
         {"source_mode", mediapipe::MakePacket<std::string>("file")},
@@ -1279,10 +1279,10 @@ TEST_F(CAPINonCopy, GStreamerRtspSourceOverlayPipeline) {
                              totalBoxes += static_cast<int>(boxes.size());
                              return absl::OkStatus();
                          })
-                    .ok());
+            .ok());
     ASSERT_TRUE(graph.ObserveOutputStream("detections",
                          [&](const mediapipe::Packet&) { return absl::OkStatus(); })
-                    .ok());
+            .ok());
 
     std::map<std::string, mediapipe::Packet> sidePackets = {
         {"source_mode", mediapipe::MakePacket<std::string>("rtsp")},
@@ -1477,10 +1477,10 @@ TEST_F(CAPINonCopy, GStreamerOverlayEncodeRtspPipeline) {
                                  ++framesWithBoxes;
                              return absl::OkStatus();
                          })
-                    .ok());
+            .ok());
     ASSERT_TRUE(graph.ObserveOutputStream("detections",
                          [&](const mediapipe::Packet&) { return absl::OkStatus(); })
-                    .ok());
+            .ok());
 
     std::map<std::string, mediapipe::Packet> sidePackets = {
         {"source_mode", mediapipe::MakePacket<std::string>("file")},

@@ -163,8 +163,7 @@ private:
     absl::Status initializeModel() {
         try {
             std::shared_ptr<ov::Model> raw_model = core_.read_model(
-                model_path_, {}, ov::AnyMap{{ "ENABLE_MMAP",
-                    "NO" }});
+                model_path_, {}, ov::AnyMap{{"ENABLE_MMAP", "NO"}});
             ov::preprocess::PrePostProcessor preprocessor(raw_model);
             preprocessor.input().tensor().set_element_type(ov::element::u8).set_color_format(ov::preprocess::ColorFormat::NV12_TWO_PLANES, {"y", "uv"}).set_memory_type(ov::intel_gpu::memory_type::surface);
             preprocessor.input().preprocess().convert_color(ov::preprocess::ColorFormat::BGR);

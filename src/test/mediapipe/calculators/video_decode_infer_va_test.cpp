@@ -101,7 +101,7 @@ TEST(VideoDecodeInferVaGraph, RunsAndProducesDetections) {
     ASSERT_TRUE(graph.AddPacketToInputStream(
                          "tick",
                          ::mediapipe::MakePacket<int>(0).At(::mediapipe::Timestamp(0)))
-                    .ok());
+            .ok());
     ASSERT_TRUE(graph.CloseInputStream("tick").ok());
 
     ::mediapipe::Packet packet;

@@ -379,7 +379,7 @@ TEST(MpiOpenVinoIntegration, CompiledModelSidePacket) {
                          ++frames;
                          return absl::OkStatus();
                      })
-                    .ok());
+            .ok());
     const absl::Status status = graph.StartRun({
         {"video_path", mediapipe::MakePacket<std::string>(bench::videoPath())},
         {"width", mediapipe::MakePacket<int>(benchmark_config::kModelWidth)},

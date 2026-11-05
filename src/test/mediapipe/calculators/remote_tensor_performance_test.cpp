@@ -820,7 +820,7 @@ TEST_F(WindowsD3D11RemoteTensorFixture, PureOpenVinoInferenceWithD3D11Nv12InCalc
                                  "frame", ::mediapipe::MakePacket<::mediapipe::GstVideoFramePacket>(
                                               std::move(frame))
                                               .At(::mediapipe::Timestamp(frameIndex)))
-                            .ok());
+                    .ok());
             ::mediapipe::Packet output;
             ASSERT_TRUE(poller.Next(&output));
             const auto calculatorStop = Clock::now();
@@ -828,7 +828,7 @@ TEST_F(WindowsD3D11RemoteTensorFixture, PureOpenVinoInferenceWithD3D11Nv12InCalc
             if (frameIndex >= warmupFrames) {
                 calculatorMs.push_back(std::chrono::duration<double, std::milli>(
                     calculatorStop - calculatorStart)
-                                           .count());
+                        .count());
             }
         }
         ASSERT_TRUE(graph.CloseInputStream("frame").ok());
@@ -938,7 +938,7 @@ TEST_F(WindowsD3D11RemoteTensorFixture, OvmsCapiInferenceWithD3D11Nv12InCalculat
                                  "frame", ::mediapipe::MakePacket<::mediapipe::GstVideoFramePacket>(
                                               std::move(frame))
                                               .At(::mediapipe::Timestamp(frameIndex)))
-                            .ok());
+                    .ok());
             ::mediapipe::Packet output;
             ASSERT_TRUE(poller.Next(&output));
             const auto calculatorStop = Clock::now();
@@ -946,7 +946,7 @@ TEST_F(WindowsD3D11RemoteTensorFixture, OvmsCapiInferenceWithD3D11Nv12InCalculat
             if (frameIndex >= warmupFrames) {
                 calculatorMs.push_back(std::chrono::duration<double, std::milli>(
                     calculatorStop - calculatorStart)
-                                           .count());
+                        .count());
             }
         }
         ASSERT_TRUE(graph.CloseInputStream("frame").ok());

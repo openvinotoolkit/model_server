@@ -790,8 +790,8 @@ imp_status_t linux_video_open(imp_video_stream_t** stream,
         chrono::duration<double, std::milli>(end - start).count();
 
     const char* decode_mode = want_va_surface ? "VA-API/GPU surface"
-                                              : use_va ? "VA-API/GPU"
-                                                       : "CPU";
+                              : use_va        ? "VA-API/GPU"
+                                              : "CPU";
     for (size_t i = 0; i < s->branches.size(); i++) {
         const auto& b = s->branches[i];
         std::cout << "[linux_video_open] Branch " << i
