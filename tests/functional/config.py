@@ -99,7 +99,7 @@ language_models_enabled = get_bool("TT_LANGUAGE_MODELS_ENABLED", True)
 mediapipe_disable = bool(get_int("MEDIAPIPE_DISABLE", 0))
 
 # Kept for external test suites; Python support is always enabled.
-python_disable = False
+python_disable = False  # pylint: disable=invalid-name
 
 """ TT_WIN_PY_VERSION - Python version for virtualenv on Windows OS """
 windows_python_version = os.environ.get("TT_WIN_PY_VERSION", "3.12")
