@@ -336,9 +336,12 @@ RUN rm -f /usr/lib64/cmake/OpenSSL/OpenSSLConfig.cmake
 # Builds unit tests together with ovms server in one step
 # It speeds up CI when tests are executed outside of the image building
 # hadolint ignore=SC2046
-RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms \
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} $(if [ "$VERBOSE_LOGS" == "ON" ]; then echo --subcommands --verbose_failures --noshow_progress; fi) //src:ovms \
     //src/python:libovmspython //src/python:libpython_calculators \
-    $(if [ "$OPTIMIZE_BUILDING_TESTS" == "1" ] ; then echo -n "//src:ovms_test //src:python_runtime_library_test"; fi)
+    $(if [ "$OPTIMIZE_BUILDING_TESTS" == "1" ] ; then echo -n "//src:ovms_test //src:python_runtime_library_test"; fi) 2>&1 | tee /ovms/linux_build.log; \
+    build_status=$?; \
+    gzip -1 /ovms/linux_build.log || exit $?; \
+    exit "$build_status"
 
 # espeak-ng is built as a separate step, independent of the OVMS binary.
 # Set ESPEAK=0 to skip the espeak build.
