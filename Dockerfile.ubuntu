@@ -455,13 +455,13 @@ RUN apt-get update ; \
             curl -fL -O https://github.com/intel/linux-npu-driver/releases/download/v1.38.0/linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2604.tar.gz && \
             echo "83685e6d92f4db1ca65e442846d487c7feb1335634b33994292ceb38f933bcc7  linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2604.tar.gz" | sha256sum -c - && \
             tar -xf linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2604.tar.gz && \
-            curl -fL -O https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20260830T100000Z/pool/main/l/level-zero-loader/libze1_1.32.0-1~26.04~ppa1_amd64.deb && \
+            curl --retry 5 --retry-all-errors --retry-delay 2 -fL -O https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20260830T100000Z/pool/main/l/level-zero-loader/libze1_1.32.0-1~26.04~ppa1_amd64.deb && \
             echo "ddd80bf4c5cef21716bc1d7370cc055dc8803451c6e644a98d3dd534d91bc1b2  libze1_1.32.0-1~26.04~ppa1_amd64.deb" | sha256sum -c - || exit 1 ; \
         else \
             curl -fL -O https://github.com/intel/linux-npu-driver/releases/download/v1.38.0/linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2404.tar.gz && \
             echo "1efcd4b60c22abee751d8f2705962cbcc2a569de45c7e0e670cf08afbfcdc1d2  linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2404.tar.gz" | sha256sum -c - && \
             tar -xf linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2404.tar.gz && \
-            curl -fL -O https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20260830T100000Z/pool/main/l/level-zero-loader/libze1_1.32.0-1~24.04~ppa1_amd64.deb && \
+            curl --retry 5 --retry-all-errors --retry-delay 2 -fL -O https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20260830T100000Z/pool/main/l/level-zero-loader/libze1_1.32.0-1~24.04~ppa1_amd64.deb && \
             echo "d4001dc474d3cb74ded50a449b9f646cfdfbb31e69e70b8af38f2d18273dfce1  libze1_1.32.0-1~24.04~ppa1_amd64.deb" | sha256sum -c - || exit 1 ; \
         fi ; \
         dpkg -i ./*.deb || exit 1; rm -Rf /tmp/npu_deps ; \
