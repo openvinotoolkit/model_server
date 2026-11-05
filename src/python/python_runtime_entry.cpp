@@ -17,6 +17,7 @@
 #include "../module.hpp"
 #include "pythoninterpretermodule.hpp"
 #include "python_runtime_env.hpp"
+#include "python_runtime_path.hpp"
 
 #include <cstdlib>
 #include <filesystem>
@@ -75,13 +76,12 @@ bool ensureInterpreterInitialized(std::string& details) {
     if (!validateEnvPaths(details)) {
         return false;
     }
-    if (Py_IsInitialized()) {
-        return true;
-    }
-
     try {
-        py::initialize_interpreter();
-        PyEval_SaveThread();
+        if (!Py_IsInitialized()) {
+            py::initialize_interpreter();
+            PyEval_SaveThread();
+        }
+        ovms::addPackagedPythonPath();
         return true;
     } catch (const py::error_already_set& e) {
         details = e.what();
@@ -208,6 +208,7 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_validatePythonEnvironment(const char*
         }
         {
             py::gil_scoped_acquire acquire;
+            ovms::addPackagedPythonPath();
             // Validate that OVMS Python bindings are importable and executable.
             py::module_::import("pyovms");
         }
@@ -246,6 +247,28 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_ensurePythonInterpreterInitialized(co
 
     if (errorMessage != nullptr) {
         setRuntimeOutput(std::string(PY_RUNTIME_INIT_ERROR_PREFIX) + details, errorMessage);
+    }
+    return false;
+}
+
+extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_ensureChatTemplateRuntimeInitialized(const char** errorMessage) {
+    if (!OVMS_ensurePythonInterpreterInitialized(errorMessage)) {
+        return false;
+    }
+
+    py::gil_scoped_acquire acquire;
+    try {
+        py::module_::import("json");
+        py::module_::import("pathlib");
+        py::module_::import("datetime");
+        py::module_::import("jinja2");
+        py::module_::import("jinja2.sandbox");
+        py::module_::import("jinja2.ext");
+        return true;
+    } catch (const std::exception& error) {
+        setRuntimeOutput(error.what(), errorMessage);
+    } catch (...) {
+        setRuntimeOutput("Failed to initialize Python chat template dependencies", errorMessage);
     }
     return false;
 }
@@ -373,11 +396,6 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_createPreparedChatTemplateRuntime(
                     with open(tool_use_template_file, "r", encoding="utf-8") as f:
                         tool_chat_template = f.read()
 
-                chat_template_jinja_file = Path(models_path) / "chat_template.jinja"
-                if chat_template_jinja_file.is_file():
-                    with open(chat_template_jinja_file, "r", encoding="utf-8") as f:
-                        chat_template = f.read()
-
                 prepared_chat_template = jinja_env.from_string(chat_template)
                 prepared_tool_template = jinja_env.from_string(tool_chat_template) if tool_chat_template is not None else prepared_chat_template
             except Exception as e:
@@ -448,11 +466,12 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_applyPreparedChatTemplateRuntime(
             "bos_token"_a = prepared->bosToken,
             "eos_token"_a = prepared->eosToken);
 
+        // TODO: Group chat-template runtime logging in a follow-up change.
+        SPDLOG_DEBUG("Applying chat template via Python Jinja renderer");
         py::exec(R"(
             import json
             output = ""
             error = ""
-            print("OVMS: prepared Python Jinja renderer executing", flush=True)
             try:
                 request_json = json.loads(request_body)
                 messages = request_json["messages"]

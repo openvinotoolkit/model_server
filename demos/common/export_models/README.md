@@ -105,17 +105,6 @@ Supported poolings: `LAST`, `MEAN`, `CLS` (default).
 python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --pooling LAST --weight-format fp16 --config_file_path models/config_all.json
 ```
 
-#### Embeddings with `sentence_transformers` library
-Some embedding models require special handling during export. For example:
-```console
-python export_model.py embeddings_ov --source_model nomic-ai/nomic-embed-text-v1.5 --extra_quantization_params "--library sentence_transformers" --pooling MEAN --weight-format fp16 --config_file_path models/config_all.json
-```
-Known models that require it:
-- Alibaba-NLP/gte-large-en-v1.5
-- nomic-ai/nomic-embed-text-v1.5
-
-
-
 #### With Input Truncation
 By default, embeddings endpoint returns an error when the input exceed the maximum model context length.
 It is possible to change the behavior to truncate prompts automatically to fit the model. Add `--truncate` option in the export command.

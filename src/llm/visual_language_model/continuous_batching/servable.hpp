@@ -40,7 +40,7 @@ class VisualLanguageModelServable : public ContinuousBatchingServable {
 public:
     VisualLanguageModelServable() {
         properties = std::make_shared<VisualLanguageModelServableProperties>();
-        properties->inputProcessorContext.config.isVLM = true;
+        properties->inputProcessorContext.config.supportsVisualInputs = true;
     }
 
     // Overriding ContinuousBatchingServable method

@@ -18,6 +18,8 @@
 
 #include "src/audio/text_to_speech/t2s_calculator.pb.h"
 
+#include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <memory>
 #include <mutex>
@@ -31,14 +33,25 @@ class Text2SpeechPipeline;
 }
 
 namespace ovms {
+inline std::string toLowerCopy(const std::string& value) {
+    std::string lowered = value;
+    std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char ch) {
+        return static_cast<char>(std::tolower(ch));
+    });
+    return lowered;
+}
+
 class TtsServable {
 public:
     std::shared_ptr<ov::genai::Text2SpeechPipeline> ttsPipeline;
     std::unordered_map<std::string, ov::Tensor> voices;
+    std::unordered_map<std::string, std::string> builtinSpeakerAliases;
     std::mutex ttsPipelineMutex;
     std::filesystem::path parsedModelsPath;
 
     TtsServable(const std::string& modelDir, const std::string& targetDevice, const google::protobuf::RepeatedPtrField<mediapipe::T2sCalculatorOptions_SpeakerEmbeddings>& graphVoices, const std::string& pluginConfig, const std::string& graphPath);
+
+    static std::unordered_map<std::string, std::string> loadBuiltinSpeakerAliases(const std::filesystem::path& configPath);
 };
 
 using TtsServableMap = std::unordered_map<std::string, std::shared_ptr<TtsServable>>;

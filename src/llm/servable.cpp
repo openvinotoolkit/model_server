@@ -173,7 +173,7 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
     }
 
     {
-        auto ovmsCallback = [& ctx = *executionContext](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
+        auto ovmsCallback = [&ctx = *executionContext](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
             ctx.deltaChannel.push(std::move(delta), isLast);
             return ov::genai::StreamingStatus::RUNNING;
         };
@@ -201,21 +201,48 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
 }
 
 absl::Status GenAiServable::validateInputCompatibility(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
-    // LM servables reject requests containing image content. Images are preserved
-    // as JsonContainer arrays in chatHistory. Reject if any message's content array
-    // contains an image_url entry.
-    if (!getProperties()->inputProcessorContext.config.isVLM &&
-        std::holds_alternative<ov::genai::ChatHistory>(executionContext->inputRequest.input)) {
+    const bool chatInput = std::holds_alternative<ov::genai::ChatHistory>(executionContext->inputRequest.input);
+
+    // Reject chat requests if the chat template is not available.
+    if (chatInput && getProperties()->chatTemplateStatus != ChatTemplateStatus::AVAILABLE) {
+        std::string reason;
+        switch (getProperties()->chatTemplateStatus) {
+        case ChatTemplateStatus::MISSING:
+            reason = "the model has no chat template";
+            break;
+        case ChatTemplateStatus::LOAD_FAILED:
+            reason = "the chat template could not be loaded";
+            break;
+        case ChatTemplateStatus::INCOMPATIBLE:
+            reason = "the chat template is incompatible with the selected engine";
+            break;
+        case ChatTemplateStatus::NOT_CHECKED:
+            reason = "chat template initialization has not completed";
+            break;
+        case ChatTemplateStatus::AVAILABLE:
+            break;
+        }
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Rejecting chat request: {}", reason);
+        return absl::InvalidArgumentError("Chat requests are unavailable because " + reason + ".");
+    }
+
+    // Multimodal entries are preserved as JsonContainer arrays in chatHistory until
+    // compatibility is checked.
+    if (chatInput) {
+        const auto& inputProcessingConfig = getProperties()->inputProcessorContext.config;
         const auto& ch = std::get<ov::genai::ChatHistory>(executionContext->inputRequest.input);
         for (size_t i = 0; i < ch.size(); i++) {
             const auto content = ch[i]["content"];
             if (content.is_array()) {
                 for (size_t j = 0; j < content.size(); j++) {
                     const auto type = content[j]["type"].as_string().value_or("");
-                    if (type == "image_url") {
+                    if (type == "input_audio" && !inputProcessingConfig.audioInputConfig.has_value()) {
+                        return absl::Status(absl::StatusCode::kInvalidArgument, "This servable does not support audio input");
+                    }
+                    if (!inputProcessingConfig.supportsVisualInputs && type == "image_url") {
                         return absl::Status(absl::StatusCode::kInvalidArgument, "This servable supports only text input, but image_url has been provided");
                     }
-                    if (type == "video_url") {
+                    if (!inputProcessingConfig.supportsVisualInputs && type == "video_url") {
                         return absl::Status(absl::StatusCode::kInvalidArgument, "This servable supports only text input, but video_url has been provided");
                     }
                 }

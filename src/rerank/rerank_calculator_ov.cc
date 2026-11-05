@@ -314,6 +314,10 @@ public:
         if (!status.ok()) {
             return status;
         }
+        status = handler.validateDocumentsCanBeRanked();
+        if (!status.ok()) {
+            return status;
+        }
 
         try {
             // Prepare inputs for rerank model

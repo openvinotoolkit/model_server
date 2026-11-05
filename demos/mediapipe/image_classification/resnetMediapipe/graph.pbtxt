@@ -34,11 +34,11 @@ node {
     [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
         tag_to_input_tensor_names {
           key: "B"
-          value: "0"
+          value: "image"
         }
         tag_to_output_tensor_names {
           key: "A"
-          value: "1463"
+          value: "output"
         }
     }
   }

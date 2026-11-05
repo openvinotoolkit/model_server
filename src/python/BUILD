@@ -209,6 +209,13 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "python_runtime_path",
+    hdrs = ["python_runtime_path.hpp"],
+    deps = PYBIND_DEPS,
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "libovmspythonmodule",
     hdrs = [
         "pythoninterpretermodule.hpp",
@@ -216,6 +223,7 @@ ovms_cc_library(
     ],
     srcs = ["pythoninterpretermodule.cpp",],
     deps = PYBIND_DEPS + [
+        ":python_runtime_path",
         "//src:cpp_headers", # TODO make ovmslib depend on that
         "//src:libovmslogging",
         "//src:libovmsstatus",
@@ -241,6 +249,7 @@ ovms_cc_library(
     deps = PYBIND_DEPS + [
         "libovmspythonmodule",
         "python_runtime_env",
+        ":python_runtime_path",
         "//src:libovmslogging",
         "//src:libovmsstatus",
         "//src:libovms_module",
@@ -261,6 +270,7 @@ ovms_cc_library(
     ],
     srcs = ["pythoninterpretermodule.cpp",],
     deps = PYBIND_DEPS + [
+        ":python_runtime_path",
         "//src:cpp_headers",
         "//src:libovmslogging",
         "//src:libovmsstatus",
@@ -286,6 +296,7 @@ cc_test(
     copts = COPTS_TESTS,
     deps = PYBIND_DEPS + [
         ":pythonbackend",
+        ":python_runtime_path",
         "//src:cpp_headers",
         "//src:libovmslogging",
         "//src:libovmsstatus",
@@ -312,6 +323,7 @@ cc_test(
     copts = COPTS_TESTS,
     deps = PYBIND_DEPS + [
         ":pythonbackend",
+        ":python_runtime_path",
         "//src:cpp_headers",
         "//src:libovmslogging",
         "//src:libovmsstatus",
@@ -335,6 +347,7 @@ cc_test(
     copts = COPTS_TESTS,
     deps = PYBIND_DEPS + [
         ":pythonbackend",
+        ":python_runtime_path",
         "//src:cpp_headers",
         "//src:libovmslogging",
         "//src:libovmsstatus",
@@ -369,6 +382,7 @@ cc_binary(
     ],
     deps = PYBIND_DEPS + [
         "python_runtime_env",
+        ":python_runtime_path",
         "//src:libovmslogging",
         "//src:libovmsstatus",
         "//src:libovms_module",

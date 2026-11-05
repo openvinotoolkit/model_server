@@ -57,10 +57,10 @@ GenAiServable support.
 This header contains the interface for GenAiServable and its properties and execution context.
 All classes in this file should not be instantiated, but rather extended by derived classes.
 
-GenAiServable is an interface for derived classes that implement logic for specific types of pipelines. 
+GenAiServable is an interface for derived classes that implement logic for specific types of pipelines.
 It uses both GenAiServableProperties and GenAiServableExecutionContext (or rather their extensions) to facilitate implementation.
 
-GenAiServableProperties is a container for data initialized when the servable is loaded and it is reused 
+GenAiServableProperties is a container for data initialized when the servable is loaded and it is reused
 for every request, in contrary to GenAiServableExecutionContext that is created multiple times during servable lifespan.
 GenAiServableProperties are initialized by servable initializer (see servable_initializer.hpp).
 
@@ -73,12 +73,6 @@ Note that GenAiServableExecutionContext pointer is the only parameter most of th
 enum class GenerationPhase {
     INPUT_TOKEN_PROCESSING,
     OUTPUT_TOKEN_PROCESSING,
-};
-
-enum class ChatTemplateEngine {
-    NONE,
-    MINJA,  // Use GenAI's apply_chat_template (minja-based)
-    JINJA,  // Use Python Jinja2 module for chat template processing
 };
 
 // Thread-safe channel for parsed streaming deltas.
@@ -181,6 +175,26 @@ struct LegacyServableExecutionContextBase : public GenAiServableExecutionContext
 // Defined in servable.cpp. Both Legacy servable overrides delegate here.
 absl::Status prepareLegacyPartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
+enum class ChatTemplateEngine {
+    NONE,
+    MINJA,  // Use GenAI's apply_chat_template (minja-based)
+    JINJA,  // Use Python Jinja2 module for chat template processing
+};
+
+enum class ChatTemplateStatus {
+    NOT_CHECKED,
+    AVAILABLE,
+    MISSING,
+    LOAD_FAILED,
+    INCOMPATIBLE,
+};
+
+enum class ChatTemplateSource {
+    NONE,
+    CHAT_TEMPLATE_JINJA,
+    GENAI_TOKENIZER,
+};
+
 struct GenAiServableProperties {
     // General configuration
     std::string modelsPath;
@@ -192,7 +206,8 @@ struct GenAiServableProperties {
     ov::AnyMap tokenizerPluginConfig;
     bool enableToolGuidedGeneration = false;
     ChatTemplateEngine chatTemplateEngine = ChatTemplateEngine::NONE;
-    bool chatTemplateEngineExplicit = false;
+    ChatTemplateStatus chatTemplateStatus = ChatTemplateStatus::NOT_CHECKED;
+    ChatTemplateSource chatTemplateSource = ChatTemplateSource::NONE;
     // Chat template analysis
     ChatTemplateCaps chatTemplateCaps;
     // Sampling
