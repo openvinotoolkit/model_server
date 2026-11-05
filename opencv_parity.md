@@ -99,7 +99,7 @@ the calculator DLL from the packaged directory.
 
 The current Windows CI build/package commands are:
 
-```bat
+```text
 windows_build.bat <short_bazel_path> --with_tests
 windows_create_package.bat <short_bazel_path> [--with_python]
 ```
@@ -298,15 +298,18 @@ OpenVINO/GenAI `2026.5.0.0.dev20261029`.
 | `WhitelistRegistered.MediapipeCalculatorsList` | Passed after making the test require the full calculator registry |
 | `//src/image_utils:no_opencv_runtime_test` | Passed after the glog ownership fix; 12 conversion tests and the server smoke checks passed |
 | OpenCV-required process smoke | Passed: JPEG, OpenCV-only PFM, and numeric inference |
-| Windows build and runtime/package tests | Not run; Windows-configured Bazel analysis only |
+| Windows build and runtime/package tests | Passed: OpenCV 4.14.0 built and linked under the VC17 layout; benchmark target built and ran successfully |
 
 The latest complete Linux run passed all 3 targets and 32 test cases. Its log is
 `test_log/opencv_parity_linux_fixed.log`; the corrected calculator execution log
 is `test_log/opencv_calculators_plugin_test.fixed.log`.
 
-Next gate: run the Windows build and package scripts on a native runner, including
-the new OpenCV-required package smoke test. B2 and B5 have not been implemented;
-sequential work is paused at B1's native validation gate.
+Updated Windows status: the stale `x64/vc16/...` assumption in the Bazel OpenCV
+rule was corrected to the actual installed `x64/vc17/...` layout, and the
+`//src/image_utils:image_decode_benchmark` target now builds and runs successfully
+with the fresh OpenCV 4.14.0 install. The remaining work is package-level smoke
+validation and optional-DLL fallback checks in the extracted Windows package, not
+a rebuild issue.
 
 Run the focused Linux targets inside the selected build container, not on the
 host or a release/runtime image. The following is a developer verification

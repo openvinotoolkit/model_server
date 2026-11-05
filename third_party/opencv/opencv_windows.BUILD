@@ -35,12 +35,12 @@ config_setting(
 cc_import(
     name = "opencv_import_lib",
     interface_library = select({
-        ":opt_build": "x64/vc16/lib/opencv_world" + OPENCV_VERSION + ".lib",
-        ":dbg_build": "x64/vc16/lib/opencv_world" + OPENCV_VERSION + "d.lib",
+        ":opt_build": "x64/vc17/lib/opencv_world" + OPENCV_VERSION + ".lib",
+        ":dbg_build": "x64/vc17/lib/opencv_world" + OPENCV_VERSION + "d.lib",
     }),
     shared_library = select({
-        ":opt_build": "x64/vc16/bin/opencv_world" + OPENCV_VERSION + ".dll",
-        ":dbg_build": "x64/vc16/bin/opencv_world" + OPENCV_VERSION + "d.dll",
+        ":opt_build": "x64/vc17/bin/opencv_world" + OPENCV_VERSION + ".dll",
+        ":dbg_build": "x64/vc17/bin/opencv_world" + OPENCV_VERSION + "d.dll",
     }),
     visibility = ["//visibility:public"],
 )

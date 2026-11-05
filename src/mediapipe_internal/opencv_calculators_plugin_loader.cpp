@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include "opencv_calculators_plugin_loader.hpp"
 
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <mutex>
@@ -32,6 +33,7 @@
 #include <unistd.h>
 #elif _WIN32
 #include <windows.h>
+#include "google/protobuf/extension_set.h"
 #include "mediapipe/calculators/image/image_cropping_calculator.pb.h"
 #include "mediapipe/calculators/image/image_transformation_calculator.pb.h"
 #include "mediapipe/calculators/image/opencv_encoded_image_to_image_frame_calculator.pb.h"
@@ -61,15 +63,46 @@ PluginState& pluginState() {
 }
 
 #ifdef _WIN32
+template <typename MessageType>
+bool isOpenCvCalculatorOptionDescriptorRegistered() {
+    ::google::protobuf::internal::GeneratedExtensionFinder finder(
+        &::mediapipe::CalculatorOptions::default_instance());
+    ::google::protobuf::internal::ExtensionInfo info;
+    return finder.Find(MessageType::kExtFieldNumber, &info);
+}
+
+template <typename MessageType>
+void registerOpenCvCalculatorOptionDescriptor() {
+    if (isOpenCvCalculatorOptionDescriptorRegistered<MessageType>()) {
+        return;
+    }
+    // The plugin is loaded from a DLL, so the generated .pb.cc static init may
+    // register the extension against a plugin-local protobuf runtime rather than
+    // the host process. Register each extension explicitly against the host's
+    // CalculatorOptions default instance before parsing any graph config.
+    ::google::protobuf::internal::ExtensionSet::RegisterMessageExtension(
+        &::mediapipe::CalculatorOptions::default_instance(),
+        MessageType::kExtFieldNumber,
+        11,
+        false,
+        false,
+        &MessageType::default_instance(),
+        nullptr,
+        ::google::protobuf::internal::LazyAnnotation::kUndefined);
+}
+
 void retainOpenCvCalculatorOptionDescriptors() {
-    (void)mediapipe::ImageCroppingCalculatorOptions::ext.number();
-    (void)mediapipe::ImageTransformationCalculatorOptions::ext.number();
-    (void)mediapipe::OpenCvEncodedImageToImageFrameCalculatorOptions::ext.number();
-    (void)mediapipe::OpenCvImageEncoderCalculatorOptions::ext.number();
-    (void)mediapipe::SegmentationSmoothingCalculatorOptions::ext.number();
-    (void)mediapipe::WarpAffineCalculatorOptions::ext.number();
-    (void)mediapipe::ImageToTensorCalculatorOptions::ext.number();
-    (void)mediapipe::AnnotationOverlayCalculatorOptions::ext.number();
+    static std::once_flag registrationOnce;
+    std::call_once(registrationOnce, []() {
+        registerOpenCvCalculatorOptionDescriptor<mediapipe::ImageCroppingCalculatorOptions>();
+        registerOpenCvCalculatorOptionDescriptor<mediapipe::ImageTransformationCalculatorOptions>();
+        registerOpenCvCalculatorOptionDescriptor<mediapipe::OpenCvEncodedImageToImageFrameCalculatorOptions>();
+        registerOpenCvCalculatorOptionDescriptor<mediapipe::OpenCvImageEncoderCalculatorOptions>();
+        registerOpenCvCalculatorOptionDescriptor<mediapipe::SegmentationSmoothingCalculatorOptions>();
+        registerOpenCvCalculatorOptionDescriptor<mediapipe::WarpAffineCalculatorOptions>();
+        registerOpenCvCalculatorOptionDescriptor<mediapipe::ImageToTensorCalculatorOptions>();
+        registerOpenCvCalculatorOptionDescriptor<mediapipe::AnnotationOverlayCalculatorOptions>();
+    });
 }
 #endif
 
@@ -198,10 +231,11 @@ bool loadOpenCvCalculatorsPluginFromCandidates(const std::vector<std::string>& c
         HMODULE handle = LoadLibraryExA(candidate.c_str(), nullptr,
             LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
         if (handle == nullptr) {
+            const DWORD lastError = GetLastError();
             if (!state.error.empty()) {
                 state.error += "; ";
             }
-            state.error += candidate + ": Windows loader error " + std::to_string(GetLastError());
+            state.error += candidate + ": Windows loader error " + std::to_string(lastError);
             continue;
         }
 

@@ -18,6 +18,7 @@
 
 #include <filesystem>
 #include <string>
+#include <vector>
 
 #ifdef _WIN32
 #ifndef NOMINMAX
@@ -32,24 +33,41 @@
 #pragma warning(pop)
 
 namespace ovms {
+namespace {
 
-// Requires an initialized interpreter. Existing search paths retain precedence.
-inline void addPackagedPythonPath(const std::filesystem::path& executablePath) {
-#ifdef _WIN32
-    const auto pythonDirectory = executablePath.parent_path() / "python";
-#else
-    const auto pythonDirectory = (executablePath.parent_path() / "../lib/python").lexically_normal();
-#endif
-    if (!std::filesystem::is_directory(pythonDirectory)) {
+inline void appendPythonPathIfPresent(pybind11::list& paths, const std::filesystem::path& path) {
+    if (!std::filesystem::is_directory(path)) {
         return;
     }
 
-    pybind11::gil_scoped_acquire acquire;
-    pybind11::list paths = pybind11::module_::import("sys").attr("path");
-    const pybind11::str pythonPath(pythonDirectory.string());
+    const pybind11::str pythonPath(path.string());
     if (!paths.contains(pythonPath)) {
         paths.append(pythonPath);
     }
+}
+
+}  // namespace
+
+// Requires an initialized interpreter. Existing search paths retain precedence.
+inline void addPackagedPythonPath(const std::filesystem::path& executablePath) {
+    pybind11::gil_scoped_acquire acquire;
+    pybind11::list paths = pybind11::module_::import("sys").attr("path");
+
+#ifdef _WIN32
+    const std::vector<std::filesystem::path> candidateDirectories = {
+        executablePath.parent_path() / "python",
+        executablePath.parent_path() / "python" / "binding",
+        executablePath.parent_path() / "src" / "python",
+        executablePath.parent_path() / "src" / "python" / "binding",
+    };
+
+    for (const auto& candidate : candidateDirectories) {
+        appendPythonPathIfPresent(paths, candidate);
+    }
+#else
+    const auto pythonDirectory = (executablePath.parent_path() / "../lib/python").lexically_normal();
+    appendPythonPathIfPresent(paths, pythonDirectory);
+#endif
 }
 
 // Add Python modules from the package-relative directory for the current platform.
