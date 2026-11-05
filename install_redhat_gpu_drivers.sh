@@ -37,7 +37,7 @@ download_verified_rpm() {
     wget -q -O "$package" "$url"
     if ! printf '%s  %s\n' "$checksum" "$package" | sha256sum --check --status -; then
         echo "Error: SHA-256 checksum mismatch for $filename." >&2
-        return 1
+        exit 1
     fi
     downloaded_rpms+=("$package")
 }
