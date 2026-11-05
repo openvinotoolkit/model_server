@@ -18,8 +18,14 @@
 #include <limits>
 #include <random>
 #include <string>
+#include <stdexcept>
+#include <vector>
 #include <openvino/genai/generation_config.hpp>
+#include "src/port/rapidjson_document.hpp"
+#include "src/port/rapidjson_stringbuffer.hpp"
+#include "src/port/rapidjson_writer.hpp"
 #include "base_generation_config_builder.hpp"
+#include "output_parsing_config.hpp"
 
 namespace ovms {
 
@@ -134,6 +140,49 @@ void BaseGenerationConfigBuilder::setStructuralTagsConfig(const ov::genai::Struc
     }
 }
 
+bool BaseGenerationConfigBuilder::requiresNamedToolCall(const OpenAIRequest& request) {
+    return !request.toolChoice.empty() && request.toolChoice != "auto" && request.toolChoice != "none" && request.toolChoice != "required";
+}
+
+bool BaseGenerationConfigBuilder::shouldApplyToolGuidance(const OpenAIRequest& request) const {
+    return supportsToolGuidance() && !request.toolNameSchemaMap.empty() &&
+           (enableToolGuidedGeneration || request.toolChoice == "required" || requiresNamedToolCall(request));
+}
+
+bool BaseGenerationConfigBuilder::shouldApplyResponseFormatGuidance(const OpenAIRequest& request) {
+    return request.responseFormat.has_value();
+}
+
+// Accepts tags built by either the common format helper or custom logic (e.g. Phi4's array schema),
+// applying the same call-count policy regardless of how the grammar was constructed.
+void BaseGenerationConfigBuilder::setToolGrammar(const OpenAIRequest& request, const std::shared_ptr<ov::genai::StructuredOutputConfig::TriggeredTags>& tags) {
+    if (request.responseFormat) {
+        config.structured_output_config.emplace();
+    }
+    const bool namedChoice = requiresNamedToolCall(request);
+    tags->at_least_one = request.toolChoice == "required" || namedChoice;
+    tags->stop_after_first = namedChoice;
+    setStructuralTagsConfig(tags);
+}
+
+ov::genai::StructuredOutputConfig::StructuralTag BaseGenerationConfigBuilder::buildToolArgumentGrammar(const std::string& schema) {
+    return ov::genai::StructuredOutputConfig::JSONSchema(schema);
+}
+
+// Covers formats expressible as a trigger and begin/name/arguments/end markers; ToolCallFormat
+// supplies the differences between Hermes/Llama/Devstral without duplicating grammar assembly.
+void BaseGenerationConfigBuilder::setTaggedToolGrammar(const OpenAIRequest& request, const ToolCallFormat& format) {
+    using SOC = ov::genai::StructuredOutputConfig;
+    auto tags = std::make_shared<SOC::TriggeredTags>();
+    tags->triggers.push_back(format.trigger);
+    for (const auto& [name, schema] : request.toolNameSchemaMap) {
+        const std::string encodedName = format.encodeFunctionNameAsJson ? SOC::format_for_json(name) : name;
+        tags->tags.emplace_back(format.begin + encodedName + format.arguments,
+            buildToolArgumentGrammar(schema.stringRepr), format.end);
+    }
+    setToolGrammar(request, tags);
+}
+
 void BaseGenerationConfigBuilder::addStopString(const std::string& decodedStopString) {
     config.stop_strings.insert(decodedStopString);
 }
@@ -146,6 +195,52 @@ void BaseGenerationConfigBuilder::validateStructuredOutputConfig(ov::genai::Toke
 
 void BaseGenerationConfigBuilder::unsetStructuredOutputConfig() {
     config.structured_output_config.reset();
+}
+
+void BaseGenerationConfigBuilder::applyToolGuidance(const OpenAIRequest&) {
+}
+
+void BaseGenerationConfigBuilder::configureStructuredGeneration(const OpenAIRequest& request, const ReasoningGenerationContext& reasoningContext, const std::string& reasoningParserName) {
+    if (shouldApplyToolGuidance(request)) {
+        applyToolGuidance(request);
+    } else if (shouldApplyResponseFormatGuidance(request)) {
+        applyResponseFormatGuidance(request, reasoningContext, reasoningParserName);
+    } else {
+        // No request-specific guidance; preserve model defaults.
+    }
+}
+
+void BaseGenerationConfigBuilder::applyResponseFormatGuidance(const OpenAIRequest& request, const ReasoningGenerationContext& reasoningContext, const std::string& reasoningParserName) {
+    using SOC = ov::genai::StructuredOutputConfig;
+    config.structured_output_config.emplace();
+    SOC::StructuralTag answerFormat = *request.responseFormat;
+    // TODO: Hardcoded for qwen3 now - should be generalized
+    const bool shouldAllowReasoningWithResponseFormat = reasoningParserName == "qwen3" && !reasoningContext.completedInPrompt &&
+                                                        !reasoningContext.begin.empty() && !reasoningContext.end.empty() &&
+                                                        (reasoningContext.implicitStart || request.enableThinking.value_or(true));
+    if (shouldAllowReasoningWithResponseFormat) {
+        rapidjson::Document format;
+        format.Parse(request.responseFormat->c_str());
+        if (format.HasParseError() || !format.IsObject() || !format.HasMember("format")) {
+            throw ResponseFormatInvariantError("Expected response format converter to produce a structural tag with a format member");
+        }
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        format["format"].Accept(writer);
+        answerFormat = std::string(buffer.GetString(), buffer.GetSize());
+        auto reasoningTag = std::make_shared<SOC::Tag>(
+            reasoningContext.implicitStart ? std::string{} : reasoningContext.begin,
+            SOC::AnyText{}, reasoningContext.end);
+        auto sequence = std::make_shared<SOC::Concat>(std::vector<SOC::StructuralTag>{reasoningTag, answerFormat});
+        if (reasoningContext.implicitStart) {
+            // Allow free-form until reasoning end marker, then enforce the structured answer format
+            answerFormat = sequence;
+        } else {
+            // Allow either free-form reasoning followed by the structured answer format, or just the structured answer format
+            answerFormat = std::make_shared<SOC::Union>(std::vector<SOC::StructuralTag>{answerFormat, sequence});
+        }
+    }
+    setStructuralTagsConfig(answerFormat);
 }
 
 void BaseGenerationConfigBuilder::parseConfigFromRequest(const OpenAIRequest& request) {
@@ -232,12 +327,5 @@ void BaseGenerationConfigBuilder::parseConfigFromRequest(const OpenAIRequest& re
         config.branching_factor = request.branchingFactor.value();
     if (request.treeDepth.has_value())
         config.tree_depth = request.treeDepth.value();
-
-    // Response format handling
-    if (request.responseFormat.has_value()) {
-        ov::genai::StructuredOutputConfig structuredOutputConfig;
-        structuredOutputConfig.structural_tags_config = request.responseFormat.value();
-        config.structured_output_config = structuredOutputConfig;
-    }
 }
 }  // namespace ovms
