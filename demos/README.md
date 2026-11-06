@@ -64,7 +64,7 @@ Integrations <ovms_demos_integrations>
 |[Using input strings](universal-sentence-encoder/README.md)|Handling AI model with text as the model input.|
 |[Using output strings](image_classification_with_string_output/README.md)|Handling AI model with string output.|
 |[Natural Language Processing with BERT](bert_question_answering/python/README.md)|Provide a knowledge source and a query and use BERT model for question answering via gRPC API. This demo uses dynamic shape feature.|
-|[Benchmark App](benchmark/python/README.md)|Generate traffic and measure performance of the model served in OpenVINO Model Server.|
+|[Benchmark Clients](benchmark/README.md)|Generate traffic and measure performance of models served in OpenVINO Model Server.|
 
 ## MediaPipe
 | Demo | Description |

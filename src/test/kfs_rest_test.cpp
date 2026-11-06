@@ -94,6 +94,17 @@ public:
     void SetUp() override {
         handler = std::make_unique<HttpRestApiHandler>(*server, 5);
     }
+    ovms::Status getModelConfig(const std::string& path, rapidjson::Document& config) {
+        std::string response;
+        std::unordered_map<std::string, std::string> headers;
+        ovms::HttpResponseComponents responseComponents;
+        const ovms::Status status = handler->processRequest("GET", path, "", &headers, &response, responseComponents, nullptr, nullptr);
+        if (status.ok()) {
+            config.Parse(response.c_str());
+            EXPECT_FALSE(config.HasParseError());
+        }
+        return status;
+    }
     void TearDown() override {
         handler.reset();
     }
@@ -461,6 +472,83 @@ TEST_F(HttpRestApiHandlerTest, RegexParseReady) {
     ASSERT_EQ(comp.model_version, 1);
     ASSERT_EQ(comp.model_name, "dummy");
 }
+
+TEST_F(HttpRestApiHandlerTest, ModelConfigRoutes) {
+    const std::vector<std::string> paths{"/v2/models/dummy/config", "/v2/models/dummy/versions/1/config"};
+    for (const std::string& path : paths) {
+        ovms::HttpRequestComponents components;
+        ASSERT_EQ(handler->parseRequestComponents(components, "GET", path), StatusCode::OK);
+        EXPECT_EQ(components.type, ovms::KFS_GetModelConfig);
+        EXPECT_EQ(components.model_name, "dummy");
+        EXPECT_EQ(components.model_version, path.find("versions") == std::string::npos ? std::nullopt : std::optional<int64_t>{1});
+        EXPECT_EQ(handler->parseRequestComponents(components, "POST", path), StatusCode::REST_UNSUPPORTED_METHOD);
+    }
+}
+
+TEST_F(HttpRestApiHandlerTest, ModelConfigResponse) {
+    rapidjson::Document defaultConfig;
+    ASSERT_EQ(getModelConfig("/v2/models/dummy/config", defaultConfig), StatusCode::OK);
+    rapidjson::Document config;
+    ASSERT_EQ(getModelConfig("/v2/models/dummy/versions/1/config", config), StatusCode::OK);
+    EXPECT_EQ(config, defaultConfig);
+    EXPECT_STREQ(config["name"].GetString(), "dummy");
+    EXPECT_EQ(config["max_batch_size"].GetInt(), 0);
+    ASSERT_EQ(config["input"].Size(), 1);
+    EXPECT_STREQ(config["input"][0]["name"].GetString(), "b");
+    EXPECT_STREQ(config["input"][0]["data_type"].GetString(), "TYPE_FP32");
+    ASSERT_EQ(config["input"][0]["dims"].Size(), 2);
+    EXPECT_EQ(config["input"][0]["dims"][0].GetInt64(), 1);
+    EXPECT_EQ(config["input"][0]["dims"][1].GetInt64(), 10);
+    ASSERT_EQ(config["output"].Size(), 1);
+    EXPECT_STREQ(config["output"][0]["name"].GetString(), "a");
+    EXPECT_STREQ(config["output"][0]["data_type"].GetString(), "TYPE_FP32");
+    ASSERT_EQ(config["output"][0]["dims"].Size(), 2);
+    EXPECT_EQ(config["output"][0]["dims"][0].GetInt64(), 1);
+    EXPECT_EQ(config["output"][0]["dims"][1].GetInt64(), 10);
+}
+
+TEST_F(HttpRestApiHandlerTest, ModelConfigUnknownModelAndVersion) {
+    rapidjson::Document config;
+    EXPECT_EQ(getModelConfig("/v2/models/unknown/config", config), StatusCode::MODEL_NAME_MISSING);
+    EXPECT_EQ(getModelConfig("/v2/models/dummy/versions/999/config", config), StatusCode::MODEL_VERSION_MISSING);
+}
+
+TEST_F(HttpRestApiHandlerTest, ModelConfigInvalidRoutes) {
+    ovms::HttpRequestComponents components;
+    EXPECT_EQ(handler->parseRequestComponents(components, "GET", "/v2/models/dummy/versions/999999999999999999999999/config"), StatusCode::MODEL_VERSION_MISSING);
+    EXPECT_EQ(handler->parseRequestComponents(components, "GET", "/v2/models/dummy/versions/invalid/config"), StatusCode::REST_INVALID_URL);
+    EXPECT_EQ(handler->parseRequestComponents(components, "GET", "/v2/models/dummy/versions/-1/config"), StatusCode::REST_INVALID_URL);
+    EXPECT_EQ(handler->parseRequestComponents(components, "GET", "/v2/models/dummy/config/extra"), StatusCode::REST_INVALID_URL);
+    EXPECT_EQ(handler->parseRequestComponents(components, "GET", "/v2/models/%64ummy/config"), StatusCode::OK);
+    EXPECT_EQ(components.model_name, "dummy");
+}
+
+TEST_F(HttpRestApiHandlerWithDynamicModelTest, ModelConfigDynamicDimensions) {
+    rapidjson::Document config;
+    ASSERT_EQ(getModelConfig("/v2/models/dummy/config", config), StatusCode::OK);
+    ASSERT_EQ(config["input"][0]["dims"].Size(), 2);
+    EXPECT_EQ(config["input"][0]["dims"][0].GetInt64(), -1);
+    EXPECT_EQ(config["input"][0]["dims"][1].GetInt64(), -1);
+    ASSERT_EQ(config["output"][0]["dims"].Size(), 2);
+    EXPECT_EQ(config["output"][0]["dims"][0].GetInt64(), -1);
+    EXPECT_EQ(config["output"][0]["dims"][1].GetInt64(), -1);
+}
+
+TEST_F(HttpRestApiHandlerWithStringModelTest, ModelConfigBytesDatatype) {
+    rapidjson::Document config;
+    ASSERT_EQ(getModelConfig("/v2/models/string/config", config), StatusCode::OK);
+    EXPECT_STREQ(config["input"][0]["data_type"].GetString(), "TYPE_STRING");
+    EXPECT_STREQ(config["output"][0]["data_type"].GetString(), "TYPE_STRING");
+}
+
+#ifndef _WIN32
+TEST_F(HttpRestApiHandlerWithScalarModelTest, ModelConfigScalarDimensions) {
+    rapidjson::Document config;
+    ASSERT_EQ(getModelConfig("/v2/models/scalar/config", config), StatusCode::OK);
+    EXPECT_TRUE(config["input"][0]["dims"].Empty());
+    EXPECT_TRUE(config["output"][0]["dims"].Empty());
+}
+#endif
 
 TEST_F(HttpRestApiHandlerTest, RegexParseMetadataWithImplicitVersion) {
     std::string request = "/v2/models/dummy";
