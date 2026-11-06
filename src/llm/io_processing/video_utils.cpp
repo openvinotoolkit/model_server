@@ -219,6 +219,9 @@ absl::StatusOr<ov::Tensor> decodeVideoSource(const std::string& videoSource,
     if (fileSize == 0 || fileSize > maxFileSize || fileSize > static_cast<size_t>(std::numeric_limits<int64_t>::max())) {
         return absl::InvalidArgumentError("Encoded video source exceeds the allowed file size");
     }
+    if (std::fseek(input.get(), 0, SEEK_SET) != 0) {
+        return absl::InvalidArgumentError("Unable to read video source");
+    }
     EncodedVideoFile file{input.get(), fileSize};
     MP4D_demux_t mp4{};
     if (MP4D_open(&mp4, readVideoBytes, &file, static_cast<int64_t>(fileSize)) == 0) {
