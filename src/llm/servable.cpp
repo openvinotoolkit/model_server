@@ -13,9 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <cmath>
 #include <memory>
+#include <optional>
+#include <cstdlib>
 #include <stdexcept>
 #include <string>
+#include <string_view>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -37,6 +42,7 @@
 #include "../profiler.hpp"
 #include "apis/openai_completions.hpp"
 #include "apis/openai_responses.hpp"
+#include "apis/openai_transcriptions.hpp"
 #include "io_processing/generation_config_builder.hpp"
 #include "io_processing/input_processor.hpp"
 #include "llm_calculators_plugin_api.hpp"
@@ -46,6 +52,64 @@
 #include "../tokenize/tokenize_parser.hpp"
 
 namespace ovms {
+
+namespace {
+
+bool isTranscriptionEndpoint(const std::string& uri) {
+    return uri == "/v3/audio/transcriptions" ||
+           uri == "/v3/v1/audio/transcriptions" ||
+           uri == "/v1/audio/transcriptions";
+}
+
+absl::Status normalizeTranscriptionRequest(HttpPayload& payload) {
+    if (!payload.multipartParser || payload.multipartParser->hasParseError()) {
+        return absl::InvalidArgumentError("Failed to parse multipart data");
+    }
+    if (payload.multipartParser->getFieldByName("stream") == "true") {
+        return absl::InvalidArgumentError("Streaming is not supported for audio transcriptions in the LLM calculator");
+    }
+
+    const std::string model = payload.multipartParser->getFieldByName("model");
+    if (model.empty()) {
+        return absl::InvalidArgumentError("model is missing");
+    }
+    if (payload.multipartParser->getFileContentByFieldName("file").empty()) {
+        return absl::InvalidArgumentError("file is missing");
+    }
+
+    auto request = std::make_shared<rapidjson::Document>();
+    request->SetObject();
+    auto& allocator = request->GetAllocator();
+    request->AddMember("model", rapidjson::Value(model.c_str(), allocator), allocator);
+
+    rapidjson::Value audioPart(rapidjson::kObjectType);
+    audioPart.AddMember("type", "audio", allocator);
+
+    rapidjson::Value content(rapidjson::kArrayType);
+    content.PushBack(audioPart, allocator);
+    rapidjson::Value message(rapidjson::kObjectType);
+    message.AddMember("role", "user", allocator);
+    message.AddMember("content", content, allocator);
+    rapidjson::Value messages(rapidjson::kArrayType);
+    messages.PushBack(message, allocator);
+    request->AddMember("messages", messages, allocator);
+
+    const std::string temperature = payload.multipartParser->getFieldByName("temperature");
+    if (!temperature.empty()) {
+        char* parseEnd = nullptr;
+        const float parsedTemperature = std::strtof(temperature.c_str(), &parseEnd);
+        if (parseEnd == temperature.c_str() || *parseEnd != '\0' ||
+            !std::isfinite(parsedTemperature) || parsedTemperature < 0.0f || parsedTemperature > 2.0f) {
+            return absl::InvalidArgumentError("temperature must be finite and in range [0.0, 2.0]");
+        }
+        request->AddMember("temperature", parsedTemperature, allocator);
+    }
+
+    payload.parsedJson = std::move(request);
+    return absl::OkStatus();
+}
+
+}  // namespace
 
 double calculatePrefillSpeed(size_t inputTokenCount, double ttftMs) {
     return ttftMs > 0.0 ? (1000.0 * inputTokenCount) / ttftMs : 0.0;
@@ -85,32 +149,41 @@ absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionCo
     if (spdlog::default_logger_raw()->level() <= spdlog::level::debug) {
         logRequestDetails(payload);
     }
+    HttpPayload normalizedPayload = payload;
+    if (isTranscriptionEndpoint(normalizedPayload.uri)) {
+        auto status = normalizeTranscriptionRequest(normalizedPayload);
+        if (!status.ok()) {
+            return status;
+        }
+    }
     // Parsed JSON is not guaranteed to be valid, we may reach this point via multipart content type request with no valid JSON parser
-    if (payload.parsedJson->HasParseError()) {
+    if (normalizedPayload.parsedJson->HasParseError()) {
         return absl::InvalidArgumentError("Non-json request received in text generation calculator");
     }
-    if (payload.uri.find("/v3/v1/") != std::string::npos) {
-        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Endpoint {} is deprecated. Use /v1/ prefix instead.", payload.uri);
+    if (normalizedPayload.uri.find("/v3/v1/") != std::string::npos) {
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Endpoint {} is deprecated. Use /v1/ prefix instead.", normalizedPayload.uri);
     }
-    if (payload.uri == "/v3/chat/completions" || payload.uri == "/v3/v1/chat/completions" ||
-        payload.uri == "/v1/chat/completions") {
+    if (normalizedPayload.uri == "/v3/chat/completions" || normalizedPayload.uri == "/v3/v1/chat/completions" ||
+        normalizedPayload.uri == "/v1/chat/completions") {
         executionContext->endpoint = Endpoint::CHAT_COMPLETIONS;
-    } else if (payload.uri == "/v3/completions" || payload.uri == "/v3/v1/completions" ||
-               payload.uri == "/v1/completions") {
+    } else if (normalizedPayload.uri == "/v3/completions" || normalizedPayload.uri == "/v3/v1/completions" ||
+               normalizedPayload.uri == "/v1/completions") {
         executionContext->endpoint = Endpoint::COMPLETIONS;
-    } else if (payload.uri == "/v3/responses" || payload.uri == "/v3/v1/responses" ||
-               payload.uri == "/v1/responses") {
+    } else if (normalizedPayload.uri == "/v3/responses" || normalizedPayload.uri == "/v3/v1/responses" ||
+               normalizedPayload.uri == "/v1/responses") {
         executionContext->endpoint = Endpoint::RESPONSES;
-    } else if (TokenizeParser::isTokenizeEndpoint(payload.uri)) {
+    } else if (isTranscriptionEndpoint(normalizedPayload.uri)) {
+        executionContext->endpoint = Endpoint::TRANSCRIPTIONS;
+    } else if (TokenizeParser::isTokenizeEndpoint(normalizedPayload.uri)) {
         executionContext->endpoint = Endpoint::TOKENIZE;
     } else {
-        return absl::InvalidArgumentError("Wrong endpoint. Allowed endpoints: /v[13]/chat/completions, /v[13]/completions, /v[13]/responses, /v[13]/tokenize");
+        return absl::InvalidArgumentError("Wrong endpoint. Allowed endpoints: /v[13]/chat/completions, /v[13]/completions, /v[13]/responses, /v[13]/audio/transcriptions, /v[13]/tokenize");
     }
     auto endpointStatus = validateEndpoint(executionContext->endpoint);
     if (!endpointStatus.ok()) {
         return endpointStatus;
     }
-    executionContext->payload = payload;
+    executionContext->payload = std::move(normalizedPayload);
     return absl::OkStatus();
 }
 
@@ -169,6 +242,11 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
                 getProperties()->tokenizer,
                 getProperties()->toolParserName,
                 getProperties()->reasoningParserName);
+        } else if (executionContext->endpoint == Endpoint::TRANSCRIPTIONS) {
+            executionContext->apiHandler = std::make_shared<OpenAITranscriptionsHandler>(*executionContext->payload.parsedJson,
+                executionContext->endpoint,
+                std::chrono::system_clock::now(),
+                getProperties()->tokenizer);
         } else {
             executionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*executionContext->payload.parsedJson,
                 executionContext->endpoint,
@@ -194,6 +272,10 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         return inputRequestResult.status();
     }
     executionContext->inputRequest = std::move(*inputRequestResult);
+    if (executionContext->endpoint == Endpoint::TRANSCRIPTIONS) {
+        const std::string_view audio = executionContext->payload.multipartParser->getFileContentByFieldName("file");
+        executionContext->inputRequest.multipartAudioInputs.push_back({audio});
+    }
     return absl::OkStatus();
 }
 
