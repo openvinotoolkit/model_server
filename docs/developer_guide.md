@@ -121,7 +121,7 @@ make run_unit_tests
 
 This uses the builder image. GPU-specific tests and host driver requirements are optional and described under [GPU Access and Tests](#gpu-access-and-tests).
 
-### Build and Test the Split Python Runtime
+### Build and Test Python Integration with OVMS
 
 Python no longer has a separate on/off build configuration. Building `//src:ovms` links the MediaPipe runtime and host-side Python calculators into the executable and includes `libovmspython`, `libpython_calculators`, and `pyovms` as runtime data dependencies. Use `--config=mp_on` for changes that require MediaPipe.
 
