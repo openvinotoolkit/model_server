@@ -221,7 +221,7 @@ RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; pip3.12 install --no-cache-dir -r /openvino/src/bindings/python/wheel/requirements-dev.txt
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; \
-    cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DENABLE_LTO=${LTO_ENABLE} -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DENABLE_INTEL_NPU=OFF -DCMAKE_CXX_FLAGS="  ${SDL_OPS} -Wno-error=parentheses  ${LTO_CXX_FLAGS} " -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" .. && \
+    cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DENABLE_LTO=${LTO_ENABLE} -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DENABLE_INTEL_NPU=OFF -DGPU_RT_TYPE=COMBINED -DBUILD_SHARED_LIBS=ON -DCMAKE_CXX_FLAGS="  ${SDL_OPS} -Wno-error=parentheses  ${LTO_CXX_FLAGS} " -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" .. && \
     make --jobs=$JOBS && \
     make install
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
