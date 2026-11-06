@@ -17,7 +17,7 @@
 // Integration tests for the full input processing pipeline:
 //   JSON string
 //   → OpenAIApiHandler::parseRequest()        (wire format → chatHistory + request fields)
-//   → OpenAIApiHandler::extractInputRequest() (chatHistory → inputRequest + generationConfig)
+//   → OpenAIApiHandler::extractInputRequest() (chatHistory → inputRequest)
 //   → InputProcessor::process()              (ImageDecoding / TextNorm / ChatTemplate / Tokenize)
 //
 // The tokenizer is loaded once per test suite from a known test fixture
@@ -142,10 +142,7 @@ protected:
             return result;
         }
 
-        GenerationConfigBuilder configBuilder(
-            ov::genai::GenerationConfig{}, /*toolParserName=*/"",
-            /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD);
-        auto reqResult = result.handler->extractInputRequest(configBuilder);
+        auto reqResult = result.handler->extractInputRequest();
         if (!reqResult.ok()) {
             result.parseStatus = reqResult.status();
             return result;
@@ -160,6 +157,16 @@ protected:
 
         InputProcessor processor(ctx, result.req);
         result.processStatus = processor.process(result.req);
+        if (result.processStatus.ok()) {
+            GenerationConfigBuilder configBuilder(
+                ov::genai::GenerationConfig{}, "", false, DecodingMethod::STANDARD);
+            try {
+                configBuilder.build(result.handler->getRequest(), {}, "", *sharedTokenizer);
+                result.req.generationConfig = configBuilder.getConfig();
+            } catch (const std::invalid_argument& e) {
+                result.processStatus = absl::InvalidArgumentError(e.what());
+            }
+        }
         return result;
     }
 
@@ -757,9 +764,7 @@ TEST(InputProcessingEquivalenceTest, ChatAndResponsesProduceSamePromptAndImages)
 
         EXPECT_TRUE(handler->parseRequest(std::nullopt, 0, std::nullopt).ok());
 
-        GenerationConfigBuilder configBuilder(
-            ov::genai::GenerationConfig{}, "", false, DecodingMethod::STANDARD);
-        auto reqResult = handler->extractInputRequest(configBuilder);
+        auto reqResult = handler->extractInputRequest();
         EXPECT_TRUE(reqResult.ok());
         auto req = std::move(*reqResult);
 

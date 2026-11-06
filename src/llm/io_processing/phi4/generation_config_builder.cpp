@@ -19,74 +19,65 @@
 #include <utility>
 #include <openvino/genai/generation_config.hpp>
 
+#include "src/port/rapidjson_document.hpp"
+#include "src/port/rapidjson_stringbuffer.hpp"
+#include "src/port/rapidjson_writer.hpp"
 #include "generation_config_builder.hpp"
 
 namespace ovms {
 
-void Phi4GenerationConfigBuilder::parseConfigFromRequest(const OpenAIRequest& request) {
-    // Call the base class method to fill in common configuration
-    BaseGenerationConfigBuilder::parseConfigFromRequest(request);
+void Phi4GenerationConfigBuilder::applyToolGuidance(const OpenAIRequest& request) {
+    // Set tool guided generation config specific to Phi-4 model as described in template from:
+    // https://github.com/vllm-project/vllm/blob/v0.9.2/examples/tool_chat_template_phi4_mini.jinja
 
-    // For now the only specific part is related to tools, so if there are no tools provided in the request
-    // we can exit early
-    if (request.toolNameSchemaMap.empty()) {
-        return;
+    static const std::string beginOfToolsString = "functools";
+    auto triggeredTags = std::make_shared<ov::genai::StructuredOutputConfig::TriggeredTags>();
+    triggeredTags->triggers.push_back(beginOfToolsString);
+    ov::genai::StructuredOutputConfig::Tag tagItem;
+    tagItem.begin = beginOfToolsString;
+
+    rapidjson::Document schema(rapidjson::kObjectType);
+    auto& allocator = schema.GetAllocator();
+    schema.AddMember("type", "array", allocator);
+    if (request.toolChoice == "required" || requiresNamedToolCall(request)) {
+        schema.AddMember("minItems", 1, allocator);
     }
-
-    if (enableToolGuidedGeneration || request.toolChoice == "required") {
-        // Set tool guided generation config specific to Phi-4 model as described in template from:
-        // https://github.com/vllm-project/vllm/blob/v0.9.2/examples/tool_chat_template_phi4_mini.jinja
-
-        static const std::string beginOfToolsString = "functools";
-        auto triggeredTags = std::make_shared<ov::genai::StructuredOutputConfig::TriggeredTags>();
-        triggeredTags->triggers.push_back(beginOfToolsString);
-        ov::genai::StructuredOutputConfig::Tag tagItem;
-        tagItem.begin = beginOfToolsString;
-
-        // Build the "anyOf" array for each tool
-        std::string anyOfArray = "[";
-        bool first = true;
-        for (const auto& [toolName, toolSchemaWrapper] : request.toolNameSchemaMap) {
-            const auto& toolSchema = toolSchemaWrapper.stringRepr;
-            if (!first) {
-                anyOfArray += ",";
-            }
-            first = false;
-            anyOfArray += R"({
-                "type": "object",
-                "properties": {
-                    "name": {
-                        "type": "string",
-                        "enum": [")" +
-                          toolName + R"("]
-                    },
-                    "arguments": )" +
-                          toolSchema + R"(
-                },
-                "required": [
-                    "name",
-                    "arguments"
-                ]
-            })";
-        }
-        anyOfArray += "]";
-
-        std::string schema = R"({
-            "type": "array",
-            "items": {
-                "anyOf": )" +
-                             anyOfArray + R"(
-            }
-        })";
-
-        tagItem.content = ov::genai::StructuredOutputConfig::JSONSchema(schema);
-        triggeredTags->tags.push_back(tagItem);
-        if (request.toolChoice == "required") {
-            triggeredTags->at_least_one = true;
-        }
-        ov::genai::StructuredOutputConfig::StructuralTag structuralTag = triggeredTags;
-        setStructuralTagsConfig(structuralTag);
+    if (requiresNamedToolCall(request)) {
+        schema.AddMember("maxItems", 1, allocator);
     }
+    rapidjson::Value alternatives(rapidjson::kArrayType);
+    for (const auto& [toolName, toolSchemaWrapper] : request.toolNameSchemaMap) {
+        rapidjson::Value functionSchema(rapidjson::kObjectType);
+        functionSchema.AddMember("type", "object", allocator);
+        rapidjson::Value properties(rapidjson::kObjectType);
+        rapidjson::Value nameSchema(rapidjson::kObjectType);
+        nameSchema.AddMember("type", "string", allocator);
+        rapidjson::Value names(rapidjson::kArrayType);
+        names.PushBack(rapidjson::Value(toolName.c_str(), allocator), allocator);
+        nameSchema.AddMember("enum", names, allocator);
+        properties.AddMember("name", nameSchema, allocator);
+        rapidjson::Document arguments;
+        arguments.Parse(toolSchemaWrapper.stringRepr.c_str());
+        rapidjson::Value argumentSchema;
+        argumentSchema.CopyFrom(arguments, allocator);
+        properties.AddMember("arguments", argumentSchema, allocator);
+        functionSchema.AddMember("properties", properties, allocator);
+        rapidjson::Value required(rapidjson::kArrayType);
+        required.PushBack(rapidjson::Value("name", allocator), allocator);
+        required.PushBack(rapidjson::Value("arguments", allocator), allocator);
+        functionSchema.AddMember("required", required, allocator);
+        alternatives.PushBack(functionSchema, allocator);
+    }
+    rapidjson::Value items(rapidjson::kObjectType);
+    items.AddMember("anyOf", alternatives, allocator);
+    schema.AddMember("items", items, allocator);
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    schema.Accept(writer);
+
+    tagItem.content = buildToolArgumentGrammar(buffer.GetString());
+    triggeredTags->tags.push_back(tagItem);
+    setToolGrammar(request, triggeredTags);
 }
 
 }  // namespace ovms

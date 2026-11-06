@@ -231,6 +231,10 @@ struct GenAiServableProperties {
 };
 
 class GenAiServable {
+protected:
+    /** Constructs the text streamer after output-parser initialization. */
+    virtual void initializeTextStreamer(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
+
 public:
     GenAiServable() = default;
     GenAiServable(GenAiServable&&) = default;
@@ -273,15 +277,15 @@ public:
 
     /*
     parseRequest method implementation MUST fill executionContext apiHandler field and parse request.
-    For streaming requests, it MUST initialize the textStreamer field of executionContext.
     Base implementation creates OpenAIChatCompletionsHandler and calls its parseRequest method.
-    Additionally it initializes textStreamer for streaming requests.
+    Output parsers and streamers are constructed after generation setup in prepareInputs.
     */
     virtual absl::Status parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
     /*
     prepareInputs method implementation MUST fill executionContext inputRequest.inputIds field.
     Base implementation applies chat template to the payload body and encodes it with tokenizer.
+    It then configures generation and initializes output parsing and streaming.
     */
     virtual absl::Status prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
