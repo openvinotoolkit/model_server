@@ -24,6 +24,7 @@
 
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #pragma warning(pop)
 
@@ -50,6 +51,7 @@ absl::Status validateMediaSource(const std::string& mediaSource,
 
 absl::Status downloadMediaToFile(const std::string& mediaSource, std::FILE* output,
     size_t sizeLimit, size_t& downloadedBytes);
+absl::Status validateHttpImageDownloadResponse(int64_t httpCode, bool redirectsAllowed);
 
 absl::StatusOr<ov::Tensor> fetchAndDecodeImage(const std::string& imageSource,
     const std::optional<std::string>& allowedLocalMediaPath,

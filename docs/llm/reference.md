@@ -322,6 +322,29 @@ When `tool_parser` is used, it's possible to leverage tool guided generation wit
 
 > **Note**: When `enable_tool_guided_generation` is set, but model server fails to load any tool schema from the request, the request will still be processed, but tool guided generation will be disabled.
 
+Tool-guided generation is supported by the `hermes3` (including Qwen3), `llama3`,
+`phi4`, and `devstral` tool parsers. For these formats, `tool_choice: "required"`
+activates guidance regardless of `enable_tool_guided_generation` and requires at
+least one call. A named function choice also activates guidance regardless of
+the flag and requires exactly one call to that function. If `parameters` is
+omitted, the function is treated as parameterless and accepts an empty argument
+object. Explicit parameter schemas are left unchanged.
+
+Tool-guided generation and `response_format` are not supported together. If tool
+guidance activates, its grammar takes precedence over `response_format`.
+Structured-output validation failures retain the existing fallback to
+unconstrained generation.
+
+With the `qwen3` reasoning parser, thinking and `response_format` can be used in
+one request without enabling tool guidance. The model can produce free-form
+thinking followed by a final answer constrained by the requested format;
+reasoning is returned separately from final content. A thinking opener already
+present in the chat template's generation prompt is not generated a second time.
+Existing `chat_template_kwargs`, including `enable_thinking: false`, remain
+effective. Channel-based reasoning formats such as Harmony are not covered by
+this response-format envelope. A request that reaches its token limit during
+thinking or the final answer can still return incomplete output.
+
 ### OpenVINO runtime settings
 
 `plugin_config` accepts a json dictionary of tuning parameters for the OpenVINO plugin. It can tune the behavior of the inference runtime. For example you can include there kv cache compression or the group size `{"KV_CACHE_PRECISION": "u8", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "32"}`. It also holds additional options that are described below.

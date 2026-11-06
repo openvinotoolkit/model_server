@@ -23,7 +23,7 @@ node {
     output_stream: "RESPONSE_PAYLOAD:output"
     node_options: {
       [type.googleapis.com / mediapipe.RerankCalculatorOVOptions]: {
-        models_path: "/ovms/src/test/llm_testing/BAAI/bge-reranker-base/ov"
+        models_path: "/ovms/src/test/llm_testing/OpenVINO/bge-reranker-base-int8-ov"
       }
     }
 }

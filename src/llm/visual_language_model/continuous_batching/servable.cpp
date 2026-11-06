@@ -56,8 +56,10 @@ void VisualLanguageModelServable::logPerfMetrics(ov::genai::VLMPerfMetrics& perf
 
 absl::Status VisualLanguageModelServable::addRequestToPipeline(std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext) {
     auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
-    vlmExecutionContext->generationHandle = properties->pipeline->add_request(currentRequestId++,  // to be removed from API?
-        vlmExecutionContext->inputRequest.promptText, vlmExecutionContext->inputRequest.inputImages,
+    vlmExecutionContext->generationHandle = properties->pipeline->add_request(
+        currentRequestId++,  // to be removed from API?
+        vlmExecutionContext->inputRequest.promptText,
+        vlmExecutionContext->inputRequest.inputImages,
         vlmExecutionContext->inputRequest.inputVideos,
         vlmExecutionContext->inputRequest.generationConfig);
     return absl::OkStatus();

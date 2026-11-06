@@ -16,8 +16,13 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 
 namespace ovms {
+
+struct AudioInputConfig {
+    bool resamplingRequired = false;
+};
 
 // Deployment-level configuration for InputProcessor, populated once at servable init.
 struct InputProcessingConfig {
@@ -31,6 +36,12 @@ struct InputProcessingConfig {
     // Encoded-video sampling settings for VLM input processing.
     float videoFps = 2.0F;
     uint32_t videoMaxFrames = 100;
+    // Enables image and video decoding.
+    // TokenizationProcessor still runs (to populate inputIds for usage statistics
+    // and max-length checks) but inputIds is not passed to the VLM pipeline.
+    bool supportsVisualInputs = false;
+    // An empty value means audio input is unsupported.
+    std::optional<AudioInputConfig> audioInputConfig;
 };
 
 }  // namespace ovms
