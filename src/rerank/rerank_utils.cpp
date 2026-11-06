@@ -136,6 +136,16 @@ absl::Status RerankHandler::parseRequest() {
     return absl::OkStatus();
 }
 
+absl::Status RerankHandler::validateDocumentsCanBeRanked() const {
+    if (!request.documentsList.empty()) {
+        return absl::OkStatus();
+    }
+    if (!request.documentsMap.empty()) {
+        return absl::InvalidArgumentError("documents given as objects are not supported, use an array of strings");
+    }
+    return absl::InvalidArgumentError("documents array should not be empty");
+}
+
 std::vector<size_t> getSortedIndexes(const std::vector<float>& scores) {
     std::vector<size_t> indexes(scores.size());
     std::iota(indexes.begin(), indexes.end(), 0);

@@ -28,10 +28,10 @@ using namespace ovms;
 using namespace ovms::openai;
 
 #ifdef _WIN32
-const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\openai\\gpt-oss-20b";
+const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\OpenVINO\\gpt-oss-20b-int4-ov";
 #else
 // Hardcoded for usage in docker container
-const std::string tokenizerPath = "/ovms/src/test/llm_testing/openai/gpt-oss-20b";
+const std::string tokenizerPath = "/ovms/src/test/llm_testing/OpenVINO/gpt-oss-20b-int4-ov";
 #endif
 
 static std::unique_ptr<ov::genai::Tokenizer> gptOssTokenizer;

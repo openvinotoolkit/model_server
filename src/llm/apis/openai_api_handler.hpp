@@ -51,8 +51,6 @@ using namespace rapidjson;
 
 namespace ovms {
 
-class GenerationConfigBuilder;
-
 ov::genai::JsonContainer rapidJsonValueToJsonContainer(const rapidjson::Value& value);
 
 enum class Endpoint {
@@ -129,13 +127,13 @@ protected:
     // Shared parsing helpers
     absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
     absl::Status parseResponseFormat();
+    absl::Status parseThinkingFromChatTemplateKwargs();
     // Validates effort against the OpenAI reasoning_effort enum and merges its chat-template
     // representation (reasoning_effort, reasoning_strength mapped onto low/medium/high/xhigh,
     // enable_thinking) into doc's chat_template_kwargs, without overwriting keys the request
     // already set explicitly.
     absl::Status applyReasoningEffort(const std::string& effort);
     absl::Status ensureArgumentsInToolCalls(Value& messageObj);
-    void initOutputParser();
     // Assemble a ParsedOutput from a sequence of streaming Delta variants produced by OVMSTextStreamer.
     static ParsedOutput parsedOutputFromDeltas(const std::vector<Delta>& deltas);
 
@@ -157,7 +155,7 @@ public:
     OpenAIApiHandler(OpenAIApiHandler&&) = delete;
     OpenAIApiHandler& operator=(OpenAIApiHandler&&) = delete;
 
-    // Request parsing: non-virtual wrapper; calls parseRequestImpl() then initOutputParser().
+    // Request parsing only; output parsing is initialized after input and generation setup.
     absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
         std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt);
 
@@ -180,10 +178,11 @@ public:
     std::string getModel() const;
     std::string getToolChoice() const;
     const std::shared_ptr<OutputParser>& getOutputParser() const;
-    // Builds a complete InputRequest: runs the full generation config pipeline
-    // (parse → adjust → validate) on the provided builder using this handler's
-    // request and tokenizer, then populates input from the parsed request.
-    absl::StatusOr<InputRequest> extractInputRequest(GenerationConfigBuilder& configBuilder);
+    /** Extracts input and template context from the parsed request without configuring generation. */
+    absl::StatusOr<InputRequest> extractInputRequest();
+
+    /** Constructs output parsers after generation setup and applies the detected prompt state. */
+    void initOutputParser(const ReasoningGenerationContext& reasoningContext);
 
     // Verbose response configuration
     void enableVerboseResponse(const std::string& promptAfterTemplate) {

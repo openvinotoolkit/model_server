@@ -28,7 +28,6 @@
 
 #include "../../logging.hpp"
 #include "../../profiler.hpp"
-#include "../io_processing/generation_config_builder.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/strings/str_cat.h"
@@ -113,6 +112,18 @@ absl::Status OpenAIApiHandler::parseResponseFormat() {
             return absl::InvalidArgumentError("response_format is not an object");
         const rapidjson::Value& responseFormat = it->value;
         request.responseFormat = convertOpenAIResponseFormatToStructuralTagStringFormat(responseFormat);
+    }
+    return absl::OkStatus();
+}
+
+absl::Status OpenAIApiHandler::parseThinkingFromChatTemplateKwargs() {
+    request.enableThinking.reset();
+    const auto kwargs = doc.FindMember("chat_template_kwargs");
+    if (kwargs != doc.MemberEnd() && kwargs->value.IsObject()) {
+        const auto thinking = kwargs->value.FindMember("enable_thinking");
+        if (thinking != kwargs->value.MemberEnd() && thinking->value.IsBool()) {
+            request.enableThinking = thinking->value.GetBool();
+        }
     }
     return absl::OkStatus();
 }
@@ -279,20 +290,29 @@ absl::Status OpenAIApiHandler::parseTools() {
             }
 
             i++;
-            // If we keep the tool, add tool name and schema to the request
-            if (parametersValue != nullptr) {
-                if (!parametersValue->IsObject()) {
-                    return absl::InvalidArgumentError("Function parameters are not a valid JSON object");
-                }
-                // Dump parameters object to string since this is the schema format expected by GenAI
-                // Keep the rapidjson::Value pointer as well to avoid re-parsing in outputParsers
-                rapidjson::StringBuffer buffer;
-                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                parametersValue->Accept(writer);
-                std::string parametersStr = buffer.GetString();
-                ToolSchemaWrapper schemaReprs{parametersValue, std::move(parametersStr)};
-                request.toolNameSchemaMap[functionName] = std::move(schemaReprs);
+            // For functions without parameters, create an empty parameters object, so that the schema is always present
+            if (parametersValue == nullptr) {
+                auto& allocator = doc.GetAllocator();
+                rapidjson::Value parameters(rapidjson::kObjectType);
+                parameters.AddMember("type", "object", allocator);
+                parameters.AddMember("properties", rapidjson::Value(rapidjson::kObjectType), allocator);
+                parameters.AddMember("additionalProperties", false, allocator);
+                auto& owner = functionIt != obj.MemberEnd() ? functionIt->value : obj;
+                owner.AddMember("parameters", parameters, allocator);
+                parametersValue = &owner["parameters"];
             }
+
+            if (!parametersValue->IsObject()) {
+                return absl::InvalidArgumentError("Function parameters are not a valid JSON object");
+            }
+            // Dump parameters object to string since this is the schema format expected by GenAI
+            // Keep the rapidjson::Value pointer as well to avoid re-parsing in outputParsers
+            rapidjson::StringBuffer buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+            parametersValue->Accept(writer);
+            std::string parametersStr = buffer.GetString();
+            ToolSchemaWrapper schemaReprs{parametersValue, std::move(parametersStr)};
+            request.toolNameSchemaMap[functionName] = std::move(schemaReprs);
         }
     } else {
         toolChoice = "none";  // If tools are not provided, set toolChoice to "none"
@@ -304,16 +324,14 @@ absl::Status OpenAIApiHandler::parseTools() {
 
 absl::Status OpenAIApiHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
     std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) {
-    auto status = parseRequestImpl(maxTokensLimit, bestOfLimit, maxModelLength, allowedLocalMediaPath, allowedMediaDomains);
-    if (status.ok())
-        initOutputParser();
-    return status;
+    return parseRequestImpl(maxTokensLimit, bestOfLimit, maxModelLength, allowedLocalMediaPath, allowedMediaDomains);
 }
 
-void OpenAIApiHandler::initOutputParser() {
+void OpenAIApiHandler::initOutputParser(const ReasoningGenerationContext& reasoningContext) {
     if (toolParserName.empty() && reasoningParserName.empty())
         return;
     outputParser = std::make_shared<OutputParser>(tokenizer, toolParserName, reasoningParserName, request.toolNameSchemaMap);
+    outputParser->setImplicitReasoningStart(reasoningContext.implicitStart);
 }
 
 absl::StatusOr<std::optional<ov::genai::JsonContainer>> OpenAIApiHandler::parseToolsToJsonContainer() {
@@ -373,21 +391,8 @@ ov::genai::ChatHistory& OpenAIApiHandler::getChatHistory() {
     return request.chatHistory;
 }
 
-absl::StatusOr<InputRequest> OpenAIApiHandler::extractInputRequest(GenerationConfigBuilder& configBuilder) {
-    configBuilder.parseConfigFromRequest(request);
-    try {
-        configBuilder.adjustConfigForDecodingMethod();
-    } catch (const std::invalid_argument& e) {
-        return absl::InvalidArgumentError(e.what());
-    }
-    try {
-        configBuilder.validateStructuredOutputConfig(tokenizer);
-    } catch (const std::exception& e) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool guided generation will not be applied due to JSON schema validation failure: {}", e.what());
-        configBuilder.unsetStructuredOutputConfig();
-    }
+absl::StatusOr<InputRequest> OpenAIApiHandler::extractInputRequest() {
     InputRequest req;
-    req.generationConfig = configBuilder.getConfig();
     if (endpoint == Endpoint::COMPLETIONS) {
         req.input = request.prompt.value_or("");
     } else {
@@ -613,7 +618,7 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
                     return absl::InvalidArgumentError("max_tokens value can't be greater than 4294967295");
                 return absl::InvalidArgumentError("max_tokens is not an unsigned integer");
             }
-            if (maxTokensLimit.has_value() && !(it->value.GetUint() < maxTokensLimit.value()))
+            if (maxTokensLimit.has_value() && it->value.GetUint() > maxTokensLimit.value())
                 return absl::InvalidArgumentError(absl::StrCat("max_tokens exceeds limit provided in graph config: ", maxTokensLimit.value()));
             request.maxTokens = it->value.GetUint();
         } else {
@@ -781,7 +786,7 @@ absl::Status OpenAIApiHandler::parseCommonPart(std::optional<uint32_t> maxTokens
             return absl::InvalidArgumentError("best_of is not an unsigned integer");
         if (it->value.GetUint() == 0)
             return absl::InvalidArgumentError("best_of value should be greater than 0");
-        if (!(it->value.GetUint() < bestOfLimit))
+        if (it->value.GetUint() > bestOfLimit)
             return absl::InvalidArgumentError(absl::StrCat("best_of exceeds limit provided in graph config: ", bestOfLimit));
         if (request.stream)
             return absl::InvalidArgumentError("best_of cannot be used in streaming mode");

@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=arguments-differ
 
 from dataclasses import dataclass
 from typing import Union
@@ -154,8 +155,7 @@ class OvmsChatCompletionsRequestParams(OvmsCommonCompletionsRequestParams, OpenA
             return self.prepare_dict_with_extra_body(
                 [OpenAICommonCompletionsRequestParams, OpenAIChatCompletionsRequestParams],
             )
-        else:
-            return super().prepare_dict(set_null_values=set_null_values)
+        return super().prepare_dict(set_null_values=set_null_values)
 
     def set_default_values(self, **kwargs):
         super().set_default_values(**kwargs)
@@ -173,8 +173,7 @@ class OvmsCompletionsRequestParams(OvmsCommonCompletionsRequestParams, OpenAICom
             return self.prepare_dict_with_extra_body(
                 [OpenAICommonCompletionsRequestParams, OpenAICompletionsRequestParams],
             )
-        else:
-            return super().prepare_dict(set_null_values=set_null_values)
+        return super().prepare_dict(set_null_values=set_null_values)
 
 
 @dataclass
@@ -205,8 +204,7 @@ class OvmsResponsesRequestParams(OpenAIResponsesRequestParams, OvmsCommonRequest
     def prepare_dict(self, set_null_values=False, use_extra_body=True):
         if use_extra_body:
             return self.prepare_dict_with_extra_body([OpenAIResponsesRequestParams])
-        else:
-            return super().prepare_dict(set_null_values=set_null_values)
+        return super().prepare_dict(set_null_values=set_null_values)
 
 
 @dataclass
@@ -238,8 +236,7 @@ class OvmsImagesGenerationsRequestParams(OvmsCommonImagesRequestParams, OpenAIIm
             return self.prepare_dict_with_extra_body(
                 [OpenAICommonImagesRequestParams, OpenAIImagesGenerationsRequestParams],
             )
-        else:
-            return super().prepare_dict(set_null_values=set_null_values)
+        return super().prepare_dict(set_null_values=set_null_values)
 
 
 @dataclass
@@ -251,8 +248,7 @@ class OvmsImagesEditsRequestParams(OvmsCommonImagesRequestParams, OpenAIImagesEd
             return self.prepare_dict_with_extra_body(
                 [OpenAICommonImagesRequestParams, OpenAIImagesEditsRequestParams],
             )
-        else:
-            return super().prepare_dict(set_null_values=set_null_values)
+        return super().prepare_dict(set_null_values=set_null_values)
 
     def set_default_values(self, **kwargs):
         super().set_default_values(**kwargs)

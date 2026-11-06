@@ -12,8 +12,9 @@ Learn more about the [binary inputs](binary_input.md) feature.
 #### Download the Pretrained Model
 Download the model files and store them in the `models` directory
 ```bash
-mkdir -p models/resnet/1
-curl https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.bin https://storage.openvinotoolkit.org/repositories/open_model_zoo/2022.1/models_bin/2/resnet50-binary-0001/FP32-INT1/resnet50-binary-0001.xml -o models/resnet/1/resnet50-binary-0001.bin -o models/resnet/1/resnet50-binary-0001.xml
+mkdir -p ${HOME}/models
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o ${HOME}/models/resnet50.bin
+curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o ${HOME}/models/resnet50.xml
 ```
 
 #### Pull the Latest Model Server Image from Docker Hub
@@ -25,7 +26,11 @@ docker pull openvino/model_server:latest
 #### Start the Container with Downloaded Model
 Start the container with the image pulled in the previous step and mount the `models` directory :
 ```bash
-docker run --rm -d -v $(pwd)/models:/models -p 9000:9000 openvino/model_server:latest --model_name resnet --model_path /models/resnet --layout NHWC:NCHW --port 9000
+docker run --rm -d -u $(id -u) -v ${HOME}/models:/models -p 9000:9000 \
+  openvino/model_server:latest \
+  --model_name resnet --model_path /models/resnet50.xml \
+  --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" \
+  --port 9000
 ```
 
 ### Download Client Package

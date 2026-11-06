@@ -47,7 +47,7 @@ using namespace ovms;
 class OnyxChatTemplateAndParserRoundtripTest : public ::testing::Test {
 protected:
     // TODO @atobiszei change tokenizer for onyx
-    const std::string& tokenizerPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m", false);
+    const std::string& tokenizerPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/OpenVINO/Muse-Glimmer-30B-int4-ov", false);
     const std::string& chatTemplatesPath = getGenericFullPathForSrcTest("/ovms/src/test/llm/chat_templates", false);
 
     static std::string loadTemplateFile(const std::string& path) {

@@ -38,7 +38,6 @@
 #include "../../../http_payload.hpp"
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
 #include "../../text_utils.hpp"
-#include "../../io_processing/generation_config_builder.hpp"
 #include "servable.hpp"
 
 namespace ovms {
@@ -113,36 +112,34 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
         return status;
     }
 
-    ov::AnyMap streamerConfig;
-    {
-        if (!legacyExecutionContext->apiHandler->getRequest().skipSpecialTokens) {
-            streamerConfig.insert(ov::genai::skip_special_tokens(false));
-        }
-        auto ovmsCallback = [& ctx = *legacyExecutionContext](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
-            if (ctx.clientDisconnected.load()) {
-                ctx.deltaChannel.signalComplete();
-                return ov::genai::StreamingStatus::CANCEL;
-            }
-            ctx.deltaChannel.push(std::move(delta), isLast);
-            return ov::genai::StreamingStatus::RUNNING;
-        };
-        legacyExecutionContext->textStreamer = std::make_shared<OVMSTextStreamer>(
-            getProperties()->tokenizer,
-            legacyExecutionContext->apiHandler->getOutputParser(),
-            legacyExecutionContext->apiHandler->areToolsAvailable(),
-            std::move(ovmsCallback),
-            streamerConfig);
-    }
-    GenerationConfigBuilder configBuilder(getProperties()->baseGenerationConfig,
-        getProperties()->toolParserName,
-        getProperties()->enableToolGuidedGeneration,
-        getProperties()->decodingMethod);
-    auto inputRequestResult = legacyExecutionContext->apiHandler->extractInputRequest(configBuilder);
+    auto inputRequestResult = legacyExecutionContext->apiHandler->extractInputRequest();
     if (!inputRequestResult.ok()) {
         return inputRequestResult.status();
     }
     legacyExecutionContext->inputRequest = std::move(*inputRequestResult);
     return absl::OkStatus();
+}
+
+void LegacyServable::initializeTextStreamer(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    auto legacyExecutionContext = std::static_pointer_cast<LegacyServableExecutionContext>(executionContext);
+    ov::AnyMap streamerConfig;
+    if (!legacyExecutionContext->apiHandler->getRequest().skipSpecialTokens) {
+        streamerConfig.insert(ov::genai::skip_special_tokens(false));
+    }
+    auto ovmsCallback = [&ctx = *legacyExecutionContext](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
+        if (ctx.clientDisconnected.load()) {
+            ctx.deltaChannel.signalComplete();
+            return ov::genai::StreamingStatus::CANCEL;
+        }
+        ctx.deltaChannel.push(std::move(delta), isLast);
+        return ov::genai::StreamingStatus::RUNNING;
+    };
+    legacyExecutionContext->textStreamer = std::make_shared<OVMSTextStreamer>(
+        getProperties()->tokenizer,
+        legacyExecutionContext->apiHandler->getOutputParser(),
+        legacyExecutionContext->apiHandler->areToolsAvailable(),
+        std::move(ovmsCallback),
+        streamerConfig);
 }
 
 absl::Status LegacyServable::prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
