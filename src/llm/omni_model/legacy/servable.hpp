@@ -69,8 +69,8 @@ class OmniModelLegacyServable : public GenAiServable {
 public:
     OmniModelLegacyServable() {
         properties = std::make_shared<OmniModelLegacyServableProperties>();
-        properties->inputProcessorContext.config.isVLM = true;
-        properties->inputProcessorContext.config.isOmni = true;
+        properties->inputProcessorContext.config.supportsVisualInputs = true;
+        properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig{};
     }
 
     absl::Status validateEndpoint(Endpoint endpoint) const override;
