@@ -398,21 +398,27 @@ The benchmark reports latency and throughput without validating classification a
 
 ### Test a Packaged Binary
 
-On the Linux host, unpack the release archive and inspect its shared-library dependencies. Replace `<os_name>` with the package directory:
+On the Linux host, unpack the release archive. Replace `<os_name>` with the package directory:
 
 ```text
 tar -xvzf dist/<os_name>/ovms.tar.gz -C dist/<os_name>/
+```
+
+Inspect the unpacked executable's shared-library dependencies:
+
+```text
 ldd dist/<os_name>/ovms/bin/ovms
+```
+
+Dependencies should resolve to the packaged `ovms/lib` directory where applicable.
+
+`OVMS_BINARY_PATH` is only needed when functional tests should use the unpacked executable instead of a Docker image. From the repository root, set it in the Linux-host shell before starting the tests:
+
+```text
 export OVMS_BINARY_PATH="${PWD}/dist/<os_name>/ovms/bin/ovms"
 ```
 
-Dependencies should resolve to the packaged `ovms/lib` directory where applicable. If needed, configure the library search path on the Linux host before running binary-mode tests:
-
-```text
-export LD_LIBRARY_PATH="${PWD}/dist/<os_name>/ovms/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
-```
-
-Configure the test harness to use binary mode and `OVMS_BINARY_PATH` instead of a Docker image. These values can also be set through `os.environ` in its local Python configuration.
+Configure the test harness to use binary mode. The path can also be set through `os.environ` in its local Python configuration.
 
 ## Optional Configuration
 
@@ -423,7 +429,7 @@ Supported `BASE_OS` values include `ubuntu24` (default), `ubuntu22`, `ubuntu26`,
 Run on the Linux host, replacing `<URL>` with the matching package URL:
 
 ```text
-make ovms_builder_image RUN_TESTS=0 BASE_OS=ubuntu26 DLDT_PACKAGE_URL=<URL>
+make ovms_builder_image RUN_TESTS=0 BASE_OS=ubuntu26 DLDT_PACKAGE_URL=<URL> GENAI_PACKAGE_SHA256=<SHA>
 ```
 
 For Red Hat, run on the Linux host:
@@ -459,23 +465,3 @@ make docker_build RUN_TESTS=0
 
 This includes the builder, package, and release-image stages. The default images include `openvino/model_server:latest`, the GPU image/tag, the NGINX MTLS image, and `openvino/model_server-build:latest`. See [Building From Source](./build_from_source.md) for detailed options. Use `RUN_TESTS=1` when tests should run as part of the image build.
 
-### Custom Images and Cache
-
-On shared hosts, use a unique image base name and unused ports. Run on the Linux host, replacing the placeholders:
-
-```text
-make docker_build OVMS_CPP_DOCKER_IMAGE=<unique_image_name>
-make test_functional OVMS_CPP_DOCKER_IMAGE=<unique_image_name>
-```
-
-The builder image is named `<unique_image_name>-build:latest`; debug builds use `<unique_image_name>-dbg-build:latest`. Use the matching image when starting containers.
-
-To rebuild without Docker cache, run on the Linux host:
-
-```text
-make ovms_builder_image RUN_TESTS=0 NO_DOCKER_CACHE=true
-```
-
-### Copilot Skills
-
-To add a repository skill for GitHub Copilot in VS Code, create `.github/skills/<skill-name>/SKILL.md` with YAML frontmatter containing a unique `name` and a concise `description`, followed by the workflow instructions. Copilot discovers repository skills when the workspace is open. Describe the workflow in chat so the matching skill can be selected.
