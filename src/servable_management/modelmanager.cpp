@@ -1653,6 +1653,10 @@ const std::vector<std::string> ModelManager::getNamesOfAvailableModels() const {
 }
 
 #if (MEDIAPIPE_DISABLE == 0)
+Status ModelManager::getSttPipeline(const std::string& name, SttPipelineHandle& handle) const {
+    return mediapipeFactory->getSttPipeline(name, handle);
+}
+
 const std::vector<std::string> ModelManager::getNamesOfAvailableMediapipePipelines() const {
     return mediapipeFactory->getNamesOfAvailableMediapipePipelines();
 }

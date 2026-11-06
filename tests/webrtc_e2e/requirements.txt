@@ -1,0 +1,4 @@
+aiortc>=1.9
+pytest>=8
+pytest-asyncio>=0.23
+requests
