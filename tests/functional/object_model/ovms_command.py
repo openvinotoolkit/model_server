@@ -56,6 +56,19 @@ def create_ovms_command(
 ):
     layout = parameters.get_layout_from_regular_models()
 
+    # --max_length is an embeddings graph-generation CLI option. It is only valid
+    # when OVMS is started directly with --model_path/--model_name (config-less
+    # launch). When a config file is used (config_path is not None) the override
+    # must instead be embedded into the generated embeddings graph itself
+    # (see EmbeddingsCalculatorOV), otherwise the CLI rejects the unmatched argument.
+    max_length = None
+    if config_path is None:
+        for model in parameters.models or []:
+            model_max_length = getattr(model, "max_length", None)
+            if model_max_length is not None:
+                max_length = model_max_length
+                break
+
     common_parameters = {
         "grpc_port": parameters.grpc_port,
         "rest_port": parameters.rest_port,
@@ -74,6 +87,7 @@ def create_ovms_command(
         "allowed_media_domains": parameters.allowed_media_domains,
         "max_image_decode_pixels": parameters.max_image_decode_pixels,
         "pooling": pooling,
+        "max_length": max_length,
     }
     pull_parameters = {
         "pull": pull,
@@ -156,6 +170,7 @@ class OvmsCommand:
     resolution: str = None
     cache_size: int = None
     pooling: str = None
+    max_length: int = None
 
     def to_list(self):
         ovms_command, _ = Ovms.get_ovms_binary_paths(self.ovms_type, self.base_os)
@@ -311,6 +326,10 @@ class OvmsCommand:
             if self.pooling is not None:
                 command_parts.append("--pooling")
                 command_parts.append(str(self.pooling))
+
+            if self.max_length is not None:
+                command_parts.append("--max_length")
+                command_parts.append(str(self.max_length))
 
         return command_parts
 
