@@ -223,7 +223,7 @@ run_ovms_with_valgrind = get_bool("TT_RUN_OVMS_WITH_VALGRIND", False)
 run_ovms_with_opencl_trace = get_bool("TT_RUN_OVMS_WITH_OPENCL_TRACE", False)
 
 """ TT_XDIST_WORKERS - number of workers """
-xdist_workers = get_int("TT_XDIST_WORKERS", 0)
+xdist_workers = get_int("TT_XDIST_WORKERS", 4)
 
 """ TT_DOCKER_CLIENT_TIMEOUT - Docker client timeout"""
 docker_client_timeout = get_int("TT_DOCKER_CLIENT_TIMEOUT", 120)
@@ -394,7 +394,7 @@ host_os_user = os.environ.get("TT_HOST_OS_USER", None)
 log_username = os.environ.get("TT_LOG_USERNAME", False)
 sensitive_keys = get_list("TT_SENSITIVE_KEYS", fallback=StrippingLists.DEFAULT_SENSITIVE_KEYS_TO_BE_MASKED)
 sensitive_keys_to_be_masked = re.compile("|".join(sensitive_keys), re.IGNORECASE)
-strip_sensitive_data = get_bool("TT_STRIP_SENSITIVE_DATA", False)
+strip_sensitive_data = get_bool("TT_STRIP_SENSITIVE_DATA", True)
 logging_level = os.environ.get("TT_LOGGING_LEVEL", "INFO")
 logger_format = "{}%(asctime)s {}- %(name)s - %(levelname)s: %(message)s".format
 

@@ -1064,7 +1064,9 @@ def apply_conditional_run_type_marks(item):
             continue
         device = params.get(TARGET_DEVICE_PARAM_NAME, "")
         for mark_name, model_collection in marker.kwargs.get("model_mark_map", {}).items():
-            device_models = set(model_collection.get(device, []))
+            device_models = set(
+                model_collection.get(device, []) if isinstance(model_collection, dict) else model_collection
+            )
             if model_type in device_models:
                 item.add_marker(getattr(pytest.mark, mark_name))
                 return

@@ -85,7 +85,6 @@ class TestRerank:
         default_mark="api_regression",
         model_mark_map={"api_on_commit": ModelsLib.various_rerank_models_on_commit},
     )
-    @pytest.mark.api_on_commit
     @pytest.mark.devices_supported_for_test(TargetDevice.CPU, TargetDevice.GPU)
     @pytest.mark.model_type(ModelsLib.various_rerank_models_on_commit + ModelsLib.various_rerank_models)
     @pytest.mark.parametrize("endpoint", [CohereWrapper.RERANK])

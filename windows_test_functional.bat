@@ -41,6 +41,7 @@ IF "%~3"=="" (
 ) ELSE (
     set "xdistWorkers=%~3"
 )
+set "TT_XDIST_WORKERS=!xdistWorkers!"
 
 :: Remove stale results from previous runs
 del /f /q pytest-functional.xml 2>nul
@@ -95,8 +96,8 @@ if !errorlevel! neq 0 (
     exit /b !errorlevel!
 )
 
-echo Running: pytest !pytestParams! -v -n !xdistWorkers! --junitxml=pytest-functional.xml --basetemp=!baseTemp!
-pytest !pytestParams! -v -n !xdistWorkers! --junitxml=pytest-functional.xml --basetemp=!baseTemp!
+echo Running: pytest !pytestParams! -v -n !xdistWorkers! --dist loadgroup --confcutdir=tests/functional --junitxml=report.xml --html=report.html --self-contained-html -v -rA -s --basetemp=!baseTemp!
+pytest !pytestParams! -v -n !xdistWorkers! --dist loadgroup --confcutdir=tests/functional --junitxml=report.xml --html=report.html --self-contained-html -v -rA -s --basetemp=!baseTemp!
 set "pytestExitCode=!errorlevel!"
 
 if exist "%baseTemp%" rmdir /s /q "%baseTemp%"

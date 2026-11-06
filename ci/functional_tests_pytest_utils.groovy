@@ -84,8 +84,8 @@ def checkoutCore(String branch, scmConfig) {
 }
 
 def publishResults() {
-    junit allowEmptyResults: true, testResults: 'pytest-functional.xml'
-    archiveArtifacts allowEmptyArchive: true, artifacts: 'pytest-functional.xml,test_log/**,tests/functional/test_log_build/**'
+    junit allowEmptyResults: true, testResults: 'report.xml'
+    archiveArtifacts allowEmptyArchive: true, artifacts: 'report.xml,report.html,test_log/**,tests/functional/test_log_build/**'
 }
 
 return this

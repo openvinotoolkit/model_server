@@ -98,7 +98,7 @@ pipeline {
                             withEnv(testEnv) {
                                 // basetemp is kept short to stay under the Windows path length limit.
                                 bat """
-                                    (if not exist .venv virtualenv .venv --python=python3.12) && call .venv\\Scripts\\activate.bat && python -m pip install --upgrade pip && python -m pip install -r tests\\requirements.txt && pytest ${pytestArgs} -v -n %TT_XDIST_WORKERS% --junitxml=pytest-functional.xml --basetemp=${baseTemp}
+                                    (if not exist .venv virtualenv .venv --python=python3.12) && call .venv\\Scripts\\activate.bat && python -m pip install --upgrade pip && python -m pip install -r tests\\requirements.txt && pytest ${pytestArgs} -v -n %TT_XDIST_WORKERS% --confcutdir=tests/functional --junitxml=report.xml --html=report.html --self-contained-html -rA -s --basetemp=${baseTemp}
                                 """
                             }
                         } finally {
