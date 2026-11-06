@@ -40,9 +40,12 @@ absl::StatusOr<ov::Tensor> loadVideoFrames(const std::vector<std::string>& frame
     const std::optional<std::vector<std::string>>& allowedMediaDomains,
     size_t& totalAllocatedPixels);
 
+// Decodes an H.264/AVC MP4 source and samples output frames at requestedFps.
+// The request is rejected when the estimated sampled frame count exceeds
+// maxDecodedFrames; dependency samples may still be decoded but are not retained.
 absl::StatusOr<ov::Tensor> decodeVideoSource(const std::string& videoSource,
     const std::optional<std::string>& allowedLocalMediaPath,
     const std::optional<std::vector<std::string>>& allowedMediaDomains,
-    uint32_t frameStride, uint32_t maxFrames, size_t& totalAllocatedPixels);
+    float requestedFps, uint32_t maxDecodedFrames, size_t& totalAllocatedPixels);
 
 }  // namespace ovms

@@ -465,7 +465,10 @@ TEST(VideoFramesProcessorTest, FileSizeIsRejectedBeforeMp4Parsing) {
     ScopedVideoDecodeLimits limits(3, OVMS_DEFAULT_MAX_VIDEO_DECODE_PIXELS);
 
     size_t totalVideoPixels = 0;
-    const auto result = decodeVideoSource(source.path.string(), std::filesystem::temp_directory_path().string(), std::nullopt, 1, 1, totalVideoPixels);
+    constexpr float requestedFps = 1.0F;
+    constexpr uint32_t maxDecodedFrames = 1;
+    const auto result = decodeVideoSource(source.path.string(), std::filesystem::temp_directory_path().string(), std::nullopt,
+        requestedFps, maxDecodedFrames, totalVideoPixels);
 
     ASSERT_FALSE(result.ok());
     EXPECT_EQ(result.status(), absl::InvalidArgumentError("Encoded video source exceeds the allowed file size"));
@@ -477,7 +480,10 @@ TEST(VideoFramesProcessorTest, MalformedMp4IsRejected) {
     ScopedVideoDecodeLimits limits(1024, OVMS_DEFAULT_MAX_VIDEO_DECODE_PIXELS);
 
     size_t totalVideoPixels = 0;
-    const auto result = decodeVideoSource(source.path.string(), std::filesystem::temp_directory_path().string(), std::nullopt, 1, 1, totalVideoPixels);
+    constexpr float requestedFps = 1.0F;
+    constexpr uint32_t maxDecodedFrames = 1;
+    const auto result = decodeVideoSource(source.path.string(), std::filesystem::temp_directory_path().string(), std::nullopt,
+        requestedFps, maxDecodedFrames, totalVideoPixels);
 
     ASSERT_FALSE(result.ok());
     EXPECT_EQ(result.status(), absl::InvalidArgumentError("Unable to parse MP4 video source"));
@@ -494,15 +500,15 @@ TEST(VideoFramesProcessorTest, DefaultVideoBudgetAccommodatesThirtySecondsAtTwoF
 
 TEST(VideoFramesProcessorTest, RemoteMp4Decodes) {
     constexpr char remoteVideoUrl[] = "https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/video/CEO%20Pat%20Gelsinger%20on%20Leading%20Intel.mp4";
-    constexpr uint32_t videoFrameStride = 10;
-    constexpr uint32_t maxDecodedFrames = 4;
+    constexpr float requestedFps = 1.0F;
+    constexpr uint32_t maxDecodedFrames = 100;
     ScopedVideoDecodeLimits limits(16 * 1024 * 1024, OVMS_DEFAULT_MAX_VIDEO_DECODE_PIXELS);
     size_t totalVideoPixels = 0;
 
     const auto result = decodeVideoSource(remoteVideoUrl, std::nullopt,
-        std::vector<std::string>{"storage.openvinotoolkit.org"}, videoFrameStride, maxDecodedFrames, totalVideoPixels);
+        std::vector<std::string>{"storage.openvinotoolkit.org"}, requestedFps, maxDecodedFrames, totalVideoPixels);
 
     ASSERT_TRUE(result.ok()) << result.status().message();
-    EXPECT_EQ(result->get_shape()[0], maxDecodedFrames);
+    EXPECT_LE(result->get_shape()[0], maxDecodedFrames);
     EXPECT_GT(totalVideoPixels, 0u);
 }

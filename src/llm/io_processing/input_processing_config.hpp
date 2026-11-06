@@ -28,7 +28,8 @@ struct InputProcessingConfig {
     // True for Omni servables. Enables AudioDecodingProcessor in addition to
     // ImageDecodingProcessor (implies isVLM-like behavior for images).
     bool isOmni = false;
-    uint32_t videoFrameStride = 10;
+    // Encoded-video sampling settings for VLM input processing.
+    float videoFps = 2.0F;
     uint32_t videoMaxFrames = 100;
 };
 

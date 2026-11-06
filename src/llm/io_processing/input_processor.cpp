@@ -56,7 +56,7 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
             processors.emplace_back(std::make_unique<VideoFramesProcessor>(
                 settings.allowedLocalMediaPath,
                 settings.allowedMediaDomains,
-                context.config.videoFrameStride,
+                context.config.videoFps,
                 context.config.videoMaxFrames));
         }
 

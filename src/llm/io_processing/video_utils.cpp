@@ -17,6 +17,7 @@
 #include "video_utils.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
@@ -178,9 +179,9 @@ absl::StatusOr<ov::Tensor> loadVideoFrames(const std::vector<std::string>& frame
 absl::StatusOr<ov::Tensor> decodeVideoSource(const std::string& videoSource,
     const std::optional<std::string>& allowedLocalMediaPath,
     const std::optional<std::vector<std::string>>& allowedMediaDomains,
-    uint32_t frameStride, uint32_t maxFrames, size_t& totalAllocatedPixels) {
-    if (frameStride == 0 || maxFrames == 0) {
-        return absl::InvalidArgumentError("Video frame stride and maximum frame count must be greater than zero");
+    float requestedFps, uint32_t maxDecodedFrames, size_t& totalAllocatedPixels) {
+    if (!std::isfinite(requestedFps) || requestedFps <= 0.0F || maxDecodedFrames == 0) {
+        return absl::InvalidArgumentError("Requested video FPS and maximum frame count must be valid and greater than zero");
     }
     auto validationStatus = validateMediaSource(videoSource, allowedLocalMediaPath, allowedMediaDomains);
     if (!validationStatus.ok()) {
@@ -251,9 +252,26 @@ absl::StatusOr<ov::Tensor> decodeVideoSource(const std::string& videoSource,
         return absl::InvalidArgumentError("MP4 video track is not H.264 AVC");
     }
 
-    const size_t selectedFrameLimit = std::min({static_cast<size_t>(maxFrames), static_cast<size_t>(MAX_VIDEO_FRAMES),
-        static_cast<size_t>(mp4.track[trackIndex].sample_count) / frameStride +
-            (static_cast<size_t>(mp4.track[trackIndex].sample_count) % frameStride != 0 ? 1U : 0U)});
+    const auto& videoTrack = mp4.track[trackIndex];
+    if (videoTrack.timescale == 0) {
+        closeMp4();
+        return absl::InvalidArgumentError("MP4 video track has an invalid time scale");
+    }
+    const uint64_t durationUnits = (static_cast<uint64_t>(videoTrack.duration_hi) << 32) | videoTrack.duration_lo;
+    const long double requestedFrameCount = std::ceil(
+        static_cast<long double>(durationUnits) * requestedFps / static_cast<long double>(videoTrack.timescale));
+    if (!std::isfinite(requestedFrameCount) || requestedFrameCount < 1.0L ||
+        requestedFrameCount > static_cast<long double>(std::numeric_limits<size_t>::max())) {
+        closeMp4();
+        return absl::InvalidArgumentError("MP4 video duration cannot be sampled at the requested FPS");
+    }
+    const size_t estimatedRequestedFrames = static_cast<size_t>(requestedFrameCount);
+    if (estimatedRequestedFrames > maxDecodedFrames) {
+        closeMp4();
+        return absl::InvalidArgumentError("Requested video FPS exceeds maximum decoded frame count");
+    }
+    const size_t selectedFrameLimit = std::min({estimatedRequestedFrames, static_cast<size_t>(maxDecodedFrames),
+        static_cast<size_t>(MAX_VIDEO_FRAMES), static_cast<size_t>(videoTrack.sample_count)});
     const size_t estimatedWidth = mp4.track[trackIndex].SampleDescription.video.width;
     const size_t estimatedHeight = mp4.track[trackIndex].SampleDescription.video.height;
     const size_t maxAllowedVideoPixels = request_validation_utils::getMaxVideoDecodePixels();
@@ -288,7 +306,8 @@ absl::StatusOr<ov::Tensor> decodeVideoSource(const std::string& videoSource,
     ov::Shape frameShape;
     size_t frameBytes = 0;
     size_t selectedFrames = 0;
-    size_t decodedFrames = 0;
+    const long double frameInterval = static_cast<long double>(videoTrack.timescale) / requestedFps;
+    long double nextSelectedTimestamp = 0.0L;
     absl::Status decodeStatus = absl::OkStatus();
     for (unsigned sampleIndex = 0; sampleIndex < mp4.track[trackIndex].sample_count; ++sampleIndex) {
         unsigned sampleBytes = 0;
@@ -320,9 +339,10 @@ absl::StatusOr<ov::Tensor> decodeVideoSource(const std::string& videoSource,
         if (output.iBufferStatus != 1) {
             continue;
         }
-        if (decodedFrames++ % frameStride != 0 || selectedFrames == maxFrames) {
+        if (selectedFrames == maxDecodedFrames || static_cast<long double>(timestamp) < nextSelectedTimestamp) {
             continue;
         }
+        nextSelectedTimestamp += frameInterval;
 
         const int width = output.UsrData.sSystemBuffer.iWidth;
         const int height = output.UsrData.sSystemBuffer.iHeight;
