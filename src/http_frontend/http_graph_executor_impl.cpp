@@ -32,6 +32,7 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
+#include "../logging.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 
@@ -92,6 +93,16 @@ Status onPacketReadySerializeImpl(
     const mediapipe_packet_type_enum packetType,
     const ::mediapipe::Packet& packet,
     std::string& response) {
+    if (packet.IsEmpty()) {
+        SPDLOG_DEBUG("Received empty packet for output stream: {}", packetName);
+        response.clear();
+        return StatusCode::OK;
+    }
+    if (!packet.ValidateAsType<std::string>().ok()) {
+        SPDLOG_ERROR("Packet type mismatch for stream: {}. Expected std::string but received: {}",
+            packetName, packet.DebugTypeName());
+        return Status(StatusCode::MEDIAPIPE_EXECUTION_ERROR, "Invalid packet payload type for HTTP output");
+    }
     response = packet.Get<std::string>();
     return StatusCode::OK;
 }
