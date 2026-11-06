@@ -257,34 +257,34 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Qwen38_ToolCallWithStringArgs) {
     ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
     EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "qwen3");
 
-// This model woks ok in usual flow with Minja, initializing CB pipeline in GenAI chat template is modified and problem with Minja's "is undefined" is solved. In this test, we are using only tokenizer, so we cannot use the full chat template application.
+    // This model woks ok in usual flow with Minja, initializing CB pipeline in GenAI chat template is modified and problem with Minja's "is undefined" is solved. In this test, we are using only tokenizer, so we cannot use the full chat template application.
 
-//     EXPECT_TRUE(caps.supportsToolCalls);
-//     EXPECT_TRUE(caps.requiresObjectArguments);
+    //     EXPECT_TRUE(caps.supportsToolCalls);
+    //     EXPECT_TRUE(caps.requiresObjectArguments);
 
-//     std::string expectedOutput = R"(<|im_start|>system
-// Reasoning effort is set to xhigh. Please think carefully through the task, validate key assumptions, consider plausible alternatives, and prioritize correctness, consistency, and clarity in the final answer.<|im_end|>
-// <|im_start|>user
-// What's the weather in Paris?<|im_end|>
-// <|im_start|>assistant
-// <think>
+    //     std::string expectedOutput = R"(<|im_start|>system
+    // Reasoning effort is set to xhigh. Please think carefully through the task, validate key assumptions, consider plausible alternatives, and prioritize correctness, consistency, and clarity in the final answer.<|im_end|>
+    // <|im_start|>user
+    // What's the weather in Paris?<|im_end|>
+    // <|im_start|>assistant
+    // <think>
 
-// </think>
+    // </think>
 
-// <tool_call>
-// <function=get_weather>
-// <parameter=location>
-// Paris
-// </parameter>
-// <parameter=unit>
-// celsius
-// </parameter>
-// </function>
-// </tool_call><|im_end|>
-// <|im_start|>assistant
-// <think>
-// )";
-//     EXPECT_EQ(appliedOutput, expectedOutput);
+    // <tool_call>
+    // <function=get_weather>
+    // <parameter=location>
+    // Paris
+    // </parameter>
+    // <parameter=unit>
+    // celsius
+    // </parameter>
+    // </function>
+    // </tool_call><|im_end|>
+    // <|im_start|>assistant
+    // <think>
+    // )";
+    //     EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
 // =============================================================================
@@ -309,16 +309,16 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Gemma4_ToolCallWithStringArgs) {
     ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
     EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "gemma4");
 
-// This model woks ok in usual flow with Minja, initializing CB pipeline in GenAI chat template is modified and problem with Minja's "is undefined" is solved. In this test, we are using only tokenizer, so we cannot use the full chat template application.
-// EXPECT_TRUE(caps.supportsToolCalls);
-// EXPECT_TRUE(caps.requiresObjectArguments);
-// EXPECT_TRUE(caps.missnamedReasoningField.empty());
+    // This model woks ok in usual flow with Minja, initializing CB pipeline in GenAI chat template is modified and problem with Minja's "is undefined" is solved. In this test, we are using only tokenizer, so we cannot use the full chat template application.
+    // EXPECT_TRUE(caps.supportsToolCalls);
+    // EXPECT_TRUE(caps.requiresObjectArguments);
+    // EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
-//     std::string expectedOutput = R"(</s><|turn>user
-// What's the weather in Paris?<turn|>
-// <|turn>model
-// <|tool_call>call:get_weather{location:<|"|>Paris<|"|>,unit:<|"|>celsius<|"|>}<tool_call|><|tool_response>)";
-//     EXPECT_EQ(appliedOutput, expectedOutput);
+    //     std::string expectedOutput = R"(</s><|turn>user
+    // What's the weather in Paris?<turn|>
+    // <|turn>model
+    // <|tool_call>call:get_weather{location:<|"|>Paris<|"|>,unit:<|"|>celsius<|"|>}<tool_call|><|tool_response>)";
+    //     EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
 TEST_F(ChatTemplateEndToEndMinjaTest, Qwen3Coder_ToolCallWithStringArgs) {
