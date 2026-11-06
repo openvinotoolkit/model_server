@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=invalid-name
 # pylint: disable=pointless-string-statement
 
 import os

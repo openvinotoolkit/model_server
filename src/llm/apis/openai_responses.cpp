@@ -806,6 +806,11 @@ absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> 
         // summary field is accepted but ignored
     }
 
+    auto thinkingStatus = parseThinkingFromChatTemplateKwargs();
+    if (!thinkingStatus.ok()) {
+        return thinkingStatus;
+    }
+
     // logprobs: bool; optional - defaults to false
     it = doc.FindMember("logprobs");
     if (it != doc.MemberEnd() && !it->value.IsNull()) {

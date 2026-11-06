@@ -573,6 +573,7 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
             "io_processing/gptoss/tool_parser.cpp",
             "io_processing/gptoss/content_parser.cpp",
             "io_processing/gptoss/harmony.cpp",
+            "io_processing/output_parsing_config.cpp",
             "io_processing/output_parser.cpp",
     ],
     deps = [
@@ -603,6 +604,7 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
 ovms_cc_library(
     name = "generation_config_builders",
     hdrs = ["io_processing/base_generation_config_builder.hpp",
+            "io_processing/output_parsing_config.hpp",
             "io_processing/phi4/generation_config_builder.hpp",
             "io_processing/llama3/generation_config_builder.hpp",
             "io_processing/hermes3/generation_config_builder.hpp",
@@ -614,6 +616,9 @@ ovms_cc_library(
             "io_processing/hermes3/generation_config_builder.cpp",
             "io_processing/devstral/generation_config_builder.cpp"],
     deps = [
+        "@com_github_tencent_rapidjson//:rapidjson",
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
         ":openai_request",
         "//src:libovmslogging",
         "//third_party:genai",],
