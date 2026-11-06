@@ -7,7 +7,7 @@ Whenever you want to solve a problem or a bug with big contribution impact pleas
 
 We encourage to make smaller contributions in multiple parts with clear goals and concise description rather than huge implementations created with AI tools that would be hard to understand or review.
 
-Once the PR is created in the repository it will be initially triaged and checked by the jenkins pipeline.
+Once the PR is created CI automation is to be approved by repository maintainers. It is recommended to trigger the build and tests locally in advance.
 The coresponding pipeline steps are described in the [Jenkins Pipeline Checks](#jenkins-ci-checks) section.
 Once the specific jenkins step fails you can reproduce it using the mentioned commands on your machine or ask for help to resolve it.
 
