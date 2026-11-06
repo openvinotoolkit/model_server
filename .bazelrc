@@ -217,7 +217,9 @@ test:linux --test_env no_proxy=localhost
 test:linux --test_env "OVMS_MEDIA_URL_ALLOW_REDIRECTS=1"
 
 # Windows test runtime env mirrors Linux test env intent.
-test:windows --test_env PATH=C:/opt/opencv_4.14.0/x64/vc16/bin;C:/opt/openvino/runtime/bin/intel64/Release;C:/opt/openvino/runtime/3rdparty/tbb/bin;C:/opt/Python312;C:/opt/Python312/DLLs
+test:windows --test_env PATH=C:/opt/opencv_4.14.0/x64/vc17/bin;C:/opt/openvino/runtime/bin/intel64/Release;C:/opt/openvino/runtime/3rdparty/tbb/bin;C:/opt/Python312;C:/opt/Python312/DLLs
+test:windows --test_env PYTHONHOME=C:/opt/Python312
+test:windows --test_env PYTHONPATH=C:/opt/Python312;C:/git/model_server/bazel-bin/src/python/binding
 test:windows --test_env OPENVINO_TOKENIZERS_PATH_GENAI=C:/opt/openvino/runtime/bin/intel64/Release/openvino_tokenizers.dll
 test:windows --test_env no_proxy=localhost
 test:windows --test_env "OVMS_MEDIA_URL_ALLOW_REDIRECTS=1"
