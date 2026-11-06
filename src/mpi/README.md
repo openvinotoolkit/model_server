@@ -142,7 +142,7 @@ in the configured build environment. For a two-host build, set
 
 Exact commands inside either build container:
 
-```bash
+```text
 bazel build --config=mp_on //src/test/mediapipe/calculators:openvino_inference_benchmark
 bazel build --config=mp_on //src/test/mediapipe/calculators:mpi_openvino_inference_benchmark
 bazel build --config=mp_on //src/test/mediapipe/calculators:mpi_capi_inference_benchmark
@@ -150,7 +150,7 @@ bazel build --config=mp_on //src/test/mediapipe/calculators:mpi_capi_inference_b
 
 Exact per-binary run commands inside the configured GPU test container:
 
-```bash
+```text
 bash tools/run_linux_inference_benchmarks.sh //src/test/mediapipe/calculators:openvino_inference_benchmark
 bash tools/run_linux_inference_benchmarks.sh //src/test/mediapipe/calculators:mpi_openvino_inference_benchmark
 bash tools/run_linux_inference_benchmarks.sh //src/test/mediapipe/calculators:mpi_capi_inference_benchmark

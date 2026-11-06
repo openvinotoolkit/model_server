@@ -22,14 +22,14 @@ that workflow.
 Build in the configured Linux build container, which has GStreamer and its
 plugins:
 
-```bash
+```text
 bazel build --config=mp_on //standalone:mpi_openvino_video
 ```
 
 Run with a video and an OpenVINO IR XML file. Width and height default to
 672x384 and can be overridden together:
 
-```bash
+```text
 bazel run --config=mp_on //standalone:mpi_openvino_video -- \
   standalone/openvino_video_inference.pbtxt \
   recording_3_raw.avi \
@@ -48,7 +48,7 @@ boxes, and writes an H.264 MP4 file. Its calculators are `GstVideoSourceCalculat
 `GstVideoSinkCalculator`. This graph is Linux-only because the overlay supports
 host NV12 and VA surfaces, not D3D11 frames.
 
-```bash
+```text
 bazel run --config=mp_on //standalone:mpi_openvino_video -- \
   standalone/openvino_video_overlay.pbtxt \
   recording_3_raw.avi \
@@ -63,7 +63,7 @@ non-empty video with `test -s annotated.mp4`.
 
 Run the dependency check from the repository root:
 
-```bash
+```text
 bash standalone/check_dependencies.sh
 ```
 

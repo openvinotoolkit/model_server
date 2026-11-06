@@ -109,7 +109,7 @@ baseline measurements.
 
 Build the benchmark targets in the project's configured Linux build container:
 
-```bash
+```text
 bash tools/build_linux_inference_benchmarks.sh
 ```
 
@@ -122,7 +122,7 @@ logs, external downloads and node_modules; it does not delete remote files.
 
 Exact commands inside either build container:
 
-```bash
+```text
 bazel build --config=mp_on //src/test/mediapipe/calculators:openvino_inference_benchmark
 bazel build --config=mp_on //src/test/mediapipe/calculators:mpi_openvino_inference_benchmark
 bazel build --config=mp_on //src/test/mediapipe/calculators:mpi_capi_inference_benchmark
@@ -130,7 +130,7 @@ bazel build --config=mp_on //src/test/mediapipe/calculators:mpi_capi_inference_b
 
 Run the cases inside the configured GPU test container:
 
-```bash
+```text
 bash tools/run_linux_inference_benchmarks.sh //src/test/mediapipe/calculators:openvino_inference_benchmark
 bash tools/run_linux_inference_benchmarks.sh //src/test/mediapipe/calculators:mpi_openvino_inference_benchmark
 bash tools/run_linux_inference_benchmarks.sh //src/test/mediapipe/calculators:mpi_capi_inference_benchmark
@@ -228,7 +228,7 @@ this as `surface_sync_ms_per_frame`; the default is off.
 For focused lifecycle tests, first prepare inputs with the runner, then inside
 the worker container:
 
-```bash
+```text
 export OVMS_REPO_ROOT=/ovms
 export PATH=/opt/gstreamer/bin:$PATH
 export LD_LIBRARY_PATH=/azure-sdk-install/lib:/opt/gstreamer/lib:$LD_LIBRARY_PATH
@@ -311,7 +311,7 @@ The same three target names have host/OpenCL/D3D11 implementations on Windows.
 Windows compile/runtime validation remains outstanding in this Linux session.
 The legacy Windows diagnostic fixture and runner remain available:
 
-```powershell
+```text
 .\tools\run_remote_tensor_performance.ps1 -BuildOnly
 .\tools\run_remote_tensor_performance.ps1 -NoTestCache -BenchmarkTrialCount 5 -GTestFilter '*Performance'
 ```
