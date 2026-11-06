@@ -34,6 +34,7 @@ ovms_cc_library(
         "//src:httppayload",
         "//third_party:genai",
         "//src/mediapipe_internal:node_initializer",
+        "//src/metrics:libovmsmetrics",
         "//src:libovmslogging",
         "//src:libovmsstring_utils",],
     visibility = ["//visibility:public"],
@@ -658,6 +659,7 @@ ovms_cc_library(
             "omni_model/legacy/servable_initializer.cpp",
             "omni_model/legacy/legacy_executor.cpp"],
     deps = [
+        "//src/metrics:libovmsmetrics",
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_cc_proto",
         "@mediapipe//mediapipe/framework/port:ret_check",
@@ -759,5 +761,3 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
-
-

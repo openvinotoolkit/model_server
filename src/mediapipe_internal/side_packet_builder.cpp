@@ -23,6 +23,7 @@ namespace ovms {
 void buildInputSidePackets(std::map<std::string, mediapipe::Packet>& inputSidePackets,
     const GraphSidePackets& sidePackets) {
     const auto ts = ::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE);
+    inputSidePackets[CALCULATOR_METRICS_PACKET_NAME] = mediapipe::MakePacket<CalculatorMetricsMap>(sidePackets.calculatorMetrics).At(ts);
     inputSidePackets[PYTHON_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<PythonNodeResourcesMap>(sidePackets.pythonNodeResourcesMap).At(ts);
     inputSidePackets[LLM_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiServableMap>(sidePackets.genAiServableMap).At(ts);
     inputSidePackets[LLM_EXECUTION_CONTEXT_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<GenAiExecutionContextMap>(sidePackets.genAiExecutionContextMap).At(ts);

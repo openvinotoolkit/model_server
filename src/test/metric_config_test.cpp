@@ -88,6 +88,31 @@ public:
     }
 };
 
+TEST(MetricsListPresetTest, AllLLMMetrics) {
+    MetricConfig metricConfig;
+
+    ASSERT_EQ(metricConfig.loadFromCLIString(true, "all_llm"), StatusCode::OK);
+
+    EXPECT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_LLM_KV_CACHE_UTILIZATION));
+    EXPECT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_LLM_PREFILL_SPEED));
+    EXPECT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_LLM_GENERATED_TOKENS));
+    EXPECT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_LLM_SCHEDULED_REQUESTS));
+    EXPECT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_LLM_TTFT));
+    EXPECT_FALSE(metricConfig.isFamilyEnabled(METRIC_NAME_REQUESTS_SUCCESS));
+}
+
+TEST(MetricsListPresetTest, AllLLMAndIndividualFamilyAreOrderIndependent) {
+    const std::string llmMetric = METRIC_NAME_LLM_TTFT;
+    for (const std::string& metricsList : {
+             "all_llm," + llmMetric,
+             llmMetric + ",all_llm"}) {
+        MetricConfig metricConfig;
+        ASSERT_EQ(metricConfig.loadFromCLIString(true, metricsList), StatusCode::OK)
+            << "metrics_list: " << metricsList;
+        EXPECT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_LLM_TTFT));
+    }
+}
+
 std::string createModelMetricsChangedConfig() {
     return R"(
 {

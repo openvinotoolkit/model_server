@@ -66,6 +66,12 @@ const std::string METRIC_NAME_PROCESSING_TIME = "ovms_graph_processing_time_us";
 
 const std::string METRIC_NAME_REQUEST_LATENCY = "ovms_graph_request_latency_us";
 
+const std::string METRIC_NAME_LLM_KV_CACHE_UTILIZATION = "ovms_llm_kv_cache_utilization_percent";
+const std::string METRIC_NAME_LLM_PREFILL_SPEED = "ovms_llm_prefill_speed_tokens_per_second";
+const std::string METRIC_NAME_LLM_GENERATED_TOKENS = "ovms_llm_generated_tokens_total";
+const std::string METRIC_NAME_LLM_SCHEDULED_REQUESTS = "ovms_llm_scheduled_requests";
+const std::string METRIC_NAME_LLM_TTFT = "ovms_llm_ttft_milliseconds";
+
 bool MetricConfig::validateEndpointPath(const std::string& endpoint) {
     std::regex valid_endpoint_regex("^/[a-zA-Z0-9]*$");
     return std::regex_match(endpoint, valid_endpoint_regex);
@@ -122,21 +128,30 @@ Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
     for (auto& sh : v.GetArray()) {
         std::string metric = std::string(sh.GetString());
 
-        const size_t listSize = this->enabledFamiliesList.size();
+        if (metric == "all_llm") {
+            for (const auto& family : this->llmMetricFamilies) {
+                this->enabledFamiliesList.insert(family);
+            }
+            continue;
+        }
+
+        bool supported = false;
 
         for (const auto& family : this->defaultMetricFamilies) {
             if (metric == family) {
                 this->enabledFamiliesList.insert(family);
+                supported = true;
             }
         }
 
         for (const auto& family : this->additionalMetricFamilies) {
             if (metric == family) {
                 this->enabledFamiliesList.insert(family);
+                supported = true;
             }
         }
 
-        if (this->enabledFamiliesList.size() == listSize) {
+        if (!supported) {
             SPDLOG_LOGGER_WARN(modelmanager_logger, "Metrics family name not supported: {}", metric);
             return StatusCode::INVALID_METRICS_FAMILY_NAME;
         }

@@ -46,6 +46,11 @@ Optional metrics
 | :---    |    :----   |    :----   |    :----       |
 | gauge      | ovms_infer_req_queue_size | name,version | Inference request queue size (nireq). |
 | gauge      | ovms_infer_req_active | name,version | Number of currently consumed inference requests from the processing queue that are now either in the data loading or inference process. |
+| gauge      | ovms_llm_kv_cache_utilization_percent | name,node | GenAI-reported cache utilization (0-100) for a continuous-batching LLM or VLM pipeline. |
+| histogram      | ovms_llm_prefill_speed_tokens_per_second | name,node | Per-request input token count divided by GenAI time to first token in seconds, for continuous-batching LLM and VLM pipelines. |
+| counter      | ovms_llm_generated_tokens_total | name,node | Generated output tokens from successfully completed continuous-batching LLM/VLM requests; excludes partial output from failed or cancelled requests. |
+| gauge      | ovms_llm_scheduled_requests | name,node | Number of requests scheduled in the last continuous-batching generation step; set to zero when the executor becomes idle. |
+| histogram      | ovms_llm_ttft_milliseconds | name,node | GenAI time to first token in milliseconds for successfully completed continuous-batching LLM/VLM requests, excluding VLM embedding preparation. |
 
 > **Note**: While `ovms_current_requests` and `ovms_infer_req_active` both indicate how much resources are engaged in the requests processing, they are quite distinct. A request is counted in `ovms_current_requests` metric starting as soon as it's received by the server and stays there until the response is sent back to the user. The `ovms_infer_req_active` counter informs about the number of OpenVINO Infer Requests that are bound to user requests and are either loading the data or already running inference. 
 
@@ -57,7 +62,85 @@ Labels description
 | method      | ModelMetadata, ModelReady, ModelInfer, Predict, GetModelStatus, GetModelMetadata, Unary, Stream | Interface methods. |
 | version      | 1, 2, ..., n | Model version. Note that GetModelStatus and ModelReady and all MediaPipe servables do not have the version label. |
 | name      | As defined in model server config | Model name, DAG name or MediaPipe graph name. |
+| node      | As defined in the graph configuration | LLM calculator node name; distinguishes independent pipelines within a graph. |
 
+## LLM-specific metrics
+
+The five currently supported `ovms_llm_*` families are optional and supported
+for continuous-batching language and vision-language models, not legacy/NPU or
+Omni pipelines. Use the `all_llm` preset in the metrics list to enable all five,
+or list individual families:
+
+```bash
+ovms --config_path /models/config.json --rest_port 8000 --metrics_enable \
+    --metrics_list all_llm
+curl http://localhost:8000/metrics
+```
+
+The preset can also be used in `monitoring.metrics.metrics_list` in the
+configuration file. An explicit list selects only the listed families; include
+other metric names if you also need the default serving metrics. The preset
+includes only currently supported LLM metric families; it does not enable
+proposed or future LLM metrics automatically.
+
+Cache utilization is published by the executor after each generation step and
+before waiting for new requests. It is GenAI's last-step maximum cache utilization
+percentage across registered cache types, not total device-memory utilization.
+The denominator can change with dynamic cache allocation. Idle pipelines retain
+the last reported sample; idle does not imply an empty cache or a zero value.
+
+Prefill speed is observed once per successfully completed request, for both unary
+and streaming responses, independently of the log level. Cancelled or failed
+requests are not observed. It is an effective TTFT-derived rate, not isolated
+prefill kernel throughput: scheduling, first-token generation and prefix-cache
+hits affect it. For VLMs, the GenAI TTFT excludes embedding preparation. Invalid
+or non-positive speed samples are skipped with a warning.
+
+The histogram exports `_bucket`, `_sum`, and `_count` series. Its finite bucket
+boundaries, in tokens per second, are `1, 10, 50, 100, 250, 500, 1000, 2500,
+5000, 10000, 25000, 50000, 100000`. For example, the mean per-request speed over
+five minutes is:
+
+```promql
+sum by (name, node) (rate(ovms_llm_prefill_speed_tokens_per_second_sum[5m]))
+/
+sum by (name, node) (rate(ovms_llm_prefill_speed_tokens_per_second_count[5m]))
+```
+
+This is not aggregate token throughput or a token-weighted average. Values are
+retained in the in-memory registry between scrapes; scraping does not query the
+GenAI pipeline. Series are deactivated and removed when the graph unloads or
+reloads, even if an in-flight request still retains the old pipeline. Replacement
+pipelines start fresh series; late updates from the old pipeline are ignored.
+
+Generated tokens and TTFT use the same successful-completion accounting as prefill
+speed, independently of the log level. Streaming requests are recorded once, when
+the final response is prepared, not once per chunk. Partial output from cancelled
+or failed requests is not counted. The token counter uses GenAI's generated-token
+count, not characters or HTTP response chunks. An invalid TTFT sample is skipped
+with a warning without discarding the request's generated-token count.
+
+TTFT is GenAI's request timing, not HTTP end-to-end latency. For VLMs it excludes
+embedding preparation, matching the timing used for the existing prefill-speed
+metric. Its finite histogram bucket boundaries, in milliseconds, are
+`1, 5, 10, 20, 40, 60, 80, 100, 250, 500, 750, 1000, 2500, 5000, 7500,
+10000, 20000, 40000, 80000, 160000, 640000, 2560000`.
+Only finite, strictly positive TTFT samples are observed.
+
+Scheduled requests are published after each generation step, using GenAI's
+`scheduled_requests` value for the previous step. The gauge is set to zero before
+the executor waits for new requests. It is not the waiting queue size or the total
+number of requests accepted by the server.
+
+For example, the generated-token rate accounted for at successful request
+completion, averaged over five minutes, is:
+
+```promql
+sum by (name, node) (rate(ovms_llm_generated_tokens_total[5m]))
+```
+
+Because tokens are counted at completion, this rate is not a live measurement of
+tokens emitted by still-running requests.
 
 ## Enable metrics
 
@@ -244,7 +327,128 @@ For [MediaPipe Graphs](./mediapipe.md) execution there are 6 generic metrics whi
 | histogram      | ovms_graph_processing_time_us | Tracks duration of successfully started mediapipe graphs in us. It can represent pipeline processing time for unary calls or the session length for streamed requests. |
 | histogram      | ovms_graph_request_latency_us | Difference between MediaPipe packet timestamps at the time of creation (request receival) and when the packet generation has concluded (full or partial response). Server automatically timestamps the incoming  packets and is used as a source of truth for receival time, unless client opts-in to manual timestamping (NOTE: manual timestamping causes the metric results to become invalid). |
 
-Exposing custom metrics in calculator implementations (MediaPipe graph nodes) is not supported yet.
+## Custom metrics in C++ calculators
+
+Calculators can register **custom counters** and update them during processing.
+The API is deliberately small:
+
+```cpp
+auto events = metrics->registerCounter("custom_events_total", "Events processed.");
+events->increment();       // Add one.
+events->increment(3.0);    // Add a batch.
+```
+
+`metrics` is an OVMS-provided `std::shared_ptr<ovms::CalculatorMetrics>`, scoped
+to one graph and one named calculator node. The returned
+`std::shared_ptr<ovms::CalculatorCounter>` is a thread-safe handle, not a local
+copy of the counter. OVMS stores the accumulated value in the shared Prometheus
+registry and exposes it on the existing `/metrics` endpoint. No separate cache,
+exporter, background thread or scrape callback is necessary.
+
+This API currently supports counters only, not gauges or histograms. It is a
+**C++ extension API**: implementing new metric logic requires compiling the
+calculator and linking it into OVMS; a graph file alone cannot define arbitrary
+counting logic. It does not expose a Python metrics API.
+
+### 1. Enable metrics and add the side packet
+
+Enable the normal metrics endpoint using `--rest_port 8000 --metrics_enable`, or
+the equivalent monitoring configuration. Then add this input side packet to the
+calculator node in its graph:
+
+```protobuf
+node {
+    name: "my_node"
+    calculator: "MyCalculator"
+    input_side_packet: "CALCULATOR_METRICS:calculator_metrics"
+    # Other inputs, outputs and calculator options...
+}
+```
+
+OVMS supplies the packet; do not configure an external side-packet value.
+Use the tag and packet name exactly as shown (`CALCULATOR_METRICS:calculator_metrics`).
+The node must have a stable, non-empty `name`. Each custom series automatically
+gets `name="<graph name>"` and `node="<calculator node name>"` labels.
+
+### 2. Register a counter in the calculator
+
+Include `src/metrics/calculator_metrics.hpp` and depend on
+`//src/metrics:libovmsmetrics` in the calculator's Bazel target.
+Declare the side-packet type in `GetContract`, acquire the node's scope in `Open`,
+and retain the returned handle as a calculator member:
+
+```cpp
+std::shared_ptr<ovms::CalculatorCounter> events;
+
+static absl::Status GetContract(mediapipe::CalculatorContract* cc) {
+    // Keep the calculator's existing input/output contract here.
+    cc->InputSidePackets()
+        .Tag(ovms::CALCULATOR_METRICS_TAG)
+        .Set<ovms::CalculatorMetricsMap>();
+    return absl::OkStatus();
+}
+
+absl::Status Open(mediapipe::CalculatorContext* cc) override {
+    const auto& scopes = cc->InputSidePackets()
+        .Tag(ovms::CALCULATOR_METRICS_TAG)
+        .Get<ovms::CalculatorMetricsMap>();
+    const auto scope = scopes.find(cc->NodeName());
+    RET_CHECK(scope != scopes.end()) << "Missing calculator metrics scope";
+    try {
+        events = scope->second->registerCounter(
+            "custom_events_total", "Events processed.");
+    } catch (const std::exception& e) {
+        return absl::InvalidArgumentError(e.what());
+    }
+    return absl::OkStatus();
+}
+```
+
+Use the normal MediaPipe headers for these methods, plus `<memory>` and
+`<exception>`. For an optional integration, guard both contract declaration and
+`Open` lookup with `cc->InputSidePackets().HasTag(ovms::CALCULATOR_METRICS_TAG)`.
+
+Registration is idempotent: identical registrations from concurrent calculator
+instances in the same graph/node return the same counter. Register in `Open`,
+not for every packet. Different nodes or graphs get independent series.
+
+### 3. Update during processing
+
+Once an event has occurred, call the retained handle:
+
+```cpp
+events->increment();
+```
+
+To count multiple events in a packet, call
+`events->increment(static_cast<double>(eventCount))`.
+No registry lookup, metric-name construction or registration is needed in
+`Process`. Scrapes do not reset counters; use Prometheus `rate()` or `increase()`
+to calculate changes over time.
+
+### Naming, configuration and lifetime
+
+- Names must match `custom_<name>_total`, containing only ASCII letters, digits
+  and underscores, with a non-empty middle name and help text. The `custom_`
+  prefix keeps application counters separate from built-in `ovms_` metrics.
+- The same metric name must have identical help text across nodes and graphs.
+  Invalid names, conflicting definitions and negative/non-finite increments
+  are logged and throw exceptions; do not suppress those errors.
+- Metric names must be fixed in calculator code. Do not construct names from
+  words, users, requests or timestamps. This initial API intentionally exposes
+  only the fixed graph/node labels to keep cardinality bounded.
+- Custom counters are controlled by the global metrics-enable setting and the
+  calculator's own registration logic, **not** by the built-in `metrics_list`.
+  Do not put custom names in that list: its parser accepts built-in names only.
+  Custom counters still work when a list selects a subset of built-in metrics.
+- With metrics disabled, registration returns a valid no-op handle, so processing
+  need not contain null checks. Names and increments are still validated.
+- Counters persist across requests and calculator `Close` calls. Do not remove
+  them in `Close`: other calculator instances can share the series.
+- OVMS deactivates scopes and removes series on graph unload/reload. Old handles
+  safely ignore valid late updates and cannot affect replacement series.
+  Re-registering through an inactive scope fails. Reloads and server restarts
+  reset counters; Prometheus handles counter resets in `rate()`/`increase()`.
 
 
 ## Visualize with Grafana

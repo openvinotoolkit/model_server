@@ -156,6 +156,7 @@ private:
     StatusCode notLoadedYetCode() const override;
     StatusCode notLoadedAnymoreCode() const override;
     void unloadComponentsAfterPendingExecutorsAreCreated();
+    void deactivateMetrics();
 
     tensor_map_t inputsInfo;
     tensor_map_t outputsInfo;
@@ -171,6 +172,8 @@ private:
 
     PythonBackend* pythonBackend;
 
+    MetricRegistry* metricRegistry;
+    const MetricConfig* metricConfig;
     std::unique_ptr<MediapipeServableMetricReporter> reporter;
     std::shared_ptr<GraphQueue> queue;
 

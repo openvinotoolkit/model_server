@@ -25,6 +25,7 @@
 #include "mediapipe/framework/calculator.pb.h"
 
 #include "src/logging.hpp"
+#include "src/metrics/llm_metric_reporter.hpp"
 
 namespace ovms {
 class LlmNodeInitializer : public NodeInitializer {
@@ -39,7 +40,9 @@ public:
         const std::string& graphName,
         const std::string& basePath,
         GraphSidePackets& sidePackets,
-        PythonBackend* /*pythonBackend*/) override {
+        PythonBackend* /*pythonBackend*/,
+        MetricRegistry* metricRegistry,
+        const MetricConfig* metricConfig) override {
         auto& genAiServableMap = sidePackets.genAiServableMap;
         if (!nodeConfig.node_options().size()) {
             SPDLOG_ERROR("LLM node missing options in graph: {}. ", graphName);
@@ -55,11 +58,14 @@ public:
             return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
         }
         std::shared_ptr<GenAiServable> servable;
-        Status status = initializeGenAiServable(servable, nodeConfig, basePath);
+        auto metricReporter = std::make_shared<LLMMetricReporter>(metricConfig, metricRegistry, graphName, nodeName);
+        std::weak_ptr<LLMMetricReporter> metricReporterRef = metricReporter;
+        Status status = initializeGenAiServable(servable, nodeConfig, basePath, std::move(metricReporter));
         if (!status.ok()) {
             SPDLOG_ERROR("Failed to process LLM node graph {}", graphName);
             return status;
         }
+        sidePackets.llmMetricReporters.push_back(std::move(metricReporterRef));
         genAiServableMap.insert(std::pair<std::string, std::shared_ptr<GenAiServable>>(nodeName, std::move(servable)));
         sidePackets.genAiExecutionContextMap.emplace(
             nodeName, std::make_shared<GenAiExecutionContextHolder>());

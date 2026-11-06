@@ -45,6 +45,7 @@ enum class PipelineType {
 
 class Status;
 class GenAiServable;
+class LLMMetricReporter;
 struct GenAiServableProperties;
 
 class GenAiServableInitializer {
@@ -79,5 +80,6 @@ std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath);
 // Throws std::runtime_error if the XML is missing or cannot be opened/read.
 GenAiServableProperties::DraftModelStrategy detectDraftModelStrategy(const std::string& draftPath);
 Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath);
-Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath);
+Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig,
+    std::string graphPath, std::shared_ptr<LLMMetricReporter> metricReporter = nullptr);
 }  // namespace ovms

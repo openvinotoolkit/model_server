@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "metric_registry.hpp"
 
+#include <utility>
+
 #include <prometheus/family.h>
 #include <prometheus/text_serializer.h>
 
@@ -24,6 +26,25 @@
 namespace ovms {
 
 MetricRegistry::MetricRegistry() = default;
+
+std::shared_ptr<MetricFamily<MetricCounter>> MetricRegistry::registerCustomCounterFamily(const std::string& name, const std::string& help) {
+    std::lock_guard<std::mutex> lock(customFamiliesMutex);
+    const auto existing = customCounterFamilies.find(name);
+    if (existing != customCounterFamilies.end()) {
+        if (existing->second.first != help) {
+            throw std::invalid_argument("Custom counter '" + name +
+                                        "' was registered with different help text; "
+                                        "all registrations for the same metric name must use identical help text");
+        }
+        return existing->second.second;
+    }
+    auto family = createFamily<MetricCounter>(name, help);
+    if (!family) {
+        throw std::invalid_argument("Cannot register custom counter family");
+    }
+    customCounterFamilies.emplace(name, std::make_pair(help, family));
+    return family;
+}
 
 std::string MetricRegistry::collect() const {
     prometheus::TextSerializer serializer;
