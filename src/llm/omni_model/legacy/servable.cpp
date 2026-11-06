@@ -256,10 +256,9 @@ absl::Status OmniModelLegacyServable::prepareCompleteResponse(std::shared_ptr<Ge
         std::string audioBase64;
         if (omniExecutionContext->audioFormat == OpenAIRequest::AudioFormat::WAV) {
             constexpr uint32_t OMNI_SAMPLE_RATE = 24000;
-            constexpr uint16_t BITS_PER_SAMPLE = 32;
             void* wavData = nullptr;
             size_t wavSize = 0;
-            ovms::audio_utils::prepareAudioOutput(&wavData, wavSize, OMNI_SAMPLE_RATE, BITS_PER_SAMPLE, sampleCount, pcmData);
+            ovms::audio_utils::prepareAudioOutput(&wavData, wavSize, OMNI_SAMPLE_RATE, sampleCount, pcmData);
             audioBase64 = absl::Base64Escape(std::string_view(reinterpret_cast<const char*>(wavData), wavSize));
             free(wavData);
         } else {
