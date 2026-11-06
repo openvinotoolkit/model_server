@@ -151,45 +151,10 @@ void RemoveFiltersAdjustment::apply(std::string& processed) const {
     }
 }
 
-ConcatMultiLineStringAdjustment::ConcatMultiLineStringAdjustment() {}
-
-void ConcatMultiLineStringAdjustment::apply(std::string& processed) const {
-    static const std::regex stringLiteral(
-        R"regex("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')regex");
-    std::string concatenated;
-    concatenated.reserve(processed.size());
-    size_t previousEnd = 0;
-    bool previousWasDoubleQuoted = false;
-    for (std::sregex_iterator token(processed.begin(), processed.end(), stringLiteral), end; token != end; ++token) {
-        const size_t start = static_cast<size_t>(token->position());
-        const size_t length = static_cast<size_t>(token->length());
-        const bool doubleQuoted = processed[start] == '"';
-        const bool whitespaceOnly = processed.find_first_not_of(" \t\r\n\f\v", previousEnd) >= start;
-        if (previousWasDoubleQuoted && doubleQuoted && whitespaceOnly) {
-            concatenated.pop_back();
-            concatenated.append(processed, start + 1, length - 1);
-        } else {
-            concatenated.append(processed, previousEnd, start - previousEnd);
-            concatenated.append(processed, start, length);
-        }
-        previousEnd = start + length;
-        previousWasDoubleQuoted = doubleQuoted;
-    }
-    concatenated.append(processed, previousEnd, std::string::npos);
-    processed = std::move(concatenated);
-}
-
-void ReplaceUndefinedChecksAdjustment::apply(std::string& processed) const {
-    static const std::regex varIsUndefinedPattern{R"regex((\b\w+(?:\.\w+|\[(?:\d+|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")\])*)\s+is\s+undefined\b)regex"};
-    processed = std::regex_replace(processed, varIsUndefinedPattern, "not $1 is defined");
-}
-
 ChatTemplateAdjusterConfig ChatTemplateAdjusterConfig::forMinja() {
     ChatTemplateAdjusterConfig config;
     config.removeFunctions = {"min", "from_json"};
-    config.concatMultiLineStrings = true;
     config.removeFunctionsParams = {"tojson"};
-    config.replaceUndefinedChecks = true;
     return config;
 }
 
@@ -208,12 +173,6 @@ ChatTemplateAdjuster::ChatTemplateAdjuster(const ChatTemplateAdjusterConfig& con
     }
     if (!config.removeFunctions.empty()) {
         adjustments.emplace_back(std::make_unique<RemoveFiltersAdjustment>(config.removeFunctions));
-    }
-    if (config.concatMultiLineStrings) {
-        adjustments.emplace_back(std::make_unique<ConcatMultiLineStringAdjustment>());
-    }
-    if (config.replaceUndefinedChecks) {
-        adjustments.emplace_back(std::make_unique<ReplaceUndefinedChecksAdjustment>());
     }
 }
 
