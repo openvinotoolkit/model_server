@@ -40,7 +40,9 @@ bool GraphMetadata::setString(const std::string& key, const std::string& value) 
 }
 
 bool GraphMetadata::setObject(const std::string& key, std::shared_ptr<const GraphMetadata> value) {
-    return set(key, Value(std::in_place_type<std::shared_ptr<const GraphMetadata>>, std::move(value)));
+    // Store a copy so that callers keeping a mutable pointer cannot change a published snapshot.
+    auto copy = value ? std::make_shared<const GraphMetadata>(*value) : nullptr;
+    return set(key, Value(std::in_place_type<std::shared_ptr<const GraphMetadata>>, std::move(copy)));
 }
 
 const GraphMetadata::Value* GraphMetadata::find(const std::string& key) const {
@@ -57,7 +59,7 @@ void GraphMetadata::writeMembers(rapidjson::Writer<rapidjson::StringBuffer>& wri
         if (skipKeys.count(key)) {
             continue;
         }
-        writer.String(key.c_str());
+        writer.String(key.c_str(), static_cast<rapidjson::SizeType>(key.size()));
         if (const auto* boolValue = std::get_if<bool>(&value)) {
             writer.Bool(*boolValue);
         } else if (const auto* intValue = std::get_if<int64_t>(&value)) {

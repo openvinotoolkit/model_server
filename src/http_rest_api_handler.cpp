@@ -45,6 +45,7 @@
 #include "execution_context.hpp"
 #include "filesystem/filesystem.hpp"
 #include "config_status_utils.hpp"
+#include "graph_metadata.hpp"
 #include "grpcservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
@@ -69,7 +70,6 @@
 
 #if (MEDIAPIPE_DISABLE == 0)
 #include "copyable_object_wrapper.hpp"
-#include "graph_metadata.hpp"
 #include "http_payload.hpp"
 #include "http_frontend/http_client_connection.hpp"
 #endif

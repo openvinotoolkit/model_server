@@ -78,6 +78,30 @@ TEST(GraphMetadataTest, NestedObjectIsSerialized) {
     EXPECT_TRUE(doc["missing"].IsNull());
 }
 
+TEST(GraphMetadataTest, NestedObjectIsCopiedOnInsert) {
+    auto inner = std::make_shared<GraphMetadata>();
+    inner->setInt("depth", 2);
+    auto middle = std::make_shared<GraphMetadata>();
+    middle->setObject("inner", inner);
+    GraphMetadata metadata;
+    metadata.setObject("middle", middle);
+    const std::string before = toJson(metadata);
+
+    middle->setInt("added_to_child", 1);
+    inner->setInt("added_to_grandchild", 1);
+
+    EXPECT_EQ(toJson(metadata), before);
+}
+
+TEST(GraphMetadataTest, KeysWithEmbeddedNulAreNotTruncated) {
+    GraphMetadata metadata;
+    const std::string keyWithNul("a\0b", 3);
+    EXPECT_TRUE(metadata.setInt("a", 1));
+    EXPECT_TRUE(metadata.setInt(keyWithNul, 2));
+    const std::string json = toJson(metadata);
+    EXPECT_EQ(json, std::string("{\"a\":1,\"a\\u0000b\":2}"));
+}
+
 TEST(GraphMetadataTest, FirstValueOfDuplicateKeyWins) {
     GraphMetadata metadata;
     EXPECT_TRUE(metadata.setInt("key", 1));
