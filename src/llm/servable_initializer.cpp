@@ -150,6 +150,13 @@ GenAiServableProperties::DraftModelStrategy detectDraftModelStrategy(const std::
 
 static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Chat template is unavailable. Servable will not respond to /chat/completions endpoint.";
 
+static void configureInputProcessingCapabilities(const std::shared_ptr<GenAiServableProperties>& properties) {
+    if (!properties->inputProcessorContext.config.audioInputConfig.has_value() &&
+        std::filesystem::exists(std::filesystem::path(properties->modelsPath) / "openvino_audio_embeddings_model.xml")) {
+        properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig{true};
+    }
+}
+
 // Dry-run probes: render the chat template with synthetic inputs to empirically
 // detect what the template requires. This is model-agnostic and tests actual
 // template behavior rather than relying solely on string pattern matching.
@@ -554,7 +561,8 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
     Status status;
     if (nodeOptions.has_models_path()) {
-        // need to initialize pipelineType with some value to avoid compiler warning, determinePipelineType will set it properly
+        // Need to initialize pipelineType with some value to avoid compiler warning;
+        // determinePipelineType will set it properly.
         PipelineType pipelineType{PipelineType::LM_CB};
         status = determinePipelineType(pipelineType, nodeOptions, graphPath);
         if (status != StatusCode::OK) {
@@ -629,6 +637,7 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         return StatusCode::INTERNAL_ERROR;
     }
     servable->determineDecodingMethod();
+    configureInputProcessingCapabilities(servable->getProperties());
     return StatusCode::OK;
 }
 }  // namespace ovms

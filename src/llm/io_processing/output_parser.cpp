@@ -14,9 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <algorithm>
-#include <unordered_set>
-
 #include "src/logging.hpp"
 #include "src/stringutils.hpp"
 #include "utils.hpp"
@@ -345,19 +342,6 @@ void OutputParser::setImplicitReasoningStart(bool value) {
     if (processingPhase == UNKNOWN || processingPhase == REASONING) {
         processingPhase = value ? REASONING : UNKNOWN;
     }
-}
-
-void OutputParser::detectAndSetImplicitReasoningStart(const std::string& renderedPrompt) {
-    if (!reasoningParser) {
-        return;
-    }
-    std::string trimmed = renderedPrompt;
-    rtrim(trimmed);
-    const auto& startTags = reasoningParser->getParsingConfig().startTags;
-    bool detected = std::any_of(startTags.begin(), startTags.end(),
-        [&](const std::string& tag) { return !tag.empty() && endsWith(trimmed, tag); });
-    setImplicitReasoningStart(detected);
-    return;
 }
 
 std::optional<Delta> OutputParser::parseChunk(const std::string& chunkResponse, const std::vector<int64_t>& tokens, const bool toolsAvailable, ov::genai::GenerationFinishReason finishReason) {

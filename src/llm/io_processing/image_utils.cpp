@@ -75,19 +75,68 @@ static size_t appendChunkCallback(void* downloadedChunk, size_t size, size_t nme
     return static_cast<ImageDownloadContext*>(context)->append(downloadedChunk, size, nmemb);
 }
 
+const char* getDownloadFailureReason(CURLcode status) {
+    switch (status) {
+    case CURLE_URL_MALFORMAT:
+        return "invalid_url";
+    case CURLE_UNSUPPORTED_PROTOCOL:
+        return "unsupported_protocol";
+    case CURLE_COULDNT_RESOLVE_HOST:
+        return "dns_resolution_failed";
+    case CURLE_COULDNT_RESOLVE_PROXY:
+        return "proxy_resolution_failed";
+    case CURLE_COULDNT_CONNECT:
+        return "connect_failed";
+    case CURLE_OPERATION_TIMEDOUT:
+        return "timeout";
+    case CURLE_SSL_CONNECT_ERROR:
+        return "tls_connection_failed";
+    case CURLE_PEER_FAILED_VERIFICATION:
+        return "tls_verification_failed";
+    case CURLE_LOGIN_DENIED:
+        return "authentication_failed";
+    case CURLE_REMOTE_ACCESS_DENIED:
+        return "remote_access_denied";
+    case CURLE_TOO_MANY_REDIRECTS:
+        return "redirect_limit_exceeded";
+    case CURLE_SEND_ERROR:
+    case CURLE_RECV_ERROR:
+        return "io_failed";
+    default:
+        return "transfer_failed";
+    }
+}
+
 #define CURL_SETOPT(setopt)   \
     if (status == CURLE_OK) { \
         status = setopt;      \
     }
 
+}  // namespace
+
+absl::Status validateHttpImageDownloadResponse(int64_t httpCode, bool redirectsAllowed) {
+    if (httpCode >= 300 && httpCode < 400 && !redirectsAllowed) {
+        return absl::InvalidArgumentError("Failed to download image from external URL because redirects are not allowed. Set OVMS_MEDIA_URL_ALLOW_REDIRECTS=1 environment variable to allow redirects.");
+    }
+    if (httpCode < 200 || httpCode >= 300) {
+        return absl::InvalidArgumentError("Failed to download image from external URL: HTTP status " + std::to_string(httpCode) + ".");
+    }
+    return absl::OkStatus();
+}
+
+namespace {
+
 absl::Status downloadImage(const char* url, std::string& image, const int64_t& sizeLimit) {
     CURL* curl_handle = curl_easy_init();
     if (!curl_handle) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to initialize curl handle");
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger,
+            "External image download failed: reason=curl_initialization");
         return absl::InternalError("Image downloading failed");
     }
     auto handleGuard = std::unique_ptr<CURL, decltype(&curl_easy_cleanup)>(curl_handle, curl_easy_cleanup);
     if (sizeLimit < 0) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger,
+            "External image download failed: reason=invalid_size_limit size_limit_bytes={}", sizeLimit);
         return absl::InvalidArgumentError("Image size limit cannot be negative");
     }
     ImageDownloadContext downloadContext{&image, static_cast<size_t>(sizeLimit)};
@@ -97,32 +146,61 @@ absl::Status downloadImage(const char* url, std::string& image, const int64_t& s
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &downloadContext))
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA))
     const char* envAllowRedirects = std::getenv("OVMS_MEDIA_URL_ALLOW_REDIRECTS");
-    if (envAllowRedirects != nullptr && (std::strcmp(envAllowRedirects, "1") == 0)) {
+    const bool redirectsAllowed = envAllowRedirects != nullptr && std::strcmp(envAllowRedirects, "1") == 0;
+    if (redirectsAllowed) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "URL redirects allowed");
         CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L))
     }
     CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_MAXFILESIZE_LARGE, static_cast<curl_off_t>(sizeLimit)))
 
     if (status != CURLE_OK) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Setting curl opts failed: {}", curl_easy_strerror(status));
-        return absl::InvalidArgumentError("Image downloading failed");
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger,
+            "External image download failed: reason=curl_configuration curl_code={} curl_error={}",
+            static_cast<int>(status), curl_easy_strerror(status));
+        return absl::InternalError("Failed to configure image download.");
     }
 
     status = curl_easy_perform(curl_handle);
     if (status != CURLE_OK) {
         if (downloadContext.sizeLimitExceeded || status == CURLE_FILESIZE_EXCEEDED) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloaded image exceeds the size limit of {} bytes", sizeLimit);
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger,
+                "External image download failed: reason=size_limit_exceeded size_limit_bytes={} bytes_received={}",
+                sizeLimit, downloadContext.bytesReceived);
             return absl::InvalidArgumentError("Downloaded image exceeds the size limit");
         }
         if (downloadContext.allocationFailed) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Memory allocation failed while downloading image");
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger,
+                "External image download failed: reason=memory_allocation_failed bytes_received={}",
+                downloadContext.bytesReceived);
             return absl::ResourceExhaustedError("Memory allocation failed while downloading image");
         }
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloading image failed: {}", curl_easy_strerror(status));
-        return absl::InvalidArgumentError("Image downloading failed");
-    } else {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloading image succeeded, {} bytes retrieved", image.size());
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger,
+            "External image download failed: reason={} curl_code={} curl_error={}",
+            getDownloadFailureReason(status), static_cast<int>(status), curl_easy_strerror(status));
+        return absl::InvalidArgumentError("Failed to download image from external URL.");
     }
+
+    const bool isHttpUrl = std::strncmp(url, "http://", 7) == 0 || std::strncmp(url, "https://", 8) == 0;
+    if (isHttpUrl) {
+        long httpCode = 0;  // NOLINT(runtime/int): CURLINFO_RESPONSE_CODE requires long*.
+        status = curl_easy_getinfo(curl_handle, CURLINFO_RESPONSE_CODE, &httpCode);
+        if (status != CURLE_OK) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger,
+                "External image download failed: reason=response_status_unavailable curl_code={} curl_error={}",
+                static_cast<int>(status), curl_easy_strerror(status));
+            return absl::InternalError("Failed to get image download response status.");
+        }
+        if (httpCode >= 300 && httpCode < 400 && !redirectsAllowed) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger,
+                "External image download failed: reason=redirect_disallowed http_status={} redirects_allowed=false",
+                httpCode);
+        } else if (httpCode < 200 || httpCode >= 300) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger,
+                "External image download failed: reason=http_status http_status={}", httpCode);
+        }
+        return validateHttpImageDownloadResponse(static_cast<int64_t>(httpCode), redirectsAllowed);
+    }
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloading image succeeded, {} bytes retrieved", image.size());
     return absl::OkStatus();
 }
 
@@ -258,9 +336,9 @@ absl::StatusOr<ov::Tensor> fetchAndDecodeImage(const std::string& imageSource,
     ov::Tensor imageTensor;
     try {
         imageTensor = loadImageStbiFromMemory(decoded);
-    } catch (std::runtime_error& e) {
+    } catch (const std::runtime_error& e) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image parsing failed: {}", e.what());
-        return absl::InvalidArgumentError("Image parsing failed");
+        return absl::InvalidArgumentError("Image parsing failed: " + std::string(e.what()));
     }
 
     // Part 3: bound the actual decoded pixel count against the remaining per-request budget and
