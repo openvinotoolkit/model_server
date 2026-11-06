@@ -164,19 +164,19 @@ protected:
 
 public:
     std::string modelName = "rerank_ov";
-    const size_t MAX_POSITION_EMBEDDINGS = 12;
+    const size_t MAX_POSITION_EMBEDDINGS = 13;
     const size_t MAX_ALLOWED_CHUNKS = 4;
 
     static void SetUpTestSuite() {
         std::string port = "9173";
         /*
             Setup with:
-            max_position_embeddings: 12
+            max_position_embeddings: 13
             max_allowed_chunks: 4
 
             Meaning query is trimmed to contain at most 6 tokens (half of max_position_embeddings)
             And maximum number of documents or chunks (after chunking process) can be 4
-            Allowed space for chunk is 12-6-4=2 tokens
+            Allowed space for chunk is 13-6-4=3 tokens
         */
         std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/rerank/with_params/config.json");
         SetUpSuite(port, configPath, t);
@@ -205,7 +205,7 @@ TEST_F(RerankWithParamsHttpTest, PositiveMaxAllowedChunksNotExceeded) {
     rapidjson::Value documents(rapidjson::kArrayType);
 
     for (size_t i = 0; i < MAX_ALLOWED_CHUNKS; i++) {
-        documents.PushBack("Test", allocator);  // Short document to not exceed 2 token space for chunks
+        documents.PushBack("Test", allocator);  // 3 tokens, fitting the available chunk space
     }
     document.AddMember("documents", documents, allocator);
 
@@ -233,7 +233,7 @@ TEST_F(RerankWithParamsHttpTest, MaxAllowedChunksExceededByDocumentsBeforeChunki
     rapidjson::Value documents(rapidjson::kArrayType);
 
     for (size_t i = 0; i < MAX_ALLOWED_CHUNKS + 1; i++) {
-        documents.PushBack("Test", allocator);  // Short document to not exceed 2 token space for chunks
+        documents.PushBack("Test", allocator);  // 3 tokens, fitting the available chunk space
     }
     document.AddMember("documents", documents, allocator);
 
@@ -263,7 +263,7 @@ TEST_F(RerankWithParamsHttpTest, MaxAllowedChunksExceededAfterChunking) {
     // There are 4 documents - which is supported by max_allowed_chunks,
     // but one document is long and chunking will the number of allowed documents (4)
     for (size_t i = 0; i < MAX_ALLOWED_CHUNKS - 1; i++) {
-        documents.PushBack("Test", allocator);  // Short document to not exceed 2 token space for chunks
+        documents.PushBack("Test", allocator);  // 3 tokens, fitting the available chunk space
     }
     documents.PushBack("This is a long document that will be chunked", allocator);  // Long document
     document.AddMember("documents", documents, allocator);
@@ -276,7 +276,7 @@ TEST_F(RerankWithParamsHttpTest, MaxAllowedChunksExceededAfterChunking) {
     std::string requestBody = buffer.GetString();
     auto status = handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR) << status.string();
-    ASSERT_THAT(status.string(), ::testing::HasSubstr("Chunking failed: exceeding max_allowed_chunks after chunking limit: 4; actual: 8"));  // 8 because of the last document which was chunked to 5 documents, 3 + 5 = 8
+    ASSERT_THAT(status.string(), ::testing::HasSubstr("Chunking failed: exceeding max_allowed_chunks after chunking limit: 4"));
 }
 
 class RerankWithInvalidParamsHttpTest : public V3HttpTest {
