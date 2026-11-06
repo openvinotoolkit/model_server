@@ -1,0 +1,85 @@
+# Copyright 2026 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# P6a.1/P6a.2 full pipeline: decode + infer -> overlay -> encode (Linux VA).
+#
+#   source{FRAME_INFER}  -> inference -> DETECTION_BOXES ─┐
+#   source{FRAME_FULL}  ────────────────────────────────── overlay -> FRAME_OVERLAID -> sink -> file
+#
+# FRAME_INFER is always a model-res native surface (zero-copy inference). FRAME_FULL
+# is selected by the FULL_NATIVE_SURFACE side packet: false -> full-res host NV12 for
+# the CPU overlay (P6a.1); true -> full-res GPU native surface kept end to end so the
+# overlay maps it in place and the sink encodes it with no GPU->CPU download
+# (P6a.2). GstDetectionOverlayCalculator auto-detects the frame memory type, so
+# one graph serves both paths.
+
+input_side_packet: "SOURCE_MODE:source_mode"
+input_side_packet: "SOURCE_URI:source_uri"
+input_side_packet: "WIDTH:width"
+input_side_packet: "HEIGHT:height"
+input_side_packet: "FULL_WIDTH:full_width"
+input_side_packet: "FULL_HEIGHT:full_height"
+input_side_packet: "FULL_NATIVE_SURFACE:full_native_surface"
+input_side_packet: "SERVABLE_NAME:servable_name"
+input_side_packet: "SERVABLE_VERSION:servable_version"
+input_side_packet: "INPUT_NAME:input_name"
+input_side_packet: "SERVER:server"
+input_side_packet: "OUTPUT_PATH:output_path"
+input_side_packet: "OUTPUT_MODE:output_mode"
+input_side_packet: "FRAMERATE:framerate"
+input_side_packet: "MAX_FRAMES:max_frames"
+output_stream: "DETECTIONS:detections"
+output_stream: "DETECTION_BOXES:detection_boxes"
+
+node {
+  calculator: "GstVideoSourceCalculator"
+  input_side_packet: "SOURCE_MODE:source_mode"
+  input_side_packet: "SOURCE_URI:source_uri"
+  input_side_packet: "WIDTH:width"
+  input_side_packet: "HEIGHT:height"
+  input_side_packet: "FULL_WIDTH:full_width"
+  input_side_packet: "FULL_HEIGHT:full_height"
+  input_side_packet: "FULL_NATIVE_SURFACE:full_native_surface"
+  input_side_packet: "MAX_FRAMES:max_frames"
+  output_stream: "FRAME_INFER:frame_infer"
+  output_stream: "FRAME_FULL:frame_full"
+}
+
+node {
+  calculator: "GstCapiInferenceCalculator"
+  input_stream: "FRAME:frame_infer"
+  input_side_packet: "SERVABLE_NAME:servable_name"
+  input_side_packet: "SERVABLE_VERSION:servable_version"
+  input_side_packet: "INPUT_NAME:input_name"
+  input_side_packet: "SERVER:server"
+  input_side_packet: "FULL_WIDTH:full_width"
+  input_side_packet: "FULL_HEIGHT:full_height"
+  output_stream: "DETECTIONS:detections"
+  output_stream: "DETECTION_BOXES:detection_boxes"
+}
+
+node {
+  calculator: "GstDetectionOverlayCalculator"
+  input_stream: "FRAME_FULL:frame_full"
+  input_stream: "DETECTION_BOXES:detection_boxes"
+  output_stream: "FRAME_OVERLAID:frame_overlaid"
+}
+
+node {
+  calculator: "GstVideoSinkCalculator"
+  input_stream: "FRAME:frame_overlaid"
+  input_side_packet: "OUTPUT_PATH:output_path"
+  input_side_packet: "OUTPUT_MODE:output_mode"
+  input_side_packet: "FRAMERATE:framerate"
+}

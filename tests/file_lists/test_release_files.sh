@@ -56,6 +56,20 @@ else
     errors=$((errors+1))
 fi
 
+if [ -e /opt/gstreamer ]; then
+    printf -- "ERROR: GStreamer must not be installed in the base release image.\n"
+    errors=$((errors+1))
+else
+    printf -- "SUCCESS: Base release image does not contain /opt/gstreamer.\n"
+fi
+
+if grep -Eq 'libgst[^[:space:]]*' <<< "$dependency_paths"; then
+    printf -- "ERROR: OVMS must not link to GStreamer libraries in the base release image.\n"
+    errors=$((errors+1))
+else
+    printf -- "SUCCESS: OVMS has no GStreamer library dependency.\n"
+fi
+
 # check for errors
 if [ "$errors" -ne "0" ]; then
    printf -- "$errors error[s] in release package check. Please verify release image contents.\n"

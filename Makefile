@@ -121,6 +121,9 @@ include versions.mk
 
 TEST_LLM_PATH ?= "src/test/llm_testing"
 GPU_MODEL_PATH ?= "/tmp/face_detection_adas"
+MPI_VIDEO_DEFAULT_PATH := models/mpi/ceo_pat_gelsinger.mp4
+MPI_VIDEO_PATH ?= $(MPI_VIDEO_DEFAULT_PATH)
+GPU_TEST_VIDEO_PATH := $(if $(strip $(VIDEO_PATH)),$(VIDEO_PATH),$(MPI_VIDEO_PATH))
 ifneq ($(filter MINGW% MSYS% CYGWIN%,$(UNAME_S)),)
 CURL_PATH ?= /c/opt/curl-$(CURL_VERSION)-win64-mingw/bin
 CURL_BIN ?= $(CURL_PATH)/curl.exe
@@ -238,6 +241,10 @@ OVMS_CPP_IMAGE_TAG ?= latest
 
 OVMS_PYTHON_IMAGE_TAG ?= py
 
+# Optional GStreamer image built on top of the GPU release image; see extras/gstreamer/Dockerfile.ubuntu.
+ACCEPT_GSTREAMER_LICENSES ?= no
+GSTREAMER_BASE_IMAGE ?= $(OVMS_CPP_DOCKER_IMAGE)-gpu:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
+
 PRODUCT_VERSION ?= "2026.5.0"
 PROJECT_VER_PATCH =
 
@@ -349,7 +356,7 @@ $(ACTIVATE_STYLE_READY): ci/style_requirements.txt
 		touch "$(ACTIVATE_STYLE_READY)"; \
 	else \
 		echo "[ERROR] Unable to install style requirements; restore package-index access and retry."; \
- 		exit 1; \
+	exit 1; \
 	fi
 
 cppclean: venv-style
@@ -495,6 +502,24 @@ ifeq ($(BUILD_NGINX), 1)
 	docker tag $(OVMS_CPP_DOCKER_IMAGE)-nginx-mtls:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)-nginx-mtls$(IMAGE_TAG_SUFFIX)
 endif
 
+# Builds the build image, package, GStreamer-free release images and the GStreamer image on top of the GPU one.
+.PHONY: gstreamer_image docker_gstreamer_build
+docker_gstreamer_build: docker_build gstreamer_image
+
+gstreamer_image:
+ifneq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
+	@echo "GStreamer image is supported only for ubuntu BASE_OS"; exit 1
+endif
+	docker $(BUILDX) build $(NO_CACHE_OPTION) -f extras/gstreamer/Dockerfile.ubuntu extras/gstreamer \
+		--build-arg http_proxy=$(HTTP_PROXY) \
+		--build-arg https_proxy=$(HTTPS_PROXY) \
+		--build-arg no_proxy=$(NO_PROXY) \
+		--build-arg BASE_IMAGE=$(GSTREAMER_BASE_IMAGE) \
+		--build-arg BUILDER_IMAGE=$(BASE_IMAGE) \
+		--build-arg JOBS=$(JOBS) \
+		--build-arg ACCEPT_GSTREAMER_LICENSES=$(ACCEPT_GSTREAMER_LICENSES) \
+		-t $(OVMS_CPP_DOCKER_IMAGE)-gstreamer:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
+
 get_gpl_mpl_packages:
 ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
 	@docker run -u 0 --entrypoint bash $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) -c 'dpkg --get-selections | sed "s/\t//g" | sed "s/install//g" | cut -d":" -f1 | tr -d "\r"' > ubuntu.txt
@@ -622,9 +647,8 @@ cpu_extension:
 
 prepare_models:
 	./prepare_llm_models.sh ${TEST_LLM_PATH}
-ifeq ($(RUN_GPU_TESTS),1)
+	./prepare_mpi_video.sh ${MPI_VIDEO_DEFAULT_PATH}
 	./prepare_gpu_models.sh ${GPU_MODEL_PATH}
-endif
 
 run_unit_tests: prepare_models
 	docker rm -f $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
@@ -635,12 +659,15 @@ ifeq ($(RUN_GPU_TESTS),1)
 		--group-add=$(shell stat -c "%g" /dev/dri/render* | head -n 1) \
 		-u 0 \
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
+		-v $(shell realpath ./standalone):/ovms/standalone:ro \
 		-v $(shell realpath ${GPU_MODEL_PATH}):/ovms/src/test/face_detection_adas/1:ro \
+		-v $(shell realpath ${GPU_TEST_VIDEO_PATH}):/ovms/testdata/mpi_video.mp4:ro \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
 		$(GIT_CONFIG_MOUNT) \
 		-e https_proxy=${https_proxy} \
 		-e RUN_TESTS=1 \
 		-e RUN_GPU_TESTS=$(RUN_GPU_TESTS) \
+		-e VIDEO_PATH=/ovms/testdata/mpi_video.mp4 \
 		-e JOBS=$(JOBS) \
 		-e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} \
 		$(OVMS_CPP_DOCKER_IMAGE)-build:$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
@@ -654,6 +681,7 @@ else
 	docker run \
 		--name $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
 		-v $(shell realpath ./run_unit_tests.sh):/ovms/./run_unit_tests.sh \
+		-v $(shell realpath ./standalone):/ovms/standalone:ro \
 		-v $(shell realpath ${TEST_LLM_PATH}):/ovms/src/test/llm_testing:ro \
 		$(GIT_CONFIG_MOUNT) \
 		-e https_proxy=${https_proxy} \
