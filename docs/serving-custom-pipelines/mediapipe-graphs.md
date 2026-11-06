@@ -21,7 +21,7 @@ Check [our MediaPipe github fork](https://github.com/openvinotoolkit/mediapipe) 
 
 This guide gives information about:
 
-- [Integration with mediapipe {#ovms\_docs\_mediapipe}](#integration-with-mediapipe)
+- [Integration with mediapipe {#ovms\_docs\_mediapipe}](#introduction)
   - [Introduction](#introduction)
   - [OpenVINO calculators](#openvino-calculators)
   - [PythonExecutorCalculator](#pythonexecutorcalculator)
