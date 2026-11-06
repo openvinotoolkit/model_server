@@ -25,7 +25,7 @@ namespace ovms {
 
 // Decodes video_url content entries from ChatHistory messages into video tensors
 // and injects <ov_genai_video_N> tags into message content.
-// Active when: config.isVLM && input is ChatHistory variant.
+// Active when: config.supportsVisualInputs and input is a ChatHistory variant.
 class VideoFramesProcessor : public BaseInputProcessor {
 public:
     VideoFramesProcessor(std::optional<std::string> allowedLocalMediaPath,

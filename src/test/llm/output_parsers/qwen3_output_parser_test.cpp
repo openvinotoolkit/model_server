@@ -26,10 +26,10 @@
 using namespace ovms;
 
 #ifdef _WIN32
-const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\Qwen\\Qwen3-8B";
+const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\OpenVINO\\Qwen3-8B-int4-ov";
 #else
 // Hardcoded for usage in docker container
-const std::string tokenizerPath = "/ovms/src/test/llm_testing/Qwen/Qwen3-8B";
+const std::string tokenizerPath = "/ovms/src/test/llm_testing/OpenVINO/Qwen3-8B-int4-ov";
 #endif
 
 static ovms::ToolsSchemas_t EMPTY_TOOLS_SCHEMA = {};  // not used for Qwen3
@@ -58,6 +58,37 @@ protected:
         outputParser = std::make_unique<OutputParser>(*qwen3Tokenizer, "hermes3", "qwen3", EMPTY_TOOLS_SCHEMA);
     }
 };
+
+TEST(ReasoningContextTest, DefaultMetadataDetectsReasoningWithoutParserInstances) {
+    for (const std::string parserName : {"qwen3", "gemma4", "gptoss", "minicpm5", "lfm2", "onyx"}) {
+        const auto config = getDefaultReasoningParsingConfig(parserName);
+        ASSERT_FALSE(config.startTags.empty()) << parserName;
+        const auto context = determineReasoningContext(config, "assistant\n" + config.startTags.front() + "\n");
+        EXPECT_TRUE(context.implicitStart) << parserName;
+        EXPECT_EQ(context.begin, config.startTags.front()) << parserName;
+    }
+    const auto context = determineReasoningContext(getDefaultReasoningParsingConfig(""), "assistant\n<think>\n");
+    EXPECT_FALSE(context.implicitStart);
+    EXPECT_TRUE(context.begin.empty());
+}
+
+TEST(ReasoningContextTest, EmptyMetadataReturnsEmptyContext) {
+    const auto context = determineReasoningContext({}, std::string(10000, 'x'));
+    EXPECT_TRUE(context.begin.empty());
+    EXPECT_TRUE(context.end.empty());
+    EXPECT_FALSE(context.implicitStart);
+    EXPECT_FALSE(context.completedInPrompt);
+}
+
+TEST(ReasoningContextTest, EndOnlyMetadataStillDetectsCompletedReasoning) {
+    OutputParsingConfig config;
+    config.endTags = {"</think>"};
+    const auto context = determineReasoningContext(config, "reasoning</think>\n");
+    EXPECT_TRUE(context.begin.empty());
+    EXPECT_EQ(context.end, "</think>");
+    EXPECT_FALSE(context.implicitStart);
+    EXPECT_TRUE(context.completedInPrompt);
+}
 
 TEST_F(Qwen3OutputParserTest, ParseToolCallOutputWithSingleToolCallNoThinking) {
     std::string input = "<tool_call>{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}</tool_call>";
@@ -523,7 +554,7 @@ TEST_F(Qwen3OutputParserTest, ToolCallsDataAfterToolCall) {
 // =====================================================================================
 // Implicit reasoning start tests
 //
-// These cover the behavior triggered by detectAndSetImplicitReasoningStart() - used when
+// These cover reasoning-context detection and explicitly applying implicit start when
 // the chat template appends the reasoning start tag (e.g. "<think>\n") as the prompt
 // suffix, so the model output begins already inside the reasoning segment without
 // emitting the start tag itself (Qwen3.6, Qwen3-VL).
@@ -534,13 +565,18 @@ namespace {
 std::string docToString(const ovms::Delta& delta) {
     return ovms::test::deltaToJson(delta);
 }
+
+ovms::ReasoningGenerationContext determineQwen3Context(const std::string& prompt) {
+    return ovms::determineReasoningContext(ovms::getDefaultReasoningParsingConfig("qwen3"), prompt);
+}
 }  // namespace
 
 // --- Detection ---------------------------------------------------------------
 
 TEST_F(Qwen3OutputParserTest, ImplicitStart_DetectsPromptEndingWithThinkTag) {
     // Prompt ends with the bare start tag - typical Qwen3 enable_thinking=true rendering.
-    outputParser->detectAndSetImplicitReasoningStart("<|im_start|>user\nhi<|im_end|>\n<|im_start|>assistant\n<think>");
+    const auto context = determineQwen3Context("<|im_start|>user\nhi<|im_end|>\n<|im_start|>assistant\n<think>");
+    outputParser->setImplicitReasoningStart(context.implicitStart);
     std::string input = "reasoning body</think>visible answer";
     auto generatedTensor = qwen3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -554,7 +590,8 @@ TEST_F(Qwen3OutputParserTest, ImplicitStart_DetectsPromptEndingWithThinkTagAndTr
     // Also exercises the end-tag bundling path: if the BPE tokenizer merges a reasoning-text
     // suffix with the start of "</think>", the streamer's FOUND_INCOMPLETE hold-back may
     // deliver e.g. "...ing</think>" in one chunk. The parser must emit the pre-tag text.
-    outputParser->detectAndSetImplicitReasoningStart("<|im_start|>assistant\n<think>\n");
+    const auto context = determineQwen3Context("<|im_start|>assistant\n<think>\n");
+    outputParser->setImplicitReasoningStart(context.implicitStart);
     std::string input = "reasoning</think>answer";
     auto generatedTensor = qwen3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -566,7 +603,8 @@ TEST_F(Qwen3OutputParserTest, ImplicitStart_DetectsPromptEndingWithThinkTagAndTr
 TEST_F(Qwen3OutputParserTest, ImplicitStart_DoesNotTriggerOnUnrelatedPromptSuffix) {
     // Prompt does not end with <think> (e.g. enable_thinking=false renders "<think>\n\n</think>\n\n"
     // then ends with assistant header). Implicit start must NOT activate.
-    outputParser->detectAndSetImplicitReasoningStart("<|im_start|>assistant\n");
+    const auto context = determineQwen3Context("<|im_start|>assistant\n");
+    outputParser->setImplicitReasoningStart(context.implicitStart);
     std::string input = "plain answer without any tags";
     auto generatedTensor = qwen3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -576,7 +614,8 @@ TEST_F(Qwen3OutputParserTest, ImplicitStart_DoesNotTriggerOnUnrelatedPromptSuffi
 }
 
 TEST_F(Qwen3OutputParserTest, ImplicitStart_EmptyPromptDoesNotActivate) {
-    outputParser->detectAndSetImplicitReasoningStart("");
+    const auto context = determineQwen3Context("");
+    outputParser->setImplicitReasoningStart(context.implicitStart);
     std::string input = "no reasoning, just content";
     auto generatedTensor = qwen3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -588,7 +627,11 @@ TEST_F(Qwen3OutputParserTest, ImplicitStart_EmptyPromptDoesNotActivate) {
 TEST_F(Qwen3OutputParserTest, ImplicitStart_NoReasoningParserIsNoOp) {
     // When no reasoning parser is configured the call must not affect parsing behavior.
     auto parserWithoutReasoning = std::make_unique<OutputParser>(*qwen3Tokenizer, "hermes3", "", EMPTY_TOOLS_SCHEMA);
-    parserWithoutReasoning->detectAndSetImplicitReasoningStart("<|im_start|>assistant\n<think>");
+    const auto context = determineReasoningContext(getDefaultReasoningParsingConfig(""), "<|im_start|>assistant\n<think>");
+    EXPECT_FALSE(context.implicitStart);
+    EXPECT_TRUE(context.begin.empty());
+    EXPECT_TRUE(context.end.empty());
+    parserWithoutReasoning->setImplicitReasoningStart(context.implicitStart);
     std::string input = "regular content";
     auto generatedTensor = qwen3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -597,11 +640,43 @@ TEST_F(Qwen3OutputParserTest, ImplicitStart_NoReasoningParserIsNoOp) {
     EXPECT_EQ(parsedOutput.content, "regular content");
 }
 
+TEST_F(Qwen3OutputParserTest, ResponseFormatContextMatchesImplicitAndCompletedPrompt) {
+    const auto implicit = determineQwen3Context("<|im_start|>assistant\n<think>\n");
+    EXPECT_EQ(implicit.begin, "<think>");
+    EXPECT_EQ(implicit.end, "</think>");
+    EXPECT_TRUE(implicit.implicitStart);
+    EXPECT_FALSE(implicit.completedInPrompt);
+    const auto completed = determineQwen3Context("<|im_start|>assistant\n<think>\n\n</think>\n\n");
+    EXPECT_FALSE(completed.implicitStart);
+    EXPECT_TRUE(completed.completedInPrompt);
+}
+
+TEST_F(Qwen3OutputParserTest, DeterminingReasoningContextDoesNotChangeParserState) {
+    const auto context = determineQwen3Context("<|im_start|>assistant\n<think>\n");
+    EXPECT_TRUE(context.implicitStart);
+    const auto delta = outputParser->parseChunk("answer", {}, false, ov::genai::GenerationFinishReason::NONE);
+    ASSERT_TRUE(delta.has_value());
+    EXPECT_EQ(docToString(*delta), R"({"delta":{"content":"answer"}})");
+}
+
+TEST_F(Qwen3OutputParserTest, ImplicitThinkingWithJsonAnswerSeparatesReasoningAndContent) {
+    const auto context = determineQwen3Context("<|im_start|>assistant\n<think>\n");
+    outputParser->setImplicitReasoningStart(context.implicitStart);
+    const std::string output = R"(7 has no divisors except 1 and 7.</think>{"answer":"Yes"})";
+    const auto encoded = qwen3Tokenizer->encode(output, ov::genai::add_special_tokens(false)).input_ids;
+    const std::vector<int64_t> tokens(encoded.data<int64_t>(), encoded.data<int64_t>() + encoded.get_size());
+    const auto parsed = ovms::test::parseWithStreamer(*qwen3Tokenizer, *outputParser, tokens, false);
+    EXPECT_EQ(parsed.reasoning, "7 has no divisors except 1 and 7.");
+    EXPECT_EQ(parsed.content, R"({"answer":"Yes"})");
+    EXPECT_TRUE(parsed.toolCalls.empty());
+}
+
 // --- Unary parsing ----------------------------------------------------------
 
 TEST_F(Qwen3OutputParserTest, ImplicitStart_UnaryReasoningOnlyOutputBecomesReasoning) {
     // Model finishes before emitting </think> - entire output is reasoning, content empty.
-    outputParser->detectAndSetImplicitReasoningStart("<|im_start|>assistant\n<think>\n");
+    const auto context = determineQwen3Context("<|im_start|>assistant\n<think>\n");
+    outputParser->setImplicitReasoningStart(context.implicitStart);
     std::string input = "still thinking when generation stopped";
     auto generatedTensor = qwen3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -611,7 +686,8 @@ TEST_F(Qwen3OutputParserTest, ImplicitStart_UnaryReasoningOnlyOutputBecomesReaso
 }
 
 TEST_F(Qwen3OutputParserTest, ImplicitStart_UnarySplitsOnEndTag) {
-    outputParser->detectAndSetImplicitReasoningStart("<|im_start|>assistant\n<think>\n");
+    const auto context = determineQwen3Context("<|im_start|>assistant\n<think>\n");
+    outputParser->setImplicitReasoningStart(context.implicitStart);
     std::string input = "let me think</think>final answer";
     auto generatedTensor = qwen3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -624,7 +700,8 @@ TEST_F(Qwen3OutputParserTest, ImplicitStart_UnaryExplicitThinkInOutputStillHonor
     // When implicit start is active (prompt ended with <think>) and the model also emits
     // <think> in its output, the tag is literal reasoning content — we are already in
     // REASONING phase so there is no phase transition to trigger.
-    outputParser->detectAndSetImplicitReasoningStart("<|im_start|>assistant\n<think>\n");
+    const auto context = determineQwen3Context("<|im_start|>assistant\n<think>\n");
+    outputParser->setImplicitReasoningStart(context.implicitStart);
     std::string input = "prefix<think>inner</think>suffix";
     auto generatedTensor = qwen3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -636,7 +713,8 @@ TEST_F(Qwen3OutputParserTest, ImplicitStart_UnaryExplicitThinkInOutputStillHonor
 TEST_F(Qwen3OutputParserTest, NoImplicitStart_UnaryMissingStartTagDoesNotExtractReasoning) {
     // Baseline regression: when detect did NOT activate implicit start, output that lacks
     // a start tag must NOT have any reasoning extracted - everything stays in content.
-    outputParser->detectAndSetImplicitReasoningStart("<|im_start|>assistant\n");
+    const auto context = determineQwen3Context("<|im_start|>assistant\n");
+    outputParser->setImplicitReasoningStart(context.implicitStart);
     std::string input = "leaked reasoning</think>and answer";
     auto generatedTensor = qwen3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
@@ -650,7 +728,8 @@ TEST_F(Qwen3OutputParserTest, NoImplicitStart_UnaryMissingStartTagDoesNotExtract
 TEST_F(Qwen3OutputParserTest, ImplicitStart_StreamingStartsInReasoningPhase) {
     // With implicit start the very first chunks must be emitted as reasoning_content deltas
     // without waiting for a <think> start tag.
-    outputParser->detectAndSetImplicitReasoningStart("<|im_start|>assistant\n<think>\n");
+    const auto context = determineQwen3Context("<|im_start|>assistant\n<think>\n");
+    outputParser->setImplicitReasoningStart(context.implicitStart);
     std::vector<std::pair<std::string, std::optional<std::string>>> chunks{
         {"Let ", "{\"delta\":{\"reasoning_content\":\"Let \"}}"},
         {"me ", "{\"delta\":{\"reasoning_content\":\"me \"}}"},
@@ -672,7 +751,8 @@ TEST_F(Qwen3OutputParserTest, ImplicitStart_StreamingStartsInReasoningPhase) {
 
 TEST_F(Qwen3OutputParserTest, ImplicitStart_StreamingNoEndTagAllReasoning) {
     // Model finishes while still inside reasoning - every chunk stays reasoning_content.
-    outputParser->detectAndSetImplicitReasoningStart("<|im_start|>assistant\n<think>\n");
+    const auto context = determineQwen3Context("<|im_start|>assistant\n<think>\n");
+    outputParser->setImplicitReasoningStart(context.implicitStart);
     std::vector<std::pair<std::string, std::string>> chunks{
         {"deep ", "{\"delta\":{\"reasoning_content\":\"deep \"}}"},
         {"reasoning ", "{\"delta\":{\"reasoning_content\":\"reasoning \"}}"},
@@ -688,17 +768,18 @@ TEST_F(Qwen3OutputParserTest, ImplicitStart_StreamingNoEndTagAllReasoning) {
 
 TEST_F(Qwen3OutputParserTest, ImplicitStart_StreamingHandlesEndTagSplitAcrossChunks) {
     // Incomplete </think> at the end of the chunk must be buffered until the rest arrives.
-    outputParser->detectAndSetImplicitReasoningStart("<|im_start|>assistant\n<think>\n");
+    const auto context = determineQwen3Context("<|im_start|>assistant\n<think>\n");
+    outputParser->setImplicitReasoningStart(context.implicitStart);
     auto doc = outputParser->parseChunk("thinking", {}, false, ov::genai::GenerationFinishReason::NONE);
     ASSERT_TRUE(doc.has_value());
     EXPECT_EQ(docToString(*doc), "{\"delta\":{\"reasoning_content\":\"thinking\"}}");
 
     // Partial closing tag - must be held in the cache, no emission.
-    auto partial = outputParser->parseChunk("</thi", {}, false, ov::genai::GenerationFinishReason::NONE);
+    auto partial = outputParser->parseChunk("</th", {}, false, ov::genai::GenerationFinishReason::NONE);
     EXPECT_FALSE(partial.has_value());
 
     // Completion of closing tag - tag itself is dropped, no emission.
-    auto closed = outputParser->parseChunk("nk>", {}, false, ov::genai::GenerationFinishReason::NONE);
+    auto closed = outputParser->parseChunk("ink>", {}, false, ov::genai::GenerationFinishReason::NONE);
     EXPECT_FALSE(closed.has_value());
 
     auto after = outputParser->parseChunk("answer", {}, false, ov::genai::GenerationFinishReason::NONE);
@@ -709,7 +790,8 @@ TEST_F(Qwen3OutputParserTest, ImplicitStart_StreamingHandlesEndTagSplitAcrossChu
 TEST_F(Qwen3OutputParserTest, NoImplicitStart_StreamingFirstChunkIsContent) {
     // Baseline: without implicit start, output that does not begin with <think> is treated
     // as plain content from the first chunk (preserves pre-existing behavior).
-    outputParser->detectAndSetImplicitReasoningStart("<|im_start|>assistant\n");
+    const auto context = determineQwen3Context("<|im_start|>assistant\n");
+    outputParser->setImplicitReasoningStart(context.implicitStart);
     auto doc = outputParser->parseChunk("hello", {}, false, ov::genai::GenerationFinishReason::NONE);
     ASSERT_TRUE(doc.has_value());
     EXPECT_EQ(docToString(*doc), "{\"delta\":{\"content\":\"hello\"}}");

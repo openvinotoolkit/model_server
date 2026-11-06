@@ -229,6 +229,7 @@ class Qwen3Embedding06BFp16OvHf(GenerativeModelHuggingFace, FeatureExtractionMod
     precision: str = "FP16"
     pooling: str = "LAST"
     is_local: bool = True
+    max_length: int = 1000
 
 
 @dataclass

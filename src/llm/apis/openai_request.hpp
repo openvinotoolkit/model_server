@@ -77,6 +77,7 @@ struct OpenAIRequest {
     // Guided generation specific
     // String representation of response format object
     std::optional<std::string> responseFormat{std::nullopt};
+    std::optional<bool> enableThinking{std::nullopt};
     // Map that holds tool names and schemas for their arguments
     ToolsSchemas_t toolNameSchemaMap;
     // Holds value for tool_choice field as described in https://platform.openai.com/docs/api-reference/chat/create#chat_create-tool_choice

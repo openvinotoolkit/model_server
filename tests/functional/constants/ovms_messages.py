@@ -17,8 +17,6 @@
 import re
 
 from tests.functional.utils.environment_info import CurrentOsInfo
-from tests.functional.constants.os_type import OsType
-from tests.functional.config import base_os
 from tests.functional.constants.ovms import CurrentOvmsType
 
 
@@ -143,8 +141,7 @@ class OvmsMessages:
     ERROR_NOT_VALID_JSON = "Error: The file is not valid json"
     ERROR_MODEL_NOT_FOUND = "Model with requested name is not found"
     ERROR_PIPELINE_NOT_FOUND = "Pipeline with requested name is not found"
-    ERROR_FAILED_TO_PARSE = "error parsing options: Argument '{}' failed to parse" if OsType.Windows in base_os \
-        else "error parsing options: Argument ‘{}’ failed to parse"
+    ERROR_FAILED_TO_PARSE = "error parsing options: Argument '{}' failed to parse"
     ERROR_WRONG_BATCH_SIZE = "Wrong batch size parameter provided"
     ERROR_FAILED_TO_PARSE_SHAPE_SHORT = "There was an error parsing shape"
     ERROR_FAILED_TO_PARSE_SHAPE = "There was an error parsing shape {}"
