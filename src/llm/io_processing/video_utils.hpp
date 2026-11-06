@@ -40,4 +40,9 @@ absl::StatusOr<ov::Tensor> loadVideoFrames(const std::vector<std::string>& frame
     const std::optional<std::vector<std::string>>& allowedMediaDomains,
     size_t& totalAllocatedPixels);
 
+absl::StatusOr<ov::Tensor> decodeVideoSource(const std::string& videoSource,
+    const std::optional<std::string>& allowedLocalMediaPath,
+    const std::optional<std::vector<std::string>>& allowedMediaDomains,
+    uint32_t frameStride, uint32_t maxFrames, size_t& totalAllocatedPixels);
+
 }  // namespace ovms

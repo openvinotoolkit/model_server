@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
@@ -29,12 +30,15 @@ namespace ovms {
 class VideoFramesProcessor : public BaseInputProcessor {
 public:
     VideoFramesProcessor(std::optional<std::string> allowedLocalMediaPath,
-        std::optional<std::vector<std::string>> allowedMediaDomains);
+        std::optional<std::vector<std::string>> allowedMediaDomains,
+        uint32_t frameStride = 10, uint32_t maxFrames = 100);
     absl::Status process(InputRequest& req) override;
 
 private:
     std::optional<std::string> allowedLocalMediaPath;
     std::optional<std::vector<std::string>> allowedMediaDomains;
+    uint32_t frameStride;
+    uint32_t maxFrames;
 };
 
 }  // namespace ovms

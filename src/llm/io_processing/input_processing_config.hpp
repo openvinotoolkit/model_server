@@ -15,6 +15,8 @@
 //*****************************************************************************
 #pragma once
 
+#include <cstdint>
+
 namespace ovms {
 
 // Deployment-level configuration for InputProcessor, populated once at servable init.
@@ -26,6 +28,8 @@ struct InputProcessingConfig {
     // True for Omni servables. Enables AudioDecodingProcessor in addition to
     // ImageDecodingProcessor (implies isVLM-like behavior for images).
     bool isOmni = false;
+    uint32_t videoFrameStride = 10;
+    uint32_t videoMaxFrames = 100;
 };
 
 }  // namespace ovms

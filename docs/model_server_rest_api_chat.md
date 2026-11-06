@@ -198,7 +198,7 @@ curl http://localhost/v3/chat/completions \
 ```
 **Note**: check `--allowed_local_media_path` parameter described [here](parameters.md)
 
-In case of VLM models that support video understanding (e.g. Qwen3-VL), a video can be sent as a `video_url` content part. Because the server does not decode compressed video containers (mp4 etc.), the client is responsible for extracting frames from the source video and sending them as an **array of already-decoded frames**. Each element of the `url` array is a single frame in the same formats accepted by `image_url` (base64 data URI, HTTP(S) URL, or local filesystem path). Frames are sent in the order given, so extract them in temporal order:
+In case of VLM models that support video understanding (e.g. Qwen3-VL), a video can be sent as a `video_url` content part. The `url` field accepts either an **array of already-decoded image frames** or a single encoded MP4 source. Each frame in an array uses the same formats as `image_url` (base64 data URI, HTTP(S) URL, or local filesystem path) and is sent in temporal order. An encoded MP4 source is an HTTP(S) URL or a local filesystem path; OVMS decodes it server-side with the OpenCV FFmpeg backend.
 
 ```
 curl http://localhost/v1/chat/completions \
@@ -231,7 +231,18 @@ curl http://localhost/v1/chat/completions \
 }'
 ```
 
-**Note**: Unlike `image_url.url`, which is a single string, `video_url.url` is an **array of 1 to 1024 strings** (one per frame). All frames of a single video must share the same height, width and channel count. Decoded frame pixels count toward the request-wide `--max_image_decode_pixels` budget shared by all `image_url` and `video_url` parts. The same `--allowed_media_domains` / `--allowed_local_media_path` restrictions apply to each frame reference. Multiple `video_url` parts, and mixing `image_url` and `video_url` in one message, are supported.
+To send an encoded MP4, set `video_url.url` to its source string:
+
+```json
+{
+  "type": "video_url",
+  "video_url": {
+    "url": "https://media.example.com/video.mp4"
+  }
+}
+```
+
+**Note**: A frame-array `video_url.url` contains **1 to 1024 strings**. An encoded source is an MP4 path or URL containing H.264/AVC video. Local paths require `--allowed_local_media_path`; URLs require a matching `--allowed_media_domains` entry. Encoded MP4 sources are sampled according to the model's `video_frame_stride` and `video_max_frames` calculator options (defaults: every 10th decoded output frame, at most 100 frames), with a hard ceiling of 1024 retained frames per source. Stride is sample-order based, not an FPS control, so it does not provide constant-rate sampling for variable-frame-rate MP4s. All decoded frames of a single video must share the same height, width and channel count. Encoded-video pixels count toward the request-wide `--max_video_decode_pixels` budget; frame-array pixels count toward `--max_image_decode_pixels`. The encoded file size is bounded by `--max_encoded_video_file_size_bytes` for both local files and downloaded sources. Multiple `video_url` parts, and mixing `image_url` and `video_url` in one message, are supported.
 
 ### Request
 

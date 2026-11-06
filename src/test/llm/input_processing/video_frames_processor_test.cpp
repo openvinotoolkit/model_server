@@ -13,7 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <filesystem>
+#include <fstream>
 #include <string>
+#include <thread>
 
 #include <gtest/gtest.h>
 #include <openvino/genai/chat_history.hpp>
@@ -51,6 +54,44 @@ private:
     ovms::ModelsSettingsImpl savedModelsSettings;
 };
 
+class ScopedVideoDecodeLimits {
+public:
+    ScopedVideoDecodeLimits(uint64_t maxFileSize, uint64_t maxVideoPixels) :
+        savedServerSettings(ovms::Config::instance().getServerSettings()),
+        savedModelsSettings(ovms::Config::instance().getModelSettings()) {
+        ovms::ServerSettingsImpl serverSettings = savedServerSettings;
+        serverSettings.maxEncodedVideoFileSizeBytes = maxFileSize;
+        serverSettings.maxVideoDecodePixels = maxVideoPixels;
+        ovms::ModelsSettingsImpl modelsSettings = savedModelsSettings;
+        ovms::Config::instance().parse(&serverSettings, &modelsSettings);
+    }
+    ScopedVideoDecodeLimits(const ScopedVideoDecodeLimits&) = delete;
+    ScopedVideoDecodeLimits& operator=(const ScopedVideoDecodeLimits&) = delete;
+    ~ScopedVideoDecodeLimits() {
+        ovms::Config::instance().parse(&savedServerSettings, &savedModelsSettings);
+    }
+
+private:
+    ovms::ServerSettingsImpl savedServerSettings;
+    ovms::ModelsSettingsImpl savedModelsSettings;
+};
+
+class TemporaryVideoFile {
+public:
+    TemporaryVideoFile(const std::string& filename, const std::string& contents) :
+        path(std::filesystem::temp_directory_path() /
+             (filename + "_" + std::to_string(std::hash<std::thread::id>{}(std::this_thread::get_id())))) {
+        std::ofstream output(path, std::ios::binary);
+        output << contents;
+    }
+    ~TemporaryVideoFile() {
+        std::error_code error;
+        std::filesystem::remove(path, error);
+    }
+
+    const std::filesystem::path path;
+};
+
 static InputRequest makeChatRequest(ov::genai::ChatHistory chatHistory) {
     InputRequest req;
     req.input = std::move(chatHistory);
@@ -81,6 +122,32 @@ TEST(VideoFramesProcessorTest, NoVideoInTextOnlyMessage) {
     EXPECT_TRUE(req.inputVideos.empty());
     const auto& resultHistory = std::get<ov::genai::ChatHistory>(req.input);
     EXPECT_EQ(resultHistory[0]["content"].as_string().value_or(""), "Hello, world!");
+}
+
+TEST(VideoFramesProcessorTest, EncodedVideoWithoutAllowedLocalPathIsRejected) {
+    ov::genai::ChatHistory history;
+    history.push_back({{"role", "user"}, {"content", ov::genai::JsonContainer::from_json_string(
+                                                         R"([{"type":"video_url","video_url":{"url":"/tmp/video.mp4"}}])")}});
+
+    InputRequest req = makeChatRequest(history);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    const auto status = processor.process(req);
+
+    EXPECT_EQ(status, absl::InvalidArgumentError("Loading media from local filesystem is disabled."));
+    EXPECT_TRUE(req.inputVideos.empty());
+}
+
+TEST(VideoFramesProcessorTest, EncodedVideoRemoteSourceRequiresAllowedDomain) {
+    ov::genai::ChatHistory history;
+    history.push_back({{"role", "user"}, {"content", ov::genai::JsonContainer::from_json_string(
+                                                         R"([{"type":"video_url","video_url":{"url":"ftp://media.example.com/video.mp4"}}])")}});
+
+    InputRequest req = makeChatRequest(history);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    const auto status = processor.process(req);
+
+    EXPECT_EQ(status, absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains"));
+    EXPECT_TRUE(req.inputVideos.empty());
 }
 
 TEST(VideoFramesProcessorTest, InjectionGuardBlocksPreexistingTag) {
@@ -391,4 +458,51 @@ TEST(VideoFramesProcessorTest, OversizedFrameArrayRejected) {
     EXPECT_FALSE(status.ok());
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
     EXPECT_TRUE(req.inputVideos.empty());
+}
+
+TEST(VideoFramesProcessorTest, FileSizeIsRejectedBeforeMp4Parsing) {
+    TemporaryVideoFile source("ovms_too_large.mp4", "0123");
+    ScopedVideoDecodeLimits limits(3, OVMS_DEFAULT_MAX_VIDEO_DECODE_PIXELS);
+
+    size_t totalVideoPixels = 0;
+    const auto result = decodeVideoSource(source.path.string(), std::filesystem::temp_directory_path().string(), std::nullopt, 1, 1, totalVideoPixels);
+
+    ASSERT_FALSE(result.ok());
+    EXPECT_EQ(result.status(), absl::InvalidArgumentError("Encoded video source exceeds the allowed file size"));
+    EXPECT_EQ(totalVideoPixels, 0u);
+}
+
+TEST(VideoFramesProcessorTest, MalformedMp4IsRejected) {
+    TemporaryVideoFile source("ovms_malformed.mp4", "not an mp4");
+    ScopedVideoDecodeLimits limits(1024, OVMS_DEFAULT_MAX_VIDEO_DECODE_PIXELS);
+
+    size_t totalVideoPixels = 0;
+    const auto result = decodeVideoSource(source.path.string(), std::filesystem::temp_directory_path().string(), std::nullopt, 1, 1, totalVideoPixels);
+
+    ASSERT_FALSE(result.ok());
+    EXPECT_EQ(result.status(), absl::InvalidArgumentError("Unable to parse MP4 video source"));
+    EXPECT_EQ(totalVideoPixels, 0u);
+}
+
+TEST(VideoFramesProcessorTest, DefaultVideoBudgetAccommodatesThirtySecondsAtTwoFpsIn1080p) {
+    constexpr uint64_t frames = 2 * 30;
+    constexpr uint64_t decodedPixels = frames * 1920 * 1080;
+
+    EXPECT_EQ(decodedPixels, 124416000u);
+    EXPECT_LE(decodedPixels, OVMS_DEFAULT_MAX_VIDEO_DECODE_PIXELS);
+}
+
+TEST(VideoFramesProcessorTest, RemoteMp4Decodes) {
+    constexpr char remoteVideoUrl[] = "https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/video/CEO%20Pat%20Gelsinger%20on%20Leading%20Intel.mp4";
+    constexpr uint32_t videoFrameStride = 10;
+    constexpr uint32_t maxDecodedFrames = 4;
+    ScopedVideoDecodeLimits limits(16 * 1024 * 1024, OVMS_DEFAULT_MAX_VIDEO_DECODE_PIXELS);
+    size_t totalVideoPixels = 0;
+
+    const auto result = decodeVideoSource(remoteVideoUrl, std::nullopt,
+        std::vector<std::string>{"storage.openvinotoolkit.org"}, videoFrameStride, maxDecodedFrames, totalVideoPixels);
+
+    ASSERT_TRUE(result.ok()) << result.status().message();
+    EXPECT_EQ(result->get_shape()[0], maxDecodedFrames);
+    EXPECT_GT(totalVideoPixels, 0u);
 }

@@ -57,8 +57,8 @@ Configuration options for the server are defined only via command-line options a
 | `allowed_methods` | `string` (default: *) | Comma-separated list of allowed methods in CORS requests. |
 | `allowed_origins` | `string` (default: *) | Comma-separated list of allowed origins in CORS requests. |
 | `api_key_file` | `string` | Path to the text file with the API key for generative endpoints `/v3/`. The value of first line is used. If not specified, server is using environment variable API_KEY. If not set, requests will not require authorization.| 
-| `allowed_local_media_path` | `string` | Path to the directory containing images to include in requests. If unset, local filesystem images in requests are not supported.|
-| `allowed_media_domains` | `string` | Comma separated list of media domains from which URLs can be used as input for LLMs. Set to \"all\" to disable this restrictions. If unset, URLs in requests are not supported."
+| `allowed_local_media_path` | `string` | Path to the directory containing image and encoded-video files to include in requests. If unset, local filesystem media in requests is not supported.|
+| `allowed_media_domains` | `string` | Comma separated list of media domains from which URLs can be used as input for LLMs. Set to \"all\" to disable this restriction. If unset, remote media URLs in requests are not supported.|
 | `verbose_response` | `NA` | When enabled, responses include an extra `__verbose` object with additional debug information. Applies for text generation models |
 | `idle_unload_timeout_seconds` | `integer` (default: 0) | Unloads servable resources after this many seconds with no inference requests, freeing GPU/CPU memory. Resources are reloaded automatically on the next request. Set to `0` to disable the feature. See [Idle servable unload](#idle-servable-unload). |
 
@@ -241,7 +241,7 @@ The `--target_device` option defaults to auto-detected based on available GPU de
 
 > **Note:** Auto-detection does not select `NPU`. To use NPU, set `--target_device NPU` explicitly.
 
-## Image input decode protection
+## Input media decode protection
 
 Binary image inputs (KServe infer requests and multimodal `/v1` or `/v3` requests) are decoded before inference. A small compressed image can decode into a far larger raw buffer, and for vision language models even a "reasonable" ~1 GB image can amplify further inside the vision encoder. The server therefore bounds the decoded image size by pixel count (width × height) before decoding.
 
@@ -250,5 +250,9 @@ Binary image inputs (KServe infer requests and multimodal `/v1` or `/v3` request
 | `--max_image_decode_pixels` | CLI parameter | `67108864` | OVMS in-process pixel budget, read **per request**. Images whose header-declared pixel count exceeds this limit are rejected before decoding, and the total pixels across all images in a request are bounded too. Applies on the OVMS decode pre-check (stb + OpenCV paths) on every deployment. The default matches `OPENCV_IO_MAX_IMAGE_PIXELS`. |
 | `--allow_unestimatable_image_formats` | CLI parameter | `false` | When `false`, images whose decoded pixel count cannot be estimated (formats OVMS cannot inspect the header of) are rejected. Set to `true` only if you must accept such formats. |
 | `OPENCV_IO_MAX_IMAGE_PIXELS` | Environment variable | `67108864` (set in the provided container images) | OpenCV's own guard, read **once at process startup**, so it must be set before OVMS launches. It is separate from `--max_image_decode_pixels`: changing the CLI parameter does not change OpenCV's internal limit. OpenCV rejects images whose header-declared pixel count exceeds this limit, before allocating the decode buffer. The provided container images set it by default; on bare-metal deployments export it yourself before starting OVMS (or, for the container, override it with `docker run -e OPENCV_IO_MAX_IMAGE_PIXELS=<value>`). This is only relevant when `--allow_unestimatable_image_formats` is `true` (see below); otherwise it is defense-in-depth. |
+| `--max_encoded_video_file_size_bytes` | CLI parameter | `268435456` | Maximum compressed size of an encoded-video source accepted for MP4 demuxing. The limit is checked from local-file metadata or enforced while downloading a remote source. OVMS uses minimp4's random-access callback and does not load the complete compressed MP4 into memory. |
+| `--max_video_decode_pixels` | CLI parameter | `134217728` | Request-wide decoded-pixel budget for encoded MP4 video frames. It is separate from the image budget because a sampled video naturally contains many frames. At the default, 30 seconds at 2 FPS in 1080p uses $60 \times 1920 \times 1080 = 124416000$ pixels and is accepted. |
 
 With default settings you do not depend on `OPENCV_IO_MAX_IMAGE_PIXELS`. By default `--allow_unestimatable_image_formats` is `false`, so images OVMS cannot estimate (formats stb cannot read the header of, e.g. TIFF) are rejected before reaching OpenCV, and images OVMS can estimate are already bounded by `--max_image_decode_pixels`. The OpenCV variable only becomes the active guard if an admin sets `--allow_unestimatable_image_formats=true`, which lets unestimatable formats fall through to OpenCV's `cv::imdecode` — there `OPENCV_IO_MAX_IMAGE_PIXELS` is the remaining pixel cap. Note the VLM (stb) decode path does not use OpenCV at all, so it is unaffected by this variable. Keep both limits at the same value if you change either.
+
+Encoded video currently accepts MP4 files containing H.264/AVC video only. Local sources must be within `--allowed_local_media_path`; remote sources must match `--allowed_media_domains`. The video settings above are administrator ceilings, while a graph's `video_frame_stride` and `video_max_frames` choose how many decoded output frames are retained.

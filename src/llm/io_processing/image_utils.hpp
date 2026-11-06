@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <cstdio>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -42,6 +43,13 @@ struct ImageDownloadContext {
 
     size_t append(const void* downloadedChunk, size_t size, size_t nmemb) noexcept;
 };
+
+absl::Status validateMediaSource(const std::string& mediaSource,
+    const std::optional<std::string>& allowedLocalMediaPath,
+    const std::optional<std::vector<std::string>>& allowedMediaDomains);
+
+absl::Status downloadMediaToFile(const std::string& mediaSource, std::FILE* output,
+    size_t sizeLimit, size_t& downloadedBytes);
 
 absl::StatusOr<ov::Tensor> fetchAndDecodeImage(const std::string& imageSource,
     const std::optional<std::string>& allowedLocalMediaPath,

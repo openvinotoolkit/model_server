@@ -177,6 +177,13 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         properties->schedulerConfig.cache_interval_multiplier = nodeOptions.cache_interval_multiplier();
     }
 
+    if (nodeOptions.video_frame_stride() == 0 || nodeOptions.video_max_frames() == 0) {
+        SPDLOG_ERROR("video_frame_stride and video_max_frames must be greater than zero");
+        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+    }
+    properties->inputProcessorContext.config.videoFrameStride = nodeOptions.video_frame_stride();
+    properties->inputProcessorContext.config.videoMaxFrames = nodeOptions.video_max_frames();
+
     if (nodeOptions.has_cache_eviction_config()) {
         properties->schedulerConfig.cache_eviction_config = prepareCacheEvictionConfig(nodeOptions);
         properties->schedulerConfig.use_cache_eviction = true;
