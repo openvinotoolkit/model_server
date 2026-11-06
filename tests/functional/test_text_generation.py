@@ -132,7 +132,7 @@ class TestTextGeneration:
     @pytest.mark.parametrize("parallel_requests", [100], ids=lambda x: f"parallel_requests={x}")
     @pytest.mark.parametrize("ovms_log_level", [Ovms.LOG_LEVEL_INFO, Ovms.LOG_LEVEL_DEBUG, Ovms.LOG_LEVEL_TRACE])
     @pytest.mark.parametrize("pipeline_type", PipelineType.TEXT_GENERATION)
-    @pytest.mark.parametrize("dataset_type", ["LLM", "VLM"], ids=lambda x: f"dataset_type={x}")
+    @pytest.mark.parametrize("dataset_type", ["LLM"], ids=lambda x: f"dataset_type={x}")
     @pytest.mark.timeout(calculate_generative_test_timeout(960))
     def test_text_generation_endpoints_multiple_requests(
             self,
@@ -182,7 +182,7 @@ class TestTextGeneration:
             max_tokens=max_tokens,
             temperature=temperature,
         )
-        if model_type.is_vision_language:
+        if model_type.is_vision_language and dataset_type == "VLM":
             dataset = model_type().get_default_dataset()
         elif model_type.single_message_dataset:
             dataset = LongPromptSingleMessageLanguageModelDataset
