@@ -392,3 +392,35 @@ TEST(VideoFramesProcessorTest, OversizedFrameArrayRejected) {
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
     EXPECT_TRUE(req.inputVideos.empty());
 }
+
+TEST(VideoFramesProcessorTest, LocalVideoPathRequiresLocalMediaEnabled) {
+    ov::genai::ChatHistory history;
+    ov::AnyMap msg;
+    msg["role"] = std::string("user");
+    msg["content"] = ov::genai::JsonContainer::from_json_string(
+        R"([{"type":"video_url","video_url":{"url":"/media/video.mp4"}}])");
+    history.push_back(msg);
+
+    InputRequest req = makeChatRequest(history);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    const auto status = processor.process(req);
+
+    EXPECT_EQ(status, absl::InvalidArgumentError("Loading videos from local filesystem is disabled."));
+    EXPECT_TRUE(req.inputVideos.empty());
+}
+
+TEST(VideoFramesProcessorTest, RemoteVideoUrlRequiresAllowedMediaDomain) {
+    ov::genai::ChatHistory history;
+    ov::AnyMap msg;
+    msg["role"] = std::string("user");
+    msg["content"] = ov::genai::JsonContainer::from_json_string(
+        R"([{"type":"video_url","video_url":{"url":"https://example.com/video.mp4"}}])");
+    history.push_back(msg);
+
+    InputRequest req = makeChatRequest(history);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    const auto status = processor.process(req);
+
+    EXPECT_EQ(status, absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains"));
+    EXPECT_TRUE(req.inputVideos.empty());
+}

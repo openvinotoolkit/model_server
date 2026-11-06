@@ -189,7 +189,10 @@ ovms_cc_library(
     deps = [
         "@mediapipe//mediapipe/framework:calculator_framework",  # required for absl status
         ":image_utils",
+        "//src/filesystem:libovmsfilesystem",
+        "//src/mpi:intel_mpi",
         "//src:predict_request_validation_utils_impl",
+        "//third_party:curl",
         "//third_party:genai",
         "//src:libovmslogging",
     ],

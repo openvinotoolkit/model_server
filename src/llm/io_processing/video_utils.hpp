@@ -30,12 +30,20 @@
 namespace ovms {
 
 constexpr int64_t MAX_VIDEO_FRAMES = 1024;
+constexpr int64_t MAX_ENCODED_VIDEO_FRAMES = 5;
 
 // Loads a sequence of video frames from a list of frame references (base64 data
 // URIs, HTTP/HTTPS URLs, or local file paths) and stacks them into a single
 // video tensor with [N, H, W, C] layout (RGB, u8), as expected by the GenAI VLM
 // pipeline video input.
 absl::StatusOr<ov::Tensor> loadVideoFrames(const std::vector<std::string>& frameSources,
+    const std::optional<std::string>& allowedLocalMediaPath,
+    const std::optional<std::vector<std::string>>& allowedMediaDomains,
+    size_t& totalAllocatedPixels);
+
+// Decodes up to MAX_ENCODED_VIDEO_FRAMES from a local video file through MPI
+// into the CPU RGB tensor format expected by the GenAI VLM pipeline.
+absl::StatusOr<ov::Tensor> loadEncodedVideo(const std::string& videoSource,
     const std::optional<std::string>& allowedLocalMediaPath,
     const std::optional<std::vector<std::string>>& allowedMediaDomains,
     size_t& totalAllocatedPixels);
