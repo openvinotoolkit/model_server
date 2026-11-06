@@ -576,7 +576,7 @@ def export_image_generation_model(model_repository_path, source_model, model_nam
     target_path = os.path.join(model_repository_path, model_name)
     model_index_path = os.path.join(target_path, 'model_index.json')
 
-    if os.path.isfile(model_index_path):
+    if os.path.isfile(model_index_path) and not args['overwrite_models']:
         print("Model index file already exists. Skipping conversion, re-generating graph only.")
     else:
         optimum_command = "optimum-cli export openvino --model {} --weight-format {} {} {}".format(source_model, precision, task_parameters['extra_quantization_params'], target_path)
