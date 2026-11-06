@@ -55,7 +55,9 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
                 settings.allowedMediaDomains));
             processors.emplace_back(std::make_unique<VideoFramesProcessor>(
                 settings.allowedLocalMediaPath,
-                settings.allowedMediaDomains));
+                settings.allowedMediaDomains,
+                context.config.videoFps,
+                context.config.videoMaxFrames));
         }
         if (context.config.audioInputConfig.has_value()) {
             processors.emplace_back(std::make_unique<AudioDecodingProcessor>(

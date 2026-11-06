@@ -35,9 +35,12 @@ constexpr std::string_view VIDEO_TAG_PREFIX = "<ov_genai_video_";
 
 VideoFramesProcessor::VideoFramesProcessor(
     std::optional<std::string> allowedLocalMediaPath,
-    std::optional<std::vector<std::string>> allowedMediaDomains) :
+    std::optional<std::vector<std::string>> allowedMediaDomains,
+    float requestedFps, uint32_t maxDecodedFrames) :
     allowedLocalMediaPath(std::move(allowedLocalMediaPath)),
-    allowedMediaDomains(std::move(allowedMediaDomains)) {}
+    allowedMediaDomains(std::move(allowedMediaDomains)),
+    requestedFps(requestedFps),
+    maxDecodedFrames(maxDecodedFrames) {}
 
 absl::Status VideoFramesProcessor::process(InputRequest& req) {
     if (!std::holds_alternative<ov::genai::ChatHistory>(req.input)) {
@@ -68,16 +71,22 @@ absl::Status VideoFramesProcessor::process(InputRequest& req) {
             const auto part = content[j];
             if (part["type"].as_string().value_or("") == "video_url") {
                 const auto urls = part["video_url"]["url"];
-                // Reject oversized frame arrays before allocating from an untrusted length.
-                if (static_cast<int64_t>(urls.size()) > MAX_VIDEO_FRAMES) {
-                    return absl::InvalidArgumentError("Number of video frames exceeds the allowed maximum of " + std::to_string(MAX_VIDEO_FRAMES));
+                absl::StatusOr<ov::Tensor> videoResult = absl::InvalidArgumentError("Invalid video source");
+                if (urls.is_string()) {
+                    videoResult = decodeVideoSource(urls.as_string().value_or(""), allowedLocalMediaPath,
+                        allowedMediaDomains, requestedFps, maxDecodedFrames, req.totalDecodedVideoPixels);
+                } else if (urls.is_array()) {
+                    // Reject oversized frame arrays before allocating from an untrusted length.
+                    if (static_cast<int64_t>(urls.size()) > MAX_VIDEO_FRAMES) {
+                        return absl::InvalidArgumentError("Number of video frames exceeds the allowed maximum of " + std::to_string(MAX_VIDEO_FRAMES));
+                    }
+                    std::vector<std::string> frameSources;
+                    frameSources.reserve(urls.size());
+                    for (size_t k = 0; k < urls.size(); k++) {
+                        frameSources.push_back(urls[k].as_string().value_or(""));
+                    }
+                    videoResult = loadVideoFrames(frameSources, allowedLocalMediaPath, allowedMediaDomains, req.totalDecodedPixels);
                 }
-                std::vector<std::string> frameSources;
-                frameSources.reserve(urls.size());
-                for (size_t k = 0; k < urls.size(); k++) {
-                    frameSources.push_back(urls[k].as_string().value_or(""));
-                }
-                auto videoResult = loadVideoFrames(frameSources, allowedLocalMediaPath, allowedMediaDomains, req.totalDecodedPixels);
                 if (!videoResult.ok()) {
                     return videoResult.status();
                 }

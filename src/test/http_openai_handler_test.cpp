@@ -6154,6 +6154,18 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingVideoUrlEmptyFrameArrayInChatComplet
         absl::InvalidArgumentError("Invalid message structure - video_url url array cannot be empty"));
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingVideoUrlEncodedSourceInChatCompletions) {
+    std::string json = R"({"model":"llama","messages":[{"role":"user","content":[{"type":"video_url","video_url":{"url":"https://media.example.com/video.mp4"}}]}]})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
+    ASSERT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt), absl::OkStatus());
+    const auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 1);
+    EXPECT_EQ(chatHistory[0]["content"][0]["video_url"]["url"].as_string().value_or(""),
+        "https://media.example.com/video.mp4");
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingVideoUrlOversizedFrameArrayInChatCompletionsFails) {
     // A frame array larger than the allowed maximum must be rejected during
     // parsing, before the untrusted array is copied into the ChatHistory.

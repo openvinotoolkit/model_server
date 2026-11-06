@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <algorithm>
+#include <cmath>
 #include <fstream>
 #include <memory>
 #include <stdexcept>
@@ -176,6 +177,13 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     if (nodeOptions.has_cache_interval_multiplier()) {
         properties->schedulerConfig.cache_interval_multiplier = nodeOptions.cache_interval_multiplier();
     }
+
+    if (nodeOptions.video_fps() <= 0.0F || !std::isfinite(nodeOptions.video_fps()) || nodeOptions.video_max_frames() == 0) {
+        SPDLOG_ERROR("video_fps must be finite and greater than zero, and video_max_frames must be greater than zero");
+        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+    }
+    properties->inputProcessorContext.config.videoFps = nodeOptions.video_fps();
+    properties->inputProcessorContext.config.videoMaxFrames = nodeOptions.video_max_frames();
 
     if (nodeOptions.has_cache_eviction_config()) {
         properties->schedulerConfig.cache_eviction_config = prepareCacheEvictionConfig(nodeOptions);

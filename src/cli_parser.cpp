@@ -187,6 +187,14 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, const
                 "which is controlled separately by the OPENCV_IO_MAX_IMAGE_PIXELS environment variable read at startup.",
                 cxxopts::value<uint64_t>()->default_value(std::to_string(OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS)),
                 "MAX_IMAGE_DECODE_PIXELS")
+            ("max_encoded_video_file_size_bytes",
+                "Maximum size in bytes of a local encoded-video file accepted for MP4 demuxing.",
+                cxxopts::value<uint64_t>()->default_value(std::to_string(OVMS_DEFAULT_MAX_ENCODED_VIDEO_FILE_SIZE_BYTES)),
+                "MAX_ENCODED_VIDEO_FILE_SIZE_BYTES")
+            ("max_video_decode_pixels",
+                "Maximum total number of decoded video pixels (the sum of width x height across encoded-video frames in a request).",
+                cxxopts::value<uint64_t>()->default_value(std::to_string(OVMS_DEFAULT_MAX_VIDEO_DECODE_PIXELS)),
+                "MAX_VIDEO_DECODE_PIXELS")
             ("allow_unestimatable_image_formats",
                 "Flag allowing input images whose decoded size cannot be estimated (formats OVMS cannot inspect the header of) "
                 "to be decoded anyway. Disabled by default, so such images are rejected. Enable only if you must accept formats "
@@ -647,6 +655,8 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
         serverSettings.grpcMemoryQuota = result->operator[]("grpc_memory_quota").as<size_t>();
 
     serverSettings.maxImageDecodePixels = result->operator[]("max_image_decode_pixels").as<uint64_t>();
+    serverSettings.maxEncodedVideoFileSizeBytes = result->operator[]("max_encoded_video_file_size_bytes").as<uint64_t>();
+    serverSettings.maxVideoDecodePixels = result->operator[]("max_video_decode_pixels").as<uint64_t>();
     serverSettings.allowUnestimatableImageFormats = result->operator[]("allow_unestimatable_image_formats").as<bool>();
     if (result->count("json_max_complexity"))
         serverSettings.jsonMaxComplexity = result->operator[]("json_max_complexity").as<size_t>();

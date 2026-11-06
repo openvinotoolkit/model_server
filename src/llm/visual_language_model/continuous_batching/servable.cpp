@@ -61,7 +61,6 @@ absl::Status VisualLanguageModelServable::addRequestToPipeline(std::shared_ptr<C
         vlmExecutionContext->inputRequest.promptText,
         vlmExecutionContext->inputRequest.inputImages,
         vlmExecutionContext->inputRequest.inputVideos,
-        vlmExecutionContext->inputRequest.inputAudios,
         vlmExecutionContext->inputRequest.generationConfig);
     return absl::OkStatus();
 }
