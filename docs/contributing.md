@@ -22,8 +22,6 @@ This guide provides steps and coding standards to follow before sending merge re
     - [Headers Naming Conventions](#3-headers-naming-conventions)
     - [Scoping](#4-scoping)
     - [Clang Format](#clang-format)
-5. [Compiler Security Flags](#compiler-security-flags)
-6. [Docker and Python Files Check](#docker-and-python-files-check)
 
 ## Jenkins Pipeline Checks
 

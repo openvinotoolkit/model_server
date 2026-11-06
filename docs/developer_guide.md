@@ -16,11 +16,13 @@ Unless stated otherwise, run host commands from the repository root and build-co
 
 ## Prerequisites
 
-The Linux host needs Git, Make, Docker, and permission to run Docker commands. Keep the repository on the Linux host, not on the Windows laptop. Image builds and model downloads require network access; configure proxy variables if your network requires them.
+The Linux host or WSL needs Git, Make, Docker, and permission to run Docker commands. Make sure the proxy settings are configured for the Docker engine when applicable.
 
-For remote development, install VS Code with the Remote - SSH and Dev Containers extensions on the Windows laptop. Connect to the Linux host using Remote - SSH before running the host commands below.
+To develop directly on a Windows machine, use WSL 2 with a supported Linux distribution and a working Docker daemon. You can install Docker Engine in the distribution or use Docker Desktop with WSL integration enabled; verify that `docker info` succeeds from the WSL shell. Clone the repository in the WSL Linux filesystem (for example, under `~/src`) rather than under `/mnt/c` to avoid slower builds and file access. Install VS Code and its WSL extension on Windows, open the repository from WSL with `code .`, and use the integrated WSL terminal for the Linux-host commands in this guide. If Docker runs through Docker Desktop, ensure its proxy settings are configured there when required.
 
-Python 3.12 is required on the Linux host only for model-preparation scripts and Python-based functional/client tests. Ensure `python3` on `PATH` points to that installation. `make venv` creates the host test environment using that interpreter; Python development inside the builder uses the container's environment.
+To develop on a separate Linux machine instead, install the Remote - SSH and Dev Containers extensions in VS Code on the Windows machine, connect to the Linux host using Remote - SSH, and run the host commands below in its remote terminal.
+
+Python 3.12 or 3.14 is required on the Linux host only for model-preparation scripts and Python-based functional/client tests. Ensure `python3` on `PATH` points to that installation. `make venv` creates the host test environment using that interpreter; Python development inside the builder uses the container's environment.
 
 ## Build Environment
 
@@ -34,9 +36,9 @@ cd model_server
 make ovms_builder_image RUN_TESTS=0
 ```
 
-This creates `openvino/model_server-build:latest` using Ubuntu 24 by default, without running unit tests. Reuse an existing compatible builder image when available. Unlike `make docker_build`, this target does not also package OVMS and create release images. Other operating systems and image names are covered in [Optional Configuration](#optional-configuration).
+This creates `openvino/model_server-build:latest`, without running unit tests. Reuse an existing compatible builder image when available. Unlike `make docker_build`, this target does not also package OVMS and create release images. Other operating systems and image names are covered in [Optional Configuration](#optional-configuration).
 
-When reusing an older builder, ensure it provides the Bazel version required by the repository's `.bazelversion`. If Bazel reports that the required version is missing, install that version inside the builder or rebuild the builder image before compiling OVMS. Install client Python dependencies separately in the environment used to run the client; the builder does not necessarily include them.
+Install client Python dependencies separately in the environment used to run the client; the builder does not necessarily include them.
 
 ### Start the Build Container
 
@@ -52,27 +54,13 @@ The repository is mounted at `/ovms`. Docker assigns the container name automati
 
 On a shared host, choose unused host ports and update client endpoints accordingly. Publish ports when creating the container; an existing container without these mappings must be recreated to add them. Do not start another server on the same host ports while this container is running.
 
-For a terminal-only workflow, find the container name and open its shell. Run on the Linux host, replacing `<container_name>` with the Docker-generated name:
-
-```text
-docker ps
-docker exec -it <container_name> bash
-```
-
 ## Remote Development With VS Code
 
 In the Remote - SSH window connected to the Linux host, run **Dev Containers: Attach to Running Container...** from the Command Palette. Select the container using `openvino/model_server-build:latest` and open `/ovms`.
 
-Edit features from the Windows laptop while running Bazel builds, tests, and GDB in the attached container's terminal. Edits persist in the Linux host repository through the bind mount; no Windows source synchronization is needed. Docker and Make commands still run in a separate Linux-host terminal, not in the attached container.
+Edit features from the VSCode while running Bazel builds, tests, and GDB in the attached container's terminal. Edits persist in the Linux host repository through the bind mount; no Windows source synchronization is needed. Docker and Make commands still run in a separate Linux-host terminal, not in the attached container.
 
-Reuse the container across development sessions. If it is stopped, run on the Linux host, replacing `<container_name>` with its name from `docker ps -a`:
-
-```text
-docker ps -a
-docker start <container_name>
-```
-
-Attach VS Code again and open `/ovms`.
+It is recommended to run git commands outside of the running container or start it with own security context --user $(id -u).
 
 ## Build and Test
 
@@ -94,13 +82,18 @@ Some tests require downloaded models. Prepare only the models needed by your tes
 make prepare_models
 ```
 
-To prepare only the LLM test models, run on the Linux host:
+To download test models for unit tests, run on the Linux host:
 
 ```text
 ./prepare_llm_models.sh ./src/test/llm_testing
 ```
 
 The mounted repository makes these models available inside the build container.
+
+From the builder image, run the script’s container mode instead, from /ovms:
+```text
+./prepare_llm_models.sh ./src/test/llm_testing docker
+```
 
 ### Run Unit Tests
 
@@ -113,7 +106,8 @@ bazel test --test_summary=detailed --test_output=all \
 
 `bazel test` builds and runs the target. `--test_filter` selects the fixture or test, `--test_summary=detailed` reports failures, and `--test_output=all` includes test output. See the [Bazel command-line reference](https://bazel.build/reference/command-line-reference).
 
-After relevant focused tests pass, run the broader unit-test workflow on the Linux host:
+After relevant focused tests pass, run the broader unit-test workflow on the Linux host.
+This is an option to run all unit tests outside of container on the created earlier builder image.
 
 ```text
 make run_unit_tests
@@ -128,7 +122,6 @@ Python no longer has a separate on/off build configuration. Building `//src:ovms
 Run inside the build container:
 
 ```text
-bazel build //src:ovms
 bazel test \
     //src:python_runtime_library_test \
     //src/python:pythoninterpretermodule_lifecycle_test \
@@ -179,25 +172,15 @@ docker run -dit --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
 
 Use this container instead of the standard builder, not alongside it on the same ports. `BAZEL_BUILD_TYPE=dbg` adds `-dbg` to the image base name. To build applicable source-built dependencies in debug mode, also use `CMAKE_BUILD_TYPE=Debug`; this does not change prebuilt dependencies.
 
-### Connect an External Client Container
+### Check OVMS From the Linux Host
 
-Start OVMS under GDB as above and enter `run`. From a separate terminal on the Linux host, use `--network=host` for the client container. This makes the published OVMS endpoints available at `localhost:9178` for gRPC and `http://localhost:9179` for REST.
-
-Run on the Linux host to check readiness:
+Start OVMS under GDB as above and enter `run`. The build container publishes gRPC on port `9178` and REST on port `9179`, so use a separate Linux-host terminal to call the server directly. For example, check readiness with `curl`:
 
 ```text
-docker run --rm --network=host curlimages/curl:latest -i http://localhost:9179/v2/health/ready
+curl --noproxy '*' -i http://localhost:9179/v2/health/ready
 ```
 
-Expect HTTP `200 OK` once OVMS is ready and the model state is `AVAILABLE` in the server log. For an existing build container without published ports, share its network namespace instead. Run on the Linux host, replacing `<container_name>` with the running build container's name:
-
-```text
-docker run --rm --network=container:<container_name> curlimages/curl:latest --noproxy '*' -i http://localhost:9179/v2/health/ready
-```
-
-With this network setting, `localhost` refers to the build container, so no host port mapping is required. Use `localhost:9178` for a gRPC client sharing the same network namespace.
-
-Then run your inference client container with the same network setting and the matching endpoint. Requests can wait or time out while OVMS is paused at a breakpoint. Host networking here refers to the Linux server, not the Windows laptop.
+Expect HTTP `200 OK` once OVMS is ready and the model state is `AVAILABLE` in the server log. Run a gRPC client on the Linux host with `localhost:9178` as its endpoint. If OVMS is paused at a GDB breakpoint, client requests will wait or time out until execution resumes.
 
 ### Debug Unit Tests
 
