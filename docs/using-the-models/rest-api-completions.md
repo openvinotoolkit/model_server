@@ -164,7 +164,7 @@ response = client.completions.create(
 
 [LLM quick start guide](../get-started/llm-quickstart.md)
 
-[End to end demo with LLM model serving over OpenAI API](../../demos/continuous_batching/README.md)
+[End to end demo with LLM model serving over OpenAI API](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/README.md)
 
 [Code snippets](genai-api-index.md)
 

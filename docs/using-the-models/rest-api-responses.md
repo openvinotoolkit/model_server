@@ -141,7 +141,7 @@ curl http://localhost/v3/responses \
 
 #### Speculative decoding specific
 
-Note that below parameters are valid only for speculative pipeline. See [speculative decoding demo](../../demos/continuous_batching/speculative_decoding/README.md) for details on how to prepare and serve such pipeline.
+Note that below parameters are valid only for speculative pipeline. See [speculative decoding demo](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/speculative_decoding/README.md) for details on how to prepare and serve such pipeline.
 
 | Param | OpenVINO Model Server | OpenAI /responses API | Type | Description |
 |-------|----------|----------|---------|-----|
@@ -288,7 +288,7 @@ response = client.responses.create(
 
 [LLM quick start guide](../get-started/llm-quickstart.md)
 
-[End to end demo with LLM model serving over OpenAI API](../../demos/continuous_batching/README.md)
+[End to end demo with LLM model serving over OpenAI API](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/README.md)
 
 [Code snippets](genai-api-index.md)
 

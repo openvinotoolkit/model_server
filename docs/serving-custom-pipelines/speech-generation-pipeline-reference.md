@@ -7,7 +7,7 @@ sidebar_position: 15
 
 ## Text to speech Calculator
 Text to speech pipeline consists of one MediaPipe node - T2S Calculator. To serve the speech generation model, it is required to create a MediaPipe graph configuration file that defines the node and its parameters. The graph configuration file is typically named `graph.pbtxt` and is placed in the model directory.
-The `graph.pbtxt` file may be created automatically via [export models script](../../demos/common/export_models) or manually by an administrator.
+The `graph.pbtxt` file may be created automatically via [export models script](https://github.com/openvinotoolkit/model_server/tree/main/demos/common/export_models) or manually by an administrator.
 
 Calculator has access to HTTP request and parses it to extract the generation parameters:
 ```cpp
@@ -59,7 +59,7 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `required string models_path` - location of the models and scheduler directory (can be relative);
 -    `optional string target_device` - device to load models to. Supported values: "CPU", "GPU", "NPU". Default value is set to GPU if available on the platform, CPU otherwise.
 
-We recommend using [export script](../../demos/common/export_models/README.md) to prepare models directory structure for serving.
+We recommend using [export script](https://github.com/openvinotoolkit/model_server/blob/main/demos/common/export_models/README.md) to prepare models directory structure for serving.
 Check [supported models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#speech-generation-models).
 
 ### Text to speech calculator limitations
@@ -68,4 +68,4 @@ Check [supported models](https://openvinotoolkit.github.io/openvino.genai/docs/s
 
 ## References
 - [Speech Generation API](../using-the-models/rest-api-text-to-speech.md)
-- [Demos](../../demos/audio/README.md#speech-generation)
+- [Demos](https://github.com/openvinotoolkit/model_server/blob/main/demos/audio/README.md#speech-generation)

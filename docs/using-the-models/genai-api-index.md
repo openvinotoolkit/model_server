@@ -123,7 +123,7 @@ print(response.choices[0].message)
 :::
 ::::
 
-Check [LLM quick start](../get-started/llm-quickstart.md) and [end to end demo of text generation](../../demos/continuous_batching/README.md).
+Check [LLM quick start](../get-started/llm-quickstart.md) and [end to end demo of text generation](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/README.md).
 
 ### Request completions with unary calls
 
@@ -161,7 +161,7 @@ curl http://localhost:8000/v3/completions \
 ```
 :::
 ::::
-Check [LLM quick start](../get-started/llm-quickstart.md) and [end to end demo of text generation](../../demos/continuous_batching/README.md).
+Check [LLM quick start](../get-started/llm-quickstart.md) and [end to end demo of text generation](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/README.md).
 
 ### Request chat completions with streaming
 
@@ -232,7 +232,7 @@ for chunk in stream:
 :::
 ::::
 
-Check [LLM quick start](../get-started/llm-quickstart.md) and [end to end demo of text generation](../../demos/continuous_batching/README.md).
+Check [LLM quick start](../get-started/llm-quickstart.md) and [end to end demo of text generation](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/README.md).
 
 ### Request completions with streaming
 
@@ -257,7 +257,7 @@ for chunk in stream:
 ```
 :::
 ::::
-Check [LLM quick start](../get-started/llm-quickstart.md) and [end to end demo of text generation](../../demos/continuous_batching/README.md).
+Check [LLM quick start](../get-started/llm-quickstart.md) and [end to end demo of text generation](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/README.md).
 
 ### Text embeddings
 
@@ -294,7 +294,7 @@ curl http://localhost:8000/v3/embeddings \
 ```
 :::
 ::::
-Check [text embeddings end to end demo](../../demos/embeddings/README.md).
+Check [text embeddings end to end demo](https://github.com/openvinotoolkit/model_server/blob/main/demos/embeddings/README.md).
 
 ### Image generation
 
@@ -362,7 +362,7 @@ $base64 = ($response.Content | ConvertFrom-Json).data[0].b64_json
 ::::
 
 
-Check [image generation end to end demo](../../demos/image_generation/README.md).
+Check [image generation end to end demo](https://github.com/openvinotoolkit/model_server/blob/main/demos/image_generation/README.md).
 
 ### Speech to text 
 #### Transcription
@@ -401,7 +401,7 @@ curl http://localhost:8000/v3/audio/transcriptions \
 ::::
 
 
-Check [Transcription demo](../../demos/audio/README.md#Transcription).
+Check [Transcription demo](https://github.com/openvinotoolkit/model_server/blob/main/demos/audio/README.md#transcription).
 
 #### Translation
 ::::{tab-set}
@@ -439,7 +439,7 @@ curl http://localhost:8000/v3/audio/translations \
 ::::
 
 
-Check [Translation demo](../../demos/audio/README.md#Translation).
+Check [Translation demo](https://github.com/openvinotoolkit/model_server/blob/main/demos/audio/README.md#translation).
 
 ### Text to speech
 ::::{tab-set}
@@ -477,7 +477,7 @@ curl http://localhost:8000/v3/audio/speech \
 ::::
 
 
-Check [Speech generation demo](../../demos/audio/README.md#Speech-generation).
+Check [Speech generation demo](https://github.com/openvinotoolkit/model_server/blob/main/demos/audio/README.md#speech-generation).
 
 ### List models
 
@@ -564,4 +564,4 @@ curl http://localhost:8000/v3/rerank \
 ```
 :::
 ::::
-Check [documents reranking end to end demo](../../demos/rerank/README.md).
+Check [documents reranking end to end demo](https://github.com/openvinotoolkit/model_server/blob/main/demos/rerank/README.md).

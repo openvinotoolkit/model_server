@@ -13,7 +13,7 @@ Landing page replacing the old 'Advanced' catch-all; links to src/example/Sample
 ## CPU Extensions
 Implement any CPU layer, that is not supported by OpenVINO yet, as a shared library.
 
-[Learn more](../../src/example/SampleCpuExtension/README.md)
+[Learn more](https://github.com/openvinotoolkit/model_server/blob/main/src/example/SampleCpuExtension/README.md)
 
 ## Model Cache
 Leverage the OpenVINO [model caching](https://docs.openvino.ai/2026/openvino-workflow/running-inference/optimize-inference/optimizing-latency/model-caching-overview.html) feature to speed up subsequent model loading on a target device.
@@ -28,4 +28,4 @@ Write your own custom model loader based on a predefined interface and load it s
 ## Securing Model Server with NGINX
 Protect network endpoints with traffic encryption and client authorization using a reverse proxy
 
-[Learn more](../../extras/nginx-mtls-auth/README.md)
+[Learn more](https://github.com/openvinotoolkit/model_server/blob/main/extras/nginx-mtls-auth/README.md)

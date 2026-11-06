@@ -12,7 +12,7 @@ GenAI model preparation chooser.
 
 Prepare models using OVMS [pull mode](pull-from-huggingface.md) (recommended).
 
-Prepare models using [python script](../../demos/common/export_models/README.md).
+Prepare models using [python script](https://github.com/openvinotoolkit/model_server/blob/main/demos/common/export_models/README.md).
 
 Prepare models using OVMS with python [optimum pull mode](export-with-optimum-cli.md).
 

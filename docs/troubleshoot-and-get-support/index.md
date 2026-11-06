@@ -12,7 +12,7 @@ IA flags this as a discoverability problem (171 combined views) rather than low 
 ## Introduction
 This document gives information about troubleshooting the following issues while using the OpenVINO&trade; Model Server:
 * [Generative models troubleshooting](#generative-models-troubleshooting)
-* [Classic Model Import Issues](#model-import-issues)
+* [Classic Model Import Issues](#classic-model-import-issues)
 * [Client Request Issues](#client-request-issues)
 * [Resource Allocation](#resource-allocation)
 * [Usage Monitoring](#usage-monitoring)

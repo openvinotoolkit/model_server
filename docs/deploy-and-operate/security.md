@@ -24,7 +24,7 @@ When deploying in environments where only local access is required, administrato
 ```
 
 See also:
-- [Securing OVMS with NGINX](../../extras/nginx-mtls-auth/README.md)
+- [Securing OVMS with NGINX](https://github.com/openvinotoolkit/model_server/blob/main/extras/nginx-mtls-auth/README.md)
 - [Securing models with OVSA](https://docs.openvino.ai/2026/about-openvino/openvino-ecosystem/openvino-project/openvino-security-add-on.html)
 
 ---

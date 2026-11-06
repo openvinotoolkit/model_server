@@ -137,9 +137,9 @@ In our case, it will be a modified input image with bounding boxes indicating de
 
 ![Inference results](../quickstart_result.jpeg)
 
-> **Note**: Similar steps can be performed with other model formats. Check the [ONNX use case example](../../demos/using_onnx_model/python/README.md),
-[TensorFlow classification model demo](../../demos/image_classification_using_tf_model/python/README.md)
-or [PaddlePaddle model demo](../../demos/classification_using_paddlepaddle_model/python/README.md).
+> **Note**: Similar steps can be performed with other model formats. Check the [ONNX use case example](https://github.com/openvinotoolkit/model_server/blob/main/demos/using_onnx_model/python/README.md),
+[TensorFlow classification model demo](https://github.com/openvinotoolkit/model_server/blob/main/demos/image_classification_using_tf_model/python/README.md)
+or [PaddlePaddle model demo](https://github.com/openvinotoolkit/model_server/blob/main/demos/classification_using_paddlepaddle_model/python/README.md).
 
-Congratulations, you have completed the QuickStart guide. Try other Model Server [demos](../../demos/README.md) or explore more [features](../serving-custom-pipelines/index.md) to create your application.
+Congratulations, you have completed the QuickStart guide. Try other Model Server [demos](https://github.com/openvinotoolkit/model_server/blob/main/demos/README.md) or explore more [features](../serving-custom-pipelines/index.md) to create your application.
 Check also how to write the client code using [KServe API](../using-the-models/kserve-api-index.md)

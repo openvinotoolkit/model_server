@@ -66,7 +66,7 @@ Endpoint can raise an error related to incorrect request in the following condit
 
 ## References
 
-[End to end demo with speech generation endpoint](../../demos/audio/README.md#speech-generation)
+[End to end demo with speech generation endpoint](https://github.com/openvinotoolkit/model_server/blob/main/demos/audio/README.md#speech-generation)
 
 [Code snippets](genai-api-index.md)
 

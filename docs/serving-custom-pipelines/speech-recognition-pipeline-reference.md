@@ -7,7 +7,7 @@ sidebar_position: 16
 
 ## Speech to text Calculator
 Speech to text pipeline consists of one MediaPipe node - S2T Calculator. To serve the speech generation model, it is required to create a MediaPipe graph configuration file that defines the node and its parameters. The graph configuration file is typically named `graph.pbtxt` and is placed in the model directory.
-The `graph.pbtxt` file may be created automatically via [export models script](../../demos/common/export_models) or manually by an administrator.
+The `graph.pbtxt` file may be created automatically via [export models script](https://github.com/openvinotoolkit/model_server/tree/main/demos/common/export_models) or manually by an administrator.
 
 Calculator has access to HTTP request and parses it to extract the generation parameters:
 ```cpp
@@ -61,7 +61,7 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional string device` - device to load models to. Supported values: "CPU, GPU, NPU" [default = "CPU"]
 -    `optional bool enable_word_timestamps` - set to true if model should support user requests for word timestamp. [default = false]
 
-We recommend using [export script](../../demos/common/export_models/README.md) to prepare models directory structure for serving.
+We recommend using [export script](https://github.com/openvinotoolkit/model_server/blob/main/demos/common/export_models/README.md) to prepare models directory structure for serving.
 Check [supported models](https://openvinotoolkit.github.io/openvino.genai/docs/supported-models/#speech-recognition-models).
 
 ### Speech to text calculator limitations
@@ -79,4 +79,4 @@ export OVMS_AUDIO_MAX_FILE_SIZE_BYTES=104857600
 ## References
 - [Transcription API](../using-the-models/rest-api-speech-to-text.md#transcription)
 - [Translation API](../using-the-models/rest-api-speech-to-text.md#translation)
-- Demos on [CPU/GPU](../../demos/audio/README.md#transcription)
+- Demos on [CPU/GPU](https://github.com/openvinotoolkit/model_server/blob/main/demos/audio/README.md#transcription)

@@ -21,7 +21,7 @@ Check [our MediaPipe github fork](https://github.com/openvinotoolkit/mediapipe) 
 
 This guide gives information about:
 
-- [Integration with mediapipe {#ovms\_docs\_mediapipe}](#integration-with-mediapipe-ovms_docs_mediapipe)
+- [Integration with mediapipe {#ovms\_docs\_mediapipe}](#integration-with-mediapipe)
   - [Introduction](#introduction)
   - [OpenVINO calculators](#openvino-calculators)
   - [PythonExecutorCalculator](#pythonexecutorcalculator)
@@ -287,9 +287,9 @@ Currently the graph tracing on the model server side is not supported. If you wo
 
 ### Benchmarking
 While you implemented and deployed the graph you have several options to test the performance.
-To validate the throughput for unary requests you can use the [benchmark client](../../demos/benchmark/python/README.md#mediapipe-benchmarking) .
+To validate the throughput for unary requests you can use the [benchmark client](https://github.com/openvinotoolkit/model_server/blob/main/demos/benchmark/python/README.md#mediapipe-benchmarking) .
 
-For streaming gRPC connections, there is available [rtsp_client](../../demos/real_time_stream_analysis/python/README.md).
+For streaming gRPC connections, there is available [rtsp_client](https://github.com/openvinotoolkit/model_server/blob/main/demos/real_time_stream_analysis/python/README.md).
 It can generate the load to gRPC stream and the mediapipe graph based on the content from RTSP video stream, MPG4 file or from the local camera.
 
 ## Using MediaPipe graphs from the remote client
@@ -337,13 +337,13 @@ in the conditions:default section of the deps property:
 
 ## MediaPipe Graphs Examples
 
-[Holistic analysis](../../demos/mediapipe/holistic_tracking/README.md)
+[Holistic analysis](https://github.com/openvinotoolkit/model_server/blob/main/demos/mediapipe/holistic_tracking/README.md)
 
-[Image classification](../../demos/mediapipe/image_classification/README.md)
+[Image classification](https://github.com/openvinotoolkit/model_server/blob/main/demos/mediapipe/image_classification/README.md)
 
-[Object detection](../../demos/mediapipe/object_detection/README.md)
+[Object detection](https://github.com/openvinotoolkit/model_server/blob/main/demos/mediapipe/object_detection/README.md)
 
-[Multi model](../../demos/mediapipe/multi_model_graph/README.md)
+[Multi model](https://github.com/openvinotoolkit/model_server/blob/main/demos/mediapipe/multi_model_graph/README.md)
 
 
 

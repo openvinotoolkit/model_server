@@ -13,7 +13,7 @@ sidebar_position: 4
 
  Check out the [quickstart guide](../using-the-models/python-node-quickstart.md) for a simple example that shows how to use this feature.
 
- Check out [Generative AI demos](../../demos/README.md#check-out-new-generative-ai-demos) for real life use cases.
+ Check out [Generative AI demos](https://github.com/openvinotoolkit/model_server/blob/main/demos/README.md#check-out-new-generative-ai-demos) for real life use cases.
 
  ## Building Docker Image
 
@@ -754,7 +754,7 @@ node {
 
 When using generative mode, the `execute` method in [`OvmsPythonModel`](#ovmspythonmodel-class) class must `yield` value.
 
-> **Note:** Generative mode is not compatible with the [graph pool](../serving-custom-pipelines/mediapipe-graphs.md#graph-pool-scalability-feature). Do not add `# OVMS_GRAPH_QUEUE_MAX_SIZE` directive to graphs that use generative Python nodes with LOOPBACK.
+> **Note:** Generative mode is not compatible with the [graph pool](../serving-custom-pipelines/mediapipe-graphs.md#graph-pool-pre-initialized-graph-queue). Do not add `# OVMS_GRAPH_QUEUE_MAX_SIZE` directive to graphs that use generative Python nodes with LOOPBACK.
 
 ```python
 from pyovms import Tensor
@@ -848,7 +848,7 @@ Apart from basic configuration present also in regular mode, this graph contains
 It's recommended not to reuse the same graph instance when the cycle is finished.
 Instead, if you want to generate for new data, create new gRPC stream.
 
-For working configurations and code samples see the [demos](../../demos/README.md#check-out-new-generative-ai-demos).
+For working configurations and code samples see the [demos](https://github.com/openvinotoolkit/model_server/blob/main/demos/README.md#check-out-new-generative-ai-demos).
 
 ### Incomplete inputs
 

@@ -379,7 +379,7 @@ Additionally, Visual Language Models have encoder and decoder models for text an
 
 This model directory can be created based on the models from Hugging Face Hub or from the PyTorch model stored on the local filesystem. Exporting the models to Intermediate Representation format is one time operation and can speed up the loading time and reduce the storage volume, if it's combined with quantization and compression.
 
-We recommend using [export script](../../demos/common/export_models/README.md) to prepare models directory structure for serving.
+We recommend using [export script](https://github.com/openvinotoolkit/model_server/blob/main/demos/common/export_models/README.md) to prepare models directory structure for serving.
 
 Check [tested models](https://github.com/openvinotoolkit/openvino.genai/blob/master/tests/python_tests/models/real_models).
 
@@ -468,6 +468,6 @@ Some servable types introduce additional limitations:
 - [Completions API](../using-the-models/rest-api-completions.md)
 - [Responses API](../using-the-models/rest-api-responses.md)
 - [Tokenizer API](../using-the-models/rest-api-tokenize.md)
-- Demos on [CPU/GPU](../../demos/continuous_batching/README.md) and [NPU](../../demos/llm_npu/README.md)
-- VLM Demos on [CPU/GPU](../../demos/continuous_batching/vlm/README.md) and [NPU](../../demos/vlm_npu/README.md)
-- [Omni Demo](../../demos/omni/README.md)
+- Demos on [CPU/GPU](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/README.md) and [NPU](https://github.com/openvinotoolkit/model_server/blob/main/demos/llm_npu/README.md)
+- VLM Demos on [CPU/GPU](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/vlm/README.md) and [NPU](https://github.com/openvinotoolkit/model_server/blob/main/demos/vlm_npu/README.md)
+- [Omni Demo](https://github.com/openvinotoolkit/model_server/blob/main/demos/omni/README.md)

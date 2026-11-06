@@ -227,7 +227,7 @@ Learn more about model server [starting parameters](../reference/parameters.md).
 
 - [Start the server](starting-the-server.md)
 - Try the model server [features](../serving-custom-pipelines/index.md)
-- Explore the model server [demos](../../demos/README.md)
+- Explore the model server [demos](https://github.com/openvinotoolkit/model_server/blob/main/demos/README.md)
 
 ## Additional Resources
 

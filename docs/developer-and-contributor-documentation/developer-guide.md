@@ -8,7 +8,7 @@ sidebar_position: 3
 
 This document gives information and steps to run and debug tests. It gives information about following points :
 
-- [OpenVINO™ Model Server Developer Guide](#openvino-model-server-developer-guide)
+- [OpenVINO™ Model Server Developer Guide](#introduction)
 	- [Introduction](#introduction)
 	- [Set up the Development Environment](#set-up-the-development-environment)
 	- [Prepare Environment to Use the Tests](#prepare-environment-to-use-the-tests)
@@ -446,7 +446,7 @@ docker run -it -v ${PWD}:/workspace:rw -p 9178:9178 openvino/model_server --mode
 | OVMS_PROFILE_ASYNC_BEGIN | For custom start and end markers, use this macro to mark beginning of asynchronous event. Remember to use the same marker name and id for beginning and end. Asynchronous markers need an identifier to correctly match events. | `OVMS_PROFILER_ASYNC_BEGIN("My Asynchronous Event", unique_id);` |
 | OVMS_PROFILE_ASYNC_END | For custom start and end markers, use this macro to mark end of asynchronous event. Remember to use the same marker name and id for beginning and end. Asynchronous markers need an identifier to correctly match events. | `OVMS_PROFILER_ASYNC_END("My Asynchronous Event", unique_id);` |
 
-More information can be found in [profiler.hpp](../../src/profiler.hpp) file.
+More information can be found in [profiler.hpp](https://github.com/openvinotoolkit/model_server/blob/main/src/profiler.hpp) file.
 
 </details>
 

@@ -43,7 +43,7 @@ There are several important considerations for tuning LLM serving via the OpenAI
       By default it is set to the number of vCPU cores, which is usually correct.
       You can increase it for stress benchmarking with very high client counts, or reduce it to prevent server overload (some clients will wait for a connection).
 
-Check also a guide about [handling long context requests](../../demos/continuous_batching/long_context/README.md).
+Check also a guide about [handling long context requests](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/long_context/README.md).
 
 ## Classic model tuning
 
@@ -229,8 +229,8 @@ Recommended steps to investigate achievable performance and discover bottlenecks
       **Note:** It is useful to extract plugin configuration from benchmark app with `-dump_config`, then apply the same plugin configuration to the model loaded in OVMS.
 
       **Note:** When launching benchmark app, use `-inference_only=false`. Otherwise, OpenVINO avoids setting the input tensor for each inference call, which is not comparable to OVMS request flow.
-2. [Launch OVMS benchmark client](../../demos/benchmark/README.md) on the same machine as OVMS
-3. [Launch OVMS benchmark client](../../demos/benchmark/README.md) from remote machine
+2. [Launch OVMS benchmark client](https://github.com/openvinotoolkit/model_server/blob/main/demos/benchmark/README.md) on the same machine as OVMS
+3. [Launch OVMS benchmark client](https://github.com/openvinotoolkit/model_server/blob/main/demos/benchmark/README.md) from remote machine
 4. Measure achievable network bandwidth with tools such as [iperf](https://github.com/esnet/iperf)
 
 ## Analyzing accuracy issues

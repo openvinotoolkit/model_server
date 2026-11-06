@@ -22,9 +22,9 @@ Model Server includes a built-in extension for wide list of custom [tokenizers a
 The extension performs tokenization operation for the string data type. 
 
 A demonstration of such use case is in the MUSE model which can be imported directly but the models server. The client can send the text data without any preprocessing and take advantage of much faster execution time.
-Check the [MUSE demo](../../demos/universal-sentence-encoder/README.md).
+Check the [MUSE demo](https://github.com/openvinotoolkit/model_server/blob/main/demos/universal-sentence-encoder/README.md).
 
-Example usage of a model with string on output is our [image classification with string output demo](../../demos/image_classification_with_string_output/README.md). The original model used in this demo returns probabilities but we are adding to the model postprocessing function which returns the most likely label name as a string.
+Example usage of a model with string on output is our [image classification with string output demo](https://github.com/openvinotoolkit/model_server/blob/main/demos/image_classification_with_string_output/README.md). The original model used in this demo returns probabilities but we are adding to the model postprocessing function which returns the most likely label name as a string.
 
 ## DAG pipeline to delegate tokenization to the server (deprecated)
 When the model is using tokens on input or output, you can create a DAG pipeline which include custom nodes performing pre and post processing.

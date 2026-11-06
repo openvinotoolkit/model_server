@@ -83,8 +83,8 @@ Endpoint can raise an error related to incorrect request in the following condit
 
 ## References
 
-[End to end demo with transcription endpoint](../../demos/audio/README.md#transcription)
-[End to end demo with translation endpoint](../../demos/audio/README.md#translation)
+[End to end demo with transcription endpoint](https://github.com/openvinotoolkit/model_server/blob/main/demos/audio/README.md#transcription)
+[End to end demo with translation endpoint](https://github.com/openvinotoolkit/model_server/blob/main/demos/audio/README.md#translation)
 
 [Code snippets](genai-api-index.md)
 

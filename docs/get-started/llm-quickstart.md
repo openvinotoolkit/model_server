@@ -175,7 +175,7 @@ Paris, the charming City of Light, is renowned for its rich history, iconic land
 
 ## References
 - [Efficient LLM Serving - reference](../serving-custom-pipelines/genai-pipeline-reference.md)
-- [Exporting GEN AI Models](../../demos/common/export_models/README.md)
+- [Exporting GEN AI Models](https://github.com/openvinotoolkit/model_server/blob/main/demos/common/export_models/README.md)
 - [Chat Completions API](../using-the-models/rest-api-chat.md)
 - [Completions API](../using-the-models/rest-api-completions.md)
-- [Demo with Llama3 serving](../../demos/continuous_batching/README.md)
+- [Demo with Llama3 serving](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/README.md)

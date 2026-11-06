@@ -7,7 +7,7 @@ sidebar_position: 11
 
 ## Image Generation Calculator
 Image Generation pipeline consists of one MediaPipe node - Image Generation Calculator. To serve the image generation model, it is required to create a MediaPipe graph configuration file that defines the node and its parameters. The graph configuration file is typically named `graph.pbtxt` and is placed in the model directory.
-The `graph.pbtxt` file may be created automatically by the Model Server when [using HuggingFaces pulling](../get-models/pull-from-huggingface.md) on start-up, automatically via [export models script](../../demos/common/export_models) or manually by an administrator.
+The `graph.pbtxt` file may be created automatically by the Model Server when [using HuggingFaces pulling](../get-models/pull-from-huggingface.md) on start-up, automatically via [export models script](https://github.com/openvinotoolkit/model_server/tree/main/demos/common/export_models) or manually by an administrator.
 
 Calculator has access to HTTP request and parses it to extract the generation parameters:
 ```cpp
@@ -183,7 +183,7 @@ models/OpenVINO/
 - `scheduler/scheduler_config.json` - configuration file for the scheduler that manages the execution of the models in the pipeline.
 - `text_encoder`, `tokenizer`, `unet`, `vae_encoder`, `vae_decoder` - directories containing the OpenVINO models and their configurations for the respective components of the image generation pipeline.
 
-We recommend using [export script](../../demos/common/export_models/README.md) to prepare models directory structure for serving, or simply use [HuggingFace pulling](../get-models/pull-from-huggingface.md) to automatically download and convert models from Hugging Face Hub.
+We recommend using [export script](https://github.com/openvinotoolkit/model_server/blob/main/demos/common/export_models/README.md) to prepare models directory structure for serving, or simply use [HuggingFace pulling](../get-models/pull-from-huggingface.md) to automatically download and convert models from Hugging Face Hub.
 
 Check [tested models](https://github.com/openvinotoolkit/openvino.genai/blob/master/tests/python_tests/models/real_models).
 
@@ -388,4 +388,4 @@ With this configuration, every request runs against `style_base`-enhanced weight
 ## References
 - [Image Generation API](../using-the-models/rest-api-image-generation.md)
 - [Image Edit API](../using-the-models/rest-api-image-edit.md)
-- Demos on [CPU/GPU](../../demos/image_generation/README.md)
+- Demos on [CPU/GPU](https://github.com/openvinotoolkit/model_server/blob/main/demos/image_generation/README.md)

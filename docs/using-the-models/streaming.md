@@ -80,7 +80,7 @@ The MediaPipe graph is checked for internal processing errors in-between subsequ
 
 ## Useful links
 - [example client snippets](kserve-api-index.md)
-- [complete demo with streaming](../../demos/mediapipe/holistic_tracking/README.md)
+- [complete demo with streaming](https://github.com/openvinotoolkit/model_server/blob/main/demos/mediapipe/holistic_tracking/README.md)
 
 > **NOTE**: gRPC Streaming API supports only MediaPipe Graph servables via KServe API compatible client like `tritonclient`.
 

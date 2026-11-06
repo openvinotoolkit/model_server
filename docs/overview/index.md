@@ -125,14 +125,14 @@ print("Top-1 class index:", int(np.argmax(output[0])))
 ## Features
 
 ### Generative AI
-- [LLM text generation](../../demos/continuous_batching/README.md) — continuous batching, streaming, structured output, speculative decoding
-- [VLM (Vision Language Models)](../../demos/continuous_batching/vlm/README.md)
-- [AI Agents with MCP servers](../../demos/continuous_batching/agentic_ai/README.md)
-- [Text embeddings](../../demos/embeddings/README.md) — OpenAI-compatible `/v1/embeddings`
-- [Reranking](../../demos/rerank/README.md) — Cohere-compatible API
-- [Image generation](../../demos/image_generation/README.md) — OpenAI-compatible `/v1/images/generations`
-- [Speech recognition and TTS](../../demos/audio/README.md) — OpenAI-compatible audio API
-- [GGUF model support](../../demos/gguf/README.md)
+- [LLM text generation](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/README.md) — continuous batching, streaming, structured output, speculative decoding
+- [VLM (Vision Language Models)](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/vlm/README.md)
+- [AI Agents with MCP servers](https://github.com/openvinotoolkit/model_server/blob/main/demos/continuous_batching/agentic_ai/README.md)
+- [Text embeddings](https://github.com/openvinotoolkit/model_server/blob/main/demos/embeddings/README.md) — OpenAI-compatible `/v1/embeddings`
+- [Reranking](https://github.com/openvinotoolkit/model_server/blob/main/demos/rerank/README.md) — Cohere-compatible API
+- [Image generation](https://github.com/openvinotoolkit/model_server/blob/main/demos/image_generation/README.md) — OpenAI-compatible `/v1/images/generations`
+- [Speech recognition and TTS](https://github.com/openvinotoolkit/model_server/blob/main/demos/audio/README.md) — OpenAI-compatible audio API
+- [GGUF model support](https://github.com/openvinotoolkit/model_server/blob/main/demos/gguf/README.md)
 
 ### Classic Models and Pipelines
 - TensorFlow, ONNX, PaddlePaddle, OpenVINO IR model formats
@@ -163,7 +163,7 @@ print("Top-1 class index:", int(np.argmax(output[0])))
 | Deployment | [Deploying the server](../deploy-and-operate/index.md) |
 | Model repository | [Preparing models](../get-models/index.md) |
 | Client libraries | [Writing client code](../using-the-models/index.md) |
-| Demos & examples | [Demos](../../demos/README.md) |
+| Demos & examples | [Demos](https://github.com/openvinotoolkit/model_server/blob/main/demos/README.md) |
 | Release notes | [GitHub Releases](https://github.com/openvinotoolkit/model_server/releases) |
 
 ---
@@ -186,7 +186,7 @@ docker pull openvino/model_server:latest-gpu    # Intel CPU,GPU,NPU
 ## Contributing
 
 Contributions are welcome! Please open an issue or pull request on GitHub.  
-See [security policy](../../security.md) for responsible disclosure.
+See [security policy](https://github.com/openvinotoolkit/model_server/blob/main/security.md) for responsible disclosure.
 
 ---
 

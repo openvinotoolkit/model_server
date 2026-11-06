@@ -101,6 +101,6 @@ Endpoint can raise an error related to incorrect request in the following condit
 
 ## References
 
-[End to end demo with image generation endpoint](../../demos/image_generation/README.md)
+[End to end demo with image generation endpoint](https://github.com/openvinotoolkit/model_server/blob/main/demos/image_generation/README.md)
 
 [Code snippets](genai-api-index.md)
