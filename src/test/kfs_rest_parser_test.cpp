@@ -628,6 +628,30 @@ TEST_F(KFSRestParserTest, parseValidRequestWithOutput) {
     ASSERT_EQ(proto.outputs()[0].name(), "output0");
 }
 
+TEST_F(KFSRestParserTest, parseValidRequestWithMultipleOutputs) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [ 2, 2 ],
+        "datatype" : "UINT32",
+        "data" : [ 1, 2, 3, 4 ]
+        }
+    ],
+    "outputs" : [
+        { "name" : "output0" },
+        { "name" : "output1" }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::OK);
+
+    auto proto = parser.getProto();
+    ASSERT_EQ(proto.outputs_size(), 2);
+    ASSERT_EQ(proto.outputs()[0].name(), "output0");
+    ASSERT_EQ(proto.outputs()[1].name(), "output1");
+}
+
 TEST_F(KFSRestParserTest, parseValidRequestWithStringOutputParameter) {
     std::string request = R"({
     "inputs" : [
