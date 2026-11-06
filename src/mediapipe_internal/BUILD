@@ -16,9 +16,41 @@
 load("//:common_settings.bzl", "ovms_cc_library")
 
 ovms_cc_library(
+    name = "live_graph_session_api",
+    hdrs = ["live_graph_session.hpp"],
+    deps = ["//src:libovmsstatus"],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "live_graph_config",
+    hdrs = ["live_graph_config.hpp"],
+    deps = [
+        ":live_graph_session_api",
+        "@mediapipe//mediapipe/framework:calculator_graph",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "live_graph_session",
+    srcs = ["live_graph_session.cpp"],
+    hdrs = ["live_graph_session_impl.hpp"],
+    deps = [
+        ":live_graph_session_api",
+        ":live_graph_config",
+        ":streaming_s2t_graph",
+        "//src:libovmslogging",
+        "@mediapipe//mediapipe/framework:calculator_graph",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "mediapipe_executor_interface",
     hdrs = ["mediapipe_graph_executor_interface.hpp"],
     deps = [
+        ":live_graph_session_api",
         "//src:libovms_execution_context",
         "//src:libovmsstatus",
     ],
@@ -76,6 +108,18 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "streaming_s2t_graph",
+    srcs = ["streaming_s2t_graph.cpp"],
+    hdrs = ["streaming_s2t_graph.hpp"],
+    deps = [
+        "//src/audio/speech_to_text:streaming_s2t",
+        "@mediapipe//mediapipe/framework:calculator_graph",
+        "@mediapipe//mediapipe/framework/stream_handler:immediate_input_stream_handler",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "graphqueue",
     hdrs = [
         "graphqueue.hpp",
@@ -89,6 +133,7 @@ ovms_cc_library(
         ":mediapipe_utils",
         ":outputstreamobserver",
         ":side_packet_builder",
+        ":streaming_s2t_graph",
         "//src:libovms_queue",
         "//src:libovmslogging",
         "//src:libovms_execution_context",
@@ -227,6 +272,9 @@ ovms_cc_library(
         "//src:libovms_execution_context",
         "//src:libovmstimer",
         "//src:libovms_time_utils",
+        "//src/audio/speech_to_text:s2t_servable",
+        "//src/audio/speech_to_text:s2t_calculator_cc_proto",
+        ":live_graph_session",
         "//src:libovmsprofiler",
         "//src/llm:execution_context_utils_runtime",
         "//src/utils:env_guard",

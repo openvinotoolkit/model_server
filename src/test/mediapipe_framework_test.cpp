@@ -582,6 +582,9 @@ TEST(NodeInitializerRegistryTest, AllExpectedInitializersRegistered) {
         "ImageGenCalculator",
         "RerankCalculatorOV",
         "S2tCalculator",
+#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
+        "StreamingS2TCalculator",
+#endif
         "T2sCalculator",
         "PythonExecutorCalculator",
     };

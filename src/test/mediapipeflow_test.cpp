@@ -51,6 +51,7 @@
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
+#include "../mediapipe_internal/streaming_s2t_graph.hpp"
 #include "src/metrics/metric_config.hpp"
 #include "src/metrics/metric_module.hpp"
 #include "../model.hpp"
@@ -88,6 +89,76 @@ using testing::HasSubstr;
 using testing::Not;
 using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
+
+class SttGraphDefinitionForTest : public MediapipeGraphDefinition {
+public:
+    SttGraphDefinitionForTest() :
+        MediapipeGraphDefinition("stt-selection-test") {}
+
+    Status parse(const std::string& basePath, const std::string& modelPath) {
+        mgconfig.setBasePath(basePath);
+        chosenConfig = R"(
+input_stream: "HTTP_REQUEST_PAYLOAD:input"
+output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+node {
+    name: "stt"
+    calculator: "S2tCalculator"
+    input_side_packet: "STT_NODE_RESOURCES:stt_servable"
+    input_stream: "HTTP_REQUEST_PAYLOAD:input"
+    output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+    node_options: {
+        [type.googleapis.com/mediapipe.S2tCalculatorOptions]: {
+            models_path: ")" + modelPath + R"("
+        }
+    }
+})";
+        return validateForConfigLoadableness();
+    }
+
+    std::string calculator() const {
+        return config.node(0).calculator();
+    }
+
+    absl::Status initializeRuntime() const {
+        mediapipe::CalculatorGraph graph;
+        StreamingS2TGraphExecution execution(graph);
+        return execution.initialize(config);
+    }
+};
+
+class SttGraphSelectionTest : public TestWithTempDir {};
+
+TEST_F(SttGraphSelectionTest, WhisperKeepsStandardCalculator) {
+    {
+        std::ofstream file(directoryPath + "/config.json");
+        ASSERT_TRUE(file.is_open());
+        file << R"({"model_type":"whisper"})";
+    }
+    SttGraphDefinitionForTest graph;
+    ASSERT_TRUE(graph.parse(directoryPath, "./").ok());
+    EXPECT_EQ(graph.calculator(), "S2tCalculator");
+}
+
+TEST_F(SttGraphSelectionTest, VoxtralNeverSelectsStandardCalculator) {
+    {
+        std::ofstream file(directoryPath + "/config.json");
+        ASSERT_TRUE(file.is_open());
+        file << R"({"model_type":"voxtral_realtime"})";
+    }
+    for (const std::string& modelPath : {std::string("./"), directoryPath}) {
+        SttGraphDefinitionForTest graph;
+        const auto status = graph.parse(directoryPath, modelPath);
+#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
+        ASSERT_TRUE(status.ok()) << status.string();
+        EXPECT_EQ(graph.calculator(), "StreamingS2TCalculator");
+        const auto initialization = graph.initializeRuntime();
+        EXPECT_TRUE(initialization.ok()) << initialization.ToString();
+#else
+        EXPECT_EQ(status, StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID);
+        EXPECT_THAT(status.string(), HasSubstr("BUILD_WITH_EXPERIMENTAL_VOXTRAL=1"));
+#endif
+    }
+}
 
 class MediapipeCliFlowTest : public ::testing::TestWithParam<std::string> {
 protected:

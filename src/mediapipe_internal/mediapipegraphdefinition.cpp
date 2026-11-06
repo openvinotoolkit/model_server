@@ -16,10 +16,12 @@
 #include "mediapipegraphdefinition.hpp"
 
 #include <algorithm>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <regex>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -27,6 +29,8 @@
 #include <vector>
 
 #include "src/execution_context.hpp"
+#include "src/audio/speech_to_text/s2t_servable.hpp"
+#include "src/audio/speech_to_text/s2t_calculator.pb.h"
 #include "../config.hpp"
 #include "../llm/llm_calculators_plugin_loader.hpp"
 #include "src/utils/env_guard.hpp"
@@ -213,6 +217,27 @@ Status MediapipeGraphDefinition::validateForConfigLoadableness() {
     if (!success) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Trying to parse mediapipe graph definition: {} failed", this->getName(), this->chosenConfig);
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+    }
+    for (auto& node : *this->config.mutable_node()) {
+        if (node.calculator() != "S2tCalculator" || node.node_options_size() == 0)
+            continue;
+        mediapipe::S2tCalculatorOptions options;
+        if (!node.node_options(0).UnpackTo(&options))
+            continue;
+        const auto modelPath = std::filesystem::path(mgconfig.getBasePath()) / options.models_path();
+        try {
+            if (!SttServable::isRealtimeModel(modelPath.string()))
+                continue;
+#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
+            node.set_calculator("StreamingS2TCalculator");
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Selected StreamingS2TCalculator for Voxtral node {} in graph {}", node.name(), getName());
+#else
+            throw std::runtime_error("Voxtral realtime requires BUILD_WITH_WEBRTC=1 and BUILD_WITH_EXPERIMENTAL_VOXTRAL=1");
+#endif
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot configure STT node {} in graph {}: {}", node.name(), getName(), e.what());
+            return Status(StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID, e.what());
+        }
     }
     return StatusCode::OK;
 }
@@ -749,6 +774,11 @@ Status MediapipeGraphDefinition::initializeNodes() {
                 }
             }
         }
+    }
+    for (const auto& initializer : registry.all()) {
+        const auto status = initializer->prepareLiveGraph(config, *sidePacketMaps);
+        if (!status.ok())
+            return status;
     }
     // Register LoRA aliases for routing from initialized image gen pipelines
     this->loraAliases = sidePacketMaps->loraAliases;

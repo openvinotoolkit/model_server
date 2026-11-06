@@ -22,6 +22,7 @@
 
 namespace mediapipe {
 class CalculatorGraphConfig_Node;
+class CalculatorGraphConfig;
 }
 
 namespace ovms {
@@ -38,6 +39,11 @@ public:
         const std::string& basePath,
         GraphSidePackets& sidePackets,
         PythonBackend* pythonBackend) = 0;
+    /// Optionally prepares transport-independent execution profiles after resources load.
+    virtual Status prepareLiveGraph(const ::mediapipe::CalculatorGraphConfig&,
+        GraphSidePackets&) {
+        return StatusCode::OK;
+    }
 };
 
 class NodeInitializerRegistry {

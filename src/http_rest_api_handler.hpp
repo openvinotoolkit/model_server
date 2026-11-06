@@ -30,12 +30,17 @@
 #include "rest_parser.hpp"
 #include "status.hpp"
 #include "tensorinfo_fwd.hpp"
+#if defined(BUILD_WITH_WEBRTC)
+#include "webrtc/webrtc_session_controller.hpp"
+#endif
 
 namespace ovms {
 class ServableMetricReporter;
 class KFSInferenceServiceImpl;
 class Server;
 class ModelManager;
+class MultiPartParser;
+class MediapipeGraphExecutorInterface;
 
 // note since removal of TFS, V3 endpoints (from OpenAI) are will be also accepted as V1
 enum RequestType { ConfigReload,
@@ -50,6 +55,8 @@ enum RequestType { ConfigReload,
     V3_RetrieveModel,
     V3,
     Metrics,
+    WebRTC_RealtimeCall,
+    WebRTC_RealtimeHangup,
     Options };
 
 struct HttpRequestComponents {
@@ -60,18 +67,21 @@ struct HttpRequestComponents {
     std::optional<std::string_view> model_version_label;
     std::string processing_method;
     std::string model_subresource;
+    std::string realtime_call_id;
     std::optional<int> inferenceHeaderContentLength;
     std::unordered_map<std::string, std::string> headers;
 };
 
 enum class ContentType {
     JSON,
-    PLAIN_TEXT
+    PLAIN_TEXT,
+    SDP
 };
 
 struct HttpResponseComponents {
     std::optional<int> inferenceHeaderContentLength;
     ContentType contentType = ContentType::JSON;
+    std::optional<std::string> location;
 };
 
 using HandlerCallbackFn = std::function<Status(
@@ -95,6 +105,8 @@ public:
     static const std::string kfs_inferRegexExp;
 
     static const std::string metricsRegexExp;
+    static const std::string realtimeCallsRegexExp;
+    static const std::string realtimeHangupRegexExp;
 
     static const std::string kfs_serverreadyRegexExp;
     static const std::string kfs_serverliveRegexExp;
@@ -162,6 +174,16 @@ public:
     Status processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::optional<int>& inferenceHeaderContentLength);
     Status processMetrics(const HttpRequestComponents& request_components, HttpResponseComponents& response_components, std::string& response, const std::string& request_body);
+#if defined(BUILD_WITH_WEBRTC)
+    /// OpenAI Realtime WebRTC call: multipart "sdp" and "session" naming the speech-to-text graph,
+    /// or application/sdp using the sole available speech-to-text graph. Returns an SDP answer with ICE candidates.
+    Status processRealtimeCall(const HttpRequestComponents& request_components, const std::string& request_body, std::string& response,
+        const std::shared_ptr<MultiPartParser>& multiPartParser, HttpResponseComponents& response_components);
+    /// Resolves a named speech-to-text graph, or the sole available one when modelName is empty.
+    Status getRealtimeCallExecutor(const std::string& modelName,
+        std::unique_ptr<MediapipeGraphExecutorInterface>& executor);
+    Status processRealtimeHangup(const HttpRequestComponents& request_components, std::string& response);
+#endif
     Status processOptions(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
     Status processServerReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
@@ -172,6 +194,7 @@ public:
     Status processListModelsRequest(std::string& response);
     Status processRetrieveModelRequest(const std::string& name, std::string& response);
     bool isAuthorized(const std::unordered_map<std::string, std::string>& headers, const std::string& apiKey);
+    bool isWebRtcRequestAuthorized(const HttpRequestComponents& request_components);
     const std::string apiKey;
 
 private:
@@ -191,6 +214,8 @@ private:
     const std::regex v3_Regex;
 
     const std::regex metricsRegex;
+    const std::regex realtimeCallsRegex;
+    const std::regex realtimeHangupRegex;
 
     std::map<RequestType, HandlerCallbackFn> handlers;
     int timeout_in_ms;
@@ -198,6 +223,9 @@ private:
     ovms::Server& ovmsServer;
     ovms::KFSInferenceServiceImpl& kfsGrpcImpl;
     ovms::ModelManager& modelManager;
+#if defined(BUILD_WITH_WEBRTC)
+    WebRtcSessionController webRtcSessionController;
+#endif
 
     Status getReporter(const HttpRequestComponents& components, ovms::ServableMetricReporter*& reporter);
 };

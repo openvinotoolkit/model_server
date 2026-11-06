@@ -76,6 +76,84 @@ curl -X POST http://localhost:8000/v3/audio/translations \
 Endpoint can raise an error related to incorrect request in the following conditions:
 - Incorrect format of any of the fields based on the schema
 
+## Realtime WebRTC transcription
+
+WebRTC requires a non-Windows build with `BUILD_WITH_WEBRTC=1`. Voxtral Realtime
+additionally requires `BUILD_WITH_EXPERIMENTAL_VOXTRAL=1` and an OpenVINO GenAI
+build providing `ASRPipeline::create_stream()`. Inside the build container, enable
+both flags with:
+
+```bash
+bazel build --config=voxtral //src:ovms
+```
+
+Changing the flags automatically rebuilds affected Bazel actions; a clean build
+is not required. Restart OVMS with the rebuilt binary. Its debug registry log
+should list `StreamingS2TCalculator`.
+
+Models with `"model_type": "voxtral_realtime"` in their exported `config.json`
+use only `StreamingS2TCalculator`, selected before graph validation and
+initialization. WebRTC acquires a managed graph executor through the same
+model-manager path as HTTP inference, including on-demand loading and active
+inference tracking. A live graph session retains the model resources and active
+inference lease independently of the creating executor. It supplies resources to
+the calculator through normal graph side packets; the WebRTC transport does not
+access the GenAI pipeline.
+
+Live audio currently supports single-node STT graphs. During graph loading, the
+STT node initializer prepares a named live execution profile with audio input and
+transcription events, retaining the configured node's name, options, and loaded
+resources. Graphs with additional nodes are rejected instead of bypassing those
+nodes. Each call has a separate graph; it does not reuse a pooled HTTP graph.
+
+The executor exposes only generic profile discovery and live session creation.
+Sessions send checked payloads to named streams, close inputs, and cancel
+execution; neither interface assumes audio. The STT adapter owns the
+`speech-to-text.incremental` and `speech-to-text.utterance` profiles and translates
+audio and utterance boundaries into session packets. Finishing an utterance does
+not close the session input, so subsequent turns use the same call.
+
+Without experimental support, Voxtral models are rejected rather
+than routed through the utterance-based Whisper adapter. Whisper WebRTC remains
+available without the experimental flag.
+
+Voxtral audio frames are fed incrementally to `StreamingS2TCalculator`;
+`input_audio_buffer.commit` finishes the current utterance. Whisper retains
+silence-based or explicit-commit utterance segmentation, and executes complete
+utterances through `S2tCalculator`. Both return delta and completed events on the
+data channel. Disconnecting or hanging up cancels live graph execution and
+releases the session and its resources once outstanding callbacks have finished.
+
+`POST /v1/realtime/calls` accepts either of the OpenAI Realtime signaling formats:
+
+- `Content-Type: application/sdp`: the request body is the SDP offer. OVMS selects
+  the sole available speech-to-text graph; non-STT graphs are ignored. If no STT
+  graph or multiple STT graphs are available, the request returns HTTP 400 with a
+  descriptive JSON error. Use multipart signaling to select a model explicitly.
+- `Content-Type: multipart/form-data`: the `sdp` field contains the offer and the
+  `session` field contains a JSON object with `audio.input.transcription.model`
+  (or top-level `model` as a fallback) naming the served STT graph.
+
+Both formats return an `application/sdp` answer with embedded ICE candidates and
+a `Location: /v1/realtime/calls/<id>` header. To end the call, send
+`POST /v1/realtime/calls/<id>/hangup`. Transcription events use the `oai-events`
+WebRTC data channel.
+
+When API-key authentication is enabled, both call creation and hangup require
+`Authorization: Bearer <configured-api-key>`. OVMS does not issue OpenAI ephemeral
+tokens or implement `/v1/realtime/client_secrets`; plain SDP uses the configured
+API key, not a token carrying session configuration. No model query parameter or
+custom header is required.
+
+```bash
+curl http://localhost:8000/v1/realtime/calls \
+  -H 'Content-Type: application/sdp' \
+  --data-binary @offer.sdp
+```
+
+Malformed signaling requests return HTTP 400 with a descriptive JSON error,
+rather than a JSON-file parsing error.
+
 ## References
 
 [End to end demo with transcription endpoint](../demos/audio/README.md#transcription)
