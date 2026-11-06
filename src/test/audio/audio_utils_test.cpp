@@ -481,6 +481,12 @@ TEST_F(AudioUtilsSampleRateTest, isWavBufferReturnsTrueForValidWav) {
     EXPECT_TRUE(isWavBuffer(wav));
 }
 
+TEST_F(AudioUtilsSampleRateTest, isWavBufferAcceptsUnalignedView) {
+    const std::string wav = buildWavBuffer(/*sampleRate=*/16000, /*numSamples=*/16);
+    const std::string prefixedWav = "x" + wav;
+    EXPECT_TRUE(isWavBuffer(std::string_view(prefixedWav).substr(1)));
+}
+
 TEST_F(AudioUtilsSampleRateTest, isWavBufferReturnsFalseForNonWav) {
     EXPECT_FALSE(isWavBuffer("not a wav file"));
 }

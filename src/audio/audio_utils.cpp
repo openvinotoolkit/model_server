@@ -21,6 +21,7 @@
 #include "src/stringutils.hpp"
 #include "src/timer.hpp"
 #include "src/logging.hpp"
+#include <cstring>
 #include <cstdlib>
 #include <limits>
 #include <stdexcept>
@@ -42,7 +43,8 @@ bool isWavBuffer(std::string_view buf) {
         return false;
     }
 
-    uint32_t chunk_size = *reinterpret_cast<const uint32_t*>(buf.data() + 4);
+    uint32_t chunk_size;
+    std::memcpy(&chunk_size, buf.data() + 4, sizeof(chunk_size));
     SPDLOG_TRACE("isWavBuffer: chunk_size {}", chunk_size);
     if (chunk_size + 8 != buf.size()) {
         return false;

@@ -262,7 +262,9 @@ public:
     // Override to reject endpoints not supported by this servable.
     // Called after endpoint is determined. Return non-OK to reject.
     virtual absl::Status validateEndpoint(Endpoint endpoint) const {
-        (void)endpoint;
+        if (endpoint == Endpoint::TRANSCRIPTIONS) {
+            return absl::InvalidArgumentError("This servable does not support audio transcriptions");
+        }
         return absl::OkStatus();
     }
 

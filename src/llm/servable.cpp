@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <cmath>
 #include <memory>
 #include <optional>
 #include <cstdlib>
@@ -97,8 +98,9 @@ absl::Status normalizeTranscriptionRequest(HttpPayload& payload) {
     if (!temperature.empty()) {
         char* parseEnd = nullptr;
         const float parsedTemperature = std::strtof(temperature.c_str(), &parseEnd);
-        if (parseEnd == temperature.c_str() || *parseEnd != '\0') {
-            return absl::InvalidArgumentError("Invalid temperature type.");
+        if (parseEnd == temperature.c_str() || *parseEnd != '\0' ||
+            !std::isfinite(parsedTemperature) || parsedTemperature < 0.0f || parsedTemperature > 2.0f) {
+            return absl::InvalidArgumentError("temperature must be finite and in range [0.0, 2.0]");
         }
         request->AddMember("temperature", parsedTemperature, allocator);
     }

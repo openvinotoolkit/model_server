@@ -27,6 +27,7 @@
 #pragma warning(pop)
 
 #include "../../../llm/io_processing/input_processors/audio_decoding_processor.hpp"
+#include "../../../llm/io_processing/input_processors/multipart_audio_decoding_processor.hpp"
 #include "../../../llm/io_processing/input_request.hpp"
 #include "../../wav_test_utils.hpp"
 
@@ -105,6 +106,30 @@ TEST(AudioDecodingProcessorTest, ValidWavAudioDecodedSuccessfully) {
     // WAV at 16kHz with no resampling should produce numSamples float values
     EXPECT_EQ(req.inputAudios[0].get_shape()[0], numSamples);
     EXPECT_EQ(req.inputAudios[0].get_element_type(), ov::element::f32);
+}
+
+TEST(MultipartAudioDecodingProcessorTest, ResamplesWavTo16Khz) {
+    const std::string wavData = buildWavBuffer(/*numSamples=*/240, /*sampleRate=*/24000);
+    InputRequest req;
+    req.multipartAudioInputs.push_back({wavData});
+    MultipartAudioDecodingProcessor processor;
+
+    ASSERT_TRUE(processor.process(req).ok());
+    ASSERT_EQ(req.inputAudios.size(), 1u);
+    EXPECT_EQ(req.inputAudios[0].get_shape()[0], 160u);
+    EXPECT_EQ(req.inputAudios[0].get_element_type(), ov::element::f32);
+}
+
+TEST(MultipartAudioDecodingProcessorTest, RejectsMalformedAudio) {
+    const std::string malformedAudio = "not valid audio";
+    InputRequest req;
+    req.multipartAudioInputs.push_back({malformedAudio});
+    MultipartAudioDecodingProcessor processor;
+
+    const auto status = processor.process(req);
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_TRUE(req.inputAudios.empty());
 }
 
 TEST(AudioDecodingProcessorTest, AudioPartReplacedWithIndexedTag) {
