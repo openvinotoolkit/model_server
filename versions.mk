@@ -37,8 +37,8 @@ DLDT_PACKAGE_URL_UBUNTU22 ?= https://storage.openvinotoolkit.org/repositories/op
 DLDT_PACKAGE_SHA256_UBUNTU22 ?= 39184b4d5dcfbfdb99c41fba27fbe13e8c29038f8be0dc2e9f736658f5b7891f
 DLDT_PACKAGE_URL_RHEL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.5.0.0rc1/openvino_genai_rhel9_2026.5.0.0rc1_x86_64.tar.gz
 DLDT_PACKAGE_SHA256_RHEL ?= 06c7dde1db2c82d0752a0796375ecf087390b8d6eccb167f315b628ad3ab0e15
-GENAI_PACKAGE_URL_WINDOWS ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.5.0.0rc1/pdb_openvino_genai_windows_2026.5.0.0rc1_x86_64.zip
-GENAI_PACKAGE_SHA256_WINDOWS ?= 052d3e28b12dff2e5458e0c86c22694e697979293fc1f89a86cb8b8c88699bb9
+GENAI_PACKAGE_URL_WINDOWS ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.5.0.0rc1/openvino_genai_windows_2026.5.0.0rc1_x86_64.zip
+GENAI_PACKAGE_SHA256_WINDOWS ?= 349f99b68a6b37631d027787dcc83df4728c4325e592fd799e149248a70e2571
 # Third-party dependency versions (used for binary builds)
 OPENCV_VERSION ?= 4.14.0
 CURL_VERSION ?= 8.22.0_2
