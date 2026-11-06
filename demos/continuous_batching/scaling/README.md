@@ -84,7 +84,7 @@ Let's use the benchmark_serving script from vllm repository. First, we need to i
 ```bash
 git clone --branch v0.7.3 --depth 1 https://github.com/vllm-project/vllm
 cd vllm
-pip3 install -r requirements-cpu.txt "transformers==4.48.2" "pyarrow<22" --extra-index-url https://download.pytorch.org/whl/cpu
+pip3 install -r requirements-cpu.txt "numpy==1.26.4" "torch==2.5.1+cpu" "torchvision==0.20.1+cpu" "torchaudio==2.5.1+cpu" "transformers==4.48.2" "pyarrow<22" --extra-index-url https://download.pytorch.org/whl/cpu
 cd benchmarks
 curl -L https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json -o ShareGPT_V3_unfiltered_cleaned_split.json
 ```
