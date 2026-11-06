@@ -476,8 +476,12 @@ class ModelInfo:
             else:
                 src_model_path = Path(self.model_path_on_host)
                 # model_name/version_num
-                model_subpath = src_model_path.parts[-2:] if self.model_subpath is None else \
-                    Path(self.model_subpath).parts
+                if self.model_subpath is None and "/" in self.name:
+                    model_subpath = src_model_path.parts[-3:]
+                elif self.model_subpath is None:
+                    model_subpath = src_model_path.parts[-2:]
+                else:
+                    model_subpath = Path(self.model_subpath).parts
                 target_model_dir = Path(resource_destination, *model_subpath)
             if not os.path.exists(target_model_dir):
                 logger.debug(f"Copying {self.name} to container: {target_model_dir}")

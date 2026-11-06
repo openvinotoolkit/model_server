@@ -59,7 +59,8 @@ class Paths:
     LLM_EXPORT_MODELS_REQUIREMENTS = os.path.join(LLM_EXPORT_MODELS_DIR, "requirements.txt")
     LLM_EXPORT_MODELS_SCRIPT = os.path.join(LLM_EXPORT_MODELS_DIR, "export_model.py")
 
-    OVMS_C_IMAGES = os.path.join(config.ovms_c_repo_path, "demos", "common", "static", "images")
+    OVMS_C_CLIENT_IMAGES = os.path.join(config.ovms_c_repo_path, "client", "python")
+    OVMS_C_DEMOS_IMAGES = os.path.join(config.ovms_c_repo_path, "demos", "common", "static", "images")
 
     @staticmethod
     def CAPI_WRAPPER_PACKAGE_CONTENT_PATH(base_os):
@@ -88,7 +89,3 @@ class Paths:
                 return os.path.join(config.ovms_file_locks_dir, f"target_device_{TargetDevice.NPU}_{i}.lock")
 
         return os.path.join(config.ovms_file_locks_dir, f"target_device_{target_device}_{i}.lock")
-
-
-def any_is_relative_to(paths, subpath):
-    return any(_path in subpath for _path in paths)

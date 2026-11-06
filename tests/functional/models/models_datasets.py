@@ -77,6 +77,14 @@ class NumPyDataset(ModelDataset):
         self.data_path = data_src_path if data_src_path is not None else os.path.join(datasets_path, *data_path)
 
 
+class NumPyImageData(NumPyDataset):
+
+    def __init__(self, size=None):
+        file_name = "imgs_nhwc.npy"
+        super().__init__(file_name, data_src_path=os.path.join(Paths.OVMS_C_CLIENT_IMAGES, file_name))
+        self.size = size
+
+
 class LanguageModelDataset(ModelDataset):
     str_input_data = ["Lorem ipsum dolor sit amet", "consectetur adipiscing elit", "sed do eiusmod tempor"]
 
@@ -128,7 +136,7 @@ class LargeLanguageModelDataset(ModelDataset):
 class ZebraImageDataset(NumPyDataset):
     def __init__(self):
         file_name = "zebra.jpeg"
-        super().__init__(file_name, data_src_path=os.path.join(Paths.OVMS_C_IMAGES, file_name))
+        super().__init__(file_name, data_src_path=os.path.join(Paths.OVMS_C_DEMOS_IMAGES, file_name))
 
 
 class VisionLanguageModelImageDataset(ZebraImageDataset):

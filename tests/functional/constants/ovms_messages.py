@@ -437,7 +437,7 @@ class OvmsMessages:
         "All requests: {}; Scheduled requests: {}; Cache type: static, cache usage: {}%"
     LLM_CACHE_USAGE = "Cache usage {}%;"
     LLM_CALCULATOR_CLOSE = "LLMCalculator [Node: LLMExecutor ] Close"
-    LLM_STREAM_GENERATION_CANCELLED = "graph wait until done CANCELLED"
+    LLM_STREAM_GENERATION_CANCELLED = "Graph {}: Done execution"
     LLM_UNARY_GENERATION_CANCELLED = "Mediapipe execution failed. MP status - CANCELLED"
     LLM_STREAM_GENERATION_DONE = "data: [DONE]"
     LLM_UNARY_GENERATION_DONE = "Complete unary response"

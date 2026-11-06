@@ -40,7 +40,7 @@ class ModelsLibrary:
             {
                 TargetDevice.CPU: [mg.DummyCyclicLlavaOvHf],
                 TargetDevice.GPU: [mg.DummyCyclicLlavaOvHf],
-                TargetDevice.NPU: [mg.DummyCyclicLlavaOvHf],
+                TargetDevice.NPU: [mg.Gemma34bItInt4CwOvHf],
             },
         )
 

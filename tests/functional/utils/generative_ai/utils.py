@@ -29,8 +29,7 @@ from tests.functional.config import (
     kv_cache_size_value,
     kv_cache_precision_value,
     ovms_c_repo_path,
-    ovms_ip_address,
-    ovms_rest_port,
+    server_address,
 )
 from tests.functional.constants.generative_ai import GenerativeAIPluginConfig
 from tests.functional.constants.os_type import OsType
@@ -45,6 +44,7 @@ from tests.functional.models.models_generative import Qwen3Embedding06BFp16OvHf
 from tests.functional.object_model.inference_helpers import run_llm_inference
 from tests.functional.object_model.mediapipe_calculators import MediaPipeCalculator
 from tests.functional.object_model.ovms_config import OvmsConfig
+from tests.functional.object_model.ovms_external import OvmsExternal
 from tests.functional.object_model.ovms_params import OvmsParams
 from tests.functional.object_model.python_custom_nodes.python_custom_nodes import (
     SimpleLLM,
@@ -180,20 +180,16 @@ class GenerativeAIUtils:
             enable_word_timestamps=enable_word_timestamps,
         )
 
-        if ovms_rest_port is None:
-            step("Start OVMS")
-            result = start_ovms(
-                context,
-                OvmsParams(
-                    models=[model], use_config=True, use_subconfig=model.use_subconfig, log_level=log_level,
-                    allowed_local_media_path=allowed_local_media_path, allowed_media_domains=allowed_media_domains
-                ),
-                timeout=model.model_timeout, environment=env,
-            )
-            port = result.ovms.get_port(openai_rest_api_type)
-        else:
-            result = None
-            port = ovms_rest_port
+        step("Start OVMS")
+        result = start_ovms(
+            context,
+            OvmsParams(
+                models=[model], use_config=True, use_subconfig=model.use_subconfig, log_level=log_level,
+                allowed_local_media_path=allowed_local_media_path, allowed_media_domains=allowed_media_domains
+            ),
+            timeout=model.model_timeout, environment=env,
+        )
+        port = result.ovms.get_port(openai_rest_api_type)
 
         request_params = cls.prepare_request_params(endpoint, **request_params_kwargs)
 
@@ -202,7 +198,8 @@ class GenerativeAIUtils:
     @staticmethod
     def unload_model_and_verify(model, result, port, openai_rest_api_type, endpoint, request_parameters,
                                 dataset=None, error_type=NotFoundError):
-        if result is None:
+        if isinstance(result.ovms, OvmsExternal):
+            logger.warning("Skipping \"Unload model\" step - can't remove/add models to remote OVMS server")
             return
 
         step("Unload model")
@@ -226,8 +223,8 @@ class GenerativeAIUtils:
 
     @staticmethod
     def prepare_python_script_command(
-            context, tmp_path, port, model, endpoint, input_data, request_parameters, ip_address=ovms_ip_address,
-            image_path=None, timeout=900
+            context, tmp_path, port, model, endpoint, input_data, request_parameters,
+            ip_address=server_address, requests_number=1, image_path=None, timeout=900
     ):
         input_data_json_path = os.path.join(tmp_path, "input_data.json")
         with open(input_data_json_path, "w", encoding='utf-8') as fo:
@@ -242,7 +239,7 @@ class GenerativeAIUtils:
 
         cmd = (f"{venv_cmd} && python3 {script_path} --ip_address {ip_address} --port {port} --model {model.name} "
                f"--endpoint {endpoint} --input_data_file {input_data_json_path} {request_params_str} "
-               f"--timeout {timeout}")
+               f"--timeout {timeout} --requests_number {requests_number}")
         if image_path is not None:
             cmd += f" --image_path {image_path}"
         return cmd
@@ -295,7 +292,8 @@ class GenerativeAIUtils:
             cos_sim_reference=0.7,
             embeddings_model_type=Qwen3Embedding06BFp16OvHf,
     ):
-        if result is None:
+        if isinstance(result.ovms, OvmsExternal):
+            logger.warning("Skipping \"Check Similarity\" step - can't remove/add models to remote OVMS server")
             return
 
         step("Check Similarity")

@@ -196,9 +196,21 @@ build_test_image = get_bool("TT_BUILD_TEST_IMAGE", False)
 """ TT_SAVE_IMAGE_TO_ARTIFACTS - save generated or edited image to artifacts """
 save_image_to_artifacts = get_bool("TT_SAVE_IMAGE_TO_ARTIFACTS", False)
 
+""" TT_OVMS_GRPC_PORT - OVMS server GRPC port to be used for tests (enables usage of external server) """
+ovms_grpc_port = get_int("TT_OVMS_GRPC_PORT", None)
+
+""" TT_OVMS_REST_PORT - OVMS server REST port to be used for tests (enables usage of external server) """
+ovms_rest_port = get_int("TT_OVMS_REST_PORT", None)
+
+""" TT_SERVER_ADDRESS - OVMS server address"""
+server_address = os.environ.get("TT_SERVER_ADDRESS", "localhost")
+
 """TT_SET_NO_PROXY"""
 set_no_proxy = get_bool("TT_SET_NO_PROXY", True)
 no_proxy = os.environ.get("no_proxy", "")
+if server_address != "localhost":
+    no_proxy = f"{no_proxy},{server_address}"
+    os.environ["no_proxy"] = no_proxy
 if set_no_proxy:
     os.environ["NO_PROXY"] = no_proxy
 http_proxy = os.environ.get("http_proxy", "")
@@ -215,9 +227,6 @@ xdist_workers = get_int("TT_XDIST_WORKERS", 0)
 
 """ TT_DOCKER_CLIENT_TIMEOUT - Docker client timeout"""
 docker_client_timeout = get_int("TT_DOCKER_CLIENT_TIMEOUT", 120)
-
-""" TT_SERVER_ADDRESS - OVMS server address"""
-server_address = os.environ.get("TT_SERVER_ADDRESS", "localhost")
 
 """ TT_RESOURCE_MONITOR_ENABLED - Dump ovms container resource statistics once per second """
 resource_monitor_enabled = get_bool("TT_RESOURCE_MONITOR_ENABLED", False)
@@ -428,11 +437,5 @@ run_on_commit_tests = get_bool("TT_ON_COMMIT_TESTS", True)
                              True -> api-regression tests are run, default: False """
 run_regression_tests = get_bool("TT_RUN_REGRESSION_TESTS", False)
 
-""" TT_OVMS_GRPC_PORT - ovms grpc port to be used for tests """
-ovms_grpc_port = get_int("TT_OVMS_GRPC_PORT", None)
-
-""" TT_OVMS_REST_PORT - ovms rest port to be used for tests """
-ovms_rest_port = get_int("TT_OVMS_REST_PORT", None)
-
-""" TT_OVMS_IP_ADDRESS - ovms ip address to be used for tests """
-ovms_ip_address = os.environ.get("TT_OVMS_IP_ADDRESS", "localhost")
+""" TT_CLEAN_GENERATIVE_MODELS - remove unused models from TT_MODELS_PATH """
+clean_downloaded_models = get_bool("TT_CLEAN_GENERATIVE_MODELS", False)

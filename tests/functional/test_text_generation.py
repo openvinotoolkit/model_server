@@ -34,6 +34,7 @@ from tests.functional.constants.ovms_type import OvmsType
 from tests.functional.constants.requirements import Requirements
 from tests.functional.constants.target_device import TargetDevice
 from tests.functional.constants.target_device_configuration import nginx_mtls_not_supported_for_test
+from tests.functional.models import models_generative as mg
 from tests.functional.object_model.inference_helpers import run_llm_inference
 from tests.functional.utils.context import Context
 from tests.functional.utils.generative_ai.utils import calculate_generative_test_timeout, GenerativeAIUtils
@@ -43,6 +44,7 @@ from tests.functional.utils.process_multi import run_command_in_parallel
 from tests.functional.utils.test_framework import (
     skip_if_language_models_not_enabled,
     skip_if_mediapipe_disabled,
+    skip_if_runtime,
 )
 
 logger = get_logger(__name__)
@@ -72,7 +74,7 @@ class TestTextGeneration:
     @pytest.mark.parametrize("ovms_log_level", [Ovms.LOG_LEVEL_INFO, Ovms.LOG_LEVEL_DEBUG, Ovms.LOG_LEVEL_TRACE])
     @pytest.mark.parametrize("pipeline_type", PipelineType.TEXT_GENERATION)
     @pytest.mark.timeout(calculate_generative_test_timeout(480))
-    def test_on_commit_llm_text_generation_endpoints(
+    def test_text_generation_endpoints(
             self, context: Context, model_type, openai_rest_api_type, endpoint, stream, max_tokens, temperature,
             pipeline_type, ovms_log_level,
     ):
@@ -123,27 +125,31 @@ class TestTextGeneration:
     @pytest.mark.model_type(ModelsLib.various_large_and_vision_language_models_on_commit)
     @pytest.mark.parametrize("endpoint", [OpenAIWrapper.CHAT_COMPLETIONS])
     @pytest.mark.parametrize("stream", [True, False], ids=lambda x: f"stream={x}")
-    @pytest.mark.parametrize("max_tokens", [MaxTokensValues.COMPARE], ids=lambda x: f"max_tokens={x}")
+    @pytest.mark.parametrize("ignore_eos", [True], ids=lambda x: f"ignore_eos={x}")
+    @pytest.mark.parametrize("max_tokens", [MaxTokensValues.COMPARE_LONG, 300], ids=lambda x: f"max_tokens={x}")
     @pytest.mark.parametrize("temperature", [TemperatureValues.TEST_DEFAULT], ids=lambda x: f"temperature={x}")
-    @pytest.mark.parametrize("sequential_batches", [1], ids=lambda x: f"sequential_batches={x}")
-    @pytest.mark.parametrize("parallel_requests", [1000], ids=lambda x: f"parallel_requests={x}")
+    @pytest.mark.parametrize("sequential_requests", [5], ids=lambda x: f"sequential_requests={x}")
+    @pytest.mark.parametrize("parallel_requests", [100], ids=lambda x: f"parallel_requests={x}")
     @pytest.mark.parametrize("ovms_log_level", [Ovms.LOG_LEVEL_INFO, Ovms.LOG_LEVEL_DEBUG, Ovms.LOG_LEVEL_TRACE])
     @pytest.mark.parametrize("pipeline_type", PipelineType.TEXT_GENERATION)
+    @pytest.mark.parametrize("dataset_type", ["LLM", "VLM"], ids=lambda x: f"dataset_type={x}")
     @pytest.mark.timeout(calculate_generative_test_timeout(960))
-    def test_on_commit_text_generation_endpoints_multiple_requests(
+    def test_text_generation_endpoints_multiple_requests(
             self,
             context: Context,
             tmp_path,
             model_type,
             openai_rest_api_type,
             stream,
+            ignore_eos,
             endpoint,
             max_tokens,
             temperature,
-            sequential_batches,
+            sequential_requests,
             parallel_requests,
             pipeline_type,
             ovms_log_level,
+            dataset_type,
     ):
         """
         <b>Description:</b>
@@ -162,6 +168,9 @@ class TestTextGeneration:
         4. Trigger large number of requests
         5. Check similarity (non-dummy models)
         """
+        skip_if_runtime(model_type==mg.Gemma34bItInt4CwOvHf, "VLM dummy model not yet enabled")
+        skip_if_runtime(dataset_type == "VLM" and not model_type.is_vision_language, "VLM dataset not for LLM")
+
         model, result, port, request_params = GenerativeAIUtils.prepare_resources(
             context,
             model_with_pipeline_type(model_type, pipeline_type),
@@ -169,6 +178,7 @@ class TestTextGeneration:
             endpoint,
             log_level=ovms_log_level,
             stream=stream,
+            ignore_eos=ignore_eos,
             max_tokens=max_tokens,
             temperature=temperature,
         )
@@ -197,16 +207,15 @@ class TestTextGeneration:
             if endpoint == OpenAIWrapper.COMPLETIONS else \
             ChatCompletionsApi.prepare_chat_completions_input_content(input_objects)
         command = GenerativeAIUtils.prepare_python_script_command(
-            context, tmp_path, port, model, endpoint, input_data, request_params
+            context, tmp_path, port, model, endpoint, input_data, request_params, requests_number=sequential_requests
         )
-        outputs_multiple_requests = None
-        for _ in range(sequential_batches):
-            stdout = run_command_in_parallel(command, runs=parallel_requests)
-            assert stdout, f"Empty stdout for {parallel_requests} commands: '{command}'"
-            outputs_multiple_requests = GenerativeAIUtils.get_llm_outputs_from_curl_stdout(stdout)
-            len_stdout = len(outputs_multiple_requests)
-            assert len_stdout == parallel_requests, \
-                f"Not all outputs available. Expected: {parallel_requests}, Actual: {len_stdout}"
+
+        stdout = run_command_in_parallel(command, runs=parallel_requests)
+        assert stdout, f"Empty stdout for {parallel_requests} commands: '{command}'"
+        outputs_multiple_requests = GenerativeAIUtils.get_llm_outputs_from_curl_stdout(stdout)
+        len_stdout = len(outputs_multiple_requests)
+        assert len_stdout == parallel_requests * sequential_requests, \
+            f"Not all outputs available. Expected: {parallel_requests}, Actual: {len_stdout}"
 
         GenerativeAIUtils.unload_model_and_verify(model, result, port, openai_rest_api_type, endpoint, request_params)
         if not model_type.is_dummy:

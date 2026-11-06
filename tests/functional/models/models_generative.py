@@ -218,6 +218,12 @@ class DummyCyclicLlavaOvHf(GenerativeModelHuggingFace, VisionLanguageModel):
 
 
 @dataclass
+class Gemma34bItInt4CwOvHf(GenerativeModelHuggingFace, VisionLanguageModel):
+    name: str = "OpenVINO/gemma-3-4b-it-int4-cw-ov"
+    is_local: bool = True
+
+
+@dataclass
 class Qwen3Embedding06BFp16OvHf(GenerativeModelHuggingFace, FeatureExtractionModel):
     name: str = "OpenVINO/Qwen3-Embedding-0.6B-fp16-ov"
     precision: str = "FP16"

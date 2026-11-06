@@ -16,11 +16,16 @@
 
 # pylint: disable=not-an-iterable
 
+import datetime
 import json
 import sys
 from argparse import ArgumentParser
 
 from openai import OpenAI
+
+
+def str2bool(value):
+    return str(value).strip().lower() in ("true", "1", "yes")
 
 
 def run_inference(parameters):
@@ -32,7 +37,8 @@ def run_inference(parameters):
 
     model = parameters.model
     max_tokens = int(parameters.max_tokens)
-    stream = bool(parameters.stream)
+    ignore_eos = str2bool(parameters.ignore_eos)
+    stream = str2bool(parameters.stream)
     temperature = int(parameters.temperature)
     image_path = parameters.image_path
     size = parameters.size
@@ -44,74 +50,77 @@ def run_inference(parameters):
 
     with open(parameters.input_data_file, encoding="utf-8") as fo:
         input_data = json.load(fo)
-    stream_content = []
 
-    if parameters.endpoint == "completions":
-        response = client.completions.create(
-            model=model,
-            prompt=input_data,
-            max_tokens=max_tokens,
-            stream=stream,
-            temperature=temperature,
-            timeout=timeout,
-        )
-        if stream:
-            for r in response:
-                for choice in r.choices:
-                    if choice.text is not None:
-                        stream_content.append(choice.text)
-            outputs_content = ["".join(stream_content)]
+    for request_number in range(int(parameters.requests_number)):
+        stream_content = []
+        if parameters.endpoint == "completions":
+            response = client.completions.create(
+                model=model,
+                prompt=input_data,
+                max_tokens=max_tokens,
+                stream=stream,
+                temperature=temperature,
+                timeout=timeout,
+                extra_body={"ignore_eos": ignore_eos},
+            )
+            if stream:
+                for r in response:
+                    for choice in r.choices:
+                        if choice.text is not None:
+                            stream_content.append(choice.text)
+                outputs_content = ["".join(stream_content)]
+            else:
+                outputs_content = [response.choices[0].text]
+        elif parameters.endpoint == "chat/completions":
+            response = client.chat.completions.create(
+                model=model,
+                messages=input_data,
+                max_tokens=max_tokens,
+                stream=stream,
+                temperature=temperature,
+                timeout=timeout,
+                extra_body={"ignore_eos": ignore_eos},
+            )
+            if stream:
+                for r in response:
+                    for choice in r.choices:
+                        if choice.delta.content is not None:
+                            stream_content.append(choice.delta.content)
+                outputs_content = ["".join(stream_content)]
+            else:
+                outputs_content = [response.choices[0].message.content]
+        elif parameters.endpoint == "images/edits":
+            response = client.images.edit(
+                model=model,
+                prompt=input_data,
+                image=open(image_path, "rb"),   # pylint: disable=consider-using-with
+                size=size,
+                n=n,
+                extra_body={
+                    "num_inference_steps": num_inference_steps,
+                    "rng_seed": rng_seed,
+                    "strength": strength,
+                },
+                timeout=timeout,
+            )
+            outputs_content = [response.data[0].b64_json]
+        elif parameters.endpoint == "images/generations":
+            response = client.images.generate(
+                model=model,
+                prompt=input_data,
+                size=size,
+                n=n,
+                extra_body={
+                    "num_inference_steps": num_inference_steps,
+                    "rng_seed": rng_seed,
+                },
+                timeout=timeout,
+            )
+            outputs_content = [response.data[0].b64_json]
         else:
-            outputs_content = [response.choices[0].text]
-    elif parameters.endpoint == "chat/completions":
-        response = client.chat.completions.create(
-            model=model,
-            messages=input_data,
-            max_tokens=max_tokens,
-            stream=stream,
-            temperature=temperature,
-            timeout=timeout,
-        )
-        if stream:
-            for r in response:
-                for choice in r.choices:
-                    if choice.delta.content is not None:
-                        stream_content.append(choice.delta.content)
-            outputs_content = ["".join(stream_content)]
-        else:
-            outputs_content = [response.choices[0].message.content]
-    elif parameters.endpoint == "images/edits":
-        response = client.images.edit(
-            model=model,
-            prompt=input_data,
-            image=open(image_path, "rb"),   # pylint: disable=consider-using-with
-            size=size,
-            n=n,
-            extra_body={
-                "num_inference_steps": num_inference_steps,
-                "rng_seed": rng_seed,
-                "strength": strength,
-            },
-            timeout=timeout,
-        )
-        outputs_content = [response.data[0].b64_json]
-    elif parameters.endpoint == "images/generations":
-        response = client.images.generate(
-            model=model,
-            prompt=input_data,
-            size=size,
-            n=n,
-            extra_body={
-                "num_inference_steps": num_inference_steps,
-                "rng_seed": rng_seed,
-            },
-            timeout=timeout,
-        )
-        outputs_content = [response.data[0].b64_json]
-    else:
-        raise NotImplementedError()
+            raise NotImplementedError()
 
-    print(outputs_content)
+        print(f"[{datetime.datetime.now()}] outputs_content for request {request_number}: {outputs_content}")
 
 
 if __name__ == '__main__':
@@ -151,6 +160,12 @@ if __name__ == '__main__':
         "--max_tokens",
         help="max_tokens",
         default=30,
+        required=False,
+    )
+    parser.add_argument(
+        "--ignore_eos",
+        help="ignore_eos",
+        default=False,
         required=False,
     )
     parser.add_argument(
@@ -204,6 +219,12 @@ if __name__ == '__main__':
         "--timeout",
         help="timeout",
         default=2400,
+        required=False,
+    )
+    parser.add_argument(
+        "--requests_number",
+        help="requests_number",
+        default=1,
         required=False,
     )
 

@@ -38,10 +38,12 @@ from tests.functional.config import (
     build_test_image,
     c_api_wrapper_dir,
     cleanup_env_on_startup,
+    clean_downloaded_models,
     components_ids,
     exclude_components_ids,
     exclude_req_ids,
     force_generate_new_ssl_certs,
+    generative_models_local_path,
     global_tmp_dir_default,
     http_proxy,
     https_proxy,
@@ -94,6 +96,7 @@ from tests.functional.constants.paths import Paths
 from tests.functional.constants.target_device import MAX_WORKERS_PER_TARGET_DEVICE, TargetDevice
 from tests.functional.constants.ovms_binaries import calculate_ovms_binary_name
 from tests.functional.models.models import PipelineType
+from tests.functional.models.models_classic import classic_models_to_download
 from tests.functional.models.models_library import ModelsLib, ModelsLibrary
 from tests.functional.object_model.dmesg_log_monitor import DmesgLogMonitor
 from tests.functional.object_model.ovms_info import OvmsInfo
@@ -110,13 +113,21 @@ from tests.functional.utils.marks import (
     MarkGeneral,
     MarkPriority,
     MarkRunType,
+    MarkSupportedDevices,
+    MarkSupportedOsTypes,
+    MarkSupportedOvmsTypes,
     MarkTestParameters,
 )
 from tests.functional.utils.ov_hf_downloader import OVHfDownloader
 from tests.functional.utils.process import PID_STATE_ZOMBIE, Process, get_pid_name, get_pid_status
 from tests.functional.utils.reservation_manager.args import parse_args
 from tests.functional.utils.reservation_manager.manager import Manager as ReservationManager
-from tests.functional.utils.test_framework import change_dir_permissions, get_test_object_prefix, is_xdist_master
+from tests.functional.utils.test_framework import (
+    change_dir_permissions,
+    get_test_object_prefix,
+    is_xdist_master,
+    remove_dir_tree,
+)
 
 logger = get_logger(__name__)
 
@@ -453,6 +464,7 @@ def prepare_ovms_package():
 
 def get_models_to_download():
     models_to_download = []
+    models_to_download.extend(classic_models_to_download)
     for various_models_name in [name for name, obj in vars(ModelsLibrary).items() if isinstance(obj, property)]:
         various_models_value = getattr(ModelsLib, various_models_name)
         if isinstance(various_models_value, dict):
@@ -461,6 +473,48 @@ def get_models_to_download():
         else:
             models_to_download.extend(various_models_value)
     return list(set(models_to_download))
+
+
+def get_all_models_in_library():
+    """ Models referenced in ModelsLibrary for every device, not only the selected target devices. """
+    models = []
+    for various_models_name in [name for name, obj in vars(ModelsLibrary).items() if isinstance(obj, property)]:
+        various_models_value = getattr(ModelsLib, various_models_name)
+        if isinstance(various_models_value, dict):
+            for device_models in various_models_value.values():
+                models.extend(device_models)
+        else:
+            models.extend(various_models_value)
+    return list(set(models))
+
+
+def _remove_unused_model_dirs(directory, used_paths):
+    for child in directory.iterdir():
+        if not child.is_dir():
+            continue
+        resolved = child.resolve()
+        if resolved in used_paths:
+            continue
+        if any(used_path.is_relative_to(resolved) for used_path in used_paths):
+            # Parent of a used model, e.g. the organization directory of an HF model name.
+            _remove_unused_model_dirs(child, used_paths)
+        else:
+            logger.info(f"Removing model no longer used in repository: {child}")
+            remove_dir_tree(str(child))
+
+
+def clean_unused_models():
+    if not clean_downloaded_models:
+        return
+    models_root = Path(generative_models_local_path)
+    if not models_root.is_dir():
+        return
+    used_paths = set()
+    for model_type in get_all_models_in_library():
+        model_path = model_type().model_path_on_host
+        if model_path is not None:
+            used_paths.add(Path(model_path).resolve())
+    _remove_unused_model_dirs(models_root, used_paths)
 
 
 def download_models():
@@ -514,6 +568,7 @@ def download_resources_master():
         return
     print("Download required resources")
     download_models()
+    clean_unused_models()
     download_docker_images()
 
 
@@ -819,6 +874,10 @@ def mute_warnings():
         action="ignore", message="`np.bool8` is a deprecated alias for `np.bool_`", category=DeprecationWarning
     )
 
+    # Xet Storage is enabled for this repo, but the 'hf_xet' package is not installed.
+    # Falling back to regular HTTP download. ...
+    warnings.filterwarnings(action="ignore", message="Xet Storage is enabled for this repo")
+
 
 def setup_nginx():
     if not is_nginx_mtls:
@@ -1060,6 +1119,21 @@ def generic_test_deselect(item):
     model_type = item.callspec.params.get(MODEL_TYPE_PARAM_NAME, None)
     use_mapping = item.callspec.params.get(USES_MAPPING_PARAM_NAME, None)
     endpoint = item.callspec.params.get(ENDPOINT_PARAM_NAME, None)
+
+    base_target_device = get_base_device(target_device) or target_device
+    for marker in item.iter_markers():
+        if any([
+            # TT_TARGET_DEVICE
+            marker.name == MarkSupportedDevices.DEVICES_SUPPORTED and base_target_device not in marker.args,
+            marker.name == MarkSupportedDevices.DEVICES_NOT_SUPPORTED and base_target_device in marker.args,
+            # TT_OVMS_TYPE
+            marker.name == MarkSupportedOvmsTypes.OVMS_TYPES_SUPPORTED and ovms_type not in marker.args,
+            marker.name == MarkSupportedOvmsTypes.OVMS_TYPES_NOT_SUPPORTED and ovms_type in marker.args,
+            # TT_BASE_OS
+            marker.name == MarkSupportedOsTypes.OS_TYPES_SUPPORTED and base_os not in marker.args,
+            marker.name == MarkSupportedOsTypes.OS_TYPES_NOT_SUPPORTED and base_os in marker.args,
+        ]):
+            return True
 
     # Disable completions endpoint for VLM models
     if model_type is not None and model_type.is_vision_language and endpoint == OpenAIWrapper.COMPLETIONS:

@@ -81,37 +81,16 @@ class TestRerank:
             error_type=CohereNotFoundError,
         )
 
+    @pytest.mark.conditional_run_type_by_model(
+        default_mark="api_regression",
+        model_mark_map={"api_on_commit": ModelsLib.various_rerank_models_on_commit},
+    )
     @pytest.mark.api_on_commit
     @pytest.mark.devices_supported_for_test(TargetDevice.CPU, TargetDevice.GPU)
-    @pytest.mark.model_type(ModelsLib.various_rerank_models_on_commit)
+    @pytest.mark.model_type(ModelsLib.various_rerank_models_on_commit + ModelsLib.various_rerank_models)
     @pytest.mark.parametrize("endpoint", [CohereWrapper.RERANK])
     @pytest.mark.timeout(calculate_generative_test_timeout(480))
-    def test_on_commit_rerank_endpoints(self, context: Context, model_type, cohere_rest_api_type, endpoint):
-        """
-        <b>Description:</b>
-        Execute single inference with LLM type model.
-
-        <b>Input data:</b>
-        - Language model type
-
-        <b>Expected results:</b>
-        OVMS will properly load language model and execute inference
-
-        <b>Steps:</b>
-        1. Prepare language model instance
-        2. Start OVMS
-        3. Run simple inference
-        4. Unload model
-        5. Verify model is unreachable
-        """
-        self.run_rerank_endpoint_test(context, model_type, cohere_rest_api_type, endpoint)
-
-    @pytest.mark.api_regression
-    @pytest.mark.devices_supported_for_test(TargetDevice.CPU, TargetDevice.GPU)
-    @pytest.mark.model_type(ModelsLib.various_rerank_models)
-    @pytest.mark.parametrize("endpoint", [CohereWrapper.RERANK])
-    @pytest.mark.timeout(calculate_generative_test_timeout(480))
-    def test_regression_rerank_endpoints(self, context: Context, model_type, cohere_rest_api_type, endpoint):
+    def test_rerank_endpoints(self, context: Context, model_type, cohere_rest_api_type, endpoint):
         """
         <b>Description:</b>
         Execute single inference with LLM type model.

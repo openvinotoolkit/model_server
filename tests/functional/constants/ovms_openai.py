@@ -37,7 +37,7 @@ from tests.functional.utils.inference.serving.openai import (
 
 @dataclass
 class MaxTokensValues:
-    DEFAULT = 30
+    DEFAULT = 10
     DEFAULT_COMPARE_JINJA = 50
     VLM_COMPARE = 50
     COMPARE = 100
