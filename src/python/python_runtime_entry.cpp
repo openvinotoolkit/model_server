@@ -376,7 +376,7 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_createPreparedChatTemplateRuntime(
                 jinja_env.globals["raise_exception"] = raise_exception
                 jinja_env.globals["strftime_now"] = strftime_now
                 jinja_env.filters["from_json"] = json.loads
-                jinja_env.filters["tojson"] = lambda value, indent=None: json.dumps(value, ensure_ascii=False, indent=indent)
+                jinja_env.filters["tojson"] = lambda value, ensure_ascii=False, indent=None: json.dumps(value, ensure_ascii=ensure_ascii, indent=indent)
 
                 tool_chat_template = None
 

@@ -95,7 +95,7 @@ absl::Status ChatTemplateProcessor::process(InputRequest& req) {
             kwargs.empty() ? std::nullopt : std::make_optional(kwargs);
         try {
             req.promptText = tokenizer.apply_chat_template(
-                chatHistory, addGenerationPrompt, {}, optTools, optKwargs);
+                chatHistory, addGenerationPrompt, {}, optTools, optKwargs, ov::AnyMap{{"apply_polyfills", false}});
         } catch (const std::exception& e) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to apply chat template: {}", e.what());
             return absl::Status(absl::StatusCode::kInvalidArgument,
