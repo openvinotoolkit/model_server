@@ -57,7 +57,7 @@ set "openvino_dir=!BAZEL_SHORT_PATH!/openvino/runtime/cmake"
 set /p bazelVersion=<"%~dp0.bazelversion"
 set "bazelPath=C:\opt\bazel-%bazelVersion%-windows-x86_64.exe"
 
-set "buildCommand=%bazelPath% %bazelStartupCmd% build  %buildWithIntegrity% %bazelBuildArgs% --action_env OpenVINO_DIR=%openvino_dir% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %buildTargets% 2>&1 | tee win_build.log"
+set "buildCommand=%bazelPath% %bazelStartupCmd% build --keep_going %buildWithIntegrity% %bazelBuildArgs% --action_env OpenVINO_DIR=%openvino_dir% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %buildTargets% 2>&1 | tee win_build.log"
 set "setOvmsVersionCmd=python windows_set_ovms_version.py"
 
 :: Setting PATH environment variable based on default windows node settings: Added ovms_windows specific python settings and c:/opt and removed unused Nvidia and OCL specific tools.
@@ -66,8 +66,12 @@ set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\us
 set "PYTHONHOME=C:\opt\Python312"
 set "PYTHONPATH=C:\opt\Python312"
 set "envPath=win_environment.log"
-set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
-set "basePythonPath=C:\opt\Python312;%setPythonPath%"
+if exist "%cd%\bazel-bin\src\python\binding" (
+    set "setPythonPath=%cd%\bazel-bin\src\python\binding"
+) else (
+    set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
+)
+set "basePythonPath=C:\opt\Python312;%setPythonPath%;%cd%\bazel-bin\src\python;%cd%\bazel-bin\src"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Load chosen dependency versions from versions.mk

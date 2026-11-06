@@ -298,7 +298,8 @@ TYPED_TEST(NativeFileInputConversionTest, positive_resizing_with_dynamic_shape_c
 }
 
 TYPED_TEST(NativeFileInputConversionTest, positive_resizing_with_dynamic_shape_cols_bigger) {
-    uint8_t rgb_expected_tensor[] = {0x96, 0x8f, 0xf3, 0x98, 0x9a, 0x81, 0x9d, 0xa9, 0x12};
+    // OpenVINO rounds the float interpolation result; OpenCV's fixed-point u8 path was one lower in two channels.
+    uint8_t rgb_expected_tensor[] = {0x96, 0x8f, 0xf3, 0x98, 0x9a, 0x81, 0x9e, 0xaa, 0x12};
 
     size_t filesize;
     std::unique_ptr<char[]> image_bytes;
@@ -317,7 +318,29 @@ TYPED_TEST(NativeFileInputConversionTest, positive_resizing_with_dynamic_shape_c
     EXPECT_EQ(tensorDims[2], expectedColsNumber);
     ASSERT_EQ(tensor.get_size(), 9);
     uint8_t* ptr = static_cast<uint8_t*>(tensor.data());
-    EXPECT_EQ(std::equal(ptr, ptr + tensor.get_size(), rgb_expected_tensor), true);
+    EXPECT_THAT(std::vector<uint8_t>(ptr, ptr + tensor.get_size()), ::testing::ElementsAreArray(rgb_expected_tensor));
+}
+
+TEST(ImagePreprocessingCompatibility, LinearIntegerResizeDiffersFromOpenCvByAtMostOne) {
+    cv::RNG random(12345);
+    for (int depth : {CV_8U, CV_16U}) {
+        for (int channels : {1, 3, 4}) {
+            cv::Mat source(13, 17, CV_MAKETYPE(depth, channels));
+            random.fill(source, cv::RNG::UNIFORM, 0, depth == CV_8U ? 256 : 65536);
+            const ov::element::Type precision = depth == CV_8U ? ov::element::u8 : ov::element::u16;
+            ov::Tensor input(precision, {1, 13, 17, static_cast<size_t>(channels)}, source.data);
+            for (const auto& size : {cv::Size(1, 1), cv::Size(7, 5), cv::Size(31, 27)}) {
+                SCOPED_TRACE(::testing::Message() << "depth=" << depth << " channels=" << channels << " size=" << size);
+                cv::Mat reference;
+                cv::resize(source, reference, size);
+                ov::Tensor output;
+                const auto status = image_utils::preprocessImage(input, output, precision, size.height, size.width);
+                ASSERT_TRUE(status.ok()) << status.string();
+                cv::Mat actual(size.height, size.width, source.type(), output.data());
+                EXPECT_LE(cv::norm(reference, actual, cv::NORM_INF), 1);
+            }
+        }
+    }
 }
 
 TYPED_TEST(NativeFileInputConversionTest, positive_resizing_with_dynamic_shape_cols_in_range) {

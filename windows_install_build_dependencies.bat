@@ -47,9 +47,11 @@ set "BAZEL_SHORT_PATH=C:\%output_user_root%"
 set "opt_install_dir=C:\opt"
 
 :: Python 312 needs to be first in the windows path, as well as MSYS tools
-set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\;%PATH%;"
+set "CMAKE_BIN_DIR=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin"
+set "CMAKE_BIN=%CMAKE_BIN_DIR%\cmake.exe"
+set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;%CMAKE_BIN_DIR%;%SystemRoot%\System32;%PATH%;"
 set "PYTHONHOME=C:\opt\Python312"
-:: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel, wget to PATH
+:: Ensure the Windows Python interpreter wins over any MSYS/shim Python during CMake configure steps.
 set "PATH=%setPath%"
 
 if defined GITHUB_TOKEN (
@@ -86,23 +88,6 @@ IF /I EXIST %opt_install_dir% (
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::::::::::::::::::::::: Installing wget
-echo [INFO] Installing wget ...
-set "wget_path=%opt_install_dir%\wget.exe"
-IF /I EXIST %wget_path% (
-    if %expunge% EQU 1 (
-        rmdir /S /Q %wget_path%
-        if !errorlevel! neq 0 exit /b !errorlevel!
-        curl -k -o %wget_path% https://eternallybored.org/misc/wget/1.21.4/64/wget.exe
-        if !errorlevel! neq 0 exit /b !errorlevel!
-    ) else ( echo [INFO] ::::::::::::::::::::::: wget installed already in %wget_path% )
-) ELSE (
-    curl -k -o %wget_path% https://eternallybored.org/misc/wget/1.21.4/64/wget.exe
-    if !errorlevel! neq 0 exit /b !errorlevel!
-)
-echo [INFO] Wget installed in %wget_path%
-::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Msys bash
 echo Installing msys ...
 set "bash_path=%opt_install_dir%\msys64\usr\bin\bash.exe"
@@ -121,7 +106,7 @@ IF /I EXIST %bash_path% (
         if !errorlevel! neq 0 exit /b !errorlevel!
     )
     IF /I NOT EXIST %msys_install% (
-        %wget_path% -P %opt_install_dir%\ %msys_url%
+        curl -k -L -o "%msys_install%" "%msys_url%"
         if !errorlevel! neq 0 exit /b !errorlevel!
     )
 
@@ -161,6 +146,13 @@ IF /I EXIST %msys_make% (
 "%msys_path%\usr\bin\pacman.exe" --noconfirm --sync --refresh --sysupgrade
 if !errorlevel! neq 0 (
     echo [ERROR] MSYS2 package refresh failed. This usually means the bundled MSYS2 snapshot is stale or the network/proxy cannot reach the repository mirrors.
+    exit /b !errorlevel!
+)
+
+:: NASM is required for optimized OpenCV assembly builds on Windows.
+"%msys_path%\usr\bin\pacman.exe" --noconfirm --sync --needed nasm
+if !errorlevel! neq 0 (
+    echo [ERROR] NASM installation failed.
     exit /b !errorlevel!
 )
 
@@ -225,14 +217,14 @@ echo [INFO] Installing GenAI: %genai_dir% ...
 :: Download GenAi
 IF /I EXIST %genai_zip% (
     if %expunge% EQU 1 (
-        del /S /Q %genai_zip%
+        del /S /Q "%genai_zip%"
         if !errorlevel! neq 0 exit /b !errorlevel!
-        %wget_path% -P %BAZEL_SHORT_PATH%\ %GENAI_PACKAGE_URL%
+        curl -k -L -o "%genai_zip%" "%GENAI_PACKAGE_URL%"
         if !errorlevel! neq 0 exit /b !errorlevel!
     ) else ( echo [INFO] file exists %genai_zip% )
     
 ) ELSE (
-    %wget_path% -P %BAZEL_SHORT_PATH%\ %GENAI_PACKAGE_URL%
+    curl -k -L -o "%genai_zip%" "%GENAI_PACKAGE_URL%"
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 :: Extract GenAi
@@ -283,11 +275,11 @@ IF /I NOT EXIST build (
 )
 cd build
 set "TBB_DIR="
-cmake -G "Visual Studio 17 2022" -DENABLE_SAMPLES=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF ..
+"%CMAKE_BIN%" -G "Visual Studio 17 2022" -DENABLE_SAMPLES=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF ..
 if !errorlevel! neq 0 exit /b !errorlevel!
-cmake --build . --config Release --verbose -j
+"%CMAKE_BIN%" --build . --config Release --verbose -j
 if !errorlevel! neq 0 exit /b !errorlevel!
-cmake --install . --config Release --prefix %BAZEL_SHORT_PATH%\openvino
+"%CMAKE_BIN%" --install . --config Release --prefix %BAZEL_SHORT_PATH%\openvino
 if !errorlevel! neq 0 exit /b !errorlevel!
 call %BAZEL_SHORT_PATH%\openvino\setupvars.bat
 
@@ -308,11 +300,11 @@ IF /I NOT EXIST build (
     mkdir build
 )
 cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
+"%CMAKE_BIN%" -G "Visual Studio 17 2022" -A x64 -T v143 -DCMAKE_BUILD_TYPE=Release ..
 if !errorlevel! neq 0 exit /b !errorlevel!
-cmake --build . --config Release --verbose -j
+"%CMAKE_BIN%" --build . --config Release --verbose -j
 if !errorlevel! neq 0 exit /b !errorlevel!
-cmake --install . --config Release --prefix %BAZEL_SHORT_PATH%\openvino
+"%CMAKE_BIN%" --install . --config Release --prefix %BAZEL_SHORT_PATH%\openvino
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -332,11 +324,11 @@ IF /I NOT EXIST build (
     mkdir build
 )
 cd build
-cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TOKENIZERS=OFF -DENABLE_SAMPLES=OFF -DENABLE_TOOLS=OFF -DENABLE_TESTS=OFF -DENABLE_XGRAMMAR=ON ..
+"%CMAKE_BIN%" -G "Visual Studio 17 2022" -A x64 -T v143 -DCMAKE_BUILD_TYPE=Release -DBUILD_TOKENIZERS=OFF -DENABLE_SAMPLES=OFF -DENABLE_TOOLS=OFF -DENABLE_TESTS=OFF -DENABLE_XGRAMMAR=ON ..
 if !errorlevel! neq 0 exit /b !errorlevel!
-cmake --build . --config Release --verbose -j
+"%CMAKE_BIN%" --build . --config Release --verbose -j
 if !errorlevel! neq 0 exit /b !errorlevel!
-cmake --install . --config Release --prefix %BAZEL_SHORT_PATH%\openvino
+"%CMAKE_BIN%" --install . --config Release --prefix %BAZEL_SHORT_PATH%\openvino
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy src\cpp\openvino\genai\version.hpp %BAZEL_SHORT_PATH%\openvino\runtime\include\openvino\genai\
 if !errorlevel! neq 0 exit /b !errorlevel!
@@ -407,7 +399,7 @@ IF /I EXIST %bazel_path% (
     )
 )
 IF /I NOT EXIST %bazel_path% (
-    %wget_path% -P %opt_install_dir%\ %bazel_url%
+    curl -k -L -o "%bazel_path%" "%bazel_url%"
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 echo [INFO] Bazel installed: %bazel_file%
@@ -543,12 +535,12 @@ IF /I EXIST %curl_zip% (
     if %expunge% EQU 1 (
         del /S /Q %curl_zip%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        %wget_path% -P %opt_install_dir%\ %curl_http%%curl_ver%
+        curl -k -L -o "%curl_zip%" "%curl_http%%curl_ver%"
         if !errorlevel! neq 0 exit /b !errorlevel!
     ) else ( echo [INFO] file exists %curl_zip% )
     
 ) ELSE (
-    %wget_path% -P %opt_install_dir%\ %curl_http%%curl_ver%
+    curl -k -L -o "%curl_zip%" "%curl_http%%curl_ver%"
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 :: Extract curl
@@ -599,14 +591,33 @@ set "opencv_ver=%OPENCV_VERSION%"
 set "opencv_dir=%opt_install_dir%\opencv_git_%opencv_ver%"
 set "opencv_contrib_dir=%opt_install_dir%\opencv_contrib_git_%opencv_ver%"
 set "opencv_install=%opt_install_dir%\opencv_%opencv_ver%"
-set "opencv_flags=-D BUILD_LIST=core,improc,imgcodecs,calib3d,features2d,highgui,imgproc,video,videoio,optflow -D CMAKE_BUILD_TYPE=Release -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_opencv_ts=OFF -D BUILD_opencv_aruco=OFF -D BUILD_opencv_bgsegm=OFF -D BUILD_opencv_bioinspired=OFF -D BUILD_opencv_ccalib=OFF -D BUILD_opencv_datasets=OFF -D BUILD_opencv_dnn=OFF -D BUILD_opencv_dnn_objdetect=OFF -D BUILD_opencv_dpm=OFF -D BUILD_opencv_face=OFF -D BUILD_opencv_fuzzy=OFF -D BUILD_opencv_hfs=OFF -D BUILD_opencv_img_hash=OFF -D BUILD_opencv_js=OFF -D BUILD_opencv_line_descriptor=OFF -D BUILD_opencv_phase_unwrapping=OFF -D BUILD_opencv_plot=OFF -D BUILD_opencv_quality=OFF -D BUILD_opencv_reg=OFF -D BUILD_opencv_rgbd=OFF -D BUILD_opencv_saliency=OFF -D BUILD_opencv_shape=OFF -D BUILD_opencv_structured_light=OFF -D BUILD_opencv_surface_matching=OFF -D BUILD_opencv_world=ON -D BUILD_opencv_xobjdetect=OFF -D BUILD_opencv_xphoto=OFF -D CV_ENABLE_INTRINSICS=ON -D WITH_EIGEN=ON -D WITH_PTHREADS=ON -D WITH_PTHREADS_PF=ON -D WITH_JPEG=ON -D WITH_PNG=ON -D WITH_TIFF=OFF -D WITH_OPENEXR=OFF"
+set "opencv_flags=-D BUILD_LIST=core,improc,imgcodecs,calib3d,features2d,highgui,imgproc,video,videoio,optflow -D CMAKE_BUILD_TYPE=Release -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_opencv_ts=OFF -D BUILD_opencv_aruco=OFF -D BUILD_opencv_bgsegm=OFF -D BUILD_opencv_bioinspired=OFF -D BUILD_opencv_ccalib=OFF -D BUILD_opencv_datasets=OFF -D BUILD_opencv_dnn=OFF -D BUILD_opencv_dnn_objdetect=OFF -D BUILD_opencv_dpm=OFF -D BUILD_opencv_face=OFF -D BUILD_opencv_fuzzy=OFF -D BUILD_opencv_hfs=OFF -D BUILD_opencv_img_hash=OFF -D BUILD_opencv_js=OFF -D BUILD_opencv_line_descriptor=OFF -D BUILD_opencv_phase_unwrapping=OFF -D BUILD_opencv_plot=OFF -D BUILD_opencv_quality=OFF -D BUILD_opencv_reg=OFF -D BUILD_opencv_rgbd=OFF -D BUILD_opencv_saliency=OFF -D BUILD_opencv_shape=OFF -D BUILD_opencv_structured_light=OFF -D BUILD_opencv_surface_matching=OFF -D BUILD_opencv_world=ON -D BUILD_opencv_xobjdetect=OFF -D BUILD_opencv_xphoto=OFF -D BUILD_opencv_python=OFF -D BUILD_opencv_python3=OFF -D BUILD_opencv_python_bindings_generator=OFF -D CV_ENABLE_INTRINSICS=ON -D WITH_EIGEN=ON -D WITH_PTHREADS=ON -D WITH_JPEG=ON -D WITH_PNG=ON -D WITH_TIFF=OFF -D WITH_OPENEXR=OFF -D WITH_NASM=ON -D CMAKE_ASM_NASM_COMPILER=%msys_path%\usr\bin\nasm.exe -D PYTHON_EXECUTABLE=C:/opt/Python312/python.exe -D PYTHON3_EXECUTABLE=C:/opt/Python312/python.exe -D Python3_EXECUTABLE=C:/opt/Python312/python.exe"
 
 echo [INFO] Installing OpenCV %opencv_ver% ...
+set "opencv_bin=%opencv_install%\x64\vc17\bin\opencv_world%opencv_ver%.dll"
+set "opencv_lib=%opencv_install%\x64\vc17\lib\opencv_world%opencv_ver%.lib"
+set "opencv_wrong_toolset=%opencv_install%\x64\vc16"
+set "opencv_wrong_toolset_legacy=%opencv_install%\x64\vc15"
+
+IF /I EXIST %opencv_bin% IF /I EXIST %opencv_lib% (
+    echo [INFO] OpenCV layout verified in %opencv_install%
+    goto :exit_dependencies
+)
+
+IF /I EXIST %opencv_wrong_toolset% (
+    echo [WARN] OpenCV was built with the wrong toolset layout [%opencv_wrong_toolset%] - reinstalling: %opencv_install%
+    rmdir /S /Q %opencv_install%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+) ELSE IF /I EXIST %opencv_wrong_toolset_legacy% (
+    echo [WARN] OpenCV was built with a legacy toolset layout [%opencv_wrong_toolset_legacy%] - reinstalling: %opencv_install%
+    rmdir /S /Q %opencv_install%
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+
 IF /I EXIST %opencv_install% (
-    if %expunge% EQU 1 (rmdir /S /Q %opencv_install%) else (
-        echo "[INFO] OpenCV installed in: "%opencv_install%
-        goto :exit_dependencies
-    )
+    echo [WARN] OpenCV directory exists but is incomplete or stale - reinstalling: %opencv_install%
+    rmdir /S /Q %opencv_install%
+    if !errorlevel! neq 0 exit /b !errorlevel!
 )
 
 :: Clone OpenCL
@@ -626,8 +637,13 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 
 cd %opencv_dir%
 if !errorlevel! neq 0 exit /b !errorlevel!
-mkdir build
-if !errorlevel! neq 0 exit /b !errorlevel!
+if not exist build (
+    echo [INFO] Creating missing OpenCV build directory: %opencv_dir%\build
+    mkdir build
+    if !errorlevel! neq 0 exit /b !errorlevel!
+) else (
+    echo [INFO] Reusing existing OpenCV build directory: %opencv_dir%\build
+)
 cd build
 if !errorlevel! neq 0 exit /b !errorlevel!
 if "%ENABLE_INTEGRITYCHECK%"=="1" (
@@ -636,13 +652,19 @@ if "%ENABLE_INTEGRITYCHECK%"=="1" (
     set "SDL_OPS=/GS /sdl /guard:cf /DYNAMICBASE /NXCOMPAT /W4 /WX /LTCG"
 )
 
-:: Expected compilers in CI - -G "Visual Studio 16 2019", local -G "Visual Studio 17 2022" as default
-cmake -T v142 .. -D CMAKE_INSTALL_PREFIX=%opencv_install% -D OPENCV_EXTRA_MODULES_PATH=%opencv_contrib_dir%\modules %opencv_flags% %SDL_OPS%
+:: OpenCV must be built with the Visual Studio 2022 toolset so the generated layout matches
+:: the Bazel import rule used in third_party/opencv/opencv_windows.BUILD (x64/vc17).
+"%CMAKE_BIN%" -G "Visual Studio 17 2022" -A x64 -T v143 .. -D CMAKE_INSTALL_PREFIX=%opencv_install% -D OPENCV_EXTRA_MODULES_PATH=%opencv_contrib_dir%\modules %opencv_flags% %SDL_OPS%
 if !errorlevel! neq 0 exit /b !errorlevel!
-cmake --build . --config Release -j %NUMBER_OF_PROCESSORS%
+"%CMAKE_BIN%" --build . --config Release -j %NUMBER_OF_PROCESSORS%
 if !errorlevel! neq 0 exit /b !errorlevel!
-cmake --install .
+"%CMAKE_BIN%" --install .
 if !errorlevel! neq 0 exit /b !errorlevel!
+if not exist "%opencv_install%\setup_vars_opencv4.cmd" (
+    echo [ERROR] OpenCV install did not create %opencv_install%\setup_vars_opencv4.cmd. Check the CMake configure/build output above.
+    exit /b 1
+)
+
 echo [INFO] OpenCV %opencv_ver% installed: %opencv_install%
 :exit_dependencies
 echo [INFO] Dependencies installed 

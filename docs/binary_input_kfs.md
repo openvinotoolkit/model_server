@@ -12,7 +12,7 @@ If data is located in `raw_input_contents` you need to precede data of every bat
 Note, that while the model metadata reports the inputs shape with layout `NHWC`, the binary data must be sent with 
 shape: `[N]` with datatype: `BYTES`. Where `N` represents number of images converted to string bytes.
 
-When sending data in the array format, the shape and datatype gives information on how to interpret bytes in the contents. For binary encoded data, the only information given by the `shape` field is the amount of images in the batch. On the server side, the bytes of every batch are loaded, resized to match model input shape and converted to the OpenVINO-friendly array format by OpenCV.
+When sending data in the array format, the shape and datatype gives information on how to interpret bytes in the contents. For binary encoded data, the only information given by the `shape` field is the amount of images in the batch. On the server side, images are decoded by the optional OpenCV backend or the stb_image fallback, then resized and converted to the requested precision using OpenVINO preprocessing.
 
 ## HTTP
 
@@ -20,7 +20,7 @@ When sending data in the array format, the shape and datatype gives information 
 
 KServe API also allows sending encoded images via HTTP interface to a model that has 4 shape dimensions. Similar to GRPC input with such datatype `datatype` needs to be `BYTES`. The tensor binary data is provided in the request body, after JSON object. While the JSON part contains information required to route the data to the target model and run inference properly, the data itself, in the binary format is placed right after the JSON. Therefore, you need to precede data of every image by 4 bytes(little endian) containing size of this image and specify their combined size in `binary_data_size` parameter.
 
-For binary inputs, the `parameters` map in the JSON part contains `binary_data_size` field for each binary input that indicates the size of the data on the input. Since there's no strict limitations on image resolution and format (as long as it can be loaded by OpenCV), images might be of different sizes. To send a batch of images you need to precede data of every batch by 4 bytes(little endian) containing size of this batch and specify their combined size in `binary_data_size`. For example, if batch would contain three images of sizes 370, 480, 500 bytes the content of input buffer inside binary extension would look like this: 
+For binary inputs, the `parameters` map in the JSON part contains `binary_data_size` field for each binary input that indicates the size of the data on the input. Images can have different sizes when the model permits resizing, subject to [image decoding limits](./parameters.md) and the formats supported by the selected decoder. To send a batch of images you need to precede data of every batch by 4 bytes(little endian) containing size of this batch and specify their combined size in `binary_data_size`. For example, if batch would contain three images of sizes 370, 480, 500 bytes the content of input buffer inside binary extension would look like this:
 <0x72010000 (=370)><370 bytes of first image><0xE0010000 (=480)><480 bytes of second image> <0xF4010000 (=500)><500 bytes of third image>
 And in that case binary_data_size would be 1350(370 + 480 + 500)
 Function set_data_from_numpy in triton client lib that we use in our [REST sample](https://github.com/openvinotoolkit/model_server/blob/main/client/python/kserve-api/samples/http_infer_binary_resnet.py) automatically converts given images to this format.
@@ -29,13 +29,13 @@ If the request contains only one input `binary_data_size` parameter can be omitt
 
 For HTTP request headers, `Inference-Header-Content-Length` header must be provided to give the length of the JSON object, and `Content-Length` continues to give the full body length (as HTTP requires). See an extended example with the request headers, and multiple images in the batch:
 
-On the server side, the binary encoded data is loaded using OpenCV which then converts it to OpenVINO-friendly data format for inference.
+On the server side, encoded data is decoded with OpenCV when available, or stb_image otherwise. OpenVINO performs precision conversion and resizing. Formats requiring unavailable OpenCV codecs fail with an explicit dependency diagnostic; see [optional OpenCV decoding](./binary_input.md#optional-opencv-decoding).
 
 The structure of the response is specified [Inference Response specification](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#inference-response-json-object).
 
 ### Raw data
 
-Above section described how to send JPEG/PNG encoded image via REST interface. Data sent like this is processed by OpenCV to convert it to OpenVINO-friendly format. Many times data is already available in OpenVINO-friendly format and all you want to do is to send it and get the prediction.
+Above section described how to send JPEG/PNG encoded image via REST interface. Such data is decoded and preprocessed into OpenVINO tensors. Many times data is already available in OpenVINO-friendly format and all you want to do is to send it and get the prediction.
 
 With KServe API you can also send raw data in a binary representation via REST interface. **That way the request gets smaller and easier to process on the server side, therefore using this format is more efficient when working with RESTful API, than providing the input data in a JSON object**. To send raw data in the binary format, you need to specify `datatype` other than `BYTES` and data `shape`, should match the input `shape` (also the memory layout should be compatible). 
 

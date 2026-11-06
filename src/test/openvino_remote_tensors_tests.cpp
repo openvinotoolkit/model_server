@@ -24,7 +24,6 @@
 #include <gtest/gtest.h>
 
 #include <openvino/runtime/core.hpp>
-#include <opencv2/opencv.hpp>
 #include <openvino/core/type/element_type.hpp>
 #include <openvino/openvino.hpp>
 

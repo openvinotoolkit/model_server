@@ -155,6 +155,8 @@ WINDOWS_COMMON_STATIC_LIBS_COPTS = [
                         "/Qspectre",
                         "/wd4305",  # abseil after switch to build tools 22
                         "/wd4324",  # genai after switch to build tools 22
+                        "/wd6001",  # false-positive uninitialized-memory warning in external absl headers
+                        "/wd6011",  # false-positive null-dereference warning in external mediapipe headers
                         "/wd4068",
                         "/wd4458",
                         "/wd4100",

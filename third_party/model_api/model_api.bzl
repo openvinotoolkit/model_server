@@ -139,6 +139,17 @@ def _impl(repository_ctx):
     else:
         build_file_content = _get_linux_build_file()
 
+    build_file_content += """
+# OVMS implements this pure virtual interface itself; it does not use the
+# Model API image-processing archive or its OpenCV dependency.
+cc_library(
+    name = "inference_adapter_headers",
+    hdrs = ["src/cpp/adapters/include/adapters/inference_adapter.h"],
+    includes = ["src/cpp/adapters/include"],
+    deps = ["@ovms//third_party:openvino"],
+    visibility = ["//visibility:public"],
+)
+"""
     repository_ctx.file("BUILD", build_file_content.format(http_proxy = http_proxy, https_proxy = https_proxy, openvino_dir = openvino_dir, opencv_dir = opencv_dir))
 
 model_api_repository = repository_rule(
