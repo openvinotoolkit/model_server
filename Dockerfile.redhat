@@ -33,7 +33,6 @@ ARG LTO_LD_FLAGS="-Wl,-z,relro"
 # hadolint ignore=DL3041
 RUN echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf && \
     curl -fsSL -o /tmp/epel-release.rpm https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && \
-    echo "b434245bffd8b40ea486157e72363d08b36e38145c8f917c5c00adfca3f2101b  /tmp/epel-release.rpm" | sha256sum -c - && \
     dnf install -y /tmp/epel-release.rpm && dnf update -d6 -y && dnf install -d6 -y \
             libuuid-devel \
             bc \

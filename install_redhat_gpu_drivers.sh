@@ -34,7 +34,7 @@ download_verified_rpm() {
     checksum=$2
     filename=${url##*/}
     package="/tmp/gpu_deps/$filename"
-    wget -q -O "$package" "$url"
+    curl -fsSL -o "$package" "$url"
     if ! printf '%s  %s\n' "$checksum" "$package" | sha256sum --check --status -; then
         echo "Error: SHA-256 checksum mismatch for $filename." >&2
         exit 1
