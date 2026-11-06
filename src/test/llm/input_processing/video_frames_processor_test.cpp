@@ -108,6 +108,20 @@ static const std::string FRAME_BASE64_2X2 =
     "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91Jpz"
     "AAAAEElEQVR4nGP4z8AARAwQCgAf7gP9i18U1AAAAABJRU5ErkJggg==";
 
+static void appendBigEndianUint32(std::string& data, uint32_t value) {
+    for (int shift = 24; shift >= 0; shift -= 8) {
+        data.push_back(static_cast<char>(value >> shift));
+    }
+}
+
+static std::string makeMp4Box(uint32_t type, const std::string& payload) {
+    std::string box;
+    appendBigEndianUint32(box, static_cast<uint32_t>(payload.size() + 8));
+    appendBigEndianUint32(box, type);
+    box += payload;
+    return box;
+}
+
 // Tests ------------------------------------------------------------------
 
 TEST(VideoFramesProcessorTest, NoVideoInTextOnlyMessage) {
@@ -484,6 +498,33 @@ TEST(VideoFramesProcessorTest, MalformedMp4IsRejected) {
     constexpr uint32_t maxDecodedFrames = 1;
     const auto result = decodeVideoSource(source.path.string(), std::filesystem::temp_directory_path().string(), std::nullopt,
         requestedFps, maxDecodedFrames, totalVideoPixels);
+
+    ASSERT_FALSE(result.ok());
+    EXPECT_EQ(result.status(), absl::InvalidArgumentError("Unable to parse MP4 video source"));
+    EXPECT_EQ(totalVideoPixels, 0u);
+}
+
+TEST(VideoFramesProcessorTest, TruncatedAvcCParameterSetIsRejected) {
+    constexpr uint32_t moov = 0x6d6f6f76;
+    constexpr uint32_t trak = 0x7472616b;
+    constexpr uint32_t mdia = 0x6d646961;
+    constexpr uint32_t minf = 0x6d696e66;
+    constexpr uint32_t stbl = 0x7374626c;
+    constexpr uint32_t stsd = 0x73747364;
+    constexpr uint32_t avc1 = 0x61766331;
+    constexpr uint32_t avcC = 0x61766343;
+    const std::string malformedAvcC = makeMp4Box(avcC, std::string({1, 100, 0, 31, static_cast<char>(0xff), static_cast<char>(0xe1), static_cast<char>(0xff), static_cast<char>(0xff)}));
+    std::string avc1Payload(78, '\0');
+    avc1Payload += malformedAvcC;
+    std::string stsdPayload(8, '\0');
+    stsdPayload += makeMp4Box(avc1, avc1Payload);
+    const std::string malformedMp4 = makeMp4Box(moov, makeMp4Box(trak, makeMp4Box(mdia, makeMp4Box(minf, makeMp4Box(stbl, makeMp4Box(stsd, stsdPayload))))));
+    TemporaryVideoFile source("ovms_truncated_avcc.mp4", malformedMp4);
+    ScopedVideoDecodeLimits limits(1024, OVMS_DEFAULT_MAX_VIDEO_DECODE_PIXELS);
+
+    size_t totalVideoPixels = 0;
+    const auto result = decodeVideoSource(source.path.string(), std::filesystem::temp_directory_path().string(), std::nullopt,
+        1.0F, 1, totalVideoPixels);
 
     ASSERT_FALSE(result.ok());
     EXPECT_EQ(result.status(), absl::InvalidArgumentError("Unable to parse MP4 video source"));
