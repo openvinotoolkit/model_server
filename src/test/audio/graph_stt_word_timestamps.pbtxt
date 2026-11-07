@@ -29,7 +29,7 @@ node {
   }
   node_options: {
     [type.googleapis.com / mediapipe.S2tCalculatorOptions]: {
-      models_path: "/ovms/src/test/llm_testing/openai/whisper-tiny",
+      models_path: "/ovms/src/test/llm_testing/OpenVINO/whisper-tiny-int4-ov",
       plugin_config: '{ "NUM_STREAMS": "1" }',
       target_device: "CPU",
       enable_word_timestamps: true

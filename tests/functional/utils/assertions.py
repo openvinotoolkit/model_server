@@ -85,18 +85,36 @@ class TemplateMessageException(Exception):
         super().__init__(self.TEMPLATE.format(message))
 
 
+def _exception_details(exc: BaseException) -> str:
+    # openai>=3 may omit the response body from str(exc) (e.g. streaming requests)
+    details = [str(exc)]
+    body = getattr(exc, "body", None)
+    if body:
+        details.append(str(body))
+    response = getattr(exc, "response", None)
+    if response is not None:
+        try:
+            response.read()
+            details.append(response.text)
+        except Exception:  # pylint: disable=broad-except
+            pass
+    return "\n".join(details)
+
+
 def assert_raises_exception(exception: Type[BaseException], output, callable_obj, *args, **kwargs):
     with pytest.raises(exception) as e:
         callable_obj(*args, **kwargs)
-    assert output in str(e.value), \
-        f"Expected output:\n{output}\nnot found in exception {exception.__class__.__name__} value:\n{str(e.value)}"
+    details = _exception_details(e.value)
+    assert output in details, \
+        f"Expected output:\n{output}\nnot found in exception {exception.__name__} value:\n{details}"
 
 
 def assert_raises_exception_with_pattern(exception: Type[BaseException], pattern, callable_obj, *args, **kwargs):
     with pytest.raises(exception) as e:
         callable_obj(*args, **kwargs)
-    assert pattern.search(str(e.value)), \
-        f"Expected output:\n{pattern}\nnot found in exception {exception.__class__.__name__} value:\n{str(e.value)}"
+    details = _exception_details(e.value)
+    assert pattern.search(details), \
+        f"Expected output:\n{pattern}\nnot found in exception {exception.__class__.__name__} value:\n{details}"
 
 
 def get_mediapipe_details_from_context(context):

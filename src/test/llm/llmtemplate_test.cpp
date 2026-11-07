@@ -83,7 +83,7 @@ protected:
         jinjaConfigFilePath = directoryPath + "/chat_template.jinja";
 
         // We need real model tokenizer and detokenizer as we rely on them to load chat template properly
-        std::string realModelPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m");
+        std::string realModelPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov");
 
         std::string srcTokenizerPath = ovms::FileSystem::joinPath({realModelPath, "openvino_tokenizer.xml"});
         std::string dstTokenizerPath = ovms::FileSystem::joinPath({directoryPath, "openvino_tokenizer.xml"});
@@ -116,7 +116,7 @@ public:
         return createConfigFileWithContent(fileContents, jinjaConfigFilePath);
     }
     void CopyDefaultChatTemplate() {
-        std::string srcFilePath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m/chat_template.jinja");
+        std::string srcFilePath = getGenericFullPathForSrcTest("/ovms/src/test/llm/dummy_facebook_template.jinja");
         std::string dstFilePath = ovms::FileSystem::joinPath({directoryPath, "chat_template.jinja"});
         std::filesystem::copy_file(srcFilePath, dstFilePath, std::filesystem::copy_options::overwrite_existing);
     }
@@ -289,10 +289,27 @@ TEST_F(LLMChatTemplateTest, MissingTemplateRejectsChatInputButAllowsCompletionIn
     EXPECT_TRUE(servable->validateInputCompatibility(completionContext).ok());
 }
 
+TEST_F(LLMChatTemplateTest, VlmWithoutAudioCapabilityRejectsAudioInput) {
+    servable = std::make_shared<ContinuousBatchingServable>();
+    auto properties = servable->getProperties();
+    properties->chatTemplateStatus = ChatTemplateStatus::AVAILABLE;
+    properties->inputProcessorContext.config.supportsVisualInputs = true;
+
+    auto context = servable->createExecutionContext();
+    ov::genai::ChatHistory history;
+    history.push_back({{"role", "user"}, {"content", ov::genai::JsonContainer::from_json_string(R"([{"type":"input_audio","input_audio":{"data":"audio"}}])")}});
+    context->inputRequest.input = std::move(history);
+
+    const auto status = servable->validateInputCompatibility(context);
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_EQ(status.message(), "This servable does not support audio input");
+}
+
 TEST_F(LLMChatTemplateTest, MissingTemplateClearsDisabledParsers) {
     servable = std::make_shared<ContinuousBatchingServable>();
     auto properties = servable->getProperties();
     properties->tokenizer = ov::genai::Tokenizer(directoryPath);
+    properties->tokenizer.set_chat_template("");
     properties->chatTemplateEngine = ChatTemplateEngine::MINJA;
     properties->toolParserName = "none";
     properties->reasoningParserName = "none";
@@ -745,7 +762,7 @@ public:
 
 const std::string GRAPH_PATTERN = "<GRAPH_PATTERN>";
 const std::string WORKSPACE_PATTERN = "<MODELS_PATTERN>";
-const std::string MODEL_PATH = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m");
+const std::string MODEL_PATH = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov");
 
 class LLMChatTemplateHttpTest : public TestWithTempDir {
 protected:
