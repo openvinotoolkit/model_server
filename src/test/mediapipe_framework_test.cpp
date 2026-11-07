@@ -14,12 +14,14 @@
 // limitations under the License.
 //*****************************************************************************
 #include <algorithm>
+#include <chrono>
 #include <fstream>
 #include <set>
 #include <sstream>
 #include <string>
 #include <thread>
-#include <chrono>
+#include <utility>
+#include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -594,4 +596,95 @@ TEST(NodeInitializerRegistryTest, AllExpectedInitializersRegistered) {
     constexpr size_t expectedInitializersCount = 7;
     EXPECT_EQ(initializers.size(), expectedInitializersCount)
         << "Unexpected number of registered NodeInitializers from static registration/link-time inclusion.";
+}
+
+// Regression tests for issue #4717: the local stou32() copy in
+// OpenVINOModelServerSessionCalculator accepted partial parses ("3.9" -> 3,
+// "12abc" -> 12) because it called std::stoul without capturing the consumed
+// length.  The fix replaces the local copy with ovms::stou32() and returns an
+// explicit InvalidArgument error when servable_version is supplied
+// (has_servable_version() is true) but not a valid non-negative integer
+// (including explicit empty string "").  These tests exercise the validation path through
+// Open() so that no server is required for the failing inputs (the error fires
+// before any model load attempt).
+class OpenVINOModelServerSessionCalculatorVersionTest : public ::testing::Test {
+    // Helper: build a minimal graph proto with the given servable_version
+    // string, initialize the graph, and return the status from StartRun().
+    // The session calculator will call Open() during StartRun(); if the version
+    // string is malformed it returns immediately with kInvalidArgument before
+    // touching OVMS, so no ServerGuard is needed for the error path.
+protected:
+    absl::Status RunWithVersion(const std::string& version_str, bool omit_version = false) {
+        std::string version_field = omit_version ? "" : ("servable_version: \"" + version_str + "\"");
+        std::string graph_proto = R"(
+          node {
+              calculator: "OpenVINOModelServerSessionCalculator"
+              output_side_packet: "SESSION:session"
+              node_options: {
+                [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+                  servable_name: "dummy"
+                  )" + version_field +
+                                  R"(
+                }
+              }
+          }
+        )";
+        CalculatorGraphConfig graphConfig =
+            ParseTextProtoOrDie<CalculatorGraphConfig>(graph_proto);
+        ::mediapipe::CalculatorGraph graph;
+        auto initStatus = graph.Initialize(graphConfig);
+        if (!initStatus.ok()) {
+            return initStatus;
+        }
+        auto runStatus = graph.StartRun({});
+        if (!runStatus.ok()) {
+            return runStatus;
+        }
+        return graph.WaitUntilDone();
+    }
+};
+
+// Malformed or invalid inputs (including explicit empty string) must be rejected
+// with kInvalidArgument.  These tests do not
+// require a running OVMS server because the calculator returns before attempting
+// any model load.
+TEST_F(OpenVINOModelServerSessionCalculatorVersionTest, MalformedDecimalRejected) {
+    auto status = RunWithVersion("3.9");
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument) << status.ToString();
+    EXPECT_THAT(status.ToString(), testing::HasSubstr("3.9"));
+}
+
+TEST_F(OpenVINOModelServerSessionCalculatorVersionTest, MalformedTrailingAlphaRejected) {
+    auto status = RunWithVersion("12abc");
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument) << status.ToString();
+    EXPECT_THAT(status.ToString(), testing::HasSubstr("12abc"));
+}
+
+TEST_F(OpenVINOModelServerSessionCalculatorVersionTest, MalformedHexPrefixRejected) {
+    auto status = RunWithVersion("0x3");
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument) << status.ToString();
+    EXPECT_THAT(status.ToString(), testing::HasSubstr("0x3"));
+}
+
+TEST_F(OpenVINOModelServerSessionCalculatorVersionTest, ExplicitEmptyStringRejected) {
+    auto status = RunWithVersion("");
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument) << status.ToString();
+    EXPECT_THAT(status.ToString(), testing::HasSubstr("is not a valid non-negative integer"));
+}
+
+// When servable_version is valid or omitted, validation passes and execution proceeds
+// to session->loadModel(). Without a live OVMS server running, loadModel() fails with
+// kFailedPrecondition ("failed to load the model") rather than kInvalidArgument.
+TEST_F(OpenVINOModelServerSessionCalculatorVersionTest, ValidVersionsPassValidation) {
+    for (const auto& [version, omit] : std::vector<std::pair<std::string, bool>>{
+             {"0", false},
+             {"12", false},
+             {"", true},
+         }) {
+        auto status = RunWithVersion(version, omit);
+        EXPECT_EQ(status.code(), absl::StatusCode::kFailedPrecondition)
+            << "Expected kFailedPrecondition (model load failure past validation) for version: "
+            << (omit ? "<omitted>" : version) << ", got: " << status.ToString();
+        EXPECT_THAT(status.ToString(), testing::HasSubstr("failed to load the model"));
+    }
 }
