@@ -60,6 +60,10 @@ public:
             SPDLOG_ERROR("Failed to process LLM node graph {}", graphName);
             return status;
         }
+        const auto maxModelLength = servable->getProperties()->maxModelLength;
+        if (maxModelLength.has_value() && !sidePackets.metadata.setInt("max_model_len", maxModelLength.value())) {
+            SPDLOG_WARN("Metadata key max_model_len is already set in graph: {}, ignoring the value from LLM node: {}", graphName, nodeName);
+        }
         genAiServableMap.insert(std::pair<std::string, std::shared_ptr<GenAiServable>>(nodeName, std::move(servable)));
         sidePackets.genAiExecutionContextMap.emplace(
             nodeName, std::make_shared<GenAiExecutionContextHolder>());

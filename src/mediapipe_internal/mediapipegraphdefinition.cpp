@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "src/execution_context.hpp"
+#include "src/graph_metadata.hpp"
 #include "../config.hpp"
 #include "../llm/llm_calculators_plugin_loader.hpp"
 #include "src/utils/env_guard.hpp"
@@ -68,6 +69,16 @@ const tensor_map_t MediapipeGraphDefinition::getInputsInfo() const {
 const tensor_map_t MediapipeGraphDefinition::getOutputsInfo() const {
     std::shared_lock lock(metadataMtx);
     return this->outputsInfo;
+}
+
+std::shared_ptr<const GraphMetadata> MediapipeGraphDefinition::getMetadata() const {
+    std::lock_guard<std::mutex> lock(metadataSnapshotMtx);
+    return this->metadata;
+}
+
+void MediapipeGraphDefinition::clearMetadata() {
+    std::lock_guard<std::mutex> lock(metadataSnapshotMtx);
+    this->metadata.reset();
 }
 
 Status MediapipeGraphDefinition::validateForConfigFileExistence() {
@@ -592,7 +603,11 @@ Status MediapipeGraphDefinition::reload(const ServableNameChecker& checker, cons
     idleUnloadTimeoutSecondsCache.store(this->mgconfig.getIdleUnloadTimeoutSeconds(), std::memory_order_relaxed);
     this->queue.reset();
     this->sidePacketMaps = std::make_shared<GraphSidePackets>();
-    return validate(checker);
+    Status validationStatus = validate(checker);
+    if (!validationStatus.ok()) {
+        clearMetadata();
+    }
+    return validationStatus;
 }
 
 void MediapipeGraphDefinition::retire() {
@@ -600,6 +615,7 @@ void MediapipeGraphDefinition::retire() {
     // Block creating new unloadGuards
     this->status.handle(RetireEvent());
     unloadComponentsAfterPendingExecutorsAreCreated();
+    clearMetadata();
 }
 
 bool MediapipeGraphDefinition::isIdleUnloadEnabled() const {
@@ -753,6 +769,11 @@ Status MediapipeGraphDefinition::initializeNodes() {
     // Register LoRA aliases for routing from initialized image gen pipelines
     this->loraAliases = sidePacketMaps->loraAliases;
     this->hideBaseModelInRouting = sidePacketMaps->hideBaseModelInRouting;
+    auto snapshot = std::make_shared<const GraphMetadata>(sidePacketMaps->metadata);
+    {
+        std::lock_guard<std::mutex> lock(metadataSnapshotMtx);
+        this->metadata = std::move(snapshot);
+    }
     success = true;
     return StatusCode::OK;
 }

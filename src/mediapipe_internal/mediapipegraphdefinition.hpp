@@ -47,6 +47,7 @@
 
 namespace ovms {
 class MetricConfig;
+class GraphMetadata;
 class MetricRegistry;
 class ServableNameChecker;
 class MediapipeGraphExecutor;
@@ -68,6 +69,7 @@ public:
     }
     const std::vector<std::string>& getLoraAliases() const { return loraAliases; }
     bool shouldHideBaseModelInRouting() const { return hideBaseModelInRouting; }
+    std::shared_ptr<const GraphMetadata> getMetadata() const override;
 
     const PipelineDefinitionStateCode getStateCode() const { return status.getStateCode(); }
     bool isAvailable() const override { return status.isAvailable(); }
@@ -163,6 +165,12 @@ private:
     std::vector<std::string> inputNames;
     std::vector<std::string> outputNames;
     std::vector<std::string> inputSidePacketNames;
+
+    // Immutable snapshot published by initializeNodes(). Has its own mutex because metadataMtx is held
+    // for the whole validation, which would make readers wait for a reload to finish.
+    mutable std::mutex metadataSnapshotMtx;
+    std::shared_ptr<const GraphMetadata> metadata;
+    void clearMetadata();
 
     std::vector<std::string> loraAliases;
     // When using LoRA adapters with STATIC/FUSE Adapter Config mode, lora weights are always active
