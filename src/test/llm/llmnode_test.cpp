@@ -7319,7 +7319,7 @@ protected:
         rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
         config.Accept(writer);
         std::ofstream(destination / "config.json") << buffer.GetString();
-        return destination.string();
+        return destination.generic_string();
     }
 
     static std::string buildPbtxt(const std::string& modelsPath) {
@@ -7423,7 +7423,7 @@ TEST_F(LLMGraphMetadataTest, FailedReloadLeavesNoMetadata) {
     ASSERT_NE(def.getMetadata(), nullptr);
 
     // Metadata is cleared on a failed reload, whichever stage fails
-    def.inputConfig = buildPbtxt((std::filesystem::path(directoryPath) / "nonexistent").string());
+    def.inputConfig = buildPbtxt((std::filesystem::path(directoryPath) / "nonexistent").generic_string());
     EXPECT_FALSE(def.reload(manager, mgc).ok());
     EXPECT_EQ(def.getMetadata(), nullptr);
 }
