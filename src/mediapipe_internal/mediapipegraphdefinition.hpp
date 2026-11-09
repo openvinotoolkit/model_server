@@ -46,8 +46,7 @@
 #include "graphqueue.hpp"
 
 namespace ovms {
-class MetricConfig;
-class MetricRegistry;
+class MetricProvider;
 class ServableNameChecker;
 class MediapipeGraphExecutor;
 class Status;
@@ -58,8 +57,7 @@ public:
     virtual ~MediapipeGraphDefinition();
     MediapipeGraphDefinition(const std::string name,
         const MediapipeGraphConfig& config = MGC,
-        MetricRegistry* registry = nullptr,
-        const MetricConfig* metricConfig = nullptr,
+        const MetricProvider* metrics = nullptr,
         PythonBackend* pythonBackend = nullptr,
         bool lazyLoad = false);
 
@@ -172,8 +170,8 @@ private:
 
     PythonBackend* pythonBackend;
 
-    MetricRegistry* metricRegistry;
-    const MetricConfig* metricConfig;
+    // The provider must outlive the graph definition.
+    const MetricProvider* metrics;
     std::unique_ptr<MediapipeServableMetricReporter> reporter;
     std::shared_ptr<GraphQueue> queue;
 

@@ -26,6 +26,7 @@
 
 #include "src/logging.hpp"
 #include "src/metrics/llm_metric_reporter.hpp"
+#include "src/metrics/metric_provider.hpp"
 
 namespace ovms {
 class LlmNodeInitializer : public NodeInitializer {
@@ -41,8 +42,7 @@ public:
         const std::string& basePath,
         GraphSidePackets& sidePackets,
         PythonBackend* /*pythonBackend*/,
-        MetricRegistry* metricRegistry,
-        const MetricConfig* metricConfig) override {
+        const MetricProvider* metrics) override {
         auto& genAiServableMap = sidePackets.genAiServableMap;
         if (!nodeConfig.node_options().size()) {
             SPDLOG_ERROR("LLM node missing options in graph: {}. ", graphName);
@@ -58,7 +58,9 @@ public:
             return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
         }
         std::shared_ptr<GenAiServable> servable;
-        auto metricReporter = std::make_shared<LLMMetricReporter>(metricConfig, metricRegistry, graphName, nodeName);
+        auto metricReporter = std::make_shared<LLMMetricReporter>(
+            metrics ? &metrics->getMetricConfig() : nullptr,
+            metrics ? metrics->getMetricRegistry() : nullptr, graphName, nodeName);
         std::weak_ptr<LLMMetricReporter> metricReporterRef = metricReporter;
         Status status = initializeGenAiServable(servable, nodeConfig, basePath, std::move(metricReporter));
         if (!status.ok()) {

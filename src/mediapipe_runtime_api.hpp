@@ -60,6 +60,7 @@ public:
 
     bool isLoaded() const;
 
+    // metrics must outlive the graph definition created from this configuration.
     Status processConfig(const MediapipeGraphConfig& config,
         MetricProvider& metrics,
         const ServableNameChecker& checker,

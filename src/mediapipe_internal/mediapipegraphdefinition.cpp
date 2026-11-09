@@ -33,6 +33,7 @@
 #include "src/filesystem/filesystem.hpp"
 #include "src/metrics/metric.hpp"
 #include "src/metrics/metric_config.hpp"
+#include "src/metrics/metric_provider.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../metrics/llm_metric_reporter.hpp"
 #include "../ov_utils.hpp"
@@ -393,17 +394,17 @@ Status MediapipeGraphDefinition::initializeQueueIfRequired() {
 
 MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
     const MediapipeGraphConfig& config,
-    MetricRegistry* registry,
-    const MetricConfig* metricConfig,
+    const MetricProvider* metrics,
     PythonBackend* pythonBackend,
     bool lazyLoad) :
     SingleVersionServableDefinition(name),
     sidePacketMaps(std::make_shared<GraphSidePackets>()),
     status(SCHEDULER_CLASS_NAME, getName()),
     pythonBackend(pythonBackend),
-    metricRegistry(registry),
-    metricConfig(metricConfig),
-    reporter(std::make_unique<MediapipeServableMetricReporter>(metricConfig, registry, name)) {
+    metrics(metrics),
+    reporter(std::make_unique<MediapipeServableMetricReporter>(
+        metrics ? &metrics->getMetricConfig() : nullptr,
+        metrics ? metrics->getMetricRegistry() : nullptr, name)) {
     mgconfig = config;
     idleUnloadTimeoutSecondsCache.store(mgconfig.getIdleUnloadTimeoutSeconds(), std::memory_order_relaxed);
     passKfsRequestFlag = false;
@@ -772,11 +773,11 @@ Status MediapipeGraphDefinition::initializeNodes() {
             }
             sidePacketMaps->calculatorMetrics.emplace(node.name(),
                 std::make_shared<CalculatorMetrics>(
-                    metricConfig && metricConfig->metricsEnabled ? metricRegistry : nullptr, getName(), node.name()));
+                    metrics && metrics->getMetricConfig().metricsEnabled ? metrics->getMetricRegistry() : nullptr, getName(), node.name()));
         }
         for (const auto& initializer : registry.all()) {
             if (initializer->matches(node.calculator())) {
-                Status status = initializer->initialize(node, getName(), mgconfig.getBasePath(), *sidePacketMaps, pythonBackend, metricRegistry, metricConfig);
+                Status status = initializer->initialize(node, getName(), mgconfig.getBasePath(), *sidePacketMaps, pythonBackend, metrics);
                 if (!status.ok()) {
                     return status;
                 }

@@ -53,6 +53,8 @@
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
 #include "src/metrics/metric_config.hpp"
 #include "src/metrics/metric_module.hpp"
+#include "src/metrics/metric_provider.hpp"
+#include "src/metrics/metric_registry.hpp"
 #include "../model.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../precision.hpp"
@@ -4458,10 +4460,10 @@ private:
 }  // namespace
 
 TEST(MediapipeIdleUnloadGuard, CreateDefinitionLazyLoad) {
-    ovms::MediapipeFactory factory(nullptr);
     ovms::MediapipeGraphConfig mgc{"unloadedGraph", "", ""};
     mgc.setIdleUnloadTimeoutSeconds(10);
     StubMetricProvider metrics;
+    ovms::MediapipeFactory factory(nullptr);
     ovms::ModelManager manager;
 
     auto status = factory.createDefinition("unloadedGraph", mgc, metrics, manager, true);
@@ -4473,9 +4475,9 @@ TEST(MediapipeIdleUnloadGuard, CreateDefinitionLazyLoad) {
 }
 
 TEST(MediapipeIdleUnloadGuard, CreateDefinitionLazyLoadRejectsDuplicate) {
-    ovms::MediapipeFactory factory(nullptr);
     ovms::MediapipeGraphConfig mgc{"dupGraph", "", ""};
     StubMetricProvider metrics;
+    ovms::MediapipeFactory factory(nullptr);
     ovms::ModelManager manager;
 
     auto status1 = factory.createDefinition("dupGraph", mgc, metrics, manager, true);
@@ -4483,4 +4485,78 @@ TEST(MediapipeIdleUnloadGuard, CreateDefinitionLazyLoadRejectsDuplicate) {
 
     auto status2 = factory.createDefinition("dupGraph", mgc, metrics, manager, true);
     ASSERT_EQ(status2, ovms::StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST);
+}
+
+namespace {
+class TestGraphMetricProvider : public ovms::MetricProvider {
+public:
+    mutable ovms::MetricRegistry registry;
+    ovms::MetricConfig config;
+    bool provideRegistry = true;
+    mutable int registryRequests = 0;
+    mutable int configRequests = 0;
+
+    ovms::MetricRegistry* getMetricRegistry() const override {
+        ++registryRequests;
+        return provideRegistry ? &registry : nullptr;
+    }
+    const ovms::MetricConfig& getMetricConfig() const override {
+        ++configRequests;
+        return config;
+    }
+};
+
+class MetricsGraphDefinition : public DummyMediapipeGraphDefinition {
+public:
+    explicit MetricsGraphDefinition(const ovms::MetricProvider* metrics) :
+        DummyMediapipeGraphDefinition("graph", ovms::MediapipeGraphConfig{"graph", "", ""}, "", nullptr, false, metrics) {
+        auto* node = config.add_node();
+        node->set_name("node");
+        node->set_calculator("TestCustomMetricsCalculator");
+        node->add_input_side_packet("CALCULATOR_METRICS:calculator_metrics");
+    }
+
+    std::shared_ptr<ovms::CalculatorMetrics> calculatorMetrics() {
+        return sidePacketMaps->calculatorMetrics.at("node");
+    }
+
+    void useInvalidLlmNode() {
+        auto* node = config.mutable_node(0);
+        node->set_calculator("LLMCalculator");
+        node->clear_input_side_packet();
+        node->add_node_options();
+    }
+};
+}  // namespace
+
+TEST(MediapipeGraphMetricsProvider, CustomMetricsHonorProviderConfiguration) {
+    TestGraphMetricProvider metrics;
+    metrics.config.metricsEnabled = true;
+    MetricsGraphDefinition graph(&metrics);
+    ASSERT_EQ(graph.initializeNodes(), ovms::StatusCode::OK);
+    graph.calculatorMetrics()->registerCounter("custom_events_total", "Events.")->increment();
+    EXPECT_THAT(metrics.registry.collect(), HasSubstr("custom_events_total{name=\"graph\",node=\"node\"} 1\n"));
+}
+
+TEST(MediapipeGraphMetricsProvider, CustomMetricsAreNoOpWhenDisabledOrUnavailable) {
+    TestGraphMetricProvider metrics;
+    for (int scenario = 0; scenario < 3; ++scenario) {
+        metrics.config.metricsEnabled = scenario != 0;
+        metrics.provideRegistry = scenario != 1;
+        MetricsGraphDefinition graph(scenario == 2 ? nullptr : &metrics);
+        ASSERT_EQ(graph.initializeNodes(), ovms::StatusCode::OK);
+        graph.calculatorMetrics()->registerCounter("custom_events_total", "Events.")->increment();
+        EXPECT_TRUE(metrics.registry.collect().empty());
+    }
+}
+
+TEST(MediapipeGraphMetricsProvider, PassesProviderToLlmInitializer) {
+    TestGraphMetricProvider metrics;
+    MetricsGraphDefinition graph(&metrics);
+    graph.useInvalidLlmNode();
+    const int initialRegistryRequests = metrics.registryRequests;
+    const int initialConfigRequests = metrics.configRequests;
+    ASSERT_EQ(graph.initializeNodes(), ovms::StatusCode::INTERNAL_ERROR);
+    EXPECT_EQ(metrics.registryRequests, initialRegistryRequests + 1);
+    EXPECT_EQ(metrics.configRequests, initialConfigRequests + 1);
 }

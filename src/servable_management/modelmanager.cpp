@@ -249,6 +249,9 @@ void ModelManager::logPluginConfiguration() {
 ModelManager::~ModelManager() {
     join();
     models.clear();
+#if (MEDIAPIPE_DISABLE == 0)
+    mediapipeFactory.reset();
+#endif
 }
 
 Status ModelManager::start(const Config& config) {
