@@ -349,7 +349,8 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Phi4Mini_ToolCallWithStringArgs) {
 
     ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
     EXPECT_EQ(analysisResult.detectedToolParser.value(), "phi4");
-    ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
+    ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
+    EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "qwen3");
 
     EXPECT_TRUE(caps.supportsToolCalls);
     EXPECT_FALSE(caps.requiresObjectArguments);
