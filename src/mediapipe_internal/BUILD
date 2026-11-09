@@ -50,6 +50,18 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "ovms_calculator_base",
+    srcs = ["ovms_calculator_base.cpp"],
+    hdrs = ["ovms_calculator_base.hpp"],
+    deps = [
+        ":graph_side_packets",
+        "//src/metrics:libovmsmetrics",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "graph_executor_constants",
     hdrs = [
         "graph_executor_constants.hpp",
