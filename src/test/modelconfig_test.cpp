@@ -1234,6 +1234,81 @@ TEST(ModelConfig, modelVersionPolicyIncorrect) {
     EXPECT_EQ(result, ovms::StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT);
 }
 
+TEST(ModelConfig, modelVersionPolicyLatestValid) {
+    ovms::ModelConfig config;
+    std::string command = "{\"latest\": {\"num_versions\": 1}}";
+    EXPECT_EQ(config.parseModelVersionPolicy(command), ovms::StatusCode::OK);
+    ASSERT_NE(config.getModelVersionPolicy(), nullptr);
+    EXPECT_EQ(config.getModelVersionPolicy()->filter({1, 2, 3}), std::vector<ovms::model_version_t>{3});
+
+    command = "{\"latest\": {\"num_versions\": 2}}";
+    EXPECT_EQ(config.parseModelVersionPolicy(command), ovms::StatusCode::OK);
+    ASSERT_NE(config.getModelVersionPolicy(), nullptr);
+    std::vector<ovms::model_version_t> expected{3, 2};
+    EXPECT_EQ(config.getModelVersionPolicy()->filter({1, 2, 3}), expected);
+
+    command = "{\"latest\": {\"num_versions\": 10}}";
+    EXPECT_EQ(config.parseModelVersionPolicy(command), ovms::StatusCode::OK);
+    ASSERT_NE(config.getModelVersionPolicy(), nullptr);
+    std::vector<ovms::model_version_t> expectedAll{3, 2, 1};
+    EXPECT_EQ(config.getModelVersionPolicy()->filter({1, 2, 3}), expectedAll);
+}
+
+TEST(ModelConfig, modelVersionPolicyLatestInvalid) {
+    ovms::ModelConfig config;
+
+    // Zero
+    std::string command = "{\"latest\": {\"num_versions\": 0}}";
+    EXPECT_EQ(config.parseModelVersionPolicy(command), ovms::StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT);
+
+    // Negative values
+    command = "{\"latest\": {\"num_versions\": -1}}";
+    EXPECT_EQ(config.parseModelVersionPolicy(command), ovms::StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT);
+
+    command = "{\"latest\": {\"num_versions\": -100}}";
+    EXPECT_EQ(config.parseModelVersionPolicy(command), ovms::StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT);
+
+    // String value
+    command = "{\"latest\": {\"num_versions\": \"2\"}}";
+    EXPECT_EQ(config.parseModelVersionPolicy(command), ovms::StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT);
+
+    // Boolean values
+    command = "{\"latest\": {\"num_versions\": true}}";
+    EXPECT_EQ(config.parseModelVersionPolicy(command), ovms::StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT);
+
+    command = "{\"latest\": {\"num_versions\": false}}";
+    EXPECT_EQ(config.parseModelVersionPolicy(command), ovms::StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT);
+
+    // Array value
+    command = "{\"latest\": {\"num_versions\": [1]}}";
+    EXPECT_EQ(config.parseModelVersionPolicy(command), ovms::StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT);
+
+    // Object value
+    command = "{\"latest\": {\"num_versions\": {\"val\": 1}}}";
+    EXPECT_EQ(config.parseModelVersionPolicy(command), ovms::StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT);
+
+    // Missing num_versions
+    command = "{\"latest\": {}}";
+    EXPECT_EQ(config.parseModelVersionPolicy(command), ovms::StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT);
+
+    command = "{\"latest\": {\"wrong_key\": 1}}";
+    EXPECT_EQ(config.parseModelVersionPolicy(command), ovms::StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT);
+
+    // Non-object latest values
+    command = "{\"latest\": 5}";
+    EXPECT_EQ(config.parseModelVersionPolicy(command), ovms::StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT);
+
+    command = "{\"latest\": \"all\"}";
+    EXPECT_EQ(config.parseModelVersionPolicy(command), ovms::StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT);
+
+    command = "{\"latest\": []}";
+    EXPECT_EQ(config.parseModelVersionPolicy(command), ovms::StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT);
+
+    // Extra keys in latest object
+    command = "{\"latest\": {\"num_versions\": 1, \"extra\": 2}}";
+    EXPECT_EQ(config.parseModelVersionPolicy(command), ovms::StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT);
+}
+
 TEST(ModelConfig, ConfigParseNodeWithForbiddenShapeName) {
     std::string config = R"#(
         {
