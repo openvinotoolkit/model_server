@@ -355,6 +355,7 @@ TEST(VideoFramesProcessorTest, InvalidBase64FrameRejected) {
 
     EXPECT_FALSE(status.ok());
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_EQ(status.message(), "Number of video frames exceeds the allowed maximum of 1024");
     EXPECT_TRUE(req.inputVideos.empty());
 }
 

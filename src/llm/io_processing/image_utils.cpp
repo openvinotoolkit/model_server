@@ -83,7 +83,16 @@ struct MediaFileDownloadContext {
     bool sizeLimitExceeded = false;
 };
 
-constexpr int64_t MEDIA_DOWNLOAD_TIMEOUT_SECONDS = 120;
+struct MediaDownloadOptions {
+    const char* url;
+    size_t (*writeCallback)(void*, size_t, size_t, void*);
+    void* writeData;
+    size_t sizeLimit;
+    int64_t timeoutSeconds;
+};
+
+constexpr int64_t IMAGE_DOWNLOAD_TIMEOUT_SECONDS = 120;
+constexpr int64_t VIDEO_DOWNLOAD_TIMEOUT_SECONDS = 120;
 
 size_t appendMediaFileChunk(void* downloadedChunk, size_t size, size_t nmemb, void* context) noexcept {
     auto* downloadContext = static_cast<MediaFileDownloadContext*>(context);
@@ -141,6 +150,24 @@ const char* getDownloadFailureReason(CURLcode status) {
         status = setopt;      \
     }
 
+bool areMediaRedirectsAllowed() {
+    const char* envAllowRedirects = std::getenv("OVMS_MEDIA_URL_ALLOW_REDIRECTS");
+    return envAllowRedirects != nullptr && std::strcmp(envAllowRedirects, "1") == 0;
+}
+
+CURLcode configureMediaDownload(CURL* curlHandle, const MediaDownloadOptions& options, bool redirectsAllowed) {
+    CURLcode status = curl_easy_setopt(curlHandle, CURLOPT_URL, options.url);
+    CURL_SETOPT(curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, options.writeCallback))
+    CURL_SETOPT(curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, options.writeData))
+    CURL_SETOPT(curl_easy_setopt(curlHandle, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA))
+    if (redirectsAllowed) {
+        CURL_SETOPT(curl_easy_setopt(curlHandle, CURLOPT_FOLLOWLOCATION, 1L))
+    }
+    CURL_SETOPT(curl_easy_setopt(curlHandle, CURLOPT_MAXFILESIZE_LARGE, static_cast<curl_off_t>(options.sizeLimit)))
+    CURL_SETOPT(curl_easy_setopt(curlHandle, CURLOPT_TIMEOUT, static_cast<long>(options.timeoutSeconds)))  // NOLINT(runtime/int): CURLOPT_TIMEOUT requires a long.
+    return status;
+}
+
 }  // namespace
 
 absl::Status validateHttpDownloadResponse(int64_t httpCode, bool redirectsAllowed, std::string_view mediaType) {
@@ -170,17 +197,12 @@ absl::Status downloadImage(const char* url, std::string& image, const int64_t& s
     }
     ImageDownloadContext downloadContext{&image, static_cast<size_t>(sizeLimit)};
 
-    auto status = curl_easy_setopt(curl_handle, CURLOPT_URL, url);
-    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, appendChunkCallback))
-    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &downloadContext))
-    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA))
-    const char* envAllowRedirects = std::getenv("OVMS_MEDIA_URL_ALLOW_REDIRECTS");
-    const bool redirectsAllowed = envAllowRedirects != nullptr && std::strcmp(envAllowRedirects, "1") == 0;
+    const bool redirectsAllowed = areMediaRedirectsAllowed();
     if (redirectsAllowed) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "URL redirects allowed");
-        CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L))
     }
-    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_MAXFILESIZE_LARGE, static_cast<curl_off_t>(sizeLimit)))
+    const MediaDownloadOptions options{url, appendChunkCallback, &downloadContext, static_cast<size_t>(sizeLimit), IMAGE_DOWNLOAD_TIMEOUT_SECONDS};
+    auto status = configureMediaDownload(curl_handle, options, redirectsAllowed);
 
     if (status != CURLE_OK) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger,
@@ -308,16 +330,9 @@ absl::Status downloadMediaToFile(const std::string& mediaSource, std::FILE* outp
     }
     auto handleGuard = std::unique_ptr<CURL, decltype(&curl_easy_cleanup)>(curlHandle, curl_easy_cleanup);
     MediaFileDownloadContext downloadContext{output, sizeLimit};
-    CURLcode status = curl_easy_setopt(curlHandle, CURLOPT_URL, mediaSource.c_str());
-    CURL_SETOPT(curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, appendMediaFileChunk))
-    CURL_SETOPT(curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, &downloadContext))
-    CURL_SETOPT(curl_easy_setopt(curlHandle, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA))
-    const char* envAllowRedirects = std::getenv("OVMS_MEDIA_URL_ALLOW_REDIRECTS");
-    if (envAllowRedirects != nullptr && std::strcmp(envAllowRedirects, "1") == 0) {
-        CURL_SETOPT(curl_easy_setopt(curlHandle, CURLOPT_FOLLOWLOCATION, 1L))
-    }
-    CURL_SETOPT(curl_easy_setopt(curlHandle, CURLOPT_MAXFILESIZE_LARGE, static_cast<curl_off_t>(sizeLimit)))
-    CURL_SETOPT(curl_easy_setopt(curlHandle, CURLOPT_TIMEOUT, MEDIA_DOWNLOAD_TIMEOUT_SECONDS))
+    const bool redirectsAllowed = areMediaRedirectsAllowed();
+    const MediaDownloadOptions options{mediaSource.c_str(), appendMediaFileChunk, &downloadContext, sizeLimit, VIDEO_DOWNLOAD_TIMEOUT_SECONDS};
+    CURLcode status = configureMediaDownload(curlHandle, options, redirectsAllowed);
     if (status != CURLE_OK) {
         return absl::InternalError("Video downloading failed");
     }
@@ -336,7 +351,6 @@ absl::Status downloadMediaToFile(const std::string& mediaSource, std::FILE* outp
         if (status != CURLE_OK) {
             return absl::InternalError("Failed to get video download response status.");
         }
-        const bool redirectsAllowed = envAllowRedirects != nullptr && std::strcmp(envAllowRedirects, "1") == 0;
         const auto responseStatus = validateHttpDownloadResponse(static_cast<int64_t>(httpCode), redirectsAllowed, "video");
         if (!responseStatus.ok()) {
             return responseStatus;
