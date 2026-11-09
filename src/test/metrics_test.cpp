@@ -56,6 +56,34 @@ TEST(CalculatorMetricsTest, RegistersAndUpdatesAcrossInstancesAndScrapes) {
     EXPECT_EQ(scrape, registry.collect());
 }
 
+TEST(CalculatorMetricsTest, RegistersAndUpdatesGauge) {
+    MetricRegistry registry;
+    CalculatorMetrics metrics(&registry, "graph", "node");
+    auto gauge = metrics.registerGauge("custom_queue_depth", "Queued requests.");
+    EXPECT_EQ(gauge, metrics.registerGauge("custom_queue_depth", "Queued requests."));
+    gauge->set(4);
+    gauge->increment(2);
+    gauge->decrement();
+    EXPECT_THAT(registry.collect(), HasSubstr("custom_queue_depth{name=\"graph\",node=\"node\"} 5\n"));
+    gauge->set(-1.5);
+    EXPECT_THAT(registry.collect(), HasSubstr("custom_queue_depth{name=\"graph\",node=\"node\"} -1.5\n"));
+}
+
+TEST(CalculatorMetricsTest, RegistersAndUpdatesHistogram) {
+    MetricRegistry registry;
+    CalculatorMetrics metrics(&registry, "graph", "node");
+    const std::vector<double> buckets{0.1, 1, 5};
+    auto histogram = metrics.registerHistogram("custom_request_duration_seconds", "Request duration.", buckets);
+    EXPECT_EQ(histogram, metrics.registerHistogram("custom_request_duration_seconds", "Request duration.", buckets));
+    histogram->observe(0.5);
+    histogram->observe(3);
+    const std::string scrape = registry.collect();
+    EXPECT_THAT(scrape, HasSubstr("custom_request_duration_seconds_count{name=\"graph\",node=\"node\"} 2\n"));
+    EXPECT_THAT(scrape, HasSubstr("custom_request_duration_seconds_sum{name=\"graph\",node=\"node\"} 3.5\n"));
+    EXPECT_THAT(scrape, HasSubstr("custom_request_duration_seconds_bucket{name=\"graph\",node=\"node\",le=\"1\"} 1\n"));
+    EXPECT_THAT(scrape, HasSubstr("custom_request_duration_seconds_bucket{name=\"graph\",node=\"node\",le=\"5\"} 2\n"));
+}
+
 TEST(CalculatorMetricsTest, NodeAndGraphScopesAreIndependent) {
     MetricRegistry registry;
     CalculatorMetrics first(&registry, "graph", "first");
@@ -83,15 +111,40 @@ TEST(CalculatorMetricsTest, InvalidRegistrationsAndUpdatesFailExplicitly) {
     for (double value : {-1.0, std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::infinity()}) {
         EXPECT_THROW(counter->increment(value), std::invalid_argument);
     }
+    auto gauge = metrics.registerGauge("custom_temperature", "Temperature.");
+    for (double value : {std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::infinity()}) {
+        EXPECT_THROW(gauge->set(value), std::invalid_argument);
+        EXPECT_THROW(gauge->increment(value), std::invalid_argument);
+        EXPECT_THROW(gauge->decrement(value), std::invalid_argument);
+    }
+    const auto histogram = metrics.registerHistogram("custom_latency_seconds", "Latency.", {1, 2});
+    for (double value : {std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::infinity()}) {
+        EXPECT_THROW(histogram->observe(value), std::invalid_argument);
+    }
+    EXPECT_THROW(metrics.registerHistogram("custom_empty_buckets", "Latency.", {}), std::invalid_argument);
+    EXPECT_THROW(metrics.registerHistogram("custom_unsorted_buckets", "Latency.", {2, 1}), std::invalid_argument);
+    EXPECT_THROW(metrics.registerHistogram("custom_duplicate_buckets", "Latency.", {1, 1}), std::invalid_argument);
+    EXPECT_THROW(metrics.registerHistogram("custom_nonfinite_buckets", "Latency.", {1, std::numeric_limits<double>::infinity()}), std::invalid_argument);
+    EXPECT_THROW(metrics.registerGauge("custom_bad-name", "Gauge."), std::invalid_argument);
     EXPECT_THAT(registry.collect(), HasSubstr("custom_events_total{name=\"graph\",node=\"node\"} 0\n"));
 }
 
 TEST(CalculatorMetricsTest, DisabledMetricsReturnUsableNoOpHandles) {
     CalculatorMetrics metrics(nullptr, "graph", "node");
     auto counter = metrics.registerCounter("custom_events_total", "Events.");
+    auto gauge = metrics.registerGauge("custom_queue_depth", "Queued requests.");
+    auto histogram = metrics.registerHistogram("custom_latency_seconds", "Latency.", {1, 2});
     ASSERT_NE(counter, nullptr);
+    ASSERT_NE(gauge, nullptr);
+    ASSERT_NE(histogram, nullptr);
     counter->increment(3);
+    gauge->set(3);
+    gauge->increment();
+    gauge->decrement();
+    histogram->observe(1.5);
     EXPECT_EQ(counter, metrics.registerCounter("custom_events_total", "Events."));
+    EXPECT_EQ(gauge, metrics.registerGauge("custom_queue_depth", "Queued requests."));
+    EXPECT_EQ(histogram, metrics.registerHistogram("custom_latency_seconds", "Latency.", {1, 2}));
 }
 
 TEST(CalculatorMetricsTest, DeactivationProtectsReplacementSeriesAndRegistryLifetime) {
@@ -127,6 +180,42 @@ TEST(CalculatorMetricsTest, ScopeDestructionRemovesSeriesEvenWhenHandleIsRetaine
     EXPECT_TRUE(registry.collect().empty());
 }
 
+TEST(CalculatorMetricsTest, DeactivationRemovesAllMetricTypesAndDisablesRetainedHandles) {
+    MetricRegistry registry;
+    CalculatorMetrics metrics(&registry, "graph", "node");
+    auto counter = metrics.registerCounter("custom_events_total", "Events.");
+    auto gauge = metrics.registerGauge("custom_queue_depth", "Queued requests.");
+    auto histogram = metrics.registerHistogram("custom_latency_seconds", "Latency.", {1, 2});
+    counter->increment();
+    gauge->set(4);
+    histogram->observe(1.5);
+
+    metrics.deactivate();
+    EXPECT_TRUE(registry.collect().empty());
+    counter->increment();
+    gauge->set(10);
+    histogram->observe(1.5);
+    EXPECT_TRUE(registry.collect().empty());
+}
+
+TEST(CalculatorMetricsTest, RegistrationTypeAndHistogramBucketsMustMatchAcrossScopes) {
+    MetricRegistry registry;
+    CalculatorMetrics first(&registry, "graph", "first");
+    CalculatorMetrics second(&registry, "graph", "second");
+    first.registerGauge("custom_events_total", "Events.")->set(3);
+    second.registerGauge("custom_events_total", "Events.")->set(5);
+    EXPECT_THROW(second.registerCounter("custom_events_total", "Events."), std::invalid_argument);
+
+    first.registerHistogram("custom_latency_seconds", "Latency.", {1, 2});
+    second.registerHistogram("custom_latency_seconds", "Latency.", {1, 2})->observe(1.5);
+    EXPECT_THROW(second.registerHistogram("custom_latency_seconds", "Latency.", {1, 3}), std::invalid_argument);
+    EXPECT_THROW(second.registerHistogram("custom_latency_seconds", "Different help.", {1, 2}), std::invalid_argument);
+    const std::string scrape = registry.collect();
+    EXPECT_THAT(scrape, HasSubstr("custom_events_total{name=\"graph\",node=\"first\"} 3\n"));
+    EXPECT_THAT(scrape, HasSubstr("custom_events_total{name=\"graph\",node=\"second\"} 5\n"));
+    EXPECT_THAT(scrape, HasSubstr("custom_latency_seconds_count{name=\"graph\",node=\"second\"} 1\n"));
+}
+
 TEST(CalculatorMetricsTest, ConcurrentRegistrationUpdatesScrapesAndDeactivation) {
     MetricRegistry registry;
     CalculatorMetrics metrics(&registry, "graph", "node");
@@ -160,6 +249,15 @@ TEST(CalculatorMetricsTest, ConflictingBuiltInFamilyTypeFailsRegistration) {
     EXPECT_TRUE(registry.collect().empty());
 }
 
+TEST(CalculatorMetricsTest, ConflictingCustomMetricTypeFailsRegistration) {
+    MetricRegistry registry;
+    auto family = registry.createFamily<MetricGauge>("custom_request_duration_seconds", "Request duration.");
+    ASSERT_NE(family, nullptr);
+    CalculatorMetrics metrics(&registry, "graph", "node");
+    EXPECT_THROW(metrics.registerHistogram("custom_request_duration_seconds", "Request duration.", {1, 2}), std::invalid_argument);
+    EXPECT_TRUE(registry.collect().empty());
+}
+
 class LLMMetricsTest : public ::testing::Test {
 protected:
     MetricRegistry registry;
@@ -167,7 +265,7 @@ protected:
 
     void SetUp() override {
         ASSERT_EQ(config.loadFromCLIString(true,
-                      METRIC_NAME_LLM_KV_CACHE_UTILIZATION + "," + METRIC_NAME_LLM_PREFILL_SPEED + "," +
+                      METRIC_NAME_KV_CACHE_UTILIZATION + "," + METRIC_NAME_KV_CACHE_SIZE + "," + METRIC_NAME_LLM_PREFILL_SPEED + "," +
                           METRIC_NAME_LLM_GENERATED_TOKENS + "," + METRIC_NAME_LLM_SCHEDULED_REQUESTS + "," + METRIC_NAME_LLM_TTFT),
             StatusCode::OK);
     }
@@ -175,7 +273,8 @@ protected:
 
 TEST_F(LLMMetricsTest, OptionalFamiliesAreNotEnabledByDefault) {
     MetricConfig defaults(true);
-    EXPECT_FALSE(defaults.isFamilyEnabled(METRIC_NAME_LLM_KV_CACHE_UTILIZATION));
+    EXPECT_FALSE(defaults.isFamilyEnabled(METRIC_NAME_KV_CACHE_UTILIZATION));
+    EXPECT_FALSE(defaults.isFamilyEnabled(METRIC_NAME_KV_CACHE_SIZE));
     EXPECT_FALSE(defaults.isFamilyEnabled(METRIC_NAME_LLM_PREFILL_SPEED));
     EXPECT_FALSE(defaults.isFamilyEnabled(METRIC_NAME_LLM_GENERATED_TOKENS));
     EXPECT_FALSE(defaults.isFamilyEnabled(METRIC_NAME_LLM_SCHEDULED_REQUESTS));
@@ -212,11 +311,19 @@ TEST_F(LLMMetricsTest, MissingRegistryOrConfigurationDoesNotRegisterSeries) {
 
 TEST_F(LLMMetricsTest, FamiliesCanBeSelectedIndependently) {
     MetricConfig cacheConfig;
-    ASSERT_EQ(cacheConfig.loadFromCLIString(true, METRIC_NAME_LLM_KV_CACHE_UTILIZATION), StatusCode::OK);
+    ASSERT_EQ(cacheConfig.loadFromCLIString(true, METRIC_NAME_KV_CACHE_UTILIZATION), StatusCode::OK);
     LLMMetricReporter cacheReporter(&cacheConfig, &registry, "cache_model", "llm");
     EXPECT_TRUE(cacheReporter.isCacheUtilizationEnabled());
     cacheReporter.observePrefillSpeed(1000);
     EXPECT_THAT(registry.collect(), Not(HasSubstr(METRIC_NAME_LLM_PREFILL_SPEED)));
+
+    MetricConfig cacheSizeConfig;
+    ASSERT_EQ(cacheSizeConfig.loadFromCLIString(true, METRIC_NAME_KV_CACHE_SIZE), StatusCode::OK);
+    LLMMetricReporter cacheSizeReporter(&cacheSizeConfig, &registry, "cache_size_model", "llm");
+    EXPECT_TRUE(cacheSizeReporter.isCacheSizeEnabled());
+    EXPECT_FALSE(cacheSizeReporter.isCacheUtilizationEnabled());
+    cacheSizeReporter.setCacheSizeBytes(4096);
+    EXPECT_THAT(registry.collect(), HasSubstr("ovms_kv_cache_size_bytes{name=\"cache_size_model\",node=\"llm\"} 4096\n"));
 
     MetricConfig prefillConfig;
     ASSERT_EQ(prefillConfig.loadFromCLIString(true, METRIC_NAME_LLM_PREFILL_SPEED), StatusCode::OK);
@@ -236,12 +343,22 @@ TEST_F(LLMMetricsTest, GaugeRetainsLatestValueAcrossScrapes) {
     reporter.setCacheUtilization(25);
     reporter.setCacheUtilization(42.5);
     const std::string firstScrape = registry.collect();
-    EXPECT_THAT(firstScrape, HasSubstr("ovms_llm_kv_cache_utilization_percent{name=\"model\",node=\"llm\"} 42.5\n"));
+    EXPECT_THAT(firstScrape, HasSubstr("ovms_kv_cache_utilization_percent{name=\"model\",node=\"llm\"} 42.5\n"));
     EXPECT_EQ(registry.collect(), firstScrape);
     reporter.setCacheUtilization(0);
-    EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_kv_cache_utilization_percent{name=\"model\",node=\"llm\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("ovms_kv_cache_utilization_percent{name=\"model\",node=\"llm\"} 0\n"));
     reporter.setCacheUtilization(100);
-    EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_kv_cache_utilization_percent{name=\"model\",node=\"llm\"} 100\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("ovms_kv_cache_utilization_percent{name=\"model\",node=\"llm\"} 100\n"));
+}
+
+TEST_F(LLMMetricsTest, CacheSizeGaugeRetainsLatestValueAcrossScrapes) {
+    LLMMetricReporter reporter(&config, &registry, "model", "llm");
+    ASSERT_TRUE(reporter.isCacheSizeEnabled());
+    reporter.setCacheSizeBytes(1024);
+    reporter.setCacheSizeBytes(2048);
+    const std::string firstScrape = registry.collect();
+    EXPECT_THAT(firstScrape, HasSubstr("ovms_kv_cache_size_bytes{name=\"model\",node=\"llm\"} 2048\n"));
+    EXPECT_EQ(registry.collect(), firstScrape);
 }
 
 TEST_F(LLMMetricsTest, NewFamiliesCanBeSelectedIndependently) {
@@ -346,14 +463,14 @@ TEST_F(LLMMetricsTest, PipelineLabelsAreIndependentAndRemovedOnDestruction) {
         LLMMetricReporter otherGraph(&config, &registry, "other", "first");
         second.setCacheUtilization(40);
         otherGraph.setCacheUtilization(60);
-        EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_kv_cache_utilization_percent{name=\"model\",node=\"first\"} 20\n"));
-        EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_kv_cache_utilization_percent{name=\"model\",node=\"second\"} 40\n"));
-        EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_kv_cache_utilization_percent{name=\"other\",node=\"first\"} 60\n"));
+        EXPECT_THAT(registry.collect(), HasSubstr("ovms_kv_cache_utilization_percent{name=\"model\",node=\"first\"} 20\n"));
+        EXPECT_THAT(registry.collect(), HasSubstr("ovms_kv_cache_utilization_percent{name=\"model\",node=\"second\"} 40\n"));
+        EXPECT_THAT(registry.collect(), HasSubstr("ovms_kv_cache_utilization_percent{name=\"other\",node=\"first\"} 60\n"));
     }
     EXPECT_THAT(registry.collect(), Not(HasSubstr("node=\"second\"")));
     EXPECT_THAT(registry.collect(), Not(HasSubstr("name=\"other\"")));
     first.setCacheUtilization(30);
-    EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_kv_cache_utilization_percent{name=\"model\",node=\"first\"} 30\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("ovms_kv_cache_utilization_percent{name=\"model\",node=\"first\"} 30\n"));
 }
 
 TEST_F(LLMMetricsTest, ReloadStartsFreshSeries) {
@@ -366,7 +483,7 @@ TEST_F(LLMMetricsTest, ReloadStartsFreshSeries) {
     }
     EXPECT_TRUE(registry.collect().empty());
     LLMMetricReporter reloaded(&config, &registry, "model", "llm");
-    EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_kv_cache_utilization_percent{name=\"model\",node=\"llm\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("ovms_kv_cache_utilization_percent{name=\"model\",node=\"llm\"} 0\n"));
     EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"model\",node=\"llm\"} 0\n"));
     EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_generated_tokens_total{name=\"model\",node=\"llm\"} 0\n"));
     EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_scheduled_requests{name=\"model\",node=\"llm\"} 0\n"));
@@ -423,7 +540,7 @@ TEST_F(LLMMetricsTest, ConcurrentUpdatesAndScraping) {
         }
     });
     for (int i = 0; i < 100; ++i) {
-        EXPECT_THAT(registry.collect(), HasSubstr("# TYPE ovms_llm_kv_cache_utilization_percent gauge"));
+        EXPECT_THAT(registry.collect(), HasSubstr("# TYPE ovms_kv_cache_utilization_percent gauge"));
     }
     writer.get();
     EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"model\",node=\"llm\"} 1000\n"));

@@ -52,7 +52,8 @@ extern const std::string METRIC_NAME_PROCESSING_TIME;
 
 extern const std::string METRIC_NAME_REQUEST_LATENCY;
 
-extern const std::string METRIC_NAME_LLM_KV_CACHE_UTILIZATION;
+extern const std::string METRIC_NAME_KV_CACHE_UTILIZATION;
+extern const std::string METRIC_NAME_KV_CACHE_SIZE;
 extern const std::string METRIC_NAME_LLM_PREFILL_SPEED;
 extern const std::string METRIC_NAME_LLM_GENERATED_TOKENS;
 extern const std::string METRIC_NAME_LLM_SCHEDULED_REQUESTS;
@@ -97,14 +98,16 @@ private:
     std::unordered_set<std::string> additionalMetricFamilies = {
         {METRIC_NAME_INFER_REQ_QUEUE_SIZE},
         {METRIC_NAME_INFER_REQ_ACTIVE},
-        {METRIC_NAME_LLM_KV_CACHE_UTILIZATION},
+        {METRIC_NAME_KV_CACHE_UTILIZATION},
+        {METRIC_NAME_KV_CACHE_SIZE},
         {METRIC_NAME_LLM_PREFILL_SPEED},
         {METRIC_NAME_LLM_GENERATED_TOKENS},
         {METRIC_NAME_LLM_SCHEDULED_REQUESTS},
         {METRIC_NAME_LLM_TTFT}};
 
     std::unordered_set<std::string> llmMetricFamilies = {
-        {METRIC_NAME_LLM_KV_CACHE_UTILIZATION},
+        {METRIC_NAME_KV_CACHE_UTILIZATION},
+        {METRIC_NAME_KV_CACHE_SIZE},
         {METRIC_NAME_LLM_PREFILL_SPEED},
         {METRIC_NAME_LLM_GENERATED_TOKENS},
         {METRIC_NAME_LLM_SCHEDULED_REQUESTS},

@@ -735,7 +735,8 @@ protected:
             "monitoring": {"metrics": {
                 "enable": true,
                 "metrics_list": [
-                    "ovms_llm_kv_cache_utilization_percent",
+                    "ovms_kv_cache_utilization_percent",
+                    "ovms_kv_cache_size_bytes",
                     "ovms_llm_prefill_speed_tokens_per_second",
                     "ovms_llm_generated_tokens_total",
                     "ovms_llm_scheduled_requests",
@@ -782,7 +783,8 @@ TEST_P(LLMMetricsFlowTest, PublishesAtInfoLevelAndResetsAfterIdleUnload) {
                       responseComponents, writer, parser),
             streaming ? StatusCode::PARTIAL_END : StatusCode::OK);
         const std::string scrape = server.collect();
-        EXPECT_THAT(scrape, HasSubstr("ovms_llm_kv_cache_utilization_percent{name=\"metrics_llm\",node=\"llmNode1\"} "));
+        EXPECT_THAT(scrape, HasSubstr("ovms_kv_cache_utilization_percent{name=\"metrics_llm\",node=\"llmNode1\"} "));
+        EXPECT_THAT(scrape, HasSubstr("ovms_kv_cache_size_bytes{name=\"metrics_llm\",node=\"llmNode1\"} "));
         EXPECT_THAT(scrape, HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"metrics_llm\",node=\"llmNode1\"} " + std::to_string(i) + "\n"));
         EXPECT_THAT(scrape, Not(HasSubstr("ovms_llm_prefill_speed_tokens_per_second_sum{name=\"metrics_llm\",node=\"llmNode1\"} 0\n")));
         EXPECT_THAT(scrape, HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"metrics_llm\",node=\"llmNode1\"} " + std::to_string(i) + "\n"));

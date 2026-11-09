@@ -93,7 +93,8 @@ TEST(MetricsListPresetTest, AllLLMMetrics) {
 
     ASSERT_EQ(metricConfig.loadFromCLIString(true, "all_llm"), StatusCode::OK);
 
-    EXPECT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_LLM_KV_CACHE_UTILIZATION));
+    EXPECT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_KV_CACHE_UTILIZATION));
+    EXPECT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_KV_CACHE_SIZE));
     EXPECT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_LLM_PREFILL_SPEED));
     EXPECT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_LLM_GENERATED_TOKENS));
     EXPECT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_LLM_SCHEDULED_REQUESTS));

@@ -19,19 +19,22 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <vector>
 
 namespace ovms {
 
 class MetricCounter;
+class MetricGauge;
+class MetricHistogram;
 class MetricRegistry;
 template <typename T>
 class MetricFamily;
+template <typename T>
+class MetricSeries;
 
 /// A thread-safe custom counter handle. Updates after graph unload are ignored.
 class CalculatorCounter {
-    std::mutex counterMutex;
-    std::shared_ptr<MetricFamily<MetricCounter>> family;
-    std::unique_ptr<MetricCounter> metric;
+    std::shared_ptr<MetricSeries<MetricCounter>> series;
     CalculatorCounter(MetricRegistry* registry, const std::string& name, const std::string& help,
         const std::string& graphName, const std::string& nodeName);
     void deactivate();
@@ -43,28 +46,72 @@ public:
     void increment(double value = 1.0);
 };
 
+/// A thread-safe custom gauge handle. Updates after graph unload are ignored.
+class CalculatorGauge {
+    std::shared_ptr<MetricSeries<MetricGauge>> series;
+    CalculatorGauge(MetricRegistry* registry, const std::string& name, const std::string& help,
+        const std::string& graphName, const std::string& nodeName);
+    void deactivate();
+    friend class CalculatorMetrics;
+
+public:
+    ~CalculatorGauge();
+    /// Set a finite value. Invalid values throw std::invalid_argument.
+    void set(double value);
+    /// Add or subtract a finite, non-negative amount.
+    void increment(double value = 1.0);
+    void decrement(double value = 1.0);
+};
+
+/// A thread-safe custom histogram handle. Updates after graph unload are ignored.
+class CalculatorHistogram {
+    std::shared_ptr<MetricSeries<MetricHistogram>> series;
+    CalculatorHistogram(MetricRegistry* registry, const std::string& name, const std::string& help,
+        const std::string& graphName, const std::string& nodeName, const std::vector<double>& bucketBoundaries);
+    void deactivate();
+    friend class CalculatorMetrics;
+
+public:
+    ~CalculatorHistogram();
+    /// Record a finite observation. Invalid values throw std::invalid_argument.
+    void observe(double value);
+};
+
 /// One graph/node registration scope, shared by all instances of that calculator.
 /// The registry must outlive the scope, or deactivate() must be called first.
 class CalculatorMetrics {
+    enum class MetricKind {
+        COUNTER,
+        GAUGE,
+        HISTOGRAM
+    };
+
     struct Registration {
         std::string help;
+        MetricKind kind;
+        std::vector<double> bucketBoundaries;
         std::shared_ptr<CalculatorCounter> counter;
+        std::shared_ptr<CalculatorGauge> gauge;
+        std::shared_ptr<CalculatorHistogram> histogram;
     };
     std::mutex scopeMutex;
     MetricRegistry* registry;
     const std::string graphName;
     const std::string nodeName;
     bool active = true;
-    std::map<std::string, Registration> counters;
+    std::map<std::string, Registration> metrics;
 
 public:
     CalculatorMetrics(MetricRegistry* registry, const std::string& graphName, const std::string& nodeName);
     ~CalculatorMetrics();
-    /// Register once (usually in Open). Repeated identical registration returns
-    /// the same handle. A metric name must use the same help text across scopes.
-    /// Names must start with custom_ and end with _total.
-    /// Disabled metrics return a valid no-op handle; malformed registrations throw.
+    /// Register once (usually in Open). Counters must be named custom_<name>_total;
+    /// gauges and histograms must start with custom_. Names and help text must
+    /// match across registrations. Disabled metrics return valid no-op handles.
     std::shared_ptr<CalculatorCounter> registerCounter(const std::string& name, const std::string& help);
+    std::shared_ptr<CalculatorGauge> registerGauge(const std::string& name, const std::string& help);
+    /// Histogram bucket boundaries must be finite and strictly increasing.
+    std::shared_ptr<CalculatorHistogram> registerHistogram(const std::string& name, const std::string& help,
+        const std::vector<double>& bucketBoundaries);
     /// Remove this scope's series and make retained handles safe no-ops.
     void deactivate();
 };

@@ -56,10 +56,13 @@ struct LLMExecutor {
     }
 
     void publishPipelineMetrics(bool idle = false) {
-        if (metricReporter && (metricReporter->isCacheUtilizationEnabled() || metricReporter->isScheduledRequestsEnabled())) {
+        if (metricReporter && (metricReporter->isCacheUtilizationEnabled() || metricReporter->isCacheSizeEnabled() || metricReporter->isScheduledRequestsEnabled())) {
             const auto metrics = pipe->get_metrics();
             if (metricReporter->isCacheUtilizationEnabled()) {
                 metricReporter->setCacheUtilization(metrics.cache_usage);
+            }
+            if (metricReporter->isCacheSizeEnabled()) {
+                metricReporter->setCacheSizeBytes(metrics.kv_cache_size_in_bytes);
             }
             if (metricReporter->isScheduledRequestsEnabled()) {
                 metricReporter->setScheduledRequests(idle ? 0 : metrics.scheduled_requests);

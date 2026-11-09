@@ -46,7 +46,8 @@ Optional metrics
 | :---    |    :----   |    :----   |    :----       |
 | gauge      | ovms_infer_req_queue_size | name,version | Inference request queue size (nireq). |
 | gauge      | ovms_infer_req_active | name,version | Number of currently consumed inference requests from the processing queue that are now either in the data loading or inference process. |
-| gauge      | ovms_llm_kv_cache_utilization_percent | name,node | GenAI-reported cache utilization (0-100) for a continuous-batching LLM or VLM pipeline. |
+| gauge      | ovms_kv_cache_utilization_percent | name,node | GenAI-reported cache utilization (0-100) for a continuous-batching LLM or VLM pipeline. |
+| gauge      | ovms_kv_cache_size_bytes | name,node | GenAI-reported KV-cache size in bytes for a continuous-batching LLM or VLM pipeline. |
 | histogram      | ovms_llm_prefill_speed_tokens_per_second | name,node | Per-request input token count divided by GenAI time to first token in seconds, for continuous-batching LLM and VLM pipelines. |
 | counter      | ovms_llm_generated_tokens_total | name,node | Generated output tokens from successfully completed continuous-batching LLM/VLM requests; excludes partial output from failed or cancelled requests. |
 | gauge      | ovms_llm_scheduled_requests | name,node | Number of requests scheduled in the last continuous-batching generation step; set to zero when the executor becomes idle. |
@@ -66,10 +67,10 @@ Labels description
 
 ## LLM-specific metrics
 
-The five currently supported `ovms_llm_*` families are optional and supported
-for continuous-batching language and vision-language models, not legacy/NPU or
-Omni pipelines. Use the `all_llm` preset in the metrics list to enable all five,
-or list individual families:
+The currently supported GenAI metric families are optional and supported for
+continuous-batching language and vision-language models, not legacy/NPU or Omni
+pipelines. Use the `all_llm` preset in the metrics list to enable all six, or
+list individual families:
 
 ```bash
 ovms --config_path /models/config.json --rest_port 8000 --metrics_enable \
@@ -88,6 +89,8 @@ before waiting for new requests. It is GenAI's last-step maximum cache utilizati
 percentage across registered cache types, not total device-memory utilization.
 The denominator can change with dynamic cache allocation. Idle pipelines retain
 the last reported sample; idle does not imply an empty cache or a zero value.
+KV-cache size is reported in bytes from GenAI's pipeline metrics and can vary
+with dynamic cache allocation. It is not a measurement of total device memory.
 
 Prefill speed is observed once per successfully completed request, for both unary
 and streaming responses, independently of the log level. Cancelled or failed
@@ -329,10 +332,11 @@ For [MediaPipe Graphs](./mediapipe.md) execution there are 6 generic metrics whi
 
 ## Custom metrics in C++ calculators
 
-OVMS supports custom counters in C++ MediaPipe calculators. These counters are
-exposed on the existing `/metrics` endpoint with graph and calculator-node
-labels. For setup instructions, API usage, naming rules, and lifecycle details,
-see the [developer guide](./developer_guide.md#custom-metrics-in-c-calculators).
+OVMS supports custom counters, gauges, and histograms in C++ MediaPipe
+calculators. These metrics are exposed on the existing `/metrics` endpoint with
+graph and calculator-node labels. For setup instructions, API usage, naming
+rules, and lifecycle details, see the
+[developer guide](./developer_guide.md#custom-metrics-in-c-calculators).
 
 ## Visualize with Grafana
 

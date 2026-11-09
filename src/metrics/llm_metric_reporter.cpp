@@ -23,6 +23,7 @@
 #include "metric_config.hpp"
 #include "metric_family.hpp"
 #include "metric_registry.hpp"
+#include "metric_series.hpp"
 
 namespace ovms {
 namespace {
@@ -43,48 +44,57 @@ LLMMetricReporter::LLMMetricReporter(const MetricConfig* config, MetricRegistry*
 
     const MetricLabels labels{{"name", graphName}, {"node", nodeName}};
     try {
-        if (config->isFamilyEnabled(METRIC_NAME_LLM_KV_CACHE_UTILIZATION)) {
-            cacheFamily = registry->createFamily<MetricGauge>(METRIC_NAME_LLM_KV_CACHE_UTILIZATION,
+        if (config->isFamilyEnabled(METRIC_NAME_KV_CACHE_UTILIZATION)) {
+            auto family = registry->createFamily<MetricGauge>(METRIC_NAME_KV_CACHE_UTILIZATION,
                 "GenAI KV cache utilization in percent of the pipeline cache capacity.");
-            if (!cacheFamily) {
+            if (!family) {
                 throw std::logic_error("Cannot create LLM KV cache metric family");
             }
-            cacheUtilization = cacheFamily->addMetric(labels);
+            cacheUtilization = std::make_shared<MetricSeries<MetricGauge>>(family, labels);
             cacheEnabled.store(true, std::memory_order_relaxed);
         }
+        if (config->isFamilyEnabled(METRIC_NAME_KV_CACHE_SIZE)) {
+            auto family = registry->createFamily<MetricGauge>(METRIC_NAME_KV_CACHE_SIZE,
+                "GenAI-reported KV cache size in bytes.");
+            if (!family) {
+                throw std::logic_error("Cannot create KV cache size metric family");
+            }
+            cacheSize = std::make_shared<MetricSeries<MetricGauge>>(family, labels);
+            cacheSizeEnabled.store(true, std::memory_order_relaxed);
+        }
         if (config->isFamilyEnabled(METRIC_NAME_LLM_PREFILL_SPEED)) {
-            prefillFamily = registry->createFamily<MetricHistogram>(METRIC_NAME_LLM_PREFILL_SPEED,
+            auto family = registry->createFamily<MetricHistogram>(METRIC_NAME_LLM_PREFILL_SPEED,
                 "Completed request input tokens divided by GenAI time to first token in seconds.");
-            if (!prefillFamily) {
+            if (!family) {
                 throw std::logic_error("Cannot create LLM prefill speed metric family");
             }
-            prefillSpeed = prefillFamily->addMetric(labels, PREFILL_SPEED_BUCKETS);
+            prefillSpeed = std::make_shared<MetricSeries<MetricHistogram>>(family, labels, PREFILL_SPEED_BUCKETS);
             prefillEnabled.store(true, std::memory_order_relaxed);
         }
         if (config->isFamilyEnabled(METRIC_NAME_LLM_SCHEDULED_REQUESTS)) {
-            scheduledFamily = registry->createFamily<MetricGauge>(METRIC_NAME_LLM_SCHEDULED_REQUESTS,
+            auto family = registry->createFamily<MetricGauge>(METRIC_NAME_LLM_SCHEDULED_REQUESTS,
                 "Number of requests scheduled in GenAI's last generation step, or zero when idle.");
-            if (!scheduledFamily) {
+            if (!family) {
                 throw std::logic_error("Cannot create LLM scheduled requests metric family");
             }
-            scheduledRequests = scheduledFamily->addMetric(labels);
+            scheduledRequests = std::make_shared<MetricSeries<MetricGauge>>(family, labels);
             scheduledEnabled.store(true, std::memory_order_relaxed);
         }
         if (config->isFamilyEnabled(METRIC_NAME_LLM_GENERATED_TOKENS)) {
-            generatedTokensFamily = registry->createFamily<MetricCounter>(METRIC_NAME_LLM_GENERATED_TOKENS,
+            auto family = registry->createFamily<MetricCounter>(METRIC_NAME_LLM_GENERATED_TOKENS,
                 "Generated output tokens from successfully completed requests; excludes partial output from failed or cancelled requests.");
-            if (!generatedTokensFamily) {
+            if (!family) {
                 throw std::logic_error("Cannot create LLM generated tokens metric family");
             }
-            generatedTokens = generatedTokensFamily->addMetric(labels);
+            generatedTokens = std::make_shared<MetricSeries<MetricCounter>>(family, labels);
         }
         if (config->isFamilyEnabled(METRIC_NAME_LLM_TTFT)) {
-            ttftFamily = registry->createFamily<MetricHistogram>(METRIC_NAME_LLM_TTFT,
+            auto family = registry->createFamily<MetricHistogram>(METRIC_NAME_LLM_TTFT,
                 "GenAI time to first token in milliseconds for successfully completed requests, excluding VLM embedding preparation.");
-            if (!ttftFamily) {
+            if (!family) {
                 throw std::logic_error("Cannot create LLM TTFT metric family");
             }
-            ttft = ttftFamily->addMetric(labels, TTFT_BUCKETS);
+            ttft = std::make_shared<MetricSeries<MetricHistogram>>(family, labels, TTFT_BUCKETS);
         }
         completedRequestMetricsEnabled.store(generatedTokens || ttft, std::memory_order_relaxed);
         completionMetricsEnabled.store(prefillSpeed || generatedTokens || ttft, std::memory_order_relaxed);
@@ -102,6 +112,7 @@ LLMMetricReporter::~LLMMetricReporter() {
 void LLMMetricReporter::deactivate() {
     std::lock_guard<std::mutex> lock(mutex);
     cacheEnabled.store(false, std::memory_order_relaxed);
+    cacheSizeEnabled.store(false, std::memory_order_relaxed);
     prefillEnabled.store(false, std::memory_order_relaxed);
     scheduledEnabled.store(false, std::memory_order_relaxed);
     completedRequestMetricsEnabled.store(false, std::memory_order_relaxed);
@@ -111,23 +122,27 @@ void LLMMetricReporter::deactivate() {
 
 void LLMMetricReporter::removeMetrics() {
     if (cacheUtilization) {
-        cacheFamily->remove(cacheUtilization);
+        cacheUtilization->deactivate();
         cacheUtilization.reset();
     }
+    if (cacheSize) {
+        cacheSize->deactivate();
+        cacheSize.reset();
+    }
     if (prefillSpeed) {
-        prefillFamily->remove(prefillSpeed);
+        prefillSpeed->deactivate();
         prefillSpeed.reset();
     }
     if (scheduledRequests) {
-        scheduledFamily->remove(scheduledRequests);
+        scheduledRequests->deactivate();
         scheduledRequests.reset();
     }
     if (generatedTokens) {
-        generatedTokensFamily->remove(generatedTokens);
+        generatedTokens->deactivate();
         generatedTokens.reset();
     }
     if (ttft) {
-        ttftFamily->remove(ttft);
+        ttft->deactivate();
         ttft.reset();
     }
 }
@@ -147,14 +162,14 @@ bool LLMMetricReporter::hasAnyCompletionMetricsEnabled() const {
 void LLMMetricReporter::setScheduledRequests(size_t requests) {
     std::lock_guard<std::mutex> lock(mutex);
     if (scheduledRequests) {
-        scheduledRequests->set(requests);
+        scheduledRequests->update([requests](MetricGauge& metric) { metric.set(requests); });
     }
 }
 
 void LLMMetricReporter::observeCompletedRequest(size_t outputTokens, double ttftMilliseconds) {
     std::lock_guard<std::mutex> lock(mutex);
     if (generatedTokens) {
-        generatedTokens->increment(outputTokens);
+        generatedTokens->update([outputTokens](MetricCounter& metric) { metric.increment(outputTokens); });
     }
     if (!ttft) {
         return;
@@ -167,11 +182,15 @@ void LLMMetricReporter::observeCompletedRequest(size_t outputTokens, double ttft
 #endif
         return;
     }
-    ttft->observe(ttftMilliseconds);
+    ttft->update([ttftMilliseconds](MetricHistogram& metric) { metric.observe(ttftMilliseconds); });
 }
 
 bool LLMMetricReporter::isCacheUtilizationEnabled() const {
     return cacheEnabled.load(std::memory_order_relaxed);
+}
+
+bool LLMMetricReporter::isCacheSizeEnabled() const {
+    return cacheSizeEnabled.load(std::memory_order_relaxed);
 }
 
 bool LLMMetricReporter::isPrefillSpeedEnabled() const {
@@ -191,7 +210,14 @@ void LLMMetricReporter::setCacheUtilization(double percent) {
 #endif
         return;
     }
-    cacheUtilization->set(percent);
+    cacheUtilization->update([percent](MetricGauge& metric) { metric.set(percent); });
+}
+
+void LLMMetricReporter::setCacheSizeBytes(size_t bytes) {
+    std::lock_guard<std::mutex> lock(mutex);
+    if (cacheSize) {
+        cacheSize->update([bytes](MetricGauge& metric) { metric.set(static_cast<double>(bytes)); });
+    }
 }
 
 void LLMMetricReporter::observePrefillSpeed(double tokensPerSecond) {
@@ -207,7 +233,7 @@ void LLMMetricReporter::observePrefillSpeed(double tokensPerSecond) {
 #endif
         return;
     }
-    prefillSpeed->observe(tokensPerSecond);
+    prefillSpeed->update([tokensPerSecond](MetricHistogram& metric) { metric.observe(tokensPerSecond); });
 }
 
 }  // namespace ovms

@@ -30,25 +30,24 @@ class MetricHistogram;
 class MetricCounter;
 template <typename T>
 class MetricFamily;
+template <typename T>
+class MetricSeries;
 
 // Owns the metric series for one LLM pipeline. The registry must outlive it.
 class LLMMetricReporter {
     std::mutex mutex;
     std::atomic<bool> cacheEnabled{false};
+    std::atomic<bool> cacheSizeEnabled{false};
     std::atomic<bool> prefillEnabled{false};
     std::atomic<bool> scheduledEnabled{false};
     std::atomic<bool> completedRequestMetricsEnabled{false};
     std::atomic<bool> completionMetricsEnabled{false};
-    std::shared_ptr<MetricFamily<MetricGauge>> cacheFamily;
-    std::shared_ptr<MetricFamily<MetricHistogram>> prefillFamily;
-    std::unique_ptr<MetricGauge> cacheUtilization;
-    std::unique_ptr<MetricHistogram> prefillSpeed;
-    std::shared_ptr<MetricFamily<MetricGauge>> scheduledFamily;
-    std::shared_ptr<MetricFamily<MetricCounter>> generatedTokensFamily;
-    std::shared_ptr<MetricFamily<MetricHistogram>> ttftFamily;
-    std::unique_ptr<MetricGauge> scheduledRequests;
-    std::unique_ptr<MetricCounter> generatedTokens;
-    std::unique_ptr<MetricHistogram> ttft;
+    std::shared_ptr<MetricSeries<MetricGauge>> cacheUtilization;
+    std::shared_ptr<MetricSeries<MetricGauge>> cacheSize;
+    std::shared_ptr<MetricSeries<MetricHistogram>> prefillSpeed;
+    std::shared_ptr<MetricSeries<MetricGauge>> scheduledRequests;
+    std::shared_ptr<MetricSeries<MetricCounter>> generatedTokens;
+    std::shared_ptr<MetricSeries<MetricHistogram>> ttft;
 
     void removeMetrics();
 
@@ -60,6 +59,7 @@ public:
     LLMMetricReporter& operator=(const LLMMetricReporter&) = delete;
 
     bool isCacheUtilizationEnabled() const;
+    bool isCacheSizeEnabled() const;
     bool isPrefillSpeedEnabled() const;
     bool isScheduledRequestsEnabled() const;
     bool hasCompletedRequestMetricsEnabled() const;
@@ -68,6 +68,8 @@ public:
     void deactivate();
     /// Publish GenAI's cache occupancy in percent, independently of scraping.
     void setCacheUtilization(double percent);
+    /// Publish GenAI's KV cache size in bytes.
+    void setCacheSizeBytes(size_t bytes);
     /// Record one completed request's TTFT-derived speed in tokens per second.
     void observePrefillSpeed(double tokensPerSecond);
     /// Publish GenAI's last-step scheduled request count, or zero when the executor is idle.

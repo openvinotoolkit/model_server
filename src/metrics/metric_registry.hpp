@@ -20,7 +20,9 @@
 #include <mutex>
 #include <string>
 #include <stdexcept>
+#include <typeindex>
 #include <utility>
+#include <vector>
 #include <prometheus/registry.h>
 
 namespace ovms {
@@ -52,13 +54,42 @@ public:
     // Returns all collected metrics in "Prometheus Text Exposition Format".
     std::string collect() const;
 
-    /// Register a custom counter family. Every registration of a metric name must use identical help text.
+    /// Register a custom metric family. Every registration must use the same type, help text, and histogram buckets.
+    template <typename MetricType>
+    std::shared_ptr<MetricFamily<MetricType>> registerCustomFamily(const std::string& name, const std::string& help,
+        const std::vector<double>& bucketBoundaries = {}) {
+        std::lock_guard<std::mutex> lock(customFamiliesMutex);
+        const auto existing = customFamilies.find(name);
+        if (existing != customFamilies.end()) {
+            if (existing->second.help != help || existing->second.type != std::type_index(typeid(MetricType)) ||
+                existing->second.bucketBoundaries != bucketBoundaries) {
+                throw std::invalid_argument("Custom metric '" + name +
+                                            "' was registered with different type, help text, or histogram buckets; "
+                                            "all registrations for the same metric name must match");
+            }
+            return std::static_pointer_cast<MetricFamily<MetricType>>(existing->second.family);
+        }
+        auto family = createFamily<MetricType>(name, help);
+        if (!family) {
+            throw std::invalid_argument("Cannot register custom metric family '" + name + "'");
+        }
+        customFamilies.emplace(name, CustomFamilyRegistration{help, std::type_index(typeid(MetricType)), bucketBoundaries, family});
+        return family;
+    }
+
     std::shared_ptr<MetricFamily<MetricCounter>> registerCustomCounterFamily(const std::string& name, const std::string& help);
 
 private:
+    struct CustomFamilyRegistration {
+        std::string help;
+        std::type_index type;
+        std::vector<double> bucketBoundaries;
+        std::shared_ptr<void> family;
+    };
+
     prometheus::Registry registryImpl;
     std::mutex customFamiliesMutex;
-    std::map<std::string, std::pair<std::string, std::shared_ptr<MetricFamily<MetricCounter>>>> customCounterFamilies;
+    std::map<std::string, CustomFamilyRegistration> customFamilies;
 };
 
 }  // namespace ovms

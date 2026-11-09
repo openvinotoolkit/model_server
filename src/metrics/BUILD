@@ -25,6 +25,7 @@ ovms_cc_library(
         "metric_family.hpp",
         "metric_module.hpp",
         "metric_registry.hpp",
+        "metric_series.hpp",
     ],
     srcs = [
         "calculator_metrics.cpp",
