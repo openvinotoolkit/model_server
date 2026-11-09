@@ -33,7 +33,7 @@ and MediaPipe image operations.
 | OpenCV calculator registration | Optional runtime plugin; execution tests pass | Optional DLL loaded into the in-process MediaPipe registries |
 | OpenCV runtime dependency | Optional on server startup | Optional until an OpenCV calculator graph is deployed |
 | MediaPipe runtime ownership | Separate runtime shared library | In-process in `ovms.exe`; optional calculators are a separate DLL |
-| OpenCV-free process tests | Passing after the glog ownership fix | DLL loader and graph execution covered by `ovms_test`; process-level missing-DLL test pending |
+| OpenCV-free process tests | Passing after the glog ownership fix | Windows build/runtime checks are now passing after the VC17 layout correction|
 
 Building the server successfully is not sufficient validation: the original
 Linux runtime failures occurred after compilation and linking succeeded.
@@ -199,7 +199,7 @@ OpenCV libraries absent.
 On a Windows build machine with the dependencies configured as in
 `windows_build.bat`, build and run it against the same representative image set:
 
-```bat
+```text
 set /p bazelVersion=<.bazelversion
 call C:\opt\openvino\setupvars.bat
 call C:\opt\opencv_4.14.0\setup_vars_opencv4.cmd
@@ -218,7 +218,7 @@ normal `windows_create_package.bat` run exercises the DLL-present path via
 temporary directory, remove `ovms_opencv_image_decoder.dll`,
 `ovms_opencv_calculators.dll`, and `opencv_world*.dll`, then run:
 
-```bat
+```text
 python src\test\no_opencv_server_test.py . - C:\path\to\temporary\ovms\ovms.exe
 ```
 
@@ -305,11 +305,11 @@ The latest complete Linux run passed all 3 targets and 32 test cases. Its log is
 is `test_log/opencv_calculators_plugin_test.fixed.log`.
 
 Updated Windows status: the stale `x64/vc16/...` assumption in the Bazel OpenCV
-rule was corrected to the actual installed `x64/vc17/...` layout, and the
-`//src/image_utils:image_decode_benchmark` target now builds and runs successfully
-with the fresh OpenCV 4.14.0 install. The remaining work is package-level smoke
-validation and optional-DLL fallback checks in the extracted Windows package, not
-a rebuild issue.
+rule has been corrected to the actual installed `x64/vc17/...` layout, and the
+OpenCV 4.14.0 Windows dependency now builds and runs cleanly with the current
+build rules. The remaining work is package-level smoke validation and the
+optional-DLL fallback checks in the extracted Windows package; the core build and
+runtime-path issue has been resolved.
 
 Run the focused Linux targets inside the selected build container, not on the
 host or a release/runtime image. The following is a developer verification

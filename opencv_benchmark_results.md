@@ -10,7 +10,7 @@ Environment:
 
 Command used:
 
-```bat
+```text
 cmd.exe /c "cd /d c:\git\model_server && call windows_setupvars.bat && C:\opt\bazel.exe --output_user_root=C:/opt build --config=win_mp_on --action_env OpenVINO_DIR=C:/opt/openvino/runtime/cmake //src/image_utils:image_decode_benchmark && bazel-bin\src\image_utils\image_decode_benchmark.exe src\test\images\rgb.jpg src\test\images\gray16.png"
 ```
 
@@ -35,7 +35,7 @@ The stale Bazel rule was pointing at `x64/vc16/...` while the installed OpenCV p
 
 Command used:
 
-```bat
+```text
 bazel --output_user_root=C:/opt build -c opt --config=win_mp_on --jobs=24 --verbose_failures //src/image_utils:image_decode_benchmark
 bazel-bin\src\image_utils\image_decode_benchmark.exe demos\benchmark\python\sample_data\road1.jpg
 ```
