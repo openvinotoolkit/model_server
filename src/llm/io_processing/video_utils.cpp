@@ -74,17 +74,20 @@ void appendStartCode(std::vector<uint8_t>& annexB, const uint8_t* nal, size_t si
     annexB.insert(annexB.end(), nal, nal + size);
 }
 
-bool appendLengthPrefixedSample(std::vector<uint8_t>& annexB, const uint8_t* sample, size_t size) {
+bool appendLengthPrefixedSample(std::vector<uint8_t>& annexB, const uint8_t* sample, size_t size, size_t lengthPrefixBytes) {
+    if (lengthPrefixBytes != 1 && lengthPrefixBytes != 2 && lengthPrefixBytes != 4) {
+        return false;
+    }
     size_t position = 0;
     while (position < size) {
-        if (size - position < 4) {
+        if (size - position < lengthPrefixBytes) {
             return false;
         }
-        const uint32_t nalSize = (static_cast<uint32_t>(sample[position]) << 24) |
-                                 (static_cast<uint32_t>(sample[position + 1]) << 16) |
-                                 (static_cast<uint32_t>(sample[position + 2]) << 8) |
-                                 static_cast<uint32_t>(sample[position + 3]);
-        position += 4;
+        uint32_t nalSize = 0;
+        for (size_t byteIndex = 0; byteIndex < lengthPrefixBytes; ++byteIndex) {
+            nalSize = (nalSize << 8) | sample[position + byteIndex];
+        }
+        position += lengthPrefixBytes;
         if (nalSize > size - position) {
             return false;
         }
@@ -328,7 +331,7 @@ absl::StatusOr<ov::Tensor> decodeVideoSource(const std::string& videoSource,
         }
         std::vector<uint8_t> sample(sampleBytes);
         if (readVideoBytes(offset, sample.data(), sample.size(), &file) != 0 ||
-            !appendLengthPrefixedSample(annexB, sample.data(), sample.size())) {
+            !appendLengthPrefixedSample(annexB, sample.data(), sample.size(), videoTrack.nal_length_size)) {
             decodeStatus = absl::InvalidArgumentError("MP4 source has an invalid H.264 sample");
             break;
         }

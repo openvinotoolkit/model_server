@@ -340,7 +340,10 @@ new_local_repository(
 http_archive(
     name = "minimp4",
     build_file = "@//third_party:minimp4.BUILD",
-    patches = ["@//third_party:minimp4_avcc_bounds.patch"],
+    patches = [
+        "@//third_party:minimp4_avcc_bounds.patch",
+        "@//third_party:minimp4_nal_length.patch",
+    ],
     patch_args = ["-p1", "--binary"],
     sha256 = "1049558a37f4dca34f5a5ff76b04c0d14705e3e66974afc650b9b76d19ccfd08",
     strip_prefix = "minimp4-2a3014a7753cfcba4442adeb469431967238fe6a",
