@@ -21,6 +21,7 @@ licenses(["notice"])  # BSD license
 exports_files(["LICENSE"])
 
 OPENCV_VERSION = "4140"  # 4.14.0
+OPENCV_VC_DIR = "vc17" if glob(["x64/vc17/bin/opencv_world" + OPENCV_VERSION + ".dll"]) else "vc16"
 
 config_setting(
     name = "opt_build",
