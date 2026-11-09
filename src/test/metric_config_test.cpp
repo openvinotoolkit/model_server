@@ -95,13 +95,13 @@ TEST(MetricsListPresetTest, AllLLMMetrics) {
     ASSERT_EQ(metricConfig.loadFromCLIString(true, "all_llm"), StatusCode::OK);
 
     EXPECT_EQ(MetricConfig::getLLMMetricFamilies(), (std::vector<std::string>{
-        METRIC_NAME_KV_CACHE_SIZE,
-        METRIC_NAME_KV_CACHE_UTILIZATION,
-        METRIC_NAME_LLM_GENERATED_TOKENS,
-        METRIC_NAME_LLM_PROMPT_TOKENS,
-        METRIC_NAME_LLM_SCHEDULED_REQUESTS,
-        METRIC_NAME_LLM_TPOT,
-        METRIC_NAME_LLM_TTFT}));
+                                                        METRIC_NAME_KV_CACHE_SIZE,
+                                                        METRIC_NAME_KV_CACHE_UTILIZATION,
+                                                        METRIC_NAME_LLM_GENERATED_TOKENS,
+                                                        METRIC_NAME_LLM_PROMPT_TOKENS,
+                                                        METRIC_NAME_LLM_SCHEDULED_REQUESTS,
+                                                        METRIC_NAME_LLM_TPOT,
+                                                        METRIC_NAME_LLM_TTFT}));
     EXPECT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_KV_CACHE_UTILIZATION));
     EXPECT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_KV_CACHE_SIZE));
     EXPECT_TRUE(metricConfig.isFamilyEnabled(METRIC_NAME_LLM_PROMPT_TOKENS));
