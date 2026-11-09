@@ -297,6 +297,12 @@ packages = {
         'libpython3.12-stdlib',
         'media-types',
     },
+    OvmsBaseType.UBUNTU26: {
+        'libicu74',
+        'tzdata',
+        'netbase',
+        'libreadline8t64'
+    },
     OvmsBaseType.UBUNTU26_PYTHON: {
         'libpython3.12t64',
         'libpython3.12-minimal',
@@ -369,11 +375,9 @@ whitelisted_packages = {
                                    "python": packages[OvmsBaseType.UBUNTU_PYTHON] | packages[OvmsBaseType.UBUNTU24_PYTHON]},
     OvmsType.UBUNTU26: {"default": packages[OvmsBaseType.UBUNTU] | packages[OvmsBaseType.UBUNTU26],
                         "python": packages[OvmsBaseType.UBUNTU_PYTHON] | packages[OvmsBaseType.UBUNTU26_PYTHON]},
-    OvmsType.UBUNTU26_GPU: {
-        "default": packages[OvmsBaseType.UBUNTU] | packages[OvmsBaseType.UBUNTU26] | packages[OvmsBaseType.UBUNTU_GPU],
-        "python": packages[OvmsBaseType.UBUNTU_PYTHON] | packages[OvmsBaseType.UBUNTU26_PYTHON]},
-    OvmsType.UBUNTU26_NGINX: {"default": packages[OvmsBaseType.UBUNTU] | packages[OvmsBaseType.UBUNTU26] | packages[
-        OvmsBaseType.UBUNTU_NGINX],
+    OvmsType.UBUNTU26_GPU: {"default": packages[OvmsBaseType.UBUNTU] | packages[OvmsBaseType.UBUNTU26] | packages[OvmsBaseType.UBUNTU_GPU],
+                            "python": packages[OvmsBaseType.UBUNTU_PYTHON] | packages[OvmsBaseType.UBUNTU26_PYTHON]},
+    OvmsType.UBUNTU26_NGINX: {"default": packages[OvmsBaseType.UBUNTU] | packages[OvmsBaseType.UBUNTU26] | packages[OvmsBaseType.UBUNTU_NGINX],
                               "python": packages[OvmsBaseType.UBUNTU_PYTHON] | packages[OvmsBaseType.UBUNTU26_PYTHON]},
     OvmsType.REDHAT: {"default": packages[OvmsBaseType.REDHAT],
                            "python": packages[OvmsBaseType.REDHAT_PYTHON]},
