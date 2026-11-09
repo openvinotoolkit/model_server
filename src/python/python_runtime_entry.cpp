@@ -126,21 +126,27 @@ bool validateEnvPaths(std::string& details) {
     if (const char* pythonPath = std::getenv("PYTHONPATH"); pythonPath != nullptr && pythonPath[0] != '\0') {
 #ifdef _WIN32
         const char separator = ';';
+        const auto bindingFilename = std::filesystem::path("pyovms.pyd");
 #else
         const char separator = ':';
+        const auto bindingFilename = std::filesystem::path("pyovms.so");
 #endif
         std::string pathValue(pythonPath);
         size_t start = 0;
         bool hadNonEmptyEntry = false;
-        bool hasExistingEntry = false;
+        bool hasBindingEntry = false;
         while (start <= pathValue.size()) {
             size_t end = pathValue.find(separator, start);
             std::string directory = (end == std::string::npos) ? pathValue.substr(start) : pathValue.substr(start, end - start);
             if (!directory.empty()) {
                 hadNonEmptyEntry = true;
                 std::error_code ec;
-                if (std::filesystem::exists(std::filesystem::path(directory), ec) && !ec) {
-                    hasExistingEntry = true;
+                const auto path = std::filesystem::path(directory);
+                if (std::filesystem::exists(path, ec) && !ec) {
+                    const auto bindingPath = path / bindingFilename;
+                    if (std::filesystem::exists(bindingPath, ec) && !ec) {
+                        hasBindingEntry = true;
+                    }
                 }
             }
             if (end == std::string::npos) {
@@ -149,8 +155,8 @@ bool validateEnvPaths(std::string& details) {
             start = end + 1;
         }
 
-        if (hadNonEmptyEntry && !hasExistingEntry) {
-            details = "PYTHONPATH does not contain any existing directory";
+        if (hadNonEmptyEntry && !hasBindingEntry) {
+            details = "PYTHONPATH does not contain the pyovms binding directory";
             return false;
         }
     }

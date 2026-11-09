@@ -18,10 +18,6 @@ setlocal EnableExtensions EnableDelayedExpansion
 set "ROOT=%~dp0"
 for %%I in ("%ROOT%.") do set "ROOT=%%~fI"
 set "LOCAL_TOOLS_DIR=%ROOT%\.windows_make_tools"
-:: Bazel / Python startup can inherit stale PYTHONHOME/PYTHONPATH values from a different
-:: service install; clear them before configuring the expected runtime.
-if defined PYTHONHOME set "PYTHONHOME="
-if defined PYTHONPATH set "PYTHONPATH="
 set "SETUP_EXIT_CODE=0"
 :: Load chosen dependency versions from versions.mk
 for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
@@ -124,8 +120,6 @@ set "BAZEL_VC_FULL_VERSION=14.44.35207"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
 set "PATH=%setPath%"
-set "PYTHONHOME=C:\opt\Python312"
-set "PYTHONPATH=C:\opt\Python312;%setPythonPath%;%cd%\bazel-bin\src\python;%cd%\bazel-bin\src"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Set paths with libs for execution - affects PATH

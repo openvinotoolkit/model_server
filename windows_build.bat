@@ -66,12 +66,8 @@ set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\us
 set "PYTHONHOME=C:\opt\Python312"
 set "PYTHONPATH=C:\opt\Python312"
 set "envPath=win_environment.log"
-if exist "%cd%\bazel-bin\src\python\binding" (
-    set "setPythonPath=%cd%\bazel-bin\src\python\binding"
-) else (
-    set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
-)
-set "basePythonPath=C:\opt\Python312;%setPythonPath%;%cd%\bazel-bin\src\python;%cd%\bazel-bin\src"
+set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
+set "basePythonPath=C:\opt\Python312;%setPythonPath%"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Load chosen dependency versions from versions.mk
