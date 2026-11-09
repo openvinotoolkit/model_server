@@ -23,8 +23,15 @@
 #include <gtest/gtest.h>
 
 #include <openvino/runtime/core.hpp>
+#include <openvino/runtime/compiled_model.hpp>
+#include <openvino/runtime/infer_request.hpp>
 #include <stdlib.h>
 
+#ifdef __linux__
+#include <openvino/runtime/intel_gpu/ocl/ocl.hpp>
+#endif
+
+#include "../itensorfactory.hpp"
 #include "../modelinstance.hpp"
 #include "../modelinstanceunloadguard.hpp"
 #include "environment.hpp"
@@ -384,6 +391,16 @@ TEST_F(TestLoadModel, CheckIfNonExistingXmlFileReturnsFileInvalid) {
 }
 class TestLoadModelWithRemoteTensorFactoriesSucceeds : public ::testing::Test {
 protected:
+    class ModelInstanceWithContext : public ovms::ModelInstance {
+    public:
+        using ovms::ModelInstance::ModelInstance;
+        using ovms::ModelInstance::compiledModel;
+#ifdef __linux__
+        using ovms::ModelInstance::oclContextCpp;
+        using ovms::ModelInstance::vaContext;
+#endif
+    };
+
     ovms::ModelConfig config;
     std::unique_ptr<ov::Core> ieCore;
     void SetUp() {
@@ -404,9 +421,62 @@ protected:
 TEST_F(TestLoadModelWithRemoteTensorFactoriesSucceeds, OpenCL_CheckIfLoadingSucceedsForGPU) {
     SKIP_AND_EXIT_IF_NO_GPU();
     this->config.setTargetDevice("GPU");
-    ovms::ModelInstance modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    ModelInstanceWithContext modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
     auto status = modelInstance.loadModel(config);
-    EXPECT_EQ(status, ovms::StatusCode::OK) << status.string();
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+    EXPECT_EQ(modelInstance.getStatus().getState(), ovms::ModelVersionState::AVAILABLE);
+
+    const auto tensorFactories = modelInstance.getTensorFactories();
+    ASSERT_EQ(tensorFactories.count(OVMS_BUFFERTYPE_CPU), 1);
+#ifdef __linux__
+    const auto context = modelInstance.compiledModel->get_context();
+    if (context.is<ov::intel_gpu::ocl::ClContext>()) {
+        auto oclContext = context.as<ov::intel_gpu::ocl::ClContext>();
+        EXPECT_EQ(*modelInstance.getOclCContext(), oclContext.get());
+        EXPECT_NE(modelInstance.oclContextCpp.get(), nullptr);
+        EXPECT_EQ(tensorFactories.count(OVMS_BUFFERTYPE_OPENCL), 1);
+    } else {
+        EXPECT_EQ(*modelInstance.getOclCContext(), nullptr);
+        EXPECT_EQ(modelInstance.oclContextCpp.get(), nullptr);
+        EXPECT_EQ(modelInstance.vaContext.get(), nullptr);
+        EXPECT_EQ(tensorFactories.count(OVMS_BUFFERTYPE_OPENCL), 0);
+        EXPECT_EQ(tensorFactories.count(OVMS_BUFFERTYPE_VASURFACE_Y), 0);
+        EXPECT_EQ(tensorFactories.count(OVMS_BUFFERTYPE_VASURFACE_UV), 0);
+    }
+#endif
+
+    std::vector<float> inputData(DUMMY_MODEL_INPUT_SIZE, 2.0f);
+    const ov::Tensor input = tensorFactories.at(OVMS_BUFFERTYPE_CPU)->create(
+        ov::element::f32, ov::Shape{1, DUMMY_MODEL_INPUT_SIZE}, inputData.data());
+    auto inferRequest = modelInstance.compiledModel->create_infer_request();
+    inferRequest.set_tensor(DUMMY_MODEL_INPUT_NAME, input);
+    ASSERT_NO_THROW(inferRequest.infer());
+    const ov::Tensor output = inferRequest.get_tensor(DUMMY_MODEL_OUTPUT_NAME);
+    ASSERT_EQ(output.get_size(), DUMMY_MODEL_OUTPUT_SIZE);
+    for (size_t index = 0; index < output.get_size(); ++index) {
+        EXPECT_FLOAT_EQ(output.data<const float>()[index], inputData[index] + DUMMY_ADDITION_VALUE);
+    }
+}
+TEST_F(TestLoadModelWithRemoteTensorFactoriesSucceeds, ReloadFromGPUToCPUClearsContexts) {
+    SKIP_AND_EXIT_IF_NO_GPU();
+    this->config.setTargetDevice("GPU");
+    ModelInstanceWithContext modelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, *ieCore);
+    auto status = modelInstance.loadModel(config);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+
+    this->config.setTargetDevice("CPU");
+    status = modelInstance.reloadModel(config);
+    ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
+#ifdef __linux__
+    EXPECT_EQ(*modelInstance.getOclCContext(), nullptr);
+    EXPECT_EQ(modelInstance.oclContextCpp.get(), nullptr);
+    EXPECT_EQ(modelInstance.vaContext.get(), nullptr);
+#endif
+    const auto tensorFactories = modelInstance.getTensorFactories();
+    EXPECT_EQ(tensorFactories.count(OVMS_BUFFERTYPE_CPU), 1);
+    EXPECT_EQ(tensorFactories.count(OVMS_BUFFERTYPE_OPENCL), 0);
+    EXPECT_EQ(tensorFactories.count(OVMS_BUFFERTYPE_VASURFACE_Y), 0);
+    EXPECT_EQ(tensorFactories.count(OVMS_BUFFERTYPE_VASURFACE_UV), 0);
 }
 TEST_F(TestLoadModelWithRemoteTensorFactoriesSucceeds, OpenCL_CheckIfLoadingSucceedsForHeteroCPUGPU) {
     SKIP_AND_EXIT_IF_NO_GPU();
