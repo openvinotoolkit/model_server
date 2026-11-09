@@ -24,6 +24,9 @@ class OvmsType(Enum):
     UBUNTU24 = auto()
     UBUNTU24_GPU = auto()
     UBUNTU24_NGINX = auto()
+    UBUNTU26 = auto()
+    UBUNTU26_GPU = auto()
+    UBUNTU26_NGINX = auto()
     REDHAT = auto()
     REDHAT_GPU = auto()
     REDHAT_CUDA = auto()
@@ -35,9 +38,11 @@ class OvmsBaseType(Enum):
     UBUNTU = "ubuntu"
     UBUNTU22 = "ubuntu22"
     UBUNTU24 = "ubuntu24"
+    UBUNTU26 = "ubuntu26"
     UBUNTU_PYTHON = "ubuntu_python"
     UBUNTU22_PYTHON = "ubuntu22_python"
     UBUNTU24_PYTHON = "ubuntu24_python"
+    UBUNTU26_PYTHON = "ubuntu26_python"
     UBUNTU_GPU = "ubuntu_gpu"
     UBUNTU_NGINX = "ubuntu_nginx"
     REDHAT = "redhat"
@@ -61,7 +66,9 @@ dynamic_libraries = {
     OvmsBaseType.UBUNTU22: {'libdl.so', 'libm.so', 'libpthread.so',},
     OvmsBaseType.UBUNTU22_PYTHON: {'libpython3.10.so',},
     OvmsBaseType.UBUNTU24: {'libdl.so', 'libm.so', 'libpthread.so',},
+    OvmsBaseType.UBUNTU26: {'libdl.so', 'libm.so', 'libpthread.so',},
     OvmsBaseType.UBUNTU24_PYTHON: set(),
+    OvmsBaseType.UBUNTU26_PYTHON: set(),
     OvmsBaseType.REDHAT: {'libdl.so', 'libm.so', 'libpthread.so',},
     OvmsBaseType.REDHAT_PYTHON: set(),
 }
@@ -79,6 +86,18 @@ whitelisted_dynamic_libraries = {
                                   "python": dynamic_libraries[OvmsBaseType.UBUNTU24_PYTHON]},
     OvmsType.UBUNTU24_NGINX: {"default": dynamic_libraries[OvmsBaseType.COMMON]  | dynamic_libraries[OvmsBaseType.UBUNTU] | dynamic_libraries[OvmsBaseType.UBUNTU24],
                                    "python": dynamic_libraries[OvmsBaseType.UBUNTU24_PYTHON]},
+    OvmsType.UBUNTU26: {
+        "default": dynamic_libraries[OvmsBaseType.COMMON] | dynamic_libraries[OvmsBaseType.UBUNTU] | dynamic_libraries[
+            OvmsBaseType.UBUNTU26],
+        "python": dynamic_libraries[OvmsBaseType.UBUNTU26_PYTHON]},
+    OvmsType.UBUNTU26_GPU: {
+        "default": dynamic_libraries[OvmsBaseType.COMMON] | dynamic_libraries[OvmsBaseType.UBUNTU] | dynamic_libraries[
+            OvmsBaseType.UBUNTU26],
+        "python": dynamic_libraries[OvmsBaseType.UBUNTU26_PYTHON]},
+    OvmsType.UBUNTU26_NGINX: {
+        "default": dynamic_libraries[OvmsBaseType.COMMON] | dynamic_libraries[OvmsBaseType.UBUNTU] | dynamic_libraries[
+            OvmsBaseType.UBUNTU26],
+        "python": dynamic_libraries[OvmsBaseType.UBUNTU26_PYTHON]},
     OvmsType.REDHAT: {"default": dynamic_libraries[OvmsBaseType.COMMON] | dynamic_libraries[OvmsBaseType.REDHAT],
                            "python": dynamic_libraries[OvmsBaseType.REDHAT_PYTHON]},
     OvmsType.REDHAT_GPU: {"default": dynamic_libraries[OvmsBaseType.COMMON] | dynamic_libraries[OvmsBaseType.REDHAT],
@@ -134,11 +153,16 @@ libraries = {
     },
     OvmsBaseType.UBUNTU22: set(),
     OvmsBaseType.UBUNTU24: set(),
+    OvmsBaseType.UBUNTU26: set(),
     OvmsBaseType.UBUNTU22_PYTHON: {
         'libovmspython.so',
         'libpython_calculators.so',
     },
     OvmsBaseType.UBUNTU24_PYTHON: {
+        'libovmspython.so',
+        'libpython_calculators.so',
+    },
+    OvmsBaseType.UBUNTU26_PYTHON: {
         'libovmspython.so',
         'libpython_calculators.so',
     },
@@ -221,6 +245,15 @@ whitelisted_libraries = {
                                   "python": libraries[OvmsBaseType.UBUNTU24_PYTHON]},
     OvmsType.UBUNTU24_NGINX: {"default": libraries[OvmsBaseType.COMMON] | libraries[OvmsBaseType.UBUNTU] | libraries[OvmsBaseType.UBUNTU24],
                                    "python": libraries[OvmsBaseType.UBUNTU24_PYTHON]},
+    OvmsType.UBUNTU26: {
+        "default": libraries[OvmsBaseType.COMMON] | libraries[OvmsBaseType.UBUNTU] | libraries[OvmsBaseType.UBUNTU26],
+        "python": libraries[OvmsBaseType.UBUNTU26_PYTHON]},
+    OvmsType.UBUNTU26_GPU: {
+        "default": libraries[OvmsBaseType.COMMON] | libraries[OvmsBaseType.UBUNTU] | libraries[OvmsBaseType.UBUNTU26],
+        "python": libraries[OvmsBaseType.UBUNTU26_PYTHON]},
+    OvmsType.UBUNTU26_NGINX: {
+        "default": libraries[OvmsBaseType.COMMON] | libraries[OvmsBaseType.UBUNTU] | libraries[OvmsBaseType.UBUNTU26],
+        "python": libraries[OvmsBaseType.UBUNTU26_PYTHON]},
     OvmsType.REDHAT: {"default": libraries[OvmsBaseType.COMMON] | libraries[OvmsBaseType.REDHAT],
                            "python": libraries[OvmsBaseType.REDHAT_PYTHON]},
     OvmsType.REDHAT_GPU: {"default": libraries[OvmsBaseType.COMMON] | libraries[OvmsBaseType.REDHAT],
@@ -259,6 +292,12 @@ packages = {
         'libreadline8t64'
     },
     OvmsBaseType.UBUNTU24_PYTHON: {
+        'libpython3.12t64',
+        'libpython3.12-minimal',
+        'libpython3.12-stdlib',
+        'media-types',
+    },
+    OvmsBaseType.UBUNTU26_PYTHON: {
         'libpython3.12t64',
         'libpython3.12-minimal',
         'libpython3.12-stdlib',
@@ -328,6 +367,14 @@ whitelisted_packages = {
                                  "python": packages[OvmsBaseType.UBUNTU_PYTHON] | packages[OvmsBaseType.UBUNTU24_PYTHON]},
     OvmsType.UBUNTU24_NGINX: {"default": packages[OvmsBaseType.UBUNTU] | packages[OvmsBaseType.UBUNTU24] | packages[OvmsBaseType.UBUNTU_NGINX],
                                    "python": packages[OvmsBaseType.UBUNTU_PYTHON] | packages[OvmsBaseType.UBUNTU24_PYTHON]},
+    OvmsType.UBUNTU26: {"default": packages[OvmsBaseType.UBUNTU] | packages[OvmsBaseType.UBUNTU26],
+                        "python": packages[OvmsBaseType.UBUNTU_PYTHON] | packages[OvmsBaseType.UBUNTU26_PYTHON]},
+    OvmsType.UBUNTU26_GPU: {
+        "default": packages[OvmsBaseType.UBUNTU] | packages[OvmsBaseType.UBUNTU26] | packages[OvmsBaseType.UBUNTU_GPU],
+        "python": packages[OvmsBaseType.UBUNTU_PYTHON] | packages[OvmsBaseType.UBUNTU26_PYTHON]},
+    OvmsType.UBUNTU26_NGINX: {"default": packages[OvmsBaseType.UBUNTU] | packages[OvmsBaseType.UBUNTU26] | packages[
+        OvmsBaseType.UBUNTU_NGINX],
+                              "python": packages[OvmsBaseType.UBUNTU_PYTHON] | packages[OvmsBaseType.UBUNTU26_PYTHON]},
     OvmsType.REDHAT: {"default": packages[OvmsBaseType.REDHAT],
                            "python": packages[OvmsBaseType.REDHAT_PYTHON]},
     OvmsType.REDHAT_GPU: {"default":  packages[OvmsBaseType.REDHAT] | packages[OvmsBaseType.REDHAT_GPU],
