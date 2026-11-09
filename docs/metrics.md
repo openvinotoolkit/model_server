@@ -48,7 +48,7 @@ Optional metrics
 | gauge      | ovms_infer_req_active | name,version | Number of currently consumed inference requests from the processing queue that are now either in the data loading or inference process. |
 | gauge      | ovms_kv_cache_utilization_percent | name,node | GenAI-reported cache utilization (0-100) for a continuous-batching LLM or VLM pipeline. |
 | gauge      | ovms_kv_cache_size_bytes | name,node | GenAI-reported KV-cache size in bytes for a continuous-batching LLM or VLM pipeline. |
-| histogram      | ovms_llm_prefill_speed_tokens_per_second | name,node | Per-request input token count divided by GenAI time to first token in seconds, for continuous-batching LLM and VLM pipelines. |
+| histogram      | ovms_prefill_tps | name,node | Per-request input token count divided by GenAI time to first token in seconds, for continuous-batching LLM and VLM pipelines. |
 | counter      | ovms_llm_generated_tokens_total | name,node | Generated output tokens from successfully completed continuous-batching LLM/VLM requests; excludes partial output from failed or cancelled requests. |
 | gauge      | ovms_llm_scheduled_requests | name,node | Number of requests scheduled in the last continuous-batching generation step; set to zero when the executor becomes idle. |
 | histogram      | ovms_llm_ttft_milliseconds | name,node | GenAI time to first token in milliseconds for successfully completed continuous-batching LLM/VLM requests, excluding VLM embedding preparation. |
@@ -105,9 +105,9 @@ boundaries, in tokens per second, are `1, 10, 50, 100, 250, 500, 1000, 2500,
 five minutes is:
 
 ```promql
-sum by (name, node) (rate(ovms_llm_prefill_speed_tokens_per_second_sum[5m]))
+sum by (name, node) (rate(ovms_prefill_tps_sum[5m]))
 /
-sum by (name, node) (rate(ovms_llm_prefill_speed_tokens_per_second_count[5m]))
+sum by (name, node) (rate(ovms_prefill_tps_count[5m]))
 ```
 
 This is not aggregate token throughput or a token-weighted average. Values are

@@ -737,7 +737,7 @@ protected:
                 "metrics_list": [
                     "ovms_kv_cache_utilization_percent",
                     "ovms_kv_cache_size_bytes",
-                    "ovms_llm_prefill_speed_tokens_per_second",
+                    "ovms_prefill_tps",
                     "ovms_llm_generated_tokens_total",
                     "ovms_llm_scheduled_requests",
                     "ovms_llm_ttft_milliseconds"
@@ -785,8 +785,8 @@ TEST_P(LLMMetricsFlowTest, PublishesAtInfoLevelAndResetsAfterIdleUnload) {
         const std::string scrape = server.collect();
         EXPECT_THAT(scrape, HasSubstr("ovms_kv_cache_utilization_percent{name=\"metrics_llm\",node=\"llmNode1\"} "));
         EXPECT_THAT(scrape, HasSubstr("ovms_kv_cache_size_bytes{name=\"metrics_llm\",node=\"llmNode1\"} "));
-        EXPECT_THAT(scrape, HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"metrics_llm\",node=\"llmNode1\"} " + std::to_string(i) + "\n"));
-        EXPECT_THAT(scrape, Not(HasSubstr("ovms_llm_prefill_speed_tokens_per_second_sum{name=\"metrics_llm\",node=\"llmNode1\"} 0\n")));
+        EXPECT_THAT(scrape, HasSubstr("ovms_prefill_tps_count{name=\"metrics_llm\",node=\"llmNode1\"} " + std::to_string(i) + "\n"));
+        EXPECT_THAT(scrape, Not(HasSubstr("ovms_prefill_tps_sum{name=\"metrics_llm\",node=\"llmNode1\"} 0\n")));
         EXPECT_THAT(scrape, HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"metrics_llm\",node=\"llmNode1\"} " + std::to_string(i) + "\n"));
         EXPECT_THAT(scrape, Not(HasSubstr("ovms_llm_ttft_milliseconds_sum{name=\"metrics_llm\",node=\"llmNode1\"} 0\n")));
         EXPECT_THAT(scrape, HasSubstr("ovms_llm_scheduled_requests{name=\"metrics_llm\",node=\"llmNode1\"} "));
@@ -798,7 +798,7 @@ TEST_P(LLMMetricsFlowTest, PublishesAtInfoLevelAndResetsAfterIdleUnload) {
     ASSERT_EQ(factory.putToSleepDefinition("metrics_llm"), StatusCode::OK);
     EXPECT_THAT(server.collect(), Not(HasSubstr("ovms_llm_")));
     ASSERT_EQ(factory.wakeUpDefinition("metrics_llm", manager), StatusCode::OK);
-    EXPECT_THAT(server.collect(), HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"metrics_llm\",node=\"llmNode1\"} 0\n"));
+    EXPECT_THAT(server.collect(), HasSubstr("ovms_prefill_tps_count{name=\"metrics_llm\",node=\"llmNode1\"} 0\n"));
     EXPECT_THAT(server.collect(), HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"metrics_llm\",node=\"llmNode1\"} 0\n"));
     EXPECT_THAT(server.collect(), HasSubstr("ovms_llm_generated_tokens_total{name=\"metrics_llm\",node=\"llmNode1\"} 0\n"));
     EXPECT_THAT(server.collect(), HasSubstr("ovms_llm_scheduled_requests{name=\"metrics_llm\",node=\"llmNode1\"} 0\n"));

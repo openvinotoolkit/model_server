@@ -332,7 +332,7 @@ TEST_F(LLMMetricsTest, FamiliesCanBeSelectedIndependently) {
     EXPECT_TRUE(prefillReporter.isPrefillSpeedEnabled());
     EXPECT_TRUE(prefillReporter.hasAnyCompletionMetricsEnabled());
     prefillReporter.observePrefillSpeed(1000);
-    EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"prefill_model\",node=\"llm\"} 1\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("ovms_prefill_tps_count{name=\"prefill_model\",node=\"llm\"} 1\n"));
     prefillReporter.deactivate();
     EXPECT_FALSE(prefillReporter.hasAnyCompletionMetricsEnabled());
 }
@@ -434,10 +434,10 @@ TEST_F(LLMMetricsTest, HistogramRetainsDistributionAcrossScrapes) {
     reporter.observeCompletedRequest(7, 20);
     reporter.setScheduledRequests(3);
     const std::string scrape = registry.collect();
-    EXPECT_THAT(scrape, HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"model\",node=\"llm\"} 2\n"));
-    EXPECT_THAT(scrape, HasSubstr("ovms_llm_prefill_speed_tokens_per_second_sum{name=\"model\",node=\"llm\"} 1100\n"));
-    EXPECT_THAT(scrape, HasSubstr("ovms_llm_prefill_speed_tokens_per_second_bucket{name=\"model\",node=\"llm\",le=\"100\"} 1\n"));
-    EXPECT_THAT(scrape, HasSubstr("ovms_llm_prefill_speed_tokens_per_second_bucket{name=\"model\",node=\"llm\",le=\"1000\"} 2\n"));
+    EXPECT_THAT(scrape, HasSubstr("ovms_prefill_tps_count{name=\"model\",node=\"llm\"} 2\n"));
+    EXPECT_THAT(scrape, HasSubstr("ovms_prefill_tps_sum{name=\"model\",node=\"llm\"} 1100\n"));
+    EXPECT_THAT(scrape, HasSubstr("ovms_prefill_tps_bucket{name=\"model\",node=\"llm\",le=\"100\"} 1\n"));
+    EXPECT_THAT(scrape, HasSubstr("ovms_prefill_tps_bucket{name=\"model\",node=\"llm\",le=\"1000\"} 2\n"));
     EXPECT_EQ(registry.collect(), scrape);
 }
 
@@ -484,7 +484,7 @@ TEST_F(LLMMetricsTest, ReloadStartsFreshSeries) {
     EXPECT_TRUE(registry.collect().empty());
     LLMMetricReporter reloaded(&config, &registry, "model", "llm");
     EXPECT_THAT(registry.collect(), HasSubstr("ovms_kv_cache_utilization_percent{name=\"model\",node=\"llm\"} 0\n"));
-    EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"model\",node=\"llm\"} 0\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("ovms_prefill_tps_count{name=\"model\",node=\"llm\"} 0\n"));
     EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_generated_tokens_total{name=\"model\",node=\"llm\"} 0\n"));
     EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_scheduled_requests{name=\"model\",node=\"llm\"} 0\n"));
     EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"model\",node=\"llm\"} 0\n"));
@@ -543,7 +543,7 @@ TEST_F(LLMMetricsTest, ConcurrentUpdatesAndScraping) {
         EXPECT_THAT(registry.collect(), HasSubstr("# TYPE ovms_kv_cache_utilization_percent gauge"));
     }
     writer.get();
-    EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"model\",node=\"llm\"} 1000\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("ovms_prefill_tps_count{name=\"model\",node=\"llm\"} 1000\n"));
     EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_generated_tokens_total{name=\"model\",node=\"llm\"} 2000\n"));
     EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"model\",node=\"llm\"} 1000\n"));
     EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_ttft_milliseconds_sum{name=\"model\",node=\"llm\"} 20000\n"));

@@ -99,8 +99,8 @@ protected:
 TEST_F(LLMPrefillMetricsTest, ConvertsMillisecondsAndRecordsOnlyOnce) {
     servable.recordCompletedRequestMetrics(context);
     servable.recordCompletedRequestMetrics(context);
-    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"model\",node=\"llm\"} 1\n"));
-    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_prefill_speed_tokens_per_second_sum{name=\"model\",node=\"llm\"} 5000\n"));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_prefill_tps_count{name=\"model\",node=\"llm\"} 1\n"));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_prefill_tps_sum{name=\"model\",node=\"llm\"} 5000\n"));
     EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_generated_tokens_total{name=\"model\",node=\"llm\"} 7\n"));
     EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"model\",node=\"llm\"} 1\n"));
     EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_ttft_milliseconds_sum{name=\"model\",node=\"llm\"} 20\n"));
@@ -113,7 +113,7 @@ TEST_F(LLMPrefillMetricsTest, MissingPerformanceMetricsCanBePublishedAtCompletio
     context.perfMetrics = std::move(metrics);
     servable.recordCompletedRequestMetrics(context);
     EXPECT_TRUE(context.completedMetricsRecorded);
-    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"model\",node=\"llm\"} 1\n"));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_prefill_tps_count{name=\"model\",node=\"llm\"} 1\n"));
 }
 
 TEST_F(LLMPrefillMetricsTest, InvalidTimeToFirstTokenIsNotObserved) {
@@ -122,7 +122,7 @@ TEST_F(LLMPrefillMetricsTest, InvalidTimeToFirstTokenIsNotObserved) {
         context.perfMetrics->ttft.mean = ttft;
         servable.recordCompletedRequestMetrics(context);
     }
-    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"model\",node=\"llm\"} 0\n"));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_prefill_tps_count{name=\"model\",node=\"llm\"} 0\n"));
     EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"model\",node=\"llm\"} 0\n"));
     EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_generated_tokens_total{name=\"model\",node=\"llm\"} 28\n"));
 }
