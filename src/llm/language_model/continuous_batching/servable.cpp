@@ -60,12 +60,9 @@ void ContinuousBatchingServable::recordCompletedRequestMetrics(GenAiServableExec
     cbExecutionContext.completedMetricsRecorded = true;
     auto& perfMetrics = *executionContext.perfMetrics;
     const double ttftMilliseconds = perfMetrics.get_ttft().mean;
-    if (metricReporter->isPrefillSpeedEnabled()) {
-        metricReporter->observePrefillSpeed(
-            calculatePrefillSpeed(perfMetrics.get_num_input_tokens(), ttftMilliseconds));
-    }
     if (metricReporter->hasCompletedRequestMetricsEnabled()) {
-        metricReporter->observeCompletedRequest(perfMetrics.get_num_generated_tokens(), ttftMilliseconds);
+        metricReporter->observeCompletedRequest(perfMetrics.get_num_input_tokens(),
+            perfMetrics.get_num_generated_tokens(), ttftMilliseconds, perfMetrics.get_tpot().mean);
     }
 }
 

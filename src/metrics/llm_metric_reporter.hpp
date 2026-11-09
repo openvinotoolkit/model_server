@@ -38,16 +38,16 @@ class LLMMetricReporter {
     std::mutex mutex;
     std::atomic<bool> cacheEnabled{false};
     std::atomic<bool> cacheSizeEnabled{false};
-    std::atomic<bool> prefillEnabled{false};
     std::atomic<bool> scheduledEnabled{false};
     std::atomic<bool> completedRequestMetricsEnabled{false};
     std::atomic<bool> completionMetricsEnabled{false};
     std::shared_ptr<MetricSeries<MetricGauge>> cacheUtilization;
     std::shared_ptr<MetricSeries<MetricGauge>> cacheSize;
-    std::shared_ptr<MetricSeries<MetricHistogram>> prefillSpeed;
     std::shared_ptr<MetricSeries<MetricGauge>> scheduledRequests;
+    std::shared_ptr<MetricSeries<MetricCounter>> promptTokens;
     std::shared_ptr<MetricSeries<MetricCounter>> generatedTokens;
     std::shared_ptr<MetricSeries<MetricHistogram>> ttft;
+    std::shared_ptr<MetricSeries<MetricHistogram>> tpot;
 
     void removeMetrics();
 
@@ -60,7 +60,6 @@ public:
 
     bool isCacheUtilizationEnabled() const;
     bool isCacheSizeEnabled() const;
-    bool isPrefillSpeedEnabled() const;
     bool isScheduledRequestsEnabled() const;
     bool hasCompletedRequestMetricsEnabled() const;
     bool hasAnyCompletionMetricsEnabled() const;
@@ -70,13 +69,11 @@ public:
     void setCacheUtilization(double percent);
     /// Publish GenAI's KV cache size in bytes.
     void setCacheSizeBytes(size_t bytes);
-    /// Record one completed request's TTFT-derived speed in tokens per second.
-    void observePrefillSpeed(double tokensPerSecond);
     /// Publish GenAI's last-step scheduled request count, or zero when the executor is idle.
     void setScheduledRequests(size_t requests);
     /// Record successful completion only; partial output from failed/cancelled requests is not counted.
-    /// TTFT is GenAI's request latency in milliseconds, excluding VLM embedding preparation.
-    void observeCompletedRequest(size_t outputTokens, double ttftMilliseconds);
+    /// TTFT and TPOT are GenAI request timing values in milliseconds.
+    void observeCompletedRequest(size_t inputTokens, size_t outputTokens, double ttftMilliseconds, double tpotMilliseconds);
 };
 
 }  // namespace ovms

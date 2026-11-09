@@ -48,10 +48,11 @@ Optional metrics
 | gauge      | ovms_infer_req_active | name,version | Number of currently consumed inference requests from the processing queue that are now either in the data loading or inference process. |
 | gauge      | ovms_kv_cache_utilization_percent | name,node | GenAI-reported cache utilization (0-100) for a continuous-batching LLM or VLM pipeline. |
 | gauge      | ovms_kv_cache_size_bytes | name,node | GenAI-reported KV-cache size in bytes for a continuous-batching LLM or VLM pipeline. |
-| histogram      | ovms_prefill_tps | name,node | Per-request input token count divided by GenAI time to first token in seconds, for continuous-batching LLM and VLM pipelines. |
+| counter      | ovms_llm_prompt_tokens_total | name,node | Input prompt tokens from successfully completed continuous-batching LLM/VLM requests, as reported by GenAI. |
 | counter      | ovms_llm_generated_tokens_total | name,node | Generated output tokens from successfully completed continuous-batching LLM/VLM requests; excludes partial output from failed or cancelled requests. |
 | gauge      | ovms_llm_scheduled_requests | name,node | Number of requests scheduled in the last continuous-batching generation step; set to zero when the executor becomes idle. |
 | histogram      | ovms_llm_ttft_milliseconds | name,node | GenAI time to first token in milliseconds for successfully completed continuous-batching LLM/VLM requests, excluding VLM embedding preparation. |
+| histogram      | ovms_llm_tpot_milliseconds | name,node | GenAI time per output token in milliseconds for successfully completed continuous-batching LLM/VLM requests. |
 
 > **Note**: While `ovms_current_requests` and `ovms_infer_req_active` both indicate how much resources are engaged in the requests processing, they are quite distinct. A request is counted in `ovms_current_requests` metric starting as soon as it's received by the server and stays there until the response is sent back to the user. The `ovms_infer_req_active` counter informs about the number of OpenVINO Infer Requests that are bound to user requests and are either loading the data or already running inference. 
 
@@ -69,7 +70,7 @@ Labels description
 
 The currently supported GenAI metric families are optional and supported for
 continuous-batching language and vision-language models, not legacy/NPU or Omni
-pipelines. Use the `all_llm` preset in the metrics list to enable all six, or
+pipelines. Use the `all_llm` preset in the metrics list to enable all seven, or
 list individual families:
 
 ```bash
@@ -92,43 +93,34 @@ the last reported sample; idle does not imply an empty cache or a zero value.
 KV-cache size is reported in bytes from GenAI's pipeline metrics and can vary
 with dynamic cache allocation. It is not a measurement of total device memory.
 
-Prefill speed is observed once per successfully completed request, for both unary
-and streaming responses, independently of the log level. Cancelled or failed
-requests are not observed. It is an effective TTFT-derived rate, not isolated
-prefill kernel throughput: scheduling, first-token generation and prefix-cache
-hits affect it. For VLMs, the GenAI TTFT excludes embedding preparation. Invalid
-or non-positive speed samples are skipped with a warning.
-
-The histogram exports `_bucket`, `_sum`, and `_count` series. Its finite bucket
-boundaries, in tokens per second, are `1, 10, 50, 100, 250, 500, 1000, 2500,
-5000, 10000, 25000, 50000, 100000`. For example, the mean per-request speed over
-five minutes is:
+Prompt and generated token counters are incremented once per successfully
+completed request, for both unary and streaming responses, independently of the
+log level. Cancelled or failed requests are not counted. The values come from
+GenAI's input and generated token counts. For example, aggregate prompt and
+generated token rates over five minutes are:
 
 ```promql
-sum by (name, node) (rate(ovms_prefill_tps_sum[5m]))
-/
-sum by (name, node) (rate(ovms_prefill_tps_count[5m]))
+sum by (name, node) (rate(ovms_llm_prompt_tokens_total[5m]))
+sum by (name, node) (rate(ovms_llm_generated_tokens_total[5m]))
 ```
 
-This is not aggregate token throughput or a token-weighted average. Values are
-retained in the in-memory registry between scrapes; scraping does not query the
-GenAI pipeline. Series are deactivated and removed when the graph unloads or
-reloads, even if an in-flight request still retains the old pipeline. Replacement
+These counters are updated at request completion, so their rates are not live
+measurements of tokens in still-running requests. Streaming requests are recorded
+once, when the final response is prepared, not once per chunk. Values are retained
+in the in-memory registry between scrapes; scraping does not query the GenAI
+pipeline. Series are deactivated and removed when the graph unloads or reloads,
+even if an in-flight request still retains the old pipeline. Replacement
 pipelines start fresh series; late updates from the old pipeline are ignored.
 
-Generated tokens and TTFT use the same successful-completion accounting as prefill
-speed, independently of the log level. Streaming requests are recorded once, when
-the final response is prepared, not once per chunk. Partial output from cancelled
-or failed requests is not counted. The token counter uses GenAI's generated-token
-count, not characters or HTTP response chunks. An invalid TTFT sample is skipped
-with a warning without discarding the request's generated-token count.
-
-TTFT is GenAI's request timing, not HTTP end-to-end latency. For VLMs it excludes
-embedding preparation, matching the timing used for the existing prefill-speed
-metric. Its finite histogram bucket boundaries, in milliseconds, are
+TTFT and TPOT are GenAI request timings, not HTTP end-to-end latency. For VLMs,
+TTFT excludes embedding preparation. The histograms export `_bucket`, `_sum`,
+and `_count` series. Their finite bucket boundaries, in milliseconds, are
 `1, 5, 10, 20, 40, 60, 80, 100, 250, 500, 750, 1000, 2500, 5000, 7500,
-10000, 20000, 40000, 80000, 160000, 640000, 2560000`.
-Only finite, strictly positive TTFT samples are observed.
+10000, 20000, 40000, 80000, 160000, 640000` for TTFT, and
+`10, 20, 40, 60, 80, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000,
+20000, 40000, 80000` for TPOT. Only finite, strictly positive samples are observed;
+an invalid timing sample is skipped without discarding the request's token counts
+or the other valid timing sample.
 
 Scheduled requests are published after each generation step, using GenAI's
 `scheduled_requests` value for the previous step. The gauge is set to zero before

@@ -28,11 +28,11 @@
 namespace ovms {
 namespace {
 
-const BucketBoundaries PREFILL_SPEED_BUCKETS{
-    1, 10, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000};
 const BucketBoundaries TTFT_BUCKETS{
     1, 5, 10, 20, 40, 60, 80, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000,
-    20000, 40000, 80000, 160000, 640000, 2560000};
+    20000, 40000, 80000, 160000, 640000};
+const BucketBoundaries TPOT_BUCKETS{
+    10, 20, 40, 60, 80, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000, 20000, 40000, 80000};
 
 }  // namespace
 
@@ -62,14 +62,13 @@ LLMMetricReporter::LLMMetricReporter(const MetricConfig* config, MetricRegistry*
             cacheSize = std::make_shared<MetricSeries<MetricGauge>>(family, labels);
             cacheSizeEnabled.store(true, std::memory_order_relaxed);
         }
-        if (config->isFamilyEnabled(METRIC_NAME_LLM_PREFILL_SPEED)) {
-            auto family = registry->createFamily<MetricHistogram>(METRIC_NAME_LLM_PREFILL_SPEED,
-                "Completed request input tokens divided by GenAI time to first token in seconds.");
+        if (config->isFamilyEnabled(METRIC_NAME_LLM_PROMPT_TOKENS)) {
+            auto family = registry->createFamily<MetricCounter>(METRIC_NAME_LLM_PROMPT_TOKENS,
+                "Input prompt tokens from successfully completed requests, as reported by GenAI.");
             if (!family) {
-                throw std::logic_error("Cannot create LLM prefill speed metric family");
+                throw std::logic_error("Cannot create LLM prompt tokens metric family");
             }
-            prefillSpeed = std::make_shared<MetricSeries<MetricHistogram>>(family, labels, PREFILL_SPEED_BUCKETS);
-            prefillEnabled.store(true, std::memory_order_relaxed);
+            promptTokens = std::make_shared<MetricSeries<MetricCounter>>(family, labels);
         }
         if (config->isFamilyEnabled(METRIC_NAME_LLM_SCHEDULED_REQUESTS)) {
             auto family = registry->createFamily<MetricGauge>(METRIC_NAME_LLM_SCHEDULED_REQUESTS,
@@ -96,8 +95,16 @@ LLMMetricReporter::LLMMetricReporter(const MetricConfig* config, MetricRegistry*
             }
             ttft = std::make_shared<MetricSeries<MetricHistogram>>(family, labels, TTFT_BUCKETS);
         }
-        completedRequestMetricsEnabled.store(generatedTokens || ttft, std::memory_order_relaxed);
-        completionMetricsEnabled.store(prefillSpeed || generatedTokens || ttft, std::memory_order_relaxed);
+        if (config->isFamilyEnabled(METRIC_NAME_LLM_TPOT)) {
+            auto family = registry->createFamily<MetricHistogram>(METRIC_NAME_LLM_TPOT,
+                "GenAI time per output token in milliseconds for successfully completed requests.");
+            if (!family) {
+                throw std::logic_error("Cannot create LLM TPOT metric family");
+            }
+            tpot = std::make_shared<MetricSeries<MetricHistogram>>(family, labels, TPOT_BUCKETS);
+        }
+        completedRequestMetricsEnabled.store(promptTokens || generatedTokens || ttft || tpot, std::memory_order_relaxed);
+        completionMetricsEnabled.store(promptTokens || generatedTokens || ttft || tpot, std::memory_order_relaxed);
     } catch (const std::exception& e) {
         removeMetrics();
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to register LLM metrics for graph {} node {}: {}", graphName, nodeName, e.what());
@@ -113,7 +120,6 @@ void LLMMetricReporter::deactivate() {
     std::lock_guard<std::mutex> lock(mutex);
     cacheEnabled.store(false, std::memory_order_relaxed);
     cacheSizeEnabled.store(false, std::memory_order_relaxed);
-    prefillEnabled.store(false, std::memory_order_relaxed);
     scheduledEnabled.store(false, std::memory_order_relaxed);
     completedRequestMetricsEnabled.store(false, std::memory_order_relaxed);
     completionMetricsEnabled.store(false, std::memory_order_relaxed);
@@ -129,10 +135,6 @@ void LLMMetricReporter::removeMetrics() {
         cacheSize->deactivate();
         cacheSize.reset();
     }
-    if (prefillSpeed) {
-        prefillSpeed->deactivate();
-        prefillSpeed.reset();
-    }
     if (scheduledRequests) {
         scheduledRequests->deactivate();
         scheduledRequests.reset();
@@ -141,9 +143,17 @@ void LLMMetricReporter::removeMetrics() {
         generatedTokens->deactivate();
         generatedTokens.reset();
     }
+    if (promptTokens) {
+        promptTokens->deactivate();
+        promptTokens.reset();
+    }
     if (ttft) {
         ttft->deactivate();
         ttft.reset();
+    }
+    if (tpot) {
+        tpot->deactivate();
+        tpot.reset();
     }
 }
 
@@ -166,23 +176,32 @@ void LLMMetricReporter::setScheduledRequests(size_t requests) {
     }
 }
 
-void LLMMetricReporter::observeCompletedRequest(size_t outputTokens, double ttftMilliseconds) {
+void LLMMetricReporter::observeCompletedRequest(size_t inputTokens, size_t outputTokens, double ttftMilliseconds, double tpotMilliseconds) {
     std::lock_guard<std::mutex> lock(mutex);
+    if (promptTokens) {
+        promptTokens->update([inputTokens](MetricCounter& metric) { metric.increment(inputTokens); });
+    }
     if (generatedTokens) {
         generatedTokens->update([outputTokens](MetricCounter& metric) { metric.increment(outputTokens); });
     }
-    if (!ttft) {
-        return;
-    }
-    if (!std::isfinite(ttftMilliseconds) || ttftMilliseconds <= 0.0) {
+    if (ttft && (!std::isfinite(ttftMilliseconds) || ttftMilliseconds <= 0.0)) {
 #if (MEDIAPIPE_DISABLE == 0)
         SPDLOG_LOGGER_WARN(llm_calculator_logger, "Ignoring invalid GenAI TTFT in milliseconds: {}", ttftMilliseconds);
 #else
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Ignoring invalid GenAI TTFT in milliseconds: {}", ttftMilliseconds);
 #endif
-        return;
+    } else if (ttft) {
+        ttft->update([ttftMilliseconds](MetricHistogram& metric) { metric.observe(ttftMilliseconds); });
     }
-    ttft->update([ttftMilliseconds](MetricHistogram& metric) { metric.observe(ttftMilliseconds); });
+    if (tpot && (!std::isfinite(tpotMilliseconds) || tpotMilliseconds <= 0.0)) {
+#if (MEDIAPIPE_DISABLE == 0)
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Ignoring invalid GenAI TPOT in milliseconds: {}", tpotMilliseconds);
+#else
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Ignoring invalid GenAI TPOT in milliseconds: {}", tpotMilliseconds);
+#endif
+    } else if (tpot) {
+        tpot->update([tpotMilliseconds](MetricHistogram& metric) { metric.observe(tpotMilliseconds); });
+    }
 }
 
 bool LLMMetricReporter::isCacheUtilizationEnabled() const {
@@ -191,10 +210,6 @@ bool LLMMetricReporter::isCacheUtilizationEnabled() const {
 
 bool LLMMetricReporter::isCacheSizeEnabled() const {
     return cacheSizeEnabled.load(std::memory_order_relaxed);
-}
-
-bool LLMMetricReporter::isPrefillSpeedEnabled() const {
-    return prefillEnabled.load(std::memory_order_relaxed);
 }
 
 void LLMMetricReporter::setCacheUtilization(double percent) {
@@ -218,22 +233,6 @@ void LLMMetricReporter::setCacheSizeBytes(size_t bytes) {
     if (cacheSize) {
         cacheSize->update([bytes](MetricGauge& metric) { metric.set(static_cast<double>(bytes)); });
     }
-}
-
-void LLMMetricReporter::observePrefillSpeed(double tokensPerSecond) {
-    std::lock_guard<std::mutex> lock(mutex);
-    if (!prefillSpeed) {
-        return;
-    }
-    if (!std::isfinite(tokensPerSecond) || tokensPerSecond <= 0.0) {
-#if (MEDIAPIPE_DISABLE == 0)
-        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Ignoring invalid TTFT-derived prefill speed: {}", tokensPerSecond);
-#else
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Ignoring invalid TTFT-derived prefill speed: {}", tokensPerSecond);
-#endif
-        return;
-    }
-    prefillSpeed->update([tokensPerSecond](MetricHistogram& metric) { metric.observe(tokensPerSecond); });
 }
 
 }  // namespace ovms

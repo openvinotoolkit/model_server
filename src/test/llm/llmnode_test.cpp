@@ -70,7 +70,7 @@
 
 using namespace ovms;
 
-class LLMPrefillMetricsTest : public ::testing::Test {
+class LLMCompletionMetricsTest : public ::testing::Test {
 protected:
     class TestServable : public ContinuousBatchingServable {
     public:
@@ -84,7 +84,8 @@ protected:
 
     void SetUp() override {
         ASSERT_EQ(metricConfig.loadFromCLIString(true,
-                      METRIC_NAME_LLM_PREFILL_SPEED + "," + METRIC_NAME_LLM_GENERATED_TOKENS + "," + METRIC_NAME_LLM_TTFT),
+                      METRIC_NAME_LLM_PROMPT_TOKENS + "," + METRIC_NAME_LLM_GENERATED_TOKENS + "," +
+                          METRIC_NAME_LLM_TTFT + "," + METRIC_NAME_LLM_TPOT),
             StatusCode::OK);
         servable.getContinuousBatchingProperties()->metricReporter =
             std::make_shared<LLMMetricReporter>(&metricConfig, &registry, "model", "llm");
@@ -92,42 +93,46 @@ protected:
         context.perfMetrics->num_input_tokens = 100;
         context.perfMetrics->num_generated_tokens = 7;
         context.perfMetrics->ttft = {20, 0};
+        context.perfMetrics->tpot = {50, 0};
         context.perfMetrics->m_evaluated = true;
     }
 };
 
-TEST_F(LLMPrefillMetricsTest, ConvertsMillisecondsAndRecordsOnlyOnce) {
+TEST_F(LLMCompletionMetricsTest, RecordsTokenCountsAndTimingHistogramsOnlyOnce) {
     servable.recordCompletedRequestMetrics(context);
     servable.recordCompletedRequestMetrics(context);
-    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_prefill_tps_count{name=\"model\",node=\"llm\"} 1\n"));
-    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_prefill_tps_sum{name=\"model\",node=\"llm\"} 5000\n"));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_prompt_tokens_total{name=\"model\",node=\"llm\"} 100\n"));
     EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_generated_tokens_total{name=\"model\",node=\"llm\"} 7\n"));
     EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"model\",node=\"llm\"} 1\n"));
     EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_ttft_milliseconds_sum{name=\"model\",node=\"llm\"} 20\n"));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_tpot_milliseconds_count{name=\"model\",node=\"llm\"} 1\n"));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_tpot_milliseconds_sum{name=\"model\",node=\"llm\"} 50\n"));
 }
 
-TEST_F(LLMPrefillMetricsTest, MissingPerformanceMetricsCanBePublishedAtCompletion) {
+TEST_F(LLMCompletionMetricsTest, MissingPerformanceMetricsCanBePublishedAtCompletion) {
     auto metrics = std::move(context.perfMetrics);
     servable.recordCompletedRequestMetrics(context);
     EXPECT_FALSE(context.completedMetricsRecorded);
     context.perfMetrics = std::move(metrics);
     servable.recordCompletedRequestMetrics(context);
     EXPECT_TRUE(context.completedMetricsRecorded);
-    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_prefill_tps_count{name=\"model\",node=\"llm\"} 1\n"));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_prompt_tokens_total{name=\"model\",node=\"llm\"} 100\n"));
 }
 
-TEST_F(LLMPrefillMetricsTest, InvalidTimeToFirstTokenIsNotObserved) {
+TEST_F(LLMCompletionMetricsTest, InvalidTimingSamplesDoNotDiscardTokenCounts) {
     for (float ttft : {0.0f, -1.0f, std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::infinity()}) {
         context.completedMetricsRecorded = false;
         context.perfMetrics->ttft.mean = ttft;
+        context.perfMetrics->tpot.mean = ttft;
         servable.recordCompletedRequestMetrics(context);
     }
-    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_prefill_tps_count{name=\"model\",node=\"llm\"} 0\n"));
-    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"model\",node=\"llm\"} 0\n"));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_prompt_tokens_total{name=\"model\",node=\"llm\"} 400\n"));
     EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_generated_tokens_total{name=\"model\",node=\"llm\"} 28\n"));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"model\",node=\"llm\"} 0\n"));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_tpot_milliseconds_count{name=\"model\",node=\"llm\"} 0\n"));
 }
 
-TEST_F(LLMPrefillMetricsTest, DisabledPrefillMetricDoesNotEvaluatePerformanceStatistics) {
+TEST_F(LLMCompletionMetricsTest, DisabledCompletionMetricsDoNotEvaluatePerformanceStatistics) {
     servable.getContinuousBatchingProperties()->metricReporter->deactivate();
     context.perfMetrics->m_evaluated = false;
     servable.recordCompletedRequestMetrics(context);
@@ -136,27 +141,29 @@ TEST_F(LLMPrefillMetricsTest, DisabledPrefillMetricDoesNotEvaluatePerformanceSta
     EXPECT_TRUE(registry.collect().empty());
 }
 
-TEST_F(LLMPrefillMetricsTest, CompletionMetricsWorkWithoutPrefillSpeed) {
+TEST_F(LLMCompletionMetricsTest, CompletionMetricsWorkWithoutPromptCounter) {
     servable.getContinuousBatchingProperties()->metricReporter->deactivate();
     metricConfig.setDefaultMetricsTo(false);
     ASSERT_EQ(metricConfig.loadFromCLIString(true, METRIC_NAME_LLM_GENERATED_TOKENS + "," + METRIC_NAME_LLM_TTFT), StatusCode::OK);
     servable.getContinuousBatchingProperties()->metricReporter =
         std::make_shared<LLMMetricReporter>(&metricConfig, &registry, "model", "llm");
     servable.recordCompletedRequestMetrics(context);
-    EXPECT_THAT(registry.collect(), testing::Not(testing::HasSubstr(METRIC_NAME_LLM_PREFILL_SPEED)));
+    EXPECT_THAT(registry.collect(), testing::Not(testing::HasSubstr(METRIC_NAME_LLM_PROMPT_TOKENS)));
     EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_generated_tokens_total{name=\"model\",node=\"llm\"} 7\n"));
     EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"model\",node=\"llm\"} 1\n"));
 }
 
-TEST_F(LLMPrefillMetricsTest, FailedPartialResponseDoesNotRecordCompletionMetrics) {
+TEST_F(LLMCompletionMetricsTest, FailedPartialResponseDoesNotRecordCompletionMetrics) {
     auto executionContext = std::make_shared<ContinuousBatchingServableExecutionContext>();
     executionContext->perfMetrics = std::move(context.perfMetrics);
     std::shared_ptr<GenAiServableExecutionContext> baseContext = executionContext;
     // Missing generation output fails response preparation before any completion accounting.
     EXPECT_FALSE(servable.preparePartialResponse(baseContext).ok());
     EXPECT_FALSE(executionContext->completedMetricsRecorded);
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_prompt_tokens_total{name=\"model\",node=\"llm\"} 0\n"));
     EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_generated_tokens_total{name=\"model\",node=\"llm\"} 0\n"));
     EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"model\",node=\"llm\"} 0\n"));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_tpot_milliseconds_count{name=\"model\",node=\"llm\"} 0\n"));
 }
 
 struct TestParameters {

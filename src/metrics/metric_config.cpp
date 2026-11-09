@@ -72,10 +72,23 @@ const std::string METRIC_NAME_REQUEST_LATENCY = "ovms_graph_request_latency_us";
 
 const std::string METRIC_NAME_KV_CACHE_UTILIZATION = "ovms_kv_cache_utilization_percent";
 const std::string METRIC_NAME_KV_CACHE_SIZE = "ovms_kv_cache_size_bytes";
-const std::string METRIC_NAME_LLM_PREFILL_SPEED = "ovms_prefill_tps";
+const std::string METRIC_NAME_LLM_PROMPT_TOKENS = "ovms_llm_prompt_tokens_total";
 const std::string METRIC_NAME_LLM_GENERATED_TOKENS = "ovms_llm_generated_tokens_total";
 const std::string METRIC_NAME_LLM_SCHEDULED_REQUESTS = "ovms_llm_scheduled_requests";
 const std::string METRIC_NAME_LLM_TTFT = "ovms_llm_ttft_milliseconds";
+const std::string METRIC_NAME_LLM_TPOT = "ovms_llm_tpot_milliseconds";
+
+const std::vector<std::string>& MetricConfig::getLLMMetricFamilies() {
+    static const std::vector<std::string> families{
+        METRIC_NAME_KV_CACHE_SIZE,
+        METRIC_NAME_KV_CACHE_UTILIZATION,
+        METRIC_NAME_LLM_GENERATED_TOKENS,
+        METRIC_NAME_LLM_PROMPT_TOKENS,
+        METRIC_NAME_LLM_SCHEDULED_REQUESTS,
+        METRIC_NAME_LLM_TPOT,
+        METRIC_NAME_LLM_TTFT};
+    return families;
+}
 
 bool MetricConfig::validateEndpointPath(const std::string& endpoint) {
     std::regex valid_endpoint_regex("^/[a-zA-Z0-9]*$");
@@ -134,7 +147,7 @@ Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
         std::string metric = std::string(sh.GetString());
 
         if (metric == ALL_LLM_METRICS_PRESET) {
-            for (const auto& family : this->llmMetricFamilies) {
+            for (const auto& family : getLLMMetricFamilies()) {
                 this->enabledFamiliesList.insert(family);
             }
             continue;

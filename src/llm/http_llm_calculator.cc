@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include <atomic>
 #include <mutex>
+#include <sstream>
 #include <string>
 
 #pragma warning(push)
@@ -35,6 +36,7 @@
 #include "../mediapipe_internal/graph_side_packets.hpp"
 #include "../mediapipe_calculators/utils/timestamp_advance_guard.hpp"
 #include "../metrics/calculator_metrics.hpp"
+#include "../metrics/metric_config.hpp"
 #include "../profiler.hpp"
 #include "apis/openai_completions.hpp"
 #include "servable.hpp"
@@ -86,6 +88,19 @@ public:
     absl::Status Open(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Open start", cc->NodeName());
+        if (llm_calculator_logger->should_log(spdlog::level::debug)) {
+            std::ostringstream metricFamilies;
+            const auto& availableMetrics = ovms::MetricConfig::getLLMMetricFamilies();
+            for (size_t i = 0; i < availableMetrics.size(); ++i) {
+                if (i > 0) {
+                    metricFamilies << ", ";
+                }
+                metricFamilies << availableMetrics[i];
+            }
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger,
+                "LLMCalculator [Node: {}] Available metric families (select with --metrics_list or all_llm): {}",
+                cc->NodeName(), metricFamilies.str());
+        }
         ovms::GenAiServableMap servableMap = cc->InputSidePackets().Tag(LLM_SESSION_SIDE_PACKET_TAG).Get<ovms::GenAiServableMap>();
         auto it = servableMap.find(cc->NodeName());
         RET_CHECK(it != servableMap.end()) << "Could not find initialized LLM node named: " << cc->NodeName();
