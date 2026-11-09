@@ -16,16 +16,6 @@
 
 load("//:common_settings.bzl", "ovms_cc_library")
 
-cc_binary(
-    name = "image_decode_benchmark",
-    srcs = ["image_decode_benchmark.cpp"],
-    deps = [
-        "@stb//:image",
-        "//third_party:opencv",
-    ],
-    visibility = ["//visibility:public"],
-)
-
 ovms_cc_library(
     name = "kserve_image_conversion",
     hdrs = ["kserve_image_conversion.hpp"],

@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <filesystem>
 #include <limits>
 #include <list>
@@ -195,22 +196,40 @@ const std::string& openCvImageDecoderUnavailableReason() {
 }
 
 Status decodeImage(std::string_view encoded, ov::Tensor& tensor, ImageDecoder decoder) {
+    const bool traceDecode = spdlog::default_logger()->should_log(spdlog::level::trace);
+    const auto decodeStart = traceDecode ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
+    const auto logDecode = [&](const char* backend, const char* result) {
+        if (traceDecode) {
+            const auto durationUs = std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now() - decodeStart)
+                                        .count();
+            SPDLOG_TRACE("Encoded image decode backend={} result={} duration_us={} encoded_bytes={}",
+                backend, result, durationUs, encoded.size());
+        }
+    };
+
     tensor = ov::Tensor{};
     if (encoded.empty() || encoded.size() > static_cast<size_t>(std::numeric_limits<int>::max())) {
         SPDLOG_DEBUG("Encoded image is empty or exceeds the decoder size limit");
+        logDecode("none", "rejected");
         return Status(StatusCode::IMAGE_PARSING_FAILED, "Encoded image is empty or exceeds the decoder size limit");
     }
     if (decoder != ImageDecoder::STB) {
         auto& backend = plugin();
         if (backend.decode) {
             std::array<char, 1024> error{};
-            if (backend.decode(reinterpret_cast<const unsigned char*>(encoded.data()), encoded.size(), &tensor, error.data(), error.size()))
+            if (backend.decode(reinterpret_cast<const unsigned char*>(encoded.data()), encoded.size(), &tensor, error.data(), error.size())) {
+                logDecode("opencv", "success");
                 return StatusCode::OK;
+            }
             SPDLOG_DEBUG("OpenCV image decoding failed: {}", error.data());
+            logDecode("opencv", "failed");
             return Status(StatusCode::IMAGE_PARSING_FAILED, error.data());
         }
-        if (decoder == ImageDecoder::OPENCV)
+        if (decoder == ImageDecoder::OPENCV) {
+            logDecode("opencv", "unavailable");
             return Status(StatusCode::IMAGE_PARSING_FAILED, backend.error);
+        }
     }
     const auto* data = reinterpret_cast<const unsigned char*>(encoded.data());
     const int size = static_cast<int>(encoded.size());
@@ -228,6 +247,7 @@ Status decodeImage(std::string_view encoded, ov::Tensor& tensor, ImageDecoder de
         if (decoder == ImageDecoder::AUTO)
             detail += ". " + plugin().error + ". Install OpenCV and the OVMS OpenCV decoder plugin to enable additional image formats";
         SPDLOG_DEBUG("{}", detail);
+        logDecode("stb", "failed");
         return Status(StatusCode::IMAGE_PARSING_FAILED, detail);
     }
     if (desiredChannels)
@@ -246,6 +266,7 @@ Status decodeImage(std::string_view encoded, ov::Tensor& tensor, ImageDecoder de
                                                         : ov::element::u8,
         ov::Shape{1, static_cast<size_t>(height), static_cast<size_t>(width), static_cast<size_t>(channels)},
         StbAllocator{std::move(owner), pixelCount * channels * channelBytes});
+    logDecode("stb", "success");
     return StatusCode::OK;
 }
 
