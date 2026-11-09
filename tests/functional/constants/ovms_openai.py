@@ -126,6 +126,7 @@ class OvmsCommonRequestParams:
 @dataclass
 class OvmsCommonCompletionsRequestParams(OpenAICommonCompletionsRequestParams, OvmsCommonRequestParams):
     ignore_eos: bool = None
+    skip_special_tokens: bool = None
     length_penalty: float = None
     include_stop_str_in_output: bool = None
     top_k: int = None
@@ -180,6 +181,7 @@ class OvmsCompletionsRequestParams(OvmsCommonCompletionsRequestParams, OpenAICom
 class OvmsResponsesRequestParams(OpenAIResponsesRequestParams, OvmsCommonRequestParams):
     stop: Union[str, list] = None
     ignore_eos: bool = None
+    skip_special_tokens: bool = None
     include_stop_str_in_output: bool = None
     logprobs: bool = None
     response_format: dict = None
