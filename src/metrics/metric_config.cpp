@@ -39,6 +39,10 @@
 #endif
 namespace ovms {
 
+namespace {
+constexpr const char* ALL_LLM_METRICS_PRESET = "all_llm";
+}
+
 // Single Model / DAG
 const std::string METRIC_NAME_REQUESTS_SUCCESS = "ovms_requests_success";
 const std::string METRIC_NAME_REQUESTS_FAIL = "ovms_requests_fail";
@@ -129,7 +133,7 @@ Status MetricConfig::parseMetricsArray(const rapidjson::Value& v) {
     for (auto& sh : v.GetArray()) {
         std::string metric = std::string(sh.GetString());
 
-        if (metric == "all_llm") {
+        if (metric == ALL_LLM_METRICS_PRESET) {
             for (const auto& family : this->llmMetricFamilies) {
                 this->enabledFamiliesList.insert(family);
             }
