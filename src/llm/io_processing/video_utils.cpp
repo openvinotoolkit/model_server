@@ -29,7 +29,10 @@
 #include <vector>
 
 #define MINIMP4_IMPLEMENTATION
+#pragma warning(push)
+#pragma warning(disable : 6246)
 #include <minimp4.h>
+#pragma warning(pop)
 #include <codec_api.h>
 
 #include "image_utils.hpp"
