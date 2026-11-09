@@ -187,6 +187,7 @@ echo [INFO]   OV_REPO=%OV_REPO%
 echo [INFO]   OV_GENAI_REPO=%OV_GENAI_REPO%
 echo [INFO]   OV_TOKENIZERS_REPO=%OV_TOKENIZERS_REPO%
 echo [INFO]   GENAI_PACKAGE_URL_WINDOWS=%GENAI_PACKAGE_URL_WINDOWS%
+echo [INFO]   GENAI_PACKAGE_SHA256_WINDOWS=%GENAI_PACKAGE_SHA256_WINDOWS%
 
 echo [INFO] OV_USE_BINARY=%OV_USE_BINARY%
 IF "%OV_USE_BINARY%"=="0" (
@@ -202,6 +203,13 @@ if "%GENAI_PACKAGE_URL%"=="" (
 )
 if "%GENAI_PACKAGE_URL%"=="" (
     echo [ERROR] GENAI_PACKAGE_URL is not set. Ensure versions.mk was loaded or set GENAI_PACKAGE_URL/GENAI_PACKAGE_URL_WINDOWS in the environment.
+    exit /b 1
+)
+if "%GENAI_PACKAGE_SHA256%"=="" (
+    set "GENAI_PACKAGE_SHA256=%GENAI_PACKAGE_SHA256_WINDOWS%"
+)
+if "%GENAI_PACKAGE_SHA256%"=="" (
+    echo [ERROR] GENAI_PACKAGE_SHA256 is not set.
     exit /b 1
 )
 
@@ -226,6 +234,12 @@ IF /I EXIST %genai_zip% (
 ) ELSE (
     curl -k -L -o "%genai_zip%" "%GENAI_PACKAGE_URL%"
     if !errorlevel! neq 0 exit /b !errorlevel!
+)
+set "actual_hash="
+for /f "skip=1 tokens=*" %%H in ('certutil -hashfile "%genai_zip%" SHA256') do if not defined actual_hash set "actual_hash=%%H"
+if /I not "!actual_hash!"=="%GENAI_PACKAGE_SHA256%" (
+    echo [ERROR] SHA-256 mismatch for %genai_zip%: expected %GENAI_PACKAGE_SHA256%, got !actual_hash!
+    exit /b 1
 )
 :: Extract GenAi
 IF /I EXIST %BAZEL_SHORT_PATH%\%genai_dir% (

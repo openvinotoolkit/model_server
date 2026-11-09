@@ -38,9 +38,9 @@ from tests.functional.constants.ovms import CurrentTarget as ct
 
 # should be checked periodically with OVMS Dockerfiles
 GPU_INSTALL_DRIVER_VERSION = {
-    "redhat": "24.52.32224",
-    "ubuntu22": "24.39.31294",
-    "ubuntu24": "26.09.37435",
+    "redhat": "25.18.33578",
+    "ubuntu22": "24.52.32224",
+    "ubuntu24": "26.31.39395",
     "ubuntu26": "26.31.39395",
 }
 
