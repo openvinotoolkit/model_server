@@ -26,10 +26,10 @@
 using namespace ovms;
 
 #ifdef _WIN32
-const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\OpenVINO\\Phi-4-mini-instruct-int4-ov";
+const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\OpenVINO\\Phi-4-reasoning-int4-ov";
 #else
 // Hardcoded for usage in docker container
-const std::string tokenizerPath = "/ovms/src/test/llm_testing/OpenVINO/Phi-4-mini-instruct-int4-ov";
+const std::string tokenizerPath = "/ovms/src/test/llm_testing/OpenVINO/Phi-4-reasoning-int4-ov";
 #endif
 
 static ovms::ToolsSchemas_t EMPTY_TOOLS_SCHEMA = {};  // not used for phi4
@@ -54,7 +54,7 @@ protected:
     }
 
     void SetUp() override {
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*phi4Tokenizer, "phi4", "", EMPTY_TOOLS_SCHEMA);
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*phi4Tokenizer, "phi4", "qwen3", EMPTY_TOOLS_SCHEMA);
     }
 };
 
@@ -108,6 +108,39 @@ TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithContentAndNoToolCalls) {
     EXPECT_EQ(parsedOutput.content, "This is a regular model response without tool calls.");
     ASSERT_EQ(parsedOutput.toolCalls.size(), 0);
     EXPECT_EQ(parsedOutput.reasoning, "");
+}
+
+TEST_F(Phi4OutputParserTest, ParseReasoningWithoutContent) {
+    std::string input = "<think>Let me think this through.</think>";
+    auto generatedTensor = phi4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*phi4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "");
+    EXPECT_EQ(parsedOutput.reasoning, "Let me think this through.");
+    EXPECT_TRUE(parsedOutput.toolCalls.empty());
+}
+
+TEST_F(Phi4OutputParserTest, ParseReasoningBeforeContent) {
+    std::string input = "<think>Let me think this through.</think>The answer is 42.";
+    auto generatedTensor = phi4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*phi4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "The answer is 42.");
+    EXPECT_EQ(parsedOutput.reasoning, "Let me think this through.");
+    EXPECT_TRUE(parsedOutput.toolCalls.empty());
+}
+
+TEST_F(Phi4OutputParserTest, ParseReasoningBeforeToolCall) {
+    std::string input = "<think>I should use the example tool.</think>"
+                        "functools[{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\"}}]";
+    auto generatedTensor = phi4Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*phi4Tokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "");
+    EXPECT_EQ(parsedOutput.reasoning, "I should use the example tool.");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "example_tool");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"arg1\":\"value1\"}");
 }
 
 TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithContentAndSingleToolCall) {

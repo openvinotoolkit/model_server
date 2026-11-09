@@ -89,6 +89,7 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
     // Phi-4 detection — uses "functools[" marker for tool calls
     if (contains(templateSource, "functools")) {
         result.detectedToolParser = "phi4";
+        result.detectedReasoningParser = "qwen3";
         result.caps.supportsToolCalls = true;
         return result;
     }

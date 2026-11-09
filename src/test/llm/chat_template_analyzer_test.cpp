@@ -123,7 +123,8 @@ TEST_F(ChatTemplateAnalyzerTest, detectsPhi4) {
     auto result = ChatTemplateAnalyzer::analyze(tmpl);
     ASSERT_TRUE(result.detectedToolParser.has_value());
     EXPECT_EQ(result.detectedToolParser.value(), "phi4");
-    EXPECT_FALSE(result.detectedReasoningParser.has_value());
+    EXPECT_TRUE(result.detectedReasoningParser.has_value());
+    EXPECT_EQ(result.detectedReasoningParser.value(), "qwen3");
     EXPECT_TRUE(result.caps.supportsToolCalls);
 }
 
