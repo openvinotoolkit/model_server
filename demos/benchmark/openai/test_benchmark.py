@@ -303,6 +303,101 @@ class VLMInputTests(unittest.TestCase):
         self.assertEqual(benchmark.batch_size, 16)
 
 
+class ImageGenerationTests(unittest.TestCase):
+    def test_prepare_fixed_prompts_without_dataset_or_tokenizer(self):
+        benchmark.args = vars(benchmark.parser.parse_args(['--backend', 'image-gen', '--limit', '3']))
+        with patch.object(benchmark, 'load_dataset') as dataset, \
+                patch.object(benchmark.AutoTokenizer, 'from_pretrained') as tokenizer:
+            docs = benchmark.prepare_documents()
+        self.assertEqual(list(docs['text']), ['Draw a picture of a cute cat'] * 3)
+        dataset.assert_not_called()
+        tokenizer.assert_not_called()
+        self.assertEqual(benchmark.args['steps'], 50)
+        self.assertEqual(benchmark.args['resolution'], '512x512')
+
+    def test_invalid_generation_options(self):
+        for options in (['--steps', '0'], ['--steps', '-1'], ['--resolution', '512'],
+                        ['--resolution', '0x512'], ['--resolution', '512x-1'],
+                        ['--resolution', '512x512x512'], ['--resolution', 'ax512']):
+            with self.subTest(options=options), redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                benchmark.parser.parse_args(['--backend', 'image-gen'] + options)
+
+    def test_batch_size_must_be_one(self):
+        with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            benchmark.main(['--backend', 'image-gen', '--batch_size', '2'])
+
+    def test_statistics_defaults_and_failures(self):
+        for successes, latencies, expected in (
+            ([True, False, True], [1.0, 100.0, 3.0],
+             ['Mean latency: 2000.000 ms', 'Median latency: 2000.000 ms',
+              'p90 latency: 2800.000 ms', 'Total images/min: 12.000']),
+            ([False], [100.0], ['Mean latency: n/a', 'Median latency: n/a',
+                               'p90 latency: n/a', 'Total images/min: 0.000']),
+        ):
+            results = {'duration': 10.0, 'successes': successes, 'latencies': latencies,
+                       'errors': ['' if success else 'failed' for success in successes]}
+            with patch.object(benchmark, 'discover_model', return_value='image-model'), \
+                    patch.object(benchmark, 'benchmark', new=lambda **kwargs: kwargs), \
+                    patch.object(benchmark.asyncio, 'run', return_value=results) as run, \
+                    patch.object(benchmark, 'count_tokens') as tokens, \
+                    redirect_stdout(io.StringIO()) as output, redirect_stderr(io.StringIO()):
+                status = benchmark.main(['--backend', 'image-gen', '--limit', '3'])
+            self.assertEqual(status, 1)
+            self.assertEqual(benchmark.batch_size, 1)
+            self.assertEqual(benchmark.args['api_url'], 'http://localhost:8000/v1/images/generations')
+            self.assertIs(run.call_args.args[0]['backend_function'], benchmark.async_request_image_gen)
+            tokens.assert_not_called()
+            for line in expected:
+                self.assertIn(line, output.getvalue())
+
+
+class ImageGenerationRequestTests(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        benchmark.args = vars(benchmark.parser.parse_args(['--backend', 'image-gen', '--limit', '2',
+                                                           '--steps', '4', '--resolution', '768x512']))
+        benchmark.batch_size = 1
+        self.payloads = []
+        self.status = 200
+        self.response = {'data': [{'b64_json': 'aW1hZ2U='}]}
+        app = web.Application()
+        app.router.add_post('/v1/images/generations', self.generate)
+        self.runner = web.AppRunner(app)
+        await self.runner.setup()
+        await web.TCPSite(self.runner, '127.0.0.1', 0).start()
+        self.url = f'http://127.0.0.1:{self.runner.addresses[0][1]}/v1/images/generations'
+
+    async def asyncTearDown(self):
+        await self.runner.cleanup()
+
+    async def generate(self, request):
+        self.payloads.append(await request.json())
+        return web.json_response(self.response, status=self.status)
+
+    async def test_payload_and_successful_benchmark(self):
+        results = await benchmark.benchmark(benchmark.prepare_documents(), 'image-model', self.url,
+                                            float('inf'), benchmark.async_request_image_gen)
+        self.assertEqual(results['successes'], [True, True])
+        self.assertTrue(all(latency > 0 for latency in results['latencies']))
+        self.assertEqual(self.payloads, [{'model': 'image-model', 'prompt': 'Draw a picture of a cute cat',
+                                         'n': 1, 'num_inference_steps': 4, 'size': '768x512'}] * 2)
+
+    async def test_failed_or_missing_images_are_not_successful(self):
+        for status, response in ((500, {'error': 'generation failed'}), (200, {'data': []}),
+                                 (200, {'data': [{}]}), (200, {'data': [{'b64_json': ''}]})):
+            with self.subTest(status=status, response=response):
+                self.status, self.response = status, response
+                output = await benchmark.async_request_image_gen(
+                    benchmark.RequestFuncInput(self.url, ['Draw a picture of a cute cat'], 'image-model'))
+                self.assertFalse(output.success)
+                self.assertTrue(output.error)
+
+    async def test_image_url_response(self):
+        self.response = {'data': [{'url': 'https://example.org/generated.png'}]}
+        output = await benchmark.async_request_image_gen(
+            benchmark.RequestFuncInput(self.url, ['Draw a picture of a cute cat'], 'image-model'))
+        self.assertTrue(output.success)
+
+
 class VLMRequestTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         benchmark.args = vars(benchmark.parser.parse_args(['--backend', 'ovms-vlm', '--limit', '4',

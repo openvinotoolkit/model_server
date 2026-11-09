@@ -159,12 +159,6 @@ pip install "transformers<5"  # WA for optimum-intel and model support for new t
 python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --model_name gte-large-en-v1.5 --pooling CLS --extra_quantization_params "--library sentence_transformers"
 ```
 :::
-:::{tab-item} nomic-ai/nomic-embed-text-v1.5
-:sync: nomic-embed-text-v1.5
-```console
-python export_model.py embeddings_ov --source_model nomic-ai/nomic-embed-text-v1.5 --model_name nomic-embed-text-v1.5 --pooling MEAN --extra_quantization_params "--library sentence_transformers"
-```
-:::
 :::{tab-item} sentence-transformers/all-mpnet-base-v2
 :sync: all-mpnet-base-v2
 ```console
@@ -229,12 +223,6 @@ python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-lar
 ```text
 pip install "transformers<5"  # WA for optimum-intel and model support for new transformers
 python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --model_name gte-large-en-v1.5 --pooling CLS --weight-format int8 --target_device GPU --extra_quantization_params "--library sentence_transformers" --config_file_path models/config.json --model_repository_path models
-```
-:::
-:::{tab-item} nomic-ai/nomic-embed-text-v1.5
-:sync: nomic-embed-text-v1.5
-```console
-python export_model.py embeddings_ov --source_model nomic-ai/nomic-embed-text-v1.5 --model_name nomic-embed-text-v1.5 --pooling MEAN --weight-format int8 --target_device GPU --extra_quantization_params "--library sentence_transformers" --config_file_path models/config.json --model_repository_path models
 ```
 :::
 :::{tab-item} sentence-transformers/all-mpnet-base-v2
@@ -316,7 +304,6 @@ All models supported by [optimum-intel](https://github.com/huggingface/optimum-i
 |intfloat/multilingual-e5-large-instruct|MEAN|CPU,GPU|
 |intfloat/multilingual-e5-large|MEAN|CPU,GPU|
 |Alibaba-NLP/gte-large-en-v1.5|CLS|CPU,GPU|
-|nomic-ai/nomic-embed-text-v1.5|MEAN|CPU,GPU|
 |sentence-transformers/all-mpnet-base-v2|MEAN|CPU,GPU,NPU|
 
 ## Server Deployment

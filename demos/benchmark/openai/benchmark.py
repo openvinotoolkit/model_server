@@ -49,7 +49,8 @@ default_url_description = "Default value depends on the backend: \
     text2speech: http://localhost:8000/v3/audio/speech ;\
     speech2text: http://localhost:8000/v3/audio/transcriptions ;\
     translations: http://localhost:8000/v3/audio/translations ;\
-    ovms-vlm: http://localhost:8000/v1/chat/completions"
+    ovms-vlm: http://localhost:8000/v1/chat/completions ;\
+    image-gen: http://localhost:8000/v1/images/generations"
 
 
 def positive_int(value):
@@ -58,15 +59,22 @@ def positive_int(value):
         raise argparse.ArgumentTypeError('must be a positive integer')
     return number
 
-parser = argparse.ArgumentParser(description='Run benchmark for embeddings, audio, and VLM chat endpoints', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+def image_resolution(value):
+    dimensions = value.split('x')
+    if len(dimensions) != 2 or any(not dimension.isascii() or not dimension.isdecimal() or int(dimension) <= 0
+                                   for dimension in dimensions):
+        raise argparse.ArgumentTypeError('must be WIDTHxHEIGHT with positive integer dimensions')
+    return value
+
+parser = argparse.ArgumentParser(description='Run benchmark for embeddings, audio, VLM chat, and image generation endpoints', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--dataset', required=False, default='Cohere/wikipedia-2023-11-embed-multilingual-v3', help='Dataset for load generation from HF or a keyword "synthetic"', dest='dataset')
 parser.add_argument('--synthetic_length', required=False, default=510, type=int, help='Length of the synthetic dataset', dest='length')
-parser.add_argument('--api_url', required=False, help='API URL for embeddings endpoint. ' + default_url_description, dest='api_url')
+parser.add_argument('--api_url', required=False, help='API URL for the selected backend. ' + default_url_description, dest='api_url')
 parser.add_argument('--model', required=False, help='Served model name; auto-detected from /v1/models when exactly one model is available', dest='model')
 parser.add_argument('--request_rate', required=False, default='inf', help='Average amount of requests per seconds in random distribution', dest='request_rate')
-parser.add_argument('--batch_size', required=False, type=positive_int, default=None, help='Strings per request; default 16, or 1 for ovms-vlm', dest='batch_size')
+parser.add_argument('--batch_size', required=False, type=positive_int, default=None, help='Strings per request; default 16, or 1 for ovms-vlm and image-gen', dest='batch_size')
 parser.add_argument('--voice', required=False, help='Voice name for text2speech backend', dest='voice')
-parser.add_argument('--backend', required=False, default='ovms-embeddings', choices=['ovms-embeddings','tei-embed','infinity-embeddings','ovms_rerank','text2speech','speech2text', 'translations', 'ovms-vlm'], help='Backend serving API type', dest='backend')
+parser.add_argument('--backend', required=False, default='ovms-embeddings', choices=['ovms-embeddings','tei-embed','infinity-embeddings','ovms_rerank','text2speech','speech2text', 'translations', 'ovms-vlm', 'image-gen'], help='Backend serving API type', dest='backend')
 parser.add_argument('--limit', required=False, type=positive_int, default=1000, help='Number of documents, or independent conversations for ovms-vlm', dest='limit')
 parser.add_argument('--split', required=False, default='train', help='Dataset split', dest='split')
 parser.add_argument('--hf-subset', required=False, help='Hf dataset subset', dest='subset')
@@ -80,6 +88,8 @@ parser.add_argument('--max_concurrency', type=positive_int, default=100, help='M
 parser.add_argument('--image', help='Image HTTP(S) URL, data URI, or local filename for the first VLM user message')
 parser.add_argument('--turns', type=positive_int, default=1, help='Requests per VLM conversation, including the first turn')
 parser.add_argument('--turn_lenght', '--turn_length', dest='turn_length', type=positive_int, default=128, help='New text tokens added to each subsequent VLM user turn')
+parser.add_argument('--steps', type=positive_int, default=50, help='Denoising steps for image-gen')
+parser.add_argument('--resolution', type=image_resolution, default='512x512', help='Image-gen resolution as WIDTHxHEIGHT')
 
 args = {}
 
@@ -199,6 +209,8 @@ def image_context_url(image):
 
 
 def prepare_documents():
+    if args['backend'] == 'image-gen':
+        return Dataset.from_dict({'text': ['Draw a picture of a cute cat'] * args['limit']})
     if args['backend'] == 'ovms-vlm':
         source = Path(args['text_input_file']).read_text(encoding='utf-8') if args.get('text_input_file') else None
         if uses_server_tokenization():
@@ -381,6 +393,38 @@ async def async_request_vlm(request_func_input: RequestFuncInput, pbar=None):
             if not output.success:
                 break
     return outputs
+
+
+async def async_request_image_gen(request_func_input: RequestFuncInput, pbar=None):
+    payload = {
+        'model': request_func_input.model,
+        'prompt': request_func_input.documents[0],
+        'n': 1,
+        'num_inference_steps': args['steps'],
+        'size': args['resolution'],
+    }
+    output = RequestFuncOutput()
+    async with aiohttp.ClientSession(timeout=AIOHTTP_TIMEOUT, read_bufsize=100000) as session:
+        started = time.perf_counter()
+        try:
+            async with session.post(request_func_input.api_url, json=payload,
+                                    headers=application_json_headers) as response:
+                if response.status != 200:
+                    raise ValueError(f'HTTP {response.status}: {(await response.text())[:1000]}')
+                data = await response.json()
+                images = data.get('data') if isinstance(data, dict) else None
+                if not isinstance(images, list) or len(images) != 1 or not isinstance(images[0], dict):
+                    raise ValueError('Expected one generated image in response')
+                if not any(isinstance(images[0].get(key), str) and images[0][key]
+                           for key in ('b64_json', 'url')):
+                    raise ValueError('Missing generated image data or URL')
+            output.success = True
+        except Exception as error:
+            output.error = str(error)
+        output.latency = time.perf_counter() - started
+    if pbar:
+        pbar.update(1)
+    return output
 
 
 async def async_request_text2speech(
@@ -720,9 +764,9 @@ def main(argv=None):
     args = vars(parser.parse_args(argv))
     if args['text_input_file'] and args['backend'] != 'ovms-vlm':
         parser.error('--text_input_file is only supported for ovms-vlm')
-    args['batch_size'] = args['batch_size'] or (1 if args['backend'] == 'ovms-vlm' else 16)
+    args['batch_size'] = args['batch_size'] or (1 if args['backend'] in ('ovms-vlm', 'image-gen') else 16)
     batch_size = args['batch_size']
-    if args['backend'] in ('ovms-vlm', 'text2speech', 'speech2text', 'translations') and batch_size != 1:
+    if args['backend'] in ('ovms-vlm', 'text2speech', 'speech2text', 'translations', 'image-gen') and batch_size != 1:
         parser.error(f"Only batch_size=1 is supported for {args['backend']}")
     try:
         request_rate = float(args['request_rate'])
@@ -739,6 +783,7 @@ def main(argv=None):
         'speech2text': (async_request_speech2text, 'http://localhost:8000/v3/audio/transcriptions'),
         'translations': (async_request_speech2text, 'http://localhost:8000/v3/audio/translations'),
         'ovms-vlm': (async_request_vlm, 'http://localhost:8000/v1/chat/completions'),
+        'image-gen': (async_request_image_gen, 'http://localhost:8000/v1/images/generations'),
     }
     backend_function, default_api_url = backends[args['backend']]
     if args['api_url'] is None:
@@ -760,6 +805,19 @@ def main(argv=None):
     if args['backend'] == 'ovms-vlm':
         print_vlm_statistics(benchmark_results)
         return 0 if all(benchmark_results['successes']) else 1
+    if args['backend'] == 'image-gen':
+        latencies = [value * 1000 for value, success in zip(benchmark_results['latencies'],
+                                                          benchmark_results['successes']) if success]
+        print(f'Success rate: {success_rate:.2f}%. ({success_count}/{total_count})')
+        for label, operation in (('Mean', np.mean), ('Median', np.median),
+                                 ('p90', lambda values: np.percentile(values, 90))):
+            value = f'{operation(latencies):.3f} ms' if latencies else 'n/a'
+            print(f'{label} latency: {value}')
+        duration = benchmark_results['duration']
+        print(f'Total images/min: {60 * success_count / duration if duration else 0:.3f}')
+        for error in list(dict.fromkeys(error for error in benchmark_results['errors'] if error))[:3]:
+            print(f'Request error: {error}', file=sys.stderr)
+        return 0 if success_count == total_count else 1
     if args['backend'] == 'text2speech':
         rtfx_values = []
         for latency, audio_duration, success in zip(
