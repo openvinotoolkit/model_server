@@ -9,7 +9,7 @@ diff --git a/minimp4.h b/minimp4.h
      unsigned dsi_bytes;
  
      // MP4 object type code
-@@ -3221,14 +3222,12 @@ int MP4D_open(MP4D_demux_t *mp4, int (*read_callback)(int64_t offset, void *bu
+@@ -3221,14 +3222,12 @@ int MP4D_open(...)
                  unsigned int AVCProfileIndication = READ(1);
                  unsigned int profile_compatibility = READ(1);
                  unsigned int AVCLevelIndication = READ(1);

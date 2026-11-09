@@ -82,6 +82,8 @@ struct MediaFileDownloadContext {
     bool sizeLimitExceeded = false;
 };
 
+constexpr long MEDIA_DOWNLOAD_TIMEOUT_SECONDS = 120;
+
 size_t appendMediaFileChunk(void* downloadedChunk, size_t size, size_t nmemb, void* context) noexcept {
     auto* downloadContext = static_cast<MediaFileDownloadContext*>(context);
     if (size != 0 && nmemb > std::numeric_limits<size_t>::max() / size) {
@@ -140,12 +142,12 @@ const char* getDownloadFailureReason(CURLcode status) {
 
 }  // namespace
 
-absl::Status validateHttpImageDownloadResponse(int64_t httpCode, bool redirectsAllowed) {
+absl::Status validateHttpDownloadResponse(int64_t httpCode, bool redirectsAllowed, std::string_view mediaType) {
     if (httpCode >= 300 && httpCode < 400 && !redirectsAllowed) {
-        return absl::InvalidArgumentError("Failed to download image from external URL because redirects are not allowed. Set OVMS_MEDIA_URL_ALLOW_REDIRECTS=1 environment variable to allow redirects.");
+        return absl::InvalidArgumentError("Failed to download " + std::string(mediaType) + " from external URL because redirects are not allowed. Set OVMS_MEDIA_URL_ALLOW_REDIRECTS=1 environment variable to allow redirects.");
     }
     if (httpCode < 200 || httpCode >= 300) {
-        return absl::InvalidArgumentError("Failed to download image from external URL: HTTP status " + std::to_string(httpCode) + ".");
+        return absl::InvalidArgumentError("Failed to download " + std::string(mediaType) + " from external URL: HTTP status " + std::to_string(httpCode) + ".");
     }
     return absl::OkStatus();
 }
@@ -224,7 +226,7 @@ absl::Status downloadImage(const char* url, std::string& image, const int64_t& s
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger,
                 "External image download failed: reason=http_status http_status={}", httpCode);
         }
-        return validateHttpImageDownloadResponse(static_cast<int64_t>(httpCode), redirectsAllowed);
+        return validateHttpDownloadResponse(static_cast<int64_t>(httpCode), redirectsAllowed, "image");
     }
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloading image succeeded, {} bytes retrieved", image.size());
     return absl::OkStatus();
@@ -314,6 +316,7 @@ absl::Status downloadMediaToFile(const std::string& mediaSource, std::FILE* outp
         CURL_SETOPT(curl_easy_setopt(curlHandle, CURLOPT_FOLLOWLOCATION, 1L))
     }
     CURL_SETOPT(curl_easy_setopt(curlHandle, CURLOPT_MAXFILESIZE_LARGE, static_cast<curl_off_t>(sizeLimit)))
+    CURL_SETOPT(curl_easy_setopt(curlHandle, CURLOPT_TIMEOUT, MEDIA_DOWNLOAD_TIMEOUT_SECONDS))
     if (status != CURLE_OK) {
         return absl::InternalError("Video downloading failed");
     }
@@ -324,6 +327,19 @@ absl::Status downloadMediaToFile(const std::string& mediaSource, std::FILE* outp
             return absl::InvalidArgumentError("Encoded video source exceeds the allowed file size");
         }
         return absl::InvalidArgumentError("Video downloading failed");
+    }
+    const bool isHttpUrl = mediaSource.rfind("http://", 0) == 0 || mediaSource.rfind("https://", 0) == 0;
+    if (isHttpUrl) {
+        long httpCode = 0;  // NOLINT(runtime/int): CURLINFO_RESPONSE_CODE requires long*.
+        status = curl_easy_getinfo(curlHandle, CURLINFO_RESPONSE_CODE, &httpCode);
+        if (status != CURLE_OK) {
+            return absl::InternalError("Failed to get video download response status.");
+        }
+        const bool redirectsAllowed = envAllowRedirects != nullptr && std::strcmp(envAllowRedirects, "1") == 0;
+        const auto responseStatus = validateHttpDownloadResponse(static_cast<int64_t>(httpCode), redirectsAllowed, "video");
+        if (!responseStatus.ok()) {
+            return responseStatus;
+        }
     }
     if (std::fflush(output) != 0) {
         return absl::InternalError("Unable to write downloaded video source");

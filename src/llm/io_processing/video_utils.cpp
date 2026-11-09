@@ -33,8 +33,8 @@
 #include <codec_api.h>
 
 #include "image_utils.hpp"
-#include "../../logging.hpp"
-#include "../../predict_request_validation_utils_impl.hpp"
+#include "src/logging.hpp"
+#include "src/predict_request_validation_utils_impl.hpp"
 
 namespace ovms {
 
@@ -49,6 +49,28 @@ struct FileCloser {
     void operator()(std::FILE* file) const {
         if (file != nullptr) {
             std::fclose(file);
+        }
+    }
+};
+
+struct Mp4DemuxGuard {
+    MP4D_demux_t& demux;
+
+    ~Mp4DemuxGuard() {
+        MP4D_close(&demux);
+    }
+};
+
+struct OpenH264DecoderGuard {
+    ISVCDecoder* decoder = nullptr;
+    bool initialized = false;
+
+    ~OpenH264DecoderGuard() {
+        if (decoder != nullptr) {
+            if (initialized) {
+                decoder->Uninitialize();
+            }
+            WelsDestroyDecoder(decoder);
         }
     }
 };
@@ -103,6 +125,37 @@ uint8_t clampToByte(int value) {
 
 bool multiplicationExceeds(size_t left, size_t right, size_t limit) {
     return left != 0 && right > limit / left;
+}
+
+void copyI420ToRgb(const uint8_t* const planes[3], int width, int height, const int strides[2], uint8_t* destination);
+
+absl::Status storeDecodedFrameInTensor(uint8_t* const planes[3], const SBufferInfo& output,
+    size_t maxAllowedVideoPixels, size_t& totalAllocatedPixels, ov::Shape& frameShape,
+    size_t& frameBytes, size_t selectedFrameLimit, size_t selectedFrames, ov::Tensor& video) {
+    const int width = output.UsrData.sSystemBuffer.iWidth;
+    const int height = output.UsrData.sSystemBuffer.iHeight;
+    if (width <= 0 || height <= 0 || multiplicationExceeds(static_cast<size_t>(height), static_cast<size_t>(width), std::numeric_limits<size_t>::max())) {
+        return absl::InvalidArgumentError("H.264 decoder returned an invalid frame size");
+    }
+    const size_t framePixels = static_cast<size_t>(height) * static_cast<size_t>(width);
+    const ov::Shape decodedFrameShape{1, static_cast<size_t>(height), static_cast<size_t>(width), 3};
+    if (framePixels > maxAllowedVideoPixels - totalAllocatedPixels) {
+        return absl::InvalidArgumentError("Video exceeds maximum decoded size");
+    }
+    if (frameShape.empty()) {
+        frameShape = decodedFrameShape;
+        if (multiplicationExceeds(framePixels, 3, std::numeric_limits<size_t>::max())) {
+            return absl::InvalidArgumentError("H.264 decoder returned an invalid frame size");
+        }
+        frameBytes = framePixels * 3;
+        video = ov::Tensor(ov::element::u8, ov::Shape{selectedFrameLimit, frameShape[1], frameShape[2], frameShape[3]});
+    } else if (decodedFrameShape != frameShape) {
+        return absl::InvalidArgumentError("All video frames must have the same height, width and channel count");
+    }
+    auto* const destination = static_cast<uint8_t*>(video.data()) + selectedFrames * frameBytes;
+    copyI420ToRgb(planes, width, height, output.UsrData.sSystemBuffer.iStride, destination);
+    totalAllocatedPixels += framePixels;
+    return absl::OkStatus();
 }
 
 void copyI420ToRgb(const uint8_t* const planes[3], int width, int height, const int strides[2], uint8_t* destination) {
@@ -230,9 +283,7 @@ absl::StatusOr<ov::Tensor> decodeVideoSource(const std::string& videoSource,
     if (MP4D_open(&mp4, readVideoBytes, &file, static_cast<int64_t>(fileSize)) == 0) {
         return absl::InvalidArgumentError("Unable to parse MP4 video source");
     }
-    const auto closeMp4 = [&mp4]() {
-        MP4D_close(&mp4);
-    };
+    Mp4DemuxGuard mp4Guard{mp4};
 
     unsigned trackIndex = mp4.track_count;
     for (unsigned index = 0; index < mp4.track_count; ++index) {
@@ -242,7 +293,6 @@ absl::StatusOr<ov::Tensor> decodeVideoSource(const std::string& videoSource,
         }
     }
     if (trackIndex == mp4.track_count) {
-        closeMp4();
         return absl::InvalidArgumentError("MP4 source does not contain a video track");
     }
 
@@ -254,13 +304,11 @@ absl::StatusOr<ov::Tensor> decodeVideoSource(const std::string& videoSource,
         appendStartCode(configuration, pps, bytes);
     }
     if (configuration.empty()) {
-        closeMp4();
         return absl::InvalidArgumentError("MP4 video track is not H.264 AVC");
     }
 
     const auto& videoTrack = mp4.track[trackIndex];
     if (videoTrack.timescale == 0) {
-        closeMp4();
         return absl::InvalidArgumentError("MP4 video track has an invalid time scale");
     }
     const uint64_t durationUnits = (static_cast<uint64_t>(videoTrack.duration_hi) << 32) | videoTrack.duration_lo;
@@ -268,12 +316,10 @@ absl::StatusOr<ov::Tensor> decodeVideoSource(const std::string& videoSource,
         static_cast<long double>(durationUnits) * requestedFps / static_cast<long double>(videoTrack.timescale));
     if (!std::isfinite(requestedFrameCount) || requestedFrameCount < 1.0L ||
         requestedFrameCount > static_cast<long double>(std::numeric_limits<size_t>::max())) {
-        closeMp4();
         return absl::InvalidArgumentError("MP4 video duration cannot be sampled at the requested FPS");
     }
     const size_t estimatedRequestedFrames = static_cast<size_t>(requestedFrameCount);
     if (estimatedRequestedFrames > maxDecodedFrames) {
-        closeMp4();
         return absl::InvalidArgumentError("Requested video FPS exceeds maximum decoded frame count");
     }
     const size_t selectedFrameLimit = std::min({estimatedRequestedFrames, static_cast<size_t>(maxDecodedFrames),
@@ -283,35 +329,30 @@ absl::StatusOr<ov::Tensor> decodeVideoSource(const std::string& videoSource,
     const size_t maxAllowedVideoPixels = request_validation_utils::getMaxVideoDecodePixels();
     if (selectedFrameLimit == 0 || estimatedWidth == 0 || estimatedHeight == 0 ||
         multiplicationExceeds(estimatedWidth, estimatedHeight, std::numeric_limits<size_t>::max())) {
-        closeMp4();
         return absl::InvalidArgumentError("MP4 source has invalid video dimensions");
     }
     const size_t estimatedFramePixels = estimatedWidth * estimatedHeight;
     if (totalAllocatedPixels > maxAllowedVideoPixels ||
         multiplicationExceeds(estimatedFramePixels, selectedFrameLimit, maxAllowedVideoPixels - totalAllocatedPixels)) {
-        closeMp4();
         return absl::InvalidArgumentError("Video exceeds maximum decoded size");
     }
 
-    ISVCDecoder* decoder = nullptr;
-    if (WelsCreateDecoder(&decoder) != 0 || decoder == nullptr) {
-        closeMp4();
+    OpenH264DecoderGuard decoderGuard;
+    if (WelsCreateDecoder(&decoderGuard.decoder) != 0 || decoderGuard.decoder == nullptr) {
         return absl::InternalError("Unable to create H.264 decoder");
     }
     SDecodingParam parameters{};
     parameters.sVideoProperty.size = sizeof(SVideoProperty);
     parameters.sVideoProperty.eVideoBsType = VIDEO_BITSTREAM_AVC;
-    if (decoder->Initialize(&parameters) != 0) {
-        WelsDestroyDecoder(decoder);
-        closeMp4();
+    if (decoderGuard.decoder->Initialize(&parameters) != 0) {
         return absl::InternalError("Unable to initialize H.264 decoder");
     }
+    decoderGuard.initialized = true;
 
-    std::vector<std::vector<uint8_t>> selectedFrameBytes;
-    selectedFrameBytes.reserve(selectedFrameLimit);
     ov::Shape frameShape;
     size_t frameBytes = 0;
     size_t selectedFrames = 0;
+    ov::Tensor video;
     const long double frameInterval = static_cast<long double>(videoTrack.timescale) / requestedFps;
     long double nextSelectedTimestamp = 0.0L;
     absl::Status decodeStatus = absl::OkStatus();
@@ -338,69 +379,52 @@ absl::StatusOr<ov::Tensor> decodeVideoSource(const std::string& videoSource,
 
         uint8_t* planes[3]{};
         SBufferInfo output{};
-        if (decoder->DecodeFrameNoDelay(annexB.data(), static_cast<int>(annexB.size()), planes, &output) != dsErrorFree) {
+        if (decoderGuard.decoder->DecodeFrameNoDelay(annexB.data(), static_cast<int>(annexB.size()), planes, &output) != dsErrorFree) {
             decodeStatus = absl::InvalidArgumentError("Unable to decode H.264 video frame");
             break;
         }
         if (output.iBufferStatus != 1) {
             continue;
         }
+        // TODO: Sample using presentation timestamps after preserving MP4 ctts offsets
+        // and passing timestamps through a timestamp-aware OpenH264 decoder API.
         if (selectedFrames == maxDecodedFrames || static_cast<long double>(timestamp) < nextSelectedTimestamp) {
             continue;
         }
-        nextSelectedTimestamp += frameInterval;
+        nextSelectedTimestamp = (std::floor(static_cast<long double>(timestamp) / frameInterval) + 1.0L) * frameInterval;
 
-        const int width = output.UsrData.sSystemBuffer.iWidth;
-        const int height = output.UsrData.sSystemBuffer.iHeight;
-        if (width <= 0 || height <= 0) {
-            decodeStatus = absl::InvalidArgumentError("H.264 decoder returned an invalid frame size");
+        decodeStatus = storeDecodedFrameInTensor(planes, output, maxAllowedVideoPixels, totalAllocatedPixels,
+            frameShape, frameBytes, selectedFrameLimit, selectedFrames, video);
+        if (!decodeStatus.ok()) {
             break;
         }
-        const ov::Shape decodedFrameShape{1, static_cast<size_t>(height), static_cast<size_t>(width), 3};
-        if (multiplicationExceeds(static_cast<size_t>(height), static_cast<size_t>(width), std::numeric_limits<size_t>::max())) {
-            decodeStatus = absl::InvalidArgumentError("Video exceeds maximum decoded size");
-            break;
-        }
-        const size_t framePixels = static_cast<size_t>(height) * static_cast<size_t>(width);
-        if (framePixels > maxAllowedVideoPixels - totalAllocatedPixels) {
-            decodeStatus = absl::InvalidArgumentError("Video exceeds maximum decoded size");
-            break;
-        }
-        if (frameShape.empty()) {
-            frameShape = decodedFrameShape;
-            if (multiplicationExceeds(framePixels, 3, std::numeric_limits<size_t>::max())) {
-                decodeStatus = absl::InvalidArgumentError("H.264 decoder returned an invalid frame size");
-                break;
-            }
-            frameBytes = framePixels * 3;
-        } else if (decodedFrameShape != frameShape) {
-            decodeStatus = absl::InvalidArgumentError("All video frames must have the same height, width and channel count");
-            break;
-        }
-        selectedFrameBytes.emplace_back(frameBytes);
-        copyI420ToRgb(planes, width, height, output.UsrData.sSystemBuffer.iStride,
-            selectedFrameBytes.back().data());
-        totalAllocatedPixels += framePixels;
         selectedFrames++;
         if (selectedFrames == selectedFrameLimit) {
             break;
         }
     }
 
-    decoder->Uninitialize();
-    WelsDestroyDecoder(decoder);
-    closeMp4();
+    while (decodeStatus.ok() && selectedFrames < selectedFrameLimit) {
+        uint8_t* planes[3]{};
+        SBufferInfo output{};
+        if (decoderGuard.decoder->FlushFrame(planes, &output) != dsErrorFree || output.iBufferStatus != 1) {
+            break;
+        }
+        decodeStatus = storeDecodedFrameInTensor(planes, output, maxAllowedVideoPixels, totalAllocatedPixels,
+            frameShape, frameBytes, selectedFrameLimit, selectedFrames, video);
+        if (!decodeStatus.ok()) {
+            break;
+        }
+        selectedFrames++;
+    }
+
     if (!decodeStatus.ok()) {
         return decodeStatus;
     }
     if (selectedFrames == 0) {
         return absl::InvalidArgumentError("Video must contain at least one decodable frame");
     }
-    ov::Tensor video(ov::element::u8, ov::Shape{selectedFrames, frameShape[1], frameShape[2], frameShape[3]});
-    auto* destination = static_cast<uint8_t*>(video.data());
-    for (size_t frameIndex = 0; frameIndex < selectedFrames; ++frameIndex) {
-        std::memcpy(destination + frameIndex * frameBytes, selectedFrameBytes[frameIndex].data(), frameBytes);
-    }
+    video.set_shape(ov::Shape{selectedFrames, frameShape[1], frameShape[2], frameShape[3]});
     return video;
 }
 

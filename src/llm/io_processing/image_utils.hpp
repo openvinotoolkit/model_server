@@ -51,7 +51,7 @@ absl::Status validateMediaSource(const std::string& mediaSource,
 
 absl::Status downloadMediaToFile(const std::string& mediaSource, std::FILE* output,
     size_t sizeLimit, size_t& downloadedBytes);
-absl::Status validateHttpImageDownloadResponse(int64_t httpCode, bool redirectsAllowed);
+absl::Status validateHttpDownloadResponse(int64_t httpCode, bool redirectsAllowed, std::string_view mediaType);
 
 absl::StatusOr<ov::Tensor> fetchAndDecodeImage(const std::string& imageSource,
     const std::optional<std::string>& allowedLocalMediaPath,
