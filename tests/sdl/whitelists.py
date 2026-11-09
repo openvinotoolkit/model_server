@@ -304,9 +304,9 @@ packages = {
         'libreadline8t64'
     },
     OvmsBaseType.UBUNTU26_PYTHON: {
-        'libpython3.12t64',
-        'libpython3.12-minimal',
-        'libpython3.12-stdlib',
+        'libpython3.14',
+        'libpython3.14-minimal',
+        'libpython3.14-stdlib',
         'media-types',
     },
     OvmsBaseType.UBUNTU_GPU: {
