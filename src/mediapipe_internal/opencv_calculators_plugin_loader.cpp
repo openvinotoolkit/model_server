@@ -16,7 +16,6 @@
 #include "opencv_calculators_plugin_loader.hpp"
 
 #include <cstdio>
-#include <cstdlib>
 #include <filesystem>
 #include <mutex>
 #include <string>
