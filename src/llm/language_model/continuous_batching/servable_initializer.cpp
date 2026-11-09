@@ -255,6 +255,7 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     }
 
     applyGlobalCacheDir(properties);
+    applyDefaultGgufReader(properties, parsedModelsPath);
 
     if (properties->device == "CPU") {
         status = applyDefaultCpuProperties(properties->pluginConfig);

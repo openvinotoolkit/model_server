@@ -397,6 +397,16 @@ void GenAiServableInitializer::applyGlobalCacheDir(std::shared_ptr<GenAiServable
     }
 }
 
+void GenAiServableInitializer::applyDefaultGgufReader(std::shared_ptr<GenAiServableProperties> properties, const std::string& modelsPath) {
+    if (std::filesystem::path(modelsPath).extension() != ".gguf") {
+        return;
+    }
+    constexpr char ggufReaderProperty[] = "GGUF_READER";
+    if (properties->pluginConfig.find(ggufReaderProperty) == properties->pluginConfig.end()) {
+        properties->pluginConfig[ggufReaderProperty] = "FRONTEND";
+    }
+}
+
 ChatTemplateEngine GenAiServableInitializer::determineChatTemplateEngine(
     const mediapipe::LLMCalculatorOptions& nodeOptions) {
     if (nodeOptions.has_chat_template_engine() &&

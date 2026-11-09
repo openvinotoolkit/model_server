@@ -4922,6 +4922,22 @@ TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckPluginConfig) {
     LLMNodeOptionsCheckPluginConfig(modelsPath);
 }
 
+TEST(GenAiServableInitializerTest, DefaultGgufReaderSelection) {
+    auto properties = std::make_shared<GenAiServableProperties>();
+
+    GenAiServableInitializer::applyDefaultGgufReader(properties, "/models/model.gguf");
+    ASSERT_EQ(properties->pluginConfig.count("GGUF_READER"), 1);
+    EXPECT_EQ(properties->pluginConfig["GGUF_READER"].as<std::string>(), "FRONTEND");
+
+    properties->pluginConfig["GGUF_READER"] = "LEGACY";
+    GenAiServableInitializer::applyDefaultGgufReader(properties, "/models/another.gguf");
+    EXPECT_EQ(properties->pluginConfig["GGUF_READER"].as<std::string>(), "LEGACY");
+
+    properties->pluginConfig.clear();
+    GenAiServableInitializer::applyDefaultGgufReader(properties, "/models/exported_ir");
+    EXPECT_EQ(properties->pluginConfig.count("GGUF_READER"), 0);
+}
+
 // RAII guard that restores the global Config singleton (and optionally removes a temporary
 // cache directory) on scope exit. The cache_dir tests below mutate the process-wide Config
 // singleton; without this guard a failed ASSERT_* mid-test (which returns early) would leak

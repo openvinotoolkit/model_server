@@ -2,6 +2,14 @@
 
 This demo shows how to deploy GGUF model with the OpenVINO Model Server.
 
+OVMS selects the OpenVINO GGUF frontend automatically for `.gguf` models; no reader-selection parameter is required. The supported `GGUF_READER` values are `FRONTEND` and `LEGACY`. To force the legacy reader, set it through the existing `plugin_config` option:
+
+```bash
+--plugin_config '{"GGUF_READER":"LEGACY"}'
+```
+
+An explicit `GGUF_READER` value is preserved. The legacy reader supports fewer model architectures (Llama, Qwen2, and Qwen3) than the frontend; unsupported values are rejected by GenAI.
+
 Currently supported models are DeepSeek-R1-Distill-Qwen (1.5B, 7B), Qwen2.5 Instruct (1.5B, 3B, 7B), llama-3.2 Instruct (1B, 3B) & llama-3.1-8B.
 Check the [list of supported models](https://blog.openvino.ai/blog-posts/openvino-genai-supports-gguf-models) for more details.
 
