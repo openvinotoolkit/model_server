@@ -188,7 +188,7 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, const
                 cxxopts::value<uint64_t>()->default_value(std::to_string(OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS)),
                 "MAX_IMAGE_DECODE_PIXELS")
             ("max_encoded_video_file_size_bytes",
-                "Maximum size in bytes of a local encoded-video file accepted for MP4 demuxing.",
+                "Maximum size in bytes of an encoded H.264/AVC MP4 source accepted for decoding, including downloaded remote sources.",
                 cxxopts::value<uint64_t>()->default_value(std::to_string(OVMS_DEFAULT_MAX_ENCODED_VIDEO_FILE_SIZE_BYTES)),
                 "MAX_ENCODED_VIDEO_FILE_SIZE_BYTES")
             ("max_video_decode_pixels",

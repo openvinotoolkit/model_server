@@ -198,7 +198,7 @@ curl http://localhost/v3/chat/completions \
 ```
 **Note**: check `--allowed_local_media_path` parameter described [here](parameters.md)
 
-In case of VLM models that support video understanding (e.g. Qwen3-VL), a video can be sent as a `video_url` content part. The `url` field accepts either an **array of already-decoded image frames** or a single encoded MP4 source. Each frame in an array uses the same formats as `image_url` (base64 data URI, HTTP(S) URL, or local filesystem path) and is sent in temporal order. An encoded MP4 source is an HTTP(S) URL or a local filesystem path; OVMS decodes it server-side with the OpenCV FFmpeg backend.
+In case of VLM models that support video understanding (e.g. Qwen3-VL), a video can be sent as a `video_url` content part. The `url` field accepts either an **array of already-decoded image frames** or a single encoded H.264/AVC MP4 source. Each frame in an array uses the same formats as `image_url` (base64 data URI, HTTP(S) URL, or local filesystem path) and is sent in temporal order. An encoded MP4 source is an HTTP(S) URL or a local filesystem path; OVMS decodes it server-side with minimp4 and OpenH264.
 
 ```
 curl http://localhost/v1/chat/completions \
