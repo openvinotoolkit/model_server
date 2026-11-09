@@ -17,6 +17,7 @@
 #include "image_utils.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -82,7 +83,7 @@ struct MediaFileDownloadContext {
     bool sizeLimitExceeded = false;
 };
 
-constexpr long MEDIA_DOWNLOAD_TIMEOUT_SECONDS = 120;
+constexpr int64_t MEDIA_DOWNLOAD_TIMEOUT_SECONDS = 120;
 
 size_t appendMediaFileChunk(void* downloadedChunk, size_t size, size_t nmemb, void* context) noexcept {
     auto* downloadContext = static_cast<MediaFileDownloadContext*>(context);
