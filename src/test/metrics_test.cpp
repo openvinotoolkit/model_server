@@ -187,7 +187,8 @@ TEST_F(LLMMetricsTest, OptionalFamiliesAreNotEnabledByDefault) {
     reporter.setScheduledRequests(3);
     EXPECT_FALSE(reporter.isCacheUtilizationEnabled());
     EXPECT_FALSE(reporter.isPrefillSpeedEnabled());
-    EXPECT_FALSE(reporter.isCompletedRequestEnabled());
+    EXPECT_FALSE(reporter.hasCompletedRequestMetricsEnabled());
+    EXPECT_FALSE(reporter.hasAnyCompletionMetricsEnabled());
     EXPECT_FALSE(reporter.isScheduledRequestsEnabled());
     EXPECT_TRUE(registry.collect().empty());
 }
@@ -222,8 +223,11 @@ TEST_F(LLMMetricsTest, FamiliesCanBeSelectedIndependently) {
     LLMMetricReporter prefillReporter(&prefillConfig, &registry, "prefill_model", "llm");
     EXPECT_FALSE(prefillReporter.isCacheUtilizationEnabled());
     EXPECT_TRUE(prefillReporter.isPrefillSpeedEnabled());
+    EXPECT_TRUE(prefillReporter.hasAnyCompletionMetricsEnabled());
     prefillReporter.observePrefillSpeed(1000);
     EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_prefill_speed_tokens_per_second_count{name=\"prefill_model\",node=\"llm\"} 1\n"));
+    prefillReporter.deactivate();
+    EXPECT_FALSE(prefillReporter.hasAnyCompletionMetricsEnabled());
 }
 
 TEST_F(LLMMetricsTest, GaugeRetainsLatestValueAcrossScrapes) {
@@ -245,6 +249,8 @@ TEST_F(LLMMetricsTest, NewFamiliesCanBeSelectedIndependently) {
         MetricConfig selected;
         ASSERT_EQ(selected.loadFromCLIString(true, family), StatusCode::OK);
         LLMMetricReporter reporter(&selected, &registry, "model", "llm");
+        EXPECT_EQ(reporter.hasCompletedRequestMetricsEnabled(),
+            family == METRIC_NAME_LLM_GENERATED_TOKENS || family == METRIC_NAME_LLM_TTFT);
         reporter.observeCompletedRequest(7, 20);
         reporter.setScheduledRequests(3);
         const std::string scrape = registry.collect();

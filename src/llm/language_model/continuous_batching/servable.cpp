@@ -43,21 +43,29 @@ namespace ovms {
 
 void ContinuousBatchingServable::recordCompletedRequestMetrics(GenAiServableExecutionContext& executionContext) {
     auto& cbExecutionContext = static_cast<ContinuousBatchingServableExecutionContext&>(executionContext);
-    if (!properties->metricReporter ||
-        (!properties->metricReporter->isPrefillSpeedEnabled() && !properties->metricReporter->isCompletedRequestEnabled()) ||
-        !executionContext.perfMetrics || cbExecutionContext.completedMetricsRecorded) {
+    const auto& metricReporter = properties->metricReporter;
+    if (!metricReporter) {
+        return;
+    }
+    if (!metricReporter->hasAnyCompletionMetricsEnabled()) {
+        return;
+    }
+    if (!executionContext.perfMetrics) {
+        return;
+    }
+    if (cbExecutionContext.completedMetricsRecorded) {
         return;
     }
     // Called only on successful completion; partial output from cancelled/failed requests is not accounted for.
     cbExecutionContext.completedMetricsRecorded = true;
     auto& perfMetrics = *executionContext.perfMetrics;
     const double ttftMilliseconds = perfMetrics.get_ttft().mean;
-    if (properties->metricReporter->isPrefillSpeedEnabled()) {
-        properties->metricReporter->observePrefillSpeed(
+    if (metricReporter->isPrefillSpeedEnabled()) {
+        metricReporter->observePrefillSpeed(
             calculatePrefillSpeed(perfMetrics.get_num_input_tokens(), ttftMilliseconds));
     }
-    if (properties->metricReporter->isCompletedRequestEnabled()) {
-        properties->metricReporter->observeCompletedRequest(perfMetrics.get_num_generated_tokens(), ttftMilliseconds);
+    if (metricReporter->hasCompletedRequestMetricsEnabled()) {
+        metricReporter->observeCompletedRequest(perfMetrics.get_num_generated_tokens(), ttftMilliseconds);
     }
 }
 

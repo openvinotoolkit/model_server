@@ -37,7 +37,8 @@ class LLMMetricReporter {
     std::atomic<bool> cacheEnabled{false};
     std::atomic<bool> prefillEnabled{false};
     std::atomic<bool> scheduledEnabled{false};
-    std::atomic<bool> completedRequestEnabled{false};
+    std::atomic<bool> completedRequestMetricsEnabled{false};
+    std::atomic<bool> completionMetricsEnabled{false};
     std::shared_ptr<MetricFamily<MetricGauge>> cacheFamily;
     std::shared_ptr<MetricFamily<MetricHistogram>> prefillFamily;
     std::unique_ptr<MetricGauge> cacheUtilization;
@@ -61,7 +62,8 @@ public:
     bool isCacheUtilizationEnabled() const;
     bool isPrefillSpeedEnabled() const;
     bool isScheduledRequestsEnabled() const;
-    bool isCompletedRequestEnabled() const;
+    bool hasCompletedRequestMetricsEnabled() const;
+    bool hasAnyCompletionMetricsEnabled() const;
     /// Stop publishing and remove series before replacing or unloading a pipeline.
     void deactivate();
     /// Publish GenAI's cache occupancy in percent, independently of scraping.

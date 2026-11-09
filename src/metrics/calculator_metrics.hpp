@@ -29,7 +29,7 @@ class MetricFamily;
 
 /// A thread-safe custom counter handle. Updates after graph unload are ignored.
 class CalculatorCounter {
-    std::mutex mutex;
+    std::mutex counterMutex;
     std::shared_ptr<MetricFamily<MetricCounter>> family;
     std::unique_ptr<MetricCounter> metric;
     CalculatorCounter(MetricRegistry* registry, const std::string& name, const std::string& help,
@@ -50,7 +50,7 @@ class CalculatorMetrics {
         std::string help;
         std::shared_ptr<CalculatorCounter> counter;
     };
-    std::mutex mutex;
+    std::mutex scopeMutex;
     MetricRegistry* registry;
     const std::string graphName;
     const std::string nodeName;

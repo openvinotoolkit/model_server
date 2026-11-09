@@ -86,7 +86,8 @@ LLMMetricReporter::LLMMetricReporter(const MetricConfig* config, MetricRegistry*
             }
             ttft = ttftFamily->addMetric(labels, TTFT_BUCKETS);
         }
-        completedRequestEnabled.store(generatedTokens || ttft, std::memory_order_relaxed);
+        completedRequestMetricsEnabled.store(generatedTokens || ttft, std::memory_order_relaxed);
+        completionMetricsEnabled.store(prefillSpeed || generatedTokens || ttft, std::memory_order_relaxed);
     } catch (const std::exception& e) {
         removeMetrics();
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to register LLM metrics for graph {} node {}: {}", graphName, nodeName, e.what());
@@ -103,7 +104,8 @@ void LLMMetricReporter::deactivate() {
     cacheEnabled.store(false, std::memory_order_relaxed);
     prefillEnabled.store(false, std::memory_order_relaxed);
     scheduledEnabled.store(false, std::memory_order_relaxed);
-    completedRequestEnabled.store(false, std::memory_order_relaxed);
+    completedRequestMetricsEnabled.store(false, std::memory_order_relaxed);
+    completionMetricsEnabled.store(false, std::memory_order_relaxed);
     removeMetrics();
 }
 
@@ -134,8 +136,12 @@ bool LLMMetricReporter::isScheduledRequestsEnabled() const {
     return scheduledEnabled.load(std::memory_order_relaxed);
 }
 
-bool LLMMetricReporter::isCompletedRequestEnabled() const {
-    return completedRequestEnabled.load(std::memory_order_relaxed);
+bool LLMMetricReporter::hasCompletedRequestMetricsEnabled() const {
+    return completedRequestMetricsEnabled.load(std::memory_order_relaxed);
+}
+
+bool LLMMetricReporter::hasAnyCompletionMetricsEnabled() const {
+    return completionMetricsEnabled.load(std::memory_order_relaxed);
 }
 
 void LLMMetricReporter::setScheduledRequests(size_t requests) {

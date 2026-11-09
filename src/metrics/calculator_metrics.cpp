@@ -62,7 +62,7 @@ CalculatorCounter::~CalculatorCounter() {
 }
 
 void CalculatorCounter::deactivate() {
-    std::lock_guard<std::mutex> lock(mutex);
+    std::lock_guard<std::mutex> lock(counterMutex);
     if (metric) {
         family->remove(metric);
         metric.reset();
@@ -74,7 +74,7 @@ void CalculatorCounter::increment(double value) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Custom counter increment must be finite and non-negative, got {}", value);
         throw std::invalid_argument("Custom counter increment must be finite and non-negative");
     }
-    std::lock_guard<std::mutex> lock(mutex);
+    std::lock_guard<std::mutex> lock(counterMutex);
     if (metric) {
         metric->increment(value);
     }
@@ -90,7 +90,7 @@ CalculatorMetrics::~CalculatorMetrics() {
 }
 
 std::shared_ptr<CalculatorCounter> CalculatorMetrics::registerCounter(const std::string& name, const std::string& help) {
-    std::lock_guard<std::mutex> lock(mutex);
+    std::lock_guard<std::mutex> lock(scopeMutex);
     try {
         if (!active) {
             throw std::logic_error("Cannot register a custom counter after graph unload");
@@ -116,7 +116,7 @@ std::shared_ptr<CalculatorCounter> CalculatorMetrics::registerCounter(const std:
 }
 
 void CalculatorMetrics::deactivate() {
-    std::lock_guard<std::mutex> lock(mutex);
+    std::lock_guard<std::mutex> lock(scopeMutex);
     active = false;
     for (const auto& entry : counters) {
         entry.second.counter->deactivate();

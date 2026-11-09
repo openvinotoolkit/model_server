@@ -53,7 +53,6 @@ struct LLMExecutor {
     void step() {
         OVMS_PROFILE_FUNCTION();
         pipe->step();
-        publishPipelineMetrics();
     }
 
     void publishPipelineMetrics(bool idle = false) {
@@ -140,6 +139,7 @@ class LLMExecutorWrapper {
                 if (llmExecutor->hasRequests()) {
                     stepCounter++;
                     llmExecutor->step();
+                    llmExecutor->publishPipelineMetrics();
                 } else {
                     llmExecutor->publishPipelineMetrics(true);
                     SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {}; Scheduled requests: {};", 0, 0);
