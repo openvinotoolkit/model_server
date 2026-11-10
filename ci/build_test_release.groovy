@@ -140,7 +140,7 @@ pipeline {
                                 echo "WARNING: Signed file not found, falling back to unsigned ovms.zip"
                             }
                         }
-                        def status = bat(returnStatus:true, script: "net use w: /delete /y 2>nul & net use w: \\\\10.102.76.118\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms_artefacts\\")
+                        def status = bat(returnStatus:true, script: "net use w: /delete /y 2>nul & net use w: \\\\ov-share-13.sclab.intel.com\\data\\cv_bench_cache\\OVMS_do_not_remove\\ovms_artefacts\\")
                         if (status != 0) {
                             error "Failed to map network drive. Status code: ${status}"
                         }
