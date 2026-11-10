@@ -66,14 +66,20 @@ Following table lists supported tag and packet types in pbtxt graph definition:
 |:---|:---|:---|:---|:---|
 |input_stream: "a"|input|none|ov::Tensor|a|
 |output_stream: "b"|output|none|ov::Tensor|b|
-|input_stream: "IMAGE:a"|input|IMAGE|mediapipe::ImageFrame|a|
-|output_stream: "IMAGE:b"|output|IMAGE|mediapipe::ImageFrame|b|
 |input_stream: "OVTENSOR:a"|input|OVTENSOR|ov::Tensor|a|
 |output_stream: "OVTENSOR:b"|output|OVTENSOR|ov::Tensor|b|
+|input_stream: "TENSOR:a"|input|TENSOR|mediapipe::Tensor|a|
+|output_stream: "TENSOR:b"|output|TENSOR|mediapipe::Tensor|b|
+|input_stream: "IMAGE:a"|input|IMAGE|mediapipe::ImageFrame|a|
+|output_stream: "IMAGE:b"|output|IMAGE|mediapipe::ImageFrame|b|
+|input_stream: "OVMS_PY_TENSOR:a"|input|OVMS_PY_TENSOR|OVMS Python tensor|a|
+|output_stream: "OVMS_PY_TENSOR:b"|output|OVMS_PY_TENSOR|OVMS Python tensor|b|
 |input_stream: "REQUEST:req"|input|REQUEST|KServe inference::ModelInferRequest|req|
 |output_stream: "RESPONSE:res"|output|RESPONSE|KServe inference::ModelInferResponse|res|
 
-In case of missing tag OpenVINO Model Server assumes that the packet type is `ov::Tensor`. The stream name can be arbitrary but the convention is to use a lowercase word.
+This table describes packet types at the KServe graph boundary. A stream without a recognized packet tag is treated as `ov::Tensor`. `OVMS_PY_TENSOR` requires the OVMS Python tensor bridge to be available in the build. TensorFlow `TFTENSOR` packets are not available through this KServe graph bridge, and TFLite tensor output is not supported.
+
+The stream name can be arbitrary, but the convention is to use a lowercase word.
 
 The required data layout for the MediaPipe `IMAGE` conversion is HWC and the supported precisions are:
 |Datatype|Allowed number of channels|
@@ -85,18 +91,53 @@ The required data layout for the MediaPipe `IMAGE` conversion is HWC and the sup
 |UINT16|1,3,4|
 |INT16|1,3,4|
 
-> **Note**: Input serialization to MediaPipe ImageFrame format, requires the data in the KServe request to be encapsulated in `raw_input_contents` field based on [KServe API GRPC](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto) or in binary extension of based on [KServe API REST](./binary_input_kfs.md#http). That is the default behavior in the client libs like `triton-client`.
+> **Note**: `IMAGE` input requires data in the KServe request's `raw_input_contents` field for [gRPC](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto) or binary extension for [REST](./binary_input_kfs.md#http). This is the default behavior in client libraries such as `triton-client`.
 
 When the client is sending in the gRPC/REST request the input as an numpy array, it will be deserialized on the Model Server side to the format specified in the graph.
 For example when the graph has the input type IMAGE, the gRPC/REST client could send the input data with the shape `(300, 300, 3)` and precision INT8. It would not be allowed to send the data in the shape for example `(1,300,300,1)` as that would be incorrect layout and the number of dimensions.
 
-When the input graph would be set as `OVTENSOR`, any shape and precisions of the input would be allowed. It will be converted to `ov::Tensor` object and passed to the graph. For example input can have shape `(1,3,300,300)` and precision `FP32`. If passed tensor would not be accepted by model, calculator and graph will return error.
+For `OVTENSOR` input, OVMS creates an `ov::Tensor` from the request shape, datatype, and contents. Raw data in `raw_input_contents` (gRPC) or the REST binary extension is supported. Shape dimensions and datatype must be valid, and the model must accept the resulting tensor. Typed KServe `contents` has narrower datatype support than raw input. For example, an input may have shape `(1,3,300,300)` and datatype `FP32`.
 
 Check the code snippets for [gRPC unary](clients_kfs.md#request-prediction-on-a-numpy-array) calls and [gRPC streaming](clients_kfs.md#request-streaming-prediction).
 
 There is also an option to avoid any data conversions in the serialization and deserialization by the OpenVINO Model Server. When the input stream is of type REQUEST, it will be passed-through to the calculator. The receiving calculator will be in charge of deserializing it and interpreting all the content. Likewise, the output format RESPONSE delegate to the calculator creating a complete KServe response message to the client. That gives extra flexibility in the data format as arbitrary data can be stored in [raw_input_content](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto#L202) and later decoded in custom calculator.
 
-**Note:** `OpenVINOInferenceCalculator` consumes `std::vector<ov::Tensor>` on `TENSORS` (or `std::vector<ov::RemoteTensor>` on `REMOTE_TENSORS`). Model loading and inference options are documented with the [OpenVINO MediaPipe calculators](https://github.com/openvinotoolkit/mediapipe/tree/windows-build/mediapipe/calculators/openvino). OVMS additionally provides tensor-vector and MediaPipe/OpenVINO tensor boundary calculators.
+`OpenVINOInferenceCalculator` supports two mutually exclusive input/output modes:
+
+- Vector mode uses `std::vector<ov::Tensor>` on `TENSORS` or `std::vector<ov::RemoteTensor>` on `REMOTE_TENSORS`; vector inputs and outputs are ordered with `input_order` and `output_order`.
+- Named mode uses separate scalar `ov::Tensor` streams. `tag_to_input_tensor_names` and `tag_to_output_tensor_names` map each stream tag to a model tensor name. Every model input must be mapped. Multiple output tags may map to the same model output for fan-out.
+
+For example, a two-input model can use named streams as follows:
+
+```protobuf
+node {
+    calculator: "OpenVINOSessionCalculator"
+    output_side_packet: "SESSION:session"
+    node_options: {
+        [type.googleapis.com/mediapipe.OpenVINOSessionCalculatorOptions] {
+            model_path: "/models/add/1/model.xml"
+            device: "CPU"
+            num_infer_requests: 4
+        }
+    }
+}
+node {
+    calculator: "OpenVINOInferenceCalculator"
+    input_side_packet: "SESSION:session"
+    input_stream: "LEFT:left"
+    input_stream: "RIGHT:right"
+    output_stream: "SUM:sum"
+    node_options: {
+        [type.googleapis.com/mediapipe.OpenVINOInferenceCalculatorOptions] {
+            tag_to_input_tensor_names { key: "LEFT" value: "left" }
+            tag_to_input_tensor_names { key: "RIGHT" value: "right" }
+            tag_to_output_tensor_names { key: "SUM" value: "sum" }
+        }
+    }
+}
+```
+
+Inputs and outputs in named mode are scalar `ov::Tensor` packets, not MediaPipe `Tensor` packets. Convert MediaPipe tensors at the boundary with OVMS's `MPTensorToOVTensorCalculator` or `OVTensorToMPTensorCalculator`. The inference calculator copies output data before returning its pooled inference request, so output packets do not refer to buffers that may be reused by a later inference. See the [OpenVINO MediaPipe calculator documentation](https://github.com/openvinotoolkit/mediapipe/tree/main/mediapipe/calculators/openvino) for session and inference options.
 
 ### Side packets
 Side packets are special parameters which can be passed to the calculators at the beginning of the graph initialization. It can tune the behavior of the calculator like set the object detection threshold or number of objects to process.
@@ -137,9 +178,9 @@ mediapipe_graph_name/
 └── subconfig.json
 ```
 
-The `graph.pbtxt` should include the definition of the mediapipe graph.
-The `subconfig.json` is an extension to the main model server `config.json` configuration file. The subconfig should include the definition of the models used in the graph nodes. They will be loaded during the model server initialization and ready to use when the graph starts executing.
-Included OpenVINO inference session calculator should include the reference to the model name as configured in `subconfig.json`.
+The `graph.pbtxt` should include the definition of the MediaPipe graph. The `subconfig.json` is an extension to the main model server `config.json` configuration file and defines OVMS servables used by graph calculators that refer to those servables.
+
+The OpenVINO `OpenVINOSessionCalculator` does not resolve a model name from `subconfig.json`. It reads a model file directly using its `model_path` option, for example `/models/add/1/model.xml`. Use an absolute path in deployed graphs when possible.
 Here is example of the `subconfig.json`:
 ```json
 {
@@ -172,14 +213,14 @@ Here is an example `config.json` file that defines two MediaPipe graphs. One wit
     "model_config_list": [
         {
             "config": {
-                "name": "mediapipe_graph_name",
+                "name": "mediapipe_graph_name"
             }
         },
         {
             "config": {
                 "name": "mediapipe_graph_name_for_default_name",
-                "base_path":"mediapipe_graph_name ",
-                "graph_path": " graph.pbtxt"
+                "base_path": "mediapipe_graph_name",
+                "graph_path": "graph.pbtxt"
             }
         }
     ]
@@ -214,6 +255,8 @@ Nodes in the MediaPipe graphs can reference both the models configured in model_
 |`"base_path"`|string|Path to the which graph definition and subconfig files paths are relative. May be absolute or relative to the main config path. Default value is "(main config path)\(name)"|No|
 |`"graph_path"`|string|Path to the graph proto file. May be absolute or relative to the base_path. Default value is "(base_path)\graph.pbtxt". File have to exist.|No|
 |`"subconfig"`|string|Path to the subconfig file. May be absolute or relative to the base_path. Default value is "(base_path)\subconfig.json". Missing  file does not result in error.|No|
+|`"idle_unload_timeout_seconds"`|integer|Idle period before graph resources can be unloaded. `0` disables idle unload for the graph. See [idle servable management](idle_servable_management.md).|No|
+|`"group_name"`|string|Idle-management group for this graph. Defaults to the graph name; servables in the same group unload and reload together. See [idle servable management](idle_servable_management.md).|No|
 
 Subconfig file may only contain *model_config_list* section  - in the same format as in [models config file](starting_server.md).
 
@@ -237,16 +280,16 @@ The graph pool size is controlled via a comment directive in the graph `.pbtxt` 
 
 | Value | Behavior |
 |:------|:---------|
-| `AUTO` | Pool size is set to the number of hardware threads (`std::thread::hardware_concurrency()`), or 16 if detection fails |
-| Positive integer (e.g. `4`) | Pool size set to the given value (must not exceed hardware thread count) |
+| `AUTO` | Pool size is the lower of the REST worker count and CPU core count, with a minimum of 1 |
+| Positive integer (e.g. `4`) | Pool size is set to the given value. If hardware thread count is available and the value exceeds it, OVMS clamps the size to that count. |
 | `0` | Graph pool disabled — falls back to per-request graph creation |
 | *(directive absent)* | Default: graph pool is disabled |
 
 **Default behavior:** graph pool stays disabled unless `OVMS_GRAPH_QUEUE_MAX_SIZE` is explicitly present in `graph.pbtxt`. Since the OVMS CLI graph exporter (`--pull --task`) always emits this directive, **graphs created via the CLI exporter have the pool enabled by default**.
 
 **Generated graphs from exporters:**
-- OVMS `--task ...` graph export emits `# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO` for all graph types.
-- `demos/common/export_models/export_model.py` also emits `# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO` for all graph types.
+- The OVMS CLI graph exporter emits `# OVMS_GRAPH_QUEUE_MAX_SIZE: AUTO`.
+- The graph templates in `demos/common/export_models/export_model.py` also emit this directive.
 
 **Runtime kill-switch:**
 Setting the environment variable `OVMS_GRAPH_QUEUE_OFF=1` globally disables graph pools at runtime, regardless of the directive in `graph.pbtxt`. 
@@ -306,28 +349,9 @@ MediaPipe graphs can include only the calculators built-in the model server imag
 If you want to add your own mediapipe calculator to OpenVINO Model Server functionality you need to add it as a dependency and rebuild the OpenVINO Model Server binary.
 
 If you have it in external repository, you need to add the http_archive() definition or git_repository() definition to the bazel [WORKSPACE](https://github.com/openvinotoolkit/model_server/blob/main/WORKSPACE) file.
-Then you need to add the calculator target as a bazel dependency to the [src/BUILD](https://github.com/openvinotoolkit/model_server/blob/main/src/BUILD) file. This should be done for:
+Define a Bazel target for the calculator and include its target in the MediaPipe runtime-owner library in `src/mediapipe_internal/BUILD` (currently `libovms_mediapipe_runtime_owner_no_python_calculators`). This is the link point that keeps calculator registrations available to the graph runtime. Calculator libraries that rely on static registration should use `alwayslink = 1`, following the existing calculator targets.
 
-```
-cc_library(
- name = "ovms_lib",
-...
-```
-
-in the conditions:default section of the deps property:
-
-```
-  deps = [
-         "//:ovms_dependencies",
-        "//src/kfserving_api:kfserving_api_cpp",
-        ] + select({
-            "//conditions:default": [
-                "//src:ovmscalculatoroptions_cc_proto", # ovmscalculatoroptions_proto - just mediapipe stuff with mediapipe_proto_library adding nonvisible target
-                "@mediapipe_calculators//:mediapipe_calculators",
-                 "@your_repository//:yourpathtocalculator/your_calculator
-```
-
- Make sure the REGISTER_CALCULATOR(your_calculator); macro is present in the calculator file that you have added.
+Add `REGISTER_CALCULATOR(YourCalculator);` in the calculator implementation, and ensure the runtime target that contains it is linked into each OVMS binary or library where the graph must be available. Validate the graph at startup and add a focused graph test.
 
 
 ## MediaPipe Graphs Examples
@@ -347,7 +371,7 @@ in the conditions:default section of the deps property:
 
 - KServe ModelMetadata call response contains only input and output names. In the response, shapes will be empty and datatypes will be `"INVALID"`.
 
-- Binary inputs are not supported for MediaPipe graphs for the type IMAGE and OVTENSOR.
+- TensorFlow `TFTENSOR` packets are not available through the KServe graph bridge. Use `ov::Tensor` inputs for OpenVINO inference, or convert MediaPipe `Tensor` packets with an appropriate calculator.
 
 - Updates in subconfig files and mediapipe graph files do not trigger model server config reloads. The reload of the full config, including subconfig and graphs, can be initiated by an updated in the main config json file or using the REST API `config/reload` endpoint.
 
