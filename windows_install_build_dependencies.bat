@@ -49,7 +49,7 @@ set "opt_install_dir=C:\opt"
 :: Python 312 needs to be first in the windows path, as well as MSYS tools
 set "CMAKE_BIN_DIR=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin"
 set "CMAKE_BIN=%CMAKE_BIN_DIR%\cmake.exe"
-set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;%CMAKE_BIN_DIR%;%SystemRoot%\System32;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;%CMAKE_BIN_DIR%;%SystemRoot%\System32;C:\opt\msys64\usr\bin\;%PATH%;"
 set "PYTHONHOME=C:\opt\Python312"
 :: Ensure the Windows Python interpreter wins over any MSYS/shim Python during CMake configure steps.
 set "PATH=%setPath%"
@@ -608,8 +608,9 @@ set "opencv_install=%opt_install_dir%\opencv_%opencv_ver%"
 set "opencv_flags=-D BUILD_LIST=core,improc,imgcodecs,calib3d,features2d,highgui,imgproc,video,videoio,optflow -D CMAKE_BUILD_TYPE=Release -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_opencv_ts=OFF -D BUILD_opencv_aruco=OFF -D BUILD_opencv_bgsegm=OFF -D BUILD_opencv_bioinspired=OFF -D BUILD_opencv_ccalib=OFF -D BUILD_opencv_datasets=OFF -D BUILD_opencv_dnn=OFF -D BUILD_opencv_dnn_objdetect=OFF -D BUILD_opencv_dpm=OFF -D BUILD_opencv_face=OFF -D BUILD_opencv_fuzzy=OFF -D BUILD_opencv_hfs=OFF -D BUILD_opencv_img_hash=OFF -D BUILD_opencv_js=OFF -D BUILD_opencv_line_descriptor=OFF -D BUILD_opencv_phase_unwrapping=OFF -D BUILD_opencv_plot=OFF -D BUILD_opencv_quality=OFF -D BUILD_opencv_reg=OFF -D BUILD_opencv_rgbd=OFF -D BUILD_opencv_saliency=OFF -D BUILD_opencv_shape=OFF -D BUILD_opencv_structured_light=OFF -D BUILD_opencv_surface_matching=OFF -D BUILD_opencv_world=ON -D BUILD_opencv_xobjdetect=OFF -D BUILD_opencv_xphoto=OFF -D BUILD_opencv_python=OFF -D BUILD_opencv_python3=OFF -D BUILD_opencv_python_bindings_generator=OFF -D CV_ENABLE_INTRINSICS=ON -D WITH_EIGEN=ON -D WITH_PTHREADS=ON -D WITH_JPEG=ON -D WITH_PNG=ON -D WITH_TIFF=OFF -D WITH_OPENEXR=OFF -D WITH_NASM=ON -D CMAKE_ASM_NASM_COMPILER=%msys_path%\usr\bin\nasm.exe -D PYTHON_EXECUTABLE=C:/opt/Python312/python.exe -D PYTHON3_EXECUTABLE=C:/opt/Python312/python.exe -D Python3_EXECUTABLE=C:/opt/Python312/python.exe"
 
 echo [INFO] Installing OpenCV %opencv_ver% ...
-set "opencv_bin=%opencv_install%\x64\vc17\bin\opencv_world%opencv_ver%.dll"
-set "opencv_lib=%opencv_install%\x64\vc17\lib\opencv_world%opencv_ver%.lib"
+set "opencv_binary_ver=%opencv_ver:.=%"
+set "opencv_bin=%opencv_install%\x64\vc17\bin\opencv_world%opencv_binary_ver%.dll"
+set "opencv_lib=%opencv_install%\x64\vc17\lib\opencv_world%opencv_binary_ver%.lib"
 set "opencv_wrong_toolset=%opencv_install%\x64\vc16"
 set "opencv_wrong_toolset_legacy=%opencv_install%\x64\vc15"
 
