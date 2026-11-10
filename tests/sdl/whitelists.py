@@ -64,11 +64,11 @@ dynamic_libraries = {
     OvmsBaseType.UBUNTU_PYTHON: {'libexpat.so',},
     OvmsBaseType.UBUNTU22: {'libdl.so', 'libm.so', 'libpthread.so',},
     OvmsBaseType.UBUNTU22_PYTHON: {'libpython3.10.so',},
-    OvmsBaseType.UBUNTU24: {'libdl.so', 'libm.so', 'libpthread.so',},
+    OvmsBaseType.UBUNTU24: {'libdl.so', 'libm.so', 'libpthread.so', 'liblzma.so', 'libicuuc.so', 'libicudata.so',},
     OvmsBaseType.UBUNTU26: {'libdl.so', 'libm.so', 'libpthread.so',},
     OvmsBaseType.UBUNTU24_PYTHON: set(),
     OvmsBaseType.UBUNTU26_PYTHON: set(),
-    OvmsBaseType.REDHAT: {'libdl.so', 'libm.so', 'libpthread.so',},
+    OvmsBaseType.REDHAT: {'libdl.so', 'libm.so', 'libpthread.so', 'liblzma.so',},
     OvmsBaseType.REDHAT_PYTHON: set(),
 }
 
