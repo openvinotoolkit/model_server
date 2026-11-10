@@ -44,7 +44,7 @@ protected:
 public:
     GptOssReasoningParser() = delete;
 
-    static OutputParsingConfig defaultParsingConfig() {
+    static OutputParsingConfig getDefaultReasoningParsingConfig() {
         OutputParsingConfig cfg;
         cfg.startTags = {"<|channel|>analysis<|message|>"};
         cfg.endTags = {"<|end|>", "<|return|>"};
@@ -56,7 +56,7 @@ public:
     explicit GptOssReasoningParser(ov::genai::Tokenizer& tokenizer,
         std::optional<OutputParsingConfig> configOverride = std::nullopt) :
         BaseOutputParser(tokenizer,
-            configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+            configOverride.has_value() ? std::move(*configOverride) : getDefaultReasoningParsingConfig()) {}
 
     void resetState() override { state = StreamState::UNKNOWN; }
 

@@ -143,6 +143,23 @@ absl::Status GenAiServable::processTokenizeRequest(std::shared_ptr<GenAiServable
     return absl::OkStatus();
 }
 
+void GenAiServable::initializeTextStreamer(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    auto ovmsCallback = [&ctx = *executionContext](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
+        ctx.deltaChannel.push(std::move(delta), isLast);
+        return ov::genai::StreamingStatus::RUNNING;
+    };
+    ov::AnyMap streamerConfig;
+    if (!executionContext->apiHandler->getRequest().skipSpecialTokens) {
+        streamerConfig.insert(ov::genai::skip_special_tokens(false));
+    }
+    executionContext->textStreamer = std::make_shared<OVMSTextStreamer>(
+        getProperties()->tokenizer,
+        executionContext->apiHandler->getOutputParser(),
+        executionContext->apiHandler->areToolsAvailable(),
+        std::move(ovmsCallback),
+        streamerConfig);
+}
+
 absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     try {
         if (executionContext->endpoint == Endpoint::RESPONSES) {
@@ -172,27 +189,7 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         return status;
     }
 
-    {
-        auto ovmsCallback = [&ctx = *executionContext](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
-            ctx.deltaChannel.push(std::move(delta), isLast);
-            return ov::genai::StreamingStatus::RUNNING;
-        };
-        ov::AnyMap streamerConfig;
-        if (!executionContext->apiHandler->getRequest().skipSpecialTokens) {
-            streamerConfig.insert(ov::genai::skip_special_tokens(false));
-        }
-        executionContext->textStreamer = std::make_shared<OVMSTextStreamer>(
-            getProperties()->tokenizer,
-            executionContext->apiHandler->getOutputParser(),
-            executionContext->apiHandler->areToolsAvailable(),
-            std::move(ovmsCallback),
-            streamerConfig);
-    }
-    GenerationConfigBuilder configBuilder(getProperties()->baseGenerationConfig,
-        getProperties()->toolParserName,
-        getProperties()->enableToolGuidedGeneration,
-        getProperties()->decodingMethod);
-    auto inputRequestResult = executionContext->apiHandler->extractInputRequest(configBuilder);
+    auto inputRequestResult = executionContext->apiHandler->extractInputRequest();
     if (!inputRequestResult.ok()) {
         return inputRequestResult.status();
     }
@@ -269,9 +266,22 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         return status;
     }
 
-    if (executionContext->apiHandler->getOutputParser() != nullptr) {
-        executionContext->apiHandler->getOutputParser()->detectAndSetImplicitReasoningStart(req.promptText);
+    const auto reasoningContext = determineReasoningContext(
+        getDefaultReasoningParsingConfig(getProperties()->reasoningParserName), req.promptText);
+
+    GenerationConfigBuilder configBuilder(getProperties()->baseGenerationConfig,
+        getProperties()->toolParserName,
+        getProperties()->enableToolGuidedGeneration,
+        getProperties()->decodingMethod);
+    try {
+        configBuilder.build(executionContext->apiHandler->getRequest(), reasoningContext,
+            getProperties()->reasoningParserName, getProperties()->tokenizer);
+    } catch (const ResponseFormatInvariantError&) {
+        return absl::InternalError("Request processing failed");
+    } catch (const std::invalid_argument& e) {
+        return absl::InvalidArgumentError(e.what());
     }
+    req.generationConfig = configBuilder.getConfig();
     if (Config::instance().getServerSettings().verboseResponse) {
         executionContext->apiHandler->enableVerboseResponse(req.promptText);
     }
@@ -298,6 +308,8 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "{}", getPromptTokensString(req.inputIds));
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Pipeline input text: {}", req.promptText);
 
+    executionContext->apiHandler->initOutputParser(reasoningContext);
+    initializeTextStreamer(executionContext);
     return absl::OkStatus();
 }
 
