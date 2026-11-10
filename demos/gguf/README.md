@@ -2,16 +2,10 @@
 
 This demo shows how to deploy GGUF model with the OpenVINO Model Server.
 
-OVMS selects the OpenVINO GGUF frontend automatically for `.gguf` models; no reader-selection parameter is required. The supported `GGUF_READER` values are `FRONTEND` and `LEGACY`. To force the legacy reader, set it through the existing `plugin_config` option:
+OVMS selects the OpenVINO GGUF frontend automatically for `.gguf` models; no reader-selection parameter is required.
 
-```bash
---plugin_config '{"GGUF_READER":"LEGACY"}'
-```
-
-An explicit `GGUF_READER` value is preserved. The legacy reader supports fewer model architectures (Llama, Qwen2, and Qwen3) than the frontend; unsupported values are rejected by GenAI.
-
-Currently supported models are DeepSeek-R1-Distill-Qwen (1.5B, 7B), Qwen2.5 Instruct (1.5B, 3B, 7B), llama-3.2 Instruct (1B, 3B) & llama-3.1-8B.
-Check the [list of supported models](https://blog.openvino.ai/blog-posts/openvino-genai-supports-gguf-models) for more details.
+Currently recommended model is Ternary-Bonsai-2-27B PQ2_0.
+Check the [list of supported models](https://github.com/openvinotoolkit/openvino/blob/master/src/frontends/gguf/docs/supported_models.md) for more details.
 
 If the model already exists locally, it will skip the downloading and immediately start the serving.
 
@@ -32,9 +26,9 @@ docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/model
     --rest_port 8000 \
     --model_repository_path /models/ \
     --task text_generation \
-    --source_model "Qwen/Qwen2.5-3B-Instruct-GGUF" \
-    --gguf_filename qwen2.5-3b-instruct-q4_k_m.gguf \
-    --model_name Qwen/Qwen2.5-3B-Instruct
+    --source_model "prism-ml/Ternary-Bonsai-2-27B-gguf" \
+    --gguf_filename Ternary-Bonsai-2-27B-PQ2_0.gguf \
+    --model_name prism-ml/Ternary-Bonsai-2-27B
 ```
 :::
 
@@ -45,9 +39,9 @@ mkdir models
 ovms --rest_port 8000 ^
   --model_repository_path ./models/ ^
   --task text_generation ^
-  --source_model "Qwen/Qwen2.5-3B-Instruct-GGUF" ^
-  --gguf_filename qwen2.5-3b-instruct-q4_k_m.gguf ^
-  --model_name Qwen/Qwen2.5-3B-Instruct
+  --source_model "prism-ml/Ternary-Bonsai-2-27B-gguf" ^
+  --gguf_filename Ternary-Bonsai-2-27B-PQ2_0.gguf ^
+  --model_name prism-ml/Ternary-Bonsai-2-27B
 ```
 :::
 ::::
@@ -58,7 +52,7 @@ Then send a request to the model:
 
 ```text
 curl http://localhost:8000/v3/chat/completions -s -H "Content-Type: application/json" \
-                                                  -d '{"model": "Qwen/Qwen2.5-3B-Instruct", "stream":false, "messages": [{"role": "system","content": "You are a helpful assistant."}, {"role": "user","content": "What is the capital of France in one word?"}]}' \
+                                                  -d '{"model": "prism-ml/Ternary-Bonsai-2-27B", "stream":false, "messages": [{"role": "system","content": "You are a helpful assistant."}, {"role": "user","content": "What is the capital of France in one word?"}]}' \
 | jq .
 ```
 
@@ -79,7 +73,7 @@ Example response would be:
     }
   ],
   "created": 1756986130,
-  "model": "Qwen/Qwen2.5-3B-Instruct",
+  "model": "prism-ml/Ternary-Bonsai-2-27B",
   "object": "chat.completion",
   "usage": {
     "prompt_tokens": 54,
