@@ -47,12 +47,18 @@ ov::element::Type ToOVElementType(Tensor::ElementType type) {
 }
 
 Tensor::ElementType ToMPTensorElementType(const ov::element::Type& type) {
-    if (type == ov::element::f32) return Tensor::ElementType::kFloat32;
-    if (type == ov::element::f16) return Tensor::ElementType::kFloat16;
-    if (type == ov::element::i32) return Tensor::ElementType::kInt32;
-    if (type == ov::element::i8) return Tensor::ElementType::kInt8;
-    if (type == ov::element::u8) return Tensor::ElementType::kUInt8;
-    if (type == ov::element::boolean) return Tensor::ElementType::kBool;
+    if (type == ov::element::f32)
+        return Tensor::ElementType::kFloat32;
+    if (type == ov::element::f16)
+        return Tensor::ElementType::kFloat16;
+    if (type == ov::element::i32)
+        return Tensor::ElementType::kInt32;
+    if (type == ov::element::i8)
+        return Tensor::ElementType::kInt8;
+    if (type == ov::element::u8)
+        return Tensor::ElementType::kUInt8;
+    if (type == ov::element::boolean)
+        return Tensor::ElementType::kBool;
     return Tensor::ElementType::kNone;
 }
 
@@ -75,7 +81,7 @@ ov::Tensor ConvertMPTensor(const Tensor& input) {
 }
 
 class MPTensorToOVTensorCalculator : public CalculatorBase {
- public:
+public:
     static absl::Status GetContract(CalculatorContract* cc) {
         cc->Inputs().Tag("TENSOR").Set<Tensor>();
         cc->Outputs().Tag("OVTENSOR").Set<ov::Tensor>();
@@ -83,16 +89,16 @@ class MPTensorToOVTensorCalculator : public CalculatorBase {
     }
 
     absl::Status Process(CalculatorContext* cc) override {
-        if (cc->Inputs().Tag("TENSOR").IsEmpty()) return absl::OkStatus();
+        if (cc->Inputs().Tag("TENSOR").IsEmpty())
+            return absl::OkStatus();
         const Tensor& input = cc->Inputs().Tag("TENSOR").Get<Tensor>();
-        cc->Outputs().Tag("OVTENSOR").AddPacket(
-            MakePacket<ov::Tensor>(ConvertMPTensor(input)).At(cc->InputTimestamp()));
+        cc->Outputs().Tag("OVTENSOR").AddPacket(MakePacket<ov::Tensor>(ConvertMPTensor(input)).At(cc->InputTimestamp()));
         return absl::OkStatus();
     }
 };
 
 class OVTensorToMPTensorCalculator : public CalculatorBase {
- public:
+public:
     static absl::Status GetContract(CalculatorContract* cc) {
         cc->Inputs().Tag("OVTENSOR").Set<ov::Tensor>();
         cc->Outputs().Tag("TENSOR").Set<Tensor>();
@@ -100,7 +106,8 @@ class OVTensorToMPTensorCalculator : public CalculatorBase {
     }
 
     absl::Status Process(CalculatorContext* cc) override {
-        if (cc->Inputs().Tag("OVTENSOR").IsEmpty()) return absl::OkStatus();
+        if (cc->Inputs().Tag("OVTENSOR").IsEmpty())
+            return absl::OkStatus();
         const ov::Tensor& input = cc->Inputs().Tag("OVTENSOR").Get<ov::Tensor>();
         const Tensor::ElementType elementType = ToMPTensorElementType(input.get_element_type());
         RET_CHECK(elementType != Tensor::ElementType::kNone)

@@ -47,14 +47,15 @@ TEST(OVTensorTensorConversionCalculatorsTest, CopiesTensorDataAndPreservesShape)
     const mediapipe::Timestamp timestamp(23);
     std::vector<float> observedValues;
     ASSERT_TRUE(graph.ObserveOutputStream("out", [&observedValues, timestamp](const mediapipe::Packet& packet) {
-        EXPECT_EQ(packet.Timestamp(), timestamp);
-        const mediapipe::Tensor& tensor = packet.Get<mediapipe::Tensor>();
-        EXPECT_EQ(tensor.element_type(), mediapipe::Tensor::ElementType::kFloat32);
-        EXPECT_EQ(tensor.shape().dims, std::vector<int>({1, 2}));
-        const float* tensorData = tensor.GetCpuReadView().buffer<float>();
-        observedValues.assign(tensorData, tensorData + 2);
-        return absl::OkStatus();
-    }).ok());
+                         EXPECT_EQ(packet.Timestamp(), timestamp);
+                         const mediapipe::Tensor& tensor = packet.Get<mediapipe::Tensor>();
+                         EXPECT_EQ(tensor.element_type(), mediapipe::Tensor::ElementType::kFloat32);
+                         EXPECT_EQ(tensor.shape().dims, std::vector<int>({1, 2}));
+                         const float* tensorData = tensor.GetCpuReadView().buffer<float>();
+                         observedValues.assign(tensorData, tensorData + 2);
+                         return absl::OkStatus();
+                     })
+            .ok());
     ASSERT_TRUE(graph.StartRun({}).ok());
 
     mediapipe::Tensor input(mediapipe::Tensor::ElementType::kFloat32,
@@ -63,8 +64,9 @@ TEST(OVTensorTensorConversionCalculatorsTest, CopiesTensorDataAndPreservesShape)
     inputData[0] = 3.0f;
     inputData[1] = 7.0f;
     ASSERT_TRUE(graph.AddPacketToInputStream(
-        "in", mediapipe::MakePacket<mediapipe::Tensor>(std::move(input))
-                  .At(timestamp)).ok());
+                         "in", mediapipe::MakePacket<mediapipe::Tensor>(std::move(input))
+                                   .At(timestamp))
+            .ok());
     ASSERT_TRUE(graph.CloseAllPacketSources().ok());
     ASSERT_TRUE(graph.WaitUntilDone().ok());
     EXPECT_EQ(observedValues, (std::vector<float>{3.0f, 7.0f}));
