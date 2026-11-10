@@ -56,12 +56,11 @@ class OvmsBaseType(Enum):
 dynamic_libraries = {
     OvmsBaseType.COMMON: {
         'libgcc_s.so',
-        'liblzma.so',
         'libstdc++.so',
         'libuuid.so',
         'libxml2.so',
     },
-    OvmsBaseType.UBUNTU: {'libicuuc.so', 'libicudata.so',},
+    OvmsBaseType.UBUNTU: set(),
     OvmsBaseType.UBUNTU_PYTHON: {'libexpat.so',},
     OvmsBaseType.UBUNTU22: {'libdl.so', 'libm.so', 'libpthread.so',},
     OvmsBaseType.UBUNTU22_PYTHON: {'libpython3.10.so',},
@@ -151,26 +150,14 @@ libraries = {
         'libopenvino_intel_npu_compiler_loader.so',
         'libopenvino_intel_npu_vm_runtime.so',
     },
-    OvmsBaseType.UBUNTU22: set(),
-    OvmsBaseType.UBUNTU24: set(),
-    OvmsBaseType.UBUNTU26: set(),
-    OvmsBaseType.UBUNTU22_PYTHON: {
-        'libovmspython.so',
-        'libpython_calculators.so',
-    },
-    OvmsBaseType.UBUNTU24_PYTHON: {
-        'libovmspython.so',
-        'libpython_calculators.so',
-    },
-    OvmsBaseType.UBUNTU26_PYTHON: {
-        'libovmspython.so',
-        'libpython_calculators.so',
-    },
-    OvmsBaseType.REDHAT: set(),
-    OvmsBaseType.REDHAT_PYTHON: {
-        'libovmspython.so',
-        'libpython_calculators.so',
-    },
+    OvmsBaseType.UBUNTU22: {'libovmspython.so', 'libpython_calculators.so'},
+    OvmsBaseType.UBUNTU24: {'libovmspython.so', 'libpython_calculators.so'},
+    OvmsBaseType.UBUNTU26: {'libovmspython.so', 'libpython_calculators.so'},
+    OvmsBaseType.UBUNTU22_PYTHON: set(),
+    OvmsBaseType.UBUNTU24_PYTHON: set(),
+    OvmsBaseType.UBUNTU26_PYTHON: set(),
+    OvmsBaseType.REDHAT: {'libovmspython.so', 'libpython_calculators.so'},
+    OvmsBaseType.REDHAT_PYTHON: set(),
     OvmsBaseType.WINDOWS: {
         'espeak-ng.dll',
         'git2.dll',
@@ -269,15 +256,12 @@ packages = {
         'libxml2',
         'openssl',
     },
-    OvmsBaseType.UBUNTU_PYTHON: {
+    OvmsBaseType.UBUNTU_PYTHON: set(),
+    OvmsBaseType.UBUNTU22: {
+        'libicu70',
         'libexpat1',
         'libsqlite3-0',
         'readline-common',
-    },
-    OvmsBaseType.UBUNTU22: {
-        'libicu70'
-    },
-    OvmsBaseType.UBUNTU22_PYTHON: {
         'libmpdec3',
         'libreadline8',
         'libpython3.10',
@@ -285,30 +269,35 @@ packages = {
         'libpython3.10-stdlib',
         'media-types',
     },
+    OvmsBaseType.UBUNTU22_PYTHON: set(),
     OvmsBaseType.UBUNTU24: {
         'libicu74',
         'tzdata',
         'netbase',
-        'libreadline8t64'
-    },
-    OvmsBaseType.UBUNTU24_PYTHON: {
+        'libreadline8t64',
+        'libexpat1',
+        'libsqlite3-0',
+        'readline-common',
         'libpython3.12t64',
         'libpython3.12-minimal',
         'libpython3.12-stdlib',
         'media-types',
     },
+    OvmsBaseType.UBUNTU24_PYTHON: set(),
     OvmsBaseType.UBUNTU26: {
         'libicu74',
         'tzdata',
         'netbase',
-        'libreadline8t64'
-    },
-    OvmsBaseType.UBUNTU26_PYTHON: {
+        'libreadline8t64',
+        'libexpat1',
+        'libsqlite3-0',
+        'readline-common',
         'libpython3.14',
         'libpython3.14-minimal',
         'libpython3.14-stdlib',
         'media-types',
     },
+    OvmsBaseType.UBUNTU26_PYTHON: set(),
     OvmsBaseType.UBUNTU_GPU: {
         'intel-driver-compiler-npu',
         'intel-fw-npu',
@@ -341,12 +330,11 @@ packages = {
         'libtirpc',
         'mpdecimal',
         'libnsl2',
-    },
-    OvmsBaseType.REDHAT_PYTHON: {
         'expat',
         'python3.12-libs',
         'python3.12-pip-wheel',
     },
+    OvmsBaseType.REDHAT_PYTHON: set(),
     OvmsBaseType.REDHAT_GPU: {
         'intel-gmmlib',
         'intel-igc-core',
