@@ -138,7 +138,7 @@ std::optional<Delta> DevstralToolParser::parseChunk(const std::string& chunk, co
                 return delta;
             }
             const bool endsWithEndTag = this->streamContent.size() >= this->parsingEndTag.size() &&
-                                         this->streamContent.substr(this->streamContent.size() - this->parsingEndTag.size()) == this->parsingEndTag;
+                                        this->streamContent.substr(this->streamContent.size() - this->parsingEndTag.size()) == this->parsingEndTag;
             if (endsWithEndTag || finishReason != ov::genai::GenerationFinishReason::NONE) {
                 ToolCall toolCall;
                 toolCall.name = this->toolName;
