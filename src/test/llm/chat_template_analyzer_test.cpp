@@ -123,9 +123,20 @@ TEST_F(ChatTemplateAnalyzerTest, detectsPhi4) {
     auto result = ChatTemplateAnalyzer::analyze(tmpl);
     ASSERT_TRUE(result.detectedToolParser.has_value());
     EXPECT_EQ(result.detectedToolParser.value(), "phi4");
-    EXPECT_TRUE(result.detectedReasoningParser.has_value());
-    EXPECT_EQ(result.detectedReasoningParser.value(), "qwen3");
+    EXPECT_FALSE(result.detectedReasoningParser.has_value());
     EXPECT_TRUE(result.caps.supportsToolCalls);
+}
+
+// --- Phi-4 reasoning ---
+
+TEST_F(ChatTemplateAnalyzerTest, detectsPhi4Reasoning) {
+    std::string tmpl = loadTemplate("chat_template_phi4_reasoning.jinja");
+    ASSERT_FALSE(tmpl.empty());
+    auto result = ChatTemplateAnalyzer::analyze(tmpl);
+    ASSERT_FALSE(result.detectedToolParser.has_value());
+    ASSERT_TRUE(result.detectedReasoningParser.has_value());
+    EXPECT_EQ(result.detectedReasoningParser.value(), "qwen3");
+    EXPECT_FALSE(result.caps.supportsToolCalls);
 }
 
 // --- Devstral ---
