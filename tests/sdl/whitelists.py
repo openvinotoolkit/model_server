@@ -49,11 +49,14 @@ dynamic_libraries = {
         'libstdc++.so',
         'libuuid.so',
         'libxml2.so',
+        'libdl.so',
+        'libm.so',
+        'libpthread.so',
     },
     OvmsBaseType.UBUNTU: set(),
-    OvmsBaseType.UBUNTU24: {'libdl.so', 'libm.so', 'libpthread.so', 'liblzma.so', 'libicuuc.so', 'libicudata.so',},
-    OvmsBaseType.UBUNTU26: {'libdl.so', 'libm.so', 'libpthread.so'},
-    OvmsBaseType.REDHAT: {'libdl.so', 'libm.so', 'libpthread.so', 'liblzma.so'},
+    OvmsBaseType.UBUNTU24: {'liblzma.so', 'libicuuc.so', 'libicudata.so',},
+    OvmsBaseType.UBUNTU26: set(),
+    OvmsBaseType.REDHAT: {'liblzma.so',},
 }
 
 whitelisted_dynamic_libraries = {
