@@ -131,14 +131,11 @@ pipeline {
                         } else {
                             python_suffix = "off"
                         }
-                        def packageName = "ovms_windows_${env.PRODUCT_VERSION}_${env.RELEASE_TAG}_python_${python_suffix}.zip"
                         def sourceFile = "ovms.zip"
-                        def shaFile = ""
                         if (env.SIGN_FILES == "true" && env.SIGN_USER_PASSWORD != "") {
                             def signedFiles = "${env.WORKSPACE}\\dist\\windows\\ovms_windows_python_${python_suffix}.zip"
                             if (fileExists(signedFiles)) {
                                 sourceFile = "ovms_windows_python_${python_suffix}.zip"
-                                shaFile = "ovms_windows_python_${python_suffix}.zip.sha256"
                             } else {
                                 echo "WARNING: Signed file not found, falling back to unsigned ovms.zip"
                             }
@@ -149,14 +146,27 @@ pipeline {
                         }
                         def destPath = "w:\\${env.PRODUCT_VERSION}\\${env.RELEASE_TAG}\\windows"
                         def latestPath = "${destPath}\\latest"
+                        def releasePath = "${destPath}\\release"
+                        def packageName = "ovms_windows.zip"
+                        def sourcePath = "${env.WORKSPACE}\\dist\\windows\\${sourceFile}"
+                        def shaPath = "${env.WORKSPACE}\\dist\\windows\\${packageName}.sha256"
+
+                        status = bat(returnStatus:true, script: "powershell -NoProfile -Command \"(Get-FileHash -Algorithm SHA256 -LiteralPath '${sourcePath}').Hash.ToLower() + '  ${packageName}' | Set-Content -LiteralPath '${shaPath}' -NoNewline -Encoding ASCII\"")
+                        if (status != 0) {
+                            error "Failed to generate sha256 file. Status code: ${status}"
+                        }
                         
                         status = bat(returnStatus:true, script: "if not exist \"${destPath}\\${env.BUILDSTAMP}\" mkdir \"${destPath}\\${env.BUILDSTAMP}\"")
                         if (status != 0) {
                             error "Failed to create directory. Status code: ${status}"
                         }
-                        status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\${sourceFile}\" \"${destPath}\\${env.BUILDSTAMP}\\${packageName}\"")
+                        status = bat(returnStatus:true, script: "copy /Y \"${sourcePath}\" \"${destPath}\\${env.BUILDSTAMP}\\${packageName}\"")
                         if (status != 0) {
                             error "Failed to copy file. Status code: ${status}"
+                        }
+                        status = bat(returnStatus:true, script: "copy /Y \"${shaPath}\" \"${destPath}\\${env.BUILDSTAMP}\\${packageName}.sha256\"")
+                        if (status != 0) {
+                            error "Failed to copy sha256 file. Status code: ${status}"
                         }
                         status = bat(returnStatus:true, script: "if exist \"${latestPath}\" rmdir /S /Q \"${latestPath}\"")
                         if (status != 0) {
@@ -166,15 +176,25 @@ pipeline {
                         if (status != 0) {
                             error "Failed to create directory. Status code: ${status}"
                         }
-                        status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\${sourceFile}\" \"${latestPath}\\${packageName}\"")
+                        status = bat(returnStatus:true, script: "copy /Y \"${sourcePath}\" \"${latestPath}\\${packageName}\"")
                         if (status != 0) {
                             error "Failed to copy file. Status code: ${status}"
                         }
-                        if (shaFile != "" && fileExists("${env.WORKSPACE}\\dist\\windows\\${shaFile}")) {
-                            status = bat(returnStatus:true, script: "copy /Y \"${env.WORKSPACE}\\dist\\windows\\${shaFile}\" \"${latestPath}\\${packageName}.sha256\"")
-                            if (status != 0) {
-                                error "Failed to copy sha256 file. Status code: ${status}"
-                            }
+                        status = bat(returnStatus:true, script: "copy /Y \"${shaPath}\" \"${latestPath}\\${packageName}.sha256\"")
+                        if (status != 0) {
+                            error "Failed to copy sha256 file. Status code: ${status}"
+                        }
+                        status = bat(returnStatus:true, script: "if not exist \"${releasePath}\" mkdir \"${releasePath}\"")
+                        if (status != 0) {
+                            error "Failed to create release directory. Status code: ${status}"
+                        }
+                        status = bat(returnStatus:true, script: "copy /Y \"${sourcePath}\" \"${releasePath}\\${packageName}\"")
+                        if (status != 0) {
+                            error "Failed to copy file to release directory. Status code: ${status}"
+                        }
+                        status = bat(returnStatus:true, script: "copy /Y \"${shaPath}\" \"${releasePath}\\${packageName}.sha256\"")
+                        if (status != 0) {
+                            error "Failed to copy sha256 file to release directory. Status code: ${status}"
                         }
                     } else {
                         error "Cannot load ci/loadWin.groovy file."
