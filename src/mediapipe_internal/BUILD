@@ -248,7 +248,9 @@ ovms_cc_library(
     name = "libovms_mediapipe_runtime_owner_no_python_calculators",
     deps = [
         ":libovms_mediapipe",
-        "//src/mediapipe_calculators/ovms:ovms_calculator",
+        "@mediapipe_openvino//mediapipe/calculators/openvino:openvino_calculators",
+        "@mediapipe//mediapipe/calculators/tensor:image_to_tensor_calculator",
+        "//src/mediapipe_calculators/ovms:ovtensor_tensor_conversion_calculators",
         "//src/llm:llmcalculator_registration",
         "//src:kfs_graph_executor_impl",
         "//src:libovms_mediapipe_http_executor",

@@ -119,92 +119,44 @@ We will find that in using bazel `mediapipe_simple_subgraph` function another `p
 
 After performing those steps we have a list of pbtxt files with inference nodes that need adjustments.
 
-### 2. Replacement of inference calculators in graph and subgraphs
+### 2. Use the OpenVINO MediaPipe calculators
 
-We start with basic replacement of inference calculator in graph and subgraphs if needed. Existing configuration could look like:
-```
+OVMS uses `OpenVINOSessionCalculator` and `OpenVINOInferenceCalculator` from the OpenVINO MediaPipe calculator package. The session compiles a model file and publishes a `SESSION` side packet; inference consumes and emits vectors of `ov::Tensor`:
+
+```protobuf
 node {
-  calculator: "HandLandmarkModelLoader"
-  input_side_packet: "MODEL_COMPLEXITY:model_complexity"
-  output_side_packet: "MODEL:model"
-}
-node {
-  calculator: "InferenceCalculator"
-  input_side_packet: "MODEL:model"
-  input_stream: "TENSORS:input_tensor"
-  output_stream: "TENSORS:output_tensors"
-  options: {
-    [mediapipe.InferenceCalculatorOptions.ext] {
-      model_path: "mediapipe/modules/holistic_landmark/hand_recrop.tflite"
-      delegate {
-        xnnpack {}
-      }
-    }
-  }
-}
-```
-This tells us which model is used (`hand_recrop`) and what type of packets are send to inference calculator (`vector\<mediapipe::Tensor\>`). We also need information what are model names inputs. This could be checked f.e. using OVMS logs from model loading or metadata request calls. With that information we would replace that part of a graph with:
-```
-node {
-  calculator: "OpenVINOModelServerSessionCalculator"
+  calculator: "OpenVINOSessionCalculator"
   output_side_packet: "SESSION:session"
   node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "hand_recrop"
-      servable_version: "1"
+    [type.googleapis.com/mediapipe.OpenVINOSessionCalculatorOptions] {
+      model_path: "/models/hand_recrop/1/hand_recrop.xml"
+      device: "CPU"
+      num_infer_requests: 4
     }
   }
 }
 node {
   calculator: "OpenVINOInferenceCalculator"
   input_side_packet: "SESSION:session"
-  input_stream: "TENSORS:initial_crop_tensor"
-  output_stream: "TENSORS:landmark_tensors"
+  input_stream: "TENSORS:input_tensors"
+  output_stream: "TENSORS:output_tensors"
   node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
-          tag_to_input_tensor_names {
-            key: "TENSORS"
-            value: "input_1"
-          }
-          tag_to_output_tensor_names {
-            key: "TENSORS"
-            value: "output_crop"
-          }
-        }
-  }
-}
-```
-In `OpenVINOModelServerSessionCalculator` we set `servable_name` with the model's name we found earlier. In `OpenVINOInferenceCalculator` we set input & output tags names to start with `TENSORS`. We then need to map out those tags to actual model names in `mediapipe.OpenVINOInferenceCalculatorOptions` `tag_to_input_tensor_names` and `tag_to_output_tensor_names` fields.
-
-#### 2.1. Add information about input/output tensors ordering.
-
-This step may be required if model has multiple inputs or outputs. If input/output packet types are vector of some type - we must figure out the correct ordering of tensors - expected by the graph. Assuming that model produces several outputs we may need to add following section to `OpenVINOInferenceCalculatorOptions`:
-```
-output_order_list: ["Identity","Identity_1","Identity_2","Identity_3"]
-```
-In case of multiple inputs, we must do similar steps, and add:
-```
-input_order_list: ["Identity","Identity_1","Identity_2","Identity_3"]
-```
-
-### 3. Adjust graph input/output streams
-
-This step is required if you plan to deploy the graph in OpenVINO Model Server and existing graph does not have supported input/output packet types. Check for supported input and output packet types [here](./mediapipe.md).
-In that cases you may need to add converter calculators as it was done [here](https://github.com/openvinotoolkit/model_server/blob/main/demos/mediapipe/object_detection/graph.pbtxt#L31).
-
-### 4. Set the config.json file path in the session calculator
-
-This step is required if you plan to use graph within existing application. You need to fill `server_config` field in `OpenVINOModelServerSessionCalculatorOptions` to pass full file path to configuration file like:
-```
-node {
-  calculator: "OpenVINOModelServerSessionCalculator"
-  output_side_packet: "SESSION:session"
-  node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "hand_recrop"
-      servable_version: "1"
-      server_config: "/servables/config.json"
+    [type.googleapis.com/mediapipe.OpenVINOInferenceCalculatorOptions] {
+      input_order: "input_1"
+      output_order: "output_crop"
     }
   }
 }
 ```
+
+`input_order` and `output_order` map vector positions to OpenVINO tensor names. When omitted, tensors bind by model index and outputs follow model order. Use the same `OpenVINOSessionCalculatorOptions` for graphs that should share a compiled model and request pool.
+
+The session calculator reads `model_path` directly. Absolute paths are recommended in deployed graphs. Relative paths resolve from the process working directory, not from the graph or subconfig directory. A session is shared while at least one graph owns it; replacing a model file does not invalidate a live session. Recreate/reload the graph to pick up changed model contents.
+
+The old OVMS calculators selected a model by `servable_name` and version and could start an embedded server using `server_config`. The direct OpenVINO calculators do neither: configure device, request count, shape, layout, and preprocessing in the session options, and manage model files independently of OVMS model configuration. Dynamic input shapes must be declared/compiled through the session options or in the model; the calculator does not reload a servable for each input shape.
+
+### 3. Adapt graph tensor boundaries
+
+The inference calculator accepts `std::vector<ov::Tensor>` on `TENSORS`, `std::vector<ov::RemoteTensor>` on `REMOTE_TENSORS`, or individually tagged `ov::Tensor` streams mapped to model names. Use named streams when inputs come from separate branches; no pack/split calculators are required. Multiple output tags may map to the same model output for fan-out. Vector mode remains available for producers that naturally emit a vector. OVMS registers `MPTensorToOVTensorCalculator` and `OVTensorToMPTensorCalculator` only for graph nodes whose packet type is MediaPipe `Tensor`; those conversions copy data into an owned buffer.
+
+An image or Python producer must produce the packet type expected by its boundary calculator. Check preprocessing/layout/precision when replacing model-server preprocessing with session options; do not assume that changing a stream tag changes its packet type.

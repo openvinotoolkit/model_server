@@ -28,7 +28,7 @@ from tests.functional.constants.ovms import Config
 from tests.functional.constants.paths import Paths
 from tests.functional.object_model.custom_node import CustomNode
 from tests.functional.object_model.mediapipe_calculators import MediaPipeCalculator, PythonCalculator, \
-    OpenVINOModelServerSessionCalculator, OpenVINOInferenceCalculator
+    OpenVINOSessionCalculator, OpenVINOInferenceCalculator
 
 
 class NodesConnection:
@@ -690,7 +690,7 @@ class SimpleMediaPipe(MediaPipe):
     def __init__(self, model, demultiply_count=None, **kwargs):
         pipeline = SimplePipeline
         super().__init__(model, pipeline, demultiply_count, **kwargs)
-        self.calculators = [OpenVINOModelServerSessionCalculator(model=self), OpenVINOInferenceCalculator(model=self)]
+        self.calculators = [OpenVINOSessionCalculator(model=self), OpenVINOInferenceCalculator(model=self)]
         self._initialize([model])
         self.regular_models = self.get_regular_models()
         assert not self.name.endswith("_mediapipe")

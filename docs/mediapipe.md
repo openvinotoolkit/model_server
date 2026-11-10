@@ -96,7 +96,7 @@ Check the code snippets for [gRPC unary](clients_kfs.md#request-prediction-on-a-
 
 There is also an option to avoid any data conversions in the serialization and deserialization by the OpenVINO Model Server. When the input stream is of type REQUEST, it will be passed-through to the calculator. The receiving calculator will be in charge of deserializing it and interpreting all the content. Likewise, the output format RESPONSE delegate to the calculator creating a complete KServe response message to the client. That gives extra flexibility in the data format as arbitrary data can be stored in [raw_input_content](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/grpc_predict_v2.proto#L202) and later decoded in custom calculator.
 
-**Note:** For list of supported packet types and tags of `OpenVINOInferenceCalculator`, including graph examples, check documentation of [OpenVINO Model Server calculators](https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/calculators/ovms/).
+**Note:** `OpenVINOInferenceCalculator` consumes `std::vector<ov::Tensor>` on `TENSORS` (or `std::vector<ov::RemoteTensor>` on `REMOTE_TENSORS`). Model loading and inference options are documented with the [OpenVINO MediaPipe calculators](https://github.com/openvinotoolkit/mediapipe/tree/windows-build/mediapipe/calculators/openvino). OVMS additionally provides tensor-vector and MediaPipe/OpenVINO tensor boundary calculators.
 
 ### Side packets
 Side packets are special parameters which can be passed to the calculators at the beginning of the graph initialization. It can tune the behavior of the calculator like set the object detection threshold or number of objects to process.

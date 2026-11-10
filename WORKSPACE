@@ -229,6 +229,21 @@ http_archive(
     patch_tool = "patch",
 )
 
+http_archive(
+    name = "mediapipe_openvino",
+    sha256 = "9a0e0bae1f09c3dce22dd619f8a81b180531127cce2578be43bb04a5be1e6664",
+    strip_prefix = "mediapipe-f004ca9bb779fceb13d6d048cd7d75922bb511ed",
+    type = "tar.gz",
+    urls = ["https://codeload.github.com/openvinotoolkit/mediapipe/tar.gz/f004ca9bb779fceb13d6d048cd7d75922bb511ed"],
+    patches = ["@ovms//third_party/mediapipe:ovms_openvino_calculators.patch"],
+    patch_args = ["-p1"],
+    patch_tool = "patch",
+    repo_mapping = {
+        "@mediapipe": "@mediapipe",
+        "@com_github_nlohmann_json": "@nlohmann_json",
+    },
+)
+
 # DEV mediapipe 1 source - adjust local repository path for build
 #local_repository(
 #    name = "mediapipe",

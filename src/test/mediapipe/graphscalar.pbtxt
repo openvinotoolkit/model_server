@@ -16,12 +16,12 @@
 input_stream: "in"
 output_stream: "out"
 node {
-  calculator: "OpenVINOModelServerSessionCalculator"
+  calculator: "OpenVINOSessionCalculator"
   output_side_packet: "SESSION:session"
   node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "scalar"
-      servable_version: "1"
+    [type.googleapis.com / mediapipe.OpenVINOSessionCalculatorOptions]: {
+      model_path: "/ovms/src/test/scalar/1/saved_model.xml"
+      shape: "auto"
     }
   }
 }
@@ -32,14 +32,8 @@ node {
   output_stream: "SCALAR:out"
   node_options: {
     [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
-      tag_to_input_tensor_names {
-        key: "SCALAR"
-        value: "model_scalar_input"
-      }
-      tag_to_output_tensor_names {
-        key: "SCALAR"
-        value: "model_scalar_output"
-      }
+      tag_to_input_tensor_names { key: "SCALAR" value: "model_scalar_input" }
+      tag_to_output_tensor_names { key: "SCALAR" value: "model_scalar_output" }
     }
   }
 }

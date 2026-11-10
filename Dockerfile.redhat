@@ -186,10 +186,10 @@ RUN wget -q https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packag
 RUN python3.12 --version && python3.12 -m pip install "numpy<2.0.0" "Jinja2==3.1.6" "MarkupSafe==3.0.2"  --no-cache-dir
 
 # Set up Bazel
-ENV BAZEL_VERSION 7.4.1
+ENV BAZEL_VERSION 7.7.0
 WORKDIR /bazel
 RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
-    echo "fcce7df3fdbe8ef9f278816776709292ca7bb42d2facc15fc777649a9b46ca49  bazel-$BAZEL_VERSION-installer-linux-x86_64.sh" | sha256sum -c - && \
+    echo "7e749f59fa4c4430fbc49ea38b0bc0a41dd1f460e8671c90978d70c2166bf0c4  bazel-$BAZEL_VERSION-installer-linux-x86_64.sh" | sha256sum -c - && \
     curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
     chmod +x bazel-*.sh && \
     ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
@@ -320,6 +320,7 @@ RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [
     bazel build --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
 
 COPY src/ /ovms/src/
+COPY MakefileCapi /ovms/
 
 # Sample CPU Extension
 WORKDIR /ovms/src/example/SampleCpuExtension/
@@ -350,6 +351,14 @@ RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false baze
     //src/python:libovmspython //src/python:libpython_calculators \
     $(if [ "$OPTIMIZE_BUILDING_TESTS" == "1" ] ; then echo -n "//src:ovms_test //src:python_runtime_library_test"; fi)
 
+# Build the C API with the same MediaPipe-enabled Bazel configuration as OVMS.
+ARG FUZZER_BUILD=0
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$FUZZER_BUILD" == "0" ]; then \
+    bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms_shared //src:capi_cpp_example //src:capi_benchmark && \
+    ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy" && \
+    CAPI_FLAGS="${debug_bazel_flags} ${minitrace_flags}" make -f MakefileCapi cpp && \
+    CAPI_FLAGS="${debug_bazel_flags} ${minitrace_flags}" make -f MakefileCapi c; fi
+
 # espeak-ng is built as a separate step, independent of the OVMS binary.
 # Set ESPEAK=0 to skip the espeak build.
 ARG ESPEAK=1
@@ -374,29 +383,6 @@ RUN python3.12 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENV
     'BAZEL_BUILD_FLAGS':'${debug_bazel_flags}${minitrace_flags}}','BASE_IMAGE':'${BASE_IMAGE}' }; \
     print(json.dumps(m,indent=4))" > /ovms/release_files/metadata.json
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-
-FROM $BUILD_IMAGE as capi-build
-# C api shared library
-ARG CAPI_FLAGS="--strip=always  --config=mp_off --//:distro=redhat"
-ARG JOBS=40
-ARG LTO_ENABLE=OFF
-WORKDIR /ovms
-RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false bazel build --jobs $JOBS ${CAPI_FLAGS} //src:ovms_shared
-
-# C api app with bazel
-# hadolint ignore=DL3059
-RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false bazel build --jobs $JOBS ${CAPI_FLAGS} //src:capi_cpp_example
-
-# C-API benchmark app
-RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy"
-# C-api C/C++ app with gcc
-COPY MakefileCapi /ovms/
-RUN make -f MakefileCapi cpp CAPI_FLAGS="${CAPI_FLAGS}" && \
-    make -f MakefileCapi c CAPI_FLAGS="${CAPI_FLAGS}"
-
-RUN mkdir -p /ovms_release/lib/ ; find /ovms/bazel-out/k8-*/bin -iname 'libovms_shared.so'  -exec cp -v {} /ovms_release/lib/ \;
-
 FROM $BUILD_IMAGE as pkg
 
 COPY --from=build /usr/local/bin/patchelf /usr/local/bin/patchelf
@@ -412,6 +398,7 @@ RUN ./create_package.sh
 # hadolint ignore=DL3059
 RUN chown -R ovms:ovms /ovms_release
 RUN mkdir /licenses && ln -s /ovms_release/LICENSE /licenses && ln -s /ovms_release/thirdparty-licenses /licenses/thirdparty-licenses
+RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/libovms_shared.so / ; fi
 
 
 FROM $RELEASE_BASE_IMAGE as release
