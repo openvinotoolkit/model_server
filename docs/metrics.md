@@ -73,7 +73,7 @@ continuous-batching language and vision-language models, not legacy/NPU or Omni
 pipelines. Use the `all_llm` preset in the metrics list to enable all seven, or
 list individual families:
 
-```bash
+```text
 ovms --config_path /models/config.json --rest_port 8000 --metrics_enable \
     --metrics_list all_llm
 curl http://localhost:8000/metrics

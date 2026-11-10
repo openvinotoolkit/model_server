@@ -46,12 +46,18 @@
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../mediapipe_internal/graphqueue.hpp"
 #include "src/kfs_python_tensor_bridge.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
+#include "../mediapipe_internal/ovms_calculator_base.hpp"
+#include "../mediapipe_internal/graph_side_packets.hpp"
+#include "src/metrics/calculator_metrics.hpp"
 #include "src/metrics/metric_config.hpp"
+#include "src/metrics/metric.hpp"
+#include "src/metrics/metric_family.hpp"
 #include "src/metrics/metric_module.hpp"
 #include "src/metrics/metric_provider.hpp"
 #include "src/metrics/metric_registry.hpp"
@@ -4487,6 +4493,90 @@ TEST(MediapipeIdleUnloadGuard, CreateDefinitionLazyLoadRejectsDuplicate) {
     ASSERT_EQ(status2, ovms::StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST);
 }
 
+namespace mediapipe {
+class TestCustomMetricsCalculator : public ::ovms::OvmsCalculatorBase {
+    std::shared_ptr<::ovms::CalculatorCounter> counter;
+
+public:
+    static absl::Status GetContract(CalculatorContract* cc) {
+        cc->Inputs().Tag("IN").Set<std::string>();
+        SetCalculatorMetricsContract(cc);
+        return absl::OkStatus();
+    }
+
+    absl::Status Open(CalculatorContext* cc) final {
+        auto status = InitializeCalculatorMetrics(cc);
+        if (!status.ok()) {
+            return status;
+        }
+        counter = calculatorMetrics->registerCounter("custom_runtime_events_total", "Runtime events.");
+        return absl::OkStatus();
+    }
+
+    absl::Status Process(CalculatorContext* cc) final {
+        counter->increment();
+        return absl::OkStatus();
+    }
+};
+REGISTER_CALCULATOR(TestCustomMetricsCalculator);
+}  // namespace mediapipe
+
+TEST(MediapipeGraphMetricsProvider, CustomMetricsReachRunningCalculatorAcrossPoolAndReload) {
+    MetricRegistry registry;
+    auto sidePackets = std::make_shared<GraphSidePackets>();
+    sidePackets->calculatorMetrics.emplace(
+        "metric_node", std::make_shared<CalculatorMetrics>(&registry, "runtime_graph", "metric_node"));
+
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(R"(
+input_stream: "in"
+node {
+  name: "metric_node"
+  calculator: "TestCustomMetricsCalculator"
+  input_stream: "IN:in"
+  input_side_packet: "CALCULATOR_METRICS:calculator_metrics"
+}
+)", &config));
+
+    auto queue = std::make_shared<GraphQueue>(config, sidePackets, 2);
+    auto process = [](mediapipe::CalculatorGraph& graph) {
+        auto status = graph.AddPacketToInputStream(
+            "in", mediapipe::MakePacket<std::string>("event").At(mediapipe::Timestamp(0)));
+        if (!status.ok()) {
+            return status;
+        }
+        status = graph.CloseInputStream("in");
+        if (!status.ok()) {
+            return status;
+        }
+        return graph.WaitUntilDone();
+    };
+    {
+        GraphIdGuard first(queue);
+        GraphIdGuard second(queue);
+        ASSERT_TRUE(process(first.graph).ok());
+        ASSERT_TRUE(process(second.graph).ok());
+    }
+    EXPECT_THAT(registry.collect(),
+        HasSubstr("custom_runtime_events_total{name=\"runtime_graph\",node=\"metric_node\"} 2\n"));
+
+    queue.reset();
+    sidePackets->clear();
+    EXPECT_TRUE(registry.collect().empty());
+
+    sidePackets->calculatorMetrics.emplace(
+        "metric_node", std::make_shared<CalculatorMetrics>(&registry, "runtime_graph", "metric_node"));
+    queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
+    {
+        GraphIdGuard reloaded(queue);
+        ASSERT_TRUE(process(reloaded.graph).ok());
+    }
+    EXPECT_THAT(registry.collect(),
+        HasSubstr("custom_runtime_events_total{name=\"runtime_graph\",node=\"metric_node\"} 1\n"));
+    queue.reset();
+    sidePackets->clear();
+}
+
 namespace {
 class TestGraphMetricProvider : public ovms::MetricProvider {
 public:
@@ -4528,6 +4618,19 @@ public:
     }
 };
 }  // namespace
+
+TEST(MediapipeGraphMetricsProvider, LlmMetricRegistrationExceptionsBecomeStatuses) {
+    TestGraphMetricProvider metrics;
+    ASSERT_EQ(metrics.config.loadFromCLIString(true, METRIC_NAME_KV_CACHE_UTILIZATION), StatusCode::OK);
+    ASSERT_NE(nullptr, metrics.registry.createFamily<MetricCounter>(
+                           METRIC_NAME_KV_CACHE_UTILIZATION, "Conflicting family type."));
+    MetricsGraphDefinition graph(&metrics);
+    graph.useInvalidLlmNode();
+
+    EXPECT_NO_THROW({
+        EXPECT_EQ(graph.initializeNodes(), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
+    });
+}
 
 TEST(MediapipeGraphMetricsProvider, CustomMetricsHonorProviderConfiguration) {
     TestGraphMetricProvider metrics;

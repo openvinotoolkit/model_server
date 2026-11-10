@@ -98,8 +98,8 @@ public:
                 metricFamilies << availableMetrics[i];
             }
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger,
-                "LLMCalculator [Node: {}] Available metric families (select with --metrics_list or all_llm): {}",
-                cc->NodeName(), metricFamilies.str());
+                "LLMCalculator [Node: {}] Available metric families (select with --metrics_list or {}): {}",
+                cc->NodeName(), ovms::ALL_LLM_METRICS_PRESET, metricFamilies.str());
         }
         ovms::GenAiServableMap servableMap = cc->InputSidePackets().Tag(LLM_SESSION_SIDE_PACKET_TAG).Get<ovms::GenAiServableMap>();
         auto it = servableMap.find(cc->NodeName());

@@ -26,6 +26,8 @@
 
 namespace ovms {
 
+inline constexpr const char* ALL_LLM_METRICS_PRESET = "all_llm";
+
 // Single Model / DAG
 extern const std::string METRIC_NAME_REQUESTS_SUCCESS;
 extern const std::string METRIC_NAME_REQUESTS_FAIL;

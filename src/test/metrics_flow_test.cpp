@@ -786,6 +786,7 @@ TEST_P(LLMMetricsFlowTest, PublishesAtInfoLevelAndResetsAfterIdleUnload) {
         const std::string scrape = server.collect();
         EXPECT_THAT(scrape, HasSubstr("ovms_kv_cache_utilization_percent{name=\"metrics_llm\",node=\"llmNode1\"} "));
         EXPECT_THAT(scrape, HasSubstr("ovms_kv_cache_size_bytes{name=\"metrics_llm\",node=\"llmNode1\"} "));
+        EXPECT_THAT(scrape, HasSubstr("ovms_llm_prompt_tokens_total{name=\"metrics_llm\",node=\"llmNode1\"} "));
         EXPECT_THAT(scrape, Not(HasSubstr("ovms_llm_prompt_tokens_total{name=\"metrics_llm\",node=\"llmNode1\"} 0\n")));
         EXPECT_THAT(scrape, HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"metrics_llm\",node=\"llmNode1\"} " + std::to_string(i) + "\n"));
         EXPECT_THAT(scrape, Not(HasSubstr("ovms_llm_ttft_milliseconds_sum{name=\"metrics_llm\",node=\"llmNode1\"} 0\n")));

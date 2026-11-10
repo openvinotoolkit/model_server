@@ -105,9 +105,8 @@ LLMMetricReporter::LLMMetricReporter(const MetricConfig* config, MetricRegistry*
         }
         completedRequestMetricsEnabled.store(promptTokens || generatedTokens || ttft || tpot, std::memory_order_relaxed);
         completionMetricsEnabled.store(promptTokens || generatedTokens || ttft || tpot, std::memory_order_relaxed);
-    } catch (const std::exception& e) {
+    } catch (const std::exception&) {
         removeMetrics();
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Failed to register LLM metrics for graph {} node {}: {}", graphName, nodeName, e.what());
         throw;
     }
 }

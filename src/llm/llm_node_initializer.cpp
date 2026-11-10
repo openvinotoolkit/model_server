@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <exception>
 #include <memory>
 #include <string>
 #include <utility>
@@ -58,11 +59,22 @@ public:
             return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
         }
         std::shared_ptr<GenAiServable> servable;
-        auto metricReporter = std::make_shared<LLMMetricReporter>(
-            metrics ? &metrics->getMetricConfig() : nullptr,
-            metrics ? metrics->getMetricRegistry() : nullptr, graphName, nodeName);
+        std::shared_ptr<LLMMetricReporter> metricReporter;
         std::weak_ptr<LLMMetricReporter> metricReporterRef = metricReporter;
-        Status status = initializeGenAiServable(servable, nodeConfig, basePath, std::move(metricReporter));
+        Status status;
+        try {
+            metricReporter = std::make_shared<LLMMetricReporter>(
+                metrics ? &metrics->getMetricConfig() : nullptr,
+                metrics ? metrics->getMetricRegistry() : nullptr, graphName, nodeName);
+            metricReporterRef = metricReporter;
+            status = initializeGenAiServable(servable, nodeConfig, basePath, std::move(metricReporter));
+        } catch (const std::exception& e) {
+            SPDLOG_ERROR("Failed to initialize LLM node {} in graph {}: {}", nodeName, graphName, e.what());
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        } catch (...) {
+            SPDLOG_ERROR("Failed to initialize LLM node {} in graph {} due to an unknown exception", nodeName, graphName);
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
         if (!status.ok()) {
             SPDLOG_ERROR("Failed to process LLM node graph {}", graphName);
             return status;
