@@ -139,12 +139,14 @@ std::shared_ptr<Preprocessor> getPreprocessor(const ov::Tensor& source,
     static std::list<std::pair<PreprocessKey, std::shared_ptr<Preprocessor>>> cache;
     const size_t channels = source.get_shape()[3];
     const PreprocessKey key{source.get_element_type(), precision, channels, height, width};
-    std::lock_guard<std::mutex> lock(mutex);
-    for (auto it = cache.begin(); it != cache.end(); ++it) {
-        if (it->first == key) {
-            auto entry = it->second;
-            cache.splice(cache.begin(), cache, it);
-            return entry;
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        for (auto it = cache.begin(); it != cache.end(); ++it) {
+            if (it->first == key) {
+                auto entry = it->second;
+                cache.splice(cache.begin(), cache, it);
+                return entry;
+            }
         }
     }
     auto input = std::make_shared<ov::op::v0::Parameter>(precision,
@@ -181,12 +183,24 @@ std::shared_ptr<Preprocessor> getPreprocessor(const ov::Tensor& source,
         });
         steps.convert_element_type(precision);
     }
+
     auto entry = std::make_shared<Preprocessor>();
     entry->model = core.compile_model(processor.build(), "CPU", ov::hint::inference_precision(ov::element::f32),
         ov::inference_num_threads(1), ov::num_streams(1));
-    cache.emplace_front(key, entry);
-    if (cache.size() > 32)
-        cache.pop_back();
+
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        for (auto it = cache.begin(); it != cache.end(); ++it) {
+            if (it->first == key) {
+                auto cached = it->second;
+                cache.splice(cache.begin(), cache, it);
+                return cached;
+            }
+        }
+        cache.emplace_front(key, entry);
+        if (cache.size() > 32)
+            cache.pop_back();
+    }
     return entry;
 }
 }  // namespace

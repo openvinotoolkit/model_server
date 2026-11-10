@@ -106,7 +106,7 @@ IF /I EXIST %bash_path% (
         if !errorlevel! neq 0 exit /b !errorlevel!
     )
     IF /I NOT EXIST %msys_install% (
-        curl -k -L -o "%msys_install%" "%msys_url%"
+        curl -L -o "%msys_install%" "%msys_url%"
         if !errorlevel! neq 0 exit /b !errorlevel!
     )
 
@@ -227,12 +227,12 @@ IF /I EXIST %genai_zip% (
     if %expunge% EQU 1 (
         del /S /Q "%genai_zip%"
         if !errorlevel! neq 0 exit /b !errorlevel!
-        curl -k -L -o "%genai_zip%" "%GENAI_PACKAGE_URL%"
+        curl -L -o "%genai_zip%" "%GENAI_PACKAGE_URL%"
         if !errorlevel! neq 0 exit /b !errorlevel!
     ) else ( echo [INFO] file exists %genai_zip% )
     
 ) ELSE (
-    curl -k -L -o "%genai_zip%" "%GENAI_PACKAGE_URL%"
+    curl -L -o "%genai_zip%" "%GENAI_PACKAGE_URL%"
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 set "actual_hash="
@@ -413,7 +413,7 @@ IF /I EXIST %bazel_path% (
     )
 )
 IF /I NOT EXIST %bazel_path% (
-    curl -k -L -o "%bazel_path%" "%bazel_url%"
+    curl -L -o "%bazel_path%" "%bazel_url%"
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 echo [INFO] Bazel installed: %bazel_file%
@@ -445,7 +445,7 @@ IF /I EXIST %python_path%\python.exe (
         if !errorlevel! neq 0 exit /b !errorlevel!
 
         :: Install python
-        curl -k %python_url% -o %opt_install_dir%\%python_full_name%.exe
+        curl %python_url% -o %opt_install_dir%\%python_full_name%.exe
         if !errorlevel! neq 0 exit /b !errorlevel!
         call :UninstallPython
         if !errorlevel! neq 0 exit /b !errorlevel!
@@ -468,7 +468,7 @@ IF /I EXIST %python_path%\python.exe (
         if !errorlevel! neq 0 exit /b !errorlevel!
     )
     :: Install python
-    curl -k %python_url% -o %opt_install_dir%\%python_full_name%.exe
+    curl %python_url% -o %opt_install_dir%\%python_full_name%.exe
     if !errorlevel! neq 0 exit /b !errorlevel!
     call :UninstallPython
     if !errorlevel! neq 0 exit /b !errorlevel!
@@ -549,12 +549,12 @@ IF /I EXIST %curl_zip% (
     if %expunge% EQU 1 (
         del /S /Q %curl_zip%
         if !errorlevel! neq 0 exit /b !errorlevel!
-        curl -k -L -o "%curl_zip%" "%curl_http%%curl_ver%"
+        curl -L -o "%curl_zip%" "%curl_http%%curl_ver%"
         if !errorlevel! neq 0 exit /b !errorlevel!
     ) else ( echo [INFO] file exists %curl_zip% )
     
 ) ELSE (
-    curl -k -L -o "%curl_zip%" "%curl_http%%curl_ver%"
+    curl -L -o "%curl_zip%" "%curl_http%%curl_ver%"
     if !errorlevel! neq 0 exit /b !errorlevel!
 )
 :: Extract curl

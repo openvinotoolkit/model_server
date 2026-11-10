@@ -90,6 +90,7 @@ TEST_F(PythonRuntimePath, ImportsModulesAfterInterpreterReinitialization) {
     }
 }
 
+#ifdef _WIN32
 TEST_F(PythonRuntimePath, AppendsBindingDirectoryWhenPresent) {
     const auto bindingDirectory = pythonDirectory / "binding";
     std::filesystem::create_directories(bindingDirectory);
@@ -107,6 +108,7 @@ TEST_F(PythonRuntimePath, AppendsBindingDirectoryWhenPresent) {
     EXPECT_TRUE(paths.contains(py::str(bindingDirectory.string())));
     EXPECT_EQ(py::module_::import("ovms_binding_probe").attr("value").cast<int>(), 7);
 }
+#endif
 
 #ifdef __linux__
 TEST_F(PythonRuntimePath, DefaultPathIsRelativeToResolvedExecutable) {
