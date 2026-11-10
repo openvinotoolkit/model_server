@@ -160,6 +160,7 @@ ARG JOBS=8
 ARG ov_use_binary=0
 ARG ov_repo=openvinotoolkit/openvino
 ARG DLDT_PACKAGE_URL
+ARG DLDT_PACKAGE_SHA256
 ARG ov_branch=master
 ARG CMAKE_BUILD_TYPE=Release
 
@@ -170,6 +171,7 @@ ENV TF_SYSTEM_LIBS="curl"
 ENV BAZEL_VERSION 7.4.1
 WORKDIR /bazel
 RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    echo "fcce7df3fdbe8ef9f278816776709292ca7bb42d2facc15fc777649a9b46ca49  bazel-$BAZEL_VERSION-installer-linux-x86_64.sh" | sha256sum -c - && \
     curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
     chmod +x bazel-*.sh && \
     ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
@@ -203,10 +205,12 @@ ARG TEMP_DIR=/tmp/openvino_installer
 WORKDIR $TEMP_DIR
 
 # OV toolkit package
-RUN if [ "$ov_use_binary" == "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; else exit 0 ; fi ; \
-    wget -nv $DLDT_PACKAGE_URL && \
+RUN if [ "$ov_use_binary" != "1" ] || [ -z "$DLDT_PACKAGE_URL" ]; then exit 0; fi; \
+    if [ -z "$DLDT_PACKAGE_SHA256" ]; then echo "DLDT_PACKAGE_SHA256 must be set for binary OpenVINO packages" >&2; exit 1; fi; \
+    wget -nv -O openvino_genai.tar.gz "$DLDT_PACKAGE_URL" && \
+    echo "$DLDT_PACKAGE_SHA256  openvino_genai.tar.gz" | sha256sum -c - && \
     mkdir /opt/intel && \
-    tar -zxf ./*openvino_genai*.tar.gz -C /opt/intel && \
+    tar -zxf openvino_genai.tar.gz -C /opt/intel && \
     ln -s /opt/intel/*openvino_genai* /opt/intel/openvino && \
     ln -s /opt/intel/*openvino_genai* /opt/intel/openvino_2026
 
@@ -259,7 +263,7 @@ WORKDIR /ovms
 # GPU testing in build img
 COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
 COPY ./install_ubuntu_level_zero_loader.sh /usr/local/bin/install_level_zero_loader.sh
-ARG INSTALL_DRIVER_VERSION="23.22.26516"
+ARG INSTALL_DRIVER_VERSION="26.31.39395"
 RUN /tmp/install_gpu_drivers.sh && \
     bash /usr/local/bin/install_level_zero_loader.sh && \
     rm -f /usr/local/bin/install_level_zero_loader.sh && \
@@ -322,6 +326,7 @@ RUN bash -c "sed -i -e 's|REPLACE_PROJECT_VERSION|${PROJECT_VERSION}|g' /ovms/sr
 WORKDIR /patchelf
 # hadolint ignore=DL3003
 RUN wget -q https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
+    echo "b3cb6bdedcef5607ce34a350cf0b182eb979f8f7bc31eae55a93a70a3f020d13  0.10.tar.gz" | sha256sum -c - && \
     tar -xf 0.10.tar.gz && cd patchelf-0.10 && \
     ./bootstrap.sh && ./configure && make && make install
 
@@ -412,7 +417,7 @@ RUN if [ -f /ovms_release/lib/libovms_shared.so ] ; then mv /ovms_release/lib/li
 
 FROM $BASE_IMAGE as release
 ARG INSTALL_RPMS_FROM_URL=
-ARG INSTALL_DRIVER_VERSION="24.26.30049"
+ARG INSTALL_DRIVER_VERSION="26.31.39395"
 ARG GPU=0
 ARG NPU=0
 ENV DEBIAN_FRONTEND=noninteractive
@@ -429,7 +434,7 @@ WORKDIR /
 
 COPY release_files/drivers /drivers
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-ARG INSTALL_DRIVER_VERSION="24.39.31294"
+ARG INSTALL_DRIVER_VERSION="26.31.39395"
 COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
 COPY ./install_ubuntu_level_zero_loader.sh /usr/local/bin/install_level_zero_loader.sh
 # hadolint ignore=DL3003,SC2164
@@ -439,7 +444,7 @@ RUN apt-get update ; \
     # build (controlled via --//:espeak=on/off in debug_bazel_flags);
     # no system package is required at runtime.
     if [ "$GPU" == "1" ] ; then \
-	/tmp/install_gpu_drivers.sh ; \
+    /tmp/install_gpu_drivers.sh || exit 1; \
     fi ; \
     if [[ "$GPU" == "1" || "$NPU" == "1" ]]; then \
         bash /usr/local/bin/install_level_zero_loader.sh || exit 1; \
@@ -448,14 +453,23 @@ RUN apt-get update ; \
         mkdir /tmp/npu_deps && cd /tmp/npu_deps ; \
         apt-get update && apt-get install -y --no-install-recommends libtbb12 && \
         if [[ "$BASE_IMAGE" == *"22.04"* ]] ; then \
-            curl -L -O https://github.com/intel/linux-npu-driver/releases/download/v1.26.0/linux-npu-driver-v1.26.0.20251125-19665715237-ubuntu2204.tar.gz && \
-            tar -xf linux-npu-driver-v1.26.0.20251125-19665715237-ubuntu2204.tar.gz ; \
+            curl -fL -O https://github.com/intel/linux-npu-driver/releases/download/v1.26.0/linux-npu-driver-v1.26.0.20251125-19665715237-ubuntu2204.tar.gz && \
+            echo "cfdbcc9adc1ea20d498ebd9cbdb5c212f6fc940e1034ef7a72e239a8636f653a  linux-npu-driver-v1.26.0.20251125-19665715237-ubuntu2204.tar.gz" | sha256sum -c - && \
+            tar -xf linux-npu-driver-v1.26.0.20251125-19665715237-ubuntu2204.tar.gz && \
+            curl -fL -O https://github.com/oneapi-src/level-zero/releases/download/v1.24.2/level-zero_1.24.2+u22.04_amd64.deb && \
+            echo "7c304e93835d96025c90f6a3d8f2ce5edf142c24da9f4871113a4f0225fef22e  level-zero_1.24.2+u22.04_amd64.deb" | sha256sum -c - || exit 1 ; \
         elif [[ "$BASE_IMAGE" == *"26.04"* ]] ; then \
             curl -fL -O https://github.com/intel/linux-npu-driver/releases/download/v1.38.0/linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2604.tar.gz && \
-            tar -xf linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2604.tar.gz || exit 1 ; \
+            echo "83685e6d92f4db1ca65e442846d487c7feb1335634b33994292ceb38f933bcc7  linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2604.tar.gz" | sha256sum -c - && \
+            tar -xf linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2604.tar.gz && \
+            curl --retry 5 --retry-all-errors --retry-delay 2 -fL -O https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20260830T100000Z/pool/main/l/level-zero-loader/libze1_1.32.0-1~26.04~ppa1_amd64.deb && \
+            echo "ddd80bf4c5cef21716bc1d7370cc055dc8803451c6e644a98d3dd534d91bc1b2  libze1_1.32.0-1~26.04~ppa1_amd64.deb" | sha256sum -c - || exit 1 ; \
         else \
             curl -fL -O https://github.com/intel/linux-npu-driver/releases/download/v1.38.0/linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2404.tar.gz && \
-            tar -xf linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2404.tar.gz || exit 1 ; \
+            echo "1efcd4b60c22abee751d8f2705962cbcc2a569de45c7e0e670cf08afbfcdc1d2  linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2404.tar.gz" | sha256sum -c - && \
+            tar -xf linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2404.tar.gz && \
+            curl --retry 5 --retry-all-errors --retry-delay 2 -fL -O https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20260830T100000Z/pool/main/l/level-zero-loader/libze1_1.32.0-1~24.04~ppa1_amd64.deb && \
+            echo "d4001dc474d3cb74ded50a449b9f646cfdfbb31e69e70b8af38f2d18273dfce1  libze1_1.32.0-1~24.04~ppa1_amd64.deb" | sha256sum -c - || exit 1 ; \
         fi ; \
         dpkg -i ./*.deb || exit 1; rm -Rf /tmp/npu_deps ; \
     fi ; \

@@ -16,7 +16,7 @@
 
 /**
  * Test suite for Python runtime fallback behavior.
- * 
+ *
  * Verifies:
  * 1. Graceful error handling when Python interpreter fails to initialize
  * 2. Python calculators plugin load failures are reported clearly

@@ -28,9 +28,9 @@
 using namespace ovms;
 
 #ifdef _WIN32
-const std::string minicpm5TokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\openbmb\\MiniCPM5-1B";
+const std::string minicpm5TokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\OpenVINO\\MiniCPM5-1B-int4-ov";
 #else
-const std::string minicpm5TokenizerPath = "/ovms/src/test/llm_testing/openbmb/MiniCPM5-1B";
+const std::string minicpm5TokenizerPath = "/ovms/src/test/llm_testing/OpenVINO/MiniCPM5-1B-int4-ov";
 #endif
 
 using ovms::ParameterType;
@@ -256,13 +256,15 @@ TEST_F(Minicpm5OutputParserTest, ParseMixedStringAndIntegerParams) {
 }
 
 // In production, MiniCPM5's chat template appends <think> at the end of the
-// prompt; detectAndSetImplicitReasoningStart detects it and sets the parser
+// prompt; the detected reasoning context is applied to set the parser
 // into implicit reasoning mode. The model then outputs reasoning text directly
 // without emitting <think>, and terminates with </think>.
 // We simulate that here via setImplicitReasoningStart(true).
 TEST_F(Minicpm5OutputParserTest, ParseReasoningWithoutStartingTag) {
     auto scopedParser = std::make_unique<OutputParser>(*minicpm5Tokenizer, "minicpm5", "minicpm5", minicpm5ToolsSchemas);
-    scopedParser->detectAndSetImplicitReasoningStart("Some text\n<|im_start|>assistant\n<think>");
+    const auto context = ovms::determineReasoningContext(ovms::getDefaultReasoningParsingConfig("minicpm5"), "Some text\n<|im_start|>assistant\n<think>");
+    EXPECT_TRUE(context.implicitStart);
+    scopedParser->setImplicitReasoningStart(context.implicitStart);
 
     // Encode the reasoning text without BOS (in production these are generated
     // tokens, not prompt tokens — the model never emits <think> itself).

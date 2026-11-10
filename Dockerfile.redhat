@@ -32,7 +32,8 @@ ARG LTO_LD_FLAGS="-Wl,-z,relro"
 
 # hadolint ignore=DL3041
 RUN echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf && \
-    dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && dnf update -d6 -y && dnf install -d6 -y \
+    curl -fsSL -o /tmp/epel-release.rpm https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && \
+    dnf install -y /tmp/epel-release.rpm && dnf update -d6 -y && dnf install -d6 -y \
             libuuid-devel \
             bc \
             cmake \
@@ -144,8 +145,9 @@ ARG VERBOSE_LOGS=OFF
 ARG LTO_ENABLE=OFF
 
 # hadolint ignore=DL3041
-RUN dnf install -y -d6 \
-            https://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/opencl-headers-2.2-1.20180306gite986688.el8.noarch.rpm \
+RUN curl -fsSL -o /tmp/opencl-headers.rpm https://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/opencl-headers-2.2-1.20180306gite986688.el8.noarch.rpm && \
+    echo "04b159a7182de1964e3dd32ad9aaf7cd4dcf2926050b126063a38d51c5f72381  /tmp/opencl-headers.rpm" | sha256sum -c - && \
+    dnf install -y -d6 /tmp/opencl-headers.rpm \
             gdb \
             java-11-openjdk-devel \
             tzdata-java \
@@ -175,6 +177,7 @@ WORKDIR /ovms
 COPY ./install_redhat_gpu_drivers.sh ./install_gpu_drivers.sh
 # hadolint ignore=SC1091
 RUN wget -q https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/libva-devel-2.22.0-1.el9.x86_64.rpm && \
+    echo "15265e154e43bd3e695d373bd10503005d508b99bc94689abfcbbe0f6a4624f2  libva-devel-2.22.0-1.el9.x86_64.rpm" | sha256sum -c - && \
     rpm -ivh --nodeps ./libva-devel-2.22.0-1.el9.x86_64.rpm && \
     if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf ; else export DNF_TOOL=microdnf ; fi ; source ./install_gpu_drivers.sh && \
     groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
@@ -186,16 +189,20 @@ RUN python3.12 --version && python3.12 -m pip install "numpy<2.0.0" "Jinja2==3.1
 ENV BAZEL_VERSION 7.4.1
 WORKDIR /bazel
 RUN curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -O https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
+    echo "fcce7df3fdbe8ef9f278816776709292ca7bb42d2facc15fc777649a9b46ca49  bazel-$BAZEL_VERSION-installer-linux-x86_64.sh" | sha256sum -c - && \
     curl -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36" -fSsL -o /bazel/LICENSE.txt https://raw.githubusercontent.com/bazelbuild/bazel/master/LICENSE && \
     chmod +x bazel-*.sh && \
     ./bazel-$BAZEL_VERSION-installer-linux-x86_64.sh && \
     rm -f /bazel/bazel-$BAZEL_VERSION-installer-linux-x86_64.sh
 
-RUN  dnf install -y https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm && dnf clean all
+RUN curl -fsSL -o /tmp/lcov.rpm https://github.com/linux-test-project/lcov/releases/download/v1.16/lcov-1.16-1.noarch.rpm && \
+    echo "b737233ec9139ff4b09ee715f912a29dd3dcd9481d9c50ba43082b333587760b  /tmp/lcov.rpm" | sha256sum -c - && \
+    dnf install -y /tmp/lcov.rpm && dnf clean all && rm /tmp/lcov.rpm
 
 WORKDIR /patchelf
 # hadolint ignore=DL3003
 RUN wget -q https://github.com/NixOS/patchelf/archive/0.10.tar.gz && \
+    echo "b3cb6bdedcef5607ce34a350cf0b182eb979f8f7bc31eae55a93a70a3f020d13  0.10.tar.gz" | sha256sum -c - && \
     tar -xf 0.10.tar.gz && cd patchelf-0.10 && \
     ./bootstrap.sh && ./configure && make && make install
 
@@ -205,6 +212,7 @@ ARG ov_branch=c01cd93e24d1cd78bfbb401eed51c08fb93e0816
 ARG ov_repo=openvinotoolkit/openvino
 ARG ov_use_binary=0
 ARG DLDT_PACKAGE_URL
+ARG DLDT_PACKAGE_SHA256
 ARG TEMP_DIR=/tmp/openvino_installer
 ARG CMAKE_BUILD_TYPE=Release
 ARG debug_bazel_flags="--strip=always  --config=mp_on --//:distro=redhat"
@@ -214,7 +222,7 @@ RUN alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1 && alt
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 ARG SDL_OPS="-Wl,-z,relro,-z,now,-z,noexecstack -fPIE -pie -fstack-protector-strong -fexceptions -fasynchronous-unwind-tables -fcf-protection -fpic -O2 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fno-strict-overflow -Wno-unknown-pragmas -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv -fstack-clash-protection -Wformat -Wformat-security -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wuninitialized"
 # hadolint ignore=DL3041
-RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && dnf install -y gflags-devel gflags json-devel fdupes && \
+RUN dnf install -y gflags-devel gflags json-devel fdupes && \
     dnf clean all
 # hadolint ignore=DL3003
 RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_repo.git /openvino && cd /openvino && git checkout $ov_branch && git submodule update --init --recursive
@@ -238,16 +246,18 @@ RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; cp -r /openvi
 ################### TAKE OPENVINO FROM A BINARY RELEASE - buildarg ov_use_binary=1 (DEFAULT) ##########
 WORKDIR $TEMP_DIR
 # OV toolkit package
-RUN if [ "$ov_use_binary" = "1" ] && [ "$DLDT_PACKAGE_URL" != "" ]; then true ; else exit 0 ; fi ; \
-    wget -nv $DLDT_PACKAGE_URL && \
+RUN if [ "$ov_use_binary" != "1" ] || [ -z "$DLDT_PACKAGE_URL" ]; then exit 0; fi; \
+    if [ -z "$DLDT_PACKAGE_SHA256" ]; then echo "DLDT_PACKAGE_SHA256 must be set for binary OpenVINO packages" >&2; exit 1; fi; \
+    wget -nv -O openvino_genai.tar.gz "$DLDT_PACKAGE_URL" && \
+    echo "$DLDT_PACKAGE_SHA256  openvino_genai.tar.gz" | sha256sum -c - && \
     mkdir /opt/intel && \
-    tar -zxf ./*openvino_genai*.tar.gz -C /opt/intel && \
+    tar -zxf openvino_genai.tar.gz -C /opt/intel && \
     ln -s /opt/intel/*openvino_genai* /opt/intel/openvino && \
     ln -s /opt/intel/*openvino_genai* /opt/intel/openvino_2026
 
 # install sample apps including benchmark_app
 # hadolint ignore=DL3041
-RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && dnf install -y gflags-devel gflags json-devel && \
+RUN dnf install -y gflags-devel gflags json-devel && \
     dnf clean all
 RUN if [ -f /opt/intel/openvino/samples/cpp/build_samples.sh ];  then /opt/intel/openvino/samples/cpp/build_samples.sh ; fi
 #################### END OF OPENVINO BINARY INSTALL
@@ -433,6 +443,7 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_do
     # build (controlled via --//:espeak=on/off in debug_bazel_flags);
     # no system package is required at runtime.
     if [ "$GPU" == "1" ] ; then \
+        $DNF_TOOL install -y wget --setopt=install_weak_deps=0 --nodocs && \
         source /install_gpu_drivers.sh && rm -rf /install_gpu_drivers.sh; \
     fi ; \
     # For image with Python enabled install Python library

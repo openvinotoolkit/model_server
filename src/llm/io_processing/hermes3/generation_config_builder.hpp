@@ -20,7 +20,7 @@ namespace ovms {
 
 /*
  * Hermes3GenerationConfigBuilder extends BaseGenerationConfigBuilder to provide specific configuration for Hermes3 and Qwen3 models.
- * It overrides the parseConfigFromRequest method to set tool guided generation config.
+ * It provides Hermes3/Qwen3 tool grammar construction for the shared structured-output setup.
  */
 class Hermes3GenerationConfigBuilder : public BaseGenerationConfigBuilder {
 public:
@@ -28,6 +28,7 @@ public:
     explicit Hermes3GenerationConfigBuilder(const ov::genai::GenerationConfig& baseConfig, bool enableToolGuidedGeneration, DecodingMethod decodingMethod) :
         BaseGenerationConfigBuilder(baseConfig, enableToolGuidedGeneration, decodingMethod) {}
 
-    void parseConfigFromRequest(const OpenAIRequest& request) override;
+    bool supportsToolGuidance() const override { return true; }
+    void applyToolGuidance(const OpenAIRequest& request) override;
 };
 }  // namespace ovms
