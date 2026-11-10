@@ -350,6 +350,10 @@ class OvmsMessages:
     MEDIAPIPE_MESSAGE_CONTAINS_OV_GENAI_IMAGE_TAG = "Message contains restricted <ov_genai_image> tag"
     MEDIAPIPE_REQUEST_PROCESSING_FAILED = "Request processing failed, check its correctness"
     MEDIAPIPE_URL_IMAGE_INVALID_ARGUMENT_FILESYSTEM_DISABLED = "Loading images from local filesystem is disabled"
+    MEDIAPIPE_FAILED_TO_DOWNLOAD_IMAGE_HTTP_STATUS_404 = "Failed to download image from external URL: HTTP status 404."
+    MEDIAPIPE_FAILED_TO_DOWNLOAD_IMAGE_REDIRECTS_NOT_ALLOWED = \
+        ("Failed to download image from external URL because redirects are not allowed. "
+         "Set OVMS_MEDIA_URL_ALLOW_REDIRECTS=1 environment variable to allow redirects.")
     MEDIAPIPE_URL_IMAGE_PARSING_FAILED = "Image parsing failed"
     MEDIAPIPE_IMAGE_PARSING_FAILED = "Image file parsing failed"
     MEDIAPIPE_IMAGE_NOT_SUBPATH_OF_ALLOWED_LOCAL_MEDIA_PATH = \
@@ -411,9 +415,8 @@ class OvmsMessages:
         'Create new stream for another request.'
     )
 
-    FAILED_TO_PREPARE_JINJA_CHAT_TEMPLATE = "Failed to prepare Jinja chat template"
-    CHAT_TEMPLATE_NOT_COMPATIBLE_WITH_MINJA = "Chat template is not compatible with minja"
-    DISABLING_CHAT_COMPLETIONS = "Disabling /chat/completions endpoint for this model."
+    CHAT_REQUEST_UNAVAILABLE = "Chat requests are unavailable because the chat template could not be loaded."
+    CHAT_TEMPLATE_UNAVAILABLE = "Chat template is unavailable. Servable will not respond to /chat/completions endpoint."
     CHAT_TEMPLATE_NOT_LOADED = (
         "Warning: Chat template has not been loaded properly. Servable will not respond to /chat/completions endpoint"
     )

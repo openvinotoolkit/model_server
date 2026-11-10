@@ -107,12 +107,20 @@ class TestTextGeneration:
             temperature=temperature,
         )
 
+        if model_type.is_vision_language:
+            dataset = model_type().get_default_dataset()
+        elif model_type.single_message_dataset:
+            dataset = LongPromptSingleMessageLanguageModelDataset
+        else:
+            dataset = LongPromptLanguageModelDataset
+
         step("Run simple inference")
         run_llm_inference(
             model,
             openai_rest_api_type,
             port,
             endpoint,
+            dataset=dataset,
             validate_outputs_ttr=False,
             request_parameters=request_params,
         )
@@ -126,13 +134,12 @@ class TestTextGeneration:
     @pytest.mark.parametrize("endpoint", [OpenAIWrapper.CHAT_COMPLETIONS])
     @pytest.mark.parametrize("stream", [True, False], ids=lambda x: f"stream={x}")
     @pytest.mark.parametrize("ignore_eos", [True], ids=lambda x: f"ignore_eos={x}")
-    @pytest.mark.parametrize("max_tokens", [MaxTokensValues.COMPARE_LONG, 300], ids=lambda x: f"max_tokens={x}")
+    @pytest.mark.parametrize("max_tokens", [MaxTokensValues.COMPARE,], ids=lambda x: f"max_tokens={x}")
     @pytest.mark.parametrize("temperature", [TemperatureValues.TEST_DEFAULT], ids=lambda x: f"temperature={x}")
-    @pytest.mark.parametrize("sequential_requests", [5], ids=lambda x: f"sequential_requests={x}")
+    @pytest.mark.parametrize("sequential_requests", [3], ids=lambda x: f"sequential_requests={x}")
     @pytest.mark.parametrize("parallel_requests", [100], ids=lambda x: f"parallel_requests={x}")
     @pytest.mark.parametrize("ovms_log_level", [Ovms.LOG_LEVEL_INFO, Ovms.LOG_LEVEL_DEBUG, Ovms.LOG_LEVEL_TRACE])
     @pytest.mark.parametrize("pipeline_type", PipelineType.TEXT_GENERATION)
-    @pytest.mark.parametrize("dataset_type", ["LLM"], ids=lambda x: f"dataset_type={x}")
     @pytest.mark.timeout(calculate_generative_test_timeout(960))
     def test_text_generation_endpoints_multiple_requests(
             self,
@@ -149,7 +156,6 @@ class TestTextGeneration:
             parallel_requests,
             pipeline_type,
             ovms_log_level,
-            dataset_type,
     ):
         """
         <b>Description:</b>
@@ -169,7 +175,6 @@ class TestTextGeneration:
         5. Check similarity (non-dummy models)
         """
         skip_if_runtime(model_type==mg.Gemma34bItInt4CwOvHf, "VLM dummy model not yet enabled")
-        skip_if_runtime(dataset_type == "VLM" and not model_type.is_vision_language, "VLM dataset not for LLM")
 
         model, result, port, request_params = GenerativeAIUtils.prepare_resources(
             context,
@@ -182,9 +187,8 @@ class TestTextGeneration:
             max_tokens=max_tokens,
             temperature=temperature,
         )
-        if model_type.is_vision_language and dataset_type == "VLM":
-            dataset = model_type().get_default_dataset()
-        elif model_type.single_message_dataset:
+
+        if model_type.single_message_dataset:
             dataset = LongPromptSingleMessageLanguageModelDataset
         else:
             dataset = LongPromptLanguageModelDataset

@@ -90,6 +90,12 @@ generative_models_local_path = get_path(
     "TT_GENERATIVE_MODELS_LOCAL_PATH", os.path.join(models_path, "generative_models")
 )
 
+""" TT_EXTRA_LLM_MODELS_TEST - extra generative models classes to use in OV GenAI samples tests """
+# Use pattern: "class_name:model_name:precision:precision_dir"
+# Remember to add "VL" to class_name if it is vision model
+# Example: "MetaLlama318BInstructInt4SymCw:meta-llama/Llama-3.1-8B-Instruct:INT4:INT4_SYM_CW"
+additional_generative_models_definitions = get_list("TT_EXTRA_LLM_MODELS_TEST")
+
 """ TT_CLEAN_ARTIFACTS_DIR """
 clean_artifacts_dir = get_bool("TT_CLEAN_ARTIFACTS_DIR", False)
 

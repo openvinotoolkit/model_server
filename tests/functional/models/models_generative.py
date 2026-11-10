@@ -20,10 +20,10 @@
 import os
 import shutil
 
-from dataclasses import dataclass, Field, MISSING
+from dataclasses import dataclass, field, Field, MISSING, make_dataclass
 from pathlib import Path
 
-from tests.functional.config import generative_models_local_path
+from tests.functional.config import additional_generative_models_definitions, generative_models_local_path
 from tests.functional.constants.paths import Paths
 from tests.functional.models.models import ModelInfo, ModelType
 from tests.functional.models.models_datasets import (
@@ -237,3 +237,46 @@ class Qwen3Reranker06BSeqClsFp16OvHf(GenerativeModelHuggingFace, RerankModel):
     name: str = "OpenVINO/Qwen3-Reranker-0.6B-seq-cls-fp16-ov"
     precision: str = "FP16"
     is_local: bool = True
+
+
+def create_dynamic_classes_from_env(models_list, known_classes=None):
+    known_classes = globals() if known_classes is None else known_classes
+    classes = []
+    name = None
+    precision = None
+    precision_dir = None
+    for model_definition in models_list:
+        model_attributes = model_definition.split(":")
+        if len(model_attributes) == 4:
+            class_name, name, precision, precision_dir = map(str.strip, model_attributes)
+        elif len(model_attributes) == 1:
+            # if only class name is provided, create a class with default values
+            class_name = model_attributes[0].strip()
+        else:
+            raise ValueError(
+                f"Invalid model definition: {model_definition}. "
+                f"Expected format: class_name:name:precision:precision_dir")
+
+        if class_name in known_classes:
+            # if class already exists, only add it to the test
+            classes.append(known_classes[class_name])
+        else:
+            # if class does not already exist, create a new one
+            assert [name, precision, precision_dir].count(None) == 0, \
+                f"Missing attributes for model definition: {model_definition}. " \
+                f"Expected format: class_name:name:precision:precision_dir. " \
+                f"Example: MetaLlama318BInstructInt4SymCw:meta-llama/Llama-3.1-8B-Instruct:INT4:INT4_SYM_CW"
+            base_class = VisionLanguageModel if "VL" in class_name else LargeLanguageModel
+            classes.append(make_dataclass(
+                class_name,
+                [
+                    ("name", str, field(default=name)),
+                    ("precision", str, field(default=precision)),
+                    ("precision_dir", str, field(default=precision_dir))
+                ],
+                bases=(base_class,)
+            ))
+    return classes
+
+
+additional_generative_models = create_dynamic_classes_from_env(additional_generative_models_definitions)
