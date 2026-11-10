@@ -17,6 +17,7 @@
 #include "image_utils.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -31,7 +32,9 @@
 #include "src/filesystem/filesystem.hpp"
 #include "src/image_utils/decoded_image_size.hpp"
 #include "src/image_utils/image_conversion.hpp"
+#include "src/image_utils/kserve_image_conversion.hpp"
 #include "src/predict_request_validation_utils_impl.hpp"
+#include "src/status.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
@@ -267,6 +270,47 @@ bool isDomainAllowed(const std::vector<std::string>& allowedDomains, const char*
     return allowed;
 }
 
+absl::StatusOr<ov::Tensor> decodeVlmImage(std::string_view encoded) {
+    ov::Tensor decoded;
+    const Status decodeStatus = image_utils::decodeImage(encoded, decoded, image_utils::ImageDecoder::AUTO);
+    if (!decodeStatus.ok()) {
+        return absl::InvalidArgumentError("Image parsing failed: " + decodeStatus.string());
+    }
+
+    // Keep the VLM input contract used by the original stb path: RGB, U8, three channels.
+    if (decoded.get_element_type() != ov::element::u8) {
+        try {
+            return loadImageStbiFromMemory(encoded);
+        } catch (const std::runtime_error& error) {
+            return absl::InvalidArgumentError("Image parsing failed: " + std::string(error.what()));
+        }
+    }
+    const auto& shape = decoded.get_shape();
+    if (shape.size() != 4 || shape[0] != 1 || shape[3] < 1 || shape[3] > 4) {
+        return absl::InvalidArgumentError("Decoded image has an unsupported VLM input shape");
+    }
+
+    const size_t height = shape[1];
+    const size_t width = shape[2];
+    const size_t channels = shape[3];
+    ov::Tensor rgb(ov::element::u8, ov::Shape{1, height, width, 3});
+    const auto* source = decoded.data<uint8_t>();
+    auto* destination = rgb.data<uint8_t>();
+    for (size_t pixel = 0; pixel < height * width; ++pixel) {
+        if (channels <= 2) {
+            const uint8_t gray = source[pixel * channels];
+            destination[pixel * 3] = gray;
+            destination[pixel * 3 + 1] = gray;
+            destination[pixel * 3 + 2] = gray;
+        } else {
+            destination[pixel * 3] = source[pixel * channels + 2];
+            destination[pixel * 3 + 1] = source[pixel * channels + 1];
+            destination[pixel * 3 + 2] = source[pixel * channels];
+        }
+    }
+    return rgb;
+}
+
 }  // namespace
 
 absl::StatusOr<ov::Tensor> fetchAndDecodeImage(const std::string& imageSource,
@@ -334,13 +378,13 @@ absl::StatusOr<ov::Tensor> fetchAndDecodeImage(const std::string& imageSource,
             estimatedDecodedPixels, remainingBudget);
         return absl::InvalidArgumentError("Image exceeds maximum decoded size");
     }
-    ov::Tensor imageTensor;
-    try {
-        imageTensor = loadImageStbiFromMemory(decoded);
-    } catch (const std::runtime_error& e) {
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image parsing failed: {}", e.what());
-        return absl::InvalidArgumentError("Image parsing failed: " + std::string(e.what()));
+    auto imageResult = decodeVlmImage(decoded);
+    if (!imageResult.ok()) {
+        const auto& error = imageResult.status().message();
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Image parsing failed: {}", error);
+        return absl::InvalidArgumentError(error);
     }
+    ov::Tensor imageTensor = std::move(imageResult).value();
 
     // Part 3: bound the actual decoded pixel count against the remaining per-request budget and
     // advance the running total so subsequent images in the same request see the reduced budget.

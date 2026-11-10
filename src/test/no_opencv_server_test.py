@@ -91,7 +91,7 @@ node {
                 "--rest_port", str(http_port),
                 "--port", str(grpc_port),
                 "--allow_unestimatable_image_formats",
-                "--log_level", "INFO",
+                "--log_level", "TRACE",
             ],
             env=environment,
             cwd=executable.parent,
@@ -186,6 +186,16 @@ node {
             with client.open(numeric, timeout=10) as response:
                 result = json.load(response)
                 assert result["outputs"][0]["data"] == [2.0] * 12, result
+            log.seek(0)
+            server_log = log.read()
+            expected_backend = "opencv" if expect_opencv else "stb"
+            decode_timing_logs = [
+                line for line in server_log.splitlines()
+                if "Encoded image decode backend=" in line
+            ]
+            expected_timing = f"Encoded image decode backend={expected_backend} result=success duration_us="
+            assert any(expected_timing in line for line in decode_timing_logs), server_log
+            print("\n".join(decode_timing_logs))
             if expect_opencv:
                 print("PASS: OpenCV decoder loaded, encoded JPEG and PFM inference, numeric inference")
             else:
