@@ -186,8 +186,6 @@ void LLMMetricReporter::observeCompletedRequest(size_t inputTokens, size_t outpu
     if (ttft && (!std::isfinite(ttftMilliseconds) || ttftMilliseconds <= 0.0)) {
 #if (MEDIAPIPE_DISABLE == 0)
         SPDLOG_LOGGER_WARN(llm_calculator_logger, "Ignoring invalid GenAI TTFT in milliseconds: {}", ttftMilliseconds);
-#else
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Ignoring invalid GenAI TTFT in milliseconds: {}", ttftMilliseconds);
 #endif
     } else if (ttft) {
         ttft->update([ttftMilliseconds](MetricHistogram& metric) { metric.observe(ttftMilliseconds); });
@@ -195,8 +193,6 @@ void LLMMetricReporter::observeCompletedRequest(size_t inputTokens, size_t outpu
     if (tpot && (!std::isfinite(tpotMilliseconds) || tpotMilliseconds <= 0.0)) {
 #if (MEDIAPIPE_DISABLE == 0)
         SPDLOG_LOGGER_WARN(llm_calculator_logger, "Ignoring invalid GenAI TPOT in milliseconds: {}", tpotMilliseconds);
-#else
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Ignoring invalid GenAI TPOT in milliseconds: {}", tpotMilliseconds);
 #endif
     } else if (tpot) {
         tpot->update([tpotMilliseconds](MetricHistogram& metric) { metric.observe(tpotMilliseconds); });
@@ -219,8 +215,6 @@ void LLMMetricReporter::setCacheUtilization(double percent) {
     if (!std::isfinite(percent) || percent < 0.0 || percent > 100.0) {
 #if (MEDIAPIPE_DISABLE == 0)
         SPDLOG_LOGGER_WARN(llm_executor_logger, "Ignoring invalid GenAI KV cache utilization: {}", percent);
-#else
-        SPDLOG_LOGGER_WARN(modelmanager_logger, "Ignoring invalid GenAI KV cache utilization: {}", percent);
 #endif
         return;
     }
