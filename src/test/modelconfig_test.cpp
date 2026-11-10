@@ -22,6 +22,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "../model_version_policy.hpp"
 #include "../modelconfig.hpp"
 #include "../schema.hpp"
 #include "src/status.hpp"

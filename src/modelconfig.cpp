@@ -284,8 +284,8 @@ Status ModelConfig::parseModelVersionPolicy(std::string command) {
             return StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT;
         }
         auto& numVersions = m->value;
-        if (!numVersions.IsUint64() || numVersions.GetUint64() == 0 || numVersions.GetUint64() > std::numeric_limits<size_t>::max()) {
-            SPDLOG_WARN("Model policy specified in config contains invalid num_versions. It should be a number greater than 0.");
+        if (!numVersions.IsUint64() || numVersions.GetUint64() == 0 || numVersions.GetUint64() > static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
+            SPDLOG_WARN("Model policy specified in config contains invalid num_versions. It must be a positive integer representable as size_t.");
             return StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT;
         }
         modelVersionPolicy = std::make_shared<LatestModelVersionPolicy>(static_cast<size_t>(numVersions.GetUint64()));
