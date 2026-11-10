@@ -124,13 +124,27 @@ std::optional<Delta> DevstralToolParser::parseChunk(const std::string& chunk, co
             this->toolName = this->streamContent.substr(0, pos);
             ovms::trim(this->toolName);  // trim in case of extra spaces/newlines
             this->streamContent = this->streamContent.substr(pos + this->parsingArgsStartTag.length());
-            // check if chunk ends with </s>, if yes, we need return full tool call delta
-            if (this->streamContent.size() >= this->parsingEndTag.size() &&
-                this->streamContent.substr(this->streamContent.size() - this->parsingEndTag.size()) == this->parsingEndTag) {
-                // remove </s> from streamContent
+            size_t nextCallPos = this->streamContent.find(this->parsingToolCallsStartTag);
+            if (nextCallPos != std::string::npos) {
                 ToolCall toolCall;
                 toolCall.name = this->toolName;
-                this->streamContent = this->streamContent.substr(0, this->streamContent.size() - this->parsingEndTag.size());
+                toolCall.arguments = nextCallPos != 0 ? this->streamContent.substr(0, nextCallPos) : "{}";
+                auto delta = wrapCombinedDelta(toolCall);
+                this->streamContent.erase(0, nextCallPos + this->parsingToolCallsStartTag.size());
+                this->internalState = AWAITING_ARGS_TAG;
+                this->toolCallIndex++;
+                this->toolName.clear();
+                argumentsEmitted = false;
+                return delta;
+            }
+            const bool endsWithEndTag = this->streamContent.size() >= this->parsingEndTag.size() &&
+                                         this->streamContent.substr(this->streamContent.size() - this->parsingEndTag.size()) == this->parsingEndTag;
+            if (endsWithEndTag || finishReason != ov::genai::GenerationFinishReason::NONE) {
+                ToolCall toolCall;
+                toolCall.name = this->toolName;
+                if (endsWithEndTag) {
+                    this->streamContent.resize(this->streamContent.size() - this->parsingEndTag.size());
+                }
                 if (!this->streamContent.empty()) {
                     toolCall.arguments = this->streamContent;
                 } else {

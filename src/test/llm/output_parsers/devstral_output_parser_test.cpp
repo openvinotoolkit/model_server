@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "src/llm/io_processing/base_output_parser.hpp"
+#include "src/llm/io_processing/devstral/tool_parser.hpp"
 #include "src/llm/io_processing/output_parser.hpp"
 #include "output_parser_test_utils.hpp"
 #include "test/platform_utils.hpp"
@@ -412,6 +413,77 @@ TEST_F(DevstralOutputParserTest, ParallelToolCallsStreamingWithSplitTagsAndEmpty
             EXPECT_NE(toolCalls[0].id, toolCalls[2].id);
         }
     }
+}
+
+TEST_F(DevstralOutputParserTest, ParallelToolCallsWithBoundaryAfterArgsTag) {
+    for (auto finishReason : {ov::genai::GenerationFinishReason::NONE, ov::genai::GenerationFinishReason::STOP, ov::genai::GenerationFinishReason::LENGTH}) {
+        DevstralToolParser parser(*devstralTokenizer, EMPTY_TOOLS_SCHEMA);
+        auto delta = parser.parseChunk("[TOOL_CALLS]first[ARGS]", {}, ov::genai::GenerationFinishReason::NONE);
+        ASSERT_TRUE(delta.has_value());
+        const auto* toolDelta = std::get_if<ToolCallDelta>(&*delta);
+        ASSERT_NE(toolDelta, nullptr);
+        EXPECT_EQ(toolDelta->index, 0);
+        EXPECT_EQ(toolDelta->name, "first");
+        EXPECT_TRUE(toolDelta->id.has_value());
+        EXPECT_TRUE(toolDelta->arguments.empty());
+
+        delta = parser.parseChunk("{}[TOOL_CALLS]", {}, ov::genai::GenerationFinishReason::NONE);
+        ASSERT_TRUE(delta.has_value());
+        toolDelta = std::get_if<ToolCallDelta>(&*delta);
+        ASSERT_NE(toolDelta, nullptr);
+        EXPECT_EQ(toolDelta->index, 0);
+        EXPECT_EQ(toolDelta->arguments, "{}");
+
+        delta = parser.parseChunk("second[ARGS]{}[TOOL_CALLS]third[ARGS]{}</s>", {}, finishReason);
+        ASSERT_TRUE(delta.has_value());
+        toolDelta = std::get_if<ToolCallDelta>(&*delta);
+        ASSERT_NE(toolDelta, nullptr);
+        EXPECT_EQ(toolDelta->index, 1);
+        EXPECT_EQ(toolDelta->name, "second");
+        ASSERT_TRUE(toolDelta->id.has_value());
+        EXPECT_FALSE(toolDelta->id->empty());
+        EXPECT_EQ(toolDelta->arguments, "{}");
+        const std::string secondId = *toolDelta->id;
+
+        delta = parser.parseChunk("", {}, finishReason);
+        ASSERT_TRUE(delta.has_value());
+        toolDelta = std::get_if<ToolCallDelta>(&*delta);
+        ASSERT_NE(toolDelta, nullptr);
+        EXPECT_EQ(toolDelta->index, 2);
+        EXPECT_EQ(toolDelta->name, "third");
+        ASSERT_TRUE(toolDelta->id.has_value());
+        EXPECT_FALSE(toolDelta->id->empty());
+        EXPECT_NE(*toolDelta->id, secondId);
+        EXPECT_EQ(toolDelta->arguments, "{}");
+        EXPECT_FALSE(parser.parseChunk("", {}, finishReason).has_value());
+    }
+}
+
+TEST_F(DevstralOutputParserTest, FinalStopFlushesArgumentsAfterParallelCallBoundary) {
+    DevstralToolParser parser(*devstralTokenizer, EMPTY_TOOLS_SCHEMA);
+    auto delta = parser.parseChunk("[TOOL_CALLS]first[ARGS]", {}, ov::genai::GenerationFinishReason::NONE);
+    ASSERT_TRUE(delta.has_value());
+    const auto* toolDelta = std::get_if<ToolCallDelta>(&*delta);
+    ASSERT_NE(toolDelta, nullptr);
+    EXPECT_EQ(toolDelta->name, "first");
+    EXPECT_TRUE(toolDelta->arguments.empty());
+
+    delta = parser.parseChunk("{}[TOOL_CALLS]last[ARGS]{}", {}, ov::genai::GenerationFinishReason::NONE);
+    ASSERT_TRUE(delta.has_value());
+    toolDelta = std::get_if<ToolCallDelta>(&*delta);
+    ASSERT_NE(toolDelta, nullptr);
+    EXPECT_EQ(toolDelta->index, 0);
+    EXPECT_EQ(toolDelta->arguments, "{}");
+
+    delta = parser.parseChunk("", {}, ov::genai::GenerationFinishReason::STOP);
+    ASSERT_TRUE(delta.has_value());
+    toolDelta = std::get_if<ToolCallDelta>(&*delta);
+    ASSERT_NE(toolDelta, nullptr);
+    EXPECT_EQ(toolDelta->index, 1);
+    EXPECT_EQ(toolDelta->name, "last");
+    ASSERT_TRUE(toolDelta->id.has_value());
+    EXPECT_FALSE(toolDelta->id->empty());
+    EXPECT_EQ(toolDelta->arguments, "{}");
 }
 
 TEST_F(DevstralOutputParserTest, ParallelToolCalls) {
