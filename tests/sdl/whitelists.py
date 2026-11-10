@@ -368,6 +368,9 @@ packages = {
         'libedit',
         'libnl3',
         'ocl-icd',
+        'libpsl',
+        'publicsuffix-list-dafsa',
+        'wget',
     },
 }
 
