@@ -3927,6 +3927,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "StringToUint32Calculator",
         "StringToUint64Calculator",
         "StringToUintCalculator",
+        "TestCustomMetricsCalculator",
         "TwoInputCalculator",
         "WarpAffineCalculator",
         "WarpAffineCalculatorCpu"});

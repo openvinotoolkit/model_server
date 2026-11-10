@@ -23,12 +23,12 @@
 #include <vector>
 
 #include "../metrics/calculator_metrics.hpp"
+#include "../metrics/llm_metric_reporter.hpp"
 
 namespace ovms {
 
 class PythonNodeResources;
 class GenAiServable;
-class LLMMetricReporter;
 struct GenAiServableExecutionContext;
 struct ImageGenerationPipelines;
 struct EmbeddingsServable;
@@ -86,6 +86,11 @@ struct GraphSidePackets {
     void clear() {
         for (const auto& entry : calculatorMetrics) {
             entry.second->deactivate();
+        }
+        for (const auto& reporterRef : llmMetricReporters) {
+            if (auto llmReporter = reporterRef.lock()) {
+                llmReporter->deactivate();
+            }
         }
         calculatorMetrics.clear();
         pythonNodeResourcesMap.clear();
