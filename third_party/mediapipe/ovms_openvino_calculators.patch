@@ -1,0 +1,26 @@
+--- a/third_party/BUILD.bazel
++++ b/third_party/BUILD.bazel
+@@ -5,7 +5,4 @@
+ alias(
+     name = "openvino",
+-    actual = select({
+-        "@mediapipe//mediapipe:windows": "@windows_openvino//:openvino",
+-        "//conditions:default": "@openvino//:openvino",
+-    }),
++    actual = "@ovms//third_party:openvino",
+ )
+@@ -13,7 +10,4 @@
+ filegroup(
+     name = "windows_openvino_runtime_dlls",
+-    srcs = select({
+-        "@mediapipe//mediapipe:windows": ["@windows_openvino//:runtime_dlls"],
+-        "//conditions:default": [],
+-    }),
++    srcs = [],
+ )
+--- a/mediapipe/calculators/openvino/openvino_test_util.h
++++ b/mediapipe/calculators/openvino/openvino_test_util.h
+@@ -27,2 +27,2 @@
+    const std::string path = runfiles->Rlocation(
+-      std::string(workspace) + "/" + options.model_path());
++      "mediapipe_openvino/" + options.model_path());
