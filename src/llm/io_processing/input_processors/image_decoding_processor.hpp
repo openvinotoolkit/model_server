@@ -25,7 +25,7 @@ namespace ovms {
 
 // Decodes image_url content entries from ChatHistory messages into tensors and
 // injects <ov_genai_image_N> tags into message content.
-// Active when: config.isVLM && input is ChatHistory variant.
+// Active when: config.supportsVisualInputs and input is a ChatHistory variant.
 class ImageDecodingProcessor : public BaseInputProcessor {
 public:
     ImageDecodingProcessor(std::optional<std::string> allowedLocalMediaPath,

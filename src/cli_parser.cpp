@@ -413,9 +413,14 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, const
                 }
 
                 if (shouldInferTask) {
-                    inferredTaskParameter = determineDefaultTaskParameter(modelPath, sourceModel, modelRepositoryPath);
+                    std::string taskInferenceError;
+                    inferredTaskParameter = determineDefaultTaskParameter(modelPath, sourceModel, modelRepositoryPath, &taskInferenceError);
                     if (!result->count("task") && !inferredTaskParameter.has_value()) {
-                        ss << "error parsing options - Could not infer model task - specify --task value explicitly" << std::endl;
+                        ss << "error parsing options - Could not infer model task - specify --task value explicitly";
+                        if (!taskInferenceError.empty()) {
+                            ss << ". " << taskInferenceError;
+                        }
+                        ss << std::endl;
                         return std::make_pair(OVMS_EX_USAGE, ss.str());
                     }
                 }

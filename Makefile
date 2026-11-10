@@ -209,14 +209,17 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
         OS=ubuntu24
 	INSTALL_DRIVER_VERSION ?= "26.31.39395"
 	DLDT_PACKAGE_URL ?= $(DLDT_PACKAGE_URL_UBUNTU24)
+	DLDT_PACKAGE_SHA256 ?= $(DLDT_PACKAGE_SHA256_UBUNTU24)
 	else ifeq ($(BASE_OS_TAG),26.04)
 				OS=ubuntu26
 	INSTALL_DRIVER_VERSION ?= "26.31.39395"
 	DLDT_PACKAGE_URL ?= $(DLDT_PACKAGE_URL_UBUNTU26)
+	DLDT_PACKAGE_SHA256 ?= $(DLDT_PACKAGE_SHA256_UBUNTU26)
   else ifeq  ($(BASE_OS_TAG),22.04)
         OS=ubuntu22
-	INSTALL_DRIVER_VERSION ?= "24.39.31294"
+	INSTALL_DRIVER_VERSION ?= "24.52.32224"
 	DLDT_PACKAGE_URL ?= $(DLDT_PACKAGE_URL_UBUNTU22)
+	DLDT_PACKAGE_SHA256 ?= $(DLDT_PACKAGE_SHA256_UBUNTU22)
   endif
 endif
 ifeq ($(BASE_OS),redhat)
@@ -226,6 +229,7 @@ ifeq ($(BASE_OS),redhat)
   BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
   DLDT_PACKAGE_URL ?= $(DLDT_PACKAGE_URL_RHEL) # not used
+	DLDT_PACKAGE_SHA256 ?= $(DLDT_PACKAGE_SHA256_RHEL)
   INSTALL_DRIVER_VERSION ?= "25.18.33578"
 endif
 
@@ -282,6 +286,7 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg ov_genai_branch=$(OV_GENAI_BRANCH)\
 	--build-arg ov_use_binary=$(OV_USE_BINARY)\
 	--build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL)\
+	--build-arg DLDT_PACKAGE_SHA256=$(DLDT_PACKAGE_SHA256)\
 	--build-arg CHECK_COVERAGE=$(CHECK_COVERAGE)\
 	--build-arg RUN_TESTS=$(RUN_TESTS)\
 	--build-arg OPTIMIZE_BUILDING_TESTS=$(OPTIMIZE_BUILDING_TESTS)\
@@ -574,105 +579,6 @@ test_checksec: venv
 	@rm -f /tmp/ovms
 	@rm -f /tmp/libovms_shared.so
 	@echo "Checksec check success."
-
-test_perf: venv
-	@echo "Dropping test container if exist"
-	@docker rm --force $(OVMS_CPP_CONTAINER_NAME) || true
-	@echo "Starting docker image"
-	@./tests/performance/download_model.sh
-	@docker run -d --name $(OVMS_CPP_CONTAINER_NAME) \
-		-v $(HOME)/resnet50-binary:/models/resnet50-binary \
-		-p $(OVMS_CPP_CONTAINER_PORT):$(OVMS_CPP_CONTAINER_PORT) \
-		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
-		--model_name resnet-binary --model_path /models/resnet50-binary --port $(OVMS_CPP_CONTAINER_PORT); sleep 5
-	@echo "Running latency test"
-	@. $(ACTIVATE); python3 tests/performance/grpc_latency.py \
-	  --grpc_port $(OVMS_CPP_CONTAINER_PORT) \
-		--images_numpy_path tests/performance/imgs.npy \
-		--labels_numpy_path tests/performance/labels.npy \
-		--iteration 1000 \
-		--batchsize 1 \
-		--report_every 100 \
-		--input_name 0 \
-		--output_name 1463 \
-		--model_name resnet-binary
-	@echo "Removing test container"
-	@docker rm --force $(OVMS_CPP_CONTAINER_NAME)
-
-test_perf_dummy_model: venv
-	@echo "Dropping test container if exist"
-	@docker rm --force $(OVMS_CPP_CONTAINER_NAME) || true
-	@echo "Starting docker image"
-	@docker run -d --name $(OVMS_CPP_CONTAINER_NAME) \
-		-v $(PWD)/src/test/dummy/1:/dummy/1 \
-		-p $(OVMS_CPP_CONTAINER_PORT):$(OVMS_CPP_CONTAINER_PORT) \
-		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
-		--model_name dummy --model_path /dummy --port $(OVMS_CPP_CONTAINER_PORT); sleep 5
-	@echo "Running latency test"
-	@. $(ACTIVATE); python3 tests/performance/grpc_latency.py \
-	  --grpc_port $(OVMS_CPP_CONTAINER_PORT) \
-		--images_numpy_path tests/performance/dummy_input.npy \
-		--labels_numpy_path tests/performance/dummy_lbs.npy \
-		--iteration 10000 \
-		--batchsize 1 \
-		--report_every 1000 \
-		--input_name b \
-		--output_name a \
-		--model_name dummy
-	@echo "Removing test container"
-	@docker rm --force $(OVMS_CPP_CONTAINER_NAME)
-
-
-test_throughput: venv
-	@echo "Dropping test container if exist"
-	@docker rm --force $(OVMS_CPP_CONTAINER_NAME) || true
-	@echo "Starting docker image"
-	@./tests/performance/download_model.sh
-	@docker run -d --name $(OVMS_CPP_CONTAINER_NAME) \
-		-v $(HOME)/resnet50-binary:/models/resnet50-binary \
-		-p $(OVMS_CPP_CONTAINER_PORT):$(OVMS_CPP_CONTAINER_PORT) \
-		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
-		--model_name resnet-binary \
-		--model_path /models/resnet50-binary \
-		--port $(OVMS_CPP_CONTAINER_PORT); \
-		sleep 10
-	@echo "Running throughput test"
-	@. $(ACTIVATE); cd tests/performance; ./grpc_throughput.sh 28 \
-	  --grpc_port $(OVMS_CPP_CONTAINER_PORT) \
-		--images_numpy_path imgs.npy \
-		--labels_numpy_path labels.npy \
-		--iteration 500 \
-		--batchsize 1 \
-		--input_name 0 \
-		--output_name 1463 \
-		--model_name resnet-binary
-	@echo "Removing test container"
-	@docker rm --force $(OVMS_CPP_CONTAINER_NAME)
-
-test_throughput_dummy_model: venv
-	@echo "Dropping test container if exist"
-	@docker rm --force $(OVMS_CPP_CONTAINER_NAME) || true
-	@echo "Starting docker image"
-	@docker run -d --name $(OVMS_CPP_CONTAINER_NAME) \
-		-v $(PWD)/src/test/dummy/1:/dummy/1 \
-		-p $(OVMS_CPP_CONTAINER_PORT):$(OVMS_CPP_CONTAINER_PORT) \
-		$(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG) \
-		--model_name dummy \
-		--model_path /dummy \
-		--port $(OVMS_CPP_CONTAINER_PORT); \
-		sleep 10
-	@echo "Running throughput test"
-	@. $(ACTIVATE); cd tests/performance; ./grpc_throughput.sh 28 \
-	  --grpc_port $(OVMS_CPP_CONTAINER_PORT) \
-		--images_numpy_path dummy_input.npy \
-		--labels_numpy_path dummy_lbs.npy \
-		--iteration 10000 \
-		--batchsize 1 \
-		--input_name b \
-		--output_name a \
-		--model_name dummy
-	@echo "Removing test container"
-	@docker rm --force $(OVMS_CPP_CONTAINER_NAME)
 
 test_functional: venv
 	@export OVMS_CPP_DOCKER_IMAGE=$(OVMS_CPP_DOCKER_IMAGE) && export OVMS_CPP_IMAGE_TAG=$(OVMS_CPP_IMAGE_TAG);. $(ACTIVATE); pytest --confcutdir=tests/functional --junitxml=report.xml --html=report.html --self-contained-html -v -rA -s $(TEST_PATH)

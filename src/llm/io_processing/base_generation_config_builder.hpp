@@ -14,6 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <memory>
+#include <stdexcept>
 #include <string>
 
 #include <openvino/genai/generation_config.hpp>
@@ -21,6 +23,13 @@
 #include "../apis/openai_request.hpp"
 
 namespace ovms {
+
+class ResponseFormatInvariantError : public std::runtime_error {
+public:
+    using std::runtime_error::runtime_error;
+};
+
+struct ReasoningGenerationContext;
 
 /*
  * DecodingMethod enum is used to properly set defaults and validate GenerationConfig depending on whether pipeline has been
@@ -56,10 +65,27 @@ enum DecodingMethod {
  */
 class BaseGenerationConfigBuilder {
 protected:
+    struct ToolCallFormat {
+        std::string trigger;
+        std::string begin;
+        std::string arguments;
+        std::string end;
+        bool encodeFunctionNameAsJson;
+    };
+
     ov::genai::GenerationConfig config;
     const bool enableToolGuidedGeneration;
     DecodingMethod decodingMethod;
     void setStructuralTagsConfig(const ov::genai::StructuredOutputConfig::StructuralTag& structuralTag);
+    static bool requiresNamedToolCall(const OpenAIRequest& request);
+    virtual bool supportsToolGuidance() const { return false; }
+    bool shouldApplyToolGuidance(const OpenAIRequest& request) const;
+    static bool shouldApplyResponseFormatGuidance(const OpenAIRequest& request);
+    void setToolGrammar(const OpenAIRequest& request, const std::shared_ptr<ov::genai::StructuredOutputConfig::TriggeredTags>& tags);
+    static ov::genai::StructuredOutputConfig::StructuralTag buildToolArgumentGrammar(const std::string& schema);
+    void setTaggedToolGrammar(const OpenAIRequest& request, const ToolCallFormat& format);
+    virtual void applyToolGuidance(const OpenAIRequest& request);
+    void applyResponseFormatGuidance(const OpenAIRequest& request, const ReasoningGenerationContext& reasoningContext, const std::string& reasoningParserName);
 
 public:
     BaseGenerationConfigBuilder() = delete;
@@ -96,11 +122,13 @@ public:
      */
     void unsetStructuredOutputConfig();
 
+    /** Selects tool guidance or response formatting and composes any supported reasoning envelope. */
+    void configureStructuredGeneration(const OpenAIRequest& request, const ReasoningGenerationContext& reasoningContext, const std::string& reasoningParserName);
+
     /*
-     * Fills generation config with values read from OpenAI request.
-     * If extended, model specific implementation should call base class method first to fill in common configuration
-     * and then set model specific parameters.
+     * Fills sampling parameters from the OpenAI request. Structured output is
+     * configured separately after the reasoning context is available.
      */
-    virtual void parseConfigFromRequest(const OpenAIRequest& request);
+    void parseConfigFromRequest(const OpenAIRequest& request);
 };
 }  // namespace ovms
