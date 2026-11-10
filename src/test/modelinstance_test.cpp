@@ -393,8 +393,8 @@ class TestLoadModelWithRemoteTensorFactoriesSucceeds : public ::testing::Test {
 protected:
     class ModelInstanceWithContext : public ovms::ModelInstance {
     public:
-        using ovms::ModelInstance::ModelInstance;
         using ovms::ModelInstance::compiledModel;
+        using ovms::ModelInstance::ModelInstance;
 #ifdef __linux__
         using ovms::ModelInstance::oclContextCpp;
         using ovms::ModelInstance::vaContext;
@@ -446,8 +446,7 @@ TEST_F(TestLoadModelWithRemoteTensorFactoriesSucceeds, OpenCL_CheckIfLoadingSucc
 #endif
 
     std::vector<float> inputData(DUMMY_MODEL_INPUT_SIZE, 2.0f);
-    const ov::Tensor input = tensorFactories.at(OVMS_BUFFERTYPE_CPU)->create(
-        ov::element::f32, ov::Shape{1, DUMMY_MODEL_INPUT_SIZE}, inputData.data());
+    const ov::Tensor input = tensorFactories.at(OVMS_BUFFERTYPE_CPU)->create(ov::element::f32, ov::Shape{1, DUMMY_MODEL_INPUT_SIZE}, inputData.data());
     auto inferRequest = modelInstance.compiledModel->create_infer_request();
     inferRequest.set_tensor(DUMMY_MODEL_INPUT_NAME, input);
     ASSERT_NO_THROW(inferRequest.infer());
