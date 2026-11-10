@@ -21,6 +21,7 @@
 #include <string>
 #include <stdexcept>
 #include <typeindex>
+#include <type_traits>
 #include <utility>
 #include <vector>
 #include <prometheus/registry.h>
@@ -30,6 +31,7 @@ namespace ovms {
 template <typename MetricType>
 class MetricFamily;
 class MetricCounter;
+class MetricHistogram;
 
 class MetricRegistry {
 public:
@@ -69,21 +71,52 @@ public:
             }
             return std::static_pointer_cast<MetricFamily<MetricType>>(existing->second.family);
         }
+        constexpr bool isHistogram = std::is_same_v<MetricType, MetricHistogram>;
+        validateNoHistogramNameCollision(name, isHistogram);
         auto family = createFamily<MetricType>(name, help);
         if (!family) {
             throw std::invalid_argument("Cannot register custom metric family '" + name + "'");
         }
-        customFamilies.emplace(name, CustomFamilyRegistration{help, std::type_index(typeid(MetricType)), bucketBoundaries, family});
+        customFamilies.emplace(name, CustomFamilyRegistration{help, std::type_index(typeid(MetricType)), bucketBoundaries, isHistogram, family});
         return family;
     }
 
     std::shared_ptr<MetricFamily<MetricCounter>> registerCustomCounterFamily(const std::string& name, const std::string& help);
 
 private:
+    void validateNoHistogramNameCollision(const std::string& name, bool isHistogram) const {
+        constexpr const char* histogramSuffixes[] = {"_count", "_sum", "_bucket"};
+        for (const auto& registration : customFamilies) {
+            for (const char* suffix : histogramSuffixes) {
+                if ((registration.second.isHistogram && name == registration.first + suffix) ||
+                    (isHistogram && registration.first == name + suffix)) {
+                    throw std::invalid_argument("Custom metric '" + name +
+                                                "' conflicts with a histogram-generated metric name");
+                }
+            }
+        }
+    }
+
+    template <typename Family, typename Remove>
+    bool removeFamilyAndForgetCustomRegistration(const std::shared_ptr<Family>& family, Remove&& removeFamily) {
+        std::lock_guard<std::mutex> lock(customFamiliesMutex);
+        if (!removeFamily()) {
+            return false;
+        }
+        for (auto it = customFamilies.begin(); it != customFamilies.end(); ++it) {
+            if (it->second.family == family) {
+                customFamilies.erase(it);
+                break;
+            }
+        }
+        return true;
+    }
+
     struct CustomFamilyRegistration {
         std::string help;
         std::type_index type;
         std::vector<double> bucketBoundaries;
+        bool isHistogram;
         std::shared_ptr<void> family;
     };
 

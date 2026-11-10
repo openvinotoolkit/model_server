@@ -18,6 +18,7 @@
 #include <memory>
 #include <stdexcept>
 #include <thread>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -38,6 +39,13 @@ using testing::ContainsRegex;
 using testing::HasSubstr;
 using testing::Not;
 
+static_assert(!std::is_copy_constructible_v<CalculatorCounter>);
+static_assert(!std::is_copy_assignable_v<CalculatorCounter>);
+static_assert(!std::is_copy_constructible_v<CalculatorGauge>);
+static_assert(!std::is_copy_assignable_v<CalculatorGauge>);
+static_assert(!std::is_copy_constructible_v<CalculatorHistogram>);
+static_assert(!std::is_copy_assignable_v<CalculatorHistogram>);
+
 TEST(Metrics, RegistryEmpty) {
     MetricRegistry registry;
     EXPECT_EQ(registry.collect().size(), 0);
@@ -54,6 +62,19 @@ TEST(CalculatorMetricsTest, RegistersAndUpdatesAcrossInstancesAndScrapes) {
     const std::string scrape = registry.collect();
     EXPECT_THAT(scrape, HasSubstr("custom_events_total{name=\"graph\",node=\"node\"} 3\n"));
     EXPECT_EQ(scrape, registry.collect());
+}
+
+TEST(MetricRegistryTest, ReRegistersCustomFamilyAfterRemoval) {
+    MetricRegistry registry;
+    auto first = registry.registerCustomFamily<MetricCounter>("custom_events_total", "Events.");
+
+    ASSERT_TRUE(registry.remove(first));
+    auto second = registry.registerCustomFamily<MetricCounter>("custom_events_total", "Events.");
+
+    ASSERT_NE(first, second);
+    auto metric = second->addMetric();
+    metric->increment();
+    EXPECT_THAT(registry.collect(), HasSubstr("custom_events_total 1\n"));
 }
 
 TEST(CalculatorMetricsTest, RegistersAndUpdatesGauge) {
@@ -82,6 +103,26 @@ TEST(CalculatorMetricsTest, RegistersAndUpdatesHistogram) {
     EXPECT_THAT(scrape, HasSubstr("custom_request_duration_seconds_sum{name=\"graph\",node=\"node\"} 3.5\n"));
     EXPECT_THAT(scrape, HasSubstr("custom_request_duration_seconds_bucket{name=\"graph\",node=\"node\",le=\"1\"} 1\n"));
     EXPECT_THAT(scrape, HasSubstr("custom_request_duration_seconds_bucket{name=\"graph\",node=\"node\",le=\"5\"} 2\n"));
+}
+
+TEST(CalculatorMetricsTest, RejectsNamesCollidingWithHistogramSamples) {
+    const std::vector<std::string> suffixes{"_count", "_sum", "_bucket"};
+    for (const auto& suffix : suffixes) {
+        const std::string histogramName = "custom_latency_seconds";
+        const std::string generatedName = histogramName + suffix;
+        {
+            MetricRegistry registry;
+            CalculatorMetrics metrics(&registry, "graph", "node");
+            metrics.registerHistogram(histogramName, "Latency.", {1, 2});
+            EXPECT_THROW(metrics.registerGauge(generatedName, "Generated sample collision."), std::invalid_argument);
+        }
+        {
+            MetricRegistry registry;
+            CalculatorMetrics metrics(&registry, "graph", "node");
+            metrics.registerGauge(generatedName, "Gauge.");
+            EXPECT_THROW(metrics.registerHistogram(histogramName, "Latency.", {1, 2}), std::invalid_argument);
+        }
+    }
 }
 
 TEST(CalculatorMetricsTest, NodeAndGraphScopesAreIndependent) {

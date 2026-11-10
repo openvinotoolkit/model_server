@@ -41,6 +41,8 @@ class CalculatorCounter {
     friend class CalculatorMetrics;
 
 public:
+    CalculatorCounter(const CalculatorCounter&) = delete;
+    CalculatorCounter& operator=(const CalculatorCounter&) = delete;
     ~CalculatorCounter();
     /// Add a finite, non-negative value. Invalid values throw std::invalid_argument.
     void increment(double value = 1.0);
@@ -55,6 +57,8 @@ class CalculatorGauge {
     friend class CalculatorMetrics;
 
 public:
+    CalculatorGauge(const CalculatorGauge&) = delete;
+    CalculatorGauge& operator=(const CalculatorGauge&) = delete;
     ~CalculatorGauge();
     /// Set a finite value. Invalid values throw std::invalid_argument.
     void set(double value);
@@ -72,6 +76,8 @@ class CalculatorHistogram {
     friend class CalculatorMetrics;
 
 public:
+    CalculatorHistogram(const CalculatorHistogram&) = delete;
+    CalculatorHistogram& operator=(const CalculatorHistogram&) = delete;
     ~CalculatorHistogram();
     /// Record a finite observation. Invalid values throw std::invalid_argument.
     void observe(double value);

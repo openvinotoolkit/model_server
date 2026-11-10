@@ -38,17 +38,23 @@ std::string MetricRegistry::collect() const {
 
 template <>
 bool MetricRegistry::remove(std::shared_ptr<MetricFamily<MetricCounter>> family) {
-    return this->registryImpl.Remove(*static_cast<prometheus::Family<prometheus::Counter>*>(family->familyImplRef));
+    return removeFamilyAndForgetCustomRegistration(family, [this, family] {
+        return this->registryImpl.Remove(*static_cast<prometheus::Family<prometheus::Counter>*>(family->familyImplRef));
+    });
 }
 
 template <>
 bool MetricRegistry::remove(std::shared_ptr<MetricFamily<MetricGauge>> family) {
-    return this->registryImpl.Remove(*static_cast<prometheus::Family<prometheus::Gauge>*>(family->familyImplRef));
+    return removeFamilyAndForgetCustomRegistration(family, [this, family] {
+        return this->registryImpl.Remove(*static_cast<prometheus::Family<prometheus::Gauge>*>(family->familyImplRef));
+    });
 }
 
 template <>
 bool MetricRegistry::remove(std::shared_ptr<MetricFamily<MetricHistogram>> family) {
-    return this->registryImpl.Remove(*static_cast<prometheus::Family<prometheus::Histogram>*>(family->familyImplRef));
+    return removeFamilyAndForgetCustomRegistration(family, [this, family] {
+        return this->registryImpl.Remove(*static_cast<prometheus::Family<prometheus::Histogram>*>(family->familyImplRef));
+    });
 }
 
 }  // namespace ovms
