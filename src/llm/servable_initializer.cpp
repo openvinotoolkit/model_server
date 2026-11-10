@@ -571,10 +571,8 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         }
         if (pipelineType == PipelineType::LM_CB) {
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Language Model Continuous Batching servable");
-            ContinuousBatchingServableInitializer cbServableInitializer;
-            auto cbServable = std::make_shared<ContinuousBatchingServable>();
-            cbServable->getContinuousBatchingProperties()->metricReporter = std::move(metricReporter);
-            servable = std::move(cbServable);
+            ContinuousBatchingServableInitializer cbServableInitializer(std::move(metricReporter));
+            servable = std::make_shared<ContinuousBatchingServable>();
             status = cbServableInitializer.initialize(servable, nodeOptions, graphPath);
             if (status != StatusCode::OK) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
@@ -600,10 +598,8 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
                 }
             }
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Visual Language Model Continuous Batching servable");
-            ContinuousBatchingServableInitializer cbServableInitializer;
-            auto cbServable = std::make_shared<VisualLanguageModelServable>();
-            cbServable->getContinuousBatchingProperties()->metricReporter = std::move(metricReporter);
-            servable = std::move(cbServable);
+            ContinuousBatchingServableInitializer cbServableInitializer(std::move(metricReporter));
+            servable = std::make_shared<VisualLanguageModelServable>();
             status = cbServableInitializer.initialize(servable, nodeOptions, graphPath);
             if (status != StatusCode::OK) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());

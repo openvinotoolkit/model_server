@@ -179,7 +179,7 @@ CalculatorMetrics::~CalculatorMetrics() {
     deactivate();
 }
 
-std::shared_ptr<CalculatorCounter> CalculatorMetrics::registerCounter(const std::string& name, const std::string& help) {
+std::shared_ptr<CalculatorCounter> CalculatorMetrics::getOrRegisterCounter(const std::string& name, const std::string& help) {
     std::lock_guard<std::mutex> lock(scopeMutex);
     try {
         if (!active) {
@@ -205,7 +205,7 @@ std::shared_ptr<CalculatorCounter> CalculatorMetrics::registerCounter(const std:
     }
 }
 
-std::shared_ptr<CalculatorGauge> CalculatorMetrics::registerGauge(const std::string& name, const std::string& help) {
+std::shared_ptr<CalculatorGauge> CalculatorMetrics::getOrRegisterGauge(const std::string& name, const std::string& help) {
     std::lock_guard<std::mutex> lock(scopeMutex);
     try {
         if (!active) {
@@ -231,7 +231,7 @@ std::shared_ptr<CalculatorGauge> CalculatorMetrics::registerGauge(const std::str
     }
 }
 
-std::shared_ptr<CalculatorHistogram> CalculatorMetrics::registerHistogram(const std::string& name, const std::string& help,
+std::shared_ptr<CalculatorHistogram> CalculatorMetrics::getOrRegisterHistogram(const std::string& name, const std::string& help,
     const std::vector<double>& bucketBoundaries) {
     std::lock_guard<std::mutex> lock(scopeMutex);
     try {

@@ -18,6 +18,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 #include <openvino/genai/cache_eviction.hpp>
 #include <openvino/genai/sparse_attention.hpp>
@@ -133,6 +134,9 @@ ov::genai::SchedulerConfig ContinuousBatchingServableInitializer::prepareDraftPi
     return config;
 }
 
+ContinuousBatchingServableInitializer::ContinuousBatchingServableInitializer(std::shared_ptr<LLMMetricReporter> metricReporter) :
+    metricReporter(std::move(metricReporter)) {}
+
 Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) {
     std::string parsedModelsPath;
     auto status = parseModelsPath(parsedModelsPath, nodeOptions.models_path(), graphPath);
@@ -140,6 +144,7 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         return status;
     }
     auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
+    properties->metricReporter = metricReporter;
     properties->modelsPath = parsedModelsPath;
     std::filesystem::path modelGenerationConfigPath = std::filesystem::path(parsedModelsPath) / "generation_config.json";
     if (std::filesystem::exists(modelGenerationConfigPath)) {

@@ -110,13 +110,14 @@ class CalculatorMetrics {
 public:
     CalculatorMetrics(MetricRegistry* registry, const std::string& graphName, const std::string& nodeName);
     ~CalculatorMetrics();
-    /// Register once (usually in Open). Counters must be named custom_<name>_total;
+    /// Get an existing handle or register one (usually in Open).
+    /// Counters must be named custom_<name>_total;
     /// gauges and histograms must start with custom_. Names and help text must
     /// match across registrations. Disabled metrics return valid no-op handles.
-    std::shared_ptr<CalculatorCounter> registerCounter(const std::string& name, const std::string& help);
-    std::shared_ptr<CalculatorGauge> registerGauge(const std::string& name, const std::string& help);
+    std::shared_ptr<CalculatorCounter> getOrRegisterCounter(const std::string& name, const std::string& help);
+    std::shared_ptr<CalculatorGauge> getOrRegisterGauge(const std::string& name, const std::string& help);
     /// Histogram bucket boundaries must be finite and strictly increasing.
-    std::shared_ptr<CalculatorHistogram> registerHistogram(const std::string& name, const std::string& help,
+    std::shared_ptr<CalculatorHistogram> getOrRegisterHistogram(const std::string& name, const std::string& help,
         const std::vector<double>& bucketBoundaries);
     /// Remove this scope's series and make retained handles safe no-ops.
     void deactivate();

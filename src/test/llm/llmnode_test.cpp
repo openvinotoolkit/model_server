@@ -75,6 +75,7 @@ class LLMCompletionMetricsTest : public ::testing::Test {
 protected:
     class TestServable : public ContinuousBatchingServable {
     public:
+        using ContinuousBatchingServable::properties;
         using ContinuousBatchingServable::recordCompletedRequestMetrics;
     };
 
@@ -88,7 +89,7 @@ protected:
                       METRIC_NAME_LLM_PROMPT_TOKENS + "," + METRIC_NAME_LLM_GENERATED_TOKENS + "," +
                           METRIC_NAME_LLM_TTFT + "," + METRIC_NAME_LLM_TPOT),
             StatusCode::OK);
-        servable.getContinuousBatchingProperties()->metricReporter =
+        servable.properties->metricReporter =
             std::make_shared<LLMMetricReporter>(&metricConfig, &registry, "model", "llm");
         context.perfMetrics = std::make_unique<ov::genai::PerfMetrics>();
         context.perfMetrics->num_input_tokens = 100;
@@ -134,7 +135,7 @@ TEST_F(LLMCompletionMetricsTest, InvalidTimingSamplesDoNotDiscardTokenCounts) {
 }
 
 TEST_F(LLMCompletionMetricsTest, DisabledCompletionMetricsDoNotEvaluatePerformanceStatistics) {
-    servable.getContinuousBatchingProperties()->metricReporter->deactivate();
+    servable.properties->metricReporter->deactivate();
     context.perfMetrics->m_evaluated = false;
     servable.recordCompletedRequestMetrics(context);
     EXPECT_FALSE(context.completedMetricsRecorded);
@@ -143,10 +144,10 @@ TEST_F(LLMCompletionMetricsTest, DisabledCompletionMetricsDoNotEvaluatePerforman
 }
 
 TEST_F(LLMCompletionMetricsTest, CompletionMetricsWorkWithoutPromptCounter) {
-    servable.getContinuousBatchingProperties()->metricReporter->deactivate();
+    servable.properties->metricReporter->deactivate();
     metricConfig.setDefaultMetricsTo(false);
     ASSERT_EQ(metricConfig.loadFromCLIString(true, METRIC_NAME_LLM_GENERATED_TOKENS + "," + METRIC_NAME_LLM_TTFT), StatusCode::OK);
-    servable.getContinuousBatchingProperties()->metricReporter =
+    servable.properties->metricReporter =
         std::make_shared<LLMMetricReporter>(&metricConfig, &registry, "model", "llm");
     servable.recordCompletedRequestMetrics(context);
     EXPECT_THAT(registry.collect(), testing::Not(testing::HasSubstr(METRIC_NAME_LLM_PROMPT_TOKENS)));
@@ -4836,9 +4837,14 @@ void TestLLMNodeOptionsCheckDefault(std::string& modelsPath) {
     adjustConfigForTargetPlatform(testPbtxt);
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+    MetricRegistry registry;
+    MetricConfig metricConfig;
+    ASSERT_EQ(metricConfig.loadFromCLIString(true, METRIC_NAME_LLM_GENERATED_TOKENS), StatusCode::OK);
+    auto metricReporter = std::make_shared<LLMMetricReporter>(&metricConfig, &registry, "model", "llm");
     std::shared_ptr<GenAiServable> servable;
-    ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
+    ASSERT_EQ(initializeGenAiServable(servable, config.node(0), "", metricReporter), StatusCode::OK);
     auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
+    ASSERT_EQ(properties->metricReporter, metricReporter);
     ASSERT_EQ(properties->schedulerConfig.max_num_batched_tokens, 256);
     ASSERT_EQ(properties->schedulerConfig.cache_size, 0);
     ASSERT_EQ(properties->schedulerConfig.dynamic_split_fuse, true);

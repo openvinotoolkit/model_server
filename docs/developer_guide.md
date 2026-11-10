@@ -24,15 +24,15 @@ Calculators can register **custom counters, gauges, and histograms** and update
 them during processing:
 
 ```cpp
-auto events = metrics->registerCounter("custom_events_total", "Events processed.");
+auto events = metrics->getOrRegisterCounter("custom_events_total", "Events processed.");
 events->increment();       // Add one.
 events->increment(3.0);    // Add a batch.
 
-auto queueDepth = metrics->registerGauge("custom_queue_depth", "Queued requests.");
+auto queueDepth = metrics->getOrRegisterGauge("custom_queue_depth", "Queued requests.");
 queueDepth->set(4);
 queueDepth->decrement();
 
-auto latency = metrics->registerHistogram(
+auto latency = metrics->getOrRegisterHistogram(
     "custom_request_duration_seconds", "Request duration.", {0.01, 0.1, 1.0});
 latency->observe(0.08);
 ```
@@ -95,11 +95,11 @@ absl::Status Open(mediapipe::CalculatorContext* cc) override {
     const auto scope = scopes.find(cc->NodeName());
     RET_CHECK(scope != scopes.end()) << "Missing calculator metrics scope";
     try {
-        events = scope->second->registerCounter(
+        events = scope->second->getOrRegisterCounter(
             "custom_events_total", "Events processed.");
-        queueDepth = scope->second->registerGauge(
+        queueDepth = scope->second->getOrRegisterGauge(
             "custom_queue_depth", "Queued requests.");
-        latency = scope->second->registerHistogram(
+        latency = scope->second->getOrRegisterHistogram(
             "custom_request_duration_seconds", "Request duration.",
             {0.01, 0.1, 1.0});
     } catch (const std::exception& e) {

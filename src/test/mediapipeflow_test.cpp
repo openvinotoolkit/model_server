@@ -4510,7 +4510,7 @@ public:
         if (!status.ok()) {
             return status;
         }
-        counter = calculatorMetrics->registerCounter("custom_runtime_events_total", "Runtime events.");
+        counter = calculatorMetrics->getOrRegisterCounter("custom_runtime_events_total", "Runtime events.");
         return absl::OkStatus();
     }
 
@@ -4639,7 +4639,7 @@ TEST(MediapipeGraphMetricsProvider, CustomMetricsHonorProviderConfiguration) {
     metrics.config.metricsEnabled = true;
     MetricsGraphDefinition graph(&metrics);
     ASSERT_EQ(graph.initializeNodes(), ovms::StatusCode::OK);
-    graph.calculatorMetrics()->registerCounter("custom_events_total", "Events.")->increment();
+    graph.calculatorMetrics()->getOrRegisterCounter("custom_events_total", "Events.")->increment();
     EXPECT_THAT(metrics.registry.collect(), HasSubstr("custom_events_total{name=\"graph\",node=\"node\"} 1\n"));
 }
 
@@ -4650,7 +4650,7 @@ TEST(MediapipeGraphMetricsProvider, CustomMetricsAreNoOpWhenDisabledOrUnavailabl
         metrics.provideRegistry = scenario != 1;
         MetricsGraphDefinition graph(scenario == 2 ? nullptr : &metrics);
         ASSERT_EQ(graph.initializeNodes(), ovms::StatusCode::OK);
-        graph.calculatorMetrics()->registerCounter("custom_events_total", "Events.")->increment();
+        graph.calculatorMetrics()->getOrRegisterCounter("custom_events_total", "Events.")->increment();
         EXPECT_TRUE(metrics.registry.collect().empty());
     }
 }
