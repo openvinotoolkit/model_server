@@ -18,9 +18,6 @@ from enum import Enum, auto
 
 
 class OvmsType(Enum):
-    UBUNTU22 = auto()
-    UBUNTU22_GPU = auto()
-    UBUNTU22_NGINX = auto()
     UBUNTU24 = auto()
     UBUNTU24_GPU = auto()
     UBUNTU24_NGINX = auto()
@@ -36,7 +33,6 @@ class OvmsType(Enum):
 class OvmsBaseType(Enum):
     COMMON = "common"
     UBUNTU = "ubuntu"
-    UBUNTU22 = "ubuntu22"
     UBUNTU24 = "ubuntu24"
     UBUNTU26 = "ubuntu26"
     UBUNTU_GPU = "ubuntu_gpu"
