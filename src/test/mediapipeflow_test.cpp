@@ -4536,7 +4536,8 @@ node {
   input_stream: "IN:in"
   input_side_packet: "CALCULATOR_METRICS:calculator_metrics"
 }
-)", &config));
+)",
+        &config));
 
     auto queue = std::make_shared<GraphQueue>(config, sidePackets, 2);
     auto process = [](mediapipe::CalculatorGraph& graph) {
