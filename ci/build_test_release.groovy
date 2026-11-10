@@ -144,9 +144,10 @@ pipeline {
                         if (status != 0) {
                             error "Failed to map network drive. Status code: ${status}"
                         }
-                        def destPath = "w:\\${env.PRODUCT_VERSION}\\${env.RELEASE_TAG}\\windows"
+                        def releaseTagPath = "w:\\${env.PRODUCT_VERSION}\\${env.RELEASE_TAG}"
+                        def destPath = "${releaseTagPath}\\windows"
                         def latestPath = "${destPath}\\latest"
-                        def releasePath = "${destPath}\\release"
+                        def releasePath = "${releaseTagPath}\\release"
                         def packageName = "ovms_windows.zip"
                         def sourcePath = "${env.WORKSPACE}\\dist\\windows\\${sourceFile}"
                         def shaPath = "${env.WORKSPACE}\\dist\\windows\\${packageName}.sha256"
