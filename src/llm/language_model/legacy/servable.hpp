@@ -64,6 +64,7 @@ class LegacyServable : public LegacyServableBase {
     void logPerfMetrics(ov::genai::PerfMetrics& perfMetrics);
 
 protected:
+    void initializeTextStreamer(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     void notifyExecutorThread();
     absl::Status validateInputComplianceWithProperties(const ov::Tensor& inputIds) const;
 

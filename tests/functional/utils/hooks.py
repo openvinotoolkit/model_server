@@ -790,12 +790,15 @@ def parametrize_base_os(metafunc):
     metafunc.parametrize(BASE_OS_PARAM_NAME, params, ids=ids)
 
 
+SENSITIVE_ENV_VAR_RE = re.compile(r"PASS|TOKEN|SECRET|CREDENTIALS|CONNECTION_STRING|KEY", re.IGNORECASE)
+
+
 def log_configuration_variables():
     logger.info("============== configuration variables ==============")
     pt_env_vars = list(filter(lambda x: x[0].startswith("TT_"), os.environ.items()))
     pt_env_vars.sort()
-    for env_var in pt_env_vars:
-        logger.info(f"{env_var[0]}={env_var[1]}")
+    for name, value in pt_env_vars:
+        logger.info(f"{name}={'***' if SENSITIVE_ENV_VAR_RE.search(name) else value}")
 
 
 def mute_warnings():
@@ -1061,7 +1064,7 @@ def generic_test_deselect(item):
     endpoint = item.callspec.params.get(ENDPOINT_PARAM_NAME, None)
 
     # Disable completions endpoint for VLM models
-    if model_type is not None and model_type.is_vision_language and endpoint == OpenAIWrapper.COMPLETIONS:
+    if endpoint == OpenAIWrapper.COMPLETIONS and getattr(model_type, "is_vision_language", False):
         return True
 
     return False
