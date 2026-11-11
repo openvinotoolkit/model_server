@@ -291,6 +291,8 @@ http_archive( # Using commit past 0.9.0 that adds cmake 3.26.2 for model api. Be
     url = "https://github.com/bazelbuild/rules_foreign_cc/archive/1fb8a1ed9100236590c2a9441d79811aefaabcf8.tar.gz",
     sha256 = "9d55e5b295dc9de77dfac8c1c2f365894363f2acc54cccdde41f7555a9b28dc6",
     strip_prefix = "rules_foreign_cc-1fb8a1ed9100236590c2a9441d79811aefaabcf8",
+    patches = ["//third_party:rules_foreign_cc.patch"],
+    patch_args = ["-p1"],
 )
 
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
