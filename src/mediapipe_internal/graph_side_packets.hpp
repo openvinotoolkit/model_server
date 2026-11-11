@@ -22,8 +22,6 @@
 #include <utility>
 #include <vector>
 
-#include "src/graph_metadata.hpp"
-
 namespace ovms {
 
 class PythonNodeResources;
@@ -80,7 +78,6 @@ struct GraphSidePackets {
     TtsServableMap ttsServableMap;
     std::vector<std::string> loraAliases;
     bool hideBaseModelInRouting = false;
-    GraphMetadata metadata;
     void clear() {
         pythonNodeResourcesMap.clear();
         genAiServableMap.clear();
@@ -92,7 +89,6 @@ struct GraphSidePackets {
         ttsServableMap.clear();
         loraAliases.clear();
         hideBaseModelInRouting = false;
-        metadata = GraphMetadata();
     }
     bool empty() {
         return (pythonNodeResourcesMap.empty() &&

@@ -45,9 +45,6 @@ ovms_cc_library(
     hdrs = [
         "graph_side_packets.hpp",
     ],
-    deps = [
-        "//src:libovms_graph_metadata",
-    ],
     visibility = ["//visibility:public"],
 )
 

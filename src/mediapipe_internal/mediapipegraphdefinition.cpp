@@ -754,12 +754,13 @@ Status MediapipeGraphDefinition::initializeNodes() {
         }
     } guard{*sidePacketMaps, success};
 
+    GraphMetadata graphMetadata;
     auto& registry = NodeInitializerRegistry::instance();
     for (int i = 0; i < config.node().size(); i++) {
         const auto& node = config.node(i);
         for (const auto& initializer : registry.all()) {
             if (initializer->matches(node.calculator())) {
-                Status status = initializer->initialize(node, getName(), mgconfig.getBasePath(), *sidePacketMaps, pythonBackend);
+                Status status = initializer->initialize(node, getName(), mgconfig.getBasePath(), *sidePacketMaps, graphMetadata, pythonBackend);
                 if (!status.ok()) {
                     return status;
                 }
@@ -769,7 +770,7 @@ Status MediapipeGraphDefinition::initializeNodes() {
     // Register LoRA aliases for routing from initialized image gen pipelines
     this->loraAliases = sidePacketMaps->loraAliases;
     this->hideBaseModelInRouting = sidePacketMaps->hideBaseModelInRouting;
-    auto snapshot = std::make_shared<const GraphMetadata>(sidePacketMaps->metadata);
+    auto snapshot = std::make_shared<const GraphMetadata>(std::move(graphMetadata));
     {
         std::lock_guard<std::mutex> lock(metadataSnapshotMtx);
         this->metadata = std::move(snapshot);
