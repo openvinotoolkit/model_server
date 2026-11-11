@@ -80,8 +80,9 @@ void GraphMetadata::writeMembers(rapidjson::Writer<rapidjson::StringBuffer>& wri
 }
 
 void GraphMetadata::writeObject(rapidjson::Writer<rapidjson::StringBuffer>& writer) const {
+    static const std::unordered_set<std::string> noSkippedKeys;
     writer.StartObject();
-    writeMembers(writer, {});
+    writeMembers(writer, noSkippedKeys);
     writer.EndObject();
 }
 

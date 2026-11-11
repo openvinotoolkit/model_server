@@ -7305,10 +7305,17 @@ protected:
         std::stringstream content;
         {
             std::ifstream ifs(destination / "config.json");
+            if (!ifs.is_open()) {
+                ADD_FAILURE() << "Could not open " << (destination / "config.json").generic_string();
+                return {};
+            }
             content << ifs.rdbuf();
         }
         rapidjson::Document config;
-        config.Parse(content.str().c_str());
+        if (config.Parse(content.str().c_str()).HasParseError() || !config.IsObject()) {
+            ADD_FAILURE() << "config.json of " << destination.generic_string() << " is not a valid JSON object";
+            return {};
+        }
         for (const char* field : {"max_position_embeddings", "n_positions", "seq_len", "seq_length", "n_ctx", "sliding_window", "text_config"}) {
             config.RemoveMember(field);
         }
@@ -7318,7 +7325,12 @@ protected:
         rapidjson::StringBuffer buffer;
         rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
         config.Accept(writer);
-        std::ofstream(destination / "config.json") << buffer.GetString();
+        std::ofstream ofs(destination / "config.json");
+        ofs << buffer.GetString();
+        if (!ofs) {
+            ADD_FAILURE() << "Could not write " << (destination / "config.json").generic_string();
+            return {};
+        }
         return destination.generic_string();
     }
 
@@ -7370,7 +7382,11 @@ protected:
         if (!value) {
             return std::nullopt;
         }
-        return std::get<int64_t>(*value);
+        const auto* intValue = std::get_if<int64_t>(value);
+        if (!intValue) {
+            return std::nullopt;
+        }
+        return *intValue;
     }
 };
 
@@ -7447,6 +7463,7 @@ TEST_F(LLMGraphMetadataTest, MetadataKeptWhileSleepingAndRestoredOnWakeUp) {
             if (maxModelLenOf(def.getMetadata()) != std::optional<int64_t>(4096)) {
                 ++blankReads;
             }
+            std::this_thread::yield();
         }
     });
     const Status wakeUpStatus = def.wakeUpIfSleeping(manager);
@@ -7477,6 +7494,7 @@ TEST_F(LLMGraphMetadataTest, ReadersSeeOldOrNewSnapshotDuringReloads) {
                     ++unexpected;
                 }
                 ++reads;
+                std::this_thread::yield();
             }
         });
     }

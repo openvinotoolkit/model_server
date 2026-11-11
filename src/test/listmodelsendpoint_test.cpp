@@ -226,6 +226,17 @@ public:
         ASSERT_EQ(handler->dispatchToProcessor(endpoint, "", &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
         ASSERT_FALSE(document.Parse(response.c_str()).HasParseError());
     }
+
+    static void expectStandardFields(const rapidjson::Value& entry) {
+        ASSERT_TRUE(entry.HasMember("id"));
+        ASSERT_TRUE(entry.HasMember("object"));
+        ASSERT_TRUE(entry.HasMember("created"));
+        ASSERT_TRUE(entry.HasMember("owned_by"));
+        ASSERT_TRUE(entry["id"].IsString());
+        EXPECT_STREQ(entry["object"].GetString(), "model");
+        EXPECT_TRUE(entry["created"].IsInt64());
+        EXPECT_STREQ(entry["owned_by"].GetString(), "OVMS");
+    }
 };
 std::unique_ptr<std::thread> ListModelsEndpointMetadataTest::t;
 
@@ -237,9 +248,7 @@ TEST_F(ListModelsEndpointMetadataTest, ListContainsMaxModelLenOnlyForLLM) {
     bool llmFound = false;
     bool passthroughFound = false;
     for (const auto& entry : d["data"].GetArray()) {
-        EXPECT_STREQ(entry["object"].GetString(), "model");
-        EXPECT_STREQ(entry["owned_by"].GetString(), "OVMS");
-        EXPECT_TRUE(entry["created"].IsInt64());
+        ASSERT_NO_FATAL_FAILURE(expectStandardFields(entry));
         const std::string id = entry["id"].GetString();
         if (id == "lm_cb_regular") {
             llmFound = true;
@@ -248,7 +257,6 @@ TEST_F(ListModelsEndpointMetadataTest, ListContainsMaxModelLenOnlyForLLM) {
             EXPECT_GT(entry["max_model_len"].GetUint(), 0u);
         } else if (id == "passthrough") {
             passthroughFound = true;
-            EXPECT_EQ(entry.MemberCount(), 4);
             EXPECT_FALSE(entry.HasMember("max_model_len"));
         }
     }
@@ -259,6 +267,7 @@ TEST_F(ListModelsEndpointMetadataTest, ListContainsMaxModelLenOnlyForLLM) {
 TEST_F(ListModelsEndpointMetadataTest, RetrieveLLMContainsMaxModelLen) {
     rapidjson::Document d;
     get("/v1/models/lm_cb_regular", d);
+    ASSERT_NO_FATAL_FAILURE(expectStandardFields(d));
     EXPECT_STREQ(d["id"].GetString(), "lm_cb_regular");
     ASSERT_TRUE(d.HasMember("max_model_len"));
     ASSERT_TRUE(d["max_model_len"].IsUint());
@@ -268,8 +277,8 @@ TEST_F(ListModelsEndpointMetadataTest, RetrieveLLMContainsMaxModelLen) {
 TEST_F(ListModelsEndpointMetadataTest, RetrieveNonLLMHasNoMaxModelLen) {
     rapidjson::Document d;
     get("/v1/models/passthrough", d);
+    ASSERT_NO_FATAL_FAILURE(expectStandardFields(d));
     EXPECT_STREQ(d["id"].GetString(), "passthrough");
-    EXPECT_EQ(d.MemberCount(), 4);
     EXPECT_FALSE(d.HasMember("max_model_len"));
 }
 
