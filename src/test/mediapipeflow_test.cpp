@@ -1950,11 +1950,13 @@ node {
     response.Clear();
     inputs_info_t inputsMeta{{"in", {DUMMY_MODEL_SHAPE, precision}}};
     preparePredictRequest(request, inputsMeta);
-input_stream:
-    "INPUT:in" output_stream : "OUTPUT:out" std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
+    request.mutable_model_name()->assign(modelName);
+    ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::OK);
+    std::vector<float> requestData{0., 0., 0, 0., 0., 0., 0., 0, 0., 0.};
     checkDummyResponse("out", requestData, request, response, 1, 1, modelName);
-    tag_to_input_tensor_names{key : "INPUT" value : "b"}
-    tag_to_output_tensor_names{key : "OUTPUT" value : "a"} class MediapipeConfig : public MediapipeFlowTest {
+}
+
+class MediapipeConfig : public MediapipeFlowTest {
     public:
         void TearDown() override {}
     };
