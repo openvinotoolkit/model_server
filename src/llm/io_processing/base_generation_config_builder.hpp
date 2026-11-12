@@ -14,6 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <memory>
+#include <stdexcept>
 #include <string>
 
 #include <openvino/genai/generation_config.hpp>
@@ -22,23 +24,30 @@
 
 namespace ovms {
 
+class ResponseFormatInvariantError : public std::runtime_error {
+public:
+    using std::runtime_error::runtime_error;
+};
+
+struct ReasoningGenerationContext;
+
 /*
-* DecodingMethod enum is used to properly set defaults and validate GenerationConfig depending on whether pipeline has been
-* configured to use standard sampling strategies like greedy, beam search or multinomial or non-standard strategies like 
-* speculative decoding with draft model or prompt lookup technique.
-*
-* STANDARD: Standard decoding methods such as greedy, beam search, and multinomial sampling. No special pipeline configuration.
-* FAST_DRAFT: Classic two-model speculative decoding — a smaller off-the-shelf LLM drafts tokens that the main model verifies.
-*             Pipeline configured with draft_models_path.
-* EAGLE3: EAGLE3 speculative decoding — draft head conditioned on main model hidden states; supports tree drafting.
-*         Auto-detected from model rt_info (eagle3_mode=true). Greedy decoding only.
-* DFLASH: DFlash speculative decoding — hidden-state-conditioned head using linear attention.
-*         Auto-detected from model rt_info (dflash_mode=true). Supports VLM and multinomial sampling.
-* MTP: Multi-Token Prediction — bundled prediction head (openvino_mtp_model.xml) inside the draft model directory.
-*      Auto-detected from model artifacts; no extra flag required. Multinomial sampling supported.
-* PROMPT_LOOKUP: N-gram prompt lookup decoding; no draft model required.
-*                Pipeline configured with prompt_lookup=true in pluginConfig.
-*/
+ * DecodingMethod enum is used to properly set defaults and validate GenerationConfig depending on whether pipeline has been
+ * configured to use standard sampling strategies like greedy, beam search or multinomial or non-standard strategies like
+ * speculative decoding with draft model or prompt lookup technique.
+ *
+ * STANDARD: Standard decoding methods such as greedy, beam search, and multinomial sampling. No special pipeline configuration.
+ * FAST_DRAFT: Classic two-model speculative decoding — a smaller off-the-shelf LLM drafts tokens that the main model verifies.
+ *             Pipeline configured with draft_models_path.
+ * EAGLE3: EAGLE3 speculative decoding — draft head conditioned on main model hidden states; supports tree drafting.
+ *         Auto-detected from model rt_info (eagle3_mode=true). Greedy decoding only.
+ * DFLASH: DFlash speculative decoding — hidden-state-conditioned head using linear attention.
+ *         Auto-detected from model rt_info (dflash_mode=true). Supports VLM and multinomial sampling.
+ * MTP: Multi-Token Prediction — bundled prediction head (openvino_mtp_model.xml) inside the draft model directory.
+ *      Auto-detected from model artifacts; no extra flag required. Multinomial sampling supported.
+ * PROMPT_LOOKUP: N-gram prompt lookup decoding; no draft model required.
+ *                Pipeline configured with prompt_lookup=true in pluginConfig.
+ */
 enum DecodingMethod {
     STANDARD,
     FAST_DRAFT,
@@ -50,16 +59,33 @@ enum DecodingMethod {
 
 /*
  * BaseGenerationConfigBuilder is a class that helps in building the base generation configuration
- * for OpenVINO GenAI pipeline based on OpenAI API request. 
+ * for OpenVINO GenAI pipeline based on OpenAI API request.
  * This class provides functionalities common for different models and pipeline types.
  * It is designed to be extended by specific configuration builders for different models or pipeline types.
  */
 class BaseGenerationConfigBuilder {
 protected:
+    struct ToolCallFormat {
+        std::string trigger;
+        std::string begin;
+        std::string arguments;
+        std::string end;
+        bool encodeFunctionNameAsJson;
+    };
+
     ov::genai::GenerationConfig config;
     const bool enableToolGuidedGeneration;
     DecodingMethod decodingMethod;
     void setStructuralTagsConfig(const ov::genai::StructuredOutputConfig::StructuralTag& structuralTag);
+    static bool requiresNamedToolCall(const OpenAIRequest& request);
+    virtual bool supportsToolGuidance() const { return false; }
+    bool shouldApplyToolGuidance(const OpenAIRequest& request) const;
+    static bool shouldApplyResponseFormatGuidance(const OpenAIRequest& request);
+    void setToolGrammar(const OpenAIRequest& request, const std::shared_ptr<ov::genai::StructuredOutputConfig::TriggeredTags>& tags);
+    static ov::genai::StructuredOutputConfig::StructuralTag buildToolArgumentGrammar(const std::string& schema);
+    void setTaggedToolGrammar(const OpenAIRequest& request, const ToolCallFormat& format);
+    virtual void applyToolGuidance(const OpenAIRequest& request);
+    void applyResponseFormatGuidance(const OpenAIRequest& request, const ReasoningGenerationContext& reasoningContext, const std::string& reasoningParserName);
 
 public:
     BaseGenerationConfigBuilder() = delete;
@@ -73,20 +99,20 @@ public:
     ov::genai::GenerationConfig& getConfig() { return config; }
 
     /*
-    * Adjusts generation config based on the decoding method used in the pipeline.
-    * This includes setting defaults for parameters required by the selected decoding method if they are not already set.
-    */
+     * Adjusts generation config based on the decoding method used in the pipeline.
+     * This includes setting defaults for parameters required by the selected decoding method if they are not already set.
+     */
     void adjustConfigForDecodingMethod();
 
     /*
-    * Add stop string to generation config. Used when model server needs to add additional stop string that has not been provided in the request.
-    */
+     * Add stop string to generation config. Used when model server needs to add additional stop string that has not been provided in the request.
+     */
     void addStopString(const std::string& decodedStopString);
 
     /*
-    * Validates the structured output configuration, if exists.
-    * Throws exception if validation fails.
-    */
+     * Validates the structured output configuration, if exists.
+     * Throws exception if validation fails.
+     */
     void validateStructuredOutputConfig(ov::genai::Tokenizer& tokenizer);
 
     /*
@@ -96,11 +122,13 @@ public:
      */
     void unsetStructuredOutputConfig();
 
+    /** Selects tool guidance or response formatting and composes any supported reasoning envelope. */
+    void configureStructuredGeneration(const OpenAIRequest& request, const ReasoningGenerationContext& reasoningContext, const std::string& reasoningParserName);
+
     /*
-     * Fills generation config with values read from OpenAI request.
-     * If extended, model specific implementation should call base class method first to fill in common configuration
-     * and then set model specific parameters.
+     * Fills sampling parameters from the OpenAI request. Structured output is
+     * configured separately after the reasoning context is available.
      */
-    virtual void parseConfigFromRequest(const OpenAIRequest& request);
+    void parseConfigFromRequest(const OpenAIRequest& request);
 };
 }  // namespace ovms

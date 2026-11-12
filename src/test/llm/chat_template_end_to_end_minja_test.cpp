@@ -39,7 +39,7 @@ using namespace ovms;
 class ChatTemplateEndToEndMinjaTest : public ::testing::Test {
 protected:
     // Any tokenizer will do the job, the only thing we need to do is to change chat template content before use
-    const std::string& tokenizerPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m", false);
+    const std::string& tokenizerPath = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov", false);
     const std::string& chatTemplatesPath = getGenericFullPathForSrcTest("/ovms/src/test/llm/chat_templates", false);
 
     std::string savedLogLevel;
@@ -253,7 +253,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Gemma4_ToolCallWithStringArgs) {
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
-    std::string expectedOutput = R"(</s><|turn>user
+    std::string expectedOutput = R"(<|endoftext|><|turn>user
 What's the weather in Paris?<turn|>
 <|turn>model
 <|tool_call>call:get_weather{location:<|"|>Paris<|"|>,unit:<|"|>celsius<|"|>}<tool_call|><|tool_response>)";
@@ -425,8 +425,37 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Mistral7B_ToolCallWithStringArgs) {
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
-    std::string expectedOutput = R"(</s>[INST] What's the weather in Paris?[/INST][TOOL_CALLS] [{"name": "get_weather", "arguments": {"location": "Paris", "unit": "celsius"}, "id": "abc123def"}]</s>)";
+    std::string expectedOutput = R"(<|endoftext|>[INST] What's the weather in Paris?[/INST][TOOL_CALLS] [{"name": "get_weather", "arguments": {"location": "Paris", "unit": "celsius"}, "id": "abc123def"}]<|endoftext|>)";
     EXPECT_EQ(appliedOutput, expectedOutput);
+}
+
+// =============================================================================
+// Mistral3 and Devstral-2-small have similar chat templates, the only difference is the system prompt.
+// =============================================================================
+TEST_F(ChatTemplateEndToEndMinjaTest, Mistral3_ToolCallWithStringArgs) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_mistral3.jinja");
+    ASSERT_FALSE(chatTemplate.empty());
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"abc123def","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
+
+    run();
+
+    ASSERT_FALSE(exceptionThrownDuringApplication);
+
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "devstral");
+    ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
+
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
+
+    std::string expectedOutput = R"([/SYSTEM_PROMPT][INST]What's the weather in Paris?[/INST][TOOL_CALLS]get_weather[ARGS]{"location": "Paris", "unit": "celsius"}<|endoftext|>)";
+    ASSERT_GE(appliedOutput.size(), expectedOutput.size());
+    EXPECT_EQ(appliedOutput.substr(appliedOutput.size() - expectedOutput.size()), expectedOutput);
 }
 
 // =============================================================================
@@ -451,7 +480,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM2_ToolCallWithStringArgs) {
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
-    std::string expectedOutput = R"(</s><|im_start|>user
+    std::string expectedOutput = R"(<|endoftext|><|im_start|>user
 What's the weather in Paris?<|im_end|>
 <|im_start|>assistant
 <|tool_call_start|>[get_weather(location='Paris', unit='celsius')]<|tool_call_end|><|im_end|>
@@ -482,7 +511,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ToolCallWithStringArgs) {
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_EQ(caps.missnamedReasoningField, "thinking");
 
-    std::string expectedOutput = R"(</s><|im_start|>user
+    std::string expectedOutput = R"(<|endoftext|><|im_start|>user
 What's the weather in Paris?<|im_end|>
 <|im_start|>assistant
 <|tool_call_start|>[get_weather(location='Paris', unit='celsius')]<|tool_call_end|><|im_end|>
@@ -513,7 +542,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ToolCallWithStringArgsAndReasoning) 
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_EQ(caps.missnamedReasoningField, "thinking");
 
-    std::string expectedOutput = R"(</s><|im_start|>user
+    std::string expectedOutput = R"(<|endoftext|><|im_start|>user
 What's the weather in Paris?<|im_end|>
 <|im_start|>assistant
 <think>Here is some reasoning content</think><|tool_call_start|>[get_weather(location='Paris', unit='celsius')]<|tool_call_end|><|im_end|>
@@ -544,7 +573,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, LFM25_ReasoningAndEmptyToolCalls) {
     EXPECT_TRUE(caps.requiresObjectArguments);
     EXPECT_EQ(caps.missnamedReasoningField, "thinking");
 
-    std::string expectedOutput = R"(</s><|im_start|>user
+    std::string expectedOutput = R"(<|endoftext|><|im_start|>user
 What's the weather in Paris?<|im_end|>
 <|im_start|>assistant
 <think>Here is some reasoning content</think><|im_end|>

@@ -17,16 +17,17 @@
 // Integration tests for the full input processing pipeline:
 //   JSON string
 //   → OpenAIApiHandler::parseRequest()        (wire format → chatHistory + request fields)
-//   → OpenAIApiHandler::extractInputRequest() (chatHistory → inputRequest + generationConfig)
+//   → OpenAIApiHandler::extractInputRequest() (chatHistory → inputRequest)
 //   → InputProcessor::process()              (ImageDecoding / TextNorm / ChatTemplate / Tokenize)
 //
 // The tokenizer is loaded once per test suite from a known test fixture
-// (SmolLM2-360M-Instruct). No inference is performed.
+// (dummy-cyclic-gpt2-ov). No inference is performed.
 
 #include <chrono>
 #include <memory>
 #include <optional>
 #include <string>
+#include <fstream>
 
 #include <gtest/gtest.h>
 #include <openvino/genai/generation_config.hpp>
@@ -54,12 +55,10 @@ namespace {
 
 using test_utils::buildWavBuffer;
 
-// SmolLM2-360M-Instruct injects this default system turn when the first message
+// Dummy model injects this default system turn when the first message
 // is not 'system' (verified from tokenizer_config.json chat_template).
-constexpr const char* SMOL_DEFAULT_SYSTEM =
-    "<|im_start|>system\n"
-    "You are a helpful AI assistant named SmolLM, trained by Hugging Face"
-    "<|im_end|>\n";
+constexpr const char* LLM_DEFAULT_SYSTEM = "<|im_start|>system\\n"
+                                           "You are Dummy, a helpful AI assistant that explains what OpenVINO is to users.<|im_end|>\n";
 
 // Minimal 1×1 PNG (same fixture used throughout the handler test suite).
 constexpr const char* TINY_PNG =
@@ -76,17 +75,19 @@ static std::unique_ptr<PreparedChatTemplateRuntime> sharedPreparedRuntimeTemplat
 class InputProcessingIntegrationTest : public testing::TestWithParam<Endpoint> {
 protected:
     static void SetUpTestSuite() {
-        std::string initializationError;
-        ASSERT_TRUE(ensurePythonRuntimeInitialized(initializationError)) << initializationError;
-
-        const std::string modelsPath = getGenericFullPathForSrcTest(
-            "/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct");
-        sharedTokenizer = std::make_unique<ov::genai::Tokenizer>(modelsPath);
+        const std::string modelPath = getGenericFullPathForSrcTest(
+            "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov");
+        sharedTokenizer = std::make_unique<ov::genai::Tokenizer>(modelPath);
+        std::ifstream templateFile(modelPath + "/chat_template.jinja");
+        ASSERT_TRUE(templateFile.is_open()) << "Failed to open chat_template.jinja in " << modelPath;
+        const std::string chatTemplate{
+            std::istreambuf_iterator<char>(templateFile), std::istreambuf_iterator<char>()};
+        sharedTokenizer->set_chat_template(chatTemplate);
 
         auto prepared = std::make_unique<PreparedChatTemplateRuntime>();
         std::string errorMessage;
         const bool preparedSuccessfully = prepared->prepare(
-            modelsPath,
+            modelPath,
             sharedTokenizer->get_chat_template(),
             sharedTokenizer->get_bos_token(),
             sharedTokenizer->get_eos_token(),
@@ -111,7 +112,9 @@ protected:
         std::shared_ptr<rapidjson::Document> doc;  // keeps handler's reference alive
     };
 
-    RunResult runPipeline(const std::string& json, bool isVLM = false, bool isOmni = false) {
+    RunResult runPipeline(const std::string& json,
+        bool supportsVisualInputs = false,
+        std::optional<AudioInputConfig> audioInputConfig = std::nullopt) {
         RunResult result;
 
         result.doc = std::make_shared<rapidjson::Document>();
@@ -139,10 +142,7 @@ protected:
             return result;
         }
 
-        GenerationConfigBuilder configBuilder(
-            ov::genai::GenerationConfig{}, /*toolParserName=*/"",
-            /*enableToolGuidedGeneration=*/false, DecodingMethod::STANDARD);
-        auto reqResult = result.handler->extractInputRequest(configBuilder);
+        auto reqResult = result.handler->extractInputRequest();
         if (!reqResult.ok()) {
             result.parseStatus = reqResult.status();
             return result;
@@ -150,13 +150,23 @@ protected:
         result.req = std::move(*reqResult);
 
         InputProcessorContext ctx;
-        ctx.config.isVLM = isVLM;
-        ctx.config.isOmni = isOmni;
+        ctx.config.supportsVisualInputs = supportsVisualInputs;
+        ctx.config.audioInputConfig = audioInputConfig;
         ctx.tokenizer = *sharedTokenizer;
         ctx.templateProcessor = sharedPreparedRuntimeTemplate.get();
 
         InputProcessor processor(ctx, result.req);
         result.processStatus = processor.process(result.req);
+        if (result.processStatus.ok()) {
+            GenerationConfigBuilder configBuilder(
+                ov::genai::GenerationConfig{}, "", false, DecodingMethod::STANDARD);
+            try {
+                configBuilder.build(result.handler->getRequest(), {}, "", *sharedTokenizer);
+                result.req.generationConfig = configBuilder.getConfig();
+            } catch (const std::invalid_argument& e) {
+                result.processStatus = absl::InvalidArgumentError(e.what());
+            }
+        }
         return result;
     }
 
@@ -273,9 +283,9 @@ TEST_P(InputProcessingIntegrationTest, TextOnly_PromptAndGenConfigPopulated) {
     ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
 
     const std::string expected =
-        std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\nWhat is OpenVINO?<|im_end|>\n"
-        "<|im_start|>assistant\n";
+        std::string(LLM_DEFAULT_SYSTEM) +
+        "User: What is OpenVINO?"
+        "Assistant: ";
     EXPECT_EQ(result.req.promptText, expected);
     EXPECT_GT(result.req.inputIds.get_size(), 0u);
     EXPECT_TRUE(result.req.inputImages.empty());
@@ -292,9 +302,9 @@ TEST_P(InputProcessingIntegrationTest, SingleBase64Image_DecodedAndTagInPrompt) 
 
     // Preserve the multipart order: [text("Describe this."), image].
     const std::string expected =
-        std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\nDescribe this.\n<ov_genai_image_0><|im_end|>\n"
-        "<|im_start|>assistant\n";
+        std::string(LLM_DEFAULT_SYSTEM) +
+        "User: Describe this.\n<ov_genai_image_0>"
+        "Assistant: ";
     ASSERT_EQ(result.req.inputImages.size(), 1u);
     EXPECT_EQ(result.req.promptText, expected);
     EXPECT_GT(result.req.inputIds.get_size(), 0u);
@@ -308,10 +318,10 @@ TEST_P(InputProcessingIntegrationTest, ThreeImages_AllDecodedWithCorrectTagIndic
 
     // Preserve the multipart order: [text("Describe all."), image, image, image].
     const std::string expected =
-        std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\nDescribe all.\n"
-        "<ov_genai_image_0>\n<ov_genai_image_1>\n<ov_genai_image_2><|im_end|>\n"
-        "<|im_start|>assistant\n";
+        std::string(LLM_DEFAULT_SYSTEM) +
+        "User: Describe all.\n"
+        "<ov_genai_image_0>\n<ov_genai_image_1>\n<ov_genai_image_2>"
+        "Assistant: ";
     ASSERT_EQ(result.req.inputImages.size(), 3u);
     EXPECT_EQ(result.req.promptText, expected);
 }
@@ -324,9 +334,9 @@ TEST_P(InputProcessingIntegrationTest, InterleavedTextAndImage_BothTextPartsInPr
 
     // Preserve the multipart order: [text("Before."), image, text("After.")].
     const std::string expected =
-        std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\nBefore.\n<ov_genai_image_0>\nAfter.<|im_end|>\n"
-        "<|im_start|>assistant\n";
+        std::string(LLM_DEFAULT_SYSTEM) +
+        "User: Before.\n<ov_genai_image_0>\nAfter."
+        "Assistant: ";
     ASSERT_EQ(result.req.inputImages.size(), 1u);
     EXPECT_EQ(result.req.promptText, expected);
 }
@@ -337,15 +347,16 @@ TEST_P(InputProcessingIntegrationTest, MultiTurnConversation_AllTurnsInPrompt) {
     ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
     ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
 
-    // First message is 'system' → no default system injection by the template.
+    // First message is 'system'.
     // ImageDecodingProcessor also flattens the Responses endpoint's assistant
     // text array ([{type:text,text:"..."}]) to a plain string before ChatTemplateProcessor.
     const std::string expected =
-        "<|im_start|>system\nYou are helpful.<|im_end|>\n"
-        "<|im_start|>user\nFirst question.<|im_end|>\n"
-        "<|im_start|>assistant\nThat's a great question!<|im_end|>\n"
-        "<|im_start|>user\n<ov_genai_image_0>\nDescribe it.<|im_end|>\n"
-        "<|im_start|>assistant\n";
+        std::string(LLM_DEFAULT_SYSTEM) +
+        "System: You are helpful.\n"
+        "User: First question."
+        "Assistant: That's a great question!\n"
+        "User: <ov_genai_image_0>\nDescribe it."
+        "Assistant: ";
     ASSERT_EQ(result.req.inputImages.size(), 1u);
     EXPECT_EQ(result.req.promptText, expected);
 }
@@ -357,9 +368,9 @@ TEST_P(InputProcessingIntegrationTest, GenerationConfigFields_SurviveFullPipelin
     ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
 
     const std::string expected =
-        std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\nHello.<|im_end|>\n"
-        "<|im_start|>assistant\n";
+        std::string(LLM_DEFAULT_SYSTEM) +
+        "User: Hello."
+        "Assistant: ";
     EXPECT_EQ(result.req.promptText, expected);
     EXPECT_EQ(result.handler->getMaxTokens(), 42);
     EXPECT_NEAR(result.req.generationConfig.temperature, 0.7f, 1e-5f);
@@ -372,9 +383,9 @@ TEST_P(InputProcessingIntegrationTest, TextArrayContent_FlattenedByNormalization
     // VLM path used without images (VLM is a superset of LM).
     // TextContentNormalizationProcessor joins the two parts with \n before the template runs.
     const std::string expected =
-        std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\nFirst part.\nSecond part.<|im_end|>\n"
-        "<|im_start|>assistant\n";
+        std::string(LLM_DEFAULT_SYSTEM) +
+        "User: First part.\nSecond part."
+        "Assistant: ";
 
     for (bool isVLM : {false, true}) {
         auto result = runPipeline(textArrayJson(), isVLM);
@@ -466,6 +477,52 @@ static std::string toBase64(const std::string& raw) {
     return absl::Base64Escape(raw);
 }
 
+TEST_P(InputProcessingIntegrationTest, VlmAudioInput_DecodesWithoutOmni) {
+    const std::string audioB64 = toBase64(buildWavBuffer(160));
+    const std::string json = (GetParam() == Endpoint::CHAT_COMPLETIONS)
+                                 ? R"({"model":"m","messages":[{"role":"user","content":[{"type":"text","text":"Describe this audio."},{"type":"input_audio","input_audio":{"data":")" +
+                                       audioB64 + R"(","format":"wav"}}]}]})"
+                                 : R"({"model":"m","input":[{"type":"message","role":"user","content":[{"type":"input_text","text":"Describe this audio."},{"type":"input_audio","input_audio":{"data":")" +
+                                       audioB64 + R"(","format":"wav"}}]}]})";
+
+    auto result = runPipeline(json, /*supportsVisualInputs=*/true, AudioInputConfig{true});
+    ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
+    ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
+    ASSERT_EQ(result.req.inputAudios.size(), 1u);
+    EXPECT_EQ(result.req.inputAudios[0].get_shape()[0], 160u);
+    EXPECT_NE(result.req.promptText.find("<ov_genai_audio_0>"), std::string::npos);
+}
+
+TEST_P(InputProcessingIntegrationTest, VlmAudioInput_ResamplesTo16Khz) {
+    const std::string audioB64 = toBase64(buildWavBuffer(240, /*sampleRate=*/24000));
+    const std::string json = (GetParam() == Endpoint::CHAT_COMPLETIONS)
+                                 ? R"({"model":"m","messages":[{"role":"user","content":[{"type":"input_audio","input_audio":{"data":")" +
+                                       audioB64 + R"(","format":"wav"}}]}]})"
+                                 : R"({"model":"m","input":[{"type":"message","role":"user","content":[{"type":"input_audio","input_audio":{"data":")" +
+                                       audioB64 + R"(","format":"wav"}}]}]})";
+
+    auto result = runPipeline(json, /*supportsVisualInputs=*/true, AudioInputConfig{true});
+    ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
+    ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
+    ASSERT_EQ(result.req.inputAudios.size(), 1u);
+    EXPECT_EQ(result.req.inputAudios[0].get_shape()[0], 160u);
+}
+
+TEST_P(InputProcessingIntegrationTest, OmniAudioInput_PreservesNativeSampleRate) {
+    const std::string audioB64 = toBase64(buildWavBuffer(240, /*sampleRate=*/24000));
+    const std::string json = (GetParam() == Endpoint::CHAT_COMPLETIONS)
+                                 ? R"({"model":"m","messages":[{"role":"user","content":[{"type":"input_audio","input_audio":{"data":")" +
+                                       audioB64 + R"(","format":"wav"}}]}]})"
+                                 : R"({"model":"m","input":[{"type":"message","role":"user","content":[{"type":"input_audio","input_audio":{"data":")" +
+                                       audioB64 + R"(","format":"wav"}}]}]})";
+
+    auto result = runPipeline(json, /*supportsVisualInputs=*/true, AudioInputConfig{});
+    ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
+    ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
+    ASSERT_EQ(result.req.inputAudios.size(), 1u);
+    EXPECT_EQ(result.req.inputAudios[0].get_shape()[0], 240u);
+}
+
 TEST_P(InputProcessingIntegrationTest, TextImageAudio_AllModalitiesDecoded) {
     // Build a request with text + image + audio in a single message.
     const std::string audioB64 = toBase64(buildWavBuffer(160));
@@ -487,7 +544,7 @@ TEST_P(InputProcessingIntegrationTest, TextImageAudio_AllModalitiesDecoded) {
                audioB64 + R"(","format":"wav"}}]}]})";
     }
 
-    auto result = runPipeline(json, /*isVLM=*/true, /*isOmni=*/true);
+    auto result = runPipeline(json, /*supportsVisualInputs=*/true, AudioInputConfig{});
 
     ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
     ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
@@ -526,7 +583,7 @@ TEST_P(InputProcessingIntegrationTest, MultiTurnAudio_PreservesPlacement) {
                R"(,{"type":"input_text","text":"After."}]}]})";
     }
 
-    auto result = runPipeline(json, /*isVLM=*/true, /*isOmni=*/true);
+    auto result = runPipeline(json, /*supportsVisualInputs=*/true, AudioInputConfig{});
     ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
     ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
     ASSERT_EQ(result.req.inputAudios.size(), 2u);
@@ -547,7 +604,7 @@ TEST_P(InputProcessingIntegrationTest, MultiTurnAudio_PreservesPlacement) {
 }
 
 TEST_P(InputProcessingIntegrationTest, AudioTagInUserTextRejected) {
-    auto result = runPipeline(textJson("<ov_genai_audio_0>"), /*isVLM=*/true, /*isOmni=*/true);
+    auto result = runPipeline(textJson("<ov_genai_audio_0>"), /*supportsVisualInputs=*/true, AudioInputConfig{});
     ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
     EXPECT_EQ(result.processStatus.code(), absl::StatusCode::kInvalidArgument);
 }
@@ -586,9 +643,9 @@ TEST_P(InputProcessingIntegrationTest, VideoFrames_DecodedAndTagInPrompt) {
     EXPECT_TRUE(result.req.inputImages.empty());
     // Preserve the multipart order: [text("Describe this video."), video tag].
     const std::string expected =
-        std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\nDescribe this video.\n<ov_genai_video_0><|im_end|>\n"
-        "<|im_start|>assistant\n";
+        std::string(LLM_DEFAULT_SYSTEM) +
+        "User: Describe this video.\n<ov_genai_video_0>"
+        "Assistant: ";
     EXPECT_EQ(result.req.promptText, expected);
     EXPECT_GT(result.req.inputIds.get_size(), 0u);
 }
@@ -661,9 +718,15 @@ TEST_P(InputProcessingIntegrationTest, InvalidBase64VideoFrame_VideoDecodingFail
 
 TEST(InputProcessingEquivalenceTest, ChatAndResponsesProduceSamePromptAndImages) {
     const std::string tokPath = getGenericFullPathForSrcTest(
-        "/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct");
+        "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov");
+    std::ifstream templateFile(tokPath + "/chat_template.jinja");
+    ASSERT_TRUE(templateFile.is_open()) << "Failed to open chat_template.jinja in " << tokPath;
+    const std::string chatTemplate{
+        std::istreambuf_iterator<char>(templateFile), std::istreambuf_iterator<char>()};
+
     // The tokenizer is shared between both endpoint runs in this one test.
     ov::genai::Tokenizer tokenizer(tokPath);
+    tokenizer.set_chat_template(chatTemplate);
     std::string initializationError;
     ASSERT_TRUE(ensurePythonRuntimeInitialized(initializationError)) << initializationError;
     PreparedChatTemplateRuntime preparedRuntimeTemplate;
@@ -701,14 +764,12 @@ TEST(InputProcessingEquivalenceTest, ChatAndResponsesProduceSamePromptAndImages)
 
         EXPECT_TRUE(handler->parseRequest(std::nullopt, 0, std::nullopt).ok());
 
-        GenerationConfigBuilder configBuilder(
-            ov::genai::GenerationConfig{}, "", false, DecodingMethod::STANDARD);
-        auto reqResult = handler->extractInputRequest(configBuilder);
+        auto reqResult = handler->extractInputRequest();
         EXPECT_TRUE(reqResult.ok());
         auto req = std::move(*reqResult);
 
         InputProcessorContext ctx;
-        ctx.config.isVLM = true;
+        ctx.config.supportsVisualInputs = true;
         ctx.tokenizer = tokenizer;
         ctx.templateProcessor = &preparedRuntimeTemplate;
 
@@ -721,9 +782,9 @@ TEST(InputProcessingEquivalenceTest, ChatAndResponsesProduceSamePromptAndImages)
     auto [responsesPrompt, responsesImages] = run(Endpoint::RESPONSES);
 
     const std::string expectedPrompt =
-        std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\nDescribe this.\n<ov_genai_image_0><|im_end|>\n"
-        "<|im_start|>assistant\n";
+        std::string(LLM_DEFAULT_SYSTEM) +
+        "User: Describe this.\n<ov_genai_image_0>"
+        "Assistant: ";
     EXPECT_EQ(chatPrompt, expectedPrompt);
     EXPECT_EQ(responsesPrompt, expectedPrompt);
     EXPECT_EQ(chatImages, 1u);

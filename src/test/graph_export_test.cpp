@@ -207,7 +207,7 @@ const std::string expectedDraftAndFuseGraphContents = R"(
             cache_size: 10,
             dynamic_split_fuse: false,
             # Speculative decoding configuration
-            draft_models_path: "-ovms-src-test-llm_testing-facebook-opt-125m",
+            draft_models_path: "-ovms-src-test-llm_testing-mzeglars-dummy-cyclic-gpt2-ov",
         }
     }
     input_stream_handler {
@@ -656,7 +656,7 @@ TEST_F(GraphCreationTest, positiveDraftAndFuse) {
     ovms::HFSettingsImpl hfSettings;
     hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     ovms::TextGenGraphSettingsImpl graphSettings;
-    graphSettings.draftModelDirName = "/ovms/src/test/llm_testing/facebook/opt-125m";
+    graphSettings.draftModelDirName = "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov";
     graphSettings.dynamicSplitFuse = "false";
 
     hfSettings.graphSettings = std::move(graphSettings);
@@ -686,7 +686,7 @@ const std::string expectedDraftEagle3GraphContents = R"(
             enable_prefix_caching: true,
             cache_size: 10,
             # Speculative decoding configuration
-            draft_models_path: "-ovms-src-test-llm_testing-facebook-opt-125m",
+            draft_models_path: "-ovms-src-test-llm_testing-mzeglars-dummy-cyclic-gpt2-ov",
             draft_eagle3_mode: true,
         }
     }
@@ -707,7 +707,7 @@ TEST_F(GraphCreationTest, positiveDraftEagle3Mode) {
     ovms::HFSettingsImpl hfSettings;
     hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
     ovms::TextGenGraphSettingsImpl graphSettings;
-    graphSettings.draftModelDirName = "/ovms/src/test/llm_testing/facebook/opt-125m";
+    graphSettings.draftModelDirName = "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov";
     graphSettings.draftEagle3Mode = true;
     hfSettings.graphSettings = std::move(graphSettings);
     assertCreatedGraphEquals(hfSettings, expectedDraftEagle3GraphContents);

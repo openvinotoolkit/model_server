@@ -41,7 +41,7 @@ class MetricConfig;
 class MetricRegistry;
 class Status;
 /*     * @brief This class represent inference models
-     */
+ */
 class Model : public ServableDefinition {
 private:
     /**
@@ -50,92 +50,92 @@ private:
     mutable std::shared_mutex modelVersionsMtx;
 
     /**
-      * @brief Update default version
-      *
-      * @param ignoredVersion Version to exclude from being selected as the default version
-      */
+     * @brief Update default version
+     *
+     * @param ignoredVersion Version to exclude from being selected as the default version
+     */
     void updateDefaultVersion(int ignoredVersion = 0);
 
 protected:
     /**
-         * @brief Model name
-         */
+     * @brief Model name
+     */
     std::string name;
 
     /**
-         * @brief Holds different versions of model
-         */
+     * @brief Holds different versions of model
+     */
     std::map<model_version_t, std::shared_ptr<ModelInstance>> modelVersions;
 
     /**
-         * @brief Model default version
-         *
-         */
+     * @brief Model default version
+     *
+     */
     model_version_t defaultVersion = 0;
 
     /**
-         * @brief Get default version
-         *
-         * @return default version
-         */
+     * @brief Get default version
+     *
+     * @return default version
+     */
     const model_version_t getDefaultVersion() const {
         SPDLOG_DEBUG("Getting default version for model: {}, {}", getName(), defaultVersion);
         return defaultVersion;
     }
 
     /**
-         * @brief Adds a new version of ModelInstance to the list of versions
-         *
-         * @param config model configuration
-         *
-         * @return status
-         */
+     * @brief Adds a new version of ModelInstance to the list of versions
+     *
+     * @param config model configuration
+     *
+     * @return status
+     */
     virtual Status addVersion(const ModelConfig& config, ov::Core& ieCore, MetricRegistry* registry = nullptr, const MetricConfig* metricConfig = nullptr, bool lazyLoad = false);
 
     /**
-         * @brief ModelInstances factory
-         *
-         * @return modelInstance
-         */
+     * @brief ModelInstances factory
+     *
+     * @return modelInstance
+     */
     virtual std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const model_version_t modelVersion, ov::Core& ieCore, MetricRegistry* registry, const MetricConfig* metricConfig);
 
     ModelChangeSubscription subscriptionManager;
 
     /**
-         * @brief Holds the custom loader interface Name
-         *
-         */
+     * @brief Holds the custom loader interface Name
+     *
+     */
     std::string customLoaderName;
 
 public:
     /**
-         * @brief Constructor
-         */
+     * @brief Constructor
+     */
     Model(const std::string& name) :
         name(name),
         defaultVersion(0),
         subscriptionManager(std::string("model: ") + name) {}
 
     /**
-         * @brief Destroy the Model object
-         * 
-         */
+     * @brief Destroy the Model object
+     *
+     */
     virtual ~Model() {}
 
     /**
-         * @brief Gets the model name
-         * 
-         * @return model name
-         */
+     * @brief Gets the model name
+     *
+     * @return model name
+     */
     const std::string& getName() const override {
         return name;
     }
 
     /**
-         * @brief Gets the default ModelInstance
-         *
-         * @return ModelInstance
-         */
+     * @brief Gets the default ModelInstance
+     *
+     * @return ModelInstance
+     */
     const std::shared_ptr<ModelInstance> getDefaultModelInstance() const;
 
     /**
@@ -153,72 +153,72 @@ public:
     const std::map<model_version_t, const ModelInstance&> getModelVersionsMapCopy() const;
 
     /**
-         * @brief Finds ModelInstance with specific version
-         *
-         * @param version of the model to search for
-         *
-         * @return specific model version
-         */
+     * @brief Finds ModelInstance with specific version
+     *
+     * @param version of the model to search for
+     *
+     * @return specific model version
+     */
     const std::shared_ptr<ModelInstance> getModelInstanceByVersion(const model_version_t& version) const;
 
     Status wakeUpIfSleeping();
 
     /**
-         * @brief Adds new versions of ModelInstance
-         *
-         * @param config model configuration
-         *
-         * @return status
-         */
+     * @brief Adds new versions of ModelInstance
+     *
+     * @param config model configuration
+     *
+     * @return status
+     */
     Status addVersions(std::shared_ptr<model_versions_t>& versions, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, ov::Core& ieCore, std::shared_ptr<model_versions_t>& versionsFailed, MetricRegistry* registry = nullptr, const MetricConfig* metricConfig = nullptr, bool lazyLoad = false);
 
     /**
-         * @brief Retires versions of Model
-         *
-         * @param versions versions to retire
-         *
-         * @return status
-         */
+     * @brief Retires versions of Model
+     *
+     * @param versions versions to retire
+     *
+     * @return status
+     */
     Status retireVersions(std::shared_ptr<model_versions_t>& versions);
 
     /**
-         * @brief Cleans up versions of Model
-         *
-         * @param versions versions to clean up
-         *
-         * @return status
-         */
+     * @brief Cleans up versions of Model
+     *
+     * @param versions versions to clean up
+     *
+     * @return status
+     */
     Status cleanupFailedLoad(std::shared_ptr<model_versions_t>& versions);
 
     /**
-         * @brief Retires all versions of Model
-         */
+     * @brief Retires all versions of Model
+     */
     void retireAllVersions();
 
     void putToSleepAllVersions();
 
     /**
-         * @brief Cleans up all versions of Model
-         */
+     * @brief Cleans up all versions of Model
+     */
     void cleanupAllVersions();
 
     /**
-         * @brief Reloads versions of Model
-         *
-         * @param config model configuration
-         *
-         * @return status
-         */
+     * @brief Reloads versions of Model
+     *
+     * @param config model configuration
+     *
+     * @return status
+     */
     Status reloadVersions(std::shared_ptr<model_versions_t>& versions, ovms::ModelConfig& config, std::shared_ptr<FileSystem>& fs, ov::Core& ieCore, std::shared_ptr<model_versions_t>& versionsFailed);
 
     void subscribe(NotifyReceiver& pd);
     void unsubscribe(NotifyReceiver& pd);
     /**
-         * @brief Set the custom loader name
-         *
-         * @param custom loader name
-         *
-         */
+     * @brief Set the custom loader name
+     *
+     * @param custom loader name
+     *
+     */
 
     bool isAnyVersionSubscribed() const;
 
@@ -227,9 +227,9 @@ public:
     }
 
     /**
-         * @brief Reset the custom loader name
-         *
-         */
+     * @brief Reset the custom loader name
+     *
+     */
     void resetCustomLoaderName() {
         customLoaderName.clear();
     }
