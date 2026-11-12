@@ -204,6 +204,28 @@ class MediaPipeCalculator:
 
         return inputs, outputs
 
+    def create_input_output_tensor_names(self, model):
+        # Note: Key name must be capitalized:
+        # https://github.com/google/mediapipe/blob/master/mediapipe/framework/tool/validate_name.cc#L35
+
+        model_inputs_keys = list(model.inputs.keys())
+        model_outputs_keys = list(model.outputs.keys())
+
+        input_tensors = ""
+        model_name = self.get_upper_model_name(model)
+        for i, model_input in enumerate(model_inputs_keys, start=0):
+            inp = f"{model_name}_INPUT_{i}"
+            input_tensor_names = f'tag_to_input_tensor_names {{key: "{inp}" value: "{model_input}"}}'
+            input_tensors += f"{input_tensor_names} \n"
+
+        output_tensors = ""
+        for i, model_output in enumerate(model_outputs_keys, start=0):
+            out = f"{model_name}_OUTPUT_{i}"
+            output_tensor_names = f'tag_to_output_tensor_names {{key: "{out}" value: "{model_output}"}}'
+            output_tensors += f"{output_tensor_names} \n"
+
+        return input_tensors, output_tensors
+
     @classmethod
     def get_full_content(cls, content, model, input_stream, output_stream):
         header = cls.create_proto_header(model, input_stream, output_stream)
@@ -257,28 +279,6 @@ class OvmsCMediaPipeCalculator(MediaPipeCalculator):
         )
         if self.src_filename is not None:
             self.src_file_path = os.path.join(self.src_dir, f"{self.src_filename}.{self.src_type}")
-
-    def create_input_output_tensor_names(self, model):
-        # Note: Key name must be capitalized:
-        # https://github.com/google/mediapipe/blob/master/mediapipe/framework/tool/validate_name.cc#L35
-
-        model_inputs_keys = list(model.inputs.keys())
-        model_outputs_keys = list(model.outputs.keys())
-
-        input_tensors = ""
-        model_name = self.get_upper_model_name(model)
-        for i, model_input in enumerate(model_inputs_keys, start=0):
-            inp = f"{model_name}_INPUT_{i}"
-            input_tensor_names = f'tag_to_input_tensor_names {{key: "{inp}" value: "{model_input}"}}'
-            input_tensors += f"{input_tensor_names} \n"
-
-        output_tensors = ""
-        for i, model_output in enumerate(model_outputs_keys, start=0):
-            out = f"{model_name}_OUTPUT_{i}"
-            output_tensor_names = f'tag_to_output_tensor_names {{key: "{out}" value: "{model_output}"}}'
-            output_tensors += f"{output_tensor_names} \n"
-
-        return input_tensors, output_tensors
 
 
 @dataclass
