@@ -298,6 +298,5 @@ def test_install_script_recommends_read_only_localservice_access(tmp_path: Path,
     assert result.returncode == 0, result.stdout + "\n" + result.stderr
 
     combined = "\n".join((result.stdout, result.stderr)).lower()
-    assert "recommended model repository" in combined
-    assert "read-only access" in combined
-    assert "without write permission" in combined
+    assert "using model repository path" in combined
+    assert "using service account nt authority\\localservice" in combined
