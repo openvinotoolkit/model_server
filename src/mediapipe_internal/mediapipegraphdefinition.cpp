@@ -590,8 +590,13 @@ Status MediapipeGraphDefinition::setStreamTypes() {
 }
 
 Status MediapipeGraphDefinition::reload(const ServableNameChecker& checker, const MediapipeGraphConfig& config) {
+    const bool clearMetadataOnFailure = true;
+    return doReload(checker, config, clearMetadataOnFailure);
+}
+
+Status MediapipeGraphDefinition::doReload(const ServableNameChecker& checker, const MediapipeGraphConfig& config, bool clearMetadataOnFailure) {
     // Serialize against unload()/wakeUp() on the watcher/request threads.
-    // Recursive: wakeUpIfSleeping() already holds this and calls reload().
+    // Recursive: wakeUpIfSleeping() already holds this and calls doReload().
     std::lock_guard<std::recursive_mutex> lock(lifecycleMtx);
     // block creating new unloadGuards
     this->status.handle(ReloadEvent());
@@ -604,7 +609,7 @@ Status MediapipeGraphDefinition::reload(const ServableNameChecker& checker, cons
     this->queue.reset();
     this->sidePacketMaps = std::make_shared<GraphSidePackets>();
     Status validationStatus = validate(checker);
-    if (!validationStatus.ok()) {
+    if (!validationStatus.ok() && clearMetadataOnFailure) {
         clearMetadata();
     }
     return validationStatus;
@@ -697,7 +702,10 @@ Status MediapipeGraphDefinition::wakeUpIfSleeping(const ServableNameChecker& che
     SPDLOG_LOGGER_INFO(modelmanager_logger,
         "Mediapipe graph {} is SLEEPING; triggering lazy wake-up reload", getName());
     auto start = std::chrono::steady_clock::now();
-    Status reloadStatus = reload(checker, this->mgconfig);
+    // A graph that fails to wake up goes back to sleep and stays listed, so it keeps reporting
+    // the metadata from its last successful load.
+    const bool clearMetadataOnFailure = false;
+    Status reloadStatus = doReload(checker, this->mgconfig, clearMetadataOnFailure);
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now() - start);
     if (reloadStatus.ok()) {

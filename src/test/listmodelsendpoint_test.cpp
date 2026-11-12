@@ -22,6 +22,7 @@
 #include <gtest/gtest.h>
 
 #include "src/http_rest_api_handler.hpp"
+#include "src/mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "src/server.hpp"
 #include "src/servable_management/modelmanager.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
@@ -280,6 +281,36 @@ TEST_F(ListModelsEndpointMetadataTest, RetrieveNonLLMHasNoMaxModelLen) {
     ASSERT_NO_FATAL_FAILURE(expectStandardFields(d));
     EXPECT_STREQ(d["id"].GetString(), "passthrough");
     EXPECT_FALSE(d.HasMember("max_model_len"));
+}
+
+TEST_F(ListModelsEndpointMetadataTest, SleepingLLMStillReportsMaxModelLen) {
+    ovms::Server& server = ovms::Server::instance();
+    auto& manager = dynamic_cast<const ovms::ServableManagerModule*>(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME))->getServableManager();
+    auto& factory = manager.getMediapipeFactory();
+    auto* definition = factory.findDefinitionByName("lm_cb_regular");
+    ASSERT_NE(definition, nullptr);
+    ASSERT_EQ(factory.putToSleepDefinition("lm_cb_regular"), ovms::StatusCode::OK);
+    ASSERT_EQ(definition->getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+
+    rapidjson::Document list;
+    get("/v1/models", list);
+    bool llmFound = false;
+    for (const auto& entry : list["data"].GetArray()) {
+        if (std::string(entry["id"].GetString()) == "lm_cb_regular") {
+            llmFound = true;
+            ASSERT_TRUE(entry.HasMember("max_model_len"));
+            EXPECT_GT(entry["max_model_len"].GetUint(), 0u);
+        }
+    }
+    EXPECT_TRUE(llmFound);
+    rapidjson::Document retrieved;
+    get("/v1/models/lm_cb_regular", retrieved);
+    ASSERT_TRUE(retrieved.HasMember("max_model_len"));
+    EXPECT_GT(retrieved["max_model_len"].GetUint(), 0u);
+
+    // Reporting metadata must not wake the graph up
+    EXPECT_EQ(definition->getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+    ASSERT_EQ(factory.wakeUpDefinition("lm_cb_regular", manager), ovms::StatusCode::OK);
 }
 
 class ListModelsEndpointIdleManagementTest : public TestWithTempDir {

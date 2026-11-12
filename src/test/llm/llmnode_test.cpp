@@ -7474,6 +7474,41 @@ TEST_F(LLMGraphMetadataTest, MetadataKeptWhileSleepingAndRestoredOnWakeUp) {
     EXPECT_EQ(maxModelLenOf(def.getMetadata()), std::optional<int64_t>(4096));
 }
 
+TEST_F(LLMGraphMetadataTest, FailedWakeUpKeepsMetadata) {
+    const std::string pbtxt = buildPbtxt(createModelCopy("model", 4096));
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, pbtxt, nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    auto before = def.getMetadata();
+    ASSERT_EQ(maxModelLenOf(before), std::optional<int64_t>(4096));
+    ASSERT_EQ(def.putToSleep(), StatusCode::OK);
+
+    // The graph goes back to sleep and stays listed, so it keeps the metadata of its last successful load
+    def.inputConfig = buildPbtxt((std::filesystem::path(directoryPath) / "nonexistent").generic_string());
+    std::atomic<bool> stop{false};
+    std::atomic<uint64_t> blankReads{0};
+    std::thread reader([&]() {
+        while (!stop) {
+            if (maxModelLenOf(def.getMetadata()) != std::optional<int64_t>(4096)) {
+                ++blankReads;
+            }
+            std::this_thread::yield();
+        }
+    });
+    const Status wakeUpStatus = def.wakeUpIfSleeping(manager);
+    stop = true;
+    reader.join();
+    EXPECT_FALSE(wakeUpStatus.ok());
+    EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+    EXPECT_EQ(blankReads, 0u);
+    EXPECT_EQ(def.getMetadata(), before);
+
+    def.inputConfig = pbtxt;
+    ASSERT_EQ(def.wakeUpIfSleeping(manager), StatusCode::OK);
+    EXPECT_EQ(maxModelLenOf(def.getMetadata()), std::optional<int64_t>(4096));
+}
+
 TEST_F(LLMGraphMetadataTest, ReadersSeeOldOrNewSnapshotDuringReloads) {
     const std::string pbtxt4096 = buildPbtxt(createModelCopy("model4096", 4096));
     const std::string pbtxt8192 = buildPbtxt(createModelCopy("model8192", 8192));
