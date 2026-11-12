@@ -7,6 +7,7 @@ This document gives information and steps to run and debug tests. It gives infor
 - [OpenVINO™ Model Server Developer Guide](#openvino-model-server-developer-guide)
 	- [Introduction](#introduction)
 	- [Custom metrics in C++ calculators](#custom-metrics-in-c-calculators)
+	- [LLM metric series lifecycle](#llm-metric-series-lifecycle)
 	- [Set up the Development Environment](#set-up-the-development-environment)
 	- [Prepare Environment to Use the Tests](#prepare-environment-to-use-the-tests)
 		- [Step 1: Compile source code](#step-1-compile-source-code)
@@ -161,6 +162,14 @@ or `increase()` to calculate counter changes over time.
   safely ignore valid late updates and cannot affect replacement series.
   Re-registering through an inactive scope fails. Reloads and server restarts
   reset metric series; Prometheus handles counter resets in `rate()`/`increase()`.
+
+## LLM metric series lifecycle
+
+The LLM metric reporter is scoped to a graph pipeline. OVMS deactivates the
+reporter and removes its series when the graph unloads or reloads. An in-flight
+request may still hold the old reporter, but updates through it are ignored and
+cannot affect the replacement pipeline's series. New pipelines start fresh
+series; use Prometheus `rate()` or `increase()` to account for counter resets.
 
 ## Set up the Development Environment
 

@@ -84,32 +84,25 @@ other metric names if you also need the default serving metrics. The preset
 includes only currently supported LLM metric families; it does not enable
 proposed or future LLM metrics automatically.
 
-Cache utilization is published by the executor after each generation step and
-before waiting for new requests. It is GenAI's last-step maximum cache utilization
-percentage across registered cache types, not total device-memory utilization.
-The denominator can change with dynamic cache allocation. Idle pipelines retain
-the last reported sample; idle does not imply an empty cache or a zero value.
-KV-cache size is reported in bytes from GenAI's pipeline metrics and can vary
-with dynamic cache allocation. It is not a measurement of total device memory.
+Cache utilization is GenAI's maximum utilization percentage across registered
+cache types, not total device-memory utilization. Its denominator can change
+with dynamic cache allocation. While a pipeline is waiting for new requests,
+cache gauges retain their latest values; waiting does not imply an empty cache
+or zero utilization. KV-cache size is reported in bytes and can also change
+with dynamic allocation; it is not total device memory.
 
-Prompt and generated token counters are incremented once per successfully
-completed request, for both unary and streaming responses, independently of the
-log level. Cancelled or failed requests are not counted. The values come from
-GenAI's input and generated token counts. For example, aggregate prompt and
-generated token rates over five minutes are:
+Prompt and generated-token counters increase once per successfully completed
+request, for both unary and streaming responses. Failed and cancelled requests
+are excluded. Since counters update at completion, their rates do not include
+tokens from requests still in progress. For example, aggregate prompt and
+generated-token rates over five minutes are:
 
 ```promql
 sum by (name, node) (rate(ovms_llm_prompt_tokens_total[5m]))
 sum by (name, node) (rate(ovms_llm_generated_tokens_total[5m]))
 ```
 
-These counters are updated at request completion, so their rates are not live
-measurements of tokens in still-running requests. Streaming requests are recorded
-once, when the final response is prepared, not once per chunk. Values are retained
-in the in-memory registry between scrapes; scraping does not query the GenAI
-pipeline. Series are deactivated and removed when the graph unloads or reloads,
-even if an in-flight request still retains the old pipeline. Replacement
-pipelines start fresh series; late updates from the old pipeline are ignored.
+Streaming requests are recorded once, at final response, not once per chunk.
 
 TTFT and TPOT are GenAI request timings, not HTTP end-to-end latency. For VLMs,
 TTFT excludes embedding preparation. The histograms export `_bucket`, `_sum`,
@@ -121,20 +114,9 @@ and `_count` series. Their finite bucket boundaries, in milliseconds, are
 an invalid timing sample is skipped without discarding the request's token counts
 or the other valid timing sample.
 
-Scheduled requests are published after each generation step, using GenAI's
-`scheduled_requests` value for the previous step. The gauge is set to zero before
-the executor waits for new requests. It is not the waiting queue size or the total
-number of requests accepted by the server.
-
-For example, the generated-token rate accounted for at successful request
-completion, averaged over five minutes, is:
-
-```promql
-sum by (name, node) (rate(ovms_llm_generated_tokens_total[5m]))
-```
-
-Because tokens are counted at completion, this rate is not a live measurement of
-tokens emitted by still-running requests.
+The scheduled-requests gauge reports GenAI's count from the latest generation
+step. It is zero while the pipeline is waiting for new requests. It is not the
+waiting queue size or the total number of requests accepted by the server.
 
 ## Enable metrics
 
