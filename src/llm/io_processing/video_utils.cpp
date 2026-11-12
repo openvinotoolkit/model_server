@@ -143,7 +143,8 @@ bool multiplicationExceeds(size_t left, size_t right, size_t limit) {
 
 class H264BitReader {
 public:
-    explicit H264BitReader(const std::vector<uint8_t>& bytes) : bytes(bytes) {
+    explicit H264BitReader(const std::vector<uint8_t>& bytes) :
+        bytes(bytes) {
     }
 
     bool readBit(uint32_t& value) {
@@ -315,13 +316,15 @@ absl::Status validateH264SpsDimensions(const uint8_t* nal, size_t nalSize, size_
     uint32_t cropTop = 0;
     uint32_t cropBottom = 0;
     if (frameCroppingFlag != 0 && (!reader.readUnsignedExpGolomb(cropLeft) || !reader.readUnsignedExpGolomb(cropRight) ||
-                                  !reader.readUnsignedExpGolomb(cropTop) || !reader.readUnsignedExpGolomb(cropBottom))) {
+                                      !reader.readUnsignedExpGolomb(cropTop) || !reader.readUnsignedExpGolomb(cropBottom))) {
         return absl::InvalidArgumentError("Invalid H.264 SPS");
     }
 
     const uint32_t chromaArrayType = separateColourPlaneFlag != 0 ? 0 : chromaFormatIdc;
     const size_t cropUnitX = chromaArrayType == 0 || chromaArrayType == 3 ? 1 : 2;
-    const size_t cropUnitY = (chromaArrayType == 0 ? 1 : chromaArrayType == 1 ? 2 : 1) * (2 - frameMbsOnlyFlag);
+    const size_t cropUnitY = (chromaArrayType == 0 ? 1 : chromaArrayType == 1 ? 2
+                                                                              : 1) *
+                             (2 - frameMbsOnlyFlag);
     const size_t codedWidth = (static_cast<size_t>(widthInMbsMinusOne) + 1) * 16;
     const size_t codedHeight = (static_cast<size_t>(heightInMapUnitsMinusOne) + 1) * 16 * (2 - frameMbsOnlyFlag);
     const size_t croppedWidth = (static_cast<size_t>(cropLeft) + cropRight) * cropUnitX;
