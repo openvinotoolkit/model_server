@@ -342,6 +342,7 @@ http_archive(
     build_file = "@//third_party:minimp4.BUILD",
     patches = [
         "@//third_party:minimp4_avcc_bounds.patch",
+        "@//third_party:minimp4_metadata_budget.patch",
         "@//third_party:minimp4_nal_length.patch",
     ],
     patch_args = ["-p1", "--binary"],
