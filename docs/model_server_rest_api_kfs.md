@@ -19,7 +19,7 @@ Get information about server liveness.
 
 **URL**
 
-```
+```text
 GET http://${REST_URL}:${REST_PORT}/v2/health/live
 ```
 
@@ -217,9 +217,9 @@ API and does not expose OVMS plugin configuration or allow configuration changes
 
 **URLs**
 
-```console
-GET http://${REST_URL}:${REST_PORT}/v2/models/${MODEL_NAME}/config
-GET http://${REST_URL}:${REST_PORT}/v2/models/${MODEL_NAME}/versions/${MODEL_VERSION}/config
+```text
+GET http://${REST_URL}:8000/v2/models/resnet/config
+GET http://${REST_URL}:8000/v2/models/resnet/versions/1/config
 ```
 
 When the version is omitted, the same version selection as the Model Metadata API
@@ -250,7 +250,7 @@ KServe `BYTES` represented as `TYPE_STRING`.
 
 **Usage Example**
 
-```console
+```text
 curl -f http://localhost:8000/v2/models/resnet/config
 ```
 

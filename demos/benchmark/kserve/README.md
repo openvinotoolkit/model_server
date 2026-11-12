@@ -45,7 +45,15 @@ an explicit `NUM_STREAMS` setting. See [performance tuning](../../../docs/perfor
 
 ### Installation
 
-Use Python 3.12. Run the client commands from this demo directory. On Linux:
+Use Python 3.12. Download the client files into the same writable directory as
+the model files:
+
+```console
+curl -fL https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/benchmark/kserve/benchmark.py -o benchmark.py
+curl -fL https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/benchmark/kserve/requirements.txt -o requirements.txt
+```
+
+On Linux:
 
 ```bash
 python3.12 -m venv .venv

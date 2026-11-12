@@ -16,18 +16,10 @@ mkdir -p "${HOME}/models"
 ```
 
 Each section starts one container named `ovms` on port 8000.
-Run one use case at a time. Before sending benchmark requests, wait for the model
-to appear in the model list; repeat this command while the model is loading:
-
-```bash
-curl -f http://localhost:8000/v1/models
-```
-
-After finishing a section, stop its server before starting the next one:
-
-```bash
-docker stop ovms
-```
+Run one use case at a time. After starting its server and before sending benchmark
+requests, wait for the model to appear in `/v1/models`. Repeat the readiness check
+in that section while the model is loading. Stop its server before starting the
+next section.
 
 All examples start with a small load. Increase `--limit` for longer measurements
 and `--max_concurrency` for more concurrent clients. `--request_rate inf` sends
@@ -57,7 +49,13 @@ docker run -d ${GPU_ARGS} --rm --name ovms \
 	--model_name vlm --model_repository_path /models
 ```
 
-Wait for `/v1/models` as described above. Download an image on the client:
+Wait for the model:
+
+```bash
+curl -f http://localhost:8000/v1/models
+```
+
+Download an image on the client:
 
 ```bash
 curl -fL https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/static/images/bee.jpeg -o image.jpeg
@@ -122,6 +120,12 @@ first request. Turns within a conversation run sequentially; `--max_concurrency`
 limits active conversations. VLM batch size is automatically 1. Failed turns stop
 their conversation and produce a nonzero exit code.
 
+Stop the server before starting the next use case:
+
+```bash
+docker stop ovms
+```
+
 ## Text Embeddings
 
 Serve a single pre-converted model directly, without `config.json` or a separate
@@ -136,7 +140,13 @@ docker run -d --rm --name ovms \
 	--model_repository_path /models
 ```
 
-After the readiness check, benchmark synthetic text without downloading a dataset:
+Wait for the model:
+
+```bash
+curl -f http://localhost:8000/v1/models
+```
+
+Benchmark synthetic text without downloading a dataset:
 
 ```bash
 python benchmark.py --backend ovms-embeddings --api_url http://localhost:8000/v1/embeddings --dataset synthetic --synthetic_length 64 --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
@@ -149,6 +159,12 @@ To use real text instead, load a dataset such as Cohere Wikipedia:
 
 ```bash
 python benchmark.py --backend ovms-embeddings --api_url http://localhost:8000/v1/embeddings --dataset Cohere/wikipedia-2023-11-embed-multilingual-v3 --hf-subset simple --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
+```
+
+Stop the server before starting the next use case:
+
+```bash
+docker stop ovms
 ```
 
 ## Documents Reranking
@@ -166,7 +182,13 @@ docker run -d --rm --name ovms \
 	--model_repository_path /models
 ```
 
-Wait for the model, then run:
+Wait for the model:
+
+```bash
+curl -f http://localhost:8000/v1/models
+```
+
+Then run:
 
 ```bash
 python benchmark.py --backend ovms_rerank --api_url http://localhost:8000/v1/rerank --dataset synthetic --synthetic_length 64 --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
@@ -179,6 +201,12 @@ To benchmark real documents instead of synthetic text:
 
 ```bash
 python benchmark.py --backend ovms_rerank --api_url http://localhost:8000/v1/rerank --dataset Cohere/wikipedia-2023-11-embed-multilingual-v3 --hf-subset simple --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
+```
+
+Stop the server before starting the next use case:
+
+```bash
+docker stop ovms
 ```
 
 ## Speech Generation
@@ -194,7 +222,13 @@ docker run -d --rm --name ovms \
 	--model_repository_path /models --target_device CPU
 ```
 
-After the readiness check, use one text per request and a Kokoro voice:
+Wait for the model:
+
+```bash
+curl -f http://localhost:8000/v1/models
+```
+
+Use one text per request and a Kokoro voice:
 
 ```bash
 python benchmark.py --backend text2speech --api_url http://localhost:8000/v1/audio/speech --dataset synthetic --synthetic_length 32 --batch_size 1 --limit 10 --max_concurrency 2 --request_rate inf --voice af_alloy
@@ -209,6 +243,12 @@ run:
 
 ```bash
 python benchmark.py --backend text2speech --api_url http://localhost:8000/v1/audio/speech --dataset edinburghcstr/ami --hf-subset ihm --batch_size 1 --limit 10 --max_concurrency 2 --request_rate inf --voice af_alloy
+```
+
+Stop the server before starting the next use case:
+
+```bash
+docker stop ovms
 ```
 
 ## Speech Transcription
@@ -234,7 +274,13 @@ virtual environment, after the common requirements installation:
 python -m pip install "datasets[audio]==3.6.0"
 ```
 
-Wait for the model, then use a small real-audio dataset:
+Wait for the model:
+
+```bash
+curl -f http://localhost:8000/v1/models
+```
+
+Then use a small real-audio dataset:
 
 ```bash
 python benchmark.py --backend speech2text --api_url http://localhost:8000/v1/audio/transcriptions --dataset hf-internal-testing/librispeech_asr_dummy --hf-subset clean --split validation --batch_size 1 --limit 10 --max_concurrency 2 --request_rate inf --tokenizer openai/whisper-large-v3-turbo
@@ -245,7 +291,13 @@ requests. A synthetic text dataset is not valid for transcription. The tokenizer
 override is needed because this backend locally counts tokens in the returned
 transcripts, while the served alias `whisper` is not a Hugging Face tokenizer
 identifier. The report includes success rate, transcript tokens/second, and
-successful-request mean/median latency. Stop the container when finished.
+successful-request mean/median latency.
+
+Stop the container when finished:
+
+```bash
+docker stop ovms
+```
 
 ## Timing and Usage
 

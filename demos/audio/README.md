@@ -14,6 +14,12 @@ Check supported [Speech Recognition Models](https://openvinotoolkit.github.io/op
 
 **Client**: curl or Python for using OpenAI client package
 
+Install the client dependency before running the Python examples:
+
+```bash
+pip install openai
+```
+
 ## Speech generation
 Kokoro is the primary example in this demo, but SpeechT5 remains supported for existing deployments.
 
