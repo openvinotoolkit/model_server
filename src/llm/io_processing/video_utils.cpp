@@ -362,6 +362,12 @@ absl::Status validateH264SpsDimensions(const std::vector<uint8_t>& annexB, size_
 
 }  // namespace
 
+bool videoFrameAllocationFitsBudget(size_t framePixels, size_t frameCount,
+    size_t totalAllocatedPixels, size_t maxAllowedPixels) {
+    return totalAllocatedPixels <= maxAllowedPixels &&
+           !multiplicationExceeds(framePixels, frameCount, maxAllowedPixels - totalAllocatedPixels);
+}
+
 absl::StatusOr<size_t> calculateSelectedVideoFrameCount(uint64_t durationUnits,
     uint32_t timescale, uint32_t sampleCount, std::optional<float> requestedFps, uint32_t maxDecodedFrames) {
     if (timescale == 0) {
@@ -507,7 +513,8 @@ absl::Status storeDecodedFrameInTensor(uint8_t* const planes[3], const SBufferIn
     }
     const size_t framePixels = static_cast<size_t>(height) * static_cast<size_t>(width);
     const ov::Shape decodedFrameShape{1, static_cast<size_t>(height), static_cast<size_t>(width), 3};
-    if (framePixels > maxAllowedVideoPixels - totalAllocatedPixels) {
+    if (!videoFrameAllocationFitsBudget(framePixels, selectedFrameLimit - selectedFrames,
+            totalAllocatedPixels, maxAllowedVideoPixels)) {
         return absl::InvalidArgumentError("Video exceeds maximum decoded size");
     }
     if (frameShape.empty()) {

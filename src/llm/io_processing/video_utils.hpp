@@ -36,6 +36,10 @@ constexpr int64_t MAX_VIDEO_FRAMES = 1024;
 absl::StatusOr<size_t> calculateSelectedVideoFrameCount(uint64_t durationUnits,
     uint32_t timescale, uint32_t sampleCount, std::optional<float> requestedFps, uint32_t maxDecodedFrames);
 
+// Returns whether reserving frameCount decoded frames fits the remaining pixel budget.
+bool videoFrameAllocationFitsBudget(size_t framePixels, size_t frameCount,
+    size_t totalAllocatedPixels, size_t maxAllowedPixels);
+
 class VideoFrameSelector {
 public:
     VideoFrameSelector(std::optional<long double> frameInterval, size_t maxSelectedFrames);

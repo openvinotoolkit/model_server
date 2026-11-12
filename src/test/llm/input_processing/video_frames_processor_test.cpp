@@ -407,6 +407,15 @@ TEST(VideoFrameSelectionTest, KeepsAvailableFramesWhenFpsIsOmitted) {
     EXPECT_EQ(selectedIndexes, (std::vector<size_t>{0, 1, 2}));
 }
 
+TEST(VideoFrameAllocationTest, RejectsStackedFramesBeyondBudget) {
+    constexpr size_t framePixels = 3840 * 2160;
+    constexpr size_t selectedFrameCount = 100;
+    constexpr size_t maximumPixels = 124416000;
+
+    EXPECT_FALSE(videoFrameAllocationFitsBudget(framePixels, selectedFrameCount, 0, maximumPixels));
+    EXPECT_TRUE(videoFrameAllocationFitsBudget(framePixels, 1, 0, maximumPixels));
+}
+
 TEST(VideoFrameSelectionTest, SelectsTimestampSpacedFrames) {
     constexpr long double halfSecondInTimestampUnits = 500.0L;
     constexpr size_t maximumSelectedFrames = 10;
