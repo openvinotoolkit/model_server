@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-input_stream: "in"
-output_stream: "out"
+input_stream: "TENSOR:in"
+output_stream: "TENSOR:out"
 node {
   calculator: "MPTensorToOVTensorCalculator"
   input_stream: "TENSOR:in"
@@ -46,5 +46,4 @@ node {
   calculator: "OVTensorToMPTensorCalculator"
   input_stream: "OVTENSOR:ov_output"
   output_stream: "TENSOR:out"
-  }
 }
