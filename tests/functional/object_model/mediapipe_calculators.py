@@ -370,15 +370,15 @@ class OpenVINOSessionCalculator(MediaPipeCalculator):
     def create_proto_content(self, model, input_stream=None, output_stream=None, create_header=True):
         model = self.model if self.model is not None else model
         session = MediaPipeCalculator.get_valid_model_name(model) if self.session is None else self.session
+        model_path = os.path.join(model.base_path, str(model.version))
         if model.model_type.value == "IR":
             model_filename = model.xml_name if model.xml_name is not None else model.name
-            model_extension = "xml"
+            model_path = os.path.join(model_path, f"{model_filename}.xml")
         elif model.model_type.value == "ONNX":
             model_filename = model.onnx_name if model.onnx_name is not None else model.name
-            model_extension = "onnx"
-        else:
+            model_path = os.path.join(model_path, f"{model_filename}.onnx")
+        elif model.model_type.value != "TFSM":
             raise NotImplementedError(model.model_type)
-        model_path = os.path.join(model.base_path, str(model.version), f"{model_filename}.{model_extension}")
         model_path = model_path.replace("\\", "\\\\").replace('"', '\\"')
         device = model.target_device or "CPU"
         session_options = [f'model_path: "{model_path}"', f"device: {json.dumps(str(device))}"]

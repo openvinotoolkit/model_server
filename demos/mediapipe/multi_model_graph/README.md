@@ -52,31 +52,51 @@ node {
 }
 ```
 
+## Prerequisites
+
+**Model preparation**: Python 3.10 or higher with pip
+
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [baremetal deployment guide](../../../docs/deploying_server_baremetal.md)
 
 ## Prepare models
 
-  input_stream: "DUMMY_IN:in1"
-  output_stream: "DUMMY_OUT:dummy_output"
+Clone the repository and enter the multi-model graph directory:
+```console
 git clone https://github.com/openvinotoolkit/model_server.git
 cd model_server/demos/mediapipe/multi_model_graph
-      tag_to_input_tensor_names { key: "DUMMY_IN" value: "b" }
-      tag_to_output_tensor_names { key: "DUMMY_OUT" value: "a" }
+```
+
 ## Download models
 ### On Linux
 ```bash
+cp -r ../../../src/test/add_two_inputs_model ./dummyAdd/
+cp -r ../../../src/test/dummy ./dummyAdd/
+```
+
+### On Windows
+```bat
+xcopy /s /e /q /y ..\..\..\src\test\add_two_inputs_model .\dummyAdd\add_two_inputs_model\
+xcopy /s /e /q /y ..\..\..\src\test\dummy .\dummyAdd\dummy\
+```
+
 ## Server Deployment
 :::{dropdown} **Deploying with Docker**
 Prepare virtualenv according to [kserve samples readme](https://github.com/openvinotoolkit/model_server/blob/main/client/python/kserve-api/samples/README.md)
-  input_stream: "ADD_INPUT1:dummy_output"
-  input_stream: "ADD_INPUT2:in2"
-  output_stream: "SUM:out"
+```bash
+docker run -d -v $PWD:/mediapipe -p 9000:9000 openvino/model_server:latest --config_path /mediapipe/config.json --port 9000
 ```
 :::
-      tag_to_input_tensor_names { key: "ADD_INPUT1" value: "input1" }
-      tag_to_input_tensor_names { key: "ADD_INPUT2" value: "input2" }
-      tag_to_output_tensor_names { key: "SUM" value: "sum" }
+:::{dropdown} **Deploying on Bare Metal**
+Assuming you have unpacked model server package, make sure to:
+
 - **On Windows**: run `setupvars` script
 - **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
+
+as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+```bat
+ovms --config_path config.json --port 9000
+```
+:::
 
 ## Run the client:
 ```console
