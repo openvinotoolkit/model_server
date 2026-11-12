@@ -141,6 +141,225 @@ bool multiplicationExceeds(size_t left, size_t right, size_t limit) {
     return left != 0 && right > limit / left;
 }
 
+class H264BitReader {
+public:
+    explicit H264BitReader(const std::vector<uint8_t>& bytes) : bytes(bytes) {
+    }
+
+    bool readBit(uint32_t& value) {
+        if (bitOffset >= bytes.size() * 8) {
+            return false;
+        }
+        value = (bytes[bitOffset / 8] >> (7 - bitOffset % 8)) & 1;
+        bitOffset++;
+        return true;
+    }
+
+    bool readBits(uint32_t count, uint32_t& value) {
+        if (count > 32 || count > bytes.size() * 8 - bitOffset) {
+            return false;
+        }
+        value = 0;
+        for (uint32_t bitIndex = 0; bitIndex < count; ++bitIndex) {
+            uint32_t bit = 0;
+            if (!readBit(bit)) {
+                return false;
+            }
+            value = (value << 1) | bit;
+        }
+        return true;
+    }
+
+    bool readUnsignedExpGolomb(uint32_t& value) {
+        uint32_t leadingZeroBits = 0;
+        uint32_t bit = 0;
+        while (true) {
+            if (!readBit(bit) || leadingZeroBits == 32) {
+                return false;
+            }
+            if (bit != 0) {
+                break;
+            }
+            leadingZeroBits++;
+        }
+        uint32_t suffix = 0;
+        if (!readBits(leadingZeroBits, suffix)) {
+            return false;
+        }
+        value = ((uint32_t{1} << leadingZeroBits) - 1) + suffix;
+        return true;
+    }
+
+    bool readSignedExpGolomb(int32_t& value) {
+        uint32_t unsignedValue = 0;
+        if (!readUnsignedExpGolomb(unsignedValue) || unsignedValue == std::numeric_limits<uint32_t>::max()) {
+            return false;
+        }
+        value = unsignedValue % 2 == 0 ? -static_cast<int32_t>(unsignedValue / 2) : static_cast<int32_t>((unsignedValue + 1) / 2);
+        return true;
+    }
+
+private:
+    const std::vector<uint8_t>& bytes;
+    size_t bitOffset = 0;
+};
+
+bool skipH264ScalingList(H264BitReader& reader, uint32_t size) {
+    int32_t lastScale = 8;
+    int32_t nextScale = 8;
+    for (uint32_t index = 0; index < size; ++index) {
+        if (nextScale != 0) {
+            int32_t deltaScale = 0;
+            if (!reader.readSignedExpGolomb(deltaScale)) {
+                return false;
+            }
+            nextScale = (lastScale + deltaScale + 256) % 256;
+        }
+        lastScale = nextScale == 0 ? lastScale : nextScale;
+    }
+    return true;
+}
+
+bool isHighProfile(uint32_t profileIdc) {
+    return profileIdc == 44 || profileIdc == 83 || profileIdc == 86 || profileIdc == 100 || profileIdc == 110 ||
+           profileIdc == 118 || profileIdc == 122 || profileIdc == 128 || profileIdc == 134 || profileIdc == 135 ||
+           profileIdc == 138 || profileIdc == 139 || profileIdc == 244;
+}
+
+absl::Status validateH264SpsDimensions(const uint8_t* nal, size_t nalSize, size_t maxAllowedPixels) {
+    if (nalSize < 2 || (nal[0] & 0x1f) != 7) {
+        return absl::InvalidArgumentError("Invalid H.264 SPS");
+    }
+
+    std::vector<uint8_t> rbsp;
+    rbsp.reserve(nalSize - 1);
+    uint32_t consecutiveZeroBytes = 0;
+    for (size_t index = 1; index < nalSize; ++index) {
+        const uint8_t byte = nal[index];
+        if (consecutiveZeroBytes >= 2 && byte == 3) {
+            consecutiveZeroBytes = 0;
+            continue;
+        }
+        rbsp.push_back(byte);
+        consecutiveZeroBytes = byte == 0 ? consecutiveZeroBytes + 1 : 0;
+    }
+
+    H264BitReader reader(rbsp);
+    uint32_t profileIdc = 0;
+    uint32_t ignored = 0;
+    uint32_t chromaFormatIdc = 1;
+    uint32_t separateColourPlaneFlag = 0;
+    if (!reader.readBits(8, profileIdc) || !reader.readBits(8, ignored) || !reader.readBits(8, ignored) ||
+        !reader.readUnsignedExpGolomb(ignored)) {
+        return absl::InvalidArgumentError("Invalid H.264 SPS");
+    }
+    if (isHighProfile(profileIdc)) {
+        if (!reader.readUnsignedExpGolomb(chromaFormatIdc) || chromaFormatIdc > 3) {
+            return absl::InvalidArgumentError("Invalid H.264 SPS");
+        }
+        if (chromaFormatIdc == 3 && !reader.readBit(separateColourPlaneFlag)) {
+            return absl::InvalidArgumentError("Invalid H.264 SPS");
+        }
+        uint32_t scalingMatrixPresent = 0;
+        if (!reader.readUnsignedExpGolomb(ignored) || !reader.readUnsignedExpGolomb(ignored) || !reader.readBit(ignored) ||
+            !reader.readBit(scalingMatrixPresent)) {
+            return absl::InvalidArgumentError("Invalid H.264 SPS");
+        }
+        if (scalingMatrixPresent != 0) {
+            const uint32_t scalingListCount = chromaFormatIdc == 3 ? 12 : 8;
+            for (uint32_t index = 0; index < scalingListCount; ++index) {
+                uint32_t scalingListPresent = 0;
+                if (!reader.readBit(scalingListPresent) || (scalingListPresent != 0 && !skipH264ScalingList(reader, index < 6 ? 16 : 64))) {
+                    return absl::InvalidArgumentError("Invalid H.264 SPS");
+                }
+            }
+        }
+    }
+
+    uint32_t pictureOrderCountType = 0;
+    if (!reader.readUnsignedExpGolomb(ignored) || !reader.readUnsignedExpGolomb(pictureOrderCountType)) {
+        return absl::InvalidArgumentError("Invalid H.264 SPS");
+    }
+    if (pictureOrderCountType == 0) {
+        if (!reader.readUnsignedExpGolomb(ignored)) {
+            return absl::InvalidArgumentError("Invalid H.264 SPS");
+        }
+    } else if (pictureOrderCountType == 1) {
+        uint32_t cycleLength = 0;
+        int32_t signedValue = 0;
+        if (!reader.readBit(ignored) || !reader.readSignedExpGolomb(signedValue) || !reader.readSignedExpGolomb(signedValue) ||
+            !reader.readUnsignedExpGolomb(cycleLength)) {
+            return absl::InvalidArgumentError("Invalid H.264 SPS");
+        }
+        for (uint32_t index = 0; index < cycleLength; ++index) {
+            if (!reader.readSignedExpGolomb(signedValue)) {
+                return absl::InvalidArgumentError("Invalid H.264 SPS");
+            }
+        }
+    } else if (pictureOrderCountType > 2) {
+        return absl::InvalidArgumentError("Invalid H.264 SPS");
+    }
+
+    uint32_t widthInMbsMinusOne = 0;
+    uint32_t heightInMapUnitsMinusOne = 0;
+    uint32_t frameMbsOnlyFlag = 0;
+    uint32_t frameCroppingFlag = 0;
+    if (!reader.readUnsignedExpGolomb(ignored) || !reader.readBit(ignored) || !reader.readUnsignedExpGolomb(widthInMbsMinusOne) ||
+        !reader.readUnsignedExpGolomb(heightInMapUnitsMinusOne) || !reader.readBit(frameMbsOnlyFlag) ||
+        (frameMbsOnlyFlag == 0 && !reader.readBit(ignored)) || !reader.readBit(ignored) || !reader.readBit(frameCroppingFlag)) {
+        return absl::InvalidArgumentError("Invalid H.264 SPS");
+    }
+
+    uint32_t cropLeft = 0;
+    uint32_t cropRight = 0;
+    uint32_t cropTop = 0;
+    uint32_t cropBottom = 0;
+    if (frameCroppingFlag != 0 && (!reader.readUnsignedExpGolomb(cropLeft) || !reader.readUnsignedExpGolomb(cropRight) ||
+                                  !reader.readUnsignedExpGolomb(cropTop) || !reader.readUnsignedExpGolomb(cropBottom))) {
+        return absl::InvalidArgumentError("Invalid H.264 SPS");
+    }
+
+    const uint32_t chromaArrayType = separateColourPlaneFlag != 0 ? 0 : chromaFormatIdc;
+    const size_t cropUnitX = chromaArrayType == 0 || chromaArrayType == 3 ? 1 : 2;
+    const size_t cropUnitY = (chromaArrayType == 0 ? 1 : chromaArrayType == 1 ? 2 : 1) * (2 - frameMbsOnlyFlag);
+    const size_t codedWidth = (static_cast<size_t>(widthInMbsMinusOne) + 1) * 16;
+    const size_t codedHeight = (static_cast<size_t>(heightInMapUnitsMinusOne) + 1) * 16 * (2 - frameMbsOnlyFlag);
+    const size_t croppedWidth = (static_cast<size_t>(cropLeft) + cropRight) * cropUnitX;
+    const size_t croppedHeight = (static_cast<size_t>(cropTop) + cropBottom) * cropUnitY;
+    if (croppedWidth >= codedWidth || croppedHeight >= codedHeight) {
+        return absl::InvalidArgumentError("Invalid H.264 SPS");
+    }
+    const size_t width = codedWidth - croppedWidth;
+    const size_t height = codedHeight - croppedHeight;
+    if (multiplicationExceeds(width, height, maxAllowedPixels)) {
+        return absl::InvalidArgumentError("Video exceeds maximum decoded size");
+    }
+    return absl::OkStatus();
+}
+
+absl::Status validateH264SpsDimensions(const std::vector<uint8_t>& annexB, size_t maxAllowedPixels) {
+    size_t start = 0;
+    while (start < annexB.size()) {
+        if (annexB.size() - start < 5 || std::memcmp(annexB.data() + start, "\0\0\0\1", 4) != 0) {
+            return absl::InvalidArgumentError("Invalid H.264 sample");
+        }
+        const size_t nalStart = start + 4;
+        size_t nextStart = nalStart;
+        while (nextStart + 4 <= annexB.size() && std::memcmp(annexB.data() + nextStart, "\0\0\0\1", 4) != 0) {
+            ++nextStart;
+        }
+        const size_t nalEnd = nextStart + 4 <= annexB.size() ? nextStart : annexB.size();
+        if ((annexB[nalStart] & 0x1f) == 7) {
+            auto status = validateH264SpsDimensions(annexB.data() + nalStart, nalEnd - nalStart, maxAllowedPixels);
+            if (!status.ok()) {
+                return status;
+            }
+        }
+        start = nalEnd == annexB.size() ? annexB.size() : nextStart;
+    }
+    return absl::OkStatus();
+}
+
 }  // namespace
 
 absl::StatusOr<size_t> calculateSelectedVideoFrameCount(uint64_t durationUnits,
@@ -364,6 +583,10 @@ absl::StatusOr<ov::Tensor> decodeH264Video(MP4D_demux_t& mp4, unsigned videoTrac
         if (readVideoBytes(offset, sample.data(), sample.size(), &file) != 0 ||
             !appendLengthPrefixedSample(annexB, sample.data(), sample.size(), videoTrack.nal_length_size)) {
             decodeStatus = absl::InvalidArgumentError("MP4 source has an invalid H.264 sample");
+            break;
+        }
+        decodeStatus = validateH264SpsDimensions(annexB, samplingPlan.maxAllowedPixels);
+        if (!decodeStatus.ok()) {
             break;
         }
 
