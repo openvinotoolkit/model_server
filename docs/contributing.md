@@ -6,6 +6,7 @@ If you plan to add a new feature and you would like to ask for feedback beforeha
 Whenever you want to solve a problem or a bug with big contribution impact please describe the problem and solution in the [issues](https://github.com/openvinotoolkit/model_server/issues) section so that you can get initial feedback before you start the contribution.
 
 We encourage to make smaller contributions in multiple parts with clear goals and concise description rather than huge implementations created with AI tools that would be hard to understand or review.
+Practice shows that small PRs have significantly bigger chances of being merged. If you plan bigger contribution, decompose it into smaller PRs.
 
 Once the PR is created CI automation is to be approved by repository maintainers. It is recommended to trigger the build and tests locally in advance.
 The coresponding pipeline steps are described in the [Jenkins Pipeline Checks](#jenkins-ci-checks) section.
@@ -42,7 +43,7 @@ on the files changed.
 
 Write applicable checks in the [pull request template](../.github/pull_request_template.md).
 
-It is recommended to run the specific commands before submitting the PR on github.
+It's recommended to run these checks in your dev environment before submitting PR on github.
 
 ## AI-Assisted Contributions
 
