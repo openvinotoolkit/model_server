@@ -516,6 +516,35 @@ TEST_F(ChatTemplateEndToEndJinjaTest, Mistral7B_ToolCallWithStringArgs) {
 }
 
 // =============================================================================
+// Mistral3 and Devstral-2-small have similar chat templates, the only difference is the system prompt. 
+// =============================================================================
+TEST_F(ChatTemplateEndToEndJinjaTest, Mistral3_ToolCallWithStringArgs) {
+    chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_mistral3.jinja");
+    ASSERT_FALSE(chatTemplate.empty());
+
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"user","content":"What's the weather in Paris?"})"));
+    chatHistory.push_back(ov::genai::JsonContainer::from_json_string(
+        R"({"role":"assistant","content":"","tool_calls":[{"id":"abc123def","type":"function","function":{"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]})"));
+
+    run();
+
+    ASSERT_FALSE(exceptionThrownDuringApplication);
+
+    ASSERT_TRUE(analysisResult.detectedToolParser.has_value());
+    EXPECT_EQ(analysisResult.detectedToolParser.value(), "devstral");
+    ASSERT_FALSE(analysisResult.detectedReasoningParser.has_value());
+
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
+
+    std::string expectedOutput = R"([/SYSTEM_PROMPT][INST]What's the weather in Paris?[/INST][TOOL_CALLS]get_weather[ARGS]{"location": "Paris", "unit": "celsius"}<|endoftext|>)";
+    ASSERT_GE(appliedOutput.size(), expectedOutput.size());
+    EXPECT_EQ(appliedOutput.substr(appliedOutput.size() - expectedOutput.size()), expectedOutput);
+}
+
+// =============================================================================
 // LFM2 does not render tool calls in current chat template, therefore the output is the same as if there were no tool calls.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndJinjaTest, LFM2_ToolCallWithStringArgs) {
