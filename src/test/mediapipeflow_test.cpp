@@ -1440,7 +1440,7 @@ TEST_F(MediapipeStreamFlowAddTest, InferOnReloadedGraph) {
     ASSERT_EQ(status, StatusCode::OK) << status.string();
     reloader.join();
 
-    // Opening new stream, expect new graph to be available but errors in processing
+    // The new graph is available; input validation errors are returned in the stream response.
     std::promise<void> canDisconnect;
     MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> newStream;
     EXPECT_CALL(newStream, Read(::testing::_))
@@ -1463,7 +1463,7 @@ TEST_F(MediapipeStreamFlowAddTest, InferOnReloadedGraph) {
             return true;
         });
     status = impl.ModelStreamInferImpl(nullptr, &newStream);
-    ASSERT_EQ(status, StatusCode::MEDIAPIPE_PRECONDITION_FAILED) << status.string();
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
 }
 
 TEST_F(MediapipeStreamFlowAddTest, NegativeShouldNotReachInferDueToRetiredGraph) {

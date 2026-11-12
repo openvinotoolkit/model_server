@@ -7,7 +7,7 @@ node {
   node_options: {
     [type.googleapis.com / mediapipe.OpenVINOSessionCalculatorOptions]: {
       model_path: "/ovms/src/test/add_two_inputs_model/1/add.xml"
-      shape: "auto"
+      shape: "{\"input1\":\"(1)\",\"input2\":\"(1)\"}"
     }
   }
 }
