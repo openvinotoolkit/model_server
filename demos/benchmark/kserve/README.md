@@ -103,7 +103,7 @@ docker run --rm -d --name ovms-benchmark-python \
 	--user "$(id -u):$(id -g)" -v "${PWD}:/models:ro" \
 	-p 9000:9000 -p 8000:8000 \
 	openvino/model_server:latest \
-	--model_name resnet --model_path /models/resnet50.xml \
+	--model_name resnet --model_path /models/resnet50.xml --batch_size 1 \
 	--mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" \
 	--layout "NHWC:NCHW" --port 9000 --rest_port 8000 \
 	--plugin_config '{"PERFORMANCE_HINT":"LATENCY"}'
@@ -112,7 +112,7 @@ docker run --rm -d --name ovms-benchmark-python \
 On Windows, start OVMS in a separate command prompt:
 
 ```bat
-ovms.exe --model_name resnet --model_path resnet50.xml --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --port 9000 --rest_port 8000 --plugin_config "{\"PERFORMANCE_HINT\":\"LATENCY\"}"
+ovms.exe --model_name resnet --model_path resnet50.xml --batch_size 1 --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --port 9000 --rest_port 8000 --plugin_config "{\"PERFORMANCE_HINT\":\"LATENCY\"}"
 ```
 
 Check readiness before running the client commands from this demo directory. Repeat
@@ -200,7 +200,7 @@ docker run --rm -d --name ovms-benchmark-python \
 	--user "$(id -u):$(id -g)" -v "${PWD}:/models:ro" \
 	-p 9000:9000 -p 8000:8000 \
 	openvino/model_server:latest \
-	--model_name resnet --model_path /models/resnet50.xml \
+	--model_name resnet --model_path /models/resnet50.xml --batch_size 1 \
 	--mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" \
 	--layout "NHWC:NCHW" --port 9000 --rest_port 8000 \
 	--plugin_config '{"PERFORMANCE_HINT":"THROUGHPUT"}'
@@ -209,7 +209,7 @@ docker run --rm -d --name ovms-benchmark-python \
 On Windows, press Ctrl+C in the latency server prompt, then run:
 
 ```bat
-ovms.exe --model_name resnet --model_path resnet50.xml --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --port 9000 --rest_port 8000 --plugin_config "{\"PERFORMANCE_HINT\":\"THROUGHPUT\"}"
+ovms.exe --model_name resnet --model_path resnet50.xml --batch_size 1 --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --port 9000 --rest_port 8000 --plugin_config "{\"PERFORMANCE_HINT\":\"THROUGHPUT\"}"
 ```
 
 Repeat the readiness check before benchmarking:
