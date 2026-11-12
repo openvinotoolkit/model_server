@@ -42,8 +42,8 @@ public:
         metric = this->family->addMetric(labels, bucketBoundaries);
     }
 
-    template <typename Update>
-    void update(Update&& updateMetric) {
+    template <typename UpdateFn>
+    void update(UpdateFn&& updateMetric) {
         std::lock_guard<std::mutex> lock(mutex);
         if (metric) {
             updateMetric(*metric);

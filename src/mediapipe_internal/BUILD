@@ -55,6 +55,7 @@ ovms_cc_library(
     hdrs = ["ovms_calculator_base.hpp"],
     deps = [
         ":graph_side_packets",
+        "//src:libovmslogging",
         "//src/metrics:libovmsmetrics",
         "@mediapipe//mediapipe/framework:calculator_framework",
     ],

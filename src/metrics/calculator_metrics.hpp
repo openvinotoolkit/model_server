@@ -19,6 +19,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace ovms {
@@ -44,7 +45,7 @@ public:
     CalculatorCounter(const CalculatorCounter&) = delete;
     CalculatorCounter& operator=(const CalculatorCounter&) = delete;
     ~CalculatorCounter();
-    /// Add a finite, non-negative value. Invalid values throw std::invalid_argument.
+    /// Add a finite, non-negative value. Invalid values are logged and ignored.
     void increment(double value = 1.0);
 };
 
@@ -60,11 +61,10 @@ public:
     CalculatorGauge(const CalculatorGauge&) = delete;
     CalculatorGauge& operator=(const CalculatorGauge&) = delete;
     ~CalculatorGauge();
-    /// Set a finite value. Invalid values throw std::invalid_argument.
+    /// Set a finite value. Invalid values are logged and ignored.
     void set(double value);
-    /// Add or subtract a finite, non-negative amount.
-    void increment(double value = 1.0);
-    void decrement(double value = 1.0);
+    /// Add a finite signed value, including zero. Invalid values are logged and ignored.
+    void add(double value);
 };
 
 /// A thread-safe custom histogram handle. Updates after graph unload are ignored.
@@ -79,26 +79,24 @@ public:
     CalculatorHistogram(const CalculatorHistogram&) = delete;
     CalculatorHistogram& operator=(const CalculatorHistogram&) = delete;
     ~CalculatorHistogram();
-    /// Record a finite observation. Invalid values throw std::invalid_argument.
+    /// Record a finite observation. Invalid values are logged and ignored.
     void observe(double value);
 };
 
 /// One graph/node registration scope, shared by all instances of that calculator.
 /// The registry must outlive the scope, or deactivate() must be called first.
 class CalculatorMetrics {
-    enum class MetricKind {
-        COUNTER,
-        GAUGE,
-        HISTOGRAM
-    };
+    using MetricHandle = std::variant<
+        std::shared_ptr<CalculatorCounter>,
+        std::shared_ptr<CalculatorGauge>,
+        std::shared_ptr<CalculatorHistogram>>;
 
     struct Registration {
         std::string help;
-        MetricKind kind;
         std::vector<double> bucketBoundaries;
-        std::shared_ptr<CalculatorCounter> counter;
-        std::shared_ptr<CalculatorGauge> gauge;
-        std::shared_ptr<CalculatorHistogram> histogram;
+        MetricHandle metricHandle;
+
+        void deactivate() const;
     };
     std::mutex scopeMutex;
     MetricRegistry* registry;
@@ -106,6 +104,10 @@ class CalculatorMetrics {
     const std::string nodeName;
     bool active = true;
     std::map<std::string, Registration> metrics;
+
+    template <typename HandleType>
+    std::shared_ptr<HandleType> findCompatibleRegistration(const std::string& name, const std::string& help,
+        const std::vector<double>& bucketBoundaries = {}) const;
 
 public:
     CalculatorMetrics(MetricRegistry* registry, const std::string& graphName, const std::string& nodeName);

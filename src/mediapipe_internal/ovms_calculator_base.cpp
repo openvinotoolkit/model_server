@@ -23,6 +23,7 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
+#include "../logging.hpp"
 #include "graph_side_packets.hpp"
 
 namespace ovms {
@@ -36,6 +37,9 @@ void OvmsCalculatorBase::SetCalculatorMetricsContract(mediapipe::CalculatorContr
 absl::Status OvmsCalculatorBase::InitializeCalculatorMetrics(mediapipe::CalculatorContext* cc) {
     calculatorMetrics.reset();
     if (!cc->InputSidePackets().HasTag(CALCULATOR_METRICS_TAG)) {
+        SPDLOG_LOGGER_INFO(mediapipe_logger,
+            "Custom calculator metrics are not configured for node '{}'; the CALCULATOR_METRICS side packet is absent.",
+            cc->NodeName());
         return absl::OkStatus();
     }
 

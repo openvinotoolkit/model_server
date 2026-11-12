@@ -17,6 +17,7 @@
 
 #include <cmath>
 #include <stdexcept>
+#include <string_view>
 #include <utility>
 
 #include "../logging.hpp"
@@ -29,8 +30,12 @@ namespace ovms {
 
 namespace {
 
+constexpr std::string_view CUSTOM_METRIC_PREFIX = "custom_";
+constexpr std::string_view COUNTER_SUFFIX = "_total";
+
 bool hasValidCustomMetricName(const std::string& name) {
-    if (name.size() <= 7 || name.compare(0, 7, "custom_") != 0) {
+    if (name.size() <= CUSTOM_METRIC_PREFIX.size() ||
+        name.compare(0, CUSTOM_METRIC_PREFIX.size(), CUSTOM_METRIC_PREFIX) != 0) {
         return false;
     }
     for (char c : name) {
@@ -44,8 +49,9 @@ bool hasValidCustomMetricName(const std::string& name) {
 }
 
 bool hasValidCustomCounterName(const std::string& name) {
-    return hasValidCustomMetricName(name) && name.size() > 13 &&
-           name.compare(name.size() - 6, 6, "_total") == 0;
+    return hasValidCustomMetricName(name) &&
+           name.size() > CUSTOM_METRIC_PREFIX.size() + COUNTER_SUFFIX.size() &&
+           name.compare(name.size() - COUNTER_SUFFIX.size(), COUNTER_SUFFIX.size(), COUNTER_SUFFIX) == 0;
 }
 
 bool hasValidBucketBoundaries(const std::vector<double>& bucketBoundaries) {
@@ -88,8 +94,8 @@ void CalculatorCounter::deactivate() {
 
 void CalculatorCounter::increment(double value) {
     if (!std::isfinite(value) || value < 0.0) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Custom counter increment must be finite and non-negative, got {}", value);
-        throw std::invalid_argument("Custom counter increment must be finite and non-negative");
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Ignoring custom counter increment; value must be finite and non-negative, got {}", value);
+        return;
     }
     if (series) {
         series->update([value](MetricCounter& metric) { metric.increment(value); });
@@ -115,31 +121,21 @@ void CalculatorGauge::deactivate() {
 
 void CalculatorGauge::set(double value) {
     if (!std::isfinite(value)) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Custom gauge value must be finite, got {}", value);
-        throw std::invalid_argument("Custom gauge value must be finite");
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Ignoring custom gauge set; value must be finite, got {}", value);
+        return;
     }
     if (series) {
         series->update([value](MetricGauge& metric) { metric.set(value); });
     }
 }
 
-void CalculatorGauge::increment(double value) {
-    if (!std::isfinite(value) || value < 0.0) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Custom gauge increment must be finite and non-negative, got {}", value);
-        throw std::invalid_argument("Custom gauge increment must be finite and non-negative");
+void CalculatorGauge::add(double value) {
+    if (!std::isfinite(value)) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Ignoring custom gauge add; value must be finite, got {}", value);
+        return;
     }
     if (series) {
         series->update([value](MetricGauge& metric) { metric.increment(value); });
-    }
-}
-
-void CalculatorGauge::decrement(double value) {
-    if (!std::isfinite(value) || value < 0.0) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Custom gauge decrement must be finite and non-negative, got {}", value);
-        throw std::invalid_argument("Custom gauge decrement must be finite and non-negative");
-    }
-    if (series) {
-        series->update([value](MetricGauge& metric) { metric.decrement(value); });
     }
 }
 
@@ -162,8 +158,8 @@ void CalculatorHistogram::deactivate() {
 
 void CalculatorHistogram::observe(double value) {
     if (!std::isfinite(value)) {
-        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Custom histogram observation must be finite, got {}", value);
-        throw std::invalid_argument("Custom histogram observation must be finite");
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Ignoring custom histogram observation; value must be finite, got {}", value);
+        return;
     }
     if (series) {
         series->update([value](MetricHistogram& metric) { metric.observe(value); });
@@ -179,6 +175,22 @@ CalculatorMetrics::~CalculatorMetrics() {
     deactivate();
 }
 
+template <typename HandleType>
+std::shared_ptr<HandleType> CalculatorMetrics::findCompatibleRegistration(
+    const std::string& name, const std::string& help,
+    const std::vector<double>& bucketBoundaries) const {
+    const auto existing = metrics.find(name);
+    if (existing == metrics.end()) {
+        return nullptr;
+    }
+    const auto* metricHandle = std::get_if<std::shared_ptr<HandleType>>(&existing->second.metricHandle);
+    if (!metricHandle || existing->second.help != help ||
+        existing->second.bucketBoundaries != bucketBoundaries) {
+        throw std::invalid_argument(conflictingRegistrationMessage(name));
+    }
+    return *metricHandle;
+}
+
 std::shared_ptr<CalculatorCounter> CalculatorMetrics::getOrRegisterCounter(const std::string& name, const std::string& help) {
     std::lock_guard<std::mutex> lock(scopeMutex);
     try {
@@ -188,15 +200,11 @@ std::shared_ptr<CalculatorCounter> CalculatorMetrics::getOrRegisterCounter(const
         if (!hasValidCustomCounterName(name) || help.empty()) {
             throw std::invalid_argument("Custom counter requires a custom_<name>_total name and non-empty help");
         }
-        const auto existing = metrics.find(name);
-        if (existing != metrics.end()) {
-            if (existing->second.kind != MetricKind::COUNTER || existing->second.help != help) {
-                throw std::invalid_argument(conflictingRegistrationMessage(name));
-            }
-            return existing->second.counter;
+        if (auto existing = findCompatibleRegistration<CalculatorCounter>(name, help)) {
+            return existing;
         }
         auto counter = std::shared_ptr<CalculatorCounter>(new CalculatorCounter(registry, name, help, graphName, nodeName));
-        metrics.emplace(name, Registration{help, MetricKind::COUNTER, {}, counter, nullptr, nullptr});
+        metrics.emplace(name, Registration{help, {}, counter});
         return counter;
     } catch (const std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Custom counter registration failed for graph {} node {} metric {}: {}",
@@ -214,15 +222,11 @@ std::shared_ptr<CalculatorGauge> CalculatorMetrics::getOrRegisterGauge(const std
         if (!hasValidCustomMetricName(name) || help.empty()) {
             throw std::invalid_argument("Custom gauge requires a custom_ name and non-empty help");
         }
-        const auto existing = metrics.find(name);
-        if (existing != metrics.end()) {
-            if (existing->second.kind != MetricKind::GAUGE || existing->second.help != help) {
-                throw std::invalid_argument(conflictingRegistrationMessage(name));
-            }
-            return existing->second.gauge;
+        if (auto existing = findCompatibleRegistration<CalculatorGauge>(name, help)) {
+            return existing;
         }
         auto gauge = std::shared_ptr<CalculatorGauge>(new CalculatorGauge(registry, name, help, graphName, nodeName));
-        metrics.emplace(name, Registration{help, MetricKind::GAUGE, {}, nullptr, gauge, nullptr});
+        metrics.emplace(name, Registration{help, {}, gauge});
         return gauge;
     } catch (const std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Custom gauge registration failed for graph {} node {} metric {}: {}",
@@ -241,23 +245,22 @@ std::shared_ptr<CalculatorHistogram> CalculatorMetrics::getOrRegisterHistogram(c
         if (!hasValidCustomMetricName(name) || help.empty() || !hasValidBucketBoundaries(bucketBoundaries)) {
             throw std::invalid_argument("Custom histogram requires a custom_ name, non-empty help, and finite strictly increasing buckets");
         }
-        const auto existing = metrics.find(name);
-        if (existing != metrics.end()) {
-            if (existing->second.kind != MetricKind::HISTOGRAM || existing->second.help != help ||
-                existing->second.bucketBoundaries != bucketBoundaries) {
-                throw std::invalid_argument(conflictingRegistrationMessage(name));
-            }
-            return existing->second.histogram;
+        if (auto existing = findCompatibleRegistration<CalculatorHistogram>(name, help, bucketBoundaries)) {
+            return existing;
         }
         auto histogram = std::shared_ptr<CalculatorHistogram>(
             new CalculatorHistogram(registry, name, help, graphName, nodeName, bucketBoundaries));
-        metrics.emplace(name, Registration{help, MetricKind::HISTOGRAM, bucketBoundaries, nullptr, nullptr, histogram});
+        metrics.emplace(name, Registration{help, bucketBoundaries, histogram});
         return histogram;
     } catch (const std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Custom histogram registration failed for graph {} node {} metric {}: {}",
             graphName, nodeName, name, e.what());
         throw;
     }
+}
+
+void CalculatorMetrics::Registration::deactivate() const {
+    std::visit([](const auto& handle) { handle->deactivate(); }, metricHandle);
 }
 
 void CalculatorMetrics::deactivate() {
@@ -267,17 +270,7 @@ void CalculatorMetrics::deactivate() {
     }
     active = false;
     for (const auto& entry : metrics) {
-        switch (entry.second.kind) {
-        case MetricKind::COUNTER:
-            entry.second.counter->deactivate();
-            break;
-        case MetricKind::GAUGE:
-            entry.second.gauge->deactivate();
-            break;
-        case MetricKind::HISTOGRAM:
-            entry.second.histogram->deactivate();
-            break;
-        }
+        entry.second.deactivate();
     }
     registry = nullptr;
 }

@@ -41,28 +41,35 @@
 
 namespace ovms {
 
+namespace {
+
+RequestMetricsSnapshot makeRequestMetricsSnapshot(ov::genai::PerfMetrics& perfMetrics) {
+    const double ttftMilliseconds = perfMetrics.get_ttft().mean;
+    return {
+        perfMetrics.get_num_input_tokens(),
+        perfMetrics.get_num_generated_tokens(),
+        ttftMilliseconds,
+        perfMetrics.get_tpot().mean};
+}
+
+}  // namespace
+
+bool ContinuousBatchingServable::canRecordCompletedRequestMetrics(const GenAiServableExecutionContext& executionContext) const {
+    const auto& cbExecutionContext = static_cast<const ContinuousBatchingServableExecutionContext&>(executionContext);
+    const auto& metricReporter = properties->metricReporter;
+    return metricReporter &&
+        metricReporter->hasAnyCompletionMetricsEnabled() &&
+        executionContext.perfMetrics &&
+        !cbExecutionContext.completedMetricsRecorded;
+}
+
 void ContinuousBatchingServable::recordCompletedRequestMetrics(GenAiServableExecutionContext& executionContext) {
     auto& cbExecutionContext = static_cast<ContinuousBatchingServableExecutionContext&>(executionContext);
     const auto& metricReporter = properties->metricReporter;
-    if (!metricReporter) {
-        return;
-    }
-    if (!metricReporter->hasAnyCompletionMetricsEnabled()) {
-        return;
-    }
-    if (!executionContext.perfMetrics) {
-        return;
-    }
-    if (cbExecutionContext.completedMetricsRecorded) {
-        return;
-    }
     // Called only on successful completion; partial output from cancelled/failed requests is not accounted for.
     cbExecutionContext.completedMetricsRecorded = true;
-    auto& perfMetrics = *executionContext.perfMetrics;
-    const double ttftMilliseconds = perfMetrics.get_ttft().mean;
     if (metricReporter->hasCompletedRequestMetricsEnabled()) {
-        metricReporter->observeCompletedRequest(perfMetrics.get_num_input_tokens(),
-            perfMetrics.get_num_generated_tokens(), ttftMilliseconds, perfMetrics.get_tpot().mean);
+        metricReporter->observeCompletedRequest(makeRequestMetricsSnapshot(*executionContext.perfMetrics));
     }
 }
 
@@ -197,7 +204,7 @@ absl::Status ContinuousBatchingServable::readPartialExecutionResults(std::shared
 
 absl::Status ContinuousBatchingServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto status = GenAiServable::prepareCompleteResponse(executionContext);
-    if (status.ok()) {
+    if (status.ok() && canRecordCompletedRequestMetrics(*executionContext)) {
         recordCompletedRequestMetrics(*executionContext);
     }
     if (status.ok() && executionContext->perfMetrics && llm_calculator_logger->should_log(spdlog::level::debug)) {
@@ -212,7 +219,7 @@ absl::Status ContinuousBatchingServable::preparePartialResponse(std::shared_ptr<
         stopGenerationOnResponseError(std::static_pointer_cast<ContinuousBatchingServableExecutionContext>(executionContext));
         return status;
     }
-    if (!executionContext->sendLoopbackSignal) {
+    if (!executionContext->sendLoopbackSignal && canRecordCompletedRequestMetrics(*executionContext)) {
         recordCompletedRequestMetrics(*executionContext);
     }
     if (status.ok() &&

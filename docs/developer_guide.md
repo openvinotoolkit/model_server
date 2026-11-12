@@ -31,7 +31,7 @@ events->increment(3.0);    // Add a batch.
 
 auto queueDepth = metrics->getOrRegisterGauge("custom_queue_depth", "Queued requests.");
 queueDepth->set(4);
-queueDepth->decrement();
+queueDepth->add(-1);
 
 auto latency = metrics->getOrRegisterHistogram(
     "custom_request_duration_seconds", "Request duration.", {0.01, 0.1, 1.0});
@@ -128,7 +128,7 @@ events->increment();
 
 To count multiple events in a packet, call
 `events->increment(static_cast<double>(eventCount))`.
-Use gauges with `set`, `increment`, or `decrement`; record histogram samples
+Use gauges with `set` or `add` (accepting positive, zero, or negative finite values); record histogram samples
 with `observe`. Histogram bucket boundaries must be finite and strictly
 increasing, and the same metric name must use identical boundaries everywhere.
 No registry lookup, metric-name construction or registration is needed in
@@ -143,10 +143,10 @@ or `increase()` to calculate counter changes over time.
   help text. The `custom_` prefix keeps application metrics separate from
   built-in `ovms_` metrics.
 - The same metric name must have identical type, help text, and (for histograms)
-  bucket boundaries across nodes and graphs. Invalid names, conflicting
-  definitions, non-finite gauge values or histogram observations, and
-  negative/non-finite counter or gauge increments are logged and throw
-  exceptions; do not suppress those errors.
+  bucket boundaries across nodes and graphs. Invalid names and conflicting
+  definitions are logged and throw exceptions; do not suppress those errors.
+  Non-finite gauge values or histogram observations, and negative or non-finite
+  counter increments, are logged as warnings and ignored.
 - Metric names must be fixed in calculator code. Do not construct names from
   words, users, requests or timestamps. This initial API intentionally exposes
   only the fixed graph/node labels to keep cardinality bounded.

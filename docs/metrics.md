@@ -84,6 +84,11 @@ other metric names if you also need the default serving metrics. The preset
 includes only currently supported LLM metric families; it does not enable
 proposed or future LLM metrics automatically.
 
+Cache utilization, cache size, and scheduled-request gauges are updated every
+10 generation steps and when the executor becomes idle, before waiting for new
+requests. Scrapes return the latest published values; short-lived changes between
+updates may not be visible.
+
 Cache utilization is GenAI's maximum utilization percentage across registered
 cache types, not total device-memory utilization. Its denominator can change
 with dynamic cache allocation. While a pipeline is waiting for new requests,

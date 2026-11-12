@@ -97,8 +97,8 @@ private:
         }
     }
 
-    template <typename Family, typename Remove>
-    bool removeFamilyAndForgetCustomRegistration(const std::shared_ptr<Family>& family, Remove&& removeFamily) {
+    template <typename Family, typename RemoveFn>
+    bool removeFamilyAndForgetCustomRegistration(const std::shared_ptr<Family>& family, RemoveFn&& removeFamily) {
         std::lock_guard<std::mutex> lock(customFamiliesMutex);
         if (!removeFamily()) {
             return false;

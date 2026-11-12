@@ -4612,6 +4612,18 @@ public:
         return sidePacketMaps->calculatorMetrics.at("node");
     }
 
+    void setMetricsSidePacket(const std::string& packet) {
+        config.mutable_node(0)->set_input_side_packet(0, packet);
+    }
+
+    void clearNodeName() {
+        config.mutable_node(0)->clear_name();
+    }
+
+    size_t calculatorMetricsCount() const {
+        return sidePacketMaps->calculatorMetrics.size();
+    }
+
     void useInvalidLlmNode() {
         auto* node = config.mutable_node(0);
         node->set_calculator("LLMCalculator");
@@ -4641,6 +4653,23 @@ TEST(MediapipeGraphMetricsProvider, CustomMetricsHonorProviderConfiguration) {
     ASSERT_EQ(graph.initializeNodes(), ovms::StatusCode::OK);
     graph.calculatorMetrics()->getOrRegisterCounter("custom_events_total", "Events.")->increment();
     EXPECT_THAT(metrics.registry.collect(), HasSubstr("custom_events_total{name=\"graph\",node=\"node\"} 1\n"));
+}
+
+TEST(MediapipeGraphMetricsProvider, OnlyExactMetricsSidePacketCreatesScope) {
+    TestGraphMetricProvider metrics;
+    for (const char* packet : {"CALCULATOR_METRICS:other", "METRICS_CALCULATOR:calculator_metrics"}) {
+        MetricsGraphDefinition graph(&metrics);
+        graph.setMetricsSidePacket(packet);
+        EXPECT_EQ(graph.initializeNodes(), ovms::StatusCode::OK);
+        EXPECT_EQ(graph.calculatorMetricsCount(), 0);
+    }
+}
+
+TEST(MediapipeGraphMetricsProvider, CustomMetricsRequireNamedNode) {
+    TestGraphMetricProvider metrics;
+    MetricsGraphDefinition graph(&metrics);
+    graph.clearNodeName();
+    EXPECT_EQ(graph.initializeNodes(), ovms::StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
 }
 
 TEST(MediapipeGraphMetricsProvider, CustomMetricsAreNoOpWhenDisabledOrUnavailable) {

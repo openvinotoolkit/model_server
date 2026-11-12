@@ -44,6 +44,7 @@ protected:
     std::shared_ptr<ContinuousBatchingServableProperties> properties;
     void notifyExecutorThread();
     void logPerfMetrics(ov::genai::PerfMetrics& perfMetrics);
+    bool canRecordCompletedRequestMetrics(const GenAiServableExecutionContext& executionContext) const;
     void recordCompletedRequestMetrics(GenAiServableExecutionContext& executionContext);
     void stopGenerationOnResponseError(const std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext);
 

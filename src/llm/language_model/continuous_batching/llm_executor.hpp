@@ -57,7 +57,7 @@ struct LLMExecutor {
 
     void publishPipelineMetrics(bool idle = false) {
         if (metricReporter && (metricReporter->isCacheUtilizationEnabled() || metricReporter->isCacheSizeEnabled() || metricReporter->isScheduledRequestsEnabled())) {
-            const auto metrics = pipe->get_metrics();
+            const ov::genai::PipelineMetrics& metrics = pipe->get_metrics();
             if (metricReporter->isCacheUtilizationEnabled()) {
                 metricReporter->setCacheUtilization(metrics.cache_usage);
             }
@@ -131,18 +131,17 @@ class LLMExecutorWrapper {
     std::atomic<bool> finishExecutorThread = false;
 
     static void run(LLMExecutor* llmExecutor, std::atomic<bool>* receivedEndSignal) {
-        const uint8_t printMetricsEveryNumberOfSteps = 10;
+        constexpr uint8_t metricsEveryNumberOfSteps = 10;
         uint8_t stepCounter = 0;
         while (!(*receivedEndSignal)) {
             try {
-                if (stepCounter == printMetricsEveryNumberOfSteps) {
-                    llmExecutor->printMetrics();
-                    stepCounter = 0;
-                }
                 if (llmExecutor->hasRequests()) {
-                    stepCounter++;
                     llmExecutor->step();
-                    llmExecutor->publishPipelineMetrics();
+                    if (++stepCounter == metricsEveryNumberOfSteps) {
+                        llmExecutor->publishPipelineMetrics();
+                        llmExecutor->printMetrics();
+                        stepCounter = 0;
+                    }
                 } else {
                     llmExecutor->publishPipelineMetrics(true);
                     SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {}; Scheduled requests: {};", 0, 0);

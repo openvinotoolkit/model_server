@@ -20,10 +20,12 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <vector>
+
+#include "metric_config.hpp"
 
 namespace ovms {
 
-class MetricConfig;
 class MetricRegistry;
 class MetricGauge;
 class MetricHistogram;
@@ -32,6 +34,13 @@ template <typename T>
 class MetricFamily;
 template <typename T>
 class MetricSeries;
+
+struct RequestMetricsSnapshot {
+    size_t inputTokens;
+    size_t outputTokens;
+    double ttftMilliseconds;
+    double tpotMilliseconds;
+};
 
 // Owns the metric series for one LLM pipeline. The registry must outlive it.
 class LLMMetricReporter {
@@ -48,6 +57,45 @@ class LLMMetricReporter {
     std::shared_ptr<MetricSeries<MetricCounter>> generatedTokens;
     std::shared_ptr<MetricSeries<MetricHistogram>> ttft;
     std::shared_ptr<MetricSeries<MetricHistogram>> tpot;
+
+    template <typename MetricType>
+    struct MetricRegistration {
+        const std::string& name;
+        const char* help;
+        std::shared_ptr<MetricSeries<MetricType>> LLMMetricReporter::* destination;
+        std::vector<double> bucketBoundaries;
+    };
+
+    inline static const std::vector<double> BUCKET_BOUNDARIES_1_TO_640K{
+        1, 5, 10, 20, 40, 60, 80, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000,
+        20000, 40000, 80000, 160000, 640000};
+    inline static const std::vector<double> BUCKET_BOUNDARIES_10_TO_80K{
+        10, 20, 40, 60, 80, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000, 20000, 40000, 80000};
+
+    inline static const MetricRegistration<MetricGauge> GAUGE_REGISTRATIONS[]{
+        {METRIC_NAME_KV_CACHE_UTILIZATION,
+            "KV cache utilization in percent of the pipeline cache capacity.",
+            &LLMMetricReporter::cacheUtilization, {}},
+        {METRIC_NAME_KV_CACHE_SIZE,
+            "KV cache size in bytes.",
+            &LLMMetricReporter::cacheSize, {}},
+        {METRIC_NAME_LLM_SCHEDULED_REQUESTS,
+            "Number of requests scheduled in GenAI's last generation step, or zero when idle.",
+            &LLMMetricReporter::scheduledRequests, {}}};
+    inline static const MetricRegistration<MetricCounter> COUNTER_REGISTRATIONS[]{
+        {METRIC_NAME_LLM_PROMPT_TOKENS,
+            "Input prompt tokens from successfully completed requests, as reported by GenAI.",
+            &LLMMetricReporter::promptTokens, {}},
+        {METRIC_NAME_LLM_GENERATED_TOKENS,
+            "Generated output tokens from successfully completed requests; excludes partial output from failed or cancelled requests.",
+            &LLMMetricReporter::generatedTokens, {}}};
+    inline static const MetricRegistration<MetricHistogram> HISTOGRAM_REGISTRATIONS[]{
+        {METRIC_NAME_LLM_TTFT,
+            "GenAI time to first token in milliseconds for successfully completed requests, excluding VLM embedding preparation.",
+            &LLMMetricReporter::ttft, BUCKET_BOUNDARIES_1_TO_640K},
+        {METRIC_NAME_LLM_TPOT,
+            "GenAI time per output token in milliseconds for successfully completed requests.",
+            &LLMMetricReporter::tpot, BUCKET_BOUNDARIES_10_TO_80K}};
 
     void removeMetrics();
 
@@ -73,7 +121,7 @@ public:
     void setScheduledRequests(size_t requests);
     /// Record successful completion only; partial output from failed/cancelled requests is not counted.
     /// TTFT and TPOT are GenAI request timing values in milliseconds.
-    void observeCompletedRequest(size_t inputTokens, size_t outputTokens, double ttftMilliseconds, double tpotMilliseconds);
+    void observeCompletedRequest(const RequestMetricsSnapshot& metrics);
 };
 
 }  // namespace ovms

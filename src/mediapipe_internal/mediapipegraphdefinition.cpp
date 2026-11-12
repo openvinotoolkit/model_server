@@ -762,13 +762,11 @@ Status MediapipeGraphDefinition::initializeNodes() {
     auto& registry = NodeInitializerRegistry::instance();
     for (int i = 0; i < config.node().size(); i++) {
         const auto& node = config.node(i);
-        const bool usesMetrics = std::any_of(node.input_side_packet().begin(), node.input_side_packet().end(),
-            [](const std::string& packet) { return packet.rfind("CALCULATOR_METRICS:", 0) == 0; });
+        const bool usesMetrics = std::find(node.input_side_packet().begin(), node.input_side_packet().end(),
+                                     "CALCULATOR_METRICS:calculator_metrics") != node.input_side_packet().end();
         if (usesMetrics) {
-            if (node.name().empty() ||
-                std::find(node.input_side_packet().begin(), node.input_side_packet().end(),
-                    "CALCULATOR_METRICS:calculator_metrics") == node.input_side_packet().end()) {
-                SPDLOG_ERROR("Custom metrics require a named node and input_side_packet: \"CALCULATOR_METRICS:calculator_metrics\" in graph {}", getName());
+            if (node.name().empty()) {
+                SPDLOG_ERROR("Custom metrics require a named node in graph {}", getName());
                 return StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR;
             }
             sidePacketMaps->calculatorMetrics.emplace(node.name(),

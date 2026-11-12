@@ -76,6 +76,7 @@ protected:
     class TestServable : public ContinuousBatchingServable {
     public:
         using ContinuousBatchingServable::properties;
+        using ContinuousBatchingServable::canRecordCompletedRequestMetrics;
         using ContinuousBatchingServable::recordCompletedRequestMetrics;
     };
 
@@ -101,8 +102,9 @@ protected:
 };
 
 TEST_F(LLMCompletionMetricsTest, RecordsTokenCountsAndTimingHistogramsOnlyOnce) {
+    ASSERT_TRUE(servable.canRecordCompletedRequestMetrics(context));
     servable.recordCompletedRequestMetrics(context);
-    servable.recordCompletedRequestMetrics(context);
+    EXPECT_FALSE(servable.canRecordCompletedRequestMetrics(context));
     EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_prompt_tokens_total{name=\"model\",node=\"llm\"} 100\n"));
     EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_generated_tokens_total{name=\"model\",node=\"llm\"} 7\n"));
     EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"model\",node=\"llm\"} 1\n"));
@@ -113,9 +115,10 @@ TEST_F(LLMCompletionMetricsTest, RecordsTokenCountsAndTimingHistogramsOnlyOnce) 
 
 TEST_F(LLMCompletionMetricsTest, MissingPerformanceMetricsCanBePublishedAtCompletion) {
     auto metrics = std::move(context.perfMetrics);
-    servable.recordCompletedRequestMetrics(context);
+    EXPECT_FALSE(servable.canRecordCompletedRequestMetrics(context));
     EXPECT_FALSE(context.completedMetricsRecorded);
     context.perfMetrics = std::move(metrics);
+    ASSERT_TRUE(servable.canRecordCompletedRequestMetrics(context));
     servable.recordCompletedRequestMetrics(context);
     EXPECT_TRUE(context.completedMetricsRecorded);
     EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_prompt_tokens_total{name=\"model\",node=\"llm\"} 100\n"));
@@ -126,6 +129,7 @@ TEST_F(LLMCompletionMetricsTest, InvalidTimingSamplesDoNotDiscardTokenCounts) {
         context.completedMetricsRecorded = false;
         context.perfMetrics->ttft.mean = ttft;
         context.perfMetrics->tpot.mean = ttft;
+        ASSERT_TRUE(servable.canRecordCompletedRequestMetrics(context));
         servable.recordCompletedRequestMetrics(context);
     }
     EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_prompt_tokens_total{name=\"model\",node=\"llm\"} 400\n"));
@@ -137,7 +141,7 @@ TEST_F(LLMCompletionMetricsTest, InvalidTimingSamplesDoNotDiscardTokenCounts) {
 TEST_F(LLMCompletionMetricsTest, DisabledCompletionMetricsDoNotEvaluatePerformanceStatistics) {
     servable.properties->metricReporter->deactivate();
     context.perfMetrics->m_evaluated = false;
-    servable.recordCompletedRequestMetrics(context);
+    EXPECT_FALSE(servable.canRecordCompletedRequestMetrics(context));
     EXPECT_FALSE(context.completedMetricsRecorded);
     EXPECT_FALSE(context.perfMetrics->m_evaluated);
     EXPECT_TRUE(registry.collect().empty());
@@ -149,6 +153,7 @@ TEST_F(LLMCompletionMetricsTest, CompletionMetricsWorkWithoutPromptCounter) {
     ASSERT_EQ(metricConfig.loadFromCLIString(true, METRIC_NAME_LLM_GENERATED_TOKENS + "," + METRIC_NAME_LLM_TTFT), StatusCode::OK);
     servable.properties->metricReporter =
         std::make_shared<LLMMetricReporter>(&metricConfig, &registry, "model", "llm");
+    ASSERT_TRUE(servable.canRecordCompletedRequestMetrics(context));
     servable.recordCompletedRequestMetrics(context);
     EXPECT_THAT(registry.collect(), testing::Not(testing::HasSubstr(METRIC_NAME_LLM_PROMPT_TOKENS)));
     EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_generated_tokens_total{name=\"model\",node=\"llm\"} 7\n"));

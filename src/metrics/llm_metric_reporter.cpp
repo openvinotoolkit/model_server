@@ -28,11 +28,34 @@
 namespace ovms {
 namespace {
 
-const BucketBoundaries TTFT_BUCKETS{
-    1, 5, 10, 20, 40, 60, 80, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000,
-    20000, 40000, 80000, 160000, 640000};
-const BucketBoundaries TPOT_BUCKETS{
-    10, 20, 40, 60, 80, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000, 20000, 40000, 80000};
+template <typename MetricType, typename Registration, size_t Count>
+void registerEnabledMetrics(LLMMetricReporter& reporter, const MetricConfig& config,
+    MetricRegistry& registry, const MetricLabels& labels,
+    const Registration (&registrations)[Count]) {
+    for (const auto& registration : registrations) {
+        if (!config.isFamilyEnabled(registration.name)) {
+            continue;
+        }
+        auto family = registry.createFamily<MetricType>(registration.name, registration.help);
+        if (!family) {
+            throw std::logic_error("Cannot create LLM metric family '" + registration.name + "'");
+        }
+        reporter.*(registration.destination) =
+            std::make_shared<MetricSeries<MetricType>>(family, labels, registration.bucketBoundaries);
+    }
+}
+
+template <typename Registration, size_t Count>
+void removeRegisteredMetrics(LLMMetricReporter& reporter,
+    const Registration (&registrations)[Count]) {
+    for (const auto& registration : registrations) {
+        auto& series = reporter.*(registration.destination);
+        if (series) {
+            series->deactivate();
+            series.reset();
+        }
+    }
+}
 
 }  // namespace
 
@@ -44,65 +67,12 @@ LLMMetricReporter::LLMMetricReporter(const MetricConfig* config, MetricRegistry*
 
     const MetricLabels labels{{"name", graphName}, {"node", nodeName}};
     try {
-        if (config->isFamilyEnabled(METRIC_NAME_KV_CACHE_UTILIZATION)) {
-            auto family = registry->createFamily<MetricGauge>(METRIC_NAME_KV_CACHE_UTILIZATION,
-                "GenAI KV cache utilization in percent of the pipeline cache capacity.");
-            if (!family) {
-                throw std::logic_error("Cannot create LLM KV cache metric family");
-            }
-            cacheUtilization = std::make_shared<MetricSeries<MetricGauge>>(family, labels);
-            cacheEnabled.store(true, std::memory_order_relaxed);
-        }
-        if (config->isFamilyEnabled(METRIC_NAME_KV_CACHE_SIZE)) {
-            auto family = registry->createFamily<MetricGauge>(METRIC_NAME_KV_CACHE_SIZE,
-                "GenAI-reported KV cache size in bytes.");
-            if (!family) {
-                throw std::logic_error("Cannot create KV cache size metric family");
-            }
-            cacheSize = std::make_shared<MetricSeries<MetricGauge>>(family, labels);
-            cacheSizeEnabled.store(true, std::memory_order_relaxed);
-        }
-        if (config->isFamilyEnabled(METRIC_NAME_LLM_PROMPT_TOKENS)) {
-            auto family = registry->createFamily<MetricCounter>(METRIC_NAME_LLM_PROMPT_TOKENS,
-                "Input prompt tokens from successfully completed requests, as reported by GenAI.");
-            if (!family) {
-                throw std::logic_error("Cannot create LLM prompt tokens metric family");
-            }
-            promptTokens = std::make_shared<MetricSeries<MetricCounter>>(family, labels);
-        }
-        if (config->isFamilyEnabled(METRIC_NAME_LLM_SCHEDULED_REQUESTS)) {
-            auto family = registry->createFamily<MetricGauge>(METRIC_NAME_LLM_SCHEDULED_REQUESTS,
-                "Number of requests scheduled in GenAI's last generation step, or zero when idle.");
-            if (!family) {
-                throw std::logic_error("Cannot create LLM scheduled requests metric family");
-            }
-            scheduledRequests = std::make_shared<MetricSeries<MetricGauge>>(family, labels);
-            scheduledEnabled.store(true, std::memory_order_relaxed);
-        }
-        if (config->isFamilyEnabled(METRIC_NAME_LLM_GENERATED_TOKENS)) {
-            auto family = registry->createFamily<MetricCounter>(METRIC_NAME_LLM_GENERATED_TOKENS,
-                "Generated output tokens from successfully completed requests; excludes partial output from failed or cancelled requests.");
-            if (!family) {
-                throw std::logic_error("Cannot create LLM generated tokens metric family");
-            }
-            generatedTokens = std::make_shared<MetricSeries<MetricCounter>>(family, labels);
-        }
-        if (config->isFamilyEnabled(METRIC_NAME_LLM_TTFT)) {
-            auto family = registry->createFamily<MetricHistogram>(METRIC_NAME_LLM_TTFT,
-                "GenAI time to first token in milliseconds for successfully completed requests, excluding VLM embedding preparation.");
-            if (!family) {
-                throw std::logic_error("Cannot create LLM TTFT metric family");
-            }
-            ttft = std::make_shared<MetricSeries<MetricHistogram>>(family, labels, TTFT_BUCKETS);
-        }
-        if (config->isFamilyEnabled(METRIC_NAME_LLM_TPOT)) {
-            auto family = registry->createFamily<MetricHistogram>(METRIC_NAME_LLM_TPOT,
-                "GenAI time per output token in milliseconds for successfully completed requests.");
-            if (!family) {
-                throw std::logic_error("Cannot create LLM TPOT metric family");
-            }
-            tpot = std::make_shared<MetricSeries<MetricHistogram>>(family, labels, TPOT_BUCKETS);
-        }
+        registerEnabledMetrics<MetricGauge>(*this, *config, *registry, labels, GAUGE_REGISTRATIONS);
+        registerEnabledMetrics<MetricCounter>(*this, *config, *registry, labels, COUNTER_REGISTRATIONS);
+        registerEnabledMetrics<MetricHistogram>(*this, *config, *registry, labels, HISTOGRAM_REGISTRATIONS);
+        cacheEnabled.store(cacheUtilization != nullptr, std::memory_order_relaxed);
+        cacheSizeEnabled.store(cacheSize != nullptr, std::memory_order_relaxed);
+        scheduledEnabled.store(scheduledRequests != nullptr, std::memory_order_relaxed);
         completedRequestMetricsEnabled.store(promptTokens || generatedTokens || ttft || tpot, std::memory_order_relaxed);
         completionMetricsEnabled.store(promptTokens || generatedTokens || ttft || tpot, std::memory_order_relaxed);
     } catch (const std::exception&) {
@@ -126,34 +96,9 @@ void LLMMetricReporter::deactivate() {
 }
 
 void LLMMetricReporter::removeMetrics() {
-    if (cacheUtilization) {
-        cacheUtilization->deactivate();
-        cacheUtilization.reset();
-    }
-    if (cacheSize) {
-        cacheSize->deactivate();
-        cacheSize.reset();
-    }
-    if (scheduledRequests) {
-        scheduledRequests->deactivate();
-        scheduledRequests.reset();
-    }
-    if (generatedTokens) {
-        generatedTokens->deactivate();
-        generatedTokens.reset();
-    }
-    if (promptTokens) {
-        promptTokens->deactivate();
-        promptTokens.reset();
-    }
-    if (ttft) {
-        ttft->deactivate();
-        ttft.reset();
-    }
-    if (tpot) {
-        tpot->deactivate();
-        tpot.reset();
-    }
+    removeRegisteredMetrics(*this, GAUGE_REGISTRATIONS);
+    removeRegisteredMetrics(*this, COUNTER_REGISTRATIONS);
+    removeRegisteredMetrics(*this, HISTOGRAM_REGISTRATIONS);
 }
 
 bool LLMMetricReporter::isScheduledRequestsEnabled() const {
@@ -175,27 +120,23 @@ void LLMMetricReporter::setScheduledRequests(size_t requests) {
     }
 }
 
-void LLMMetricReporter::observeCompletedRequest(size_t inputTokens, size_t outputTokens, double ttftMilliseconds, double tpotMilliseconds) {
+void LLMMetricReporter::observeCompletedRequest(const RequestMetricsSnapshot& metrics) {
     std::lock_guard<std::mutex> lock(mutex);
     if (promptTokens) {
-        promptTokens->update([inputTokens](MetricCounter& metric) { metric.increment(inputTokens); });
+        promptTokens->update([&metrics](MetricCounter& metric) { metric.increment(metrics.inputTokens); });
     }
     if (generatedTokens) {
-        generatedTokens->update([outputTokens](MetricCounter& metric) { metric.increment(outputTokens); });
+        generatedTokens->update([&metrics](MetricCounter& metric) { metric.increment(metrics.outputTokens); });
     }
-    if (ttft && (!std::isfinite(ttftMilliseconds) || ttftMilliseconds <= 0.0)) {
-#if (MEDIAPIPE_DISABLE == 0)
-        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Ignoring invalid GenAI TTFT in milliseconds: {}", ttftMilliseconds);
-#endif
+    if (ttft && (!std::isfinite(metrics.ttftMilliseconds) || metrics.ttftMilliseconds <= 0.0)) {
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Ignoring invalid GenAI TTFT in milliseconds: {}", metrics.ttftMilliseconds);
     } else if (ttft) {
-        ttft->update([ttftMilliseconds](MetricHistogram& metric) { metric.observe(ttftMilliseconds); });
+        ttft->update([&metrics](MetricHistogram& metric) { metric.observe(metrics.ttftMilliseconds); });
     }
-    if (tpot && (!std::isfinite(tpotMilliseconds) || tpotMilliseconds <= 0.0)) {
-#if (MEDIAPIPE_DISABLE == 0)
-        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Ignoring invalid GenAI TPOT in milliseconds: {}", tpotMilliseconds);
-#endif
+    if (tpot && (!std::isfinite(metrics.tpotMilliseconds) || metrics.tpotMilliseconds <= 0.0)) {
+        SPDLOG_LOGGER_WARN(llm_calculator_logger, "Ignoring invalid GenAI TPOT in milliseconds: {}", metrics.tpotMilliseconds);
     } else if (tpot) {
-        tpot->update([tpotMilliseconds](MetricHistogram& metric) { metric.observe(tpotMilliseconds); });
+        tpot->update([&metrics](MetricHistogram& metric) { metric.observe(metrics.tpotMilliseconds); });
     }
 }
 
@@ -213,9 +154,7 @@ void LLMMetricReporter::setCacheUtilization(double percent) {
         return;
     }
     if (!std::isfinite(percent) || percent < 0.0 || percent > 100.0) {
-#if (MEDIAPIPE_DISABLE == 0)
         SPDLOG_LOGGER_WARN(llm_executor_logger, "Ignoring invalid GenAI KV cache utilization: {}", percent);
-#endif
         return;
     }
     cacheUtilization->update([percent](MetricGauge& metric) { metric.set(percent); });
