@@ -31,13 +31,13 @@ class VideoFramesProcessor : public BaseInputProcessor {
 public:
     VideoFramesProcessor(std::optional<std::string> allowedLocalMediaPath,
         std::optional<std::vector<std::string>> allowedMediaDomains,
-        float requestedFps = 2.0F, uint32_t maxDecodedFrames = 100);
+        std::optional<float> requestedFps = std::nullopt, uint32_t maxDecodedFrames = 100);
     absl::Status process(InputRequest& req) override;
 
 private:
     std::optional<std::string> allowedLocalMediaPath;
     std::optional<std::vector<std::string>> allowedMediaDomains;
-    float requestedFps;
+    std::optional<float> requestedFps;
     uint32_t maxDecodedFrames;
 };
 

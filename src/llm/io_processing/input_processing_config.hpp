@@ -34,7 +34,7 @@ struct InputProcessingConfig {
     // ImageDecodingProcessor (implies isVLM-like behavior for images).
     bool isOmni = false;
     // Encoded-video sampling settings for VLM input processing.
-    float videoFps = 2.0F;
+    std::optional<float> videoFps;
     uint32_t videoMaxFrames = 100;
     // Enables image and video decoding.
     // TokenizationProcessor still runs (to populate inputIds for usage statistics

@@ -358,6 +358,93 @@ TEST(VideoFramesProcessorTest, InvalidBase64FrameRejected) {
     EXPECT_TRUE(req.inputVideos.empty());
 }
 
+TEST(VideoFrameSelectionTest, AppliesAdminFpsMaxFramesAndClientSampleCount) {
+    constexpr uint64_t videoDurationTicks = 10;
+    constexpr uint32_t videoTicksPerSecond = 1;
+    constexpr float defaultVideoFps = 2.0F;
+    constexpr uint32_t clientSampleCount = 3;
+    constexpr uint32_t defaultMaxVideoFrames = 32;
+
+    auto selectedFrameCount = calculateSelectedVideoFrameCount(videoDurationTicks, videoTicksPerSecond,
+        clientSampleCount, defaultVideoFps, defaultMaxVideoFrames);
+    ASSERT_TRUE(selectedFrameCount.ok());
+    EXPECT_EQ(selectedFrameCount.value(), 3u);
+
+    constexpr float configuredVideoFps = 1.0F;
+    constexpr uint32_t clientSampleCountForConfiguredFps = 20;
+    selectedFrameCount = calculateSelectedVideoFrameCount(videoDurationTicks, videoTicksPerSecond,
+        clientSampleCountForConfiguredFps, configuredVideoFps, defaultMaxVideoFrames);
+    ASSERT_TRUE(selectedFrameCount.ok());
+    EXPECT_EQ(selectedFrameCount.value(), 10u);
+
+    constexpr uint32_t configuredMaxVideoFrames = 3;
+    selectedFrameCount = calculateSelectedVideoFrameCount(videoDurationTicks, videoTicksPerSecond,
+        clientSampleCountForConfiguredFps, defaultVideoFps, configuredMaxVideoFrames);
+    ASSERT_FALSE(selectedFrameCount.ok());
+    EXPECT_EQ(selectedFrameCount.status(), absl::InvalidArgumentError("Requested video FPS exceeds maximum decoded frame count"));
+}
+
+TEST(VideoFrameSelectionTest, KeepsAvailableFramesWhenFpsIsOmitted) {
+    constexpr uint64_t videoDurationTicks = 10;
+    constexpr uint32_t videoTicksPerSecond = 1;
+    constexpr uint32_t clientSampleCount = 3;
+    constexpr uint32_t maximumSelectedFrames = 10;
+
+    const auto selectedFrameCount = calculateSelectedVideoFrameCount(videoDurationTicks, videoTicksPerSecond,
+        clientSampleCount, std::nullopt, maximumSelectedFrames);
+    ASSERT_TRUE(selectedFrameCount.ok());
+    EXPECT_EQ(selectedFrameCount.value(), clientSampleCount);
+
+    const std::vector<uint64_t> sampleTimestamps{0, 100, 200};
+    VideoFrameSelector selector(std::nullopt, maximumSelectedFrames);
+    std::vector<size_t> selectedIndexes;
+    for (size_t sampleIndex = 0; sampleIndex < sampleTimestamps.size(); ++sampleIndex) {
+        if (selector.shouldSelect(sampleTimestamps[sampleIndex])) {
+            selectedIndexes.push_back(sampleIndex);
+        }
+    }
+
+    EXPECT_EQ(selectedIndexes, (std::vector<size_t>{0, 1, 2}));
+}
+
+TEST(VideoFrameSelectionTest, SelectsTimestampSpacedFrames) {
+    constexpr long double halfSecondInTimestampUnits = 500.0L;
+    constexpr size_t maximumSelectedFrames = 10;
+    const std::vector<uint64_t> sampleTimestamps{0, 100, 200, 300, 400, 500, 610, 700};
+    const std::vector<size_t> expectedSelectedIndexes{0, 5};
+    const std::vector<uint64_t> expectedSelectedTimestamps{0, 500};
+
+    VideoFrameSelector selector(halfSecondInTimestampUnits, maximumSelectedFrames);
+    std::vector<size_t> selectedIndexes;
+    std::vector<uint64_t> selectedTimestamps;
+    for (size_t sampleIndex = 0; sampleIndex < sampleTimestamps.size(); ++sampleIndex) {
+        if (selector.shouldSelect(sampleTimestamps[sampleIndex])) {
+            selectedIndexes.push_back(sampleIndex);
+            selectedTimestamps.push_back(sampleTimestamps[sampleIndex]);
+        }
+    }
+
+    EXPECT_EQ(selectedIndexes, expectedSelectedIndexes);
+    EXPECT_EQ(selectedTimestamps, expectedSelectedTimestamps);
+}
+
+TEST(VideoFrameSelectionTest, StopsSelectingAtMaximumFrameCount) {
+    constexpr long double oneSecondInTimestampUnits = 1000.0L;
+    constexpr size_t maximumSelectedFrames = 2;
+    const std::vector<uint64_t> sampleTimestamps{0, 1000, 2000, 3000};
+    const std::vector<size_t> expectedSelectedIndexes{0, 1};
+
+    VideoFrameSelector selector(oneSecondInTimestampUnits, maximumSelectedFrames);
+    std::vector<size_t> selectedIndexes;
+    for (size_t sampleIndex = 0; sampleIndex < sampleTimestamps.size(); ++sampleIndex) {
+        if (selector.shouldSelect(sampleTimestamps[sampleIndex])) {
+            selectedIndexes.push_back(sampleIndex);
+        }
+    }
+
+    EXPECT_EQ(selectedIndexes, expectedSelectedIndexes);
+}
+
 TEST(VideoFramesProcessorTest, MismatchingFrameResolutionRejected) {
     ov::genai::ChatHistory history;
     ov::AnyMap msg;

@@ -31,6 +31,23 @@ namespace ovms {
 
 constexpr int64_t MAX_VIDEO_FRAMES = 1024;
 
+// Calculates how many decoded frames can be retained after applying the
+// administrator's FPS and maximum-frame settings to a client video source.
+absl::StatusOr<size_t> calculateSelectedVideoFrameCount(uint64_t durationUnits,
+    uint32_t timescale, uint32_t sampleCount, std::optional<float> requestedFps, uint32_t maxDecodedFrames);
+
+class VideoFrameSelector {
+public:
+    VideoFrameSelector(std::optional<long double> frameInterval, size_t maxSelectedFrames);
+    bool shouldSelect(uint64_t timestamp);
+
+private:
+    const std::optional<long double> frameInterval;
+    const size_t maxSelectedFrames{0};
+    size_t selectedFrameCount{0};
+    long double nextSelectedTimestamp{0.0L};
+};
+
 // Loads a sequence of video frames from a list of frame references (base64 data
 // URIs, HTTP/HTTPS URLs, or local file paths) and stacks them into a single
 // video tensor with [N, H, W, C] layout (RGB, u8), as expected by the GenAI VLM
@@ -46,6 +63,6 @@ absl::StatusOr<ov::Tensor> loadVideoFrames(const std::vector<std::string>& frame
 absl::StatusOr<ov::Tensor> decodeVideoSource(const std::string& videoSource,
     const std::optional<std::string>& allowedLocalMediaPath,
     const std::optional<std::vector<std::string>>& allowedMediaDomains,
-    float requestedFps, uint32_t maxDecodedFrames, size_t& totalAllocatedPixels);
+    std::optional<float> requestedFps, uint32_t maxDecodedFrames, size_t& totalAllocatedPixels);
 
 }  // namespace ovms

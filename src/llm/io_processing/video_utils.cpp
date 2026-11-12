@@ -64,7 +64,7 @@ struct OpenedVideoSource {
 struct VideoSamplingPlan {
     size_t selectedFrameLimit;
     size_t maxAllowedPixels;
-    long double frameInterval;
+    std::optional<long double> frameInterval;
 };
 
 struct Mp4DemuxGuard {
@@ -141,6 +141,53 @@ bool multiplicationExceeds(size_t left, size_t right, size_t limit) {
     return left != 0 && right > limit / left;
 }
 
+}  // namespace
+
+absl::StatusOr<size_t> calculateSelectedVideoFrameCount(uint64_t durationUnits,
+    uint32_t timescale, uint32_t sampleCount, std::optional<float> requestedFps, uint32_t maxDecodedFrames) {
+    if (timescale == 0) {
+        return absl::InvalidArgumentError("MP4 video track has an invalid time scale");
+    }
+    if (!requestedFps.has_value()) {
+        return std::min({static_cast<size_t>(sampleCount), static_cast<size_t>(maxDecodedFrames),
+            static_cast<size_t>(MAX_VIDEO_FRAMES)});
+    }
+    const float fps = requestedFps.value();
+    const long double requestedFrameCount = std::ceil(
+        static_cast<long double>(durationUnits) * fps / static_cast<long double>(timescale));
+    if (!std::isfinite(requestedFrameCount) || requestedFrameCount < 1.0L ||
+        requestedFrameCount > static_cast<long double>(std::numeric_limits<size_t>::max())) {
+        return absl::InvalidArgumentError("MP4 video duration cannot be sampled at the requested FPS");
+    }
+    const size_t estimatedRequestedFrames = static_cast<size_t>(requestedFrameCount);
+    if (estimatedRequestedFrames > maxDecodedFrames) {
+        return absl::InvalidArgumentError("Requested video FPS exceeds maximum decoded frame count");
+    }
+    return std::min({estimatedRequestedFrames, static_cast<size_t>(maxDecodedFrames),
+        static_cast<size_t>(MAX_VIDEO_FRAMES), static_cast<size_t>(sampleCount)});
+}
+
+VideoFrameSelector::VideoFrameSelector(std::optional<long double> frameInterval, size_t maxSelectedFrames) :
+    frameInterval(frameInterval),
+    maxSelectedFrames(maxSelectedFrames) {
+}
+
+bool VideoFrameSelector::shouldSelect(uint64_t timestamp) {
+    if (selectedFrameCount >= maxSelectedFrames) {
+        return false;
+    }
+    if (frameInterval.has_value()) {
+        if (static_cast<long double>(timestamp) < nextSelectedTimestamp) {
+            return false;
+        }
+        nextSelectedTimestamp = (std::floor(static_cast<long double>(timestamp) / frameInterval.value()) + 1.0L) * frameInterval.value();
+    }
+    selectedFrameCount++;
+    return true;
+}
+
+namespace {
+
 void copyI420ToRgb(const uint8_t* const planes[3], int width, int height, const int strides[2], uint8_t* destination);
 
 absl::StatusOr<OpenedVideoSource> openVideoSource(const std::string& videoSource, size_t maxFileSize) {
@@ -204,24 +251,15 @@ absl::StatusOr<std::vector<uint8_t>> readH264ParameterSets(MP4D_demux_t& mp4, un
 }
 
 absl::StatusOr<VideoSamplingPlan> createVideoSamplingPlan(const MP4D_demux_t& mp4, unsigned videoTrackIndex,
-    float requestedFps, uint32_t maxDecodedFrames, size_t totalAllocatedPixels) {
+    std::optional<float> requestedFps, uint32_t maxDecodedFrames, size_t totalAllocatedPixels) {
     const auto& videoTrack = mp4.track[videoTrackIndex];
-    if (videoTrack.timescale == 0) {
-        return absl::InvalidArgumentError("MP4 video track has an invalid time scale");
-    }
     const uint64_t durationUnits = (static_cast<uint64_t>(videoTrack.duration_hi) << 32) | videoTrack.duration_lo;
-    const long double requestedFrameCount = std::ceil(
-        static_cast<long double>(durationUnits) * requestedFps / static_cast<long double>(videoTrack.timescale));
-    if (!std::isfinite(requestedFrameCount) || requestedFrameCount < 1.0L ||
-        requestedFrameCount > static_cast<long double>(std::numeric_limits<size_t>::max())) {
-        return absl::InvalidArgumentError("MP4 video duration cannot be sampled at the requested FPS");
+    auto selectedFrameLimitResult = calculateSelectedVideoFrameCount(durationUnits, videoTrack.timescale,
+        videoTrack.sample_count, requestedFps, maxDecodedFrames);
+    if (!selectedFrameLimitResult.ok()) {
+        return selectedFrameLimitResult.status();
     }
-    const size_t estimatedRequestedFrames = static_cast<size_t>(requestedFrameCount);
-    if (estimatedRequestedFrames > maxDecodedFrames) {
-        return absl::InvalidArgumentError("Requested video FPS exceeds maximum decoded frame count");
-    }
-    const size_t selectedFrameLimit = std::min({estimatedRequestedFrames, static_cast<size_t>(maxDecodedFrames),
-        static_cast<size_t>(MAX_VIDEO_FRAMES), static_cast<size_t>(videoTrack.sample_count)});
+    const size_t selectedFrameLimit = selectedFrameLimitResult.value();
     const size_t estimatedWidth = videoTrack.SampleDescription.video.width;
     const size_t estimatedHeight = videoTrack.SampleDescription.video.height;
     const size_t maxAllowedPixels = request_validation_utils::getMaxVideoDecodePixels();
@@ -234,8 +272,10 @@ absl::StatusOr<VideoSamplingPlan> createVideoSamplingPlan(const MP4D_demux_t& mp
         multiplicationExceeds(estimatedFramePixels, selectedFrameLimit, maxAllowedPixels - totalAllocatedPixels)) {
         return absl::InvalidArgumentError("Video exceeds maximum decoded size");
     }
-    return VideoSamplingPlan{selectedFrameLimit, maxAllowedPixels,
-        static_cast<long double>(videoTrack.timescale) / requestedFps};
+    const std::optional<long double> frameInterval = requestedFps.has_value()
+                                                         ? std::optional<long double>{static_cast<long double>(videoTrack.timescale) / requestedFps.value()}
+                                                         : std::nullopt;
+    return VideoSamplingPlan{selectedFrameLimit, maxAllowedPixels, frameInterval};
 }
 
 absl::Status storeDecodedFrameInTensor(uint8_t* const planes[3], const SBufferInfo& output,
@@ -304,7 +344,7 @@ absl::StatusOr<ov::Tensor> decodeH264Video(MP4D_demux_t& mp4, unsigned videoTrac
     size_t frameBytes = 0;
     size_t selectedFrames = 0;
     ov::Tensor video;
-    long double nextSelectedTimestamp = 0.0L;
+    VideoFrameSelector frameSelector(samplingPlan.frameInterval, samplingPlan.selectedFrameLimit);
     absl::Status decodeStatus = absl::OkStatus();
     for (unsigned sampleIndex = 0; sampleIndex < videoTrack.sample_count; ++sampleIndex) {
         unsigned sampleBytes = 0;
@@ -338,10 +378,9 @@ absl::StatusOr<ov::Tensor> decodeH264Video(MP4D_demux_t& mp4, unsigned videoTrac
         }
         // TODO: Sample using presentation timestamps after preserving MP4 ctts offsets
         // and passing timestamps through a timestamp-aware OpenH264 decoder API.
-        if (static_cast<long double>(timestamp) < nextSelectedTimestamp) {
+        if (!frameSelector.shouldSelect(timestamp)) {
             continue;
         }
-        nextSelectedTimestamp = (std::floor(static_cast<long double>(timestamp) / samplingPlan.frameInterval) + 1.0L) * samplingPlan.frameInterval;
 
         decodeStatus = storeDecodedFrameInTensor(planes, output, samplingPlan.maxAllowedPixels, totalAllocatedPixels,
             frameShape, frameBytes, samplingPlan.selectedFrameLimit, selectedFrames, video);
@@ -438,8 +477,8 @@ absl::StatusOr<ov::Tensor> loadVideoFrames(const std::vector<std::string>& frame
 absl::StatusOr<ov::Tensor> decodeVideoSource(const std::string& videoSource,
     const std::optional<std::string>& allowedLocalMediaPath,
     const std::optional<std::vector<std::string>>& allowedMediaDomains,
-    float requestedFps, uint32_t maxDecodedFrames, size_t& totalAllocatedPixels) {
-    if (!std::isfinite(requestedFps) || requestedFps <= 0.0F || maxDecodedFrames == 0) {
+    std::optional<float> requestedFps, uint32_t maxDecodedFrames, size_t& totalAllocatedPixels) {
+    if ((requestedFps.has_value() && (!std::isfinite(requestedFps.value()) || requestedFps.value() <= 0.0F)) || maxDecodedFrames == 0) {
         return absl::InvalidArgumentError("Requested video FPS and maximum frame count must be valid and greater than zero");
     }
     auto validationStatus = validateMediaSource(videoSource, allowedLocalMediaPath, allowedMediaDomains);

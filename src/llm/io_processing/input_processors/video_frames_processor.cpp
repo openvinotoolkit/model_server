@@ -36,7 +36,7 @@ constexpr std::string_view VIDEO_TAG_PREFIX = "<ov_genai_video_";
 VideoFramesProcessor::VideoFramesProcessor(
     std::optional<std::string> allowedLocalMediaPath,
     std::optional<std::vector<std::string>> allowedMediaDomains,
-    float requestedFps, uint32_t maxDecodedFrames) :
+    std::optional<float> requestedFps, uint32_t maxDecodedFrames) :
     allowedLocalMediaPath(std::move(allowedLocalMediaPath)),
     allowedMediaDomains(std::move(allowedMediaDomains)),
     requestedFps(requestedFps),
