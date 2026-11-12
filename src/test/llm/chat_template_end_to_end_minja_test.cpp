@@ -430,7 +430,7 @@ TEST_F(ChatTemplateEndToEndMinjaTest, Mistral7B_ToolCallWithStringArgs) {
 }
 
 // =============================================================================
-// Mistral3 and Devstral-2-small have similar chat templates, the only difference is the system prompt. 
+// Mistral3 and Devstral-2-small have similar chat templates, the only difference is the system prompt.
 // =============================================================================
 TEST_F(ChatTemplateEndToEndMinjaTest, Mistral3_ToolCallWithStringArgs) {
     chatTemplate = loadTemplateFile(chatTemplatesPath + "/chat_template_mistral3.jinja");
