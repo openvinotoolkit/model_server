@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -4920,6 +4921,93 @@ TEST_F(LLMOptionsHttpTest, LLMNodeOptionsCheckPluginConfig) {
 }
 TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckPluginConfig) {
     LLMNodeOptionsCheckPluginConfig(modelsPath);
+}
+
+class GgufPipelineSelectionTest : public TestWithTempDir {
+protected:
+    std::string writeMetadata(const std::string& architecture, unsigned int version = 3) {
+        const std::string path = ovms::FileSystem::joinPath({directoryPath, "model.gguf"});
+        std::ofstream file(path, std::ios::binary);
+        auto writeInteger = [&](uint64_t value, size_t bytes) {
+            for (size_t index = 0; index < bytes; ++index)
+                file.put(static_cast<char>((value >> (8 * index)) & 0xff));
+        };
+        auto writeString = [&](const std::string& value) {
+            writeInteger(value.size(), 8);
+            file.write(value.data(), value.size());
+        };
+        writeInteger(0x46554747, 4);
+        writeInteger(version, 4);
+        writeInteger(1, 8);
+        writeInteger(2, 8);
+        writeString("tokenizer.ggml.tokens");
+        writeInteger(9, 4);
+        writeInteger(8, 4);
+        writeInteger(1, 8);
+        writeString("dummy");
+        writeString("general.architecture");
+        writeInteger(8, 4);
+        writeString(architecture);
+        return path;
+    }
+};
+
+TEST_F(GgufPipelineSelectionTest, TextAutoAndExplicitSelection) {
+    mediapipe::LLMCalculatorOptions options;
+    options.set_models_path(writeMetadata("qwen35"));
+    PipelineType pipelineType{PipelineType::LM};
+    EXPECT_EQ(determinePipelineType(pipelineType, options, ""), StatusCode::OK);
+    EXPECT_EQ(pipelineType, PipelineType::LM_CB);
+    options.set_device("NPU");
+    EXPECT_EQ(determinePipelineType(pipelineType, options, ""), StatusCode::OK);
+    EXPECT_EQ(pipelineType, PipelineType::LM);
+    options.set_pipeline_type(mediapipe::LLMCalculatorOptions::LM_CB);
+    EXPECT_EQ(determinePipelineType(pipelineType, options, ""), StatusCode::OK);
+    EXPECT_EQ(pipelineType, PipelineType::LM_CB);
+    options.set_pipeline_type(mediapipe::LLMCalculatorOptions::LM);
+    EXPECT_EQ(determinePipelineType(pipelineType, options, ""), StatusCode::OK);
+    EXPECT_EQ(pipelineType, PipelineType::LM);
+}
+
+TEST_F(GgufPipelineSelectionTest, CompanionDoesNotEnableUnsupportedVision) {
+    mediapipe::LLMCalculatorOptions options;
+    options.set_models_path(writeMetadata("qwen35"));
+    std::ofstream(ovms::FileSystem::joinPath({directoryPath, "mmproj.gguf"})).close();
+    PipelineType pipelineType{PipelineType::LM};
+    ASSERT_EQ(determinePipelineType(pipelineType, options, ""), StatusCode::OK);
+    EXPECT_EQ(pipelineType, PipelineType::LM_CB);
+    for (const auto requestedType : {mediapipe::LLMCalculatorOptions::VLM, mediapipe::LLMCalculatorOptions::VLM_CB, mediapipe::LLMCalculatorOptions::OMNI}) {
+        options.set_pipeline_type(requestedType);
+        EXPECT_EQ(determinePipelineType(pipelineType, options, ""), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
+    }
+}
+
+TEST_F(GgufPipelineSelectionTest, ProjectorCannotBeLanguageModel) {
+    mediapipe::LLMCalculatorOptions options;
+    options.set_models_path(writeMetadata("clip"));
+    PipelineType pipelineType{PipelineType::LM};
+    EXPECT_EQ(determinePipelineType(pipelineType, options, ""), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
+}
+
+TEST_F(GgufPipelineSelectionTest, UnknownArchitectureDelegatesSupportToGenai) {
+    mediapipe::LLMCalculatorOptions options;
+    options.set_models_path(writeMetadata("future_architecture", 2));
+    PipelineType pipelineType{PipelineType::LM};
+    EXPECT_EQ(determinePipelineType(pipelineType, options, ""), StatusCode::OK);
+    EXPECT_EQ(pipelineType, PipelineType::LM_CB);
+}
+
+TEST_F(GgufPipelineSelectionTest, InvalidMetadataFailsBeforePipelineConstruction) {
+    mediapipe::LLMCalculatorOptions options;
+    PipelineType pipelineType{PipelineType::LM};
+    options.set_models_path(writeMetadata(""));
+    EXPECT_EQ(determinePipelineType(pipelineType, options, ""), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
+    options.set_models_path(writeMetadata("qwen35", 99));
+    EXPECT_EQ(determinePipelineType(pipelineType, options, ""), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
+    std::ofstream(options.models_path(), std::ios::binary | std::ios::trunc) << "GGUF";
+    EXPECT_EQ(determinePipelineType(pipelineType, options, ""), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
+    std::ofstream(options.models_path(), std::ios::binary | std::ios::trunc) << "invalid magic";
+    EXPECT_EQ(determinePipelineType(pipelineType, options, ""), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
 }
 
 TEST(GenAiServableInitializerTest, DefaultGgufReaderSelection) {

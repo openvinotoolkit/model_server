@@ -4,6 +4,10 @@ This demo shows how to deploy GGUF model with the OpenVINO Model Server.
 
 OVMS selects the OpenVINO GGUF frontend automatically for `.gguf` models; no reader-selection parameter is required.
 
+Before selecting a pipeline, OVMS reads GGUF v2/v3 metadata without loading tensor data. Metadata inspection is limited to 64 MiB and requires a nonempty string `general.architecture`. Unknown architectures are passed to GenAI, which validates model support during loading.
+
+GGUF language models use `LM_CB` in `AUTO` mode, or `LM` on NPU. Explicit `LM` and `LM_CB` choices are preserved. A `clip` vision projector cannot be served as a language model. GGUF `VLM`, `VLM_CB`, and `OMNI` selections are rejected because companion-projector loading is not supported. Sibling GGUF filenames containing `mmproj` are reported as projector candidates but are not loaded; their presence does not enable vision support.
+
 Currently recommended model is Ternary-Bonsai-2-27B PQ2_0.
 Check the [list of supported models](https://github.com/openvinotoolkit/openvino/blob/master/src/frontends/gguf/docs/supported_models.md) for more details.
 
