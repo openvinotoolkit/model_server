@@ -96,6 +96,7 @@ windows_test.bat my_dir_on_c PythonFlowTest.*
 
 # Running functional tests - optional
 The script runs pytest tests from `tests\functional` against the ovms.exe binary from a release package. It creates a `.venv` virtual environment, installs `tests\requirements.txt` and writes results to `pytest-functional.xml`.
+See the [functional tests developer guide](../tests/functional/docs/developer_guide.md) for details on configuration, test selection and writing tests.
 Create the deployment package first (see the next section) and pass the absolute path to the ovms.zip as the first argument.
 A HuggingFace token is required (some tests download gated models). Provide it with the `HF_TOKEN` environment variable, or with `HF_TOKEN_FILE_PATH` pointing to a file containing the token. `HF_TOKEN` takes priority. When `HF_TOKEN_FILE_PATH` is not set, `~\ovms_tokens\huggingface_token` is used.
 ```bat

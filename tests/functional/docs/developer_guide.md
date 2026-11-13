@@ -30,6 +30,7 @@ Functional tests treat OpenVINO Model Server (OVMS) as a black box. A test start
   - [Parametrization](#parametrization)
   - [Fixtures and Context](#fixtures-and-context)
   - [Adding a model](#adding-a-model)
+  - [Testing extra generative models](#testing-extra-generative-models-tt_extra_generative_models)
   - [Logging, steps and timeouts](#logging-steps-and-timeouts)
   - [Skipping tests](#skipping-tests)
   - [Marking known bugs](#marking-known-bugs)
@@ -131,7 +132,7 @@ make test_functional TEST_PATH=tests/functional/test_embeddings.py
 
 ### Using pytest directly
 
-```bash
+```text
 . .venv/bin/activate
 export OVMS_CPP_DOCKER_IMAGE=openvino/model_server
 export OVMS_CPP_IMAGE_TAG=latest
@@ -239,12 +240,12 @@ A missing model or image is not downloaded; the test fails instead.
 Typical flow: run the tests once with the default settings so that models and image are downloaded, then repeat with
 `TT_AIRPLANE_MODE=True`:
 
-```bash
+```text
 export TT_AIRPLANE_MODE=True
 pytest tests/functional/test_embeddings.py -v
 ```
 
-```bat
+```text
 set TT_AIRPLANE_MODE=True
 windows_test_functional.bat c:\git\model_server\dist\windows\ovms.zip
 ```
@@ -268,10 +269,10 @@ When `TT_OVMS_REST_PORT` or `TT_OVMS_GRPC_PORT` is set, `start_ovms(...)` does n
 `TT_SERVER_ADDRESS:<port>`. `REMOTE_SERVER_ADDRESS`, when set in the environment, takes priority over `TT_SERVER_ADDRESS`.
 A non-local `TT_SERVER_ADDRESS` is appended to `no_proxy` automatically (`TT_SET_NO_PROXY=False` disables the `NO_PROXY` update).
 
-Example - server on `10.0.0.5` serving the models that the selected tests use, tests run from another machine:
+Example - server on `127.0.0.1` serving the models that the selected tests use, tests run from another machine:
 
-```bash
-export TT_SERVER_ADDRESS=10.0.0.5
+```text
+export TT_SERVER_ADDRESS=127.0.0.1
 export TT_OVMS_REST_PORT=8000
 export TT_OVMS_GRPC_PORT=9000
 export TT_AIRPLANE_MODE=True          # nothing to download or pull on the client machine
@@ -307,20 +308,20 @@ Without it the tests fail with `Missing permissions to use dmesg without sudo. P
 
 1. Check the current value (`1` means restricted):
 
-   ```bash
+   ```text
    sysctl kernel.dmesg_restrict
    dmesg -T --level=err    # must print messages instead of "Operation not permitted"
    ```
 
 2. Allow reading the kernel log. This lasts until the next reboot:
 
-   ```bash
+   ```text
    sudo sysctl -w kernel.dmesg_restrict=0
    ```
 
    To keep the setting after a reboot:
 
-   ```bash
+   ```text
    echo "kernel.dmesg_restrict = 0" | sudo tee /etc/sysctl.d/99-dmesg.conf
    sudo sysctl --system
    ```
@@ -365,6 +366,7 @@ All variables are documented next to their definitions in [config.py](../config.
 | `TT_LOGGING_LEVEL` | `INFO` | Log level of the test framework (Python `logging`). Values: `CRITICAL`, `ERROR`, `WARNING`, `INFO`, `DEBUG` (upper case). `DEBUG` also raises the number of log lines checked when waiting for OVMS messages |
 | `TT_MODELS_PATH` | `~/ovms_models` | Local models repository |
 | `TT_GENERATIVE_MODELS_LOCAL_PATH` | `<TT_MODELS_PATH>/generative_models` | Local copies of generative models |
+| `TT_EXTRA_GENERATIVE_MODELS` | not set | Comma-separated list of extra LLM / VLM definitions added to the generative test collections, see [extra generative models](#testing-extra-generative-models-tt_extra_generative_models) |
 | `HF_TOKEN` / `HF_TOKEN_FILE_PATH` | not set / `~/ovms_tokens/huggingface_token` | Hugging Face token |
 | `TT_PORTS_POOL_SIZE`, `TT_GRPC_OVMS_STARTING_PORT`, `TT_REST_OVMS_STARTING_PORT` | generated | Ports used by started servers. When not all three are set, a pool is created using `tests/reservation_manager.yml` |
 | `TT_WAIT_FOR_MESSAGES_TIMEOUT` | `180` | Timeout in seconds of waiting for log messages from OVMS |
@@ -581,6 +583,44 @@ All models from all `ModelsLib` collections for the selected `TT_TARGET_DEVICE` 
 (`download_models` in `utils/hooks.py`), so add only the models that are really used. Downloads are incremental: files that are
 missing or have a different size are downloaded again.
 
+### Testing extra generative models
+
+`TT_EXTRA_GENERATIVE_MODELS` adds LLM / VLM models to the existing generative test collections without changing the code.
+The models are appended to `ModelsLib.various_mini_large_language_models` and `ModelsLib.various_mini_vision_language_models`,
+so every test that uses them (including the on-commit combined collection) is also parametrized with the extra models.
+
+The value is a comma-separated list of definitions in the format:
+
+```
+class_name:model_name:precision:precision_dir
+```
+
+| Field | Description |
+|-------|-------------|
+| `class_name` | Name of the generated model class. It appears in the test id. Include `VL` in the name to create a vision language model (`VisionLanguageModel`); otherwise a `LargeLanguageModel` is created |
+| `model_name` | Hugging Face repository of the model |
+| `precision` | Model precision, for example `INT4` |
+| `precision_dir` | Directory name used for the precision in the local models path (`<precision_dir>/<model_name>` under `TT_GENERATIVE_MODELS_LOCAL_PATH`) |
+
+If `class_name` matches a class already defined in `models/models_generative.py`, that class is added to the collections and the
+remaining fields can be omitted (a definition with only the class name). Any other number of fields is rejected with `ValueError`.
+
+Examples:
+
+```text
+# one new LLM
+export TT_EXTRA_GENERATIVE_MODELS="MetaLlama318BInstructInt4SymCw:meta-llama/Llama-3.1-8B-Instruct:INT4:INT4_SYM_CW"
+
+# a new VLM and an already defined class
+export TT_EXTRA_GENERATIVE_MODELS="MyModelVLInt4:org/my-vlm:INT4:INT4_SYM_CW,Gemma34bItInt4CwOvHf"
+
+pytest tests/functional/test_text_generation.py -k "MetaLlama318BInstructInt4SymCw" -v
+```
+
+The variable can also be set in `user_config.py`. The extra models are prepared like the other generative models, so they are
+downloaded at the session start (unless `TT_AIRPLANE_MODE=True`) and gated models need a Hugging Face token.
+Use `pytest --collect-only -q` to check the generated test ids.
+
 ### Logging, steps and timeouts
 
 ```python
@@ -662,9 +702,9 @@ When the bug affects only some parametrizations, skip inside the test instead:
 - Follow the existing style of the file. The line limit and the other rules are in [pylintrc](../pylintrc).
 - Run pylint from the repository root (the same command is run in the CI):
 
-  ```bash
-  python3 -m pylint --rcfile=tests/functional/pylintrc tests/functional
-  ```
+```bash
+python3 -m pylint --rcfile=tests/functional/pylintrc tests/functional
+```
 
 - Every new file needs the Apache 2.0 license header with the current year.
 - Pass non-trivial values through helpers and constants (`constants/`) instead of repeating literals.
