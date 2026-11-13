@@ -28,10 +28,10 @@ IF /I EXIST c:\opt\llm_testing (
     rmdir /S /Q "%~1"
     if !errorlevel! neq 0 exit /b !errorlevel!
   )
-    mklink /d "%~1" c:\opt\llm_testing
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    echo Created link to existing in c:\opt\llm_testing. Skipping downloading models.
-    exit /b 0
+  mklink /d "%~1" c:\opt\llm_testing
+  if !errorlevel! neq 0 exit /b !errorlevel!
+  echo Created link to existing in c:\opt\llm_testing. Skipping downloading models.
+  exit /b 0
 )
 
 set "EMBEDDING_MODEL=OpenVINO/bge-base-en-v1.5-int8-ov"
@@ -46,7 +46,7 @@ set "STT_MODEL=OpenVINO/whisper-tiny-int4-ov"
 set "QWEN3_MODEL=OpenVINO/Qwen3-8B-int4-ov"
 set "LLAMA3_MODEL=OpenVINO/Llama-3.1-8B-Instruct-FastDraft-150M-int8-ov"
 set "HERMES3_MODEL=NousResearch/Hermes-3-Llama-3.1-8B"
-set "PHI4_MODEL=OpenVINO/Phi-4-mini-instruct-int4-ov"
+set "PHI4_MODEL=OpenVINO/Phi-4-reasoning-int4-ov"
 set "MISTRAL_MODEL=OpenVINO/Mistral-7B-Instruct-v0.3-int4-ov"
 set "GPTOSS_MODEL=OpenVINO/gpt-oss-20b-int4-ov"
 set "DEVSTRAL_MODEL=unsloth/Devstral-Small-2507"

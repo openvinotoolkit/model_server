@@ -53,7 +53,8 @@ curl http://localhost:8000/v1/models
       "id": "OpenVINO/Qwen3.6-35B-A3B-int4-ov",
       "object": "model",
       "created": 1772928358,
-      "owned_by": "OVMS"
+      "owned_by": "OVMS",
+      "max_model_len": 262144
     }
   ]
 }
