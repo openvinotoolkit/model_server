@@ -90,6 +90,12 @@ generative_models_local_path = get_path(
     "TT_GENERATIVE_MODELS_LOCAL_PATH", os.path.join(models_path, "generative_models")
 )
 
+""" TT_EXTRA_GENERATIVE_MODELS - extra generative models (LLM/VLM) classes to use in tests """
+# Use pattern: "class_name:model_name:precision:precision_dir"
+# Remember to add "VL" to class_name if it is vision model
+# Example: "MetaLlama318BInstructInt4SymCw:meta-llama/Llama-3.1-8B-Instruct:INT4:INT4_SYM_CW"
+extra_generative_models_definitions = get_list("TT_EXTRA_GENERATIVE_MODELS")
+
 """ TT_CLEAN_ARTIFACTS_DIR """
 clean_artifacts_dir = get_bool("TT_CLEAN_ARTIFACTS_DIR", False)
 
@@ -197,9 +203,21 @@ build_test_image = get_bool("TT_BUILD_TEST_IMAGE", False)
 """ TT_SAVE_IMAGE_TO_ARTIFACTS - save generated or edited image to artifacts """
 save_image_to_artifacts = get_bool("TT_SAVE_IMAGE_TO_ARTIFACTS", False)
 
+""" TT_OVMS_GRPC_PORT - OVMS server GRPC port to be used for tests (enables usage of external server) """
+ovms_grpc_port = get_int("TT_OVMS_GRPC_PORT", None)
+
+""" TT_OVMS_REST_PORT - OVMS server REST port to be used for tests (enables usage of external server) """
+ovms_rest_port = get_int("TT_OVMS_REST_PORT", None)
+
+""" TT_SERVER_ADDRESS - OVMS server address"""
+server_address = os.environ.get("TT_SERVER_ADDRESS", "localhost")
+
 """TT_SET_NO_PROXY"""
 set_no_proxy = get_bool("TT_SET_NO_PROXY", True)
 no_proxy = os.environ.get("no_proxy", "")
+if server_address != "localhost":
+    no_proxy = f"{no_proxy},{server_address}"
+    os.environ["no_proxy"] = no_proxy
 if set_no_proxy:
     os.environ["NO_PROXY"] = no_proxy
 http_proxy = os.environ.get("http_proxy", "")
@@ -212,13 +230,10 @@ run_ovms_with_valgrind = get_bool("TT_RUN_OVMS_WITH_VALGRIND", False)
 run_ovms_with_opencl_trace = get_bool("TT_RUN_OVMS_WITH_OPENCL_TRACE", False)
 
 """ TT_XDIST_WORKERS - number of workers """
-xdist_workers = get_int("TT_XDIST_WORKERS", 0)
+xdist_workers = get_int("TT_XDIST_WORKERS", 4)
 
 """ TT_DOCKER_CLIENT_TIMEOUT - Docker client timeout"""
 docker_client_timeout = get_int("TT_DOCKER_CLIENT_TIMEOUT", 120)
-
-""" TT_SERVER_ADDRESS - OVMS server address"""
-server_address = os.environ.get("TT_SERVER_ADDRESS", "localhost")
 
 """ TT_RESOURCE_MONITOR_ENABLED - Dump ovms container resource statistics once per second """
 resource_monitor_enabled = get_bool("TT_RESOURCE_MONITOR_ENABLED", False)
@@ -374,11 +389,14 @@ class StrippingLists:
     DEFAULT_SENSITIVE_KEYS_TO_BE_MASKED = [
         r"(?!zabbix_operator_initial_).*pass(word)?",
         r".*client_id",
-        r".*(access)?(_)?(?<!ssh_)key(?!s|_path)",
-        r"id_token",
-        r"Authorization",
-        r"database_url",
-        r"gmail_",
+        r".*(access)?(_)?(?<!ssh_)key(?!s|_path|word)",
+        r".*id_token",
+        r".*token(?!s|_file_path)",
+        r".*(?<!no_)proxy",
+        r".*(secret|credentials|connection_string)",
+        r".*Authorization",
+        r".*database_url",
+        r".*gmail_",
     ]
 
 
@@ -387,7 +405,7 @@ host_os_user = os.environ.get("TT_HOST_OS_USER", None)
 log_username = os.environ.get("TT_LOG_USERNAME", False)
 sensitive_keys = get_list("TT_SENSITIVE_KEYS", fallback=StrippingLists.DEFAULT_SENSITIVE_KEYS_TO_BE_MASKED)
 sensitive_keys_to_be_masked = re.compile("|".join(sensitive_keys), re.IGNORECASE)
-strip_sensitive_data = get_bool("TT_STRIP_SENSITIVE_DATA", False)
+strip_sensitive_data = get_bool("TT_STRIP_SENSITIVE_DATA", True)
 logging_level = os.environ.get("TT_LOGGING_LEVEL", "INFO")
 logger_format = "{}%(asctime)s {}- %(name)s - %(levelname)s: %(message)s".format
 
@@ -429,3 +447,6 @@ run_on_commit_tests = get_bool("TT_ON_COMMIT_TESTS", True)
 """ TT_RUN_REGRESSION_TESTS - False -> api-regression tests are not run,
                              True -> api-regression tests are run, default: False """
 run_regression_tests = get_bool("TT_RUN_REGRESSION_TESTS", False)
+
+""" TT_CLEAN_GENERATIVE_MODELS - remove unused models from TT_MODELS_PATH """
+clean_downloaded_models = get_bool("TT_CLEAN_GENERATIVE_MODELS", False)

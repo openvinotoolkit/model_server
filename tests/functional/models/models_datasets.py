@@ -32,7 +32,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from tests.functional.config import binary_io_images_path, datasets_path
+from tests.functional.config import binary_io_images_path, datasets_path, ovms_c_repo_path
 from tests.functional.constants.ovms import Ovms
 from tests.functional.constants.paths import Paths
 from tests.functional.utils.inference.serving.openai import ChatCompletionsApi
@@ -75,6 +75,14 @@ class NumPyDataset(ModelDataset):
     def __init__(self, *data_path, data_src_path=None):
         self.name = data_path[0]
         self.data_path = data_src_path if data_src_path is not None else os.path.join(datasets_path, *data_path)
+
+
+class NumPyImageData(NumPyDataset):
+
+    def __init__(self, size=None):
+        file_name = "imgs_nhwc.npy"
+        super().__init__(file_name, data_src_path=os.path.join(Paths.OVMS_C_CLIENT_IMAGES, file_name))
+        self.size = size
 
 
 class LanguageModelDataset(ModelDataset):
@@ -128,7 +136,7 @@ class LargeLanguageModelDataset(ModelDataset):
 class ZebraImageDataset(NumPyDataset):
     def __init__(self):
         file_name = "zebra.jpeg"
-        super().__init__(file_name, data_src_path=os.path.join(Paths.OVMS_C_IMAGES, file_name))
+        super().__init__(file_name, data_src_path=os.path.join(Paths.OVMS_C_DEMOS_IMAGES, file_name))
 
 
 class VisionLanguageModelImageDataset(ZebraImageDataset):
@@ -196,6 +204,50 @@ class RerankModelDataset(LargeLanguageModelDataset):
 
 class SingleMessageLanguageModelDataset(LargeLanguageModelDataset):
     user_data = [ChatCompletionsApi.ROLE_USER, LargeLanguageModelDataset.user_content]
+    input_data = [user_data]
+
+
+MEDIUM_PROMPT_MAX_CHARACTERS = 2923
+
+
+def get_long_prompt(max_characters=None):
+    with open(
+            os.path.join(ovms_c_repo_path, "tests", "functional","data", "generative_ai", "long_prompt.txt"),
+            'r',
+            encoding='utf-8'
+    ) as file:
+        user_content = file.read()
+    if max_characters is not None and len(user_content) > max_characters:
+        # cut at a word boundary
+        user_content = user_content[:max_characters].rsplit(None, 1)[0]
+    return user_content
+
+
+class LongPromptLanguageModelDataset(LargeLanguageModelDataset):
+    user_content = get_long_prompt()
+    system_content = "You are a helpful assistant giving short answers."
+    user_data = [ChatCompletionsApi.ROLE_USER, user_content]
+    system_data = [ChatCompletionsApi.ROLE_SYSTEM, system_content]
+    input_data = [system_data, user_data]
+
+
+class LongPromptSingleMessageLanguageModelDataset(LargeLanguageModelDataset):
+    user_content = get_long_prompt()
+    user_data = [ChatCompletionsApi.ROLE_USER, user_content]
+    input_data = [user_data]
+
+
+class MediumPromptLanguageModelDataset(LargeLanguageModelDataset):
+    user_content = get_long_prompt(MEDIUM_PROMPT_MAX_CHARACTERS)
+    system_content = "You are a helpful assistant giving short answers."
+    user_data = [ChatCompletionsApi.ROLE_USER, user_content]
+    system_data = [ChatCompletionsApi.ROLE_SYSTEM, system_content]
+    input_data = [system_data, user_data]
+
+
+class MediumPromptSingleMessageLanguageModelDataset(LargeLanguageModelDataset):
+    user_content = get_long_prompt(MEDIUM_PROMPT_MAX_CHARACTERS)
+    user_data = [ChatCompletionsApi.ROLE_USER, user_content]
     input_data = [user_data]
 
 

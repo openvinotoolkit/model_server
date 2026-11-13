@@ -134,6 +134,7 @@ def check_dir(start_dir):
         'third_party/python/BUILD',
         'libevent/BUILD',
         'listen.patch',
+        'long_prompt.txt',
         'metrics_output.out',
         'missing_headers.txt',
         'net_http.patch',

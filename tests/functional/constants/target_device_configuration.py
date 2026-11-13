@@ -24,12 +24,10 @@ try:
 except ImportError:
     getuid = None
 
-from tests.functional.constants.os_type import get_host_os
-from tests.functional.utils.test_framework import FrameworkMessages, get_parameter_from_item, skip_if
+from tests.functional.utils.test_framework import FrameworkMessages, skip_if
 
 from tests.functional.config import skip_nginx_test
 from tests.functional.constants.target_device import TargetDevice
-from tests.functional.constants.ovms import BASE_OS_PARAM_NAME
 
 NETWORK = "network"
 PRIVILEGED = "privileged"
@@ -104,8 +102,3 @@ def nginx_mtls_not_supported_for_test():
     nginx_mtls images.
     """
     return skip_if(skip_nginx_test, msg=FrameworkMessages.NGINX_IMAGE_NOT_SUPPORTED)
-
-
-def deselect_if_host_os_not_match_docker_base_image_runtime(item):
-    should_skip = get_host_os() != get_parameter_from_item(item, BASE_OS_PARAM_NAME)
-    return should_skip

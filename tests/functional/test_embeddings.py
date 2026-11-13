@@ -90,7 +90,7 @@ class TestEmbeddings:
     @pytest.mark.parametrize("encoding_format", EncodingFormatValues.values(), ids=lambda x: f"encoding_format={x}")
     @pytest.mark.parametrize("input_data_type", ["list", "string"], ids=lambda x: f"input_data_type={x}")
     @pytest.mark.timeout(calculate_generative_test_timeout(480))
-    def test_on_commit_embeddings_endpoints(
+    def test_embeddings_endpoints(
             self, context: Context, model_type, openai_rest_api_type, endpoint, encoding_format, input_data_type
     ):
         """

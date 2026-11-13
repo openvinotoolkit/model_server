@@ -18,8 +18,16 @@
 
 import pytest
 
+from tests.functional.models.models import PipelineType, model_with_pipeline_type
+from tests.functional.models.models_datasets import (
+    LongPromptLanguageModelDataset,
+    LongPromptSingleMessageLanguageModelDataset,
+    MediumPromptLanguageModelDataset,
+    MediumPromptSingleMessageLanguageModelDataset,
+)
 from tests.functional.models.models_library import ModelsLib
 from tests.functional.constants.components import OvmsComponents
+from tests.functional.constants.ovms import Ovms
 from tests.functional.constants.ovms_openai import (
     MaxTokensValues,
     TemperatureValues,
@@ -28,14 +36,17 @@ from tests.functional.constants.ovms_type import OvmsType
 from tests.functional.constants.requirements import Requirements
 from tests.functional.constants.target_device import TargetDevice
 from tests.functional.constants.target_device_configuration import nginx_mtls_not_supported_for_test
+from tests.functional.models import models_generative as mg
 from tests.functional.object_model.inference_helpers import run_llm_inference
 from tests.functional.utils.context import Context
 from tests.functional.utils.generative_ai.utils import calculate_generative_test_timeout, GenerativeAIUtils
-from tests.functional.utils.inference.serving.openai import OpenAIWrapper
+from tests.functional.utils.inference.serving.openai import OpenAIWrapper, ChatCompletionsApi, CompletionsApi
 from tests.functional.utils.logger import get_logger, step
+from tests.functional.utils.process_multi import run_command_in_parallel
 from tests.functional.utils.test_framework import (
     skip_if_language_models_not_enabled,
     skip_if_mediapipe_disabled,
+    skip_if_runtime,
 )
 
 logger = get_logger(__name__)
@@ -62,9 +73,12 @@ class TestTextGeneration:
     @pytest.mark.parametrize("stream", [True, False], ids=lambda x: f"stream={x}")
     @pytest.mark.parametrize("max_tokens", [MaxTokensValues.DEFAULT], ids=lambda x: f"max_tokens={x}")
     @pytest.mark.parametrize("temperature", [TemperatureValues.TEST_DEFAULT], ids=lambda x: f"temperature={x}")
+    @pytest.mark.parametrize("ovms_log_level", [Ovms.LOG_LEVEL_INFO, Ovms.LOG_LEVEL_DEBUG, Ovms.LOG_LEVEL_TRACE])
+    @pytest.mark.parametrize("pipeline_type", PipelineType.TEXT_GENERATION)
     @pytest.mark.timeout(calculate_generative_test_timeout(480))
-    def test_on_commit_llm_text_generation_endpoints(
-            self, context: Context, model_type, openai_rest_api_type, endpoint, stream, max_tokens, temperature
+    def test_text_generation_endpoints(
+            self, context: Context, model_type, openai_rest_api_type, endpoint, stream, max_tokens, temperature,
+            pipeline_type, ovms_log_level,
     ):
         """
         <b>Description:</b>
@@ -72,6 +86,7 @@ class TestTextGeneration:
 
         <b>Input data:</b>
         - Language model type/ Vision Language model type
+        - Pipeline type
 
         <b>Expected results:</b>
         OVMS will properly load language model and execute inference
@@ -85,13 +100,21 @@ class TestTextGeneration:
         """
         model, result, port, request_params = GenerativeAIUtils.prepare_resources(
             context,
-            model_type,
+            model_with_pipeline_type(model_type, pipeline_type),
             openai_rest_api_type,
             endpoint,
+            log_level=ovms_log_level,
             stream=stream,
             max_tokens=max_tokens,
             temperature=temperature,
         )
+
+        if model_type.is_vision_language:
+            dataset = model_type().get_default_dataset()
+        elif model_type.single_message_dataset:
+            dataset = LongPromptSingleMessageLanguageModelDataset
+        else:
+            dataset = LongPromptLanguageModelDataset
 
         step("Run simple inference")
         run_llm_inference(
@@ -99,8 +122,139 @@ class TestTextGeneration:
             openai_rest_api_type,
             port,
             endpoint,
+            dataset=dataset,
             validate_outputs_ttr=False,
             request_parameters=request_params,
         )
 
         GenerativeAIUtils.unload_model_and_verify(model, result, port, openai_rest_api_type, endpoint, request_params)
+
+    @pytest.mark.api_on_commit
+    @pytest.mark.devices_supported_for_test(TargetDevice.CPU, TargetDevice.GPU, TargetDevice.NPU)
+    @pytest.mark.reqids(Requirements.llm, Requirements.openai_api, Requirements.sdl)
+    @pytest.mark.model_type(ModelsLib.various_large_and_vision_language_models_on_commit)
+    @pytest.mark.parametrize("endpoint", [OpenAIWrapper.CHAT_COMPLETIONS])
+    @pytest.mark.parametrize("stream", [True, False], ids=lambda x: f"stream={x}")
+    @pytest.mark.parametrize("ignore_eos", [True], ids=lambda x: f"ignore_eos={x}")
+    @pytest.mark.parametrize("max_tokens", [MaxTokensValues.COMPARE,], ids=lambda x: f"max_tokens={x}")
+    @pytest.mark.parametrize("temperature", [TemperatureValues.TEST_DEFAULT], ids=lambda x: f"temperature={x}")
+    @pytest.mark.parametrize("pipeline_type", PipelineType.TEXT_GENERATION)
+    @pytest.mark.parametrize("ovms_log_level", [Ovms.LOG_LEVEL_INFO, Ovms.LOG_LEVEL_DEBUG, Ovms.LOG_LEVEL_TRACE])
+    @pytest.mark.parametrize("sequential_requests", [3], ids=lambda x: f"sequential_requests={x}")
+    @pytest.mark.parametrize("parallel_requests", [32], ids=lambda x: f"parallel_requests={x}")
+    @pytest.mark.parametrize("request_type", ["curl"], ids=lambda x: f"request_type={x}")  # also available: "python"
+    @pytest.mark.timeout(calculate_generative_test_timeout(960))
+    def test_text_generation_endpoints_multiple_requests(
+            self,
+            context: Context,
+            tmp_path,
+            model_type,
+            openai_rest_api_type,
+            stream,
+            ignore_eos,
+            endpoint,
+            max_tokens,
+            temperature,
+            pipeline_type,
+            ovms_log_level,
+            sequential_requests,
+            parallel_requests,
+            request_type,
+    ):
+        """
+        <b>Description:</b>
+        Execute multiple inferences with LLM/VLM type model.
+
+        <b>Input data:</b>
+        - Language model type/ Vision Language model type
+
+        <b>Expected results:</b>
+        OVMS will properly load language model and execute multiple inferences
+
+        <b>Steps:</b>
+        1. Prepare language model instance
+        2. Start OVMS
+        3. Run simple inference for reference (non-dummy models)
+        4. Trigger large number of requests
+        5. Check similarity (non-dummy models)
+        """
+        skip_if_runtime(model_type==mg.Gemma34bItInt4CwOvHf, "VLM dummy model not yet enabled")
+
+        model, result, port, request_params = GenerativeAIUtils.prepare_resources(
+            context,
+            model_with_pipeline_type(model_type, pipeline_type),
+            openai_rest_api_type,
+            endpoint,
+            log_level=ovms_log_level,
+            stream=stream,
+            ignore_eos=ignore_eos,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+
+        if model_type.is_vision_language:
+            dataset = model_type().get_default_dataset()
+        elif model_type.single_message_dataset:
+            dataset = MediumPromptSingleMessageLanguageModelDataset
+        else:
+            dataset = MediumPromptLanguageModelDataset
+
+        reference_outputs = None
+        if not model_type.is_dummy:
+            step("Run simple inference for reference (non-dummy models)")
+            reference_outputs, _, _, _ = run_llm_inference(
+                model,
+                openai_rest_api_type,
+                port,
+                endpoint,
+                dataset=dataset,
+                request_parameters=request_params,
+            )
+
+        step("Trigger large number of requests")
+        if request_type == "curl":
+            curl_command = GenerativeAIUtils.prepare_llm_curl_request(
+                openai_rest_api_type, endpoint, port, model, request_params, tmp_path, dataset=dataset,
+            )
+            command = GenerativeAIUtils.prepare_curl_script_command(
+                curl_command, sequential_requests, tmp_path, context.base_os,
+            )
+            stdout = run_command_in_parallel(command, runs=parallel_requests)
+            assert stdout, f"Empty stdout for {parallel_requests} commands: '{command}'"
+            outputs_multiple_requests = GenerativeAIUtils.get_outputs_from_curl_stdout(stdout, stream)
+        elif request_type == "python":
+            input_objects = model.prepare_input_data(dataset=dataset)
+            input_data = CompletionsApi.prepare_completions_input_content(input_objects) \
+                if endpoint == OpenAIWrapper.COMPLETIONS else \
+                ChatCompletionsApi.prepare_chat_completions_input_content(input_objects)
+            command = GenerativeAIUtils.prepare_python_script_command(
+                context,
+                tmp_path,
+                port,
+                model,
+                endpoint,
+                input_data,
+                request_params,
+                requests_number=sequential_requests,
+            )
+            stdout = run_command_in_parallel(command, runs=parallel_requests)
+            assert stdout, f"Empty stdout for {parallel_requests} commands: '{command}'"
+            outputs_multiple_requests = GenerativeAIUtils.get_outputs_from_stdout(stdout)
+        else:
+            raise NotImplementedError()
+
+        len_outputs = len(outputs_multiple_requests)
+        assert len_outputs == parallel_requests * sequential_requests, \
+            f"Not all outputs available. Expected: {parallel_requests * sequential_requests}, Actual: {len_outputs}"
+
+        GenerativeAIUtils.unload_model_and_verify(model, result, port, openai_rest_api_type, endpoint, request_params)
+        if not model_type.is_dummy:
+            step("Check similarity (non-dummy models)")
+            GenerativeAIUtils.check_llm_outputs_similarity(
+                context,
+                outputs_multiple_requests,
+                reference_outputs,
+                result,
+                openai_rest_api_type,
+                port,
+            )

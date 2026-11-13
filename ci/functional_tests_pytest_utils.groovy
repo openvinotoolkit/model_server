@@ -2,8 +2,8 @@ def validateParams(params) {
     if (!(params.TARGET_HOST ==~ /[a-zA-Z0-9_.-]+/)) {
         error "Invalid TARGET_HOST '${params.TARGET_HOST}'. Allowed characters: letters, digits, dot, underscore, hyphen."
     }
-    if (!(params.TT_XDIST_WORKERS ==~ /[1-9][0-9]*/)) {
-        error "Invalid TT_XDIST_WORKERS '${params.TT_XDIST_WORKERS}'. Expected a positive integer; 'auto' is not supported because tests/functional/config.py parses it as an int."
+    if (!(params.TT_XDIST_WORKERS ==~ /0|[1-9][0-9]*/)) {
+        error "Invalid TT_XDIST_WORKERS '${params.TT_XDIST_WORKERS}'. Expected a non-negative integer (0 disables xdist)."
     }
 }
 
@@ -84,8 +84,8 @@ def checkoutCore(String branch, scmConfig) {
 }
 
 def publishResults() {
-    junit allowEmptyResults: true, testResults: 'pytest-functional.xml'
-    archiveArtifacts allowEmptyArchive: true, artifacts: 'pytest-functional.xml,test_log/**,tests/functional/test_log_build/**'
+    junit allowEmptyResults: true, testResults: 'report.xml'
+    archiveArtifacts allowEmptyArchive: true, artifacts: 'report.xml,report.html,test_log/**,tests/functional/test_log_build/**'
 }
 
 return this

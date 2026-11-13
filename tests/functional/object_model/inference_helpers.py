@@ -1001,6 +1001,11 @@ def run_llm_inference(
         ttr_reference=0.5,
         **kwargs,
 ):
+    if not isinstance(model, list):
+        # Wrapped mediapipe models keep the real model in calculators[0].model
+        underlying_model = model.calculators[0].model if getattr(model, "calculators", None) else model
+        if getattr(underlying_model, "is_dummy", False):
+            validate_outputs_ttr = False
     if api_type.type == REST:
         api_client = api_type(model=model, port=port)
         infer_request = kwargs.get("infer_request", None)

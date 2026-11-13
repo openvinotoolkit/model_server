@@ -93,7 +93,7 @@ pipeline {
                                     . .venv/bin/activate
                                     python -m pip install --upgrade pip
                                     python -m pip install -r tests/requirements.txt
-                                    pytest ${pytestArgs} -v -n "\$TT_XDIST_WORKERS" --junitxml=pytest-functional.xml
+                                    pytest ${pytestArgs} -v -n "\$TT_XDIST_WORKERS" --confcutdir=tests/functional --junitxml=report.xml --html=report.html --self-contained-html -v -rA -s
                                 """
                             }
                         } finally {

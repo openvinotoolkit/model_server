@@ -164,6 +164,7 @@ Where:
 
 The functional tests are written in Python. Therefore, to complete the tests in this section, Python 3.6 - 3.8 must be installed.
 > **NOTE**: In-case of additional problems, see the [debugging section](#debugging).
+> **NOTE**: A detailed guide on running and writing functional tests is available in [tests/functional/docs/developer_guide.md](../tests/functional/docs/developer_guide.md).
 
 1. Run command
 

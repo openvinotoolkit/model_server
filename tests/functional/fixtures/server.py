@@ -28,6 +28,8 @@ from tests.functional.utils.logger import get_logger, log_fixture
 from tests.functional.utils.test_framework import skip_if_runtime
 
 from tests.functional.config import (
+    ovms_grpc_port,
+    ovms_rest_port,
     resource_monitor_enabled,
     run_ovms_with_opencl_trace,
     run_ovms_with_valgrind,
@@ -38,6 +40,7 @@ from tests.functional.object_model.tools import Cliloader, Valgrind
 from tests.functional.object_model.ovms_binary import start_binary_ovms
 from tests.functional.object_model.ovms_capi import OvmsCapiParams, start_capi_ovms
 from tests.functional.object_model.ovms_docker import OvmsDockerLauncher, OvmsDockerParams
+from tests.functional.object_model.ovms_external import OvmsExternal
 from tests.functional.object_model.ovms_instance import OvmsRunContext
 from tests.functional.object_model.test_environment import TestEnvironment
 
@@ -82,6 +85,9 @@ def start_ovms(
     timeout=None,
     **kwargs,
 ):
+    if ovms_rest_port is not None or ovms_grpc_port is not None:
+        return OvmsRunContext(OvmsExternal(), parameters.models, context)
+
     if ovms_type_to_start is None:
         ovms_type_to_start = context.ovms_type
 
@@ -100,6 +106,7 @@ def start_ovms(
         else:
             environment = env
 
+    result = None
     if ovms_type_to_start in (OvmsType.DOCKER, OvmsType.DOCKER_CMD_LINE, OvmsType.BINARY_DOCKER):
         ovms_docker_params = rewrite_parameters(inherit_class=OvmsDockerParams, base_class_object=parameters)
         result = start_docker_ovms(

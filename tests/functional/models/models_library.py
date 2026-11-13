@@ -27,9 +27,9 @@ class ModelsLibrary:
         return defaultdict(
             list,
             {
-                TargetDevice.CPU: [mg.LFM25350MInt8OvHf],
-                TargetDevice.GPU: [mg.LFM25350MInt8OvHf],
-                TargetDevice.NPU: [mg.Phi35MiniInstructInt4CwOvHf],
+                TargetDevice.CPU: [mg.DummyCyclicGpt2OvHf] + mg.extra_generative_models,
+                TargetDevice.GPU: [mg.DummyCyclicGpt2OvHf] + mg.extra_generative_models,
+                TargetDevice.NPU: [mg.DummyCyclicGpt2OvHf] + mg.extra_generative_models,
             },
         )
 
@@ -38,9 +38,9 @@ class ModelsLibrary:
         return defaultdict(
             list,
             {
-                TargetDevice.CPU: [mg.Gemma34bItInt4OvHf],
-                TargetDevice.GPU: [mg.Gemma34bItInt4OvHf],
-                TargetDevice.NPU: [mg.Gemma34bItInt4CwOvHf],
+                TargetDevice.CPU: [mg.DummyCyclicLlavaOvHf] + mg.extra_generative_models,
+                TargetDevice.GPU: [mg.DummyCyclicLlavaOvHf] + mg.extra_generative_models,
+                TargetDevice.NPU: [mg.Gemma34bItInt4CwOvHf] + mg.extra_generative_models,
             },
         )
 
@@ -49,15 +49,18 @@ class ModelsLibrary:
         return defaultdict(
             list,
             {
-                TargetDevice.CPU:
-                    self.various_mini_large_language_models[TargetDevice.CPU] +
-                    self.various_mini_vision_language_models[TargetDevice.CPU],
-                TargetDevice.GPU:
-                    self.various_mini_large_language_models[TargetDevice.GPU] +
-                    self.various_mini_vision_language_models[TargetDevice.GPU],
-                TargetDevice.NPU:
-                    self.various_mini_large_language_models[TargetDevice.NPU] +
-                    self.various_mini_vision_language_models[TargetDevice.NPU],
+                TargetDevice.CPU: sorted(
+                    set(self.various_mini_large_language_models[TargetDevice.CPU] +
+                        self.various_mini_vision_language_models[TargetDevice.CPU]),
+                    key=lambda model: model.__name__),
+                TargetDevice.GPU: sorted(
+                    set(self.various_mini_large_language_models[TargetDevice.GPU] +
+                        self.various_mini_vision_language_models[TargetDevice.GPU]),
+                    key=lambda model: model.__name__),
+                TargetDevice.NPU: sorted(
+                    set(self.various_mini_large_language_models[TargetDevice.NPU] +
+                        self.various_mini_vision_language_models[TargetDevice.NPU]),
+                    key=lambda model: model.__name__),
             },
         )
 
