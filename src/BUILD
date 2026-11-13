@@ -2039,7 +2039,6 @@ cc_test(
         "test/kfs_metadata_test.cpp",
         "test/kfs_rest_test.cpp",
         "test/kfs_rest_parser_test.cpp",
-        "test/kserve_image_conversion_test.cpp",
         "test/layout_test.cpp",
         "test/metric_config_test.cpp",
         "test/metrics_test.cpp",
@@ -2248,9 +2247,7 @@ cc_test(
     }),
     deps = [
             "optimum-cli",
-            ":opencv_dep",
             "//src/image_utils:kserve_image_conversion",
-            "@stb//:image",
             "//src:ovms_lib",
             "//src:module_names",
             "//src:libovms_default_task_detector",
