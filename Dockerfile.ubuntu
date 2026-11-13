@@ -185,7 +185,7 @@ ARG SDL_OPS="-Wl,-z,relro,-z,now,-z,noexecstack -fPIE -pie -fstack-protector-str
 RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_repo.git /openvino && cd /openvino && git checkout $ov_branch && git submodule update --init --recursive
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ]; then \
-    cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" ${SDL_OPS} -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF -DENABLE_SYSTEM_LEVEL_ZERO=OFF .. && \
+    cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" ${SDL_OPS} -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF -DGPU_RT_TYPE=COMBINED -DBUILD_SHARED_LIBS=ON .. && \
     make --jobs=$JOBS && \
     make install ; \
     fi
@@ -238,7 +238,7 @@ RUN mkdir -p /opt/intel/openvino/python/openvino_tokenizers/lib ; \
     ln -s /ovms/lib/libopenvino_tokenizers.so /opt/intel/openvino/python/openvino_tokenizers/lib/libopenvino_tokenizers.so
 # hadolint ignore=DL3003
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; \
-    cd /openvino_tokenizers && cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_CXX_FLAGS=" ${SDL_OPS} " -S ./ -B ./build/ && cmake --build ./build/ --parallel $JOBS && cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/ && \
+    cd /openvino_tokenizers && cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_CXX_FLAGS=" ${SDL_OPS} " -DCMAKE_INSTALL_BINDIR=bin -DCMAKE_INSTALL_INCLUDEDIR=include -S ./ -B ./build/ && cmake --build ./build/ --parallel $JOBS && cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/ && \
     cp build/python/* /opt/intel/openvino/python/openvino_tokenizers/
 ARG ov_genai_branch=master
 ARG ov_genai_repo=openvinotoolkit/openvino.genai
@@ -262,8 +262,11 @@ RUN apt-get update ; \
 WORKDIR /ovms
 # GPU testing in build img
 COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
+COPY ./install_ubuntu_level_zero_loader.sh /usr/local/bin/install_level_zero_loader.sh
 ARG INSTALL_DRIVER_VERSION="26.31.39395"
 RUN /tmp/install_gpu_drivers.sh && \
+    bash /usr/local/bin/install_level_zero_loader.sh && \
+    rm -f /usr/local/bin/install_level_zero_loader.sh && \
     groupadd --gid 5000 ovms && \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 # GPU testing in build img
@@ -433,6 +436,7 @@ COPY release_files/drivers /drivers
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG INSTALL_DRIVER_VERSION="26.31.39395"
 COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
+COPY ./install_ubuntu_level_zero_loader.sh /usr/local/bin/install_level_zero_loader.sh
 # hadolint ignore=DL3003,SC2164
 RUN apt-get update ; \
     if [ "$BASE_OS" == "ubuntu26" ]; then apt-get install -y --no-install-recommends curl ca-certificates libxml2-16; else apt-get install -y --no-install-recommends curl ca-certificates libxml2; fi || exit 1; \
@@ -441,6 +445,9 @@ RUN apt-get update ; \
     # no system package is required at runtime.
     if [ "$GPU" == "1" ] ; then \
     /tmp/install_gpu_drivers.sh || exit 1; \
+    fi ; \
+    if [[ "$GPU" == "1" || "$NPU" == "1" ]]; then \
+        bash /usr/local/bin/install_level_zero_loader.sh || exit 1; \
     fi ; \
     if [ "$NPU" == "1" ] ; then \
         mkdir /tmp/npu_deps && cd /tmp/npu_deps ; \
@@ -467,7 +474,7 @@ RUN apt-get update ; \
         dpkg -i ./*.deb || exit 1; rm -Rf /tmp/npu_deps ; \
     fi ; \
     apt-get clean ; \
-    rm -rf /tmp/install_gpu_drivers.sh && \
+    rm -rf /tmp/install_gpu_drivers.sh /usr/local/bin/install_level_zero_loader.sh && \
     rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* && \
     groupadd --gid 5000 ovms && \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms

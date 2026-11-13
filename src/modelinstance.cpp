@@ -991,13 +991,19 @@ void ModelInstance::loadCompiledModelPtr(const plugin_config_t& pluginConfig) {
 #endif
 
 #ifdef __linux__
-        OV_LOGGER("ov::CompiledModel->get_context().as<ov::intel_gpu::ocl::ClContext>, compiledModel: {}", (void*)this->compiledModel.get());
-        const auto oclContext = compiledModel->get_context().as<ov::intel_gpu::ocl::ClContext>();
-        OV_LOGGER("ov::intel_gpu::ocl::ClContext(oclContext: {})", (void*)&oclContext);
-        this->oclContextCpp = std::make_unique<ov::intel_gpu::ocl::ClContext>(oclContext);
-        OV_LOGGER("ov::intel_gpu::ocl::ClContext::get(), oclContextCpp: {}", (void*)this->oclContextCpp.get());
-        this->oclContextC = this->oclContextCpp->get();
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {}, version:{}, oclContextC:{}", getName(), getVersion(), (void*)&this->oclContextC);
+        const auto context = compiledModel->get_context();
+        if (context.is<ov::intel_gpu::ocl::ClContext>()) {
+            const auto oclContext = context.as<ov::intel_gpu::ocl::ClContext>();
+            OV_LOGGER("ov::intel_gpu::ocl::ClContext(oclContext: {})", (void*)&oclContext);
+            this->oclContextCpp = std::make_unique<ov::intel_gpu::ocl::ClContext>(oclContext);
+            OV_LOGGER("ov::intel_gpu::ocl::ClContext::get(), oclContextCpp: {}", (void*)this->oclContextCpp.get());
+            this->oclContextC = this->oclContextCpp->get();
+            SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model: {}, version:{}, oclContextC:{}", getName(), getVersion(), (void*)&this->oclContextC);
+        } else {
+            this->oclContextCpp.reset();
+            this->vaContext.reset();
+            this->oclContextC = nullptr;
+        }
 #endif
     } else {
         compiledModel = std::make_shared<ov::CompiledModel>(ieCore.compile_model(this->model, this->targetDevice, pluginConfig));
