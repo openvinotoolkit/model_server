@@ -344,6 +344,7 @@ http_archive(
         "@//third_party:minimp4_avcc_bounds.patch",
         "@//third_party:minimp4_metadata_budget.patch",
         "@//third_party:minimp4_nal_length.patch",
+        "@//third_party:minimp4_realloc.patch",
     ],
     patch_args = ["-p1", "--binary"],
     sha256 = "1049558a37f4dca34f5a5ff76b04c0d14705e3e66974afc650b9b76d19ccfd08",
