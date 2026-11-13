@@ -77,7 +77,8 @@ static std::unique_ptr<PreparedChatTemplateRuntime> sharedPreparedRuntimeTemplat
 
 class MultipartParserForTest : public MultiPartParser {
 public:
-    explicit MultipartParserForTest(const std::string& audioData) : audioData(audioData) {}
+    explicit MultipartParserForTest(const std::string& audioData) :
+        audioData(audioData) {}
 
     bool parse() override { return true; }
     bool hasParseError() const override { return false; }
@@ -97,11 +98,11 @@ private:
 
 class TranscriptionTestServable : public GenAiServable {
 public:
-    TranscriptionTestServable() : properties(std::make_shared<GenAiServableProperties>()) {}
+    TranscriptionTestServable() :
+        properties(std::make_shared<GenAiServableProperties>()) {}
 
     absl::Status validateEndpoint(Endpoint endpoint) const override {
-        return endpoint == Endpoint::TRANSCRIPTIONS ? absl::OkStatus() :
-                                                      absl::InvalidArgumentError("Unsupported endpoint");
+        return endpoint == Endpoint::TRANSCRIPTIONS ? absl::OkStatus() : absl::InvalidArgumentError("Unsupported endpoint");
     }
     std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() override {
         return std::make_shared<GenAiServableExecutionContext>();
