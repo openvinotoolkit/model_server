@@ -19,9 +19,9 @@
 # Any variable can be overridden by the environment or command-line.
 
 # Source repository git commits / branches (used for source builds)
-OV_BRANCH ?= 92096e1c255cbd816480be7e4ead89da3f0189d8
-OV_TOKENIZERS_BRANCH ?= 47eb7817ce620c9265ff369f01409c052985d2df
-OV_GENAI_BRANCH ?= b2594e591b84f3aaf3cf35377440af5f5ebc17e5
+OV_BRANCH ?= f36b4c17f38cabca6d928606a1a0c996698fa5eb
+OV_TOKENIZERS_BRANCH ?= 7314e7a6f3bdcabfa8b7811d27ff4bcfd27dcd28
+OV_GENAI_BRANCH ?= 2de7224b8031aaecf173ed98ecb890dbaac5b2b4
 
 # Source repositories (GitHub owner/repository)
 OV_REPO ?= openvinotoolkit/openvino
@@ -29,16 +29,16 @@ OV_GENAI_REPO ?= openvinotoolkit/openvino.genai
 OV_TOKENIZERS_REPO ?= openvinotoolkit/openvino_tokenizers
 
 # Binary package URLs for each supported platform.
-DLDT_PACKAGE_URL_UBUNTU26 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.5.0.0rc1/openvino_genai_ubuntu26_2026.5.0.0rc1_x86_64.tar.gz
-DLDT_PACKAGE_SHA256_UBUNTU26 ?= 1f160c8a7cf0610a245c3ffcef10295175519944444ab1f0c0279423dce294ff
-DLDT_PACKAGE_URL_UBUNTU24 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.5.0.0rc1/openvino_genai_ubuntu24_2026.5.0.0rc1_x86_64.tar.gz
-DLDT_PACKAGE_SHA256_UBUNTU24 ?= f9be78f70b29120fdf88389dad4eeed21469040317bbf504d7a6ac93088623e2
-DLDT_PACKAGE_URL_UBUNTU22 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.5.0.0rc1/openvino_genai_ubuntu22_2026.5.0.0rc1_x86_64.tar.gz
-DLDT_PACKAGE_SHA256_UBUNTU22 ?= 39184b4d5dcfbfdb99c41fba27fbe13e8c29038f8be0dc2e9f736658f5b7891f
-DLDT_PACKAGE_URL_RHEL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.5.0.0rc1/openvino_genai_rhel9_2026.5.0.0rc1_x86_64.tar.gz
-DLDT_PACKAGE_SHA256_RHEL ?= 06c7dde1db2c82d0752a0796375ecf087390b8d6eccb167f315b628ad3ab0e15
-GENAI_PACKAGE_URL_WINDOWS ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.5.0.0rc1/openvino_genai_windows_2026.5.0.0rc1_x86_64.zip
-GENAI_PACKAGE_SHA256_WINDOWS ?= 349f99b68a6b37631d027787dcc83df4728c4325e592fd799e149248a70e2571
+DLDT_PACKAGE_URL_UBUNTU26 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.5.0.0rc2/openvino_genai_ubuntu26_2026.5.0.0rc2_x86_64.tar.gz
+DLDT_PACKAGE_SHA256_UBUNTU26 ?= 3dc056268c0f6f45055d52b22ef748b75f69545e01e12403640e2ad369b093c3
+DLDT_PACKAGE_URL_UBUNTU24 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.5.0.0rc2/openvino_genai_ubuntu24_2026.5.0.0rc2_x86_64.tar.gz
+DLDT_PACKAGE_SHA256_UBUNTU24 ?= d12fd86f49e8966663f50cc9a316a51127c7ce21f4330d9dc73a412f75f5eca9
+DLDT_PACKAGE_URL_UBUNTU22 ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.5.0.0rc2/openvino_genai_ubuntu22_2026.5.0.0rc2_x86_64.tar.gz
+DLDT_PACKAGE_SHA256_UBUNTU22 ?= 4d430cb2297d554b2e2a46717fff50e60e25953cb65c439d17a206f1e123c8d1
+DLDT_PACKAGE_URL_RHEL ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.5.0.0rc2/openvino_genai_rhel9_2026.5.0.0rc2_x86_64.tar.gz
+DLDT_PACKAGE_SHA256_RHEL ?= 93a476300d9153dc490f10fdc16ac8f344641368f2c4d2a325e67fda6f6ee25d
+GENAI_PACKAGE_URL_WINDOWS ?= https://storage.openvinotoolkit.org/repositories/openvino_genai/packages/pre-release/2026.5.0.0rc2/openvino_genai_windows_2026.5.0.0rc2_x86_64.zip
+GENAI_PACKAGE_SHA256_WINDOWS ?= 008c93eba381cc834a55b9925f977bf0daaf9e673901185ce7ce836a2659cf3a
 # Third-party dependency versions (used for binary builds)
 OPENCV_VERSION ?= 4.14.0
 CURL_VERSION ?= 8.22.0_2
