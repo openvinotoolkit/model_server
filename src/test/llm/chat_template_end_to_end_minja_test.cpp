@@ -713,18 +713,17 @@ TEST_F(ChatTemplateEndToEndMinjaTest, MiniCPM5_ToolCallWithStringArgs) {
     ASSERT_TRUE(analysisResult.detectedReasoningParser.has_value());
     EXPECT_EQ(analysisResult.detectedReasoningParser.value(), "minicpm5");
 
-    // TODO @przepeck enable these tests when genai merges the ablitiy to disable minja polyfills
-    //     EXPECT_TRUE(caps.supportsToolCalls);
-    //     EXPECT_TRUE(caps.requiresObjectArguments);
-    //     EXPECT_TRUE(caps.missnamedReasoningField.empty());
+    EXPECT_TRUE(caps.supportsToolCalls);
+    EXPECT_TRUE(caps.requiresObjectArguments);
+    EXPECT_TRUE(caps.missnamedReasoningField.empty());
 
-    //     std::string expectedOutput = R"(</s><|im_start|>user
-    // What's the weather in Paris?<|im_end|>
-    // <|im_start|>assistant
-    // <function name="get_weather"><param name="location">Paris</param><param name="unit">celsius</param></function><|im_end|>
-    // <|im_start|>assistant
-    // )";
-    //     EXPECT_EQ(appliedOutput, expectedOutput);
+    std::string expectedOutput = R"(<|endoftext|><|im_start|>user
+What's the weather in Paris?<|im_end|>
+<|im_start|>assistant
+<function name="get_weather"><param name="location">Paris</param><param name="unit">celsius</param></function><|im_end|>
+<|im_start|>assistant
+)";
+    EXPECT_EQ(appliedOutput, expectedOutput);
 }
 
 TEST_F(ChatTemplateEndToEndMinjaTest, Onyx_ToolCallWithStringArgs) {
