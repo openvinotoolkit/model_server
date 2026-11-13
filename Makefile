@@ -580,8 +580,10 @@ test_checksec: venv
 	@rm -f /tmp/libovms_shared.so
 	@echo "Checksec check success."
 
+PYTEST_JUNIT_XML ?= report.xml
+
 test_functional: venv
-	@export OVMS_CPP_DOCKER_IMAGE=$(OVMS_CPP_DOCKER_IMAGE) && export OVMS_CPP_IMAGE_TAG=$(OVMS_CPP_IMAGE_TAG);. $(ACTIVATE); pytest --confcutdir=tests/functional --junitxml=report.xml --html=report.html --self-contained-html -v -rA -s $(TEST_PATH)
+	@export OVMS_CPP_DOCKER_IMAGE=$(OVMS_CPP_DOCKER_IMAGE) && export OVMS_CPP_IMAGE_TAG=$(OVMS_CPP_IMAGE_TAG);. $(ACTIVATE); pytest --confcutdir=tests/functional --junitxml=$(PYTEST_JUNIT_XML) --html=report.html --self-contained-html -v -rA -s $(TEST_PATH)
 
 test_python_clients:
 	@echo "Prepare docker image"
@@ -632,6 +634,8 @@ ifeq ($(RUN_GPU_TESTS),1)
 endif
 
 run_unit_tests: prepare_models
+	@mkdir -p unit_test_results
+	@rm -f unit_test_results/*.xml
 	docker rm -f $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX)
 ifeq ($(RUN_GPU_TESTS),1)
 	docker run \
@@ -653,6 +657,7 @@ ifeq ($(RUN_GPU_TESTS),1)
 		exit_code=$$? ;\
 		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/test_logs.tar.gz . ;\
 		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/linux_tests_summary.log . ;\
+		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/unit_test_results/. unit_test_results/ || echo "WARNING: Could not collect unit test reports" ;\
 		docker rm -f $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ;\
 		exit $$exit_code
 else
@@ -670,6 +675,7 @@ else
 		exit_code=$$? ; \
 		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/test_logs.tar.gz . ;\
 		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/linux_tests_summary.log . ;\
+		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/unit_test_results/. unit_test_results/ || echo "WARNING: Could not collect unit test reports" ;\
 		docker rm -f $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ;\
 		exit $$exit_code
 endif

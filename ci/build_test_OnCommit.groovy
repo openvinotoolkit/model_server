@@ -355,6 +355,8 @@ pipeline {
                   finally {
                       archiveArtifacts allowEmptyArchive: true, artifacts: "test_logs.tar.gz"
                       archiveArtifacts allowEmptyArchive: true, artifacts: "linux_tests_summary.log"
+                      archiveArtifacts allowEmptyArchive: true, artifacts: "unit_test_results/*.xml"
+                      junit allowEmptyResults: true, testResults: "unit_test_results/*.xml"
                   }
                 }
                 }
@@ -372,17 +374,20 @@ pipeline {
                   withGithubStageStatus('jenkins/oncommit/functional-tests', 'Functional tests') {
                     println "Running on NODE = ${env.NODE_NAME}"
                     def cmd_envs = "TT_XDIST_WORKERS=10 TT_DISABLE_DMESG_LOG_MONITOR=False"
+                    def junitReport = "pytest-functional-linux.xml"
+                    sh "rm -f ${junitReport}"
                     def cmd = ""
                     if (image_build_needed == "true") {
-                      cmd = "make test_functional TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True ${cmd_envs}"
+                      cmd = "make test_functional PYTEST_JUNIT_XML=${junitReport} TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True ${cmd_envs}"
                     } else {
-                      cmd = "make test_functional TT_OVMS_IMAGE_NAME=registry.toolbox.iotg.sclab.intel.com/openvino/model_server:ubuntu24_main ${cmd_envs}"
+                      cmd = "make test_functional PYTEST_JUNIT_XML=${junitReport} TT_OVMS_IMAGE_NAME=registry.toolbox.iotg.sclab.intel.com/openvino/model_server:ubuntu24_main ${cmd_envs}"
                     }
                     try {
                       // bash + pipefail keeps the test exit code while tee writes the log
                       sh "#!/bin/bash\nset -o pipefail\n${cmd} 2>&1 | tee functional_tests.log"
                     } finally {
-                      archiveArtifacts allowEmptyArchive: true, artifacts: "functional_tests.log,report.xml,report.html"
+                      archiveArtifacts allowEmptyArchive: true, artifacts: "functional_tests.log,${junitReport},report.html"
+                      junit allowEmptyResults: true, testResults: junitReport
                     }
                   }
                   }
@@ -447,7 +452,9 @@ pipeline {
                         sh "make create-venv TT_OVMS_C_REPO_PATH=${ovms_c_repo_path} && rm -f tests/functional && ln -s ${ovms_c_repo_path}/tests/functional tests/functional"
                         def cmd_venv_activate = ". .venv/bin/activate"
                         def cmd_export = "export TT_OVMS_C_REPO_PATH=../ && export TT_RUN_REGRESSION_TESTS=True && export TT_REGRESSION_WEEKLY_TESTS=True && export TT_TARGET_DEVICE=CPU,GPU,NPU && export TT_ENABLE_UAT_TESTS=True && export TT_ENABLE_SMOKE_TESTS=False && export TT_OVMS_C_REPO_PATH=${ovms_c_repo_path} && export TT_LOGGING_LEVEL_OVMS=DEBUG && export TT_WAIT_FOR_MESSAGES_TIMEOUT=1500 && export CORE_BRANCH=${env.CHANGE_BRANCH ?: 'main'} && export TT_REPO_FORK=${env.CHANGE_FORK ?: 'openvinotoolkit'}"
-                        def cmd_pytest = "pytest tests/non_functional/documentation -k '${test_doc_files_str}' -n 0 --dist loadgroup"
+                        def junitReport = 'pytest-documentation-linux.xml'
+                        sh "rm -f ${junitReport}"
+                        def cmd_pytest = "pytest tests/non_functional/documentation -k '${test_doc_files_str}' -n 0 --dist loadgroup --junitxml=${junitReport}"
                         def cmd = ""
                         if ( image_build_needed == "true" ) {
                             unstash 'ovms-release-image'
@@ -463,7 +470,8 @@ pipeline {
                         } finally {
                           // Always save artifacts
                           zip zipFile: 'documentation_tests_linux_logs.zip', glob: 'test_log/**,tests/functional/test_log_build/**', overwrite: true
-                          archiveArtifacts(artifacts: 'documentation_tests_linux_logs.zip,documentation_tests_linux.log', allowEmptyArchive: true)
+                          archiveArtifacts(artifacts: "documentation_tests_linux_logs.zip,documentation_tests_linux.log,${junitReport}", allowEmptyArchive: true)
+                          junit allowEmptyResults: true, testResults: junitReport
                         }
                       }
                     }
@@ -490,6 +498,8 @@ pipeline {
                             windows.install_dependencies()
                             windows.unit_test()
                           } finally {
+                            archiveArtifacts allowEmptyArchive: true, artifacts: "unit_test_results/*.xml"
+                            junit allowEmptyResults: true, testResults: "unit_test_results/*.xml"
                             windows.archive_test_artifacts()
                           }
                       } else {
@@ -525,6 +535,7 @@ pipeline {
                             windows.install_dependencies()
                             windows.functional_test(artifactsPath)
                           } finally {
+                            junit allowEmptyResults: true, testResults: "pytest-functional.xml"
                             windows.archive_test_artifacts()
                           }
                       } else {
@@ -556,7 +567,9 @@ pipeline {
                         def cmd_link_ovms = "(if exist ${current_path}\\tests\\functional rmdir ${current_path}\\tests\\functional) && mklink /D ${current_path}\\tests\\functional ${ovms_c_repo_path}\\tests\\functional"
                         def cmd_requirements = "(if not exist .venv virtualenv .venv --python=python3.12) && call .venv\\Scripts\\activate.bat && pip install -r ${ovms_c_repo_path}\\tests\\requirements.txt -r requirements.txt"
                         def cmd_export = "set \"TT_OVMS_C_REPO_PATH=../\" && set \"TT_LOGGING_LEVEL_OVMS=DEBUG\" && set \"TT_RUN_REGRESSION_TESTS=True\" && set \"TT_REGRESSION_WEEKLY_TESTS=True\" && set \"TT_TARGET_DEVICE=CPU,GPU,NPU\" && set \"TT_BASE_OS=windows\" && set \"TT_OVMS_TYPE=BINARY\" && set \"TT_ENABLE_UAT_TESTS=True\" && set \"TT_ENABLE_SMOKE_TESTS=False\" && set \"TT_DISABLE_DMESG_LOG_MONITOR=True\" && set \"TT_OVMS_C_REPO_PATH=${ovms_c_repo_path}\" && set \"TT_WAIT_FOR_MESSAGES_TIMEOUT=1500\" && set \"PYTHONUTF8=1\" && set \"PYTHONIOENCODING=utf-8\" && set \"CORE_BRANCH=${env.CHANGE_BRANCH ?: 'main'}\" && set \"TT_REPO_FORK=${env.CHANGE_FORK ?: 'openvinotoolkit'}\""
-                        def cmd_pytest = "pytest tests/non_functional/documentation -k \"${test_doc_files_str}\" -n 0 --dist loadgroup --basetemp=\"C:\\tmp\\pytest-${BRANCH_NAME}-${BUILD_NUMBER}\""
+                        def junitReport = 'pytest-documentation-windows.xml'
+                        bat "if exist ${junitReport} del /f /q ${junitReport}"
+                        def cmd_pytest = "pytest tests/non_functional/documentation -k \"${test_doc_files_str}\" -n 0 --dist loadgroup --basetemp=\"C:\\tmp\\pytest-${BRANCH_NAME}-${BUILD_NUMBER}\" --junitxml=${junitReport}"
                         def cmd = ""
                         if ( win_image_build_needed == "true" ) {
                             unstash 'ovms-windows-package'
@@ -573,7 +586,8 @@ pipeline {
                         } finally {
                           // Always save artifacts
                           zip zipFile: 'documentation_tests_windows_logs.zip', glob: 'test_log/**,tests/functional/test_log_build/**', overwrite: true
-                          archiveArtifacts(artifacts: 'documentation_tests_windows_logs.zip,documentation_tests_windows.log', allowEmptyArchive: true)
+                          archiveArtifacts(artifacts: "documentation_tests_windows_logs.zip,documentation_tests_windows.log,${junitReport}", allowEmptyArchive: true)
+                          junit allowEmptyResults: true, testResults: junitReport
                         }
                       }
                     }
