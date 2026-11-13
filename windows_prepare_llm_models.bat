@@ -11,7 +11,8 @@
 :: distributed under the License is distributed on an "AS IS" BASIS,
 :: WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 :: See the License for the specific language governing permissions and
-:: limitations under
+:: limitations under the License.
+::
 
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
@@ -23,14 +24,18 @@ if "%~1"=="" (
 
 :: Create a link to preexported models on CI workers
 IF /I EXIST c:\opt\llm_testing (
+  if exist "%~1" (
     rmdir /S /Q "%~1"
-    mklink /d "%~1" c:\opt\llm_testing
-    echo Created link to existing in c:\opt\llm_testing. Skipping downloading models.
+    if !errorlevel! neq 0 exit /b !errorlevel!
+  )
+  mklink /d "%~1" c:\opt\llm_testing
+  if !errorlevel! neq 0 exit /b !errorlevel!
+  echo Created link to existing in c:\opt\llm_testing. Skipping downloading models.
+  exit /b 0
 )
 
 set "EMBEDDING_MODEL=OpenVINO/bge-base-en-v1.5-int8-ov"
 set "RERANK_MODEL=OpenVINO/bge-reranker-base-int8-ov"
-:: Dummy cyclic models used by LLM/VLM tests instead of real downloaded models;
 set "DUMMY_LLM_MODEL=mzeglars/dummy-cyclic-gpt2-ov"
 set "DUMMY_VLM_MODEL=mzeglars/dummy-cyclic-llava-ov"
 set "TTS_MODEL=OpenVINO/Kokoro-82M-int8-ov"
@@ -65,7 +70,6 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 
 if not exist "%~1" mkdir "%~1"
 
-
 :: Download exported models
 call :download_hf_model_if_missing "%TEXT_GENERATION_MODEL%" "%~1" "openvino_model.xml"
 if !errorlevel! neq 0 exit /b !errorlevel!
@@ -78,21 +82,35 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 call :download_hf_model_if_missing "%RERANK_MODEL%" "%~1" "openvino_tokenizer.bin"
 if !errorlevel! neq 0 exit /b !errorlevel!
 call :download_hf_model "%DUMMY_LLM_MODEL%" "%~1"
+if !errorlevel! neq 0 exit /b !errorlevel!
 call :download_hf_model "%DUMMY_VLM_MODEL%" "%~1"
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Download tokenizers for tools testing
 call :download_openvino_tokenizer "%QWEN3_MODEL%" "%~1"
+if !errorlevel! neq 0 exit /b !errorlevel!
 call :download_openvino_tokenizer "%LLAMA3_MODEL%" "%~1"
+if !errorlevel! neq 0 exit /b !errorlevel!
 call :download_tokenizer "%HERMES3_MODEL%" "%~1\%HERMES3_MODEL%"
+if !errorlevel! neq 0 exit /b !errorlevel!
 call :download_openvino_tokenizer "%PHI4_MODEL%" "%~1"
+if !errorlevel! neq 0 exit /b !errorlevel!
 call :download_openvino_tokenizer "%MISTRAL_MODEL%" "%~1"
+if !errorlevel! neq 0 exit /b !errorlevel!
 call :download_openvino_tokenizer "%GPTOSS_MODEL%" "%~1"
+if !errorlevel! neq 0 exit /b !errorlevel!
 call :download_tokenizer "%DEVSTRAL_MODEL%" "%~1\%DEVSTRAL_MODEL%"
+if !errorlevel! neq 0 exit /b !errorlevel!
 call :download_openvino_tokenizer "%LFM2_MODEL%" "%~1"
+if !errorlevel! neq 0 exit /b !errorlevel!
 call :download_openvino_tokenizer "%LFM25_MODEL%" "%~1"
+if !errorlevel! neq 0 exit /b !errorlevel!
 call :download_openvino_tokenizer "%MINICPM5_MODEL%" "%~1"
+if !errorlevel! neq 0 exit /b !errorlevel!
 call :download_openvino_tokenizer "%ONYX_MODEL%" "%~1"
+if !errorlevel! neq 0 exit /b !errorlevel!
 call :download_openvino_tokenizer "%GEMMA4_MODEL%" "%~1"
+if !errorlevel! neq 0 exit /b !errorlevel!
 
 exit /b 0
 
@@ -136,12 +154,18 @@ set "repository=%~2"
 if not exist "%repository%\%model%\openvino_tokenizer.bin" (
   echo Downloading tokenizer and detokenizer for %model% model to %repository%\%model% directory.
   mkdir "%repository%\%model%"
+  if !errorlevel! neq 0 exit /b !errorlevel!
   hf download "%model%" --local-dir "%repository%\%model%" --include *tokenizer*
+  if !errorlevel! neq 0 exit /b !errorlevel!
 ) else (
   echo Models file %repository%\%model%\openvino_tokenizer.bin exists. Skipping downloading models.
 )
+if not exist "%repository%\%model%\openvino_tokenizer.bin" (
+  echo Models file %repository%\%model%\openvino_tokenizer.bin does not exist.
+  exit /b 1
+)
+exit /b 0
 
-:: Helper subroutine to download tokenizers
 :download_tokenizer
 set "model=%~1"
 set "check_path=%~2"
@@ -151,6 +175,7 @@ if exist "%check_path%" (
 ) else (
   echo Downloading tokenizer and detokenizer for %model% model to %check_path% directory.
   mkdir "%check_path%"
+  if !errorlevel! neq 0 exit /b !errorlevel!
   convert_tokenizer "%model%" --with_detokenizer -o "%check_path%"
   if !errorlevel! neq 0 exit /b !errorlevel!
 )
@@ -159,5 +184,3 @@ if not exist "%check_path%\openvino_tokenizer.bin" (
   exit /b 1
 )
 exit /b 0
-
-endlocal
