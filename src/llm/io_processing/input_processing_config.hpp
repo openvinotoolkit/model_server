@@ -23,6 +23,14 @@ namespace ovms {
 struct AudioInputConfig {
     bool resamplingRequired = false;
     bool useAudioContentPart = false;
+
+    static AudioInputConfig withResampling() {
+        return AudioInputConfig{true, false};
+    }
+
+    static AudioInputConfig withResamplingAndAudioContentPart() {
+        return AudioInputConfig{true, true};
+    }
 };
 
 // Must match the video_max_frames default in llm_calculator.proto.
