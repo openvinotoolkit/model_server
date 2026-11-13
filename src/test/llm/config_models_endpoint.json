@@ -1,0 +1,13 @@
+{
+    "model_config_list": [],
+    "mediapipe_config_list": [
+    {
+        "name":"lm_cb_regular",
+        "graph_path":"/ovms/src/test/llm/lm_cb_regular.pbtxt"
+    },
+    {
+        "name":"passthrough",
+        "graph_path":"/ovms/src/test/mediapipe/graphpassthrough.pbtxt"
+    }
+    ]
+}
