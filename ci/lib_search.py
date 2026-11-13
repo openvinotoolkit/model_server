@@ -288,7 +288,7 @@ def check_func(start_dir):
         'partial_2.18.patch',
         'zlib.LICENSE.txt',
         'bazel_rules_apple.patch',
-        'vms_plugin_type_identity.diff',
+        'ovms_plugin_type_identity.diff',
         'yarn.lock',
         'BUILD.bazel',
         'package.json',
