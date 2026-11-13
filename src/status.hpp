@@ -373,6 +373,8 @@ enum class StatusCode {
     GROUP_LOAD_FAILED,
     GROUP_UNLOAD_BLOCKED,
 
+    REST_INVALID_REQUEST, /*!< Invalid REST request content or configuration */
+
     STATUS_CODE_END
 };
 

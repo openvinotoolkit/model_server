@@ -271,6 +271,8 @@ ovms_cc_library(
     ],
     deps = [
         ":libovms_mediapipe",
+        "//src/audio/speech_to_text:s2t_servable",
+        "//src/audio/speech_to_text:stt_pipeline_handle",
         "//src/utils:newline_delimited",
     ],
     visibility = ["//visibility:public"],
