@@ -34,6 +34,7 @@ See the [T2s calculator documentation](../../docs/speech_generation/reference.md
 ```bash
 mkdir -p ${HOME}/models
 docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model OpenVINO/Kokoro-82M-int8-ov --model_repository_path /models --model_name Kokoro-82M-int8-ov --target_device CPU
+
 ```
 
 **Deploying with Docker on NPU**

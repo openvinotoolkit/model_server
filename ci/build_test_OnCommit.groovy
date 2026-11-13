@@ -374,18 +374,20 @@ pipeline {
                   withGithubStageStatus('jenkins/oncommit/functional-tests', 'Functional tests') {
                     println "Running on NODE = ${env.NODE_NAME}"
                     def cmd_envs = "TT_XDIST_WORKERS=10 TT_DISABLE_DMESG_LOG_MONITOR=False"
+                    def junitReport = "pytest-functional-linux.xml"
+                    sh "rm -f ${junitReport}"
                     def cmd = ""
                     if (image_build_needed == "true") {
-                      cmd = "make test_functional PYTEST_JUNIT_XML=pytest-functional.xml TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True ${cmd_envs}"
+                      cmd = "make test_functional PYTEST_JUNIT_XML=${junitReport} TT_OVMS_IMAGE_NAME=openvino/model_server:${shortCommit} TT_OVMS_IMAGE_LOCAL=True ${cmd_envs}"
                     } else {
-                      cmd = "make test_functional PYTEST_JUNIT_XML=pytest-functional.xml TT_OVMS_IMAGE_NAME=registry.toolbox.iotg.sclab.intel.com/openvino/model_server:ubuntu24_main ${cmd_envs}"
+                      cmd = "make test_functional PYTEST_JUNIT_XML=${junitReport} TT_OVMS_IMAGE_NAME=registry.toolbox.iotg.sclab.intel.com/openvino/model_server:ubuntu24_main ${cmd_envs}"
                     }
                     try {
                       // bash + pipefail keeps the test exit code while tee writes the log
                       sh "#!/bin/bash\nset -o pipefail\n${cmd} 2>&1 | tee functional_tests.log"
                     } finally {
-                      archiveArtifacts allowEmptyArchive: true, artifacts: "functional_tests.log,pytest-functional.xml,report.html"
-                      junit allowEmptyResults: true, testResults: "pytest-functional.xml"
+                      archiveArtifacts allowEmptyArchive: true, artifacts: "functional_tests.log,${junitReport},report.html"
+                      junit allowEmptyResults: true, testResults: junitReport
                     }
                   }
                   }
@@ -496,6 +498,8 @@ pipeline {
                             windows.install_dependencies()
                             windows.unit_test()
                           } finally {
+                            archiveArtifacts allowEmptyArchive: true, artifacts: "unit_test_results/*.xml"
+                            junit allowEmptyResults: true, testResults: "unit_test_results/*.xml"
                             windows.archive_test_artifacts()
                           }
                       } else {
