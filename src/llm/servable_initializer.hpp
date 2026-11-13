@@ -60,6 +60,7 @@ public:
     // (continuous batching and legacy, LM and VLM) since they all construct GenAI pipelines
     // directly and would otherwise never apply the server-level cache_dir.
     static void applyGlobalCacheDir(std::shared_ptr<GenAiServableProperties> properties);
+    static void applyDefaultGgufReader(std::shared_ptr<GenAiServableProperties> properties, const std::string& modelsPath);
     static ChatTemplateEngine determineChatTemplateEngine(const mediapipe::LLMCalculatorOptions& nodeOptions);
     static ChatTemplateEngine determineChatTemplateModeWithRuntimeContext(const mediapipe::LLMCalculatorOptions& nodeOptions,
         bool pythonRuntimeAvailable);

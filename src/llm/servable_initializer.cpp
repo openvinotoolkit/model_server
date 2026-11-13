@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <algorithm>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -397,6 +398,22 @@ void GenAiServableInitializer::applyGlobalCacheDir(std::shared_ptr<GenAiServable
     }
 }
 
+void GenAiServableInitializer::applyDefaultGgufReader(std::shared_ptr<GenAiServableProperties> properties, const std::string& modelsPath) {
+    if (std::filesystem::path(modelsPath).extension() != ".gguf") {
+        return;
+    }
+    constexpr char ggufReaderProperty[] = "GGUF_READER";
+    if (properties->pluginConfig.find(ggufReaderProperty) == properties->pluginConfig.end()) {
+#ifdef _WIN32
+        // Use the native GGUF loader by default on Windows to avoid the broken default frontend path
+        // handling seen with some GGUF assets on this platform.
+        properties->pluginConfig[ggufReaderProperty] = "NATIVE";
+#else
+        properties->pluginConfig[ggufReaderProperty] = "FRONTEND";
+#endif
+    }
+}
+
 ChatTemplateEngine GenAiServableInitializer::determineChatTemplateEngine(
     const mediapipe::LLMCalculatorOptions& nodeOptions) {
     if (nodeOptions.has_chat_template_engine() &&
@@ -484,6 +501,109 @@ std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath) {
     return maxModelLength;
 }
 
+namespace {
+class GgufMetadataReader {
+    std::ifstream file;
+    uint64_t remaining;
+
+public:
+    explicit GgufMetadataReader(const std::string& path) :
+        file(path, std::ios::binary),
+        remaining(std::min<uint64_t>(std::filesystem::file_size(path), 64 * 1024 * 1024)) {
+        if (!file.is_open())
+            throw std::runtime_error("Cannot open GGUF metadata");
+    }
+
+    void skip(uint64_t bytes) {
+        if (bytes > remaining)
+            throw std::runtime_error("Truncated or oversized GGUF metadata");
+        file.seekg(static_cast<std::streamoff>(bytes), std::ios::cur);
+        if (!file)
+            throw std::runtime_error("Cannot seek GGUF metadata");
+        remaining -= bytes;
+    }
+
+    uint64_t readInteger(size_t bytes) {
+        if (bytes > remaining)
+            throw std::runtime_error("Truncated or oversized GGUF metadata");
+        uint64_t value = 0;
+        for (size_t index = 0; index < bytes; ++index) {
+            int byte = file.get();
+            if (byte == std::char_traits<char>::eof())
+                throw std::runtime_error("Truncated GGUF metadata");
+            value |= static_cast<uint64_t>(byte) << (8 * index);
+        }
+        remaining -= bytes;
+        return value;
+    }
+
+    std::string readString() {
+        uint64_t length = readInteger(8);
+        if (length > remaining || length > 1024 * 1024)
+            throw std::runtime_error("Truncated or oversized GGUF metadata string");
+        std::string value(static_cast<size_t>(length), '\0');
+        file.read(value.data(), static_cast<std::streamsize>(length));
+        if (!file)
+            throw std::runtime_error("Truncated GGUF metadata string");
+        remaining -= length;
+        return value;
+    }
+
+    void skipValue(uint64_t type) {
+        static constexpr uint64_t widths[] = {1, 1, 2, 2, 4, 4, 4, 1, 0, 0, 8, 8, 8};
+        if (type >= std::size(widths))
+            throw std::runtime_error("Invalid GGUF metadata type");
+        if (type == 8) {
+            skip(readInteger(8));
+        } else if (type == 9) {
+            uint64_t elementType = readInteger(4);
+            uint64_t count = readInteger(8);
+            if (elementType >= std::size(widths) || elementType == 9)
+                throw std::runtime_error("Invalid GGUF metadata array type");
+            if (elementType == 8) {
+                if (count > remaining / 8)
+                    throw std::runtime_error("Oversized GGUF metadata array");
+                for (uint64_t index = 0; index < count; ++index)
+                    skip(readInteger(8));
+            } else {
+                if (count > remaining / widths[elementType])
+                    throw std::runtime_error("Oversized GGUF metadata array");
+                skip(count * widths[elementType]);
+            }
+        } else {
+            skip(widths[type]);
+        }
+    }
+
+    std::string readArchitecture() {
+        if (readInteger(4) != 0x46554747)
+            throw std::runtime_error("Invalid GGUF magic");
+        uint64_t version = readInteger(4);
+        if (version != 2 && version != 3)
+            throw std::runtime_error("Unsupported GGUF metadata version");
+        uint64_t tensorCount = readInteger(8);
+        uint64_t metadataCount = readInteger(8);
+        if (tensorCount == 0 || metadataCount > remaining / 12)
+            throw std::runtime_error("Invalid GGUF metadata header");
+        std::string architecture;
+        for (uint64_t index = 0; index < metadataCount; ++index) {
+            std::string key = readString();
+            uint64_t type = readInteger(4);
+            if (key == "general.architecture") {
+                if (type != 8 || !architecture.empty())
+                    throw std::runtime_error("Invalid GGUF architecture metadata");
+                architecture = readString();
+            } else {
+                skipValue(type);
+            }
+        }
+        if (architecture.empty())
+            throw std::runtime_error("Missing GGUF architecture metadata");
+        return architecture;
+    }
+};
+}  // namespace
+
 Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath) {
     // Assuming that models_path is always set
     std::string parsedModelsPath;
@@ -493,6 +613,34 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
     }
 
     std::filesystem::path parsedModelsPathFs(parsedModelsPath);
+
+    if (parsedModelsPathFs.extension() == ".gguf") {
+        try {
+            std::string architecture = GgufMetadataReader(parsedModelsPath).readArchitecture();
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "GGUF architecture: {} (metadata only)", architecture);
+            if (architecture == "clip") {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "GGUF vision projector cannot be served as a language model. GGUF companion-projector loading is not supported.");
+                return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+            }
+            if (nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::VLM ||
+                nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::VLM_CB ||
+                nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::OMNI) {
+                SPDLOG_LOGGER_ERROR(modelmanager_logger, "GGUF VLM/Omni pipeline selection is unsupported: detecting a model family does not provide the required vision/audio companion loading.");
+                return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+            }
+            const auto companionDirectory = parsedModelsPathFs.has_parent_path() ? parsedModelsPathFs.parent_path() : std::filesystem::path(".");
+            for (const auto& companion : std::filesystem::directory_iterator(companionDirectory)) {
+                const std::string filename = companion.path().filename().string();
+                if (companion.path() != parsedModelsPathFs && companion.path().extension() == ".gguf" &&
+                    filename.find("mmproj") != std::string::npos) {
+                    SPDLOG_LOGGER_WARN(modelmanager_logger, "GGUF projector candidate {} will not be loaded; serving language GGUF as text only", companion.path().string());
+                }
+            }
+        } catch (const std::exception& error) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot inspect GGUF metadata at {}: {}", parsedModelsPath, error.what());
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
+    }
 
     // Existence of talker model indicates omni pipeline
     bool hasTalkerModel = std::filesystem::exists(parsedModelsPathFs / "openvino_talker_model.xml");
