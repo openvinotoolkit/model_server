@@ -503,6 +503,10 @@ absl::StatusOr<VideoSamplingPlan> createVideoSamplingPlan(const MP4D_demux_t& mp
     const std::optional<long double> frameInterval = requestedFps.has_value()
                                                          ? std::optional<long double>{static_cast<long double>(videoTrack.timescale) / requestedFps.value()}
                                                          : std::nullopt;
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger,
+        "Encoded video sampling: source_frames={}, max_allowed_frames={}, requested_fps={}, selected_frames={}",
+        videoTrack.sample_count, maxDecodedFrames,
+        requestedFps.has_value() ? std::to_string(requestedFps.value()) : "unset", selectedFrameLimit);
     return VideoSamplingPlan{selectedFrameLimit, maxAllowedPixels, frameInterval};
 }
 
