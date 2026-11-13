@@ -384,6 +384,8 @@ async def benchmark(docs, model, api_url, request_rate, backend_function):
             hf_tokenizer = args["tokenizer"]
         tokenizer = AutoTokenizer.from_pretrained(hf_tokenizer)
         for output in outputs:
+            if not output.success:
+                continue
             data = json.loads(output.text)
             output.tokens_len =  len(tokenizer(data['text'],add_special_tokens=False, truncation=True)["input_ids"])
 
