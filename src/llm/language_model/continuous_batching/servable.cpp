@@ -58,9 +58,9 @@ bool ContinuousBatchingServable::canRecordCompletedRequestMetrics(const GenAiSer
     const auto& cbExecutionContext = static_cast<const ContinuousBatchingServableExecutionContext&>(executionContext);
     const auto& metricReporter = properties->metricReporter;
     return metricReporter &&
-        metricReporter->hasAnyCompletionMetricsEnabled() &&
-        executionContext.perfMetrics &&
-        !cbExecutionContext.completedMetricsRecorded;
+           metricReporter->hasAnyCompletionMetricsEnabled() &&
+           executionContext.perfMetrics &&
+           !cbExecutionContext.completedMetricsRecorded;
 }
 
 void ContinuousBatchingServable::recordCompletedRequestMetrics(GenAiServableExecutionContext& executionContext) {

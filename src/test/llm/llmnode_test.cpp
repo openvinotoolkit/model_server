@@ -75,8 +75,8 @@ class LLMCompletionMetricsTest : public ::testing::Test {
 protected:
     class TestServable : public ContinuousBatchingServable {
     public:
-        using ContinuousBatchingServable::properties;
         using ContinuousBatchingServable::canRecordCompletedRequestMetrics;
+        using ContinuousBatchingServable::properties;
         using ContinuousBatchingServable::recordCompletedRequestMetrics;
     };
 
