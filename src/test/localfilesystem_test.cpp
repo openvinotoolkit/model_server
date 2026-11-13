@@ -262,6 +262,15 @@ TEST(FileSystem, IsLocalFilesystem) {
     ASSERT_TRUE(ovms::FileSystem::isLocalFilesystem("/long/local/filesystem"));
 }
 
+#ifdef _WIN32
+TEST(FileSystem, JoinPathNormalizesDotSegments) {
+    const auto joined = ovms::FileSystem::joinPath({R"(C:\gguf_test\ovms)", ".", "models", "prism-ml", R"(Ternary-Bonsai-2-27B-gguf)", R"(./Ternary-Bonsai-2-27B-PQ2_0.gguf)"});
+    EXPECT_EQ(joined, R"(C:\gguf_test\ovms\models\prism-ml\Ternary-Bonsai-2-27B-gguf\Ternary-Bonsai-2-27B-PQ2_0.gguf)");
+    EXPECT_EQ(joined.find(R"(.\)") , std::string::npos);
+    EXPECT_EQ(joined.find("./"), std::string::npos);
+}
+#endif
+
 TEST(FileSystem, SetRootDirectoryPath) {
     std::string rootPath = "";
     std::string givenPath = "/givenpath";

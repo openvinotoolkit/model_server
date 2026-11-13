@@ -5015,7 +5015,11 @@ TEST(GenAiServableInitializerTest, DefaultGgufReaderSelection) {
 
     GenAiServableInitializer::applyDefaultGgufReader(properties, "/models/model.gguf");
     ASSERT_EQ(properties->pluginConfig.count("GGUF_READER"), 1);
+#ifdef _WIN32
+    EXPECT_EQ(properties->pluginConfig["GGUF_READER"].as<std::string>(), "NATIVE");
+#else
     EXPECT_EQ(properties->pluginConfig["GGUF_READER"].as<std::string>(), "FRONTEND");
+#endif
 
     properties->pluginConfig["GGUF_READER"] = "LEGACY";
     GenAiServableInitializer::applyDefaultGgufReader(properties, "/models/another.gguf");
