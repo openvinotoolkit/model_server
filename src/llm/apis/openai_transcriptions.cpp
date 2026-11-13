@@ -47,6 +47,16 @@ absl::Status OpenAITranscriptionsHandler::parseRequestImpl(std::optional<uint32_
         return status;
     }
     request.stream = false;
+    const auto prompt = doc.FindMember("prompt");
+    if (prompt != doc.MemberEnd()) {
+        if (!prompt->value.IsString()) {
+            return absl::InvalidArgumentError("prompt must be a string");
+        }
+        request.chatHistory.push_back({
+            {"role", "system"},
+            {"content", std::string(prompt->value.GetString(), prompt->value.GetStringLength())},
+        });
+    }
     request.chatHistory.push_back({
         {"role", "user"},
         {"content", ov::genai::JsonContainer::from_json_string(R"([{"type":"audio"}])")},

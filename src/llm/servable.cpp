@@ -82,6 +82,11 @@ absl::Status normalizeTranscriptionRequest(HttpPayload& payload) {
     auto& allocator = request->GetAllocator();
     request->AddMember("model", rapidjson::Value(model.c_str(), allocator), allocator);
 
+    const std::string prompt = payload.multipartParser->getFieldByName("prompt");
+    if (!prompt.empty()) {
+        request->AddMember("prompt", rapidjson::Value(prompt.c_str(), allocator), allocator);
+    }
+
     rapidjson::Value audioPart(rapidjson::kObjectType);
     audioPart.AddMember("type", "audio", allocator);
 
