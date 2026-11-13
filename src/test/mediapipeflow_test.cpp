@@ -43,6 +43,7 @@
 
 #include "../config.hpp"
 #include "../grpcservermodule.hpp"
+#include "../http_frontend/http_graph_executor_impl.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
@@ -4483,4 +4484,40 @@ TEST(MediapipeIdleUnloadGuard, CreateDefinitionLazyLoadRejectsDuplicate) {
 
     auto status2 = factory.createDefinition("dupGraph", mgc, metrics, manager, true);
     ASSERT_EQ(status2, ovms::StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST);
+}
+
+TEST(HttpMediapipeSerialization, ValidStringPacket) {
+    std::string expected = "sample_response_data";
+    ::mediapipe::Packet packet = ::mediapipe::MakePacket<std::string>(expected);
+    std::string response;
+    auto status = ovms::onPacketReadySerializeImpl(
+        "1", "test_graph", "1", "out",
+        ovms::mediapipe_packet_type_enum::UNKNOWN,
+        packet,
+        response);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_EQ(response, expected);
+}
+
+TEST(HttpMediapipeSerialization, EmptyPacketHandledGracefully) {
+    ::mediapipe::Packet emptyPacket;
+    std::string response = "previous_value";
+    auto status = ovms::onPacketReadySerializeImpl(
+        "1", "test_graph", "1", "out",
+        ovms::mediapipe_packet_type_enum::UNKNOWN,
+        emptyPacket,
+        response);
+    ASSERT_EQ(status, ovms::StatusCode::OK);
+    EXPECT_TRUE(response.empty());
+}
+
+TEST(HttpMediapipeSerialization, NonStringPacketReturnsErrorWithoutCrash) {
+    ::mediapipe::Packet intPacket = ::mediapipe::MakePacket<int>(42);
+    std::string response;
+    auto status = ovms::onPacketReadySerializeImpl(
+        "1", "test_graph", "1", "out",
+        ovms::mediapipe_packet_type_enum::OVTENSOR,
+        intPacket,
+        response);
+    ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
