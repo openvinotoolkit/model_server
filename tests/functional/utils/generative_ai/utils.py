@@ -280,8 +280,8 @@ class GenerativeAIUtils:
             ip_address=server_address, requests_number=1, image_path=None, timeout=900
     ):
         input_data_json_path = os.path.join(tmp_path, "input_data.json")
-        with open(input_data_json_path, "w", encoding='utf-8') as fo:
-            json.dump(input_data, fo)
+        with open(input_data_json_path, "w", encoding='utf-8') as file_object:
+            json.dump(input_data, file_object)
         # sys.prefix follows whichever repo the tests were started from
         venv_cmd = os.path.join(sys.prefix, "Scripts", "activate.bat") if context.base_os == OsType.Windows else \
             f"source {os.path.join(sys.prefix, 'bin', 'activate')}"

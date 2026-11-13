@@ -26,6 +26,7 @@
 #           ovms_infer_req_queue_size, ovms_infer_req_active
 # Config:
 #   "monitoring": {"metrics": {"enable": true, "metrics_list": [...]}}
+# pylint: disable=invalid-name
 # pylint: disable=unused-argument
 
 import re
@@ -113,7 +114,7 @@ class Metric:
 
     Type = [Type_counter, Type_gauge, Type_histogram]
 
-    DescType = {"requests_success", "counter", "request_fail", "counter"}
+    DescType = {"requests_success", "counter", "request_fail"}
 
     Protocol = [KServe]
 
@@ -373,13 +374,20 @@ class Metrics:
                 else:
                     metric_list += Metrics._fill_method[metric](model=model, ovms_run=ovms_run)
 
-        """
-        The following metrics are not multiplied for each model version (should occur once for single model name)
-        ovms_requests_success[{'api': 'KServe', 'interface': 'gRPC', 'method': 'ModelReady', 'name': 'resnet-50-tf'}] 0
-        ovms_requests_success[{'api': 'KServe', 'interface': 'REST', 'method': 'ModelReady', 'name': 'resnet-50-tf'}] 0
-        ovms_requests_fail[{'api': 'KServe', 'interface': 'gRPC', 'method': 'ModelReady', 'name': 'resnet-50-tf'}] 0
-        ovms_requests_fail[{'api': 'KServe', 'interface': 'REST', 'method': 'ModelReady', 'name': 'resnet-50-tf'}] 0
-        """
+        # The following metrics are not multiplied for each model version (should occur once for single model name)
+        # ovms_requests_success[
+        #   {'api': 'KServe', 'interface': 'gRPC', 'method': 'ModelReady', 'name': 'resnet-50-tf'}
+        # ] 0
+        # ovms_requests_success[
+        #   {'api': 'KServe', 'interface': 'REST', 'method': 'ModelReady', 'name': 'resnet-50-tf'}
+        # ] 0
+        # ovms_requests_fail[
+        #   {'api': 'KServe', 'interface': 'gRPC', 'method': 'ModelReady', 'name': 'resnet-50-tf'}
+        # ] 0
+        # ovms_requests_fail[
+        #   {'api': 'KServe', 'interface': 'REST', 'method': 'ModelReady', 'name': 'resnet-50-tf'}
+        # ] 0
+
         metrics_to_remove = []
         model_unique_metrics = []
         for metric in metric_list:
@@ -491,7 +499,7 @@ class Metrics:
 class DefaultMetrics(Metrics):
 
     @staticmethod
-    def create_from_model_list(model_list):
+    def create_from_model_list(model_list): # pylint: disable=arguments-differ
         return Metrics.create_from_model_list(model_list, metrics=Metric.Default_names)
 
 

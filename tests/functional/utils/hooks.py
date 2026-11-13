@@ -23,9 +23,9 @@ import sys
 import time
 import warnings
 from collections import Counter, defaultdict, namedtuple
-from huggingface_hub.errors import GatedRepoError
 from itertools import groupby
 from pathlib import Path
+from huggingface_hub.errors import GatedRepoError
 
 import pytest
 from docker import errors as docker_errors
@@ -63,16 +63,13 @@ from tests.functional.config import (
 from tests.functional.constants.os_type import get_host_os, OsType, UBUNTU
 from tests.functional.constants.os_version import os_type_to_base_image_binary_docker
 from tests.functional.constants.ovms import (
-    API_TYPE_PARAM_NAME,
     BASE_OS_PARAM_NAME,
-    CLOUD_TYPE_PARAM_NAME,
     CURRENT_TARGET_DEVICE_DICT_ARGUMENT,
     ENDPOINT_PARAM_NAME,
     MODEL_TYPE_PARAM_NAME,
     OVMS_TYPE_PARAM_NAME,
     TARGET_DEVICE_PARAM_NAME,
     TMP_REPOS_DIR_ARGUMENT,
-    USES_CONFIG_PARAM_NAME,
     USES_MAPPING_PARAM_NAME,
 )
 from tests.functional.constants.ovms_images import (
@@ -165,7 +162,7 @@ SkippedItem = namedtuple("SkippedItem", "test_name reason")
 
 
 def init_environment(_config):
-    global CURRENT_TARGET_DEVICE_DICT
+    global CURRENT_TARGET_DEVICE_DICT  # pylint: disable=global-variable-not-assigned
     # additional constant CURRENT_TARGET_DEVICE_DICT needs to be used due to being unable to read
     # current_target_device_dict from config when using xdist=0
     _config.current_target_device_dict = CURRENT_TARGET_DEVICE_DICT
@@ -237,13 +234,13 @@ def cleanup_docker_images():
                 logger.info(f"Removed docker image: {image.id}")
 
 
-def cleanup_tmp_repos_dir(config):
+def cleanup_tmp_repos_dir(config_ovms):
     try:
-        shutil.rmtree(config.tmp_repos_dir)
+        shutil.rmtree(config_ovms.tmp_repos_dir)
     except PermissionError as e:
         if get_host_os() == OsType.Windows and isinstance(e, PermissionError):
-            change_dir_permissions(config.tmp_repos_dir)
-            shutil.rmtree(config.tmp_repos_dir)
+            change_dir_permissions(config_ovms.tmp_repos_dir)
+            shutil.rmtree(config_ovms.tmp_repos_dir)
 
 
 def teardown_environment():
@@ -400,7 +397,9 @@ def get_ovms_binary_docker_build_cmd(ovms_image, base_os, dockerfile, ovms_binar
 
 
 def build_ovms_binary_image():
-    ovms_c_artifacts = {_base_os: config.ovms_c_release_artifacts_path[index] for index, _base_os in enumerate(config.base_os)}
+    ovms_c_artifacts = {
+        _base_os: config.ovms_c_release_artifacts_path[index] for index, _base_os in enumerate(config.base_os)
+    }
 
     for ovms_image, base_os in get_ovms_calculated_images():
         ovms_binary_dst_path = os.path.join(tmp_dir, "ovms_binary", base_os)
@@ -418,7 +417,9 @@ def build_ovms_binary_image():
 
 
 def build_ovms_capi_image():
-    ovms_c_artifacts = {_base_os: config.ovms_c_release_artifacts_path[index] for index, _base_os in enumerate(config.base_os)}
+    ovms_c_artifacts = {
+        _base_os: config.ovms_c_release_artifacts_path[index] for index, _base_os in enumerate(config.base_os)
+    }
 
     for ovms_image, base_os in get_ovms_calculated_images():
         ovms_capi_dst_path = os.path.join(tmp_dir, "ovms_capi", base_os)
@@ -574,7 +575,7 @@ def download_resources_master():
 
 def init_ovms_config_retrieved_from_master(pytest_config):
     config.tmp_repos_dir = pytest_config.workerinput[TMP_REPOS_DIR_ARGUMENT]
-    global CURRENT_TARGET_DEVICE_DICT
+    global CURRENT_TARGET_DEVICE_DICT   # pylint: disable=global-statement
     CURRENT_TARGET_DEVICE_DICT = pytest_config.workerinput[CURRENT_TARGET_DEVICE_DICT_ARGUMENT]
 
 
@@ -585,8 +586,8 @@ def build_local_resources():
         build_ovms_capi_image()
 
 
-def setup_tmp_repos_dir(config):
-    config.tmp_repos_dir = TmpDir()
+def setup_tmp_repos_dir(config_ovms):
+    config_ovms.tmp_repos_dir = TmpDir()
 
 
 def get_marker_args(metafunc, marker_name):
@@ -654,7 +655,7 @@ def parametrize_model_type(metafunc):
 def parametrize_all_models(metafunc):
     args = get_marker_args(metafunc, MarkTestParameters.ALL_MODELS)
     if args is None:
-        parametrize_target_device(metafunc, config.target_devices)
+        parametrize_target_device(metafunc)
         return
     params_list = []
     for device_type in config.target_devices:
@@ -663,9 +664,11 @@ def parametrize_all_models(metafunc):
                 params_list.append((device_type, _models[get_base_device(device_type)]))
             else:
                 params_list.append((device_type, _models))
-    ids_list = lambda i: get_ids_with_target_device(
-        i, lambda x: x[-1].name if len(x) > 0 and hasattr(x[-1], "name") else "empty"
-    )
+    def ids_list(parameter):
+        return get_ids_with_target_device(
+            parameter, lambda x: x[-1].name if len(x) > 0 and hasattr(x[-1], "name") else "empty"
+        )
+
     metafunc.parametrize(f"{TARGET_DEVICE_PARAM_NAME}, {MarkTestParameters.ALL_MODELS}", params_list, ids=ids_list)
 
 
@@ -678,7 +681,9 @@ def parametrize_many_models(metafunc):
     params_list = [
         (device_type, (arg[0](device_type, arg[1]), arg[2])) for device_type in config.target_devices for arg in args
     ]
-    ids_list = lambda i: get_ids_with_target_device(i, lambda x: f"count={len(x[0])}-iters={x[1]}")
+    def ids_list(parameter):
+        return get_ids_with_target_device(parameter, lambda x: f"count={len(x[0])}-iters={x[1]}")
+
     metafunc.parametrize(f"{TARGET_DEVICE_PARAM_NAME}, {MarkTestParameters.MANY_MODELS}", params_list, ids=ids_list)
 
 
@@ -697,7 +702,9 @@ def parametrize_iteration_info(metafunc):
                     (_iteration_info[0][device_type][_iteration_info[1]], _iteration_info[2], _iteration_info[3])
                 )
             params_list.append((device_type, iteration_info))
-    ids_list = lambda i: get_ids_with_target_device(i, ModelsLib.generate_ids_for_iteration_info)
+    def ids_list(parameter):
+        return get_ids_with_target_device(parameter, ModelsLib.generate_ids_for_iteration_info)
+
     metafunc.parametrize(f"{TARGET_DEVICE_PARAM_NAME}, {MarkTestParameters.ITERATION_INFO}", params_list, ids=ids_list)
 
 
@@ -705,8 +712,6 @@ def parametrize_input_shape(metafunc):
     params_list = []
     args = get_marker_args(metafunc, MarkTestParameters.INPUT_SHAPE)
     if args is not None:
-        # (ModelsLib.create_input_shapes_for_auto_reshape_tests, ModelsLib.reshapeable_model, ModelType.ONNX) ->
-        # ("CPU", ModelsLib.create_input_shapes_for_auto_reshape_tests(ModelsLib.reshapeable_model["CPU"][ModelType.ONNX]))
         params_list = [
             (device_type, shape)
             for device_type in config.target_devices
@@ -716,7 +721,9 @@ def parametrize_input_shape(metafunc):
     if args is not None:
         params_list = [(device_type, shape) for device_type in config.target_devices for shape in args[0][device_type]]
     if params_list:
-        ids_list = lambda i: get_ids_with_target_device(i, ModelsLib.generate_model_shape_ids)
+        def ids_list(parameter):
+            return get_ids_with_target_device(parameter, ModelsLib.generate_model_shape_ids)
+
         metafunc.parametrize(f"{TARGET_DEVICE_PARAM_NAME}, {MarkTestParameters.INPUT_SHAPE}", params_list, ids=ids_list)
     else:
         parametrize_target_device(metafunc)
@@ -731,7 +738,11 @@ def parametrize_plugin_config(metafunc):
         (device_type, plugin_config) for device_type in config.target_devices
         for plugin_config in args[0][get_base_device(device_type)]
     ]
-    ids_list = lambda i: get_ids_with_target_device(i, lambda x: "-".join(map(lambda y: f"{y[0]}={y[1]}", x.items())))
+    def ids_list(parameter):
+        return get_ids_with_target_device(
+            parameter, lambda x: "-".join(map(lambda y: f"{y[0]}={y[1]}", x.items()))
+        )
+
     metafunc.parametrize(f"{TARGET_DEVICE_PARAM_NAME}, {MarkTestParameters.PLUGIN_CONFIG}", params_list, ids=ids_list)
 
 
@@ -913,8 +924,8 @@ def clear_lockfiles():
         file.unlink()
 
 
-def deselect_items(items, config, deselected):
-    config.hook.pytest_deselected(items=deselected)
+def deselect_items(items, config_ovms, deselected):
+    config_ovms.hook.pytest_deselected(items=deselected)
     for item in deselected:
         test_name = item.parent.nodeid
         # nodeid comes in a way:
@@ -1024,7 +1035,7 @@ def set_item_image_parameter(item):
         # Store calculated image for later use.
         ovms_type = item.callspec.params.get(OVMS_TYPE_PARAM_NAME, OvmsType.DOCKER)
         base_os = item.callspec.params.get(BASE_OS_PARAM_NAME, OsType.Ubuntu22)
-        if ovms_type == OvmsType.BINARY or ovms_type == OvmsType.CAPI:
+        if ovms_type in (OvmsType.BINARY, OvmsType.CAPI):
             item._image = calculate_ovms_binary_name(base_os=base_os)
         else:
             target_device = item.callspec.params.get(TARGET_DEVICE_PARAM_NAME, TargetDevice.CPU)
@@ -1114,12 +1125,8 @@ def generic_test_deselect(item):
     """
     target_device = item.callspec.params.get(TARGET_DEVICE_PARAM_NAME, None)
     ovms_type = item.callspec.params.get(OVMS_TYPE_PARAM_NAME, None)
-    api_type = item.callspec.params.get(API_TYPE_PARAM_NAME, None)
     base_os = item.callspec.params.get(BASE_OS_PARAM_NAME, None)
-    use_config = item.callspec.params.get(USES_CONFIG_PARAM_NAME, None)
-    cloud_type = item.callspec.params.get(CLOUD_TYPE_PARAM_NAME, None)
     model_type = item.callspec.params.get(MODEL_TYPE_PARAM_NAME, None)
-    use_mapping = item.callspec.params.get(USES_MAPPING_PARAM_NAME, None)
     endpoint = item.callspec.params.get(ENDPOINT_PARAM_NAME, None)
 
     base_target_device = get_base_device(target_device) or target_device

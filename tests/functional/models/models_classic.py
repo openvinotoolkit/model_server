@@ -14,11 +14,8 @@
 # limitations under the License.
 #
 
-import os
-import numpy as np
-
 from dataclasses import dataclass, field
-from pathlib import Path
+import numpy as np
 
 from tests.functional.models.models import ModelInfo
 from tests.functional.models.models_datasets import NumPyImageData

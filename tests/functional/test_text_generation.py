@@ -228,7 +228,14 @@ class TestTextGeneration:
                 if endpoint == OpenAIWrapper.COMPLETIONS else \
                 ChatCompletionsApi.prepare_chat_completions_input_content(input_objects)
             command = GenerativeAIUtils.prepare_python_script_command(
-                context, tmp_path, port, model, endpoint, input_data, request_params, requests_number=sequential_requests
+                context,
+                tmp_path,
+                port,
+                model,
+                endpoint,
+                input_data,
+                request_params,
+                requests_number=sequential_requests,
             )
             stdout = run_command_in_parallel(command, runs=parallel_requests)
             assert stdout, f"Empty stdout for {parallel_requests} commands: '{command}'"

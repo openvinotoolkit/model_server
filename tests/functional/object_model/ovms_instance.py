@@ -337,6 +337,9 @@ class OvmsInstance(ABC):
     def execute_command(self, cmd, stream=False, cwd=None):
         pass
 
+    def get_short_id(self):
+        raise NotImplementedError(f"{type(self).__name__} does not run in a container")
+
     def prepare_resources(self, models):
         """
         Execute on each model method prepare_resources (copy models, prepare custom_nodes and custom libraries if required)

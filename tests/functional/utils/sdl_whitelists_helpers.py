@@ -47,41 +47,29 @@ def get_ovms_type(target_device, base_os):
     if CurrentTarget.is_gpu_based_target(target_device):
         if OsType.Ubuntu24 in base_os:
             return ovms_type.UBUNTU24_GPU
-        elif OsType.Ubuntu22 in base_os:
+        if OsType.Ubuntu22 in base_os:
             return ovms_type.UBUNTU22_GPU
-        elif OsType.Redhat in base_os:
+        if OsType.Redhat in base_os:
             return ovms_type.REDHAT_GPU
 
     if OsType.Ubuntu24 in base_os:
         if is_nginx_mtls:
             return ovms_type.UBUNTU24_NGINX
         return ovms_type.UBUNTU24
-    elif OsType.Ubuntu22 in base_os:
+    if OsType.Ubuntu22 in base_os:
         if is_nginx_mtls:
             return ovms_type.UBUNTU22_NGINX
         return ovms_type.UBUNTU22
-    elif OsType.Redhat in base_os:
+    if OsType.Redhat in base_os:
         return ovms_type.REDHAT
 
     raise OvmsTestException(f"Cannot deduce image device={target_device}, base_os={base_os}")
 
 
-def get_whitelist_python_option(context, whitelist_dict):
-    ovms_type = context.ovms_image if context.ovms_image is not None else context.ovms_binary
-    context.env_info.env_info.get_ovms_version(ovms_type)
-    ovms_build_flags = context.env_info.env_info._ovms_build_flags
-    whitelist = set()
-    if whitelist_dict.get("python", None) is not None:
-        whitelist = whitelist_dict["python"]
-    else:
-        whitelist = whitelist_dict["no_python"]
-    return whitelist
-
-
 def get_whitelist(context, whitelist_name):
     ovms_type = get_ovms_type(context.target_device, get_base_os(context))
     whitelist_dict = getattr(import_module("whitelists"), whitelist_name)[ovms_type]
-    whitelist = whitelist_dict["default"] | get_whitelist_python_option(context, whitelist_dict)
+    whitelist = whitelist_dict["default"]
     if not whitelist:
         raise OvmsTestException(f"Empty whitelist: {whitelist_name}")
     return whitelist
@@ -99,7 +87,7 @@ def validate_whitelists(context, whitelist_name, detected_objects, check_missing
 
     if unexpected_objects and missing_objects and check_missing_objects:
         raise SdlException(unexpected_objects_msg + missing_objects_msg)
-    elif unexpected_objects:
+    if unexpected_objects:
         raise SdlException(unexpected_objects_msg)
-    elif missing_objects and check_missing_objects:
+    if missing_objects and check_missing_objects:
         raise SdlException(missing_objects_msg)

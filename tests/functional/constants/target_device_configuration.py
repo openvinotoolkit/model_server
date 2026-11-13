@@ -24,12 +24,10 @@ try:
 except ImportError:
     getuid = None
 
-from tests.functional.constants.os_type import get_host_os
-from tests.functional.utils.test_framework import FrameworkMessages, get_parameter_from_item, skip_if
+from tests.functional.utils.test_framework import FrameworkMessages, skip_if
 
 from tests.functional.config import skip_nginx_test
 from tests.functional.constants.target_device import TargetDevice
-from tests.functional.constants.ovms import BASE_OS_PARAM_NAME
 
 NETWORK = "network"
 PRIVILEGED = "privileged"

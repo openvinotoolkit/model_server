@@ -63,7 +63,7 @@ class Paths:
     OVMS_C_DEMOS_IMAGES = os.path.join(config.ovms_c_repo_path, "demos", "common", "static", "images")
 
     @staticmethod
-    def CAPI_WRAPPER_PACKAGE_CONTENT_PATH(base_os):
+    def CAPI_WRAPPER_PACKAGE_CONTENT_PATH(base_os): # pylint: disable=invalid-name
         return os.path.join(config.c_api_wrapper_dir, base_os, "ovms")
 
     COMMON_GIT_CLONE_LOCK_FILE = os.path.join(config.ovms_file_locks_dir, "common_git_clone.lock")

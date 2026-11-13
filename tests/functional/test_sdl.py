@@ -14,10 +14,11 @@
 # limitations under the License.
 #
 
-import docker
 import os
-import pytest
 import re
+
+import docker
+import pytest
 
 from tests.functional.config import container_proxy, is_nginx_mtls
 from tests.functional.constants.components import OvmsComponents
@@ -37,7 +38,7 @@ from tests.functional.utils.assertions import SdlException
 from tests.functional.utils.context import Context
 from tests.functional.utils.docker import DockerContainer
 from tests.functional.utils.logger import get_logger, step
-from tests.functional.utils.sdl_whitelists_helpers import validate_whitelists
+from tests.functional.utils.sdl_whitelists_helpers import get_whitelist, validate_whitelists
 
 logger = get_logger(__name__)
 
@@ -92,7 +93,7 @@ class TestSdl:
         base_image_container = DockerContainer(
             container=DockerContainer(None).client.run(base_image, "sleep inf", detach=True)
         )
-        context.test_objects.append(lambda: base_image_container.cleanup())
+        context.test_objects.append(base_image_container.cleanup)
         return base_image_container.id
 
     @staticmethod
@@ -289,8 +290,6 @@ class TestSdl:
         validate_whitelists(
             context, whitelist_name="whitelisted_dynamic_libraries", detected_objects=detected_dynamic_libraries
         )
-
-        from tests.functional.utils.sdl_whitelists_helpers import get_whitelist
 
         whitelisted_objects = get_whitelist(context, whitelist_name="whitelisted_libraries")
         duplicated_libraries = set(x for x in detected_dynamic_libraries if x in whitelisted_objects)

@@ -124,7 +124,7 @@ def prepare_general_os_list(base_os_list):
     return os_types
 
 
-def calculate_ovms_image_tag(image_tag_to_check, base_os, base_os_list):
+def calculate_ovms_image_tag(image_tag_to_check, base_os, base_os_list):    # pylint: disable=redefined-outer-name
     os_types = prepare_general_os_list(base_os_list)
     image_tag_base_os = [i for i in image_tag_to_check.split("_") if i in os_types]
     if image_tag_base_os and image_tag_base_os[0] not in base_os:
@@ -132,7 +132,7 @@ def calculate_ovms_image_tag(image_tag_to_check, base_os, base_os_list):
     return image_tag_to_check
 
 
-def calculate_ovms_image_name(target_device=None, base_os=OsType.Ubuntu22):
+def calculate_ovms_image_name(target_device=None, base_os=OsType.Ubuntu24): # pylint: disable=redefined-outer-name
     assert target_device, "Wrong target_device specified."
     base_os_list = [val for key, val in vars(OsType).items() if not key.startswith("__")]
     assert base_os in base_os_list, f"Wrong os specified: {base_os}"

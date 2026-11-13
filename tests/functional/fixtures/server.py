@@ -106,6 +106,7 @@ def start_ovms(
         else:
             environment = env
 
+    result = None
     if ovms_type_to_start in (OvmsType.DOCKER, OvmsType.DOCKER_CMD_LINE, OvmsType.BINARY_DOCKER):
         ovms_docker_params = rewrite_parameters(inherit_class=OvmsDockerParams, base_class_object=parameters)
         result = start_docker_ovms(

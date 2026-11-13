@@ -48,8 +48,8 @@ def run_inference(parameters):
     strength = float(parameters.strength)
     timeout = int(parameters.timeout)
 
-    with open(parameters.input_data_file, encoding="utf-8") as fo:
-        input_data = json.load(fo)
+    with open(parameters.input_data_file, encoding="utf-8") as file_object:
+        input_data = json.load(file_object)
 
     for request_number in range(int(parameters.requests_number)):
         stream_content = []
