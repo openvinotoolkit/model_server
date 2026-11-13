@@ -47,6 +47,9 @@
 #include "../../../llm/io_processing/input_processor_context.hpp"
 #include "../../../llm/io_processing/input_request.hpp"
 #include "../../../llm/runtime_chat_template_runtime_loader.hpp"
+#include "../../../servable.hpp"
+#include "../../../http_payload.hpp"
+#include "../../../multi_part_parser.hpp"
 #include "../../platform_utils.hpp"
 #include "../../wav_test_utils.hpp"
 
@@ -71,6 +74,60 @@ constexpr const char* TINY_PNG =
 
 static std::unique_ptr<ov::genai::Tokenizer> sharedTokenizer;
 static std::unique_ptr<PreparedChatTemplateRuntime> sharedPreparedRuntimeTemplate;
+
+class MultipartParserForTest : public MultiPartParser {
+public:
+    MultipartParserForTest(const std::string& audioData, const std::string& prompt) :
+        audioData(audioData),
+        prompt(prompt) {}
+
+    bool parse() override { return true; }
+    bool hasParseError() const override { return false; }
+    std::vector<std::string> getArrayFieldByName(const std::string&) const override { return {}; }
+    std::string getFieldByName(const std::string& name) const override {
+        if (name == "model") {
+            return "m";
+        }
+        return name == "prompt" ? prompt : "";
+    }
+    std::string_view getFileContentByFieldName(const std::string& name) const override {
+        return name == "file" ? audioData : "";
+    }
+    std::vector<std::string_view> getFilesArrayByFieldName(const std::string&) const override { return {}; }
+    std::set<std::string> getAllFieldNames() const override { return {"file", "model", "prompt"}; }
+
+private:
+    const std::string& audioData;
+    const std::string& prompt;
+};
+
+class TranscriptionTestServable : public GenAiServable {
+public:
+    TranscriptionTestServable() :
+        properties(std::make_shared<GenAiServableProperties>()) {}
+
+    absl::Status validateEndpoint(Endpoint endpoint) const override {
+        return endpoint == Endpoint::TRANSCRIPTIONS ? absl::OkStatus() : absl::InvalidArgumentError("Unsupported endpoint");
+    }
+    std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() override {
+        return std::make_shared<GenAiServableExecutionContext>();
+    }
+    std::shared_ptr<GenAiServableProperties> getProperties() override {
+        return properties;
+    }
+    absl::Status scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>&) override {
+        return absl::OkStatus();
+    }
+    absl::Status readCompleteExecutionResults(std::shared_ptr<GenAiServableExecutionContext>&) override {
+        return absl::OkStatus();
+    }
+    absl::Status readPartialExecutionResults(std::shared_ptr<GenAiServableExecutionContext>&) override {
+        return absl::OkStatus();
+    }
+
+private:
+    std::shared_ptr<GenAiServableProperties> properties;
+};
 
 class InputProcessingIntegrationTest : public testing::TestWithParam<Endpoint> {
 protected:
@@ -105,6 +162,7 @@ protected:
     // Run result — owns the Document so the handler's reference stays valid.
     // ------------------------------------------------------------------
     struct RunResult {
+        absl::Status loadStatus;
         absl::Status parseStatus;
         absl::Status processStatus;
         InputRequest req;
@@ -167,6 +225,34 @@ protected:
                 result.processStatus = absl::InvalidArgumentError(e.what());
             }
         }
+        return result;
+    }
+
+    RunResult runMultipartTranscriptionPipeline(const std::string& audioData, const std::string& prompt = "") {
+        RunResult result;
+        auto parser = std::make_shared<MultipartParserForTest>(audioData, prompt);
+        HttpPayload payload;
+        payload.uri = "/v1/audio/transcriptions";
+        payload.multipartParser = std::move(parser);
+
+        TranscriptionTestServable servable;
+        const auto properties = servable.getProperties();
+        properties->chatTemplateStatus = ChatTemplateStatus::AVAILABLE;
+        properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig::withResamplingAndAudioContentPart();
+        properties->inputProcessorContext.tokenizer = *sharedTokenizer;
+        properties->inputProcessorContext.templateProcessor = sharedPreparedRuntimeTemplate.get();
+
+        auto context = servable.createExecutionContext();
+        result.loadStatus = servable.loadRequest(context, payload);
+        if (!result.loadStatus.ok()) {
+            return result;
+        }
+        result.parseStatus = servable.parseRequest(context);
+        if (!result.parseStatus.ok()) {
+            return result;
+        }
+        result.processStatus = servable.prepareInputs(context);
+        result.req = std::move(context->inputRequest);
         return result;
     }
 
@@ -506,6 +592,46 @@ TEST_P(InputProcessingIntegrationTest, VlmAudioInput_ResamplesTo16Khz) {
     ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
     ASSERT_EQ(result.req.inputAudios.size(), 1u);
     EXPECT_EQ(result.req.inputAudios[0].get_shape()[0], 160u);
+}
+
+TEST_P(InputProcessingIntegrationTest, MultipartTranscription_DecodesAudioAndKeepsAudioContentPart) {
+    const std::string wavData = buildWavBuffer(/*numSamples=*/240, /*sampleRate=*/24000);
+    auto result = runMultipartTranscriptionPipeline(wavData);
+
+    ASSERT_TRUE(result.loadStatus.ok()) << result.loadStatus.message();
+    ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
+    ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
+    ASSERT_EQ(result.req.inputAudios.size(), 1u);
+    EXPECT_EQ(result.req.inputAudios[0].get_shape()[0], 160u);
+
+    const auto& chatHistory = std::get<ov::genai::ChatHistory>(result.req.input);
+    ASSERT_EQ(chatHistory.size(), 1u);
+    EXPECT_EQ(chatHistory[0]["content"][0]["type"].as_string().value_or(""), "audio");
+}
+
+TEST_P(InputProcessingIntegrationTest, MultipartTranscription_UsesPromptAsSystemMessage) {
+    const std::string prompt = "Transcribe in English.";
+    auto result = runMultipartTranscriptionPipeline(buildWavBuffer(160), prompt);
+
+    ASSERT_TRUE(result.loadStatus.ok()) << result.loadStatus.message();
+    ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
+    ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
+
+    const auto& chatHistory = std::get<ov::genai::ChatHistory>(result.req.input);
+    ASSERT_EQ(chatHistory.size(), 2u);
+    EXPECT_EQ(chatHistory[0]["role"].as_string().value_or(""), "system");
+    EXPECT_EQ(chatHistory[0]["content"].as_string().value_or(""), prompt);
+    EXPECT_NE(result.req.promptText.find(prompt), std::string::npos);
+    EXPECT_EQ(chatHistory[1]["content"][0]["type"].as_string().value_or(""), "audio");
+}
+
+TEST_P(InputProcessingIntegrationTest, MultipartTranscription_RejectsMalformedAudio) {
+    auto result = runMultipartTranscriptionPipeline("not valid audio");
+
+    ASSERT_TRUE(result.loadStatus.ok()) << result.loadStatus.message();
+    ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
+    EXPECT_EQ(result.processStatus.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_TRUE(result.req.inputAudios.empty());
 }
 
 TEST_P(InputProcessingIntegrationTest, OmniAudioInput_PreservesNativeSampleRate) {

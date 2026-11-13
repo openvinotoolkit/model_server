@@ -151,4 +151,7 @@ message LLMCalculatorOptions {
     }
 
     optional ChatTemplateEngine chat_template_engine = 26;
+
+    // Enables OpenAI-compatible /audio/transcriptions for this servable.
+    optional bool supports_transcriptions = 27 [default = false];
 }

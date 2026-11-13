@@ -3073,6 +3073,8 @@ cc_library(
         "//src/llm:io_processing_input_processor_context",
         "//src/llm:generation_config_builders",
         "//src/llm:runtime_chat_template_loader",
+        ":httppayload",
+        ":servable",
     ],
     copts = COPTS_TESTS,
     local_defines = COMMON_LOCAL_DEFINES,

@@ -75,6 +75,9 @@ absl::Status VisualLanguageModelLegacyServable::validateEndpoint(Endpoint endpoi
     if (endpoint == Endpoint::COMPLETIONS) {
         return absl::InvalidArgumentError("VLM Servable does not support the /completions endpoint. Use /chat/completions or /responses.");
     }
+    if (endpoint == Endpoint::TRANSCRIPTIONS) {
+        return absl::InvalidArgumentError("Legacy VLM Servable does not support audio transcriptions");
+    }
     return absl::OkStatus();
 }
 
