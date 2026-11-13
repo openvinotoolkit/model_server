@@ -18,6 +18,7 @@
 #include <string>
 #include <utility>
 
+#include "src/graph_metadata.hpp"
 #include "src/mediapipe_internal/graph_side_packets.hpp"
 #include "src/mediapipe_internal/node_initializer.hpp"
 #include "src/stringutils.hpp"
@@ -42,6 +43,7 @@ public:
         const std::string& graphName,
         const std::string& basePath,
         GraphSidePackets& sidePackets,
+        GraphMetadata& metadata,
         PythonBackend* /*pythonBackend*/,
         const MetricProvider* metrics) override {
         auto& genAiServableMap = sidePackets.genAiServableMap;
@@ -80,6 +82,10 @@ public:
             return status;
         }
         sidePackets.llmMetricReporters.push_back(std::move(metricReporterRef));
+        const auto maxModelLength = servable->getProperties()->maxModelLength;
+        if (maxModelLength.has_value() && !metadata.setInt("max_model_len", maxModelLength.value())) {
+            SPDLOG_WARN("Metadata key max_model_len is already set in graph: {}, ignoring the value from LLM node: {}", graphName, nodeName);
+        }
         genAiServableMap.insert(std::pair<std::string, std::shared_ptr<GenAiServable>>(nodeName, std::move(servable)));
         sidePackets.genAiExecutionContextMap.emplace(
             nodeName, std::make_shared<GenAiExecutionContextHolder>());

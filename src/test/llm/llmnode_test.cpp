@@ -20,10 +20,13 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <regex>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <thread>
+#include <vector>
 
 #include <fmt/ranges.h>
 
@@ -58,6 +61,7 @@
 #include "../../ov_utils.hpp"
 #include "../../server.hpp"
 #include "src/filesystem/filesystem.hpp"
+#include "src/graph_metadata.hpp"
 #include "src/graph_export/graph_export.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
@@ -7391,4 +7395,264 @@ TEST_F(LLMIdleUnloadTest, FailedWakeLeavesGraphSleepingAndRetryable) {
     EXPECT_EQ(okStatus, StatusCode::OK) << okStatus.string();
     EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
     EXPECT_NE(def.getGenAiServable("llmNode"), nullptr);
+}
+
+// ---------------------------------------------------------------------------
+// Graph metadata: max_model_len reported by an LLM node and the snapshot lifecycle.
+// These tests require the dummy LLM model fixture (src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov).
+// ---------------------------------------------------------------------------
+
+class LLMGraphMetadataTest : public TestWithTempDir {
+protected:
+    ConstructorEnabledModelManager manager;
+
+    // Copies the dummy model and sets the context length in its config.json, or removes it if not given.
+    std::string createModelCopy(const std::string& name, std::optional<uint32_t> maxModelLength) {
+        const std::filesystem::path source = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov");
+        const std::filesystem::path destination = std::filesystem::path(directoryPath) / name;
+        std::filesystem::copy(source, destination, std::filesystem::copy_options::recursive);
+        std::stringstream content;
+        {
+            std::ifstream ifs(destination / "config.json");
+            if (!ifs.is_open()) {
+                ADD_FAILURE() << "Could not open " << (destination / "config.json").generic_string();
+                return {};
+            }
+            content << ifs.rdbuf();
+        }
+        rapidjson::Document config;
+        if (config.Parse(content.str().c_str()).HasParseError() || !config.IsObject()) {
+            ADD_FAILURE() << "config.json of " << destination.generic_string() << " is not a valid JSON object";
+            return {};
+        }
+        for (const char* field : {"max_position_embeddings", "n_positions", "seq_len", "seq_length", "n_ctx", "sliding_window", "text_config"}) {
+            config.RemoveMember(field);
+        }
+        if (maxModelLength.has_value()) {
+            config.AddMember(rapidjson::StringRef("max_position_embeddings"), rapidjson::Value(maxModelLength.value()), config.GetAllocator());
+        }
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        config.Accept(writer);
+        std::ofstream ofs(destination / "config.json");
+        ofs << buffer.GetString();
+        if (!ofs) {
+            ADD_FAILURE() << "Could not write " << (destination / "config.json").generic_string();
+            return {};
+        }
+        return destination.generic_string();
+    }
+
+    static std::string buildPbtxt(const std::string& modelsPath) {
+        std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: ")" +
+                                modelsPath + R"("
+                cache_size: 1
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
+        }
+    )";
+        adjustConfigForTargetPlatform(testPbtxt);
+        return testPbtxt;
+    }
+
+    static std::optional<int64_t> maxModelLenOf(const std::shared_ptr<const GraphMetadata>& metadata) {
+        if (!metadata) {
+            return std::nullopt;
+        }
+        const auto* value = metadata->find("max_model_len");
+        if (!value) {
+            return std::nullopt;
+        }
+        const auto* intValue = std::get_if<int64_t>(value);
+        if (!intValue) {
+            return std::nullopt;
+        }
+        return *intValue;
+    }
+};
+
+TEST_F(LLMGraphMetadataTest, LLMNodeReportsMaxModelLen) {
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, buildPbtxt(createModelCopy("model", 4096)), nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    EXPECT_EQ(maxModelLenOf(def.getMetadata()), std::optional<int64_t>(4096));
+}
+
+TEST_F(LLMGraphMetadataTest, UnknownMaxModelLenLeavesKeyAbsent) {
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, buildPbtxt(createModelCopy("model", std::nullopt)), nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    auto metadata = def.getMetadata();
+    ASSERT_NE(metadata, nullptr);
+    EXPECT_EQ(metadata->find("max_model_len"), nullptr);
+    EXPECT_TRUE(metadata->empty());
+}
+
+TEST_F(LLMGraphMetadataTest, ReloadReplacesMetadata) {
+    const std::string pbtxt4096 = buildPbtxt(createModelCopy("model4096", 4096));
+    const std::string pbtxt8192 = buildPbtxt(createModelCopy("model8192", 8192));
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, pbtxt4096, nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    auto before = def.getMetadata();
+    ASSERT_EQ(maxModelLenOf(before), std::optional<int64_t>(4096));
+
+    def.inputConfig = pbtxt8192;
+    ASSERT_EQ(def.reload(manager, mgc), StatusCode::OK);
+    EXPECT_EQ(maxModelLenOf(def.getMetadata()), std::optional<int64_t>(8192));
+    // Snapshot taken before the reload is immutable
+    EXPECT_EQ(maxModelLenOf(before), std::optional<int64_t>(4096));
+}
+
+TEST_F(LLMGraphMetadataTest, RetireClearsMetadata) {
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, buildPbtxt(createModelCopy("model", 4096)), nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    ASSERT_NE(def.getMetadata(), nullptr);
+    def.retire();
+    EXPECT_EQ(def.getMetadata(), nullptr);
+}
+
+TEST_F(LLMGraphMetadataTest, FailedReloadLeavesNoMetadata) {
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, buildPbtxt(createModelCopy("model", 4096)), nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    ASSERT_NE(def.getMetadata(), nullptr);
+
+    // Metadata is cleared on a failed reload, whichever stage fails
+    def.inputConfig = buildPbtxt((std::filesystem::path(directoryPath) / "nonexistent").generic_string());
+    EXPECT_FALSE(def.reload(manager, mgc).ok());
+    EXPECT_EQ(def.getMetadata(), nullptr);
+}
+
+TEST_F(LLMGraphMetadataTest, MetadataKeptWhileSleepingAndRestoredOnWakeUp) {
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, buildPbtxt(createModelCopy("model", 4096)), nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    auto before = def.getMetadata();
+    ASSERT_EQ(maxModelLenOf(before), std::optional<int64_t>(4096));
+
+    ASSERT_EQ(def.putToSleep(), StatusCode::OK);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+    EXPECT_EQ(def.getMetadata(), before);
+
+    std::atomic<bool> stop{false};
+    std::atomic<uint64_t> blankReads{0};
+    std::thread reader([&]() {
+        while (!stop) {
+            if (maxModelLenOf(def.getMetadata()) != std::optional<int64_t>(4096)) {
+                ++blankReads;
+            }
+            std::this_thread::yield();
+        }
+    });
+    const Status wakeUpStatus = def.wakeUpIfSleeping(manager);
+    stop = true;
+    reader.join();
+    ASSERT_EQ(wakeUpStatus, StatusCode::OK);
+    EXPECT_EQ(blankReads, 0u);
+    EXPECT_EQ(maxModelLenOf(def.getMetadata()), std::optional<int64_t>(4096));
+}
+
+TEST_F(LLMGraphMetadataTest, FailedWakeUpKeepsMetadata) {
+    const std::string pbtxt = buildPbtxt(createModelCopy("model", 4096));
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, pbtxt, nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    auto before = def.getMetadata();
+    ASSERT_EQ(maxModelLenOf(before), std::optional<int64_t>(4096));
+    ASSERT_EQ(def.putToSleep(), StatusCode::OK);
+
+    // The graph goes back to sleep and stays listed, so it keeps the metadata of its last successful load
+    def.inputConfig = buildPbtxt((std::filesystem::path(directoryPath) / "nonexistent").generic_string());
+    std::atomic<bool> stop{false};
+    std::atomic<uint64_t> blankReads{0};
+    std::thread reader([&]() {
+        while (!stop) {
+            if (maxModelLenOf(def.getMetadata()) != std::optional<int64_t>(4096)) {
+                ++blankReads;
+            }
+            std::this_thread::yield();
+        }
+    });
+    const Status wakeUpStatus = def.wakeUpIfSleeping(manager);
+    stop = true;
+    reader.join();
+    EXPECT_FALSE(wakeUpStatus.ok());
+    EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+    EXPECT_EQ(blankReads, 0u);
+    EXPECT_EQ(def.getMetadata(), before);
+
+    def.inputConfig = pbtxt;
+    ASSERT_EQ(def.wakeUpIfSleeping(manager), StatusCode::OK);
+    EXPECT_EQ(maxModelLenOf(def.getMetadata()), std::optional<int64_t>(4096));
+}
+
+TEST_F(LLMGraphMetadataTest, ReadersSeeOldOrNewSnapshotDuringReloads) {
+    const std::string pbtxt4096 = buildPbtxt(createModelCopy("model4096", 4096));
+    const std::string pbtxt8192 = buildPbtxt(createModelCopy("model8192", 8192));
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, pbtxt4096, nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+
+    std::atomic<bool> stop{false};
+    std::atomic<uint64_t> reads{0};
+    std::atomic<uint64_t> unexpected{0};
+    std::vector<std::thread> readers;
+    for (int i = 0; i < 4; ++i) {
+        readers.emplace_back([&]() {
+            while (!stop) {
+                // Always the old or the new complete snapshot, never an empty one
+                auto value = maxModelLenOf(def.getMetadata());
+                if (!value.has_value() || (value.value() != 4096 && value.value() != 8192)) {
+                    ++unexpected;
+                }
+                ++reads;
+                std::this_thread::yield();
+            }
+        });
+    }
+    bool reloadsSucceeded = true;
+    for (int i = 0; i < 6 && reloadsSucceeded; ++i) {
+        def.inputConfig = (i % 2 == 0) ? pbtxt8192 : pbtxt4096;
+        reloadsSucceeded = def.reload(manager, mgc).ok();
+    }
+    stop = true;
+    for (auto& reader : readers) {
+        reader.join();
+    }
+    EXPECT_TRUE(reloadsSucceeded);
+    EXPECT_EQ(unexpected, 0u);
+    EXPECT_GT(reads, 0u);
+    EXPECT_EQ(maxModelLenOf(def.getMetadata()), std::optional<int64_t>(4096));
 }

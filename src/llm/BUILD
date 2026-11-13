@@ -28,6 +28,7 @@ ovms_cc_library(
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/mediapipe_internal:graph_side_packets",
         "//src/mediapipe_internal:ovms_calculator_base",
+        "//src:libovms_graph_metadata",
         "//src/mediapipe_calculators/utils:timestamp_advance_guard",
         "//src/kfserving_api:kfserving_api_cpp",
         "//src:libovmsprofiler",

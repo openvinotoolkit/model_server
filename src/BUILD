@@ -178,6 +178,16 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
+    name = "libovms_graph_metadata",
+    srcs = ["graph_metadata.cpp"],
+    hdrs = ["graph_metadata.hpp"],
+    deps = [
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
+    ],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
     name = "libovms_single_version_servable_definition",
     srcs = [
         "servable_definition_unload_guard.cpp",
@@ -878,6 +888,7 @@ ovms_cc_library(
             "//src/metrics:libovms_metric_provider",
             "libovms_model_instance_provider",
             "libovms_servable_definition",
+            "libovms_graph_metadata",
             "libovms_single_version_servable_definition",
             "kfs_python_tensor_bridge",
             "copyable_object_wrapper",
@@ -2077,6 +2088,7 @@ cc_test(
         "test/configs/emptyConfigWithMetrics.json",
         "test/llm/config.json",
         "test/llm/config_queue.json",
+        "test/llm/config_models_endpoint.json",
         "test/llm/assisted_decoding_config.json",
         "test/llm/lm_cb_regular.pbtxt",
         "test/llm/lm_cb_prefix_caching.pbtxt",
@@ -2257,6 +2269,7 @@ cc_test(
                 "//src/rerank:rerank_api_handler",
                 ":embeddings_handler_tests",
                 ":test_idle_mediapipe_test",
+                ":test_graph_metadata_test",
                 "//src/mediapipe_internal:mediapipe_utils",
                 "//src/llm:llmcalculator_proto_owner",
             ],
@@ -2477,6 +2490,21 @@ ovms_cc_test_library(
         "//src/mediapipe_internal:pipelinedefinitionstatus",
         "//src/mediapipe_internal:libovms_mediapipe",
         "//src/mediapipe_internal:mediapipegraphconfig",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+ovms_cc_test_library(
+    name = "test_graph_metadata_test",
+    srcs = ["test/graph_metadata_test.cpp"],
+    deps = [
+        ":test_constructor_enabled_model_manager",
+        ":test_utils",
+        "//src:libovms_graph_metadata",
+        "//src:libovms_servable_definition",
+        "//src/mediapipe_internal:libovms_mediapipe",
+        "//src/mediapipe_internal:mediapipegraphconfig",
+        "//src/port:rapidjson_document",
         "@com_google_googletest//:gtest",
     ],
 )
