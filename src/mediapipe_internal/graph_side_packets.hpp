@@ -32,6 +32,7 @@ struct EmbeddingsServable;
 struct RerankServable;
 struct SttServable;
 class TtsServable;
+struct LiveGraphConfig;
 
 using PythonNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>;
 using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiServable>>;
@@ -76,6 +77,7 @@ struct GraphSidePackets {
     RerankServableMap rerankServableMap;
     SttServableMap sttServableMap;
     TtsServableMap ttsServableMap;
+    std::unordered_map<std::string, std::shared_ptr<const LiveGraphConfig>> liveGraphProfiles;
     std::vector<std::string> loraAliases;
     bool hideBaseModelInRouting = false;
     void clear() {
@@ -87,6 +89,7 @@ struct GraphSidePackets {
         rerankServableMap.clear();
         sttServableMap.clear();
         ttsServableMap.clear();
+        liveGraphProfiles.clear();
         loraAliases.clear();
         hideBaseModelInRouting = false;
     }
@@ -98,7 +101,8 @@ struct GraphSidePackets {
                 embeddingsServableMap.empty() &&
                 rerankServableMap.empty() &&
                 sttServableMap.empty() &&
-                ttsServableMap.empty());
+                ttsServableMap.empty() &&
+                liveGraphProfiles.empty());
     }
 };
 }  // namespace ovms

@@ -30,6 +30,7 @@ std::shared_ptr<spdlog::logger> s3_logger = std::make_shared<spdlog::logger>("s3
 std::shared_ptr<spdlog::logger> modelmanager_logger = std::make_shared<spdlog::logger>("modelmanager");
 std::shared_ptr<spdlog::logger> dag_executor_logger = std::make_shared<spdlog::logger>("dag_executor");
 std::shared_ptr<spdlog::logger> capi_logger = std::make_shared<spdlog::logger>("C-API");
+std::shared_ptr<spdlog::logger> webrtc_logger = std::make_shared<spdlog::logger>("webrtc");
 #if (MEDIAPIPE_DISABLE == 0)
 std::shared_ptr<spdlog::logger> mediapipe_logger = std::make_shared<spdlog::logger>("mediapipe");
 std::shared_ptr<spdlog::logger> llm_executor_logger = std::make_shared<spdlog::logger>("llm_executor");
@@ -80,6 +81,7 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
     t2s_calculator_logger->set_pattern(default_pattern);
     rerank_calculator_logger->set_pattern(default_pattern);
     embeddings_calculator_logger->set_pattern(default_pattern);
+    webrtc_logger->set_pattern(default_pattern);
 #endif
 #if (OV_TRACE == 1)
     ov_logger->set_pattern(default_pattern);
@@ -99,6 +101,7 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
         t2s_calculator_logger->sinks().push_back(sink);
         rerank_calculator_logger->sinks().push_back(sink);
         embeddings_calculator_logger->sinks().push_back(sink);
+        webrtc_logger->sinks().push_back(sink);
 #endif
 #if (OV_TRACE == 1)
         ov_logger->sinks().push_back(sink);
@@ -119,6 +122,7 @@ static void register_loggers(const std::string& log_level, std::vector<spdlog::s
     set_log_level(log_level, t2s_calculator_logger);
     set_log_level(log_level, rerank_calculator_logger);
     set_log_level(log_level, embeddings_calculator_logger);
+    set_log_level(log_level, webrtc_logger);
 #endif
 #if (OV_TRACE == 1)
     set_log_level(log_level, ov_logger);
@@ -161,6 +165,7 @@ void initialize_named_loggers_from_default() {
         adopt_default_logger_settings(t2s_calculator_logger, defaultLogger);
         adopt_default_logger_settings(embeddings_calculator_logger, defaultLogger);
         adopt_default_logger_settings(rerank_calculator_logger, defaultLogger);
+        adopt_default_logger_settings(webrtc_logger, defaultLogger);
 #endif
 #if (OV_TRACE == 1)
         adopt_default_logger_settings(ov_logger, defaultLogger);

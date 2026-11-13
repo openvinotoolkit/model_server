@@ -17,6 +17,12 @@
 #include "s2t_servable.hpp"
 
 #include <stdexcept>
+#include <fstream>
+#include "src/port/rapidjson_document.hpp"
+#include "src/port/rapidjson_istreamwrapper.hpp"
+#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
+#include "src/webrtc/voxtral_audio_adapter.hpp"
+#endif
 
 #pragma warning(push)
 #pragma warning(disable : 6386)
@@ -60,10 +66,45 @@ SttServable::SttServable(const ::mediapipe::S2tCalculatorOptions& nodeOptions, c
         config["STATIC_PIPELINE"] = true;
     }
     config["word_timestamps"] = enableWordTimestamps;
+    streamingBackend = isRealtimeModel(parsedModelsPath.string());
+#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
+    if (streamingBackend && !VoxtralAudioAdapter::isAvailable())
+        throw std::runtime_error("Voxtral realtime requires an OpenVINO GenAI build with independent ASR streams");
+    if (streamingBackend && enableWordTimestamps)
+        throw std::invalid_argument("Voxtral realtime streams do not support word timestamps");
+#else
+    if (streamingBackend)
+        throw std::runtime_error("Voxtral realtime requires BUILD_WITH_WEBRTC=1 and BUILD_WITH_EXPERIMENTAL_VOXTRAL=1");
+#endif
     sttPipeline = std::make_shared<ov::genai::ASRPipeline>(parsedModelsPath.string(), device, config);
 
-    streamingExecutor = std::make_unique<SttExecutorWrapper>(sttPipeline, sttPipelineMutex);
+    if (!streamingBackend)
+        streamingExecutor = std::make_unique<SttExecutorWrapper>(sttPipeline, sttPipelineMutex);
 }
+
+bool SttServable::isRealtimeModel(const std::string& modelPath) {
+    const std::string configPath = modelPath + "/config.json";
+    std::ifstream input(configPath);
+    if (!input.is_open())
+        return false;
+    rapidjson::IStreamWrapper stream(input);
+    rapidjson::Document config;
+    config.ParseStream(stream);
+    if (config.HasParseError() || !config.IsObject())
+        throw std::runtime_error("Invalid speech model configuration: " + configPath);
+    const auto modelType = config.FindMember("model_type");
+    if (modelType == config.MemberEnd() || !modelType->value.IsString())
+        throw std::runtime_error("Missing or invalid model_type in speech model configuration: " + configPath);
+    return std::string(modelType->value.GetString()) == "voxtral_realtime";
+}
+
+#if defined(BUILD_WITH_EXPERIMENTAL_VOXTRAL)
+std::shared_ptr<VoxtralAudioAdapter> SttServable::createStreamingAdapter() const {
+    if (!streamingBackend)
+        throw std::invalid_argument("The configured STT backend does not support incremental audio");
+    return std::make_shared<VoxtralAudioAdapter>(sttPipeline);
+}
+#endif
 
 void SttServable::addRequest(std::shared_ptr<SttServableExecutionContext> executionContext) {
     if (!streamingExecutor) {

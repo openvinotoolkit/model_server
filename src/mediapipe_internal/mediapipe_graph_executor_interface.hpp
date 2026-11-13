@@ -15,10 +15,12 @@
 //****************************************************************************
 #pragma once
 
+#include <memory>
 #include <string>
 
 #include "src/execution_context.hpp"
 #include "src/status.hpp"
+#include "live_graph_session.hpp"
 
 namespace grpc {
 template <typename W, typename R>
@@ -39,6 +41,13 @@ struct HttpPayload;
 class MediapipeGraphExecutorInterface {
 public:
     virtual ~MediapipeGraphExecutorInterface() = default;
+
+    /// Reports whether a named live execution profile was prepared during graph loading.
+    virtual bool supportsSession(const std::string& profile) const = 0;
+    /// Starts a managed live execution using normal graph resources. The returned
+    /// session owns its lifetime independently of this executor.
+    virtual Status startSession(const std::string& profile, LiveGraphSession::Observer observer,
+        std::unique_ptr<LiveGraphSession>& session) = 0;
 
     virtual Status infer(const inference::ModelInferRequest* request,
         inference::ModelInferResponse* response,

@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "mediapipegraphexecutor.hpp"
 
+#include <exception>
+#include <map>
 #include <string>
 #include <utility>
 #include <vector>
@@ -30,8 +32,36 @@
 #pragma warning(pop)
 
 #include "src/llm/execution_context_utils.hpp"
+#include "live_graph_session_impl.hpp"
 
 namespace ovms {
+
+MediapipeGraphExecutor::~MediapipeGraphExecutor() = default;
+
+bool MediapipeGraphExecutor::supportsSession(const std::string& profile) const {
+    return sidePacketMaps.liveGraphProfiles.count(profile) != 0;
+}
+
+Status MediapipeGraphExecutor::startSession(const std::string& profile, LiveGraphSession::Observer observer,
+    std::unique_ptr<LiveGraphSession>& session) {
+    const auto prepared = sidePacketMaps.liveGraphProfiles.find(profile);
+    if (prepared == sidePacketMaps.liveGraphProfiles.end())
+        return Status(StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID,
+            "Unsupported live graph profile: " + profile);
+    std::map<std::string, mediapipe::Packet> packets;
+    buildInputSidePackets(packets, sidePacketMaps);
+    try {
+        if (!liveExecutionLease && activeInferenceGuard) {
+            liveExecutionLease = std::make_shared<ActiveInferenceGuard>(std::move(*activeInferenceGuard));
+            activeInferenceGuard.reset();
+        }
+        return createLiveGraphSession(prepared->second, std::move(packets),
+            liveExecutionLease, std::move(observer), session);
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Failed to start live graph {} profile {}: {}", name, profile, e.what());
+        return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, e.what());
+    }
+}
 
 MediapipeGraphExecutor::MediapipeGraphExecutor(
     const std::string& name,
@@ -59,9 +89,7 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     currentStreamTimestamp(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE)),
     mediapipeServableMetricReporter(mediapipeServableMetricReporter),
     guard(std::move(guard)),
-    activeInferenceGuard(activeInferenceCount
-                             ? std::optional<ActiveInferenceGuard>(ActiveInferenceGuard(std::move(activeInferenceCount), std::move(lastActivityTimeNs)))
-                             : std::nullopt) {}
+    activeInferenceGuard(std::in_place, std::move(activeInferenceCount), std::move(lastActivityTimeNs)) {}
 MediapipeGraphExecutor::MediapipeGraphExecutor(
     const std::string& name,
     const std::string& version,
@@ -86,8 +114,6 @@ MediapipeGraphExecutor::MediapipeGraphExecutor(
     pythonBackend(pythonBackend),
     currentStreamTimestamp(::mediapipe::Timestamp(STARTING_TIMESTAMP_VALUE)),
     mediapipeServableMetricReporter(mediapipeServableMetricReporter),
-    activeInferenceGuard(activeInferenceCount
-                             ? std::optional<ActiveInferenceGuard>(ActiveInferenceGuard(std::move(activeInferenceCount), std::move(lastActivityTimeNs)))
-                             : std::nullopt) {}
+    activeInferenceGuard(std::in_place, std::move(activeInferenceCount), std::move(lastActivityTimeNs)) {}
 
 }  // namespace ovms
