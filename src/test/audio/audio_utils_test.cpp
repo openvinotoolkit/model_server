@@ -17,6 +17,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <array>
 #include <cstdlib>
 #include <limits>
 #if defined(_WIN32)
@@ -36,6 +37,11 @@
 using namespace ovms::audio_utils;
 
 namespace {
+
+uint16_t readLe16(const char* ptr) {
+    return static_cast<uint16_t>(static_cast<unsigned char>(ptr[0])) |
+           (static_cast<uint16_t>(static_cast<unsigned char>(ptr[1])) << 8);
+}
 
 // Builds an in-memory PCM16 mono WAV file with an attacker-controlled sample rate
 // and an arbitrary number of zeroed PCM samples. Used to reproduce the DoS report
@@ -581,23 +587,22 @@ TEST_F(AudioUtilsSampleRateTest, prepareAudioOutputRejectsOversizedSpeech) {
     // that exceeds the 1 GB default cap.  The function must throw before any
     // allocation attempt.
     constexpr uint32_t sampleRate = 24000;
-    constexpr uint16_t bitsPerSample = 32;  // float32
-    // 512 Mi samples × 4 bytes = 2 GiB → exceeds DEFAULT_MAX_FILE_SIZE (1 GB)
-    constexpr size_t oversizedSpeech = 512ull * 1024 * 1024;
+    // 512 Mi samples × 2 bytes is exactly the 1 GiB PCM16 cap, so add one
+    // sample to keep the early oversized-buffer rejection path valid.
+    constexpr size_t oversizedSpeech = (512ull * 1024 * 1024) + 1;
     // A non-null dummy pointer is enough; prepareAudioOutput throws before
     // it dereferences waveformPtr.
     const float dummyWaveform = 0.0f;
     void* ppData = nullptr;
     size_t pDataSize = 0;
     EXPECT_THROW(
-        prepareAudioOutput(&ppData, pDataSize, sampleRate, bitsPerSample, oversizedSpeech, &dummyWaveform),
+        prepareAudioOutput(&ppData, pDataSize, sampleRate, oversizedSpeech, &dummyWaveform),
         std::runtime_error);
 }
 
 TEST_F(AudioUtilsSampleRateTest, prepareAudioOutputRejectsOversizedSpeechWithCustomEnvVar) {
     // Honour OVMS_AUDIO_MAX_FILE_SIZE_BYTES for the synthesis path too.
     constexpr uint32_t sampleRate = 24000;
-    constexpr uint16_t bitsPerSample = 32;
     // 100 samples × 4 bytes = 400 bytes — normally fine, but tiny cap rejects it.
     constexpr size_t speechSize = 100;
     SetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES", "100");
@@ -605,7 +610,7 @@ TEST_F(AudioUtilsSampleRateTest, prepareAudioOutputRejectsOversizedSpeechWithCus
     void* ppData = nullptr;
     size_t pDataSize = 0;
     EXPECT_THROW(
-        prepareAudioOutput(&ppData, pDataSize, sampleRate, bitsPerSample, speechSize, &dummyWaveform),
+        prepareAudioOutput(&ppData, pDataSize, sampleRate, speechSize, &dummyWaveform),
         std::runtime_error);
     UnSetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
 }
@@ -613,14 +618,13 @@ TEST_F(AudioUtilsSampleRateTest, prepareAudioOutputRejectsOversizedSpeechWithCus
 TEST_F(AudioUtilsSampleRateTest, prepareAudioOutputAcceptsSmallSpeech) {
     // A small, realistic synthesis output must pass the cap check.
     constexpr uint32_t sampleRate = 24000;
-    constexpr uint16_t bitsPerSample = 32;
     // 1000 samples × 4 bytes = 4000 bytes — well under the 1 GB default.
     constexpr size_t speechSize = 1000;
     std::vector<float> waveform(speechSize, 0.0f);
     void* ppData = nullptr;
     size_t pDataSize = 0;
     EXPECT_NO_THROW(
-        prepareAudioOutput(&ppData, pDataSize, sampleRate, bitsPerSample, speechSize, waveform.data()));
+        prepareAudioOutput(&ppData, pDataSize, sampleRate, speechSize, waveform.data()));
     if (ppData) {
         free(ppData);  // drwav allocates via DRWAV_MALLOC
     }
@@ -632,32 +636,65 @@ TEST_F(AudioUtilsSampleRateTest, prepareAudioOutputRejectsWhenHeaderPushesOverLi
     // returned by drwav must exceed the limit and be rejected — even though the
     // raw PCM payload alone would have been accepted.
     constexpr uint32_t sampleRate = 24000;
-    constexpr uint16_t bitsPerSample = 32;
     constexpr size_t speechSize = 100;
-    constexpr size_t rawPcmBytes = speechSize * (bitsPerSample / 8);  // 400 bytes
+    constexpr size_t rawPcmBytes = speechSize * sizeof(int16_t);
     // Cap == raw PCM size; the WAV container will be larger, so it must be rejected.
     SetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES", std::to_string(rawPcmBytes));
     std::vector<float> waveform(speechSize, 0.0f);
     void* ppData = nullptr;
     size_t pDataSize = 0;
     EXPECT_THROW(
-        prepareAudioOutput(&ppData, pDataSize, sampleRate, bitsPerSample, speechSize, waveform.data()),
+        prepareAudioOutput(&ppData, pDataSize, sampleRate, speechSize, waveform.data()),
         std::runtime_error);
     UnSetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
 }
 
-TEST_F(AudioUtilsSampleRateTest, prepareAudioOutputRejectsZeroBitsPerSample) {
-    // bitsPerSample == 0 means bytesPerSample == 0 which would cause a divide-
-    // by-zero or meaningless size check — must be rejected.
+TEST_F(AudioUtilsSampleRateTest, prepareAudioOutputProducesPcm16Wav) {
     constexpr uint32_t sampleRate = 24000;
-    constexpr uint16_t bitsPerSample = 0;
-    constexpr size_t speechSize = 100;
-    const float dummyWaveform = 0.0f;
+    std::array<float, 3> waveform{0.0f, 0.5f, -0.5f};
     void* ppData = nullptr;
     size_t pDataSize = 0;
-    EXPECT_THROW(
-        prepareAudioOutput(&ppData, pDataSize, sampleRate, bitsPerSample, speechSize, &dummyWaveform),
-        std::runtime_error);
+    ASSERT_NO_THROW(prepareAudioOutput(&ppData, pDataSize, sampleRate, waveform.size(), waveform.data()));
+    ASSERT_NE(ppData, nullptr);
+    std::string wav(reinterpret_cast<const char*>(ppData), pDataSize);
+    EXPECT_TRUE(isWavBuffer(wav));
+    EXPECT_EQ(readLe16(wav.data() + 20), 1);   // PCM
+    EXPECT_EQ(readLe16(wav.data() + 22), 1);   // mono
+    EXPECT_EQ(readLe16(wav.data() + 34), 16);  // PCM16
+    EXPECT_EQ(static_cast<unsigned char>(wav[44]), 0x00);
+    EXPECT_EQ(static_cast<unsigned char>(wav[45]), 0x00);
+    EXPECT_EQ(static_cast<unsigned char>(wav[46]), 0xFF);
+    EXPECT_EQ(static_cast<unsigned char>(wav[47]), 0x3F);
+    free(ppData);
+}
+
+TEST_F(AudioUtilsSampleRateTest, prepareRawPcm16LEOutputProducesLittleEndianSamples) {
+    std::array<float, 2> waveform{0.0f, 0.5f};
+    void* ppData = nullptr;
+    size_t pDataSize = 0;
+    ASSERT_NO_THROW(prepareRawPcm16LEOutput(&ppData, pDataSize, waveform.size(), waveform.data()));
+    ASSERT_NE(ppData, nullptr);
+    ASSERT_EQ(pDataSize, waveform.size() * sizeof(int16_t));
+    const auto* bytes = reinterpret_cast<const unsigned char*>(ppData);
+    EXPECT_EQ(bytes[0], 0x00);
+    EXPECT_EQ(bytes[1], 0x00);
+    EXPECT_EQ(bytes[2], 0xFF);
+    EXPECT_EQ(bytes[3], 0x3F);
+    free(ppData);
+}
+
+TEST_F(AudioUtilsSampleRateTest, prepareRawPcm16LEOutputMapsNaNToSilence) {
+    std::array<float, 3> waveform{0.0f, std::numeric_limits<float>::quiet_NaN(), 0.5f};
+    void* ppData = nullptr;
+    size_t pDataSize = 0;
+    ASSERT_NO_THROW(prepareRawPcm16LEOutput(&ppData, pDataSize, waveform.size(), waveform.data()));
+    ASSERT_NE(ppData, nullptr);
+    ASSERT_EQ(pDataSize, waveform.size() * sizeof(int16_t));
+    const auto* pcm16 = reinterpret_cast<const int16_t*>(ppData);
+    EXPECT_EQ(pcm16[0], 0);
+    EXPECT_EQ(pcm16[1], 0);
+    EXPECT_EQ(pcm16[2], 16383);
+    free(ppData);
 }
 
 }  // namespace

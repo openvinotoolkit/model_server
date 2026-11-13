@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <optional>
 #include <string>
 #include <vector>
 #include <stdint.h>
@@ -25,6 +26,11 @@ namespace ovms::audio_utils {
 
 static constexpr uint32_t S2T_PIPELINE_SUPPORTED_SAMPLE_RATE = 16000;
 static constexpr uint32_t DISABLED_RESAMPLING_SAMPLE_RATE = 0;
+
+enum class TextToSpeechResponseFormat {
+    WAV,
+    PCM
+};
 
 bool isWavBuffer(const std::string buf);
 
@@ -40,7 +46,11 @@ std::vector<float> readMp3(const std::string_view& mp3Data, uint32_t targetSampl
 // No resampling is applied — returns the raw PCM at the file's native sample rate.
 std::vector<float> readWithoutResample(const std::string_view& audioData, const std::string& format);
 
-void prepareAudioOutput(void** ppData, size_t& pDataSize, uint32_t sampleRate, uint16_t bitsPerSample, size_t speechSize, const float* waveformPtr);
+std::optional<TextToSpeechResponseFormat> tryParseTextToSpeechResponseFormat(std::string_view format);
+
+void prepareAudioOutput(void** ppData, size_t& pDataSize, uint32_t sampleRate, size_t speechSize, const float* waveformPtr);
+
+void prepareRawPcm16LEOutput(void** ppData, size_t& pDataSize, size_t speechSize, const float* waveformPtr);
 
 // Throws if the estimated resampled audio buffer size would exceed the maximum allowed size
 void validateAudioFileSize(
