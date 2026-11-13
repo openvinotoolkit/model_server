@@ -22,6 +22,7 @@
 #include <gtest/gtest.h>
 
 #include "src/http_rest_api_handler.hpp"
+#include "src/mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "src/server.hpp"
 #include "src/servable_management/modelmanager.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
@@ -183,6 +184,133 @@ TEST_F(ListModelsEndpointTest, simplePositiveRetrieveModelv1v3) {
     ASSERT_EQ(d["id"], "add");
     ASSERT_TRUE(d["created"].IsInt());
     ASSERT_EQ(d["owned_by"], "OVMS");
+}
+
+class ListModelsEndpointMetadataTest : public ::testing::Test {
+protected:
+    static std::unique_ptr<std::thread> t;
+
+public:
+    std::unique_ptr<ovms::HttpRestApiHandler> handler;
+    std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
+    std::shared_ptr<MockedServerRequestInterface> writer;
+    std::shared_ptr<MockedMultiPartParser> multiPartParser;
+
+    static void SetUpTestSuite() {
+        std::string port = "9179";
+        std::string configPath = getGenericFullPathForSrcTest("/ovms/src/test/llm/config_models_endpoint.json");
+        ::SetUpServer(t, ovms::Server::instance(), port, configPath.c_str(), 60);
+    }
+
+    static void TearDownTestSuite() {
+        ovms::Server& server = ovms::Server::instance();
+        server.setShutdownRequest(1);
+        t->join();
+        server.setShutdownRequest(0);
+    }
+
+    void SetUp() override {
+        writer = std::make_shared<MockedServerRequestInterface>();
+        multiPartParser = std::make_shared<MockedMultiPartParser>();
+        handler = std::make_unique<ovms::HttpRestApiHandler>(ovms::Server::instance(), 5);
+    }
+
+    void TearDown() override {
+        handler.reset();
+    }
+
+    void get(const std::string& endpoint, rapidjson::Document& document) {
+        ovms::HttpRequestComponents comp;
+        ovms::HttpResponseComponents responseComponents;
+        std::string response;
+        ASSERT_EQ(handler->parseRequestComponents(comp, "GET", endpoint, headers), ovms::StatusCode::OK);
+        ASSERT_EQ(handler->dispatchToProcessor(endpoint, "", &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
+        ASSERT_FALSE(document.Parse(response.c_str()).HasParseError());
+    }
+
+    static void expectStandardFields(const rapidjson::Value& entry) {
+        ASSERT_TRUE(entry.HasMember("id"));
+        ASSERT_TRUE(entry.HasMember("object"));
+        ASSERT_TRUE(entry.HasMember("created"));
+        ASSERT_TRUE(entry.HasMember("owned_by"));
+        ASSERT_TRUE(entry["id"].IsString());
+        EXPECT_STREQ(entry["object"].GetString(), "model");
+        EXPECT_TRUE(entry["created"].IsInt64());
+        EXPECT_STREQ(entry["owned_by"].GetString(), "OVMS");
+    }
+};
+std::unique_ptr<std::thread> ListModelsEndpointMetadataTest::t;
+
+TEST_F(ListModelsEndpointMetadataTest, ListContainsMaxModelLenOnlyForLLM) {
+    rapidjson::Document d;
+    get("/v1/models", d);
+    ASSERT_TRUE(d["data"].IsArray());
+    ASSERT_EQ(d["data"].Size(), 2);
+    bool llmFound = false;
+    bool passthroughFound = false;
+    for (const auto& entry : d["data"].GetArray()) {
+        ASSERT_NO_FATAL_FAILURE(expectStandardFields(entry));
+        const std::string id = entry["id"].GetString();
+        if (id == "lm_cb_regular") {
+            llmFound = true;
+            ASSERT_TRUE(entry.HasMember("max_model_len"));
+            ASSERT_TRUE(entry["max_model_len"].IsUint());
+            EXPECT_GT(entry["max_model_len"].GetUint(), 0u);
+        } else if (id == "passthrough") {
+            passthroughFound = true;
+            EXPECT_FALSE(entry.HasMember("max_model_len"));
+        }
+    }
+    EXPECT_TRUE(llmFound);
+    EXPECT_TRUE(passthroughFound);
+}
+
+TEST_F(ListModelsEndpointMetadataTest, RetrieveLLMContainsMaxModelLen) {
+    rapidjson::Document d;
+    get("/v1/models/lm_cb_regular", d);
+    ASSERT_NO_FATAL_FAILURE(expectStandardFields(d));
+    EXPECT_STREQ(d["id"].GetString(), "lm_cb_regular");
+    ASSERT_TRUE(d.HasMember("max_model_len"));
+    ASSERT_TRUE(d["max_model_len"].IsUint());
+    EXPECT_GT(d["max_model_len"].GetUint(), 0u);
+}
+
+TEST_F(ListModelsEndpointMetadataTest, RetrieveNonLLMHasNoMaxModelLen) {
+    rapidjson::Document d;
+    get("/v1/models/passthrough", d);
+    ASSERT_NO_FATAL_FAILURE(expectStandardFields(d));
+    EXPECT_STREQ(d["id"].GetString(), "passthrough");
+    EXPECT_FALSE(d.HasMember("max_model_len"));
+}
+
+TEST_F(ListModelsEndpointMetadataTest, SleepingLLMStillReportsMaxModelLen) {
+    ovms::Server& server = ovms::Server::instance();
+    auto& manager = dynamic_cast<const ovms::ServableManagerModule*>(server.getModule(ovms::SERVABLE_MANAGER_MODULE_NAME))->getServableManager();
+    auto& factory = manager.getMediapipeFactory();
+    auto* definition = factory.findDefinitionByName("lm_cb_regular");
+    ASSERT_NE(definition, nullptr);
+    ASSERT_EQ(factory.putToSleepDefinition("lm_cb_regular"), ovms::StatusCode::OK);
+    ASSERT_EQ(definition->getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+
+    rapidjson::Document list;
+    get("/v1/models", list);
+    bool llmFound = false;
+    for (const auto& entry : list["data"].GetArray()) {
+        if (std::string(entry["id"].GetString()) == "lm_cb_regular") {
+            llmFound = true;
+            ASSERT_TRUE(entry.HasMember("max_model_len"));
+            EXPECT_GT(entry["max_model_len"].GetUint(), 0u);
+        }
+    }
+    EXPECT_TRUE(llmFound);
+    rapidjson::Document retrieved;
+    get("/v1/models/lm_cb_regular", retrieved);
+    ASSERT_TRUE(retrieved.HasMember("max_model_len"));
+    EXPECT_GT(retrieved["max_model_len"].GetUint(), 0u);
+
+    // Reporting metadata must not wake the graph up
+    EXPECT_EQ(definition->getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+    ASSERT_EQ(factory.wakeUpDefinition("lm_cb_regular", manager), ovms::StatusCode::OK);
 }
 
 class ListModelsEndpointIdleManagementTest : public TestWithTempDir {

@@ -43,6 +43,7 @@ public:
         const std::string& graphName,
         const std::string& basePath,
         GraphSidePackets& sidePackets,
+        GraphMetadata& /*metadata*/,
         PythonBackend* /*pythonBackend*/) override {
         auto& imageGenPipelinesMap = sidePackets.imageGenPipelinesMap;
         if (!nodeConfig.node_options().size()) {
