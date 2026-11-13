@@ -157,6 +157,7 @@ RUN if [ "$BASE_OS" == "ubuntu26" ] ; then apt-get update ; apt-get install pyth
     python3.14 -m pip install "Jinja2==3.1.6" "MarkupSafe==3.0.2" "numpy<2.0.0" --no-cache-dir ; fi
 
 ARG JOBS=8
+ARG VERBOSE_LOGS=OFF
 ARG ov_use_binary=0
 ARG ov_repo=openvinotoolkit/openvino
 ARG DLDT_PACKAGE_URL
@@ -292,11 +293,11 @@ COPY package.json /ovms/
 # setup so pybind11 extensions are built against the same ABI as tests.
 
 # prebuild dependencies before copying sources & test dependencies for caching
-# hadolint ignore=DL3059
-
+# hadolint ignore=DL3059,SC2046
 RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false \
     bazel build --repo_env=GIT_CONFIG_GLOBAL=/root/.gitconfig \
-        --jobs=$JOBS ${debug_bazel_flags} //:ovms_dependencies @com_google_googletest//:gtest
+        --jobs=$JOBS ${debug_bazel_flags} $(if [ "$VERBOSE_LOGS" == "ON" ]; then echo --subcommands --verbose_failures --noshow_progress; fi) \
+         //:ovms_dependencies @com_google_googletest//:gtest 2>&1 | tee -a /ovms/linux_build.log
 
 COPY src/ /ovms/src/
 
@@ -340,9 +341,9 @@ ARG OPTIMIZE_BUILDING_TESTS=0
 # Builds unit tests together with ovms server in one step
 # It speeds up CI when tests are executed outside of the image building
 # hadolint ignore=SC2046
-RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} //src:ovms \
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${debug_bazel_flags} ${minitrace_flags} $(if [ "$VERBOSE_LOGS" == "ON" ]; then echo --subcommands --verbose_failures --noshow_progress; fi) //src:ovms \
     //src/python:libovmspython //src/python:libpython_calculators \
-    $(if [ "${OPTIMIZE_BUILDING_TESTS}" == "1" ] ; then echo -n "//src:ovms_test //src:python_runtime_library_test"; fi); fi;
+    $(if [ "${OPTIMIZE_BUILDING_TESTS}" == "1" ] ; then echo -n "//src:ovms_test //src:python_runtime_library_test"; fi) 2>&1 | tee -a /ovms/linux_build.log; build_status=$?; exit "$build_status"; fi;
 
 # espeak-ng is built as a separate step, independent of the OVMS binary.
 # Set ESPEAK=0 to skip the espeak build.
