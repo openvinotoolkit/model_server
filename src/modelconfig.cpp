@@ -274,14 +274,21 @@ Status ModelConfig::parseModelVersionPolicy(std::string command) {
     m = node.FindMember("latest");
     if (m != node.MemberEnd()) {
         auto& latest = m->value;
-        if (latest.MemberCount() != 1) {
+        if (!latest.IsObject() || latest.MemberCount() != 1) {
+            SPDLOG_WARN("Model policy is invalid. 'latest' policy should include 'num_versions' item with a positive number as a value");
             return StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT;
         }
         m = latest.FindMember("num_versions");
         if (m == latest.MemberEnd()) {
+            SPDLOG_WARN("Model policy is invalid. 'latest' policy should include 'num_versions' item with a positive number as a value");
             return StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT;
         }
-        modelVersionPolicy = std::make_shared<LatestModelVersionPolicy>(m->value.GetInt64());
+        auto& numVersions = m->value;
+        if (!numVersions.IsUint64() || numVersions.GetUint64() == 0 || numVersions.GetUint64() > static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
+            SPDLOG_WARN("Model policy specified in config contains invalid num_versions. It must be a positive integer representable as size_t.");
+            return StatusCode::MODEL_VERSION_POLICY_WRONG_FORMAT;
+        }
+        modelVersionPolicy = std::make_shared<LatestModelVersionPolicy>(static_cast<size_t>(numVersions.GetUint64()));
         return StatusCode::OK;
     }
 
