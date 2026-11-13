@@ -160,6 +160,10 @@ build:windows --host_copt=-DWIN32_LEAN_AND_MEAN
 build:windows --copt=-DNOGDI
 build:windows --host_copt=-DNOGDI
 
+# glog's abbreviated-severity macro can be injected on the compiler command line
+build:windows --copt=-UGLOG_NO_ABBREVIATED_SEVERITIES
+build:windows --host_copt=-UGLOG_NO_ABBREVIATED_SEVERITIES
+
 # MSVC (Windows): Standards-conformant preprocessor mode
 # See https://docs.microsoft.com/en-us/cpp/preprocessor/preprocessor-experimental-overview
 build:windows --copt=/Zc:preprocessor
@@ -213,9 +217,10 @@ test:linux --test_env no_proxy=localhost
 test:linux --test_env "OVMS_MEDIA_URL_ALLOW_REDIRECTS=1"
 
 # Windows test runtime env mirrors Linux test env intent.
-test:windows --test_env PATH=C:/opt/openvino/runtime/bin/intel64/Release;C:/opt/openvino/runtime/3rdparty/tbb/bin;C:/opt/Python312;C:/opt/Python312/DLLs
+test:windows --test_env PATH=C:/opt/opencv_4.14.0/x64/vc17/bin;C:/opt/openvino/runtime/bin/intel64/Release;C:/opt/openvino/runtime/3rdparty/tbb/bin;C:/opt/Python312;C:/opt/Python312/DLLs
+test:windows --test_env PYTHONHOME=C:/opt/Python312
+test:windows --test_env PYTHONPATH
 test:windows --test_env OPENVINO_TOKENIZERS_PATH_GENAI=C:/opt/openvino/runtime/bin/intel64/Release/openvino_tokenizers.dll
-test:windows --test_env PYTHONPATH=C:/opt/openvino/python;%workspace%/bazel-bin/src/python/binding
 test:windows --test_env no_proxy=localhost
 test:windows --test_env "OVMS_MEDIA_URL_ALLOW_REDIRECTS=1"
 

@@ -248,7 +248,7 @@ TEST(PythonRuntimeLibrary, ExistingLibraryExportsRequiredSymbols) {
     EXPECT_NE(findSymbol(library.get(), "OVMS_destroyPreparedChatTemplateRuntime"), nullptr);
 }
 
-TEST(PythonRuntimeLibrary, ValidationFailsWithoutBindingOnPythonPath) {
+TEST(PythonRuntimeLibrary, ValidationFailsWithoutExistingPythonPathEntry) {
     const auto runtimeLibraryFilename = getRuntimeLibraryFilename();
     const auto libraryPath = findLibrary(runtimeLibraryFilename);
     ASSERT_FALSE(libraryPath.empty()) << "Could not find " << runtimeLibraryFilename;
@@ -256,9 +256,8 @@ TEST(PythonRuntimeLibrary, ValidationFailsWithoutBindingOnPythonPath) {
     ScopedSharedLibrary library(libraryPath);
     ASSERT_NE(library.get(), nullptr) << getLibraryLoadError();
 
-    const auto emptyPythonPath = std::filesystem::temp_directory_path() / "ovms_empty_pythonpath";
-    std::filesystem::create_directories(emptyPythonPath);
-    ScopedEnvironmentVariable pythonPathEnv("PYTHONPATH", emptyPythonPath.string());
+    const auto missingPythonPath = std::filesystem::temp_directory_path() / "ovms_missing_pythonpath";
+    ScopedEnvironmentVariable pythonPathEnv("PYTHONPATH", missingPythonPath.string());
 
     auto validate = reinterpret_cast<ValidatePythonEnvironmentFn>(findSymbol(library.get(), "OVMS_validatePythonEnvironment"));
     ASSERT_NE(validate, nullptr);
@@ -266,7 +265,36 @@ TEST(PythonRuntimeLibrary, ValidationFailsWithoutBindingOnPythonPath) {
     const char* errorMessage = nullptr;
     EXPECT_FALSE(validate(&errorMessage));
     ASSERT_NE(errorMessage, nullptr);
-    EXPECT_THAT(std::string(errorMessage), HasSubstr("pyovms"));
+    EXPECT_THAT(std::string(errorMessage), HasSubstr("PYTHONPATH"));
+}
+
+// Keep pyovms importable from Bazel runfiles while validating a user PYTHONPATH entry.
+TEST(PythonRuntimeLibrary, ValidationSucceedsWithUserModulesAndBindingOnPythonPath) {
+    const auto runtimeLibraryFilename = getRuntimeLibraryFilename();
+    const auto libraryPath = findLibrary(runtimeLibraryFilename);
+    ASSERT_FALSE(libraryPath.empty()) << "Could not find " << runtimeLibraryFilename;
+
+    ScopedSharedLibrary library(libraryPath);
+    ASSERT_NE(library.get(), nullptr) << getLibraryLoadError();
+
+    const auto userPythonPath = std::filesystem::temp_directory_path() / "ovms_user_pythonpath";
+    std::filesystem::create_directories(userPythonPath);
+    const auto bindingPath = findPyovmsBinding();
+    ASSERT_FALSE(bindingPath.empty()) << "Could not find " << getBindingFilename();
+#ifdef _WIN32
+    constexpr char pathSeparator = ';';
+#else
+    constexpr char pathSeparator = ':';
+#endif
+    const std::string pythonPath = userPythonPath.string() + pathSeparator + bindingPath.parent_path().string();
+    ScopedEnvironmentVariable pythonPathEnv("PYTHONPATH", pythonPath);
+
+    auto validate = reinterpret_cast<ValidatePythonEnvironmentFn>(findSymbol(library.get(), "OVMS_validatePythonEnvironment"));
+    ASSERT_NE(validate, nullptr);
+
+    const char* errorMessage = nullptr;
+    EXPECT_TRUE(validate(&errorMessage));
+    EXPECT_EQ(errorMessage, nullptr);
 }
 
 TEST(PythonRuntimeLibrary, ValidationFailsWithoutPythonExecutableOnPath) {

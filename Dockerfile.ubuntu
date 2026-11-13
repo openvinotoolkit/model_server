@@ -27,6 +27,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ARG BASE_IMAGE
 RUN apt-get update && apt-get install --no-install-recommends -y \
             build-essential \
+            nasm \
             make \
             cmake \
             automake \
@@ -273,6 +274,7 @@ COPY .bazelrc .user.bazelr[c] .bazelversion WORKSPACE /ovms/
 COPY external /ovms/external/
 # This path is required for namespace to setup Python dependencies for testing the binding
 COPY src/BUILD /ovms/src/BUILD
+COPY src/mediapipe_internal/BUILD src/mediapipe_internal/runtime_plugin.bzl /ovms/src/mediapipe_internal/
 COPY src/python/binding/BUILD /ovms/src/python/binding/BUILD
 COPY src/python/binding/tests/requirements.txt /ovms/src/python/binding/tests/requirements.txt
 
@@ -371,10 +373,10 @@ ARG CAPI_FLAGS="--strip=always --config mp_off --//:distro=ubuntu"
 ARG JOBS=40
 ARG FUZZER_BUILD=0
 WORKDIR /ovms
-RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared //src:ovms_optional_plugins
 
 # C-API benchmark app
-RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy"; fi;
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --config_path /ovms/src/test/configs/config_cpu_dummy.json --niter 2 --nstreams 1 --servable_name "dummy"; fi;
 
 ARG FUZZER_BUILD=0
 # C api app with bazel

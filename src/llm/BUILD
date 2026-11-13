@@ -174,6 +174,7 @@ ovms_cc_library(
         "@mediapipe//mediapipe/framework/port:status",
         "//third_party:curl",
         "//src/image_utils:image_conversion",
+        "//src/image_utils:kserve_image_conversion",
         "//src/image_utils:decoded_image_size",
         "//src:predict_request_validation_utils_impl",
         "//src/filesystem:libovmsfilesystem",

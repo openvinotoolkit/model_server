@@ -37,8 +37,10 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "src/mediapipe_calculators/ovms/modelapiovmsadapter.hpp"
+#include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
+#include "mediapipe/framework/port/parse_text_proto.h"
 #pragma GCC diagnostic pop
 
 #include "../config.hpp"
@@ -51,6 +53,7 @@
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
+#include "../mediapipe_internal/opencv_calculators_plugin_loader.hpp"
 #include "src/metrics/metric_config.hpp"
 #include "src/metrics/metric_module.hpp"
 #include "../model.hpp"
@@ -3797,10 +3800,15 @@ TEST(WhitelistRegistered, InputStreamHandlers) {
 }
 
 TEST(WhitelistRegistered, MediapipeCalculatorsList) {
-    std::unordered_set<std::string> expected({"CalculatorRunnerSinkCalculator",
+    ASSERT_TRUE(ovms::loadOpenCvCalculatorsPlugin());
+    std::unordered_set<std::string> expected({
+#if (PYTHON_DISABLE == 0)
+        // Expected when building with python
+        "CalculatorRunnerSinkCalculator",
         "CalculatorRunnerSourceCalculator",
         "PyTensorOvTensorConverterCalculator",  // integral OVMS calculator
         "PythonExecutorCalculator",             // integral OVMS calculator
+#endif
         "HttpLLMCalculator",                    // integral OVMS calculator
         "OpenAIChatCompletionsMockCalculator",  // OVMS test calculator
         "AddHeaderCalculator",
@@ -3924,6 +3932,48 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "WarpAffineCalculatorCpu"});
 
     ASSERT_THAT(mediapipe::CalculatorBaseRegistry::GetRegisteredNames(), UnorderedElementsAreArray(expected)) << readableSetError(mediapipe::CalculatorBaseRegistry::GetRegisteredNames(), expected);
+}
+
+TEST(OpenCvCalculatorPlugin, DecoderGraphExecutesAcrossPluginBoundary) {
+    ASSERT_TRUE(loadOpenCvCalculatorsPlugin()) << getOpenCvCalculatorsPluginDiagnostic();
+    const std::string graphText = R"(
+        input_stream: "encoded"
+        output_stream: "decoded"
+        node {
+            calculator: "OpenCvEncodedImageToImageFrameCalculator"
+            input_stream: "encoded"
+            output_stream: "decoded"
+            options {
+                [mediapipe.OpenCvEncodedImageToImageFrameCalculatorOptions.ext] {
+                    apply_orientation_from_exif_data: false
+                }
+            }
+        }
+    )";
+    mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(google::protobuf::TextFormat::ParseFromString(graphText, &config));
+
+    mediapipe::CalculatorGraph graph;
+    const auto initializeStatus = graph.Initialize(config);
+    ASSERT_TRUE(initializeStatus.ok()) << initializeStatus;
+    auto poller = graph.AddOutputStreamPoller("decoded");
+    ASSERT_TRUE(poller.ok()) << poller.status();
+    ASSERT_TRUE(graph.StartRun({}).ok());
+
+    const std::string encoded = std::string("P6\n1 1\n255\n") + "\x0a\x14\x1e";
+    const auto packetStatus = graph.AddPacketToInputStream("encoded",
+        mediapipe::MakePacket<std::string>(encoded).At(mediapipe::Timestamp(0)));
+    ASSERT_TRUE(packetStatus.ok()) << packetStatus;
+    ASSERT_TRUE(graph.CloseAllPacketSources().ok());
+
+    mediapipe::Packet packet;
+    ASSERT_TRUE(poller->Next(&packet));
+    const auto& image = packet.Get<mediapipe::ImageFrame>();
+    EXPECT_EQ(image.Width(), 1);
+    EXPECT_EQ(image.Height(), 1);
+    EXPECT_EQ(image.NumberOfChannels(), 3);
+    EXPECT_EQ(std::memcmp(image.PixelData(), "\x0a\x14\x1e", 3), 0);
+    EXPECT_TRUE(graph.WaitUntilDone().ok());
 }
 
 TEST(WhitelistRegistered, MediapipeSubgraphList) {
