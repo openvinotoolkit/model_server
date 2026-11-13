@@ -2,6 +2,23 @@
 This document describes windows development and compilation guide for ovms.exe binary.
 This instruction was tested on Windows 11 and Windows 10 OS.
 
+## Contents
+
+- [List of disabled features on Windows model server](#list-of-disabled-features-on-windows-model-server)
+- [Install prerequisites](#install-prerequisites)
+	- [Visual Build Tools](#visual-build-tools)
+	- [PowerShell settings](#power-shell-settings)
+	- [Enable Developer mode in Windows system settings](#enable-developer-mode-in-windows-system-settings)
+	- [Run Command Prompt](#run-command-prompt)
+	- [Pull OpenVINO Model Server source](#pull-openvino-model-server-source)
+	- [Install dependencies](#install-dependencies)
+- [Compile](#compile)
+- [Running unit tests](#running-unit-tests---optional)
+- [Running functional tests](#running-functional-tests---optional)
+- [Creating deployment package](#creating-deployment-package)
+- [Test the Deployment](#test-the-deployment)
+- [Developer Command Prompt](#developer-command-prompt)
+
 ## List of disabled features on Windows model server:
 - cloud storage for the models - to be added in next releases
 - C-API interface - to be added in next releases

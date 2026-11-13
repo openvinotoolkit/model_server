@@ -9,20 +9,15 @@ We encourage to make smaller contributions in multiple parts with clear goals an
 Practice shows that small PRs have significantly bigger chances of being merged. If you plan bigger contribution, decompose it into smaller PRs.
 
 Once the PR is created CI automation is to be approved by repository maintainers. It is recommended to trigger the build and tests locally in advance.
-The coresponding pipeline steps are described in the [Jenkins Pipeline Checks](#jenkins-ci-checks) section.
+The coresponding pipeline steps are described in the [Jenkins Pipeline Checks](#jenkins-pipeline-checks) section.
 Once the specific jenkins step fails you can reproduce it using the mentioned commands on your machine or ask for help to resolve it.
 
 ## Overview
 This guide provides steps and coding standards to follow before sending merge requests:
-1. [Jenkins Pipeline Checks](#jenkins-ci-checks)
+1. [Jenkins Pipeline Checks](#jenkins-pipeline-checks)
 2. [AI-Assisted Contributions](#ai-assisted-contributions)
 3. [Merge Request Checklist](#merge-request-checklist)
-4. [C++ Coding Style](#c-coding-style)
-    - [Variable Naming Conventions](#1-variable-naming-conventions)
-    - [File Naming Conventions](#2-file-naming-conventions)
-    - [Headers Naming Conventions](#3-headers-naming-conventions)
-    - [Scoping](#4-scoping)
-    - [Clang Format](#clang-format)
+4. [License](#license)
 
 ## Jenkins Pipeline Checks
 
@@ -34,8 +29,8 @@ on the files changed.
 
 | Platform | Commands | Visible Jenkins stage / GitHub check | When Jenkins runs them |
 | :--- | :--- | :--- | :--- |
-| Linux | `make style` | `Style check` / `Style check` | Every on-commit build |
-| Linux | `make sdl-check` | `Sdl check` / `SDL check` | Every on-commit build |
+| Linux or Windows | `make style` | `Style check` / `Style check` | Every on-commit build |
+| Linux or Windows | `make sdl-check` | `Sdl check` / `SDL check` | Every on-commit build |
 | Linux | `make ovms_builder_image BASE_OS=ubuntu24 RUN_TESTS=0 OPTIMIZE_BUILDING_TESTS=1`<br>`make release_image BASE_OS=ubuntu24 RUN_TESTS=0`<br>`make run_lib_files_test` | `Build linux` / `Build linux` | Source, dependency, or build-system changes that trigger the Linux build pipeline |
 | Linux | `make run_unit_tests BASE_OS=ubuntu24` (prepares models with `./prepare_llm_models.sh src/test/llm_testing`) | `Run unit tests` / `Linux unit tests` | Source, dependency, or build-system changes that trigger the Linux build pipeline |
 | Windows | `windows_install_build_dependencies.bat opt`<br>`windows_clean_build.bat opt`<br>`windows_build.bat opt` | `Build windows` / `Build windows` | Source, dependency, or build-system changes that trigger the Windows build pipeline; run from a configured Windows build environment |
@@ -53,10 +48,14 @@ AI tools may assist with contributions, but submitters are responsible for every
 
 Before sending your merge requests, make sure you followed this list.
 
-- Changes are consistent with the [Coding Style](#c-coding-style)
-- Each merge request should start with the corresponding Jira Ticket Number and short task description, e.g.: `CVS-3111 Implement feature XY`
-- The branches should also correspond to Jira Task Name and start with Jira Ticket Number
+- Changes are consistent with the Coding Style
+- Each merge request should start with Short task description, e.g.: `Implement feature XY`
 - Write a short description of what the merge request introduces/improves
 - Always include unit tests when contributing new features
 - Bug fixes also generally require unit tests, because the presence of bugs usually indicates insufficient tests
 - Include a license at the top of new files
+
+
+## License
+
+By contributing to the OpenVINO Model Server project, you agree that your contributions will be licensed under the terms stated in the [LICENSE](../LICENSE) file.
