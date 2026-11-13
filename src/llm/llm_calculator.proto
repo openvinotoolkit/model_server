@@ -154,5 +154,5 @@ message LLMCalculatorOptions {
 
     optional float video_fps = 27;
 
-    optional uint32 video_max_frames = 28 [default = 100];
+    optional uint32 video_max_frames = 28 [default = 32];
 }
