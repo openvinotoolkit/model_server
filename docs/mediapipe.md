@@ -12,7 +12,11 @@ With the introduction of OpenVINO calculator it is possible to optimize inferenc
 
 ![mp_graph_modes](./mp_graph_modes.png)
 
-Check [our MediaPipe github fork](https://github.com/openvinotoolkit/mediapipe) to learn how to use the OpenVINO calculator inside standalone MediaPipe application.
+For a runnable Linux application that uses MediaPipe, Intel MPI, and the OV-only OpenVINO calculator without linking the OVMS server, see the [standalone MediaPipe + MPI example](../standalone/README.md). It documents the selected Bazel dependencies, graph, build, and runtime setup.
+
+The standard OVMS release image does not include GStreamer. To add GStreamer to a GPU release image, use the [optional image recipe](../extras/gstreamer/Dockerfile.ubuntu) and its documented build-time license gate.
+
+For server-hosted graphs and the OVMS-specific calculator integration, continue with the deployment guidance below. The standalone example is built within this repository's Bazel workspace; it is not yet a separately importable external workspace.
 
 This guide gives information about:
 

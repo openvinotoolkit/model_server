@@ -16,6 +16,7 @@
 import os
 import sys
 import re
+import subprocess
 
 COPYRIGHT = re.compile(r'(?i)copyright(?:\s+\([cC]\))?\s+\d{4}(?:-\d{4})?(?:\s*,\s*\d{4}(?:-\d{4})?)*(?:\s*,)?\s+[A-Za-z0-9._-]+(?:\s+[A-Za-z0-9._-]+)*')
 FORBIDDEN_FUNCTIONS = re.compile(r'setjmp\(|longjmp\(|getwd\(|strlen\(|wcslen\(|gets\(|strcpy\(|wcscpy\(|strcat\(|wcscat\(|sprintf\(|vsprintf\(|asctime\(')
@@ -54,6 +55,25 @@ def check_function(fd):
     return detected
 
 
+def tracked_paths(start_dir):
+    try:
+        repo_root = subprocess.check_output(
+            ['git', '-C', os.path.abspath(start_dir), 'rev-parse', '--show-toplevel'],
+            text=True,
+        ).strip()
+        output = subprocess.check_output(
+            ['git', '-C', repo_root, 'ls-files', '-z'],
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+    return {
+        os.path.normcase(os.path.abspath(os.path.join(repo_root, path)))
+        for path in output.decode().split('\0')
+        if path
+    }
+
+
 def should_skip_directory(path):
     norm_path = path.replace('\\', '/')
     return any(skip_dir in norm_path for skip_dir in EXCLUDED_DIRECTORIES)
@@ -82,6 +102,7 @@ EXCLUDED_DIRECTORIES = [
 
 def check_dir(start_dir):
     no_header = []
+    tracked = tracked_paths(start_dir)
     exclude_files = [
         '.user.bazelrc',
         '.bandit',
@@ -220,6 +241,9 @@ def check_dir(start_dir):
 
             fpath = os.path.join(d_path, f_name)
             norm_fpath = os.path.normpath(fpath).replace('\\', '/')
+
+            if tracked is not None and os.path.normcase(os.path.abspath(fpath)) not in tracked:
+                continue
 
             if not [test for test in exclude_files if test in norm_fpath]:
                 with open(fpath, 'r', encoding='utf-8', errors='ignore') as fd:

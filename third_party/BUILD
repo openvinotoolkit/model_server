@@ -64,6 +64,15 @@ alias(
     visibility = ["//visibility:public"],
 )
 
+alias(
+    name = "gstreamer",
+    actual = select({
+        "//src:windows": "@windows_gstreamer//:gstreamer",
+        "//conditions:default": "@linux_gstreamer//:gstreamer_headers",
+    }),
+    visibility = ["//visibility:public"],
+)
+
 # espeak-ng built from source via Bazel (rules_foreign_cc cmake).
 # Built as a separate step in the Dockerfile (ARG ESPEAK=1/0), not as
 # a dependency of the OVMS binary.

@@ -47,11 +47,12 @@ IF "%~2"=="" (
 )
 
 set "bazelBuildArgs=--config=win_mp_on --action_env OpenVINO_DIR=%openvino_dir%"
-set "testTargets=//src:ovms_test //src:python_runtime_library_test //src/python:pythoninterpretermodule_lifecycle_test //src/python:pythoninterpretermodule_backend_failure_test //src/python:pythoninterpretermodule_borrowed_interpreter_test"
+set "testTargets=//src:ovms_test //src:python_runtime_library_test //src/python:pythoninterpretermodule_lifecycle_test //src/python:pythoninterpretermodule_backend_failure_test //src/python:pythoninterpretermodule_borrowed_interpreter_test //src/test/mediapipe/calculators:gst_d3d11_p9_test"
 set "runPythonRuntimeTest=%cd%\bazel-bin\src\python_runtime_library_test.exe --gtest_filter=!gtestFilter!"
-set "runPythonInterpreterLifecycleTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=!gtestFilter! //src/python:pythoninterpretermodule_lifecycle_test"
-set "runPythonInterpreterBackendFailureTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=!gtestFilter! //src/python:pythoninterpretermodule_backend_failure_test"
-set "runPythonInterpreterBorrowedTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=!gtestFilter! //src/python:pythoninterpretermodule_borrowed_interpreter_test"
+set "runGstreamerD3D11Test=%cd%\bazel-bin\src\test\mediapipe\calculators\gst_d3d11_p9_test.exe --gtest_filter=P9ServerFixture.FileSourceEosReleasesCleanly"
+set "runPythonInterpreterLifecycleTest=%bazelPath% %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=!gtestFilter! //src/python:pythoninterpretermodule_lifecycle_test"
+set "runPythonInterpreterBackendFailureTest=%bazelPath% %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=!gtestFilter! //src/python:pythoninterpretermodule_backend_failure_test"
+set "runPythonInterpreterBorrowedTest=%bazelPath% %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=!gtestFilter! //src/python:pythoninterpretermodule_borrowed_interpreter_test"
 
 set "buildTestCommand=%bazelPath% %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %testTargets%"
 set "changeConfigsCmd=python windows_change_test_configs.py"
@@ -65,7 +66,7 @@ for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
 
 :: Setting PATH environment variable based on default windows node settings: Added ovms_windows specific python settings and c:/opt and removed unused Nvidia and OCL specific tools.
 :: When changing the values here you can print the node default PATH value and base your changes on it.
-set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-!curl_version!-win64-mingw\bin;c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-!curl_version!-win64-mingw\bin;C:\opt\gstreamer\1.0\msvc_x86_64\bin;c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\;%PATH%;"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
@@ -131,6 +132,15 @@ if !errorlevel! neq 0 (
     exit /b !errorlevel!
 )
 
+:: Download the test video used by the GStreamer/D3D11 video tests.
+:: Tests that consume it read VIDEO_PATH and skip gracefully when it is absent.
+call %cd%\windows_prepare_video.bat %cd%\models\mpi\ceo_pat_gelsinger.mp4
+if !errorlevel! neq 0 (
+    echo [ERROR] windows_prepare_video.bat failed with error code !errorlevel! >> win_full_test.log
+    exit /b !errorlevel!
+)
+set "VIDEO_PATH=%cd%\models\mpi\ceo_pat_gelsinger.mp4"
+
 :: Run install_ovms_service.bat unit tests
 echo Running install_ovms_service.bat unit tests...
 python -m pytest tests\python\test_install_ovms_service_windows.py -v > win_install_service_test.log 2>&1
@@ -150,6 +160,9 @@ set "testExitCode=!errorlevel!"
 echo Running: %runPythonRuntimeTest%
 %runPythonRuntimeTest% >> win_full_test.log 2>&1
 set "pythonTestExitCode=!errorlevel!"
+echo Running: %runGstreamerD3D11Test%
+%runGstreamerD3D11Test% >> win_full_test.log 2>&1
+set "gstreamerD3D11TestExitCode=!errorlevel!"
 echo Running: %runPythonInterpreterLifecycleTest%
 %runPythonInterpreterLifecycleTest% >> win_full_test.log 2>&1
 set "pythonInterpreterLifecycleExitCode=!errorlevel!"
@@ -180,6 +193,10 @@ grep -a -q "\[  PASSED  \] " win_full_test.log
 set "hasPassed=!errorlevel!"
 grep -a -q "\[  FAILED  \] " win_full_test.log
 set "hasFailed=!errorlevel!"
+if !gstreamerD3D11TestExitCode! neq 0 (
+    echo [ERROR] GStreamer D3D11 lifecycle test failed with exit code !gstreamerD3D11TestExitCode!.
+    exit /b !gstreamerD3D11TestExitCode!
+)
 if !hasPassed! equ 0 if !hasFailed! neq 0 (
     echo [INFO] Tests finished with no failures. Check the summary in win_test_summary.log.
     exit /b 0

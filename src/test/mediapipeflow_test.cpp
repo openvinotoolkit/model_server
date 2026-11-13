@@ -3923,6 +3923,16 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "WarpAffineCalculator",
         "WarpAffineCalculatorCpu"});
 
+#ifndef _WIN32
+    // Linux ovms_test links these through openvino_remote_tensors_tests.
+    expected.insert({
+        "GstVideoSourceCalculator",
+        "GstCapiInferenceCalculator",
+        "GstVideoSinkCalculator",
+        "GstDetectionOverlayCalculator",
+    });
+#endif
+
     ASSERT_THAT(mediapipe::CalculatorBaseRegistry::GetRegisteredNames(), UnorderedElementsAreArray(expected)) << readableSetError(mediapipe::CalculatorBaseRegistry::GetRegisteredNames(), expected);
 }
 
