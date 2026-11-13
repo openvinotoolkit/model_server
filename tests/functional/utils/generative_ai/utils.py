@@ -59,6 +59,8 @@ from tests.functional.object_model.test_helpers import send_reload_request
 from tests.functional.utils.assertions import assert_raises_exception
 from tests.functional.utils.context import Context
 from tests.functional.utils.hooks import timeout_dict
+from tests.functional.utils.inference.communication import REST
+from tests.functional.utils.inference.inference_client_factory import InferenceClientFactory
 from tests.functional.utils.inference.serving.cohere import CohereWrapper
 from tests.functional.utils.inference.serving.openai import OpenAIWrapper
 from tests.functional.utils.logger import get_logger, step
@@ -90,6 +92,57 @@ class GenerativeAIUtils:
         )
         request_params = request_params_builder.request_params
         return request_params
+
+    @staticmethod
+    def prepare_llm_curl_request(api_type, endpoint, port, model, request_params, tmp_path, dataset=None):
+        inference_client = InferenceClientFactory.get_client(
+            serving=api_type.serving,
+            communication=REST,
+        )
+        request_params_dict = inference_client.prepare_body_dict(
+            input_objects=model.prepare_input_data(dataset=dataset),
+            model=model,
+            endpoint=endpoint,
+            request_parameters=request_params,
+        )
+        # Windows cmd does not honor single quotes, so the body is passed from a file.
+        json_file_path = os.path.join(tmp_path, "curl_request.json")
+        with open(json_file_path, "w", encoding="utf-8") as f:
+            f.write(json.dumps(request_params_dict, ensure_ascii=False))
+        task_command = f'curl http://{server_address}:{port}/{OpenAIWrapper.REST_VERSION}/{endpoint} ' \
+                       f'-H "Content-Type: application/json" -d @{json_file_path}'
+        return task_command
+
+    @staticmethod
+    def prepare_curl_script_command(curl_command, commands_number, tmp_path, base_os):
+        if base_os == OsType.Windows:
+            script_path = os.path.join(tmp_path, "curl_requests.bat")
+            header, newline, run_command = "@echo off\n", "\r\n", script_path
+        else:
+            script_path = os.path.join(tmp_path, "curl_requests.sh")
+            header, newline, run_command = "#!/bin/bash\n", "\n", f"bash {script_path}"
+        with open(script_path, "w", encoding="utf-8", newline=newline) as f:
+            f.write(header + f"{curl_command}\n" * commands_number)
+        return run_command
+
+    @staticmethod
+    def get_outputs_from_curl_stdout(stdout, stream):
+        outputs = []
+        if stream:
+            for response in stdout.split("data: [DONE]")[:-1]:
+                chunks = [json.loads(line[len("data: "):]) for line in response.splitlines()
+                          if line.startswith("data: ")]
+                outputs.append("".join(
+                    choice["delta"].get("content") or "" for chunk in chunks for choice in chunk["choices"]
+                ))
+        else:
+            decoder = json.JSONDecoder()
+            position = stdout.find("{")
+            while position != -1:
+                body, end = decoder.raw_decode(stdout, position)
+                outputs.append(body["choices"][0]["message"]["content"])
+                position = stdout.find("{", end)
+        return [[output] for output in outputs]
 
     @staticmethod
     def prepare_model(
@@ -245,7 +298,7 @@ class GenerativeAIUtils:
         return cmd
 
     @staticmethod
-    def get_llm_outputs_from_curl_stdout(stdout):
+    def get_outputs_from_stdout(stdout):
         braces_left_str = "[\""
         braces_right_str = "\"]"
         stdout_list = stdout.replace("['", braces_left_str).replace("']", braces_right_str).split(braces_right_str)

@@ -207,13 +207,19 @@ class SingleMessageLanguageModelDataset(LargeLanguageModelDataset):
     input_data = [user_data]
 
 
-def get_long_prompt():
+MEDIUM_PROMPT_MAX_CHARACTERS = 2923
+
+
+def get_long_prompt(max_characters=None):
     with open(
             os.path.join(ovms_c_repo_path, "tests", "functional","data", "generative_ai", "long_prompt.txt"),
             'r',
             encoding='utf-8'
     ) as file:
         user_content = file.read()
+    if max_characters is not None and len(user_content) > max_characters:
+        # cut at a word boundary
+        user_content = user_content[:max_characters].rsplit(None, 1)[0]
     return user_content
 
 
@@ -227,6 +233,20 @@ class LongPromptLanguageModelDataset(LargeLanguageModelDataset):
 
 class LongPromptSingleMessageLanguageModelDataset(LargeLanguageModelDataset):
     user_content = get_long_prompt()
+    user_data = [ChatCompletionsApi.ROLE_USER, user_content]
+    input_data = [user_data]
+
+
+class MediumPromptLanguageModelDataset(LargeLanguageModelDataset):
+    user_content = get_long_prompt(MEDIUM_PROMPT_MAX_CHARACTERS)
+    system_content = "You are a helpful assistant giving short answers."
+    user_data = [ChatCompletionsApi.ROLE_USER, user_content]
+    system_data = [ChatCompletionsApi.ROLE_SYSTEM, system_content]
+    input_data = [system_data, user_data]
+
+
+class MediumPromptSingleMessageLanguageModelDataset(LargeLanguageModelDataset):
+    user_content = get_long_prompt(MEDIUM_PROMPT_MAX_CHARACTERS)
     user_data = [ChatCompletionsApi.ROLE_USER, user_content]
     input_data = [user_data]
 

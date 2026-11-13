@@ -22,6 +22,8 @@ from tests.functional.models.models import PipelineType, model_with_pipeline_typ
 from tests.functional.models.models_datasets import (
     LongPromptLanguageModelDataset,
     LongPromptSingleMessageLanguageModelDataset,
+    MediumPromptLanguageModelDataset,
+    MediumPromptSingleMessageLanguageModelDataset,
 )
 from tests.functional.models.models_library import ModelsLib
 from tests.functional.constants.components import OvmsComponents
@@ -136,10 +138,11 @@ class TestTextGeneration:
     @pytest.mark.parametrize("ignore_eos", [True], ids=lambda x: f"ignore_eos={x}")
     @pytest.mark.parametrize("max_tokens", [MaxTokensValues.COMPARE,], ids=lambda x: f"max_tokens={x}")
     @pytest.mark.parametrize("temperature", [TemperatureValues.TEST_DEFAULT], ids=lambda x: f"temperature={x}")
-    @pytest.mark.parametrize("sequential_requests", [3], ids=lambda x: f"sequential_requests={x}")
-    @pytest.mark.parametrize("parallel_requests", [100], ids=lambda x: f"parallel_requests={x}")
-    @pytest.mark.parametrize("ovms_log_level", [Ovms.LOG_LEVEL_INFO, Ovms.LOG_LEVEL_DEBUG, Ovms.LOG_LEVEL_TRACE])
     @pytest.mark.parametrize("pipeline_type", PipelineType.TEXT_GENERATION)
+    @pytest.mark.parametrize("ovms_log_level", [Ovms.LOG_LEVEL_INFO, Ovms.LOG_LEVEL_DEBUG, Ovms.LOG_LEVEL_TRACE])
+    @pytest.mark.parametrize("sequential_requests", [3], ids=lambda x: f"sequential_requests={x}")
+    @pytest.mark.parametrize("parallel_requests", [32], ids=lambda x: f"parallel_requests={x}")
+    @pytest.mark.parametrize("request_type", ["curl"], ids=lambda x: f"request_type={x}")  # also available: "python"
     @pytest.mark.timeout(calculate_generative_test_timeout(960))
     def test_text_generation_endpoints_multiple_requests(
             self,
@@ -152,10 +155,11 @@ class TestTextGeneration:
             endpoint,
             max_tokens,
             temperature,
-            sequential_requests,
-            parallel_requests,
             pipeline_type,
             ovms_log_level,
+            sequential_requests,
+            parallel_requests,
+            request_type,
     ):
         """
         <b>Description:</b>
@@ -188,10 +192,12 @@ class TestTextGeneration:
             temperature=temperature,
         )
 
-        if model_type.single_message_dataset:
-            dataset = LongPromptSingleMessageLanguageModelDataset
+        if model_type.is_vision_language:
+            dataset = model_type().get_default_dataset()
+        elif model_type.single_message_dataset:
+            dataset = MediumPromptSingleMessageLanguageModelDataset
         else:
-            dataset = LongPromptLanguageModelDataset
+            dataset = MediumPromptLanguageModelDataset
 
         reference_outputs = None
         if not model_type.is_dummy:
@@ -206,20 +212,33 @@ class TestTextGeneration:
             )
 
         step("Trigger large number of requests")
-        input_objects = model.prepare_input_data(dataset=dataset)
-        input_data = CompletionsApi.prepare_completions_input_content(input_objects) \
-            if endpoint == OpenAIWrapper.COMPLETIONS else \
-            ChatCompletionsApi.prepare_chat_completions_input_content(input_objects)
-        command = GenerativeAIUtils.prepare_python_script_command(
-            context, tmp_path, port, model, endpoint, input_data, request_params, requests_number=sequential_requests
-        )
+        if request_type == "curl":
+            curl_command = GenerativeAIUtils.prepare_llm_curl_request(
+                openai_rest_api_type, endpoint, port, model, request_params, tmp_path, dataset=dataset,
+            )
+            command = GenerativeAIUtils.prepare_curl_script_command(
+                curl_command, sequential_requests, tmp_path, context.base_os,
+            )
+            stdout = run_command_in_parallel(command, runs=parallel_requests)
+            assert stdout, f"Empty stdout for {parallel_requests} commands: '{command}'"
+            outputs_multiple_requests = GenerativeAIUtils.get_outputs_from_curl_stdout(stdout, stream)
+        elif request_type == "python":
+            input_objects = model.prepare_input_data(dataset=dataset)
+            input_data = CompletionsApi.prepare_completions_input_content(input_objects) \
+                if endpoint == OpenAIWrapper.COMPLETIONS else \
+                ChatCompletionsApi.prepare_chat_completions_input_content(input_objects)
+            command = GenerativeAIUtils.prepare_python_script_command(
+                context, tmp_path, port, model, endpoint, input_data, request_params, requests_number=sequential_requests
+            )
+            stdout = run_command_in_parallel(command, runs=parallel_requests)
+            assert stdout, f"Empty stdout for {parallel_requests} commands: '{command}'"
+            outputs_multiple_requests = GenerativeAIUtils.get_outputs_from_stdout(stdout)
+        else:
+            raise NotImplementedError()
 
-        stdout = run_command_in_parallel(command, runs=parallel_requests)
-        assert stdout, f"Empty stdout for {parallel_requests} commands: '{command}'"
-        outputs_multiple_requests = GenerativeAIUtils.get_llm_outputs_from_curl_stdout(stdout)
-        len_stdout = len(outputs_multiple_requests)
-        assert len_stdout == parallel_requests * sequential_requests, \
-            f"Not all outputs available. Expected: {parallel_requests}, Actual: {len_stdout}"
+        len_outputs = len(outputs_multiple_requests)
+        assert len_outputs == parallel_requests * sequential_requests, \
+            f"Not all outputs available. Expected: {parallel_requests * sequential_requests}, Actual: {len_outputs}"
 
         GenerativeAIUtils.unload_model_and_verify(model, result, port, openai_rest_api_type, endpoint, request_params)
         if not model_type.is_dummy:
