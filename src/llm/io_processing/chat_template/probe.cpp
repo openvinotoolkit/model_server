@@ -40,7 +40,7 @@ bool probeChatTemplateBasicRenderMinja(ov::genai::Tokenizer& tokenizer) {
             R"({"role":"assistant","content":")" + contentNeedle + R"("})"));
 
         auto t0 = std::chrono::steady_clock::now();
-        std::string output = tokenizer.apply_chat_template(history, true);
+        std::string output = tokenizer.apply_chat_template(history, true, {}, {}, {}, ov::AnyMap{{"apply_polyfills", false}});
         auto t1 = std::chrono::steady_clock::now();
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Basic render probe: {} us",
             std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count());
@@ -144,7 +144,7 @@ bool probeChatTemplateReasoning(ov::genai::Tokenizer& tokenizer, ChatTemplateCap
         history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":"Hello"})"));
         history.push_back(ov::genai::JsonContainer::from_json_string(PROBE_REASONING_MSG));
 
-        std::string output = tokenizer.apply_chat_template(history, true);
+        std::string output = tokenizer.apply_chat_template(history, true, {}, {}, {}, ov::AnyMap{{"apply_polyfills", false}});
 
         if (output.find(PROBE_NEEDLE) != std::string::npos) {
             SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Reasoning probe: standard 'reasoning_content' field supported");
@@ -166,7 +166,7 @@ bool probeChatTemplateReasoning(ov::genai::Tokenizer& tokenizer, ChatTemplateCap
         history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":"Hello"})"));
         history.push_back(ov::genai::JsonContainer::from_json_string(altMsg));
 
-        std::string output = tokenizer.apply_chat_template(history, true);
+        std::string output = tokenizer.apply_chat_template(history, true, {}, {}, {}, ov::AnyMap{{"apply_polyfills", false}});
 
         if (output.find(PROBE_NEEDLE) != std::string::npos) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Reasoning probe: template uses '{}' instead of 'reasoning_content'", field);
@@ -194,7 +194,7 @@ bool probeChatTemplateToolResponse(ov::genai::Tokenizer& tokenizer, ChatTemplate
         history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":"Hello"})"));
         history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"assistant","content":"Hello"})"));
 
-        std::string output = tokenizer.apply_chat_template(history, true);
+        std::string output = tokenizer.apply_chat_template(history, true, {}, {}, {}, ov::AnyMap{{"apply_polyfills", false}});
 
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Tool result probe: output '{}'", output);
 
@@ -217,7 +217,7 @@ static std::pair<bool, std::string> renderProbeMessage(ov::genai::Tokenizer& tok
         ov::genai::ChatHistory history;
         history.push_back(ov::genai::JsonContainer::from_json_string(R"({"role":"user","content":"Hello"})"));
         history.push_back(ov::genai::JsonContainer::from_json_string(assistantMsg));
-        std::string output = tokenizer.apply_chat_template(history, true);
+        std::string output = tokenizer.apply_chat_template(history, true, {}, {}, {}, ov::AnyMap{{"apply_polyfills", false}});
         return {true, std::move(output)};
     } catch (...) {
         return {false, ""};
