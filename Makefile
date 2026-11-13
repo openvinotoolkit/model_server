@@ -580,8 +580,10 @@ test_checksec: venv
 	@rm -f /tmp/libovms_shared.so
 	@echo "Checksec check success."
 
+PYTEST_JUNIT_XML ?= report.xml
+
 test_functional: venv
-	@export OVMS_CPP_DOCKER_IMAGE=$(OVMS_CPP_DOCKER_IMAGE) && export OVMS_CPP_IMAGE_TAG=$(OVMS_CPP_IMAGE_TAG);. $(ACTIVATE); pytest --confcutdir=tests/functional --junitxml=report.xml --html=report.html --self-contained-html -v -rA -s $(TEST_PATH)
+	@export OVMS_CPP_DOCKER_IMAGE=$(OVMS_CPP_DOCKER_IMAGE) && export OVMS_CPP_IMAGE_TAG=$(OVMS_CPP_IMAGE_TAG);. $(ACTIVATE); pytest --confcutdir=tests/functional --junitxml=$(PYTEST_JUNIT_XML) --html=report.html --self-contained-html -v -rA -s $(TEST_PATH)
 
 test_python_clients:
 	@echo "Prepare docker image"
