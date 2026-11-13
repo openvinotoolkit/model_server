@@ -52,6 +52,9 @@ GPU_INSTALL_SCRIPTS = {
 }
 
 
+DEFAULT_OVMS_IMAGE_NAME = "openvino/model_server"
+
+
 class OvmsImages:
     _os_type = None
     _os_version = None
@@ -150,19 +153,17 @@ def calculate_ovms_image_name(target_device=None, base_os=OsType.Ubuntu22):
             image_name = f"{image_name}{calculate_ovms_image_suffix(target_device)}"
             image_tag = calculate_ovms_image_tag(image_tag, base_os, base_os_list)
     else:
-        if docker_registry is not None:
-            image_name = f"{docker_registry}/{ovms_cpp_docker_image}"
-            if force_use_ovms_image:
-                return f"{image_name}:{ovms_image_tag}"
-            image_name = f"{image_name}{calculate_ovms_image_suffix(target_device)}"
-            image_tag = ovms_image_tag if ovms_image_tag else ovms_image_tag_dict[base_os]
-            image_tag = calculate_ovms_image_tag(image_tag, base_os, base_os_list)
-        else:
+        if ovms_cpp_docker_image:
             image_name = ovms_cpp_docker_image
-            if force_use_ovms_image:
-                return f"{image_name}:{ovms_image_tag}"
-            image_tag = ovms_image_tag if ovms_image_tag else ovms_image_tag_dict[base_os]
-            image_tag = f"{image_tag}{calculate_ovms_image_suffix(target_device)}"
+        elif docker_registry:
+            image_name = f"{docker_registry}/{DEFAULT_OVMS_IMAGE_NAME}"
+        else:
+            image_name = DEFAULT_OVMS_IMAGE_NAME
+        if force_use_ovms_image and ovms_image_tag:
+            return f"{image_name}:{ovms_image_tag}"
+        image_name = f"{image_name}{calculate_ovms_image_suffix(target_device)}"
+        image_tag = ovms_image_tag if ovms_image_tag else ovms_image_tag_dict[base_os]
+        image_tag = calculate_ovms_image_tag(image_tag, base_os, base_os_list)
 
     return f"{image_name}:{image_tag}"
 

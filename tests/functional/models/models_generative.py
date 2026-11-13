@@ -23,7 +23,7 @@ import shutil
 from dataclasses import dataclass, field, Field, MISSING, make_dataclass
 from pathlib import Path
 
-from tests.functional.config import additional_generative_models_definitions, generative_models_local_path
+from tests.functional.config import extra_generative_models_definitions, generative_models_local_path
 from tests.functional.constants.paths import Paths
 from tests.functional.models.models import ModelInfo, ModelType
 from tests.functional.models.models_datasets import (
@@ -279,4 +279,4 @@ def create_dynamic_classes_from_env(models_list, known_classes=None):
     return classes
 
 
-additional_generative_models = create_dynamic_classes_from_env(additional_generative_models_definitions)
+extra_generative_models = create_dynamic_classes_from_env(extra_generative_models_definitions)
