@@ -94,6 +94,25 @@ TEST_F(KFSRestParserTest, parseValidRequestUINT64) {
     VALIDATE_INPUT("UINT64", uint64_contents_size, uint64_contents);
 }
 
+TEST_F(KFSRestParserTest, parseValidRequestUINT64AboveUint32Range) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [ 1 ],
+        "datatype" : "UINT64",
+        "data" : [ 4294967296 ]
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::OK);
+
+    auto proto = parser.getProto();
+    ASSERT_EQ(proto.inputs_size(), 1);
+    ASSERT_THAT(proto.inputs()[0].contents().uint64_contents(), ElementsAre(4294967296ULL));
+}
+
 TEST_F(KFSRestParserTest, parseValidRequestUINT32) {
     std::string request = R"({
     "inputs" : [
@@ -160,6 +179,25 @@ TEST_F(KFSRestParserTest, parseValidRequestINT64) {
     ASSERT_EQ(status, StatusCode::OK);
 
     VALIDATE_INPUT("INT64", int64_contents_size, int64_contents);
+}
+
+TEST_F(KFSRestParserTest, parseValidRequestINT64AboveInt32Range) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [ 1 ],
+        "datatype" : "INT64",
+        "data" : [ 2147483648 ]
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::OK);
+
+    auto proto = parser.getProto();
+    ASSERT_EQ(proto.inputs_size(), 1);
+    ASSERT_THAT(proto.inputs()[0].contents().int64_contents(), ElementsAre(2147483648LL));
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestINT32) {
