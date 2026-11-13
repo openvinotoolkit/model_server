@@ -1,0 +1,81 @@
+input_stream: "OVMS_PY_TENSOR:image"
+output_stream: "OVMS_PY_TENSOR:embedding"
+
+node{
+    name: "CLIPPreprocessor"
+    calculator: "PythonExecutorCalculator"
+    input_side_packet: "PYTHON_NODE_RESOURCES:py"
+    input_stream: "OVMS_PY_TENSOR:image"
+    output_stream: "OVMS_PY_TENSOR:pixel_values"
+    node_options:{
+        [type.googleapis.com/mediapipe.PythonExecutorCalculatorOptions]:{
+            handler_path: "/workspace/pre.py"
+        }
+    }
+}
+
+node{
+    name: "PixelValuesConverter"
+    calculator: "PyTensorOvTensorConverterCalculator"
+    input_stream: "OVMS_PY_TENSOR:pixel_values"
+    output_stream: "OVTENSOR:image_em"
+}
+
+node {
+  calculator: "OpenVINOModelServerSessionCalculator"
+  output_side_packet: "SESSION:session"
+  node_options: {
+    [type.googleapis.com/mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+      servable_name: "clip"
+      servable_version: "1"
+    }
+  }
+}
+
+node {
+  calculator: "OpenVINOInferenceCalculator"
+  input_side_packet: "SESSION:session"
+  input_stream: "OVTENSOR:image_em"
+  output_stream: "OVTENSOR:pooler_output"
+  node_options: {
+    [type.googleapis.com/mediapipe.OpenVINOInferenceCalculatorOptions]: {
+      tag_to_input_tensor_names {
+        key: "OVTENSOR"
+        value: "40"
+      }
+      tag_to_output_tensor_names {
+        key: "OVTENSOR"
+        value: "pooler_output"
+      }
+    }
+  }
+}
+
+
+node {
+  name: "EmbeddingConverter"
+  calculator: "PyTensorOvTensorConverterCalculator"
+  input_stream: "OVTENSOR:pooler_output"
+  output_stream: "OVMS_PY_TENSOR:pooler_output_em"
+  node_options: {
+        [type.googleapis.com/mediapipe.PyTensorOvTensorConverterCalculatorOptions]: {
+          tag_to_output_tensor_names{
+            key: "OVMS_PY_TENSOR"
+            value: "pooler_output_em"
+          }
+        }
+}
+}
+
+node {
+  name: "PostprocessorCLIP"
+  calculator: "PythonExecutorCalculator"
+  input_side_packet: "PYTHON_NODE_RESOURCES:py"
+  input_stream: "OVMS_PY_TENSOR:pooler_output_em"
+  output_stream: "OVMS_PY_TENSOR:embedding"
+  node_options: {
+    [type.googleapis.com/mediapipe.PythonExecutorCalculatorOptions]: {
+      handler_path: "/workspace/post.py"
+    }
+  }
+}
