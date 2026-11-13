@@ -77,23 +77,28 @@ static std::unique_ptr<PreparedChatTemplateRuntime> sharedPreparedRuntimeTemplat
 
 class MultipartParserForTest : public MultiPartParser {
 public:
-    explicit MultipartParserForTest(const std::string& audioData) :
-        audioData(audioData) {}
+    MultipartParserForTest(const std::string& audioData, const std::string& prompt) :
+        audioData(audioData),
+        prompt(prompt) {}
 
     bool parse() override { return true; }
     bool hasParseError() const override { return false; }
     std::vector<std::string> getArrayFieldByName(const std::string&) const override { return {}; }
     std::string getFieldByName(const std::string& name) const override {
-        return name == "model" ? "m" : "";
+        if (name == "model") {
+            return "m";
+        }
+        return name == "prompt" ? prompt : "";
     }
     std::string_view getFileContentByFieldName(const std::string& name) const override {
         return name == "file" ? audioData : "";
     }
     std::vector<std::string_view> getFilesArrayByFieldName(const std::string&) const override { return {}; }
-    std::set<std::string> getAllFieldNames() const override { return {"file", "model"}; }
+    std::set<std::string> getAllFieldNames() const override { return {"file", "model", "prompt"}; }
 
 private:
     const std::string& audioData;
+    const std::string& prompt;
 };
 
 class TranscriptionTestServable : public GenAiServable {
@@ -223,9 +228,9 @@ protected:
         return result;
     }
 
-    RunResult runMultipartTranscriptionPipeline(const std::string& audioData) {
+    RunResult runMultipartTranscriptionPipeline(const std::string& audioData, const std::string& prompt = "") {
         RunResult result;
-        auto parser = std::make_shared<MultipartParserForTest>(audioData);
+        auto parser = std::make_shared<MultipartParserForTest>(audioData, prompt);
         HttpPayload payload;
         payload.uri = "/v1/audio/transcriptions";
         payload.multipartParser = std::move(parser);
@@ -602,6 +607,22 @@ TEST_P(InputProcessingIntegrationTest, MultipartTranscription_DecodesAudioAndKee
     const auto& chatHistory = std::get<ov::genai::ChatHistory>(result.req.input);
     ASSERT_EQ(chatHistory.size(), 1u);
     EXPECT_EQ(chatHistory[0]["content"][0]["type"].as_string().value_or(""), "audio");
+}
+
+TEST_P(InputProcessingIntegrationTest, MultipartTranscription_UsesPromptAsSystemMessage) {
+    const std::string prompt = "Transcribe in English.";
+    auto result = runMultipartTranscriptionPipeline(buildWavBuffer(160), prompt);
+
+    ASSERT_TRUE(result.loadStatus.ok()) << result.loadStatus.message();
+    ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
+    ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
+
+    const auto& chatHistory = std::get<ov::genai::ChatHistory>(result.req.input);
+    ASSERT_EQ(chatHistory.size(), 2u);
+    EXPECT_EQ(chatHistory[0]["role"].as_string().value_or(""), "system");
+    EXPECT_EQ(chatHistory[0]["content"].as_string().value_or(""), prompt);
+    EXPECT_NE(result.req.promptText.find(prompt), std::string::npos);
+    EXPECT_EQ(chatHistory[1]["content"][0]["type"].as_string().value_or(""), "audio");
 }
 
 TEST_P(InputProcessingIntegrationTest, MultipartTranscription_RejectsMalformedAudio) {
