@@ -14,93 +14,12 @@
 # limitations under the License.
 #
 
-load("@mediapipe//mediapipe/framework/port:build_config.bzl", "mediapipe_proto_library")
-
-licenses(["notice"])
-
 package(default_visibility = ["//visibility:public"])
 
-mediapipe_proto_library(
-    name = "openvinoinferencecalculator_proto",
-    srcs = ["openvinoinferencecalculator.proto"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "@mediapipe//mediapipe/framework:calculator_options_proto",
-        "@mediapipe//mediapipe/framework:calculator_proto",
-    ],
-)
-
-mediapipe_proto_library(
-    name = "openvinomodelserversessioncalculator_proto",
-    srcs = ["openvinomodelserversessioncalculator.proto"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "@mediapipe//mediapipe/framework:calculator_options_proto",
-        "@mediapipe//mediapipe/framework:calculator_proto",
-    ],
-)
-
 cc_library(
-    name = "openvinoinferencedumputils",
-    srcs = ["openvinoinferencedumputils.cc"],
-    hdrs = ["openvinoinferencedumputils.h"],
-    copts = ["-Isrc"],
+    name = "ovtensor_tensor_conversion_calculators",
+    srcs = ["ovtensor_tensor_conversion_calculators.cc"],
     deps = [
-        "//third_party:openvino",
-    ],
-    alwayslink = 1,
-)
-
-cc_library(
-    name = "openvinoinferenceutils",
-    srcs = ["openvinoinferenceutils.cc"],
-    hdrs = ["openvinoinferenceutils.h"],
-    copts = ["-Isrc"],
-    deps = [
-        "//src:ovms_header",
-    ],
-    alwayslink = 1,
-)
-
-cc_library(
-    name = "modelapiovmsadapter",
-    srcs = ["modelapiovmsadapter.cc"],
-    hdrs = ["modelapiovmsadapter.hpp"],
-    copts = ["-Isrc"],
-    deps = [
-        ":openvinoinferencedumputils",
-        "//src:ovms_header",
-        "//third_party:openvino",
-        "@mediapipe//mediapipe/framework/port:logging",
-        "@model_api//:model_api",
-    ],
-)
-
-cc_library(
-    name = "openvinoinferencecalculatoroptions",
-    srcs = ["openvinoinferencecalculatoroptions.cc"],
-    hdrs = ["openvinoinferencecalculatoroptions.h"],
-    copts = ["-Isrc"],
-    deps = [
-        ":openvinoinferencecalculator_cc_proto",
-        ":openvinoinferenceutils",
-        "//src:ovms_header",
-        "@mediapipe//mediapipe/framework:calculator_framework",
-    ],
-    alwayslink = 1,
-)
-
-cc_library(
-    name = "openvinoinferencecalculator",
-    srcs = ["openvinoinferencecalculator.cc"],
-    hdrs = ["openvinoinferencecalculator.h"],
-    copts = ["-Isrc"],
-    deps = [
-        ":modelapiovmsadapter",
-        ":openvinoinferencecalculator_cc_proto",
-        ":openvinoinferencecalculatoroptions",
-        ":openvinoinferenceutils",
-        "//src:ovms_header",
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_framework",
         "@mediapipe//mediapipe/framework/formats:tensor",
@@ -108,28 +27,14 @@ cc_library(
     alwayslink = 1,
 )
 
-cc_library(
-    name = "openvinomodelserversessioncalculator",
-    srcs = ["openvinomodelserversessioncalculator.cc"],
-    hdrs = ["openvinomodelserversessioncalculator.h"],
-    copts = ["-Isrc"],
+cc_test(
+    name = "ovtensor_tensor_conversion_calculators_test",
+    srcs = ["ovtensor_tensor_conversion_calculators_test.cc"],
     deps = [
-        ":modelapiovmsadapter",
-        ":openvinoinferenceutils",
-        ":openvinomodelserversessioncalculator_cc_proto",
-        "//src:ovms_header",
-        "//third_party:openvino",
+        ":ovtensor_tensor_conversion_calculators",
         "@mediapipe//mediapipe/framework:calculator_framework",
+        "@mediapipe//mediapipe/framework/port:gtest_main",
+        "@mediapipe//mediapipe/framework/port:parse_text_proto",
+        "@mediapipe//mediapipe/framework/formats:tensor",
     ],
-    alwayslink = 1,
-)
-
-cc_library(
-    name = "ovms_calculator",
-    deps = [
-        ":modelapiovmsadapter",
-        ":openvinoinferencecalculator",
-        ":openvinomodelserversessioncalculator",
-    ],
-    alwayslink = 1,
 )

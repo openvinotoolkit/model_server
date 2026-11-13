@@ -26,41 +26,29 @@ node {
   output_stream: "INPUT_IDS_PY:input_ids_py"
   output_stream: "ATTENCTION_MASK_PY:attention_mask_py"
   output_stream: "PIXEL_VALUES_PY:pixel_values_py"
-  node_options: {
-    [type.googleapis.com/mediapipe.PythonExecutorCalculatorOptions]: {
-      handler_path: "/workspace/preprocess.py"
-    }
-  }
-}
-
-node {
   name: "InputIdsConverter"
   calculator: "PyTensorOvTensorConverterCalculator"
     input_stream: "OVMS_PY_TENSOR:input_ids_py"
-    output_stream: "OVTENSOR:input_ids"
+    input_stream: "INPUT_IDS:input_ids"
+    input_stream: "ATTENTION_MASK:attention_mask"
+    input_stream: "PIXEL_VALUES:pixel_values"
+    output_stream: "LOGITS:logits_per_image"
+
+node {
+        tag_to_input_tensor_names { key: "INPUT_IDS" value: "input_ids" }
+        tag_to_input_tensor_names { key: "ATTENTION_MASK" value: "958" }
+        tag_to_input_tensor_names { key: "PIXEL_VALUES" value: "86" }
+        tag_to_output_tensor_names { key: "LOGITS" value: "out_0" }
 }
 
 node {
-  name: "AttentionMaskConverter"
-  calculator: "PyTensorOvTensorConverterCalculator"
-    input_stream: "OVMS_PY_TENSOR:attention_mask_py"
-    output_stream: "OVTENSOR:attention_mask"
-}
-
 node {
-  name: "PixelValuesConverter"
-  calculator: "PyTensorOvTensorConverterCalculator"
-    input_stream: "OVMS_PY_TENSOR:pixel_values_py"
-    output_stream: "OVTENSOR:pixel_values"
-}
-
-node {
-  calculator: "OpenVINOModelServerSessionCalculator"
+  calculator: "OpenVINOSessionCalculator"
   output_side_packet: "SESSION:session"
   node_options: {
-    [type.googleapis.com/mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "clip"  # servable name inside OVMS
-      servable_version: "1"
+    [type.googleapis.com/mediapipe.OpenVINOSessionCalculatorOptions]: {
+      model_path: "/model/1/clip-vit-base-patch16.xml"
+      device: "CPU"
     }
   }
 }
@@ -68,29 +56,17 @@ node {
 node {
   calculator: "OpenVINOInferenceCalculator"
   input_side_packet: "SESSION:session"
-  input_stream: "OVTENSOR:input_ids"
-  input_stream: "OVTENSOR1:attention_mask"
-  input_stream: "OVTENSOR2:pixel_values"
-  output_stream: "OVTENSOR:logits_per_image"
+  input_stream: "INPUT_IDS:input_ids"
+  input_stream: "ATTENTION_MASK:attention_mask"
+  input_stream: "PIXEL_VALUES:pixel_values"
+  output_stream: "LOGITS:logits_per_image"
   node_options: {
     [type.googleapis.com/mediapipe.OpenVINOInferenceCalculatorOptions]: {
-          tag_to_input_tensor_names {
-            key: "OVTENSOR"
-            value: "input_ids"
-          }
-          tag_to_input_tensor_names {
-            key: "OVTENSOR1"
-            value: "958"
-          }
-          tag_to_input_tensor_names {
-            key: "OVTENSOR2"
-            value: "86"
-          }
-          tag_to_output_tensor_names {
-            key: "OVTENSOR"
-            value: "out_0"
-          }
-        }
+      tag_to_input_tensor_names { key: "INPUT_IDS" value: "input_ids" }
+      tag_to_input_tensor_names { key: "ATTENTION_MASK" value: "958" }
+      tag_to_input_tensor_names { key: "PIXEL_VALUES" value: "86" }
+      tag_to_output_tensor_names { key: "LOGITS" value: "out_0" }
+    }
   }
 }
 

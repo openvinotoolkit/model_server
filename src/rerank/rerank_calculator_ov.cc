@@ -30,7 +30,6 @@
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 
-#include <adapters/inference_adapter.h>
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
 

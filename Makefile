@@ -183,7 +183,6 @@ else ifeq ($(findstring redhat,$(BASE_OS)),redhat)
 else
   $(error BASE_OS must be either ubuntu or redhat)
 endif
-CAPI_FLAGS = "--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)"  --config=mp_off"$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)
 BAZEL_DEBUG_FLAGS="--strip=$(STRIP)"$(BAZEL_DEBUG_BUILD_FLAGS)$(DISABLE_PARAMS)$(FUZZER_BUILD_PARAMS)$(OV_TRACING_PARAMS)$(TARGET_DISTRO_PARAMS)$(REPO_ENV)
 
 # Option to Override release image.
@@ -303,7 +302,6 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg INSTALL_DRIVER_VERSION=$(INSTALL_DRIVER_VERSION)\
 	--build-arg RELEASE_BASE_IMAGE=$(BASE_IMAGE_RELEASE)\
 	--build-arg JOBS=$(JOBS)\
-	--build-arg CAPI_FLAGS=$(CAPI_FLAGS)\
 	--build-arg VERBOSE_LOGS=$(VERBOSE_LOGS)\
 	--build-arg KONFLUX=$(KONFLUX)\
 	--build-arg ESPEAK=$(ESPEAK)\
@@ -463,19 +461,7 @@ targz_package:
 	ID=$$(docker create $(OVMS_CPP_DOCKER_IMAGE)-pkg:$(OVMS_CPP_IMAGE_TAG)) && \
 	docker cp $$ID:/ovms_pkg/$(OS)/ovms.tar dist/$(OS)/ && \
 	docker rm $$ID
-	docker $(BUILDX) build -f Dockerfile.$(DIST_OS) . \
-		$(BUILD_ARGS) \
-		--build-arg BUILD_IMAGE=$(BUILD_IMAGE) \
-		-t $(OVMS_CPP_DOCKER_IMAGE)-capi:$(OVMS_CPP_IMAGE_TAG) \
-		--target=capi-build && \
-	ID=$$(docker create $(OVMS_CPP_DOCKER_IMAGE)-capi:$(OVMS_CPP_IMAGE_TAG)) && \
-	docker cp $$ID:/ovms_release/lib/libovms_shared.so dist/$(OS)/ && \
-	docker rm $$ID
-	cd dist/$(OS) && \
-	tar rf ovms.tar --transform 's,^,ovms/lib/,' libovms_shared.so && \
-	gzip ovms.tar && \
-	rm -f libovms_shared.so && \
-	sha256sum ovms.tar.gz > ovms.tar.gz.sha256
+	cd dist/$(OS) && gzip ovms.tar && sha256sum ovms.tar.gz > ovms.tar.gz.sha256
 
 ovms_release_images:
 ifeq ($(BASE_OS),redhat)

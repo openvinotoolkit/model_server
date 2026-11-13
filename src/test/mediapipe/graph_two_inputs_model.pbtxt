@@ -2,35 +2,26 @@ input_stream: "in"
 input_stream: "in2"
 output_stream: "out"
 node {
-  calculator: "OpenVINOModelServerSessionCalculator"
+  calculator: "OpenVINOSessionCalculator"
   output_side_packet: "SESSION:add"
   node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "add"
-      servable_version: "1"
+    [type.googleapis.com / mediapipe.OpenVINOSessionCalculatorOptions]: {
+      model_path: "/ovms/src/test/add_two_inputs_model/1/add.xml"
+      shape: "auto"
     }
   }
 }
 node {
   calculator: "OpenVINOInferenceCalculator"
   input_side_packet: "SESSION:add"
-  input_stream: "ADD_INPUT1:in"
-  input_stream: "ADD_INPUT2:in2"
+  input_stream: "INPUT1:in"
+  input_stream: "INPUT2:in2"
   output_stream: "SUM:out"
   node_options: {
     [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
-        tag_to_input_tensor_names {
-          key: "ADD_INPUT1"
-          value: "input1"
-        }
-        tag_to_input_tensor_names {
-          key: "ADD_INPUT2"
-          value: "input2"
-        }
-        tag_to_output_tensor_names {
-          key: "SUM"
-          value: "out"
-        }
+        tag_to_input_tensor_names { key: "INPUT1" value: "input1" }
+        tag_to_input_tensor_names { key: "INPUT2" value: "input2" }
+        tag_to_output_tensor_names { key: "SUM" value: "sum" }
     }
   }
 }

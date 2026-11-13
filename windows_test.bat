@@ -47,7 +47,7 @@ IF "%~2"=="" (
 )
 
 set "bazelBuildArgs=--config=win_mp_on --action_env OpenVINO_DIR=%openvino_dir%"
-set "testTargets=//src:ovms_test //src:python_runtime_library_test //src/python:pythoninterpretermodule_lifecycle_test //src/python:pythoninterpretermodule_backend_failure_test //src/python:pythoninterpretermodule_borrowed_interpreter_test"
+set "testTargets=//src:ovms_shared //src:ovms_test //src:python_runtime_library_test //src/python:pythoninterpretermodule_lifecycle_test //src/python:pythoninterpretermodule_backend_failure_test //src/python:pythoninterpretermodule_borrowed_interpreter_test"
 set "runPythonRuntimeTest=%cd%\bazel-bin\src\python_runtime_library_test.exe --gtest_filter=!gtestFilter!"
 set "runPythonInterpreterLifecycleTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=!gtestFilter! //src/python:pythoninterpretermodule_lifecycle_test"
 set "runPythonInterpreterBackendFailureTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=!gtestFilter! //src/python:pythoninterpretermodule_backend_failure_test"

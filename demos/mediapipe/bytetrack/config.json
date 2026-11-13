@@ -1,11 +1,5 @@
 {
-    "model_config_list": [
-        {"config": {
-            "name": "yolox_tiny-fp16-ov",
-            "base_path": "yolox_tiny-fp16-ov"
-    }
-    }
-    ],
+    "model_config_list": [],
     "mediapipe_config_list": [
     {
         "name":"ByteTrack",
