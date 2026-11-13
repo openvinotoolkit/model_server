@@ -428,10 +428,10 @@ def export_text_generation_model(model_repository_path, source_model, model_name
         draft_llm_model_path = os.path.join(model_repository_path, model_name, draft_model_dir_name)
         if os.path.isfile(os.path.join(draft_llm_model_path, 'openvino_model.xml')):
             print("OV model is source folder. Skipping conversion.")
-        elif source_model.startswith("OpenVINO/"):
+        elif draft_source_model.startswith("OpenVINO/"):
             if precision:
                 print("Precision change is not supported for OpenVINO models. Parameter --weight-format {} will be ignored.".format(precision))
-            hugging_face_cmd = "huggingface-cli download {} --local-dir {} ".format(source_model, os.path.join(draft_llm_model_path, draft_source_model))
+            hugging_face_cmd = "huggingface-cli download {} --local-dir {} ".format(draft_source_model, draft_llm_model_path)
             if os.system(hugging_face_cmd):
                 raise ValueError("Failed to download llm model", source_model)    
         else: # assume HF model name or local pytorch model folder
