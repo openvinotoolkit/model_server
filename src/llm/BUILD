@@ -27,6 +27,7 @@ ovms_cc_library(
             "@mediapipe//mediapipe/framework:calculator_cc_proto",
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/mediapipe_internal:graph_side_packets",
+        "//src/mediapipe_internal:ovms_calculator_base",
         "//src:libovms_graph_metadata",
         "//src/mediapipe_calculators/utils:timestamp_advance_guard",
         "//src/kfserving_api:kfserving_api_cpp",
@@ -35,6 +36,8 @@ ovms_cc_library(
         "//src:httppayload",
         "//third_party:genai",
         "//src/mediapipe_internal:node_initializer",
+        "//src/metrics:libovms_metric_provider",
+        "//src/metrics:libovmsmetrics",
         "//src:libovmslogging",
         "//src:libovmsstring_utils",],
     visibility = ["//visibility:public"],
@@ -664,6 +667,7 @@ ovms_cc_library(
             "omni_model/legacy/servable_initializer.cpp",
             "omni_model/legacy/legacy_executor.cpp"],
     deps = [
+        "//src/metrics:libovmsmetrics",
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_cc_proto",
         "@mediapipe//mediapipe/framework/port:ret_check",
@@ -765,5 +769,3 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
-
-

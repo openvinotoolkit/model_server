@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include <atomic>
 #include <mutex>
+#include <sstream>
 #include <string>
 
 #pragma warning(push)
@@ -33,7 +34,9 @@
 #include "../http_payload.hpp"
 #include "../logging.hpp"
 #include "../mediapipe_internal/graph_side_packets.hpp"
+#include "../mediapipe_internal/ovms_calculator_base.hpp"
 #include "../mediapipe_calculators/utils/timestamp_advance_guard.hpp"
+#include "../metrics/metric_config.hpp"
 #include "../profiler.hpp"
 #include "apis/openai_completions.hpp"
 #include "servable.hpp"
@@ -45,7 +48,7 @@ namespace mediapipe {
 const std::string LLM_SESSION_SIDE_PACKET_TAG = "LLM_NODE_RESOURCES";
 const std::string LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG = "LLM_NODE_EXECUTION_CONTEXTS";
 
-class HttpLLMCalculator : public CalculatorBase {
+class HttpLLMCalculator : public OvmsCalculatorBase {
     std::shared_ptr<GenAiServable> servable;
     std::shared_ptr<GenAiExecutionContextHolder> executionContextHolder;
     std::shared_ptr<GenAiServableExecutionContext> executionContext;
@@ -63,6 +66,7 @@ public:
         cc->Inputs().Tag(INPUT_TAG_NAME).Set<ovms::HttpPayload>();
         cc->Inputs().Tag(LOOPBACK_TAG_NAME).Set<bool>();
         cc->InputSidePackets().Tag(LLM_SESSION_SIDE_PACKET_TAG).Set<ovms::GenAiServableMap>();
+        SetCalculatorMetricsContract(cc);
         if (cc->InputSidePackets().HasTag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG)) {
             cc->InputSidePackets().Tag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG).Set<ovms::GenAiExecutionContextMap>();
         }
@@ -80,11 +84,27 @@ public:
     absl::Status Open(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Open start", cc->NodeName());
+        const auto metricsStatus = InitializeCalculatorMetrics(cc);
+        if (!metricsStatus.ok()) {
+            return metricsStatus;
+        }
+        if (llm_calculator_logger->should_log(spdlog::level::debug)) {
+            std::ostringstream metricFamilies;
+            const auto& availableMetrics = ovms::MetricConfig::getLLMMetricFamilies();
+            for (size_t i = 0; i < availableMetrics.size(); ++i) {
+                if (i > 0) {
+                    metricFamilies << ", ";
+                }
+                metricFamilies << availableMetrics[i];
+            }
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger,
+                "LLMCalculator [Node: {}] Available metric families (select with --metrics_list or {}): {}",
+                cc->NodeName(), ovms::ALL_LLM_METRICS_PRESET, metricFamilies.str());
+        }
         ovms::GenAiServableMap servableMap = cc->InputSidePackets().Tag(LLM_SESSION_SIDE_PACKET_TAG).Get<ovms::GenAiServableMap>();
         auto it = servableMap.find(cc->NodeName());
         RET_CHECK(it != servableMap.end()) << "Could not find initialized LLM node named: " << cc->NodeName();
         this->servable = it->second;
-
         if (cc->InputSidePackets().HasTag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG) && !cc->InputSidePackets().Tag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG).IsEmpty()) {
             ovms::GenAiExecutionContextMap executionContextMap = cc->InputSidePackets().Tag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG).Get<ovms::GenAiExecutionContextMap>();
             auto contextIt = executionContextMap.find(cc->NodeName());

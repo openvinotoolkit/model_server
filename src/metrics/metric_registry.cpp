@@ -15,6 +15,8 @@
 //*****************************************************************************
 #include "metric_registry.hpp"
 
+#include <utility>
+
 #include <prometheus/family.h>
 #include <prometheus/text_serializer.h>
 
@@ -25,6 +27,10 @@ namespace ovms {
 
 MetricRegistry::MetricRegistry() = default;
 
+std::shared_ptr<MetricFamily<MetricCounter>> MetricRegistry::registerCustomCounterFamily(const std::string& name, const std::string& help) {
+    return registerCustomFamily<MetricCounter>(name, help);
+}
+
 std::string MetricRegistry::collect() const {
     prometheus::TextSerializer serializer;
     return serializer.Serialize(this->registryImpl.Collect());
@@ -32,17 +38,23 @@ std::string MetricRegistry::collect() const {
 
 template <>
 bool MetricRegistry::remove(std::shared_ptr<MetricFamily<MetricCounter>> family) {
-    return this->registryImpl.Remove(*static_cast<prometheus::Family<prometheus::Counter>*>(family->familyImplRef));
+    return removeFamilyAndForgetCustomRegistration(family, [this, family] {
+        return this->registryImpl.Remove(*static_cast<prometheus::Family<prometheus::Counter>*>(family->familyImplRef));
+    });
 }
 
 template <>
 bool MetricRegistry::remove(std::shared_ptr<MetricFamily<MetricGauge>> family) {
-    return this->registryImpl.Remove(*static_cast<prometheus::Family<prometheus::Gauge>*>(family->familyImplRef));
+    return removeFamilyAndForgetCustomRegistration(family, [this, family] {
+        return this->registryImpl.Remove(*static_cast<prometheus::Family<prometheus::Gauge>*>(family->familyImplRef));
+    });
 }
 
 template <>
 bool MetricRegistry::remove(std::shared_ptr<MetricFamily<MetricHistogram>> family) {
-    return this->registryImpl.Remove(*static_cast<prometheus::Family<prometheus::Histogram>*>(family->familyImplRef));
+    return removeFamilyAndForgetCustomRegistration(family, [this, family] {
+        return this->registryImpl.Remove(*static_cast<prometheus::Family<prometheus::Histogram>*>(family->familyImplRef));
+    });
 }
 
 }  // namespace ovms

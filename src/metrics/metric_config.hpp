@@ -18,12 +18,15 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/document.h>
 #pragma warning(pop)
 
 namespace ovms {
+
+inline constexpr const char* ALL_LLM_METRICS_PRESET = "all_llm";
 
 // Single Model / DAG
 extern const std::string METRIC_NAME_REQUESTS_SUCCESS;
@@ -52,6 +55,14 @@ extern const std::string METRIC_NAME_PROCESSING_TIME;
 
 extern const std::string METRIC_NAME_REQUEST_LATENCY;
 
+extern const std::string METRIC_NAME_KV_CACHE_UTILIZATION;
+extern const std::string METRIC_NAME_KV_CACHE_SIZE;
+extern const std::string METRIC_NAME_LLM_PROMPT_TOKENS;
+extern const std::string METRIC_NAME_LLM_GENERATED_TOKENS;
+extern const std::string METRIC_NAME_LLM_SCHEDULED_REQUESTS;
+extern const std::string METRIC_NAME_LLM_TTFT;
+extern const std::string METRIC_NAME_LLM_TPOT;
+
 class Status;
 /**
  * @brief This class represents metrics configuration
@@ -63,6 +74,7 @@ public:
 
     Status parseMetricsConfig(const rapidjson::Value& v, bool forceFailureIfMetricsAreEnabled = false);
     bool isFamilyEnabled(const std::string& family) const;
+    static const std::vector<std::string>& getLLMMetricFamilies();
 
     void setDefaultMetricsTo(bool enabled);
     Status loadFromCLIString(bool isEnabled, const std::string& metricsList);
@@ -90,7 +102,14 @@ private:
 
     std::unordered_set<std::string> additionalMetricFamilies = {
         {METRIC_NAME_INFER_REQ_QUEUE_SIZE},
-        {METRIC_NAME_INFER_REQ_ACTIVE}};
+        {METRIC_NAME_INFER_REQ_ACTIVE},
+        {METRIC_NAME_KV_CACHE_UTILIZATION},
+        {METRIC_NAME_KV_CACHE_SIZE},
+        {METRIC_NAME_LLM_PROMPT_TOKENS},
+        {METRIC_NAME_LLM_GENERATED_TOKENS},
+        {METRIC_NAME_LLM_SCHEDULED_REQUESTS},
+        {METRIC_NAME_LLM_TTFT},
+        {METRIC_NAME_LLM_TPOT}};
 
     std::unordered_set<std::string> defaultMetricFamilies = {
         {METRIC_NAME_CURRENT_REQUESTS},

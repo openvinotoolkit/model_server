@@ -46,6 +46,13 @@ Optional metrics
 | :---    |    :----   |    :----   |    :----       |
 | gauge      | ovms_infer_req_queue_size | name,version | Inference request queue size (nireq). |
 | gauge      | ovms_infer_req_active | name,version | Number of currently consumed inference requests from the processing queue that are now either in the data loading or inference process. |
+| gauge      | ovms_kv_cache_utilization_percent | name,node | GenAI-reported cache utilization (0-100) for a continuous-batching LLM or VLM pipeline. |
+| gauge      | ovms_kv_cache_size_bytes | name,node | GenAI-reported KV-cache size in bytes for a continuous-batching LLM or VLM pipeline. |
+| counter      | ovms_llm_prompt_tokens_total | name,node | Input prompt tokens from successfully completed continuous-batching LLM/VLM requests, as reported by GenAI. |
+| counter      | ovms_llm_generated_tokens_total | name,node | Generated output tokens from successfully completed continuous-batching LLM/VLM requests; excludes partial output from failed or cancelled requests. |
+| gauge      | ovms_llm_scheduled_requests | name,node | Number of requests scheduled in the last continuous-batching generation step; set to zero when the executor becomes idle. |
+| histogram      | ovms_llm_ttft_milliseconds | name,node | GenAI time to first token in milliseconds for successfully completed continuous-batching LLM/VLM requests, excluding VLM embedding preparation. |
+| histogram      | ovms_llm_tpot_milliseconds | name,node | GenAI time per output token in milliseconds for successfully completed continuous-batching LLM/VLM requests. |
 
 > **Note**: While `ovms_current_requests` and `ovms_infer_req_active` both indicate how much resources are engaged in the requests processing, they are quite distinct. A request is counted in `ovms_current_requests` metric starting as soon as it's received by the server and stays there until the response is sent back to the user. The `ovms_infer_req_active` counter informs about the number of OpenVINO Infer Requests that are bound to user requests and are either loading the data or already running inference. 
 
@@ -57,7 +64,65 @@ Labels description
 | method      | ModelMetadata, ModelReady, ModelInfer, Predict, GetModelStatus, GetModelMetadata, Unary, Stream | Interface methods. |
 | version      | 1, 2, ..., n | Model version. Note that GetModelStatus and ModelReady and all MediaPipe servables do not have the version label. |
 | name      | As defined in model server config | Model name, DAG name or MediaPipe graph name. |
+| node      | As defined in the graph configuration | LLM calculator node name; distinguishes independent pipelines within a graph. |
 
+## LLM-specific metrics
+
+The currently supported GenAI metric families are optional and supported for
+continuous-batching language and vision-language models, not legacy/NPU or Omni
+pipelines. Use the `all_llm` preset in the metrics list to enable all seven, or
+list individual families:
+
+```text
+ovms --config_path /models/config.json --rest_port 8000 --metrics_enable --metrics_list all_llm
+curl http://localhost:8000/metrics
+```
+
+The preset can also be used in `monitoring.metrics.metrics_list` in the
+configuration file. An explicit list selects only the listed families; include
+other metric names if you also need the default serving metrics. The preset
+includes only currently supported LLM metric families; it does not enable
+proposed or future LLM metrics automatically.
+
+Cache utilization, cache size, and scheduled-request gauges are not refreshed
+after every generation step. OVMS publishes their latest GenAI values every 10
+generation steps and when the executor becomes idle, before waiting for new
+requests. Scrapes return the latest published values; changes between updates
+may not be visible.
+
+Cache utilization is GenAI's maximum utilization percentage across registered
+cache types, not total device-memory utilization. Its denominator can change
+with dynamic cache allocation. While a pipeline is waiting for new requests,
+cache gauges retain their latest values; waiting does not imply an empty cache
+or zero utilization. KV-cache size is reported in bytes and can also change
+with dynamic allocation; it is not total device memory.
+
+Prompt and generated-token counters increase once per successfully completed
+request, for both unary and streaming responses. Failed and cancelled requests
+are excluded. Since counters update at completion, their rates do not include
+tokens from requests still in progress. For example, aggregate prompt and
+generated-token rates over five minutes are:
+
+```promql
+sum by (name, node) (rate(ovms_llm_prompt_tokens_total[5m]))
+sum by (name, node) (rate(ovms_llm_generated_tokens_total[5m]))
+```
+
+Streaming requests are recorded once, at final response, not once per chunk.
+
+TTFT and TPOT are GenAI request timings, not HTTP end-to-end latency. For VLMs,
+TTFT excludes embedding preparation. The histograms export `_bucket`, `_sum`,
+and `_count` series. Their finite bucket boundaries, in milliseconds, are
+`1, 5, 10, 20, 40, 60, 80, 100, 250, 500, 750, 1000, 2500, 5000, 7500,
+10000, 20000, 40000, 80000, 160000, 640000` for TTFT, and
+`10, 20, 40, 60, 80, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000,
+20000, 40000, 80000` for TPOT. Only finite, strictly positive samples are observed;
+an invalid timing sample is skipped without discarding the request's token counts
+or the other valid timing sample.
+
+The scheduled-requests gauge reports GenAI's count from the latest generation
+step. It is zero while the pipeline is waiting for new requests. It is not the
+waiting queue size or the total number of requests accepted by the server.
 
 ## Enable metrics
 
@@ -244,8 +309,13 @@ For [MediaPipe Graphs](./mediapipe.md) execution there are 6 generic metrics whi
 | histogram      | ovms_graph_processing_time_us | Tracks duration of successfully started mediapipe graphs in us. It can represent pipeline processing time for unary calls or the session length for streamed requests. |
 | histogram      | ovms_graph_request_latency_us | Difference between MediaPipe packet timestamps at the time of creation (request receival) and when the packet generation has concluded (full or partial response). Server automatically timestamps the incoming  packets and is used as a source of truth for receival time, unless client opts-in to manual timestamping (NOTE: manual timestamping causes the metric results to become invalid). |
 
-Exposing custom metrics in calculator implementations (MediaPipe graph nodes) is not supported yet.
+## Custom metrics in C++ calculators
 
+OVMS supports custom counters, gauges, and histograms in C++ MediaPipe
+calculators. These metrics are exposed on the existing `/metrics` endpoint with
+graph and calculator-node labels. For setup instructions, API usage, naming
+rules, and lifecycle details, see the
+[developer guide](./developer_guide.md#custom-metrics-in-c-calculators).
 
 ## Visualize with Grafana
 

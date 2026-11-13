@@ -45,6 +45,20 @@ ovms_cc_library(
     hdrs = [
         "graph_side_packets.hpp",
     ],
+    deps = ["//src/metrics:libovmsmetrics"],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "ovms_calculator_base",
+    srcs = ["ovms_calculator_base.cpp"],
+    hdrs = ["ovms_calculator_base.hpp"],
+    deps = [
+        ":graph_side_packets",
+        "//src:libovmslogging",
+        "//src/metrics:libovmsmetrics",
+        "@mediapipe//mediapipe/framework:calculator_framework",
+    ],
     visibility = ["//visibility:public"],
 )
 

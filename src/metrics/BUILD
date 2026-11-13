@@ -18,19 +18,26 @@ load("//:common_settings.bzl", "ovms_cc_library")
 ovms_cc_library(
     name = "libovmsmetrics",
     hdrs = [
+        "calculator_metrics.hpp",
+        "llm_metric_reporter.hpp",
         "metric.hpp",
         "metric_config.hpp",
         "metric_family.hpp",
         "metric_module.hpp",
         "metric_registry.hpp",
+        "metric_series.hpp",
     ],
     srcs = [
+        "calculator_metrics.cpp",
         "metric.cpp",
         "metric_config.cpp",
         "metric_family.cpp",
         "metric_registry.cpp",
         "metric_module.cpp",
-    ],
+    ] + select({
+        "//:not_disable_mediapipe": ["llm_metric_reporter.cpp"],
+        "//:disable_mediapipe": [],
+    }),
     deps = [
         "@com_github_jupp0r_prometheus_cpp//core",
         "@com_github_tencent_rapidjson//:rapidjson",

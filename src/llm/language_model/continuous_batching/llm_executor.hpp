@@ -28,6 +28,7 @@
 #include <openvino/genai/continuous_batching_pipeline.hpp>
 
 #include "../../../logging.hpp"
+#include "../../../metrics/llm_metric_reporter.hpp"
 #include "../../../profiler.hpp"
 
 namespace ovms {
@@ -37,11 +38,13 @@ struct LLMExecutor {
     std::mutex mutex;
     std::condition_variable cv;
     std::shared_ptr<ov::genai::ContinuousBatchingPipeline> pipe = nullptr;
+    std::shared_ptr<LLMMetricReporter> metricReporter;
 
-    LLMExecutor(std::shared_ptr<ov::genai::ContinuousBatchingPipeline> pipe, bool isDynamicKVCacheSet = false) {
-        this->pipe = std::move(pipe);
-        this->isDynamicKVCache = isDynamicKVCacheSet;
-    }
+    LLMExecutor(std::shared_ptr<ov::genai::ContinuousBatchingPipeline> pipe, bool isDynamicKVCacheSet,
+        std::shared_ptr<LLMMetricReporter> metricReporter) :
+        isDynamicKVCache(isDynamicKVCacheSet),
+        pipe(std::move(pipe)),
+        metricReporter(std::move(metricReporter)) {}
 
     bool hasRequests() {
         return (pipe->has_non_finished_requests());
@@ -50,6 +53,21 @@ struct LLMExecutor {
     void step() {
         OVMS_PROFILE_FUNCTION();
         pipe->step();
+    }
+
+    void publishPipelineMetrics(bool idle = false) {
+        if (metricReporter && (metricReporter->isCacheUtilizationEnabled() || metricReporter->isCacheSizeEnabled() || metricReporter->isScheduledRequestsEnabled())) {
+            const ov::genai::PipelineMetrics& metrics = pipe->get_metrics();
+            if (metricReporter->isCacheUtilizationEnabled()) {
+                metricReporter->setCacheUtilization(metrics.cache_usage);
+            }
+            if (metricReporter->isCacheSizeEnabled()) {
+                metricReporter->setCacheSizeBytes(metrics.kv_cache_size_in_bytes);
+            }
+            if (metricReporter->isScheduledRequestsEnabled()) {
+                metricReporter->setScheduledRequests(idle ? 0 : metrics.scheduled_requests);
+            }
+        }
     }
 
     void waitForRequests(std::atomic<bool>* receivedEndSignal) {
@@ -113,18 +131,19 @@ class LLMExecutorWrapper {
     std::atomic<bool> finishExecutorThread = false;
 
     static void run(LLMExecutor* llmExecutor, std::atomic<bool>* receivedEndSignal) {
-        const uint8_t printMetricsEveryNumberOfSteps = 10;
+        constexpr uint8_t metricsEveryNumberOfSteps = 10;
         uint8_t stepCounter = 0;
         while (!(*receivedEndSignal)) {
             try {
-                if (stepCounter == printMetricsEveryNumberOfSteps) {
-                    llmExecutor->printMetrics();
-                    stepCounter = 0;
-                }
                 if (llmExecutor->hasRequests()) {
-                    stepCounter++;
                     llmExecutor->step();
+                    if (++stepCounter == metricsEveryNumberOfSteps) {
+                        llmExecutor->publishPipelineMetrics();
+                        llmExecutor->printMetrics();
+                        stepCounter = 0;
+                    }
                 } else {
+                    llmExecutor->publishPipelineMetrics(true);
                     SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {}; Scheduled requests: {};", 0, 0);
                     llmExecutor->waitForRequests(receivedEndSignal);
                 }
@@ -136,8 +155,9 @@ class LLMExecutorWrapper {
     }
 
 public:
-    LLMExecutorWrapper(std::shared_ptr<ov::genai::ContinuousBatchingPipeline> pipe, bool isDynamicKVCache = false) :
-        llmExecutor(std::move(pipe), isDynamicKVCache) {
+    LLMExecutorWrapper(std::shared_ptr<ov::genai::ContinuousBatchingPipeline> pipe, bool isDynamicKVCache = false,
+        std::shared_ptr<LLMMetricReporter> metricReporter = nullptr) :
+        llmExecutor(std::move(pipe), isDynamicKVCache, std::move(metricReporter)) {
         llmExecutorThread = std::thread(LLMExecutorWrapper::run, &llmExecutor, &finishExecutorThread);
     }
 

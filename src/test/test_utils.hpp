@@ -813,8 +813,9 @@ public:
         const ovms::MediapipeGraphConfig& config,
         std::string inputConfig,
         ovms::PythonBackend* pythonBackend = nullptr,
-        bool lazyLoad = false) :
-        ovms::MediapipeGraphDefinition(name, config, nullptr, nullptr, pythonBackend, lazyLoad) {
+        bool lazyLoad = false,
+        const ovms::MetricProvider* metrics = nullptr) :
+        ovms::MediapipeGraphDefinition(name, config, metrics, pythonBackend, lazyLoad) {
         this->inputConfig = inputConfig;
     }
 

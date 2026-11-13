@@ -33,7 +33,10 @@
 #include "src/utils/env_guard.hpp"
 #include "src/filesystem/filesystem.hpp"
 #include "src/metrics/metric.hpp"
+#include "src/metrics/metric_config.hpp"
+#include "src/metrics/metric_provider.hpp"
 #include "../model_metric_reporter.hpp"
+#include "../metrics/llm_metric_reporter.hpp"
 #include "../ov_utils.hpp"
 #include "../servable_definition_unload_guard.hpp"
 #include "../servable_name_checker.hpp"
@@ -402,15 +405,17 @@ Status MediapipeGraphDefinition::initializeQueueIfRequired() {
 
 MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
     const MediapipeGraphConfig& config,
-    MetricRegistry* registry,
-    const MetricConfig* metricConfig,
+    const MetricProvider* metrics,
     PythonBackend* pythonBackend,
     bool lazyLoad) :
     SingleVersionServableDefinition(name),
     sidePacketMaps(std::make_shared<GraphSidePackets>()),
     status(SCHEDULER_CLASS_NAME, getName()),
     pythonBackend(pythonBackend),
-    reporter(std::make_unique<MediapipeServableMetricReporter>(metricConfig, registry, name)) {
+    metrics(metrics),
+    reporter(std::make_unique<MediapipeServableMetricReporter>(
+        metrics ? &metrics->getMetricConfig() : nullptr,
+        metrics ? metrics->getMetricRegistry() : nullptr, name)) {
     mgconfig = config;
     idleUnloadTimeoutSecondsCache.store(mgconfig.getIdleUnloadTimeoutSeconds(), std::memory_order_relaxed);
     passKfsRequestFlag = false;
@@ -606,6 +611,7 @@ Status MediapipeGraphDefinition::doReload(const ServableNameChecker& checker, co
     this->mgconfig = config;
     // Refresh the lock-free cache while we still hold lifecycleMtx.
     idleUnloadTimeoutSecondsCache.store(this->mgconfig.getIdleUnloadTimeoutSeconds(), std::memory_order_relaxed);
+    deactivateMetrics();
     this->queue.reset();
     this->sidePacketMaps = std::make_shared<GraphSidePackets>();
     Status validationStatus = validate(checker);
@@ -746,8 +752,23 @@ void MediapipeGraphDefinition::unloadComponentsAfterPendingExecutorsAreCreated()
     while (pendingCreateExecutorCount > 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
+    deactivateMetrics();
     this->queue.reset();
     this->sidePacketMaps.reset();
+}
+
+void MediapipeGraphDefinition::deactivateMetrics() {
+    if (!sidePacketMaps) {
+        return;
+    }
+    for (const auto& entry : sidePacketMaps->calculatorMetrics) {
+        entry.second->deactivate();
+    }
+    for (const auto& reporterRef : sidePacketMaps->llmMetricReporters) {
+        if (auto llmReporter = reporterRef.lock()) {
+            llmReporter->deactivate();
+        }
+    }
 }
 
 Status MediapipeGraphDefinition::initializeNodes() {
@@ -766,9 +787,20 @@ Status MediapipeGraphDefinition::initializeNodes() {
     auto& registry = NodeInitializerRegistry::instance();
     for (int i = 0; i < config.node().size(); i++) {
         const auto& node = config.node(i);
+        const bool usesMetrics = std::find(node.input_side_packet().begin(), node.input_side_packet().end(),
+                                     "CALCULATOR_METRICS:calculator_metrics") != node.input_side_packet().end();
+        if (usesMetrics) {
+            if (node.name().empty()) {
+                SPDLOG_ERROR("Custom metrics require a named node in graph {}", getName());
+                return StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR;
+            }
+            sidePacketMaps->calculatorMetrics.emplace(node.name(),
+                std::make_shared<CalculatorMetrics>(
+                    metrics && metrics->getMetricConfig().metricsEnabled ? metrics->getMetricRegistry() : nullptr, getName(), node.name()));
+        }
         for (const auto& initializer : registry.all()) {
             if (initializer->matches(node.calculator())) {
-                Status status = initializer->initialize(node, getName(), mgconfig.getBasePath(), *sidePacketMaps, graphMetadata, pythonBackend);
+                Status status = initializer->initialize(node, getName(), mgconfig.getBasePath(), *sidePacketMaps, graphMetadata, pythonBackend, metrics);
                 if (!status.ok()) {
                     return status;
                 }

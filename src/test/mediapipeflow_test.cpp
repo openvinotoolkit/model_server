@@ -46,13 +46,21 @@
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_graph_executor_impl.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../mediapipe_internal/graphqueue.hpp"
 #include "src/kfs_python_tensor_bridge.hpp"
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../mediapipe_internal/mediapipefactory.hpp"
 #include "../mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "../mediapipe_internal/mediapipegraphexecutor.hpp"
+#include "../mediapipe_internal/ovms_calculator_base.hpp"
+#include "../mediapipe_internal/graph_side_packets.hpp"
+#include "src/metrics/calculator_metrics.hpp"
 #include "src/metrics/metric_config.hpp"
+#include "src/metrics/metric.hpp"
+#include "src/metrics/metric_family.hpp"
 #include "src/metrics/metric_module.hpp"
+#include "src/metrics/metric_provider.hpp"
+#include "src/metrics/metric_registry.hpp"
 #include "../model.hpp"
 #include "../ovms_exit_codes.hpp"
 #include "../precision.hpp"
@@ -3919,6 +3927,7 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "StringToUint32Calculator",
         "StringToUint64Calculator",
         "StringToUintCalculator",
+        "TestCustomMetricsCalculator",
         "TwoInputCalculator",
         "WarpAffineCalculator",
         "WarpAffineCalculatorCpu"});
@@ -4458,10 +4467,10 @@ private:
 }  // namespace
 
 TEST(MediapipeIdleUnloadGuard, CreateDefinitionLazyLoad) {
-    ovms::MediapipeFactory factory(nullptr);
     ovms::MediapipeGraphConfig mgc{"unloadedGraph", "", ""};
     mgc.setIdleUnloadTimeoutSeconds(10);
     StubMetricProvider metrics;
+    ovms::MediapipeFactory factory(nullptr);
     ovms::ModelManager manager;
 
     auto status = factory.createDefinition("unloadedGraph", mgc, metrics, manager, true);
@@ -4473,9 +4482,9 @@ TEST(MediapipeIdleUnloadGuard, CreateDefinitionLazyLoad) {
 }
 
 TEST(MediapipeIdleUnloadGuard, CreateDefinitionLazyLoadRejectsDuplicate) {
-    ovms::MediapipeFactory factory(nullptr);
     ovms::MediapipeGraphConfig mgc{"dupGraph", "", ""};
     StubMetricProvider metrics;
+    ovms::MediapipeFactory factory(nullptr);
     ovms::ModelManager manager;
 
     auto status1 = factory.createDefinition("dupGraph", mgc, metrics, manager, true);
@@ -4483,4 +4492,205 @@ TEST(MediapipeIdleUnloadGuard, CreateDefinitionLazyLoadRejectsDuplicate) {
 
     auto status2 = factory.createDefinition("dupGraph", mgc, metrics, manager, true);
     ASSERT_EQ(status2, ovms::StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST);
+}
+
+namespace mediapipe {
+class TestCustomMetricsCalculator : public ::ovms::OvmsCalculatorBase {
+    std::shared_ptr<::ovms::CalculatorCounter> counter;
+
+public:
+    static absl::Status GetContract(CalculatorContract* cc) {
+        cc->Inputs().Tag("IN").Set<std::string>();
+        SetCalculatorMetricsContract(cc);
+        return absl::OkStatus();
+    }
+
+    absl::Status Open(CalculatorContext* cc) final {
+        auto status = InitializeCalculatorMetrics(cc);
+        if (!status.ok()) {
+            return status;
+        }
+        counter = calculatorMetrics->getOrRegisterCounter("custom_runtime_events_total", "Runtime events.");
+        return absl::OkStatus();
+    }
+
+    absl::Status Process(CalculatorContext* cc) final {
+        counter->increment();
+        return absl::OkStatus();
+    }
+};
+REGISTER_CALCULATOR(TestCustomMetricsCalculator);
+}  // namespace mediapipe
+
+TEST(MediapipeGraphMetricsProvider, CustomMetricsReachRunningCalculatorAcrossPoolAndReload) {
+    MetricRegistry registry;
+    auto sidePackets = std::make_shared<GraphSidePackets>();
+    sidePackets->calculatorMetrics.emplace(
+        "metric_node", std::make_shared<CalculatorMetrics>(&registry, "runtime_graph", "metric_node"));
+
+    ::mediapipe::CalculatorGraphConfig config;
+    ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(R"(
+input_stream: "in"
+node {
+  name: "metric_node"
+  calculator: "TestCustomMetricsCalculator"
+  input_stream: "IN:in"
+  input_side_packet: "CALCULATOR_METRICS:calculator_metrics"
+}
+)",
+        &config));
+
+    auto queue = std::make_shared<GraphQueue>(config, sidePackets, 2);
+    auto process = [](mediapipe::CalculatorGraph& graph) {
+        auto status = graph.AddPacketToInputStream(
+            "in", mediapipe::MakePacket<std::string>("event").At(mediapipe::Timestamp(0)));
+        if (!status.ok()) {
+            return status;
+        }
+        status = graph.CloseInputStream("in");
+        if (!status.ok()) {
+            return status;
+        }
+        return graph.WaitUntilDone();
+    };
+    {
+        GraphIdGuard first(queue);
+        GraphIdGuard second(queue);
+        ASSERT_TRUE(process(first.graph).ok());
+        ASSERT_TRUE(process(second.graph).ok());
+    }
+    EXPECT_THAT(registry.collect(),
+        HasSubstr("custom_runtime_events_total{name=\"runtime_graph\",node=\"metric_node\"} 2\n"));
+
+    queue.reset();
+    sidePackets->clear();
+    EXPECT_TRUE(registry.collect().empty());
+
+    sidePackets->calculatorMetrics.emplace(
+        "metric_node", std::make_shared<CalculatorMetrics>(&registry, "runtime_graph", "metric_node"));
+    queue = std::make_shared<GraphQueue>(config, sidePackets, 1);
+    {
+        GraphIdGuard reloaded(queue);
+        ASSERT_TRUE(process(reloaded.graph).ok());
+    }
+    EXPECT_THAT(registry.collect(),
+        HasSubstr("custom_runtime_events_total{name=\"runtime_graph\",node=\"metric_node\"} 1\n"));
+    queue.reset();
+    sidePackets->clear();
+}
+
+namespace {
+class TestGraphMetricProvider : public ovms::MetricProvider {
+public:
+    mutable ovms::MetricRegistry registry;
+    ovms::MetricConfig config;
+    bool provideRegistry = true;
+    mutable int registryRequests = 0;
+    mutable int configRequests = 0;
+
+    ovms::MetricRegistry* getMetricRegistry() const override {
+        ++registryRequests;
+        return provideRegistry ? &registry : nullptr;
+    }
+    const ovms::MetricConfig& getMetricConfig() const override {
+        ++configRequests;
+        return config;
+    }
+};
+
+class MetricsGraphDefinition : public DummyMediapipeGraphDefinition {
+public:
+    explicit MetricsGraphDefinition(const ovms::MetricProvider* metrics) :
+        DummyMediapipeGraphDefinition("graph", ovms::MediapipeGraphConfig{"graph", "", ""}, "", nullptr, false, metrics) {
+        auto* node = config.add_node();
+        node->set_name("node");
+        node->set_calculator("TestCustomMetricsCalculator");
+        node->add_input_side_packet("CALCULATOR_METRICS:calculator_metrics");
+    }
+
+    std::shared_ptr<ovms::CalculatorMetrics> calculatorMetrics() {
+        return sidePacketMaps->calculatorMetrics.at("node");
+    }
+
+    void setMetricsSidePacket(const std::string& packet) {
+        config.mutable_node(0)->set_input_side_packet(0, packet);
+    }
+
+    void clearNodeName() {
+        config.mutable_node(0)->clear_name();
+    }
+
+    size_t calculatorMetricsCount() const {
+        return sidePacketMaps->calculatorMetrics.size();
+    }
+
+    void useInvalidLlmNode() {
+        auto* node = config.mutable_node(0);
+        node->set_calculator("LLMCalculator");
+        node->clear_input_side_packet();
+        node->add_node_options();
+    }
+};
+}  // namespace
+
+TEST(MediapipeGraphMetricsProvider, LlmMetricRegistrationExceptionsBecomeStatuses) {
+    TestGraphMetricProvider metrics;
+    ASSERT_EQ(metrics.config.loadFromCLIString(true, METRIC_NAME_KV_CACHE_UTILIZATION), StatusCode::OK);
+    ASSERT_NE(nullptr, metrics.registry.createFamily<MetricCounter>(
+                           METRIC_NAME_KV_CACHE_UTILIZATION, "Conflicting family type."));
+    MetricsGraphDefinition graph(&metrics);
+    graph.useInvalidLlmNode();
+
+    EXPECT_NO_THROW({
+        EXPECT_EQ(graph.initializeNodes(), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
+    });
+}
+
+TEST(MediapipeGraphMetricsProvider, CustomMetricsHonorProviderConfiguration) {
+    TestGraphMetricProvider metrics;
+    metrics.config.metricsEnabled = true;
+    MetricsGraphDefinition graph(&metrics);
+    ASSERT_EQ(graph.initializeNodes(), ovms::StatusCode::OK);
+    graph.calculatorMetrics()->getOrRegisterCounter("custom_events_total", "Events.")->increment();
+    EXPECT_THAT(metrics.registry.collect(), HasSubstr("custom_events_total{name=\"graph\",node=\"node\"} 1\n"));
+}
+
+TEST(MediapipeGraphMetricsProvider, OnlyExactMetricsSidePacketCreatesScope) {
+    TestGraphMetricProvider metrics;
+    for (const char* packet : {"CALCULATOR_METRICS:other", "METRICS_CALCULATOR:calculator_metrics"}) {
+        MetricsGraphDefinition graph(&metrics);
+        graph.setMetricsSidePacket(packet);
+        EXPECT_EQ(graph.initializeNodes(), ovms::StatusCode::OK);
+        EXPECT_EQ(graph.calculatorMetricsCount(), 0);
+    }
+}
+
+TEST(MediapipeGraphMetricsProvider, CustomMetricsRequireNamedNode) {
+    TestGraphMetricProvider metrics;
+    MetricsGraphDefinition graph(&metrics);
+    graph.clearNodeName();
+    EXPECT_EQ(graph.initializeNodes(), ovms::StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR);
+}
+
+TEST(MediapipeGraphMetricsProvider, CustomMetricsAreNoOpWhenDisabledOrUnavailable) {
+    TestGraphMetricProvider metrics;
+    for (int scenario = 0; scenario < 3; ++scenario) {
+        metrics.config.metricsEnabled = scenario != 0;
+        metrics.provideRegistry = scenario != 1;
+        MetricsGraphDefinition graph(scenario == 2 ? nullptr : &metrics);
+        ASSERT_EQ(graph.initializeNodes(), ovms::StatusCode::OK);
+        graph.calculatorMetrics()->getOrRegisterCounter("custom_events_total", "Events.")->increment();
+        EXPECT_TRUE(metrics.registry.collect().empty());
+    }
+}
+
+TEST(MediapipeGraphMetricsProvider, PassesProviderToLlmInitializer) {
+    TestGraphMetricProvider metrics;
+    MetricsGraphDefinition graph(&metrics);
+    graph.useInvalidLlmNode();
+    const int initialRegistryRequests = metrics.registryRequests;
+    const int initialConfigRequests = metrics.configRequests;
+    ASSERT_EQ(graph.initializeNodes(), ovms::StatusCode::INTERNAL_ERROR);
+    EXPECT_EQ(metrics.registryRequests, initialRegistryRequests + 1);
+    EXPECT_EQ(metrics.configRequests, initialConfigRequests + 1);
 }

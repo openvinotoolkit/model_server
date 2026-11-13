@@ -556,7 +556,8 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
     return StatusCode::OK;
 }
 
-Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath) {
+Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig,
+    std::string graphPath, std::shared_ptr<LLMMetricReporter> metricReporter) {
     mediapipe::LLMCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
     Status status;
@@ -570,7 +571,7 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         }
         if (pipelineType == PipelineType::LM_CB) {
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Language Model Continuous Batching servable");
-            ContinuousBatchingServableInitializer cbServableInitializer;
+            ContinuousBatchingServableInitializer cbServableInitializer(std::move(metricReporter));
             servable = std::make_shared<ContinuousBatchingServable>();
             status = cbServableInitializer.initialize(servable, nodeOptions, graphPath);
             if (status != StatusCode::OK) {
@@ -597,7 +598,7 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
                 }
             }
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Visual Language Model Continuous Batching servable");
-            ContinuousBatchingServableInitializer cbServableInitializer;
+            ContinuousBatchingServableInitializer cbServableInitializer(std::move(metricReporter));
             servable = std::make_shared<VisualLanguageModelServable>();
             status = cbServableInitializer.initialize(servable, nodeOptions, graphPath);
             if (status != StatusCode::OK) {
