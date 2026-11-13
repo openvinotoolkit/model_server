@@ -1,0 +1,26 @@
+diff --git a/minimp4.h b/minimp4.h
+--- a/minimp4.h
++++ b/minimp4.h
+@@ -180,6 +180,7 @@ typedef struct
+     unsigned char *dsi;
+ 
+     // DSI data size
++    unsigned nal_length_size;
+     unsigned dsi_bytes;
+ 
+     // MP4 object type code
+@@ -3221,14 +3222,12 @@ int MP4D_open(...)
+                 unsigned int AVCProfileIndication = READ(1);
+                 unsigned int profile_compatibility = READ(1);
+                 unsigned int AVCLevelIndication = READ(1);
+-                //bit(6) reserved =
+-                unsigned int lengthSizeMinusOne = READ(1) & 3;
++                tr->nal_length_size = 1 + (READ(1) & 3);
+ 
+                 (void)configurationVersion;
+                 (void)AVCProfileIndication;
+                 (void)profile_compatibility;
+                 (void)AVCLevelIndication;
+-                (void)lengthSizeMinusOne;
+ 
+                 for (spspps = 0; spspps < 2; spspps++)

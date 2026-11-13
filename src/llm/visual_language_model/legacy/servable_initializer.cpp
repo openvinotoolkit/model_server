@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <cmath>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -84,6 +85,15 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
     properties->schedulerConfig.dynamic_split_fuse = nodeOptions.dynamic_split_fuse();
     properties->schedulerConfig.max_num_seqs = nodeOptions.max_num_seqs();
     properties->schedulerConfig.enable_prefix_caching = nodeOptions.enable_prefix_caching();
+
+    if ((nodeOptions.has_video_fps() && (nodeOptions.video_fps() <= 0.0F || !std::isfinite(nodeOptions.video_fps()))) || nodeOptions.video_max_frames() == 0) {
+        SPDLOG_ERROR("video_fps must be finite and greater than zero when provided, and video_max_frames must be greater than zero");
+        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+    }
+    if (nodeOptions.has_video_fps()) {
+        properties->inputProcessorContext.config.videoFps = nodeOptions.video_fps();
+    }
+    properties->inputProcessorContext.config.videoMaxFrames = nodeOptions.video_max_frames();
 
     properties->device = nodeOptions.device();
     if (properties->device.empty()) {

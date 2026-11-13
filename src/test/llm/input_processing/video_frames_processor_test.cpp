@@ -13,7 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <filesystem>
+#include <fstream>
 #include <string>
+#include <thread>
 
 #include <gtest/gtest.h>
 #include <openvino/genai/chat_history.hpp>
@@ -51,6 +54,44 @@ private:
     ovms::ModelsSettingsImpl savedModelsSettings;
 };
 
+class ScopedVideoDecodeLimits {
+public:
+    ScopedVideoDecodeLimits(uint64_t maxFileSize, uint64_t maxVideoPixels) :
+        savedServerSettings(ovms::Config::instance().getServerSettings()),
+        savedModelsSettings(ovms::Config::instance().getModelSettings()) {
+        ovms::ServerSettingsImpl serverSettings = savedServerSettings;
+        serverSettings.maxEncodedVideoFileSizeBytes = maxFileSize;
+        serverSettings.maxVideoDecodePixels = maxVideoPixels;
+        ovms::ModelsSettingsImpl modelsSettings = savedModelsSettings;
+        ovms::Config::instance().parse(&serverSettings, &modelsSettings);
+    }
+    ScopedVideoDecodeLimits(const ScopedVideoDecodeLimits&) = delete;
+    ScopedVideoDecodeLimits& operator=(const ScopedVideoDecodeLimits&) = delete;
+    ~ScopedVideoDecodeLimits() {
+        ovms::Config::instance().parse(&savedServerSettings, &savedModelsSettings);
+    }
+
+private:
+    ovms::ServerSettingsImpl savedServerSettings;
+    ovms::ModelsSettingsImpl savedModelsSettings;
+};
+
+class TemporaryVideoFile {
+public:
+    TemporaryVideoFile(const std::string& filename, const std::string& contents) :
+        path(std::filesystem::temp_directory_path() /
+             (filename + "_" + std::to_string(std::hash<std::thread::id>{}(std::this_thread::get_id())))) {
+        std::ofstream output(path, std::ios::binary);
+        output << contents;
+    }
+    ~TemporaryVideoFile() {
+        std::error_code error;
+        std::filesystem::remove(path, error);
+    }
+
+    const std::filesystem::path path;
+};
+
 static InputRequest makeChatRequest(ov::genai::ChatHistory chatHistory) {
     InputRequest req;
     req.input = std::move(chatHistory);
@@ -67,6 +108,20 @@ static const std::string FRAME_BASE64_2X2 =
     "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91Jpz"
     "AAAAEElEQVR4nGP4z8AARAwQCgAf7gP9i18U1AAAAABJRU5ErkJggg==";
 
+static void appendBigEndianUint32(std::string& data, uint32_t value) {
+    for (int shift = 24; shift >= 0; shift -= 8) {
+        data.push_back(static_cast<char>(value >> shift));
+    }
+}
+
+static std::string makeMp4Box(uint32_t type, const std::string& payload) {
+    std::string box;
+    appendBigEndianUint32(box, static_cast<uint32_t>(payload.size() + 8));
+    appendBigEndianUint32(box, type);
+    box += payload;
+    return box;
+}
+
 // Tests ------------------------------------------------------------------
 
 TEST(VideoFramesProcessorTest, NoVideoInTextOnlyMessage) {
@@ -81,6 +136,32 @@ TEST(VideoFramesProcessorTest, NoVideoInTextOnlyMessage) {
     EXPECT_TRUE(req.inputVideos.empty());
     const auto& resultHistory = std::get<ov::genai::ChatHistory>(req.input);
     EXPECT_EQ(resultHistory[0]["content"].as_string().value_or(""), "Hello, world!");
+}
+
+TEST(VideoFramesProcessorTest, EncodedVideoWithoutAllowedLocalPathIsRejected) {
+    ov::genai::ChatHistory history;
+    history.push_back({{"role", "user"}, {"content", ov::genai::JsonContainer::from_json_string(
+                                                         R"([{"type":"video_url","video_url":{"url":"/tmp/video.mp4"}}])")}});
+
+    InputRequest req = makeChatRequest(history);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    const auto status = processor.process(req);
+
+    EXPECT_EQ(status, absl::InvalidArgumentError("Loading media from local filesystem is disabled."));
+    EXPECT_TRUE(req.inputVideos.empty());
+}
+
+TEST(VideoFramesProcessorTest, EncodedVideoRemoteSourceRequiresAllowedDomain) {
+    ov::genai::ChatHistory history;
+    history.push_back({{"role", "user"}, {"content", ov::genai::JsonContainer::from_json_string(
+                                                         R"([{"type":"video_url","video_url":{"url":"ftp://media.example.com/video.mp4"}}])")}});
+
+    InputRequest req = makeChatRequest(history);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    const auto status = processor.process(req);
+
+    EXPECT_EQ(status, absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains"));
+    EXPECT_TRUE(req.inputVideos.empty());
 }
 
 TEST(VideoFramesProcessorTest, InjectionGuardBlocksPreexistingTag) {
@@ -277,6 +358,102 @@ TEST(VideoFramesProcessorTest, InvalidBase64FrameRejected) {
     EXPECT_TRUE(req.inputVideos.empty());
 }
 
+TEST(VideoFrameSelectionTest, AppliesAdminFpsMaxFramesAndClientSampleCount) {
+    constexpr uint64_t videoDurationTicks = 10;
+    constexpr uint32_t videoTicksPerSecond = 1;
+    constexpr float defaultVideoFps = 2.0F;
+    constexpr uint32_t clientSampleCount = 3;
+    constexpr uint32_t defaultMaxVideoFrames = 32;
+
+    auto selectedFrameCount = calculateSelectedVideoFrameCount(videoDurationTicks, videoTicksPerSecond,
+        clientSampleCount, defaultVideoFps, defaultMaxVideoFrames);
+    ASSERT_TRUE(selectedFrameCount.ok());
+    EXPECT_EQ(selectedFrameCount.value(), 3u);
+
+    constexpr float configuredVideoFps = 1.0F;
+    constexpr uint32_t clientSampleCountForConfiguredFps = 20;
+    selectedFrameCount = calculateSelectedVideoFrameCount(videoDurationTicks, videoTicksPerSecond,
+        clientSampleCountForConfiguredFps, configuredVideoFps, defaultMaxVideoFrames);
+    ASSERT_TRUE(selectedFrameCount.ok());
+    EXPECT_EQ(selectedFrameCount.value(), 10u);
+
+    constexpr uint32_t configuredMaxVideoFrames = 3;
+    selectedFrameCount = calculateSelectedVideoFrameCount(videoDurationTicks, videoTicksPerSecond,
+        clientSampleCountForConfiguredFps, defaultVideoFps, configuredMaxVideoFrames);
+    ASSERT_FALSE(selectedFrameCount.ok());
+    EXPECT_EQ(selectedFrameCount.status(), absl::InvalidArgumentError("Requested video FPS exceeds maximum decoded frame count"));
+}
+
+TEST(VideoFrameSelectionTest, KeepsAvailableFramesWhenFpsIsOmitted) {
+    constexpr uint64_t videoDurationTicks = 10;
+    constexpr uint32_t videoTicksPerSecond = 1;
+    constexpr uint32_t clientSampleCount = 3;
+    constexpr uint32_t maximumSelectedFrames = 10;
+
+    const auto selectedFrameCount = calculateSelectedVideoFrameCount(videoDurationTicks, videoTicksPerSecond,
+        clientSampleCount, std::nullopt, maximumSelectedFrames);
+    ASSERT_TRUE(selectedFrameCount.ok());
+    EXPECT_EQ(selectedFrameCount.value(), clientSampleCount);
+
+    const std::vector<uint64_t> sampleTimestamps{0, 100, 200};
+    VideoFrameSelector selector(std::nullopt, maximumSelectedFrames);
+    std::vector<size_t> selectedIndexes;
+    for (size_t sampleIndex = 0; sampleIndex < sampleTimestamps.size(); ++sampleIndex) {
+        if (selector.shouldSelect(sampleTimestamps[sampleIndex])) {
+            selectedIndexes.push_back(sampleIndex);
+        }
+    }
+
+    EXPECT_EQ(selectedIndexes, (std::vector<size_t>{0, 1, 2}));
+}
+
+TEST(VideoFrameAllocationTest, RejectsStackedFramesBeyondBudget) {
+    constexpr size_t framePixels = 3840 * 2160;
+    constexpr size_t selectedFrameCount = 100;
+    constexpr size_t maximumPixels = 124416000;
+
+    EXPECT_FALSE(videoFrameAllocationFitsBudget(framePixels, selectedFrameCount, 0, maximumPixels));
+    EXPECT_TRUE(videoFrameAllocationFitsBudget(framePixels, 1, 0, maximumPixels));
+}
+
+TEST(VideoFrameSelectionTest, SelectsTimestampSpacedFrames) {
+    constexpr long double halfSecondInTimestampUnits = 500.0L;
+    constexpr size_t maximumSelectedFrames = 10;
+    const std::vector<uint64_t> sampleTimestamps{0, 100, 200, 300, 400, 500, 610, 700};
+    const std::vector<size_t> expectedSelectedIndexes{0, 5};
+    const std::vector<uint64_t> expectedSelectedTimestamps{0, 500};
+
+    VideoFrameSelector selector(halfSecondInTimestampUnits, maximumSelectedFrames);
+    std::vector<size_t> selectedIndexes;
+    std::vector<uint64_t> selectedTimestamps;
+    for (size_t sampleIndex = 0; sampleIndex < sampleTimestamps.size(); ++sampleIndex) {
+        if (selector.shouldSelect(sampleTimestamps[sampleIndex])) {
+            selectedIndexes.push_back(sampleIndex);
+            selectedTimestamps.push_back(sampleTimestamps[sampleIndex]);
+        }
+    }
+
+    EXPECT_EQ(selectedIndexes, expectedSelectedIndexes);
+    EXPECT_EQ(selectedTimestamps, expectedSelectedTimestamps);
+}
+
+TEST(VideoFrameSelectionTest, StopsSelectingAtMaximumFrameCount) {
+    constexpr long double oneSecondInTimestampUnits = 1000.0L;
+    constexpr size_t maximumSelectedFrames = 2;
+    const std::vector<uint64_t> sampleTimestamps{0, 1000, 2000, 3000};
+    const std::vector<size_t> expectedSelectedIndexes{0, 1};
+
+    VideoFrameSelector selector(oneSecondInTimestampUnits, maximumSelectedFrames);
+    std::vector<size_t> selectedIndexes;
+    for (size_t sampleIndex = 0; sampleIndex < sampleTimestamps.size(); ++sampleIndex) {
+        if (selector.shouldSelect(sampleTimestamps[sampleIndex])) {
+            selectedIndexes.push_back(sampleIndex);
+        }
+    }
+
+    EXPECT_EQ(selectedIndexes, expectedSelectedIndexes);
+}
+
 TEST(VideoFramesProcessorTest, MismatchingFrameResolutionRejected) {
     ov::genai::ChatHistory history;
     ov::AnyMap msg;
@@ -390,5 +567,86 @@ TEST(VideoFramesProcessorTest, OversizedFrameArrayRejected) {
 
     EXPECT_FALSE(status.ok());
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_EQ(status.message(), "Number of video frames exceeds the allowed maximum of 1024");
     EXPECT_TRUE(req.inputVideos.empty());
+}
+
+TEST(VideoFramesProcessorTest, FileSizeIsRejectedBeforeMp4Parsing) {
+    TemporaryVideoFile source("ovms_too_large.mp4", "0123");
+    ScopedVideoDecodeLimits limits(3, OVMS_DEFAULT_MAX_VIDEO_DECODE_PIXELS);
+
+    size_t totalVideoPixels = 0;
+    constexpr float requestedFps = 1.0F;
+    constexpr uint32_t maxDecodedFrames = 1;
+    const auto result = decodeVideoSource(source.path.string(), std::filesystem::temp_directory_path().string(), std::nullopt,
+        requestedFps, maxDecodedFrames, totalVideoPixels);
+
+    ASSERT_FALSE(result.ok());
+    EXPECT_EQ(result.status(), absl::InvalidArgumentError("Encoded video source exceeds the allowed file size"));
+    EXPECT_EQ(totalVideoPixels, 0u);
+}
+
+TEST(VideoFramesProcessorTest, MalformedMp4IsRejected) {
+    TemporaryVideoFile source("ovms_malformed.mp4", "not an mp4");
+    ScopedVideoDecodeLimits limits(1024, OVMS_DEFAULT_MAX_VIDEO_DECODE_PIXELS);
+
+    size_t totalVideoPixels = 0;
+    constexpr float requestedFps = 1.0F;
+    constexpr uint32_t maxDecodedFrames = 1;
+    const auto result = decodeVideoSource(source.path.string(), std::filesystem::temp_directory_path().string(), std::nullopt,
+        requestedFps, maxDecodedFrames, totalVideoPixels);
+
+    ASSERT_FALSE(result.ok());
+    EXPECT_EQ(result.status(), absl::InvalidArgumentError("Unable to parse MP4 video source"));
+    EXPECT_EQ(totalVideoPixels, 0u);
+}
+
+TEST(VideoFramesProcessorTest, TruncatedAvcCParameterSetIsRejected) {
+    constexpr uint32_t moov = 0x6d6f6f76;
+    constexpr uint32_t trak = 0x7472616b;
+    constexpr uint32_t mdia = 0x6d646961;
+    constexpr uint32_t minf = 0x6d696e66;
+    constexpr uint32_t stbl = 0x7374626c;
+    constexpr uint32_t stsd = 0x73747364;
+    constexpr uint32_t avc1 = 0x61766331;
+    constexpr uint32_t avcC = 0x61766343;
+    const std::string malformedAvcC = makeMp4Box(avcC, std::string({1, 100, 0, 31, static_cast<char>(0xff), static_cast<char>(0xe1), static_cast<char>(0xff), static_cast<char>(0xff)}));
+    std::string avc1Payload(78, '\0');
+    avc1Payload += malformedAvcC;
+    std::string stsdPayload(8, '\0');
+    stsdPayload += makeMp4Box(avc1, avc1Payload);
+    const std::string malformedMp4 = makeMp4Box(moov, makeMp4Box(trak, makeMp4Box(mdia, makeMp4Box(minf, makeMp4Box(stbl, makeMp4Box(stsd, stsdPayload))))));
+    TemporaryVideoFile source("ovms_truncated_avcc.mp4", malformedMp4);
+    ScopedVideoDecodeLimits limits(1024, OVMS_DEFAULT_MAX_VIDEO_DECODE_PIXELS);
+
+    size_t totalVideoPixels = 0;
+    const auto result = decodeVideoSource(source.path.string(), std::filesystem::temp_directory_path().string(), std::nullopt,
+        1.0F, 1, totalVideoPixels);
+
+    ASSERT_FALSE(result.ok());
+    EXPECT_EQ(result.status(), absl::InvalidArgumentError("Unable to parse MP4 video source"));
+    EXPECT_EQ(totalVideoPixels, 0u);
+}
+
+TEST(VideoFramesProcessorTest, DefaultVideoBudgetAccommodatesThirtySecondsAtTwoFpsIn1080p) {
+    constexpr uint64_t frames = 2 * 30;
+    constexpr uint64_t decodedPixels = frames * 1920 * 1080;
+
+    EXPECT_EQ(decodedPixels, 124416000u);
+    EXPECT_LE(decodedPixels, OVMS_DEFAULT_MAX_VIDEO_DECODE_PIXELS);
+}
+
+TEST(VideoFramesProcessorTest, RemoteMp4Decodes) {
+    constexpr char remoteVideoUrl[] = "https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/video/CEO%20Pat%20Gelsinger%20on%20Leading%20Intel.mp4";
+    constexpr float requestedFps = 1.0F;
+    constexpr uint32_t maxDecodedFrames = 100;
+    ScopedVideoDecodeLimits limits(16 * 1024 * 1024, OVMS_DEFAULT_MAX_VIDEO_DECODE_PIXELS);
+    size_t totalVideoPixels = 0;
+
+    const auto result = decodeVideoSource(remoteVideoUrl, std::nullopt,
+        std::vector<std::string>{"storage.openvinotoolkit.org"}, requestedFps, maxDecodedFrames, totalVideoPixels);
+
+    ASSERT_TRUE(result.ok()) << result.status().message();
+    EXPECT_LE(result->get_shape()[0], maxDecodedFrames);
+    EXPECT_GT(totalVideoPixels, 0u);
 }

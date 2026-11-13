@@ -17,6 +17,7 @@
 #include "image_utils.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -75,6 +76,43 @@ static size_t appendChunkCallback(void* downloadedChunk, size_t size, size_t nme
     return static_cast<ImageDownloadContext*>(context)->append(downloadedChunk, size, nmemb);
 }
 
+struct MediaFileDownloadContext {
+    std::FILE* output;
+    size_t sizeLimit;
+    size_t bytesReceived = 0;
+    bool sizeLimitExceeded = false;
+};
+
+struct MediaDownloadOptions {
+    const char* url;
+    size_t (*writeCallback)(void*, size_t, size_t, void*);
+    void* writeData;
+    size_t sizeLimit;
+    int64_t timeoutSeconds;
+};
+
+constexpr int64_t IMAGE_DOWNLOAD_TIMEOUT_SECONDS = 120;
+constexpr int64_t VIDEO_DOWNLOAD_TIMEOUT_SECONDS = 120;
+
+size_t appendMediaFileChunk(void* downloadedChunk, size_t size, size_t nmemb, void* context) noexcept {
+    auto* downloadContext = static_cast<MediaFileDownloadContext*>(context);
+    if (size != 0 && nmemb > std::numeric_limits<size_t>::max() / size) {
+        downloadContext->sizeLimitExceeded = true;
+        return 0;
+    }
+    const size_t realSize = size * nmemb;
+    if (realSize > downloadContext->sizeLimit - downloadContext->bytesReceived) {
+        downloadContext->sizeLimitExceeded = true;
+        return 0;
+    }
+    const size_t written = std::fwrite(downloadedChunk, 1, realSize, downloadContext->output);
+    if (written != realSize) {
+        return 0;
+    }
+    downloadContext->bytesReceived += realSize;
+    return realSize;
+}
+
 const char* getDownloadFailureReason(CURLcode status) {
     switch (status) {
     case CURLE_URL_MALFORMAT:
@@ -112,14 +150,32 @@ const char* getDownloadFailureReason(CURLcode status) {
         status = setopt;      \
     }
 
+bool areMediaRedirectsAllowed() {
+    const char* envAllowRedirects = std::getenv("OVMS_MEDIA_URL_ALLOW_REDIRECTS");
+    return envAllowRedirects != nullptr && std::strcmp(envAllowRedirects, "1") == 0;
+}
+
+CURLcode configureMediaDownload(CURL* curlHandle, const MediaDownloadOptions& options, bool redirectsAllowed) {
+    CURLcode status = curl_easy_setopt(curlHandle, CURLOPT_URL, options.url);
+    CURL_SETOPT(curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, options.writeCallback))
+    CURL_SETOPT(curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, options.writeData))
+    CURL_SETOPT(curl_easy_setopt(curlHandle, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA))
+    if (redirectsAllowed) {
+        CURL_SETOPT(curl_easy_setopt(curlHandle, CURLOPT_FOLLOWLOCATION, 1L))
+    }
+    CURL_SETOPT(curl_easy_setopt(curlHandle, CURLOPT_MAXFILESIZE_LARGE, static_cast<curl_off_t>(options.sizeLimit)))
+    CURL_SETOPT(curl_easy_setopt(curlHandle, CURLOPT_TIMEOUT, static_cast<long>(options.timeoutSeconds)))  // NOLINT(runtime/int): CURLOPT_TIMEOUT requires a long.
+    return status;
+}
+
 }  // namespace
 
-absl::Status validateHttpImageDownloadResponse(int64_t httpCode, bool redirectsAllowed) {
+absl::Status validateHttpDownloadResponse(int64_t httpCode, bool redirectsAllowed, std::string_view mediaType) {
     if (httpCode >= 300 && httpCode < 400 && !redirectsAllowed) {
-        return absl::InvalidArgumentError("Failed to download image from external URL because redirects are not allowed. Set OVMS_MEDIA_URL_ALLOW_REDIRECTS=1 environment variable to allow redirects.");
+        return absl::InvalidArgumentError("Failed to download " + std::string(mediaType) + " from external URL because redirects are not allowed. Set OVMS_MEDIA_URL_ALLOW_REDIRECTS=1 environment variable to allow redirects.");
     }
     if (httpCode < 200 || httpCode >= 300) {
-        return absl::InvalidArgumentError("Failed to download image from external URL: HTTP status " + std::to_string(httpCode) + ".");
+        return absl::InvalidArgumentError("Failed to download " + std::string(mediaType) + " from external URL: HTTP status " + std::to_string(httpCode) + ".");
     }
     return absl::OkStatus();
 }
@@ -141,17 +197,12 @@ absl::Status downloadImage(const char* url, std::string& image, const int64_t& s
     }
     ImageDownloadContext downloadContext{&image, static_cast<size_t>(sizeLimit)};
 
-    auto status = curl_easy_setopt(curl_handle, CURLOPT_URL, url);
-    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, appendChunkCallback))
-    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, &downloadContext))
-    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA))
-    const char* envAllowRedirects = std::getenv("OVMS_MEDIA_URL_ALLOW_REDIRECTS");
-    const bool redirectsAllowed = envAllowRedirects != nullptr && std::strcmp(envAllowRedirects, "1") == 0;
+    const bool redirectsAllowed = areMediaRedirectsAllowed();
     if (redirectsAllowed) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "URL redirects allowed");
-        CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L))
     }
-    CURL_SETOPT(curl_easy_setopt(curl_handle, CURLOPT_MAXFILESIZE_LARGE, static_cast<curl_off_t>(sizeLimit)))
+    const MediaDownloadOptions options{url, appendChunkCallback, &downloadContext, static_cast<size_t>(sizeLimit), IMAGE_DOWNLOAD_TIMEOUT_SECONDS};
+    auto status = configureMediaDownload(curl_handle, options, redirectsAllowed);
 
     if (status != CURLE_OK) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger,
@@ -198,7 +249,7 @@ absl::Status downloadImage(const char* url, std::string& image, const int64_t& s
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger,
                 "External image download failed: reason=http_status http_status={}", httpCode);
         }
-        return validateHttpImageDownloadResponse(static_cast<int64_t>(httpCode), redirectsAllowed);
+        return validateHttpDownloadResponse(static_cast<int64_t>(httpCode), redirectsAllowed, "image");
     }
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Downloading image succeeded, {} bytes retrieved", image.size());
     return absl::OkStatus();
@@ -268,6 +319,79 @@ bool isDomainAllowed(const std::vector<std::string>& allowedDomains, const char*
 
 }  // namespace
 
+absl::Status downloadMediaToFile(const std::string& mediaSource, std::FILE* output,
+    size_t sizeLimit, size_t& downloadedBytes) {
+    if (output == nullptr) {
+        return absl::InternalError("Unable to create temporary video storage");
+    }
+    CURL* curlHandle = curl_easy_init();
+    if (!curlHandle) {
+        return absl::InternalError("Video downloading failed");
+    }
+    auto handleGuard = std::unique_ptr<CURL, decltype(&curl_easy_cleanup)>(curlHandle, curl_easy_cleanup);
+    MediaFileDownloadContext downloadContext{output, sizeLimit};
+    const bool redirectsAllowed = areMediaRedirectsAllowed();
+    const MediaDownloadOptions options{mediaSource.c_str(), appendMediaFileChunk, &downloadContext, sizeLimit, VIDEO_DOWNLOAD_TIMEOUT_SECONDS};
+    CURLcode status = configureMediaDownload(curlHandle, options, redirectsAllowed);
+    if (status != CURLE_OK) {
+        return absl::InternalError("Video downloading failed");
+    }
+
+    status = curl_easy_perform(curlHandle);
+    if (status != CURLE_OK) {
+        if (downloadContext.sizeLimitExceeded || status == CURLE_FILESIZE_EXCEEDED) {
+            return absl::InvalidArgumentError("Encoded video source exceeds the allowed file size");
+        }
+        return absl::InvalidArgumentError("Video downloading failed");
+    }
+    const bool isHttpUrl = mediaSource.rfind("http://", 0) == 0 || mediaSource.rfind("https://", 0) == 0;
+    if (isHttpUrl) {
+        long httpCode = 0;  // NOLINT(runtime/int): CURLINFO_RESPONSE_CODE requires long*.
+        status = curl_easy_getinfo(curlHandle, CURLINFO_RESPONSE_CODE, &httpCode);
+        if (status != CURLE_OK) {
+            return absl::InternalError("Failed to get video download response status.");
+        }
+        const auto responseStatus = validateHttpDownloadResponse(static_cast<int64_t>(httpCode), redirectsAllowed, "video");
+        if (!responseStatus.ok()) {
+            return responseStatus;
+        }
+    }
+    if (std::fflush(output) != 0) {
+        return absl::InternalError("Unable to write downloaded video source");
+    }
+    downloadedBytes = downloadContext.bytesReceived;
+    return absl::OkStatus();
+}
+
+absl::Status validateMediaSource(const std::string& mediaSource,
+    const std::optional<std::string>& allowedLocalMediaPath,
+    const std::optional<std::vector<std::string>>& allowedMediaDomains) {
+    const bool isRemoteUrl = mediaSource.rfind("http://", 0) == 0 || mediaSource.rfind("https://", 0) == 0 ||
+                             mediaSource.rfind("ftp://", 0) == 0 || mediaSource.rfind("sftp://", 0) == 0;
+    if (isRemoteUrl) {
+        if (!allowedMediaDomains.has_value() || !isDomainAllowed(allowedMediaDomains.value(), mediaSource.c_str())) {
+            return absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains");
+        }
+        return absl::OkStatus();
+    }
+
+    if (!allowedLocalMediaPath.has_value()) {
+        return absl::InvalidArgumentError("Loading media from local filesystem is disabled.");
+    }
+    if (FileSystem::isPathEscaped(mediaSource)) {
+        std::stringstream ss;
+        ss << "Path " << mediaSource.c_str() << " escape with .. is forbidden.";
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
+        return absl::InvalidArgumentError(ss.str());
+    }
+    const std::filesystem::path resolvedAllowedPath = FileSystem::normalizeConfiguredPath(allowedLocalMediaPath.value());
+    const std::string resolvedMediaPathStr = FileSystem::normalizeConfiguredPath(mediaSource);
+    if (!isPathInsideDirectory(resolvedMediaPathStr, resolvedAllowedPath)) {
+        return absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path");
+    }
+    return absl::OkStatus();
+}
+
 absl::StatusOr<ov::Tensor> fetchAndDecodeImage(const std::string& imageSource,
     const std::optional<std::string>& allowedLocalMediaPath,
     const std::optional<std::vector<std::string>>& allowedMediaDomains,
@@ -284,30 +408,22 @@ absl::StatusOr<ov::Tensor> fetchAndDecodeImage(const std::string& imageSource,
     } else if (imageSource.rfind("http://", 0) == 0 || imageSource.rfind("https://", 0) == 0 ||
                imageSource.rfind("ftp://", 0) == 0 || imageSource.rfind("sftp://", 0) == 0) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image using curl");
-        if (!allowedMediaDomains.has_value() || !isDomainAllowed(allowedMediaDomains.value(), imageSource.c_str())) {
-            return absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains");
+        auto validationStatus = validateMediaSource(imageSource, allowedLocalMediaPath, allowedMediaDomains);
+        if (!validationStatus.ok()) {
+            return validationStatus;
         }
         auto status = downloadImage(imageSource.c_str(), decoded, MAX_IMAGE_SIZE_BYTES);
         if (status != absl::OkStatus()) {
             return status;
         }
     } else {
-        if (!allowedLocalMediaPath.has_value()) {
-            return absl::InvalidArgumentError("Loading images from local filesystem is disabled.");
-        }
-        if (FileSystem::isPathEscaped(imageSource)) {
-            std::stringstream ss;
-            ss << "Path " << imageSource.c_str() << " escape with .. is forbidden.";
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, ss.str());
-            return absl::InvalidArgumentError(ss.str());
+        auto validationStatus = validateMediaSource(imageSource, allowedLocalMediaPath, allowedMediaDomains);
+        if (!validationStatus.ok()) {
+            return validationStatus;
         }
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image from local filesystem");
-        const std::filesystem::path resolvedAllowedPath = FileSystem::normalizeConfiguredPath(allowedLocalMediaPath.value());
         const std::string resolvedImagePathStr = FileSystem::normalizeConfiguredPath(imageSource);
         const std::filesystem::path resolvedImagePath = resolvedImagePathStr;
-        if (!isPathInsideDirectory(resolvedImagePath, resolvedAllowedPath)) {
-            return absl::InvalidArgumentError("Given filepath is not subpath of allowed_local_media_path");
-        }
         auto status = readLocalImage(resolvedImagePath, decoded, MAX_IMAGE_SIZE_BYTES);
         if (status != absl::OkStatus()) {
             return status;

@@ -35,6 +35,14 @@ size_t getMaxImageDecodePixels() {
     return Config::instance().maxImageDecodePixels();
 }
 
+size_t getMaxEncodedVideoFileSizeBytes() {
+    return Config::instance().maxEncodedVideoFileSizeBytes();
+}
+
+size_t getMaxVideoDecodePixels() {
+    return Config::instance().maxVideoDecodePixels();
+}
+
 bool allowUnestimatableImageFormats() {
     return Config::instance().allowUnestimatableImageFormats();
 }

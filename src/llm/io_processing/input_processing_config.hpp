@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <cstdint>
 #include <optional>
 
 namespace ovms {
@@ -25,6 +26,16 @@ struct AudioInputConfig {
 
 // Deployment-level configuration for InputProcessor, populated once at servable init.
 struct InputProcessingConfig {
+    // True for VLM servables. Enables ImageDecodingProcessor; TokenizationProcessor
+    // still runs (to populate inputIds for usage statistics and max-length checks)
+    // but inputIds is not passed to the VLM pipeline for inference.
+    bool isVLM = false;
+    // True for Omni servables. Enables AudioDecodingProcessor in addition to
+    // ImageDecodingProcessor (implies isVLM-like behavior for images).
+    bool isOmni = false;
+    // Encoded-video sampling settings for VLM input processing.
+    std::optional<float> videoFps;
+    uint32_t videoMaxFrames = 100;
     // Enables image and video decoding.
     // TokenizationProcessor still runs (to populate inputIds for usage statistics
     // and max-length checks) but inputIds is not passed to the VLM pipeline.
