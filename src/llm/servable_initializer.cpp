@@ -154,11 +154,11 @@ static void configureInputProcessingCapabilities(const std::shared_ptr<GenAiServ
     const std::filesystem::path modelsPath(properties->modelsPath);
     if (!properties->inputProcessorContext.config.audioInputConfig.has_value() &&
         std::filesystem::exists(modelsPath / "openvino_audio_embeddings_model.xml")) {
-        properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig{true};
+        properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig::withResampling();
     }
     if (!properties->inputProcessorContext.config.audioInputConfig.has_value() &&
         std::filesystem::exists(modelsPath / "openvino_audio_encoder_model.xml")) {
-        properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig{true, true};
+        properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig::withResamplingAndAudioContentPart();
     }
 }
 
@@ -504,15 +504,15 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
     const bool hasTextEmbeddingsModel = std::filesystem::exists(parsedModelsPathFs / "openvino_text_embeddings_model.xml");
     const bool hasVisionEmbeddingsModel = std::filesystem::exists(parsedModelsPathFs / "openvino_vision_embeddings_model.bin");
     const bool hasAudioEmbeddingsModel = std::filesystem::exists(parsedModelsPathFs / "openvino_audio_embeddings_model.xml");
-    const bool hasQwenAsrAudioEncoder = std::filesystem::exists(parsedModelsPathFs / "openvino_audio_encoder_model.xml");
-    const bool hasVlmModels = hasTextEmbeddingsModel &&
-                              (hasVisionEmbeddingsModel || hasAudioEmbeddingsModel || hasQwenAsrAudioEncoder);
+    const bool hasAudioEncoderModel = std::filesystem::exists(parsedModelsPathFs / "openvino_audio_encoder_model.xml");
+    const bool isMultimodal = hasTextEmbeddingsModel &&
+                              (hasVisionEmbeddingsModel || hasAudioEmbeddingsModel || hasAudioEncoderModel);
 
-    // Text embeddings plus vision embeddings, audio embeddings, or the Qwen3-ASR audio
-    // encoder indicates a VLM pipeline.
+    // Text embeddings plus vision embeddings, audio embeddings, or an audio encoder
+    // indicates a multimodal pipeline.
     // But if it has talker model, it means it is Omni pipeline which is built out of VLM Pipeline and Talker
-    bool isOmni = hasTalkerModel && hasVlmModels;
-    bool isVLM = !hasTalkerModel && hasVlmModels;
+    bool isOmni = hasTalkerModel && isMultimodal;
+    bool isVLM = !hasTalkerModel && isMultimodal;
 
     // If pipeline type is not explicitly defined by the user, we need to determine it based on the content of the models directory and configuration
     if (nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::AUTO) {
@@ -570,10 +570,8 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
     mediapipe::LLMCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
     Status status;
+    PipelineType pipelineType{PipelineType::LM_CB};
     if (nodeOptions.has_models_path()) {
-        // Need to initialize pipelineType with some value to avoid compiler warning;
-        // determinePipelineType will set it properly.
-        PipelineType pipelineType{PipelineType::LM_CB};
         status = determinePipelineType(pipelineType, nodeOptions, graphPath);
         if (status != StatusCode::OK) {
             return status;
@@ -648,8 +646,17 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
     }
     servable->determineDecodingMethod();
     auto properties = servable->getProperties();
-    properties->supportsTranscriptions = nodeOptions.supports_transcriptions();
     configureInputProcessingCapabilities(properties);
+    if (nodeOptions.supports_transcriptions()) {
+        const bool hasAudioEncoderModel = std::filesystem::exists(
+            std::filesystem::path(properties->modelsPath) / "openvino_audio_encoder_model.xml");
+        if (pipelineType != PipelineType::VLM_CB || !hasAudioEncoderModel) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger,
+                "Audio transcriptions require a continuous-batching VLM with an audio encoder model.");
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
+        properties->supportsTranscriptions = true;
+    }
     return StatusCode::OK;
 }
 }  // namespace ovms

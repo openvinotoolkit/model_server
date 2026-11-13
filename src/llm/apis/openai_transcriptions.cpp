@@ -67,11 +67,11 @@ std::string OpenAITranscriptionsHandler::serializeUnaryResponse(const std::vecto
 }
 
 std::string OpenAITranscriptionsHandler::serializeUnaryResponse(const std::vector<std::vector<Delta>>& allDeltas,
-    const std::vector<ov::genai::GenerationFinishReason>&,
+    const std::vector<ov::genai::GenerationFinishReason>& finishReasons,
     const std::vector<UnaryChoiceLogprobs>&) {
     static const std::vector<Delta> emptyDeltas;
     return serializeUnaryResponse(allDeltas.empty() ? emptyDeltas : allDeltas.front(),
-        ov::genai::GenerationFinishReason::STOP);
+        finishReasons.empty() ? ov::genai::GenerationFinishReason::STOP : finishReasons.front());
 }
 
 std::string OpenAITranscriptionsHandler::serializeStreamingChunk(Delta delta,

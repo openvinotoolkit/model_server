@@ -22,6 +22,14 @@ namespace ovms {
 struct AudioInputConfig {
     bool resamplingRequired = false;
     bool useAudioContentPart = false;
+
+    static AudioInputConfig withResampling() {
+        return AudioInputConfig{true, false};
+    }
+
+    static AudioInputConfig withResamplingAndAudioContentPart() {
+        return AudioInputConfig{true, true};
+    }
 };
 
 // Deployment-level configuration for InputProcessor, populated once at servable init.
