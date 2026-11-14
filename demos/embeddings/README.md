@@ -443,8 +443,7 @@ A simple method of testing the response accuracy is via comparing the response f
 
 The script [compare_results.py](https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/compare_results.py) can assist with such experiment.
 ```bash
-popd
-cd model_server/demos/embeddings
+curl -fL https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/compare_results.py -o compare_results.py
 python compare_results.py --model_name bge-large-en-v1.5 --hf_model_name BAAI/bge-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings --pooling CLS --input "hello world" --input "goodbye world"
 
 input ['hello world', 'goodbye world']

@@ -4,7 +4,7 @@
 
 ## OVMS benchmark Script
 
-The script benchmarks embeddings, reranking, audio, and VLM chat endpoints.
+The script benchmarks embeddings, reranking, audio, VLM chat, and image-generation endpoints.
 VLM mode uses streamed `/v1/chat/completions` requests and asks for the final
 usage event with `stream_options.include_usage=true`.
 
@@ -31,6 +31,7 @@ model aliases; these can be omitted when `/v1/models` returns exactly one model.
 | VLM | `OpenVINO/LFM3-VL-2B-int4-ov` | `ovms-vlm` | `/v1/chat/completions` |
 | Embeddings | `OpenVINO/Qwen3-Embedding-0.6B-int8-ov` | `ovms-embeddings` | `/v1/embeddings` |
 | Reranking | `OpenVINO/bge-reranker-base-int8-ov` | `ovms_rerank` | `/v1/rerank` |
+| Image generation | `OpenVINO/stable-diffusion-v1-5-int8-ov` | `image-gen` | `/v1/images/generations` |
 | Speech generation | `OpenVINO/Kokoro-82M-int8-ov` | `text2speech` | `/v1/audio/speech` |
 | Speech transcription | `OpenVINO/whisper-large-v3-turbo-fp16-ov` | `speech2text` | `/v1/audio/transcriptions` |
 
@@ -97,6 +98,10 @@ and previous messages, then append the next user text and assistant response.
 identifier but excluding image and chat-template tokens. To use text from a UTF-8
 file instead of synthetic text:
 
+```bash
+printf '%s\n' 'Describe the image in one sentence.' > prompt.txt
+```
+
 ```console
 python benchmark.py --backend ovms-vlm --api_url http://localhost:8000/v1/chat/completions --text_input_file prompt.txt --input_length 128 --output_lenght 64 --max_concurrency 2 --limit 10 --image image.jpeg --turns 3 --turn_lenght 32
 ```
@@ -121,6 +126,39 @@ limits active conversations. VLM batch size is automatically 1. Failed turns sto
 their conversation and produce a nonzero exit code.
 
 Stop the server before starting the next use case:
+
+```bash
+docker stop ovms
+```
+
+## Image Generation
+
+The benchmark sends one text-to-image request at a time. For model preparation
+details and GPU deployment options, see the
+[image-generation demo](../../image_generation/README.md).
+
+Start a server with the preconfigured Stable Diffusion 1.5 int8 model:
+
+```bash
+docker run -d --rm --name ovms \
+	--user "$(id -u):$(id -g)" -p 8000:8000 \
+	-v "${HOME}/models:/models:rw" \
+	openvino/model_server:weekly --rest_port 8000 \
+	--model_repository_path /models --task image_generation \
+	--source_model OpenVINO/stable-diffusion-v1-5-int8-ov
+```
+
+Wait for the model to appear, then benchmark a small number of 256x256 images:
+
+```bash
+curl -f http://localhost:8000/v1/models
+python benchmark.py --backend image-gen --model OpenVINO/stable-diffusion-v1-5-int8-ov --steps 4 --resolution 256x256 --limit 1 --max_concurrency 1
+```
+
+`--steps` controls denoising steps and `--resolution` uses `WIDTHxHEIGHT`.
+Image generation uses batch size 1. The script validates that each response
+contains generated image data and reports success rate, request latency, and
+images per minute. Stop the server when finished:
 
 ```bash
 docker stop ovms
@@ -298,6 +336,8 @@ Stop the container when finished:
 ```bash
 docker stop ovms
 ```
+
+
 
 ## Timing and Usage
 
