@@ -138,7 +138,7 @@ These shared-machine measurements are not reference performance numbers.
 
 gRPC:
 
-```console
+```text
 python benchmark.py --model resnet --endpoint grpc --host localhost --port 9000 --concurrency 1 --requests 5000
 ```
 
@@ -161,7 +161,7 @@ Max concurrency: 1 (requested 1)
 
 REST:
 
-```console
+```text
 python benchmark.py --model resnet --endpoint rest --host localhost --port 8000 --concurrency 1 --requests 5000
 ```
 
@@ -225,7 +225,7 @@ batch of 20 images; each request still contains one image.
 
 gRPC:
 
-```console
+```text
 python benchmark.py --model resnet --endpoint grpc --host localhost --port 9000 --concurrency 20 --requests 5000
 ```
 
@@ -248,7 +248,7 @@ Max concurrency: 20 (requested 20)
 
 REST:
 
-```console
+```text
 python benchmark.py --model resnet --endpoint rest --host localhost --port 8000 --concurrency 20 --requests 5000
 ```
 
@@ -295,7 +295,7 @@ When metadata contains dynamic dimensions such as `-1`, supply a concrete shape.
 The following illustrates a model named `dynamic_model` with one dynamic input
 named `image`; deploy a corresponding model before using it:
 
-```console
+```text
 python benchmark.py --model dynamic_model --endpoint grpc --shape image:1,224,224,3 --requests 5000
 ```
 
@@ -306,7 +306,7 @@ omitted: `--shape 1,224,224,3`.
 For models with multiple inputs, repeat the named options. For example, a model
 named `text_model` with two dynamic INT64 inputs could be benchmarked with:
 
-```console
+```text
 python benchmark.py --model text_model --endpoint rest --shape input_ids:1,128 --shape attention_mask:1,128 --input-file input_ids=input_ids.npy --input-file attention_mask=attention_mask.npy --concurrency 20
 ```
 
@@ -334,7 +334,7 @@ curl -fL https://raw.githubusercontent.com/openvinotoolkit/model_server/main/dem
 
 Benchmark it over gRPC:
 
-```console
+```text
 python benchmark.py --model resnet --endpoint grpc --input-file image=image.jpeg --concurrency 1 --requests 5000
 ```
 
@@ -359,7 +359,7 @@ Max concurrency: 1 (requested 1)
 
 Or over REST:
 
-```console
+```text
 python benchmark.py --model resnet --endpoint rest --input-file image=image.jpeg --concurrency 20 --requests 5000
 ```
 
@@ -438,7 +438,7 @@ guarantees.
 
 A separate multiprocessing gRPC run on the same tuned server produced:
 
-```console
+```text
 python benchmark.py --model resnet --endpoint grpc --port 19020 --concurrency 20 --requests 5000
 ```
 

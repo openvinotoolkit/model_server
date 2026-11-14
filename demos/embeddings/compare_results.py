@@ -22,8 +22,8 @@ import numpy as np
 import argparse
 
 parser = argparse.ArgumentParser(description='Compare embeddings responses from HF transformers, OVSentenceTransformer and OVMS')
-parser.add_argument('--service_url', required=False, default='http://localhost:8000/v3/embeddings',
-                    help='Specify url to embeddings endpoint. default:http://localhost:8000/v3/embeddings', dest='service_url')
+parser.add_argument('--service_url', required=False, default='http://localhost:8000/v1',
+                    help='Specify API base URL. default:http://localhost:8000/v1', dest='service_url')
 parser.add_argument('--model_name', default='Alibaba-NLP/gte-large-en-v1.5', help='Model name to query. default: Alibaba-NLP/gte-large-en-v1.5',
                     dest='model_name')
 parser.add_argument('--hf_model_name', default='', help='HuggingFaces model name. default: equal to --model_name',

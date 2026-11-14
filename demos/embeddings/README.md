@@ -366,7 +366,7 @@ curl http://localhost:8000/v3/models/bge-large-en-v1.5
 
 :::{dropdown} **Request embeddings with cURL**
 ```bash
-curl http://localhost:8000/v3/embeddings -H "Content-Type: application/json" -d "{ \"model\": \"bge-large-en-v1.5\", \"input\": \"hello world\"}"
+curl http://localhost:8000/v1/embeddings -H "Content-Type: application/json" -d "{ \"model\": \"bge-large-en-v1.5\", \"input\": \"hello world\"}"
 ```
 ```json
 {
@@ -397,7 +397,7 @@ curl http://localhost:8000/v3/embeddings -H "Content-Type: application/json" -d 
 :::{dropdown} **Request embeddings with OpenAI Python package**
 
 ```bash
-pip3 install openai "numpy<2"
+pip3 install openai numpy
 ```
 ```bash
 echo '
@@ -405,7 +405,7 @@ from openai import OpenAI
 import numpy as np
 
 client = OpenAI(
-  base_url="http://localhost:8000/v3",
+  base_url="http://localhost:8000/v1",
   api_key="unused"
 )
 model = "bge-large-en-v1.5"
@@ -444,7 +444,7 @@ A simple method of testing the response accuracy is via comparing the response f
 The script [compare_results.py](https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/compare_results.py) can assist with such experiment.
 ```bash
 curl -fL https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/compare_results.py -o compare_results.py
-python compare_results.py --model_name bge-large-en-v1.5 --hf_model_name BAAI/bge-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings --pooling CLS --input "hello world" --input "goodbye world"
+python compare_results.py --model_name bge-large-en-v1.5 --hf_model_name BAAI/bge-large-en-v1.5 --service_url http://localhost:8000/v1 --pooling CLS --input "hello world" --input "goodbye world"
 
 input ['hello world', 'goodbye world']
 HF Duration: 93.921 ms BertModel
@@ -476,7 +476,7 @@ It is easy also to run model evaluation using [MTEB](https://github.com/embeddin
 ```console
 pip install mteb tiktoken einops openai --extra-index-url "https://download.pytorch.org/whl/cpu"
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/ovms_mteb.py -o ovms_mteb.py
-python ovms_mteb.py --model_name bge-large-en-v1.5 --service_url http://localhost:8000/v3
+python ovms_mteb.py --model_name bge-large-en-v1.5 --service_url http://localhost:8000/v1
 ```
 Results will be stored in `results` folder:
 ```json
@@ -565,7 +565,7 @@ The `tokenize` endpoint provides a simple API for tokenizing input text using th
 
 Example usage:
 ```console
-curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"bge-large-en-v1.5\", \"text\": \"hello world\" }"
+curl http://localhost:8000/v1/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"bge-large-en-v1.5\", \"text\": \"hello world\" }"
 ```
 Response:
 ```json
@@ -582,7 +582,7 @@ It's possible to use additional parameters:
 
  Example usage:
 ```console
-curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"bge-large-en-v1.5\", \"text\": \"hello world\", \"max_length\": 10, \"pad_to_max_length\": true, \"padding_side\": \"left\", \"add_special_tokens\": true }"
+curl http://localhost:8000/v1/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"bge-large-en-v1.5\", \"text\": \"hello world\", \"max_length\": 10, \"pad_to_max_length\": true, \"padding_side\": \"left\", \"add_special_tokens\": true }"
 ```
 
 Response:

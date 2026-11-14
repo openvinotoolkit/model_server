@@ -16,7 +16,7 @@ Check supported [Speech Recognition Models](https://openvinotoolkit.github.io/op
 
 Install the client dependency before running the Python examples:
 
-```bash
+```console
 pip install openai
 ```
 
@@ -417,7 +417,7 @@ ovms --rest_port 8000 --source_model OpenVINO/Kokoro-82M-int8-ov --model_reposit
 For non-English text, set the `language` field explicitly so OpenVINO GenAI selects the correct phonemization path. Voice selection does not infer the language.
 
 ```console
-curl -fS http://localhost:8000/v3/audio/speech -H "Content-Type: application/json" -d "{\"model\": \"Kokoro-82M-int8-ov\", \"voice\": \"ef_dora\", \"language\": \"es\", \"input\": \"Madrid es la capital de España\"}" -o speech_spanish.wav
+curl -fS http://localhost:8000/v3/audio/speech -H "Content-Type: application/json" -d "{\"model\": \"Kokoro-82M-int8-ov\", \"voice\": \"ef_dora\", \"language\": \"es\", \"input\": \"Madrid es la capital de Espa\\u00f1a\"}" -o speech_spanish.wav
 ```
 
 ### Deployment
