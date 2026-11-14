@@ -64,12 +64,13 @@ class VisualLanguageModelLegacyServable : public LegacyServableBase {
     void logPerfMetrics(ov::genai::VLMPerfMetrics& perfMetrics);
 
 protected:
+    void initializeTextStreamer(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     void notifyExecutorThread();
 
 public:
     VisualLanguageModelLegacyServable() {
         properties = std::make_shared<VisualLanguageModelLegacyServableProperties>();
-        properties->inputProcessorContext.config.isVLM = true;
+        properties->inputProcessorContext.config.supportsVisualInputs = true;
     }
 
     // Interface methods

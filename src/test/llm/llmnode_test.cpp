@@ -20,10 +20,13 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <regex>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <thread>
+#include <vector>
 
 #include <fmt/ranges.h>
 
@@ -43,6 +46,7 @@
 #include "../../llm/apis/openai_completions.hpp"
 #include "../../llm/apis/openai_json_response.hpp"
 #include "../../llm/io_processing/base_generation_config_builder.hpp"
+#include "../../llm/io_processing/generation_config_builder.hpp"
 #include "../../llm/io_processing/output_parser.hpp"
 #include "../../llm/language_model/continuous_batching/llm_executor.hpp"
 #include "../../llm/language_model/continuous_batching/servable.hpp"
@@ -55,6 +59,7 @@
 #include "../../ov_utils.hpp"
 #include "../../server.hpp"
 #include "src/filesystem/filesystem.hpp"
+#include "src/graph_metadata.hpp"
 #include "src/graph_export/graph_export.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
@@ -1413,6 +1418,43 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsNonVlmWithVideoRejecte
         ovms::StatusCode::PARTIAL_END);
 }
 
+// Non-VLM (text-only) servables reject requests that contain input_audio content at
+// the servable level, before any processor runs.
+// Verify that the error propagates all the way to an HTTP 400 response.
+TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsNonVlmWithAudioRejected) {
+    auto params = GetParam();
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();  // audio rejection check runs only for non-VLM servables
+    }
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": true,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": [{"type": "text", "text": "What is this?"}, {"type": "input_audio", "input_audio": {"data": "UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA="}}]
+            }
+            ]
+        }
+    )";
+
+    EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
+        .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: This servable does not support audio input\"}");
+            rapidjson::Document d;
+            rapidjson::ParseResult ok = d.Parse(response.c_str());
+            ASSERT_EQ(ok.Code(), 0);
+            ASSERT_EQ(code, ovms::HTTPStatusCode::BAD_REQUEST);
+        });
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
+}
+
 TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonNMultipleStopStrings) {
     auto params = GetParam();
     std::string requestBody = R"(
@@ -2056,10 +2098,12 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStoppedByMaxModelLength
         GTEST_SKIP();
     }
     std::string prompt;
-    // 131030 "hello " words yield exactly 131071 prompt tokens with the current
-    // chat template - one under the dummy model's 131072 (128k) max length,
-    // leaving exactly 1 token of generation budget.
-    for (int i = 0; i < 131030; i++) {
+    const uint32_t overheadTokens = 41;
+    const uint32_t maxModelLength = 131072;
+    // 131066 "hello " words + the dummy chat template's ~41 tokens of literal overhead
+    // SYSTEM_PROMPT + ("User"/":"/"\n"/"Assistant"/":") yields exactly 131071 prompt tokens - one under the
+    // dummy model's 131072 (128k) max length - leaving exactly 1 token of generation budget.
+    for (int i = 0; i < (int)(maxModelLength - overheadTokens - 1); i++) {
         prompt += "hello ";
     }
     std::string requestBody = R"(
@@ -6036,11 +6080,8 @@ TEST_F(IsolatedServableTests, PromtSizeBetweenDefaultAndNonDefaultMaxPromptLenNP
 class LLMStartWithTaskParameter : public ::testing::Test {
 protected:
     static std::unique_ptr<std::thread> t;
-    // Not migrated to the dummy LLM model: --task text_generation auto-detection
-    // (TextGenerationDetector::scan in src/default_task_detector.cpp) only
-    // recognizes architectures ending in ForCausalLM/ForConditionalGeneration;
-    // the dummy model reports GPT2LMHeadModel, which isn't matched.
-    std::string srcModelDir = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct");
+
+    std::string srcModelDir = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov");
 #ifdef __linux__
     std::string tempDir;
     std::string modelDir;
@@ -6050,6 +6091,7 @@ protected:
     std::string graphPath = modelDir + "/graph.pbtxt";
     std::string graphPathRenamed = modelDir + "/graph.pbtxt.bak";
 #endif
+    bool graphFileCreatedByTest = false;
 
     void SetUp() override {
         ovms::Config::instance().setInMemoryGraphPbtxt(std::nullopt);
@@ -6060,6 +6102,11 @@ protected:
         modelDir = tempDir;
         graphPath = modelDir + "/graph.pbtxt";
 #endif
+        if (!std::filesystem::exists(graphPath)) {
+            std::ofstream graphFile(graphPath);
+            ASSERT_TRUE(graphFile.is_open()) << "Failed to create " << graphPath;
+            graphFileCreatedByTest = true;
+        }
     }
     void TearDown() override {
         ovms::Server& server = ovms::Server::instance();
@@ -6077,6 +6124,9 @@ protected:
                 std::filesystem::remove(graphPath);
             }
             std::filesystem::rename(graphPathRenamed, graphPath);
+        }
+        if (graphFileCreatedByTest && std::filesystem::exists(graphPath)) {
+            std::filesystem::remove(graphPath);
         }
 #endif
     }
@@ -6099,7 +6149,7 @@ TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskWithoutGraphFile) {
     ovms::Server& server = ovms::Server::instance();
     ::SetUpServer(t, server, port,
         modelDir.c_str(),
-        "SmolLM2",
+        "dummy",
         60,
         "text_generation");
     ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED);
@@ -6114,7 +6164,7 @@ TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskDoesNotModifyExisting
     ovms::Server& server = ovms::Server::instance();
     ::SetUpServer(t, server, port,
         modelDir.c_str(),
-        "SmolLM2",
+        "dummy",
         60,
         "text_generation");
     ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED);
@@ -6130,7 +6180,7 @@ TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskAndValidPipelineType)
     randomizeAndEnsureFree(port);
     std::string fullModelPath = getGenericFullPathForSrcTest(modelDir.c_str());
     char* argv[] = {(char*)"ovms",
-        (char*)"--model_name", (char*)"SmolLM2",
+        (char*)"--model_name", (char*)"dummy",
         (char*)"--model_path", (char*)fullModelPath.c_str(),
         (char*)"--port", (char*)port.c_str(),
         (char*)"--task", (char*)"text_generation",
@@ -6150,7 +6200,7 @@ TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskAndInvalidPipelineTyp
     randomizeAndEnsureFree(port);
     std::string fullModelPath = getGenericFullPathForSrcTest(modelDir.c_str());
     char* argv[] = {(char*)"ovms",
-        (char*)"--model_name", (char*)"SmolLM2",
+        (char*)"--model_name", (char*)"dummy",
         (char*)"--model_path", (char*)fullModelPath.c_str(),
         (char*)"--port", (char*)port.c_str(),
         (char*)"--task", (char*)"text_generation",
@@ -6165,6 +6215,177 @@ TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskAndInvalidPipelineTyp
     ASSERT_NE(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED)
         << "Server should not start with invalid pipeline_type";
 }
+
+class ToolGuidanceConfigTest : public ::testing::TestWithParam<std::string> {
+protected:
+    void configure(GenerationConfigBuilder& builder, const OpenAIRequest& request) {
+        builder.parseConfigFromRequest(request);
+        builder.configureStructuredGeneration(request, {}, "");
+    }
+
+    OpenAIRequest toolRequest(const std::string& choice) {
+        OpenAIRequest request;
+        request.toolChoice = choice;
+        request.toolNameSchemaMap.emplace("weather", ToolSchemaWrapper{nullptr, R"({"type":"object","properties":{"city":{"type":"string"}},"required":["city"]})"});
+        return request;
+    }
+
+    std::shared_ptr<ov::genai::StructuredOutputConfig::TriggeredTags> tags(const ov::genai::GenerationConfig& config) {
+        const auto& structuralTag = std::get<ov::genai::StructuredOutputConfig::StructuralTag>(*config.structured_output_config->structural_tags_config);
+        return std::get<std::shared_ptr<ov::genai::StructuredOutputConfig::TriggeredTags>>(structuralTag);
+    }
+};
+
+TEST_P(ToolGuidanceConfigTest, NamedChoiceActivatesExactlyOneCallWithoutServerFlag) {
+    GenerationConfigBuilder builder{{}, GetParam(), false, DecodingMethod::STANDARD};
+    configure(builder, toolRequest("weather"));
+    const auto& config = builder.getConfig();
+    ASSERT_TRUE(config.structured_output_config.has_value());
+    const auto grammar = tags(config);
+    EXPECT_TRUE(grammar->at_least_one);
+    EXPECT_TRUE(grammar->stop_after_first);
+    ASSERT_EQ(grammar->tags.size(), 1);
+    if (GetParam() == "phi4") {
+        rapidjson::Document schema;
+        schema.Parse(std::get<ov::genai::StructuredOutputConfig::JSONSchema>(grammar->tags[0].content).value.c_str());
+        ASSERT_FALSE(schema.HasParseError());
+        ASSERT_TRUE(schema.HasMember("minItems"));
+        ASSERT_TRUE(schema.HasMember("maxItems"));
+        EXPECT_EQ(schema["minItems"].GetInt(), 1);
+        EXPECT_EQ(schema["maxItems"].GetInt(), 1);
+    }
+}
+
+TEST_P(ToolGuidanceConfigTest, RequiredChoiceActivatesWithoutServerFlagAndAllowsMultipleCalls) {
+    GenerationConfigBuilder builder{{}, GetParam(), false, DecodingMethod::STANDARD};
+    configure(builder, toolRequest("required"));
+    ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
+    const auto grammar = tags(builder.getConfig());
+    EXPECT_TRUE(grammar->at_least_one);
+    EXPECT_FALSE(grammar->stop_after_first);
+    if (GetParam() == "phi4") {
+        rapidjson::Document schema;
+        schema.Parse(std::get<ov::genai::StructuredOutputConfig::JSONSchema>(grammar->tags[0].content).value.c_str());
+        ASSERT_FALSE(schema.HasParseError());
+        ASSERT_TRUE(schema.HasMember("minItems"));
+        EXPECT_EQ(schema["minItems"].GetInt(), 1);
+        EXPECT_FALSE(schema.HasMember("maxItems"));
+    }
+}
+
+TEST_P(ToolGuidanceConfigTest, AutoChoiceStillDependsOnServerFlag) {
+    for (bool enabled : {false, true}) {
+        GenerationConfigBuilder builder{{}, GetParam(), enabled, DecodingMethod::STANDARD};
+        configure(builder, toolRequest("auto"));
+        ASSERT_EQ(builder.getConfig().structured_output_config.has_value(), enabled);
+        if (enabled) {
+            const auto grammar = tags(builder.getConfig());
+            EXPECT_FALSE(grammar->at_least_one);
+            EXPECT_FALSE(grammar->stop_after_first);
+            if (GetParam() == "phi4") {
+                rapidjson::Document schema;
+                schema.Parse(std::get<ov::genai::StructuredOutputConfig::JSONSchema>(grammar->tags[0].content).value.c_str());
+                ASSERT_FALSE(schema.HasParseError());
+                EXPECT_FALSE(schema.HasMember("minItems"));
+                EXPECT_FALSE(schema.HasMember("maxItems"));
+            }
+        }
+    }
+}
+
+TEST_P(ToolGuidanceConfigTest, NoToolsLeavesResponseFormatUnchanged) {
+    GenerationConfigBuilder builder{{}, GetParam(), true, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.toolChoice = "none";
+    request.responseFormat = R"({"type":"structural_tag","format":{"type":"const_string","value":"answer"}})";
+    configure(builder, request);
+    const auto& config = builder.getConfig();
+    ASSERT_TRUE(config.structured_output_config.has_value());
+    const auto& structuralTag = std::get<ov::genai::StructuredOutputConfig::StructuralTag>(*config.structured_output_config->structural_tags_config);
+    EXPECT_EQ(std::get<std::string>(structuralTag), *request.responseFormat);
+}
+
+TEST_P(ToolGuidanceConfigTest, ToolGrammarStillOverridesResponseFormat) {
+    GenerationConfigBuilder builder{{}, GetParam(), true, DecodingMethod::STANDARD};
+    auto request = toolRequest("auto");
+    request.responseFormat = R"({"type":"structural_tag","format":{"type":"const_string","value":"answer"}})";
+    configure(builder, request);
+    ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
+    EXPECT_EQ(tags(builder.getConfig())->tags.size(), 1);
+}
+
+TEST_P(ToolGuidanceConfigTest, NoRequestGuidancePreservesModelDefaults) {
+    ov::genai::GenerationConfig baseConfig;
+    ov::genai::StructuredOutputConfig defaultGrammar;
+    defaultGrammar.regex = "model-default";
+    baseConfig.structured_output_config = defaultGrammar;
+    GenerationConfigBuilder builder{baseConfig, GetParam(), true, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.toolChoice = "none";
+    configure(builder, request);
+    ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
+    EXPECT_EQ(builder.getConfig().structured_output_config->regex, defaultGrammar.regex);
+    EXPECT_FALSE(builder.getConfig().structured_output_config->structural_tags_config.has_value());
+}
+
+TEST_P(ToolGuidanceConfigTest, ToolAndResponseFormatReplaceModelGrammarWithToolGrammar) {
+    ov::genai::GenerationConfig baseConfig;
+    ov::genai::StructuredOutputConfig defaultGrammar;
+    defaultGrammar.regex = "model-default";
+    baseConfig.structured_output_config = defaultGrammar;
+    GenerationConfigBuilder builder{baseConfig, GetParam(), true, DecodingMethod::STANDARD};
+    auto request = toolRequest("auto");
+    request.responseFormat = R"({"type":"structural_tag","format":{"type":"const_string","value":"answer"}})";
+    configure(builder, request);
+    ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
+    EXPECT_FALSE(builder.getConfig().structured_output_config->regex.has_value());
+    EXPECT_EQ(tags(builder.getConfig())->tags.size(), 1);
+}
+
+TEST_P(ToolGuidanceConfigTest, ToolOnlyRequestReplacesModelGrammar) {
+    for (const std::string choice : {"auto", "required", "weather"}) {
+        ov::genai::GenerationConfig baseConfig;
+        baseConfig.structured_output_config.emplace();
+        baseConfig.structured_output_config->regex = "model-default";
+        GenerationConfigBuilder builder{baseConfig, GetParam(), true, DecodingMethod::STANDARD};
+        configure(builder, toolRequest(choice));
+        ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
+        EXPECT_FALSE(builder.getConfig().structured_output_config->regex.has_value());
+        const auto grammar = tags(builder.getConfig());
+        EXPECT_EQ(grammar->tags.size(), 1);
+        EXPECT_EQ(grammar->at_least_one, choice != "auto");
+        EXPECT_EQ(grammar->stop_after_first, choice == "weather");
+    }
+}
+
+TEST(ToolGuidanceSelectionTest, UnsupportedToolFormatsStillApplyResponseFormat) {
+    for (const std::string choice : {"auto", "required", "weather"}) {
+        GenerationConfigBuilder builder{{}, "", true, DecodingMethod::STANDARD};
+        OpenAIRequest request;
+        request.toolChoice = choice;
+        request.toolNameSchemaMap.emplace("weather", ToolSchemaWrapper{nullptr, R"({"type":"object"})"});
+        request.responseFormat = R"({"type":"structural_tag","format":{"type":"const_string","value":"answer"}})";
+        builder.configureStructuredGeneration(request, {}, "");
+        ASSERT_TRUE(builder.getConfig().structured_output_config.has_value()) << choice;
+        ASSERT_TRUE(builder.getConfig().structured_output_config->structural_tags_config.has_value()) << choice;
+        const auto& structuralTag = std::get<ov::genai::StructuredOutputConfig::StructuralTag>(*builder.getConfig().structured_output_config->structural_tags_config);
+        EXPECT_EQ(std::get<std::string>(structuralTag), *request.responseFormat) << choice;
+    }
+}
+
+TEST(ToolGuidanceSelectionTest, MalformedInternalResponseFormatRaisesInvariantError) {
+    GenerationConfigBuilder builder{{}, "qwen3", false, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.responseFormat = "not-a-structural-tag";
+    ReasoningGenerationContext reasoningContext;
+    reasoningContext.begin = "<think>";
+    reasoningContext.end = "</think>";
+    reasoningContext.implicitStart = true;
+    EXPECT_THROW(builder.configureStructuredGeneration(request, reasoningContext, "qwen3"), ResponseFormatInvariantError);
+}
+
+INSTANTIATE_TEST_SUITE_P(ExistingFormats, ToolGuidanceConfigTest,
+    ::testing::Values("llama3", "hermes3", "phi4", "devstral"));
 
 // Unit tests for BaseGenerationConfigBuilder multinomial sampling defaults
 
@@ -7065,4 +7286,264 @@ TEST_F(LLMIdleUnloadTest, FailedWakeLeavesGraphSleepingAndRetryable) {
     EXPECT_EQ(okStatus, StatusCode::OK) << okStatus.string();
     EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
     EXPECT_NE(def.getGenAiServable("llmNode"), nullptr);
+}
+
+// ---------------------------------------------------------------------------
+// Graph metadata: max_model_len reported by an LLM node and the snapshot lifecycle.
+// These tests require the dummy LLM model fixture (src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov).
+// ---------------------------------------------------------------------------
+
+class LLMGraphMetadataTest : public TestWithTempDir {
+protected:
+    ConstructorEnabledModelManager manager;
+
+    // Copies the dummy model and sets the context length in its config.json, or removes it if not given.
+    std::string createModelCopy(const std::string& name, std::optional<uint32_t> maxModelLength) {
+        const std::filesystem::path source = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov");
+        const std::filesystem::path destination = std::filesystem::path(directoryPath) / name;
+        std::filesystem::copy(source, destination, std::filesystem::copy_options::recursive);
+        std::stringstream content;
+        {
+            std::ifstream ifs(destination / "config.json");
+            if (!ifs.is_open()) {
+                ADD_FAILURE() << "Could not open " << (destination / "config.json").generic_string();
+                return {};
+            }
+            content << ifs.rdbuf();
+        }
+        rapidjson::Document config;
+        if (config.Parse(content.str().c_str()).HasParseError() || !config.IsObject()) {
+            ADD_FAILURE() << "config.json of " << destination.generic_string() << " is not a valid JSON object";
+            return {};
+        }
+        for (const char* field : {"max_position_embeddings", "n_positions", "seq_len", "seq_length", "n_ctx", "sliding_window", "text_config"}) {
+            config.RemoveMember(field);
+        }
+        if (maxModelLength.has_value()) {
+            config.AddMember(rapidjson::StringRef("max_position_embeddings"), rapidjson::Value(maxModelLength.value()), config.GetAllocator());
+        }
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        config.Accept(writer);
+        std::ofstream ofs(destination / "config.json");
+        ofs << buffer.GetString();
+        if (!ofs) {
+            ADD_FAILURE() << "Could not write " << (destination / "config.json").generic_string();
+            return {};
+        }
+        return destination.generic_string();
+    }
+
+    static std::string buildPbtxt(const std::string& modelsPath) {
+        std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: ")" +
+                                modelsPath + R"("
+                cache_size: 1
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
+        }
+    )";
+        adjustConfigForTargetPlatform(testPbtxt);
+        return testPbtxt;
+    }
+
+    static std::optional<int64_t> maxModelLenOf(const std::shared_ptr<const GraphMetadata>& metadata) {
+        if (!metadata) {
+            return std::nullopt;
+        }
+        const auto* value = metadata->find("max_model_len");
+        if (!value) {
+            return std::nullopt;
+        }
+        const auto* intValue = std::get_if<int64_t>(value);
+        if (!intValue) {
+            return std::nullopt;
+        }
+        return *intValue;
+    }
+};
+
+TEST_F(LLMGraphMetadataTest, LLMNodeReportsMaxModelLen) {
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, buildPbtxt(createModelCopy("model", 4096)), nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    EXPECT_EQ(maxModelLenOf(def.getMetadata()), std::optional<int64_t>(4096));
+}
+
+TEST_F(LLMGraphMetadataTest, UnknownMaxModelLenLeavesKeyAbsent) {
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, buildPbtxt(createModelCopy("model", std::nullopt)), nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    auto metadata = def.getMetadata();
+    ASSERT_NE(metadata, nullptr);
+    EXPECT_EQ(metadata->find("max_model_len"), nullptr);
+    EXPECT_TRUE(metadata->empty());
+}
+
+TEST_F(LLMGraphMetadataTest, ReloadReplacesMetadata) {
+    const std::string pbtxt4096 = buildPbtxt(createModelCopy("model4096", 4096));
+    const std::string pbtxt8192 = buildPbtxt(createModelCopy("model8192", 8192));
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, pbtxt4096, nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    auto before = def.getMetadata();
+    ASSERT_EQ(maxModelLenOf(before), std::optional<int64_t>(4096));
+
+    def.inputConfig = pbtxt8192;
+    ASSERT_EQ(def.reload(manager, mgc), StatusCode::OK);
+    EXPECT_EQ(maxModelLenOf(def.getMetadata()), std::optional<int64_t>(8192));
+    // Snapshot taken before the reload is immutable
+    EXPECT_EQ(maxModelLenOf(before), std::optional<int64_t>(4096));
+}
+
+TEST_F(LLMGraphMetadataTest, RetireClearsMetadata) {
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, buildPbtxt(createModelCopy("model", 4096)), nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    ASSERT_NE(def.getMetadata(), nullptr);
+    def.retire();
+    EXPECT_EQ(def.getMetadata(), nullptr);
+}
+
+TEST_F(LLMGraphMetadataTest, FailedReloadLeavesNoMetadata) {
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, buildPbtxt(createModelCopy("model", 4096)), nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    ASSERT_NE(def.getMetadata(), nullptr);
+
+    // Metadata is cleared on a failed reload, whichever stage fails
+    def.inputConfig = buildPbtxt((std::filesystem::path(directoryPath) / "nonexistent").generic_string());
+    EXPECT_FALSE(def.reload(manager, mgc).ok());
+    EXPECT_EQ(def.getMetadata(), nullptr);
+}
+
+TEST_F(LLMGraphMetadataTest, MetadataKeptWhileSleepingAndRestoredOnWakeUp) {
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, buildPbtxt(createModelCopy("model", 4096)), nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    auto before = def.getMetadata();
+    ASSERT_EQ(maxModelLenOf(before), std::optional<int64_t>(4096));
+
+    ASSERT_EQ(def.putToSleep(), StatusCode::OK);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+    EXPECT_EQ(def.getMetadata(), before);
+
+    std::atomic<bool> stop{false};
+    std::atomic<uint64_t> blankReads{0};
+    std::thread reader([&]() {
+        while (!stop) {
+            if (maxModelLenOf(def.getMetadata()) != std::optional<int64_t>(4096)) {
+                ++blankReads;
+            }
+            std::this_thread::yield();
+        }
+    });
+    const Status wakeUpStatus = def.wakeUpIfSleeping(manager);
+    stop = true;
+    reader.join();
+    ASSERT_EQ(wakeUpStatus, StatusCode::OK);
+    EXPECT_EQ(blankReads, 0u);
+    EXPECT_EQ(maxModelLenOf(def.getMetadata()), std::optional<int64_t>(4096));
+}
+
+TEST_F(LLMGraphMetadataTest, FailedWakeUpKeepsMetadata) {
+    const std::string pbtxt = buildPbtxt(createModelCopy("model", 4096));
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, pbtxt, nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    auto before = def.getMetadata();
+    ASSERT_EQ(maxModelLenOf(before), std::optional<int64_t>(4096));
+    ASSERT_EQ(def.putToSleep(), StatusCode::OK);
+
+    // The graph goes back to sleep and stays listed, so it keeps the metadata of its last successful load
+    def.inputConfig = buildPbtxt((std::filesystem::path(directoryPath) / "nonexistent").generic_string());
+    std::atomic<bool> stop{false};
+    std::atomic<uint64_t> blankReads{0};
+    std::thread reader([&]() {
+        while (!stop) {
+            if (maxModelLenOf(def.getMetadata()) != std::optional<int64_t>(4096)) {
+                ++blankReads;
+            }
+            std::this_thread::yield();
+        }
+    });
+    const Status wakeUpStatus = def.wakeUpIfSleeping(manager);
+    stop = true;
+    reader.join();
+    EXPECT_FALSE(wakeUpStatus.ok());
+    EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+    EXPECT_EQ(blankReads, 0u);
+    EXPECT_EQ(def.getMetadata(), before);
+
+    def.inputConfig = pbtxt;
+    ASSERT_EQ(def.wakeUpIfSleeping(manager), StatusCode::OK);
+    EXPECT_EQ(maxModelLenOf(def.getMetadata()), std::optional<int64_t>(4096));
+}
+
+TEST_F(LLMGraphMetadataTest, ReadersSeeOldOrNewSnapshotDuringReloads) {
+    const std::string pbtxt4096 = buildPbtxt(createModelCopy("model4096", 4096));
+    const std::string pbtxt8192 = buildPbtxt(createModelCopy("model8192", 8192));
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, pbtxt4096, nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+
+    std::atomic<bool> stop{false};
+    std::atomic<uint64_t> reads{0};
+    std::atomic<uint64_t> unexpected{0};
+    std::vector<std::thread> readers;
+    for (int i = 0; i < 4; ++i) {
+        readers.emplace_back([&]() {
+            while (!stop) {
+                // Always the old or the new complete snapshot, never an empty one
+                auto value = maxModelLenOf(def.getMetadata());
+                if (!value.has_value() || (value.value() != 4096 && value.value() != 8192)) {
+                    ++unexpected;
+                }
+                ++reads;
+                std::this_thread::yield();
+            }
+        });
+    }
+    bool reloadsSucceeded = true;
+    for (int i = 0; i < 6 && reloadsSucceeded; ++i) {
+        def.inputConfig = (i % 2 == 0) ? pbtxt8192 : pbtxt4096;
+        reloadsSucceeded = def.reload(manager, mgc).ok();
+    }
+    stop = true;
+    for (auto& reader : readers) {
+        reader.join();
+    }
+    EXPECT_TRUE(reloadsSucceeded);
+    EXPECT_EQ(unexpected, 0u);
+    EXPECT_GT(reads, 0u);
+    EXPECT_EQ(maxModelLenOf(def.getMetadata()), std::optional<int64_t>(4096));
 }

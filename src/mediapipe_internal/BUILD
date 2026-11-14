@@ -209,6 +209,7 @@ ovms_cc_library(
         ":mediapipe_utils",
         ":side_packet_builder",
         "//src:mediapipe_executor_interface",
+        "//src:libovms_graph_metadata",
         "//src:libovms_single_version_servable_definition",
         "//src:libovms_tensorinfo",
         "//src:libovmslogging",

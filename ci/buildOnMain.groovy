@@ -15,8 +15,18 @@ pipeline {
           }
         }
 
+        stage("Run rebuild ubuntu26 image on main branch") {
+          steps {
+              sh """
+              env
+              """
+              echo shortCommit
+              build job: "ovmsc/ubuntu/ubuntu26-ovms-recompile-main", parameters: [[$class: 'StringParameterValue', name: 'OVMSCCOMMIT', value: shortCommit]]
+          }
+        }
 
-        stage("Run rebuild ubuntu image on main branch") {
+
+        stage("Run rebuild ubuntu24 image on main branch") {
           steps {
               sh """
               env

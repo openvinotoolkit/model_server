@@ -52,6 +52,13 @@ set "PYTHONHOME=C:\opt\Python312"
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel, wget to PATH
 set "PATH=%setPath%"
 
+if defined GITHUB_TOKEN (
+    if not defined GIT_CONFIG_COUNT set "GIT_CONFIG_COUNT=0"
+    set "GIT_CONFIG_KEY_!GIT_CONFIG_COUNT!=url.https://x-access-token:!GITHUB_TOKEN!@github.com/.insteadOf"
+    set "GIT_CONFIG_VALUE_!GIT_CONFIG_COUNT!=https://github.com/"
+    set /a GIT_CONFIG_COUNT+=1 >nul
+)
+
 :: Bazel compilation settings
 set VS_2022_BT="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
 IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :msvc_error
@@ -137,6 +144,26 @@ IF /I EXIST %bash_path% (
     echo [INFO] Msys installed in: %msys_path%
 )
 
+:: GNU Make is required to run Linux-style Makefile targets (for example: make style, make sdl-check)
+:: on the Windows developer machine when using the MSYS2 toolchain that this script installs.
+set "msys_make=%msys_path%\usr\bin\make.exe"
+IF /I EXIST %msys_make% (
+    echo [INFO] GNU Make already installed in: %msys_make%
+) ELSE (
+    echo [INFO] Installing GNU Make and required POSIX utilities in MSYS2...
+    "%msys_path%\usr\bin\pacman.exe" --noconfirm --sync --refresh --needed make python util-linux
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    echo [INFO] GNU Make and required MSYS utilities installed in: %msys_make%
+)
+
+:: Always refresh the MSYS2 package database before further tooling use to avoid stale package metadata
+:: and the interactive Y/N pacman prompts that occur when the repo snapshot is out-of-date.
+"%msys_path%\usr\bin\pacman.exe" --noconfirm --sync --refresh --sysupgrade
+if !errorlevel! neq 0 (
+    echo [ERROR] MSYS2 package refresh failed. This usually means the bundled MSYS2 snapshot is stale or the network/proxy cannot reach the repository mirrors.
+    exit /b !errorlevel!
+)
+
 :: Set default OV_USE_BINARY if not set
 if "%OV_USE_BINARY%"=="" (
     set "OV_USE_BINARY=1"
@@ -161,13 +188,14 @@ for /f "usebackq eol=# tokens=1,3" %%A in ("%~dp0versions.mk") do (
     call :setifempty "%%A" "%%B"
 )
 echo [INFO]   OV_USE_BINARY=%OV_USE_BINARY%
-echo [INFO]   OV_SOURCE_BRANCH=%OV_SOURCE_BRANCH%
+echo [INFO]   OV_BRANCH=%OV_BRANCH%
 echo [INFO]   OV_TOKENIZERS_BRANCH=%OV_TOKENIZERS_BRANCH%
 echo [INFO]   OV_GENAI_BRANCH=%OV_GENAI_BRANCH%
-echo [INFO]   OV_SOURCE_ORG=%OV_SOURCE_ORG%
-echo [INFO]   OV_GENAI_ORG=%OV_GENAI_ORG%
-echo [INFO]   OV_TOKENIZERS_ORG=%OV_TOKENIZERS_ORG%
+echo [INFO]   OV_REPO=%OV_REPO%
+echo [INFO]   OV_GENAI_REPO=%OV_GENAI_REPO%
+echo [INFO]   OV_TOKENIZERS_REPO=%OV_TOKENIZERS_REPO%
 echo [INFO]   GENAI_PACKAGE_URL_WINDOWS=%GENAI_PACKAGE_URL_WINDOWS%
+echo [INFO]   GENAI_PACKAGE_SHA256_WINDOWS=%GENAI_PACKAGE_SHA256_WINDOWS%
 
 echo [INFO] OV_USE_BINARY=%OV_USE_BINARY%
 IF "%OV_USE_BINARY%"=="0" (
@@ -183,6 +211,13 @@ if "%GENAI_PACKAGE_URL%"=="" (
 )
 if "%GENAI_PACKAGE_URL%"=="" (
     echo [ERROR] GENAI_PACKAGE_URL is not set. Ensure versions.mk was loaded or set GENAI_PACKAGE_URL/GENAI_PACKAGE_URL_WINDOWS in the environment.
+    exit /b 1
+)
+if "%GENAI_PACKAGE_SHA256%"=="" (
+    set "GENAI_PACKAGE_SHA256=%GENAI_PACKAGE_SHA256_WINDOWS%"
+)
+if "%GENAI_PACKAGE_SHA256%"=="" (
+    echo [ERROR] GENAI_PACKAGE_SHA256 is not set.
     exit /b 1
 )
 
@@ -207,6 +242,12 @@ IF /I EXIST %genai_zip% (
 ) ELSE (
     %wget_path% -P %BAZEL_SHORT_PATH%\ %GENAI_PACKAGE_URL%
     if !errorlevel! neq 0 exit /b !errorlevel!
+)
+set "actual_hash="
+for /f "skip=1 tokens=*" %%H in ('certutil -hashfile "%genai_zip%" SHA256') do if not defined actual_hash set "actual_hash=%%H"
+if /I not "!actual_hash!"=="%GENAI_PACKAGE_SHA256%" (
+    echo [ERROR] SHA-256 mismatch for %genai_zip%: expected %GENAI_PACKAGE_SHA256%, got !actual_hash!
+    exit /b 1
 )
 :: Extract GenAi
 IF /I EXIST %BAZEL_SHORT_PATH%\%genai_dir% (
@@ -236,17 +277,17 @@ IF /I EXIST %BAZEL_SHORT_PATH%\openvino (
     rmdir /S /Q %BAZEL_SHORT_PATH%\openvino
 )
 
-echo [INFO] Using OpenVINO source from %OV_SOURCE_ORG%
+echo [INFO] Using OpenVINO source from %OV_REPO%
 IF /I EXIST %BAZEL_SHORT_PATH%\openvino_src (
     rmdir /S /Q %BAZEL_SHORT_PATH%\openvino_src
 )
 
-git clone https://github.com/%OV_SOURCE_ORG%/openvino %BAZEL_SHORT_PATH%\openvino_src
+git clone https://github.com/%OV_REPO%.git %BAZEL_SHORT_PATH%\openvino_src
 
 set "BACK_CWD=%cd%"
 cd %BAZEL_SHORT_PATH%\openvino_src
 git fetch origin
-git checkout %OV_SOURCE_BRANCH%
+git checkout %OV_BRANCH%
 if !errorlevel! neq 0 exit /b !errorlevel!
 git submodule update --init --recursive
 if !errorlevel! neq 0 exit /b !errorlevel!
@@ -271,7 +312,7 @@ IF /I EXIST %BAZEL_SHORT_PATH%\openvino_tokenizers_src (
     rmdir /S /Q %BAZEL_SHORT_PATH%\openvino_tokenizers_src
 )
 
-git clone https://github.com/%OV_TOKENIZERS_ORG%/openvino_tokenizers.git %BAZEL_SHORT_PATH%\openvino_tokenizers_src
+git clone https://github.com/%OV_TOKENIZERS_REPO%.git %BAZEL_SHORT_PATH%\openvino_tokenizers_src
 cd %BAZEL_SHORT_PATH%\openvino_tokenizers_src
 git fetch origin
 git checkout %OV_TOKENIZERS_BRANCH%
@@ -295,7 +336,7 @@ IF /I EXIST %BAZEL_SHORT_PATH%\openvino_genai_src (
     rmdir /S /Q %BAZEL_SHORT_PATH%\openvino_genai_src
 )
 
-git clone https://github.com/%OV_GENAI_ORG%/openvino.genai.git %BAZEL_SHORT_PATH%\openvino_genai_src
+git clone https://github.com/%OV_GENAI_REPO%.git %BAZEL_SHORT_PATH%\openvino_genai_src
 cd %BAZEL_SHORT_PATH%\openvino_genai_src
 git fetch origin
 git checkout %OV_GENAI_BRANCH%

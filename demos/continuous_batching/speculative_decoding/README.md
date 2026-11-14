@@ -15,9 +15,10 @@ All strategies share the same server API — only the generation parameters diff
 
 ## Prerequisites
 
-**Model preparation**: Python 3.9 or higher with pip and a Hugging Face account
+**Model preparation**: Python 3.10 or higher with pip (only if converting the model is needed using export_model.py or optimum-cli)
 
 **Model Server deployment**: Docker Engine or the OVMS binary package installed according to the [bare-metal deployment guide](../../../docs/deploying_server_baremetal.md)
+**Prerelease package**: Some presented features like MTP with prefix caching require the latest prerelease package from [storage.openvinotoolkit.org](https://storage.openvinotoolkit.org/repositories/openvino_model_server/packages/weekly/latest/)  or docker image `openvino/model_server:weekly`.
 
 # MTP (Multi-Token Prediction)
 
@@ -27,7 +28,7 @@ MTP replaces the separate draft model with a lightweight prediction head bundled
 
 For this demo we use [OpenVINO/Qwen3.8-27B-int4-ov](https://huggingface.co/OpenVINO/Qwen3.8-27B-int4-ov), which has a bundled MTP head and is exported in INT4 precision.
 
-> **Note:** This model requires OVMS 2026.4 or weekly pre-release build. See the model card for compatibility details. Prefix caching is not currently supported in MTP mode. It is also required to set max_tokens parameter
+> **Note:** This model requires OVMS 2026.5.0. See the model card for compatibility details.
 
 ## Server Deployment
 
@@ -38,14 +39,13 @@ docker run -d --rm ${GPU_ARGS} --user $(id -u):$(id -g) -p 8000:8000 -v ${HOME}/
   --rest_port 8000 \
   --model_repository_path /models \
   --source_model OpenVINO/Qwen3.8-27B-int4-ov \
-  --draft_model_path . \
-  --enable_prefix_caching false
+  --draft_model_path .
 ```
 :::
 
 :::{dropdown} **Deploying on Bare Metal**
 ```bat
-ovms --rest_port 8000 --model_repository_path c:\models --source_model OpenVINO/Qwen3.8-27B-int4-ov --draft_model_path . --enable_prefix_caching false
+ovms --rest_port 8000 --model_repository_path c:\models --source_model OpenVINO/Qwen3.8-27B-int4-ov --draft_model_path .
 ```
 :::
 
@@ -77,39 +77,39 @@ Check the deployed model's performance by using the vLLM benchmark script and th
 
 Install vLLM and download the Sonnet dataset:
 ```bash
-pip install vllm --index-url https://wheels.vllm.ai/nightly/cpu --extra-index-url https://pypi.org/simple
-curl https://raw.githubusercontent.com/vllm-project/vllm/refs/heads/main/benchmarks/sonnet.txt -o sonnet.txt
+pip install vllm[bench] --extra-index-url https://wheels.vllm.ai/0.32.0/cpu --extra-index-url https://download.pytorch.org/whl/cpu
+curl -O https://raw.githubusercontent.com/hemingkx/Spec-Bench/refs/heads/main/data/spec_bench/question.jsonl
 ```
 
 Run benchmark with 10 requests sent sequentially:
 ```bash
-vllm bench serve --dataset-name sonnet --dataset-path sonnet.txt --backend openai-chat --host localhost --port 8000 --endpoint /v1/chat/completions --max-concurrency 1 --model OpenVINO/Qwen3.8-27B-int4-ov --num-prompts 10
-```
+vllm bench serve --model OpenVINO/Qwen3.8-27B-int4-ov --dataset-name spec_bench --dataset-path "question.jsonl" --num-prompts 10 \
+--spec-bench-category "summarization" --backend openai-chat --host localhost --port 8000 --endpoint /v1/chat/completions --max-concurrency 1
 ```
 ============ Serving Benchmark Result ============
 Successful requests:                     10
 Failed requests:                         0
 Maximum request concurrency:             1
-Benchmark duration (s):                  27.85
-Total input tokens:                      5405
-Total generated tokens:                  1500
-Request throughput (req/s):              0.36
-Output token throughput (tok/s):         53.86
-Peak output token throughput (tok/s):    72.00
+Benchmark duration (s):                  48.47
+Total input tokens:                      7883
+Total generated tokens:                  2324
+Request throughput (req/s):              0.21
+Output token throughput (tok/s):         47.95
+Peak output token throughput (tok/s):    67.00
 Peak concurrent requests:                2.00
-Total token throughput (tok/s):          247.95
+Total token throughput (tok/s):          210.58
 ---------------Time to First Token----------------
-Mean TTFT (ms):                          496.63
-Median TTFT (ms):                        433.09
-P99 TTFT (ms):                           897.54
+Mean TTFT (ms):                          534.38
+Median TTFT (ms):                        462.31
+P99 TTFT (ms):                           865.17
 -----Time per Output Token (excl. 1st token)------
-Mean TPOT (ms):                          15.35
-Median TPOT (ms):                        15.15
-P99 TPOT (ms):                           17.88
+Mean TPOT (ms):                          18.57
+Median TPOT (ms):                        18.67
+P99 TPOT (ms):                           20.42
 ---------------Inter-token Latency----------------
-Mean ITL (ms):                           16.02
-Median ITL (ms):                         0.02
-P99 ITL (ms):                            54.90
+Mean ITL (ms):                           18.83
+Median ITL (ms):                         0.01
+P99 ITL (ms):                            58.57
 ==================================================
 ```
 
@@ -163,7 +163,7 @@ ${HOME}/models
     └── ...
 ```
 
-## Server Deployment
+## Server Deployment 
 
 :::{dropdown} **Deploying with Docker**
 ```text
@@ -187,7 +187,7 @@ ovms --rest_port 8000 --model_repository_path c:\models --source_model OpenVINO/
 
 Use the standard chat completions API with `num_assistant_tokens` set to the draft budget. DFlash uses the same request interface as other speculative decoding modes; the draft strategy is selected automatically from the exported model metadata.
 
-```python
+```text
 from openai import OpenAI
 
 client = OpenAI(base_url="http://localhost:8000/v1", api_key="unused")

@@ -62,13 +62,16 @@ absl::Status VisualLanguageModelServable::addRequestToPipeline(std::shared_ptr<C
         for (const auto& req : vlmExecutionContext->decisionsInputRequests) {
             vlmExecutionContext->decisionsGenerationHandles.push_back(
                 properties->pipeline->add_request(currentRequestId++,
-                    req.promptText, req.inputImages, req.inputVideos, req.generationConfig));
+                    req.promptText, req.inputImages, req.inputVideos, req.inputAudios, req.generationConfig));
         }
         return absl::OkStatus();
     }
-    vlmExecutionContext->generationHandle = properties->pipeline->add_request(currentRequestId++,  // to be removed from API?
-        vlmExecutionContext->inputRequest.promptText, vlmExecutionContext->inputRequest.inputImages,
+    vlmExecutionContext->generationHandle = properties->pipeline->add_request(
+        currentRequestId++,  // to be removed from API?
+        vlmExecutionContext->inputRequest.promptText,
+        vlmExecutionContext->inputRequest.inputImages,
         vlmExecutionContext->inputRequest.inputVideos,
+        vlmExecutionContext->inputRequest.inputAudios,
         vlmExecutionContext->inputRequest.generationConfig);
     return absl::OkStatus();
 }

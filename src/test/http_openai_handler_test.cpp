@@ -33,6 +33,7 @@
 #include "../llm/apis/openai_responses.hpp"
 #include "../llm/io_processing/video_utils.hpp"
 #include "../llm/io_processing/output_parser.hpp"
+#include "../llm/io_processing/generation_config_builder.hpp"
 #include "../llm/language_model/legacy/servable.hpp"
 #include "../llm/omni_model/legacy/servable.hpp"
 #include "../llm/ovms_text_streamer.hpp"
@@ -408,7 +409,7 @@ TEST_F(HttpOpenAIHandlerTest, GraphWithANameDoesNotExist) {
 class HttpOpenAIHandlerParsingTest : public ::testing::Test {
 protected:
     rapidjson::Document doc;
-    std::shared_ptr<ov::genai::Tokenizer> tokenizer = std::make_shared<ov::genai::Tokenizer>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/facebook/opt-125m"));
+    std::shared_ptr<ov::genai::Tokenizer> tokenizer = std::make_shared<ov::genai::Tokenizer>(getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov"));
 
     std::shared_ptr<ovms::OpenAIApiHandler> createHandler(ovms::Endpoint ep,
         const std::string& toolParserName = "", const std::string& reasoningParserName = "") {
@@ -503,6 +504,22 @@ protected:
         }
         return "{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"valid prompt\"}],\"skip_special_tokens\":" + rawValue + "}";
     }
+
+    std::string createRequestWithField(const std::string& name, const std::string& rawValue) const {
+        const std::string field = "\"" + name + "\":" + rawValue;
+        if (endpoint() == ovms::Endpoint::COMPLETIONS) {
+            return "{\"model\":\"llama\",\"prompt\":\"valid prompt\"," + field + "}";
+        }
+        if (endpoint() == ovms::Endpoint::RESPONSES) {
+            return "{\"model\":\"llama\",\"input\":\"valid prompt\"," + field + "}";
+        }
+        return "{\"model\":\"llama\",\"messages\":[{\"role\":\"user\",\"content\":\"valid prompt\"}]," + field + "}";
+    }
+
+    // The Responses API names its token limit max_output_tokens, the other endpoints max_tokens.
+    std::string tokenLimitFieldName() const {
+        return endpoint() == ovms::Endpoint::RESPONSES ? "max_output_tokens" : "max_tokens";
+    }
 };
 
 TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, StreamFieldNotABooleanFails) {
@@ -593,6 +610,7 @@ TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, UserSpecialTokensPreference
     std::optional<uint32_t> maxModelLength;
     auto apiHandler = createHandler(endpoint(), "llama3");
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    apiHandler->initOutputParser({});
     auto outputParser = apiHandler->getOutputParser();
     ASSERT_NE(outputParser, nullptr);
 
@@ -619,6 +637,7 @@ TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, ReasoningParserSpecialToken
     std::optional<uint32_t> maxModelLength;
     auto apiHandler = createHandler(endpoint(), "", "gemma4");
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    apiHandler->initOutputParser({});
     auto outputParser = apiHandler->getOutputParser();
     ASSERT_NE(outputParser, nullptr);
 
@@ -629,6 +648,62 @@ TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, ReasoningParserSpecialToken
     // gemma4 reasoning needs special tokens visible: still required even though the caller
     // asked for skip_special_tokens=true (userWantsSpecialTokens=false).
     EXPECT_TRUE(outputParser->needSpecialTokensForCurrentDecode(/*userWantsSpecialTokens=*/false));
+}
+
+// max_tokens_limit and best_of_limit are documented as the maximum accepted value, so a request that
+// asks for exactly the limit must be accepted and one above it rejected.
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, TokenLimitEqualToConfiguredLimitIsAccepted) {
+    std::string json = createRequestWithField(tokenLimitFieldName(), "100");
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::optional<uint32_t> maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = createHandler(endpoint());
+
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+}
+
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, TokenLimitAboveConfiguredLimitIsRejected) {
+    std::string json = createRequestWithField(tokenLimitFieldName(), "101");
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::optional<uint32_t> maxTokensLimit = 100;
+    uint32_t bestOfLimit = 0;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = createHandler(endpoint());
+
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength),
+        absl::InvalidArgumentError(tokenLimitFieldName() + " exceeds limit provided in graph config: 100"));
+}
+
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, BestOfEqualToConfiguredLimitIsAccepted) {
+    std::string json = createRequestWithField("best_of", "20");
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 20;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = createHandler(endpoint());
+
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+}
+
+TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, BestOfAboveConfiguredLimitIsRejected) {
+    std::string json = createRequestWithField("best_of", "21");
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    std::optional<uint32_t> maxTokensLimit;
+    uint32_t bestOfLimit = 20;
+    std::optional<uint32_t> maxModelLength;
+    auto apiHandler = createHandler(endpoint());
+
+    EXPECT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength),
+        absl::InvalidArgumentError("best_of exceeds limit provided in graph config: 20"));
 }
 
 TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, SkipSpecialTokensNotBoolFails) {
@@ -740,6 +815,11 @@ protected:
     }
 
     std::shared_ptr<ovms::OpenAIApiHandler> parseCurrentRequest(const std::string& json) {
+        return parseCurrentRequest(json, "", "");
+    }
+
+    std::shared_ptr<ovms::OpenAIApiHandler> parseCurrentRequest(const std::string& json,
+        const std::string& toolParserName, const std::string& reasoningParserName) {
         doc.Parse(json.c_str());
         if (doc.HasParseError()) {
             ADD_FAILURE() << "Failed to parse JSON: " << json;
@@ -748,13 +828,18 @@ protected:
         std::optional<uint32_t> maxTokensLimit;
         uint32_t bestOfLimit = 0;
         std::optional<uint32_t> maxModelLength;
-        auto apiHandler = createHandler(endpoint());
+        auto apiHandler = createHandler(endpoint(), toolParserName, reasoningParserName);
         auto status = apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength);
         if (!status.ok()) {
             ADD_FAILURE() << "parseRequest failed: " << status << " for JSON: " << json;
             return nullptr;
         }
         return apiHandler;
+    }
+
+    std::string responseFormatRequest(const std::string& extraFields) const {
+        return createTextRequest("Is 7 prime?",
+            R"(,"response_format":{"type":"json_schema","json_schema":{"schema":{"type":"object","properties":{"answer":{"type":"string"}},"required":["answer"],"additionalProperties":false}}})" + extraFields);
     }
 
     // Parses the request with media-auth parameters plumbed through parseRequest. Returns
@@ -778,6 +863,225 @@ protected:
             std::move(allowedLocalMediaPath), std::move(allowedMediaDomains));
     }
 };
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ResponseFormatContinuesImplicitReasoningBeforeFinalAnswer) {
+    auto apiHandler = parseCurrentRequest(responseFormatRequest(""), "qwen3coder", "qwen3");
+    ASSERT_NE(apiHandler, nullptr);
+    ovms::GenerationConfigBuilder builder{{}, "qwen3coder", false, ovms::DecodingMethod::STANDARD};
+    auto result = apiHandler->extractInputRequest();
+    ASSERT_TRUE(result.ok()) << result.status();
+    ASSERT_FALSE(result->generationConfig.structured_output_config.has_value());
+    result->promptText = "<|im_start|>assistant\n<think>\n";
+    const auto reasoningContext = ovms::determineReasoningContext(ovms::getDefaultReasoningParsingConfig("qwen3"), result->promptText);
+    builder.build(apiHandler->getRequest(), reasoningContext, "qwen3", *tokenizer);
+    result->generationConfig = builder.getConfig();
+    const auto& config = result->generationConfig.structured_output_config;
+    ASSERT_TRUE(config.has_value());
+    using SOC = ov::genai::StructuredOutputConfig;
+    const auto& structuralTag = std::get<SOC::StructuralTag>(*config->structural_tags_config);
+    const auto sequence = std::get<std::shared_ptr<SOC::Concat>>(structuralTag);
+    ASSERT_EQ(sequence->elements.size(), 2);
+    const auto reasoning = std::get<std::shared_ptr<SOC::Tag>>(sequence->elements[0]);
+    EXPECT_TRUE(reasoning->begin.empty());
+    EXPECT_EQ(reasoning->end, "</think>");
+    EXPECT_TRUE(std::holds_alternative<SOC::AnyText>(reasoning->content));
+    rapidjson::Document answer;
+    answer.Parse(std::get<std::string>(sequence->elements[1]).c_str());
+    ASSERT_FALSE(answer.HasParseError());
+    EXPECT_STREQ(answer["type"].GetString(), "json_schema");
+    EXPECT_TRUE(answer["json_schema"].HasMember("properties"));
+    EXPECT_FALSE(answer["json_schema"].HasMember("schema"));
+    EXPECT_EQ(apiHandler->getOutputParser(), nullptr);
+    apiHandler->initOutputParser(reasoningContext);
+    ASSERT_NE(apiHandler->getOutputParser(), nullptr);
+    const auto delta = apiHandler->getOutputParser()->parseChunk("thinking", {}, false, ov::genai::GenerationFinishReason::NONE);
+    ASSERT_TRUE(delta.has_value());
+    EXPECT_TRUE(std::holds_alternative<ovms::ReasoningDelta>(*delta));
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ResponseFormatAllowsExplicitReasoningOrDirectAnswer) {
+    auto apiHandler = parseCurrentRequest(responseFormatRequest(""), "", "qwen3");
+    ASSERT_NE(apiHandler, nullptr);
+    ovms::GenerationConfigBuilder builder{{}, "", false, ovms::DecodingMethod::STANDARD};
+    auto result = apiHandler->extractInputRequest();
+    ASSERT_TRUE(result.ok()) << result.status();
+    result->promptText = "<|im_start|>assistant\n";
+    const auto reasoningContext = ovms::determineReasoningContext(ovms::getDefaultReasoningParsingConfig("qwen3"), result->promptText);
+    builder.build(apiHandler->getRequest(), reasoningContext, "qwen3", *tokenizer);
+    result->generationConfig = builder.getConfig();
+    ASSERT_TRUE(result->generationConfig.structured_output_config.has_value());
+    using SOC = ov::genai::StructuredOutputConfig;
+    const auto& structuralTag = std::get<SOC::StructuralTag>(*result->generationConfig.structured_output_config->structural_tags_config);
+    const auto alternatives = std::get<std::shared_ptr<SOC::Union>>(structuralTag);
+    ASSERT_EQ(alternatives->elements.size(), 2);
+    EXPECT_TRUE(std::holds_alternative<std::string>(alternatives->elements[0]));
+    const auto sequence = std::get<std::shared_ptr<SOC::Concat>>(alternatives->elements[1]);
+    const auto reasoning = std::get<std::shared_ptr<SOC::Tag>>(sequence->elements[0]);
+    EXPECT_EQ(reasoning->begin, "<think>");
+    EXPECT_EQ(reasoning->end, "</think>");
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ResponseFormatUnchangedWhenThinkingDisabledOrCompleted) {
+    for (const std::string& prompt : {std::string("<|im_start|>assistant\n"), std::string("<|im_start|>assistant\n<think>\n\n</think>\n\n")}) {
+        const bool completedPrompt = prompt.find("</think>") != std::string::npos;
+        auto apiHandler = parseCurrentRequest(responseFormatRequest(
+                                                  completedPrompt ? "" : R"(,"chat_template_kwargs":{"enable_thinking":false})"),
+            "", "qwen3");
+        ASSERT_NE(apiHandler, nullptr);
+        EXPECT_EQ(apiHandler->getRequest().enableThinking.has_value(), !completedPrompt);
+        ovms::GenerationConfigBuilder builder{{}, "", false, ovms::DecodingMethod::STANDARD};
+        auto result = apiHandler->extractInputRequest();
+        ASSERT_TRUE(result.ok()) << result.status();
+        result->promptText = prompt;
+        const auto reasoningContext = ovms::determineReasoningContext(ovms::getDefaultReasoningParsingConfig("qwen3"), result->promptText);
+        builder.build(apiHandler->getRequest(), reasoningContext, "qwen3", *tokenizer);
+        result->generationConfig = builder.getConfig();
+        ASSERT_TRUE(result->generationConfig.structured_output_config.has_value());
+        using SOC = ov::genai::StructuredOutputConfig;
+        const auto& structuralTag = std::get<SOC::StructuralTag>(*result->generationConfig.structured_output_config->structural_tags_config);
+        EXPECT_EQ(std::get<std::string>(structuralTag), *apiHandler->getRequest().responseFormat);
+    }
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, InputExtractionDoesNotConfigureGeneration) {
+    auto apiHandler = parseCurrentRequest(responseFormatRequest(""), "", "qwen3");
+    ASSERT_NE(apiHandler, nullptr);
+    auto result = apiHandler->extractInputRequest();
+    ASSERT_TRUE(result.ok()) << result.status();
+    EXPECT_TRUE(result->promptText.empty());
+    EXPECT_FALSE(result->generationConfig.structured_output_config.has_value());
+    EXPECT_EQ(apiHandler->getOutputParser(), nullptr);
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ReasoningEnvelopeDoesNotRestoreInvalidResponseFormat) {
+    auto apiHandler = parseCurrentRequest(createTextRequest("Is 7 prime?",
+                                              R"(,"response_format":{"type":"json_schema","json_schema":{"schema":{"type":"my_integer"}}})"),
+        "", "qwen3");
+    ASSERT_NE(apiHandler, nullptr);
+    ovms::GenerationConfigBuilder builder{{}, "", false, ovms::DecodingMethod::STANDARD};
+    auto result = apiHandler->extractInputRequest();
+    ASSERT_TRUE(result.ok()) << result.status();
+    ASSERT_FALSE(result->generationConfig.structured_output_config.has_value());
+    result->promptText = "<|im_start|>assistant\n<think>\n";
+    const auto reasoningContext = ovms::determineReasoningContext(ovms::getDefaultReasoningParsingConfig("qwen3"), result->promptText);
+    builder.build(apiHandler->getRequest(), reasoningContext, "qwen3", *tokenizer);
+    result->generationConfig = builder.getConfig();
+    EXPECT_FALSE(result->generationConfig.structured_output_config.has_value());
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ReasoningEnvelopePreservesNonJsonFinalAnswerFormat) {
+    auto apiHandler = parseCurrentRequest(createTextRequest("Is 7 prime?",
+                                              R"(,"response_format":{"type":"const_string","value":"answer"})"),
+        "", "qwen3");
+    ASSERT_NE(apiHandler, nullptr);
+    ovms::GenerationConfigBuilder builder{{}, "", false, ovms::DecodingMethod::STANDARD};
+    auto result = apiHandler->extractInputRequest();
+    ASSERT_TRUE(result.ok()) << result.status();
+    result->promptText = "<|im_start|>assistant\n<think>\n";
+    const auto reasoningContext = ovms::determineReasoningContext(ovms::getDefaultReasoningParsingConfig("qwen3"), result->promptText);
+    builder.build(apiHandler->getRequest(), reasoningContext, "qwen3", *tokenizer);
+    result->generationConfig = builder.getConfig();
+    ASSERT_TRUE(result->generationConfig.structured_output_config.has_value());
+    using SOC = ov::genai::StructuredOutputConfig;
+    const auto& structuralTag = std::get<SOC::StructuralTag>(*result->generationConfig.structured_output_config->structural_tags_config);
+    const auto sequence = std::get<std::shared_ptr<SOC::Concat>>(structuralTag);
+    ASSERT_EQ(sequence->elements.size(), 2);
+    rapidjson::Document answer;
+    answer.Parse(std::get<std::string>(sequence->elements[1]).c_str());
+    ASSERT_FALSE(answer.HasParseError());
+    EXPECT_STREQ(answer["type"].GetString(), "const_string");
+    EXPECT_STREQ(answer["value"].GetString(), "answer");
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ReasoningEnvelopePreservesToolGrammarPrecedence) {
+    auto apiHandler = parseCurrentRequest(responseFormatRequest(
+                                              R"(,"tools":[{"type":"function","function":{"name":"clock"}}],"tool_choice":"required")"),
+        "hermes3", "qwen3");
+    ASSERT_NE(apiHandler, nullptr);
+    ovms::GenerationConfigBuilder builder{{}, "hermes3", false, ovms::DecodingMethod::STANDARD};
+    auto result = apiHandler->extractInputRequest();
+    ASSERT_TRUE(result.ok()) << result.status();
+    result->promptText = "<|im_start|>assistant\n<think>\n";
+    const auto reasoningContext = ovms::determineReasoningContext(ovms::getDefaultReasoningParsingConfig("qwen3"), result->promptText);
+    builder.build(apiHandler->getRequest(), reasoningContext, "qwen3", *tokenizer);
+    result->generationConfig = builder.getConfig();
+    ASSERT_TRUE(result->generationConfig.structured_output_config.has_value());
+    using SOC = ov::genai::StructuredOutputConfig;
+    const auto& structuralTag = std::get<SOC::StructuralTag>(*result->generationConfig.structured_output_config->structural_tags_config);
+    EXPECT_TRUE(std::holds_alternative<std::shared_ptr<SOC::TriggeredTags>>(structuralTag));
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ResponseFormatWithoutParsersKeepsDirectContentPath) {
+    auto apiHandler = parseCurrentRequest(responseFormatRequest(""));
+    ASSERT_NE(apiHandler, nullptr);
+    ovms::GenerationConfigBuilder builder{{}, "", false, ovms::DecodingMethod::STANDARD};
+    auto result = apiHandler->extractInputRequest();
+    ASSERT_TRUE(result.ok()) << result.status();
+    result->promptText = "<|im_start|>assistant\n<think>\n";
+    builder.build(apiHandler->getRequest(), {}, "", *tokenizer);
+    result->generationConfig = builder.getConfig();
+    apiHandler->initOutputParser({});
+    EXPECT_EQ(apiHandler->getOutputParser(), nullptr);
+    ASSERT_TRUE(result->generationConfig.structured_output_config.has_value());
+    using SOC = ov::genai::StructuredOutputConfig;
+    const auto& structuralTag = std::get<SOC::StructuralTag>(*result->generationConfig.structured_output_config->structural_tags_config);
+    EXPECT_EQ(std::get<std::string>(structuralTag), *apiHandler->getRequest().responseFormat);
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ThinkingSettingIsParsedAfterReasoningEffortNormalization) {
+    const std::string extra = endpoint() == ovms::Endpoint::RESPONSES ? R"(,"reasoning":{"effort":"none"})" : R"(,"reasoning_effort":"none")";
+    auto apiHandler = parseCurrentRequest(createTextRequest("hello", extra), "hermes3", "qwen3");
+    ASSERT_NE(apiHandler, nullptr);
+    ASSERT_TRUE(apiHandler->getRequest().enableThinking.has_value());
+    EXPECT_FALSE(*apiHandler->getRequest().enableThinking);
+    EXPECT_EQ(apiHandler->getOutputParser(), nullptr);
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, UnspecifiedThinkingSettingRemainsUnset) {
+    auto apiHandler = parseCurrentRequest(createTextRequest("hello"), "hermes3", "qwen3");
+    ASSERT_NE(apiHandler, nullptr);
+    EXPECT_FALSE(apiHandler->getRequest().enableThinking.has_value());
+    EXPECT_EQ(apiHandler->getOutputParser(), nullptr);
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ExplicitThinkingSettingOverridesReasoningEffort) {
+    const std::string effort = endpoint() == ovms::Endpoint::RESPONSES ? R"(,"reasoning":{"effort":"high"})" : R"(,"reasoning_effort":"high")";
+    auto apiHandler = parseCurrentRequest(createTextRequest("hello",
+        effort + R"(,"chat_template_kwargs":{"enable_thinking":false})"));
+    ASSERT_NE(apiHandler, nullptr);
+    ASSERT_TRUE(apiHandler->getRequest().enableThinking.has_value());
+    EXPECT_FALSE(*apiHandler->getRequest().enableThinking);
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, OmittedToolParametersBecomeEmptyObjectSchema) {
+    for (const std::string& tools : {
+             std::string(R"(,"tools":[{"type":"function","function":{"name":"clock"}}])"),
+             std::string(R"(,"tools":[{"type":"function","name":"clock"}])")}) {
+        auto apiHandler = parseCurrentRequest(createTextRequest("What time is it?", tools));
+        ASSERT_NE(apiHandler, nullptr);
+        const auto& schemas = apiHandler->getRequest().toolNameSchemaMap;
+        ASSERT_EQ(schemas.size(), 1);
+        const auto& schema = schemas.at("clock");
+        ASSERT_NE(schema.rapidjsonRepr, nullptr);
+        EXPECT_STREQ((*schema.rapidjsonRepr)["type"].GetString(), "object");
+        EXPECT_TRUE((*schema.rapidjsonRepr)["properties"].ObjectEmpty());
+        EXPECT_FALSE((*schema.rapidjsonRepr)["additionalProperties"].GetBool());
+        rapidjson::Document serialized;
+        serialized.Parse(schema.stringRepr.c_str());
+        ASSERT_FALSE(serialized.HasParseError());
+        EXPECT_EQ(serialized, *schema.rapidjsonRepr);
+    }
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ExplicitToolParametersArePreserved) {
+    auto apiHandler = parseCurrentRequest(createTextRequest("What time is it?",
+        R"(,"tools":[{"type":"function","function":{"name":"clock","parameters":{"type":"object","additionalProperties":true}}}])"));
+    ASSERT_NE(apiHandler, nullptr);
+    const auto& schema = apiHandler->getRequest().toolNameSchemaMap.at("clock");
+    ASSERT_NE(schema.rapidjsonRepr, nullptr);
+    EXPECT_TRUE((*schema.rapidjsonRepr)["additionalProperties"].GetBool());
+    EXPECT_FALSE(schema.rapidjsonRepr->HasMember("properties"));
+}
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingTextInputCreatesUserChatMessage) {
     std::string json = createTextRequest("What is OpenVINO?");
@@ -989,6 +1293,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkReturnsIntermediateN
     uint32_t bestOfLimit = 0;
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    apiHandler->initOutputParser({});
 
     std::vector<std::pair<std::string, ov::genai::GenerationFinishReason>> stream = {
         {"<tool_call>", ov::genai::GenerationFinishReason::NONE},
@@ -1046,6 +1351,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkReturnsToolCallsFini
     uint32_t bestOfLimit = 0;
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    apiHandler->initOutputParser({});
 
     // Simulate scenario where tool call completes with NONE finish reason, then an empty chunk arrives with STOP
     std::vector<std::pair<std::string, ov::genai::GenerationFinishReason>> stream = {
@@ -1884,6 +2190,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesWithReas
     uint32_t bestOfLimit = 0;
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    apiHandler->initOutputParser({});
 
     // Phase 1: Created event
     std::string createdChunk = apiHandler->serializeStreamingCreatedEvent();
@@ -1959,6 +2266,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkEmptyPrimingDoesNotP
     uint32_t bestOfLimit = 0;
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    apiHandler->initOutputParser({});
 
     // Empty priming call: should emit only lifecycle events, never output_text.delta,
     // and must not move the parser past the reasoning start tag.
@@ -1994,6 +2302,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingChunkForResponsesWithoutR
     uint32_t bestOfLimit = 0;
     std::optional<uint32_t> maxModelLength;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
+    apiHandler->initOutputParser({});
 
     // Created and in-progress events
     std::string createdChunk = apiHandler->serializeStreamingCreatedEvent();
@@ -3437,11 +3746,14 @@ TEST_F(HttpOpenAIHandlerParsingTest, OutputParserInitializationDependsOnParserNa
 
     auto withoutParserNames = std::make_shared<ovms::OpenAIChatCompletionsHandler>(
         doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer);
+    withoutParserNames->initOutputParser({});
     EXPECT_EQ(withoutParserNames->getOutputParser(), nullptr);
 
     auto withParserNames = std::make_shared<ovms::OpenAIChatCompletionsHandler>(
         doc, ovms::Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), *tokenizer, "llama3", "");
     ASSERT_EQ(withParserNames->parseRequest(/*maxTokensLimit=*/std::nullopt, /*bestOfLimit=*/0, /*maxModelLength=*/std::nullopt), absl::OkStatus());
+    EXPECT_EQ(withParserNames->getOutputParser(), nullptr);
+    withParserNames->initOutputParser({});
     EXPECT_NE(withParserNames->getOutputParser(), nullptr);
 }
 
@@ -4932,10 +5244,6 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesImageChatHistoryIndexMatchesAfterF
 // --- Tools normalisation edge cases ---
 
 TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFlatToolWithoutParametersIsNormalised) {
-    // Flat Responses tools may omit `parameters` for zero-arg functions. The
-    // nested form should still be produced (with no `parameters` key under
-    // function), not fail or fabricate one. Input is given as an array so
-    // ChatHistorySink populates the messages array.
     expectResponsesEquivalentToChatCompletions(doc, *tokenizer,
         R"({
             "model": "llama",
@@ -4944,7 +5252,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ResponsesFlatToolWithoutParametersIsNormali
         })",
         R"({
             "messages": [{"role":"user","content":[{"type":"text","text":"hello"}]}],
-            "tools": [{"type":"function","function":{"name":"ping","description":"no args"}}]
+            "tools": [{"type":"function","function":{"name":"ping","description":"no args","parameters":{"type":"object","properties":{},"additionalProperties":false}}}]
         })");
 }
 
@@ -5562,7 +5870,8 @@ TEST_F(HttpOpenAIHandlerParsingTest, legacyServablePreparePartialResponseChatCom
 }
 
 static std::shared_ptr<ovms::OmniModelLegacyServableExecutionContext> makeOmniChatContext(
-    const std::shared_ptr<ov::genai::Tokenizer>& tok, const std::string& requestJson) {
+    const std::shared_ptr<ov::genai::Tokenizer>& tok, const std::string& requestJson,
+    std::string toolParserName = "", std::string reasoningParserName = "") {
     auto ctx = std::make_shared<ovms::OmniModelLegacyServableExecutionContext>();
     ctx->payload.client = std::make_shared<NeverDisconnectedClient>();
     ctx->payload.parsedJson = std::make_shared<rapidjson::Document>();
@@ -5571,7 +5880,7 @@ static std::shared_ptr<ovms::OmniModelLegacyServableExecutionContext> makeOmniCh
 
     auto apiHandler = std::make_shared<ovms::OpenAIChatCompletionsHandler>(
         *ctx->payload.parsedJson, ovms::Endpoint::CHAT_COMPLETIONS,
-        std::chrono::system_clock::now(), *tok);
+        std::chrono::system_clock::now(), *tok, toolParserName, reasoningParserName);
     if (!apiHandler->parseRequest(100, 0, std::nullopt).ok()) {
         return nullptr;
     }
@@ -5584,6 +5893,65 @@ static std::shared_ptr<ovms::OmniModelLegacyServableExecutionContext> makeOmniCh
     ctx->success = true;
     ctx->readySignal.set_value();
     return ctx;
+}
+
+class TestableOmniModelLegacyServable : public ovms::OmniModelLegacyServable {
+public:
+    using ovms::OmniModelLegacyServable::initializeTextStreamer;
+};
+
+TEST_F(HttpOpenAIHandlerParsingTest, OmniUnaryStreamerSeparatesReasoningAndPreservesAudioTranscript) {
+    auto ctx = makeOmniChatContext(tokenizer,
+        R"({"model":"llama","messages":[{"role":"user","content":"hi"}],"response_format":{"type":"json_object"},"modalities":["text","audio"],"audio":{"format":"pcm16"}})", "", "qwen3");
+    ASSERT_NE(ctx, nullptr);
+    const auto reasoningContext = ovms::determineReasoningContext(
+        ovms::getDefaultReasoningParsingConfig("qwen3"), "<think>\n");
+    ctx->apiHandler->initOutputParser(reasoningContext);
+    ctx->audioOutputRequested = true;
+    ctx->audioFormat = ovms::OpenAIRequest::AudioFormat::PCM16;
+    ov::Tensor waveform(ov::element::f32, {2});
+    waveform.data<float>()[0] = 0.0f;
+    waveform.data<float>()[1] = 0.0f;
+    ctx->results.speech_result.waveforms.push_back(waveform);
+    std::shared_ptr<ovms::GenAiServableExecutionContext> ctxBase = ctx;
+    TestableOmniModelLegacyServable servable;
+    servable.getProperties()->tokenizer = *tokenizer;
+    servable.initializeTextStreamer(ctxBase);
+    const auto encoded = tokenizer->encode(R"(analysis</think>{"answer":"yes"})", ov::genai::add_special_tokens(false)).input_ids;
+    const std::vector<int64_t> tokens(encoded.data<int64_t>(), encoded.data<int64_t>() + encoded.get_size());
+    ctx->textStreamer->write(tokens);
+    ctx->textStreamer->end();
+    ASSERT_EQ(servable.prepareCompleteResponse(ctxBase), absl::OkStatus());
+    rapidjson::Document response;
+    response.Parse(ctxBase->response.c_str());
+    ASSERT_FALSE(response.HasParseError());
+    const auto& message = response["choices"][0]["message"];
+    EXPECT_STREQ(message["reasoning_content"].GetString(), "analysis");
+    EXPECT_STREQ(message["content"].GetString(), R"({"answer":"yes"})");
+    EXPECT_STREQ(message["audio"]["transcript"].GetString(), R"({"answer":"yes"})");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, OmniUnaryStreamerParsesToolCalls) {
+    auto ctx = makeOmniChatContext(tokenizer,
+        R"({"model":"llama","messages":[{"role":"user","content":"hi"}],"tools":[{"type":"function","function":{"name":"weather"}}],"tool_choice":"required"})", "hermes3", "");
+    ASSERT_NE(ctx, nullptr);
+    ctx->apiHandler->initOutputParser({});
+    std::shared_ptr<ovms::GenAiServableExecutionContext> ctxBase = ctx;
+    TestableOmniModelLegacyServable servable;
+    servable.getProperties()->tokenizer = *tokenizer;
+    servable.initializeTextStreamer(ctxBase);
+    const auto encoded = tokenizer->encode(R"(<tool_call>{"name":"weather","arguments":{}}</tool_call>)", ov::genai::add_special_tokens(false)).input_ids;
+    const std::vector<int64_t> tokens(encoded.data<int64_t>(), encoded.data<int64_t>() + encoded.get_size());
+    ctx->textStreamer->write(tokens);
+    ctx->textStreamer->end();
+    ASSERT_EQ(servable.prepareCompleteResponse(ctxBase), absl::OkStatus());
+    rapidjson::Document response;
+    response.Parse(ctxBase->response.c_str());
+    ASSERT_FALSE(response.HasParseError());
+    const auto& calls = response["choices"][0]["message"]["tool_calls"];
+    ASSERT_EQ(calls.Size(), 1);
+    EXPECT_STREQ(calls[0]["function"]["name"].GetString(), "weather");
+    EXPECT_STREQ(calls[0]["function"]["arguments"].GetString(), "{}");
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, omniLegacyServablePrepareCompleteResponseChatCompletionsHasCachedTokens) {

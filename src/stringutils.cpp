@@ -53,8 +53,7 @@ void ltrim(std::string& str) {
 void rtrim(std::string& str) {
     str.erase(std::find_if(str.rbegin(), str.rend(), [](int c) {
         return !std::isspace(c);
-    })
-                  .base(),
+    }).base(),
         str.end());
 }
 

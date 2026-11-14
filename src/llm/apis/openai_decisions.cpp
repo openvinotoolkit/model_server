@@ -435,10 +435,10 @@ void OpenAIDecisionsHandler::appendQuestionBlock(ov::genai::ChatHistory& history
 }
 
 absl::StatusOr<std::vector<InputRequest>> OpenAIDecisionsHandler::extractInputRequests(GenerationConfigBuilder& configBuilder) {
-    auto baseResult = OpenAIApiHandler::extractInputRequest(configBuilder);
+    auto baseResult = OpenAIApiHandler::extractInputRequests(configBuilder);
     if (!baseResult.ok())
         return baseResult.status();
-    InputRequest base = std::move(*baseResult);
+    InputRequest base = std::move((*baseResult)[0]);
 
     std::vector<InputRequest> requests;
     requests.reserve(questions.size());

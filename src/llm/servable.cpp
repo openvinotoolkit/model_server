@@ -147,6 +147,23 @@ absl::Status GenAiServable::processTokenizeRequest(std::shared_ptr<GenAiServable
     return absl::OkStatus();
 }
 
+void GenAiServable::initializeTextStreamer(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    auto ovmsCallback = [&ctx = *executionContext](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
+        ctx.deltaChannel.push(std::move(delta), isLast);
+        return ov::genai::StreamingStatus::RUNNING;
+    };
+    ov::AnyMap streamerConfig;
+    if (!executionContext->apiHandler->getRequest().skipSpecialTokens) {
+        streamerConfig.insert(ov::genai::skip_special_tokens(false));
+    }
+    executionContext->textStreamer = std::make_shared<OVMSTextStreamer>(
+        getProperties()->tokenizer,
+        executionContext->apiHandler->getOutputParser(),
+        executionContext->apiHandler->areToolsAvailable(),
+        std::move(ovmsCallback),
+        streamerConfig);
+}
+
 absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     try {
         if (executionContext->endpoint == Endpoint::RESPONSES) {
@@ -183,39 +200,29 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         return status;
     }
 
-    {
-        auto ovmsCallback = [& ctx = *executionContext](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
-            ctx.deltaChannel.push(std::move(delta), isLast);
-            return ov::genai::StreamingStatus::RUNNING;
-        };
-        ov::AnyMap streamerConfig;
-        if (!executionContext->apiHandler->getRequest().skipSpecialTokens) {
-            streamerConfig.insert(ov::genai::skip_special_tokens(false));
-        }
-        executionContext->textStreamer = std::make_shared<OVMSTextStreamer>(
-            getProperties()->tokenizer,
-            executionContext->apiHandler->getOutputParser(),
-            executionContext->apiHandler->areToolsAvailable(),
-            std::move(ovmsCallback),
-            streamerConfig);
-    }
-    GenerationConfigBuilder configBuilder(getProperties()->baseGenerationConfig,
-        getProperties()->toolParserName,
-        getProperties()->enableToolGuidedGeneration,
-        getProperties()->decodingMethod);
-    auto inputRequestsResult = executionContext->apiHandler->extractInputRequests(configBuilder);
-    if (!inputRequestsResult.ok()) {
-        return inputRequestsResult.status();
-    }
     // Decisions always uses the per-question path (even with one question) so the
-    // per-question result validation in readCompleteExecutionResults applies uniformly;
-    // every non-decisions endpoint keeps the historical single inputRequest field.
-    auto& inputRequests = *inputRequestsResult;
+    // per-question result validation in readCompleteExecutionResults applies uniformly.
+    // Its generation config is built here (per-question forced greedy single token with
+    // requested-token logprobs), before the template context exists, so it takes the
+    // config-builder form of the extraction; every other endpoint builds its generation
+    // config later in prepareInputs, once the reasoning context is known.
     if (executionContext->endpoint == Endpoint::DECISIONS) {
-        executionContext->decisionsInputRequests = std::move(inputRequests);
-    } else {
-        executionContext->inputRequest = std::move(inputRequests.front());
+        GenerationConfigBuilder configBuilder(getProperties()->baseGenerationConfig,
+            getProperties()->toolParserName,
+            getProperties()->enableToolGuidedGeneration,
+            getProperties()->decodingMethod);
+        auto inputRequestsResult = executionContext->apiHandler->extractInputRequests(configBuilder);
+        if (!inputRequestsResult.ok()) {
+            return inputRequestsResult.status();
+        }
+        executionContext->decisionsInputRequests = std::move(*inputRequestsResult);
+        return absl::OkStatus();
     }
+    auto inputRequestResult = executionContext->apiHandler->extractInputRequest();
+    if (!inputRequestResult.ok()) {
+        return inputRequestResult.status();
+    }
+    executionContext->inputRequest = std::move(*inputRequestResult);
     return absl::OkStatus();
 }
 
@@ -252,16 +259,22 @@ absl::Status GenAiServable::validateInputCompatibility(std::shared_ptr<GenAiServ
         return absl::OkStatus();
     }
 
-    auto checkChatHistory = [](const ov::genai::ChatHistory& ch) -> absl::Status {
+    // Multimodal entries are preserved as JsonContainer arrays in chatHistory until
+    // compatibility is checked.
+    const auto& inputProcessingConfig = getProperties()->inputProcessorContext.config;
+    auto checkChatHistory = [&](const ov::genai::ChatHistory& ch) -> absl::Status {
         for (size_t i = 0; i < ch.size(); i++) {
             const auto content = ch[i]["content"];
             if (content.is_array()) {
                 for (size_t j = 0; j < content.size(); j++) {
                     const auto type = content[j]["type"].as_string().value_or("");
-                    if (type == "image_url") {
+                    if (type == "input_audio" && !inputProcessingConfig.audioInputConfig.has_value()) {
+                        return absl::Status(absl::StatusCode::kInvalidArgument, "This servable does not support audio input");
+                    }
+                    if (!inputProcessingConfig.supportsVisualInputs && type == "image_url") {
                         return absl::Status(absl::StatusCode::kInvalidArgument, "This servable supports only text input, but image_url has been provided");
                     }
-                    if (type == "video_url") {
+                    if (!inputProcessingConfig.supportsVisualInputs && type == "video_url") {
                         return absl::Status(absl::StatusCode::kInvalidArgument, "This servable supports only text input, but video_url has been provided");
                     }
                 }
@@ -350,9 +363,22 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         return status;
     }
 
-    if (executionContext->apiHandler->getOutputParser() != nullptr) {
-        executionContext->apiHandler->getOutputParser()->detectAndSetImplicitReasoningStart(req.promptText);
+    const auto reasoningContext = determineReasoningContext(
+        getDefaultReasoningParsingConfig(getProperties()->reasoningParserName), req.promptText);
+
+    GenerationConfigBuilder configBuilder(getProperties()->baseGenerationConfig,
+        getProperties()->toolParserName,
+        getProperties()->enableToolGuidedGeneration,
+        getProperties()->decodingMethod);
+    try {
+        configBuilder.build(executionContext->apiHandler->getRequest(), reasoningContext,
+            getProperties()->reasoningParserName, getProperties()->tokenizer);
+    } catch (const ResponseFormatInvariantError&) {
+        return absl::InternalError("Request processing failed");
+    } catch (const std::invalid_argument& e) {
+        return absl::InvalidArgumentError(e.what());
     }
+    req.generationConfig = configBuilder.getConfig();
     if (Config::instance().getServerSettings().verboseResponse) {
         executionContext->apiHandler->enableVerboseResponse(req.promptText);
     }
@@ -379,6 +405,8 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "{}", getPromptTokensString(req.inputIds));
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Pipeline input text: {}", req.promptText);
 
+    executionContext->apiHandler->initOutputParser(reasoningContext);
+    initializeTextStreamer(executionContext);
     return absl::OkStatus();
 }
 

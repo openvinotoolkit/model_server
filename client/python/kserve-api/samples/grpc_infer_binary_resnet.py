@@ -32,9 +32,9 @@ if __name__ == '__main__':
     parser.add_argument('--images_list', required=False, default='input_images.txt', help='path to a file with a list of labeled images')
     parser.add_argument('--grpc_address',required=False, default='localhost',  help='Specify url to grpc service. default:localhost')
     parser.add_argument('--grpc_port',required=False, default=9000, help='Specify port to grpc service. default: 9000')
-    parser.add_argument('--input_name',required=False, default='input', help='Specify input tensor name. default: input')
-    parser.add_argument('--output_name',required=False, default='resnet_v1_50/predictions/Reshape_1',
-                        help='Specify output name. default: resnet_v1_50/predictions/Reshape_1')
+    parser.add_argument('--input_name',required=False, default='image', help='Specify input tensor name. default: image')
+    parser.add_argument('--output_name',required=False, default='output',
+                        help='Specify output name. default: output')
     parser.add_argument('--batchsize', default=1,
                         help='Number of images in a single request. default: 1',
                         dest='batchsize')

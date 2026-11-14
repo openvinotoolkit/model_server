@@ -21,6 +21,7 @@ licenses(["notice"])  # BSD license
 exports_files(["LICENSE"])
 
 OPENCV_VERSION = "4140"  # 4.14.0
+OPENCV_VC_DIR = "vc17" if glob(["x64/vc17/bin/opencv_world" + OPENCV_VERSION + ".dll"]) else "vc16"
 
 config_setting(
     name = "opt_build",
@@ -35,12 +36,12 @@ config_setting(
 cc_import(
     name = "opencv_import_lib",
     interface_library = select({
-        ":opt_build": "x64/vc16/lib/opencv_world" + OPENCV_VERSION + ".lib",
-        ":dbg_build": "x64/vc16/lib/opencv_world" + OPENCV_VERSION + "d.lib",
+        ":opt_build": "x64/" + OPENCV_VC_DIR + "/lib/opencv_world" + OPENCV_VERSION + ".lib",
+        ":dbg_build": "x64/" + OPENCV_VC_DIR + "/lib/opencv_world" + OPENCV_VERSION + "d.lib",
     }),
     shared_library = select({
-        ":opt_build": "x64/vc16/bin/opencv_world" + OPENCV_VERSION + ".dll",
-        ":dbg_build": "x64/vc16/bin/opencv_world" + OPENCV_VERSION + "d.dll",
+        ":opt_build": "x64/" + OPENCV_VC_DIR + "/bin/opencv_world" + OPENCV_VERSION + ".dll",
+        ":dbg_build": "x64/" + OPENCV_VC_DIR + "/bin/opencv_world" + OPENCV_VERSION + "d.dll",
     }),
     visibility = ["//visibility:public"],
 )

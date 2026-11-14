@@ -26,6 +26,7 @@
 #           ovms_infer_req_queue_size, ovms_infer_req_active
 # Config:
 #   "monitoring": {"metrics": {"enable": true, "metrics_list": [...]}}
+# pylint: disable=unused-argument
 
 import re
 from enum import Enum, auto
@@ -88,11 +89,11 @@ class Metric:
         Wait_for_inference_histogram: Type_histogram,
     }
 
-    Default_names = [x for x in Default.keys()]
+    Default_names = list(Default.keys())
 
     Additional = {"ovms_infer_req_queue_size": Type_gauge, "ovms_infer_req_active": Type_gauge}
 
-    Additional_names = [x for x in Additional.keys()]
+    Additional_names = list(Additional.keys())
 
     Models_only = [
         Current_request,
@@ -296,7 +297,7 @@ class Metric:
     def __init__(self, metric_name, content: dict, value=0):
         self.name = metric_name
         self.content = content
-        self.keys = [x for x in content]
+        self.keys = list(content)
         self.value = value
 
     def get_type(self):
@@ -311,7 +312,7 @@ class Metric:
                 Metric.Inference_histogram,
                 Metric.Wait_for_inference_histogram,
             ]
-            if any([x in self.name for x in histogram_metrics]):
+            if any(x in self.name for x in histogram_metrics):
                 result = Metric.Type_histogram
         return result
 
@@ -372,7 +373,7 @@ class Metrics:
                 else:
                     metric_list += Metrics._fill_method[metric](model=model, ovms_run=ovms_run)
 
-        """ 
+        """
         The following metrics are not multiplied for each model version (should occur once for single model name)
         ovms_requests_success[{'api': 'KServe', 'interface': 'gRPC', 'method': 'ModelReady', 'name': 'resnet-50-tf'}] 0
         ovms_requests_success[{'api': 'KServe', 'interface': 'REST', 'method': 'ModelReady', 'name': 'resnet-50-tf'}] 0
@@ -480,7 +481,7 @@ class Metrics:
                     logger.debug(f"Found expected value={value} in metric {metric_name} for method {method}")
                     metric_found = True
                     break
-        assert metric_found, f"No metric found"
+        assert metric_found, "No metric found"
 
     def verify_metric_values(self, value):
         for metric in self.list:
@@ -489,9 +490,6 @@ class Metrics:
 
 class DefaultMetrics(Metrics):
 
-    def __init__(self):
-        super().__init__()
-
     @staticmethod
     def create_from_model_list(model_list):
         return Metrics.create_from_model_list(model_list, metrics=Metric.Default_names)
@@ -499,9 +497,6 @@ class DefaultMetrics(Metrics):
 
 class AdditionalMetrics(Metrics):
     Names = ["ovms_infer_req_queue_size", "ovms_infer_req_active"]
-
-    def __init__(self):
-        super().__init__()
 
 
 # Output example

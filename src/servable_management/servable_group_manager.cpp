@@ -313,7 +313,7 @@ Status ServableGroupManager::unloadGroup(const std::string& groupName, ModelMana
     return loadGroup(groupName, mm, requestedServable);
 }
 
-    [[nodiscard]] Status ServableGroupManager::ensureServableLoaded(const std::string& servableName, ModelManager& mm) {
+[[nodiscard]] Status ServableGroupManager::ensureServableLoaded(const std::string& servableName, ModelManager& mm) {
     const std::string groupName = getGroupForServable(servableName);
     if (groupName.empty()) {
         // Not managed by group manager - let normal flow handle it

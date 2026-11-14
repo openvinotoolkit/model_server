@@ -14,44 +14,12 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <memory>
-#include <string>
-#include <utility>
-#include <openvino/genai/generation_config.hpp>
-
 #include "generation_config_builder.hpp"
 
 namespace ovms {
 
-void DevstralGenerationConfigBuilder::parseConfigFromRequest(const OpenAIRequest& request) {
-    // Call the base class method to fill in common configuration
-    BaseGenerationConfigBuilder::parseConfigFromRequest(request);
-
-    // For now the only specific part is related to tools, so if there are no tools provided in the request
-    // we can exit early
-    if (request.toolNameSchemaMap.empty()) {
-        return;
-    }
-
-    if (enableToolGuidedGeneration || request.toolChoice == "required") {
-        // Set tool guided generation config specific to Devstral model
-        auto triggeredTags = std::make_shared<ov::genai::StructuredOutputConfig::TriggeredTags>();
-        triggeredTags->triggers.push_back("[TOOL_CALLS]");
-
-        for (const auto& [toolName, toolSchemaWrapper] : request.toolNameSchemaMap) {
-            const auto& toolSchema = toolSchemaWrapper.stringRepr;
-            ov::genai::StructuredOutputConfig::Tag tagItem;
-            tagItem.begin = "[TOOL_CALLS]" + toolName + "[ARGS]";
-            tagItem.end = "";
-            tagItem.content = ov::genai::StructuredOutputConfig::JSONSchema(toolSchema);
-            triggeredTags->tags.push_back(tagItem);
-        }
-        if (request.toolChoice == "required") {
-            triggeredTags->at_least_one = true;
-        }
-        ov::genai::StructuredOutputConfig::StructuralTag structuralTag = triggeredTags;
-        setStructuralTagsConfig(structuralTag);
-    }
+void DevstralGenerationConfigBuilder::applyToolGuidance(const OpenAIRequest& request) {
+    setTaggedToolGrammar(request, {"[TOOL_CALLS]", "[TOOL_CALLS]", "[ARGS]", "", false});
 }
 
 }  // namespace ovms

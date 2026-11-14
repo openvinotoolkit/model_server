@@ -105,7 +105,15 @@ class DmesgLogMonitor(LogMonitor):
             start_position = self._read_lines[self.current_offset - 1] if self._read_lines else ""
         # skip non-fatal log levels ("notice,info,debug")
         level = ",".join(["emerg", "alert", "crit", "err", "warn", "info"])
-        stdout = self._proc.run_and_check(f"dmesg -T --level={level}", exception_type=DmesgError)
+        try:
+            stdout = self._proc.run_and_check(f"dmesg -T --level={level}", exception_type=DmesgError)
+        except DmesgError as e:
+            if "Operation not permitted" in str(e):
+                message = ("Missing permissions to use dmesg without sudo. "
+                           "Please set 'sudo sysctl -w kernel.dmesg_restrict=0'.")
+                raise DmesgError(message)
+            else:
+                raise e
         self._read_lines = stdout.splitlines()
         self.current_offset = self._calculate_current_offset(start_position)
 
@@ -147,11 +155,11 @@ class DmesgLogMonitor(LogMonitor):
         logger.info(f"Dmesg OVMS process ID: {self.ovms_pid}")
         if unexpected_messages:
             dmesg_exceptions = get_children_from_module(DmesgError, assertions_module)  # [(name, class_def), ...]
-            for name, exception_class in dmesg_exceptions:
+            for _name, exception_class in dmesg_exceptions:
                 msg = getattr(exception_class, "msg", None)
                 regex = getattr(exception_class, "regex", None)
                 if (msg and any(filter(lambda x: msg in x, unexpected_messages))) or (
-                    regex and any(filter(lambda x: regex.match(x), unexpected_messages))
+                    regex and any(filter(regex.match, unexpected_messages))
                 ):
                     logger.error(f"Found unexpected message in dmesg logs: {msg}")
                     raise exception_class("\n".join(unexpected_messages), dmesg_log=logs)

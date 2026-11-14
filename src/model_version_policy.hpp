@@ -35,7 +35,7 @@ protected:
 public:
     /**
      * @brief Strips out model versions list passed by parameter depending on internal state
-     * 
+     *
      * @param versions model versions to filter
      * @return Filtered version list
      */
@@ -43,7 +43,7 @@ public:
 
     /**
      * @brief Creates default model version policy, by default only one version (highest) should be served
-     * 
+     *
      * @param highestVersion highest version
      * @return default version policy
      */
@@ -67,7 +67,7 @@ public:
 
     /**
      * @brief Filters passed versions depending on internal state
-     * 
+     *
      * @param versions model versions to filter
      * @return Filtered version list
      */
@@ -87,7 +87,7 @@ class SpecificModelVersionPolicy : public ModelVersionPolicy {
 public:
     /**
      * @brief Default constructor
-     * 
+     *
      * @param versions list of all model versions that should be served
      */
     SpecificModelVersionPolicy(const model_versions_t& versions) :
@@ -97,7 +97,7 @@ public:
 
     /**
      * @brief Filters passed versions depending on internal state
-     * 
+     *
      * @param versions model versions to filter
      * @return Filtered version list
      */
@@ -115,7 +115,7 @@ class LatestModelVersionPolicy : public ModelVersionPolicy {
 public:
     /**
      * @brief Default constructor
-     * 
+     *
      * @param numVersions number of latest versions to be served
      */
     LatestModelVersionPolicy(size_t numVersions = 1) :
@@ -123,7 +123,7 @@ public:
 
     /**
      * @brief Filters passed versions depending on internal state
-     * 
+     *
      * @param versions model versions to filter
      * @return Filtered version list
      */

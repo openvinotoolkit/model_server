@@ -170,6 +170,10 @@ absl::Status OpenAIChatCompletionsHandler::parseChatCompletionsPart(std::optiona
             return status;
         }
     }
+    status = parseThinkingFromChatTemplateKwargs();
+    if (!status.ok()) {
+        return status;
+    }
     // logprobs: bool; optional - defaults to false
     auto it = doc.FindMember("logprobs");
     if (it != doc.MemberEnd() && !it->value.IsNull()) {

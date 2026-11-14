@@ -14,9 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <algorithm>
-#include <unordered_set>
-
 #include "src/logging.hpp"
 #include "src/stringutils.hpp"
 #include "utils.hpp"
@@ -49,7 +46,7 @@ OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const s
         return TagLookupStatus::NOT_FOUND;
     }
     if (tag.size() > buffer.size()) {
-        /* 
+        /*
         If the tag is longer than the buffer, we check if the buffer and tag overlap (either partially or fully for exact match)
         They do overlap, we assume that tag may appear in the future, so we return FOUND_INCOMPLETE
         otherwise we return NOT_FOUND
@@ -60,7 +57,7 @@ OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const s
             return TagLookupStatus::NOT_FOUND;
         }
     } else if (tag.size() < buffer.size()) {
-        /* 
+        /*
         If the tag is shorter than the buffer, we check:
            a) if the tag is a substring of the buffer (tag is fully matched)
            b) if the buffer and tag overlap (part of the tag is matched)
@@ -345,19 +342,6 @@ void OutputParser::setImplicitReasoningStart(bool value) {
     if (processingPhase == UNKNOWN || processingPhase == REASONING) {
         processingPhase = value ? REASONING : UNKNOWN;
     }
-}
-
-void OutputParser::detectAndSetImplicitReasoningStart(const std::string& renderedPrompt) {
-    if (!reasoningParser) {
-        return;
-    }
-    std::string trimmed = renderedPrompt;
-    rtrim(trimmed);
-    const auto& startTags = reasoningParser->getParsingConfig().startTags;
-    bool detected = std::any_of(startTags.begin(), startTags.end(),
-        [&](const std::string& tag) { return !tag.empty() && endsWith(trimmed, tag); });
-    setImplicitReasoningStart(detected);
-    return;
 }
 
 std::optional<Delta> OutputParser::parseChunk(const std::string& chunkResponse, const std::vector<int64_t>& tokens, const bool toolsAvailable, ov::genai::GenerationFinishReason finishReason) {

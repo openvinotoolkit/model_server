@@ -45,6 +45,24 @@ static std::string ensureTrailingSlash(std::string path) {
     return path;
 }
 
+static std::string describeTaskMetadataFailure(const std::string& sourceModel, int httpCode) {
+    const std::string context = "Failed to resolve source model '" + sourceModel + "': ";
+    if (httpCode == 401 || httpCode == 403 || httpCode == 404) {
+        return context + "task metadata is not accessible from the model endpoint (check whether it is private or the repo name is invalid).";
+    }
+    if (httpCode == -1 || httpCode == 0) {
+        return context + "could not reach the model endpoint. Check the internet connection or proxy configuration.";
+    }
+    return context + "could not retrieve task metadata from the model endpoint (HTTP status " + std::to_string(httpCode) + ").";
+}
+
+static void reportTaskMetadataFailure(const std::string& sourceModel, int httpCode, std::string* errorMessage) {
+    const std::string message = describeTaskMetadataFailure(sourceModel, httpCode);
+    if (errorMessage != nullptr) {
+        *errorMessage = message;
+    }
+}
+
 bool graphPbtxtExists(const std::string& modelPath) {
     const auto graphPath = std::filesystem::path(modelPath) / "graph.pbtxt";
     return std::filesystem::exists(graphPath);
@@ -54,7 +72,7 @@ bool hasTaskSpecificParameters(const std::vector<std::string>& unmatchedOptions)
     return !unmatchedOptions.empty();
 }
 
-std::optional<std::string> determineDefaultTaskParameter(const std::optional<std::string>& modelPath, const std::optional<std::string>& sourceModel, const std::optional<std::string>& modelRepositoryPath) {
+std::optional<std::string> determineDefaultTaskParameter(const std::optional<std::string>& modelPath, const std::optional<std::string>& sourceModel, const std::optional<std::string>& modelRepositoryPath, std::string* errorMessage) {
     DefaultTaskDetector detector;
 
     if (modelPath.has_value() && !modelPath->empty()) {
@@ -101,18 +119,25 @@ std::optional<std::string> determineDefaultTaskParameter(const std::optional<std
     ModelCatalogContext ctx(std::filesystem::path{}, *sourceModel);
 
     std::string configBody;
+    int configHttpCode = -1;
     const std::string configUrl = hfEndpoint + *sourceModel + "/resolve/main/config.json";
-    const auto configStatus = fetchUrlToString(configUrl, token, configBody);
+    const auto configStatus = fetchUrlToString(configUrl, token, configBody, configHttpCode);
     if (configStatus.ok()) {
         ctx.addContent("config.json", std::move(configBody));
     } else {
+        if (configHttpCode != 404) {
+            reportTaskMetadataFailure(*sourceModel, configHttpCode, errorMessage);
+            return std::nullopt;
+        }
         // config.json not available — try model_index.json (Diffusers repos)
         std::string indexBody;
+        int indexHttpCode = -1;
         const std::string indexUrl = hfEndpoint + *sourceModel + "/resolve/main/model_index.json";
-        const auto indexStatus = fetchUrlToString(indexUrl, token, indexBody);
+        const auto indexStatus = fetchUrlToString(indexUrl, token, indexBody, indexHttpCode);
         if (indexStatus.ok()) {
             ctx.addContent("model_index.json", std::move(indexBody));
         } else {
+            reportTaskMetadataFailure(*sourceModel, indexHttpCode, errorMessage);
             return std::nullopt;
         }
     }

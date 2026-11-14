@@ -23,7 +23,7 @@ from tests.functional.object_model.test_environment import TestEnvironment
 logger = get_logger(__name__)
 
 
-class OvmsMappingConfig(object):
+class OvmsMappingConfig:
     FILE_NAME = "mapping_config.json"
 
     @staticmethod
@@ -97,21 +97,21 @@ class OvmsMappingConfig(object):
     def save(config_dict: dict, ovms_container, model):
         file_dst_path = OvmsMappingConfig.mapping_config_path(ovms_container, model)
 
-        logger.info("Saving config file to {}, content:\n{}".format(file_dst_path, config_dict))
+        logger.info(f"Saving config file to {file_dst_path}, content:\n{config_dict}")
 
-        with open(file_dst_path, "w") as fp:
+        with open(file_dst_path, "w", encoding="utf-8") as fp:
             json.dump(config_dict, fp, indent=2)
 
         return file_dst_path
 
     @staticmethod
     def load_config(config_path):
-        with open(config_path, "r") as f:
+        with open(config_path, "r", encoding="utf-8") as f:
             config_json = f.read()
             try:
                 config_dict = json.loads(config_json)
             except ValueError as e:
-                logger.error("Error while loading json: {}".format(config_json))
+                logger.error(f"Error while loading json: {config_json}")
                 raise e
         return config_dict
 

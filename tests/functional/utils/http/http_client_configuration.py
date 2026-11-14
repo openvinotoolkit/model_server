@@ -25,7 +25,7 @@ from tests.functional.utils.http.exceptions import (
 
 
 # pylint: disable=too-many-instance-attributes
-class HttpClientConfiguration(object):
+class HttpClientConfiguration:
     """Http client configuration."""
     identity_attributes = ("client_type", "url", "username", "password")
 
@@ -108,7 +108,7 @@ class HttpClientConfiguration(object):
 
     @property
     def as_dict(self) -> dict:
-        kwargs = dict()
+        kwargs = {}
         self.set_value(kwargs, "username", self.username)
         self.set_value(kwargs, "password", self.password)
         self.set_value(kwargs, "proxies", self.proxies)

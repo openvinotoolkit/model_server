@@ -39,6 +39,7 @@ public:
         const std::string& graphName,
         const std::string& basePath,
         GraphSidePackets& sidePackets,
+        GraphMetadata& /*metadata*/,
         PythonBackend* /*pythonBackend*/) override {
         auto& sttServableMap = sidePackets.sttServableMap;
         if (!nodeConfig.node_options().size()) {

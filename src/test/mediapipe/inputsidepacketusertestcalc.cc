@@ -75,14 +75,14 @@ public:
                          .Tag(ISP_INT64.c_str())
                          .Get<int64_t>();
         for (CollectionItemId id = cc->Inputs().BeginId();
-             id < cc->Inputs().EndId(); ++id) {
+            id < cc->Inputs().EndId(); ++id) {
             if (!cc->Inputs().Get(id).Header().IsEmpty()) {
                 cc->Outputs().Get(id).SetHeader(cc->Inputs().Get(id).Header());
             }
         }
         if (cc->OutputSidePackets().NumEntries() != 0) {
             for (CollectionItemId id = cc->InputSidePackets().BeginId();
-                 id < cc->InputSidePackets().EndId(); ++id) {
+                id < cc->InputSidePackets().EndId(); ++id) {
                 cc->OutputSidePackets().Get(id).Set(cc->InputSidePackets().Get(id));
             }
         }

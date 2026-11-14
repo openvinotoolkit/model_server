@@ -159,12 +159,6 @@ pip install "transformers<5"  # WA for optimum-intel and model support for new t
 python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --model_name gte-large-en-v1.5 --pooling CLS --extra_quantization_params "--library sentence_transformers"
 ```
 :::
-:::{tab-item} nomic-ai/nomic-embed-text-v1.5
-:sync: nomic-embed-text-v1.5
-```console
-python export_model.py embeddings_ov --source_model nomic-ai/nomic-embed-text-v1.5 --model_name nomic-embed-text-v1.5 --pooling MEAN --extra_quantization_params "--library sentence_transformers"
-```
-:::
 :::{tab-item} sentence-transformers/all-mpnet-base-v2
 :sync: all-mpnet-base-v2
 ```console
@@ -231,12 +225,6 @@ pip install "transformers<5"  # WA for optimum-intel and model support for new t
 python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --model_name gte-large-en-v1.5 --pooling CLS --weight-format int8 --target_device GPU --extra_quantization_params "--library sentence_transformers" --config_file_path models/config.json --model_repository_path models
 ```
 :::
-:::{tab-item} nomic-ai/nomic-embed-text-v1.5
-:sync: nomic-embed-text-v1.5
-```console
-python export_model.py embeddings_ov --source_model nomic-ai/nomic-embed-text-v1.5 --model_name nomic-embed-text-v1.5 --pooling MEAN --weight-format int8 --target_device GPU --extra_quantization_params "--library sentence_transformers" --config_file_path models/config.json --model_repository_path models
-```
-:::
 :::{tab-item} sentence-transformers/all-mpnet-base-v2
 :sync: all-mpnet-base-v2
 ```console
@@ -258,15 +246,20 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 :::{tab-item} BAAI/bge-large-en-v1.5
 :sync: BAAI/bge-large-en-v1.5-fp16
 ```console
-python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --pooling CLS --weight-format fp16 --target_device NPU --config_file_path models/config.json --model_repository_path models --max_length 1000
+python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --model_name bge-large-en-v1.5 --pooling CLS --weight-format fp16 --target_device NPU --config_file_path models/config.json --model_repository_path models --max_length 400
 ```
 :::
 ::::
 > **Note** For NPU Set `--max_length` as low as possible to speed up model loading and inference.
+
 > **Note** For NPU Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision. For int4 precisions, add required extra parameter `--extra_quantization_params "--sym --ratio 1.0 --group-size -1"`
+
 > **Note** For NPU the pooling mode --pooling LAST has the best accuracy.
+
 > **Note** For NPU and the weight-format int4, use `--extra_quantization_params "--sym --ratio 1.0 --group-size -1"`
+
 > **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance.
+
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
 
 You should have a model folder like below:
@@ -316,7 +309,6 @@ All models supported by [optimum-intel](https://github.com/huggingface/optimum-i
 |intfloat/multilingual-e5-large-instruct|MEAN|CPU,GPU|
 |intfloat/multilingual-e5-large|MEAN|CPU,GPU|
 |Alibaba-NLP/gte-large-en-v1.5|CLS|CPU,GPU|
-|nomic-ai/nomic-embed-text-v1.5|MEAN|CPU,GPU|
 |sentence-transformers/all-mpnet-base-v2|MEAN|CPU,GPU,NPU|
 
 ## Server Deployment

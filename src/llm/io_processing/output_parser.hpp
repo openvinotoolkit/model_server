@@ -16,6 +16,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <openvino/genai/tokenizer.hpp>
 #include <string>
 #include <vector>
@@ -106,12 +107,6 @@ private:
     std::optional<Delta> parseToolCallChunk(const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase = TOOL_CALLS_PROCESSING_TOOL);
     std::optional<Delta> parseReasoningChunk(const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase = REASONING);
 
-    // Configure parser to treat the output as already-in-reasoning from the first token.
-    // Used when the chat template appends the reasoning start tag (e.g. "<think>\n") as
-    // the prompt suffix - the model then emits only the reasoning body and the closing tag.
-    // No-op when no reasoning parser is configured.
-    void setImplicitReasoningStart(bool value);
-
 public:
     OutputParser() = delete;
     explicit OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName, const ToolsSchemas_t& toolNameSchemaMap);
@@ -123,8 +118,11 @@ public:
     // Reset streaming state (phase, buffer, and per-parser internal state) for a new generation.
     void resetStreamingState();
 
-    // Auto-detect and apply implicit reasoning start based on the prompt produced by the chat template.
-    void detectAndSetImplicitReasoningStart(const std::string& renderedPrompt);
+    // Configure parser to treat the output as already-in-reasoning from the first token.
+    // Used when the chat template appends the reasoning start tag (e.g. "<think>\n") as
+    // the prompt suffix - the model then emits only the reasoning body and the closing tag.
+    // No-op when no reasoning parser is configured.
+    void setImplicitReasoningStart(bool value);
 
     // Parse one decoded chunk in streaming mode.
     //

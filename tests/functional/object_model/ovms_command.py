@@ -56,6 +56,19 @@ def create_ovms_command(
 ):
     layout = parameters.get_layout_from_regular_models()
 
+    # --max_length is an embeddings graph-generation CLI option. It is only valid
+    # when OVMS is started directly with --model_path/--model_name (config-less
+    # launch). When a config file is used (config_path is not None) the override
+    # must instead be embedded into the generated embeddings graph itself
+    # (see EmbeddingsCalculatorOV), otherwise the CLI rejects the unmatched argument.
+    max_length = None
+    if config_path is None:
+        for model in parameters.models or []:
+            model_max_length = getattr(model, "max_length", None)
+            if model_max_length is not None:
+                max_length = model_max_length
+                break
+
     common_parameters = {
         "grpc_port": parameters.grpc_port,
         "rest_port": parameters.rest_port,
@@ -74,6 +87,7 @@ def create_ovms_command(
         "allowed_media_domains": parameters.allowed_media_domains,
         "max_image_decode_pixels": parameters.max_image_decode_pixels,
         "pooling": pooling,
+        "max_length": max_length,
     }
     pull_parameters = {
         "pull": pull,
@@ -93,32 +107,31 @@ def create_ovms_command(
         if add_to_config or remove_from_config:
             return OvmsCommand(config_path=config_path, model_name=model_name, **common_parameters, **pull_parameters)
         return OvmsCommand(config_path=config_path, **common_parameters)
-    else:
-        plugin_config = parameters.get_plugin_config_from_regular_models()
-        if enable_plugin_config_target_device:
-            plugin_config_target_device = Ovms.PLUGIN_CONFIG[get_base_device(parameters.target_device)]
-            plugin_config = (
-                {**plugin_config, **plugin_config_target_device}
-                if plugin_config is not None
-                else {**plugin_config_target_device}
-            )
-        use_parameter = not any([single_mediapipe_model_mode, list_models, add_to_config, remove_from_config])
-        return OvmsCommand(
-            model_path=model_path,
-            model_name=model_name,
-            plugin_config=plugin_config if use_parameter else None,
-            batchsize=batch_size if use_parameter else None,
-            nireq=parameters.nireq if use_parameter else None,
-            target_device=parameters.target_device if use_parameter else None,
-            shape=shape if use_parameter else None,
-            model_version_policy=parameters.model_version_policy if use_parameter else None,
-            **common_parameters,
-            **pull_parameters,
+    plugin_config = parameters.get_plugin_config_from_regular_models()
+    if enable_plugin_config_target_device:
+        plugin_config_target_device = Ovms.PLUGIN_CONFIG[get_base_device(parameters.target_device)]
+        plugin_config = (
+            {**plugin_config, **plugin_config_target_device}
+            if plugin_config is not None
+            else {**plugin_config_target_device}
         )
+    use_parameter = not any([single_mediapipe_model_mode, list_models, add_to_config, remove_from_config])
+    return OvmsCommand(
+        model_path=model_path,
+        model_name=model_name,
+        plugin_config=plugin_config if use_parameter else None,
+        batchsize=batch_size if use_parameter else None,
+        nireq=parameters.nireq if use_parameter else None,
+        target_device=parameters.target_device if use_parameter else None,
+        shape=shape if use_parameter else None,
+        model_version_policy=parameters.model_version_policy if use_parameter else None,
+        **common_parameters,
+        **pull_parameters,
+    )
 
 
 @dataclass
-class OvmsCommand(object):
+class OvmsCommand:
     logging_level: str = None
     model_path: str = None
     model_name: str = None
@@ -157,6 +170,7 @@ class OvmsCommand(object):
     resolution: str = None
     cache_size: int = None
     pooling: str = None
+    max_length: int = None
 
     def to_list(self):
         ovms_command, _ = Ovms.get_ovms_binary_paths(self.ovms_type, self.base_os)
@@ -312,6 +326,10 @@ class OvmsCommand(object):
             if self.pooling is not None:
                 command_parts.append("--pooling")
                 command_parts.append(str(self.pooling))
+
+            if self.max_length is not None:
+                command_parts.append("--max_length")
+                command_parts.append(str(self.max_length))
 
         return command_parts
 

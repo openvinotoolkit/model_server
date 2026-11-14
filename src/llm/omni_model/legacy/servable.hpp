@@ -46,7 +46,7 @@ struct OmniModelLegacyServableExecutionContext : public GenAiServableExecutionCo
     OpenAIRequest::AudioFormat audioFormat{OpenAIRequest::DEFAULT_AUDIO_FORMAT};
     size_t audioChunkFrames{OpenAIRequest::DEFAULT_AUDIO_CHUNK_FRAMES};
 
-    // Prepared in parseRequest, consumed by executor
+    // Speech config is prepared in parseRequest; the streamer is created after generation setup.
     ov::genai::OmniTalkerSpeechConfig speechConfig;
     ov::genai::OmniSpeechStreamerVariant speechStreamer = std::monostate{};
 
@@ -66,11 +66,14 @@ struct OmniModelLegacyServableProperties : public GenAiServableProperties {
 class OmniModelLegacyServable : public GenAiServable {
     std::shared_ptr<OmniModelLegacyServableProperties> properties;
 
+protected:
+    void initializeTextStreamer(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
+
 public:
     OmniModelLegacyServable() {
         properties = std::make_shared<OmniModelLegacyServableProperties>();
-        properties->inputProcessorContext.config.isVLM = true;
-        properties->inputProcessorContext.config.isOmni = true;
+        properties->inputProcessorContext.config.supportsVisualInputs = true;
+        properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig{};
     }
 
     absl::Status validateEndpoint(Endpoint endpoint) const override;

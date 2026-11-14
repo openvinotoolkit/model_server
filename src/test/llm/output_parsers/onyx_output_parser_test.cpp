@@ -36,9 +36,9 @@ using namespace ovms;
 
 // TODO @atobiszei replace when tokenizer is available
 #ifdef _WIN32
-const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\facebook\\opt-125m";
+const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\OpenVINO\\Muse-Glimmer-30B-int4-ov";
 #else
-const std::string tokenizerPath = "/ovms/src/test/llm_testing/facebook/opt-125m";
+const std::string tokenizerPath = "/ovms/src/test/llm_testing/OpenVINO/Muse-Glimmer-30B-int4-ov";
 #endif
 
 static std::unique_ptr<ov::genai::Tokenizer> opt125mTokenizer;

@@ -100,35 +100,23 @@ def parse_args(args=sys.argv):
     )
 
     # subparser for create
-    parser_for_create = subparsers.add_parser(
+    subparsers.add_parser(
         "create",
         help="Create a long living reservation with reservation "
         "files for JSON and Shell Environments. See --reservation-file-json "
         "and --reservation-file-env.",
     )
-    parser_for_create.add_argument(
-        dest="reservation_create",
-        action="store_true",
-    )
 
     # subparser for remove
-    parser_for_remove = subparsers.add_parser(
+    subparsers.add_parser(
         "remove",
         help="Delete reservation pointed by --reservation-file-json on host.",
     )
-    parser_for_remove.add_argument(
-        dest="reservation_remove",
-        action="store_true",
-    )
 
     # subparser for cleanup
-    parser_for_cleanup = subparsers.add_parser(
+    subparsers.add_parser(
         "cleanup",
         help="Delete all reservations on host.",
-    )
-    parser_for_cleanup.add_argument(
-        dest="reservation_cleanup",
-        action="store_true",
     )
 
     # subparser for command
