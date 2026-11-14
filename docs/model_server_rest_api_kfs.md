@@ -9,6 +9,7 @@ This document covers the following API:
 * [Server Metadata API](#server-metadata-api)
 * [Model Ready API](#model-ready-api)
 * [Model Metadata API](#model-metadata-api)
+* [Model Configuration API](#model-configuration-api) (Triton extension)
 * [Inference API](#inference-api)
 
 ## Server Live API
@@ -18,7 +19,7 @@ Get information about server liveness.
 
 **URL**
 
-```
+```text
 GET http://${REST_URL}:${REST_PORT}/v2/health/live
 ```
 
@@ -207,6 +208,55 @@ $ curl http://localhost:8000/v2/models/resnet
 For detailed description of the response contents see [KServe API docs](https://github.com/kserve/kserve/blob/master/docs/predict-api/v2/required_api.md#model-metadata).
 
 See also [code samples](https://github.com/openvinotoolkit/model_server/tree/main/client/python/kserve-api/samples) for running getting model metadata with KServe API on HTTP Model Metadata endpoint.
+
+## Model Configuration API
+
+This read-only Triton-compatible extension provides the tensor configuration used
+by clients such as NVIDIA `perf_analyzer`. It is not part of the core KServe V2
+API and does not expose OVMS plugin configuration or allow configuration changes.
+
+**URLs**
+
+```text
+GET http://${REST_URL}:8000/v2/models/resnet/config
+GET http://${REST_URL}:8000/v2/models/resnet/versions/1/config
+```
+
+When the version is omitted, the same version selection as the Model Metadata API
+is used. Missing models, unavailable versions, and model loading errors use the
+same error handling as metadata requests.
+
+**Response Example**
+
+```json
+{
+  "name": "resnet",
+  "max_batch_size": 0,
+  "input": [
+    {"name": "image", "data_type": "TYPE_FP32", "dims": [1, 224, 224, 3]}
+  ],
+  "output": [
+    {"name": "output", "data_type": "TYPE_FP32", "dims": [1, 1000]}
+  ]
+}
+```
+
+The dimensions are the full KServe tensor shapes, including any explicit batch
+dimension. `max_batch_size` is always `0` because this configuration does not add
+Triton's implicit leading batch dimension; it does not mean the model cannot
+accept an explicit batch dimension. Dynamic dimensions remain `-1`, and scalar
+tensors have an empty `dims` array. Datatypes use Triton's `TYPE_` prefix, with
+KServe `BYTES` represented as `TYPE_STRING`.
+
+**Usage Example**
+
+```text
+curl -f http://localhost:8000/v2/models/resnet/config
+```
+
+See the [KServe benchmark demo](../demos/benchmark/kserve/README.md) for
+`perf_analyzer` REST commands and verification results. This extension is available
+over REST only; it does not implement the gRPC `ModelConfig` RPC.
 
 ## Inference API
 **Description**

@@ -14,6 +14,12 @@ Check supported [Speech Recognition Models](https://openvinotoolkit.github.io/op
 
 **Client**: curl or Python for using OpenAI client package
 
+Install the client dependency before running the Python examples:
+
+```bash
+pip install openai
+```
+
 ## Speech generation
 Kokoro is the primary example in this demo, but SpeechT5 remains supported for existing deployments.
 
@@ -89,26 +95,8 @@ print("Generation finished")
 Play speech.wav file to check generated speech.
 
 ## Benchmarking speech generation
-An asynchronous benchmarking client can be used to access the model server performance with various load conditions. Below are execution examples captured on Intel(R) Core(TM) Ultra 7 258V.
-
-> **Note:** `RTFx` (Real-Time Factor, inverted) is calculated as `generated_audio_duration / generation_time`.
-> Values greater than `1.0x` mean faster-than-real-time generation, while values below `1.0x` mean slower-than-real-time.
-
-```console
-pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/benchmark/v3/requirements.txt openai>=1.0.0
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/benchmark/v3/benchmark.py -o benchmark.py
-python benchmark.py --api_url http://localhost:8000/v3/audio/speech --model Kokoro-82M-int8-ov --batch_size 1 --limit 1000 --request_rate inf --backend text2speech --dataset edinburghcstr/ami --hf-subset ihm --voice af_alloy
-Number of documents: 1000
-100%|█████████████████████████████████████████████████████████████████████████████████| 1000/1000 [16:37<00:00,  1.00it/s]
-Success rate: 100.0%. (1000/1000)
-Mean latency: 1506.60 ms
-Median latency: 1072.72 ms
-Mean RTFx: 3.655x
-Median RTFx: 3.899x
-```
-
-> **Note:** `RTFx` (Real-Time Factor, inverted) is calculated as `generated_audio_duration / generation_time`.
-> Values greater than `1.0x` mean faster-than-real-time generation, while values below `1.0x` mean slower-than-real-time.
+For synthetic and real-text benchmark examples, setup, and RTFx interpretation, see
+[Speech Generation](../benchmark/openai/README.md#speech-generation) in the benchmark guide.
 
 ## Transcription
 ### Model preparation

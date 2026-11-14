@@ -428,45 +428,8 @@ It will report results like `Similarity score as cos_sim 0.9605122725993963`.
 :::
 
 ## Benchmarking feature extraction
-
-An asynchronous benchmarking client can be used to access the model server performance with various load conditions. Below are execution examples captured on Intel(R) Core(TM) Ultra X7 368H.
-```console
-git clone https://github.com/openvinotoolkit/model_server
-pushd .
-cd model_server/demos/benchmark/v3/
-pip install -r requirements.txt
-python benchmark.py --api_url http://localhost:8000/v3/embeddings --dataset synthetic --synthetic_length 5 --request_rate 10 --batch_size 1 --model bge-large-en-v1.5 --tokenizer BAAI/bge-large-en-v1.5 
-Number of documents: 1000
-100%|██████████████████████████████████████| 1000/1000 [01:40<00:00,  9.92it/s]
-Tokens: 5000
-Success rate: 100.0%. (1000/1000)
-Throughput - Tokens per second: 49.6
-Mean latency: 12.75 ms
-Median latency: 12.43 ms
-Average document length: 5.0 tokens
-
-
-python benchmark.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 32 --dataset synthetic --synthetic_length 510 --model bge-large-en-v1.5 --tokenizer BAAI/bge-large-en-v1.5 
-Number of documents: 1000
-100%|██████████████████████████████████████| 32/32 [00:13<00:00,  2.43it/s]
-Tokens: 510000
-Success rate: 100.0%. (32/32)
-Throughput - Tokens per second: 38,746.8
-Mean latency: 6851.76 ms
-Median latency: 6790.46 ms
-Average document length: 510.0 tokens
-
-
-python benchmark.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 1 --dataset Cohere/wikipedia-2023-11-embed-multilingual-v3 --hf-subset simple --model bge-large-en-v1.5 --tokenizer BAAI/bge-large-en-v1.5
-Number of documents: 1000
-100%|██████████████████████████████████████| 1000/1000 [00:11<00:00, 89.84it/s]
-Tokens: 66568
-Success rate: 100.0%. (1000/1000)
-Throughput - Tokens per second: 5,980.8
-Mean latency: 1037.83 ms
-Median latency: 912.00 ms
-Average document length: 66.568 tokens
-```
+For synthetic and Hugging Face dataset examples, setup, and token-counting details,
+see [Text Embeddings](../benchmark/openai/README.md#text-embeddings) in the benchmark guide.
 
 ## RAG with Model Server
 
@@ -480,8 +443,7 @@ A simple method of testing the response accuracy is via comparing the response f
 
 The script [compare_results.py](https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/compare_results.py) can assist with such experiment.
 ```bash
-popd
-cd model_server/demos/embeddings
+curl -fL https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/compare_results.py -o compare_results.py
 python compare_results.py --model_name bge-large-en-v1.5 --hf_model_name BAAI/bge-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings --pooling CLS --input "hello world" --input "goodbye world"
 
 input ['hello world', 'goodbye world']
