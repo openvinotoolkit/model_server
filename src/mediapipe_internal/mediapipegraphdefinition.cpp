@@ -36,7 +36,6 @@
 #include "src/metrics/metric_config.hpp"
 #include "src/metrics/metric_provider.hpp"
 #include "../model_metric_reporter.hpp"
-#include "../metrics/llm_metric_reporter.hpp"
 #include "../ov_utils.hpp"
 #include "../servable_definition_unload_guard.hpp"
 #include "../servable_name_checker.hpp"
@@ -611,7 +610,6 @@ Status MediapipeGraphDefinition::doReload(const ServableNameChecker& checker, co
     this->mgconfig = config;
     // Refresh the lock-free cache while we still hold lifecycleMtx.
     idleUnloadTimeoutSecondsCache.store(this->mgconfig.getIdleUnloadTimeoutSeconds(), std::memory_order_relaxed);
-    deactivateMetrics();
     this->queue.reset();
     this->sidePacketMaps = std::make_shared<GraphSidePackets>();
     Status validationStatus = validate(checker);
@@ -752,23 +750,8 @@ void MediapipeGraphDefinition::unloadComponentsAfterPendingExecutorsAreCreated()
     while (pendingCreateExecutorCount > 0) {
         std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
-    deactivateMetrics();
     this->queue.reset();
     this->sidePacketMaps.reset();
-}
-
-void MediapipeGraphDefinition::deactivateMetrics() {
-    if (!sidePacketMaps) {
-        return;
-    }
-    for (const auto& entry : sidePacketMaps->calculatorMetrics) {
-        entry.second->deactivate();
-    }
-    for (const auto& reporterRef : sidePacketMaps->llmMetricReporters) {
-        if (auto llmReporter = reporterRef.lock()) {
-            llmReporter->deactivate();
-        }
-    }
 }
 
 Status MediapipeGraphDefinition::initializeNodes() {

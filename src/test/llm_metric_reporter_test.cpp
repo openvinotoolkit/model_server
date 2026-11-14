@@ -110,8 +110,6 @@ TEST_F(LLMMetricsTest, FamiliesCanBeSelectedIndependently) {
     promptTokensReporter.observeCompletedRequest({100, 7, 20, 50});
     EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_prompt_tokens_total{name=\"prompt_model\",node=\"llm\"} 100\n"));
     EXPECT_THAT(registry.collect(), Not(HasSubstr(METRIC_NAME_LLM_GENERATED_TOKENS)));
-    promptTokensReporter.deactivate();
-    EXPECT_FALSE(promptTokensReporter.hasAnyCompletionMetricsEnabled());
 }
 
 TEST_F(LLMMetricsTest, GaugeRetainsLatestValueAcrossScrapes) {
@@ -143,12 +141,13 @@ TEST_F(LLMMetricsTest, NewFamiliesCanBeSelectedIndependently) {
              METRIC_NAME_LLM_SCHEDULED_REQUESTS, METRIC_NAME_LLM_TTFT, METRIC_NAME_LLM_TPOT}) {
         MetricConfig selected;
         ASSERT_EQ(selected.loadFromCLIString(true, family), StatusCode::OK);
-        LLMMetricReporter reporter(&selected, &registry, "model", "llm");
+        MetricRegistry selectedRegistry;
+        LLMMetricReporter reporter(&selected, &selectedRegistry, "model", "llm");
         EXPECT_EQ(reporter.hasCompletedRequestMetricsEnabled(),
             family != METRIC_NAME_LLM_SCHEDULED_REQUESTS);
         reporter.observeCompletedRequest({100, 7, 20, 50});
         reporter.setScheduledRequests(3);
-        const std::string scrape = registry.collect();
+        const std::string scrape = selectedRegistry.collect();
         EXPECT_THAT(scrape, HasSubstr(family));
         for (const auto& other : {METRIC_NAME_LLM_PROMPT_TOKENS, METRIC_NAME_LLM_GENERATED_TOKENS,
                  METRIC_NAME_LLM_SCHEDULED_REQUESTS, METRIC_NAME_LLM_TTFT, METRIC_NAME_LLM_TPOT}) {
@@ -246,7 +245,7 @@ TEST_F(LLMMetricsTest, InvalidSamplesLeaveStoredValuesUnchanged) {
     EXPECT_EQ(registry.collect(), scrape);
 }
 
-TEST_F(LLMMetricsTest, PipelineLabelsAreIndependentAndRemovedOnDestruction) {
+TEST_F(LLMMetricsTest, PipelineLabelsAreIndependentAndSeriesOutliveReporter) {
     LLMMetricReporter first(&config, &registry, "model", "first");
     first.setCacheUtilization(20);
     {
@@ -254,63 +253,77 @@ TEST_F(LLMMetricsTest, PipelineLabelsAreIndependentAndRemovedOnDestruction) {
         LLMMetricReporter otherGraph(&config, &registry, "other", "first");
         second.setCacheUtilization(40);
         otherGraph.setCacheUtilization(60);
-        EXPECT_THAT(registry.collect(), HasSubstr("ovms_kv_cache_utilization_percent{name=\"model\",node=\"first\"} 20\n"));
-        EXPECT_THAT(registry.collect(), HasSubstr("ovms_kv_cache_utilization_percent{name=\"model\",node=\"second\"} 40\n"));
-        EXPECT_THAT(registry.collect(), HasSubstr("ovms_kv_cache_utilization_percent{name=\"other\",node=\"first\"} 60\n"));
     }
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("node=\"second\"")));
-    EXPECT_THAT(registry.collect(), Not(HasSubstr("name=\"other\"")));
     first.setCacheUtilization(30);
-    EXPECT_THAT(registry.collect(), HasSubstr("ovms_kv_cache_utilization_percent{name=\"model\",node=\"first\"} 30\n"));
+    const std::string scrape = registry.collect();
+    EXPECT_THAT(scrape, HasSubstr("ovms_kv_cache_utilization_percent{name=\"model\",node=\"first\"} 30\n"));
+    EXPECT_THAT(scrape, HasSubstr("ovms_kv_cache_utilization_percent{name=\"model\",node=\"second\"} 40\n"));
+    EXPECT_THAT(scrape, HasSubstr("ovms_kv_cache_utilization_percent{name=\"other\",node=\"first\"} 60\n"));
 }
 
-TEST_F(LLMMetricsTest, ReloadStartsFreshSeries) {
+TEST_F(LLMMetricsTest, ReloadPreservesSeries) {
     {
         LLMMetricReporter reporter(&config, &registry, "model", "llm");
         reporter.setCacheUtilization(42);
+        reporter.setCacheSizeBytes(4096);
         reporter.observeCompletedRequest({100, 7, 20, 30});
         reporter.setScheduledRequests(3);
     }
-    EXPECT_TRUE(registry.collect().empty());
+    const std::string unloadedScrape = registry.collect();
+    EXPECT_THAT(unloadedScrape, HasSubstr("ovms_llm_prompt_tokens_total{name=\"model\",node=\"llm\"} 100\n"));
+    EXPECT_THAT(unloadedScrape, HasSubstr("ovms_llm_generated_tokens_total{name=\"model\",node=\"llm\"} 7\n"));
+    EXPECT_THAT(unloadedScrape, HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"model\",node=\"llm\"} 1\n"));
+
     LLMMetricReporter reloaded(&config, &registry, "model", "llm");
-    EXPECT_THAT(registry.collect(), HasSubstr("ovms_kv_cache_utilization_percent{name=\"model\",node=\"llm\"} 0\n"));
-    EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_prompt_tokens_total{name=\"model\",node=\"llm\"} 0\n"));
-    EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_generated_tokens_total{name=\"model\",node=\"llm\"} 0\n"));
-    EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_scheduled_requests{name=\"model\",node=\"llm\"} 0\n"));
-    EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"model\",node=\"llm\"} 0\n"));
-    EXPECT_THAT(registry.collect(), HasSubstr("ovms_llm_tpot_milliseconds_count{name=\"model\",node=\"llm\"} 0\n"));
+    EXPECT_EQ(registry.collect(), unloadedScrape);
+    reloaded.observeCompletedRequest({50, 5, 200, 80});
+    const std::string reloadedScrape = registry.collect();
+    EXPECT_THAT(reloadedScrape, HasSubstr("ovms_llm_prompt_tokens_total{name=\"model\",node=\"llm\"} 150\n"));
+    EXPECT_THAT(reloadedScrape, HasSubstr("ovms_llm_generated_tokens_total{name=\"model\",node=\"llm\"} 12\n"));
+    EXPECT_THAT(reloadedScrape, HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"model\",node=\"llm\"} 2\n"));
+    EXPECT_THAT(reloadedScrape, HasSubstr("ovms_llm_ttft_milliseconds_sum{name=\"model\",node=\"llm\"} 220\n"));
+    EXPECT_THAT(reloadedScrape, HasSubstr("ovms_llm_tpot_milliseconds_count{name=\"model\",node=\"llm\"} 2\n"));
+    EXPECT_THAT(reloadedScrape, HasSubstr("ovms_llm_tpot_milliseconds_sum{name=\"model\",node=\"llm\"} 110\n"));
 }
 
-TEST_F(LLMMetricsTest, RetainedOldPipelineCannotModifyOrRemoveReplacementMetrics) {
+TEST_F(LLMMetricsTest, RetainedOldPipelineAndReplacementPublishToTheSameSeries) {
     auto oldReporter = std::make_unique<LLMMetricReporter>(&config, &registry, "model", "llm");
-    oldReporter->setCacheUtilization(42);
     oldReporter->observeCompletedRequest({100, 7, 20, 30});
-    oldReporter->setScheduledRequests(3);
-    oldReporter->deactivate();
-    EXPECT_FALSE(oldReporter->isCacheUtilizationEnabled());
-    EXPECT_TRUE(registry.collect().empty());
 
     LLMMetricReporter replacement(&config, &registry, "model", "llm");
-    replacement.setCacheUtilization(25);
     replacement.observeCompletedRequest({50, 5, 10, 15});
-    replacement.setScheduledRequests(1);
-    const std::string scrape = registry.collect();
-    oldReporter->setCacheUtilization(90);
     oldReporter->observeCompletedRequest({1000, 100, 1000, 2000});
-    oldReporter->setScheduledRequests(10);
-    EXPECT_EQ(registry.collect(), scrape);
     oldReporter.reset();
-    EXPECT_EQ(registry.collect(), scrape);
+    const std::string scrape = registry.collect();
+    EXPECT_THAT(scrape, HasSubstr("ovms_llm_prompt_tokens_total{name=\"model\",node=\"llm\"} 1150\n"));
+    EXPECT_THAT(scrape, HasSubstr("ovms_llm_generated_tokens_total{name=\"model\",node=\"llm\"} 112\n"));
+    EXPECT_THAT(scrape, HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"model\",node=\"llm\"} 3\n"));
 }
 
-TEST_F(LLMMetricsTest, RegistrationFailureRollsBackPartialSeries) {
+TEST_F(LLMMetricsTest, StoppedPipelineResetsGaugesAndKeepsCompletedRequestMetrics) {
+    LLMMetricReporter reporter(&config, &registry, "model", "llm");
+    reporter.setCacheUtilization(42);
+    reporter.setCacheSizeBytes(4096);
+    reporter.setScheduledRequests(3);
+    reporter.observeCompletedRequest({100, 7, 20, 30});
+
+    reporter.resetPipelineGauges();
+    const std::string scrape = registry.collect();
+    EXPECT_THAT(scrape, HasSubstr("ovms_kv_cache_utilization_percent{name=\"model\",node=\"llm\"} 0\n"));
+    EXPECT_THAT(scrape, HasSubstr("ovms_kv_cache_size_bytes{name=\"model\",node=\"llm\"} 0\n"));
+    EXPECT_THAT(scrape, HasSubstr("ovms_llm_scheduled_requests{name=\"model\",node=\"llm\"} 0\n"));
+    EXPECT_THAT(scrape, HasSubstr("ovms_llm_prompt_tokens_total{name=\"model\",node=\"llm\"} 100\n"));
+    EXPECT_THAT(scrape, HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"model\",node=\"llm\"} 1\n"));
+}
+
+TEST_F(LLMMetricsTest, RegistrationFailureLeavesNoPartialSeries) {
     auto incompatibleFamily = registry.createFamily<MetricGauge>(METRIC_NAME_LLM_PROMPT_TOKENS, "incompatible");
     ASSERT_NE(incompatibleFamily, nullptr);
     EXPECT_THROW(LLMMetricReporter(&config, &registry, "model", "llm"), std::logic_error);
     EXPECT_TRUE(registry.collect().empty());
 }
 
-TEST_F(LLMMetricsTest, NewFamilyRegistrationFailureRollsBackPartialSeries) {
+TEST_F(LLMMetricsTest, NewFamilyRegistrationFailureLeavesNoPartialSeries) {
     auto incompatibleFamily = registry.createFamily<MetricGauge>(METRIC_NAME_LLM_TTFT, "incompatible");
     ASSERT_NE(incompatibleFamily, nullptr);
     EXPECT_THROW(LLMMetricReporter(&config, &registry, "model", "llm"), std::logic_error);

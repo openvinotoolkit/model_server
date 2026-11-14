@@ -200,55 +200,36 @@ TEST(CalculatorMetricsTest, DisabledMetricsReturnUsableNoOpHandles) {
     EXPECT_EQ(histogram, metrics.getOrRegisterHistogram("custom_latency_seconds", "Latency.", {1, 2}));
 }
 
-TEST(CalculatorMetricsTest, DeactivationProtectsReplacementSeriesAndRegistryLifetime) {
-    std::shared_ptr<CalculatorCounter> retained;
-    {
-        MetricRegistry registry;
-        CalculatorMetrics oldScope(&registry, "graph", "node");
-        retained = oldScope.getOrRegisterCounter("custom_events_total", "Events.");
-        retained->increment();
-        oldScope.deactivate();
-        EXPECT_TRUE(registry.collect().empty());
-        EXPECT_THROW(oldScope.getOrRegisterCounter("custom_new_total", "New."), std::logic_error);
-        CalculatorMetrics replacement(&registry, "graph", "node");
-        auto current = replacement.getOrRegisterCounter("custom_events_total", "Events.");
-        current->increment(2);
-        retained->increment(100);
-        EXPECT_THAT(registry.collect(), HasSubstr("custom_events_total{name=\"graph\",node=\"node\"} 2\n"));
-    }
-    retained->increment();
-    retained.reset();
-}
-
-TEST(CalculatorMetricsTest, ScopeDestructionRemovesSeriesEvenWhenHandleIsRetained) {
+TEST(CalculatorMetricsTest, ReloadedScopeContinuesSeriesOfAllMetricTypes) {
     MetricRegistry registry;
-    std::shared_ptr<CalculatorCounter> retained;
+    const std::vector<double> buckets{1, 2};
+    std::shared_ptr<CalculatorCounter> retainedCounter;
     {
-        CalculatorMetrics metrics(&registry, "graph", "node");
-        retained = metrics.getOrRegisterCounter("custom_events_total", "Events.");
-        retained->increment();
+        CalculatorMetrics unloadedScope(&registry, "graph", "node");
+        retainedCounter = unloadedScope.getOrRegisterCounter("custom_events_total", "Events.");
+        retainedCounter->increment();
+        unloadedScope.getOrRegisterGauge("custom_queue_depth", "Queued requests.")->set(4);
+        unloadedScope.getOrRegisterHistogram("custom_latency_seconds", "Latency.", buckets)->observe(1.5);
     }
-    EXPECT_TRUE(registry.collect().empty());
-    retained->increment();
-    EXPECT_TRUE(registry.collect().empty());
-}
+    const std::string unloadedScrape = registry.collect();
+    EXPECT_THAT(unloadedScrape, HasSubstr("custom_events_total{name=\"graph\",node=\"node\"} 1\n"));
+    EXPECT_THAT(unloadedScrape, HasSubstr("custom_queue_depth{name=\"graph\",node=\"node\"} 4\n"));
+    EXPECT_THAT(unloadedScrape, HasSubstr("custom_latency_seconds_count{name=\"graph\",node=\"node\"} 1\n"));
 
-TEST(CalculatorMetricsTest, DeactivationRemovesAllMetricTypesAndDisablesRetainedHandles) {
-    MetricRegistry registry;
-    CalculatorMetrics metrics(&registry, "graph", "node");
-    auto counter = metrics.getOrRegisterCounter("custom_events_total", "Events.");
-    auto gauge = metrics.getOrRegisterGauge("custom_queue_depth", "Queued requests.");
-    auto histogram = metrics.getOrRegisterHistogram("custom_latency_seconds", "Latency.", {1, 2});
-    counter->increment();
-    gauge->set(4);
-    histogram->observe(1.5);
-
-    metrics.deactivate();
-    EXPECT_TRUE(registry.collect().empty());
-    counter->increment();
-    gauge->set(10);
-    histogram->observe(1.5);
-    EXPECT_TRUE(registry.collect().empty());
+    CalculatorMetrics reloadedScope(&registry, "graph", "node");
+    auto counter = reloadedScope.getOrRegisterCounter("custom_events_total", "Events.");
+    auto gauge = reloadedScope.getOrRegisterGauge("custom_queue_depth", "Queued requests.");
+    auto histogram = reloadedScope.getOrRegisterHistogram("custom_latency_seconds", "Latency.", buckets);
+    EXPECT_EQ(registry.collect(), unloadedScrape);
+    counter->increment(2);
+    retainedCounter->increment(100);
+    gauge->add(1);
+    histogram->observe(0.5);
+    const std::string reloadedScrape = registry.collect();
+    EXPECT_THAT(reloadedScrape, HasSubstr("custom_events_total{name=\"graph\",node=\"node\"} 103\n"));
+    EXPECT_THAT(reloadedScrape, HasSubstr("custom_queue_depth{name=\"graph\",node=\"node\"} 5\n"));
+    EXPECT_THAT(reloadedScrape, HasSubstr("custom_latency_seconds_count{name=\"graph\",node=\"node\"} 2\n"));
+    EXPECT_THAT(reloadedScrape, HasSubstr("custom_latency_seconds_sum{name=\"graph\",node=\"node\"} 2\n"));
 }
 
 TEST(CalculatorMetricsTest, RegistrationTypeAndHistogramBucketsMustMatchAcrossScopes) {
@@ -269,10 +250,9 @@ TEST(CalculatorMetricsTest, RegistrationTypeAndHistogramBucketsMustMatchAcrossSc
     EXPECT_THAT(scrape, HasSubstr("custom_latency_seconds_count{name=\"graph\",node=\"second\"} 1\n"));
 }
 
-TEST(CalculatorMetricsTest, ConcurrentRegistrationUpdatesScrapesAndDeactivation) {
+TEST(CalculatorMetricsTest, ConcurrentRegistrationUpdatesAndScrapes) {
     MetricRegistry registry;
     CalculatorMetrics metrics(&registry, "graph", "node");
-    auto counter = metrics.getOrRegisterCounter("custom_events_total", "Events.");
     auto writer = std::async(std::launch::async, [&]() {
         for (int i = 0; i < 1000; ++i) {
             metrics.getOrRegisterCounter("custom_events_total", "Events.")->increment();
@@ -283,14 +263,6 @@ TEST(CalculatorMetricsTest, ConcurrentRegistrationUpdatesScrapesAndDeactivation)
     }
     writer.get();
     EXPECT_THAT(registry.collect(), HasSubstr("custom_events_total{name=\"graph\",node=\"node\"} 1000\n"));
-    auto lateWriter = std::async(std::launch::async, [&]() {
-        for (int i = 0; i < 1000; ++i) {
-            counter->increment();
-        }
-    });
-    metrics.deactivate();
-    lateWriter.get();
-    EXPECT_TRUE(registry.collect().empty());
 }
 
 TEST(CalculatorMetricsTest, ConflictingBuiltInFamilyTypeFailsRegistration) {

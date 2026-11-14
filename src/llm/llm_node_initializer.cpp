@@ -61,15 +61,13 @@ public:
             return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
         }
         std::shared_ptr<GenAiServable> servable;
-        std::shared_ptr<LLMMetricReporter> metricReporter;
-        std::weak_ptr<LLMMetricReporter> metricReporterRef = metricReporter;
         Status status;
         try {
-            metricReporter = std::make_shared<LLMMetricReporter>(
-                metrics ? &metrics->getMetricConfig() : nullptr,
-                metrics ? metrics->getMetricRegistry() : nullptr, graphName, nodeName);
-            metricReporterRef = metricReporter;
-            status = initializeGenAiServable(servable, nodeConfig, basePath, std::move(metricReporter));
+            status = initializeGenAiServable(servable, nodeConfig, basePath, [metrics, graphName, nodeName]() {
+                return std::make_shared<LLMMetricReporter>(
+                    metrics ? &metrics->getMetricConfig() : nullptr,
+                    metrics ? metrics->getMetricRegistry() : nullptr, graphName, nodeName);
+            });
         } catch (const std::exception& e) {
             SPDLOG_ERROR("Failed to initialize LLM node {} in graph {}: {}", nodeName, graphName, e.what());
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
@@ -81,7 +79,6 @@ public:
             SPDLOG_ERROR("Failed to process LLM node graph {}", graphName);
             return status;
         }
-        sidePackets.llmMetricReporters.push_back(std::move(metricReporterRef));
         const auto maxModelLength = servable->getProperties()->maxModelLength;
         if (maxModelLength.has_value() && !metadata.setInt("max_model_len", maxModelLength.value())) {
             SPDLOG_WARN("Metadata key max_model_len is already set in graph: {}, ignoring the value from LLM node: {}", graphName, nodeName);

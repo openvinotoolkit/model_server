@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <chrono>
 #include <fstream>
+#include <iterator>
 #include <limits>
 #include <memory>
 #include <mutex>
@@ -4564,7 +4565,8 @@ node {
 
     queue.reset();
     sidePackets->clear();
-    EXPECT_TRUE(registry.collect().empty());
+    EXPECT_THAT(registry.collect(),
+        HasSubstr("custom_runtime_events_total{name=\"runtime_graph\",node=\"metric_node\"} 2\n"));
 
     sidePackets->calculatorMetrics.emplace(
         "metric_node", std::make_shared<CalculatorMetrics>(&registry, "runtime_graph", "metric_node"));
@@ -4574,26 +4576,26 @@ node {
         ASSERT_TRUE(process(reloaded.graph).ok());
     }
     EXPECT_THAT(registry.collect(),
-        HasSubstr("custom_runtime_events_total{name=\"runtime_graph\",node=\"metric_node\"} 1\n"));
+        HasSubstr("custom_runtime_events_total{name=\"runtime_graph\",node=\"metric_node\"} 3\n"));
     queue.reset();
     sidePackets->clear();
 }
 
 namespace {
+constexpr const char* CONTINUOUS_BATCHING_LLM_GRAPH_PATH = "/ovms/src/test/llm/lm_cb_regular.pbtxt";
+constexpr const char* LEGACY_LLM_GRAPH_PATH = "/ovms/src/test/llm/lm_legacy_regular.pbtxt";
+constexpr const char* LLM_GRAPH_NODE_NAME = "llmNode1";
+
 class TestGraphMetricProvider : public ovms::MetricProvider {
 public:
     mutable ovms::MetricRegistry registry;
     ovms::MetricConfig config;
     bool provideRegistry = true;
-    mutable int registryRequests = 0;
-    mutable int configRequests = 0;
 
     ovms::MetricRegistry* getMetricRegistry() const override {
-        ++registryRequests;
         return provideRegistry ? &registry : nullptr;
     }
     const ovms::MetricConfig& getMetricConfig() const override {
-        ++configRequests;
         return config;
     }
 };
@@ -4624,11 +4626,12 @@ public:
         return sidePacketMaps->calculatorMetrics.size();
     }
 
-    void useInvalidLlmNode() {
-        auto* node = config.mutable_node(0);
-        node->set_calculator("LLMCalculator");
-        node->clear_input_side_packet();
-        node->add_node_options();
+    // Replaces the graph with the one defined in an LLM test graph file.
+    void useLlmGraph(const std::string& graphPath) {
+        std::ifstream graphFile(getGenericFullPathForSrcTest(graphPath));
+        std::string graphContent{std::istreambuf_iterator<char>(graphFile), std::istreambuf_iterator<char>()};
+        adjustConfigForTargetPlatform(graphContent);
+        ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(graphContent, &config));
     }
 };
 }  // namespace
@@ -4639,7 +4642,7 @@ TEST(MediapipeGraphMetricsProvider, LlmMetricRegistrationExceptionsBecomeStatuse
     ASSERT_NE(nullptr, metrics.registry.createFamily<MetricCounter>(
                            METRIC_NAME_KV_CACHE_UTILIZATION, "Conflicting family type."));
     MetricsGraphDefinition graph(&metrics);
-    graph.useInvalidLlmNode();
+    ASSERT_NO_FATAL_FAILURE(graph.useLlmGraph(CONTINUOUS_BATCHING_LLM_GRAPH_PATH));
 
     EXPECT_NO_THROW({
         EXPECT_EQ(graph.initializeNodes(), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
@@ -4684,13 +4687,23 @@ TEST(MediapipeGraphMetricsProvider, CustomMetricsAreNoOpWhenDisabledOrUnavailabl
     }
 }
 
-TEST(MediapipeGraphMetricsProvider, PassesProviderToLlmInitializer) {
+TEST(MediapipeGraphMetricsProvider, ContinuousBatchingLlmNodeRegistersMetricsThroughProvider) {
     TestGraphMetricProvider metrics;
+    ASSERT_EQ(metrics.config.loadFromCLIString(true, METRIC_NAME_LLM_PROMPT_TOKENS), StatusCode::OK);
     MetricsGraphDefinition graph(&metrics);
-    graph.useInvalidLlmNode();
-    const int initialRegistryRequests = metrics.registryRequests;
-    const int initialConfigRequests = metrics.configRequests;
-    ASSERT_EQ(graph.initializeNodes(), ovms::StatusCode::INTERNAL_ERROR);
-    EXPECT_EQ(metrics.registryRequests, initialRegistryRequests + 1);
-    EXPECT_EQ(metrics.configRequests, initialConfigRequests + 1);
+    ASSERT_NO_FATAL_FAILURE(graph.useLlmGraph(CONTINUOUS_BATCHING_LLM_GRAPH_PATH));
+    ASSERT_EQ(graph.initializeNodes(), ovms::StatusCode::OK);
+    EXPECT_THAT(metrics.registry.collect(),
+        HasSubstr(METRIC_NAME_LLM_PROMPT_TOKENS + "{name=\"graph\",node=\"" + LLM_GRAPH_NODE_NAME + "\"} 0\n"));
+}
+
+TEST(MediapipeGraphMetricsProvider, LegacyLlmNodeRegistersNoLlmMetrics) {
+    TestGraphMetricProvider metrics;
+    ASSERT_EQ(metrics.config.loadFromCLIString(true, METRIC_NAME_LLM_PROMPT_TOKENS + "," + METRIC_NAME_KV_CACHE_UTILIZATION), StatusCode::OK);
+    MetricsGraphDefinition graph(&metrics);
+    ASSERT_NO_FATAL_FAILURE(graph.useLlmGraph(LEGACY_LLM_GRAPH_PATH));
+    ASSERT_EQ(graph.initializeNodes(), ovms::StatusCode::OK);
+    const std::string scrape = metrics.registry.collect();
+    EXPECT_THAT(scrape, Not(HasSubstr(METRIC_NAME_LLM_PROMPT_TOKENS)));
+    EXPECT_THAT(scrape, Not(HasSubstr(METRIC_NAME_KV_CACHE_UTILIZATION)));
 }

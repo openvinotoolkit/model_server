@@ -165,6 +165,10 @@ public:
         finishExecutorThread = true;
         llmExecutor.notify();
         llmExecutorThread.join();
+        // Series outlive the pipeline, so its state gauges must not keep the last published values.
+        if (llmExecutor.metricReporter) {
+            llmExecutor.metricReporter->resetPipelineGauges();
+        }
     }
 
     void notifyNewRequestArrived() {

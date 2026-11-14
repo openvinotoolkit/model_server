@@ -28,17 +28,13 @@ class MetricCounter;
 class MetricGauge;
 class MetricHistogram;
 class MetricRegistry;
-template <typename T>
-class MetricFamily;
-template <typename T>
-class MetricSeries;
 
-/// A thread-safe custom counter handle. Updates after graph unload are ignored.
+/// A thread-safe custom counter handle. The registry owns the series, which
+/// persists across graph unload and reload.
 class CalculatorCounter {
-    std::shared_ptr<MetricSeries<MetricCounter>> series;
+    std::unique_ptr<MetricCounter> metric;
     CalculatorCounter(MetricRegistry* registry, const std::string& name, const std::string& help,
         const std::string& graphName, const std::string& nodeName);
-    void deactivate();
     friend class CalculatorMetrics;
 
 public:
@@ -49,12 +45,12 @@ public:
     void increment(double value = 1.0);
 };
 
-/// A thread-safe custom gauge handle. Updates after graph unload are ignored.
+/// A thread-safe custom gauge handle. The registry owns the series, which
+/// persists across graph unload and reload.
 class CalculatorGauge {
-    std::shared_ptr<MetricSeries<MetricGauge>> series;
+    std::unique_ptr<MetricGauge> metric;
     CalculatorGauge(MetricRegistry* registry, const std::string& name, const std::string& help,
         const std::string& graphName, const std::string& nodeName);
-    void deactivate();
     friend class CalculatorMetrics;
 
 public:
@@ -67,12 +63,12 @@ public:
     void add(double value);
 };
 
-/// A thread-safe custom histogram handle. Updates after graph unload are ignored.
+/// A thread-safe custom histogram handle. The registry owns the series, which
+/// persists across graph unload and reload.
 class CalculatorHistogram {
-    std::shared_ptr<MetricSeries<MetricHistogram>> series;
+    std::unique_ptr<MetricHistogram> metric;
     CalculatorHistogram(MetricRegistry* registry, const std::string& name, const std::string& help,
         const std::string& graphName, const std::string& nodeName, const std::vector<double>& bucketBoundaries);
-    void deactivate();
     friend class CalculatorMetrics;
 
 public:
@@ -84,7 +80,9 @@ public:
 };
 
 /// One graph/node registration scope, shared by all instances of that calculator.
-/// The registry must outlive the scope, or deactivate() must be called first.
+/// A scope created again for the same graph and node, for example after a graph
+/// reload, continues the existing series. The registry must outlive updates made
+/// through the scope's handles.
 class CalculatorMetrics {
     using MetricHandle = std::variant<
         std::shared_ptr<CalculatorCounter>,
@@ -95,14 +93,11 @@ class CalculatorMetrics {
         std::string help;
         std::vector<double> bucketBoundaries;
         MetricHandle metricHandle;
-
-        void deactivate() const;
     };
     std::mutex scopeMutex;
-    MetricRegistry* registry;
+    MetricRegistry* const registry;
     const std::string graphName;
     const std::string nodeName;
-    bool active = true;
     std::map<std::string, Registration> metrics;
 
     template <typename HandleType>
@@ -111,7 +106,6 @@ class CalculatorMetrics {
 
 public:
     CalculatorMetrics(MetricRegistry* registry, const std::string& graphName, const std::string& nodeName);
-    ~CalculatorMetrics();
     /// Get an existing handle or register one (usually in Open).
     /// Counters must be named custom_<name>_total;
     /// gauges and histograms must start with custom_. Names and help text must
@@ -121,8 +115,6 @@ public:
     /// Histogram bucket boundaries must be finite and strictly increasing.
     std::shared_ptr<CalculatorHistogram> getOrRegisterHistogram(const std::string& name, const std::string& help,
         const std::vector<double>& bucketBoundaries);
-    /// Remove this scope's series and make retained handles safe no-ops.
-    void deactivate();
 };
 
 using CalculatorMetricsMap = std::map<std::string, std::shared_ptr<CalculatorMetrics>>;

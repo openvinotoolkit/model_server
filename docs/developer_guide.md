@@ -158,18 +158,28 @@ or `increase()` to calculate counter changes over time.
   need not contain null checks. Names and values are still validated.
 - Metrics persist across requests and calculator `Close` calls. Do not remove
   them in `Close`: other calculator instances can share the series.
-- OVMS deactivates scopes and removes series on graph unload/reload. Old handles
-  safely ignore valid late updates and cannot affect replacement series.
-  Re-registering through an inactive scope fails. Reloads and server restarts
-  reset metric series; Prometheus handles counter resets in `rate()`/`increase()`.
+- The metric registry owns the series and keeps them until the server stops.
+  Graph unload, idle-unload and reload do not remove or reset them: a calculator
+  that registers the same metric after a reload continues the existing series,
+  and counters and histograms keep their values. Handles retained by a request
+  that started before the reload still update that same series.
+- Because series outlive the graph, a series of a retired graph or a renamed
+  node stays exported with its last value. Set gauges back to their idle value
+  in `Close` if a stale value would be misleading.
 
 ## LLM metric series lifecycle
 
-The LLM metric reporter is scoped to a graph pipeline. OVMS deactivates the
-reporter and removes its series when the graph unloads or reloads. An in-flight
-request may still hold the old reporter, but updates through it are ignored and
-cannot affect the replacement pipeline's series. New pipelines start fresh
-series; use Prometheus `rate()` or `increase()` to account for counter resets.
+LLM metric series are identified by the graph and node name and are owned by the
+metric registry, which keeps them until the server stops. Graph unload,
+idle-unload and reload do not remove or reset them: the reloaded pipeline
+continues the same series, so token counters and timing histograms keep
+accumulating. A request that completes on the previous pipeline after a reload
+is counted in the same series. Counters reset only on server restart;
+Prometheus handles that in `rate()` and `increase()`.
+
+The cache utilization, cache size and scheduled-request gauges describe the
+running pipeline. OVMS sets them to `0` when the pipeline stops, so an unloaded
+graph does not keep exporting its last values.
 
 ## Set up the Development Environment
 

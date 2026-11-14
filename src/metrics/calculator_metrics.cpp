@@ -24,7 +24,6 @@
 #include "metric.hpp"
 #include "metric_family.hpp"
 #include "metric_registry.hpp"
-#include "metric_series.hpp"
 
 namespace ovms {
 
@@ -32,6 +31,12 @@ namespace {
 
 constexpr std::string_view CUSTOM_METRIC_PREFIX = "custom_";
 constexpr std::string_view COUNTER_SUFFIX = "_total";
+
+// A series is identified by its family and these labels: adding a series whose
+// labels are already registered returns the existing series.
+MetricLabels makeScopeLabels(const std::string& graphName, const std::string& nodeName) {
+    return {{"name", graphName}, {"node", nodeName}};
+}
 
 bool hasValidCustomMetricName(const std::string& name) {
     if (name.size() <= CUSTOM_METRIC_PREFIX.size() ||
@@ -77,55 +82,35 @@ std::string conflictingRegistrationMessage(const std::string& name) {
 
 CalculatorCounter::CalculatorCounter(MetricRegistry* registry, const std::string& name, const std::string& help,
     const std::string& graphName, const std::string& nodeName) :
-    series(registry ? std::make_shared<MetricSeries<MetricCounter>>(
-                          registry->registerCustomFamily<MetricCounter>(name, help),
-                          MetricLabels{{"name", graphName}, {"node", nodeName}})
+    metric(registry ? registry->registerCustomFamily<MetricCounter>(name, help)->addMetric(makeScopeLabels(graphName, nodeName))
                     : nullptr) {}
 
-CalculatorCounter::~CalculatorCounter() {
-    deactivate();
-}
-
-void CalculatorCounter::deactivate() {
-    if (series) {
-        series->deactivate();
-    }
-}
+CalculatorCounter::~CalculatorCounter() = default;
 
 void CalculatorCounter::increment(double value) {
     if (!std::isfinite(value) || value < 0.0) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Ignoring custom counter increment; value must be finite and non-negative, got {}", value);
         return;
     }
-    if (series) {
-        series->update([value](MetricCounter& metric) { metric.increment(value); });
+    if (metric) {
+        metric->increment(value);
     }
 }
 
 CalculatorGauge::CalculatorGauge(MetricRegistry* registry, const std::string& name, const std::string& help,
     const std::string& graphName, const std::string& nodeName) :
-    series(registry ? std::make_shared<MetricSeries<MetricGauge>>(
-                          registry->registerCustomFamily<MetricGauge>(name, help),
-                          MetricLabels{{"name", graphName}, {"node", nodeName}})
+    metric(registry ? registry->registerCustomFamily<MetricGauge>(name, help)->addMetric(makeScopeLabels(graphName, nodeName))
                     : nullptr) {}
 
-CalculatorGauge::~CalculatorGauge() {
-    deactivate();
-}
-
-void CalculatorGauge::deactivate() {
-    if (series) {
-        series->deactivate();
-    }
-}
+CalculatorGauge::~CalculatorGauge() = default;
 
 void CalculatorGauge::set(double value) {
     if (!std::isfinite(value)) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Ignoring custom gauge set; value must be finite, got {}", value);
         return;
     }
-    if (series) {
-        series->update([value](MetricGauge& metric) { metric.set(value); });
+    if (metric) {
+        metric->set(value);
     }
 }
 
@@ -134,35 +119,26 @@ void CalculatorGauge::add(double value) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Ignoring custom gauge add; value must be finite, got {}", value);
         return;
     }
-    if (series) {
-        series->update([value](MetricGauge& metric) { metric.increment(value); });
+    if (metric) {
+        metric->increment(value);
     }
 }
 
 CalculatorHistogram::CalculatorHistogram(MetricRegistry* registry, const std::string& name, const std::string& help,
     const std::string& graphName, const std::string& nodeName, const std::vector<double>& bucketBoundaries) :
-    series(registry ? std::make_shared<MetricSeries<MetricHistogram>>(
-                          registry->registerCustomFamily<MetricHistogram>(name, help, bucketBoundaries),
-                          MetricLabels{{"name", graphName}, {"node", nodeName}}, bucketBoundaries)
+    metric(registry ? registry->registerCustomFamily<MetricHistogram>(name, help, bucketBoundaries)
+                          ->addMetric(makeScopeLabels(graphName, nodeName), bucketBoundaries)
                     : nullptr) {}
 
-CalculatorHistogram::~CalculatorHistogram() {
-    deactivate();
-}
-
-void CalculatorHistogram::deactivate() {
-    if (series) {
-        series->deactivate();
-    }
-}
+CalculatorHistogram::~CalculatorHistogram() = default;
 
 void CalculatorHistogram::observe(double value) {
     if (!std::isfinite(value)) {
         SPDLOG_LOGGER_WARN(modelmanager_logger, "Ignoring custom histogram observation; value must be finite, got {}", value);
         return;
     }
-    if (series) {
-        series->update([value](MetricHistogram& metric) { metric.observe(value); });
+    if (metric) {
+        metric->observe(value);
     }
 }
 
@@ -170,10 +146,6 @@ CalculatorMetrics::CalculatorMetrics(MetricRegistry* registry, const std::string
     registry(registry),
     graphName(graphName),
     nodeName(nodeName) {}
-
-CalculatorMetrics::~CalculatorMetrics() {
-    deactivate();
-}
 
 template <typename HandleType>
 std::shared_ptr<HandleType> CalculatorMetrics::findCompatibleRegistration(
@@ -194,9 +166,6 @@ std::shared_ptr<HandleType> CalculatorMetrics::findCompatibleRegistration(
 std::shared_ptr<CalculatorCounter> CalculatorMetrics::getOrRegisterCounter(const std::string& name, const std::string& help) {
     std::lock_guard<std::mutex> lock(scopeMutex);
     try {
-        if (!active) {
-            throw std::logic_error("Cannot register a custom counter after graph unload");
-        }
         if (!hasValidCustomCounterName(name) || help.empty()) {
             throw std::invalid_argument("Custom counter requires a custom_<name>_total name and non-empty help");
         }
@@ -216,9 +185,6 @@ std::shared_ptr<CalculatorCounter> CalculatorMetrics::getOrRegisterCounter(const
 std::shared_ptr<CalculatorGauge> CalculatorMetrics::getOrRegisterGauge(const std::string& name, const std::string& help) {
     std::lock_guard<std::mutex> lock(scopeMutex);
     try {
-        if (!active) {
-            throw std::logic_error("Cannot register a custom gauge after graph unload");
-        }
         if (!hasValidCustomMetricName(name) || help.empty()) {
             throw std::invalid_argument("Custom gauge requires a custom_ name and non-empty help");
         }
@@ -239,9 +205,6 @@ std::shared_ptr<CalculatorHistogram> CalculatorMetrics::getOrRegisterHistogram(c
     const std::vector<double>& bucketBoundaries) {
     std::lock_guard<std::mutex> lock(scopeMutex);
     try {
-        if (!active) {
-            throw std::logic_error("Cannot register a custom histogram after graph unload");
-        }
         if (!hasValidCustomMetricName(name) || help.empty() || !hasValidBucketBoundaries(bucketBoundaries)) {
             throw std::invalid_argument("Custom histogram requires a custom_ name, non-empty help, and finite strictly increasing buckets");
         }
@@ -257,22 +220,6 @@ std::shared_ptr<CalculatorHistogram> CalculatorMetrics::getOrRegisterHistogram(c
             graphName, nodeName, name, e.what());
         throw;
     }
-}
-
-void CalculatorMetrics::Registration::deactivate() const {
-    std::visit([](const auto& handle) { handle->deactivate(); }, metricHandle);
-}
-
-void CalculatorMetrics::deactivate() {
-    std::lock_guard<std::mutex> lock(scopeMutex);
-    if (!active) {
-        return;
-    }
-    active = false;
-    for (const auto& entry : metrics) {
-        entry.second.deactivate();
-    }
-    registry = nullptr;
 }
 
 }  // namespace ovms

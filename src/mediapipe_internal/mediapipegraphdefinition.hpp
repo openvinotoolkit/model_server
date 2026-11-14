@@ -156,7 +156,6 @@ private:
     StatusCode notLoadedYetCode() const override;
     StatusCode notLoadedAnymoreCode() const override;
     void unloadComponentsAfterPendingExecutorsAreCreated();
-    void deactivateMetrics();
     Status doReload(const ServableNameChecker& checker, const MediapipeGraphConfig& config, bool clearMetadataOnFailure);
 
     tensor_map_t inputsInfo;

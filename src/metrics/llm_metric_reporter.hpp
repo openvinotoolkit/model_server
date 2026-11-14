@@ -15,10 +15,8 @@
 //*****************************************************************************
 #pragma once
 
-#include <atomic>
 #include <cstddef>
 #include <memory>
-#include <mutex>
 #include <string>
 #include <vector>
 
@@ -30,10 +28,6 @@ class MetricRegistry;
 class MetricGauge;
 class MetricHistogram;
 class MetricCounter;
-template <typename T>
-class MetricFamily;
-template <typename T>
-class MetricSeries;
 
 struct RequestMetricsSnapshot {
     size_t inputTokens;
@@ -42,27 +36,24 @@ struct RequestMetricsSnapshot {
     double tpotMilliseconds;
 };
 
-// Owns the metric series for one LLM pipeline. The registry must outlive it.
+// Publishing handle for the metric series of one LLM pipeline (graph and node name).
+// The registry owns the series and keeps them for its whole lifetime, so a reporter
+// created again for the same graph and node continues the existing series.
+// The registry must outlive updates made through the reporter.
 class LLMMetricReporter {
-    std::mutex mutex;
-    std::atomic<bool> cacheEnabled{false};
-    std::atomic<bool> cacheSizeEnabled{false};
-    std::atomic<bool> scheduledEnabled{false};
-    std::atomic<bool> completedRequestMetricsEnabled{false};
-    std::atomic<bool> completionMetricsEnabled{false};
-    std::shared_ptr<MetricSeries<MetricGauge>> cacheUtilization;
-    std::shared_ptr<MetricSeries<MetricGauge>> cacheSize;
-    std::shared_ptr<MetricSeries<MetricGauge>> scheduledRequests;
-    std::shared_ptr<MetricSeries<MetricCounter>> promptTokens;
-    std::shared_ptr<MetricSeries<MetricCounter>> generatedTokens;
-    std::shared_ptr<MetricSeries<MetricHistogram>> ttft;
-    std::shared_ptr<MetricSeries<MetricHistogram>> tpot;
+    std::unique_ptr<MetricGauge> cacheUtilization;
+    std::unique_ptr<MetricGauge> cacheSize;
+    std::unique_ptr<MetricGauge> scheduledRequests;
+    std::unique_ptr<MetricCounter> promptTokens;
+    std::unique_ptr<MetricCounter> generatedTokens;
+    std::unique_ptr<MetricHistogram> ttft;
+    std::unique_ptr<MetricHistogram> tpot;
 
     template <typename MetricType>
     struct MetricRegistration {
         const std::string& name;
         const char* help;
-        std::shared_ptr<MetricSeries<MetricType>> LLMMetricReporter::* destination;
+        std::unique_ptr<MetricType> LLMMetricReporter::* destination;
         std::vector<double> bucketBoundaries;
     };
 
@@ -97,8 +88,6 @@ class LLMMetricReporter {
             "GenAI time per output token in milliseconds for successfully completed requests.",
             &LLMMetricReporter::tpot, BUCKET_BOUNDARIES_10_TO_80K}};
 
-    void removeMetrics();
-
 public:
     LLMMetricReporter(const MetricConfig* config, MetricRegistry* registry,
         const std::string& graphName, const std::string& nodeName);
@@ -111,8 +100,9 @@ public:
     bool isScheduledRequestsEnabled() const;
     bool hasCompletedRequestMetricsEnabled() const;
     bool hasAnyCompletionMetricsEnabled() const;
-    /// Stop publishing and remove series before replacing or unloading a pipeline.
-    void deactivate();
+    /// Publish zeros for the pipeline state gauges once the pipeline stops, so an
+    /// unloaded pipeline does not keep exporting its last cache and scheduling values.
+    void resetPipelineGauges();
     /// Publish GenAI's cache occupancy in percent, independently of scraping.
     void setCacheUtilization(double percent);
     /// Publish GenAI's KV cache size in bytes.

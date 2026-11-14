@@ -23,7 +23,6 @@
 #include <vector>
 
 #include "../metrics/calculator_metrics.hpp"
-#include "../metrics/llm_metric_reporter.hpp"
 
 namespace ovms {
 
@@ -74,7 +73,6 @@ struct GraphSidePackets {
     CalculatorMetricsMap calculatorMetrics;
     PythonNodeResourcesMap pythonNodeResourcesMap;
     GenAiServableMap genAiServableMap;
-    std::vector<std::weak_ptr<LLMMetricReporter>> llmMetricReporters;
     GenAiExecutionContextMap genAiExecutionContextMap;
     ImageGenerationPipelinesMap imageGenPipelinesMap;
     EmbeddingsServableMap embeddingsServableMap;
@@ -84,18 +82,9 @@ struct GraphSidePackets {
     std::vector<std::string> loraAliases;
     bool hideBaseModelInRouting = false;
     void clear() {
-        for (const auto& entry : calculatorMetrics) {
-            entry.second->deactivate();
-        }
-        for (const auto& reporterRef : llmMetricReporters) {
-            if (auto llmReporter = reporterRef.lock()) {
-                llmReporter->deactivate();
-            }
-        }
         calculatorMetrics.clear();
         pythonNodeResourcesMap.clear();
         genAiServableMap.clear();
-        llmMetricReporters.clear();
         genAiExecutionContextMap.clear();
         imageGenPipelinesMap.clear();
         embeddingsServableMap.clear();

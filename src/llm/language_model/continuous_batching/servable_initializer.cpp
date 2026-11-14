@@ -134,8 +134,8 @@ ov::genai::SchedulerConfig ContinuousBatchingServableInitializer::prepareDraftPi
     return config;
 }
 
-ContinuousBatchingServableInitializer::ContinuousBatchingServableInitializer(std::shared_ptr<LLMMetricReporter> metricReporter) :
-    metricReporter(std::move(metricReporter)) {}
+ContinuousBatchingServableInitializer::ContinuousBatchingServableInitializer(LLMMetricReporterFactory createMetricReporter) :
+    createMetricReporter(std::move(createMetricReporter)) {}
 
 Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) {
     std::string parsedModelsPath;
@@ -144,7 +144,6 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         return status;
     }
     auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
-    properties->metricReporter = metricReporter;
     properties->modelsPath = parsedModelsPath;
     std::filesystem::path modelGenerationConfigPath = std::filesystem::path(parsedModelsPath) / "generation_config.json";
     if (std::filesystem::exists(modelGenerationConfigPath)) {
@@ -315,6 +314,10 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     }
     properties->maxModelLength = parseMaxModelLength(parsedModelsPath);
 
+    // Created last, so a load that fails earlier registers no metric series.
+    if (createMetricReporter) {
+        properties->metricReporter = createMetricReporter();
+    }
     properties->llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(
         properties->pipeline, properties->schedulerConfig.cache_size == 0, properties->metricReporter);
 

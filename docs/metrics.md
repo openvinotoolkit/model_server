@@ -97,6 +97,11 @@ cache gauges retain their latest values; waiting does not imply an empty cache
 or zero utilization. KV-cache size is reported in bytes and can also change
 with dynamic allocation; it is not total device memory.
 
+LLM metric series are kept across graph reload and idle-unload: counters and
+histograms continue from their previous values, while the cache and
+scheduled-request gauges are set to `0` when the pipeline stops. See the
+[developer guide](./developer_guide.md#llm-metric-series-lifecycle) for details.
+
 Prompt and generated-token counters increase once per successfully completed
 request, for both unary and streaming responses. Failed and cancelled requests
 are excluded. Since counters update at completion, their rates do not include
