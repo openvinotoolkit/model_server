@@ -92,6 +92,10 @@ if not "!SC_CREATE_ERROR!"=="1073" if !SC_CREATE_ERROR! neq 0 (
     echo [ERROR] sc create ovms failed !SC_CREATE_ERROR!
     exit /b !SC_CREATE_ERROR!
 )
+
+::::::::::::::::::::::: Auto-restart on failure: without recovery, a crashed server stays down until manually restarted
+sc failure ovms reset= 86400 actions= restart/60000/restart/60000/restart/60000
+
 set "PYTHONHOME=%OVMS_DIR%\python"
 set "PATH=%PYTHONHOME%;%PYTHONHOME%\Scripts;%PATH%"
 ::::::::::::::::::::::: Install the service by adding required environment variables to registry
