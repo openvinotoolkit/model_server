@@ -62,7 +62,7 @@ ovms --rest_port 8000 --source_model OpenVINO/Kokoro-82M-int8-ov --model_reposit
 
 
 ```bash
-curl http://localhost:8000/v3/audio/speech -H "Content-Type: application/json" -d "{\"model\": \"Kokoro-82M-int8-ov\", \"voice\": \"af_alloy\", \"input\": \"The quick brown fox jumped over the lazy dog\"}" -o speech.wav
+curl http://localhost:8000/v1/audio/speech -H "Content-Type: application/json" -d "{\"model\": \"Kokoro-82M-int8-ov\", \"voice\": \"af_alloy\", \"input\": \"The quick brown fox jumped over the lazy dog\"}" -o speech.wav
 ```
 :::
 
@@ -141,7 +141,7 @@ Transcribe the speech.wav file generated in the [Speech generation](#speech-gene
 
 
 ```bash
-curl http://localhost:8000/v3/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="whisper-large-v3-turbo-fp16-ov" -F language="en"
+curl http://localhost:8000/v1/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="whisper-large-v3-turbo-fp16-ov" -F language="en"
 ```
 ```json
 {"text": " The quick brown fox jumped over the lazy dog."}
@@ -178,7 +178,7 @@ The quick brown fox jumped over the lazy dog.
 :::{dropdown} **Streaming call with cURL**
 
 ```bash
-curl -N http://localhost:8000/v3/audio/transcriptions \
+curl -N http://localhost:8000/v1/audio/transcriptions \
   -H "Content-Type: multipart/form-data" \
   -F file="@speech.wav" \
   -F model="whisper-large-v3-turbo-fp16-ov" \
@@ -200,7 +200,7 @@ data: {"type":"transcript.text.done","text":"The quick brown fox jumped over the
 
 
 ```bash
-curl http://localhost:8000/v3/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="whisper-large-v3-turbo-fp16-ov" -F language="en" -F timestamp_granularities[]="segment"
+curl http://localhost:8000/v1/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="whisper-large-v3-turbo-fp16-ov" -F language="en" -F timestamp_granularities[]="segment"
 ```
 ```json
 {"text":" A quick brown fox jumped over the lazy dog","segments":[{"text":" A quick brown fox jumped over the lazy dog","start":0.0,"end":3.1399998664855957}]}
@@ -297,7 +297,7 @@ curl http://localhost:8000/v1/models
 :::{dropdown} **Unary call with cURL (word timestamps)**
 
 ```bash
-curl http://localhost:8000/v3/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="whisper-large-v3-turbo-word-ts" -F language="en" -F timestamp_granularities[]="word"
+curl http://localhost:8000/v1/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="whisper-large-v3-turbo-word-ts" -F language="en" -F timestamp_granularities[]="word"
 ```
 
 Example response:
@@ -402,7 +402,7 @@ mkdir -p ${HOME}/models
 # in case GPU is available
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
 
-docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:weekly --rest_port 8000 --source_model OpenVINO/Kokoro-82M-int8-ov --model_repository_path /models --model_name Kokoro-82M-int8-ov
+docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:weekly --rest_port 8000 --source_model OpenVINO/Kokoro-82M-int8-ov --model_repository_path /models --model_name Kokoro-82M-int8-ov --target_device CPU
 ```
 
 **Deploying on Bare Metal**
@@ -411,13 +411,13 @@ The same command can be used for CPU and GPU deployments. OVMS will auto-detect 
 
 ```bat
 mkdir c:\models
-ovms --rest_port 8000 --source_model OpenVINO/Kokoro-82M-int8-ov --model_repository_path c:\models --model_name Kokoro-82M-int8-ov
+ovms --rest_port 8000 --source_model OpenVINO/Kokoro-82M-int8-ov --model_repository_path c:\models --model_name Kokoro-82M-int8-ov --target_device CPU
 ```
 
 For non-English text, set the `language` field explicitly so OpenVINO GenAI selects the correct phonemization path. Voice selection does not infer the language.
 
 ```console
-curl -fS http://localhost:8000/v3/audio/speech -H "Content-Type: application/json" -d "{\"model\": \"Kokoro-82M-int8-ov\", \"voice\": \"ef_dora\", \"language\": \"es\", \"input\": \"Madrid es la capital de Espa\\u00f1a\"}" -o speech_spanish.wav
+curl --fail-with-body -sS http://localhost:8000/v1/audio/speech -H "Content-Type: application/json" -d "{\"model\": \"Kokoro-82M-int8-ov\", \"voice\": \"ef_dora\", \"language\": \"es\", \"input\": \"Madrid es la capital de España\"}" -o speech_spanish.wav
 ```
 
 ### Deployment
@@ -451,7 +451,7 @@ Translate the speech_spanish.wav file generated above.
 
 
 ```bash
-curl http://localhost:8000/v3/audio/translations -H "Content-Type: multipart/form-data" -F file="@speech_spanish.wav" -F model="whisper-large-v3-fp16-ov"
+curl http://localhost:8000/v1/audio/translations -H "Content-Type: multipart/form-data" -F file="@speech_spanish.wav" -F model="whisper-large-v3-fp16-ov"
 ```
 ```json
 {"text": " Madrid is the capital of Spain."}

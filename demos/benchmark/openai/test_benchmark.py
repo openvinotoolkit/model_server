@@ -71,14 +71,22 @@ class VLMInputTests(unittest.TestCase):
             self.assertEqual(base64.b64decode(encoded.split(',', 1)[1]), payload)
             self.assertEqual(benchmark.image_context_url(encoded), encoded)
 
-    def test_prepare_vlm_does_not_load_hf_dataset(self):
+    def test_prepare_vlm_uses_server_tokenizer_without_hf_dataset(self):
         benchmark.args = vars(benchmark.parser.parse_args(['--backend', 'ovms-vlm', '--limit', '3',
                                                            '--input_length', '10', '--turn_lenght', '2',
-                                                           '--tokenizer', 'local-tokenizer']))
-        with patch.object(benchmark.AutoTokenizer, 'from_pretrained', return_value=WordTokenizer()), \
+                                                           '--model', 'served-alias']))
+
+        def tokenize(text, model):
+            self.assertEqual(model, 'served-alias')
+            return [list(range(len(text.split())))]
+
+        with patch.object(benchmark, 'tokenize_texts', side_effect=tokenize) as remote, \
+                patch.object(benchmark, 'load_tokenizer') as local, \
                 patch.object(benchmark, 'load_dataset') as load_dataset:
             docs = benchmark.prepare_documents()
         load_dataset.assert_not_called()
+        local.assert_not_called()
+        remote.assert_called()
         self.assertEqual(len(docs), 3)
         self.assertEqual(len(docs[0]['text'].split()), 10)
         self.assertEqual(len(set(docs['text'])), 3)
@@ -93,7 +101,7 @@ class VLMInputTests(unittest.TestCase):
             return [list(range(len(text.split())))]
 
         with patch.object(benchmark, 'tokenize_texts', side_effect=tokenize), \
-                patch.object(benchmark.AutoTokenizer, 'from_pretrained') as local:
+            patch.object(benchmark, 'load_tokenizer') as local:
             docs = benchmark.prepare_documents()
         local.assert_not_called()
         self.assertEqual(len(docs[0]['text'].split()), 10)
@@ -104,7 +112,7 @@ class VLMInputTests(unittest.TestCase):
         benchmark.args = {'backend': 'ovms-embeddings', 'tokenizer': None}
         docs = benchmark.Dataset.from_dict({'text': ['one', 'two words', 'three words here']})
         with patch.object(benchmark, 'tokenize_texts', return_value=[[1], [1, 2], [1, 2, 3]]) as tokenize, \
-                patch.object(benchmark.AutoTokenizer, 'from_pretrained') as local:
+            patch.object(benchmark, 'load_tokenizer') as local:
             count = benchmark.count_tokens(docs, 'embedding-alias')
         self.assertEqual(count, 6)
         tokenize.assert_called_once_with(['one', 'two words', 'three words here'], 'embedding-alias')
@@ -131,7 +139,7 @@ class VLMInputTests(unittest.TestCase):
                                                                '--turn_lenght', '2', '--limit', '2']))
             with patch.object(benchmark, 'tokenize_texts', side_effect=lambda text, model:
                               [list(range(len(text.split())))]), \
-                    patch.object(benchmark.AutoTokenizer, 'from_pretrained') as local:
+                    patch.object(benchmark, 'load_tokenizer') as local:
                 docs = benchmark.prepare_documents()
         local.assert_not_called()
         text = docs[0]['text']
@@ -140,18 +148,9 @@ class VLMInputTests(unittest.TestCase):
         self.assertNotEqual(docs[1]['text'], text)
         self.assertEqual(len(benchmark.args['turn_text'].split()), 2)
 
-    def test_text_file_uses_local_tokenizer_override(self):
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / 'prompt.txt'
-            path.write_text('one two three four', encoding='utf-8')
-            benchmark.args = vars(benchmark.parser.parse_args(['--backend', 'ovms-vlm', '--tokenizer', 'local',
-                                                               '--text_input_file', str(path), '--input_length', '2',
-                                                               '--turn_lenght', '2', '--limit', '1']))
-            with patch.object(benchmark.AutoTokenizer, 'from_pretrained', return_value=WordTokenizer()), \
-                    patch.object(benchmark, 'tokenize_texts') as remote:
-                docs = benchmark.prepare_documents()
-        remote.assert_not_called()
-        self.assertEqual(docs[0]['text'].split()[1:], ['one'])
+    def test_vlm_rejects_local_tokenizer_override(self):
+        with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            benchmark.main(['--backend', 'ovms-vlm', '--tokenizer', 'local'])
 
     def test_unique_initial_text_respects_token_budget(self):
         used = set()
@@ -307,7 +306,7 @@ class ImageGenerationTests(unittest.TestCase):
     def test_prepare_fixed_prompts_without_dataset_or_tokenizer(self):
         benchmark.args = vars(benchmark.parser.parse_args(['--backend', 'image-gen', '--limit', '3']))
         with patch.object(benchmark, 'load_dataset') as dataset, \
-                patch.object(benchmark.AutoTokenizer, 'from_pretrained') as tokenizer:
+            patch.object(benchmark, 'load_tokenizer') as tokenizer:
             docs = benchmark.prepare_documents()
         self.assertEqual(list(docs['text']), ['Draw a picture of a cute cat'] * 3)
         dataset.assert_not_called()

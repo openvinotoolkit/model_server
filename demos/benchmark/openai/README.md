@@ -15,6 +15,14 @@ pip install -r requirements.txt
 mkdir -p "${HOME}/models"
 ```
 
+VLM uses OVMS `/v1/tokenize` and does not require Transformers. Install the
+optional Transformers requirements only for local tokenizer-based token counts
+(for example, speech transcription or TEI/Infinity backends):
+
+```bash
+pip install -r requirements-transformers.txt
+```
+
 Each section starts one container named `ovms` on port 8000.
 Run one use case at a time. After starting its server and before sending benchmark
 requests, wait for the model to appear in `/v1/models`. Repeat the readiness check

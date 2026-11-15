@@ -28,7 +28,6 @@ import time
 import traceback
 from dataclasses import dataclass, field
 from typing import AsyncGenerator, List, Optional, Union
-from transformers import AutoTokenizer
 import argparse
 import aiohttp
 import base64
@@ -79,7 +78,7 @@ parser.add_argument('--limit', required=False, type=positive_int, default=1000, 
 parser.add_argument('--split', required=False, default='train', help='Dataset split', dest='split')
 parser.add_argument('--hf-subset', required=False, help='Hf dataset subset', dest='subset')
 parser.add_argument('--trust-remote-code', required=False, type=bool, default=False, help='Trust remote code from huggingface', dest='trust_remote_code')
-parser.add_argument('--tokenizer', required=False, help='Optional local/HF tokenizer override; OVMS uses /v1/tokenize by default', dest='tokenizer')
+parser.add_argument('--tokenizer', required=False, help='Optional local/HF tokenizer for token counts; VLM always uses OVMS /v1/tokenize', dest='tokenizer')
 parser.add_argument('--tokenize_url', help='Override the OVMS tokenize URL; default is /v1/tokenize on the API host')
 parser.add_argument('--input_length', type=positive_int, default=510, help='First VLM user message text tokens; maximum when using --text_input_file')
 parser.add_argument('--text_input_file', help='UTF-8 file for the first VLM user message, truncated to --input_length tokens')
@@ -99,6 +98,16 @@ default_api_url = None
 batch_size = 16
 
 
+def load_tokenizer(tokenizer_name, **kwargs):
+    try:
+        from transformers import AutoTokenizer
+    except ImportError as error:
+        raise RuntimeError(
+            'Transformers is required for local tokenization. Install requirements-transformers.txt.'
+        ) from error
+    return AutoTokenizer.from_pretrained(tokenizer_name, **kwargs)
+
+
 def synthetic_token_text(tokenizer, length):
     for seed in (' hello', ' a', ' test'):
         tokens = tokenizer.encode(seed, add_special_tokens=False)
@@ -112,7 +121,9 @@ def synthetic_token_text(tokenizer, length):
 
 
 def uses_server_tokenization():
-    return args['backend'] in ('ovms-vlm', 'ovms-embeddings', 'ovms_rerank') and not args.get('tokenizer')
+    return args['backend'] == 'ovms-vlm' or (
+        args['backend'] in ('ovms-embeddings', 'ovms_rerank') and not args.get('tokenizer')
+    )
 
 
 def discover_model(api_url):
@@ -219,8 +230,8 @@ def prepare_documents():
                     truncate_input_text(source, args['input_length'], token_count))
             args['turn_text'] = synthetic_server_token_text(args['turn_length'])
         else:
-            tokenizer = AutoTokenizer.from_pretrained(args['tokenizer'] or args['model'],
-                                                     trust_remote_code=args['trust_remote_code'])
+            tokenizer = load_tokenizer(args['tokenizer'] or args['model'],
+                                       trust_remote_code=args['trust_remote_code'])
             token_count = lambda value: len(tokenizer.encode(value, add_special_tokens=False))
             text = (synthetic_token_text(tokenizer, args['input_length']) if source is None else
                     truncate_input_text(source, args['input_length'], token_count))
@@ -249,7 +260,7 @@ def count_tokens(docs, model):
         hf_tokenizer = model
     else:
         hf_tokenizer = args["tokenizer"]
-    tokenizer = AutoTokenizer.from_pretrained(hf_tokenizer)
+    tokenizer = load_tokenizer(hf_tokenizer)
     documents = docs.iter(batch_size=1)
     num_tokens = 0
     for request in documents:
@@ -695,7 +706,7 @@ async def benchmark(docs, model, api_url, request_rate, backend_function):
             hf_tokenizer = model
         else:
             hf_tokenizer = args["tokenizer"]
-        tokenizer = AutoTokenizer.from_pretrained(hf_tokenizer)
+        tokenizer = load_tokenizer(hf_tokenizer)
         for output in outputs:
             data = json.loads(output.text)
             output.tokens_len =  len(tokenizer(data['text'],add_special_tokens=False, truncation=True)["input_ids"])
@@ -762,6 +773,8 @@ def print_vlm_statistics(results):
 def main(argv=None):
     global args, batch_size, backend_function, default_api_url
     args = vars(parser.parse_args(argv))
+    if args['backend'] == 'ovms-vlm' and args['tokenizer']:
+        parser.error('--tokenizer is not supported with ovms-vlm; VLM uses OVMS /v1/tokenize')
     if args['text_input_file'] and args['backend'] != 'ovms-vlm':
         parser.error('--text_input_file is only supported for ovms-vlm')
     args['batch_size'] = args['batch_size'] or (1 if args['backend'] in ('ovms-vlm', 'image-gen') else 16)
