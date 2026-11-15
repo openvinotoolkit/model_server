@@ -255,7 +255,7 @@ absl::Status GenAiServable::validateInputCompatibility(std::shared_ptr<GenAiServ
     // LM servables reject requests containing image content. Images are preserved
     // as JsonContainer arrays in chatHistory. Reject if any message's content array
     // contains an image_url entry.
-    if (getProperties()->inputProcessorContext.config.isVLM) {
+    if (getProperties()->inputProcessorContext.config.supportsVisualInputs) {
         return absl::OkStatus();
     }
 

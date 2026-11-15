@@ -35,6 +35,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #pragma warning(pop)
+#include "../io_processing/generation_config_builder.hpp"
 #include "../io_processing/output_parser.hpp"
 #include "../io_processing/input_request.hpp"
 #include "openai_request.hpp"
