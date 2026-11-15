@@ -411,12 +411,12 @@ The same command can be used for CPU and GPU deployments. OVMS will auto-detect 
 
 ```bat
 mkdir c:\models
-ovms --rest_port 8000 --source_model OpenVINO/Kokoro-82M-int8-ov --model_repository_path c:\models --model_name Kokoro-82M-int8-ov --target_device CPU
+ovms --rest_port 8000 --source_model OpenVINO/Kokoro-82M-int8-ov --model_repository_path c:\models --model_name Kokoro-82M-int8-ov
 ```
 
 For non-English text, set the `language` field explicitly so OpenVINO GenAI selects the correct phonemization path. Voice selection does not infer the language.
 
-```console
+```text
 curl --fail-with-body -sS http://localhost:8000/v1/audio/speech -H "Content-Type: application/json" -d "{\"model\": \"Kokoro-82M-int8-ov\", \"voice\": \"ef_dora\", \"language\": \"es\", \"input\": \"Madrid es la capital de España\"}" -o speech_spanish.wav
 ```
 
@@ -450,7 +450,7 @@ Translate the speech_spanish.wav file generated above.
 :::{dropdown} **Unary call with cURL**
 
 
-```bash
+```text
 curl http://localhost:8000/v1/audio/translations -H "Content-Type: multipart/form-data" -F file="@speech_spanish.wav" -F model="whisper-large-v3-fp16-ov"
 ```
 ```json

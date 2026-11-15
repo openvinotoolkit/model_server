@@ -20,7 +20,7 @@ optional Transformers requirements only for local tokenizer-based token counts
 (for example, speech transcription or TEI/Infinity backends):
 
 ```bash
-pip install -r requirements-transformers.txt
+pip install "transformers<5.1"
 ```
 
 Each section starts one container named `ovms` on port 8000.
@@ -56,6 +56,13 @@ docker run -d ${GPU_ARGS} --rm --name ovms \
 	openvino/model_server:weekly \
 	--rest_port 8000 --source_model OpenVINO/LFM3-VL-2B-int4-ov \
 	--model_name vlm --model_repository_path /models
+```
+
+On Windows, start OVMS from a separate command prompt:
+
+```bat
+mkdir c:\models
+ovms.exe --rest_port 8000 --source_model OpenVINO/LFM3-VL-2B-int4-ov --model_name vlm --model_repository_path c:\models
 ```
 
 Wait for the model:

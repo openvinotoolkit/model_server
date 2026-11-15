@@ -700,7 +700,7 @@ Earlier Python input-validation runs used this demo's `.venv`, tritonclient 2.60
 
 Run the focused tests on either OS:
 
-```console
+```text
 python -m unittest -v test_benchmark
 ```
 
