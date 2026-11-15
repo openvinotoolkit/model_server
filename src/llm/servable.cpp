@@ -252,15 +252,11 @@ absl::Status GenAiServable::validateInputCompatibility(std::shared_ptr<GenAiServ
         return absl::InvalidArgumentError("Chat requests are unavailable because " + reason + ".");
     }
 
-    // LM servables reject requests containing image content. Images are preserved
-    // as JsonContainer arrays in chatHistory. Reject if any message's content array
-    // contains an image_url entry.
-    if (getProperties()->inputProcessorContext.config.supportsVisualInputs) {
-        return absl::OkStatus();
-    }
-
-    // Multimodal entries are preserved as JsonContainer arrays in chatHistory until
-    // compatibility is checked.
+    // Per-modality checks below: LM servables reject image/video content, servables
+    // without an audio input config reject input_audio. The image/video checks allow
+    // visual servables, so no early return for them — an early return would also skip
+    // the audio check on visual servables. Multimodal entries are preserved as
+    // JsonContainer arrays in chatHistory until compatibility is checked.
     const auto& inputProcessingConfig = getProperties()->inputProcessorContext.config;
     auto checkChatHistory = [&](const ov::genai::ChatHistory& ch) -> absl::Status {
         for (size_t i = 0; i < ch.size(); i++) {

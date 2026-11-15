@@ -221,11 +221,18 @@ absl::Status OpenAIDecisionsHandler::parseInput() {
                     if (hasMedia) {
                         // Multimodal content: preserve the parts for the VLM input
                         // processors (mirrors OpenAIChatCompletionsHandler::parseMessages);
-                        // input_image parts are normalized to image_url objects.
+                        // input_image parts are normalized to image_url objects and
+                        // input_text parts to text objects — downstream processors (the
+                        // <ov_genai_image> injection guard, TextContentNormalizationProcessor,
+                        // the chat templates) recognize only text-typed parts, mirroring the
+                        // normalization in OpenAIResponsesHandler.
                         ov::genai::JsonContainer contentParts = ov::genai::JsonContainer::array();
                         for (const auto& part : field->value.GetArray()) {
-                            if (std::string(part["type"].GetString()) == "input_image") {
+                            const std::string preservedType = part["type"].GetString();
+                            if (preservedType == "input_image") {
                                 contentParts.push_back(ov::genai::JsonContainer({{"type", "image_url"}, {"image_url", ov::genai::JsonContainer({{"url", std::string(part["image_url"].GetString())}})}}));
+                            } else if (preservedType == "input_text") {
+                                contentParts.push_back(ov::genai::JsonContainer({{"type", "text"}, {"text", std::string(part["text"].GetString())}}));
                             } else {
                                 contentParts.push_back(rapidJsonValueToJsonContainer(part));
                             }
