@@ -297,9 +297,7 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     if (!status.ok()) {
         return status;
     }
-    const auto chatTemplateAnalysis = properties->chatTemplateStatus == ChatTemplateStatus::AVAILABLE ?
-                                          std::optional<ChatTemplateAnalysisResult>{analyzeChatTemplate(properties)} :
-                                          std::nullopt;
+    const auto chatTemplateAnalysis = properties->chatTemplateStatus == ChatTemplateStatus::AVAILABLE ? std::optional<ChatTemplateAnalysisResult>{analyzeChatTemplate(properties)} : std::nullopt;
     selectOutputParsers(properties, analyzeOutputParsers(properties, chatTemplateAnalysis));
 
     if (nodeOptions.has_chat_template_engine()) {

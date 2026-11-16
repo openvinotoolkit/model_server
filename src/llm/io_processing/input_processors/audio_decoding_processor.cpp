@@ -48,9 +48,7 @@ absl::Status AudioDecodingProcessor::process(InputRequest& req) {
     if (!req.multipartAudioInputs.empty()) {
         for (const std::string_view input : req.multipartAudioInputs) {
             try {
-                const std::vector<float> pcm = audio_utils::isWavBuffer(input) ?
-                                                   audio_utils::readWav(input) :
-                                                   audio_utils::readMp3(input);
+                const std::vector<float> pcm = audio_utils::isWavBuffer(input) ? audio_utils::readWav(input) : audio_utils::readMp3(input);
                 appendAudioTensor(req, pcm);
             } catch (const std::exception& e) {
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Multipart audio decoding failed: {}", e.what());
