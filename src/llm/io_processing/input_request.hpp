@@ -32,14 +32,12 @@ namespace ovms {
 // std::string: /v3/completions path — raw prompt as received.
 using InputPayload = std::variant<ov::genai::ChatHistory, std::string>;
 
-struct MultipartAudioInput {
-    std::string_view data;
-};
-
 // Per-request data passed through the InputProcessor chain.
 // Input extraction and processing precede generation configuration in prepareInputs().
 struct InputRequest {
-    InputPayload input;                            // set in parseRequest()
+    InputPayload input;  // set in parseRequest()
+    std::vector<std::string_view> multipartAudioInputs;
+
     ov::genai::GenerationConfig generationConfig;  // set after input processing
 
     std::string promptText;               // written by ChatTemplateProcessor / RawPromptExtractor
@@ -47,7 +45,6 @@ struct InputRequest {
     std::vector<ov::Tensor> inputImages;  // written by ImageDecodingProcessor
     std::vector<ov::Tensor> inputVideos;
     std::vector<ov::Tensor> inputAudios;
-    std::vector<MultipartAudioInput> multipartAudioInputs;
 
     // Running total of decoded pixels across all image_url and frame-array video_url
     // parts in this request.

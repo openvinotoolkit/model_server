@@ -238,8 +238,6 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     // lower noise). Each parser that requires this sets defaultDecodingWithSpecialTokens in its config.
     if (contentParserName == "qwen3asr")
         contentParser = std::make_unique<Qwen3AsrContentParser>(tokenizer);
-    else if (!contentParserName.empty())
-        throw std::runtime_error("Unsupported content parser: \"" + contentParserName + "\"");
     else if (toolParserName == "onyx" || reasoningParserName == "onyx")
         contentParser = std::make_unique<OnyxContentParser>(tokenizer);
     else if (toolParserName == "gptoss" || reasoningParserName == "gptoss")
@@ -252,6 +250,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         contentParser = std::make_unique<DefaultContentParser>(tokenizer, std::vector<std::string>{"<|im_end|>"});
     else if (toolParserName == "minicpm5")
         contentParser = std::make_unique<DefaultContentParser>(tokenizer, std::vector<std::string>{"<s>", "<|im_end|>"});
+    else if (!contentParserName.empty())
+        throw std::runtime_error("Unsupported content parser: \"" + contentParserName + "\"");
     else
         contentParser = std::make_unique<DefaultContentParser>(tokenizer);
 

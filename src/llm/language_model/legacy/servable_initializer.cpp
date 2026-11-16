@@ -169,12 +169,10 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
     if (!status.ok()) {
         return status;
     }
-    if (properties->chatTemplateStatus == ChatTemplateStatus::AVAILABLE) {
-        const auto analysisResult = analyzeChatTemplate(properties);
-        selectOutputParsers(properties, analysisResult);
-    } else {
-        selectOutputParsers(properties, std::nullopt);
-    }
+    const auto chatTemplateAnalysis = properties->chatTemplateStatus == ChatTemplateStatus::AVAILABLE ?
+                                          std::optional<ChatTemplateAnalysisResult>{analyzeChatTemplate(properties)} :
+                                          std::nullopt;
+    selectOutputParsers(properties, analyzeOutputParsers(properties, chatTemplateAnalysis));
     if (nodeOptions.has_chat_template_engine()) {
         status = validateChatTemplateAvailability(properties);
         if (!status.ok()) {

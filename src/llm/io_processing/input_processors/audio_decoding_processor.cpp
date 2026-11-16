@@ -17,10 +17,11 @@
 #include "audio_decoding_processor.hpp"
 
 #include <cstring>
+#include <exception>
 #include <string>
 #include <variant>
-#include <vector>
 #include <utility>
+#include <vector>
 
 #pragma warning(push)
 #pragma warning(disable : 6001)
@@ -33,7 +34,32 @@
 
 namespace ovms {
 
+namespace {
+
+void appendAudioTensor(InputRequest& req, const std::vector<float>& pcm) {
+    ov::Tensor audioTensor(ov::element::f32, ov::Shape{pcm.size()});
+    std::memcpy(audioTensor.data<float>(), pcm.data(), pcm.size() * sizeof(float));
+    req.inputAudios.push_back(std::move(audioTensor));
+}
+
+}  // namespace
+
 absl::Status AudioDecodingProcessor::process(InputRequest& req) {
+    if (!req.multipartAudioInputs.empty()) {
+        for (const std::string_view input : req.multipartAudioInputs) {
+            try {
+                const std::vector<float> pcm = audio_utils::isWavBuffer(input) ?
+                                                   audio_utils::readWav(input) :
+                                                   audio_utils::readMp3(input);
+                appendAudioTensor(req, pcm);
+            } catch (const std::exception& e) {
+                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Multipart audio decoding failed: {}", e.what());
+                return absl::InvalidArgumentError(std::string("Audio decoding failed: ") + e.what());
+            }
+        }
+        return absl::OkStatus();
+    }
+
     if (!std::holds_alternative<ov::genai::ChatHistory>(req.input)) {
         return absl::Status(absl::StatusCode::kInternal,
             "AudioDecodingProcessor received input that is not a ChatHistory");
@@ -88,9 +114,7 @@ absl::Status AudioDecodingProcessor::process(InputRequest& req) {
                         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "AudioDecodingProcessor: decoded audio {} samples, format='{}'",
                             pcm.size(), format);
                     }
-                    ov::Tensor audioTensor(ov::element::f32, ov::Shape{pcm.size()});
-                    std::memcpy(audioTensor.data<float>(), pcm.data(), pcm.size() * sizeof(float));
-                    req.inputAudios.push_back(std::move(audioTensor));
+                    appendAudioTensor(req, pcm);
                     if (useAudioContentPart) {
                         content[j] = ov::genai::JsonContainer({{"type", "audio"}});
                     } else {

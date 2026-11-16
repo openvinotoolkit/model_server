@@ -26,7 +26,6 @@
 #include "input_processors/empty_content_array_normalization_processor.hpp"
 #include "input_processors/empty_tool_calls_array_removing_processor.hpp"
 #include "input_processors/image_decoding_processor.hpp"
-#include "input_processors/multipart_audio_decoding_processor.hpp"
 #include "input_processors/video_frames_processor.hpp"
 #include "input_processors/audio_decoding_processor.hpp"
 #include "input_processors/chat_template_adapter.hpp"
@@ -62,13 +61,9 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
         }
 
         if (context.config.audioInputConfig.has_value()) {
-            if (!req.multipartAudioInputs.empty()) {
-                processors.emplace_back(std::make_unique<MultipartAudioDecodingProcessor>());
-            } else {
-                processors.emplace_back(std::make_unique<AudioDecodingProcessor>(
-                    context.config.audioInputConfig->resamplingRequired,
-                    context.config.audioInputConfig->useAudioContentPart));
-            }
+            processors.emplace_back(std::make_unique<AudioDecodingProcessor>(
+                context.config.audioInputConfig->resamplingRequired,
+                context.config.audioInputConfig->useAudioContentPart));
         }
         processors.emplace_back(std::make_unique<TextContentNormalizationProcessor>());
 

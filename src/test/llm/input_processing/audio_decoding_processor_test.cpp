@@ -27,7 +27,6 @@
 #pragma warning(pop)
 
 #include "../../../llm/io_processing/input_processors/audio_decoding_processor.hpp"
-#include "../../../llm/io_processing/input_processors/multipart_audio_decoding_processor.hpp"
 #include "../../../llm/io_processing/input_request.hpp"
 #include "../../wav_test_utils.hpp"
 
@@ -108,11 +107,11 @@ TEST(AudioDecodingProcessorTest, ValidWavAudioDecodedSuccessfully) {
     EXPECT_EQ(req.inputAudios[0].get_element_type(), ov::element::f32);
 }
 
-TEST(MultipartAudioDecodingProcessorTest, ResamplesWavTo16Khz) {
+TEST(AudioDecodingProcessorTest, MultipartInputResamplesWavTo16Khz) {
     const std::string wavData = buildWavBuffer(/*numSamples=*/240, /*sampleRate=*/24000);
     InputRequest req;
     req.multipartAudioInputs.push_back({wavData});
-    MultipartAudioDecodingProcessor processor;
+    AudioDecodingProcessor processor;
 
     ASSERT_TRUE(processor.process(req).ok());
     ASSERT_EQ(req.inputAudios.size(), 1u);
@@ -120,11 +119,11 @@ TEST(MultipartAudioDecodingProcessorTest, ResamplesWavTo16Khz) {
     EXPECT_EQ(req.inputAudios[0].get_element_type(), ov::element::f32);
 }
 
-TEST(MultipartAudioDecodingProcessorTest, RejectsMalformedAudio) {
+TEST(AudioDecodingProcessorTest, MultipartInputRejectsMalformedAudio) {
     const std::string malformedAudio = "not valid audio";
     InputRequest req;
     req.multipartAudioInputs.push_back({malformedAudio});
-    MultipartAudioDecodingProcessor processor;
+    AudioDecodingProcessor processor;
 
     const auto status = processor.process(req);
     EXPECT_FALSE(status.ok());

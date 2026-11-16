@@ -64,8 +64,6 @@
 
 namespace ovms {
 
-static std::string detectContentParserName(const std::string& modelsPath);
-
 GenAiServableProperties::DraftModelStrategy detectDraftModelStrategy(const std::string& draftPath) {
     namespace fs = std::filesystem;
     using DS = GenAiServableProperties::DraftModelStrategy;
@@ -349,14 +347,43 @@ ChatTemplateAnalysisResult GenAiServableInitializer::analyzeChatTemplate(std::sh
     return analysisResult;
 }
 
+ParserAnalysisResult GenAiServableInitializer::analyzeOutputParsers(
+    const std::shared_ptr<GenAiServableProperties>& properties,
+    const std::optional<ChatTemplateAnalysisResult>& chatTemplateAnalysis) {
+    ParserAnalysisResult analysisResult;
+    if (chatTemplateAnalysis.has_value()) {
+        analysisResult.detectedToolParser = chatTemplateAnalysis->detectedToolParser;
+        analysisResult.detectedReasoningParser = chatTemplateAnalysis->detectedReasoningParser;
+    }
+
+    const std::string configPath = FileSystem::appendSlash(properties->modelsPath) + "config.json";
+    std::ifstream ifs(configPath);
+    if (!ifs.is_open()) {
+        return analysisResult;
+    }
+    rapidjson::Document modelConfig;
+    rapidjson::IStreamWrapper isw(ifs);
+    rapidjson::ParseResult parseResult = modelConfig.ParseStream(isw);
+    if (parseResult.Code() || !modelConfig.HasMember("architectures") || !modelConfig["architectures"].IsArray()) {
+        return analysisResult;
+    }
+    for (const auto& architecture : modelConfig["architectures"].GetArray()) {
+        if (architecture.IsString() && std::string_view(architecture.GetString(), architecture.GetStringLength()) == "Qwen3ASRForConditionalGeneration") {
+            analysisResult.detectedContentParser = "qwen3asr";
+            break;
+        }
+    }
+    return analysisResult;
+}
+
 void GenAiServableInitializer::selectOutputParsers(
     const std::shared_ptr<GenAiServableProperties>& properties,
-    const std::optional<ChatTemplateAnalysisResult>& analysisResult) {
+    const ParserAnalysisResult& analysisResult) {
     if (!isParserDisabled(properties->toolParserName)) {
         if (!properties->toolParserName.empty()) {
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured tool_parser: {}", properties->toolParserName);
-        } else if (analysisResult.has_value() && analysisResult->detectedToolParser.has_value()) {
-            properties->toolParserName = analysisResult->detectedToolParser.value();
+        } else if (analysisResult.detectedToolParser.has_value()) {
+            properties->toolParserName = analysisResult.detectedToolParser.value();
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected tool_parser: {}", properties->toolParserName);
         }
     } else {
@@ -367,8 +394,8 @@ void GenAiServableInitializer::selectOutputParsers(
     if (!isParserDisabled(properties->reasoningParserName)) {
         if (!properties->reasoningParserName.empty()) {
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured reasoning_parser: {}", properties->reasoningParserName);
-        } else if (analysisResult.has_value() && analysisResult->detectedReasoningParser.has_value()) {
-            properties->reasoningParserName = analysisResult->detectedReasoningParser.value();
+        } else if (analysisResult.detectedReasoningParser.has_value()) {
+            properties->reasoningParserName = analysisResult.detectedReasoningParser.value();
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected reasoning_parser: {}", properties->reasoningParserName);
         }
     } else {
@@ -376,8 +403,8 @@ void GenAiServableInitializer::selectOutputParsers(
         properties->reasoningParserName.clear();
     }
 
-    properties->contentParserName = detectContentParserName(properties->modelsPath);
-    if (!properties->contentParserName.empty()) {
+    if (analysisResult.detectedContentParser.has_value()) {
+        properties->contentParserName = analysisResult.detectedContentParser.value();
         SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected content_parser: {}", properties->contentParserName);
     }
 }
@@ -504,26 +531,6 @@ std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath) {
     return maxModelLength;
 }
 
-static std::string detectContentParserName(const std::string& modelsPath) {
-    const std::string configPath = FileSystem::appendSlash(modelsPath) + "config.json";
-    std::ifstream ifs(configPath);
-    if (!ifs.is_open()) {
-        return {};
-    }
-    rapidjson::Document modelConfig;
-    rapidjson::IStreamWrapper isw(ifs);
-    rapidjson::ParseResult parseResult = modelConfig.ParseStream(isw);
-    if (parseResult.Code() || !modelConfig.HasMember("architectures") || !modelConfig["architectures"].IsArray()) {
-        return {};
-    }
-    for (const auto& architecture : modelConfig["architectures"].GetArray()) {
-        if (architecture.IsString() && std::string_view(architecture.GetString(), architecture.GetStringLength()) == "Qwen3ASRForConditionalGeneration") {
-            return "qwen3asr";
-        }
-    }
-    return {};
-}
-
 Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath) {
     // Assuming that models_path is always set
     std::string parsedModelsPath;
@@ -617,8 +624,10 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
     mediapipe::LLMCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
     Status status = StatusCode::OK;
-    PipelineType pipelineType{PipelineType::LM_CB};
     if (nodeOptions.has_models_path()) {
+        // Need to initialize pipelineType with some value to avoid compiler warning;
+        // determinePipelineType will set it properly.
+        PipelineType pipelineType{PipelineType::LM_CB};
         status = determinePipelineType(pipelineType, nodeOptions, graphPath);
         if (status != StatusCode::OK) {
             return status;
@@ -696,16 +705,6 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
     status = configureInputProcessingCapabilities(properties, nodeOptions);
     if (status != StatusCode::OK) {
         return status;
-    }
-    if (nodeOptions.supports_transcriptions()) {
-        const bool hasAudioEncoderModel = std::filesystem::exists(
-            std::filesystem::path(properties->modelsPath) / "openvino_audio_encoder_model.xml");
-        if (pipelineType != PipelineType::VLM_CB || !hasAudioEncoderModel) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger,
-                "Audio transcriptions require a continuous-batching VLM with an audio encoder model.");
-            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
-        }
-        properties->supportsTranscriptions = true;
     }
     return StatusCode::OK;
 }

@@ -143,6 +143,7 @@ ovms_cc_library(
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "@com_google_absl//absl/status",
+        "//src:http_payload",
         "//src/port:rapidjson_stringbuffer",
         "//src/port:rapidjson_writer",
         ":openai_api_handler",
@@ -234,7 +235,6 @@ ovms_cc_library(
     name = "io_processing_input_processors",
     hdrs = ["io_processing/input_processors/image_decoding_processor.hpp",
             "io_processing/input_processors/audio_decoding_processor.hpp",
-            "io_processing/input_processors/multipart_audio_decoding_processor.hpp",
             "io_processing/input_processors/video_frames_processor.hpp",
             "io_processing/input_processors/chat_template_processor.hpp",
             "io_processing/input_processors/chat_template_adapter.hpp",
@@ -246,7 +246,6 @@ ovms_cc_library(
             "io_processing/input_processors/tokenization_processor.hpp"],
     srcs = ["io_processing/input_processors/image_decoding_processor.cpp",
             "io_processing/input_processors/audio_decoding_processor.cpp",
-            "io_processing/input_processors/multipart_audio_decoding_processor.cpp",
             "io_processing/input_processors/video_frames_processor.cpp",
             "io_processing/input_processors/chat_template_processor.cpp",
             "io_processing/input_processors/chat_template_adapter.cpp",

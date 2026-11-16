@@ -70,7 +70,9 @@ absl::Status VisualLanguageModelServable::validateEndpoint(Endpoint endpoint) co
     if (endpoint == Endpoint::COMPLETIONS) {
         return absl::InvalidArgumentError("VLM Servable does not support the /completions endpoint. Use /chat/completions or /responses.");
     }
-    if (endpoint == Endpoint::TRANSCRIPTIONS && !properties->supportsTranscriptions) {
+    const auto& audioInputConfig = properties->inputProcessorContext.config.audioInputConfig;
+    if (endpoint == Endpoint::TRANSCRIPTIONS &&
+        (!audioInputConfig.has_value() || !audioInputConfig->useAudioContentPart)) {
         return absl::InvalidArgumentError("VLM Servable does not support audio transcriptions");
     }
     return absl::OkStatus();

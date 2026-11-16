@@ -144,7 +144,6 @@ struct GenAiServableExecutionContext {
     std::vector<ov::genai::GenerationOutput> generationOutputs;
     std::unique_ptr<ov::genai::PerfMetrics> perfMetrics;
     std::string response;
-    std::shared_ptr<OutputParser> outputParser;
     std::shared_ptr<OVMSTextStreamer> textStreamer;
     // Loopback iterations can occur before the calculator emits its first frame.
     bool streamFrameEmitted = false;
@@ -207,7 +206,6 @@ struct GenAiServableProperties {
     ov::AnyMap pluginConfig;
     ov::AnyMap tokenizerPluginConfig;
     bool enableToolGuidedGeneration = false;
-    bool supportsTranscriptions = false;
     ChatTemplateEngine chatTemplateEngine = ChatTemplateEngine::NONE;
     ChatTemplateStatus chatTemplateStatus = ChatTemplateStatus::NOT_CHECKED;
     ChatTemplateSource chatTemplateSource = ChatTemplateSource::NONE;

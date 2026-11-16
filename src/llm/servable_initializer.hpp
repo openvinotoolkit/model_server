@@ -54,13 +54,21 @@ struct GenAiServableProperties;
 // Pass std::nullopt instead of a factory to disable metric reporter creation.
 using LLMMetricReporterFactory = std::function<std::shared_ptr<LLMMetricReporter>()>;
 
+struct ParserAnalysisResult {
+    std::optional<std::string> detectedToolParser;
+    std::optional<std::string> detectedReasoningParser;
+    std::optional<std::string> detectedContentParser;
+};
+
 class GenAiServableInitializer {
 public:
     virtual ~GenAiServableInitializer() = default;
     static Status loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
     static ChatTemplateAnalysisResult analyzeChatTemplate(std::shared_ptr<GenAiServableProperties> properties);
+    static ParserAnalysisResult analyzeOutputParsers(const std::shared_ptr<GenAiServableProperties>& properties,
+        const std::optional<ChatTemplateAnalysisResult>& chatTemplateAnalysis);
     static void selectOutputParsers(const std::shared_ptr<GenAiServableProperties>& properties,
-        const std::optional<ChatTemplateAnalysisResult>& analysisResult);
+        const ParserAnalysisResult& analysisResult);
     static Status validateChatTemplateAvailability(const std::shared_ptr<GenAiServableProperties>& properties);
     // Propagates the global --cache_dir (ServerSettings) into the pipeline plugin config
     // when the node did not set an explicit CACHE_DIR. Shared by every GenAI initializer

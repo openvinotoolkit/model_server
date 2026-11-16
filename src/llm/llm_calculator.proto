@@ -158,7 +158,4 @@ message LLMCalculatorOptions {
     }
 
     optional VisionInputOptions input_vision = 27;
-
-    // Enables OpenAI-compatible /audio/transcriptions for this servable.
-    optional bool supports_transcriptions = 28 [default = false];
 }

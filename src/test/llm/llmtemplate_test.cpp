@@ -320,7 +320,7 @@ TEST_F(LLMChatTemplateTest, MissingTemplateClearsDisabledParsers) {
     EXPECT_EQ(properties->toolParserName, "none");
     EXPECT_EQ(properties->reasoningParserName, "none");
 
-    GenAiServableInitializer::selectOutputParsers(properties, std::nullopt);
+    GenAiServableInitializer::selectOutputParsers(properties, ParserAnalysisResult{});
     EXPECT_TRUE(properties->toolParserName.empty());
     EXPECT_TRUE(properties->reasoningParserName.empty());
 

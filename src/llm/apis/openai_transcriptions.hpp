@@ -22,6 +22,8 @@
 
 namespace ovms {
 
+struct HttpPayload;
+
 class OpenAITranscriptionsHandler : public OpenAIApiHandler {
     static std::string transcriptionText(const std::vector<Delta>& deltas);
     std::string streamingText;
@@ -34,12 +36,16 @@ protected:
 public:
     using OpenAIApiHandler::OpenAIApiHandler;
 
+    static absl::Status normalizeMultipartRequest(HttpPayload& payload);
+
     std::string serializeUnaryResponse(const std::vector<Delta>& deltas,
         ov::genai::GenerationFinishReason finishReason) override;
     std::string serializeUnaryResponse(const std::vector<std::vector<Delta>>& allDeltas,
         const std::vector<ov::genai::GenerationFinishReason>& finishReasons,
         const std::vector<UnaryChoiceLogprobs>& logprobData) override;
     std::string serializeStreamingChunk(Delta delta, ov::genai::GenerationFinishReason finishReason) override;
+    bool requiresSeparateStreamingFinishEvent() const override { return true; }
+    bool appendsStreamingDoneMarker() const override { return false; }
     std::string serializeStreamingUsageChunk() override;
     std::string serializeStreamingHandshakeChunk() override;
 };

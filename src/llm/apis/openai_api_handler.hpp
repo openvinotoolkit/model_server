@@ -185,7 +185,7 @@ public:
     absl::StatusOr<InputRequest> extractInputRequest();
 
     /** Constructs output parsers after generation setup and applies the detected prompt state. */
-    void initOutputParser(const ReasoningGenerationContext& reasoningContext);
+    void initOutputParser(const ReasoningGenerationContext& reasoningContext, const std::string& contentParserName = "");
 
     // Verbose response configuration
     void enableVerboseResponse(const std::string& promptAfterTemplate) {
@@ -228,6 +228,8 @@ public:
     std::string serializeUnaryResponse(const std::vector<std::vector<Delta>>& allDeltas,
         const std::vector<ov::genai::GenerationFinishReason>& finishReasons);
     virtual std::string serializeStreamingChunk(Delta delta, ov::genai::GenerationFinishReason finishReason) = 0;
+    virtual bool requiresSeparateStreamingFinishEvent() const { return false; }
+    virtual bool appendsStreamingDoneMarker() const { return true; }
     virtual std::string serializeStreamingUsageChunk() = 0;
     virtual std::string serializeStreamingHandshakeChunk() = 0;
 
