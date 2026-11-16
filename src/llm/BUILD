@@ -303,7 +303,7 @@ ovms_cc_library(
         "io_processing/chat_template/adjustments/remove_function_params_adjustment.cpp",
         "io_processing/chat_template/adjustments/adjustment_utils.hpp",
     ],
-    deps = [],
+    deps = ["//src:libovmsstring_utils"],
     visibility = ["//visibility:public"],
 )
 

@@ -18,12 +18,9 @@
 #include <cctype>
 #include <optional>
 #include <string>
+#include "src/stringutils.hpp"
 
 namespace ovms::adjustment_detail {
-
-inline bool isIdentifierChar(char value) {
-    return std::isalnum(static_cast<unsigned char>(value)) || value == '_';
-}
 
 struct FindFilterResult {
     size_t pipePosition;
@@ -58,7 +55,7 @@ inline std::optional<FindFilterResult> findFilter(const std::string& source, con
             continue;
         }
         size_t functionEnd = functionStart + function.size();
-        if (functionEnd < source.size() && isIdentifierChar(source[functionEnd])) {
+        if (functionEnd < source.size() && isAlphanumericOrUnderscore(std::string(1, source[functionEnd]))) {
             continue;
         }
 
