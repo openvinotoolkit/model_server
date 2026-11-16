@@ -611,7 +611,7 @@ TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, UserSpecialTokensPreference
     std::optional<uint32_t> maxModelLength;
     auto apiHandler = createHandler(endpoint(), "llama3");
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
-    apiHandler->initOutputParser({}, "qwen3asr");
+    apiHandler->initOutputParser({});
     auto outputParser = apiHandler->getOutputParser();
     ASSERT_NE(outputParser, nullptr);
 

@@ -95,7 +95,7 @@ public:
         return name == "stream" ? stream : "";
     }
     std::string_view getFileContentByFieldName(const std::string& name) const override {
-        return name == "file" ? audioData : "";
+        return name == "file" ? std::string_view(audioData) : std::string_view{};
     }
     std::vector<std::string_view> getFilesArrayByFieldName(const std::string&) const override { return {}; }
     std::set<std::string> getAllFieldNames() const override { return {"file", "model", "prompt"}; }
@@ -239,6 +239,7 @@ protected:
         RunResult result;
         auto parser = std::make_shared<MultipartParserForTest>(audioData, prompt, stream);
         HttpPayload payload;
+        payload.parsedJson = std::make_shared<rapidjson::Document>();
         payload.uri = "/v1/audio/transcriptions";
         payload.multipartParser = std::move(parser);
 
