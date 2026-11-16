@@ -69,7 +69,9 @@ protected:
         ASSERT_TRUE(status.ok()) << status.string();
         ASSERT_EQ(properties.chatTemplateStatus, ChatTemplateStatus::AVAILABLE);
         const auto analysisResult = GenAiServableInitializer::analyzeChatTemplate(servable->getProperties());
-        GenAiServableInitializer::selectOutputParsers(servable->getProperties(), analysisResult);
+            GenAiServableInitializer::selectOutputParsers(
+                servable->getProperties(),
+                GenAiServableInitializer::analyzeOutputParsers(servable->getProperties(), analysisResult));
         ASSERT_TRUE(properties.preparedChatTemplate.isPrepared());
     }
 
@@ -216,7 +218,9 @@ TEST_F(LLMChatTemplateTest, MinjaUsesChatTemplateJinjaSource) {
     const auto status = GenAiServableInitializer::loadChatTemplate(properties, directoryPath);
     ASSERT_TRUE(status.ok()) << status.string();
     const auto analysisResult = GenAiServableInitializer::analyzeChatTemplate(properties);
-    GenAiServableInitializer::selectOutputParsers(properties, analysisResult);
+        GenAiServableInitializer::selectOutputParsers(
+            properties,
+            GenAiServableInitializer::analyzeOutputParsers(properties, analysisResult));
     EXPECT_EQ(properties->chatTemplateStatus, ChatTemplateStatus::AVAILABLE);
     EXPECT_EQ(properties->chatTemplateSource, ChatTemplateSource::CHAT_TEMPLATE_JINJA);
     // CreateJinjaConfig adds newline at the end. To consider if this behavior is expected in all cases.
