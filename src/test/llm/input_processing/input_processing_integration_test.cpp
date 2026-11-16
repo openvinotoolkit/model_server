@@ -47,7 +47,7 @@
 #include "../../../llm/io_processing/input_processor_context.hpp"
 #include "../../../llm/io_processing/input_request.hpp"
 #include "../../../llm/runtime_chat_template_runtime_loader.hpp"
-#include "../../../servable.hpp"
+#include "../../../llm/servable.hpp"
 #include "../../../http_payload.hpp"
 #include "../../../multi_part_parser.hpp"
 #include "../../platform_utils.hpp"
