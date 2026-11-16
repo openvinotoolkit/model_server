@@ -143,7 +143,7 @@ ovms_cc_library(
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "@com_google_absl//absl/status",
-        "//src:http_payload",
+            "//src:httppayload",
         "//src/port:rapidjson_stringbuffer",
         "//src/port:rapidjson_writer",
         ":openai_api_handler",

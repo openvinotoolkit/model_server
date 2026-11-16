@@ -199,7 +199,9 @@ TEST_F(ChatTemplateEndToEndJinjaTest, RuntimeInitializationRendersOriginalTokeni
     ASSERT_TRUE(loadStatus.ok()) << loadStatus.string();
     ASSERT_EQ(properties->chatTemplateStatus, ChatTemplateStatus::AVAILABLE);
     const auto analysisResult = GenAiServableInitializer::analyzeChatTemplate(properties);
-    GenAiServableInitializer::selectOutputParsers(properties, analysisResult);
+    GenAiServableInitializer::selectOutputParsers(
+        properties,
+        GenAiServableInitializer::analyzeOutputParsers(properties, analysisResult));
     EXPECT_EQ(properties->chatTemplateSource, ChatTemplateSource::GENAI_TOKENIZER);
     ASSERT_TRUE(properties->preparedChatTemplate.isPrepared());
     EXPECT_EQ(properties->chatTemplateCaps.toString(), ChatTemplateAnalyzer::analyze(originalTemplate).caps.toString());
