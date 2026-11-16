@@ -43,16 +43,66 @@ class VLMInputTests(unittest.TestCase):
     def test_requested_and_corrected_aliases(self):
         for output_flag, turn_flag in (('--output_lenght', '--turn_lenght'),
                                        ('--output_length', '--turn_length')):
-            options = benchmark.parser.parse_args(['--backend', 'ovms-vlm', output_flag, '7',
+            options = benchmark.parser.parse_args(['ovms-vlm', output_flag, '7',
                                                     turn_flag, '3', '--max_concurrency', '2'])
             self.assertEqual(options.output_length, 7)
             self.assertEqual(options.turn_length, 3)
             self.assertEqual(options.max_concurrency, 2)
 
+    def test_base_url_and_positional_backend(self):
+        for url in ('http://localhost:9000', 'https://example.org/', 'http://[::1]:8000/'):
+            with self.subTest(url=url):
+                options = benchmark.parser.parse_args(['ovms-vlm', '--url', url])
+                self.assertEqual(options.backend, 'ovms-vlm')
+                self.assertEqual(options.url, url.rstrip('/'))
+                self.assertIsNone(options.model)
+
+    def test_invalid_base_url(self):
+        for url in ('localhost:8000', 'ftp://localhost:8000', 'http://localhost:8000/v1',
+                    'http://localhost:8000?query=1', 'http://localhost:8000/#fragment',
+                    'http://localhost:invalid', 'http://localhost:65536', 'http://localhost:0'):
+            with self.subTest(url=url), redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as status:
+                benchmark.parser.parse_args(['ovms-vlm', '--url', url])
+            self.assertEqual(status.exception.code, 2)
+
     def test_positive_limits(self):
         for flag in ('--input_length', '--output_lenght', '--max_concurrency', '--turns', '--turn_lenght'):
             with self.subTest(flag=flag), redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
-                benchmark.parser.parse_args([flag, '0'])
+                benchmark.parser.parse_args(['ovms-vlm', flag, '0'])
+
+    def test_backend_endpoint_selection(self):
+        endpoints = (
+            ('ovms-embeddings', 8000, '/v1/embeddings'),
+            ('ovms_rerank', 8000, '/v1/rerank'),
+            ('tei-embed', 8080, '/embed'),
+            ('infinity-embeddings', 7997, '/embeddings'),
+            ('text2speech', 8000, '/v1/audio/speech'),
+            ('speech2text', 8000, '/v1/audio/transcriptions'),
+            ('translations', 8000, '/v1/audio/translations'),
+            ('ovms-vlm', 8000, '/v1/chat/completions'),
+            ('image-gen', 8000, '/v1/images/generations'),
+        )
+        for backend, port, endpoint in endpoints:
+            for url in (None, 'https://example.org:9443/'):
+                options = [backend, '--model', 'served-model', '--batch_size', '1']
+                if url:
+                    options.extend(['--url', url])
+                with self.subTest(backend=backend, url=url), \
+                        patch.object(benchmark, 'prepare_documents', side_effect=RuntimeError('URL selected')), \
+                        self.assertRaisesRegex(RuntimeError, 'URL selected'):
+                    benchmark.main(options)
+                base_url = url.rstrip('/') if url else f'http://localhost:{port}'
+                self.assertEqual(benchmark.args['url'], base_url)
+                self.assertEqual(benchmark.args['api_url'], base_url + endpoint)
+
+    def test_custom_server_model_discovery(self):
+        with patch.object(benchmark, 'urlopen', return_value=io.StringIO('{"data":[{"id":"served-model"}]}')) as get, \
+                patch.object(benchmark, 'prepare_documents', side_effect=RuntimeError('model selected')), \
+                redirect_stdout(io.StringIO()), self.assertRaisesRegex(RuntimeError, 'model selected'):
+            benchmark.main(['ovms-vlm', '--url', 'https://example.org:9443/'])
+        self.assertEqual(get.call_args.args[0].full_url, 'https://example.org:9443/v1/models')
+        self.assertEqual(benchmark.args['model'], 'served-model')
+        self.assertEqual(benchmark.args['api_url'], 'https://example.org:9443/v1/chat/completions')
 
     def test_exact_synthetic_text_lengths(self):
         tokenizer = WordTokenizer()
@@ -72,7 +122,7 @@ class VLMInputTests(unittest.TestCase):
             self.assertEqual(benchmark.image_context_url(encoded), encoded)
 
     def test_prepare_vlm_uses_server_tokenizer_without_hf_dataset(self):
-        benchmark.args = vars(benchmark.parser.parse_args(['--backend', 'ovms-vlm', '--limit', '3',
+        benchmark.args = vars(benchmark.parser.parse_args(['ovms-vlm', '--limit', '3',
                                                            '--input_length', '10', '--turn_lenght', '2',
                                                            '--model', 'served-alias']))
 
@@ -93,7 +143,7 @@ class VLMInputTests(unittest.TestCase):
         self.assertEqual(len(benchmark.args['turn_text'].split()), 2)
 
     def test_default_vlm_uses_served_tokenizer(self):
-        benchmark.args = vars(benchmark.parser.parse_args(['--backend', 'ovms-vlm', '--model', 'served-alias',
+        benchmark.args = vars(benchmark.parser.parse_args(['ovms-vlm', '--model', 'served-alias',
                                                            '--input_length', '10', '--turn_lenght', '2', '--limit', '3']))
 
         def tokenize(text, model):
@@ -134,7 +184,7 @@ class VLMInputTests(unittest.TestCase):
             path = Path(directory) / 'prompt.txt'
             source = 'one two\nthree four five'
             path.write_text(source, encoding='utf-8')
-            benchmark.args = vars(benchmark.parser.parse_args(['--backend', 'ovms-vlm', '--model', 'served-alias',
+            benchmark.args = vars(benchmark.parser.parse_args(['ovms-vlm', '--model', 'served-alias',
                                                                '--text_input_file', str(path), '--input_length', '3',
                                                                '--turn_lenght', '2', '--limit', '2']))
             with patch.object(benchmark, 'tokenize_texts', side_effect=lambda text, model:
@@ -150,7 +200,7 @@ class VLMInputTests(unittest.TestCase):
 
     def test_vlm_rejects_local_tokenizer_override(self):
         with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
-            benchmark.main(['--backend', 'ovms-vlm', '--tokenizer', 'local'])
+            benchmark.main(['ovms-vlm', '--tokenizer', 'local'])
 
     def test_unique_initial_text_respects_token_budget(self):
         used = set()
@@ -167,14 +217,14 @@ class VLMInputTests(unittest.TestCase):
     def test_missing_text_file_reports_setup_error(self):
         with tempfile.TemporaryDirectory() as directory:
             with redirect_stderr(io.StringIO()) as errors, self.assertRaises(SystemExit) as status:
-                benchmark.main(['--backend', 'ovms-vlm', '--model', 'test',
+                benchmark.main(['ovms-vlm', '--model', 'test',
                                 '--text_input_file', str(Path(directory) / 'missing.txt')])
         self.assertEqual(status.exception.code, 2)
         self.assertIn('missing.txt', errors.getvalue())
 
     def test_text_file_rejected_for_other_backends(self):
         with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as status:
-            benchmark.main(['--text_input_file', 'prompt.txt'])
+            benchmark.main(['ovms-embeddings', '--text_input_file', 'prompt.txt'])
         self.assertEqual(status.exception.code, 2)
 
     def test_tokenize_contract_and_url(self):
@@ -215,7 +265,7 @@ class VLMInputTests(unittest.TestCase):
                 patch.object(benchmark, 'prepare_documents', return_value=docs), \
                 patch.object(benchmark, 'benchmark', new=lambda **kwargs: kwargs), \
                 patch.object(benchmark.asyncio, 'run', return_value=results), redirect_stdout(io.StringIO()):
-            status = benchmark.main(['--backend', 'ovms-vlm', '--model', 'explicit-model'])
+            status = benchmark.main(['ovms-vlm', '--model', 'explicit-model'])
         discover.assert_not_called()
         self.assertEqual(status, 0)
         self.assertEqual(benchmark.args['model'], 'explicit-model')
@@ -281,7 +331,7 @@ class VLMInputTests(unittest.TestCase):
                 patch.object(benchmark, 'benchmark', new=lambda **kwargs: kwargs) as unused, \
                 patch.object(benchmark.asyncio, 'run', return_value=results) as run, \
                 redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
-            status = benchmark.main(['--backend', 'ovms-vlm', '--limit', '1'])
+            status = benchmark.main(['ovms-vlm', '--limit', '1'])
         self.assertEqual(status, 1)
         self.assertEqual(benchmark.batch_size, 1)
         self.assertEqual(benchmark.args['api_url'], 'http://localhost:8000/v1/chat/completions')
@@ -297,14 +347,14 @@ class VLMInputTests(unittest.TestCase):
                 patch.object(benchmark, 'benchmark', new=lambda **kwargs: kwargs), \
                 patch.object(benchmark.asyncio, 'run', return_value=results), \
                 patch.object(benchmark, 'count_tokens', return_value=1), redirect_stdout(io.StringIO()):
-            status = benchmark.main([])
+            status = benchmark.main(['ovms-embeddings'])
         self.assertEqual(status, 0)
         self.assertEqual(benchmark.batch_size, 16)
 
 
 class ImageGenerationTests(unittest.TestCase):
     def test_prepare_fixed_prompts_without_dataset_or_tokenizer(self):
-        benchmark.args = vars(benchmark.parser.parse_args(['--backend', 'image-gen', '--limit', '3']))
+        benchmark.args = vars(benchmark.parser.parse_args(['image-gen', '--limit', '3']))
         with patch.object(benchmark, 'load_dataset') as dataset, \
             patch.object(benchmark, 'load_tokenizer') as tokenizer:
             docs = benchmark.prepare_documents()
@@ -319,11 +369,11 @@ class ImageGenerationTests(unittest.TestCase):
                         ['--resolution', '0x512'], ['--resolution', '512x-1'],
                         ['--resolution', '512x512x512'], ['--resolution', 'ax512']):
             with self.subTest(options=options), redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
-                benchmark.parser.parse_args(['--backend', 'image-gen'] + options)
+                benchmark.parser.parse_args(['image-gen'] + options)
 
     def test_batch_size_must_be_one(self):
         with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
-            benchmark.main(['--backend', 'image-gen', '--batch_size', '2'])
+            benchmark.main(['image-gen', '--batch_size', '2'])
 
     def test_statistics_defaults_and_failures(self):
         for successes, latencies, expected in (
@@ -340,7 +390,7 @@ class ImageGenerationTests(unittest.TestCase):
                     patch.object(benchmark.asyncio, 'run', return_value=results) as run, \
                     patch.object(benchmark, 'count_tokens') as tokens, \
                     redirect_stdout(io.StringIO()) as output, redirect_stderr(io.StringIO()):
-                status = benchmark.main(['--backend', 'image-gen', '--limit', '3'])
+                status = benchmark.main(['image-gen', '--limit', '3'])
             self.assertEqual(status, 1)
             self.assertEqual(benchmark.batch_size, 1)
             self.assertEqual(benchmark.args['api_url'], 'http://localhost:8000/v1/images/generations')
@@ -352,7 +402,7 @@ class ImageGenerationTests(unittest.TestCase):
 
 class ImageGenerationRequestTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
-        benchmark.args = vars(benchmark.parser.parse_args(['--backend', 'image-gen', '--limit', '2',
+        benchmark.args = vars(benchmark.parser.parse_args(['image-gen', '--limit', '2',
                                                            '--steps', '4', '--resolution', '768x512']))
         benchmark.batch_size = 1
         self.payloads = []
@@ -399,7 +449,7 @@ class ImageGenerationRequestTests(unittest.IsolatedAsyncioTestCase):
 
 class VLMRequestTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
-        benchmark.args = vars(benchmark.parser.parse_args(['--backend', 'ovms-vlm', '--limit', '4',
+        benchmark.args = vars(benchmark.parser.parse_args(['ovms-vlm', '--limit', '4',
                                                            '--turns', '3', '--max_concurrency', '2',
                                                            '--output_lenght', '4']))
         benchmark.args.update(image_url='https://example.org/image.jpeg', turn_text='next next', batch_size=1)

@@ -49,24 +49,11 @@ Use Python 3.12. Download the client files into the same writable directory as
 the model files:
 
 ```console
-curl -fL https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/benchmark/kserve/benchmark.py -o benchmark.py
-curl -fL https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/benchmark/kserve/requirements.txt -o requirements.txt
+curl -fL https://raw.githubusercontent.com/openvinotoolkit/model_server/bench-update/demos/benchmark/kserve/benchmark.py -O
 ```
 
-On Linux:
-
-```bash
-python3.12 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-```
-
-On Windows, use a native command prompt; WSL is not required:
-
-```bat
-py -3.12 -m venv .venv
-.venv\Scripts\activate.bat
-python -m pip install -r requirements.txt
+```console
+pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/bench-update/demos/benchmark/kserve/requirements.txt
 ```
 
 Print help on either OS:

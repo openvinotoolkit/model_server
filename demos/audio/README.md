@@ -74,7 +74,7 @@ from openai import OpenAI
 
 prompt = "The quick brown fox jumped over the lazy dog"
 filename = "speech.wav"
-url="http://localhost:8000/v3"
+url="http://localhost:8000/v1"
 
 
 speech_file_path = Path(__file__).parent / "speech.wav"
@@ -155,7 +155,7 @@ from pathlib import Path
 from openai import OpenAI
 
 filename = "speech.wav"
-url="http://localhost:8000/v3"
+url="http://localhost:8000/v1"
 
 
 speech_file_path = Path(__file__).parent / filename
@@ -214,7 +214,7 @@ from pathlib import Path
 from openai import OpenAI
 
 filename = "speech.wav"
-url="http://localhost:8000/v3"
+url="http://localhost:8000/v1"
 
 
 speech_file_path = Path(__file__).parent / filename
@@ -313,7 +313,7 @@ from pathlib import Path
 from openai import OpenAI
 
 filename = "speech.wav"
-url="http://localhost:8000/v3"
+url="http://localhost:8000/v1"
 
 
 speech_file_path = Path(__file__).parent / filename
@@ -350,7 +350,7 @@ Download and apply OVMS API compatibility patch:
 
 Set OpenAI-compatible endpoint variables for OVMS:
 ```text
-export OPENAI_BASE_URL=http://localhost:8000/v3
+export OPENAI_BASE_URL=http://localhost:8000/v1
 export OPENAI_API_KEY="unused"
 ```
 
@@ -416,7 +416,7 @@ ovms --rest_port 8000 --source_model OpenVINO/Kokoro-82M-int8-ov --model_reposit
 
 For non-English text, set the `language` field explicitly so OpenVINO GenAI selects the correct phonemization path. Voice selection does not infer the language.
 
-```text
+```bash
 curl --fail-with-body -sS http://localhost:8000/v1/audio/speech -H "Content-Type: application/json" -d "{\"model\": \"Kokoro-82M-int8-ov\", \"voice\": \"ef_dora\", \"language\": \"es\", \"input\": \"Madrid es la capital de España\"}" -o speech_spanish.wav
 ```
 
@@ -450,7 +450,7 @@ Translate the speech_spanish.wav file generated above.
 :::{dropdown} **Unary call with cURL**
 
 
-```text
+```bash
 curl http://localhost:8000/v1/audio/translations -H "Content-Type: multipart/form-data" -F file="@speech_spanish.wav" -F model="whisper-large-v3-fp16-ov"
 ```
 ```json
@@ -460,12 +460,12 @@ curl http://localhost:8000/v1/audio/translations -H "Content-Type: multipart/for
 
 :::{dropdown} **Unary call with python OpenAI library**
 
-```python
+```code
 from pathlib import Path
 from openai import OpenAI
 
 filename = "speech_spanish.wav"
-url="http://localhost:8000/v3"
+url="http://localhost:8000/v1"
 
 
 speech_file_path = Path(__file__).parent / filename

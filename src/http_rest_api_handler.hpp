@@ -161,7 +161,6 @@ public:
 
     Status processConfigStatusRequest(std::string& response, ModelManager& manager);
     Status processModelMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
-    /** Return a Triton model configuration using full KServe tensor shapes without implicit batching. */
     Status processModelConfigKFSRequest(const HttpRequestComponents& request_components, std::string& response);
     Status processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::optional<int>& inferenceHeaderContentLength);

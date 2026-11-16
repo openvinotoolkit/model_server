@@ -40,18 +40,6 @@ from urllib.request import Request, urlopen
 
 AIOHTTP_TIMEOUT = aiohttp.ClientTimeout(total=6 * 60 * 60)
 
-default_url_description = "Default value depends on the backend: \
-    ovms-embeddings: http://localhost:8000/v3/embeddings ;\
-    ovms_rerank: http://localhost:8000/v3/rerank ;\
-    tei_embed: http://localhost:8080/embed ;\
-    infinity-embeddings: http://localhost:7997/embeddings ;\
-    text2speech: http://localhost:8000/v3/audio/speech ;\
-    speech2text: http://localhost:8000/v3/audio/transcriptions ;\
-    translations: http://localhost:8000/v3/audio/translations ;\
-    ovms-vlm: http://localhost:8000/v1/chat/completions ;\
-    image-gen: http://localhost:8000/v1/images/generations"
-
-
 def positive_int(value):
     number = int(value)
     if number <= 0:
@@ -65,15 +53,27 @@ def image_resolution(value):
         raise argparse.ArgumentTypeError('must be WIDTHxHEIGHT with positive integer dimensions')
     return value
 
+def server_url(value):
+    try:
+        address = urlsplit(value)
+        if (address.scheme not in ('http', 'https') or not address.hostname
+                or address.path not in ('', '/') or address.query or address.fragment):
+            raise ValueError
+        if address.port == 0:
+            raise ValueError
+    except ValueError:
+        raise argparse.ArgumentTypeError('must be an HTTP(S) server URL without an endpoint, query, or fragment')
+    return value.rstrip('/')
+
 parser = argparse.ArgumentParser(description='Run benchmark for embeddings, audio, VLM chat, and image generation endpoints', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument('backend', choices=['ovms-embeddings','tei-embed','infinity-embeddings','ovms_rerank','text2speech','speech2text', 'translations', 'ovms-vlm', 'image-gen'], help='Backend serving API type')
 parser.add_argument('--dataset', required=False, default='Cohere/wikipedia-2023-11-embed-multilingual-v3', help='Dataset for load generation from HF or a keyword "synthetic"', dest='dataset')
 parser.add_argument('--synthetic_length', required=False, default=510, type=int, help='Length of the synthetic dataset', dest='length')
-parser.add_argument('--api_url', required=False, help='API URL for the selected backend. ' + default_url_description, dest='api_url')
+parser.add_argument('--url', type=server_url, help='Server URL without an endpoint; defaults to http://localhost:8000 for OVMS, :8080 for TEI, or :7997 for Infinity')
 parser.add_argument('--model', required=False, help='Served model name; auto-detected from /v1/models when exactly one model is available', dest='model')
 parser.add_argument('--request_rate', required=False, default='inf', help='Average amount of requests per seconds in random distribution', dest='request_rate')
 parser.add_argument('--batch_size', required=False, type=positive_int, default=None, help='Strings per request; default 16, or 1 for ovms-vlm and image-gen', dest='batch_size')
 parser.add_argument('--voice', required=False, help='Voice name for text2speech backend', dest='voice')
-parser.add_argument('--backend', required=False, default='ovms-embeddings', choices=['ovms-embeddings','tei-embed','infinity-embeddings','ovms_rerank','text2speech','speech2text', 'translations', 'ovms-vlm', 'image-gen'], help='Backend serving API type', dest='backend')
 parser.add_argument('--limit', required=False, type=positive_int, default=1000, help='Number of documents, or independent conversations for ovms-vlm', dest='limit')
 parser.add_argument('--split', required=False, default='train', help='Dataset split', dest='split')
 parser.add_argument('--hf-subset', required=False, help='Hf dataset subset', dest='subset')
@@ -93,7 +93,6 @@ parser.add_argument('--resolution', type=image_resolution, default='512x512', he
 args = {}
 
 backend_function = None
-default_api_url = None
 
 batch_size = 16
 
@@ -771,7 +770,7 @@ def print_vlm_statistics(results):
 
 
 def main(argv=None):
-    global args, batch_size, backend_function, default_api_url
+    global args, batch_size, backend_function
     args = vars(parser.parse_args(argv))
     if args['backend'] == 'ovms-vlm' and args['tokenizer']:
         parser.error('--tokenizer is not supported with ovms-vlm; VLM uses OVMS /v1/tokenize')
@@ -788,19 +787,19 @@ def main(argv=None):
     if np.isnan(request_rate) or request_rate <= 0:
         parser.error('--request_rate must be positive or inf')
     backends = {
-        'ovms-embeddings': (async_request_embeddings, 'http://localhost:8000/v3/embeddings'),
-        'ovms_rerank': (async_request_rerank, 'http://localhost:8000/v3/rerank'),
-        'tei-embed': (async_request_embeddings_tei, 'http://localhost:8080/embed'),
-        'infinity-embeddings': (async_request_embeddings, 'http://localhost:7997/embeddings'),
-        'text2speech': (async_request_text2speech, 'http://localhost:8000/v3/audio/speech'),
-        'speech2text': (async_request_speech2text, 'http://localhost:8000/v3/audio/transcriptions'),
-        'translations': (async_request_speech2text, 'http://localhost:8000/v3/audio/translations'),
-        'ovms-vlm': (async_request_vlm, 'http://localhost:8000/v1/chat/completions'),
-        'image-gen': (async_request_image_gen, 'http://localhost:8000/v1/images/generations'),
+        'ovms-embeddings': (async_request_embeddings, 8000, '/v1/embeddings'),
+        'ovms_rerank': (async_request_rerank, 8000, '/v1/rerank'),
+        'tei-embed': (async_request_embeddings_tei, 8080, '/embed'),
+        'infinity-embeddings': (async_request_embeddings, 7997, '/embeddings'),
+        'text2speech': (async_request_text2speech, 8000, '/v1/audio/speech'),
+        'speech2text': (async_request_speech2text, 8000, '/v1/audio/transcriptions'),
+        'translations': (async_request_speech2text, 8000, '/v1/audio/translations'),
+        'ovms-vlm': (async_request_vlm, 8000, '/v1/chat/completions'),
+        'image-gen': (async_request_image_gen, 8000, '/v1/images/generations'),
     }
-    backend_function, default_api_url = backends[args['backend']]
-    if args['api_url'] is None:
-        args['api_url'] = default_api_url
+    backend_function, default_port, endpoint = backends[args['backend']]
+    args['url'] = args['url'] or f'http://localhost:{default_port}'
+    args['api_url'] = args['url'] + endpoint
     try:
         if args['model'] is None:
             args['model'] = discover_model(args['api_url'])

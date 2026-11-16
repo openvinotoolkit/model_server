@@ -8,10 +8,14 @@ The script benchmarks embeddings, reranking, audio, VLM chat, and image-generati
 VLM mode uses streamed `/v1/chat/completions` requests and asks for the final
 usage event with `stream_options.include_usage=true`.
 
+```console
+curl -fL https://raw.githubusercontent.com/openvinotoolkit/model_server/bench-update/demos/benchmark/openai/benchmark.py -O
+pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/bench-update/demos/benchmark/openai/requirements.txt
+```
+
+On Linux, create the model repository:
+
 ```bash
-git clone https://github.com/openvinotoolkit/model_server
-cd model_server/demos/benchmark/openai
-pip install -r requirements.txt
 mkdir -p "${HOME}/models"
 ```
 
@@ -31,8 +35,23 @@ next section.
 
 All examples start with a small load. Increase `--limit` for longer measurements
 and `--max_concurrency` for more concurrent clients. `--request_rate inf` sends
-requests as quickly as the concurrency limit allows. The examples use explicit
-model aliases; these can be omitted when `/v1/models` returns exactly one model.
+requests as quickly as the concurrency limit allows.
+
+Select the backend as the first positional argument, followed by options:
+`python benchmark.py BACKEND --url "http://localhost:8000" ...`.
+`--url` is the server address only, without an endpoint path, query, or fragment.
+The script selects the endpoint from the backend, as shown below. A trailing
+slash is accepted. When `--url` is omitted, the default is `http://localhost:8000`
+for OVMS backends, `http://localhost:8080` for `tei-embed`, or
+`http://localhost:7997` for `infinity-embeddings`. OVMS endpoints use `/v1`.
+This syntax replaces the previous `--backend` and endpoint-specific `--api_url` options.
+
+`--model` is optional. When omitted, the script queries `/v1/models` on the selected
+server and uses the model only if exactly one is listed. Multiple models produce
+an error requiring `--model NAME`; empty or invalid model lists also fail.
+An explicit `--model` skips discovery and accepts the served name or alias.
+Backends without `/v1/models` require an explicit model. The OVMS examples below
+use discovery because each deployment serves a single model.
 
 | Use case | Source model | Script backend | Endpoint |
 |---|---|---|---|
@@ -42,6 +61,9 @@ model aliases; these can be omitted when `/v1/models` returns exactly one model.
 | Image generation | `OpenVINO/stable-diffusion-v1-5-int8-ov` | `image-gen` | `/v1/images/generations` |
 | Speech generation | `OpenVINO/Kokoro-82M-int8-ov` | `text2speech` | `/v1/audio/speech` |
 | Speech transcription | `OpenVINO/whisper-large-v3-turbo-fp16-ov` | `speech2text` | `/v1/audio/transcriptions` |
+| Speech translation | A multilingual Whisper model | `translations` | `/v1/audio/translations` |
+| TEI embeddings | Selected embedding model | `tei-embed` | `/embed` |
+| Infinity embeddings | Selected embedding model | `infinity-embeddings` | `/embeddings` |
 
 ## VLM Requests
 
@@ -73,7 +95,7 @@ curl -f http://localhost:8000/v1/models
 
 Download an image on the client:
 
-```bash
+```console
 curl -fL https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/static/images/bee.jpeg -o image.jpeg
 ```
 
@@ -83,14 +105,8 @@ in the VLM guide. OVMS provides the model tokenizer through
 `/v1/tokenize`, so no Hugging Face tokenizer identifier is required:
 
 ```bash
-python benchmark.py --backend ovms-vlm --model vlm --api_url http://localhost:8000/v1/chat/completions --input_length 128 --output_lenght 64 --max_concurrency 2 --limit 10 --image image.jpeg --turns 3 --turn_lenght 32
+python benchmark.py ovms-vlm --url "http://localhost:8000" --input_length 128 --output_lenght 64 --max_concurrency 2 --limit 10 --image image.jpeg --turns 3 --turn_lenght 32
 ```
-
-`--model` is optional. When omitted, the script queries `/v1/models` on the API
-host and selects the model only if exactly one is listed. Multiple models produce
-an error requiring `--model NAME`; empty or invalid model lists also fail.
-An explicit `--model` skips discovery and accepts the served name or alias.
-Backends without `/v1/models` require an explicit model.
 
 `--image` accepts a local
 filename, HTTP(S) URL, or image data URI. Local files are embedded as base64 data
@@ -113,12 +129,12 @@ and previous messages, then append the next user text and assistant response.
 identifier but excluding image and chat-template tokens. To use text from a UTF-8
 file instead of synthetic text:
 
-```bash
-printf '%s\n' 'Describe the image in one sentence.' > prompt.txt
+```console
+echo Describe the image in one sentence. > prompt.txt
 ```
 
 ```console
-python benchmark.py --backend ovms-vlm --api_url http://localhost:8000/v1/chat/completions --text_input_file prompt.txt --input_length 128 --output_lenght 64 --max_concurrency 2 --limit 10 --image image.jpeg --turns 3 --turn_lenght 32
+python benchmark.py ovms-vlm --url "http://localhost:8000" --text_input_file prompt.txt --input_length 128 --output_lenght 64 --max_concurrency 2 --limit 10 --image image.jpeg --turns 3 --turn_lenght 32
 ```
 
 `--text_input_file` supplies the first user message for every conversation. The
@@ -167,7 +183,7 @@ Wait for the model to appear, then benchmark a small number of 256x256 images:
 
 ```bash
 curl -f http://localhost:8000/v1/models
-python benchmark.py --backend image-gen --model OpenVINO/stable-diffusion-v1-5-int8-ov --steps 4 --resolution 256x256 --limit 1 --max_concurrency 1
+python benchmark.py image-gen --url "http://localhost:8000" --steps 4 --resolution 256x256 --limit 1 --max_concurrency 1
 ```
 
 `--steps` controls denoising steps and `--resolution` uses `WIDTHxHEIGHT`.
@@ -202,7 +218,7 @@ curl -f http://localhost:8000/v1/models
 Benchmark synthetic text without downloading a dataset:
 
 ```bash
-python benchmark.py --backend ovms-embeddings --api_url http://localhost:8000/v1/embeddings --dataset synthetic --synthetic_length 64 --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
+python benchmark.py ovms-embeddings --url "http://localhost:8000" --dataset synthetic --synthetic_length 64 --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
 ```
 
 This sends 10 requests with 16 documents each. `--synthetic_length` repeats the
@@ -211,7 +227,7 @@ tokens through `/v1/tokenize` and reports tokens/second and mean/median latency.
 To use real text instead, load a dataset such as Cohere Wikipedia:
 
 ```bash
-python benchmark.py --backend ovms-embeddings --api_url http://localhost:8000/v1/embeddings --dataset Cohere/wikipedia-2023-11-embed-multilingual-v3 --hf-subset simple --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
+python benchmark.py ovms-embeddings --url "http://localhost:8000" --dataset Cohere/wikipedia-2023-11-embed-multilingual-v3 --hf-subset simple --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
 ```
 
 Stop the server before starting the next use case:
@@ -244,7 +260,7 @@ curl -f http://localhost:8000/v1/models
 Then run:
 
 ```bash
-python benchmark.py --backend ovms_rerank --api_url http://localhost:8000/v1/rerank --dataset synthetic --synthetic_length 64 --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
+python benchmark.py ovms_rerank --url "http://localhost:8000" --dataset synthetic --synthetic_length 64 --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
 ```
 
 Each request ranks 16 documents against the script's fixed query `Hello`. Reported
@@ -253,7 +269,7 @@ template tokens. This is load generation, not a relevance-quality evaluation.
 To benchmark real documents instead of synthetic text:
 
 ```bash
-python benchmark.py --backend ovms_rerank --api_url http://localhost:8000/v1/rerank --dataset Cohere/wikipedia-2023-11-embed-multilingual-v3 --hf-subset simple --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
+python benchmark.py ovms_rerank --url "http://localhost:8000" --dataset Cohere/wikipedia-2023-11-embed-multilingual-v3 --hf-subset simple --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
 ```
 
 Stop the server before starting the next use case:
@@ -284,7 +300,7 @@ curl -f http://localhost:8000/v1/models
 Use one text per request and a Kokoro voice:
 
 ```bash
-python benchmark.py --backend text2speech --api_url http://localhost:8000/v1/audio/speech --dataset synthetic --synthetic_length 32 --batch_size 1 --limit 10 --max_concurrency 2 --request_rate inf --voice af_alloy
+python benchmark.py text2speech --url "http://localhost:8000" --dataset synthetic --synthetic_length 32 --batch_size 1 --limit 10 --max_concurrency 2 --request_rate inf --voice af_alloy
 ```
 
 The backend is spelled `text2speech`. The voice `af_alloy` corresponds to a file in
@@ -295,7 +311,7 @@ For a real text corpus, for example AMI's individual head microphone transcripts
 run:
 
 ```bash
-python benchmark.py --backend text2speech --api_url http://localhost:8000/v1/audio/speech --dataset edinburghcstr/ami --hf-subset ihm --batch_size 1 --limit 10 --max_concurrency 2 --request_rate inf --voice af_alloy
+python benchmark.py text2speech --url "http://localhost:8000" --dataset edinburghcstr/ami --hf-subset ihm --batch_size 1 --limit 10 --max_concurrency 2 --request_rate inf --voice af_alloy
 ```
 
 Stop the server before starting the next use case:
@@ -336,7 +352,7 @@ curl -f http://localhost:8000/v1/models
 Then use a small real-audio dataset:
 
 ```bash
-python benchmark.py --backend speech2text --api_url http://localhost:8000/v1/audio/transcriptions --dataset hf-internal-testing/librispeech_asr_dummy --hf-subset clean --split validation --batch_size 1 --limit 10 --max_concurrency 2 --request_rate inf --tokenizer openai/whisper-large-v3-turbo
+python benchmark.py speech2text --url "http://localhost:8000" --dataset hf-internal-testing/librispeech_asr_dummy --hf-subset clean --split validation --batch_size 1 --limit 10 --max_concurrency 2 --request_rate inf --tokenizer openai/whisper-large-v3-turbo
 ```
 
 This downloads audio clips from Hugging Face and uploads WAV data as multipart
