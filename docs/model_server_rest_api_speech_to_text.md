@@ -44,7 +44,9 @@ curl -X POST http://localhost:8000/v3/audio/translations \
 | include | ❌ | ✅ | array | Additional information to include in the transcription response. |
 | known_speaker_names | ❌ | ✅ | array | List of speaker names corresponding to the audio samples |
 | known_speaker_references | ❌ | ✅ | array | Optional list of audio samples with known speaker references matching known_speaker_names |
-| prompt | ❌ | ✅ | string | An optional text to guide the model's style or continue a previous audio segment. |
+| prompt | ✅ | ✅ | string | An optional text to guide the model's style or continue a previous audio segment. Passed as `initial_prompt` (supported by Whisper models, ignored by Qwen3-ASR). |
+| hotwords | ✅ | ❌ | string | Space-separated list of hotwords used to steer the transcription to particular spellings. Passed as `hotwords` (supported by Whisper models, ignored by Qwen3-ASR). |
+| context | ✅ | ❌ | string | Context passed as a previous transcription to steer spelling or style. Supported by Qwen3-ASR models only. |
 | response_format | ❌ | ✅ | string | The format of the output. |
 | stream | ✅ | ✅ | boolean | Generate the response in streaming mode. **Note**: Streaming is not supported for translations endpoint. |
 | temperature | ✅ | ✅ | float (default: `1.0`) | The sampling temperature, cannot be negative. |
