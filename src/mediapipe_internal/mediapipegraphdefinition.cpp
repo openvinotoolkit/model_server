@@ -70,7 +70,7 @@ Status initializeCalculatorMetricsForNode(
     const MetricProvider* metrics,
     const std::string& graphName) {
     const bool usesMetrics = std::find(node.input_side_packet().begin(), node.input_side_packet().end(),
-                                "CALCULATOR_METRICS:calculator_metrics") != node.input_side_packet().end();
+                                 "CALCULATOR_METRICS:calculator_metrics") != node.input_side_packet().end();
     if (!usesMetrics) {
         return StatusCode::OK;
     }
