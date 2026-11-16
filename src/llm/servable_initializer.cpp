@@ -20,6 +20,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 #include <iterator>
@@ -62,6 +63,8 @@
 #include "omni_model/legacy/servable.hpp"
 
 namespace ovms {
+
+static std::string detectContentParserName(const std::string& modelsPath);
 
 GenAiServableProperties::DraftModelStrategy detectDraftModelStrategy(const std::string& draftPath) {
     namespace fs = std::filesystem;
@@ -372,6 +375,11 @@ void GenAiServableInitializer::selectOutputParsers(
         SPDLOG_LOGGER_INFO(llm_calculator_logger, "Reasoning parser explicitly disabled");
         properties->reasoningParserName.clear();
     }
+
+    properties->contentParserName = detectContentParserName(properties->modelsPath);
+    if (!properties->contentParserName.empty()) {
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected content_parser: {}", properties->contentParserName);
+    }
 }
 
 Status GenAiServableInitializer::validateChatTemplateAvailability(
@@ -494,6 +502,26 @@ std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath) {
         }
     }
     return maxModelLength;
+}
+
+static std::string detectContentParserName(const std::string& modelsPath) {
+    const std::string configPath = FileSystem::appendSlash(modelsPath) + "config.json";
+    std::ifstream ifs(configPath);
+    if (!ifs.is_open()) {
+        return {};
+    }
+    rapidjson::Document modelConfig;
+    rapidjson::IStreamWrapper isw(ifs);
+    rapidjson::ParseResult parseResult = modelConfig.ParseStream(isw);
+    if (parseResult.Code() || !modelConfig.HasMember("architectures") || !modelConfig["architectures"].IsArray()) {
+        return {};
+    }
+    for (const auto& architecture : modelConfig["architectures"].GetArray()) {
+        if (architecture.IsString() && std::string_view(architecture.GetString(), architecture.GetStringLength()) == "Qwen3ASRForConditionalGeneration") {
+            return "qwen3asr";
+        }
+    }
+    return {};
 }
 
 Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath) {

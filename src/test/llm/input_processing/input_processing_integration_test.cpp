@@ -77,9 +77,10 @@ static std::unique_ptr<PreparedChatTemplateRuntime> sharedPreparedRuntimeTemplat
 
 class MultipartParserForTest : public MultiPartParser {
 public:
-    MultipartParserForTest(const std::string& audioData, const std::string& prompt) :
+    MultipartParserForTest(const std::string& audioData, const std::string& prompt, const std::string& stream) :
         audioData(audioData),
-        prompt(prompt) {}
+        prompt(prompt),
+        stream(stream) {}
 
     bool parse() override { return true; }
     bool hasParseError() const override { return false; }
@@ -88,7 +89,10 @@ public:
         if (name == "model") {
             return "m";
         }
-        return name == "prompt" ? prompt : "";
+        if (name == "prompt") {
+            return prompt;
+        }
+        return name == "stream" ? stream : "";
     }
     std::string_view getFileContentByFieldName(const std::string& name) const override {
         return name == "file" ? audioData : "";
@@ -99,6 +103,7 @@ public:
 private:
     const std::string& audioData;
     const std::string& prompt;
+    const std::string& stream;
 };
 
 class TranscriptionTestServable : public GenAiServable {
@@ -230,9 +235,9 @@ protected:
         return result;
     }
 
-    RunResult runMultipartTranscriptionPipeline(const std::string& audioData, const std::string& prompt = "") {
+    RunResult runMultipartTranscriptionPipeline(const std::string& audioData, const std::string& prompt = "", const std::string& stream = "") {
         RunResult result;
-        auto parser = std::make_shared<MultipartParserForTest>(audioData, prompt);
+        auto parser = std::make_shared<MultipartParserForTest>(audioData, prompt, stream);
         HttpPayload payload;
         payload.uri = "/v1/audio/transcriptions";
         payload.multipartParser = std::move(parser);
@@ -253,6 +258,7 @@ protected:
         if (!result.parseStatus.ok()) {
             return result;
         }
+        result.handler = context->apiHandler;
         result.processStatus = servable.prepareInputs(context);
         result.req = std::move(context->inputRequest);
         return result;
@@ -625,6 +631,15 @@ TEST_P(InputProcessingIntegrationTest, MultipartTranscription_UsesPromptAsSystem
     EXPECT_EQ(chatHistory[0]["content"].as_string().value_or(""), prompt);
     EXPECT_NE(result.req.promptText.find(prompt), std::string::npos);
     EXPECT_EQ(chatHistory[1]["content"][0]["type"].as_string().value_or(""), "audio");
+}
+
+TEST_P(InputProcessingIntegrationTest, MultipartTranscription_EnablesStreaming) {
+    auto result = runMultipartTranscriptionPipeline(buildWavBuffer(160), "", "true");
+
+    ASSERT_TRUE(result.loadStatus.ok()) << result.loadStatus.message();
+    ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
+    ASSERT_NE(result.handler, nullptr);
+    EXPECT_TRUE(result.handler->isStream());
 }
 
 TEST_P(InputProcessingIntegrationTest, MultipartTranscription_RejectsMalformedAudio) {

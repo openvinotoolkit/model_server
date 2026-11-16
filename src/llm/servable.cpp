@@ -65,9 +65,6 @@ absl::Status normalizeTranscriptionRequest(HttpPayload& payload) {
     if (!payload.multipartParser || payload.multipartParser->hasParseError()) {
         return absl::InvalidArgumentError("Failed to parse multipart data");
     }
-    if (payload.multipartParser->getFieldByName("stream") == "true") {
-        return absl::InvalidArgumentError("Streaming is not supported for audio transcriptions in the LLM calculator");
-    }
 
     const std::string model = payload.multipartParser->getFieldByName("model");
     if (model.empty()) {
@@ -85,6 +82,17 @@ absl::Status normalizeTranscriptionRequest(HttpPayload& payload) {
     const std::string prompt = payload.multipartParser->getFieldByName("prompt");
     if (!prompt.empty()) {
         request->AddMember("prompt", rapidjson::Value(prompt.c_str(), allocator), allocator);
+    }
+
+    const std::string stream = payload.multipartParser->getFieldByName("stream");
+    if (!stream.empty()) {
+        if (stream == "true") {
+            request->AddMember("stream", true, allocator);
+        } else if (stream == "false") {
+            request->AddMember("stream", false, allocator);
+        } else {
+            return absl::InvalidArgumentError("stream must be true or false");
+        }
     }
 
     rapidjson::Value audioPart(rapidjson::kObjectType);
@@ -232,7 +240,7 @@ void GenAiServable::initializeTextStreamer(std::shared_ptr<GenAiServableExecutio
     }
     executionContext->textStreamer = std::make_shared<OVMSTextStreamer>(
         getProperties()->tokenizer,
-        executionContext->apiHandler->getOutputParser(),
+        executionContext->outputParser,
         executionContext->apiHandler->areToolsAvailable(),
         std::move(ovmsCallback),
         streamerConfig);
@@ -401,6 +409,16 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Pipeline input text: {}", req.promptText);
 
     executionContext->apiHandler->initOutputParser(reasoningContext);
+    if (!getProperties()->contentParserName.empty()) {
+        executionContext->outputParser = std::make_shared<OutputParser>(
+            getProperties()->tokenizer,
+            getProperties()->toolParserName,
+            getProperties()->reasoningParserName,
+            ToolsSchemas_t{},
+            getProperties()->contentParserName);
+    } else {
+        executionContext->outputParser = executionContext->apiHandler->getOutputParser();
+    }
     initializeTextStreamer(executionContext);
     return absl::OkStatus();
 }
@@ -443,7 +461,7 @@ absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServabl
                 localDeltas.push_back(std::move(delta));
                 return ov::genai::StreamingStatus::RUNNING;
             };
-            auto outputParser = executionContext->apiHandler->getOutputParser();
+            auto outputParser = executionContext->outputParser;
             if (outputParser) {
                 outputParser->resetStreamingState();
             }
@@ -566,12 +584,20 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
         executionContext->sendLoopbackSignal = true;
     } else {
         // Finishing: emit all pending deltas; the last one gets the real finishReason.
+        const bool isTranscription = executionContext->apiHandler->getEndpoint() == Endpoint::TRANSCRIPTIONS;
         if (count > 0) {
             for (size_t i = 0; i < count; ++i) {
                 const bool isLast = (i == count - 1);
                 std::string serialized = executionContext->apiHandler->serializeStreamingChunk(
                     std::move(deltas[i]),
-                    isLast ? finishReason : ov::genai::GenerationFinishReason::NONE);
+                    isLast && !isTranscription ? finishReason : ov::genai::GenerationFinishReason::NONE);
+                if (!serialized.empty()) {
+                    executionContext->response += wrapTextInServerSideEventMessage(serialized);
+                }
+            }
+            if (isTranscription) {
+                std::string serialized = executionContext->apiHandler->serializeStreamingChunk(
+                    FinishDelta{}, finishReason);
                 if (!serialized.empty()) {
                     executionContext->response += wrapTextInServerSideEventMessage(serialized);
                 }
@@ -591,7 +617,9 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
                 executionContext->response += wrapTextInServerSideEventMessage(usageChunk);
             }
         }
-        executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
+        if (!isTranscription) {
+            executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
+        }
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", executionContext->response);
         executionContext->sendLoopbackSignal = false;
     }
@@ -663,13 +691,21 @@ absl::Status prepareLegacyPartialResponse(std::shared_ptr<GenAiServableExecution
         // Legacy generation path always runs with deltas=1, so we read the single finish reason at index 0.
         const ov::genai::GenerationFinishReason finishReason = legacyCtx->legacyFinishReason();
         legacyCtx->setLegacyUsage(*executionContext->apiHandler);
+        const bool isTranscription = executionContext->apiHandler->getEndpoint() == Endpoint::TRANSCRIPTIONS;
         if (!deltas.empty()) {
             for (size_t i = 0; i < deltas.size(); ++i) {
                 const bool isLast = (i == deltas.size() - 1);
                 appendVerboseContent(deltas[i]);
                 std::string serialized = executionContext->apiHandler->serializeStreamingChunk(
                     std::move(deltas[i]),
-                    isLast ? finishReason : ov::genai::GenerationFinishReason::NONE);
+                    isLast && !isTranscription ? finishReason : ov::genai::GenerationFinishReason::NONE);
+                if (!serialized.empty()) {
+                    executionContext->response += wrapTextInServerSideEventMessage(serialized);
+                }
+            }
+            if (isTranscription) {
+                std::string serialized = executionContext->apiHandler->serializeStreamingChunk(
+                    FinishDelta{}, finishReason);
                 if (!serialized.empty()) {
                     executionContext->response += wrapTextInServerSideEventMessage(serialized);
                 }
@@ -682,9 +718,15 @@ absl::Status prepareLegacyPartialResponse(std::shared_ptr<GenAiServableExecution
                 executionContext->response += wrapTextInServerSideEventMessage(serialized);
             }
         }
-        if (executionContext->apiHandler->getStreamOptions().includeUsage)
-            executionContext->response += wrapTextInServerSideEventMessage(executionContext->apiHandler->serializeStreamingUsageChunk());
-        executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
+        if (executionContext->apiHandler->getStreamOptions().includeUsage) {
+            std::string usageChunk = executionContext->apiHandler->serializeStreamingUsageChunk();
+            if (!usageChunk.empty()) {
+                executionContext->response += wrapTextInServerSideEventMessage(usageChunk);
+            }
+        }
+        if (!isTranscription) {
+            executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
+        }
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", executionContext->response);
         executionContext->sendLoopbackSignal = false;
     }

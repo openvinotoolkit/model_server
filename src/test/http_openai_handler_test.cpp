@@ -611,7 +611,7 @@ TEST_P(HttpOpenAIHandlerCommonParsingValidationTest, UserSpecialTokensPreference
     std::optional<uint32_t> maxModelLength;
     auto apiHandler = createHandler(endpoint(), "llama3");
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, bestOfLimit, maxModelLength), absl::OkStatus());
-    apiHandler->initOutputParser({});
+    apiHandler->initOutputParser({}, "qwen3asr");
     auto outputParser = apiHandler->getOutputParser();
     ASSERT_NE(outputParser, nullptr);
 
@@ -1497,7 +1497,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseDeltasContentConcaten
     EXPECT_EQ(response["usage"]["total_tokens"].GetUint64(), 15);
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseTranscriptionRemovesQwenProtocolPrefix) {
+TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseTranscription) {
     std::string json = R"({"model":"qwen3-asr"})";
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
@@ -1510,7 +1510,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseTranscriptionRemovesQ
     EXPECT_EQ(chatHistory[0]["content"][0]["type"].as_string().value_or(""), "audio");
 
     std::vector<ovms::Delta> deltas;
-    deltas.push_back(makeContentDelta("language English<asr_text>Transcribed speech."));
+    deltas.push_back(makeContentDelta("Transcribed speech."));
     const std::string serialized = apiHandler->serializeUnaryResponse(
         deltas, ov::genai::GenerationFinishReason::STOP);
 
@@ -1522,7 +1522,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseTranscriptionRemovesQ
     EXPECT_FALSE(response.HasMember("choices"));
 }
 
-TEST_F(HttpOpenAIHandlerParsingTest, serializeContinuousBatchingTranscriptionRemovesQwenProtocolPrefix) {
+TEST_F(HttpOpenAIHandlerParsingTest, serializeContinuousBatchingTranscription) {
     std::string json = R"({"model":"qwen3-asr"})";
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
@@ -1531,7 +1531,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeContinuousBatchingTranscriptionRem
         doc, ovms::Endpoint::TRANSCRIPTIONS, std::chrono::system_clock::now(), *tokenizer);
     ASSERT_EQ(apiHandler->parseRequest(100, 0, std::nullopt), absl::OkStatus());
 
-    std::vector<std::vector<ovms::Delta>> allDeltas = {{makeContentDelta("language English<asr_text>Transcribed speech.")}};
+    std::vector<std::vector<ovms::Delta>> allDeltas = {{makeContentDelta("Transcribed speech.")}};
     const std::string serialized = apiHandler->serializeUnaryResponse(
         allDeltas, {ov::genai::GenerationFinishReason::STOP}, {});
 
@@ -1541,6 +1541,41 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeContinuousBatchingTranscriptionRem
     ASSERT_TRUE(response.HasMember("text"));
     EXPECT_STREQ(response["text"].GetString(), "Transcribed speech.");
     EXPECT_FALSE(response.HasMember("choices"));
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingTranscription) {
+    std::string json = R"({"model":"qwen3-asr","stream":true})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto apiHandler = std::make_shared<ovms::OpenAITranscriptionsHandler>(
+        doc, ovms::Endpoint::TRANSCRIPTIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_EQ(apiHandler->parseRequest(100, 0, std::nullopt), absl::OkStatus());
+    EXPECT_TRUE(apiHandler->isStream());
+
+    EXPECT_EQ(apiHandler->serializeStreamingChunk(ovms::ContentDelta{"Transcribed "}, ov::genai::GenerationFinishReason::NONE),
+        R"({"type":"transcript.text.delta","delta":"Transcribed ","logprobs":[]})");
+    EXPECT_EQ(apiHandler->serializeStreamingChunk(ovms::ContentDelta{"speech."}, ov::genai::GenerationFinishReason::NONE),
+        R"({"type":"transcript.text.delta","delta":"speech.","logprobs":[]})");
+    EXPECT_EQ(apiHandler->serializeStreamingChunk(ovms::FinishDelta{}, ov::genai::GenerationFinishReason::STOP),
+        R"({"type":"transcript.text.done","text":"Transcribed speech.","logprobs":[]})");
+    EXPECT_TRUE(apiHandler->serializeStreamingUsageChunk().empty());
+    EXPECT_TRUE(apiHandler->serializeStreamingHandshakeChunk().empty());
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, transcriptionOutputParserSuppressesSplitQwenProtocolPrefix) {
+    std::string json = R"({"model":"qwen3-asr","stream":true})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+
+    auto outputParser = std::make_shared<ovms::OutputParser>(*tokenizer, "", "", ovms::ToolsSchemas_t{}, "qwen3asr");
+    EXPECT_FALSE(outputParser->parseChunk("language English<asr_", {}, false, ov::genai::GenerationFinishReason::NONE).has_value());
+
+    const auto delta = outputParser->parseChunk("text>Transcribed ", {}, false, ov::genai::GenerationFinishReason::NONE);
+    ASSERT_TRUE(delta.has_value());
+    const auto* contentDelta = std::get_if<ovms::ContentDelta>(&*delta);
+    ASSERT_NE(contentDelta, nullptr);
+    EXPECT_EQ(contentDelta->text, "Transcribed ");
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseIgnoresAudioDeltas) {

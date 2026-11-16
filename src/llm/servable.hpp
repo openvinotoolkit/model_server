@@ -144,6 +144,7 @@ struct GenAiServableExecutionContext {
     std::vector<ov::genai::GenerationOutput> generationOutputs;
     std::unique_ptr<ov::genai::PerfMetrics> perfMetrics;
     std::string response;
+    std::shared_ptr<OutputParser> outputParser;
     std::shared_ptr<OVMSTextStreamer> textStreamer;
     // Loopback iterations can occur before the calculator emits its first frame.
     bool streamFrameEmitted = false;
@@ -201,6 +202,7 @@ struct GenAiServableProperties {
     ov::genai::GenerationConfig baseGenerationConfig;
     std::string toolParserName;
     std::string reasoningParserName;
+    std::string contentParserName;
     std::string device;
     ov::AnyMap pluginConfig;
     ov::AnyMap tokenizerPluginConfig;

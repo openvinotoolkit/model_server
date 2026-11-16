@@ -24,6 +24,7 @@ namespace ovms {
 
 class OpenAITranscriptionsHandler : public OpenAIApiHandler {
     static std::string transcriptionText(const std::vector<Delta>& deltas);
+    std::string streamingText;
 
 protected:
     absl::Status parseRequestImpl(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit,

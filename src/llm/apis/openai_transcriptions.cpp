@@ -17,7 +17,6 @@
 #include "openai_transcriptions.hpp"
 
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include "src/port/rapidjson_stringbuffer.hpp"
@@ -37,6 +36,36 @@ std::string serializeTranscriptionResponse(const std::string& text) {
     return buffer.GetString();
 }
 
+std::string serializeStreamingTranscriptionDelta(const std::string& delta) {
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    writer.StartObject();
+    writer.String("type");
+    writer.String("transcript.text.delta");
+    writer.String("delta");
+    writer.String(delta.c_str());
+    writer.String("logprobs");
+    writer.StartArray();
+    writer.EndArray();
+    writer.EndObject();
+    return buffer.GetString();
+}
+
+std::string serializeStreamingTranscriptionDone(const std::string& text) {
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    writer.StartObject();
+    writer.String("type");
+    writer.String("transcript.text.done");
+    writer.String("text");
+    writer.String(text.c_str());
+    writer.String("logprobs");
+    writer.StartArray();
+    writer.EndArray();
+    writer.EndObject();
+    return buffer.GetString();
+}
+
 }  // namespace
 
 absl::Status OpenAITranscriptionsHandler::parseRequestImpl(std::optional<uint32_t> maxTokensLimit,
@@ -46,7 +75,6 @@ absl::Status OpenAITranscriptionsHandler::parseRequestImpl(std::optional<uint32_
     if (!status.ok()) {
         return status;
     }
-    request.stream = false;
     const auto prompt = doc.FindMember("prompt");
     if (prompt != doc.MemberEnd()) {
         if (!prompt->value.IsString()) {
@@ -65,10 +93,7 @@ absl::Status OpenAITranscriptionsHandler::parseRequestImpl(std::optional<uint32_
 }
 
 std::string OpenAITranscriptionsHandler::transcriptionText(const std::vector<Delta>& deltas) {
-    const std::string generatedText = parsedOutputFromDeltas(deltas).content;
-    constexpr std::string_view asrTextMarker = "<asr_text>";
-    const size_t markerPosition = generatedText.find(asrTextMarker);
-    return markerPosition == std::string::npos ? generatedText : generatedText.substr(markerPosition + asrTextMarker.size());
+    return parsedOutputFromDeltas(deltas).content;
 }
 
 std::string OpenAITranscriptionsHandler::serializeUnaryResponse(const std::vector<Delta>& deltas,
@@ -85,16 +110,23 @@ std::string OpenAITranscriptionsHandler::serializeUnaryResponse(const std::vecto
 }
 
 std::string OpenAITranscriptionsHandler::serializeStreamingChunk(Delta delta,
-    ov::genai::GenerationFinishReason) {
-    return "";
+    ov::genai::GenerationFinishReason finishReason) {
+    if (const auto* contentDelta = std::get_if<ContentDelta>(&delta)) {
+        streamingText += contentDelta->text;
+        return serializeStreamingTranscriptionDelta(contentDelta->text);
+    }
+    if (finishReason != ov::genai::GenerationFinishReason::NONE) {
+        return serializeStreamingTranscriptionDone(streamingText);
+    }
+    return {};
 }
 
 std::string OpenAITranscriptionsHandler::serializeStreamingUsageChunk() {
-    return "";
+    return {};
 }
 
 std::string OpenAITranscriptionsHandler::serializeStreamingHandshakeChunk() {
-    return "";
+    return {};
 }
 
 }  // namespace ovms

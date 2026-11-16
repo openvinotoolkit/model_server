@@ -39,6 +39,7 @@
 #include "default_content_parser.hpp"
 #include "minicpm5/minicpm5_tool_parser.hpp"
 #include "minicpm5/minicpm5_reasoning_parser.hpp"
+#include "qwen3asr/content_parser.hpp"
 
 namespace ovms {
 OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const std::string& tag) const {
@@ -183,7 +184,8 @@ std::optional<Delta> OutputParser::parseReasoningChunk(const std::vector<int64_t
     return result;
 }
 
-OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName, const ToolsSchemas_t& toolNameSchemaMap) :
+OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName,
+    const ToolsSchemas_t& toolNameSchemaMap, const std::string& contentParserName) :
     tokenizer(tokenizer) {
     if (toolParserName == "llama3") {
         toolParser = std::make_unique<Llama3ToolParser>(tokenizer);
@@ -234,7 +236,11 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     // minicpm5's <s>/<|im_end|> must be visible before parser-owned phases begin). For all other
     // parser combinations the content phase decodes with skip_special_tokens=true (the default,
     // lower noise). Each parser that requires this sets defaultDecodingWithSpecialTokens in its config.
-    if (toolParserName == "onyx" || reasoningParserName == "onyx")
+    if (contentParserName == "qwen3asr")
+        contentParser = std::make_unique<Qwen3AsrContentParser>(tokenizer);
+    else if (!contentParserName.empty())
+        throw std::runtime_error("Unsupported content parser: \"" + contentParserName + "\"");
+    else if (toolParserName == "onyx" || reasoningParserName == "onyx")
         contentParser = std::make_unique<OnyxContentParser>(tokenizer);
     else if (toolParserName == "gptoss" || reasoningParserName == "gptoss")
         contentParser = std::make_unique<GptOssContentParser>(tokenizer);
