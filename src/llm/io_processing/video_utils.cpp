@@ -102,11 +102,6 @@ int readVideoBytes(int64_t offset, void* output, size_t size, void* token) {
     return std::fread(output, 1, size, file->input) == size ? 0 : 1;
 }
 
-bool isRemoteMediaSource(const std::string& mediaSource) {
-    return mediaSource.rfind("http://", 0) == 0 || mediaSource.rfind("https://", 0) == 0 ||
-           mediaSource.rfind("ftp://", 0) == 0 || mediaSource.rfind("sftp://", 0) == 0;
-}
-
 void appendStartCode(std::vector<uint8_t>& annexB, const uint8_t* nal, size_t size) {
     annexB.insert(annexB.end(), {0, 0, 0, 1});
     annexB.insert(annexB.end(), nal, nal + size);

@@ -130,6 +130,8 @@ struct TextGenGraphSettingsImpl {
     std::optional<std::string> chatTemplateEngine;
     std::string enableToolGuidedGeneration = "false";
     std::optional<uint64_t> cacheIntervalMultiplier;
+    std::optional<float> inputVideoFps;
+    std::optional<uint32_t> inputVideoMaxFrames;
 };
 
 struct EmbeddingsGraphSettingsImpl {

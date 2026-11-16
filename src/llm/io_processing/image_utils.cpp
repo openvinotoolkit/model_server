@@ -363,12 +363,15 @@ absl::Status downloadMediaToFile(const std::string& mediaSource, std::FILE* outp
     return absl::OkStatus();
 }
 
+bool isRemoteMediaSource(const std::string& mediaSource) {
+    return mediaSource.rfind("http://", 0) == 0 || mediaSource.rfind("https://", 0) == 0 ||
+           mediaSource.rfind("ftp://", 0) == 0 || mediaSource.rfind("sftp://", 0) == 0;
+}
+
 absl::Status validateMediaSource(const std::string& mediaSource,
     const std::optional<std::string>& allowedLocalMediaPath,
     const std::optional<std::vector<std::string>>& allowedMediaDomains) {
-    const bool isRemoteUrl = mediaSource.rfind("http://", 0) == 0 || mediaSource.rfind("https://", 0) == 0 ||
-                             mediaSource.rfind("ftp://", 0) == 0 || mediaSource.rfind("sftp://", 0) == 0;
-    if (isRemoteUrl) {
+    if (isRemoteMediaSource(mediaSource)) {
         if (!allowedMediaDomains.has_value() || !isDomainAllowed(allowedMediaDomains.value(), mediaSource.c_str())) {
             return absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains");
         }
@@ -405,8 +408,7 @@ absl::StatusOr<ov::Tensor> fetchAndDecodeImage(const std::string& imageSource,
         if (!absl::Base64Unescape(std::string_view(imageSource.data() + offset, imageSource.size() - offset), &decoded)) {
             return absl::InvalidArgumentError("Invalid base64 string in request");
         }
-    } else if (imageSource.rfind("http://", 0) == 0 || imageSource.rfind("https://", 0) == 0 ||
-               imageSource.rfind("ftp://", 0) == 0 || imageSource.rfind("sftp://", 0) == 0) {
+    } else if (isRemoteMediaSource(imageSource)) {
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Loading image using curl");
         auto validationStatus = validateMediaSource(imageSource, allowedLocalMediaPath, allowedMediaDomains);
         if (!validationStatus.ok()) {

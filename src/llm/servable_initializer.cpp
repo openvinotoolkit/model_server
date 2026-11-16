@@ -557,20 +557,21 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
     return StatusCode::OK;
 }
 
-Status configureVideoInputProcessing(InputProcessingConfig& config, const mediapipe::LLMCalculatorOptions& nodeOptions) {
-    if ((nodeOptions.has_video_fps() && (!std::isfinite(nodeOptions.video_fps()) || nodeOptions.video_fps() <= 0.0F)) || nodeOptions.video_max_frames() == 0) {
-        SPDLOG_ERROR("video_fps must be finite and greater than zero when provided, and video_max_frames must be greater than zero");
+Status configureVideoInputProcessing(VisionInputConfig& config, const mediapipe::LLMCalculatorOptions& nodeOptions) {
+    const auto& visionOptions = nodeOptions.input_vision();
+    if ((visionOptions.has_video_fps() && (!std::isfinite(visionOptions.video_fps()) || visionOptions.video_fps() <= 0.0F)) || visionOptions.video_max_frames() == 0) {
+        SPDLOG_ERROR("input_vision.video_fps must be finite and greater than zero when provided, and input_vision.video_max_frames must be greater than zero");
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
-    config.videoMaxFrames = nodeOptions.video_max_frames();
-    config.videoFps = nodeOptions.has_video_fps() ? std::optional<float>{nodeOptions.video_fps()} : std::nullopt;
+    config.videoMaxFrames = visionOptions.video_max_frames();
+    config.videoFps = visionOptions.has_video_fps() ? std::optional<float>{visionOptions.video_fps()} : std::nullopt;
     return StatusCode::OK;
 }
 
 Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath) {
     mediapipe::LLMCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
-    InputProcessingConfig videoConfig;
+    VisionInputConfig videoConfig;
     Status status = configureVideoInputProcessing(videoConfig, nodeOptions);
     if (status != StatusCode::OK) {
         return status;
@@ -653,8 +654,9 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
     }
     servable->determineDecodingMethod();
     auto& inputConfig = servable->getProperties()->inputProcessorContext.config;
-    inputConfig.videoMaxFrames = videoConfig.videoMaxFrames;
-    inputConfig.videoFps = videoConfig.videoFps;
+    if (inputConfig.visionInputConfig.has_value()) {
+        inputConfig.visionInputConfig = videoConfig;
+    }
     configureInputProcessingCapabilities(servable->getProperties());
     return StatusCode::OK;
 }

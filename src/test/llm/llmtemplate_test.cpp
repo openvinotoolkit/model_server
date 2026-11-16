@@ -293,7 +293,7 @@ TEST_F(LLMChatTemplateTest, VlmWithoutAudioCapabilityRejectsAudioInput) {
     servable = std::make_shared<ContinuousBatchingServable>();
     auto properties = servable->getProperties();
     properties->chatTemplateStatus = ChatTemplateStatus::AVAILABLE;
-    properties->inputProcessorContext.config.supportsVisualInputs = true;
+    properties->inputProcessorContext.config.visionInputConfig = VisionInputConfig{};
 
     auto context = servable->createExecutionContext();
     ov::genai::ChatHistory history;

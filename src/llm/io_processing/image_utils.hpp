@@ -45,6 +45,8 @@ struct ImageDownloadContext {
     size_t append(const void* downloadedChunk, size_t size, size_t nmemb) noexcept;
 };
 
+bool isRemoteMediaSource(const std::string& mediaSource);
+
 absl::Status validateMediaSource(const std::string& mediaSource,
     const std::optional<std::string>& allowedLocalMediaPath,
     const std::optional<std::vector<std::string>>& allowedMediaDomains);
