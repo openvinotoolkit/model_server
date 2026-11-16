@@ -63,6 +63,29 @@ const std::string MediapipeGraphDefinition::SCHEDULER_CLASS_NAME{"Mediapipe"};
 
 MediapipeGraphDefinition::~MediapipeGraphDefinition() = default;
 
+namespace {
+Status initializeCalculatorMetricsForNode(
+    const ::mediapipe::CalculatorGraphConfig_Node& node,
+    GraphSidePackets& sidePacketMaps,
+    const MetricProvider* metrics,
+    const std::string& graphName) {
+    const bool usesMetrics = std::find(node.input_side_packet().begin(), node.input_side_packet().end(),
+                                "CALCULATOR_METRICS:calculator_metrics") != node.input_side_packet().end();
+    if (!usesMetrics) {
+        return StatusCode::OK;
+    }
+    if (node.name().empty()) {
+        SPDLOG_ERROR("Custom metrics require a named node in graph {}", graphName);
+        return StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR;
+    }
+    sidePacketMaps.calculatorMetrics.emplace(node.name(),
+        std::make_shared<CalculatorMetrics>(
+            metrics && metrics->getMetricConfig().metricsEnabled ? metrics->getMetricRegistry() : nullptr,
+            graphName, node.name()));
+    return StatusCode::OK;
+}
+}  // namespace
+
 const tensor_map_t MediapipeGraphDefinition::getInputsInfo() const {
     std::shared_lock lock(metadataMtx);
     return this->inputsInfo;
@@ -770,16 +793,9 @@ Status MediapipeGraphDefinition::initializeNodes() {
     auto& registry = NodeInitializerRegistry::instance();
     for (int i = 0; i < config.node().size(); i++) {
         const auto& node = config.node(i);
-        const bool usesMetrics = std::find(node.input_side_packet().begin(), node.input_side_packet().end(),
-                                     "CALCULATOR_METRICS:calculator_metrics") != node.input_side_packet().end();
-        if (usesMetrics) {
-            if (node.name().empty()) {
-                SPDLOG_ERROR("Custom metrics require a named node in graph {}", getName());
-                return StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR;
-            }
-            sidePacketMaps->calculatorMetrics.emplace(node.name(),
-                std::make_shared<CalculatorMetrics>(
-                    metrics && metrics->getMetricConfig().metricsEnabled ? metrics->getMetricRegistry() : nullptr, getName(), node.name()));
+        Status metricsStatus = initializeCalculatorMetricsForNode(node, *sidePacketMaps, metrics, getName());
+        if (!metricsStatus.ok()) {
+            return metricsStatus;
         }
         for (const auto& initializer : registry.all()) {
             if (initializer->matches(node.calculator())) {

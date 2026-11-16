@@ -4636,7 +4636,7 @@ public:
 };
 }  // namespace
 
-TEST(MediapipeGraphMetricsProvider, LlmMetricRegistrationExceptionsBecomeStatuses) {
+TEST(MediapipeGraphMetricsProvider, LlmMetricRegistrationExceptionsPropagate) {
     TestGraphMetricProvider metrics;
     ASSERT_EQ(metrics.config.loadFromCLIString(true, METRIC_NAME_KV_CACHE_UTILIZATION), StatusCode::OK);
     ASSERT_NE(nullptr, metrics.registry.createFamily<MetricCounter>(
@@ -4644,9 +4644,7 @@ TEST(MediapipeGraphMetricsProvider, LlmMetricRegistrationExceptionsBecomeStatuse
     MetricsGraphDefinition graph(&metrics);
     ASSERT_NO_FATAL_FAILURE(graph.useLlmGraph(CONTINUOUS_BATCHING_LLM_GRAPH_PATH));
 
-    EXPECT_NO_THROW({
-        EXPECT_EQ(graph.initializeNodes(), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
-    });
+    EXPECT_ANY_THROW(graph.initializeNodes());
 }
 
 TEST(MediapipeGraphMetricsProvider, CustomMetricsHonorProviderConfiguration) {

@@ -59,6 +59,23 @@ class HttpLLMCalculator : public OvmsCalculatorBase {
 
     mediapipe::Timestamp iterationBeginTimestamp{0};
 
+    void logAvailableMetricFamilies(CalculatorContext* cc) const {
+        if (!llm_calculator_logger->should_log(spdlog::level::debug)) {
+            return;
+        }
+        std::ostringstream metricFamilies;
+        const auto& availableMetrics = ovms::MetricConfig::getLLMMetricFamilies();
+        for (size_t i = 0; i < availableMetrics.size(); ++i) {
+            if (i > 0) {
+                metricFamilies << ", ";
+            }
+            metricFamilies << availableMetrics[i];
+        }
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger,
+            "LLMCalculator [Node: {}] Available metric families (select with --metrics_list or {}): {}",
+            cc->NodeName(), ovms::ALL_LLM_METRICS_PRESET, metricFamilies.str());
+    }
+
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
         RET_CHECK(!cc->Inputs().GetTags().empty());
@@ -88,19 +105,7 @@ public:
         if (!metricsStatus.ok()) {
             return metricsStatus;
         }
-        if (llm_calculator_logger->should_log(spdlog::level::debug)) {
-            std::ostringstream metricFamilies;
-            const auto& availableMetrics = ovms::MetricConfig::getLLMMetricFamilies();
-            for (size_t i = 0; i < availableMetrics.size(); ++i) {
-                if (i > 0) {
-                    metricFamilies << ", ";
-                }
-                metricFamilies << availableMetrics[i];
-            }
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger,
-                "LLMCalculator [Node: {}] Available metric families (select with --metrics_list or {}): {}",
-                cc->NodeName(), ovms::ALL_LLM_METRICS_PRESET, metricFamilies.str());
-        }
+        logAvailableMetricFamilies(cc);
         ovms::GenAiServableMap servableMap = cc->InputSidePackets().Tag(LLM_SESSION_SIDE_PACKET_TAG).Get<ovms::GenAiServableMap>();
         auto it = servableMap.find(cc->NodeName());
         RET_CHECK(it != servableMap.end()) << "Could not find initialized LLM node named: " << cc->NodeName();
