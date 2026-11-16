@@ -29,8 +29,6 @@
 
 namespace ovms {
 
-constexpr int64_t MAX_VIDEO_FRAMES = 1024;
-
 // Calculates how many decoded frames can be retained after applying the
 // administrator's FPS and maximum-frame settings to a client video source.
 absl::StatusOr<size_t> calculateSelectedVideoFrameCount(uint64_t durationUnits,
@@ -59,7 +57,7 @@ private:
 absl::StatusOr<ov::Tensor> loadVideoFrames(const std::vector<std::string>& frameSources,
     const std::optional<std::string>& allowedLocalMediaPath,
     const std::optional<std::vector<std::string>>& allowedMediaDomains,
-    size_t& totalAllocatedPixels);
+    uint32_t maxDecodedFrames, size_t& totalAllocatedPixels);
 
 // Decodes an H.264/AVC MP4 source, sampling at requestedFps when provided.
 // With requestedFps, the request is rejected if the estimated sampled frame

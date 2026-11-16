@@ -77,15 +77,15 @@ absl::Status VideoFramesProcessor::process(InputRequest& req) {
                         allowedMediaDomains, requestedFps, maxDecodedFrames, req.totalDecodedVideoPixels);
                 } else if (urls.is_array()) {
                     // Reject oversized frame arrays before allocating from an untrusted length.
-                    if (static_cast<int64_t>(urls.size()) > MAX_VIDEO_FRAMES) {
-                        return absl::InvalidArgumentError("Number of video frames exceeds the allowed maximum of " + std::to_string(MAX_VIDEO_FRAMES));
+                    if (urls.size() > this->maxDecodedFrames) {
+                        return absl::InvalidArgumentError("Number of video frames exceeds the allowed maximum of " + std::to_string(this->maxDecodedFrames));
                     }
                     std::vector<std::string> frameSources;
                     frameSources.reserve(urls.size());
                     for (size_t k = 0; k < urls.size(); k++) {
                         frameSources.push_back(urls[k].as_string().value_or(""));
                     }
-                    videoResult = loadVideoFrames(frameSources, allowedLocalMediaPath, allowedMediaDomains, req.totalDecodedPixels);
+                    videoResult = loadVideoFrames(frameSources, allowedLocalMediaPath, allowedMediaDomains, this->maxDecodedFrames, req.totalDecodedPixels);
                 }
                 if (!videoResult.ok()) {
                     return videoResult.status();

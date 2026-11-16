@@ -37,7 +37,6 @@
 #include "../../logging.hpp"
 #include "../../profiler.hpp"
 #include "src/filesystem/filesystem.hpp"
-#include "../io_processing/video_utils.hpp"
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
 #include "absl/strings/str_cat.h"
@@ -292,8 +291,8 @@ absl::Status OpenAIChatCompletionsHandler::parseMessages(std::optional<std::stri
                             if (frames.Size() == 0) {
                                 return absl::InvalidArgumentError("Invalid message structure - video_url url array cannot be empty");
                             }
-                            if (static_cast<int64_t>(frames.Size()) > MAX_VIDEO_FRAMES) {
-                                return absl::InvalidArgumentError("Invalid message structure - video_url url array exceeds the allowed maximum of " + std::to_string(MAX_VIDEO_FRAMES) + " frames");
+                            if (this->videoMaxFrames.has_value() && frames.Size() > this->videoMaxFrames.value()) {
+                                return absl::InvalidArgumentError("Invalid message structure - video_url url array exceeds the allowed maximum of " + std::to_string(this->videoMaxFrames.value()) + " frames");
                             }
                             for (const auto& frame : frames) {
                                 if (!frame.IsString()) {

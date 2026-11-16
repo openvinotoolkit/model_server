@@ -381,8 +381,7 @@ absl::StatusOr<size_t> calculateSelectedVideoFrameCount(uint64_t durationUnits,
         return absl::InvalidArgumentError("MP4 video track has an invalid time scale");
     }
     if (!requestedFps.has_value()) {
-        return std::min({static_cast<size_t>(sampleCount), static_cast<size_t>(maxDecodedFrames),
-            static_cast<size_t>(MAX_VIDEO_FRAMES)});
+        return std::min(static_cast<size_t>(sampleCount), static_cast<size_t>(maxDecodedFrames));
     }
     const float fps = requestedFps.value();
     const long double requestedFrameCount = std::ceil(
@@ -395,8 +394,7 @@ absl::StatusOr<size_t> calculateSelectedVideoFrameCount(uint64_t durationUnits,
     if (estimatedRequestedFrames > maxDecodedFrames) {
         return absl::InvalidArgumentError("Requested video FPS exceeds maximum decoded frame count");
     }
-    return std::min({estimatedRequestedFrames, static_cast<size_t>(maxDecodedFrames),
-        static_cast<size_t>(MAX_VIDEO_FRAMES), static_cast<size_t>(sampleCount)});
+    return std::min(estimatedRequestedFrames, static_cast<size_t>(sampleCount));
 }
 
 VideoFrameSelector::VideoFrameSelector(std::optional<long double> frameInterval, size_t maxSelectedFrames) :
@@ -676,12 +674,12 @@ absl::StatusOr<ov::Tensor> decodeH264Video(MP4D_demux_t& mp4, unsigned videoTrac
 absl::StatusOr<ov::Tensor> loadVideoFrames(const std::vector<std::string>& frameSources,
     const std::optional<std::string>& allowedLocalMediaPath,
     const std::optional<std::vector<std::string>>& allowedMediaDomains,
-    size_t& totalAllocatedPixels) {
+    uint32_t maxDecodedFrames, size_t& totalAllocatedPixels) {
     if (frameSources.empty()) {
         return absl::InvalidArgumentError("Video must contain at least one frame");
     }
-    if (static_cast<int64_t>(frameSources.size()) > MAX_VIDEO_FRAMES) {
-        return absl::InvalidArgumentError("Number of video frames exceeds the allowed maximum of " + std::to_string(MAX_VIDEO_FRAMES));
+    if (frameSources.size() > maxDecodedFrames) {
+        return absl::InvalidArgumentError("Number of video frames exceeds the allowed maximum of " + std::to_string(maxDecodedFrames));
     }
     const size_t numFrames = frameSources.size();
 

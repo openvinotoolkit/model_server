@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -556,10 +557,24 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
     return StatusCode::OK;
 }
 
+Status configureVideoInputProcessing(InputProcessingConfig& config, const mediapipe::LLMCalculatorOptions& nodeOptions) {
+    if ((nodeOptions.has_video_fps() && (!std::isfinite(nodeOptions.video_fps()) || nodeOptions.video_fps() <= 0.0F)) || nodeOptions.video_max_frames() == 0) {
+        SPDLOG_ERROR("video_fps must be finite and greater than zero when provided, and video_max_frames must be greater than zero");
+        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+    }
+    config.videoMaxFrames = nodeOptions.video_max_frames();
+    config.videoFps = nodeOptions.has_video_fps() ? std::optional<float>{nodeOptions.video_fps()} : std::nullopt;
+    return StatusCode::OK;
+}
+
 Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath) {
     mediapipe::LLMCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
-    Status status;
+    InputProcessingConfig videoConfig;
+    Status status = configureVideoInputProcessing(videoConfig, nodeOptions);
+    if (status != StatusCode::OK) {
+        return status;
+    }
     if (nodeOptions.has_models_path()) {
         // Need to initialize pipelineType with some value to avoid compiler warning;
         // determinePipelineType will set it properly.
@@ -637,6 +652,9 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         return StatusCode::INTERNAL_ERROR;
     }
     servable->determineDecodingMethod();
+    auto& inputConfig = servable->getProperties()->inputProcessorContext.config;
+    inputConfig.videoMaxFrames = videoConfig.videoMaxFrames;
+    inputConfig.videoFps = videoConfig.videoFps;
     configureInputProcessingCapabilities(servable->getProperties());
     return StatusCode::OK;
 }

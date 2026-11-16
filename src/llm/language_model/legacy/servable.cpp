@@ -106,7 +106,8 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
         return absl::InvalidArgumentError(std::string("Failed to create API handler: ") + e.what());
     }
 
-    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength);
+    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength,
+        std::nullopt, std::nullopt, getProperties()->inputProcessorContext.config.videoMaxFrames);
     if (!status.ok()) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;

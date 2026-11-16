@@ -69,6 +69,16 @@
 
 using namespace ovms;
 
+TEST(VideoInputConfigTest, RejectsInvalidValues) {
+    mediapipe::LLMCalculatorOptions options;
+    InputProcessingConfig config;
+    options.set_video_max_frames(0);
+    EXPECT_EQ(configureVideoInputProcessing(config, options), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
+    options.set_video_max_frames(32);
+    options.set_video_fps(0.0F);
+    EXPECT_EQ(configureVideoInputProcessing(config, options), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
+}
+
 struct TestParameters {
     std::string modelName;
     bool generateExpectedOutput;

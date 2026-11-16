@@ -151,6 +151,7 @@ protected:
 
         InputProcessorContext ctx;
         ctx.config.supportsVisualInputs = supportsVisualInputs;
+        ctx.config.videoMaxFrames = 32;
         ctx.config.audioInputConfig = audioInputConfig;
         ctx.tokenizer = *sharedTokenizer;
         ctx.templateProcessor = sharedPreparedRuntimeTemplate.get();
@@ -770,6 +771,7 @@ TEST(InputProcessingEquivalenceTest, ChatAndResponsesProduceSamePromptAndImages)
 
         InputProcessorContext ctx;
         ctx.config.supportsVisualInputs = true;
+        ctx.config.videoMaxFrames = 32;
         ctx.tokenizer = tokenizer;
         ctx.templateProcessor = &preparedRuntimeTemplate;
 

@@ -28,7 +28,7 @@ struct AudioInputConfig {
 struct InputProcessingConfig {
     // Encoded-video sampling settings for VLM input processing.
     std::optional<float> videoFps;
-    uint32_t videoMaxFrames = 100;
+    std::optional<uint32_t> videoMaxFrames;
     // Enables image and video decoding.
     // TokenizationProcessor still runs (to populate inputIds for usage statistics
     // and max-length checks) but inputIds is not passed to the VLM pipeline.

@@ -129,7 +129,7 @@ TEST(VideoFramesProcessorTest, NoVideoInTextOnlyMessage) {
     history.push_back({{"role", "user"}, {"content", "Hello, world!"}});
 
     InputRequest req = makeChatRequest(history);
-    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt, std::nullopt, 32);
     const auto status = processor.process(req);
 
     EXPECT_TRUE(status.ok());
@@ -144,7 +144,7 @@ TEST(VideoFramesProcessorTest, EncodedVideoWithoutAllowedLocalPathIsRejected) {
                                                          R"([{"type":"video_url","video_url":{"url":"/tmp/video.mp4"}}])")}});
 
     InputRequest req = makeChatRequest(history);
-    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt, std::nullopt, 32);
     const auto status = processor.process(req);
 
     EXPECT_EQ(status, absl::InvalidArgumentError("Loading media from local filesystem is disabled."));
@@ -157,7 +157,7 @@ TEST(VideoFramesProcessorTest, EncodedVideoRemoteSourceRequiresAllowedDomain) {
                                                          R"([{"type":"video_url","video_url":{"url":"ftp://media.example.com/video.mp4"}}])")}});
 
     InputRequest req = makeChatRequest(history);
-    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt, std::nullopt, 32);
     const auto status = processor.process(req);
 
     EXPECT_EQ(status, absl::InvalidArgumentError("Given url does not match any allowed domain from allowed_media_domains"));
@@ -169,7 +169,7 @@ TEST(VideoFramesProcessorTest, InjectionGuardBlocksPreexistingTag) {
     history.push_back({{"role", "user"}, {"content", "<ov_genai_video_0>\nsome text"}});
 
     InputRequest req = makeChatRequest(history);
-    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt, std::nullopt, 32);
     const auto status = processor.process(req);
 
     EXPECT_FALSE(status.ok());
@@ -185,7 +185,7 @@ TEST(VideoFramesProcessorTest, InjectionGuardBlocksTagInArrayTextPart) {
     history.push_back(msg);
 
     InputRequest req = makeChatRequest(history);
-    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt, std::nullopt, 32);
     const auto status = processor.process(req);
 
     EXPECT_FALSE(status.ok());
@@ -205,7 +205,7 @@ TEST(VideoFramesProcessorTest, InjectionGuardBlocksTagInToolCallArguments) {
     history.push_back(msg);
 
     InputRequest req = makeChatRequest(history);
-    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt, std::nullopt, 32);
     const auto status = processor.process(req);
 
     EXPECT_FALSE(status.ok());
@@ -223,7 +223,7 @@ TEST(VideoFramesProcessorTest, InjectionGuardBlocksTagInReasoningContent) {
     history.push_back(msg);
 
     InputRequest req = makeChatRequest(history);
-    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt, std::nullopt, 32);
     const auto status = processor.process(req);
 
     EXPECT_FALSE(status.ok());
@@ -239,7 +239,7 @@ TEST(VideoFramesProcessorTest, InjectionGuardBlocksTagInTools) {
         R"([{"type":"function","function":{"name":"f","description":"<ov_genai_video_0>"}}])"));
 
     InputRequest req = makeChatRequest(history);
-    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt, std::nullopt, 32);
     const auto status = processor.process(req);
 
     EXPECT_FALSE(status.ok());
@@ -255,7 +255,7 @@ TEST(VideoFramesProcessorTest, InjectionGuardBlocksTagInExtraContext) {
         R"({"custom_instruction":"<ov_genai_video_0>"})"));
 
     InputRequest req = makeChatRequest(history);
-    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt, std::nullopt, 32);
     const auto status = processor.process(req);
 
     EXPECT_FALSE(status.ok());
@@ -267,7 +267,7 @@ TEST(VideoFramesProcessorTest, SkipsMessagesWithNonArrayContent) {
     history.push_back({{"role", "system"}, {"content", "You are helpful."}});
 
     InputRequest req = makeChatRequest(history);
-    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt, std::nullopt, 32);
     const auto status = processor.process(req);
 
     EXPECT_TRUE(status.ok());
@@ -285,7 +285,7 @@ TEST(VideoFramesProcessorTest, SingleFrameVideoDecodedAndTagged) {
     history.push_back(msg);
 
     InputRequest req = makeChatRequest(history);
-    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt, std::nullopt, 32);
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok());
@@ -317,12 +317,29 @@ TEST(VideoFramesProcessorTest, MultiFrameVideoStacksFrames) {
     history.push_back(msg);
 
     InputRequest req = makeChatRequest(history);
-    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt, std::nullopt, 3);
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok());
     ASSERT_EQ(req.inputVideos.size(), 1u);
     EXPECT_EQ(req.inputVideos[0].get_shape()[0], 3u);
+}
+
+TEST(VideoFramesProcessorTest, ConfiguredFrameArrayLimitRejectedBeforeDecoding) {
+    ov::genai::ChatHistory history;
+    ov::AnyMap msg;
+    msg["role"] = std::string("user");
+    msg["content"] = ov::genai::JsonContainer::from_json_string(
+        R"([{"type":"video_url","video_url":{"url":["x","x","x"]}}])");
+    history.push_back(msg);
+
+    InputRequest req = makeChatRequest(history);
+    constexpr size_t MAX_FRAMES = 2;
+    VideoFramesProcessor processor(std::nullopt, std::nullopt, std::nullopt, MAX_FRAMES);
+    const auto status = processor.process(req);
+
+    EXPECT_EQ(status, absl::InvalidArgumentError("Number of video frames exceeds the allowed maximum of " + std::to_string(MAX_FRAMES)));
+    EXPECT_TRUE(req.inputVideos.empty());
 }
 
 TEST(VideoFramesProcessorTest, EmptyFrameArrayRejected) {
@@ -334,7 +351,7 @@ TEST(VideoFramesProcessorTest, EmptyFrameArrayRejected) {
     history.push_back(msg);
 
     InputRequest req = makeChatRequest(history);
-    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt, std::nullopt, 32);
     const auto status = processor.process(req);
 
     EXPECT_FALSE(status.ok());
@@ -350,7 +367,7 @@ TEST(VideoFramesProcessorTest, InvalidBase64FrameRejected) {
     history.push_back(msg);
 
     InputRequest req = makeChatRequest(history);
-    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt, std::nullopt, 32);
     const auto status = processor.process(req);
 
     EXPECT_FALSE(status.ok());
@@ -465,7 +482,7 @@ TEST(VideoFramesProcessorTest, MismatchingFrameResolutionRejected) {
     history.push_back(msg);
 
     InputRequest req = makeChatRequest(history);
-    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt, std::nullopt, 32);
     const auto status = processor.process(req);
 
     EXPECT_FALSE(status.ok());
@@ -488,7 +505,7 @@ TEST(VideoFramesProcessorTest, PerRequestPixelBudgetRejectsAccumulatedFrames) {
     history.push_back(msg);
 
     InputRequest req = makeChatRequest(history);
-    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt, std::nullopt, 32);
     const auto status = processor.process(req);
 
     EXPECT_FALSE(status.ok());
@@ -511,7 +528,7 @@ TEST(VideoFramesProcessorTest, PerRequestPixelBudgetAcceptsFramesWithinTotal) {
     history.push_back(msg);
 
     InputRequest req = makeChatRequest(history);
-    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt, std::nullopt, 32);
     const auto status = processor.process(req);
 
     ASSERT_TRUE(status.ok()) << status.message();
@@ -537,7 +554,7 @@ TEST(VideoFramesProcessorTest, PerRequestPixelBudgetRejectsManyFramesBeforeAlloc
     history.push_back(msg);
 
     InputRequest req = makeChatRequest(history);
-    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt, std::nullopt, 32);
     const auto status = processor.process(req);
 
     EXPECT_FALSE(status.ok());
@@ -546,13 +563,11 @@ TEST(VideoFramesProcessorTest, PerRequestPixelBudgetRejectsManyFramesBeforeAlloc
     EXPECT_TRUE(req.inputVideos.empty());
 }
 
-TEST(VideoFramesProcessorTest, OversizedFrameArrayRejected) {
-    // A frame array larger than MAX_VIDEO_FRAMES must be rejected before any
-    // frame is copied or decoded. The url entries can be short placeholders
-    // since the size check triggers before decoding.
+TEST(VideoFramesProcessorTest, LargeConfiguredFrameArrayAccepted) {
+    constexpr uint32_t MAX_FRAMES = 1025;
     std::string urls;
-    for (int64_t i = 0; i < MAX_VIDEO_FRAMES + 1; i++) {
-        urls += (i ? ",\"x\"" : "\"x\"");
+    for (uint32_t index = 0; index < MAX_FRAMES; ++index) {
+        urls += (index ? ",\"" : "\"") + FRAME_BASE64 + "\"";
     }
     ov::genai::ChatHistory history;
     ov::AnyMap msg;
@@ -562,13 +577,12 @@ TEST(VideoFramesProcessorTest, OversizedFrameArrayRejected) {
     history.push_back(msg);
 
     InputRequest req = makeChatRequest(history);
-    VideoFramesProcessor processor(std::nullopt, std::nullopt);
+    VideoFramesProcessor processor(std::nullopt, std::nullopt, std::nullopt, MAX_FRAMES);
     const auto status = processor.process(req);
 
-    EXPECT_FALSE(status.ok());
-    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
-    EXPECT_EQ(status.message(), "Number of video frames exceeds the allowed maximum of 1024");
-    EXPECT_TRUE(req.inputVideos.empty());
+    ASSERT_TRUE(status.ok()) << status.message();
+    ASSERT_EQ(req.inputVideos.size(), 1u);
+    EXPECT_EQ(req.inputVideos[0].get_shape()[0], MAX_FRAMES);
 }
 
 TEST(VideoFramesProcessorTest, FileSizeIsRejectedBeforeMp4Parsing) {
