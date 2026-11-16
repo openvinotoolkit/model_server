@@ -15,7 +15,9 @@
 //*****************************************************************************
 #include <algorithm>
 #include <cctype>
+#include <set>
 #include <string>
+#include <unordered_map>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -158,6 +160,119 @@ INSTANTIATE_TEST_SUITE_P(
         std::replace_if(name.begin(), name.end(), [](char c) { return !std::isalnum(static_cast<unsigned char>(c)); }, '_');
         return name;
     });
+
+class SttServableUpdateTranscriptionConfigTest : public ::testing::Test {
+protected:
+    HttpPayload payload;
+    std::shared_ptr<MockedMultiPartParser> multipartParser = std::make_shared<MockedMultiPartParser>();
+    // Servable is only dereferenced for word timestamps, which no test below requests.
+    std::shared_ptr<SttServable> servable;
+    // Fields present in the simulated multipart request; absent fields return empty.
+    std::unordered_map<std::string, std::string> requestFields;
+    std::set<std::string> fieldsRead;
+
+    void SetUp() override {
+        payload.multipartParser = multipartParser;
+        // updateTranscriptionConfig reads every field it handles, so the mock is
+        // driven from requestFields rather than from per-field expectations.
+        ON_CALL(*multipartParser, getFieldByName(::testing::_))
+            .WillByDefault(::testing::Invoke([this](const std::string& name) {
+                fieldsRead.insert(name);
+                auto it = requestFields.find(name);
+                return it == requestFields.end() ? std::string{} : it->second;
+            }));
+        EXPECT_CALL(*multipartParser, getFieldByName(::testing::_))
+            .Times(::testing::AnyNumber());
+        ON_CALL(*multipartParser, getArrayFieldByName(::testing::_))
+            .WillByDefault(::testing::Return(std::vector<std::string>{}));
+    }
+};
+
+TEST_F(SttServableUpdateTranscriptionConfigTest, promptFieldSetsInitialPrompt) {
+    requestFields["prompt"] = "Polychrome";
+
+    ov::genai::ASRGenerationConfig config;
+    auto status = SttServable::updateTranscriptionConfig(config, servable, payload);
+    EXPECT_TRUE(status.ok());
+    ASSERT_TRUE(config.initial_prompt.has_value());
+    EXPECT_EQ(config.initial_prompt.value(), "Polychrome");
+    EXPECT_FALSE(config.hotwords.has_value());
+    EXPECT_FALSE(config.context.has_value());
+    EXPECT_EQ(1u, fieldsRead.count("prompt"));
+}
+
+TEST_F(SttServableUpdateTranscriptionConfigTest, hotwordsFieldSetsHotwords) {
+    requestFields["hotwords"] = "Polychrome";
+
+    ov::genai::ASRGenerationConfig config;
+    auto status = SttServable::updateTranscriptionConfig(config, servable, payload);
+    EXPECT_TRUE(status.ok());
+    ASSERT_TRUE(config.hotwords.has_value());
+    EXPECT_EQ(config.hotwords.value(), "Polychrome");
+    EXPECT_FALSE(config.initial_prompt.has_value());
+    EXPECT_FALSE(config.context.has_value());
+    EXPECT_EQ(1u, fieldsRead.count("hotwords"));
+}
+
+TEST_F(SttServableUpdateTranscriptionConfigTest, contextFieldSetsContext) {
+    requestFields["context"] = "previous transcription";
+
+    ov::genai::ASRGenerationConfig config;
+    auto status = SttServable::updateTranscriptionConfig(config, servable, payload);
+    EXPECT_TRUE(status.ok());
+    ASSERT_TRUE(config.context.has_value());
+    EXPECT_EQ(config.context.value(), "previous transcription");
+    EXPECT_FALSE(config.initial_prompt.has_value());
+    EXPECT_FALSE(config.hotwords.has_value());
+    EXPECT_EQ(1u, fieldsRead.count("context"));
+}
+
+TEST_F(SttServableUpdateTranscriptionConfigTest, allSteeringFieldsTogether) {
+    requestFields["prompt"] = "prompt text";
+    requestFields["hotwords"] = "hotword";
+    requestFields["context"] = "context text";
+
+    ov::genai::ASRGenerationConfig config;
+    auto status = SttServable::updateTranscriptionConfig(config, servable, payload);
+    EXPECT_TRUE(status.ok());
+    ASSERT_TRUE(config.initial_prompt.has_value());
+    EXPECT_EQ(config.initial_prompt.value(), "prompt text");
+    ASSERT_TRUE(config.hotwords.has_value());
+    EXPECT_EQ(config.hotwords.value(), "hotword");
+    ASSERT_TRUE(config.context.has_value());
+    EXPECT_EQ(config.context.value(), "context text");
+}
+
+TEST_F(SttServableUpdateTranscriptionConfigTest, noSteeringFieldsLeaveConfigDefaults) {
+    ov::genai::ASRGenerationConfig config;
+    auto status = SttServable::updateTranscriptionConfig(config, servable, payload);
+    EXPECT_TRUE(status.ok());
+    EXPECT_FALSE(config.initial_prompt.has_value());
+    EXPECT_FALSE(config.hotwords.has_value());
+    EXPECT_FALSE(config.context.has_value());
+}
+
+TEST_F(SttServableUpdateTranscriptionConfigTest, languageAndTemperatureStillParsed) {
+    requestFields["language"] = "en";
+    requestFields["temperature"] = "0.7";
+
+    ov::genai::ASRGenerationConfig config;
+    auto status = SttServable::updateTranscriptionConfig(config, servable, payload);
+    EXPECT_TRUE(status.ok());
+    ASSERT_TRUE(config.language.has_value());
+    EXPECT_EQ(config.language.value(), "<|en|>");
+    EXPECT_EQ(config.temperature, 0.7f);
+    EXPECT_TRUE(config.do_sample);
+}
+
+TEST_F(SttServableUpdateTranscriptionConfigTest, invalidLanguageRejectedBeforeSteeringFields) {
+    requestFields["language"] = "toolong";
+
+    ov::genai::ASRGenerationConfig config;
+    auto status = SttServable::updateTranscriptionConfig(config, servable, payload);
+    EXPECT_FALSE(status.ok());
+    EXPECT_FALSE(config.initial_prompt.has_value());
+}
 
 // ====================== Speech2Text Streaming Tests ======================
 
