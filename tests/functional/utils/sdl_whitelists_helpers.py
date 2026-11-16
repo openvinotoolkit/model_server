@@ -47,6 +47,8 @@ def get_ovms_type(target_device, base_os):
     if CurrentTarget.is_gpu_based_target(target_device):
         if OsType.Ubuntu24 in base_os:
             return ovms_type.UBUNTU24_GPU
+        if OsType.Ubuntu26 in base_os:
+            return ovms_type.UBUNTU26_GPU
         if OsType.Ubuntu22 in base_os:
             return ovms_type.UBUNTU22_GPU
         if OsType.Redhat in base_os:
@@ -56,6 +58,10 @@ def get_ovms_type(target_device, base_os):
         if is_nginx_mtls:
             return ovms_type.UBUNTU24_NGINX
         return ovms_type.UBUNTU24
+    if OsType.Ubuntu26 in base_os:
+        if is_nginx_mtls:
+            return ovms_type.UBUNTU26_NGINX
+        return ovms_type.UBUNTU26
     if OsType.Ubuntu22 in base_os:
         if is_nginx_mtls:
             return ovms_type.UBUNTU22_NGINX

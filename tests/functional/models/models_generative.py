@@ -252,6 +252,7 @@ def create_dynamic_classes_from_env(models_list, known_classes=None):
         elif len(model_attributes) == 1:
             # if only class name is provided, create a class with default values
             class_name = model_attributes[0].strip()
+            name = precision = precision_dir = None
         else:
             raise ValueError(
                 f"Invalid model definition: {model_definition}. "

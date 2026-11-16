@@ -342,7 +342,7 @@ def functional_test(String artifactsPath = null){
     def packagePath = artifactsPath ?: env.WORKSPACE + '\\dist\\windows\\ovms.zip'
     def status = bat(returnStatus: true, script: '@windows_test_functional.bat "' + packagePath + '"')
     if (status != 0) {
-        error "Error: functional_test() failed with exit code ${status}. Check pytest-functional.xml for details."
+        error "Error: functional_test() failed with exit code ${status}. Check report.xml for details."
     }
     echo "Functional tests finished successfully."
 }
@@ -361,7 +361,7 @@ def archive_test_artifacts(){
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_test_summary.log"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_test_log.zip"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_install_service_test.log"
-    archiveArtifacts allowEmptyArchive: true, artifacts: "pytest-functional.xml"
+    archiveArtifacts allowEmptyArchive: true, artifacts: "report.xml,report.html"
 }
 
 def archive_bdba_reports(){

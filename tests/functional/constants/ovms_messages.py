@@ -350,7 +350,7 @@ class OvmsMessages:
     MEDIAPIPE_MESSAGE_CONTAINS_OV_GENAI_IMAGE_TAG = "Message contains restricted <ov_genai_image> tag"
     MEDIAPIPE_REQUEST_PROCESSING_FAILED = "Request processing failed, check its correctness"
     MEDIAPIPE_URL_IMAGE_INVALID_ARGUMENT_FILESYSTEM_DISABLED = "Loading images from local filesystem is disabled"
-    MEDIAPIPE_FAILED_TO_DOWNLOAD_IMAGE_HTTP_STATUS_404 = "Failed to download image from external URL: HTTP status 404."
+    MEDIAPIPE_FAILED_TO_DOWNLOAD_IMAGE_HTTP_STATUS = "Failed to download image from external URL: HTTP status {}."
     MEDIAPIPE_FAILED_TO_DOWNLOAD_IMAGE_REDIRECTS_NOT_ALLOWED = \
         ("Failed to download image from external URL because redirects are not allowed. "
          "Set OVMS_MEDIA_URL_ALLOW_REDIRECTS=1 environment variable to allow redirects.")

@@ -17,8 +17,10 @@
 # pylint: disable=too-many-arguments
 # pylint: disable=too-many-positional-arguments
 
+import ast
 import json
 import os
+import re
 import sys
 import numpy as np
 
@@ -29,7 +31,6 @@ from tests.functional.config import (
     kv_cache_size_value,
     kv_cache_precision_value,
     ovms_c_repo_path,
-    server_address,
 )
 from tests.functional.constants.generative_ai import GenerativeAIPluginConfig
 from tests.functional.constants.os_type import OsType
@@ -109,18 +110,19 @@ class GenerativeAIUtils:
         json_file_path = os.path.join(tmp_path, "curl_request.json")
         with open(json_file_path, "w", encoding="utf-8") as f:
             f.write(json.dumps(request_params_dict, ensure_ascii=False))
-        task_command = f'curl http://{server_address}:{port}/{OpenAIWrapper.REST_VERSION}/{endpoint} ' \
-                       f'-H "Content-Type: application/json" -d @{json_file_path}'
+        task_command = \
+            f'curl http://{TestEnvironment.get_server_address()}:{port}/{OpenAIWrapper.REST_VERSION}/{endpoint} '\
+            f'-H "Content-Type: application/json" -d "@{json_file_path}"'
         return task_command
 
     @staticmethod
     def prepare_curl_script_command(curl_command, commands_number, tmp_path, base_os):
         if base_os == OsType.Windows:
             script_path = os.path.join(tmp_path, "curl_requests.bat")
-            header, newline, run_command = "@echo off\n", "\r\n", script_path
+            header, newline, run_command = "@echo off\n", "\r\n", f'"{script_path}"'
         else:
             script_path = os.path.join(tmp_path, "curl_requests.sh")
-            header, newline, run_command = "#!/bin/bash\n", "\n", f"bash {script_path}"
+            header, newline, run_command = "#!/bin/bash\n", "\n", f'bash "{script_path}"'
         with open(script_path, "w", encoding="utf-8", newline=newline) as f:
             f.write(header + f"{curl_command}\n" * commands_number)
         return run_command
@@ -277,8 +279,10 @@ class GenerativeAIUtils:
     @staticmethod
     def prepare_python_script_command(
             context, tmp_path, port, model, endpoint, input_data, request_parameters,
-            ip_address=server_address, requests_number=1, image_path=None, timeout=900
+            ip_address=None, requests_number=1, image_path=None, timeout=900
     ):
+        if ip_address is None:
+            ip_address = TestEnvironment.get_server_address()
         input_data_json_path = os.path.join(tmp_path, "input_data.json")
         with open(input_data_json_path, "w", encoding='utf-8') as file_object:
             json.dump(input_data, file_object)
@@ -299,14 +303,11 @@ class GenerativeAIUtils:
 
     @staticmethod
     def get_outputs_from_stdout(stdout):
-        braces_left_str = "[\""
-        braces_right_str = "\"]"
-        stdout_list = stdout.replace("['", braces_left_str).replace("']", braces_right_str).split(braces_right_str)
-        outputs_multiple_requests = [
-            [(outputs_str + braces_right_str).strip().strip(braces_left_str).strip(braces_right_str)]
-            for outputs_str in stdout_list[:-1]
+        # openai_client.py prints one repr()-ed list per request, so each payload stays on a single line
+        return [
+            ast.literal_eval(match.group(1).strip())
+            for match in re.finditer(r"^.*?outputs_content for request \d+: (.*)$", stdout, re.MULTILINE)
         ]
-        return outputs_multiple_requests
 
     @staticmethod
     def load_llm_model_and_verify(model, result, context, port, reload_retry=1):

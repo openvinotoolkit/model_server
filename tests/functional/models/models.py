@@ -620,7 +620,7 @@ class PipelineType:
     @classmethod
     def supported_for_model(cls, model_type, target_device=None):
         supported = (cls.VLM, cls.VLM_CB) if getattr(model_type, "is_vision_language", False) else (cls.LM, cls.LM_CB)
-        if target_device == TargetDevice.NPU:
+        if get_base_device(target_device) == TargetDevice.NPU:
             # NPU has no continuous batching support.
             supported = tuple(item for item in supported if item not in cls.CONTINUOUS_BATCHING)
         return supported

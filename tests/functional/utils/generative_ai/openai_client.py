@@ -39,7 +39,7 @@ def run_inference(parameters):
     max_tokens = int(parameters.max_tokens)
     ignore_eos = str2bool(parameters.ignore_eos)
     stream = str2bool(parameters.stream)
-    temperature = int(parameters.temperature)
+    temperature = float(parameters.temperature)
     image_path = parameters.image_path
     size = parameters.size
     n = int(parameters.n)

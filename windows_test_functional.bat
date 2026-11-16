@@ -44,7 +44,7 @@ IF "%~3"=="" (
 set "TT_XDIST_WORKERS=!xdistWorkers!"
 
 :: Remove stale results from previous runs
-del /f /q pytest-functional.xml 2>nul
+del /f /q report.xml report.html 2>nul
 
 :: Settings expected by tests/functional/config.py on Windows
 set "TT_BASE_OS=windows"
@@ -103,7 +103,7 @@ set "pytestExitCode=!errorlevel!"
 if exist "%baseTemp%" rmdir /s /q "%baseTemp%"
 
 if !pytestExitCode! neq 0 (
-    echo [ERROR] Functional tests failed with exit code !pytestExitCode!. See pytest-functional.xml.
+    echo [ERROR] Functional tests failed with exit code !pytestExitCode!. See report.xml.
     exit /b !pytestExitCode!
 )
 
