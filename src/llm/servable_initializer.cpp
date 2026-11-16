@@ -263,7 +263,7 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
         ChatTemplateAdjusterConfig adjusterConfig = isJinja ? ChatTemplateAdjusterConfig::forJinja() : ChatTemplateAdjusterConfig::forMinja();
         ChatTemplateAdjuster(adjusterConfig).adjust(templateSource);
         properties->tokenizer.set_chat_template(templateSource);
-        
+
         if (isJinja) {
             std::string errorMessage;
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Preparing selected chat template with Python Jinja");
