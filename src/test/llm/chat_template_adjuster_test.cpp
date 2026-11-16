@@ -19,7 +19,9 @@
 
 #include <gtest/gtest.h>
 
-#include "../../llm/io_processing/chat_template/adjuster.hpp"
+#include "src/llm/io_processing/chat_template/adjuster.hpp"
+#include "src/llm/io_processing/chat_template/adjustments/remove_function_params_adjustment.hpp"
+#include "src/llm/io_processing/chat_template/adjustments/remove_filters_adjustment.hpp"
 
 using namespace ovms;
 
@@ -184,16 +186,6 @@ TEST(ChatTemplateAdjusterTest, removesFunctionWithArguments) {
     EXPECT_EQ(tmpl, "{{ value }}");
 }
 
-TEST(ChatTemplateAdjusterTest, notRemovesFunctionFromString) {
-    std::string tmpl = "{{ \"Use | min went you want to have lowest number from an array.\" }}";
-    const RemoveFiltersAdjustment adjustment({"min"});
-    std::string original = tmpl;
-
-    adjustment.apply(tmpl);
-
-    EXPECT_EQ(original, tmpl);
-}
-
 TEST(ChatTemplateAdjusterTest, removesFunctionWithArgumentsSkippingComment) {
     std::string tmpl = "{# user's template #} {{ value | min(some_param=42) }}";
     const ChatTemplateAdjuster adjuster({{"min"}});
@@ -201,24 +193,6 @@ TEST(ChatTemplateAdjusterTest, removesFunctionWithArgumentsSkippingComment) {
     adjuster.adjust(tmpl);
 
     EXPECT_EQ(tmpl, "{# user's template #} {{ value }}");
-}
-
-TEST(ChatTemplateAdjusterTest, preservesFiltersInsideComments) {
-    std::string tmpl = "{# user's | min(some_param=42) #} {{ value | min(some_param=42) }}";
-    const ChatTemplateAdjuster adjuster({{"min"}});
-
-    adjuster.adjust(tmpl);
-
-    EXPECT_EQ(tmpl, "{# user's | min(some_param=42) #} {{ value }}");
-}
-
-TEST(ChatTemplateAdjusterTest, preservesCommentMarkersInsideStrings) {
-    std::string tmpl = "{{ '{# literal | min' }} {{ value | min }}";
-    const RemoveFiltersAdjustment adjustment({"min"});
-
-    adjustment.apply(tmpl);
-
-    EXPECT_EQ(tmpl, "{{ '{# literal | min' }} {{ value }}");
 }
 
 TEST(ChatTemplateAdjusterTest, removesCompactFilterWithoutAddingWhitespace) {

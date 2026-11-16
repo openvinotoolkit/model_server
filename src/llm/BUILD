@@ -291,8 +291,18 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "chat_template_adjuster",
-    hdrs = ["io_processing/chat_template/adjuster.hpp"],
-    srcs = ["io_processing/chat_template/adjuster.cpp"],
+    hdrs = [
+        "io_processing/chat_template/adjuster.hpp",
+        "io_processing/chat_template/adjustments/base_chat_template_adjustment.hpp",
+        "io_processing/chat_template/adjustments/remove_filters_adjustment.hpp",
+        "io_processing/chat_template/adjustments/remove_function_params_adjustment.hpp",
+    ],
+    srcs = [
+        "io_processing/chat_template/adjuster.cpp",
+        "io_processing/chat_template/adjustments/remove_filters_adjustment.cpp",
+        "io_processing/chat_template/adjustments/remove_function_params_adjustment.cpp",
+        "io_processing/chat_template/adjustments/adjustment_utils.hpp",
+    ],
     deps = [],
     visibility = ["//visibility:public"],
 )

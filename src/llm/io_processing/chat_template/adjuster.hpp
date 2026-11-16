@@ -19,6 +19,8 @@
 #include <string>
 #include <vector>
 
+#include "adjustments/base_chat_template_adjustment.hpp"
+
 namespace ovms {
 
 struct ChatTemplateAdjusterConfig {
@@ -29,30 +31,6 @@ struct ChatTemplateAdjusterConfig {
 
     static ChatTemplateAdjusterConfig forMinja();
     static ChatTemplateAdjusterConfig forJinja();
-};
-
-class BaseChatTemplateAdjustment {
-public:
-    virtual ~BaseChatTemplateAdjustment() = default;
-    virtual void apply(std::string& templateSource) const = 0;
-};
-
-class RemoveFunctionParamsAdjustment : public BaseChatTemplateAdjustment {
-public:
-    explicit RemoveFunctionParamsAdjustment(std::vector<std::string> functions);
-    void apply(std::string& templateSource) const override;
-
-private:
-    std::vector<std::string> functions;
-};
-
-class RemoveFiltersAdjustment : public BaseChatTemplateAdjustment {
-public:
-    explicit RemoveFiltersAdjustment(std::vector<std::string> filters);
-    void apply(std::string& templateSource) const override;
-
-private:
-    std::vector<std::string> filters;
 };
 
 class ChatTemplateAdjuster {
