@@ -40,6 +40,7 @@ public:
         const std::string& graphName,
         const std::string& basePath,
         GraphSidePackets& sidePackets,
+        GraphMetadata& /*metadata*/,
         PythonBackend* /*pythonBackend*/) override {
         auto& ttsServableMap = sidePackets.ttsServableMap;
         if (!nodeConfig.node_options().size()) {

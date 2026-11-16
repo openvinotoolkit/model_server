@@ -71,7 +71,8 @@ curl http://localhost:8000/v3/models
       "id": "OpenVINO/Qwen3-8B-int4-ov",
       "object": "model",
       "created": 1775552853,
-      "owned_by": "OVMS"
+      "owned_by": "OVMS",
+      "max_model_len": 40960
     },
     {
       "id": "OpenVINO/bge-base-en-v1.5-fp16-ov",

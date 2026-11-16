@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "src/execution_context.hpp"
+#include "src/graph_metadata.hpp"
 #include "../config.hpp"
 #include "../llm/llm_calculators_plugin_loader.hpp"
 #include "src/utils/env_guard.hpp"
@@ -68,6 +69,16 @@ const tensor_map_t MediapipeGraphDefinition::getInputsInfo() const {
 const tensor_map_t MediapipeGraphDefinition::getOutputsInfo() const {
     std::shared_lock lock(metadataMtx);
     return this->outputsInfo;
+}
+
+std::shared_ptr<const GraphMetadata> MediapipeGraphDefinition::getMetadata() const {
+    std::lock_guard<std::mutex> lock(metadataSnapshotMtx);
+    return this->metadata;
+}
+
+void MediapipeGraphDefinition::clearMetadata() {
+    std::lock_guard<std::mutex> lock(metadataSnapshotMtx);
+    this->metadata.reset();
 }
 
 Status MediapipeGraphDefinition::validateForConfigFileExistence() {
@@ -579,8 +590,13 @@ Status MediapipeGraphDefinition::setStreamTypes() {
 }
 
 Status MediapipeGraphDefinition::reload(const ServableNameChecker& checker, const MediapipeGraphConfig& config) {
+    const bool clearMetadataOnFailure = true;
+    return doReload(checker, config, clearMetadataOnFailure);
+}
+
+Status MediapipeGraphDefinition::doReload(const ServableNameChecker& checker, const MediapipeGraphConfig& config, bool clearMetadataOnFailure) {
     // Serialize against unload()/wakeUp() on the watcher/request threads.
-    // Recursive: wakeUpIfSleeping() already holds this and calls reload().
+    // Recursive: wakeUpIfSleeping() already holds this and calls doReload().
     std::lock_guard<std::recursive_mutex> lock(lifecycleMtx);
     // block creating new unloadGuards
     this->status.handle(ReloadEvent());
@@ -592,7 +608,11 @@ Status MediapipeGraphDefinition::reload(const ServableNameChecker& checker, cons
     idleUnloadTimeoutSecondsCache.store(this->mgconfig.getIdleUnloadTimeoutSeconds(), std::memory_order_relaxed);
     this->queue.reset();
     this->sidePacketMaps = std::make_shared<GraphSidePackets>();
-    return validate(checker);
+    Status validationStatus = validate(checker);
+    if (!validationStatus.ok() && clearMetadataOnFailure) {
+        clearMetadata();
+    }
+    return validationStatus;
 }
 
 void MediapipeGraphDefinition::retire() {
@@ -600,6 +620,7 @@ void MediapipeGraphDefinition::retire() {
     // Block creating new unloadGuards
     this->status.handle(RetireEvent());
     unloadComponentsAfterPendingExecutorsAreCreated();
+    clearMetadata();
 }
 
 bool MediapipeGraphDefinition::isIdleUnloadEnabled() const {
@@ -681,7 +702,10 @@ Status MediapipeGraphDefinition::wakeUpIfSleeping(const ServableNameChecker& che
     SPDLOG_LOGGER_INFO(modelmanager_logger,
         "Mediapipe graph {} is SLEEPING; triggering lazy wake-up reload", getName());
     auto start = std::chrono::steady_clock::now();
-    Status reloadStatus = reload(checker, this->mgconfig);
+    // A graph that fails to wake up goes back to sleep and stays listed, so it keeps reporting
+    // the metadata from its last successful load.
+    const bool clearMetadataOnFailure = false;
+    Status reloadStatus = doReload(checker, this->mgconfig, clearMetadataOnFailure);
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now() - start);
     if (reloadStatus.ok()) {
@@ -738,12 +762,13 @@ Status MediapipeGraphDefinition::initializeNodes() {
         }
     } guard{*sidePacketMaps, success};
 
+    GraphMetadata graphMetadata;
     auto& registry = NodeInitializerRegistry::instance();
     for (int i = 0; i < config.node().size(); i++) {
         const auto& node = config.node(i);
         for (const auto& initializer : registry.all()) {
             if (initializer->matches(node.calculator())) {
-                Status status = initializer->initialize(node, getName(), mgconfig.getBasePath(), *sidePacketMaps, pythonBackend);
+                Status status = initializer->initialize(node, getName(), mgconfig.getBasePath(), *sidePacketMaps, graphMetadata, pythonBackend);
                 if (!status.ok()) {
                     return status;
                 }
@@ -753,6 +778,11 @@ Status MediapipeGraphDefinition::initializeNodes() {
     // Register LoRA aliases for routing from initialized image gen pipelines
     this->loraAliases = sidePacketMaps->loraAliases;
     this->hideBaseModelInRouting = sidePacketMaps->hideBaseModelInRouting;
+    auto snapshot = std::make_shared<const GraphMetadata>(std::move(graphMetadata));
+    {
+        std::lock_guard<std::mutex> lock(metadataSnapshotMtx);
+        this->metadata = std::move(snapshot);
+    }
     success = true;
     return StatusCode::OK;
 }
