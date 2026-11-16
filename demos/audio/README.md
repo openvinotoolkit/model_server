@@ -401,15 +401,6 @@ Where:
 **OVMS should still be deployed with `--model_name whisper-large-v3-turbo-fp16-ov` (evaluation script does not include `openai/` prefix in requests).**
 You can replace `librispeech` with other datasets supported by the leaderboard configuration. For multilingual models run_eval_ml.py should be used.
 
-To validate streamed transcription events with the worker sweep, set `STREAM=1`:
-
-```bash
-OPENAI_BASE_URL=http://localhost:8000/v3 MODEL_NAME=openai/qwen3-asr-cb MAX_SAMPLES=10 STREAM=1 \
-  ./demos/benchmark/v3/run_open_asr_worker_sweep.sh
-```
-
-The streaming mode verifies that the concatenated `transcript.text.delta` events match the final `transcript.text.done` event and reports time-to-first-delta metrics.
-
 ## Translation
 To test the translations endpoint you can use your own sample or create one with Kokoro model.
 ### Sample generation
