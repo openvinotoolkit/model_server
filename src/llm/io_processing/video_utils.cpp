@@ -39,6 +39,8 @@
 #include "src/logging.hpp"
 #include "src/predict_request_validation_utils_impl.hpp"
 
+// H.264 specification: https://www.itu.int/rec/dologin_pub.asp?lang=e&id=T-REC-H.264-202408-S!!PDF-E&type=items
+
 namespace ovms {
 
 namespace {
@@ -221,7 +223,8 @@ bool skipH264ScalingList(H264BitReader& reader, uint32_t size) {
     return true;
 }
 
-bool isHighProfile(uint32_t profileIdc) {
+// SPS data syntax: ITU-T H.264, section 7.3.2.1.1.
+bool hasExtendedSpsFields(uint32_t profileIdc) {
     return profileIdc == 44 || profileIdc == 83 || profileIdc == 86 || profileIdc == 100 || profileIdc == 110 ||
            profileIdc == 118 || profileIdc == 122 || profileIdc == 128 || profileIdc == 134 || profileIdc == 135 ||
            profileIdc == 138 || profileIdc == 139 || profileIdc == 244;
@@ -254,7 +257,7 @@ absl::Status validateH264SpsDimensions(const uint8_t* nal, size_t nalSize, size_
         !reader.readUnsignedExpGolomb(ignored)) {
         return absl::InvalidArgumentError("Invalid H.264 SPS");
     }
-    if (isHighProfile(profileIdc)) {
+    if (hasExtendedSpsFields(profileIdc)) {
         if (!reader.readUnsignedExpGolomb(chromaFormatIdc) || chromaFormatIdc > 3) {
             return absl::InvalidArgumentError("Invalid H.264 SPS");
         }
@@ -320,13 +323,14 @@ absl::Status validateH264SpsDimensions(const uint8_t* nal, size_t nalSize, size_
         return absl::InvalidArgumentError("Invalid H.264 SPS");
     }
 
+    // H.264 section 7.4.2.1.1, equations 7-19 through 7-24:
+    constexpr size_t MACROBLOCK_SIZE = 16;
     const uint32_t chromaArrayType = separateColourPlaneFlag != 0 ? 0 : chromaFormatIdc;
+    const size_t frameHeightFactor = 2 - frameMbsOnlyFlag;
     const size_t cropUnitX = chromaArrayType == 0 || chromaArrayType == 3 ? 1 : 2;
-    const size_t cropUnitY = (chromaArrayType == 0 ? 1 : chromaArrayType == 1 ? 2
-                                                                              : 1) *
-                             (2 - frameMbsOnlyFlag);
-    const size_t codedWidth = (static_cast<size_t>(widthInMbsMinusOne) + 1) * 16;
-    const size_t codedHeight = (static_cast<size_t>(heightInMapUnitsMinusOne) + 1) * 16 * (2 - frameMbsOnlyFlag);
+    const size_t cropUnitY = (chromaArrayType == 1 ? 2 : 1) * frameHeightFactor;
+    const size_t codedWidth = (static_cast<size_t>(widthInMbsMinusOne) + 1) * MACROBLOCK_SIZE;
+    const size_t codedHeight = (static_cast<size_t>(heightInMapUnitsMinusOne) + 1) * MACROBLOCK_SIZE * frameHeightFactor;
     const size_t croppedWidth = (static_cast<size_t>(cropLeft) + cropRight) * cropUnitX;
     const size_t croppedHeight = (static_cast<size_t>(cropTop) + cropBottom) * cropUnitY;
     if (croppedWidth >= codedWidth || croppedHeight >= codedHeight) {
@@ -540,19 +544,32 @@ absl::Status storeDecodedFrameInTensor(uint8_t* const planes[3], const SBufferIn
     return absl::OkStatus();
 }
 
+// BT.601 limited-range YUV to RGB integer approximation:
+// https://learn.microsoft.com/en-us/windows/win32/medfound/recommended-8-bit-yuv-formats-for-video-rendering#converting-8-bit-yuv-to-rgb888
 void copyI420ToRgb(const uint8_t* const planes[3], int width, int height, const int strides[2], uint8_t* destination) {
+    constexpr int LUMA_OFFSET = 16;
+    constexpr int CHROMA_OFFSET = 128;
+    constexpr int LUMA_COEFFICIENT = 298;
+    constexpr int RED_V_COEFFICIENT = 409;
+    constexpr int GREEN_U_COEFFICIENT = 100;
+    constexpr int GREEN_V_COEFFICIENT = 208;
+    constexpr int BLUE_U_COEFFICIENT = 516;
+    constexpr int ROUNDING_OFFSET = 128;
+    constexpr int FRACTIONAL_BITS = 8;
+    constexpr int CHROMA_SUBSAMPLING = 2;
+    constexpr size_t RGB_CHANNELS = 3;
     for (int row = 0; row < height; ++row) {
         const uint8_t* const y = planes[0] + row * strides[0];
-        const uint8_t* const u = planes[1] + (row / 2) * strides[1];
-        const uint8_t* const v = planes[2] + (row / 2) * strides[1];
+        const uint8_t* const u = planes[1] + (row / CHROMA_SUBSAMPLING) * strides[1];
+        const uint8_t* const v = planes[2] + (row / CHROMA_SUBSAMPLING) * strides[1];
         for (int column = 0; column < width; ++column) {
-            const int luminance = static_cast<int>(y[column]) - 16;
-            const int chromaU = static_cast<int>(u[column / 2]) - 128;
-            const int chromaV = static_cast<int>(v[column / 2]) - 128;
-            uint8_t* const rgb = destination + (static_cast<size_t>(row) * width + column) * 3;
-            rgb[0] = clampToByte((298 * luminance + 409 * chromaV + 128) >> 8);
-            rgb[1] = clampToByte((298 * luminance - 100 * chromaU - 208 * chromaV + 128) >> 8);
-            rgb[2] = clampToByte((298 * luminance + 516 * chromaU + 128) >> 8);
+            const int luminance = static_cast<int>(y[column]) - LUMA_OFFSET;
+            const int chromaU = static_cast<int>(u[column / CHROMA_SUBSAMPLING]) - CHROMA_OFFSET;
+            const int chromaV = static_cast<int>(v[column / CHROMA_SUBSAMPLING]) - CHROMA_OFFSET;
+            uint8_t* const rgb = destination + (static_cast<size_t>(row) * width + column) * RGB_CHANNELS;
+            rgb[0] = clampToByte((LUMA_COEFFICIENT * luminance + RED_V_COEFFICIENT * chromaV + ROUNDING_OFFSET) >> FRACTIONAL_BITS);
+            rgb[1] = clampToByte((LUMA_COEFFICIENT * luminance - GREEN_U_COEFFICIENT * chromaU - GREEN_V_COEFFICIENT * chromaV + ROUNDING_OFFSET) >> FRACTIONAL_BITS);
+            rgb[2] = clampToByte((LUMA_COEFFICIENT * luminance + BLUE_U_COEFFICIENT * chromaU + ROUNDING_OFFSET) >> FRACTIONAL_BITS);
         }
     }
 }
