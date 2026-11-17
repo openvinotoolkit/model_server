@@ -153,17 +153,21 @@ GenAiServableProperties::DraftModelStrategy detectDraftModelStrategy(const std::
 
 static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Chat template is unavailable. Servable will not respond to /chat/completions endpoint.";
 
-static Status configureInputProcessingCapabilities(const std::shared_ptr<GenAiServableProperties>& properties,
+Status configureInputProcessingCapabilities(const std::shared_ptr<GenAiServableProperties>& properties,
     const mediapipe::LLMCalculatorOptions& nodeOptions) {
     VisionInputConfig videoConfig;
     Status status = configureVideoInputProcessing(videoConfig, nodeOptions);
     if (status != StatusCode::OK) {
         return status;
     }
-    if (properties->inputProcessorContext.config.visionInputConfig.has_value()) {
-        properties->inputProcessorContext.config.visionInputConfig = videoConfig;
-    }
     const std::filesystem::path modelsPath(properties->modelsPath);
+    if (properties->inputProcessorContext.config.visionInputConfig.has_value()) {
+        if (std::filesystem::exists(modelsPath / "openvino_vision_embeddings_model.bin")) {
+            properties->inputProcessorContext.config.visionInputConfig = videoConfig;
+        } else {
+            properties->inputProcessorContext.config.visionInputConfig.reset();
+        }
+    }
     if (!properties->inputProcessorContext.config.audioInputConfig.has_value() &&
         (std::filesystem::exists(modelsPath / "openvino_audio_embeddings_model.xml") ||
             std::filesystem::exists(modelsPath / "openvino_audio_encoder_model.xml"))) {

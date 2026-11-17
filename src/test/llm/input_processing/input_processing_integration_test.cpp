@@ -48,8 +48,10 @@
 #include "../../../llm/io_processing/input_request.hpp"
 #include "../../../llm/runtime_chat_template_runtime_loader.hpp"
 #include "../../../llm/servable.hpp"
+#include "../../../config.hpp"
 #include "../../../http_payload.hpp"
 #include "../../../multi_part_parser.hpp"
+#include "../../../utils/rapidjson_utils.hpp"
 #include "../../platform_utils.hpp"
 #include "../../wav_test_utils.hpp"
 
@@ -661,6 +663,31 @@ TEST_P(InputProcessingIntegrationTest, MultipartTranscription_ParsesStreamingUsa
 
 TEST_P(InputProcessingIntegrationTest, MultipartTranscription_RejectsMalformedStreamOptions) {
     auto result = runMultipartTranscriptionPipeline(buildWavBuffer(160), "", "true", "{");
+
+    EXPECT_EQ(result.loadStatus.code(), absl::StatusCode::kInvalidArgument);
+}
+
+TEST_P(InputProcessingIntegrationTest, MultipartTranscription_RejectsExcessivelyNestedStreamOptions) {
+    const std::string streamOptions = std::string(DEFAULT_MAX_JSON_NESTING_DEPTH + 1, '[') + "0" +
+                                      std::string(DEFAULT_MAX_JSON_NESTING_DEPTH + 1, ']');
+    auto result = runMultipartTranscriptionPipeline(buildWavBuffer(160), "", "true", streamOptions);
+
+    EXPECT_EQ(result.loadStatus.code(), absl::StatusCode::kInvalidArgument);
+}
+
+TEST_P(InputProcessingIntegrationTest, MultipartTranscription_EnforcesStreamOptionsComplexityLimit) {
+    auto& config = const_cast<ServerSettingsImpl&>(Config::instance().getServerSettings());
+    const auto previousMaxComplexity = config.jsonMaxComplexity;
+    struct JsonMaxComplexityGuard {
+        ServerSettingsImpl& config;
+        std::optional<size_t> previousMaxComplexity;
+        ~JsonMaxComplexityGuard() {
+            config.jsonMaxComplexity = previousMaxComplexity;
+        }
+    } restore{config, previousMaxComplexity};
+    config.jsonMaxComplexity = 3;
+
+    auto result = runMultipartTranscriptionPipeline(buildWavBuffer(160), "", "true", R"({"include_usage":true})");
 
     EXPECT_EQ(result.loadStatus.code(), absl::StatusCode::kInvalidArgument);
 }

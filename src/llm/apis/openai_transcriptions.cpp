@@ -23,9 +23,11 @@
 #include <utility>
 #include <vector>
 
+#include "src/config.hpp"
 #include "src/http_payload.hpp"
 #include "src/port/rapidjson_stringbuffer.hpp"
 #include "src/port/rapidjson_writer.hpp"
+#include "src/utils/rapidjson_utils.hpp"
 
 namespace ovms {
 
@@ -128,8 +130,9 @@ absl::Status OpenAITranscriptionsHandler::normalizeMultipartRequest(HttpPayload&
     const std::string streamOptions = payload.multipartParser->getFieldByName("stream_options");
     if (!streamOptions.empty()) {
         rapidjson::Document parsedStreamOptions;
-        parsedStreamOptions.Parse(streamOptions.data(), streamOptions.size());
-        if (parsedStreamOptions.HasParseError()) {
+        const auto status = parseJsonWithDepthLimit(parsedStreamOptions, streamOptions.data(), streamOptions.size(),
+            DEFAULT_MAX_JSON_NESTING_DEPTH, Config::instance().jsonMaxComplexity());
+        if (!status.ok()) {
             return absl::InvalidArgumentError("stream_options must be valid JSON");
         }
         rapidjson::Value value;

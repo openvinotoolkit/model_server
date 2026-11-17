@@ -79,6 +79,8 @@ public:
 };
 Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string graphPath);
 Status configureVideoInputProcessing(VisionInputConfig& config, const mediapipe::LLMCalculatorOptions& nodeOptions);
+Status configureInputProcessingCapabilities(const std::shared_ptr<GenAiServableProperties>& properties,
+    const mediapipe::LLMCalculatorOptions& nodeOptions);
 std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath);
 // Detects draft model strategy from model artifacts without a full model load.
 // Scans the tail of the draft model XML (walking backward in bounded chunks/lines, up to a line cap)

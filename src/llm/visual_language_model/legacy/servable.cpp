@@ -118,8 +118,13 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
         return absl::InvalidArgumentError(std::string("Failed to create API handler: ") + e.what());
     }
     auto& config = ovms::Config::instance();
+    std::optional<uint32_t> videoMaxFrames;
+    const auto& visionInputConfig = getProperties()->inputProcessorContext.config.visionInputConfig;
+    if (visionInputConfig.has_value()) {
+        videoMaxFrames = visionInputConfig->videoMaxFrames;
+    }
 
-    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains, getProperties()->inputProcessorContext.config.visionInputConfig->videoMaxFrames);
+    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains, videoMaxFrames);
     if (!status.ok()) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;
