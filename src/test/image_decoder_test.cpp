@@ -24,7 +24,7 @@
 #include <gtest/gtest.h>
 #include <openvino/runtime/tensor.hpp>
 
-#include "src/image_utils/kserve_image_conversion.hpp"
+#include "src/image_utils/image_decoder.hpp"
 #include "src/status.hpp"
 #include "stb_image_write.h"  // NOLINT
 
@@ -44,7 +44,7 @@ std::string png(const unsigned char* pixels, int channels) {
     return encoded;
 }
 
-TEST(KserveImageConversion, StbPreservesChannelsAndBgrOrder) {
+TEST(ImageDecoder, StbPreservesChannelsAndBgrOrder) {
     const std::array<unsigned char, 4> pixels{10, 20, 30, 40};
     for (int channels : {1, 3, 4}) {
         ov::Tensor tensor;
@@ -62,7 +62,20 @@ TEST(KserveImageConversion, StbPreservesChannelsAndBgrOrder) {
     }
 }
 
-TEST(KserveImageConversion, GrayAlphaExpandsToBgra) {
+TEST(ImageDecoder, CopiedTensorAndViewRetainDecodedPixels) {
+    const std::array<unsigned char, 3> pixels{10, 20, 30};
+    ov::Tensor tensor;
+    ASSERT_TRUE(decodeImage(png(pixels.data(), 3), tensor, ImageDecoder::STB).ok());
+    ov::Tensor copy = tensor;
+    ov::Tensor view(tensor, ov::Coordinate{0, 0, 0, 0}, ov::Coordinate{1, 1, 1, 3});
+    tensor = ov::Tensor{};
+    const std::array<unsigned char, 3> expected{30, 20, 10};
+    EXPECT_EQ(std::memcmp(copy.data(), expected.data(), expected.size()), 0);
+    copy = ov::Tensor{};
+    EXPECT_EQ(std::memcmp(view.data(), expected.data(), expected.size()), 0);
+}
+
+TEST(ImageDecoder, GrayAlphaExpandsToBgra) {
     const std::array<unsigned char, 2> pixels{23, 47};
     ov::Tensor tensor;
     ASSERT_TRUE(decodeImage(png(pixels.data(), 2), tensor, ImageDecoder::STB).ok());
@@ -71,7 +84,7 @@ TEST(KserveImageConversion, GrayAlphaExpandsToBgra) {
     EXPECT_EQ(std::memcmp(tensor.data(), expected.data(), expected.size()), 0);
 }
 
-TEST(KserveImageConversion, StbPreserves16BitPng) {
+TEST(ImageDecoder, StbPreserves16BitPng) {
     std::ifstream input("src/test/images/gray16.png", std::ios::binary);
     ASSERT_TRUE(input.good());
     const std::string encoded{std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
@@ -81,7 +94,7 @@ TEST(KserveImageConversion, StbPreserves16BitPng) {
     EXPECT_EQ(tensor.get_shape(), (ov::Shape{1, 11, 7, 1}));
 }
 
-TEST(KserveImageConversion, MalformedImageIsNotASuccessfulFallback) {
+TEST(ImageDecoder, MalformedImageIsNotASuccessfulFallback) {
     ov::Tensor tensor(ov::element::u8, {1, 1, 1, 3});
     const Status status = decodeImage("not an image", tensor);
     EXPECT_EQ(status.getCode(), StatusCode::IMAGE_PARSING_FAILED);
@@ -92,7 +105,7 @@ TEST(KserveImageConversion, MalformedImageIsNotASuccessfulFallback) {
     }
 }
 
-TEST(KserveImageConversion, OpenCvOnlyFormatHasExplicitDependencyError) {
+TEST(ImageDecoder, OpenCvOnlyFormatHasExplicitDependencyError) {
     const float value = 0.5;
     std::string pfm = "Pf\n1 1\n-1.0\n";
     pfm.append(reinterpret_cast<const char*>(&value), sizeof(value));
@@ -110,7 +123,7 @@ TEST(KserveImageConversion, OpenCvOnlyFormatHasExplicitDependencyError) {
     }
 }
 
-TEST(KserveImageConversion, ExplicitOpenCvSelectionReportsMissingDependency) {
+TEST(ImageDecoder, ExplicitOpenCvSelectionReportsMissingDependency) {
     if (image_utils::openCvImageDecoderUnavailableReason().empty()) {
         GTEST_SKIP() << "Requires isolated runtime without the OpenCV plugin";
     }
@@ -122,7 +135,7 @@ TEST(KserveImageConversion, ExplicitOpenCvSelectionReportsMissingDependency) {
     EXPECT_NE(status.string().find("missing"), std::string::npos);
 }
 
-TEST(KserveImageConversion, ResizeAndPrecisionConversion) {
+TEST(ImageDecoder, ResizeAndPrecisionConversion) {
     ov::Tensor input(ov::element::u8, {1, 1, 1, 3});
     const std::array<unsigned char, 3> pixels{10, 20, 30};
     std::memcpy(input.data(), pixels.data(), pixels.size());
@@ -135,7 +148,7 @@ TEST(KserveImageConversion, ResizeAndPrecisionConversion) {
         EXPECT_FLOAT_EQ(output.data<float>()[i], pixels[i % 3]);
 }
 
-TEST(KserveImageConversion, SaturatesNarrowingConversion) {
+TEST(ImageDecoder, SaturatesNarrowingConversion) {
     ov::Tensor input(ov::element::u16, {1, 1, 1, 3});
     const std::array<uint16_t, 3> pixels{0, 300, 65535};
     std::memcpy(input.data(), pixels.data(), sizeof(pixels));
@@ -146,7 +159,7 @@ TEST(KserveImageConversion, SaturatesNarrowingConversion) {
     EXPECT_EQ(std::memcmp(output.data(), expected.data(), expected.size()), 0);
 }
 
-TEST(KserveImageConversion, SupportsExistingDestinationPrecisions) {
+TEST(ImageDecoder, SupportsExistingDestinationPrecisions) {
     const std::array<ov::element::Type, 8> precisions{
         ov::element::u8, ov::element::u16, ov::element::i8, ov::element::i16,
         ov::element::i32, ov::element::f16, ov::element::f32, ov::element::f64};
@@ -160,7 +173,7 @@ TEST(KserveImageConversion, SupportsExistingDestinationPrecisions) {
     }
 }
 
-TEST(KserveImageConversion, RoundsAndSaturatesSignedConversion) {
+TEST(ImageDecoder, RoundsAndSaturatesSignedConversion) {
     ov::Tensor input(ov::element::f32, {1, 1, 1, 3});
     const std::array<float, 3> values{-2.6, 2.6, 300};
     std::memcpy(input.data(), values.data(), sizeof(values));
@@ -171,7 +184,7 @@ TEST(KserveImageConversion, RoundsAndSaturatesSignedConversion) {
     EXPECT_EQ(std::memcmp(output.data(), expected.data(), expected.size()), 0);
 }
 
-TEST(KserveImageConversion, ConcurrentPreprocessingDoesNotAliasOutputs) {
+TEST(ImageDecoder, ConcurrentPreprocessingDoesNotAliasOutputs) {
     std::vector<std::future<ov::Tensor>> outputs;
     for (int value = 0; value < 8; ++value) {
         outputs.push_back(std::async(std::launch::async, [value] {
@@ -191,7 +204,7 @@ TEST(KserveImageConversion, ConcurrentPreprocessingDoesNotAliasOutputs) {
     }
 }
 
-TEST(KserveImageConversion, RejectsInvalidPreprocessingShape) {
+TEST(ImageDecoder, RejectsInvalidPreprocessingShape) {
     ov::Tensor input(ov::element::u8, {1});
     ov::Tensor output;
     EXPECT_EQ(preprocessImage(input, output, ov::element::u8, 1, 1).getCode(), StatusCode::INVALID_SHAPE);

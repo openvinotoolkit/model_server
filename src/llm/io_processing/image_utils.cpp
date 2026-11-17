@@ -32,7 +32,7 @@
 #include "src/filesystem/filesystem.hpp"
 #include "src/image_utils/decoded_image_size.hpp"
 #include "src/image_utils/image_conversion.hpp"
-#include "src/image_utils/kserve_image_conversion.hpp"
+#include "src/image_utils/image_decoder.hpp"
 #include "src/predict_request_validation_utils_impl.hpp"
 #include "src/status.hpp"
 

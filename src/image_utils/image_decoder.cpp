@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include "kserve_image_conversion.hpp"
+#include "image_decoder.hpp"
 
 #include <algorithm>
 #include <array>
@@ -123,7 +123,7 @@ struct StbAllocator {
             throw std::runtime_error("Unexpected stb decoded image allocation size");
         return pixels.get();
     }
-    void deallocate(void*, size_t, size_t) noexcept {}
+    void deallocate(void*, size_t, size_t) noexcept { pixels.reset(); }
     bool is_equal(const StbAllocator& other) const { return pixels == other.pixels; }
 };
 
@@ -252,8 +252,20 @@ Status decodeImage(std::string_view encoded, ov::Tensor& tensor, ImageDecoder de
     const int desiredChannels = channels == 2 ? 4 : 0;
     const bool is16 = stbi_is_16_bit_from_memory(data, size);
     const bool isHdr = stbi_is_hdr_from_memory(data, size);
-    void* pixels = isHdr ? static_cast<void*>(stbi_loadf_from_memory(data, size, &width, &height, &channels, desiredChannels)) : is16 ? static_cast<void*>(stbi_load_16_from_memory(data, size, &width, &height, &channels, desiredChannels))
-                                                                                                                                      : static_cast<void*>(stbi_load_from_memory(data, size, &width, &height, &channels, desiredChannels));
+    void* pixels = nullptr;
+    size_t channelBytes = 1;
+    ov::element::Type precision = ov::element::u8;
+    if (isHdr) {
+        pixels = stbi_loadf_from_memory(data, size, &width, &height, &channels, desiredChannels);
+        channelBytes = sizeof(float);
+        precision = ov::element::f32;
+    } else if (is16) {
+        pixels = stbi_load_16_from_memory(data, size, &width, &height, &channels, desiredChannels);
+        channelBytes = sizeof(stbi_us);
+        precision = ov::element::u16;
+    } else {
+        pixels = stbi_load_from_memory(data, size, &width, &height, &channels, desiredChannels);
+    }
     std::shared_ptr<void> owner(pixels, stbi_image_free);
     if (!pixels) {
         const char* reason = stbi_failure_reason();
@@ -266,8 +278,6 @@ Status decodeImage(std::string_view encoded, ov::Tensor& tensor, ImageDecoder de
     }
     if (desiredChannels)
         channels = desiredChannels;
-    const size_t channelBytes = isHdr ? sizeof(float) : is16 ? 2
-                                                             : 1;
     const size_t pixelCount = static_cast<size_t>(width) * height;
     auto* output = static_cast<unsigned char*>(pixels);
     if (channels >= 3) {
@@ -276,8 +286,7 @@ Status decodeImage(std::string_view encoded, ov::Tensor& tensor, ImageDecoder de
                 std::swap(output[i * channels * channelBytes + j], output[(i * channels + 2) * channelBytes + j]);
         }
     }
-    tensor = ov::Tensor(isHdr ? ov::element::f32 : is16 ? ov::element::u16
-                                                        : ov::element::u8,
+    tensor = ov::Tensor(precision,
         ov::Shape{1, static_cast<size_t>(height), static_cast<size_t>(width), static_cast<size_t>(channels)},
         StbAllocator{std::move(owner), pixelCount * channels * channelBytes});
     logDecode("stb", "success");
@@ -291,9 +300,17 @@ Status preprocessImage(const ov::Tensor& source, ov::Tensor& destination,
         SPDLOG_DEBUG("Image preprocessing requires a non-empty single-image NHWC tensor and positive target dimensions");
         return Status(StatusCode::INVALID_SHAPE, "Image preprocessing requires a non-empty single-image NHWC tensor and positive target dimensions");
     }
-    if (precision != ov::element::u8 && precision != ov::element::u16 &&
-        precision != ov::element::i8 && precision != ov::element::i16 && precision != ov::element::i32 &&
-        precision != ov::element::f16 && precision != ov::element::f32 && precision != ov::element::f64) {
+    switch (precision) {
+    case ov::element::Type_t::u8:
+    case ov::element::Type_t::u16:
+    case ov::element::Type_t::i8:
+    case ov::element::Type_t::i16:
+    case ov::element::Type_t::i32:
+    case ov::element::Type_t::f16:
+    case ov::element::Type_t::f32:
+    case ov::element::Type_t::f64:
+        break;
+    default:
         SPDLOG_DEBUG("Unsupported destination image precision: {}", precision.get_type_name());
         return Status(StatusCode::INVALID_PRECISION, "Unsupported destination image precision: " + precision.get_type_name());
     }

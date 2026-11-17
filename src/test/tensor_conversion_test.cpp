@@ -25,7 +25,7 @@
 #include "../kfs_frontend/deserialization.hpp"
 #include "../config.hpp"
 #include "../tensor_conversion.hpp"
-#include "image_utils/kserve_image_conversion.hpp"
+#include "image_utils/image_decoder.hpp"
 #include "opencv2/opencv.hpp"
 #include "test_utils.hpp"
 #include "platform_utils.hpp"

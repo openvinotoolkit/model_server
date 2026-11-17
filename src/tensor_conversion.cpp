@@ -22,7 +22,7 @@
 #include <vector>
 
 #include <openvino/openvino.hpp>
-#include "image_utils/kserve_image_conversion.hpp"
+#include "image_utils/image_decoder.hpp"
 #include "tensor_conversion_common.hpp"
 #include "predict_request_validation_utils_impl.hpp"
 #include "logging.hpp"

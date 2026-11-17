@@ -23,7 +23,7 @@
 namespace {
 
 template <typename Registry>
-void registerFactories(decltype(Registry::functions()) hostRegistry) {
+void registerGraphNodesFactories(decltype(Registry::functions()) hostRegistry) {
     if (hostRegistry == Registry::functions()) {
         return;
     }
@@ -52,9 +52,9 @@ extern "C" OVMS_OPENCV_CALCULATORS_EXPORT bool OVMS_RegisterOpenCvCalculators(
     if (calculatorRegistry == nullptr || subgraphRegistry == nullptr) {
         return false;
     }
-    registerFactories<mediapipe::CalculatorBaseRegistry>(
+    registerGraphNodesFactories<mediapipe::CalculatorBaseRegistry>(
         static_cast<decltype(mediapipe::CalculatorBaseRegistry::functions())>(calculatorRegistry));
-    registerFactories<mediapipe::SubgraphRegistry>(
+    registerGraphNodesFactories<mediapipe::SubgraphRegistry>(
         static_cast<decltype(mediapipe::SubgraphRegistry::functions())>(subgraphRegistry));
     return true;
 }

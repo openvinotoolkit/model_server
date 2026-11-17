@@ -24,7 +24,6 @@
 #include "mediapipe/framework/formats/image_frame.h"
 #include "mediapipe/framework/subgraph.h"
 #include "src/kfs_frontend/kfs_graph_executor_impl.hpp"
-#include "src/logging.hpp"
 #include "src/mediapipe_internal/mediapipegraphdefinition.hpp"
 #include "src/mediapipe_internal/opencv_calculators_plugin_loader.hpp"
 #include "src/status.hpp"
@@ -68,7 +67,6 @@ REGISTER_MEDIAPIPE_GRAPH(NestedOpenCvTestGraph);
 class MissingOpenCvPlugin : public ::testing::Test {
 protected:
     void SetUp() override {
-        spdlog::set_level(spdlog::level::off);
         ASSERT_FALSE(loadOpenCvCalculatorsPluginForTesting("/ovms/nonexistent-opencv-calculators-plugin.so"));
     }
 

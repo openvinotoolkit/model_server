@@ -205,8 +205,6 @@ Status MediapipeGraphDefinition::validateForConfigLoadableness() {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Trying to parse empty mediapipe graph definition: {} failed", this->getName(), this->chosenConfig);
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
-    // Load before protobuf parsing: extensions and calculators may be referenced
-    // only inside a registered subgraph, not by a top-level node.
     loadOpenCvCalculatorsPlugin();
     if (this->chosenConfig.find("HttpLLMCalculator") != std::string::npos ||
         this->chosenConfig.find("LLMCalculatorOptions") != std::string::npos) {

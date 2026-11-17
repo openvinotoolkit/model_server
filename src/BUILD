@@ -22,7 +22,7 @@ load("//:common_settings.bzl",
     "create_config_settings", "PYBIND_DEPS", "ovms_cc_library", "ovms_cc_test_library")
 
 exports_files([
-    "test/kserve_image_conversion_test.cpp",
+    "test/image_decoder_test.cpp",
     "test/images/gray16.png",
     "test/no_opencv_audit.c",
     "test/no_opencv_runtime_test.sh",
@@ -1096,7 +1096,7 @@ ovms_cc_library(
         "libovms_tensorinfo",
         "predict_request_validation_utils_impl",
         "//src/image_utils:decoded_image_size",
-        "//src/image_utils:kserve_image_conversion",
+        "//src/image_utils:image_decoder",
     ],
     visibility = ["//visibility:public",],
 )
@@ -1124,7 +1124,7 @@ ovms_cc_library(
         "inference_request_common",
         "predict_request_validation_utils_impl",
         "//src/image_utils:decoded_image_size",
-        "//src/image_utils:kserve_image_conversion",
+        "//src/image_utils:image_decoder",
     ],
     visibility = ["//visibility:public",],
 )
@@ -2249,8 +2249,8 @@ cc_test(
     }),
     deps = [
             "optimum-cli",
-            "//src/image_utils:kserve_image_conversion",
-            "//src/image_utils:kserve_image_conversion_test_lib",
+            "//src/image_utils:image_decoder",
+            "//src/image_utils:image_decoder_test_lib",
             "//src:ovms_lib",
             "//src:module_names",
             "//src:libovms_default_task_detector",

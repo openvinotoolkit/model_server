@@ -17,7 +17,7 @@ set -euo pipefail
 
 root="${TEST_SRCDIR}/${TEST_WORKSPACE}"
 audit="${root}/src/image_utils/libno_opencv_audit.so"
-converter="${root}/src/image_utils/kserve_image_conversion_test"
+converter="${root}/src/image_utils/image_decoder_test"
 output="${TEST_TMPDIR}/missing-opencv.log"
 
 # The decoder plugin is present, but the OS loader cannot resolve any OpenCV library.

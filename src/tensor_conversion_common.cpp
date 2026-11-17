@@ -23,7 +23,7 @@
 #include <vector>
 
 #include "image_utils/decoded_image_size.hpp"
-#include "image_utils/kserve_image_conversion.hpp"
+#include "image_utils/image_decoder.hpp"
 #include "logging.hpp"
 #include "precision.hpp"
 #include "predict_request_validation_utils_impl.hpp"

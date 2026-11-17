@@ -23,9 +23,9 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
-    name = "kserve_image_conversion",
-    hdrs = ["kserve_image_conversion.hpp"],
-    srcs = ["kserve_image_conversion.cpp"],
+    name = "image_decoder",
+    hdrs = ["image_decoder.hpp"],
+    srcs = ["image_decoder.cpp"],
     deps = [
         ":image_conversion",
         ":opencv_decoder_api",
@@ -71,10 +71,10 @@ filegroup(
 )
 
 ovms_cc_test_library(
-    name = "kserve_image_conversion_test_lib",
-    srcs = ["//src:test/kserve_image_conversion_test.cpp"],
+    name = "image_decoder_test_lib",
+    srcs = ["//src:test/image_decoder_test.cpp"],
     deps = [
-        ":kserve_image_conversion",
+        ":image_decoder",
         "//src:libovmsstatus",
         "//third_party:openvino",
         "@stb//:image",
@@ -85,10 +85,10 @@ ovms_cc_test_library(
 )
 
 cc_test(
-    name = "kserve_image_conversion_test",
+    name = "image_decoder_test",
     linkstatic = True,
     deps = [
-        ":kserve_image_conversion_test_lib",
+        ":image_decoder_test_lib",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -110,7 +110,7 @@ sh_test(
     srcs = ["//src:test/no_opencv_runtime_test.sh"],
     data = [
         ":libno_opencv_audit.so",
-        ":kserve_image_conversion_test",
+        ":image_decoder_test",
         ":libovms_opencv_image_decoder.so",
         "//src:ovms",
         "//src:test/no_opencv_server_test.py",
