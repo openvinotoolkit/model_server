@@ -101,40 +101,37 @@ using mediapipe::Timestamp;
             ASSERT_TRUE(false);                                  \
         }                                                        \
     }
+
 TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerCheckNoInputPackets) {
-    // we need it only so that dummy is available via C-API
-    ServerGuard servGuard(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_benchmark.json"));
     std::string graph_proto = R"(
       input_stream: "IN:input"
       output_stream: "OUT:output"
       node {
-          calculator: "OpenVINOModelServerSessionCalculator"
+          calculator: "OpenVINOSessionCalculator"
           output_side_packet: "SESSION:session"
           node_options: {
-            [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-              servable_name: "dummy"
+                        [type.googleapis.com / mediapipe.OpenVINOSessionCalculatorOptions]: {
+                              model_path: "MODEL_PATH_TO_REPLACE"
+                              shape: "auto"
             }
           }
       }
       node {
         calculator: "OpenVINOInferenceCalculator"
         input_side_packet: "SESSION:session"
-        input_stream: "OVTENSOR:input"
-        output_stream: "OVTENSOR:output"
+        input_stream: "INPUT:input"
+        output_stream: "OUTPUT:output"
         node_options: {
             [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
-                tag_to_input_tensor_names {
-                    key: "OVTENSOR"
-                    value: "b"
-                }
-                tag_to_output_tensor_names {
-                    key: "OVTENSOR"
-                    value: "a"
-                }
+              tag_to_input_tensor_names { key: "INPUT" value: "b" }
+              tag_to_output_tensor_names { key: "OUTPUT" value: "a" }
             }
         }
       }
     )";
+    const std::string modelPath = getGenericFullPathForSrcTest("/ovms/src/test/dummy/1/dummy.xml");
+    const std::string modelPathPlaceholder = "MODEL_PATH_TO_REPLACE";
+    graph_proto.replace(graph_proto.find(modelPathPlaceholder), modelPathPlaceholder.size(), modelPath);
     CalculatorGraphConfig graphConfig =
         ParseTextProtoOrDie<CalculatorGraphConfig>(graph_proto);
     const std::string inputStreamName = "input";
@@ -202,39 +199,35 @@ TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerCheckNoInputPackets) 
     MP_ERROR_STOP(graph.WaitUntilDone());
 }
 TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerPOC) {
-    // we need it only so that dummy is available via C-API
-    ServerGuard servGuard(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_benchmark.json"));
     std::string graph_proto = R"(
       input_stream: "IN:input"
       output_stream: "OUT:output"
       node {
-          calculator: "OpenVINOModelServerSessionCalculator"
+          calculator: "OpenVINOSessionCalculator"
           output_side_packet: "SESSION:session"
           node_options: {
-            [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-              servable_name: "dummy"
+                        [type.googleapis.com / mediapipe.OpenVINOSessionCalculatorOptions]: {
+                              model_path: "MODEL_PATH_TO_REPLACE"
+                              shape: "auto"
             }
           }
       }
       node {
         calculator: "OpenVINOInferenceCalculator"
         input_side_packet: "SESSION:session"
-        input_stream: "OVTENSOR:input"
-        output_stream: "OVTENSOR:output"
+        input_stream: "INPUT:input"
+        output_stream: "OUTPUT:output"
         node_options: {
             [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
-                tag_to_input_tensor_names {
-                    key: "OVTENSOR"
-                    value: "b"
-                }
-                tag_to_output_tensor_names {
-                    key: "OVTENSOR"
-                    value: "a"
-                }
+              tag_to_input_tensor_names { key: "INPUT" value: "b" }
+              tag_to_output_tensor_names { key: "OUTPUT" value: "a" }
             }
         }
       }
     )";
+    const std::string modelPath = getGenericFullPathForSrcTest("/ovms/src/test/dummy/1/dummy.xml");
+    const std::string modelPathPlaceholder = "MODEL_PATH_TO_REPLACE";
+    graph_proto.replace(graph_proto.find(modelPathPlaceholder), modelPathPlaceholder.size(), modelPath);
     CalculatorGraphConfig graphConfig =
         ParseTextProtoOrDie<CalculatorGraphConfig>(graph_proto);
     const std::string inputStreamName = "input";
@@ -298,39 +291,35 @@ TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerPOC) {
 }
 TEST_F(MediapipeFrameworkTest, HotReloadOutputStreamHandlerPOCCompare) {
     SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
-    // we need it only so that dummy is available via C-API
-    ServerGuard servGuard(getGenericFullPathForSrcTest("/ovms/src/test/configs/config_standard_dummy.json"));
     std::string graph_proto = R"(
       input_stream: "IN:input"
       output_stream: "OUT:output"
       node {
-          calculator: "OpenVINOModelServerSessionCalculator"
+          calculator: "OpenVINOSessionCalculator"
           output_side_packet: "SESSION:session"
           node_options: {
-            [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-              servable_name: "dummy"
+                        [type.googleapis.com / mediapipe.OpenVINOSessionCalculatorOptions]: {
+                              model_path: "MODEL_PATH_TO_REPLACE"
+                              shape: "auto"
             }
           }
       }
       node {
         calculator: "OpenVINOInferenceCalculator"
         input_side_packet: "SESSION:session"
-        input_stream: "OVTENSOR:input"
-        output_stream: "OVTENSOR:output"
+        input_stream: "INPUT:input"
+        output_stream: "OUTPUT:output"
         node_options: {
             [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
-                tag_to_input_tensor_names {
-                    key: "OVTENSOR"
-                    value: "b"
-                }
-                tag_to_output_tensor_names {
-                    key: "OVTENSOR"
-                    value: "a"
-                }
+              tag_to_input_tensor_names { key: "INPUT" value: "b" }
+              tag_to_output_tensor_names { key: "OUTPUT" value: "a" }
             }
         }
       }
     )";
+    const std::string modelPath = getGenericFullPathForSrcTest("/ovms/src/test/dummy/1/dummy.xml");
+    const std::string modelPathPlaceholder = "MODEL_PATH_TO_REPLACE";
+    graph_proto.replace(graph_proto.find(modelPathPlaceholder), modelPathPlaceholder.size(), modelPath);
     CalculatorGraphConfig graphConfig =
         ParseTextProtoOrDie<CalculatorGraphConfig>(graph_proto);
     const std::string inputStreamName = "input";

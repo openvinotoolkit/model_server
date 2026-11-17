@@ -34,16 +34,6 @@
 #include "../predict_request_validation_utils.hpp"
 
 namespace ovms {
-using TensorMap = std::unordered_map<std::string, ov::Tensor>;
-template Status serializePredictResponse(
-    OutputGetter<const TensorMap&>& outputGetter,
-    const std::string& servableName,
-    model_version_t servableVersion,
-    const tensor_map_t& outputMap,
-    InferenceResponse* response,
-    outputNameChooser_t outputNameChooser,
-    bool useSharedOutputContent);
-
 template Status serializePredictResponse(
     OutputGetter<ov::InferRequest&>& outputGetter,
     const std::string& servableName,

@@ -16,30 +16,28 @@
 input_stream: "in"
 output_stream: "out"
 node {
-  calculator: "OpenVINOModelServerSessionCalculator"
+  calculator: "OpenVINOSessionCalculator"
   output_side_packet: "SESSION:session"
   node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "resnet"
-      servable_version: "1"
+    [type.googleapis.com / mediapipe.OpenVINOSessionCalculatorOptions]: {
+      model_path: "/mediapipe/resnetMediapipe/model/1/resnet50.xml"
+      device: "CPU"
+      mean: "[123.675,116.28,103.53]"
+      scale: "[58.395,57.12,57.375]"
+      layout: "NCHW"
+      color_format: "RGB:BGR"
     }
   }
 }
 node {
   calculator: "OpenVINOInferenceCalculator"
   input_side_packet: "SESSION:session"
-  input_stream: "B:in"
-  output_stream: "A:out"
+  input_stream: "IMAGE:in"
+  output_stream: "CLASSIFICATION:out"
   node_options: {
     [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
-        tag_to_input_tensor_names {
-          key: "B"
-          value: "image"
-        }
-        tag_to_output_tensor_names {
-          key: "A"
-          value: "output"
-        }
+      tag_to_input_tensor_names { key: "IMAGE" value: "image" }
+      tag_to_output_tensor_names { key: "CLASSIFICATION" value: "output" }
     }
   }
 }

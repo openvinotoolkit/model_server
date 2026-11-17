@@ -15,21 +15,29 @@
 #
 input_stream: "input"
 output_stream: "output"
-node: {
-  calculator: "OpenVINOInferenceCalculator"
-  input_side_packet: "SESSION:resnet50"
-  input_stream: "INPUT:input"
-  output_stream: "OUTPUT:output"
-  node_options: {
-        [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
-          tag_to_input_tensor_names {key: "INPUT" value: "image"}
-          tag_to_output_tensor_names {key: "OUTPUT" value: "output"}
-}}}
-node: {
-  calculator: "OpenVINOModelServerSessionCalculator"
+node {
+  calculator: "OpenVINOSessionCalculator"
   output_side_packet: "SESSION:resnet50"
   node_options: {
-  [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-  servable_name: "resnet50"
-  servable_version: "1"
-}}}
+    [type.googleapis.com/mediapipe.OpenVINOSessionCalculatorOptions] {
+      model_path: "/workspace/resnet50/1/resnet50.xml"
+      device: "CPU"
+      mean: "[123.675,116.28,103.53]"
+      scale: "[58.395,57.12,57.375]"
+      layout: "NCHW"
+      plugin_config { key: "PERFORMANCE_HINT" value: "LATENCY" }
+    }
+  }
+}
+node {
+  calculator: "OpenVINOInferenceCalculator"
+  input_side_packet: "SESSION:resnet50"
+  input_stream: "IMAGE:input"
+  output_stream: "OUTPUT:output"
+  node_options: {
+    [type.googleapis.com/mediapipe.OpenVINOInferenceCalculatorOptions] {
+      tag_to_input_tensor_names { key: "IMAGE" value: "image" }
+      tag_to_output_tensor_names { key: "OUTPUT" value: "output" }
+    }
+  }
+}

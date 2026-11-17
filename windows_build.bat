@@ -38,10 +38,10 @@ for %%A in ("%~2" "%~3") do (
 
 IF "!buildTests!"=="true" (
     echo Building model server with tests
-    set "buildTargets=//src:ovms //src:ovms_test //third_party:espeak_ng //third_party:espeak_ng_data !pythonRuntimeTargets!"
+    set "buildTargets=//src:ovms //src:ovms_shared //src:ovms_test //third_party:espeak_ng //third_party:espeak_ng_data !pythonRuntimeTargets!"
 ) ELSE (
     echo Building model server without tests
-    set "buildTargets=//src:ovms //third_party:espeak_ng //third_party:espeak_ng_data !pythonRuntimeTargets!"
+    set "buildTargets=//src:ovms //src:ovms_shared //third_party:espeak_ng //third_party:espeak_ng_data !pythonRuntimeTargets!"
 )
 
 IF "!buildIntegrity!"=="true" (

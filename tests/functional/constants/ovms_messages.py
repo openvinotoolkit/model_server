@@ -346,7 +346,7 @@ class OvmsMessages:
     MEDIAPIPE_UNEXPECTED_INPUT = "Unexpected input - {} is unexpected"
     MEDIAPIPE_FAILED_TO_LOAD_MEDIAPIPE_GRAPH_DEFINITION = "Failed to open mediapipe graph definition"
     MEDIAPIPE_UNEXPECTED_INPUT_NAME = "Unexpected input name"
-    MEDIAPIPE_CALCULATOR_FAILED_TO_LOAD_MODEL = "OpenVINOModelServerSessionCalculator failed to load the model"
+    MEDIAPIPE_CALCULATOR_FAILED_TO_LOAD_MODEL = "OpenVINOSessionCalculator failed to compile model"
     MEDIAPIPE_MESSAGE_CONTAINS_OV_GENAI_IMAGE_TAG = "Message contains restricted <ov_genai_image> tag"
     MEDIAPIPE_REQUEST_PROCESSING_FAILED = "Request processing failed, check its correctness"
     MEDIAPIPE_URL_IMAGE_INVALID_ARGUMENT_FILESYSTEM_DISABLED = "Loading images from local filesystem is disabled"

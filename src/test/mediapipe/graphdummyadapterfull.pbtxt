@@ -16,30 +16,24 @@
 input_stream: "in"
 output_stream: "out"
 node {
-  calculator: "OpenVINOModelServerSessionCalculator"
+  calculator: "OpenVINOSessionCalculator"
   output_side_packet: "SESSION:session"
   node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "dummy"
-      servable_version: "1"
+    [type.googleapis.com / mediapipe.OpenVINOSessionCalculatorOptions]: {
+      model_path: "/ovms/src/test/dummy/1/dummy.xml"
+      shape: "auto"
     }
   }
 }
 node {
   calculator: "OpenVINOInferenceCalculator"
   input_side_packet: "SESSION:session"
-  input_stream: "B:in"
-  output_stream: "A:out"
+  input_stream: "INPUT:in"
+  output_stream: "OUTPUT:out"
   node_options: {
     [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
-      tag_to_input_tensor_names {
-        key: "B"
-        value: "b"
-      }
-      tag_to_output_tensor_names {
-        key: "A"
-        value: "a"
-      }
+      tag_to_input_tensor_names { key: "INPUT" value: "b" }
+      tag_to_output_tensor_names { key: "OUTPUT" value: "a" }
     }
   }
 }

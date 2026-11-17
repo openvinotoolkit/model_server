@@ -204,6 +204,28 @@ class MediaPipeCalculator:
 
         return inputs, outputs
 
+    def create_input_output_tensor_names(self, model):
+        # Note: Key name must be capitalized:
+        # https://github.com/google/mediapipe/blob/master/mediapipe/framework/tool/validate_name.cc#L35
+
+        model_inputs_keys = list(model.inputs.keys())
+        model_outputs_keys = list(model.outputs.keys())
+
+        input_tensors = ""
+        model_name = self.get_upper_model_name(model)
+        for i, model_input in enumerate(model_inputs_keys, start=0):
+            inp = f"{model_name}_INPUT_{i}"
+            input_tensor_names = f'tag_to_input_tensor_names {{key: "{inp}" value: "{model_input}"}}'
+            input_tensors += f"{input_tensor_names} \n"
+
+        output_tensors = ""
+        for i, model_output in enumerate(model_outputs_keys, start=0):
+            out = f"{model_name}_OUTPUT_{i}"
+            output_tensor_names = f'tag_to_output_tensor_names {{key: "{out}" value: "{model_output}"}}'
+            output_tensors += f"{output_tensor_names} \n"
+
+        return input_tensors, output_tensors
+
     @classmethod
     def get_full_content(cls, content, model, input_stream, output_stream):
         header = cls.create_proto_header(model, input_stream, output_stream)
@@ -258,28 +280,6 @@ class OvmsCMediaPipeCalculator(MediaPipeCalculator):
         if self.src_filename is not None:
             self.src_file_path = os.path.join(self.src_dir, f"{self.src_filename}.{self.src_type}")
 
-    def create_input_output_tensor_names(self, model):
-        # Note: Key name must be capitalized:
-        # https://github.com/google/mediapipe/blob/master/mediapipe/framework/tool/validate_name.cc#L35
-
-        model_inputs_keys = list(model.inputs.keys())
-        model_outputs_keys = list(model.outputs.keys())
-
-        input_tensors = ""
-        model_name = self.get_upper_model_name(model)
-        for i, model_input in enumerate(model_inputs_keys, start=0):
-            inp = f"{model_name}_INPUT_{i}"
-            input_tensor_names = f'tag_to_input_tensor_names {{key: "{inp}" value: "{model_input}"}}'
-            input_tensors += f"{input_tensor_names} \n"
-
-        output_tensors = ""
-        for i, model_output in enumerate(model_outputs_keys, start=0):
-            out = f"{model_name}_OUTPUT_{i}"
-            output_tensor_names = f'tag_to_output_tensor_names {{key: "{out}" value: "{model_output}"}}'
-            output_tensors += f"{output_tensor_names} \n"
-
-        return input_tensors, output_tensors
-
 
 @dataclass
 class OvmsCUnitTestMediaPipeCalculator(MediaPipeCalculator):
@@ -325,9 +325,8 @@ class OVMSOVCalculator(OvmsCMediaPipeCalculator):
 
 
 @dataclass
-class OpenVINOInferenceCalculator(OvmsCMediaPipeCalculator):
+class OpenVINOInferenceCalculator(MediaPipeCalculator):
     name: str = "OpenVINOInferenceCalculator"
-    src_filename: str = "openvinoinferencecalculator"
     model: ModelInfo = None
     session: str = None
     input_stream: str = None
@@ -346,7 +345,6 @@ class OpenVINOInferenceCalculator(OvmsCMediaPipeCalculator):
         input_streams, output_streams = self.create_input_output_streams(model, input_stream, output_stream)
         input_tensor_names, output_tensor_names = self.create_input_output_tensor_names(model)
         session = MediaPipeCalculator.get_valid_model_name(model) if self.session is None else self.session
-
         content = (
             "node: {\n"
             f'calculator: "{self.name}"\n'
@@ -364,27 +362,55 @@ class OpenVINOInferenceCalculator(OvmsCMediaPipeCalculator):
 
 
 @dataclass
-class OpenVINOModelServerSessionCalculator(OvmsCMediaPipeCalculator):
-    name: str = "OpenVINOModelServerSessionCalculator"
-    src_filename: str = "openvinomodelserversessioncalculator"
+class OpenVINOSessionCalculator(MediaPipeCalculator):
+    name: str = "OpenVINOSessionCalculator"
     model: ModelInfo = None
     session: str = None
-    model_name: str = None
 
     def create_proto_content(self, model, input_stream=None, output_stream=None, create_header=True):
         model = self.model if self.model is not None else model
-        model_name = self.model_name if self.model_name is not None else model.name
-        model.name = model_name
         session = MediaPipeCalculator.get_valid_model_name(model) if self.session is None else self.session
+        model_path = os.path.join(model.base_path, str(model.version))
+        if model.model_type.value == "IR":
+            model_filename = model.xml_name if model.xml_name is not None else model.name
+            model_path = os.path.join(model_path, f"{model_filename}.xml")
+        elif model.model_type.value == "ONNX":
+            model_filename = model.onnx_name if model.onnx_name is not None else model.name
+            model_path = os.path.join(model_path, f"{model_filename}.onnx")
+        elif model.model_type.value != "TFSM":
+            raise NotImplementedError(model.model_type)
+        model_path = model_path.replace("\\", "\\\\").replace('"', '\\"')
+        device = model.target_device or "CPU"
+        session_options = [f'model_path: "{model_path}"', f"device: {json.dumps(str(device))}"]
+        if model.nireq:
+            session_options.append(f"num_infer_requests: {model.nireq}")
+        if model.input_shape_for_ovms:
+            shape = model.input_shape_for_ovms
+            shape_value = json.dumps(json.dumps(shape) if isinstance(shape, dict) else str(shape))
+            session_options.append(f"shape: {shape_value}")
+        if model.batch_size:
+            session_options.append(f"batch_size: {json.dumps(str(model.batch_size))}")
+        layout = model._calculate_layout_for_config()
+        if layout:
+            session_options.append(f"layout: {json.dumps(layout)}")
+        for option_name in ("mean", "scale", "color_format", "precision"):
+            option_value = getattr(model, option_name, None)
+            if option_value:
+                session_options.append(f"{option_name}: {json.dumps(str(option_value))}")
+        if isinstance(model.plugin_config, dict):
+            session_options.extend(
+                f"plugin_config {{ key: {json.dumps(str(key))} value: {json.dumps(str(value))} }}"
+                for key, value in model.plugin_config.items()
+            )
+        session_options_text = "".join(f"      {option}\n" for option in session_options)
         content = (
-            "node: {\n"
-            f'calculator: "{self.name}"\n'
-            f'output_side_packet: "SESSION:{session}" \n'
-            "node_options: {\n"
-            "[type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {\n"
-            f'servable_name: "{model_name}"\n'
-            f'servable_version: "{model.version}"\n'
-            "}}}"
+            "node {\n"
+            f'  calculator: "{self.name}"\n'
+            f'  output_side_packet: "SESSION:{session}"\n'
+            "  node_options: {\n"
+            "    [type.googleapis.com/mediapipe.OpenVINOSessionCalculatorOptions] {\n"
+            f"{session_options_text}"
+            "    }\n  }\n}\n"
         )
 
         return content

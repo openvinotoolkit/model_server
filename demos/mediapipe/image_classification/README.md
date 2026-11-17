@@ -7,30 +7,28 @@ Example usage of graph that contains only one model - resnet:
 input_stream: "in"
 output_stream: "out"
 node {
-  calculator: "OpenVINOModelServerSessionCalculator"
+  calculator: "OpenVINOSessionCalculator"
   output_side_packet: "SESSION:session"
   node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "resnet"
-      servable_version: "1"
+    [type.googleapis.com / mediapipe.OpenVINOSessionCalculatorOptions]: {
+      model_path: "/mediapipe/resnetMediapipe/model/1/resnet50.xml"
+      device: "CPU"
+      mean: "[123.675,116.28,103.53]"
+      scale: "[58.395,57.12,57.375]"
+      layout: "NCHW"
+      color_format: "RGB:BGR"
     }
   }
 }
 node {
   calculator: "OpenVINOInferenceCalculator"
   input_side_packet: "SESSION:session"
-  input_stream: "B:in"
-  output_stream: "A:out"
+  input_stream: "IMAGE:in"
+  output_stream: "CLASSIFICATION:out"
   node_options: {
     [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
-        tag_to_input_tensor_names {
-          key: "B"
-          value: "image"
-        }
-        tag_to_output_tensor_names {
-          key: "A"
-          value: "output"
-        }
+      tag_to_input_tensor_names { key: "IMAGE" value: "image" }
+      tag_to_output_tensor_names { key: "CLASSIFICATION" value: "output" }
     }
   }
 }
@@ -59,28 +57,18 @@ curl -L --create-dirs https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/m
 
 ## Server Deployment
 :::{dropdown} **Deploying with Docker**
-```bash
-chmod -R 755 resnetMediapipe
-docker run -d -v $PWD:/mediapipe -p 9000:9000 openvino/model_server:latest --config_path /mediapipe/config.json --port 9000
-```
-:::
 :::{dropdown} **Deploying on Bare Metal**
 Assuming you have unpacked model server package, make sure to:
 
-- **On Windows**: run `setupvars` script
-- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
+  input_stream: "IMAGE:in"
+  output_stream: "CLASSIFICATION:out"
 
 as mentioned in [deployment guide](../../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
-```bat
-ovms --config_path config.json --port 9000
+      tag_to_input_tensor_names { key: "IMAGE" value: "image" }
+      tag_to_output_tensor_names { key: "CLASSIFICATION" value: "output" }
 ```
 :::
 ## Run the client:
-```console
-cd ../../../client/python/kserve-api/samples
-
-pip install -r requirements.txt
-
 python grpc_infer_resnet.py --model_name resnetMediapipe --grpc_port 9000 --images_numpy_path ../../imgs.npy --transpose_input False --input_name in --output_name out --labels_numpy_path ../../lbs.npy
 Image data range: 0.0 : 255.0
 Start processing:

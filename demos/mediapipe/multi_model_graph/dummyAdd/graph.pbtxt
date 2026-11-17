@@ -17,22 +17,20 @@ input_stream: "in1"
 input_stream: "in2"
 output_stream: "out"
 node {
-  calculator: "OpenVINOModelServerSessionCalculator"
+  calculator: "OpenVINOSessionCalculator"
   output_side_packet: "SESSION:dummy"
   node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "dummy"
-      servable_version: "1"
+    [type.googleapis.com / mediapipe.OpenVINOSessionCalculatorOptions]: {
+      model_path: "/mediapipe/dummyAdd/dummy/1/dummy.xml"
     }
   }
 }
 node {
-  calculator: "OpenVINOModelServerSessionCalculator"
+  calculator: "OpenVINOSessionCalculator"
   output_side_packet: "SESSION:add"
   node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "add"
-      servable_version: "1"
+    [type.googleapis.com / mediapipe.OpenVINOSessionCalculatorOptions]: {
+      model_path: "/mediapipe/dummyAdd/add_two_inputs_model/1/add.xml"
     }
   }
 }
@@ -43,14 +41,8 @@ node {
   output_stream: "DUMMY_OUT:dummy_output"
   node_options: {
     [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
-        tag_to_input_tensor_names {
-          key: "DUMMY_IN"
-          value: "b"
-        }
-        tag_to_output_tensor_names {
-          key: "DUMMY_OUT"
-          value: "a"
-        }
+      tag_to_input_tensor_names { key: "DUMMY_IN" value: "b" }
+      tag_to_output_tensor_names { key: "DUMMY_OUT" value: "a" }
     }
   }
 }
@@ -62,18 +54,9 @@ node {
   output_stream: "SUM:out"
   node_options: {
     [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
-        tag_to_input_tensor_names {
-          key: "ADD_INPUT1"
-          value: "input1"
-        }
-        tag_to_input_tensor_names {
-          key: "ADD_INPUT2"
-          value: "input2"
-        }
-        tag_to_output_tensor_names {
-          key: "SUM"
-          value: "sum"
-        }
+      tag_to_input_tensor_names { key: "ADD_INPUT1" value: "input1" }
+      tag_to_input_tensor_names { key: "ADD_INPUT2" value: "input2" }
+      tag_to_output_tensor_names { key: "SUM" value: "sum" }
     }
   }
 }

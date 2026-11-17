@@ -1,53 +1,48 @@
 input_stream: "IMAGE:input_video"
 output_stream: "IMAGE:output"
 
-node: {
-  calculator: "ImageTransformationCalculator"
+node {
+  calculator: "ImageToTensorCalculator"
   input_stream: "IMAGE:input_video"
-  output_stream: "IMAGE:transformed_input_video"
+  output_stream: "TENSOR:mediapipe_image_tensor"
   node_options: {
-    [type.googleapis.com/mediapipe.ImageTransformationCalculatorOptions] {
-      output_width: 416
-      output_height: 416
+    [type.googleapis.com/mediapipe.ImageToTensorCalculatorOptions] {
+      output_tensor_width: 416
+      output_tensor_height: 416
+      output_tensor_float_range { min: 0.0 max: 255.0 }
     }
   }
 }
 
 node {
-  calculator: "OpenVINOConverterCalculator"
-  input_stream: "IMAGE:transformed_input_video"
-  output_stream: "TENSORS:image_tensor"
-  node_options: {
-    [type.googleapis.com/mediapipe.OpenVINOConverterCalculatorOptions] {
-      enable_normalization: true
-      use_custom_normalization: true
-      custom_div: 1.0
-      custom_sub: 0.0
-    }
-  }
+  calculator: "MPTensorToOVTensorCalculator"
+  input_stream: "TENSOR:mediapipe_image_tensor"
+  output_stream: "OVTENSOR:image_tensor"
 }
 
 node {
-  calculator: "OpenVINOModelServerSessionCalculator"
+  calculator: "OpenVINOSessionCalculator"
   output_side_packet: "SESSION:session"
   node_options: {
-    [type.googleapis.com/mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "yolox_tiny-fp16-ov"  # servable name inside OVMS
-      servable_version: "1"
+    [type.googleapis.com/mediapipe.OpenVINOSessionCalculatorOptions] {
+      model_path: "/demo/yolox_tiny-fp16-ov/1/yolox_tiny-fp16-ov.xml"
+      device: "CPU"
+      num_infer_requests: 4
     }
-  }
+        output_stream: "TENSOR:mediapipe_image_tensor"
 }
 
 node {
   calculator: "OpenVINOInferenceCalculator"
-  input_side_packet: "SESSION:session"
-  input_stream: "OVTENSORS:image_tensor"
-  output_stream: "OVTENSORS2:detection_tensors"
+        input_stream: "TENSOR:mediapipe_image_tensor"
+  input_stream: "IMAGE:image_tensor"
+  output_stream: "TENSORS:detection_tensors"
   node_options: {
-    [type.googleapis.com/mediapipe.OpenVINOInferenceCalculatorOptions]: {
-          input_order_list :["image"]
-          output_order_list :["boxes","labels"]
-        }
+    [type.googleapis.com/mediapipe.OpenVINOInferenceCalculatorOptions] {
+      tag_to_input_tensor_names { key: "IMAGE" value: "image" }
+      output_order: "boxes"
+      output_order: "labels"
+    }
   }
 }
 
@@ -58,11 +53,11 @@ node {
 
   node_options: {
     [type.googleapis.com/mediapipe.OVYoloXTensorsToDetectionsCalculatorOptions] {
-      conf_thresh: 0.1
+        input_stream: "IMAGE:image_tensor"
       input_size: 416.0
     }
   }
-}
+            tag_to_input_tensor_names { key: "IMAGE" value: "image" }
 
 # Performs non-max suppression to remove excessive detections.
 node {
@@ -72,54 +67,59 @@ node {
   node_options: {
     [type.googleapis.com/mediapipe.NonMaxSuppressionCalculatorOptions] {
       min_suppression_threshold: 0.45
-      max_num_detections: 100
-      overlap_type: INTERSECTION_OVER_UNION
-      return_empty_detections: true
-    }
-  }
-}
+      node {
+        calculator: "ImageToTensorCalculator"
+        input_stream: "IMAGE:input_video"
+        output_stream: "TENSOR:mediapipe_image_tensor"
+        node_options: {
+          [type.googleapis.com/mediapipe.ImageToTensorCalculatorOptions] {
+            output_tensor_width: 416
+            output_tensor_height: 416
+            output_tensor_float_range { min: 0.0 max: 255.0 }
+          }
+        }
+      }
 
+      node {
+        calculator: "MPTensorToOVTensorCalculator"
+        input_stream: "TENSOR:mediapipe_image_tensor"
+        output_stream: "OVTENSOR:image_tensor"
+      }
 
-# Maps detection label IDs to the corresponding label text. The label map is
-# provided in the label_map_path option.
-node {
-  calculator: "DetectionLabelIdToTextCalculator"
-  input_stream: "filtered_detections"
-  output_stream: "output_detections"
-  node_options: {
-    [type.googleapis.com/mediapipe.DetectionLabelIdToTextCalculatorOptions] {
-      label_map_path: "/demo/coco_80cl.txt"
-    }
-  }
-}
+      node {
+        calculator: "OpenVINOSessionCalculator"
+        output_side_packet: "SESSION:session"
+        node_options: {
+          [type.googleapis.com/mediapipe.OpenVINOSessionCalculatorOptions] {
+            model_path: "/demo/yolox_tiny-fp16-ov/1/yolox_tiny-fp16-ov.xml"
+            device: "CPU"
+            num_infer_requests: 4
+          }
+        }
+      }
 
-node {
-  calculator: "ByteTrackCalculator"
-  input_stream: "DETECTIONS:output_detections"
-  output_stream: "DETECTIONS:tracked_detections"
-  options: {
-    [mediapipe.ByteTrackCalculatorOptions.ext] {
-      track_high_threshold:0.7
-      track_low_threshold:0.55
-      new_track_threshold:0.35
-      matching_threshold: 0.8
-      track_buffer: 60
-      fuse_score: false
-    }
-  }
-}
+      node {
+        calculator: "OpenVINOInferenceCalculator"
+        input_side_packet: "SESSION:session"
+        input_stream: "IMAGE:image_tensor"
+        output_stream: "TENSORS:detection_tensors"
+        node_options: {
+          [type.googleapis.com/mediapipe.OpenVINOInferenceCalculatorOptions] {
+            tag_to_input_tensor_names { key: "IMAGE" value: "image" }
+            output_order: "boxes"
+            output_order: "labels"
+          }
+        }
+      }
 
-# Converts the detections to drawing primitives for annotation overlay.
-node {
-  calculator: "DetectionColorByIdCalculator"
-  input_stream: "DETECTIONS:tracked_detections"
-  output_stream: "RENDER_DATA:detections_render_data"
-}
-
-# Draws annotations and overlays them on top of the input images.
-node {
-  calculator: "AnnotationOverlayCalculator"
-  input_stream: "IMAGE:input_video"
-  input_stream: "detections_render_data"
-  output_stream: "IMAGE:output"
-}
+      node {
+        calculator: "OVYoloXTensorsToDetectionsCalculator"
+        input_stream: "TENSORS:detection_tensors"
+        output_stream: "DETECTIONS:detections"
+        node_options: {
+          [type.googleapis.com/mediapipe.OVYoloXTensorsToDetectionsCalculatorOptions] {
+            conf_thresh: 0.1
+            input_size: 416.0
+          }
+        }
+      }

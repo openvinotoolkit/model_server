@@ -36,7 +36,6 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "src/mediapipe_calculators/ovms/modelapiovmsadapter.hpp"
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/port/canonical_errors.h"
 #pragma GCC diagnostic pop
@@ -1441,7 +1440,7 @@ TEST_F(MediapipeStreamFlowAddTest, InferOnReloadedGraph) {
     ASSERT_EQ(status, StatusCode::OK) << status.string();
     reloader.join();
 
-    // Opening new stream, expect new graph to be available but errors in processing
+    // The new graph is available; input validation errors are returned in the stream response.
     std::promise<void> canDisconnect;
     MockedServerReaderWriter<::inference::ModelStreamInferResponse, ::inference::ModelInferRequest> newStream;
     EXPECT_CALL(newStream, Read(::testing::_))
@@ -1464,7 +1463,7 @@ TEST_F(MediapipeStreamFlowAddTest, InferOnReloadedGraph) {
             return true;
         });
     status = impl.ModelStreamInferImpl(nullptr, &newStream);
-    ASSERT_EQ(status, StatusCode::MEDIAPIPE_PRECONDITION_FAILED) << status.string();
+    ASSERT_EQ(status, StatusCode::OK) << status.string();
 }
 
 TEST_F(MediapipeStreamFlowAddTest, NegativeShouldNotReachInferDueToRetiredGraph) {
@@ -1608,163 +1607,6 @@ TEST_F(MediapipeFlowTest, InferWithRestrictedParamName) {
         request.mutable_parameters()->operator[](restrictedParamName).set_int64_param(int64ParamValue);
         ASSERT_EQ(impl.ModelInfer(nullptr, &request, &response).error_code(), grpc::StatusCode::FAILED_PRECONDITION);
     }
-}
-
-using testing::ElementsAre;
-
-TEST_F(MediapipeFlowAddTest, AdapterMetadata) {
-    mediapipe::ovms::OVMSInferenceAdapter adapter("add");
-    const std::shared_ptr<const ov::Model> model;
-    ov::Core unusedCore;
-    ov::AnyMap notUsedAnyMap;
-    adapter.loadModel(model, unusedCore, "NOT_USED", notUsedAnyMap);
-    EXPECT_THAT(adapter.getInputNames(), ElementsAre(SUM_MODEL_INPUT_NAME_1, SUM_MODEL_INPUT_NAME_2));
-    EXPECT_THAT(adapter.getOutputNames(), ElementsAre(SUM_MODEL_OUTPUT_NAME));
-    EXPECT_EQ(adapter.getInputShape(SUM_MODEL_INPUT_NAME_1), ov::Shape({1, 10}));
-    EXPECT_EQ(adapter.getInputShape(SUM_MODEL_INPUT_NAME_2), ov::Shape({1, 10}));
-}
-
-TEST_F(MediapipeFlowTest, AdapterMetadataDynamicShape) {
-    SetUpServer("/ovms/src/test/configs/config_dummy_dynamic_shape.json");
-    mediapipe::ovms::OVMSInferenceAdapter adapter("dummy");
-    const std::shared_ptr<const ov::Model> model;
-    ov::Core unusedCore;
-    ov::AnyMap notUsedAnyMap;
-    adapter.loadModel(model, unusedCore, "NOT_USED", notUsedAnyMap);
-    EXPECT_THAT(adapter.getInputNames(), ElementsAre(DUMMY_MODEL_INPUT_NAME));
-    EXPECT_THAT(adapter.getOutputNames(), ElementsAre(DUMMY_MODEL_OUTPUT_NAME));
-    EXPECT_EQ(adapter.getInputShape(DUMMY_MODEL_INPUT_NAME), ov::PartialShape({1, {1, 10}}));
-}
-
-namespace {
-class MockModelInstance : public ovms::ModelInstance {
-public:
-    MockModelInstance(ov::Core& ieCore) :
-        ModelInstance("UNUSED_NAME", UNUSED_MODEL_VERSION, ieCore) {
-    }
-    ov::AnyMap getRTInfo() override {
-        std::vector<std::string> mockLabels;
-        for (size_t i = 0; i < 5; i++) {
-            mockLabels.emplace_back(std::to_string(i));
-        }
-        ov::AnyMap modelInfo = {
-            {"layout", "data:HWCN"},
-            {"resize_type", "unnatural"},
-            {"labels", mockLabels}};
-        ov::AnyMap rtInfo = {{"model_info", modelInfo}};
-        return rtInfo;
-    }
-};
-
-class MockModel : public ovms::Model {
-public:
-    MockModel(const std::string& name) :
-        Model(name) {}
-    std::shared_ptr<ovms::ModelInstance> modelInstanceFactory(const std::string& modelName, const ovms::model_version_t, ov::Core& ieCore, ovms::MetricRegistry* registry = nullptr, const ovms::MetricConfig* metricConfig = nullptr) override {
-        return std::make_shared<MockModelInstance>(ieCore);
-    }
-};
-
-class MockModelManager : public ovms::ModelManager {
-    ovms::MetricRegistry registry;
-
-public:
-    std::shared_ptr<ovms::Model> modelFactory(const std::string& name) override {
-        return std::make_shared<MockModel>(name);
-    }
-
-public:
-    MockModelManager(const std::string& modelCacheDirectory = "") :
-        ovms::ModelManager(modelCacheDirectory, &registry) {
-    }
-    ~MockModelManager() {
-        spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
-        join();
-        spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
-        models.clear();
-        spdlog::info("Destructor of modelmanager(Enabled one). Models #:{}", models.size());
-    }
-};
-
-class MockedServableManagerModule : public ovms::ServableManagerModule {
-    mutable MockModelManager mockModelManager;
-
-public:
-    MockedServableManagerModule(ovms::Server& ovmsServer) :
-        ovms::ServableManagerModule(ovmsServer) {
-    }
-    ModelManager& getServableManager() const override {
-        return mockModelManager;
-    }
-};
-
-class MockedServer : public Server {
-public:
-    MockedServer() = default;
-    std::unique_ptr<Module> createModule(const std::string& name) override {
-        if (name != ovms::SERVABLE_MANAGER_MODULE_NAME)
-            return Server::createModule(name);
-        return std::make_unique<MockedServableManagerModule>(*this);
-    };
-    Module* getModule(const std::string& name) {
-        return const_cast<Module*>(Server::getModule(name));
-    }
-};
-
-}  // namespace
-
-TEST(Mediapipe, AdapterRTInfo) {
-    MockedServer server;
-    OVMS_Server* cserver = reinterpret_cast<OVMS_Server*>(&server);
-    OVMS_ServerSettings* serverSettings = nullptr;
-    OVMS_ModelsSettings* modelsSettings = nullptr;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&serverSettings));
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&modelsSettings));
-    std::string port{"5555"};
-    randomizeAndEnsureFree(port);
-    uint32_t portNum = ovms::stou32(port).value();
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(serverSettings, portNum));
-    // we will use dummy model that will have mocked rt_info
-    ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(modelsSettings, getGenericFullPathForSrcTest("/ovms/src/test/configs/config.json").c_str()));
-
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, serverSettings, modelsSettings));
-    const std::string mockedModelName = "dummy";
-    uint32_t servableVersion = 1;
-    mediapipe::ovms::OVMSInferenceAdapter adapter(mockedModelName, servableVersion, cserver);
-    const std::shared_ptr<const ov::Model> model;
-    /*ov::AnyMap configuration = {
-        {"layout", "data:HWCN"},
-        {"resize_type", "unnatural"},
-        {"labels", mockLabels}*/
-    ov::Core unusedCore;
-    ov::AnyMap notUsedAnyMap;
-    adapter.loadModel(model, unusedCore, "NOT_USED", notUsedAnyMap);
-    ov::AnyMap modelConfig = adapter.getModelConfig();
-
-    auto checkModelInfo = [](const ov::AnyMap& modelConfig) {
-        std::cout << "Model config size: " << modelConfig.size() << std::endl;
-        ASSERT_EQ(modelConfig.size(), 3);
-        auto it = modelConfig.find("resize_type");
-        ASSERT_NE(modelConfig.end(), it);
-        EXPECT_EQ(std::string("unnatural"), it->second.as<std::string>());
-        it = modelConfig.find("layout");
-        ASSERT_NE(modelConfig.end(), it);
-        ASSERT_EQ(std::string("data:HWCN"), it->second.as<std::string>());
-        it = modelConfig.find("labels");
-        ASSERT_NE(modelConfig.end(), it);
-        const std::vector<std::string>& resultLabels = it->second.as<std::vector<std::string>>();
-        EXPECT_THAT(resultLabels, ElementsAre("0", "1", "2", "3", "4"));
-    };
-    checkModelInfo(modelConfig);
-
-    OVMS_ServableMetadata* servableMetadata = nullptr;
-    ASSERT_CAPI_STATUS_NULL(OVMS_GetServableMetadata(cserver, mockedModelName.c_str(), servableVersion, &servableMetadata));
-
-    const ov::AnyMap* servableMetadataRtInfo;
-    ASSERT_CAPI_STATUS_NULL(OVMS_ServableMetadataInfo(servableMetadata, reinterpret_cast<const void**>(&servableMetadataRtInfo)));
-    ASSERT_NE(nullptr, servableMetadataRtInfo);
-    checkModelInfo((*servableMetadataRtInfo).at("model_info").as<ov::AnyMap>());
-    OVMS_ServableMetadataDelete(servableMetadata);
 }
 
 TEST(Mediapipe, MetadataDummy) {
@@ -2059,25 +1901,37 @@ TEST_F(MediapipeNoTagMapping, DummyUppercase) {
     const std::string pathToReplace = "PATH_TO_REPLACE";
     auto it = configJson.find(pathToReplace);
     ASSERT_NE(it, std::string::npos);
-    const std::string graphPbtxt = R"(
+    std::string graphPbtxt = R"(
 input_stream: "in"
 output_stream: "out"
 node {
-  calculator: "OpenVINOModelServerSessionCalculator"
+    calculator: "OpenVINOSessionCalculator"
   output_side_packet: "SESSION:session"
   node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "dummyUpper"
-      servable_version: "1"
+        [type.googleapis.com / mediapipe.OpenVINOSessionCalculatorOptions]: {
+            model_path: "MODEL_PATH_TO_REPLACE"
+            shape: "auto"
     }
   }
 }
 node {
   calculator: "OpenVINOInferenceCalculator"
   input_side_packet: "SESSION:session"
-  input_stream: "B:in"
-  output_stream: "A:out"
-})";
+    input_stream: "INPUT:in"
+    output_stream: "OUTPUT:out"
+    node_options: {
+        [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
+            tag_to_input_tensor_names { key: "INPUT" value: "B" }
+            tag_to_output_tensor_names { key: "OUTPUT" value: "A" }
+        }
+    }
+}
+)";
+    const std::string modelPathPlaceholder = "MODEL_PATH_TO_REPLACE";
+    graphPbtxt.replace(
+        graphPbtxt.find(modelPathPlaceholder),
+        modelPathPlaceholder.size(),
+        getGenericFullPathForSrcTest("/ovms/src/test/dummyUppercase/1/dummy.xml"));
     const std::string pbtxtPath = this->directoryPath + "/graphDummyUppercase.pbtxt";
     createConfigFileWithContent(graphPbtxt, pbtxtPath);
     configJson.replace(it, pathToReplace.size(), pbtxtPath);
@@ -2356,30 +2210,25 @@ const std::string MediapipeConfigChanges::pbtxtContent = R"(
 input_stream: "in"
 output_stream: "out"
 node {
-  calculator: "OpenVINOModelServerSessionCalculator"
+    calculator: "OpenVINOSessionCalculator"
   output_side_packet: "SESSION:session"
   node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "dummy"
-      servable_version: "1"
+        [type.googleapis.com / mediapipe.OpenVINOSessionCalculatorOptions]: {
+            model_path: ")" + getGenericFullPathForSrcTest("/ovms/src/test/dummy/1/dummy.xml") +
+                                                         R"("
+            shape: "auto"
     }
   }
 }
 node {
   calculator: "OpenVINOInferenceCalculator"
   input_side_packet: "SESSION:session"
-  input_stream: "B:in"
-  output_stream: "A:out"
+    input_stream: "INPUT:in"
+    output_stream: "OUTPUT:out"
   node_options: {
     [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
-      tag_to_input_tensor_names {
-        key: "B"
-        value: "b"
-      }
-      tag_to_output_tensor_names {
-        key: "A"
-        value: "a"
-      }
+            tag_to_input_tensor_names { key: "INPUT" value: "b" }
+            tag_to_output_tensor_names { key: "OUTPUT" value: "a" }
     }
   }
 }
@@ -2392,27 +2241,21 @@ node {
   calculator: "OpenVINOModelServerSessionCalculatorNONEXISTENT"
   output_side_packet: "SESSION:session"
   node_options: {
-    [type.googleapis.com / mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
-      servable_name: "dummy"
-      servable_version: "1"
+        [type.googleapis.com / mediapipe.OpenVINOSessionCalculatorOptions]: {
+            model_path: "/ovms/src/test/dummy/1/dummy.xml"
+            shape: "auto"
     }
   }
 }
 node {
   calculator: "OpenVINOInferenceCalculator"
   input_side_packet: "SESSION:session"
-  input_stream: "B:in"
-  output_stream: "A:out"
+    input_stream: "INPUT:in"
+    output_stream: "OUTPUT:out"
   node_options: {
     [type.googleapis.com / mediapipe.OpenVINOInferenceCalculatorOptions]: {
-      tag_to_input_tensor_names {
-        key: "B"
-        value: "b"
-      }
-      tag_to_output_tensor_names {
-        key: "A"
-        value: "a"
-      }
+            tag_to_input_tensor_names { key: "INPUT" value: "b" }
+            tag_to_output_tensor_names { key: "OUTPUT" value: "a" }
     }
   }
 }
@@ -3891,7 +3734,9 @@ TEST(WhitelistRegistered, MediapipeCalculatorsList) {
         "OpenCvImageEncoderCalculator",
         "OpenCvPutTextCalculator",
         "OpenVINOInferenceCalculator",
-        "OpenVINOModelServerSessionCalculator",
+        "OpenVINOSessionCalculator",
+        "MPTensorToOVTensorCalculator",
+        "OVTensorToMPTensorCalculator",
 #ifndef _WIN32  // TODO windows: stdc++20 required
         "PacketClonerCalculator",
 #endif

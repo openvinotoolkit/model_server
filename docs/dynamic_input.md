@@ -25,7 +25,7 @@ There are multiple ways of enabling dynamic inputs depending on the kind of serv
 
 OpenVINO Model Server accepts several data types that can be handled on [MediaPipe graph](mediapipe.md) input. Whether the input is dynamic or not depends on what happens next in the graph. There are 4 situations when input to the graph can be dynamic:
 
-- Next node in the graph uses `OpenVINOInferenceCalculator` that runs inference on a model that accepts dynamic inputs. Such node expects input stream with a tag starting with `OVTENSOR` prefix.
+- Next node in the graph uses `OpenVINOInferenceCalculator` that runs inference on a model that accepts dynamic inputs. KServe inputs tagged `OVTENSOR` are deserialized as `ov::Tensor`; the inference node consumes a vector on `TENSORS` (or a remote-tensor vector on `REMOTE_TENSORS`). Use the OVMS tensor-vector bridge calculators when connecting individual tensor streams.
 
 - Next node in the graph uses a calculator that handles input in [MediaPipe ImageFrame](https://developers.google.com/mediapipe/api/solutions/python/mp/ImageFrame) format. Model Server converts data from the KServe request to MediaPipe ImageFrame for input streams which tags start with `IMAGE` prefix.
 

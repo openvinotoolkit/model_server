@@ -1,0 +1,11 @@
+diff --git a/foreign_cc/cmake.bzl b/foreign_cc/cmake.bzl
+--- a/foreign_cc/cmake.bzl
++++ b/foreign_cc/cmake.bzl
+@@ -404,6 +404,7 @@ cmake = rule(
+     doc = "Rule for building external library with CMake.",
+     attrs = _attrs(),
+     fragments = CC_EXTERNAL_RULE_FRAGMENTS,
++    provides = [CcInfo],
+     output_to_genfiles = True,
+     implementation = _cmake_impl,
+     toolchains = [

@@ -15,10 +15,6 @@
 #
 package(default_visibility = ["//visibility:public"])
 
-exports_files([
-    "mediapipe_model_api_openvino_windows.patch",
-])
-
 alias(
     name = "opencv",
     actual = select({
