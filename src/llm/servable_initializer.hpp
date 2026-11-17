@@ -79,7 +79,7 @@ std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath);
 // DFlash takes priority over EAGLE3 when both markers are present (matches GenAI's strategy selection order).
 // Throws std::runtime_error if the XML is missing or cannot be opened/read.
 GenAiServableProperties::DraftModelStrategy detectDraftModelStrategy(const std::string& draftPath);
-Status determinePipelineTypeFromGGUF(const std::filesystem::path& ggufPath, const mediapipe::LLMCalculatorOptions& nodeOptions);
+Status determinePipelineTypeFromGGUF(const std::filesystem::path& ggufPath, const mediapipe::LLMCalculatorOptions& nodeOptions, PipelineType& pipelineType);
 Status determinePipelineTypeFromIR(const std::filesystem::path& irPath, const mediapipe::LLMCalculatorOptions& nodeOptions, PipelineType& pipelineType);
 Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath, ModelsFormat* detectedFormat = nullptr);
 Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath);

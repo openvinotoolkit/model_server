@@ -498,8 +498,8 @@ std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath) {
 }
 
 Status determinePipelineTypeFromGGUF(const std::filesystem::path& ggufPath, const mediapipe::LLMCalculatorOptions& nodeOptions, PipelineType& pipelineType) {
-    // currently, GGUF models are only for LM_CB
-    pipelineType = PipelineType::LM_CB;
+    // Default to continuous batching unless the legacy pipeline is explicitly requested.
+    pipelineType = nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::LM ? PipelineType::LM : PipelineType::LM_CB;
 
     if (nodeOptions.device() == "NPU") {
         pipelineType = PipelineType::LM;  // NPU device uses LM

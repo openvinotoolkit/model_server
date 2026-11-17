@@ -4926,8 +4926,11 @@ TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckPluginConfig) {
     LLMNodeOptionsCheckPluginConfig(modelsPath);
 }
 
-class GgufPipelineSelectionTest : public TestWithTempDir {
-    void SetUp() { modelsFormat = ModelsFormat::NONE; }
+class GGUFPipelineSelectionTest : public TestWithTempDir {
+     void SetUp() override {
+         TestWithTempDir::SetUp();
+         modelsFormat = ModelsFormat::NONE;
+     }
 
 protected:
     ModelsFormat modelsFormat;
@@ -4958,7 +4961,7 @@ protected:
     }
 };
 
-TEST_F(GgufPipelineSelectionTest, TextAutoAndExplicitSelection) {
+TEST_F(GGUFPipelineSelectionTest, TextAutoAndExplicitSelection) {
     mediapipe::LLMCalculatorOptions options;
     options.set_models_path(writeMetadata("qwen35"));
     PipelineType pipelineType{PipelineType::LM};
@@ -4975,7 +4978,7 @@ TEST_F(GgufPipelineSelectionTest, TextAutoAndExplicitSelection) {
     EXPECT_EQ(modelsFormat, ModelsFormat::GGUF);
 }
 
-TEST_F(GgufPipelineSelectionTest, UnknownArchitectureDelegatesSupportToGenai) {
+TEST_F(GGUFPipelineSelectionTest, UnknownArchitectureDelegatesSupportToGenai) {
     mediapipe::LLMCalculatorOptions options;
     options.set_models_path(writeMetadata("future_architecture", 2));
     PipelineType pipelineType{PipelineType::LM};
