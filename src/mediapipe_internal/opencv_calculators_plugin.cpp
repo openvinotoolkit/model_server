@@ -19,7 +19,7 @@
 
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable : 6001)
+#pragma warning(disable : 6001 6011)
 #endif
 #include "mediapipe/framework/calculator_base.h"
 #include "mediapipe/framework/subgraph.h"
