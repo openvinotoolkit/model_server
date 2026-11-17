@@ -291,6 +291,24 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "chat_template_adjuster",
+    hdrs = [
+        "io_processing/chat_template/adjuster.hpp",
+        "io_processing/chat_template/adjustments/base_chat_template_adjustment.hpp",
+        "io_processing/chat_template/adjustments/remove_filters_adjustment.hpp",
+        "io_processing/chat_template/adjustments/remove_function_params_adjustment.hpp",
+    ],
+    srcs = [
+        "io_processing/chat_template/adjuster.cpp",
+        "io_processing/chat_template/adjustments/remove_filters_adjustment.cpp",
+        "io_processing/chat_template/adjustments/remove_function_params_adjustment.cpp",
+        "io_processing/chat_template/adjustments/adjustment_utils.hpp",
+    ],
+    deps = ["//src:libovmsstring_utils"],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "chat_template_probe",
     hdrs = ["io_processing/chat_template/probe.hpp",
             "io_processing/chat_template/caps.hpp"],
@@ -298,6 +316,7 @@ ovms_cc_library(
     deps = [
         "//third_party:genai",
         "//src:libovmslogging",
+        "//src:libovmsstring_utils",
     ],
     visibility = ["//visibility:public"],
 )
@@ -682,6 +701,7 @@ ovms_cc_library(
         ":openai_completions_api_handler",
         ":openai_responses_handler",
         ":generation_config_builders",
+        ":chat_template_adjuster",
         ":chat_template_analyzer",
         ":chat_template_probe",
         ":io_processing_input_processor_context",

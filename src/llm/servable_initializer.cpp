@@ -44,6 +44,7 @@
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "src/status.hpp"
 #include "io_processing/chat_template/analyzer.hpp"
+#include "io_processing/chat_template/adjuster.hpp"
 #include "io_processing/chat_template/probe.hpp"
 #include "io_processing/parser_config_validation.hpp"
 #include "runtime_chat_template_runtime_loader.hpp"
@@ -256,12 +257,14 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
             selectedSource == ChatTemplateSource::CHAT_TEMPLATE_JINJA ? "chat_template.jinja" : "GenAI tokenizer/model");
     }
 
-    // Phase 2: load the chosen source with the selected engine.
-    if (selectedSource != ChatTemplateSource::NONE) {
-        if (properties->chatTemplateEngine == ChatTemplateEngine::JINJA) {
-            if (selectedSource == ChatTemplateSource::CHAT_TEMPLATE_JINJA) {
-                properties->tokenizer.set_chat_template(templateSource);
-            }
+    // Phase 2: load the chosen source with the selected engine. Apply adjustments if needed.
+    if (selectedSource != ChatTemplateSource::NONE && !templateSource.empty()) {
+        const bool isJinja = properties->chatTemplateEngine == ChatTemplateEngine::JINJA;
+        ChatTemplateAdjusterConfig adjusterConfig = isJinja ? ChatTemplateAdjusterConfig::forJinja() : ChatTemplateAdjusterConfig::forMinja();
+        ChatTemplateAdjuster(adjusterConfig).adjust(templateSource);
+        properties->tokenizer.set_chat_template(templateSource);
+
+        if (isJinja) {
             std::string errorMessage;
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Preparing selected chat template with Python Jinja");
             if (properties->preparedChatTemplate.prepare(
@@ -276,13 +279,6 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
                 templateLoadError = errorMessage;
             }
         } else {
-            if (selectedSource == ChatTemplateSource::CHAT_TEMPLATE_JINJA) {
-                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Setting selected chat template on tokenizer for Minja");
-                properties->tokenizer.set_chat_template(templateSource);
-                templateSource = properties->tokenizer.get_chat_template();
-            } else {
-                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using GenAI-resolved chat template already set on tokenizer for Minja");
-            }
             properties->chatTemplateStatus = probeChatTemplateBasicRenderMinja(properties->tokenizer) ? ChatTemplateStatus::AVAILABLE : ChatTemplateStatus::INCOMPATIBLE;
         }
 
