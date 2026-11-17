@@ -399,8 +399,8 @@ void GenAiServableInitializer::applyGlobalCacheDir(std::shared_ptr<GenAiServable
     }
 }
 
-void GenAiServableInitializer::applyDefaultGGUFReader(std::shared_ptr<GenAiServableProperties> properties) {
-    if (properties->modelsFormat != ModelsFormat::GGUF) {
+void GenAiServableInitializer::applyDefaultGGUFReader(std::shared_ptr<GenAiServableProperties> properties, const std::string& modelsPath) {
+    if (std::filesystem::path(modelsPath).extension() != ".gguf") {
         return;
     }
 

@@ -139,7 +139,7 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
     }
 
     applyGlobalCacheDir(properties);
-    applyDefaultGGUFReader(properties);
+    applyDefaultGGUFReader(properties, parsedModelsPath);
 
     // Max prompt len is NPU specific property
     if (properties->device == "NPU") {
