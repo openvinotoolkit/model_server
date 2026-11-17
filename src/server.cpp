@@ -595,6 +595,7 @@ std::variant<std::pair<ServerSettingsImpl, ModelsSettingsImpl>, std::pair<int, s
 }
 
 int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSettingsImpl& modelsSettings) {
+    setDefaultEspeakDataPath();
     OvmsExitGuard exitStatusGuard(*this);
     installSignalHandlers();
     int result = OVMS_EX_OK;

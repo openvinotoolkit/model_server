@@ -2269,6 +2269,7 @@ cc_test(
             "//src:module_names",
             "//src:libovms_default_task_detector",
             "//src/filesystem:libovmsfilesystemfactory",
+            "//src/utils:env_guard",
             "@cpp_httplib//:cpp_httplib", # server_test.cpp
             ":test_utils",
             ":test_test_with_temp_dir",
