@@ -502,7 +502,7 @@ Status determinePipelineTypeFromGGUF(const std::filesystem::path& ggufPath, cons
     pipelineType = PipelineType::LM_CB;
 
     if (nodeOptions.device() == "NPU") {
-        pipelineType = PipelineType::LM; // NPU device uses LM
+        pipelineType = PipelineType::LM;  // NPU device uses LM
     }
 
     return StatusCode::OK;

@@ -4928,6 +4928,7 @@ TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckPluginConfig) {
 
 class GgufPipelineSelectionTest : public TestWithTempDir {
     void SetUp() { modelsFormat = ModelsFormat::NONE; }
+
 protected:
     ModelsFormat modelsFormat;
     std::string writeMetadata(const std::string& architecture, unsigned int version = 3) {
