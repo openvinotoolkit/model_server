@@ -16,6 +16,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -28,6 +29,7 @@ class MetricRegistry;
 class MetricGauge;
 class MetricHistogram;
 class MetricCounter;
+struct PipelineMetricsOwnership;
 
 struct RequestMetricsSnapshot {
     size_t inputTokens;
@@ -48,6 +50,13 @@ class LLMMetricReporter {
     std::unique_ptr<MetricCounter> generatedTokens;
     std::unique_ptr<MetricHistogram> ttft;
     std::unique_ptr<MetricHistogram> tpot;
+
+    // Pipeline metrics (cache utilization, cache size, scheduled requests) describe the state
+    // of one pipeline. A reload can leave the previous pipeline alive until its requests
+    // finish, so only the newest reporter of a graph node may write them.
+    PipelineMetricsOwnership* pipelineMetricsOwnership = nullptr;
+    uint64_t reporterId = 0;
+    void setPipelineMetric(const std::unique_ptr<MetricGauge>& gauge, double value);
 
     template <typename MetricType>
     struct MetricRegistration {
@@ -100,6 +109,9 @@ public:
     bool isScheduledRequestsEnabled() const;
     bool hasCompletedRequestMetricsEnabled() const;
     bool hasAnyCompletionMetricsEnabled() const;
+    // The pipeline metric updates below are ignored once a newer reporter exists for the
+    // same graph and node, so a superseded pipeline cannot overwrite its replacement.
+
     /// Reset cache utilization, cache size, and scheduled-request gauges to zero
     /// once the pipeline stops. Counters and histograms are unchanged.
     void resetCacheAndScheduledRequestsGauges();

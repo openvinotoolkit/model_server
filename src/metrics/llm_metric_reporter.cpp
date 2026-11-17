@@ -17,6 +17,7 @@
 
 #include <array>
 #include <cmath>
+#include <mutex>
 #include <stdexcept>
 
 #include "../logging.hpp"
@@ -81,6 +82,10 @@ LLMMetricReporter::LLMMetricReporter(const MetricConfig* config, MetricRegistry*
     addSeries(*this, gaugeFamilies, labels, GAUGE_REGISTRATIONS);
     addSeries(*this, counterFamilies, labels, COUNTER_REGISTRATIONS);
     addSeries(*this, histogramFamilies, labels, HISTOGRAM_REGISTRATIONS);
+
+    pipelineMetricsOwnership = &registry->getPipelineMetricsOwnership(graphName, nodeName);
+    std::lock_guard<std::mutex> lock(pipelineMetricsOwnership->mutex);
+    reporterId = ++pipelineMetricsOwnership->newestReporterId;
 }
 
 LLMMetricReporter::~LLMMetricReporter() = default;
@@ -103,8 +108,19 @@ void LLMMetricReporter::resetCacheAndScheduledRequestsGauges() {
     setScheduledRequests(STOPPED_SCHEDULED_REQUESTS);
 }
 
+void LLMMetricReporter::setPipelineMetric(const std::unique_ptr<MetricGauge>& gauge, double value) {
+    if (!gauge) {
+        return;
+    }
+    // The check and the write share one lock, so a reporter superseded in between cannot write.
+    std::lock_guard<std::mutex> lock(pipelineMetricsOwnership->mutex);
+    if (reporterId == pipelineMetricsOwnership->newestReporterId) {
+        gauge->set(value);
+    }
+}
+
 void LLMMetricReporter::setScheduledRequests(size_t requests) {
-    SET_IF_ENABLED(scheduledRequests, static_cast<double>(requests));
+    setPipelineMetric(scheduledRequests, static_cast<double>(requests));
 }
 
 void LLMMetricReporter::observeCompletedRequest(const RequestMetricsSnapshot& metrics) {
@@ -142,11 +158,11 @@ void LLMMetricReporter::setCacheUtilization(double percent) {
         SPDLOG_LOGGER_WARN(llm_executor_logger, "Ignoring invalid GenAI KV cache utilization: {}", percent);
         return;
     }
-    cacheUtilization->set(percent);
+    setPipelineMetric(cacheUtilization, percent);
 }
 
 void LLMMetricReporter::setCacheSizeBytes(size_t bytes) {
-    SET_IF_ENABLED(cacheSize, static_cast<double>(bytes));
+    setPipelineMetric(cacheSize, static_cast<double>(bytes));
 }
 
 }  // namespace ovms

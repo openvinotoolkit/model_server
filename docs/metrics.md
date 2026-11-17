@@ -84,11 +84,10 @@ other metric names if you also need the default serving metrics. The preset
 includes only currently supported LLM metric families; it does not enable
 proposed or future LLM metrics automatically.
 
-Cache utilization, cache size, and scheduled-request gauges are not refreshed
-after every generation step. OVMS publishes their latest GenAI values every 10
-generation steps and when the executor becomes idle, before waiting for new
-requests. Scrapes return the latest published values; changes between updates
-may not be visible.
+The scheduled-request gauge is refreshed after every generation step. Cache
+utilization and cache-size gauges are refreshed every 10 generation steps and
+when the executor becomes idle, before waiting for new requests. Scrapes return
+the latest published values; cache changes between updates may not be visible.
 
 Cache utilization is GenAI's maximum utilization percentage across registered
 cache types, not total device-memory utilization. Its denominator can change
@@ -99,7 +98,8 @@ with dynamic allocation; it is not total device memory.
 
 LLM metric series are kept across graph reload and idle-unload: counters and
 histograms continue from their previous values, while the cache and
-scheduled-request gauges are set to `0` when the pipeline stops. See the
+scheduled-request gauges are set to `0` when the pipeline stops. After a reload,
+only the new pipeline updates these gauges. See the
 [developer guide](./developer_guide.md#llm-metric-series-lifecycle) for details.
 
 Prompt and generated-token counters increase once per successfully completed

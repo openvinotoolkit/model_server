@@ -179,7 +179,10 @@ Prometheus handles that in `rate()` and `increase()`.
 
 The cache utilization, cache size and scheduled-request gauges describe the
 running pipeline. OVMS sets them to `0` when the pipeline stops, so an unloaded
-graph does not keep exporting its last values.
+graph does not keep exporting its last values. After a reload the previous
+pipeline can stay alive until its requests finish; only the newest pipeline of a
+graph node updates these gauges, so the previous one cannot overwrite or reset
+the values of its replacement.
 
 ## Set up the Development Environment
 

@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <map>
 #include <mutex>
@@ -32,6 +33,14 @@ template <typename MetricType>
 class MetricFamily;
 class MetricCounter;
 class MetricHistogram;
+
+/// Shared by all LLM metric reporters of one pipeline (same graph and node name).
+/// A reload can leave the previous pipeline alive until its requests finish, so the
+/// reporters use it to let only the newest one write the pipeline metrics.
+struct PipelineMetricsOwnership {
+    std::mutex mutex;
+    uint64_t newestReporterId = 0;
+};
 
 class MetricRegistry {
 public:
@@ -87,6 +96,10 @@ public:
 
     std::shared_ptr<MetricFamily<MetricCounter>> registerCustomCounterFamily(const std::string& name, const std::string& help);
 
+    /// Returns the ownership record of a pipeline, creating it on first use.
+    /// The registry keeps it for its whole lifetime, like the metric series.
+    PipelineMetricsOwnership& getPipelineMetricsOwnership(const std::string& graphName, const std::string& nodeName);
+
 private:
     void validateNoHistogramNameCollision(const std::string& name, bool isHistogram) const {
         constexpr const char* histogramSuffixes[] = {"_count", "_sum", "_bucket"};
@@ -127,6 +140,8 @@ private:
     prometheus::Registry registryImpl;
     std::mutex customFamiliesMutex;
     std::map<std::string, CustomFamilyRegistration> customFamilies;
+    std::mutex pipelineMetricsOwnershipsMutex;
+    std::map<std::pair<std::string, std::string>, PipelineMetricsOwnership> pipelineMetricsOwnerships;
 };
 
 }  // namespace ovms

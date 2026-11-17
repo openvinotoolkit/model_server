@@ -31,6 +31,11 @@ std::shared_ptr<MetricFamily<MetricCounter>> MetricRegistry::registerCustomCount
     return registerCustomFamily<MetricCounter>(name, help);
 }
 
+PipelineMetricsOwnership& MetricRegistry::getPipelineMetricsOwnership(const std::string& graphName, const std::string& nodeName) {
+    std::lock_guard<std::mutex> lock(pipelineMetricsOwnershipsMutex);
+    return pipelineMetricsOwnerships[{graphName, nodeName}];
+}
+
 std::string MetricRegistry::collect() const {
     prometheus::TextSerializer serializer;
     return serializer.Serialize(this->registryImpl.Collect());

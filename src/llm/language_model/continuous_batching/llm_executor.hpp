@@ -56,19 +56,28 @@ struct LLMExecutor {
         pipe->step();
     }
 
-    void publishPipelineMetrics(bool idle = false) {
+    void publishPipelineMetrics(bool idle, bool refreshCacheGauges) {
         constexpr size_t IDLE_SCHEDULED_REQUESTS = 0;
-        if (metricReporter && (metricReporter->isCacheUtilizationEnabled() || metricReporter->isCacheSizeEnabled() || metricReporter->isScheduledRequestsEnabled())) {
-            const ov::genai::PipelineMetrics& metrics = pipe->get_metrics();
-            if (metricReporter->isCacheUtilizationEnabled()) {
-                metricReporter->setCacheUtilization(metrics.cache_usage);
-            }
-            if (metricReporter->isCacheSizeEnabled()) {
-                metricReporter->setCacheSizeBytes(metrics.kv_cache_size_in_bytes);
-            }
-            if (metricReporter->isScheduledRequestsEnabled()) {
-                metricReporter->setScheduledRequests(idle ? IDLE_SCHEDULED_REQUESTS : metrics.scheduled_requests);
-            }
+        if (!metricReporter) {
+            return;
+        }
+
+        const bool updateCacheUtilization = refreshCacheGauges && metricReporter->isCacheUtilizationEnabled();
+        const bool updateCacheSize = refreshCacheGauges && metricReporter->isCacheSizeEnabled();
+        const bool updateScheduledRequests = metricReporter->isScheduledRequestsEnabled();
+        if (!updateCacheUtilization && !updateCacheSize && !updateScheduledRequests) {
+            return;
+        }
+
+        const ov::genai::PipelineMetrics& metrics = pipe->get_metrics();
+        if (updateCacheUtilization) {
+            metricReporter->setCacheUtilization(metrics.cache_usage);
+        }
+        if (updateCacheSize) {
+            metricReporter->setCacheSizeBytes(metrics.kv_cache_size_in_bytes);
+        }
+        if (updateScheduledRequests) {
+            metricReporter->setScheduledRequests(idle ? IDLE_SCHEDULED_REQUESTS : metrics.scheduled_requests);
         }
     }
 
@@ -139,13 +148,14 @@ class LLMExecutorWrapper {
             try {
                 if (llmExecutor->hasRequests()) {
                     llmExecutor->step();
+                    const bool refreshCacheGauges = stepCounter + 1 == metricsEveryNumberOfSteps;
+                    llmExecutor->publishPipelineMetrics(false, refreshCacheGauges);
                     if (++stepCounter == metricsEveryNumberOfSteps) {
-                        llmExecutor->publishPipelineMetrics();
                         llmExecutor->printMetrics();
                         stepCounter = 0;
                     }
                 } else {
-                    llmExecutor->publishPipelineMetrics(true);
+                    llmExecutor->publishPipelineMetrics(true, true);
                     SPDLOG_LOGGER_INFO(llm_executor_logger, "All requests: {}; Scheduled requests: {};", 0, 0);
                     llmExecutor->waitForRequests(receivedEndSignal);
                 }
@@ -168,6 +178,7 @@ public:
         llmExecutor.notify();
         llmExecutorThread.join();
         // Series outlive the pipeline, so its state gauges must not keep the last published values.
+        // The reporter ignores this reset if a replacement pipeline already owns the gauges.
         if (llmExecutor.metricReporter) {
             llmExecutor.metricReporter->resetCacheAndScheduledRequestsGauges();
         }

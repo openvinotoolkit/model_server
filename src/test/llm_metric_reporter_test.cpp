@@ -300,6 +300,25 @@ TEST_F(LLMMetricsTest, RetainedOldPipelineAndReplacementPublishToTheSameSeries) 
     EXPECT_THAT(scrape, HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"model\",node=\"llm\"} 3\n"));
 }
 
+TEST_F(LLMMetricsTest, SupersededReporterCannotWritePipelineMetrics) {
+    LLMMetricReporter oldReporter(&config, &registry, "model", "llm");
+    oldReporter.setCacheUtilization(10);
+    oldReporter.setCacheSizeBytes(1024);
+    oldReporter.setScheduledRequests(1);
+
+    LLMMetricReporter replacement(&config, &registry, "model", "llm");
+    replacement.setCacheUtilization(42);
+    replacement.setCacheSizeBytes(4096);
+    replacement.setScheduledRequests(3);
+    const std::string replacementScrape = registry.collect();
+
+    oldReporter.setCacheUtilization(20);
+    oldReporter.setCacheSizeBytes(2048);
+    oldReporter.setScheduledRequests(2);
+    oldReporter.resetCacheAndScheduledRequestsGauges();
+    EXPECT_EQ(registry.collect(), replacementScrape);
+}
+
 TEST_F(LLMMetricsTest, StoppedPipelineResetsGaugesAndKeepsCompletedRequestMetrics) {
     LLMMetricReporter reporter(&config, &registry, "model", "llm");
     reporter.setCacheUtilization(42);
