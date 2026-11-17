@@ -251,6 +251,7 @@ protected:
         TranscriptionTestServable servable;
         const auto properties = servable.getProperties();
         properties->chatTemplateStatus = ChatTemplateStatus::AVAILABLE;
+        properties->tokenizer = *sharedTokenizer;
         properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig::withResampling();
         properties->inputProcessorContext.tokenizer = *sharedTokenizer;
         properties->inputProcessorContext.templateProcessor = sharedPreparedRuntimeTemplate.get();
