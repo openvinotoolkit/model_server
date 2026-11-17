@@ -1517,6 +1517,33 @@ TEST(OvmsGraphConfigTest, positiveDefault) {
     ASSERT_EQ(graphSettings.toolParser.has_value(), false);
 }
 
+TEST(OvmsGraphConfigTest, ggufFilenameWithoutTaskDefaultsToTextGeneration) {
+    std::string modelName = "Qwen/Qwen2.5-0.5B-Instruct-GGUF";
+    std::string ggufFilename = "qwen2.5-0.5b-instruct-q4_k_m.gguf";
+    std::string downloadPath = "test/repository";
+    const char* n_argv[] = {
+        (char*)"ovms",
+        (char*)"--pull",
+        (char*)"--source_model",
+        (char*)modelName.c_str(),
+        (char*)"--gguf_filename",
+        (char*)ggufFilename.c_str(),
+        (char*)"--model_repository_path",
+        (char*)downloadPath.c_str(),
+    };
+
+    int arg_count = 8;
+    ConstructorEnabledConfig config;
+    config.parse(arg_count, n_argv);
+    auto& hfSettings = config.getServerSettings().hfSettings;
+    ASSERT_EQ(hfSettings.sourceModel, modelName);
+    ASSERT_EQ(hfSettings.ggufFilename.value(), ggufFilename);
+    ASSERT_EQ(hfSettings.downloadType, ovms::GGUF_DOWNLOAD);
+    ASSERT_EQ(config.getServerSettings().serverMode, ovms::HF_PULL_MODE);
+    ASSERT_EQ(hfSettings.task, ovms::TEXT_GENERATION_GRAPH);
+    ASSERT_TRUE(std::holds_alternative<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings));
+}
+
 TEST(OvmsGraphConfigTest, positiveDefaultStart) {
     std::string modelName = "OpenVINO/Phi-3-mini-FastDraft-50M-int8-ov";
     std::string downloadPath = "test/repository";
