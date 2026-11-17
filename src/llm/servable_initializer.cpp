@@ -503,7 +503,7 @@ std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath) {
     return maxModelLength;
 }
 
-Status determinePipelineTypeFromGGUF(const std::filesystem::path& ggufPath, const mediapipe::LLMCalculatorOptions& nodeOptions) {
+Status determinePipelineTypeFromGGUF(const std::filesystem::path& ggufPath, const mediapipe::LLMCalculatorOptions& nodeOptions, PipelineType& pipelineType) {
     try {
         std::string architecture = GgufMetadataReader(ggufPath).readArchitecture();
         SPDLOG_LOGGER_INFO(modelmanager_logger, "GGUF architecture: {} (metadata only)", architecture);
@@ -529,6 +529,8 @@ Status determinePipelineTypeFromGGUF(const std::filesystem::path& ggufPath, cons
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot inspect GGUF metadata at {}: {}", ggufPath.string(), error.what());
         return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
+    // currently, GGUF models are only for LM_CB
+    pipelineType = PipelineType::LM_CB;
 
     return StatusCode::OK;
 }
@@ -602,10 +604,10 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
 
     std::filesystem::path parsedModelsPathFs(parsedModelsPath);
 
-    const bool isGguf = parsedModelsPathFs.extension() == ".gguf";
-    status = isGguf ? determinePipelineTypeFromGGUF(parsedModelsPathFs, nodeOptions) : determinePipelineTypeFromIR(parsedModelsPathFs, nodeOptions, pipelineType);
+    const bool isGGUF = parsedModelsPathFs.extension() == ".gguf";
+    status = isGGUF ? determinePipelineTypeFromGGUF(parsedModelsPathFs, nodeOptions, pipelineType) : determinePipelineTypeFromIR(parsedModelsPathFs, nodeOptions, pipelineType);
     if (status == StatusCode::OK && detectedFormat != nullptr) {
-        *detectedFormat = isGguf ? ModelsFormat::GGUF : ModelsFormat::IR;
+        *detectedFormat = isGGUF ? ModelsFormat::GGUF : ModelsFormat::IR;
     }
     return status;
 }
