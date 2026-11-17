@@ -19,9 +19,10 @@ import re
 import sys
 from importlib import import_module
 
+import docker
+
 from tests.functional.config import is_nginx_mtls, ovms_c_repo_path
 from tests.functional.constants.os_type import OsType
-from tests.functional.constants.ovms import CurrentTarget
 from tests.functional.utils.assertions import OvmsTestException, SdlException
 
 # enable import from ovms-c repository (tests/sdl)
@@ -38,19 +39,26 @@ def get_base_os(context):
     return base_os
 
 
-def get_ovms_type(target_device, base_os):
+def is_gpu_image(ovms_image):
+    labels = docker.APIClient().inspect_image(ovms_image)["Config"]["Labels"] or {}
+    # label format: "CPU=1 GPU=1 NPU=1"
+    supported_devices = dict(
+        item.split("=", 1) for item in labels.get("supported-devices", "").split() if "=" in item
+    )
+    return supported_devices.get("GPU") == "1"
+
+
+def get_ovms_type(ovms_image, base_os):
     ovms_type = getattr(import_module("whitelists"), "OvmsType")
 
     if base_os == OsType.Windows:
         return ovms_type.WINDOWS
 
-    if CurrentTarget.is_gpu_based_target(target_device):
+    if is_gpu_image(ovms_image):
         if OsType.Ubuntu24 in base_os:
             return ovms_type.UBUNTU24_GPU
         if OsType.Ubuntu26 in base_os:
             return ovms_type.UBUNTU26_GPU
-        if OsType.Ubuntu22 in base_os:
-            return ovms_type.UBUNTU22_GPU
         if OsType.Redhat in base_os:
             return ovms_type.REDHAT_GPU
 
@@ -62,18 +70,14 @@ def get_ovms_type(target_device, base_os):
         if is_nginx_mtls:
             return ovms_type.UBUNTU26_NGINX
         return ovms_type.UBUNTU26
-    if OsType.Ubuntu22 in base_os:
-        if is_nginx_mtls:
-            return ovms_type.UBUNTU22_NGINX
-        return ovms_type.UBUNTU22
     if OsType.Redhat in base_os:
         return ovms_type.REDHAT
 
-    raise OvmsTestException(f"Cannot deduce image device={target_device}, base_os={base_os}")
+    raise OvmsTestException(f"Cannot deduce image type from {ovms_image} and base_os={base_os}")
 
 
 def get_whitelist(context, whitelist_name):
-    ovms_type = get_ovms_type(context.target_device, get_base_os(context))
+    ovms_type = get_ovms_type(context.ovms_image, get_base_os(context))
     whitelist_dict = getattr(import_module("whitelists"), whitelist_name)[ovms_type]
     whitelist = whitelist_dict["default"]
     if not whitelist:

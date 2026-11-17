@@ -32,7 +32,7 @@ def run_inference(parameters):
     base_url = f"http://{parameters.ip_address}:{parameters.port}/v1"
     client = OpenAI(
         base_url=base_url,
-        api_key=base_url
+        api_key=parameters.api_key,
     )
 
     model = parameters.model

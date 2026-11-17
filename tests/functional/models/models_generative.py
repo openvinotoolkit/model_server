@@ -258,6 +258,8 @@ def get_known_classes():
 
 
 def create_dynamic_classes_from_env(models_list, known_classes=None):
+    if not models_list:
+        return []
     known_classes = get_known_classes() if known_classes is None else known_classes
     classes = []
     for model_definition in models_list:

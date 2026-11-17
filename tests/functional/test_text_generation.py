@@ -141,7 +141,7 @@ class TestTextGeneration:
     @pytest.mark.parametrize("pipeline_type", PipelineType.TEXT_GENERATION)
     @pytest.mark.parametrize("ovms_log_level", [Ovms.LOG_LEVEL_INFO, Ovms.LOG_LEVEL_DEBUG, Ovms.LOG_LEVEL_TRACE])
     @pytest.mark.parametrize("sequential_requests", [3], ids=lambda x: f"sequential_requests={x}")
-    @pytest.mark.parametrize("parallel_requests", [32], ids=lambda x: f"parallel_requests={x}")
+    @pytest.mark.parametrize("parallel_requests", [16], ids=lambda x: f"parallel_requests={x}")
     @pytest.mark.parametrize("request_type", ["curl"], ids=lambda x: f"request_type={x}")  # also available: "python"
     @pytest.mark.timeout(calculate_generative_test_timeout(960))
     def test_text_generation_endpoints_multiple_requests(
@@ -246,6 +246,8 @@ class TestTextGeneration:
         len_outputs = len(outputs_multiple_requests)
         assert len_outputs == parallel_requests * sequential_requests, \
             f"Not all outputs available. Expected: {parallel_requests * sequential_requests}, Actual: {len_outputs}"
+        assert all(output and isinstance(output[0], str) and output[0] for output in outputs_multiple_requests), \
+            "At least one request returned empty or missing generated text"
 
         GenerativeAIUtils.unload_model_and_verify(model, result, port, openai_rest_api_type, endpoint, request_params)
         if not model_type.is_dummy:

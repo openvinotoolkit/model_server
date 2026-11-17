@@ -379,7 +379,7 @@ ssl_validation = get_bool("TT_SSL_VALIDATION", False)
 logged_response_body_length = os.environ.get("TT_LOGGED_RESPONSE_BODY_LENGTH", 1024)
 
 """ TT_C_API_WRAPPER_DIR - Cython wrapper files for C_API """
-c_api_wrapper_dir = get_path("TT_C_API_WRAPPER_DIR", os.path.join("~", "ovms_c_api_wrapper_dir"))
+c_api_wrapper_dir = get_path("TT_C_API_WRAPPER_DIR", os.path.join(ovms_c_repo_path, "ovms_c_api_wrapper_dir"))
 
 """ TT_OVMS_FILE_LOCKS_DIR """
 ovms_file_locks_dir = get_path("TT_OVMS_FILE_LOCKS_DIR", os.path.join("~", "ovms_locks"))
