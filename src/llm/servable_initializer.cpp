@@ -59,6 +59,7 @@
 #include "visual_language_model/legacy/servable_initializer.hpp"
 #include "omni_model/legacy/servable_initializer.hpp"
 #include "omni_model/legacy/servable.hpp"
+#include "gguf_utils/gguf_metadata_reader.hpp"
 
 namespace ovms {
 
@@ -500,109 +501,6 @@ std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath) {
     }
     return maxModelLength;
 }
-
-namespace {
-class GgufMetadataReader {
-    std::ifstream file;
-    uint64_t remaining;
-
-public:
-    explicit GgufMetadataReader(const std::string& path) :
-        file(path, std::ios::binary),
-        remaining(std::min<uint64_t>(std::filesystem::file_size(path), 64 * 1024 * 1024)) {
-        if (!file.is_open())
-            throw std::runtime_error("Cannot open GGUF metadata");
-    }
-
-    void skip(uint64_t bytes) {
-        if (bytes > remaining)
-            throw std::runtime_error("Truncated or oversized GGUF metadata");
-        file.seekg(static_cast<std::streamoff>(bytes), std::ios::cur);
-        if (!file)
-            throw std::runtime_error("Cannot seek GGUF metadata");
-        remaining -= bytes;
-    }
-
-    uint64_t readInteger(size_t bytes) {
-        if (bytes > remaining)
-            throw std::runtime_error("Truncated or oversized GGUF metadata");
-        uint64_t value = 0;
-        for (size_t index = 0; index < bytes; ++index) {
-            int byte = file.get();
-            if (byte == std::char_traits<char>::eof())
-                throw std::runtime_error("Truncated GGUF metadata");
-            value |= static_cast<uint64_t>(byte) << (8 * index);
-        }
-        remaining -= bytes;
-        return value;
-    }
-
-    std::string readString() {
-        uint64_t length = readInteger(8);
-        if (length > remaining || length > 1024 * 1024)
-            throw std::runtime_error("Truncated or oversized GGUF metadata string");
-        std::string value(static_cast<size_t>(length), '\0');
-        file.read(value.data(), static_cast<std::streamsize>(length));
-        if (!file)
-            throw std::runtime_error("Truncated GGUF metadata string");
-        remaining -= length;
-        return value;
-    }
-
-    void skipValue(uint64_t type) {
-        static constexpr uint64_t widths[] = {1, 1, 2, 2, 4, 4, 4, 1, 0, 0, 8, 8, 8};
-        if (type >= std::size(widths))
-            throw std::runtime_error("Invalid GGUF metadata type");
-        if (type == 8) {
-            skip(readInteger(8));
-        } else if (type == 9) {
-            uint64_t elementType = readInteger(4);
-            uint64_t count = readInteger(8);
-            if (elementType >= std::size(widths) || elementType == 9)
-                throw std::runtime_error("Invalid GGUF metadata array type");
-            if (elementType == 8) {
-                if (count > remaining / 8)
-                    throw std::runtime_error("Oversized GGUF metadata array");
-                for (uint64_t index = 0; index < count; ++index)
-                    skip(readInteger(8));
-            } else {
-                if (count > remaining / widths[elementType])
-                    throw std::runtime_error("Oversized GGUF metadata array");
-                skip(count * widths[elementType]);
-            }
-        } else {
-            skip(widths[type]);
-        }
-    }
-
-    std::string readArchitecture() {
-        if (readInteger(4) != 0x46554747)
-            throw std::runtime_error("Invalid GGUF magic");
-        uint64_t version = readInteger(4);
-        if (version != 2 && version != 3)
-            throw std::runtime_error("Unsupported GGUF metadata version");
-        uint64_t tensorCount = readInteger(8);
-        uint64_t metadataCount = readInteger(8);
-        if (tensorCount == 0 || metadataCount > remaining / 12)
-            throw std::runtime_error("Invalid GGUF metadata header");
-        std::string architecture;
-        for (uint64_t index = 0; index < metadataCount; ++index) {
-            std::string key = readString();
-            uint64_t type = readInteger(4);
-            if (key == "general.architecture") {
-                if (type != 8 || !architecture.empty())
-                    throw std::runtime_error("Invalid GGUF architecture metadata");
-                architecture = readString();
-            } else {
-                skipValue(type);
-            }
-        }
-        if (architecture.empty())
-            throw std::runtime_error("Missing GGUF architecture metadata");
-        return architecture;
-    }
-};
-}  // namespace
 
 Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath) {
     // Assuming that models_path is always set
