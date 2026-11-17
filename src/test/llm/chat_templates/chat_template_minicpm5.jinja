@@ -1,31 +1,9 @@
-{{- bos_token }}
-{%- macro render_tool(tool_call) -%}
-    {{- '<function name="' ~ tool_call.name ~ '">' }}
-    {%- if tool_call.arguments %}
-        {%- set args = tool_call.arguments %}
-        {% if args is string %}
-            {{- args }}
-        {% else %}
-            {%- for param_name, param_value in args.items() %}
-                {{- '<param name="' ~ param_name ~ '">' }}
-                {%- if param_value is string and ('<' in param_value or '&' in param_value or '\n' in param_value) %}
-                    {{- '<![CDATA[' + param_value + ']]>' }}
-                {%- else %}
-                    {{- param_value }}
-                {%- endif %}
-                {{- '</param>' }}
-            {%- endfor %}
-        {% endif %}
-    {%- endif %}
-    {{- '</function>' }}
-{%- endmacro %}
-
-{%- if tools %}
+{{- bos_token }}{%- if tools %}
     {%- set tool_definitions %}
         {{- "# Tools\n\nYou are provided with function signatures within <tools></tools> XML tags:\n<tools>" }}
         {%- for tool in tools %}
             {{- "\n" }}
-            {{- tool | tojson }}
+            {{- tool | tojson(ensure_ascii=False) }}
         {%- endfor %}
         {{- '\n</tools>\n\nTool usage guidelines:\n- You may call zero or more functions. If no function calls are needed, just answer normally and do not include any <function ... </function>.\n- When calling a function, return an XML object within <function ... </function> using:\n<function name="function-name"><param name="param-name">param-value</param></function>\n- param-value may be multi-line. If it contains <, & or newline characters, wrap it in a CDATA block: <param name="param-name"><![CDATA[...multi-line value...]]></param>' }}
     {%- endset %}
@@ -87,7 +65,22 @@
                     {%- if tool_call.function %}
                         {%- set tool_call = tool_call.function %}
                     {%- endif %}
-                    {%- set single_tool_xml %}{{- render_tool(tool_call) }}{%- endset %}
+                    {%- set single_tool_xml %}
+                        {{- '<function name="' ~ tool_call.name ~ '">' }}
+                        {%- if tool_call.arguments %}
+                            {%- set args_dict = tool_call.arguments %}
+                            {%- for param_name, param_value in args_dict.items() %}
+                                {{- '<param name="' ~ param_name ~ '">' }}
+                                {%- if param_value is string and ('<' in param_value or '&' in param_value or '\n' in param_value) %}
+                                    {{- '<![CDATA[' + param_value + ']]>' }}
+                                {%- else %}
+                                    {{- param_value }}
+                                {%- endif %}
+                                {{- '</param>' }}
+                            {%- endfor %}
+                        {%- endif %}
+                        {{- '</function>' }}
+                    {%- endset %}
                     {%- set processed_content = processed_content + single_tool_xml + content_parts[i] %}
                 {%- else %}
                     {%- set processed_content = processed_content + content_parts[i] %}
@@ -100,7 +93,22 @@
                     {%- if tool_call.function %}
                         {%- set tool_call = tool_call.function %}
                     {%- endif %}
-                    {%- set remaining_tool_xml %}{{- render_tool(tool_call) }}{%- endset %}
+                    {%- set remaining_tool_xml %}
+                        {{- '<function name="' ~ tool_call.name ~ '">' }}
+                        {%- if tool_call.arguments %}
+                            {%- set args_dict = tool_call.arguments %}
+                            {%- for param_name, param_value in args_dict.items() %}
+                                {{- '<param name="' ~ param_name ~ '">' }}
+                                {%- if param_value is string and ('<' in param_value or '&' in param_value or '\n' in param_value) %}
+                                    {{- '<![CDATA[' + param_value + ']]>' }}
+                                {%- else %}
+                                    {{- param_value }}
+                                {%- endif %}
+                                {{- '</param>' }}
+                            {%- endfor %}
+                        {%- endif %}
+                        {{- '</function>' }}
+                    {%- endset %}
                     {%- set processed_content = processed_content + remaining_tool_xml %}
                 {%- endfor %}
             {%- endif %}
@@ -126,7 +134,20 @@
                 {%- if tool_call.function %}
                     {%- set tool_call = tool_call.function %}
                 {%- endif %}
-                {{- render_tool(tool_call) }}
+                {{- '<function name="' ~ tool_call.name ~ '">' }}
+                {%- if tool_call.arguments %}
+                    {%- set args_dict = tool_call.arguments %}
+                    {%- for param_name, param_value in args_dict.items() %}
+                        {{- '<param name="' ~ param_name ~ '">' }}
+                        {%- if param_value is string and ('<' in param_value or '&' in param_value or '\n' in param_value) %}
+                            {{- '<![CDATA[' + param_value + ']]>' }}
+                        {%- else %}
+                            {{- param_value }}
+                        {%- endif %}
+                        {{- '</param>' }}
+                    {%- endfor %}
+                {%- endif %}
+                {{- '</function>' }}
             {%- endfor %}
         {%- endif %}
         {{- '<|im_end|>\n' }}
@@ -138,7 +159,7 @@
         {%- if message.content is string %}
             {{- content }}
         {%- else %}
-            {{- message.content | tojson }}
+            {{- message.content | tojson(ensure_ascii=False) }}
         {%- endif %}
         {{- '\n</tool_response>' }}
         {%- if loop.last or (messages[loop.index0 + 1].role != "tool") %}
