@@ -32,6 +32,7 @@ import argparse
 import aiohttp
 import base64
 import io
+from itertools import islice
 import mimetypes
 import secrets
 from pathlib import Path
@@ -250,6 +251,11 @@ def prepare_documents():
         for index in range(args['limit']):
             docs = docs.add_item({'text': dummy_text})
         return docs
+    if args['backend'] == 'text2speech':
+        dataset = load_dataset(args['dataset'], args['subset'], trust_remote_code=args['trust_remote_code'],
+                               split=args['split'], streaming=True)
+        texts = [row['text'] for row in islice(dataset.select_columns(['text']), args['limit'])]
+        return Dataset.from_dict({'text': texts})
     split = f"{args['split']}[:{args['limit']}]"
     if args['subset'] is None:
         return load_dataset(args['dataset'], trust_remote_code=args['trust_remote_code'], split=split)

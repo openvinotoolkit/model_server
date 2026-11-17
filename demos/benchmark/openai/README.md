@@ -307,7 +307,8 @@ the model's `voices/` directory. The script decodes the returned WAV to report m
 and median RTFx (`generated audio seconds / request latency`), plus success rate
 and request latency. RTFx above 1 means faster-than-real-time generation.
 For a real text corpus, for example AMI's individual head microphone transcripts,
-run:
+the benchmark streams up to `--limit` text records before timing, without preparing
+the entire dataset. Actual download size depends on the dataset format and host. Run:
 
 ```bash
 python benchmark.py text2speech --url http://localhost:8000 --dataset edinburghcstr/ami --hf-subset ihm --batch_size 1 --limit 10 --max_concurrency 2 --request_rate inf --voice af_alloy

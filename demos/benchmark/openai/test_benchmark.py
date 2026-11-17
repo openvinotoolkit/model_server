@@ -27,7 +27,7 @@ import unittest
 from unittest.mock import patch
 
 from aiohttp import web
-from datasets import Audio, Features, Value
+from datasets import Audio, Features, IterableDataset, Value
 
 import benchmark
 
@@ -41,6 +41,31 @@ class WordTokenizer:
 
 
 class DatasetInputTests(unittest.IsolatedAsyncioTestCase):
+    async def test_text_to_speech_streams_only_requested_text(self):
+        def examples():
+            for index in range(2):
+                yield {'text': f'text {index}', 'audio': 'unused'}
+            raise AssertionError('read beyond requested limit')
+
+        dataset = IterableDataset.from_generator(
+            examples, features=Features({'text': Value('string'), 'audio': Value('string')}))
+        with patch.object(benchmark, 'load_dataset', return_value=dataset) as load_dataset:
+            benchmark.args = {'backend': 'text2speech', 'dataset': 'example', 'subset': 'ihm',
+                              'split': 'train', 'limit': 2, 'trust_remote_code': False}
+            docs = benchmark.prepare_documents()
+        load_dataset.assert_called_once_with('example', 'ihm', trust_remote_code=False, split='train', streaming=True)
+        self.assertEqual(list(docs['text']), ['text 0', 'text 1'])
+
+    async def test_text_to_speech_stream_handles_short_dataset(self):
+        dataset = benchmark.Dataset.from_dict({'text': ['only one']}).to_iterable_dataset()
+        with patch.object(benchmark, 'load_dataset', return_value=dataset) as load_dataset:
+            benchmark.args = {'backend': 'text2speech', 'dataset': 'example', 'subset': None,
+                              'split': 'validation', 'limit': 5, 'trust_remote_code': False}
+            docs = benchmark.prepare_documents()
+        load_dataset.assert_called_once_with('example', None, trust_remote_code=False,
+                                             split='validation', streaming=True)
+        self.assertEqual(list(docs['text']), ['only one'])
+
     async def test_text_to_speech_does_not_decode_unused_audio(self):
         with patch.object(Audio, 'encode_example', side_effect=lambda value: value):
             docs = benchmark.Dataset.from_dict(
