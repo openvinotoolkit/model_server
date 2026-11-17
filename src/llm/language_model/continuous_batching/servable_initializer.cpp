@@ -45,6 +45,7 @@
 #include "servable.hpp"
 #include "servable_initializer.hpp"
 #include "../../servable_initializer.hpp"
+#include "../../gguf_utils/gguf_metadata_reader.hpp"
 
 namespace ovms {
 
@@ -255,7 +256,7 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     }
 
     applyGlobalCacheDir(properties);
-    applyDefaultGgufReader(properties, parsedModelsPath);
+    applyDefaultGGUFReader(properties);
 
     if (properties->device == "CPU") {
         status = applyDefaultCpuProperties(properties->pluginConfig);

@@ -4956,7 +4956,9 @@ TEST_F(GgufPipelineSelectionTest, TextAutoAndExplicitSelection) {
     mediapipe::LLMCalculatorOptions options;
     options.set_models_path(writeMetadata("qwen35"));
     PipelineType pipelineType{PipelineType::LM};
-    EXPECT_EQ(determinePipelineType(pipelineType, options, ""), StatusCode::OK);
+    ModelsFormat modelsFormat{ModelsFormat::NONE};
+    EXPECT_EQ(determinePipelineType(pipelineType, options, "", &modelsFormat), StatusCode::OK);
+    EXPECT_EQ(modelsFormat, ModelsFormat::GGUF);
     EXPECT_EQ(pipelineType, PipelineType::LM_CB);
     options.set_device("NPU");
     EXPECT_EQ(determinePipelineType(pipelineType, options, ""), StatusCode::OK);
