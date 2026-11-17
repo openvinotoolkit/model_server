@@ -178,7 +178,7 @@ class TestTextGeneration:
         4. Trigger large number of requests
         5. Check similarity (non-dummy models)
         """
-        skip_if_runtime(model_type==mg.Gemma34bItInt4CwOvHf, "VLM dummy model not yet enabled")
+        skip_if_runtime(model_type==mg.Gemma34bItInt4CwOvHf, "VLM dummy model not yet enabled for NPU")
 
         model, result, port, request_params = GenerativeAIUtils.prepare_resources(
             context,
