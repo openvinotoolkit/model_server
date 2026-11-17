@@ -21,6 +21,7 @@
 #include <utility>
 
 #include "../logging.hpp"
+#include "src/stringutils.hpp"
 #include "metric.hpp"
 #include "metric_family.hpp"
 #include "metric_registry.hpp"
@@ -43,14 +44,7 @@ bool hasValidCustomMetricName(const std::string& name) {
         name.compare(0, CUSTOM_METRIC_PREFIX.size(), CUSTOM_METRIC_PREFIX) != 0) {
         return false;
     }
-    for (char c : name) {
-        const bool isAllowed = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-                               (c >= '0' && c <= '9') || c == '_';
-        if (!isAllowed) {
-            return false;
-        }
-    }
-    return true;
+    return isAlphanumericOrUnderscore(name);
 }
 
 bool hasValidCustomCounterName(const std::string& name) {
