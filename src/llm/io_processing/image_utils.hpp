@@ -46,6 +46,10 @@ struct ImageDownloadContext {
 
 absl::Status validateHttpImageDownloadResponse(int64_t httpCode, bool redirectsAllowed);
 
+// Seconds a single media download from a URL may take in total. 120 by default;
+// the OVMS_MEDIA_URL_TIMEOUT_SECONDS environment variable overrides it with a positive integer.
+uint32_t getMediaDownloadTimeoutSeconds();
+
 absl::StatusOr<ov::Tensor> fetchAndDecodeImage(const std::string& imageSource,
     const std::optional<std::string>& allowedLocalMediaPath,
     const std::optional<std::vector<std::string>>& allowedMediaDomains,
