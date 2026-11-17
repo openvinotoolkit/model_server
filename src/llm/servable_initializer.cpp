@@ -165,9 +165,9 @@ static Status configureInputProcessingCapabilities(const std::shared_ptr<GenAiSe
     }
     const std::filesystem::path modelsPath(properties->modelsPath);
     if (!properties->inputProcessorContext.config.audioInputConfig.has_value() &&
-            (std::filesystem::exists(modelsPath / "openvino_audio_embeddings_model.xml") ||
-                std::filesystem::exists(modelsPath / "openvino_audio_encoder_model.xml"))) {
-            properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig::withResampling();
+        (std::filesystem::exists(modelsPath / "openvino_audio_embeddings_model.xml") ||
+            std::filesystem::exists(modelsPath / "openvino_audio_encoder_model.xml"))) {
+        properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig::withResampling();
     }
     return StatusCode::OK;
 }

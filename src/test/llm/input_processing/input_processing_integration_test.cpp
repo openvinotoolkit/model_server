@@ -251,7 +251,7 @@ protected:
         TranscriptionTestServable servable;
         const auto properties = servable.getProperties();
         properties->chatTemplateStatus = ChatTemplateStatus::AVAILABLE;
-            properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig::withResampling();
+        properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig::withResampling();
         properties->inputProcessorContext.tokenizer = *sharedTokenizer;
         properties->inputProcessorContext.templateProcessor = sharedPreparedRuntimeTemplate.get();
 
@@ -620,9 +620,9 @@ TEST_P(InputProcessingIntegrationTest, MultipartTranscription_DecodesAudioAndUse
 
     const auto& chatHistory = std::get<ov::genai::ChatHistory>(result.req.input);
     ASSERT_EQ(chatHistory.size(), 1u);
-        EXPECT_EQ(chatHistory[0]["content"][0]["type"].as_string().value_or(""), "text");
-        EXPECT_EQ(chatHistory[0]["content"][0]["text"].as_string().value_or(""), "<ov_genai_audio_0>");
-        EXPECT_NE(result.req.promptText.find("<ov_genai_audio_0>"), std::string::npos);
+    EXPECT_EQ(chatHistory[0]["content"][0]["type"].as_string().value_or(""), "text");
+    EXPECT_EQ(chatHistory[0]["content"][0]["text"].as_string().value_or(""), "<ov_genai_audio_0>");
+    EXPECT_NE(result.req.promptText.find("<ov_genai_audio_0>"), std::string::npos);
 }
 
 TEST_P(InputProcessingIntegrationTest, MultipartTranscription_UsesPromptAsSystemMessage) {

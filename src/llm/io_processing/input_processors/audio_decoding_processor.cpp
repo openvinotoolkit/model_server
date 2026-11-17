@@ -113,8 +113,8 @@ absl::Status AudioDecodingProcessor::process(InputRequest& req) {
                             pcm.size(), format);
                     }
                     appendAudioTensor(req, pcm);
-                        const std::string tag = "<ov_genai_audio_" + std::to_string(req.inputAudios.size() - 1) + ">";
-                        content[j] = ov::genai::JsonContainer({{"type", "text"}, {"text", tag}});
+                    const std::string tag = "<ov_genai_audio_" + std::to_string(req.inputAudios.size() - 1) + ">";
+                    content[j] = ov::genai::JsonContainer({{"type", "text"}, {"text", tag}});
                 } catch (const std::exception& e) {
                     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Audio decoding failed: {}", e.what());
                     return absl::InvalidArgumentError(std::string("Audio decoding failed: ") + e.what());

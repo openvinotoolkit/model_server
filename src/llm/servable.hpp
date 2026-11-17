@@ -265,7 +265,7 @@ public:
 
     // Override to reject endpoints not supported by this servable.
     // Called after endpoint is determined. Return non-OK to reject.
-        virtual absl::Status validateEndpoint(Endpoint) const {
+    virtual absl::Status validateEndpoint(Endpoint) const {
         return absl::OkStatus();
     }
 

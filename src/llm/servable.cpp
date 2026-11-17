@@ -125,15 +125,15 @@ absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionCo
     if (!endpointStatus.ok()) {
         return endpointStatus;
     }
-        if (executionContext->endpoint == Endpoint::TRANSCRIPTIONS) {
-            auto status = OpenAITranscriptionsHandler::normalizeMultipartRequest(normalizedPayload);
-            if (!status.ok()) {
-                return status;
-            }
+    if (executionContext->endpoint == Endpoint::TRANSCRIPTIONS) {
+        auto status = OpenAITranscriptionsHandler::normalizeMultipartRequest(normalizedPayload);
+        if (!status.ok()) {
+            return status;
         }
-        if (!normalizedPayload.parsedJson || normalizedPayload.parsedJson->HasParseError()) {
-            return absl::InvalidArgumentError("Non-json request received in text generation calculator");
-        }
+    }
+    if (!normalizedPayload.parsedJson || normalizedPayload.parsedJson->HasParseError()) {
+        return absl::InvalidArgumentError("Non-json request received in text generation calculator");
+    }
     executionContext->payload = std::move(normalizedPayload);
     return absl::OkStatus();
 }

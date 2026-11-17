@@ -1509,7 +1509,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseTranscription) {
     apiHandler->setCompletionTokensUsage(6);
     const auto& chatHistory = apiHandler->getChatHistory();
     ASSERT_EQ(chatHistory.size(), 1u);
-        EXPECT_EQ(chatHistory[0]["content"][0]["text"].as_string().value_or(""), "<ov_genai_audio_0>");
+    EXPECT_EQ(chatHistory[0]["content"][0]["text"].as_string().value_or(""), "<ov_genai_audio_0>");
 
     std::vector<ovms::Delta> deltas;
     deltas.push_back(makeContentDelta("Transcribed speech."));

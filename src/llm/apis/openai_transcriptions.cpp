@@ -186,7 +186,7 @@ absl::Status OpenAITranscriptionsHandler::parseRequestImpl(std::optional<uint32_
     }
     request.chatHistory.push_back({
         {"role", "user"},
-           {"content", ov::genai::JsonContainer::from_json_string(R"([{"type":"text","text":"<ov_genai_audio_0>"}])")},
+        {"content", ov::genai::JsonContainer::from_json_string(R"([{"type":"text","text":"<ov_genai_audio_0>"}])")},
     });
     return absl::OkStatus();
 }
