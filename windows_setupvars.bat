@@ -94,7 +94,7 @@ if exist "%LOCAL_TOOLS_DIR%\git" del /f /q "%LOCAL_TOOLS_DIR%\git"
 set "CURL_PATH_WINDOWS=C:\opt\curl-!curl_version!-win64-mingw\bin"
 set "CURL_PATH=/c/opt/curl-!curl_version!-win64-mingw/bin"
 set "CURL_BIN=%CURL_PATH%/curl.exe"
-set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;!CURL_PATH_WINDOWS!;%ROOT%\.venv-style\Scripts;%LOCAL_TOOLS_DIR%;%PATH%;"
+set "setPath=%ROOT%\bazel-out\x64_windows-opt\bin\src\python;%ROOT%\bazel-bin\src\python;C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;!CURL_PATH_WINDOWS!;%ROOT%\.venv-style\Scripts;%LOCAL_TOOLS_DIR%;%PATH%;"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 :: Bazel normally exports TEST_SRCDIR/TEST_WORKSPACE when a test binary is launched under Bazel.
 :: For direct Windows invocation, seed them only if they are not already present.

@@ -22,9 +22,7 @@
 #include <utility>
 #include <vector>
 
-#ifdef __linux__
-#include <dlfcn.h>
-#elif _WIN32
+#ifdef _WIN32
 #include <windows.h>
 #endif
 
@@ -122,11 +120,7 @@ struct MediapipeRuntimeApi::ApiSymbols {
     ConfigureLoggingFn configureLogging = nullptr;
 };
 
-#ifdef __linux__
-static void* resolveSymbol(void* handle, const char* name) {
-    return dlsym(handle, name);
-}
-#elif _WIN32
+#ifdef _WIN32
 static void* resolveSymbol(HMODULE handle, const char* name) {
     return reinterpret_cast<void*>(GetProcAddress(handle, name));
 }
@@ -135,14 +129,34 @@ static void* resolveSymbol(HMODULE handle, const char* name) {
 MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
     api(std::make_unique<ApiSymbols>()) {
 #ifdef __linux__
-    void* currentModule = RTLD_DEFAULT;
+    api->create = OVMS_MPFactoryCreate;
+    api->destroy = OVMS_MPFactoryDestroy;
+    api->lastError = OVMS_MPFactoryGetLastError;
+    api->processConfig = OVMS_MPFactoryProcessConfig;
+    api->createExecutor = OVMS_MPFactoryCreateExecutor;
+    api->createExecutorHandle = OVMS_MPFactoryCreateExecutorHandle;
+    api->definitionExists = OVMS_MPFactoryDefinitionExists;
+    api->wakeUpDefinition = OVMS_MPFactoryWakeUpDefinition;
+    api->putToSleepDefinition = OVMS_MPFactoryPutToSleepDefinition;
+    api->retireDefinition = OVMS_MPFactoryRetireDefinition;
+    api->isDefinitionRetired = OVMS_MPFactoryIsDefinitionRetired;
+    api->isDefinitionAvailable = OVMS_MPFactoryIsDefinitionAvailable;
+    api->shouldUnloadDefinitionDueToIdle = OVMS_MPFactoryShouldUnloadDefinitionDueToIdle;
+    api->hasActiveInference = OVMS_MPFactoryHasActiveInference;
+    api->getDefinitionGroupName = OVMS_MPFactoryGetDefinitionGroupName;
+    api->aliasesConflictExcluding = OVMS_MPFactoryAliasesConflictExcluding;
+    api->getNames = OVMS_MPFactoryGetNames;
+    api->findServableDefinition = OVMS_MPFactoryFindServableDefinitionByName;
+    api->createServableConfig = OVMS_MPGraphExportCreateServableConfig;
+    api->createServableConfigInMemory = OVMS_MPGraphExportCreateServableConfigInMemory;
+    api->setExternalServerHandle = OVMS_MPSetExternalServerHandle;
+    api->configureLogging = OVMS_MPFactoryConfigureLogging;
 #elif _WIN32
     HMODULE currentModule = GetModuleHandleA(nullptr);
     if (currentModule == nullptr) {
         SPDLOG_ERROR("In-process MediaPipe runtime symbols are unavailable");
         return;
     }
-#endif
 
     api->create = reinterpret_cast<ApiSymbols::CreateFn>(resolveSymbol(currentModule, "OVMS_MPFactoryCreate"));
     api->destroy = reinterpret_cast<ApiSymbols::DestroyFn>(resolveSymbol(currentModule, "OVMS_MPFactoryDestroy"));
@@ -166,6 +180,7 @@ MediapipeRuntimeApi::MediapipeRuntimeApi(PythonBackend* pythonBackend) :
     api->createServableConfigInMemory = reinterpret_cast<ApiSymbols::CreateServableConfigInMemoryFn>(resolveSymbol(currentModule, "OVMS_MPGraphExportCreateServableConfigInMemory"));
     api->setExternalServerHandle = reinterpret_cast<ApiSymbols::SetExternalServerHandleFn>(resolveSymbol(currentModule, "OVMS_MPSetExternalServerHandle"));
     api->configureLogging = reinterpret_cast<ApiSymbols::ConfigureLoggingFn>(resolveSymbol(currentModule, "OVMS_MPFactoryConfigureLogging"));
+#endif
 
     if (api->create == nullptr || api->destroy == nullptr || api->lastError == nullptr || api->processConfig == nullptr ||
         api->createExecutor == nullptr || api->createExecutorHandle == nullptr || api->definitionExists == nullptr ||
