@@ -1084,10 +1084,11 @@ ovms_cc_library(
 )
 ovms_cc_library(
     name = "tensor_conversion",
-    hdrs = ["tensor_conversion.hpp", "tensor_conversion_common.hpp"],
+    hdrs = ["tensor_conversion.hpp"],
     srcs = ["tensor_conversion.cpp",],
     deps = [
         "//third_party:openvino",
+        "tensor_conversion_common",
         "libovmsprecision",
         "libovmslogging",
         "libovmsstatus",
@@ -1111,9 +1112,9 @@ ovms_cc_library(
 )
 ovms_cc_library(
     name = "tensor_conversion_common",
+    hdrs = ["tensor_conversion_common.hpp"],
     srcs = ["tensor_conversion_common.cpp",],
     deps = [
-        "tensor_conversion",
         "//third_party:openvino",
         "libovmsprecision",
         "libovmslogging",
@@ -2230,12 +2231,13 @@ cc_test(
         "test/summator/1/summator.bin",
         "test/scalar/1/saved_model.xml",
         "test/scalar/1/saved_model.bin",
+        ":ovms_optional_plugins",
     ] + glob(["test/models_config_json/**"]) + select({
         "//:not_disable_mediapipe": [
             "//src/lib:ovms_llm_calculators",
         ],
         "//:disable_mediapipe": [],
-    }) + [":ovms_optional_plugins"] + select({
+    }) + select({
         "//src:windows": [
             "//src/python:copy_libovmspython",
             "//src/python:libpython_calculators",

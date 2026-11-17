@@ -17,11 +17,18 @@
 load("//:common_settings.bzl", "ovms_cc_library")
 
 ovms_cc_library(
+    name = "opencv_decoder_api",
+    hdrs = ["opencv_decoder_api.hpp"],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "kserve_image_conversion",
     hdrs = ["kserve_image_conversion.hpp"],
-    srcs = ["kserve_image_conversion.cpp", "opencv_decoder_api.hpp"],
+    srcs = ["kserve_image_conversion.cpp"],
     deps = [
         ":image_conversion",
+        ":opencv_decoder_api",
         "@stb//:image",
         "//third_party:openvino",
         "//src:libovmslogging",
@@ -32,8 +39,9 @@ ovms_cc_library(
 
 cc_binary(
     name = "libovms_opencv_image_decoder.so",
-    srcs = ["opencv_decoder.cpp", "opencv_decoder_api.hpp"],
+    srcs = ["opencv_decoder.cpp"],
     deps = [
+        ":opencv_decoder_api",
         "//third_party:openvino",
         "//third_party:opencv",
     ],
@@ -43,8 +51,9 @@ cc_binary(
 
 cc_binary(
     name = "ovms_opencv_image_decoder.dll",
-    srcs = ["opencv_decoder.cpp", "opencv_decoder_api.hpp"],
+    srcs = ["opencv_decoder.cpp"],
     deps = [
+        ":opencv_decoder_api",
         "//third_party:openvino",
         "//third_party:opencv",
     ],
