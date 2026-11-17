@@ -105,7 +105,7 @@ in the VLM guide. OVMS provides the model tokenizer through
 `/v1/tokenize`, so no Hugging Face tokenizer identifier is required:
 
 ```bash
-python benchmark.py ovms-vlm --url "http://localhost:8000" --input_length 128 --output_lenght 64 --max_concurrency 2 --limit 10 --image image.jpeg --turns 3 --turn_lenght 32
+python benchmark.py ovms-vlm --url http://localhost:8000 --input_length 128 --output_length 64 --max_concurrency 2 --limit 10 --image image.jpeg --turns 3 --turn_length 32
 ```
 
 `--image` accepts a local
@@ -134,7 +134,7 @@ echo Describe the image in one sentence. > prompt.txt
 ```
 
 ```console
-python benchmark.py ovms-vlm --url "http://localhost:8000" --text_input_file prompt.txt --input_length 128 --output_lenght 64 --max_concurrency 2 --limit 10 --image image.jpeg --turns 3 --turn_lenght 32
+python benchmark.py ovms-vlm --url http://localhost:8000 --text_input_file prompt.txt --input_length 128 --output_length 64 --max_concurrency 2 --limit 10 --image image.jpeg --turns 3 --turn_length 32
 ```
 
 `--text_input_file` supplies the first user message for every conversation. The
@@ -145,12 +145,11 @@ but the identifier consumes part of the budget, leaving less space for file text
 Prefix truncation can end mid-word.
 The option is supported only for `ovms-vlm`.
 
-`--turn_lenght` adds new synthetic user text tokens on each later
+`--turn_length` adds new synthetic user text tokens on each later
 turn. Previous user and assistant messages, including the initial image, are
-resent as conversation history. Correctly spelled `--output_length` and
-`--turn_length` aliases are also accepted.
+resent as conversation history.
 
-`--output_lenght` sets `max_completion_tokens`; requests send `ignore_eos=true`.
+`--output_length` sets `max_completion_tokens`; requests send `ignore_eos=true`.
 `--limit` is the number of independent conversations and `--turns` includes the
 first request. Turns within a conversation run sequentially; `--max_concurrency`
 limits active conversations. VLM batch size is automatically 1. Failed turns stop
@@ -183,7 +182,7 @@ Wait for the model to appear, then benchmark a small number of 256x256 images:
 
 ```bash
 curl -f http://localhost:8000/v1/models
-python benchmark.py image-gen --url "http://localhost:8000" --steps 4 --resolution 256x256 --limit 1 --max_concurrency 1
+python benchmark.py image-gen --url http://localhost:8000 --steps 4 --resolution 256x256 --limit 1 --max_concurrency 1
 ```
 
 `--steps` controls denoising steps and `--resolution` uses `WIDTHxHEIGHT`.
@@ -218,7 +217,7 @@ curl -f http://localhost:8000/v1/models
 Benchmark synthetic text without downloading a dataset:
 
 ```bash
-python benchmark.py ovms-embeddings --url "http://localhost:8000" --dataset synthetic --synthetic_length 64 --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
+python benchmark.py ovms-embeddings --url http://localhost:8000 --dataset synthetic --synthetic_length 64 --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
 ```
 
 This sends 10 requests with 16 documents each. `--synthetic_length` repeats the
@@ -227,7 +226,7 @@ tokens through `/v1/tokenize` and reports tokens/second and mean/median latency.
 To use real text instead, load a dataset such as Cohere Wikipedia:
 
 ```bash
-python benchmark.py ovms-embeddings --url "http://localhost:8000" --dataset Cohere/wikipedia-2023-11-embed-multilingual-v3 --hf-subset simple --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
+python benchmark.py ovms-embeddings --url http://localhost:8000 --dataset Cohere/wikipedia-2023-11-embed-multilingual-v3 --hf-subset simple --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
 ```
 
 Stop the server before starting the next use case:
@@ -260,7 +259,7 @@ curl -f http://localhost:8000/v1/models
 Then run:
 
 ```bash
-python benchmark.py ovms_rerank --url "http://localhost:8000" --dataset synthetic --synthetic_length 64 --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
+python benchmark.py ovms_rerank --url http://localhost:8000 --dataset synthetic --synthetic_length 64 --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
 ```
 
 Each request ranks 16 documents against the script's fixed query `Hello`. Reported
@@ -269,7 +268,7 @@ template tokens. This is load generation, not a relevance-quality evaluation.
 To benchmark real documents instead of synthetic text:
 
 ```bash
-python benchmark.py ovms_rerank --url "http://localhost:8000" --dataset Cohere/wikipedia-2023-11-embed-multilingual-v3 --hf-subset simple --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
+python benchmark.py ovms_rerank --url http://localhost:8000 --dataset Cohere/wikipedia-2023-11-embed-multilingual-v3 --hf-subset simple --batch_size 16 --limit 160 --max_concurrency 2 --request_rate inf
 ```
 
 Stop the server before starting the next use case:
@@ -300,7 +299,7 @@ curl -f http://localhost:8000/v1/models
 Use one text per request and a Kokoro voice:
 
 ```bash
-python benchmark.py text2speech --url "http://localhost:8000" --dataset synthetic --synthetic_length 32 --batch_size 1 --limit 10 --max_concurrency 2 --request_rate inf --voice af_alloy
+python benchmark.py text2speech --url http://localhost:8000 --dataset synthetic --synthetic_length 32 --batch_size 1 --limit 10 --max_concurrency 2 --request_rate inf --voice af_alloy
 ```
 
 The backend is spelled `text2speech`. The voice `af_alloy` corresponds to a file in
@@ -311,7 +310,7 @@ For a real text corpus, for example AMI's individual head microphone transcripts
 run:
 
 ```bash
-python benchmark.py text2speech --url "http://localhost:8000" --dataset edinburghcstr/ami --hf-subset ihm --batch_size 1 --limit 10 --max_concurrency 2 --request_rate inf --voice af_alloy
+python benchmark.py text2speech --url http://localhost:8000 --dataset edinburghcstr/ami --hf-subset ihm --batch_size 1 --limit 10 --max_concurrency 2 --request_rate inf --voice af_alloy
 ```
 
 Stop the server before starting the next use case:
@@ -352,7 +351,7 @@ curl -f http://localhost:8000/v1/models
 Then use a small real-audio dataset:
 
 ```bash
-python benchmark.py speech2text --url "http://localhost:8000" --dataset hf-internal-testing/librispeech_asr_dummy --hf-subset clean --split validation --batch_size 1 --limit 10 --max_concurrency 2 --request_rate inf --tokenizer openai/whisper-large-v3-turbo
+python benchmark.py speech2text --url http://localhost:8000 --dataset hf-internal-testing/librispeech_asr_dummy --hf-subset clean --split validation --batch_size 1 --limit 10 --max_concurrency 2 --request_rate inf --tokenizer openai/whisper-large-v3-turbo
 ```
 
 This downloads audio clips from Hugging Face and uploads WAV data as multipart

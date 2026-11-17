@@ -82,11 +82,11 @@ parser.add_argument('--tokenizer', required=False, help='Optional local/HF token
 parser.add_argument('--tokenize_url', help='Override the OVMS tokenize URL; default is /v1/tokenize on the API host')
 parser.add_argument('--input_length', type=positive_int, default=510, help='First VLM user message text tokens; maximum when using --text_input_file')
 parser.add_argument('--text_input_file', help='UTF-8 file for the first VLM user message, truncated to --input_length tokens')
-parser.add_argument('--output_lenght', '--output_length', dest='output_length', type=positive_int, default=128, help='Maximum output tokens per VLM turn; sends ignore_eos=true')
+parser.add_argument('--output_length', '--output_lenght', dest='output_length', type=positive_int, default=128, help='Maximum output tokens per VLM turn; sends ignore_eos=true')
 parser.add_argument('--max_concurrency', type=positive_int, default=100, help='Maximum simultaneous requests; VLM conversations run sequential turns within this limit')
 parser.add_argument('--image', help='Image HTTP(S) URL, data URI, or local filename for the first VLM user message')
 parser.add_argument('--turns', type=positive_int, default=1, help='Requests per VLM conversation, including the first turn')
-parser.add_argument('--turn_lenght', '--turn_length', dest='turn_length', type=positive_int, default=128, help='New text tokens added to each subsequent VLM user turn')
+parser.add_argument('--turn_length', '--turn_lenght', dest='turn_length', type=positive_int, default=128, help='New text tokens added to each subsequent VLM user turn')
 parser.add_argument('--steps', type=positive_int, default=50, help='Denoising steps for image-gen')
 parser.add_argument('--resolution', type=image_resolution, default='512x512', help='Image-gen resolution as WIDTHxHEIGHT')
 
