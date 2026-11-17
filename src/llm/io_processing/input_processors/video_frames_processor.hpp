@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
@@ -25,16 +26,19 @@ namespace ovms {
 
 // Decodes video_url content entries from ChatHistory messages into video tensors
 // and injects <ov_genai_video_N> tags into message content.
-// Active when: config.supportsVisualInputs and input is a ChatHistory variant.
+// Active when: config.visionInputConfig has a value and input is a ChatHistory variant.
 class VideoFramesProcessor : public BaseInputProcessor {
 public:
     VideoFramesProcessor(std::optional<std::string> allowedLocalMediaPath,
-        std::optional<std::vector<std::string>> allowedMediaDomains);
+        std::optional<std::vector<std::string>> allowedMediaDomains,
+        std::optional<float> requestedFps, uint32_t maxDecodedFrames);
     absl::Status process(InputRequest& req) override;
 
 private:
     std::optional<std::string> allowedLocalMediaPath;
     std::optional<std::vector<std::string>> allowedMediaDomains;
+    std::optional<float> requestedFps;
+    uint32_t maxDecodedFrames;
 };
 
 }  // namespace ovms

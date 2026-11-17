@@ -6154,20 +6154,30 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParsingVideoUrlEmptyFrameArrayInChatComplet
         absl::InvalidArgumentError("Invalid message structure - video_url url array cannot be empty"));
 }
 
+TEST_F(HttpOpenAIHandlerParsingTest, ParsingVideoUrlEncodedSourceInChatCompletions) {
+    std::string json = R"({"model":"llama","messages":[{"role":"user","content":[{"type":"video_url","video_url":{"url":"https://media.example.com/video.mp4"}}]}]})";
+    doc.Parse(json.c_str());
+    ASSERT_FALSE(doc.HasParseError());
+    auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
+    ASSERT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt), absl::OkStatus());
+    const auto& chatHistory = apiHandler->getChatHistory();
+    ASSERT_EQ(chatHistory.size(), 1);
+    EXPECT_EQ(chatHistory[0]["content"][0]["video_url"]["url"].as_string().value_or(""),
+        "https://media.example.com/video.mp4");
+}
+
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingVideoUrlOversizedFrameArrayInChatCompletionsFails) {
-    // A frame array larger than the allowed maximum must be rejected during
-    // parsing, before the untrusted array is copied into the ChatHistory.
-    // The url entries can be short placeholders since the size check runs first.
+    constexpr uint32_t MAX_FRAMES = 2;
     std::string frames;
-    for (int64_t i = 0; i < ovms::MAX_VIDEO_FRAMES + 1; i++) {
+    for (uint32_t i = 0; i < MAX_FRAMES + 1; i++) {
         frames += (i ? ",\"x\"" : "\"x\"");
     }
     std::string json = R"({"model":"llama","messages":[{"role":"user","content":[{"type":"video_url","video_url":{"url":[)" + frames + R"(]}}]}]})";
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
     auto apiHandler = createHandler(ovms::Endpoint::CHAT_COMPLETIONS);
-    EXPECT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt),
-        absl::InvalidArgumentError("Invalid message structure - video_url url array exceeds the allowed maximum of " + std::to_string(ovms::MAX_VIDEO_FRAMES) + " frames"));
+    EXPECT_EQ(apiHandler->parseRequest(std::nullopt, 0, std::nullopt, std::nullopt, std::nullopt, MAX_FRAMES),
+        absl::InvalidArgumentError("Invalid message structure - video_url url array exceeds the allowed maximum of " + std::to_string(MAX_FRAMES) + " frames"));
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, ParsingInputAudioInResponsesAPI) {

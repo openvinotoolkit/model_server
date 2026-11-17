@@ -192,6 +192,8 @@ ovms_cc_library(
         ":image_utils",
         "//src:predict_request_validation_utils_impl",
         "//third_party:genai",
+        "@minimp4//:minimp4",
+        "@openh264//:decoder",
         "//src:libovmslogging",
     ],
     visibility = ["//visibility:public"],

@@ -73,6 +73,30 @@
 
 using namespace ovms;
 
+TEST(VideoInputConfigTest, RejectsInvalidValues) {
+    mediapipe::LLMCalculatorOptions options;
+    VisionInputConfig config;
+    options.mutable_input_vision()->set_video_max_frames(0);
+    EXPECT_EQ(configureVideoInputProcessing(config, options), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
+    options.mutable_input_vision()->set_video_max_frames(32);
+    options.mutable_input_vision()->set_video_fps(0.0F);
+    EXPECT_EQ(configureVideoInputProcessing(config, options), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
+}
+
+TEST(VideoInputConfigTest, AppliesDefaultsAndExplicitValues) {
+    mediapipe::LLMCalculatorOptions options;
+    VisionInputConfig config;
+    ASSERT_EQ(configureVideoInputProcessing(config, options), StatusCode::OK);
+    EXPECT_EQ(config.videoMaxFrames, DEFAULT_VIDEO_MAX_FRAMES);
+    EXPECT_FALSE(config.videoFps.has_value());
+    options.mutable_input_vision()->set_video_max_frames(8);
+    options.mutable_input_vision()->set_video_fps(1.5F);
+    ASSERT_EQ(configureVideoInputProcessing(config, options), StatusCode::OK);
+    EXPECT_EQ(config.videoMaxFrames, 8);
+    ASSERT_TRUE(config.videoFps.has_value());
+    EXPECT_FLOAT_EQ(config.videoFps.value(), 1.5F);
+}
+
 struct TestParameters {
     std::string modelName;
     bool generateExpectedOutput;

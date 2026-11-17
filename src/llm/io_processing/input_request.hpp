@@ -43,9 +43,11 @@ struct InputRequest {
     std::vector<ov::Tensor> inputVideos;
     std::vector<ov::Tensor> inputAudios;
 
-    // Running total of decoded pixels across all image_url and video_url parts in
-    // this request.
+    // Running total of decoded pixels across all image_url and frame-array video_url
+    // parts in this request.
     size_t totalDecodedPixels = 0;
+    // Running total of decoded pixels from encoded-video sources in this request.
+    size_t totalDecodedVideoPixels = 0;
 };
 
 }  // namespace ovms

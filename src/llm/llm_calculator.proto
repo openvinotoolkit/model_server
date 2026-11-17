@@ -151,4 +151,11 @@ message LLMCalculatorOptions {
     }
 
     optional ChatTemplateEngine chat_template_engine = 26;
+
+    message VisionInputOptions {
+      optional float video_fps = 1;
+      optional uint32 video_max_frames = 2 [default = 32];
+    }
+
+    optional VisionInputOptions input_vision = 27;
 }
