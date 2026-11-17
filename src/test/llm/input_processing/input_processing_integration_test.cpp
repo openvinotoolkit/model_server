@@ -620,8 +620,7 @@ TEST_P(InputProcessingIntegrationTest, MultipartTranscription_DecodesAudioAndUse
 
     const auto& chatHistory = std::get<ov::genai::ChatHistory>(result.req.input);
     ASSERT_EQ(chatHistory.size(), 1u);
-    EXPECT_EQ(chatHistory[0]["content"][0]["type"].as_string().value_or(""), "text");
-    EXPECT_EQ(chatHistory[0]["content"][0]["text"].as_string().value_or(""), "<ov_genai_audio_0>");
+    EXPECT_EQ(chatHistory[0]["content"].as_string().value_or(""), "<ov_genai_audio_0>");
     EXPECT_NE(result.req.promptText.find("<ov_genai_audio_0>"), std::string::npos);
 }
 
@@ -638,7 +637,7 @@ TEST_P(InputProcessingIntegrationTest, MultipartTranscription_UsesPromptAsSystem
     EXPECT_EQ(chatHistory[0]["role"].as_string().value_or(""), "system");
     EXPECT_EQ(chatHistory[0]["content"].as_string().value_or(""), prompt);
     EXPECT_NE(result.req.promptText.find(prompt), std::string::npos);
-    EXPECT_EQ(chatHistory[1]["content"][0]["text"].as_string().value_or(""), "<ov_genai_audio_0>");
+    EXPECT_EQ(chatHistory[1]["content"].as_string().value_or(""), "<ov_genai_audio_0>");
 }
 
 TEST_P(InputProcessingIntegrationTest, MultipartTranscription_EnablesStreaming) {
