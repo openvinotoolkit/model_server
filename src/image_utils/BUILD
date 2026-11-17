@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("//:common_settings.bzl", "ovms_cc_library")
+load("//:common_settings.bzl", "ovms_cc_library", "ovms_cc_test_library")
 
 ovms_cc_library(
     name = "opencv_decoder_api",
@@ -70,18 +70,27 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
-cc_test(
-    name = "kserve_image_conversion_test",
-    linkstatic = True,
+ovms_cc_test_library(
+    name = "kserve_image_conversion_test_lib",
     srcs = ["//src:test/kserve_image_conversion_test.cpp"],
     deps = [
         ":kserve_image_conversion",
         "//src:libovmsstatus",
         "//third_party:openvino",
         "@stb//:image",
-        "@com_google_googletest//:gtest_main",
+        "@com_google_googletest//:gtest",
     ],
     data = ["//src:test/images/gray16.png"],
+    visibility = ["//src:__pkg__"],
+)
+
+cc_test(
+    name = "kserve_image_conversion_test",
+    linkstatic = True,
+    deps = [
+        ":kserve_image_conversion_test_lib",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 cc_binary(

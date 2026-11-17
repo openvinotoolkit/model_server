@@ -2250,6 +2250,7 @@ cc_test(
     deps = [
             "optimum-cli",
             "//src/image_utils:kserve_image_conversion",
+            "//src/image_utils:kserve_image_conversion_test_lib",
             "//src:ovms_lib",
             "//src:module_names",
             "//src:libovms_default_task_detector",
@@ -2265,6 +2266,8 @@ cc_test(
             ":test_gguf_environment",
             ":libtest_pythonenvironment",
             ":network_utils_test",
+            # mediapipeflow_test.cpp directly includes OpenCV headers.
+            ":opencv_dep",
             "@com_google_googletest//:gtest",
             ":libgit2_test",
             ":pull_hf_model_test",
