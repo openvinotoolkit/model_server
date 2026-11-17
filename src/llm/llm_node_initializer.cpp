@@ -59,12 +59,13 @@ public:
             SPDLOG_ERROR("LLM node name: {} already used in graph: {}. ", nodeName, graphName);
             return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
         }
-        std::shared_ptr<GenAiServable> servable;
-        Status status = initializeGenAiServable(servable, nodeConfig, basePath, [metrics, graphName, nodeName]() {
+        LLMMetricReporterFactory createMetricReporter = [metrics, graphName, nodeName]() {
             return std::make_shared<LLMMetricReporter>(
                 metrics ? &metrics->getMetricConfig() : nullptr,
                 metrics ? metrics->getMetricRegistry() : nullptr, graphName, nodeName);
-        });
+        };
+        std::shared_ptr<GenAiServable> servable;
+        Status status = initializeGenAiServable(servable, nodeConfig, basePath, std::move(createMetricReporter));
         if (!status.ok()) {
             SPDLOG_ERROR("Failed to process LLM node graph {}", graphName);
             return status;

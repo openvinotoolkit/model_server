@@ -307,7 +307,7 @@ TEST_F(LLMMetricsTest, StoppedPipelineResetsGaugesAndKeepsCompletedRequestMetric
     reporter.setScheduledRequests(3);
     reporter.observeCompletedRequest({100, 7, 20, 30});
 
-    reporter.resetPipelineGauges();
+    reporter.resetCacheAndScheduledRequestsGauges();
     const std::string scrape = registry.collect();
     EXPECT_THAT(scrape, HasSubstr("ovms_kv_cache_utilization_percent{name=\"model\",node=\"llm\"} 0\n"));
     EXPECT_THAT(scrape, HasSubstr("ovms_kv_cache_size_bytes{name=\"model\",node=\"llm\"} 0\n"));

@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <fstream>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -134,7 +135,7 @@ ov::genai::SchedulerConfig ContinuousBatchingServableInitializer::prepareDraftPi
     return config;
 }
 
-ContinuousBatchingServableInitializer::ContinuousBatchingServableInitializer(LLMMetricReporterFactory createMetricReporter) :
+ContinuousBatchingServableInitializer::ContinuousBatchingServableInitializer(std::optional<LLMMetricReporterFactory> createMetricReporter) :
     createMetricReporter(std::move(createMetricReporter)) {}
 
 Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) {
@@ -315,8 +316,8 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     properties->maxModelLength = parseMaxModelLength(parsedModelsPath);
 
     // Created last, so a load that fails earlier registers no metric series.
-    if (createMetricReporter) {
-        properties->metricReporter = createMetricReporter();
+    if (createMetricReporter.has_value()) {
+        properties->metricReporter = createMetricReporter.value()();
     }
     properties->llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(
         properties->pipeline, properties->schedulerConfig.cache_size == 0, properties->metricReporter);

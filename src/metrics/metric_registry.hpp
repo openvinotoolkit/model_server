@@ -50,6 +50,10 @@ public:
         }
     }
 
+    /// WARNING: Successful removal destroys the underlying family and all its series,
+    /// invalidating every wrapper and metric handle referencing them, regardless of shared_ptr ownership.
+    /// Subsequent use is undefined behavior. Do not use in server lifecycle code: reporters and
+    /// in-flight requests may retain handles, and series must persist until registry destruction.
     template <typename MetricType>
     bool remove(std::shared_ptr<MetricFamily<MetricType>> family);
 

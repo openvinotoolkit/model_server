@@ -103,6 +103,7 @@ public:
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Open start", cc->NodeName());
         const auto metricsStatus = InitializeCalculatorMetrics(cc);
         if (!metricsStatus.ok()) {
+            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "LLMCalculator [Node: {}] Metrics initialization failed: {}", cc->NodeName(), metricsStatus.ToString());
             return metricsStatus;
         }
         logAvailableMetricFamilies(cc);

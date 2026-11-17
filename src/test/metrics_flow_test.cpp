@@ -14,9 +14,11 @@
 // limitations under the License.
 //*****************************************************************************
 #include <atomic>
+#include <chrono>
 #include <condition_variable>
 #include <fstream>
 #include <iterator>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <set>
@@ -767,7 +769,7 @@ protected:
         ASSERT_EQ(server.getManager().loadConfig(configPath), StatusCode::OK);
     }
 
-    void sendChatCompletionRequest() {
+    void sendChatCompletionRequest(size_t maxTokens = 5) {
         HttpRestApiHandler handler(server, 5);
         const std::string endpoint = "/v1/chat/completions";
         HttpRequestComponents requestComponents;
@@ -782,7 +784,8 @@ protected:
             "model": ")"} + GRAPH_NAME +
                                     R"(",
             "messages": [{"role": "user", "content": "What is the weather like today?"}],
-            "max_tokens": 5,
+            "max_tokens": )" + std::to_string(maxTokens) +
+                                    R"(,
             "temperature": 0,
             "stream": )" + (streaming ? "true" : "false") +
                                     "}";
@@ -858,6 +861,62 @@ TEST_P(LLMMetricsFlowTest, PreservesSeriesAcrossGraphReload) {
     EXPECT_EQ(completedRequestSamples(server.collect()), samplesBeforeReload);
     ASSERT_NO_FATAL_FAILURE(sendChatCompletionRequest());
     expectCompletedRequestCount(server.collect(), 2);
+}
+
+TEST_P(LLMMetricsFlowTest, SupersededExecutorDoesNotResetReplacementCacheSize) {
+    const std::string cacheSizePrefix = METRIC_NAME_KV_CACHE_SIZE + seriesLabels;
+    const std::string zeroCacheSize = cacheSizePrefix + "0";
+    const auto cacheSizeSample = [&]() {
+        std::istringstream lines(server.collect());
+        std::string line;
+        while (std::getline(lines, line)) {
+            if (line.rfind(cacheSizePrefix, 0) == 0) {
+                return line;
+            }
+        }
+        return std::string{};
+    };
+    const auto waitForCacheSizeChange = [&](const std::string& previousSample) {
+        constexpr auto publicationTimeout = std::chrono::seconds{10};
+        const auto deadline = std::chrono::steady_clock::now() + publicationTimeout;
+        std::string sample;
+        do {
+            sample = cacheSizeSample();
+            if (!sample.empty() && sample != zeroCacheSize && sample != previousSample) {
+                return sample;
+            }
+            std::this_thread::yield();
+        } while (std::chrono::steady_clock::now() < deadline);
+        return sample;
+    };
+
+    // A one-token request stays below the ten-step update interval, so nonzero cache
+    // size is published only when the executor returns to waiting.
+    constexpr size_t warmupTokens = 1;
+    ASSERT_NO_FATAL_FAILURE(sendChatCompletionRequest(warmupTokens));
+    const std::string originalSample = waitForCacheSizeChange(zeroCacheSize);
+    ASSERT_FALSE(originalSample.empty());
+    ASSERT_NE(originalSample, zeroCacheSize);
+    auto* definition = server.getManager().getMediapipeFactory().findDefinitionByName(GRAPH_NAME);
+    ASSERT_NE(definition, nullptr);
+    std::unique_ptr<MediapipeGraphExecutor> oldExecutor;
+    ASSERT_EQ(definition->create(oldExecutor), StatusCode::OK);
+
+    const std::string originalCacheConfig = "cache_size: 1";
+    const size_t cacheConfigPosition = graphContent.find(originalCacheConfig);
+    ASSERT_NE(cacheConfigPosition, std::string::npos);
+    graphContent.replace(cacheConfigPosition, originalCacheConfig.size(), "cache_size: 2");
+    ASSERT_NO_FATAL_FAILURE(loadConfigWithGraphFile("graph_reloaded.pbtxt"));
+    ASSERT_NO_FATAL_FAILURE(sendChatCompletionRequest(warmupTokens));
+
+    // A different size proves the replacement has published; it cannot publish again while idle.
+    const std::string replacementSample = waitForCacheSizeChange(originalSample);
+    ASSERT_FALSE(replacementSample.empty());
+    ASSERT_NE(replacementSample, zeroCacheSize);
+    ASSERT_NE(replacementSample, originalSample);
+
+    oldExecutor.reset();
+    EXPECT_EQ(cacheSizeSample(), replacementSample);
 }
 
 INSTANTIATE_TEST_SUITE_P(LLMAndVLM, LLMMetricsFlowTest,

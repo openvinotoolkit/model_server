@@ -58,7 +58,7 @@ public:
     virtual ~MediapipeGraphDefinition();
     MediapipeGraphDefinition(const std::string name,
         const MediapipeGraphConfig& config = MGC,
-        const MetricProvider* metrics = nullptr,
+        const MetricProvider* metricsProvider = nullptr,
         PythonBackend* pythonBackend = nullptr,
         bool lazyLoad = false);
 
@@ -179,7 +179,7 @@ private:
     PythonBackend* pythonBackend;
 
     // The provider must outlive the graph definition.
-    const MetricProvider* metrics;
+    const MetricProvider* metricsProvider;
     std::unique_ptr<MediapipeServableMetricReporter> reporter;
     std::shared_ptr<GraphQueue> queue;
 

@@ -19,13 +19,15 @@ ovms_cc_library(
     name = "libovmsmetrics",
     hdrs = [
         "calculator_metrics.hpp",
-        "llm_metric_reporter.hpp",
         "metric.hpp",
         "metric_config.hpp",
         "metric_family.hpp",
         "metric_module.hpp",
         "metric_registry.hpp",
-    ],
+    ] + select({
+        "//:not_disable_mediapipe": ["llm_metric_reporter.hpp"],
+        "//:disable_mediapipe": [],
+    }),
     srcs = [
         "calculator_metrics.cpp",
         "metric.cpp",

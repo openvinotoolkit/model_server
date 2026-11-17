@@ -100,9 +100,9 @@ public:
     bool isScheduledRequestsEnabled() const;
     bool hasCompletedRequestMetricsEnabled() const;
     bool hasAnyCompletionMetricsEnabled() const;
-    /// Publish zeros for the pipeline state gauges once the pipeline stops, so an
-    /// unloaded pipeline does not keep exporting its last cache and scheduling values.
-    void resetPipelineGauges();
+    /// Reset cache utilization, cache size, and scheduled-request gauges to zero
+    /// once the pipeline stops. Counters and histograms are unchanged.
+    void resetCacheAndScheduledRequestsGauges();
     /// Publish GenAI's cache occupancy in percent, independently of scraping.
     void setCacheUtilization(double percent);
     /// Publish GenAI's KV cache size in bytes.

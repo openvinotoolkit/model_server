@@ -67,7 +67,7 @@ namespace {
 Status initializeCalculatorMetricsForNode(
     const ::mediapipe::CalculatorGraphConfig_Node& node,
     GraphSidePackets& sidePacketMaps,
-    const MetricProvider* metrics,
+    const MetricProvider* metricsProvider,
     const std::string& graphName) {
     const bool usesMetrics = std::find(node.input_side_packet().begin(), node.input_side_packet().end(),
                                  "CALCULATOR_METRICS:calculator_metrics") != node.input_side_packet().end();
@@ -80,7 +80,7 @@ Status initializeCalculatorMetricsForNode(
     }
     sidePacketMaps.calculatorMetrics.emplace(node.name(),
         std::make_shared<CalculatorMetrics>(
-            metrics && metrics->getMetricConfig().metricsEnabled ? metrics->getMetricRegistry() : nullptr,
+            metricsProvider && metricsProvider->getMetricConfig().metricsEnabled ? metricsProvider->getMetricRegistry() : nullptr,
             graphName, node.name()));
     return StatusCode::OK;
 }
@@ -427,17 +427,17 @@ Status MediapipeGraphDefinition::initializeQueueIfRequired() {
 
 MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
     const MediapipeGraphConfig& config,
-    const MetricProvider* metrics,
+    const MetricProvider* metricsProvider,
     PythonBackend* pythonBackend,
     bool lazyLoad) :
     SingleVersionServableDefinition(name),
     sidePacketMaps(std::make_shared<GraphSidePackets>()),
     status(SCHEDULER_CLASS_NAME, getName()),
     pythonBackend(pythonBackend),
-    metrics(metrics),
+    metricsProvider(metricsProvider),
     reporter(std::make_unique<MediapipeServableMetricReporter>(
-        metrics ? &metrics->getMetricConfig() : nullptr,
-        metrics ? metrics->getMetricRegistry() : nullptr, name)) {
+        metricsProvider ? &metricsProvider->getMetricConfig() : nullptr,
+        metricsProvider ? metricsProvider->getMetricRegistry() : nullptr, name)) {
     mgconfig = config;
     idleUnloadTimeoutSecondsCache.store(mgconfig.getIdleUnloadTimeoutSeconds(), std::memory_order_relaxed);
     passKfsRequestFlag = false;
@@ -793,13 +793,13 @@ Status MediapipeGraphDefinition::initializeNodes() {
     auto& registry = NodeInitializerRegistry::instance();
     for (int i = 0; i < config.node().size(); i++) {
         const auto& node = config.node(i);
-        Status metricsStatus = initializeCalculatorMetricsForNode(node, *sidePacketMaps, metrics, getName());
+        Status metricsStatus = initializeCalculatorMetricsForNode(node, *sidePacketMaps, metricsProvider, getName());
         if (!metricsStatus.ok()) {
             return metricsStatus;
         }
         for (const auto& initializer : registry.all()) {
             if (initializer->matches(node.calculator())) {
-                Status status = initializer->initialize(node, getName(), mgconfig.getBasePath(), *sidePacketMaps, graphMetadata, pythonBackend, metrics);
+                Status status = initializer->initialize(node, getName(), mgconfig.getBasePath(), *sidePacketMaps, graphMetadata, pythonBackend, metricsProvider);
                 if (!status.ok()) {
                     return status;
                 }

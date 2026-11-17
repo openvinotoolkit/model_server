@@ -557,7 +557,7 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
 }
 
 Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig,
-    std::string graphPath, LLMMetricReporterFactory createMetricReporter) {
+    std::string graphPath, std::optional<LLMMetricReporterFactory> createMetricReporter) {
     mediapipe::LLMCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
     Status status;

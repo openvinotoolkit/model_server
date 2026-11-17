@@ -28,7 +28,9 @@
 namespace ovms {
 namespace {
 
-constexpr double STOPPED_PIPELINE_GAUGE_VALUE = 0.0;
+constexpr double STOPPED_CACHE_UTILIZATION_PERCENT = 0.0;
+constexpr size_t STOPPED_CACHE_SIZE_BYTES = 0;
+constexpr size_t STOPPED_SCHEDULED_REQUESTS = 0;
 
 template <typename MetricType, size_t Count>
 using MetricFamilies = std::array<std::shared_ptr<MetricFamily<MetricType>>, Count>;
@@ -95,10 +97,10 @@ bool LLMMetricReporter::hasAnyCompletionMetricsEnabled() const {
     return hasCompletedRequestMetricsEnabled();
 }
 
-void LLMMetricReporter::resetPipelineGauges() {
-    SET_IF_ENABLED(cacheUtilization, STOPPED_PIPELINE_GAUGE_VALUE);
-    SET_IF_ENABLED(cacheSize, STOPPED_PIPELINE_GAUGE_VALUE);
-    SET_IF_ENABLED(scheduledRequests, STOPPED_PIPELINE_GAUGE_VALUE);
+void LLMMetricReporter::resetCacheAndScheduledRequestsGauges() {
+    setCacheUtilization(STOPPED_CACHE_UTILIZATION_PERCENT);
+    setCacheSizeBytes(STOPPED_CACHE_SIZE_BYTES);
+    setScheduledRequests(STOPPED_SCHEDULED_REQUESTS);
 }
 
 void LLMMetricReporter::setScheduledRequests(size_t requests) {

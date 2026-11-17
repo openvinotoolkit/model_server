@@ -18,6 +18,7 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -56,6 +57,7 @@ struct LLMExecutor {
     }
 
     void publishPipelineMetrics(bool idle = false) {
+        constexpr size_t IDLE_SCHEDULED_REQUESTS = 0;
         if (metricReporter && (metricReporter->isCacheUtilizationEnabled() || metricReporter->isCacheSizeEnabled() || metricReporter->isScheduledRequestsEnabled())) {
             const ov::genai::PipelineMetrics& metrics = pipe->get_metrics();
             if (metricReporter->isCacheUtilizationEnabled()) {
@@ -65,7 +67,7 @@ struct LLMExecutor {
                 metricReporter->setCacheSizeBytes(metrics.kv_cache_size_in_bytes);
             }
             if (metricReporter->isScheduledRequestsEnabled()) {
-                metricReporter->setScheduledRequests(idle ? 0 : metrics.scheduled_requests);
+                metricReporter->setScheduledRequests(idle ? IDLE_SCHEDULED_REQUESTS : metrics.scheduled_requests);
             }
         }
     }
@@ -167,7 +169,7 @@ public:
         llmExecutorThread.join();
         // Series outlive the pipeline, so its state gauges must not keep the last published values.
         if (llmExecutor.metricReporter) {
-            llmExecutor.metricReporter->resetPipelineGauges();
+            llmExecutor.metricReporter->resetCacheAndScheduledRequestsGauges();
         }
     }
 
