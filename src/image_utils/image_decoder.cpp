@@ -203,6 +203,53 @@ std::shared_ptr<Preprocessor> getPreprocessor(const ov::Tensor& source,
     }
     return entry;
 }
+
+Status decodeStbImage(std::string_view encoded, ov::Tensor& tensor, ImageDecoder decoder) {
+    const auto* data = reinterpret_cast<const unsigned char*>(encoded.data());
+    const int size = static_cast<int>(encoded.size());
+    int width = 0, height = 0, channels = 0;
+    stbi_info_from_memory(data, size, &width, &height, &channels);
+    const int desiredChannels = channels == 2 ? 4 : 0;
+    const bool is16 = stbi_is_16_bit_from_memory(data, size);
+    const bool isHdr = stbi_is_hdr_from_memory(data, size);
+    void* pixels = nullptr;
+    size_t channelBytes = 1;
+    ov::element::Type precision = ov::element::u8;
+    if (isHdr) {
+        pixels = stbi_loadf_from_memory(data, size, &width, &height, &channels, desiredChannels);
+        channelBytes = sizeof(float);
+        precision = ov::element::f32;
+    } else if (is16) {
+        pixels = stbi_load_16_from_memory(data, size, &width, &height, &channels, desiredChannels);
+        channelBytes = sizeof(stbi_us);
+        precision = ov::element::u16;
+    } else {
+        pixels = stbi_load_from_memory(data, size, &width, &height, &channels, desiredChannels);
+    }
+    std::shared_ptr<void> owner(pixels, stbi_image_free);
+    if (!pixels) {
+        const char* reason = stbi_failure_reason();
+        std::string detail = std::string("stb_image could not decode the image: ") + (reason ? reason : "unknown image format");
+        if (decoder == ImageDecoder::AUTO)
+            detail += ". " + plugin().error + ". Install OpenCV and the OVMS OpenCV decoder plugin to enable additional image formats";
+        SPDLOG_DEBUG("{}", detail);
+        return Status(StatusCode::IMAGE_PARSING_FAILED, detail);
+    }
+    if (desiredChannels)
+        channels = desiredChannels;
+    const size_t pixelCount = static_cast<size_t>(width) * height;
+    auto* output = static_cast<unsigned char*>(pixels);
+    if (channels >= 3) {
+        for (size_t i = 0; i < pixelCount; ++i) {
+            for (size_t j = 0; j < channelBytes; ++j)
+                std::swap(output[i * channels * channelBytes + j], output[(i * channels + 2) * channelBytes + j]);
+        }
+    }
+    tensor = ov::Tensor(precision,
+        ov::Shape{1, static_cast<size_t>(height), static_cast<size_t>(width), static_cast<size_t>(channels)},
+        StbAllocator{std::move(owner), pixelCount * channels * channelBytes});
+    return StatusCode::OK;
+}
 }  // namespace
 
 const std::string& openCvImageDecoderUnavailableReason() {
@@ -245,52 +292,9 @@ Status decodeImage(std::string_view encoded, ov::Tensor& tensor, ImageDecoder de
             return Status(StatusCode::IMAGE_PARSING_FAILED, backend.error);
         }
     }
-    const auto* data = reinterpret_cast<const unsigned char*>(encoded.data());
-    const int size = static_cast<int>(encoded.size());
-    int width = 0, height = 0, channels = 0;
-    stbi_info_from_memory(data, size, &width, &height, &channels);
-    const int desiredChannels = channels == 2 ? 4 : 0;
-    const bool is16 = stbi_is_16_bit_from_memory(data, size);
-    const bool isHdr = stbi_is_hdr_from_memory(data, size);
-    void* pixels = nullptr;
-    size_t channelBytes = 1;
-    ov::element::Type precision = ov::element::u8;
-    if (isHdr) {
-        pixels = stbi_loadf_from_memory(data, size, &width, &height, &channels, desiredChannels);
-        channelBytes = sizeof(float);
-        precision = ov::element::f32;
-    } else if (is16) {
-        pixels = stbi_load_16_from_memory(data, size, &width, &height, &channels, desiredChannels);
-        channelBytes = sizeof(stbi_us);
-        precision = ov::element::u16;
-    } else {
-        pixels = stbi_load_from_memory(data, size, &width, &height, &channels, desiredChannels);
-    }
-    std::shared_ptr<void> owner(pixels, stbi_image_free);
-    if (!pixels) {
-        const char* reason = stbi_failure_reason();
-        std::string detail = std::string("stb_image could not decode the image: ") + (reason ? reason : "unknown image format");
-        if (decoder == ImageDecoder::AUTO)
-            detail += ". " + plugin().error + ". Install OpenCV and the OVMS OpenCV decoder plugin to enable additional image formats";
-        SPDLOG_DEBUG("{}", detail);
-        logDecode("stb", "failed");
-        return Status(StatusCode::IMAGE_PARSING_FAILED, detail);
-    }
-    if (desiredChannels)
-        channels = desiredChannels;
-    const size_t pixelCount = static_cast<size_t>(width) * height;
-    auto* output = static_cast<unsigned char*>(pixels);
-    if (channels >= 3) {
-        for (size_t i = 0; i < pixelCount; ++i) {
-            for (size_t j = 0; j < channelBytes; ++j)
-                std::swap(output[i * channels * channelBytes + j], output[(i * channels + 2) * channelBytes + j]);
-        }
-    }
-    tensor = ov::Tensor(precision,
-        ov::Shape{1, static_cast<size_t>(height), static_cast<size_t>(width), static_cast<size_t>(channels)},
-        StbAllocator{std::move(owner), pixelCount * channels * channelBytes});
-    logDecode("stb", "success");
-    return StatusCode::OK;
+    const Status status = decodeStbImage(encoded, tensor, decoder);
+    logDecode("stb", status.ok() ? "success" : "failed");
+    return status;
 }
 
 Status preprocessImage(const ov::Tensor& source, ov::Tensor& destination,
