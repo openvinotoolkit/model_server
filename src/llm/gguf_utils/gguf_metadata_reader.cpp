@@ -63,7 +63,7 @@ uint64_t getFixedValueSize(uint64_t type) {
 
 GgufMetadataReader::GgufMetadataReader(const std::string& path) :
     file(path, std::ios::binary),
-    remaining(std::min<uint64_t>(std::filesystem::file_size(path), 64 * 1024 * 1024)) {
+    remaining(std::min<uint64_t>(std::filesystem::file_size(path), MAX_METADATA_SIZE_BYTES)) {
     if (!file.is_open())
         throw std::runtime_error("Cannot open GGUF metadata");
 }
@@ -85,15 +85,15 @@ uint64_t GgufMetadataReader::readInteger(std::size_t bytes) {
         int byte = file.get();
         if (byte == std::char_traits<char>::eof())
             throw std::runtime_error("Truncated GGUF metadata");
-        value |= static_cast<uint64_t>(byte) << (8 * index);
+        value |= static_cast<uint64_t>(byte) << (BITS_PER_BYTE * index);
     }
     remaining -= bytes;
     return value;
 }
 
 std::string GgufMetadataReader::readString() {
-    uint64_t length = readInteger(8);
-    if (length > remaining || length > 1024 * 1024)
+    uint64_t length = readInteger(UINT64_SIZE_BYTES);
+    if (length > remaining || length > MAX_STRING_SIZE_BYTES)
         throw std::runtime_error("Truncated or oversized GGUF metadata string");
     std::string value(static_cast<std::size_t>(length), '\0');
     file.read(value.data(), static_cast<std::streamsize>(length));
@@ -104,47 +104,47 @@ std::string GgufMetadataReader::readString() {
 }
 
 void GgufMetadataReader::skipValue(uint64_t type) {
-    static constexpr uint64_t widths[] = {1, 1, 2, 2, 4, 4, 4, 1, 0, 0, 8, 8, 8};
-    if (type >= std::size(widths))
+    if (type >= GGUF_TYPE_COUNT)
         throw std::runtime_error("Invalid GGUF metadata type");
-    if (type == 8) {
-        skip(readInteger(8));
-    } else if (type == 9) {
-        uint64_t elementType = readInteger(4);
-        uint64_t count = readInteger(8);
-        if (elementType >= std::size(widths) || elementType == 9)
+    if (type == GGUF_TYPE_STRING) {
+        skip(readInteger(UINT64_SIZE_BYTES));
+    } else if (type == GGUF_TYPE_ARRAY) {
+        uint64_t elementType = readInteger(UINT32_SIZE_BYTES);
+        uint64_t count = readInteger(UINT64_SIZE_BYTES);
+        if (elementType >= GGUF_TYPE_COUNT || elementType == GGUF_TYPE_ARRAY)
             throw std::runtime_error("Invalid GGUF metadata array type");
-        if (elementType == 8) {
-            if (count > remaining / 8)
+        if (elementType == GGUF_TYPE_STRING) {
+            if (count > remaining / UINT64_SIZE_BYTES)
                 throw std::runtime_error("Oversized GGUF metadata array");
             for (uint64_t index = 0; index < count; ++index)
-                skip(readInteger(8));
+                skip(readInteger(UINT64_SIZE_BYTES));
         } else {
-            if (count > remaining / widths[elementType])
+            uint64_t elementSize = getFixedValueSize(elementType);
+            if (count > remaining / elementSize)
                 throw std::runtime_error("Oversized GGUF metadata array");
-            skip(count * widths[elementType]);
+            skip(count * elementSize);
         }
     } else {
-        skip(widths[type]);
+        skip(getFixedValueSize(type));
     }
 }
 
 std::string GgufMetadataReader::readArchitecture() {
-    if (readInteger(4) != GGUF_MAGIC)
+    if (readInteger(UINT32_SIZE_BYTES) != GGUF_MAGIC)
         throw std::runtime_error("Invalid GGUF magic");
-    uint64_t version = readInteger(4);
-    if (version != 2 && version != 3)
+    uint64_t version = readInteger(UINT32_SIZE_BYTES);
+    if (version != GGUF_VERSION_2 && version != GGUF_VERSION_3)
         throw std::runtime_error("Unsupported GGUF metadata version");
-    uint64_t tensorCount = readInteger(8);
-    uint64_t metadataCount = readInteger(8);
-    if (tensorCount == 0 || metadataCount > remaining / 12)
+    uint64_t tensorCount = readInteger(UINT64_SIZE_BYTES);
+    uint64_t metadataCount = readInteger(UINT64_SIZE_BYTES);
+    if (tensorCount == 0 || metadataCount > remaining / MIN_METADATA_ENTRY_SIZE_BYTES)
         throw std::runtime_error("Invalid GGUF metadata header");
     std::string architecture;
     for (uint64_t index = 0; index < metadataCount; ++index) {
         std::string key = readString();
-        uint64_t type = readInteger(4);
+        uint64_t type = readInteger(UINT32_SIZE_BYTES);
         if (key == "general.architecture") {
-            if (type != 8 || !architecture.empty())
+            if (type != GGUF_TYPE_STRING || !architecture.empty())
                 throw std::runtime_error("Invalid GGUF architecture metadata");
             architecture = readString();
         } else {
