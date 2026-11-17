@@ -43,7 +43,7 @@ Dimension getTensorInfoHeightDim(const TensorInfo& tensorInfo);
 Dimension getTensorInfoWidthDim(const TensorInfo& tensorInfo);
 void updateTargetResolution(Dimension& height, Dimension& width, const ov::Tensor& image);
 bool isResizeSupported(const TensorInfo& tensorInfo);
-Status getInputs(const std::string* buffer, std::vector<std::string>& inputs);
+Status getInputs(const std::string* buffer, std::vector<std::string_view>& inputs);
 ov::Tensor createTensorFromImages(const std::vector<ov::Tensor>& images, const TensorInfo& tensorInfo);
 }  // namespace tensor_conversion
 }  // namespace ovms
