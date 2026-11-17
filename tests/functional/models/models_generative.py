@@ -17,15 +17,20 @@
 # pylint: disable=arguments-renamed
 # pylint: disable=too-many-instance-attributes
 
+import importlib
 import os
 import shutil
 
 from dataclasses import dataclass, field, Field, MISSING, make_dataclass
 from pathlib import Path
 
-from tests.functional.config import extra_generative_models_definitions, generative_models_local_path
+from tests.functional.config import (
+    extra_generative_models_definitions,
+    generative_models_local_path,
+    root_repo_path,
+)
 from tests.functional.constants.paths import Paths
-from tests.functional.models.models import ModelInfo, ModelType
+from tests.functional.models.models import ModelInfo, ModelType, find_model_info_subclasses
 from tests.functional.models.models_datasets import (
     FeatureExtractionModelDataset,
     LargeLanguageModelDataset,
@@ -239,12 +244,22 @@ class Qwen3Reranker06BSeqClsFp16OvHf(GenerativeModelHuggingFace, RerankModel):
     is_local: bool = True
 
 
+def get_known_classes():
+    known_classes = {}
+    for file_path, class_name in find_model_info_subclasses(base_class_name=GenerativeModel.__name__):
+        module_name = ".".join(Path(file_path).relative_to(root_repo_path).with_suffix("").parts)
+        try:
+            model_class = getattr(importlib.import_module(module_name), class_name, None)
+        except ImportError:
+            continue
+        if model_class is not None:
+            known_classes.setdefault(class_name, model_class)
+    return known_classes
+
+
 def create_dynamic_classes_from_env(models_list, known_classes=None):
-    known_classes = globals() if known_classes is None else known_classes
+    known_classes = get_known_classes() if known_classes is None else known_classes
     classes = []
-    name = None
-    precision = None
-    precision_dir = None
     for model_definition in models_list:
         model_attributes = model_definition.split(":")
         if len(model_attributes) == 4:

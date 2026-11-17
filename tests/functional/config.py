@@ -95,6 +95,9 @@ generative_models_local_path = get_path(
 # Remember to add "VL" to class_name if it is vision model
 # Example: "MetaLlama318BInstructInt4SymCw:meta-llama/Llama-3.1-8B-Instruct:INT4:INT4_SYM_CW"
 extra_generative_models_definitions = get_list("TT_EXTRA_GENERATIVE_MODELS")
+# root directory to search for GenerativeModel classes
+root_repo_path = ovms_c_repo_path
+
 
 """ TT_CLEAN_ARTIFACTS_DIR """
 clean_artifacts_dir = get_bool("TT_CLEAN_ARTIFACTS_DIR", False)

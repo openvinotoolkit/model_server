@@ -21,6 +21,7 @@ import copy
 import json
 import math
 import os
+import re
 import shutil
 import stat
 from dataclasses import dataclass, field, make_dataclass
@@ -30,7 +31,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 
-from tests.functional.config import is_nginx_mtls, models_path, xdist_workers
+from tests.functional.config import is_nginx_mtls, models_path, root_repo_path, xdist_workers
 from tests.functional.constants.os_type import OsType, get_host_os
 from tests.functional.constants.ovms import Ovms
 from tests.functional.constants.paths import Paths
@@ -633,3 +634,41 @@ def model_with_pipeline_type(model_type, pipeline_type):
         [("pipeline_type", str, field(default=pipeline_type))],
         bases=(model_type,),
     )
+
+
+_CLASS_DEFINITION = re.compile(r"^class\s+(\w+)\s*\(([^)]*)\)\s*:", re.MULTILINE)
+
+
+def find_model_info_subclasses(root=None, base_class_name=ModelInfo.__name__):
+    """Statically scan *.py files under root (default: <repo>/tests) for classes deriving from base_class_name.
+
+    Inheritance is resolved transitively by class name, without importing the scanned modules.
+    Returns a sorted list of (file_path, class_name) tuples.
+    """
+    root = Path(root) if root is not None else Path(root_repo_path)
+    found = []  # (file_path, class_name, base_names)
+    for dir_path, dir_names, file_names in os.walk(root, followlinks=True):
+        dir_names[:] = [name for name in dir_names if name not in (".venv", "__pycache__")]
+        for file_name in file_names:
+            if not file_name.endswith(".py"):
+                continue
+            file_path = Path(dir_path, file_name)
+            try:
+                text = file_path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            for class_name, bases in _CLASS_DEFINITION.findall(text):
+                base_names = {
+                    base.strip().rsplit(".", 1)[-1] for base in bases.split(",")
+                    if re.fullmatch(r"[\w.]+", base.strip())
+                }
+                found.append((str(file_path), class_name, base_names))
+
+    derived_names = {base_class_name}
+    while True:
+        new_names = {name for _, name, bases in found if bases & derived_names} - derived_names
+        if not new_names:
+            break
+        derived_names |= new_names
+    derived_names.discard(base_class_name)
+    return sorted((path, name) for path, name, _ in found if name in derived_names)

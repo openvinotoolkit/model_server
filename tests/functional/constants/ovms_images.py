@@ -155,7 +155,7 @@ def calculate_ovms_image_name(target_device=None, base_os=OsType.Ubuntu24): # py
             return f"{image_name}:{ovms_image_tag}"
         image_tag = ovms_image_tag if ovms_image_tag else ovms_image_tag_dict[base_os]
 
-    if ovms_image.startswith(OPENVINO_MODEL_SERVER):
+    if image_name.startswith(OPENVINO_MODEL_SERVER):
         image_tag = f"{image_tag}{calculate_ovms_image_suffix(target_device)}"
     else:
         image_name = f"{image_name}{calculate_ovms_image_suffix(target_device)}"
