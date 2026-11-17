@@ -74,6 +74,21 @@ TEST(MetricRegistryTest, ReRegistersCustomFamilyAfterRemoval) {
     EXPECT_THAT(registry.collect(), HasSubstr("custom_events_total 1\n"));
 }
 
+TEST(MetricRegistryTest, ReRegistersCustomFamilyAfterRemovalThroughAnotherWrapper) {
+    MetricRegistry registry;
+    auto registered = registry.registerCustomFamily<MetricCounter>("custom_events_total", "Events.");
+    auto otherWrapper = registry.createFamily<MetricCounter>("custom_events_total", "Events.");
+
+    ASSERT_NE(otherWrapper, nullptr);
+    ASSERT_TRUE(registry.remove(otherWrapper));
+    auto reRegistered = registry.registerCustomFamily<MetricCounter>("custom_events_total", "Events.");
+
+    ASSERT_NE(reRegistered, registered);
+    auto metric = reRegistered->addMetric();
+    metric->increment();
+    EXPECT_THAT(registry.collect(), HasSubstr("custom_events_total 1\n"));
+}
+
 TEST(CalculatorMetricsTest, RegistersAndUpdatesGauge) {
     MetricRegistry registry;
     CalculatorMetrics metrics(&registry, "graph", "node");

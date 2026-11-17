@@ -114,14 +114,19 @@ private:
         }
     }
 
-    template <typename Family, typename RemoveFn>
-    bool removeFamilyAndForgetCustomRegistration(const std::shared_ptr<Family>& family, RemoveFn&& removeFamily) {
+    template <typename MetricType, typename RemoveFn>
+    bool removeFamilyAndForgetCustomRegistration(
+        const std::shared_ptr<MetricFamily<MetricType>>& family, RemoveFn&& removeFamily) {
         std::lock_guard<std::mutex> lock(customFamiliesMutex);
         if (!removeFamily()) {
             return false;
         }
         for (auto it = customFamilies.begin(); it != customFamilies.end(); ++it) {
-            if (it->second.family == family) {
+            if (it->second.type == std::type_index(typeid(MetricType))) {
+                const auto registeredFamily = std::static_pointer_cast<MetricFamily<MetricType>>(it->second.family);
+                if (registeredFamily->familyImplRef != family->familyImplRef) {
+                    continue;
+                }
                 customFamilies.erase(it);
                 break;
             }
