@@ -4926,6 +4926,87 @@ TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckPluginConfig) {
     LLMNodeOptionsCheckPluginConfig(modelsPath);
 }
 
+class GGUFPipelineSelectionTest : public TestWithTempDir {
+    void SetUp() override {
+        TestWithTempDir::SetUp();
+        modelsFormat = ModelsFormat::NONE;
+    }
+
+protected:
+    ModelsFormat modelsFormat;
+    std::string writeMetadata(const std::string& architecture, unsigned int version = 3) {
+        const std::string path = ovms::FileSystem::joinPath({directoryPath, "model.gguf"});
+        std::ofstream file(path, std::ios::binary);
+        auto writeInteger = [&](uint64_t value, size_t bytes) {
+            for (size_t index = 0; index < bytes; ++index)
+                file.put(static_cast<char>((value >> (8 * index)) & 0xff));
+        };
+        auto writeString = [&](const std::string& value) {
+            writeInteger(value.size(), 8);
+            file.write(value.data(), value.size());
+        };
+        writeInteger(0x46554747, 4);
+        writeInteger(version, 4);
+        writeInteger(1, 8);
+        writeInteger(2, 8);
+        writeString("tokenizer.ggml.tokens");
+        writeInteger(9, 4);
+        writeInteger(8, 4);
+        writeInteger(1, 8);
+        writeString("dummy");
+        writeString("general.architecture");
+        writeInteger(8, 4);
+        writeString(architecture);
+        return path;
+    }
+};
+
+TEST_F(GGUFPipelineSelectionTest, TextAutoAndExplicitSelection) {
+    mediapipe::LLMCalculatorOptions options;
+    options.set_models_path(writeMetadata("qwen35"));
+    PipelineType pipelineType{PipelineType::LM};
+    EXPECT_EQ(determinePipelineType(pipelineType, options, "", &modelsFormat), StatusCode::OK);
+    EXPECT_EQ(modelsFormat, ModelsFormat::GGUF);
+    EXPECT_EQ(pipelineType, PipelineType::LM_CB);
+    options.set_device("NPU");
+    EXPECT_EQ(determinePipelineType(pipelineType, options, "", &modelsFormat), StatusCode::OK);
+    EXPECT_EQ(pipelineType, PipelineType::LM);
+    EXPECT_EQ(modelsFormat, ModelsFormat::GGUF);
+    options.set_pipeline_type(mediapipe::LLMCalculatorOptions::LM_CB);
+    EXPECT_EQ(determinePipelineType(pipelineType, options, "", &modelsFormat), StatusCode::OK);
+    EXPECT_EQ(pipelineType, PipelineType::LM);
+    EXPECT_EQ(modelsFormat, ModelsFormat::GGUF);
+}
+
+TEST_F(GGUFPipelineSelectionTest, UnknownArchitectureDelegatesSupportToGenai) {
+    mediapipe::LLMCalculatorOptions options;
+    options.set_models_path(writeMetadata("future_architecture", 2));
+    PipelineType pipelineType{PipelineType::LM};
+    EXPECT_EQ(determinePipelineType(pipelineType, options, "", &modelsFormat), StatusCode::OK);
+    EXPECT_EQ(pipelineType, PipelineType::LM_CB);
+    EXPECT_EQ(modelsFormat, ModelsFormat::GGUF);
+}
+
+TEST(GenAiServableInitializerTest, DefaultGgufReaderSelection) {
+    auto properties = std::make_shared<GenAiServableProperties>();
+
+    GenAiServableInitializer::applyDefaultGGUFReader(properties, "/models/model.gguf");
+    ASSERT_EQ(properties->pluginConfig.count("GGUF_READER"), 1);
+#ifdef _WIN32
+    EXPECT_EQ(properties->pluginConfig["GGUF_READER"].as<std::string>(), "NATIVE");
+#else
+    EXPECT_EQ(properties->pluginConfig["GGUF_READER"].as<std::string>(), "FRONTEND");
+#endif
+
+    properties->pluginConfig["GGUF_READER"] = "LEGACY";
+    GenAiServableInitializer::applyDefaultGGUFReader(properties, "/models/another.gguf");
+    EXPECT_EQ(properties->pluginConfig["GGUF_READER"].as<std::string>(), "LEGACY");
+
+    properties->pluginConfig.clear();
+    GenAiServableInitializer::applyDefaultGGUFReader(properties, "/models/exported_ir");
+    EXPECT_EQ(properties->pluginConfig.count("GGUF_READER"), 0);
+}
+
 // RAII guard that restores the global Config singleton (and optionally removes a temporary
 // cache directory) on scope exit. The cache_dir tests below mutate the process-wide Config
 // singleton; without this guard a failed ASSERT_* mid-test (which returns early) would leak

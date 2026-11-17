@@ -412,7 +412,11 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, const
                     shouldInferTask = hasUnmatchedOptions || !graphExists;
                 }
 
-                if (shouldInferTask) {
+                if (result->count("gguf_filename")) {
+                    // GGUF is preview feature in 2026.5, only one task is supported: text generation
+                    // In next releases, support for additional tasks may be added and autodetection will be enhanced accordingly.
+                    inferredTaskParameter = "text_generation";
+                } else if (shouldInferTask) {
                     std::string taskInferenceError;
                     inferredTaskParameter = determineDefaultTaskParameter(modelPath, sourceModel, modelRepositoryPath, &taskInferenceError);
                     if (!result->count("task") && !inferredTaskParameter.has_value()) {

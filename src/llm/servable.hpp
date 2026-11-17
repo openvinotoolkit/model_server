@@ -195,6 +195,12 @@ enum class ChatTemplateSource {
     GENAI_TOKENIZER,
 };
 
+enum class ModelsFormat {
+    NONE,
+    IR,
+    GGUF
+};
+
 struct GenAiServableProperties {
     // General configuration
     std::string modelsPath;
@@ -205,6 +211,7 @@ struct GenAiServableProperties {
     ov::AnyMap pluginConfig;
     ov::AnyMap tokenizerPluginConfig;
     bool enableToolGuidedGeneration = false;
+    ModelsFormat modelsFormat = ModelsFormat::NONE;
     ChatTemplateEngine chatTemplateEngine = ChatTemplateEngine::NONE;
     ChatTemplateStatus chatTemplateStatus = ChatTemplateStatus::NOT_CHECKED;
     ChatTemplateSource chatTemplateSource = ChatTemplateSource::NONE;
