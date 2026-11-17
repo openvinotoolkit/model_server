@@ -78,7 +78,7 @@ TEST_F(EspeakDataPathTest, UsesBundledDataWhenPresent) {
 #endif
     std::filesystem::create_directories(dataPath);
     setDefaultEspeakDataPath(executablePath);
-    EXPECT_EQ(GetEnvVar("ESPEAK_DATA_PATH"), dataPath.string());
+    EXPECT_EQ(GetEnvVar("ESPEAK_DATA_PATH"), dataPath.lexically_normal().string());
 }
 
 TEST_F(EspeakDataPathTest, PreservesExplicitOverride) {
@@ -109,7 +109,7 @@ TEST_F(EspeakDataPathTest, UsesBundledDataWhenEnvironmentIsEmpty) {
 #endif
     std::filesystem::create_directories(dataPath);
     setDefaultEspeakDataPath(executablePath);
-    EXPECT_EQ(GetEnvVar("ESPEAK_DATA_PATH"), dataPath.string());
+    EXPECT_EQ(GetEnvVar("ESPEAK_DATA_PATH"), dataPath.lexically_normal().string());
 }
 
 TEST_F(EspeakDataPathTest, LeavesMissingDataUnset) {
