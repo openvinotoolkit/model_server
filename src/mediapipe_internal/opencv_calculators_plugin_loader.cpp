@@ -21,15 +21,11 @@
 #include <string>
 #include <vector>
 
-#ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 6001 6011)
-#endif
 #include "mediapipe/framework/calculator_base.h"
 #include "mediapipe/framework/subgraph.h"
-#ifdef _MSC_VER
 #pragma warning(pop)
-#endif
 #include "src/logging.hpp"
 
 #ifdef __linux__
