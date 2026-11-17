@@ -26,6 +26,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 #include <ctime>
@@ -44,6 +45,7 @@
 #include "execution_context.hpp"
 #include "filesystem/filesystem.hpp"
 #include "config_status_utils.hpp"
+#include "graph_metadata.hpp"
 #include "grpcservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
@@ -60,6 +62,7 @@
 #include "rest_utils.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
 #include "server.hpp"
+#include "servable_definition.hpp"
 #include "status.hpp"
 #include "stringutils.hpp"
 #include "timer.hpp"
@@ -573,7 +576,7 @@ static Status createV3HttpPayload(
 }
 #endif
 
-void parseModel(rapidjson::Writer<rapidjson::StringBuffer>& writer, const std::string& name, const time_t timestamp) {
+void parseModel(rapidjson::Writer<rapidjson::StringBuffer>& writer, const std::string& name, const time_t timestamp, const GraphMetadata* metadata) {
     writer.StartObject();
     writer.String("id");
     writer.String(name.c_str());
@@ -583,7 +586,16 @@ void parseModel(rapidjson::Writer<rapidjson::StringBuffer>& writer, const std::s
     writer.Int64(timestamp);
     writer.String("owned_by");
     writer.String("OVMS");
+    if (metadata) {
+        static const std::unordered_set<std::string> reservedKeys{"id", "object", "created", "owned_by"};
+        metadata->writeMembers(writer, reservedKeys);
+    }
     writer.EndObject();
+}
+
+static std::shared_ptr<const GraphMetadata> getServableMetadata(const ModelManager& modelManager, const std::string& name) {
+    const auto* definition = modelManager.findServableDefinition(name);
+    return definition ? definition->getMetadata() : nullptr;
 }
 
 Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, std::string& response) {
@@ -602,7 +614,7 @@ Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, 
     }
     time_t timestamp;
     time(&timestamp);
-    parseModel(writer, name, timestamp);
+    parseModel(writer, name, timestamp, getServableMetadata(modelManager, name).get());
     response = buffer.GetString();
     return StatusCode::OK;
 }
@@ -616,7 +628,7 @@ Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
     writer.String("data");
     writer.StartArray();
     for (auto const& name : modelManager.getNamesOfAvailableServables()) {
-        parseModel(writer, name, timestamp);
+        parseModel(writer, name, timestamp, getServableMetadata(modelManager, name).get());
     }
     writer.EndArray();
     writer.String("object");
