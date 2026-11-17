@@ -21,7 +21,15 @@
 #include <string>
 #include <vector>
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 6001)
+#endif
 #include "mediapipe/framework/calculator_base.h"
+#include "mediapipe/framework/subgraph.h"
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 #include "src/logging.hpp"
 
 #ifdef __linux__
@@ -42,8 +50,6 @@
 #include "mediapipe/calculators/tensor/image_to_tensor_calculator.pb.h"
 #include "mediapipe/calculators/util/annotation_overlay_calculator.pb.h"
 #endif
-
-#include "mediapipe/framework/subgraph.h"
 
 namespace ovms {
 namespace {
