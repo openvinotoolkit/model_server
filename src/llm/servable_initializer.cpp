@@ -403,7 +403,7 @@ void GenAiServableInitializer::applyDefaultGGUFReader(std::shared_ptr<GenAiServa
 #ifdef _WIN32
         // Use the native GGUF loader by default on Windows to avoid the broken default frontend path
         // handling seen with some GGUF assets on this platform.
-        properties->pluginConfig[ggufReaderProperty] = "NATIVE";
+        properties->pluginConfig[ggufReaderProperty] = "LEGACY";
 #else
         properties->pluginConfig[ggufReaderProperty] = "FRONTEND";
 #endif
