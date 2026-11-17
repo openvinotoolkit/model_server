@@ -114,8 +114,8 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional bool enable_tool_guided_generation` - enable enforcing tool schema during generation. Requires setting response parser. [default = false];
 -    `optional SparseAttentionConfig sparse_attention_config` - Sparse attention configuration. Disabled if not specified.
 -    `optional VisionInputOptions input_vision` - visual input settings:
-     - `optional float video_fps` - requested sampling rate for an encoded video source supplied as a `video_url` string. Must be finite and greater than zero when set. When unset, frames are retained up to `video_max_frames`. Sampling uses MP4 timestamps.
-     - `optional uint32 video_max_frames` - maximum number of frames retained from one encoded video source or supplied in a frame array. Must be greater than zero [default = 32]. If the requested FPS would produce more frames than this limit, or a frame array exceeds it, the request is rejected. Encoded-video pixels count against `--max_video_decode_pixels`.
+      - `optional float video_fps` - requested sampling rate for an encoded video source supplied as a `video_url` string. Must be finite and greater than zero when set. When unset, frames are retained up to `video_max_frames`. Sampling uses MP4 timestamps.
+      - `optional uint32 video_max_frames` - maximum number of frames retained from one encoded video source or supplied in a frame array. Must be greater than zero [default = 32]. If the requested FPS would produce more frames than this limit, or a frame array exceeds it, the request is rejected. Encoded-video pixels must also fit the request-wide [`--max_video_decode_pixels`](../parameters.md#input-media-decode-protection) budget; exceeding it rejects the request rather than reducing the selected frame count.
 
 ### Caching settings
 The value of `cache_size` might have performance and stability implications. It is used for storing LLM model KV cache data. Adjust it based on your environment capabilities, model size and expected level of concurrency.
