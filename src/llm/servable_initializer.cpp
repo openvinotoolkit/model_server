@@ -151,11 +151,21 @@ GenAiServableProperties::DraftModelStrategy detectDraftModelStrategy(const std::
 
 static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Chat template is unavailable. Servable will not respond to /chat/completions endpoint.";
 
-static void configureInputProcessingCapabilities(const std::shared_ptr<GenAiServableProperties>& properties) {
+static Status configureInputProcessingCapabilities(const std::shared_ptr<GenAiServableProperties>& properties,
+    const mediapipe::LLMCalculatorOptions& nodeOptions) {
+    VisionInputConfig videoConfig;
+    Status status = configureVideoInputProcessing(videoConfig, nodeOptions);
+    if (status != StatusCode::OK) {
+        return status;
+    }
+    if (properties->inputProcessorContext.config.visionInputConfig.has_value()) {
+        properties->inputProcessorContext.config.visionInputConfig = videoConfig;
+    }
     if (!properties->inputProcessorContext.config.audioInputConfig.has_value() &&
         std::filesystem::exists(std::filesystem::path(properties->modelsPath) / "openvino_audio_embeddings_model.xml")) {
         properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig{true};
     }
+    return StatusCode::OK;
 }
 
 // Dry-run probes: render the chat template with synthetic inputs to empirically
@@ -571,11 +581,7 @@ Status configureVideoInputProcessing(VisionInputConfig& config, const mediapipe:
 Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath) {
     mediapipe::LLMCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
-    VisionInputConfig videoConfig;
-    Status status = configureVideoInputProcessing(videoConfig, nodeOptions);
-    if (status != StatusCode::OK) {
-        return status;
-    }
+    Status status = StatusCode::OK;
     if (nodeOptions.has_models_path()) {
         // Need to initialize pipelineType with some value to avoid compiler warning;
         // determinePipelineType will set it properly.
@@ -653,11 +659,10 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         return StatusCode::INTERNAL_ERROR;
     }
     servable->determineDecodingMethod();
-    auto& inputConfig = servable->getProperties()->inputProcessorContext.config;
-    if (inputConfig.visionInputConfig.has_value()) {
-        inputConfig.visionInputConfig = videoConfig;
+    status = configureInputProcessingCapabilities(servable->getProperties(), nodeOptions);
+    if (status != StatusCode::OK) {
+        return status;
     }
-    configureInputProcessingCapabilities(servable->getProperties());
     return StatusCode::OK;
 }
 }  // namespace ovms
