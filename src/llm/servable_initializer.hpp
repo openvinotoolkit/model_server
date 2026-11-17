@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -45,7 +46,13 @@ enum class PipelineType {
 
 class Status;
 class GenAiServable;
+class LLMMetricReporter;
 struct GenAiServableProperties;
+
+// Creates the metric reporter of an LLM node. It is invoked only for pipelines that publish
+// LLM metrics, once the pipeline is ready, so other pipelines and failed loads register no series.
+// Pass std::nullopt instead of a factory to disable metric reporter creation.
+using LLMMetricReporterFactory = std::function<std::shared_ptr<LLMMetricReporter>()>;
 
 class GenAiServableInitializer {
 public:
@@ -80,5 +87,6 @@ std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath);
 // Throws std::runtime_error if the XML is missing or cannot be opened/read.
 GenAiServableProperties::DraftModelStrategy detectDraftModelStrategy(const std::string& draftPath);
 Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath);
-Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath);
+Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig,
+    std::string graphPath, std::optional<LLMMetricReporterFactory> createMetricReporter = std::nullopt);
 }  // namespace ovms

@@ -88,7 +88,8 @@ public:
         const std::string& basePath,
         GraphSidePackets& sidePackets,
         GraphMetadata& /*metadata*/,
-        PythonBackend* pythonBackend) override {
+        PythonBackend* pythonBackend,
+        const MetricProvider* /*metrics*/) override {
         auto& pythonNodeResourcesMap = sidePackets.pythonNodeResourcesMap;
         if (!nodeConfig.node_options().size()) {
             SPDLOG_ERROR("Python node missing options in graph: {}. ", graphName);
