@@ -258,7 +258,7 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
     }
 
     // Phase 2: load the chosen source with the selected engine. Apply adjustments if needed.
-    if (selectedSource != ChatTemplateSource::NONE) {
+    if (selectedSource != ChatTemplateSource::NONE && !templateSource.empty()) {
         const bool isJinja = properties->chatTemplateEngine == ChatTemplateEngine::JINJA;
         ChatTemplateAdjusterConfig adjusterConfig = isJinja ? ChatTemplateAdjusterConfig::forJinja() : ChatTemplateAdjusterConfig::forMinja();
         ChatTemplateAdjuster(adjusterConfig).adjust(templateSource);
