@@ -4927,10 +4927,10 @@ TEST_F(LLMVLMOptionsHttpTest, LLMVLMNodeOptionsCheckPluginConfig) {
 }
 
 class GGUFPipelineSelectionTest : public TestWithTempDir {
-     void SetUp() override {
-         TestWithTempDir::SetUp();
-         modelsFormat = ModelsFormat::NONE;
-     }
+    void SetUp() override {
+        TestWithTempDir::SetUp();
+        modelsFormat = ModelsFormat::NONE;
+    }
 
 protected:
     ModelsFormat modelsFormat;
