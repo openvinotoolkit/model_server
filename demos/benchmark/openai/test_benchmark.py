@@ -27,6 +27,7 @@ import unittest
 from unittest.mock import patch
 
 from aiohttp import web
+from datasets import Audio, Features, Value
 
 import benchmark
 
@@ -37,6 +38,27 @@ class WordTokenizer:
 
     def decode(self, tokens, **kwargs):
         return ' '.join(tokens)
+
+
+class DatasetInputTests(unittest.IsolatedAsyncioTestCase):
+    async def test_text_to_speech_does_not_decode_unused_audio(self):
+        with patch.object(Audio, 'encode_example', side_effect=lambda value: value):
+            docs = benchmark.Dataset.from_dict(
+                {'text': ['first', 'second'], 'audio': [{'path': 'unused.wav', 'bytes': None}] * 2},
+                features=Features({'text': Value('string'), 'audio': Audio()}),
+            )
+        benchmark.args = {'backend': 'text2speech'}
+        benchmark.batch_size = 1
+        with patch.object(Audio, 'decode_example', side_effect=AssertionError('unexpected audio decoding')):
+            requests = [request async for request in benchmark.get_request(docs, float('inf'))]
+        self.assertEqual(requests, [['first'], ['second']])
+
+    async def test_speech_to_text_receives_audio(self):
+        docs = benchmark.Dataset.from_dict({'text': ['unused'], 'audio': ['audio payload']})
+        benchmark.args = {'backend': 'speech2text'}
+        benchmark.batch_size = 1
+        requests = [request async for request in benchmark.get_request(docs, float('inf'))]
+        self.assertEqual(requests, [['audio payload']])
 
 
 class VLMInputTests(unittest.TestCase):

@@ -148,7 +148,11 @@ def discover_model(api_url):
 def tokenize_texts(texts, model):
     address = urlsplit(args['api_url'])
     endpoint = args.get('tokenize_url') or urlunsplit((address.scheme, address.netloc, '/v1/tokenize', '', ''))
-    payload = {'model': model, 'text': texts, 'add_special_tokens': False}
+    is_llama = urlsplit(endpoint).path.rstrip('/') == '/tokenize'
+    if is_llama and isinstance(texts, list):
+        return [tokenize_texts(text, model)[0] for text in texts]
+    payload = ({'content': texts, 'add_special': False} if is_llama else
+               {'model': model, 'text': texts, 'add_special_tokens': False})
     request = Request(endpoint, data=json.dumps(payload).encode('utf-8'), headers=application_json_headers)
     with urlopen(request, timeout=60) as response:
         data = json.load(response)
@@ -663,12 +667,10 @@ async def get_request(
     documents_all: arrow_dataset.Dataset,
     request_rate: float,
 ) -> AsyncGenerator[List[str], None]:
-    documents = documents_all.iter(batch_size=batch_size)
+    input_column = 'audio' if args['backend'] in ('speech2text', 'translations') else 'text'
+    documents = documents_all.select_columns([input_column]).iter(batch_size=batch_size)
     for request in documents:
-        if args["backend"] == "speech2text" or args["backend"] == "translations":
-            yield request["audio"]
-        else:
-            yield request["text"]
+        yield request[input_column]
         if request_rate == float("inf"):
             # If the request rate is infinity, then we don't need to wait.
             continue
