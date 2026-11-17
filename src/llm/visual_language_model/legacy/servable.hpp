@@ -70,7 +70,7 @@ protected:
 public:
     VisualLanguageModelLegacyServable() {
         properties = std::make_shared<VisualLanguageModelLegacyServableProperties>();
-        properties->inputProcessorContext.config.supportsVisualInputs = true;
+        properties->inputProcessorContext.config.visionInputConfig = VisionInputConfig{};
     }
 
     // Interface methods

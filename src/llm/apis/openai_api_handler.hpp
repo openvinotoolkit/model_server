@@ -106,6 +106,7 @@ protected:
     ov::genai::Tokenizer tokenizer;
     const std::string toolParserName;
     const std::string reasoningParserName;
+    std::optional<uint32_t> videoMaxFrames;
 
     // Output parser is used to parse chat completions response to extract specific fields like tool calls and reasoning.
     std::shared_ptr<OutputParser> outputParser = nullptr;
@@ -157,7 +158,8 @@ public:
 
     // Request parsing only; output parsing is initialized after input and generation setup.
     absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
-        std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt);
+        std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt,
+        std::optional<uint32_t> videoMaxFrames = std::nullopt);
 
     // Shared parsing (non-virtual)
     absl::Status parseTools();

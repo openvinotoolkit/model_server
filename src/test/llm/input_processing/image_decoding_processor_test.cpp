@@ -299,7 +299,7 @@ TEST(ImageDecodingProcessorTest, HttpUrlWithNoAllowedDomainsConfiguredRejected) 
 }
 
 TEST(ImageDecodingProcessorTest, HttpRedirectWithoutPermissionReturnsConfigurationGuidance) {
-    const auto status = validateHttpImageDownloadResponse(302, false);
+    const auto status = validateHttpDownloadResponse(302, false, "image");
 
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
     EXPECT_EQ(status.message(), "Failed to download image from external URL because redirects are not allowed. Set OVMS_MEDIA_URL_ALLOW_REDIRECTS=1 environment variable to allow redirects.");
@@ -338,7 +338,7 @@ TEST(ImageDecodingProcessorTest, LocalFilesystemDisabledRejected) {
     const auto status = processor.process(req);
     EXPECT_FALSE(status.ok());
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
-    EXPECT_EQ(status.message(), "Loading images from local filesystem is disabled.");
+    EXPECT_EQ(status.message(), "Loading media from local filesystem is disabled.");
 }
 
 TEST(ImageDecodingProcessorTest, LocalPathTraversalWithDotDotRejected) {
@@ -528,7 +528,7 @@ TEST(ImageDecodingProcessorTest, InterleavedTextAndImageUrlInContentArray) {
     const auto status = processor.process(req);
     EXPECT_FALSE(status.ok());
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
-    EXPECT_EQ(status.message(), "Loading images from local filesystem is disabled.");
+    EXPECT_EQ(status.message(), "Loading media from local filesystem is disabled.");
 }
 
 TEST(ImageDecodingProcessorTest, SymlinkEscapeInsideAllowedPathRejected) {

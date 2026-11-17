@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -151,11 +152,21 @@ GenAiServableProperties::DraftModelStrategy detectDraftModelStrategy(const std::
 
 static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Chat template is unavailable. Servable will not respond to /chat/completions endpoint.";
 
-static void configureInputProcessingCapabilities(const std::shared_ptr<GenAiServableProperties>& properties) {
+static Status configureInputProcessingCapabilities(const std::shared_ptr<GenAiServableProperties>& properties,
+    const mediapipe::LLMCalculatorOptions& nodeOptions) {
+    VisionInputConfig videoConfig;
+    Status status = configureVideoInputProcessing(videoConfig, nodeOptions);
+    if (status != StatusCode::OK) {
+        return status;
+    }
+    if (properties->inputProcessorContext.config.visionInputConfig.has_value()) {
+        properties->inputProcessorContext.config.visionInputConfig = videoConfig;
+    }
     if (!properties->inputProcessorContext.config.audioInputConfig.has_value() &&
         std::filesystem::exists(std::filesystem::path(properties->modelsPath) / "openvino_audio_embeddings_model.xml")) {
         properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig{true};
     }
+    return StatusCode::OK;
 }
 
 // Dry-run probes: render the chat template with synthetic inputs to empirically
@@ -552,11 +563,22 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
     return StatusCode::OK;
 }
 
+Status configureVideoInputProcessing(VisionInputConfig& config, const mediapipe::LLMCalculatorOptions& nodeOptions) {
+    const auto& visionOptions = nodeOptions.input_vision();
+    if ((visionOptions.has_video_fps() && (!std::isfinite(visionOptions.video_fps()) || visionOptions.video_fps() <= 0.0F)) || visionOptions.video_max_frames() == 0) {
+        SPDLOG_ERROR("input_vision.video_fps must be finite and greater than zero when provided, and input_vision.video_max_frames must be greater than zero");
+        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+    }
+    config.videoMaxFrames = visionOptions.video_max_frames();
+    config.videoFps = visionOptions.has_video_fps() ? std::optional<float>{visionOptions.video_fps()} : std::nullopt;
+    return StatusCode::OK;
+}
+
 Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig,
     std::string graphPath, std::optional<LLMMetricReporterFactory> createMetricReporter) {
     mediapipe::LLMCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
-    Status status;
+    Status status = StatusCode::OK;
     if (nodeOptions.has_models_path()) {
         // Need to initialize pipelineType with some value to avoid compiler warning;
         // determinePipelineType will set it properly.
@@ -634,7 +656,10 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         return StatusCode::INTERNAL_ERROR;
     }
     servable->determineDecodingMethod();
-    configureInputProcessingCapabilities(servable->getProperties());
+    status = configureInputProcessingCapabilities(servable->getProperties(), nodeOptions);
+    if (status != StatusCode::OK) {
+        return status;
+    }
     return StatusCode::OK;
 }
 }  // namespace ovms
