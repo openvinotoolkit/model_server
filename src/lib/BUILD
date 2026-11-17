@@ -19,7 +19,7 @@
 # In ensures build environment matches the release.
 # In is useful for libs loaded dynamically 
 
-load("//:common_settings.bzl", "COMMON_LOCAL_DEFINES", "COMMON_STATIC_LIBS_LINKOPTS")
+load("//:common_settings.bzl", "COMMON_LOCAL_DEFINES", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS")
 load("//src/mediapipe_internal:runtime_plugin.bzl", "runtime_plugin_deps")
 load("@aspect_bazel_lib//:e2e/copy_action/copy.bzl", "simple_copy_file")
 
@@ -51,7 +51,7 @@ cc_binary(
     }),
     linkshared = True,
     linkstatic = True,
-    copts = select({
+    copts = COMMON_STATIC_LIBS_COPTS + select({
         "//src:windows": [],
         "//conditions:default": ["-Wno-deprecated-declarations"],
     }),
