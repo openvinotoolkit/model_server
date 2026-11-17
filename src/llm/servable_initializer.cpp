@@ -344,6 +344,27 @@ ChatTemplateAnalysisResult GenAiServableInitializer::analyzeChatTemplate(std::sh
     return analysisResult;
 }
 
+static void detectDefaultContentParser(const std::shared_ptr<GenAiServableProperties>& properties) {
+    const std::string configPath = FileSystem::appendSlash(properties->modelsPath) + "config.json";
+    std::ifstream ifs(configPath);
+    if (!ifs.is_open()) {
+        return;
+    }
+    rapidjson::Document modelConfig;
+    rapidjson::IStreamWrapper isw(ifs);
+    rapidjson::ParseResult parseResult = modelConfig.ParseStream(isw);
+    if (parseResult.Code() || !modelConfig.IsObject() || !modelConfig.HasMember("architectures") || !modelConfig["architectures"].IsArray()) {
+        return;
+    }
+    for (const auto& architecture : modelConfig["architectures"].GetArray()) {
+        if (architecture.IsString() && std::string_view(architecture.GetString(), architecture.GetStringLength()) == "Qwen3ASRForConditionalGeneration") {
+            properties->contentParserName = "qwen3asr";
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected content_parser: {}", properties->contentParserName);
+            break;
+        }
+    }
+}
+
 void GenAiServableInitializer::selectOutputParsers(
     const std::shared_ptr<GenAiServableProperties>& properties,
     const std::optional<ChatTemplateAnalysisResult>& analysisResult) {
@@ -371,24 +392,7 @@ void GenAiServableInitializer::selectOutputParsers(
         properties->reasoningParserName.clear();
     }
 
-    const std::string configPath = FileSystem::appendSlash(properties->modelsPath) + "config.json";
-    std::ifstream ifs(configPath);
-    if (!ifs.is_open()) {
-        return;
-    }
-    rapidjson::Document modelConfig;
-    rapidjson::IStreamWrapper isw(ifs);
-    rapidjson::ParseResult parseResult = modelConfig.ParseStream(isw);
-    if (parseResult.Code() || !modelConfig.IsObject() || !modelConfig.HasMember("architectures") || !modelConfig["architectures"].IsArray()) {
-        return;
-    }
-    for (const auto& architecture : modelConfig["architectures"].GetArray()) {
-        if (architecture.IsString() && std::string_view(architecture.GetString(), architecture.GetStringLength()) == "Qwen3ASRForConditionalGeneration") {
-            properties->contentParserName = "qwen3asr";
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected content_parser: {}", properties->contentParserName);
-            break;
-        }
-    }
+    detectDefaultContentParser(properties);
 }
 
 Status GenAiServableInitializer::validateChatTemplateAvailability(
