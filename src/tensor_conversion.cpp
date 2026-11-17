@@ -60,6 +60,10 @@ Status convertEncodedImagesToOVTensor(const std::vector<std::string_view>& encod
         if (!status.ok()) {
             return status;
         }
+        if (image.get_shape().size() != 4) {
+            SPDLOG_ERROR("Decoded image tensor has unexpected rank: {}", image.get_shape().size());
+            return StatusCode::INTERNAL_ERROR;
+        }
         status = accumulateAndCheckDecodedImageSize(image, tensorInfo, totalAllocatedPixels, maxAllowedImagePixels);
         if (status != StatusCode::OK) {
             return status;

@@ -840,6 +840,7 @@ ovms_cc_library(
         deps = [
                 "//src/python:python_runtime_loader",
                 "//src/python:python_calculators_plugin_loader",
+                "//src/utils:env_guard",
             ] + select({
             "//:not_disable_mediapipe" : [
                 "//src/audio:audio_utils",

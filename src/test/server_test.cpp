@@ -33,10 +33,12 @@
 #include "../ovms_exit_codes.hpp"
 #include "../prediction_service_utils.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
+#include "src/utils/env_guard.hpp"
 #include "../server.hpp"
 #include "../version.hpp"
 #include "c_api_test_utils.hpp"
 #include "mockmodelinstancechangingstates.hpp"
+#include "test_utils.hpp"
 
 using ovms::ModelManager;
 using ovms::Module;
@@ -187,6 +189,46 @@ static void requestRestServerAlive(const char* httpPort, httplib::StatusCode sta
         return;
     }
     return;
+}
+
+class ServerGlobalInitializationTest : public ::testing::Test, public Server {
+protected:
+    EnvGuard environment;
+    ScopedOVMSConfigGuard configGuard;
+
+    void initializeServer() {
+        auto serverSettings = configGuard.getServerSettings();
+        auto modelSettings = configGuard.getModelSettings();
+        serverSettings.grpcBindAddress = "invalid address";
+        EXPECT_EQ(startFromSettings(&serverSettings, &modelSettings).getCode(), ovms::StatusCode::OPTIONS_USAGE_ERROR);
+    }
+};
+
+TEST_F(ServerGlobalInitializationTest, SetsOpenCvPixelLimitOnceWhenUnset) {
+    environment.unset("OPENCV_IO_MAX_IMAGE_PIXELS");
+    initializeServer();
+    EXPECT_EQ(GetEnvVar("OPENCV_IO_MAX_IMAGE_PIXELS"), std::to_string(ovms::OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS));
+    environment.set("OPENCV_IO_MAX_IMAGE_PIXELS", "123");
+    initializeServer();
+    EXPECT_EQ(GetEnvVar("OPENCV_IO_MAX_IMAGE_PIXELS"), "123");
+}
+
+TEST_F(ServerGlobalInitializationTest, SetsOpenCvPixelLimitWhenEmpty) {
+    environment.set("OPENCV_IO_MAX_IMAGE_PIXELS", "");
+    initializeServer();
+    EXPECT_EQ(GetEnvVar("OPENCV_IO_MAX_IMAGE_PIXELS"), std::to_string(ovms::OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS));
+}
+
+TEST_F(ServerGlobalInitializationTest, PreservesExplicitOpenCvPixelLimit) {
+    environment.set("OPENCV_IO_MAX_IMAGE_PIXELS", "123");
+    initializeServer();
+    EXPECT_EQ(GetEnvVar("OPENCV_IO_MAX_IMAGE_PIXELS"), "123");
+}
+
+TEST_F(ServerGlobalInitializationTest, PreservesZeroOpenCvPixelLimit) {
+    environment.set("OPENCV_IO_MAX_IMAGE_PIXELS", "0");
+    initializeServer();
+    EXPECT_EQ(GetEnvVar("OPENCV_IO_MAX_IMAGE_PIXELS"), "0");
 }
 
 TEST(Server, ServerNotAliveBeforeStart) {
