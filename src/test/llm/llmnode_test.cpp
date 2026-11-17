@@ -229,7 +229,7 @@ TEST_F(InputProcessingCapabilitiesTest, AudioOnlyModelDisablesVisionButRemainsMu
         auto context = servable.createExecutionContext();
         ov::genai::ChatHistory history;
         history.push_back({{"role", "user"}, {"content", ov::genai::JsonContainer::from_json_string(
-            "[{\"type\":\"" + type + "\"}]")}});
+                                                             "[{\"type\":\"" + type + "\"}]")}});
         context->inputRequest.input = std::move(history);
         EXPECT_EQ(servable.validateInputCompatibility(context).code(), absl::StatusCode::kInvalidArgument);
     }
