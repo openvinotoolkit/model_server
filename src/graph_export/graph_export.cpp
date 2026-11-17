@@ -82,7 +82,8 @@ static std::string constructModelsPath(const std::string& modelPath, const std::
     } else {
         modelsPath = modelPath;
     }
-    modelsPath = toGenericPath(modelsPath);
+    const std::filesystem::path normalizedPath = std::filesystem::path(modelsPath).lexically_normal();
+    modelsPath = toGenericPath(normalizedPath.string());
     SPDLOG_TRACE("Models path: {}, modelPath:{}, ggufFilenameOpt:{}", modelsPath, modelPath, ggufFilenameOpt.value_or("std::nullopt"));
     return modelsPath;
 }

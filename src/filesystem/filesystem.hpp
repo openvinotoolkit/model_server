@@ -251,30 +251,28 @@ public:
     }
 
     static std::string joinPath(std::initializer_list<std::string> segments) {
-        std::string joined;
+        std::filesystem::path joinedPath;
 
         for (const auto& seg : segments) {
-            if (joined.empty()) {
-                joined = seg;
-            } else if (isAbsolutePath(seg)) {
-                if (joined[joined.size() - 1] == '/') {
-                    joined.append(seg.substr(1));
-                } else {
-                    joined.append(seg);
-                }
+            if (seg.empty()) {
+                continue;
+            }
+            const std::filesystem::path nextSeg(seg);
+            if (joinedPath.empty()) {
+                joinedPath = nextSeg;
+            } else if (nextSeg.is_absolute()) {
+                joinedPath = nextSeg;
             } else {
-                if (joined[joined.size() - 1] != '/') {
-                    joined.append("/");
-                }
-                joined.append(seg);
+                joinedPath /= nextSeg;
             }
         }
 
-        // Windows path creation
-        if (FileSystem::getOsSeparator() != "/") {
-            std::replace(joined.begin(), joined.end(), '/', '\\');
+        if (joinedPath.empty()) {
+            return {};
         }
-        return joined;
+
+        joinedPath = joinedPath.lexically_normal();
+        return joinedPath.string();
     }
 
     static std::string getFileMD5(const std::string& filename) {

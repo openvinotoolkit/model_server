@@ -651,7 +651,8 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "genai_servables",
-    hdrs = ["servable.hpp",
+        hdrs = ["servable.hpp",
+            "gguf_utils/gguf_metadata_reader.hpp",
             "servable_initializer.hpp",
             "language_model/continuous_batching/servable.hpp",
             "language_model/continuous_batching/llm_executor.hpp",
@@ -668,7 +669,8 @@ ovms_cc_library(
                 "omni_model/legacy/legacy_executor.hpp",
                 "text_utils.hpp",
                 ":llmcalculator_proto_headers"],
-    srcs = ["servable.cpp",
+        srcs = ["servable.cpp",
+            "gguf_utils/gguf_metadata_reader.cpp",
             "servable_initializer.cpp",
             "language_model/continuous_batching/servable.cpp",
             "language_model/continuous_batching/servable_initializer.cpp",

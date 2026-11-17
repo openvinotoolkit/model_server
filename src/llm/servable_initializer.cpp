@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <algorithm>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -59,6 +60,7 @@
 #include "visual_language_model/legacy/servable_initializer.hpp"
 #include "omni_model/legacy/servable_initializer.hpp"
 #include "omni_model/legacy/servable.hpp"
+#include "gguf_utils/gguf_metadata_reader.hpp"
 
 namespace ovms {
 
@@ -393,6 +395,23 @@ void GenAiServableInitializer::applyGlobalCacheDir(std::shared_ptr<GenAiServable
     }
 }
 
+void GenAiServableInitializer::applyDefaultGGUFReader(std::shared_ptr<GenAiServableProperties> properties, const std::string& modelsPath) {
+    if (std::filesystem::path(modelsPath).extension() != ".gguf") {
+        return;
+    }
+
+    constexpr char ggufReaderProperty[] = "GGUF_READER";
+    if (properties->pluginConfig.find(ggufReaderProperty) == properties->pluginConfig.end()) {
+#ifdef _WIN32
+        // Use the native GGUF loader by default on Windows to avoid the broken default frontend path
+        // handling seen with some GGUF assets on this platform.
+        properties->pluginConfig[ggufReaderProperty] = "NATIVE";
+#else
+        properties->pluginConfig[ggufReaderProperty] = "FRONTEND";
+#endif
+    }
+}
+
 ChatTemplateEngine GenAiServableInitializer::determineChatTemplateEngine(
     const mediapipe::LLMCalculatorOptions& nodeOptions) {
     if (nodeOptions.has_chat_template_engine() &&
@@ -480,27 +499,46 @@ std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath) {
     return maxModelLength;
 }
 
-Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath) {
-    // Assuming that models_path is always set
-    std::string parsedModelsPath;
-    auto status = parseModelsPath(parsedModelsPath, nodeOptions.models_path(), graphPath);
-    if (status != StatusCode::OK) {
-        return status;
+Status determinePipelineTypeFromGGUF(const std::filesystem::path& ggufPath, const mediapipe::LLMCalculatorOptions& nodeOptions, PipelineType& pipelineType) {
+    try {
+        std::string architecture = GgufMetadataReader(ggufPath).readArchitecture();
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "GGUF architecture: {} (metadata only)", architecture);
+        if (architecture == "clip") {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "GGUF vision projector cannot be served as a language model. GGUF companion-projector loading is not supported.");
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
+        if (nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::VLM ||
+            nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::VLM_CB ||
+            nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::OMNI) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "GGUF VLM/Omni pipeline selection is unsupported: detecting a model family does not provide the required vision/audio companion loading.");
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
+        const auto companionDirectory = ggufPath.has_parent_path() ? ggufPath.parent_path() : std::filesystem::path(".");
+        for (const auto& companion : std::filesystem::directory_iterator(companionDirectory)) {
+            const std::string filename = companion.path().filename().string();
+            if (companion.path() != ggufPath && companion.path().extension() == ".gguf" &&
+                filename.find("mmproj") != std::string::npos) {
+                SPDLOG_LOGGER_WARN(modelmanager_logger, "GGUF projector candidate {} will not be loaded; serving language GGUF as text only", companion.path().string());
+            }
+        }
+    } catch (const std::exception& error) {
+        SPDLOG_LOGGER_ERROR(modelmanager_logger, "Cannot inspect GGUF metadata at {}: {}", ggufPath.string(), error.what());
+        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
+    // currently, GGUF models are only for LM_CB
+    pipelineType = PipelineType::LM_CB;
 
-    std::filesystem::path parsedModelsPathFs(parsedModelsPath);
+    return StatusCode::OK;
+}
 
-    // Existence of talker model indicates omni pipeline
-    bool hasTalkerModel = std::filesystem::exists(parsedModelsPathFs / "openvino_talker_model.xml");
-    bool hasVlmModels = (std::filesystem::exists(parsedModelsPathFs / "openvino_text_embeddings_model.xml") &&
-                         std::filesystem::exists(parsedModelsPathFs / "openvino_vision_embeddings_model.bin"));
+Status determinePipelineTypeFromIR(const std::filesystem::path& irPath, const mediapipe::LLMCalculatorOptions& nodeOptions, PipelineType& pipelineType) {
+    bool hasTalkerModel = std::filesystem::exists(irPath / "openvino_talker_model.xml");
+    bool hasVlmModels = (std::filesystem::exists(irPath / "openvino_text_embeddings_model.xml") &&
+                         std::filesystem::exists(irPath / "openvino_vision_embeddings_model.bin"));
 
-    // Existence of text embeddings and vision embeddings models indicates we are dealing with VLM pipeline
-    // But if it has talker model, it means it is Omni pipeline which is built out of VLM Pipeline and Talker
     bool isOmni = hasTalkerModel && hasVlmModels;
     bool isVLM = !hasTalkerModel && hasVlmModels;
 
-    // If pipeline type is not explicitly defined by the user, we need to determine it based on the content of the models directory and configuration
     if (nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::AUTO) {
         if (isOmni) {
             pipelineType = PipelineType::OMNI;
@@ -552,15 +590,34 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
     return StatusCode::OK;
 }
 
+Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath, ModelsFormat* detectedFormat) {
+    // Assuming that models_path is always set
+    std::string parsedModelsPath;
+    auto status = parseModelsPath(parsedModelsPath, nodeOptions.models_path(), graphPath);
+    if (status != StatusCode::OK) {
+        return status;
+    }
+
+    std::filesystem::path parsedModelsPathFs(parsedModelsPath);
+
+    const bool isGGUF = parsedModelsPathFs.extension() == ".gguf";
+    status = isGGUF ? determinePipelineTypeFromGGUF(parsedModelsPathFs, nodeOptions, pipelineType) : determinePipelineTypeFromIR(parsedModelsPathFs, nodeOptions, pipelineType);
+    if (status == StatusCode::OK && detectedFormat != nullptr) {
+        *detectedFormat = isGGUF ? ModelsFormat::GGUF : ModelsFormat::IR;
+    }
+    return status;
+}
+
 Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath) {
     mediapipe::LLMCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
     Status status;
+    ModelsFormat modelsFormat{ModelsFormat::NONE};
     if (nodeOptions.has_models_path()) {
         // Need to initialize pipelineType with some value to avoid compiler warning;
         // determinePipelineType will set it properly.
         PipelineType pipelineType{PipelineType::LM_CB};
-        status = determinePipelineType(pipelineType, nodeOptions, graphPath);
+        status = determinePipelineType(pipelineType, nodeOptions, graphPath, &modelsFormat);
         if (status != StatusCode::OK) {
             return status;
         }
@@ -632,6 +689,7 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node requires models_path to be set.");
         return StatusCode::INTERNAL_ERROR;
     }
+    servable->getProperties()->modelsFormat = modelsFormat;
     servable->determineDecodingMethod();
     configureInputProcessingCapabilities(servable->getProperties());
     return StatusCode::OK;
