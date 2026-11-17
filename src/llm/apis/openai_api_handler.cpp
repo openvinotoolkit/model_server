@@ -420,6 +420,34 @@ absl::StatusOr<InputRequest> OpenAIApiHandler::extractInputRequest() {
     return req;
 }
 
+absl::StatusOr<std::vector<InputRequest>> OpenAIApiHandler::extractInputRequests(GenerationConfigBuilder& configBuilder) {
+    // Runs the full generation config pipeline on the builder before input extraction,
+    // mirroring the config construction prepareInputs performs for the other endpoints.
+    // Used by the decisions endpoint (its handler overrides this and shares the base call).
+    configBuilder.parseConfigFromRequest(request);
+    try {
+        configBuilder.adjustConfigForDecodingMethod();
+    } catch (const std::invalid_argument& e) {
+        return absl::InvalidArgumentError(e.what());
+    }
+    try {
+        configBuilder.validateStructuredOutputConfig(tokenizer);
+    } catch (const std::exception& e) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Tool guided generation will not be applied due to JSON schema validation failure: {}", e.what());
+        configBuilder.unsetStructuredOutputConfig();
+    }
+    auto inputRequest = extractInputRequest();
+    if (!inputRequest.ok()) {
+        return inputRequest.status();
+    }
+    inputRequest->generationConfig = configBuilder.getConfig();
+    // push_back moves; a braced-initializer would copy the element (it is copied from the
+    // temporary initializer_list), and this is on the hot path of every endpoint.
+    std::vector<InputRequest> requests;
+    requests.push_back(std::move(*inputRequest));
+    return requests;
+}
+
 std::optional<int> OpenAIApiHandler::getMaxTokens() const {
     return request.maxTokens;
 }

@@ -33,6 +33,26 @@ void LegacyExecutor::processRequest() {
     if (requestExecutionContext->clientDisconnected) {
         requestExecutionContext->success = false;
         SPDLOG_LOGGER_DEBUG(llm_executor_logger, "Client disconnected, skipping request processing.");
+    } else if (!requestExecutionContext->decisionsInputRequests.empty()) {
+        // Decisions: one greedy forward pass per question (per-question prompt +
+        // per-question label token ids). The one-shot pipeline resets its KV state on
+        // every low-level generate call, so the passes are independent.
+        SPDLOG_LOGGER_TRACE(llm_executor_logger, "Decisions generation started ({} questions)", requestExecutionContext->decisionsInputRequests.size());
+        try {
+            requestExecutionContext->decisionsResults.reserve(requestExecutionContext->decisionsInputRequests.size());
+            for (const auto& req : requestExecutionContext->decisionsInputRequests) {
+                // Stop burning forward passes if the client went away mid-batch; the
+                // response phase reports the cancellation either way.
+                if (requestExecutionContext->clientDisconnected) {
+                    break;
+                }
+                requestExecutionContext->decisionsResults.push_back(pipe->generate(req.inputIds, req.generationConfig));
+            }
+        } catch (std::exception& e) {
+            requestExecutionContext->success = false;
+            SPDLOG_LOGGER_ERROR(llm_executor_logger, "LLM pipeline decisions generation failed: {}.", e.what());
+        }
+        SPDLOG_LOGGER_TRACE(llm_executor_logger, "Decisions generation ended");
     } else {
         SPDLOG_LOGGER_TRACE(llm_executor_logger, "Generation started");
         try {

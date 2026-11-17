@@ -35,6 +35,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #pragma warning(pop)
+#include "../io_processing/generation_config_builder.hpp"
 #include "../io_processing/output_parser.hpp"
 #include "../io_processing/input_request.hpp"
 #include "openai_request.hpp"
@@ -57,6 +58,7 @@ enum class Endpoint {
     CHAT_COMPLETIONS,
     COMPLETIONS,
     RESPONSES,
+    DECISIONS,
     TOKENIZE,
 };
 
@@ -91,6 +93,9 @@ struct CompletionUsageStatistics {
 struct UnaryChoiceLogprobs {
     std::vector<int64_t> generatedIds;
     std::vector<float> logProbs;
+    // Per-position logprobs of GenerationConfig::logprob_token_ids (decisions endpoint);
+    // parallel to generatedIds.
+    std::vector<std::vector<std::pair<int64_t, float>>> requestedTokenLogprobs;
 };
 
 // Abstract base class for OpenAI API handlers.
@@ -183,6 +188,19 @@ public:
 
     /** Constructs output parsers after generation setup and applies the detected prompt state. */
     void initOutputParser(const ReasoningGenerationContext& reasoningContext);
+
+    // Plural form: one fully configured InputRequest per engine request (the generation
+    // config pipeline parse → adjust → validate runs on the provided builder). The base
+    // implementation returns a single request; the decisions endpoint overrides it to emit
+    // one request per question (per-question prompt + per-question label token ids).
+    virtual absl::StatusOr<std::vector<InputRequest>> extractInputRequests(GenerationConfigBuilder& configBuilder);
+
+    // Whether the complete unary response requires per-choice logprob data.
+    virtual bool requiresLogprobData() const { return request.logprobschat || request.logprobs; }
+
+    // Endpoint-specific validation of the per-position logprob data before unary
+    // serialization. Default: nothing to validate.
+    virtual absl::Status validateLogprobData(const std::vector<UnaryChoiceLogprobs>& logprobData) const { return absl::OkStatus(); }
 
     // Verbose response configuration
     void enableVerboseResponse(const std::string& promptAfterTemplate) {

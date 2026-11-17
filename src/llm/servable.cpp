@@ -36,6 +36,7 @@
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "../profiler.hpp"
 #include "apis/openai_completions.hpp"
+#include "apis/openai_decisions.hpp"
 #include "apis/openai_responses.hpp"
 #include "io_processing/generation_config_builder.hpp"
 #include "io_processing/input_processor.hpp"
@@ -101,10 +102,13 @@ absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionCo
     } else if (payload.uri == "/v3/responses" || payload.uri == "/v3/v1/responses" ||
                payload.uri == "/v1/responses") {
         executionContext->endpoint = Endpoint::RESPONSES;
+    } else if (payload.uri == "/v3/decisions" || payload.uri == "/v3/v1/decisions" ||
+               payload.uri == "/v1/decisions") {
+        executionContext->endpoint = Endpoint::DECISIONS;
     } else if (TokenizeParser::isTokenizeEndpoint(payload.uri)) {
         executionContext->endpoint = Endpoint::TOKENIZE;
     } else {
-        return absl::InvalidArgumentError("Wrong endpoint. Allowed endpoints: /v[13]/chat/completions, /v[13]/completions, /v[13]/responses, /v[13]/tokenize");
+        return absl::InvalidArgumentError("Wrong endpoint. Allowed endpoints: /v[13]/chat/completions, /v[13]/completions, /v[13]/responses, /v[13]/decisions, /v[13]/tokenize");
     }
     auto endpointStatus = validateEndpoint(executionContext->endpoint);
     if (!endpointStatus.ok()) {
@@ -169,6 +173,13 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
                 getProperties()->tokenizer,
                 getProperties()->toolParserName,
                 getProperties()->reasoningParserName);
+        } else if (executionContext->endpoint == Endpoint::DECISIONS) {
+            executionContext->apiHandler = std::make_shared<OpenAIDecisionsHandler>(*executionContext->payload.parsedJson,
+                executionContext->endpoint,
+                std::chrono::system_clock::now(),
+                getProperties()->tokenizer,
+                getProperties()->toolParserName,
+                getProperties()->reasoningParserName);
         } else {
             executionContext->apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(*executionContext->payload.parsedJson,
                 executionContext->endpoint,
@@ -189,6 +200,24 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         return status;
     }
 
+    // Decisions always uses the per-question path (even with one question) so the
+    // per-question result validation in readCompleteExecutionResults applies uniformly.
+    // Its generation config is built here (per-question forced greedy single token with
+    // requested-token logprobs), before the template context exists, so it takes the
+    // config-builder form of the extraction; every other endpoint builds its generation
+    // config later in prepareInputs, once the reasoning context is known.
+    if (executionContext->endpoint == Endpoint::DECISIONS) {
+        GenerationConfigBuilder configBuilder(getProperties()->baseGenerationConfig,
+            getProperties()->toolParserName,
+            getProperties()->enableToolGuidedGeneration,
+            getProperties()->decodingMethod);
+        auto inputRequestsResult = executionContext->apiHandler->extractInputRequests(configBuilder);
+        if (!inputRequestsResult.ok()) {
+            return inputRequestsResult.status();
+        }
+        executionContext->decisionsInputRequests = std::move(*inputRequestsResult);
+        return absl::OkStatus();
+    }
     auto inputRequestResult = executionContext->apiHandler->extractInputRequest();
     if (!inputRequestResult.ok()) {
         return inputRequestResult.status();
@@ -223,11 +252,13 @@ absl::Status GenAiServable::validateInputCompatibility(std::shared_ptr<GenAiServ
         return absl::InvalidArgumentError("Chat requests are unavailable because " + reason + ".");
     }
 
-    // Multimodal entries are preserved as JsonContainer arrays in chatHistory until
-    // compatibility is checked.
-    if (chatInput) {
-        const auto& inputProcessingConfig = getProperties()->inputProcessorContext.config;
-        const auto& ch = std::get<ov::genai::ChatHistory>(executionContext->inputRequest.input);
+    // Per-modality checks below: LM servables reject image/video content, servables
+    // without an audio input config reject input_audio. The image/video checks allow
+    // visual servables, so no early return for them — an early return would also skip
+    // the audio check on visual servables. Multimodal entries are preserved as
+    // JsonContainer arrays in chatHistory until compatibility is checked.
+    const auto& inputProcessingConfig = getProperties()->inputProcessorContext.config;
+    auto checkChatHistory = [&](const ov::genai::ChatHistory& ch) -> absl::Status {
         for (size_t i = 0; i < ch.size(); i++) {
             const auto content = ch[i]["content"];
             if (content.is_array()) {
@@ -245,6 +276,24 @@ absl::Status GenAiServable::validateInputCompatibility(std::shared_ptr<GenAiServ
                 }
             }
         }
+        return absl::OkStatus();
+    };
+
+    if (chatInput) {
+        auto status = checkChatHistory(std::get<ov::genai::ChatHistory>(executionContext->inputRequest.input));
+        if (!status.ok()) {
+            return status;
+        }
+    }
+    // Decisions endpoint: the per-question requests carry the actual input (inputRequest
+    // is empty), so run the same check on each of them.
+    for (const auto& req : executionContext->decisionsInputRequests) {
+        if (std::holds_alternative<ov::genai::ChatHistory>(req.input)) {
+            auto status = checkChatHistory(std::get<ov::genai::ChatHistory>(req.input));
+            if (!status.ok()) {
+                return status;
+            }
+        }
     }
     return absl::OkStatus();
 }
@@ -257,6 +306,50 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     auto status = validateInputCompatibility(executionContext);
     if (!status.ok()) {
         return status;
+    }
+
+    // Decisions: one InputRequest per question, each tokenized independently. The
+    // shared prompt text differs per question (its question block), so the prompt
+    // token count is the sum across questions.
+    if (!executionContext->decisionsInputRequests.empty()) {
+        size_t totalPromptTokens = 0;
+        // The question blocks only append a text part, so every per-question copy carries
+        // the same media parts in the same order: decode the media once (first question)
+        // and reuse the ref-counted tensors for the rest.
+        for (size_t i = 0; i < executionContext->decisionsInputRequests.size(); ++i) {
+            auto& req = executionContext->decisionsInputRequests[i];
+            if (i > 0) {
+                req.preDecodedImages = executionContext->decisionsInputRequests[0].inputImages;
+                req.preDecodedVideos = executionContext->decisionsInputRequests[0].inputVideos;
+            }
+            InputProcessor processor(getProperties()->inputProcessorContext, req);
+            status = processor.process(req);
+            if (!status.ok()) {
+                return status;
+            }
+            if (getProperties()->maxModelLength.has_value()) {
+                if (req.inputIds.get_size() > getProperties()->maxModelLength.value()) {
+                    std::stringstream ss;
+                    ss << "Number of prompt tokens: " << req.inputIds.get_size()
+                       << " exceeds model max length: " << getProperties()->maxModelLength.value();
+                    SPDLOG_LOGGER_WARN(llm_calculator_logger, ss.str());
+                    return absl::Status(absl::StatusCode::kInvalidArgument, ss.str());
+                }
+                if (executionContext->apiHandler->getMaxTokens().has_value() &&
+                    req.inputIds.get_size() + static_cast<size_t>(executionContext->apiHandler->getMaxTokens().value()) >
+                        getProperties()->maxModelLength.value()) {
+                    std::stringstream ss;
+                    ss << "Number of prompt tokens: " << req.inputIds.get_size()
+                       << " + max tokens value: " << executionContext->apiHandler->getMaxTokens().value()
+                       << " exceeds model max length: " << getProperties()->maxModelLength.value();
+                    SPDLOG_LOGGER_WARN(llm_calculator_logger, ss.str());
+                    return absl::Status(absl::StatusCode::kInvalidArgument, ss.str());
+                }
+            }
+            totalPromptTokens += req.inputIds.get_size();
+        }
+        executionContext->apiHandler->setPromptTokensUsage(totalPromptTokens);
+        return absl::OkStatus();
     }
 
     InputRequest& req = executionContext->inputRequest;
@@ -314,13 +407,16 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
 }
 
 absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
-    const bool hasLogprobs = executionContext->apiHandler->getRequest().logprobschat ||
-                             executionContext->apiHandler->getRequest().logprobs;
+    const bool hasLogprobs = executionContext->apiHandler->requiresLogprobData();
     const size_t numOutputs = executionContext->generationOutputs.size();
+    // Decisions read only the requested-token logprobs: the serializer ignores text
+    // deltas, so skip detokenization and output parsing (and the per-sequence streamers)
+    // while keeping token-usage accounting and logprob collection.
+    const bool isDecisions = executionContext->endpoint == Endpoint::DECISIONS;
 
     // Build streamer config once; shared across all per-sequence streamers.
     ov::AnyMap streamerConfig;
-    if (!executionContext->apiHandler->getRequest().skipSpecialTokens) {
+    if (!isDecisions && !executionContext->apiHandler->getRequest().skipSpecialTokens) {
         streamerConfig.insert(ov::genai::skip_special_tokens(false));
     }
 
@@ -339,39 +435,43 @@ absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServabl
         executionContext->apiHandler->incrementProcessedTokens(output.generated_ids.size());
 
         std::vector<Delta> localDeltas;
-        if (numOutputs == 1) {
-            // Single sequence: reuse the OVMSTextStreamer and deltaChannel built in parseRequest.
-            executionContext->textStreamer->write(output.generated_ids);
-            executionContext->textStreamer->end();
-            localDeltas = executionContext->deltaChannel.drain();
-        } else {
-            // Multiple sequences: each beam requires its own independent stateful streamer
-            // (hold-back buffer, parser state are per-sequence).
-            auto cb = [&localDeltas](Delta delta, bool) -> ov::genai::StreamingStatus {
-                localDeltas.push_back(std::move(delta));
-                return ov::genai::StreamingStatus::RUNNING;
-            };
-            auto outputParser = executionContext->apiHandler->getOutputParser();
-            if (outputParser) {
-                outputParser->resetStreamingState();
+        if (!isDecisions) {
+            if (numOutputs == 1) {
+                // Single sequence: reuse the OVMSTextStreamer and deltaChannel built in parseRequest.
+                executionContext->textStreamer->write(output.generated_ids);
+                executionContext->textStreamer->end();
+                localDeltas = executionContext->deltaChannel.drain();
+            } else {
+                // Multiple sequences: each beam requires its own independent stateful streamer
+                // (hold-back buffer, parser state are per-sequence).
+                auto cb = [&localDeltas](Delta delta, bool) -> ov::genai::StreamingStatus {
+                    localDeltas.push_back(std::move(delta));
+                    return ov::genai::StreamingStatus::RUNNING;
+                };
+                auto outputParser = executionContext->apiHandler->getOutputParser();
+                if (outputParser) {
+                    outputParser->resetStreamingState();
+                }
+                auto tempStreamer = std::make_shared<OVMSTextStreamer>(
+                    getProperties()->tokenizer,
+                    outputParser,
+                    executionContext->apiHandler->areToolsAvailable(),
+                    std::move(cb),
+                    streamerConfig);
+                tempStreamer->write(output.generated_ids);
+                tempStreamer->end();
             }
-            auto tempStreamer = std::make_shared<OVMSTextStreamer>(
-                getProperties()->tokenizer,
-                outputParser,
-                executionContext->apiHandler->areToolsAvailable(),
-                std::move(cb),
-                streamerConfig);
-            tempStreamer->write(output.generated_ids);
-            tempStreamer->end();
         }
 
         allDeltas.push_back(std::move(localDeltas));
         finishReasons.push_back(output.finish_reason);
         if (hasLogprobs) {
-            logprobData.push_back({output.generated_ids, output.generated_log_probs});
+            logprobData.push_back({output.generated_ids, output.generated_log_probs, output.requested_token_logprobs});
         }
     }
 
+    // For decisions, perfMetrics aggregates all question handles; completion stays from
+    // incrementProcessedTokens when numOutputs > 1 (the guard below).
     if (executionContext->perfMetrics) {
         auto& perfMetrics = *executionContext->perfMetrics;
         executionContext->apiHandler->setPromptTokensUsage(perfMetrics.get_num_input_tokens());
@@ -383,6 +483,13 @@ absl::Status GenAiServable::prepareCompleteResponse(std::shared_ptr<GenAiServabl
     }
 
     if (hasLogprobs) {
+        // Endpoint-specific validation: for decisions, incomplete logprob data (missing
+        // labels, all masked, result count mismatch) must surface as a non-OK status
+        // (HTTP 400) rather than a success response with an incomplete answer.
+        auto logprobStatus = executionContext->apiHandler->validateLogprobData(logprobData);
+        if (!logprobStatus.ok()) {
+            return logprobStatus;
+        }
         executionContext->response = executionContext->apiHandler->serializeUnaryResponse(
             allDeltas, finishReasons, logprobData);
     } else {

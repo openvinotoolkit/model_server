@@ -76,13 +76,19 @@ absl::Status ImageDecodingProcessor::process(InputRequest& req) {
             const auto type = part["type"].as_string().value_or("");
 
             if (type == "image_url") {
-                const auto url = part["image_url"]["url"].as_string().value_or("");
-                auto imageResult = fetchAndDecodeImage(url, allowedLocalMediaPath, allowedMediaDomains,
-                    req.totalDecodedPixels, maxAllowedImagePixels);
-                if (!imageResult.ok()) {
-                    return imageResult.status();
+                if (imageIndex < req.preDecodedImages.size()) {
+                    // Decisions: the image was already fetched and decoded for the first
+                    // question; reuse the ref-counted tensor instead of decoding it again.
+                    req.inputImages.push_back(req.preDecodedImages[imageIndex]);
+                } else {
+                    const auto url = part["image_url"]["url"].as_string().value_or("");
+                    auto imageResult = fetchAndDecodeImage(url, allowedLocalMediaPath, allowedMediaDomains,
+                        req.totalDecodedPixels, maxAllowedImagePixels);
+                    if (!imageResult.ok()) {
+                        return imageResult.status();
+                    }
+                    req.inputImages.push_back(std::move(imageResult).value());
                 }
-                req.inputImages.push_back(std::move(imageResult).value());
                 std::string tag = "<ov_genai_image_" + std::to_string(imageIndex++) + ">";
                 ov::genai::JsonContainer textEntry({{"type", "text"}, {"text", tag}});
                 content[j] = textEntry;
