@@ -23,15 +23,13 @@ namespace ovms {
 // and populates InputRequest::inputAudios.
 class AudioDecodingProcessor : public BaseInputProcessor {
 public:
-    explicit AudioDecodingProcessor(bool resamplingRequired = true, bool useAudioContentPart = false) :
-        resamplingRequired(resamplingRequired),
-        useAudioContentPart(useAudioContentPart) {}
+    explicit AudioDecodingProcessor(bool resamplingRequired = true) :
+        resamplingRequired(resamplingRequired) {}
 
     absl::Status process(InputRequest& req) override;
 
 private:
     bool resamplingRequired;
-    bool useAudioContentPart;
 };
 
 }  // namespace ovms

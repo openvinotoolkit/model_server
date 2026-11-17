@@ -125,6 +125,15 @@ absl::Status GenAiServable::loadRequest(std::shared_ptr<GenAiServableExecutionCo
     if (!endpointStatus.ok()) {
         return endpointStatus;
     }
+        if (executionContext->endpoint == Endpoint::TRANSCRIPTIONS) {
+            auto status = OpenAITranscriptionsHandler::normalizeMultipartRequest(normalizedPayload);
+            if (!status.ok()) {
+                return status;
+            }
+        }
+        if (!normalizedPayload.parsedJson || normalizedPayload.parsedJson->HasParseError()) {
+            return absl::InvalidArgumentError("Non-json request received in text generation calculator");
+        }
     executionContext->payload = std::move(normalizedPayload);
     return absl::OkStatus();
 }
@@ -176,15 +185,6 @@ void GenAiServable::initializeTextStreamer(std::shared_ptr<GenAiServableExecutio
 }
 
 absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
-    if (executionContext->endpoint == Endpoint::TRANSCRIPTIONS) {
-        auto status = OpenAITranscriptionsHandler::normalizeMultipartRequest(executionContext->payload);
-        if (!status.ok()) {
-            return status;
-        }
-    }
-    if (!executionContext->payload.parsedJson || executionContext->payload.parsedJson->HasParseError()) {
-        return absl::InvalidArgumentError("Non-json request received in text generation calculator");
-    }
     try {
         if (executionContext->endpoint == Endpoint::RESPONSES) {
             executionContext->apiHandler = std::make_shared<OpenAIResponsesHandler>(*executionContext->payload.parsedJson,
@@ -545,9 +545,7 @@ absl::Status GenAiServable::preparePartialResponse(std::shared_ptr<GenAiServable
                 executionContext->response += wrapTextInServerSideEventMessage(usageChunk);
             }
         }
-        if (executionContext->apiHandler->appendsStreamingDoneMarker()) {
-            executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
-        }
+        executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", executionContext->response);
         executionContext->sendLoopbackSignal = false;
     }
@@ -652,9 +650,7 @@ absl::Status prepareLegacyPartialResponse(std::shared_ptr<GenAiServableExecution
                 executionContext->response += wrapTextInServerSideEventMessage(usageChunk);
             }
         }
-        if (executionContext->apiHandler->appendsStreamingDoneMarker()) {
-            executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
-        }
+        executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Generated complete streaming response: {}", executionContext->response);
         executionContext->sendLoopbackSignal = false;
     }

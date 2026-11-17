@@ -58,6 +58,7 @@ public:
     virtual absl::Status addRequestToPipeline(std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext);
 
     // Interface methods
+        absl::Status validateEndpoint(Endpoint endpoint) const override;
     std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() override;
     std::shared_ptr<GenAiServableProperties> getProperties() override;
     absl::Status scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;

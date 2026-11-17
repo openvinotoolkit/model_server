@@ -165,12 +165,9 @@ static Status configureInputProcessingCapabilities(const std::shared_ptr<GenAiSe
     }
     const std::filesystem::path modelsPath(properties->modelsPath);
     if (!properties->inputProcessorContext.config.audioInputConfig.has_value() &&
-        std::filesystem::exists(modelsPath / "openvino_audio_embeddings_model.xml")) {
-        properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig::withResampling();
-    }
-    if (!properties->inputProcessorContext.config.audioInputConfig.has_value() &&
-        std::filesystem::exists(modelsPath / "openvino_audio_encoder_model.xml")) {
-        properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig::withResamplingAndAudioContentPart();
+            (std::filesystem::exists(modelsPath / "openvino_audio_embeddings_model.xml") ||
+                std::filesystem::exists(modelsPath / "openvino_audio_encoder_model.xml"))) {
+            properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig::withResampling();
     }
     return StatusCode::OK;
 }
@@ -347,43 +344,14 @@ ChatTemplateAnalysisResult GenAiServableInitializer::analyzeChatTemplate(std::sh
     return analysisResult;
 }
 
-ParserAnalysisResult GenAiServableInitializer::analyzeOutputParsers(
-    const std::shared_ptr<GenAiServableProperties>& properties,
-    const std::optional<ChatTemplateAnalysisResult>& chatTemplateAnalysis) {
-    ParserAnalysisResult analysisResult;
-    if (chatTemplateAnalysis.has_value()) {
-        analysisResult.detectedToolParser = chatTemplateAnalysis->detectedToolParser;
-        analysisResult.detectedReasoningParser = chatTemplateAnalysis->detectedReasoningParser;
-    }
-
-    const std::string configPath = FileSystem::appendSlash(properties->modelsPath) + "config.json";
-    std::ifstream ifs(configPath);
-    if (!ifs.is_open()) {
-        return analysisResult;
-    }
-    rapidjson::Document modelConfig;
-    rapidjson::IStreamWrapper isw(ifs);
-    rapidjson::ParseResult parseResult = modelConfig.ParseStream(isw);
-    if (parseResult.Code() || !modelConfig.HasMember("architectures") || !modelConfig["architectures"].IsArray()) {
-        return analysisResult;
-    }
-    for (const auto& architecture : modelConfig["architectures"].GetArray()) {
-        if (architecture.IsString() && std::string_view(architecture.GetString(), architecture.GetStringLength()) == "Qwen3ASRForConditionalGeneration") {
-            analysisResult.detectedContentParser = "qwen3asr";
-            break;
-        }
-    }
-    return analysisResult;
-}
-
 void GenAiServableInitializer::selectOutputParsers(
     const std::shared_ptr<GenAiServableProperties>& properties,
-    const ParserAnalysisResult& analysisResult) {
+    const std::optional<ChatTemplateAnalysisResult>& analysisResult) {
     if (!isParserDisabled(properties->toolParserName)) {
         if (!properties->toolParserName.empty()) {
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured tool_parser: {}", properties->toolParserName);
-        } else if (analysisResult.detectedToolParser.has_value()) {
-            properties->toolParserName = analysisResult.detectedToolParser.value();
+        } else if (analysisResult.has_value() && analysisResult->detectedToolParser.has_value()) {
+            properties->toolParserName = analysisResult->detectedToolParser.value();
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected tool_parser: {}", properties->toolParserName);
         }
     } else {
@@ -394,8 +362,8 @@ void GenAiServableInitializer::selectOutputParsers(
     if (!isParserDisabled(properties->reasoningParserName)) {
         if (!properties->reasoningParserName.empty()) {
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured reasoning_parser: {}", properties->reasoningParserName);
-        } else if (analysisResult.detectedReasoningParser.has_value()) {
-            properties->reasoningParserName = analysisResult.detectedReasoningParser.value();
+        } else if (analysisResult.has_value() && analysisResult->detectedReasoningParser.has_value()) {
+            properties->reasoningParserName = analysisResult->detectedReasoningParser.value();
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected reasoning_parser: {}", properties->reasoningParserName);
         }
     } else {
@@ -403,9 +371,23 @@ void GenAiServableInitializer::selectOutputParsers(
         properties->reasoningParserName.clear();
     }
 
-    if (analysisResult.detectedContentParser.has_value()) {
-        properties->contentParserName = analysisResult.detectedContentParser.value();
-        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected content_parser: {}", properties->contentParserName);
+    const std::string configPath = FileSystem::appendSlash(properties->modelsPath) + "config.json";
+    std::ifstream ifs(configPath);
+    if (!ifs.is_open()) {
+        return;
+    }
+    rapidjson::Document modelConfig;
+    rapidjson::IStreamWrapper isw(ifs);
+    rapidjson::ParseResult parseResult = modelConfig.ParseStream(isw);
+    if (parseResult.Code() || !modelConfig.IsObject() || !modelConfig.HasMember("architectures") || !modelConfig["architectures"].IsArray()) {
+        return;
+    }
+    for (const auto& architecture : modelConfig["architectures"].GetArray()) {
+        if (architecture.IsString() && std::string_view(architecture.GetString(), architecture.GetStringLength()) == "Qwen3ASRForConditionalGeneration") {
+            properties->contentParserName = "qwen3asr";
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected content_parser: {}", properties->contentParserName);
+            break;
+        }
     }
 }
 

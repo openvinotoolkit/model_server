@@ -77,10 +77,11 @@ static std::unique_ptr<PreparedChatTemplateRuntime> sharedPreparedRuntimeTemplat
 
 class MultipartParserForTest : public MultiPartParser {
 public:
-    MultipartParserForTest(const std::string& audioData, const std::string& prompt, const std::string& stream) :
+    MultipartParserForTest(const std::string& audioData, const std::string& prompt, const std::string& stream, const std::string& streamOptions) :
         audioData(audioData),
         prompt(prompt),
-        stream(stream) {}
+        stream(stream),
+        streamOptions(streamOptions) {}
 
     bool parse() override { return true; }
     bool hasParseError() const override { return false; }
@@ -91,6 +92,9 @@ public:
         }
         if (name == "prompt") {
             return prompt;
+        }
+        if (name == "stream_options") {
+            return streamOptions;
         }
         return name == "stream" ? stream : "";
     }
@@ -104,6 +108,7 @@ private:
     const std::string& audioData;
     const std::string& prompt;
     const std::string& stream;
+    const std::string& streamOptions;
 };
 
 class TranscriptionTestServable : public GenAiServable {
@@ -235,9 +240,9 @@ protected:
         return result;
     }
 
-    RunResult runMultipartTranscriptionPipeline(const std::string& audioData, const std::string& prompt = "", const std::string& stream = "") {
+    RunResult runMultipartTranscriptionPipeline(const std::string& audioData, const std::string& prompt = "", const std::string& stream = "", const std::string& streamOptions = "") {
         RunResult result;
-        auto parser = std::make_shared<MultipartParserForTest>(audioData, prompt, stream);
+        auto parser = std::make_shared<MultipartParserForTest>(audioData, prompt, stream, streamOptions);
         HttpPayload payload;
         payload.parsedJson = std::make_shared<rapidjson::Document>();
         payload.uri = "/v1/audio/transcriptions";
@@ -246,7 +251,7 @@ protected:
         TranscriptionTestServable servable;
         const auto properties = servable.getProperties();
         properties->chatTemplateStatus = ChatTemplateStatus::AVAILABLE;
-        properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig::withResamplingAndAudioContentPart();
+            properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig::withResampling();
         properties->inputProcessorContext.tokenizer = *sharedTokenizer;
         properties->inputProcessorContext.templateProcessor = sharedPreparedRuntimeTemplate.get();
 
@@ -603,7 +608,7 @@ TEST_P(InputProcessingIntegrationTest, VlmAudioInput_ResamplesTo16Khz) {
     EXPECT_EQ(result.req.inputAudios[0].get_shape()[0], 160u);
 }
 
-TEST_P(InputProcessingIntegrationTest, MultipartTranscription_DecodesAudioAndKeepsAudioContentPart) {
+TEST_P(InputProcessingIntegrationTest, MultipartTranscription_DecodesAudioAndUsesIndexedTag) {
     const std::string wavData = buildWavBuffer(/*numSamples=*/240, /*sampleRate=*/24000);
     auto result = runMultipartTranscriptionPipeline(wavData);
 
@@ -615,7 +620,9 @@ TEST_P(InputProcessingIntegrationTest, MultipartTranscription_DecodesAudioAndKee
 
     const auto& chatHistory = std::get<ov::genai::ChatHistory>(result.req.input);
     ASSERT_EQ(chatHistory.size(), 1u);
-    EXPECT_EQ(chatHistory[0]["content"][0]["type"].as_string().value_or(""), "audio");
+        EXPECT_EQ(chatHistory[0]["content"][0]["type"].as_string().value_or(""), "text");
+        EXPECT_EQ(chatHistory[0]["content"][0]["text"].as_string().value_or(""), "<ov_genai_audio_0>");
+        EXPECT_NE(result.req.promptText.find("<ov_genai_audio_0>"), std::string::npos);
 }
 
 TEST_P(InputProcessingIntegrationTest, MultipartTranscription_UsesPromptAsSystemMessage) {
@@ -631,7 +638,7 @@ TEST_P(InputProcessingIntegrationTest, MultipartTranscription_UsesPromptAsSystem
     EXPECT_EQ(chatHistory[0]["role"].as_string().value_or(""), "system");
     EXPECT_EQ(chatHistory[0]["content"].as_string().value_or(""), prompt);
     EXPECT_NE(result.req.promptText.find(prompt), std::string::npos);
-    EXPECT_EQ(chatHistory[1]["content"][0]["type"].as_string().value_or(""), "audio");
+    EXPECT_EQ(chatHistory[1]["content"][0]["text"].as_string().value_or(""), "<ov_genai_audio_0>");
 }
 
 TEST_P(InputProcessingIntegrationTest, MultipartTranscription_EnablesStreaming) {
@@ -641,6 +648,42 @@ TEST_P(InputProcessingIntegrationTest, MultipartTranscription_EnablesStreaming) 
     ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
     ASSERT_NE(result.handler, nullptr);
     EXPECT_TRUE(result.handler->isStream());
+}
+
+TEST_P(InputProcessingIntegrationTest, MultipartTranscription_ParsesStreamingUsageOptions) {
+    auto result = runMultipartTranscriptionPipeline(buildWavBuffer(160), "", "true", R"({"include_usage":true})");
+
+    ASSERT_TRUE(result.loadStatus.ok()) << result.loadStatus.message();
+    ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
+    ASSERT_NE(result.handler, nullptr);
+    EXPECT_TRUE(result.handler->getStreamOptions().includeUsage);
+}
+
+TEST_P(InputProcessingIntegrationTest, MultipartTranscription_RejectsMalformedStreamOptions) {
+    auto result = runMultipartTranscriptionPipeline(buildWavBuffer(160), "", "true", "{");
+
+    EXPECT_EQ(result.loadStatus.code(), absl::StatusCode::kInvalidArgument);
+}
+
+TEST_P(InputProcessingIntegrationTest, MultipartTranscription_RejectsInvalidStreamOptions) {
+    auto result = runMultipartTranscriptionPipeline(buildWavBuffer(160), "", "true", R"({"include_usage":"true"})");
+
+    ASSERT_TRUE(result.loadStatus.ok()) << result.loadStatus.message();
+    EXPECT_EQ(result.parseStatus.code(), absl::StatusCode::kInvalidArgument);
+}
+
+TEST_P(InputProcessingIntegrationTest, MultipartTranscription_RejectsStreamOptionsWithoutStreaming) {
+    auto result = runMultipartTranscriptionPipeline(buildWavBuffer(160), "", "false", R"({"include_usage":true})");
+
+    ASSERT_TRUE(result.loadStatus.ok()) << result.loadStatus.message();
+    EXPECT_EQ(result.parseStatus.code(), absl::StatusCode::kInvalidArgument);
+}
+
+TEST_P(InputProcessingIntegrationTest, MultipartTranscription_RejectsInvalidStreamDuringLoad) {
+    auto result = runMultipartTranscriptionPipeline(buildWavBuffer(160), "", "invalid");
+
+    EXPECT_EQ(result.loadStatus.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_EQ(result.loadStatus.message(), "stream must be true or false");
 }
 
 TEST_P(InputProcessingIntegrationTest, MultipartTranscription_RejectsMalformedAudio) {

@@ -31,12 +31,27 @@ namespace ovms {
 
 namespace {
 
-std::string serializeTranscriptionResponse(const std::string& text) {
+void writeTranscriptionUsage(rapidjson::Writer<rapidjson::StringBuffer>& writer, const CompletionUsageStatistics& usage) {
+    writer.Key("usage");
+    writer.StartObject();
+    writer.Key("type");
+    writer.String("tokens");
+    writer.Key("input_tokens");
+    writer.Uint64(usage.promptTokens);
+    writer.Key("output_tokens");
+    writer.Uint64(usage.completionTokens);
+    writer.Key("total_tokens");
+    writer.Uint64(usage.calculateTotalTokens());
+    writer.EndObject();
+}
+
+std::string serializeTranscriptionResponse(const std::string& text, const CompletionUsageStatistics& usage) {
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     writer.StartObject();
     writer.Key("text");
     writer.String(text.c_str());
+    writeTranscriptionUsage(writer, usage);
     writer.EndObject();
     return buffer.GetString();
 }
@@ -56,7 +71,7 @@ std::string serializeStreamingTranscriptionDelta(const std::string& delta) {
     return buffer.GetString();
 }
 
-std::string serializeStreamingTranscriptionDone(const std::string& text) {
+std::string serializeStreamingTranscriptionDone(const std::string& text, const CompletionUsageStatistics& usage, bool includeUsage) {
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     writer.StartObject();
@@ -67,6 +82,9 @@ std::string serializeStreamingTranscriptionDone(const std::string& text) {
     writer.String("logprobs");
     writer.StartArray();
     writer.EndArray();
+    if (includeUsage) {
+        writeTranscriptionUsage(writer, usage);
+    }
     writer.EndObject();
     return buffer.GetString();
 }
@@ -107,6 +125,18 @@ absl::Status OpenAITranscriptionsHandler::normalizeMultipartRequest(HttpPayload&
         }
     }
 
+    const std::string streamOptions = payload.multipartParser->getFieldByName("stream_options");
+    if (!streamOptions.empty()) {
+        rapidjson::Document parsedStreamOptions;
+        parsedStreamOptions.Parse(streamOptions.data(), streamOptions.size());
+        if (parsedStreamOptions.HasParseError()) {
+            return absl::InvalidArgumentError("stream_options must be valid JSON");
+        }
+        rapidjson::Value value;
+        value.CopyFrom(parsedStreamOptions, allocator);
+        request->AddMember("stream_options", value, allocator);
+    }
+
     rapidjson::Value audioPart(rapidjson::kObjectType);
     audioPart.AddMember("type", "audio", allocator);
 
@@ -131,6 +161,9 @@ absl::Status OpenAITranscriptionsHandler::normalizeMultipartRequest(HttpPayload&
     }
 
     payload.parsedJson = std::move(request);
+    if (!payload.parsedJson || payload.parsedJson->HasParseError()) {
+        return absl::InvalidArgumentError("Non-json request received in text generation calculator");
+    }
     return absl::OkStatus();
 }
 
@@ -153,7 +186,7 @@ absl::Status OpenAITranscriptionsHandler::parseRequestImpl(std::optional<uint32_
     }
     request.chatHistory.push_back({
         {"role", "user"},
-        {"content", ov::genai::JsonContainer::from_json_string(R"([{"type":"audio"}])")},
+           {"content", ov::genai::JsonContainer::from_json_string(R"([{"type":"text","text":"<ov_genai_audio_0>"}])")},
     });
     return absl::OkStatus();
 }
@@ -164,7 +197,7 @@ std::string OpenAITranscriptionsHandler::transcriptionText(const std::vector<Del
 
 std::string OpenAITranscriptionsHandler::serializeUnaryResponse(const std::vector<Delta>& deltas,
     ov::genai::GenerationFinishReason) {
-    return serializeTranscriptionResponse(transcriptionText(deltas));
+    return serializeTranscriptionResponse(transcriptionText(deltas), usage);
 }
 
 std::string OpenAITranscriptionsHandler::serializeUnaryResponse(const std::vector<std::vector<Delta>>& allDeltas,
@@ -182,7 +215,7 @@ std::string OpenAITranscriptionsHandler::serializeStreamingChunk(Delta delta,
         return serializeStreamingTranscriptionDelta(contentDelta->text);
     }
     if (finishReason != ov::genai::GenerationFinishReason::NONE) {
-        return serializeStreamingTranscriptionDone(streamingText);
+        return serializeStreamingTranscriptionDone(streamingText, usage, request.streamOptions.includeUsage);
     }
     return {};
 }

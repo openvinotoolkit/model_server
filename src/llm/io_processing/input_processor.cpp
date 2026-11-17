@@ -62,8 +62,7 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
 
         if (context.config.audioInputConfig.has_value()) {
             processors.emplace_back(std::make_unique<AudioDecodingProcessor>(
-                context.config.audioInputConfig->resamplingRequired,
-                context.config.audioInputConfig->useAudioContentPart));
+                    context.config.audioInputConfig->resamplingRequired));
         }
         processors.emplace_back(std::make_unique<TextContentNormalizationProcessor>());
 

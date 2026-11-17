@@ -229,7 +229,6 @@ public:
         const std::vector<ov::genai::GenerationFinishReason>& finishReasons);
     virtual std::string serializeStreamingChunk(Delta delta, ov::genai::GenerationFinishReason finishReason) = 0;
     virtual bool requiresSeparateStreamingFinishEvent() const { return false; }
-    virtual bool appendsStreamingDoneMarker() const { return true; }
     virtual std::string serializeStreamingUsageChunk() = 0;
     virtual std::string serializeStreamingHandshakeChunk() = 0;
 

@@ -1505,9 +1505,11 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseTranscription) {
     auto apiHandler = std::make_shared<ovms::OpenAITranscriptionsHandler>(
         doc, ovms::Endpoint::TRANSCRIPTIONS, std::chrono::system_clock::now(), *tokenizer);
     ASSERT_EQ(apiHandler->parseRequest(100, 0, std::nullopt), absl::OkStatus());
+    apiHandler->setPromptTokensUsage(12);
+    apiHandler->setCompletionTokensUsage(6);
     const auto& chatHistory = apiHandler->getChatHistory();
     ASSERT_EQ(chatHistory.size(), 1u);
-    EXPECT_EQ(chatHistory[0]["content"][0]["type"].as_string().value_or(""), "audio");
+        EXPECT_EQ(chatHistory[0]["content"][0]["text"].as_string().value_or(""), "<ov_genai_audio_0>");
 
     std::vector<ovms::Delta> deltas;
     deltas.push_back(makeContentDelta("Transcribed speech."));
@@ -1519,6 +1521,11 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseTranscription) {
     ASSERT_FALSE(response.HasParseError());
     ASSERT_TRUE(response.HasMember("text"));
     EXPECT_STREQ(response["text"].GetString(), "Transcribed speech.");
+    ASSERT_TRUE(response.HasMember("usage"));
+    EXPECT_STREQ(response["usage"]["type"].GetString(), "tokens");
+    EXPECT_EQ(response["usage"]["input_tokens"].GetUint64(), 12);
+    EXPECT_EQ(response["usage"]["output_tokens"].GetUint64(), 6);
+    EXPECT_EQ(response["usage"]["total_tokens"].GetUint64(), 18);
     EXPECT_FALSE(response.HasMember("choices"));
 }
 
@@ -1530,6 +1537,8 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeContinuousBatchingTranscription) {
     auto apiHandler = std::make_shared<ovms::OpenAITranscriptionsHandler>(
         doc, ovms::Endpoint::TRANSCRIPTIONS, std::chrono::system_clock::now(), *tokenizer);
     ASSERT_EQ(apiHandler->parseRequest(100, 0, std::nullopt), absl::OkStatus());
+    apiHandler->setPromptTokensUsage(10);
+    apiHandler->setCompletionTokensUsage(5);
 
     std::vector<std::vector<ovms::Delta>> allDeltas = {{makeContentDelta("Transcribed speech.")}};
     const std::string serialized = apiHandler->serializeUnaryResponse(
@@ -1540,6 +1549,10 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeContinuousBatchingTranscription) {
     ASSERT_FALSE(response.HasParseError());
     ASSERT_TRUE(response.HasMember("text"));
     EXPECT_STREQ(response["text"].GetString(), "Transcribed speech.");
+    ASSERT_TRUE(response.HasMember("usage"));
+    EXPECT_EQ(response["usage"]["input_tokens"].GetUint64(), 10);
+    EXPECT_EQ(response["usage"]["output_tokens"].GetUint64(), 5);
+    EXPECT_EQ(response["usage"]["total_tokens"].GetUint64(), 15);
     EXPECT_FALSE(response.HasMember("choices"));
 }
 
@@ -1561,6 +1574,30 @@ TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingTranscription) {
         R"({"type":"transcript.text.done","text":"Transcribed speech.","logprobs":[]})");
     EXPECT_TRUE(apiHandler->serializeStreamingUsageChunk().empty());
     EXPECT_TRUE(apiHandler->serializeStreamingHandshakeChunk().empty());
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, serializeStreamingTranscriptionWithUsage) {
+    doc.Parse(R"({"model":"qwen3-asr","stream":true,"stream_options":{"include_usage":true}})");
+    ASSERT_FALSE(doc.HasParseError());
+    ovms::OpenAITranscriptionsHandler apiHandler(
+        doc, ovms::Endpoint::TRANSCRIPTIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_TRUE(apiHandler.parseRequest(100, 0, std::nullopt).ok());
+    apiHandler.setPromptTokensUsage(12);
+    apiHandler.setCompletionTokensUsage(6);
+    apiHandler.serializeStreamingChunk(ovms::ContentDelta{"speech"}, ov::genai::GenerationFinishReason::NONE);
+
+    const std::string serialized = apiHandler.serializeStreamingChunk(ovms::FinishDelta{}, ov::genai::GenerationFinishReason::STOP);
+    rapidjson::Document response;
+    response.Parse(serialized.c_str());
+    ASSERT_FALSE(response.HasParseError());
+    ASSERT_TRUE(response.HasMember("usage"));
+    EXPECT_STREQ(response["type"].GetString(), "transcript.text.done");
+    EXPECT_STREQ(response["usage"]["type"].GetString(), "tokens");
+    EXPECT_EQ(response["usage"]["input_tokens"].GetUint64(), 12);
+    EXPECT_EQ(response["usage"]["output_tokens"].GetUint64(), 6);
+    EXPECT_EQ(response["usage"]["total_tokens"].GetUint64(), 18);
+    EXPECT_FALSE(response["usage"].HasMember("input_token_details"));
+    EXPECT_TRUE(apiHandler.serializeStreamingUsageChunk().empty());
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, transcriptionOutputParserSuppressesSplitQwenProtocolPrefix) {
@@ -5903,6 +5940,62 @@ TEST_F(HttpOpenAIHandlerParsingTest, vlmLegacyServablePreparePartialResponseResp
         << "total_tokens must be input+output: " << response;
     ASSERT_NE(response.find("\"input_tokens_details\":{\"cached_tokens\":7}"), std::string::npos) << response;
     ASSERT_FALSE(ctxBase->sendLoopbackSignal);
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, legacyTranscriptionStreamingEndsWithDoneMarker) {
+    auto ctx = std::make_shared<ovms::LegacyServableExecutionContext>();
+    ctx->payload.client = std::make_shared<NeverDisconnectedClient>();
+    ctx->payload.parsedJson = std::make_shared<rapidjson::Document>();
+    ctx->payload.parsedJson->Parse(R"({"model":"qwen3-asr","stream":true})");
+    ctx->endpoint = ovms::Endpoint::TRANSCRIPTIONS;
+    auto apiHandler = std::make_shared<ovms::OpenAITranscriptionsHandler>(
+        *ctx->payload.parsedJson, ctx->endpoint, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_TRUE(apiHandler->parseRequest(100, 0, std::nullopt).ok());
+    ctx->apiHandler = apiHandler;
+    ctx->results.finish_reasons.push_back(ov::genai::GenerationFinishReason::STOP);
+    ctx->deltaChannel.push(ovms::ContentDelta{"speech"});
+    ctx->readySignal.set_value();
+    ctx->deltaChannel.signalComplete();
+
+    std::shared_ptr<ovms::GenAiServableExecutionContext> baseContext = ctx;
+    ASSERT_TRUE(ovms::prepareLegacyPartialResponse(baseContext).ok());
+    const std::string& response = baseContext->response;
+    const auto terminalEvent = response.find("\"type\":\"transcript.text.done\"");
+    const auto doneMarker = response.find("data: [DONE]\n\n");
+    ASSERT_NE(terminalEvent, std::string::npos) << response;
+    ASSERT_NE(doneMarker, std::string::npos) << response;
+    EXPECT_LT(terminalEvent, doneMarker);
+    EXPECT_EQ(doneMarker + std::string("data: [DONE]\n\n").size(), response.size());
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, legacyTranscriptionStreamingIncludesUsageInDoneEvent) {
+    auto ctx = std::make_shared<ovms::LegacyServableExecutionContext>();
+    ctx->payload.client = std::make_shared<NeverDisconnectedClient>();
+    ctx->payload.parsedJson = std::make_shared<rapidjson::Document>();
+    ctx->payload.parsedJson->Parse(R"({"model":"qwen3-asr","stream":true,"stream_options":{"include_usage":true}})");
+    ctx->endpoint = ovms::Endpoint::TRANSCRIPTIONS;
+    auto apiHandler = std::make_shared<ovms::OpenAITranscriptionsHandler>(
+        *ctx->payload.parsedJson, ctx->endpoint, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_TRUE(apiHandler->parseRequest(100, 0, std::nullopt).ok());
+    ctx->apiHandler = apiHandler;
+    ctx->results.perf_metrics.num_input_tokens = 12;
+    ctx->results.perf_metrics.num_generated_tokens = 6;
+    ctx->results.finish_reasons.push_back(ov::genai::GenerationFinishReason::STOP);
+    ctx->deltaChannel.push(ovms::ContentDelta{"speech"});
+    ctx->readySignal.set_value();
+    ctx->deltaChannel.signalComplete();
+
+    std::shared_ptr<ovms::GenAiServableExecutionContext> baseContext = ctx;
+    ASSERT_TRUE(ovms::prepareLegacyPartialResponse(baseContext).ok());
+    const std::string& response = baseContext->response;
+    const auto terminalEvent = response.find("\"type\":\"transcript.text.done\"");
+    const auto usage = response.find("\"usage\":{\"type\":\"tokens\",\"input_tokens\":12,\"output_tokens\":6,\"total_tokens\":18}");
+    const auto doneMarker = response.find("data: [DONE]\n\n");
+    ASSERT_NE(terminalEvent, std::string::npos) << response;
+    ASSERT_NE(usage, std::string::npos) << response;
+    ASSERT_NE(doneMarker, std::string::npos) << response;
+    EXPECT_LT(terminalEvent, usage);
+    EXPECT_LT(usage, doneMarker);
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, legacyServablePreparePartialResponseChatCompletionsStreamingHasCorrectUsageChunk) {

@@ -45,7 +45,6 @@ public:
         const std::vector<UnaryChoiceLogprobs>& logprobData) override;
     std::string serializeStreamingChunk(Delta delta, ov::genai::GenerationFinishReason finishReason) override;
     bool requiresSeparateStreamingFinishEvent() const override { return true; }
-    bool appendsStreamingDoneMarker() const override { return false; }
     std::string serializeStreamingUsageChunk() override;
     std::string serializeStreamingHandshakeChunk() override;
 };

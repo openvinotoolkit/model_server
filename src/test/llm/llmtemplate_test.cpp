@@ -69,9 +69,7 @@ protected:
         ASSERT_TRUE(status.ok()) << status.string();
         ASSERT_EQ(properties.chatTemplateStatus, ChatTemplateStatus::AVAILABLE);
         const auto analysisResult = GenAiServableInitializer::analyzeChatTemplate(servable->getProperties());
-        GenAiServableInitializer::selectOutputParsers(
-            servable->getProperties(),
-            GenAiServableInitializer::analyzeOutputParsers(servable->getProperties(), analysisResult));
+        GenAiServableInitializer::selectOutputParsers(servable->getProperties(), analysisResult);
         ASSERT_TRUE(properties.preparedChatTemplate.isPrepared());
     }
 
@@ -218,9 +216,7 @@ TEST_F(LLMChatTemplateTest, MinjaUsesChatTemplateJinjaSource) {
     const auto status = GenAiServableInitializer::loadChatTemplate(properties, directoryPath);
     ASSERT_TRUE(status.ok()) << status.string();
     const auto analysisResult = GenAiServableInitializer::analyzeChatTemplate(properties);
-    GenAiServableInitializer::selectOutputParsers(
-        properties,
-        GenAiServableInitializer::analyzeOutputParsers(properties, analysisResult));
+    GenAiServableInitializer::selectOutputParsers(properties, analysisResult);
     EXPECT_EQ(properties->chatTemplateStatus, ChatTemplateStatus::AVAILABLE);
     EXPECT_EQ(properties->chatTemplateSource, ChatTemplateSource::CHAT_TEMPLATE_JINJA);
     // CreateJinjaConfig adds newline at the end. To consider if this behavior is expected in all cases.
@@ -309,6 +305,28 @@ TEST_F(LLMChatTemplateTest, VlmWithoutAudioCapabilityRejectsAudioInput) {
     EXPECT_EQ(status.message(), "This servable does not support audio input");
 }
 
+TEST_F(LLMChatTemplateTest, DetectsQwenAsrContentParserWithoutChatTemplateAnalysis) {
+    std::string config = R"({"architectures":["Qwen3ASRForConditionalGeneration"]})";
+    ASSERT_TRUE(createConfigFileWithContent(config, directoryPath + "/config.json"));
+    auto properties = std::make_shared<GenAiServableProperties>();
+    properties->modelsPath = directoryPath;
+
+    GenAiServableInitializer::selectOutputParsers(properties, std::nullopt);
+
+    EXPECT_EQ(properties->contentParserName, "qwen3asr");
+}
+
+TEST_F(LLMChatTemplateTest, NonObjectModelConfigDoesNotSelectContentParser) {
+    std::string config = R"([])";
+    ASSERT_TRUE(createConfigFileWithContent(config, directoryPath + "/config.json"));
+    auto properties = std::make_shared<GenAiServableProperties>();
+    properties->modelsPath = directoryPath;
+
+    GenAiServableInitializer::selectOutputParsers(properties, std::nullopt);
+
+    EXPECT_TRUE(properties->contentParserName.empty());
+}
+
 TEST_F(LLMChatTemplateTest, MissingTemplateClearsDisabledParsers) {
     servable = std::make_shared<ContinuousBatchingServable>();
     auto properties = servable->getProperties();
@@ -324,7 +342,7 @@ TEST_F(LLMChatTemplateTest, MissingTemplateClearsDisabledParsers) {
     EXPECT_EQ(properties->toolParserName, "none");
     EXPECT_EQ(properties->reasoningParserName, "none");
 
-    GenAiServableInitializer::selectOutputParsers(properties, ParserAnalysisResult{});
+    GenAiServableInitializer::selectOutputParsers(properties, std::nullopt);
     EXPECT_TRUE(properties->toolParserName.empty());
     EXPECT_TRUE(properties->reasoningParserName.empty());
 
