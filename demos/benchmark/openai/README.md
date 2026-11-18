@@ -483,7 +483,7 @@ aiperf profile --model OpenVINO/LFM3-VL-2B-int4-ov --url http://localhost:8000 \
 Keep the same input/output and image settings, but increase concurrency:
 
 ```bash
-aiperf profile --model vlm --url http://localhost:8000 \
+aiperf profile --model OpenVINO/LFM3-VL-2B-int4-ov --url http://localhost:8000 \
 	--endpoint-type chat --streaming --tokenizer builtin \
 	--concurrency 20 --request-count 100 \
 	--prompt-input-tokens-mean 128 --prompt-input-tokens-stddev 0 \
