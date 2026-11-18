@@ -20,10 +20,11 @@ import torch
 import datetime
 import numpy as np
 import argparse
+from urllib.parse import urlsplit
 
 parser = argparse.ArgumentParser(description='Compare embeddings responses from HF transformers, OVSentenceTransformer and OVMS')
 parser.add_argument('--service_url', required=False, default='http://localhost:8000/v3/embeddings',
-                    help='Specify url to embeddings endpoint. default:http://localhost:8000/v3/embeddings', dest='service_url')
+                    help='Embeddings endpoint or API base URL. Default: http://localhost:8000/v3/embeddings', dest='service_url')
 parser.add_argument('--model_name', default='Alibaba-NLP/gte-large-en-v1.5', help='Model name to query. default: Alibaba-NLP/gte-large-en-v1.5',
                     dest='model_name')
 parser.add_argument('--hf_model_name', default='', help='HuggingFaces model name. default: equal to --model_name',
@@ -75,7 +76,11 @@ def run_OV():
 
 def run_ovms():
     from openai import OpenAI
-    client = OpenAI(base_url=args['service_url'],api_key="unused"    )
+    service_url = urlsplit(args['service_url'])
+    base_path, _, resource = service_url.path.rstrip("/").rpartition("/")
+    if resource == "embeddings":
+        service_url = service_url._replace(path=base_path)
+    client = OpenAI(base_url=service_url.geturl(), api_key="unused")
     start_time = datetime.datetime.now()
     responses = client.embeddings.create(input=text, model=model_id)
     end_time = datetime.datetime.now()
