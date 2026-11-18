@@ -1199,7 +1199,11 @@ Status HttpRestApiHandler::processRealtimeCall(const HttpRequestComponents& requ
         }
     }
     std::unique_ptr<MediapipeGraphExecutorInterface> executor;
-    auto status = getRealtimeCallExecutor(modelName, executor);
+    // POC-only video alias; ordinary audio calls still use their managed ASR graph.
+    const bool videoOnly = modelName == "movinet" && std::getenv("OVMS_WEBRTC_VIDEO_MODEL");
+    if (videoOnly && offerSdp.find("m=video ") == std::string::npos)
+        return Status(StatusCode::REST_INVALID_REQUEST, "The movinet model requires a VP8 video track");
+    auto status = videoOnly ? Status(StatusCode::OK) : getRealtimeCallExecutor(modelName, executor);
     if (!status.ok())
         return status;
 

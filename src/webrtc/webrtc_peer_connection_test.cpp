@@ -16,6 +16,10 @@
 #include <string>
 #include <chrono>
 #include <condition_variable>
+#include <cstddef>
+#include <cstdint>
+#include <initializer_list>
+#include <memory>
 #include <mutex>
 #include <thread>
 #include <utility>
@@ -29,6 +33,7 @@
 #include "opus_audio_codec.hpp"
 #include "rtp_packetization_config_utils.hpp"
 #include "webrtc_peer_connection.hpp"
+#include "vp8_depacketizer.hpp"
 
 using ovms::OpusAudioCodec;
 using ovms::WebRtcPeerConnection;
@@ -54,6 +59,50 @@ void connectPeers(WebRtcPeerConnection& offerer, WebRtcPeerConnection& answerer,
 }
 
 }  // namespace
+
+namespace {
+rtc::message_ptr vp8Packet(uint16_t sequence, bool marker, std::initializer_list<uint8_t> payload) {
+    auto packet = rtc::make_message(sizeof(rtc::RtpHeader) + payload.size());
+    auto* header = reinterpret_cast<rtc::RtpHeader*>(packet->data());
+    header->preparePacket();
+    header->setSeqNumber(sequence);
+    header->setTimestamp(90000);
+    header->setPayloadType(96);
+    header->setMarker(marker);
+    size_t index = sizeof(rtc::RtpHeader);
+    for (uint8_t value : payload)
+        (*packet)[index++] = std::byte{value};
+    return packet;
+}
+}  // namespace
+
+TEST(WebRtcPeerConnectionTest, ReassemblesVp8ExtensionsAndSequenceWrap) {
+    std::shared_ptr<rtc::MediaHandler> handler = std::make_shared<ovms::Vp8Depacketizer>();
+    rtc::message_vector packets{
+        vp8Packet(65535, false, {0x90, 0xf0, 0x80, 0x01, 0x02, 0x03, 0x11, 0x22}),
+        vp8Packet(0, true, {0x80, 0x80, 0x01, 0x33})};
+    handler->incoming(packets, {});
+    ASSERT_EQ(packets.size(), 1);
+    EXPECT_EQ(rtc::binary(packets[0]->begin(), packets[0]->end()),
+        (rtc::binary{std::byte{0x11}, std::byte{0x22}, std::byte{0x33}}));
+    ASSERT_TRUE(packets[0]->frameInfo);
+    EXPECT_EQ(packets[0]->frameInfo->timestamp, 90000u);
+}
+
+TEST(WebRtcPeerConnectionTest, RejectsTruncatedVp8PayloadDescriptor) {
+    std::shared_ptr<rtc::MediaHandler> handler = std::make_shared<ovms::Vp8Depacketizer>();
+    rtc::message_vector packets{vp8Packet(1, true, {0x90, 0x80})};
+    handler->incoming(packets, {});
+    EXPECT_TRUE(packets.empty());
+}
+
+TEST(WebRtcPeerConnectionTest, RejectsVp8FrameWithMissingFragment) {
+    std::shared_ptr<rtc::MediaHandler> handler = std::make_shared<ovms::Vp8Depacketizer>();
+    rtc::message_vector packets{
+        vp8Packet(1, false, {0x10, 0x11}), vp8Packet(3, true, {0x00, 0x22})};
+    handler->incoming(packets, {});
+    EXPECT_TRUE(packets.empty());
+}
 
 TEST(WebRtcPeerConnectionTest, OutboundRtpPacketContainsNegotiatedMidExtension) {
     constexpr uint32_t ssrc = 1;

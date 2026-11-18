@@ -221,6 +221,8 @@ endif
 # Mount .gitconfig into unit-test containers when present so git operations can reuse the token-authenticated config.
 GIT_CONFIG_MOUNT = $(if $(wildcard .gitconfig),-v $(shell realpath .gitconfig):/root/.gitconfig:ro,)
 
+OV_GENAI_LOCAL_PATH ?= .
+
 BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg https_proxy=$(HTTPS_PROXY)\
 	--build-arg no_proxy=$(NO_PROXY)\
@@ -230,6 +232,7 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg ov_tokenizers_org=$(OV_TOKENIZERS_ORG)\
 	--build-arg ov_tokenizers_branch=$(OV_TOKENIZERS_BRANCH)\
 	--build-arg ov_genai_branch=$(OV_GENAI_BRANCH)\
+	--build-arg OV_GENAI_LOCAL_PATH=$(OV_GENAI_LOCAL_PATH)\
 	--build-arg ov_use_binary=$(OV_USE_BINARY)\
 	--build-arg DLDT_PACKAGE_URL=$(DLDT_PACKAGE_URL)\
 	--build-arg CHECK_COVERAGE=$(CHECK_COVERAGE)\

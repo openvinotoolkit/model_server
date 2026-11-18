@@ -34,6 +34,7 @@
 #include "src/port/rapidjson_writer.hpp"
 #include "src/audio/speech_to_text/streaming_s2t.hpp"
 #include "src/logging.hpp"
+#include "movinet_video_stream.hpp"
 
 namespace ovms {
 
@@ -411,12 +412,16 @@ void WebRtcSessionController::Session::transcribeUtterance(AudioChunk utterance)
 
 void WebRtcSessionController::Session::shutdown() {
     std::shared_ptr<StreamingS2TSession> activeSession;
+    std::shared_ptr<MovinetVideoStream> activeVideo;
     {
         std::lock_guard<std::mutex> lock(mutex);
         transcriptChannel.reset();
         activeSession = std::move(audioSession);
+        activeVideo = std::move(videoSession);
     }
     peer.close();
+    if (activeVideo)
+        activeVideo->stop();
     if (activeSession)
         activeSession->cancel();
     activeSession.reset();
@@ -624,12 +629,16 @@ WebRtcSessionController::CreateCallResult WebRtcSessionController::negotiateSess
         if (state == rtc::PeerConnection::State::Disconnected ||
             state == rtc::PeerConnection::State::Failed || state == rtc::PeerConnection::State::Closed) {
             std::shared_ptr<StreamingS2TSession> audioSession;
+            std::shared_ptr<MovinetVideoStream> videoSession;
             {
                 std::lock_guard<std::mutex> lock(session->mutex);
                 audioSession = std::move(session->audioSession);
+                videoSession = std::move(session->videoSession);
             }
             if (audioSession)
                 audioSession->cancel();
+            if (videoSession)
+                videoSession->stop();
             return;
         }
         if (state != rtc::PeerConnection::State::Connected) {
@@ -679,6 +688,61 @@ WebRtcSessionController::CreateCallResult WebRtcSessionController::negotiateSess
         }
         activeSession->descriptionReady.notify_all();
     });
+    const char* videoModelPath = std::getenv("OVMS_WEBRTC_VIDEO_MODEL");
+    if (videoModelPath && offerSdp.find("m=video ") != std::string::npos) {
+        try {
+            const char* labelsPath = std::getenv("OVMS_WEBRTC_VIDEO_LABELS");
+            if (!labelsPath || !*labelsPath || !*videoModelPath)
+                throw std::runtime_error("Set OVMS_WEBRTC_VIDEO_MODEL and OVMS_WEBRTC_VIDEO_LABELS to nonempty paths");
+            std::shared_ptr<MovinetVideoModel> model;
+            {
+                std::lock_guard<std::mutex> lock(mutex_);
+                if (!videoModel_)
+                    videoModel_ = std::make_shared<MovinetVideoModel>(videoModelPath, labelsPath);
+                model = videoModel_;
+            }
+            const std::weak_ptr<Session> weakSession = session;
+            session->videoSession = std::make_shared<MovinetVideoStream>(std::move(model),
+                [weakSession](size_t frame, uint32_t timestamp, const std::string& label, float score) {
+                    if (const auto current = weakSession.lock()) {
+                        current->enqueueEvent(openAiEvent("conversation.item.input_video_classification.completed", [&](auto& writer) {
+                            writer.Key("item_id");
+                            writer.String(("video_" + current->id + "_" + std::to_string(frame)).c_str());
+                            writer.Key("frame");
+                            writer.Uint64(frame);
+                            writer.Key("rtp_timestamp");
+                            writer.Uint(timestamp);
+                            writer.Key("label");
+                            writer.String(label.c_str());
+                            writer.Key("score");
+                            writer.Double(score);
+                            writer.Key("transcript");
+                            writer.String(label.c_str());
+                        }),
+                            true);
+                    }
+                },
+                [weakSession](const std::string& error) {
+                    if (const auto current = weakSession.lock())
+                        current->sendUserError(error);
+                });
+            session->peer.onVideoFrame([weakSession](rtc::binary data, rtc::FrameInfo info) {
+                if (const auto current = weakSession.lock()) {
+                    std::shared_ptr<MovinetVideoStream> video;
+                    {
+                        std::lock_guard<std::mutex> lock(current->mutex);
+                        video = current->videoSession;
+                    }
+                    if (video)
+                        video->push(std::move(data), info.timestamp);
+                }
+            });
+        } catch (const std::exception& exception) {
+            SPDLOG_LOGGER_ERROR(webrtc_logger, "Cannot start MoViNet video: {}", exception.what());
+            session->shutdown();
+            return CreateCallResult::InternalError;
+        }
+    }
     if (executor) {
         const std::weak_ptr<Session> weakSession = session;
         const auto status = session->startAudioSession(std::move(executor));
@@ -721,7 +785,7 @@ WebRtcSessionController::CreateCallResult WebRtcSessionController::negotiateSess
     // and make libdatachannel emit a renegotiation offer instead of an answer.
     std::string opusPreferredOffer;
     try {
-        opusPreferredOffer = preferOpusAudioCodec(offerSdp);
+        opusPreferredOffer = session->videoSession && offerSdp.find("m=audio ") == std::string::npos ? offerSdp : preferOpusAudioCodec(offerSdp);
     } catch (const std::invalid_argument& e) {
         SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected invalid WebRTC offer: {}", e.what());
         session->shutdown();
@@ -734,6 +798,30 @@ WebRtcSessionController::CreateCallResult WebRtcSessionController::negotiateSess
     std::optional<rtc::Description> remoteDescription;
     try {
         remoteDescription.emplace(opusPreferredOffer, "offer");
+        if (session->videoSession) {
+            size_t videoTracks = 0;
+            for (int index = 0; index < remoteDescription->mediaCount(); ++index) {
+                auto entry = remoteDescription->media(index);
+                if (!std::holds_alternative<rtc::Description::Media*>(entry))
+                    continue;
+                auto* media = std::get<rtc::Description::Media*>(entry);
+                if (media->type() != "video")
+                    continue;
+                if (++videoTracks > 1)
+                    throw std::invalid_argument("MoViNet POC supports one video track per call");
+                bool hasVp8 = false;
+                for (int payload : media->payloadTypes()) {
+                    const auto* codec = media->rtpMap(payload);
+                    if (codec && (codec->format == "VP8" || codec->format == "vp8"))
+                        hasVp8 = true;
+                    else
+                        media->removeRtpMap(payload);
+                }
+                if (!hasVp8)
+                    throw std::invalid_argument("MoViNet video POC requires VP8");
+                media->setDirection(rtc::Description::Direction::SendOnly);
+            }
+        }
     } catch (const std::exception& e) {
         SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected invalid WebRTC offer: {}", e.what());
         session->shutdown();

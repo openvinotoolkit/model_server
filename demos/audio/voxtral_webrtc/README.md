@@ -2,6 +2,8 @@
 
 This setup sends incoming Opus audio directly to a per-session Voxtral ASR stream without waiting for silence. Transcription text is returned on a WebRTC data channel; no audio is generated.
 
+For the opt-in VP8/MoViNet activity-recognition POC, including camera video alongside ASR on the same connection and data channel, see the [video POC](../../video/movinet/README.md).
+
 The model directory must contain `openvino_audio_encoder.xml`, `openvino_text_decoder.xml`, the corresponding `.bin` files, `config.json`, `preprocessor_config.json`, and `tekken.json`. OVMS must be built against an OpenVINO GenAI library that provides `ASRPipeline::create_stream()` and uses a compatible OpenVINO/Tokenizers runtime.
 
 WebRTC is an opt-in Linux build feature. Enable it with `--define BUILD_WITH_WEBRTC=1`; to include the experimental Voxtral streaming adapter, also pass `--define BUILD_WITH_EXPERIMENTAL_VOXTRAL=1`. The default build omits WebRTC and does not require the experimental GenAI API. WebRTC is not available in the MSVC Windows build.

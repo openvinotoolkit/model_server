@@ -34,6 +34,9 @@
 
 namespace ovms {
 
+class MovinetVideoModel;
+class MovinetVideoStream;
+
 class WebRtcSessionController {
 public:
     struct Candidate {
@@ -98,6 +101,7 @@ private:
         OpusAudioCodec codec;
         AudioUtteranceBuffer utteranceBuffer;
         std::shared_ptr<StreamingS2TSession> audioSession;
+        std::shared_ptr<MovinetVideoStream> videoSession;
         std::string currentItemId;
         bool hasAudio = false;
         uint64_t itemCounter = 0;
@@ -126,6 +130,7 @@ private:
     std::string announcedIp_;
     uint64_t nextSessionId_ = 1;
     std::unordered_map<std::string, std::shared_ptr<Session>> sessions_;
+    std::shared_ptr<MovinetVideoModel> videoModel_;
 };
 
 }  // namespace ovms

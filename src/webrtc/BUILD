@@ -77,11 +77,29 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "movinet_video_stream",
+    srcs = ["movinet_video_stream.cpp"],
+    hdrs = ["movinet_video_stream.hpp"],
+    deps = [
+        "//src:libovmslogging",
+        "//third_party:openvino",
+        "//third_party:opencv",
+        "@libvpx//:vpx",
+    ],
+    target_compatible_with = select({
+        "//src:webrtc_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "webrtc_peer_connection",
-    srcs = ["webrtc_peer_connection.cpp"],
+    srcs = ["webrtc_peer_connection.cpp", "vp8_depacketizer.cpp"],
     hdrs = [
         "rtp_packetization_config_utils.hpp",
         "webrtc_peer_connection.hpp",
+        "vp8_depacketizer.hpp",
     ],
     deps = [
         "//src:libovmslogging",
@@ -103,6 +121,7 @@ ovms_cc_library(
         ":audio_utterance_buffer",
         ":opus_audio_codec",
         ":webrtc_peer_connection",
+        ":movinet_video_stream",
         "//src:mediapipe_executor_interface",
         "//src/audio/speech_to_text:streaming_s2t",
         "//src/audio/speech_to_text:streaming_s2t_session",

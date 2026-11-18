@@ -18,6 +18,7 @@
 #include "src/logging.hpp"
 #include "opus_audio_codec.hpp"
 #include "rtp_packetization_config_utils.hpp"
+#include "vp8_depacketizer.hpp"
 
 #include <chrono>
 #include <cstddef>
@@ -140,6 +141,11 @@ void WebRtcPeerConnection::onAudioFrame(AudioFrameCallback callback) {
     configureAudioTrackCallbacks();
 }
 
+void WebRtcPeerConnection::onVideoFrame(VideoFrameCallback callback) {
+    videoFrameCallback_ = std::move(callback);
+    configureAudioTrackCallbacks();
+}
+
 void WebRtcPeerConnection::onAudioTrackOpen(AudioTrackOpenCallback callback) {
     audioTrackOpenCallback_ = std::move(callback);
     configureAudioTrackCallbacks();
@@ -195,6 +201,19 @@ void WebRtcPeerConnection::configureAudioTrackCallbacks() {
     }
     audioTrackCallbacksConfigured_ = true;
     peerConnection_->onTrack([this](std::shared_ptr<rtc::Track> track) {
+        if (track->description().type() == "video" && videoFrameCallback_) {
+            if (remoteVideoTrack_) {
+                SPDLOG_LOGGER_ERROR(webrtc_logger, "Only one video track per MoViNet session is supported");
+                return;
+            }
+            remoteVideoTrack_ = track;
+            track->setMediaHandler(std::make_shared<Vp8Depacketizer>());
+            track->onFrame([this](rtc::binary data, rtc::FrameInfo info) {
+                videoFrameCallback_(std::move(data), info);
+            });
+            SPDLOG_LOGGER_INFO(webrtc_logger, "Receiving VP8 video track, mid={}", track->mid());
+            return;
+        }
         if (track->description().type() != "audio") {
             SPDLOG_LOGGER_DEBUG(webrtc_logger, "Ignoring non-audio track, mid: {}", track->mid());
             return;
