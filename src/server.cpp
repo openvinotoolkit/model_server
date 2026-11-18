@@ -72,6 +72,7 @@
 #include "shutdown_state.hpp"
 #include "servables_config_manager_module/servablesconfigmanagermodule.hpp"
 #include "stringutils.hpp"
+#include "utils/env_guard.hpp"
 #include "ov_version.hpp"
 #include "version.hpp"
 
@@ -334,6 +335,9 @@ Server::~Server() {
 
 Status Server::ensureGlobalInit() {
     std::call_once(globalInitFlag, [this]() {
+        if (GetEnvVar("OPENCV_IO_MAX_IMAGE_PIXELS").empty()) {
+            SetEnvironmentVar("OPENCV_IO_MAX_IMAGE_PIXELS", std::to_string(OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS));
+        }
         curlGlobalInitialized = initializeCurlGlobal().ok();
     });
     return curlGlobalInitialized ? StatusCode::OK : StatusCode::INTERNAL_ERROR;

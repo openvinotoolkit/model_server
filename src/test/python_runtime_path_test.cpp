@@ -90,6 +90,26 @@ TEST_F(PythonRuntimePath, ImportsModulesAfterInterpreterReinitialization) {
     }
 }
 
+#ifdef _WIN32
+TEST_F(PythonRuntimePath, AppendsBindingDirectoryWhenPresent) {
+    const auto bindingDirectory = pythonDirectory / "binding";
+    std::filesystem::create_directories(bindingDirectory);
+    {
+        std::ofstream module(bindingDirectory / "ovms_binding_probe.py");
+        ASSERT_TRUE(module.is_open());
+        module << "value = 7\n";
+        module.close();
+        ASSERT_FALSE(module.fail());
+    }
+
+    py::list paths = py::module_::import("sys").attr("path");
+    ovms::addPackagedPythonPath(executablePath);
+
+    EXPECT_TRUE(paths.contains(py::str(bindingDirectory.string())));
+    EXPECT_EQ(py::module_::import("ovms_binding_probe").attr("value").cast<int>(), 7);
+}
+#endif
+
 #ifdef __linux__
 TEST_F(PythonRuntimePath, DefaultPathIsRelativeToResolvedExecutable) {
     const auto resolvedExecutable = std::filesystem::canonical("/proc/self/exe");
