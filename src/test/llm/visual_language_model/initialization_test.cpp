@@ -43,9 +43,48 @@ class VLMServableInitializationTest : public ::testing::Test {};
 
 class PipelineTypeSelectionTest : public TestWithTempDir {
 protected:
+    inline static constexpr const char* modalityModelFiles[] = {
+        "openvino_vision_embeddings_model.bin",
+        "openvino_audio_embeddings_model.xml",
+        "openvino_audio_encoder_model.xml",
+    };
+
     void addModelFile(const std::string& filename) {
         std::ofstream file(std::filesystem::path(directoryPath) / filename);
         ASSERT_TRUE(file.is_open());
+    }
+
+    void removeModelFile(const std::string& filename) {
+        ASSERT_TRUE(std::filesystem::remove(std::filesystem::path(directoryPath) / filename));
+    }
+
+    void addTextEmbeddingsModel() {
+        addModelFile("openvino_text_embeddings_model.xml");
+    }
+
+    void removeTextEmbeddingsModel() {
+        removeModelFile("openvino_text_embeddings_model.xml");
+    }
+
+    void addVisionModelFiles() {
+        addTextEmbeddingsModel();
+        addModelFile("openvino_vision_embeddings_model.bin");
+    }
+
+    void addAudioDecoderModel() {
+        addModelFile("openvino_audio_decoder_model.xml");
+    }
+
+    void addAudioEncoderModel() {
+        addModelFile("openvino_audio_encoder_model.xml");
+    }
+
+    void addTalkerModel() {
+        addModelFile("openvino_talker_model.xml");
+    }
+
+    void removeTalkerModel() {
+        removeModelFile("openvino_talker_model.xml");
     }
 
     Status selectPipeline(mediapipe::LLMCalculatorOptions::PipelineType requested, PipelineType& selected, const std::string& device = "") {
@@ -70,16 +109,14 @@ TEST_F(PipelineTypeSelectionTest, OmniWithoutSpeechOutputRejectsTextOnlyModel) {
 }
 
 TEST_F(PipelineTypeSelectionTest, OmniWithoutSpeechOutputRejectsMultimodalModel) {
-    addModelFile("openvino_text_embeddings_model.xml");
-    addModelFile("openvino_vision_embeddings_model.bin");
+    addVisionModelFiles();
     PipelineType selected;
     EXPECT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::OMNI, selected), StatusCode::INTERNAL_ERROR);
 }
 
 TEST_F(PipelineTypeSelectionTest, ExplicitPipelinesAcceptedForOmniCapableModel) {
-    addModelFile("openvino_text_embeddings_model.xml");
-    addModelFile("openvino_vision_embeddings_model.bin");
-    addModelFile("openvino_talker_model.xml");
+    addVisionModelFiles();
+    addTalkerModel();
     const std::pair<mediapipe::LLMCalculatorOptions::PipelineType, PipelineType> cases[] = {
         {mediapipe::LLMCalculatorOptions::LM, PipelineType::LM},
         {mediapipe::LLMCalculatorOptions::LM_CB, PipelineType::LM_CB},
@@ -95,29 +132,29 @@ TEST_F(PipelineTypeSelectionTest, ExplicitPipelinesAcceptedForOmniCapableModel) 
 }
 
 TEST_F(PipelineTypeSelectionTest, AudioDecoderEnablesOmniSelection) {
-    addModelFile("openvino_audio_decoder_model.xml");
+    addAudioDecoderModel();
     PipelineType selected;
     ASSERT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::OMNI, selected), StatusCode::OK);
     EXPECT_EQ(selected, PipelineType::OMNI);
     ASSERT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::AUTO, selected), StatusCode::OK);
     EXPECT_EQ(selected, PipelineType::LM_CB);
-    addModelFile("openvino_text_embeddings_model.xml");
-    addModelFile("openvino_audio_encoder_model.xml");
+    addTextEmbeddingsModel();
+    addAudioEncoderModel();
     ASSERT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::AUTO, selected), StatusCode::OK);
     EXPECT_EQ(selected, PipelineType::OMNI);
 }
 
 TEST_F(PipelineTypeSelectionTest, MultimodalDetectionRequiresTextAndAModality) {
-    for (const std::string filename : {"openvino_vision_embeddings_model.bin", "openvino_audio_embeddings_model.xml", "openvino_audio_encoder_model.xml"}) {
+    for (const std::string filename : modalityModelFiles) {
         SCOPED_TRACE(filename);
         addModelFile(filename);
         PipelineType selected;
         EXPECT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::VLM, selected), StatusCode::INTERNAL_ERROR);
-        addModelFile("openvino_text_embeddings_model.xml");
+        addTextEmbeddingsModel();
         EXPECT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::VLM, selected), StatusCode::OK);
         EXPECT_EQ(selected, PipelineType::VLM);
-        std::filesystem::remove(std::filesystem::path(directoryPath) / filename);
-        std::filesystem::remove(std::filesystem::path(directoryPath) / "openvino_text_embeddings_model.xml");
+        removeModelFile(filename);
+        removeTextEmbeddingsModel();
     }
 }
 
@@ -127,16 +164,15 @@ TEST_F(PipelineTypeSelectionTest, AutoSelectionAndTalkerOnlyOmni) {
     EXPECT_EQ(selected, PipelineType::LM_CB);
     ASSERT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::AUTO, selected, "NPU"), StatusCode::OK);
     EXPECT_EQ(selected, PipelineType::LM);
-    addModelFile("openvino_talker_model.xml");
+    addTalkerModel();
     ASSERT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::OMNI, selected), StatusCode::OK);
     EXPECT_EQ(selected, PipelineType::OMNI);
     ASSERT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::AUTO, selected), StatusCode::OK);
     EXPECT_EQ(selected, PipelineType::LM_CB);
-    addModelFile("openvino_text_embeddings_model.xml");
-    addModelFile("openvino_vision_embeddings_model.bin");
+    addVisionModelFiles();
     ASSERT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::AUTO, selected), StatusCode::OK);
     EXPECT_EQ(selected, PipelineType::OMNI);
-    std::filesystem::remove(std::filesystem::path(directoryPath) / "openvino_talker_model.xml");
+    removeTalkerModel();
     ASSERT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::AUTO, selected), StatusCode::OK);
     EXPECT_EQ(selected, PipelineType::VLM_CB);
     ASSERT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::AUTO, selected, "NPU"), StatusCode::OK);
