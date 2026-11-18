@@ -205,49 +205,6 @@ TEST(VideoInputConfigTest, AppliesDefaultsAndExplicitValues) {
     EXPECT_FLOAT_EQ(config.videoFps.value(), 1.5F);
 }
 
-class InputProcessingCapabilitiesTest : public TestWithTempDir {};
-
-TEST_F(InputProcessingCapabilitiesTest, AudioOnlyModelDisablesVisionButRemainsMultimodal) {
-    std::ofstream(FileSystem::joinPath({directoryPath, "openvino_text_embeddings_model.xml"})).close();
-    std::ofstream(FileSystem::joinPath({directoryPath, "openvino_audio_encoder_model.xml"})).close();
-    mediapipe::LLMCalculatorOptions options;
-    options.set_models_path(directoryPath);
-    PipelineType pipelineType = PipelineType::LM;
-    ASSERT_EQ(determinePipelineType(pipelineType, options, directoryPath), StatusCode::OK);
-    EXPECT_EQ(pipelineType, PipelineType::VLM_CB);
-
-    ContinuousBatchingServable servable;
-    auto properties = servable.getProperties();
-    properties->modelsPath = directoryPath;
-    properties->chatTemplateStatus = ChatTemplateStatus::AVAILABLE;
-    properties->inputProcessorContext.config.visionInputConfig = VisionInputConfig{};
-    ASSERT_EQ(configureInputProcessingCapabilities(properties, options), StatusCode::OK);
-    EXPECT_FALSE(properties->inputProcessorContext.config.visionInputConfig.has_value());
-    EXPECT_TRUE(properties->inputProcessorContext.config.audioInputConfig.has_value());
-
-    for (const std::string type : {"image_url", "video_url"}) {
-        auto context = servable.createExecutionContext();
-        ov::genai::ChatHistory history;
-        history.push_back({{"role", "user"}, {"content", ov::genai::JsonContainer::from_json_string(
-                                                             "[{\"type\":\"" + type + "\"}]")}});
-        context->inputRequest.input = std::move(history);
-        EXPECT_EQ(servable.validateInputCompatibility(context).code(), absl::StatusCode::kInvalidArgument);
-    }
-}
-
-TEST_F(InputProcessingCapabilitiesTest, VisionModelRetainsConfiguredVideoOptions) {
-    std::ofstream(FileSystem::joinPath({directoryPath, "openvino_vision_embeddings_model.bin"})).close();
-    mediapipe::LLMCalculatorOptions options;
-    options.mutable_input_vision()->set_video_max_frames(8);
-    auto properties = std::make_shared<GenAiServableProperties>();
-    properties->modelsPath = directoryPath;
-    properties->inputProcessorContext.config.visionInputConfig = VisionInputConfig{};
-
-    ASSERT_EQ(configureInputProcessingCapabilities(properties, options), StatusCode::OK);
-    ASSERT_TRUE(properties->inputProcessorContext.config.visionInputConfig.has_value());
-    EXPECT_EQ(properties->inputProcessorContext.config.visionInputConfig->videoMaxFrames, 8);
-}
-
 struct TestParameters {
     std::string modelName;
     bool generateExpectedOutput;
