@@ -150,7 +150,9 @@ protected:
         result.req = std::move(*reqResult);
 
         InputProcessorContext ctx;
-        ctx.config.supportsVisualInputs = supportsVisualInputs;
+        if (supportsVisualInputs) {
+            ctx.config.visionInputConfig = VisionInputConfig{};
+        }
         ctx.config.audioInputConfig = audioInputConfig;
         ctx.tokenizer = *sharedTokenizer;
         ctx.templateProcessor = sharedPreparedRuntimeTemplate.get();
@@ -769,7 +771,7 @@ TEST(InputProcessingEquivalenceTest, ChatAndResponsesProduceSamePromptAndImages)
         auto req = std::move(*reqResult);
 
         InputProcessorContext ctx;
-        ctx.config.supportsVisualInputs = true;
+        ctx.config.visionInputConfig = VisionInputConfig{};
         ctx.tokenizer = tokenizer;
         ctx.templateProcessor = &preparedRuntimeTemplate;
 

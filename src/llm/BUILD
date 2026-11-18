@@ -27,6 +27,8 @@ ovms_cc_library(
             "@mediapipe//mediapipe/framework:calculator_cc_proto",
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/mediapipe_internal:graph_side_packets",
+        "//src/mediapipe_internal:ovms_calculator_base",
+        "//src:libovms_graph_metadata",
         "//src/mediapipe_calculators/utils:timestamp_advance_guard",
         "//src/kfserving_api:kfserving_api_cpp",
         "//src:libovmsprofiler",
@@ -34,6 +36,8 @@ ovms_cc_library(
         "//src:httppayload",
         "//third_party:genai",
         "//src/mediapipe_internal:node_initializer",
+        "//src/metrics:libovms_metric_provider",
+        "//src/metrics:libovmsmetrics",
         "//src:libovmslogging",
         "//src:libovmsstring_utils",],
     visibility = ["//visibility:public"],
@@ -191,6 +195,8 @@ ovms_cc_library(
         ":image_utils",
         "//src:predict_request_validation_utils_impl",
         "//third_party:genai",
+        "@minimp4//:minimp4",
+        "@openh264//:decoder",
         "//src:libovmslogging",
     ],
     visibility = ["//visibility:public"],
@@ -290,6 +296,24 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "chat_template_adjuster",
+    hdrs = [
+        "io_processing/chat_template/adjuster.hpp",
+        "io_processing/chat_template/adjustments/base_chat_template_adjustment.hpp",
+        "io_processing/chat_template/adjustments/remove_filters_adjustment.hpp",
+        "io_processing/chat_template/adjustments/remove_function_params_adjustment.hpp",
+    ],
+    srcs = [
+        "io_processing/chat_template/adjuster.cpp",
+        "io_processing/chat_template/adjustments/remove_filters_adjustment.cpp",
+        "io_processing/chat_template/adjustments/remove_function_params_adjustment.cpp",
+        "io_processing/chat_template/adjustments/adjustment_utils.hpp",
+    ],
+    deps = ["//src:libovmsstring_utils"],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "chat_template_probe",
     hdrs = ["io_processing/chat_template/probe.hpp",
             "io_processing/chat_template/caps.hpp"],
@@ -297,6 +321,7 @@ ovms_cc_library(
     deps = [
         "//third_party:genai",
         "//src:libovmslogging",
+        "//src:libovmsstring_utils",
     ],
     visibility = ["//visibility:public"],
 )
@@ -663,6 +688,7 @@ ovms_cc_library(
             "omni_model/legacy/servable_initializer.cpp",
             "omni_model/legacy/legacy_executor.cpp"],
     deps = [
+        "//src/metrics:libovmsmetrics",
         "//third_party:openvino",
         "@mediapipe//mediapipe/framework:calculator_cc_proto",
         "@mediapipe//mediapipe/framework/port:ret_check",
@@ -681,6 +707,7 @@ ovms_cc_library(
         ":openai_completions_api_handler",
         ":openai_responses_handler",
         ":generation_config_builders",
+        ":chat_template_adjuster",
         ":chat_template_analyzer",
         ":chat_template_probe",
         ":io_processing_input_processor_context",
@@ -764,5 +791,3 @@ ovms_cc_library(
     ],
     visibility = ["//visibility:public"],
 )
-
-

@@ -16,8 +16,10 @@
 #include <algorithm>
 #include <fstream>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 #include <openvino/genai/cache_eviction.hpp>
 #include <openvino/genai/sparse_attention.hpp>
@@ -132,6 +134,9 @@ ov::genai::SchedulerConfig ContinuousBatchingServableInitializer::prepareDraftPi
     config.enable_prefix_caching = nodeOptions.enable_prefix_caching();
     return config;
 }
+
+ContinuousBatchingServableInitializer::ContinuousBatchingServableInitializer(std::optional<LLMMetricReporterFactory> createMetricReporter) :
+    createMetricReporter(std::move(createMetricReporter)) {}
 
 Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) {
     std::string parsedModelsPath;
@@ -310,7 +315,12 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     }
     properties->maxModelLength = parseMaxModelLength(parsedModelsPath);
 
-    properties->llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(properties->pipeline, properties->schedulerConfig.cache_size == 0);
+    // Created last, so a load that fails earlier registers no metric series.
+    if (createMetricReporter.has_value()) {
+        properties->metricReporter = createMetricReporter.value()();
+    }
+    properties->llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(
+        properties->pipeline, properties->schedulerConfig.cache_size == 0, properties->metricReporter);
 
     return StatusCode::OK;
 }

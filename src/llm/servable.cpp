@@ -182,8 +182,13 @@ absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionC
         return absl::InvalidArgumentError(std::string("Failed to create API handler: ") + e.what());
     }
     auto& config = ovms::Config::instance();
+    std::optional<uint32_t> videoMaxFrames;
+    const auto& visionInputConfig = getProperties()->inputProcessorContext.config.visionInputConfig;
+    if (visionInputConfig.has_value()) {
+        videoMaxFrames = visionInputConfig->videoMaxFrames;
+    }
 
-    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains);
+    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains, videoMaxFrames);
     if (!status.ok()) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;
@@ -236,10 +241,10 @@ absl::Status GenAiServable::validateInputCompatibility(std::shared_ptr<GenAiServ
                     if (type == "input_audio" && !inputProcessingConfig.audioInputConfig.has_value()) {
                         return absl::Status(absl::StatusCode::kInvalidArgument, "This servable does not support audio input");
                     }
-                    if (!inputProcessingConfig.supportsVisualInputs && type == "image_url") {
+                    if (!inputProcessingConfig.visionInputConfig.has_value() && type == "image_url") {
                         return absl::Status(absl::StatusCode::kInvalidArgument, "This servable supports only text input, but image_url has been provided");
                     }
-                    if (!inputProcessingConfig.supportsVisualInputs && type == "video_url") {
+                    if (!inputProcessingConfig.visionInputConfig.has_value() && type == "video_url") {
                         return absl::Status(absl::StatusCode::kInvalidArgument, "This servable supports only text input, but video_url has been provided");
                     }
                 }

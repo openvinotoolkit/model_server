@@ -178,6 +178,16 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 ovms_cc_library(
+    name = "libovms_graph_metadata",
+    srcs = ["graph_metadata.cpp"],
+    hdrs = ["graph_metadata.hpp"],
+    deps = [
+        "//src/port:rapidjson_stringbuffer",
+        "//src/port:rapidjson_writer",
+    ],
+    visibility = ["//visibility:public"],
+)
+ovms_cc_library(
     name = "libovms_single_version_servable_definition",
     srcs = [
         "servable_definition_unload_guard.cpp",
@@ -878,6 +888,7 @@ ovms_cc_library(
             "//src/metrics:libovms_metric_provider",
             "libovms_model_instance_provider",
             "libovms_servable_definition",
+            "libovms_graph_metadata",
             "libovms_single_version_servable_definition",
             "kfs_python_tensor_bridge",
             "copyable_object_wrapper",
@@ -2039,6 +2050,7 @@ cc_test(
                 "test/multipart_calculator_test.cpp",
                 "test/llm/assisted_decoding_test.cpp",
                 "test/llm/llmnode_test.cpp",
+                "test/llm_metric_reporter_test.cpp",
                 "test/llm/tokenize_endpoint_test.cpp",
                 "test/llm/max_model_length_test.cpp",
                 "test/llm/text_streamer_test.cpp",
@@ -2076,6 +2088,7 @@ cc_test(
         "test/configs/emptyConfigWithMetrics.json",
         "test/llm/config.json",
         "test/llm/config_queue.json",
+        "test/llm/config_models_endpoint.json",
         "test/llm/assisted_decoding_config.json",
         "test/llm/lm_cb_regular.pbtxt",
         "test/llm/lm_cb_prefix_caching.pbtxt",
@@ -2234,6 +2247,7 @@ cc_test(
                 "//:not_disable_mediapipe": [
                     ":config_export_full_test",
                 "//src/llm:genai_servables",
+                "//src/llm:chat_template_adjuster",
                 "//src/llm:output_parsers",
                 "//src/llm:video_utils",
                 ":test_llm_output_parser_tests",
@@ -2256,6 +2270,7 @@ cc_test(
                 "//src/rerank:rerank_api_handler",
                 ":embeddings_handler_tests",
                 ":test_idle_mediapipe_test",
+                ":test_graph_metadata_test",
                 "//src/mediapipe_internal:mediapipe_utils",
                 "//src/llm:llmcalculator_proto_owner",
             ],
@@ -2476,6 +2491,21 @@ ovms_cc_test_library(
         "//src/mediapipe_internal:pipelinedefinitionstatus",
         "//src/mediapipe_internal:libovms_mediapipe",
         "//src/mediapipe_internal:mediapipegraphconfig",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+ovms_cc_test_library(
+    name = "test_graph_metadata_test",
+    srcs = ["test/graph_metadata_test.cpp"],
+    deps = [
+        ":test_constructor_enabled_model_manager",
+        ":test_utils",
+        "//src:libovms_graph_metadata",
+        "//src:libovms_servable_definition",
+        "//src/mediapipe_internal:libovms_mediapipe",
+        "//src/mediapipe_internal:mediapipegraphconfig",
+        "//src/port:rapidjson_document",
         "@com_google_googletest//:gtest",
     ],
 )
@@ -2987,6 +3017,7 @@ cc_library(
     hdrs = ["test/llm/output_parsers/output_parser_test_utils.hpp"],
     srcs = [
         "test/llm/chat_template_analyzer_test.cpp",
+        "test/llm/chat_template_adjuster_test.cpp",
         "test/llm/chat_template_adapter_test.cpp",
         "test/llm/chat_template_end_to_end_minja_test.cpp",
         "test/llm/chat_template_and_parser_onyx_roundtrip_test.cpp",
@@ -2994,6 +3025,7 @@ cc_library(
     deps = [
         "@com_google_googletest//:gtest",
         "//src/llm:chat_template_analyzer",
+        "//src/llm:chat_template_adjuster",
         "//src/llm:chat_template_probe",
         "//src/llm:io_processing_input_processors",
         "//src/llm:output_parsers",

@@ -130,6 +130,8 @@ struct TextGenGraphSettingsImpl {
     std::optional<std::string> chatTemplateEngine;
     std::string enableToolGuidedGeneration = "false";
     std::optional<uint64_t> cacheIntervalMultiplier;
+    std::optional<float> inputVideoFps;
+    std::optional<uint32_t> inputVideoMaxFrames;
 };
 
 struct EmbeddingsGraphSettingsImpl {
@@ -220,6 +222,8 @@ struct HFSettingsImpl {
 };
 
 constexpr uint64_t OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS = 67108864;
+constexpr uint64_t OVMS_DEFAULT_MAX_ENCODED_VIDEO_FILE_SIZE_BYTES = 268435456;
+constexpr uint64_t OVMS_DEFAULT_MAX_VIDEO_DECODE_PIXELS = 134217728;
 
 struct ServerSettingsImpl {
     uint32_t grpcPort = 0;
@@ -239,6 +243,8 @@ struct ServerSettingsImpl {
     bool verboseResponse = false;
     bool allowCredentials = false;
     uint64_t maxImageDecodePixels = OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS;
+    uint64_t maxEncodedVideoFileSizeBytes = OVMS_DEFAULT_MAX_ENCODED_VIDEO_FILE_SIZE_BYTES;
+    uint64_t maxVideoDecodePixels = OVMS_DEFAULT_MAX_VIDEO_DECODE_PIXELS;
     // When false, images whose decoded size cannot be estimated are rejected; when true they are decoded anyway.
     bool allowUnestimatableImageFormats = false;
     std::string allowedOrigins{"*"};

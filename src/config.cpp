@@ -449,6 +449,8 @@ uint32_t Config::idleUnloadTimeoutSeconds() const { return this->serverSettings.
 bool Config::disableInputCountValidation() const { return this->modelsSettings.disableInputCountValidation.value_or(false); }
 bool Config::allowCredentials() const { return this->serverSettings.allowCredentials; }
 uint64_t Config::maxImageDecodePixels() const { return this->serverSettings.maxImageDecodePixels; }
+uint64_t Config::maxEncodedVideoFileSizeBytes() const { return this->serverSettings.maxEncodedVideoFileSizeBytes; }
+uint64_t Config::maxVideoDecodePixels() const { return this->serverSettings.maxVideoDecodePixels; }
 bool Config::allowUnestimatableImageFormats() const { return this->serverSettings.allowUnestimatableImageFormats; }
 const std::string& Config::allowedOrigins() const { return this->serverSettings.allowedOrigins; }
 const std::string& Config::allowedMethods() const { return this->serverSettings.allowedMethods; }

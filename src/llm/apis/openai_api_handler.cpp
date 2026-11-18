@@ -323,7 +323,9 @@ absl::Status OpenAIApiHandler::parseTools() {
 }
 
 absl::Status OpenAIApiHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
-    std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) {
+    std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains,
+    std::optional<uint32_t> videoMaxFrames) {
+    this->videoMaxFrames = videoMaxFrames;
     return parseRequestImpl(maxTokensLimit, bestOfLimit, maxModelLength, allowedLocalMediaPath, allowedMediaDomains);
 }
 
