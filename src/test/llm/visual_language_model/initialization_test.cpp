@@ -101,9 +101,14 @@ TEST_F(PipelineTypeSelectionTest, VlmRequiresMultimodalCapabilities) {
         PipelineType selected;
         EXPECT_EQ(selectPipeline(requested, selected), StatusCode::INTERNAL_ERROR);
     }
+    addTextEmbeddingsModel();
+    for (const auto requested : {mediapipe::LLMCalculatorOptions::VLM, mediapipe::LLMCalculatorOptions::VLM_CB}) {
+        PipelineType selected;
+        EXPECT_EQ(selectPipeline(requested, selected), StatusCode::INTERNAL_ERROR);
+    }
 }
 
-TEST_F(PipelineTypeSelectionTest, OmniWithoutSpeechOutputRejectsTextOnlyModel) {
+TEST_F(PipelineTypeSelectionTest, OmniRejectsEmptyModelDirectory) {
     PipelineType selected;
     EXPECT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::OMNI, selected), StatusCode::INTERNAL_ERROR);
 }
@@ -134,12 +139,13 @@ TEST_F(PipelineTypeSelectionTest, ExplicitPipelinesAcceptedForOmniCapableModel) 
 TEST_F(PipelineTypeSelectionTest, AudioDecoderEnablesOmniSelection) {
     addAudioDecoderModel();
     PipelineType selected;
-    ASSERT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::OMNI, selected), StatusCode::OK);
-    EXPECT_EQ(selected, PipelineType::OMNI);
+    EXPECT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::OMNI, selected), StatusCode::INTERNAL_ERROR);
     ASSERT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::AUTO, selected), StatusCode::OK);
     EXPECT_EQ(selected, PipelineType::LM_CB);
     addTextEmbeddingsModel();
     addAudioEncoderModel();
+    ASSERT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::OMNI, selected), StatusCode::OK);
+    EXPECT_EQ(selected, PipelineType::OMNI);
     ASSERT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::AUTO, selected), StatusCode::OK);
     EXPECT_EQ(selected, PipelineType::OMNI);
 }
@@ -158,15 +164,14 @@ TEST_F(PipelineTypeSelectionTest, MultimodalDetectionRequiresTextAndAModality) {
     }
 }
 
-TEST_F(PipelineTypeSelectionTest, AutoSelectionAndTalkerOnlyOmni) {
+TEST_F(PipelineTypeSelectionTest, AutoSelectionAndOmniWithTalker) {
     PipelineType selected;
     ASSERT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::AUTO, selected), StatusCode::OK);
     EXPECT_EQ(selected, PipelineType::LM_CB);
     ASSERT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::AUTO, selected, "NPU"), StatusCode::OK);
     EXPECT_EQ(selected, PipelineType::LM);
     addTalkerModel();
-    ASSERT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::OMNI, selected), StatusCode::OK);
-    EXPECT_EQ(selected, PipelineType::OMNI);
+    EXPECT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::OMNI, selected), StatusCode::INTERNAL_ERROR);
     ASSERT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::AUTO, selected), StatusCode::OK);
     EXPECT_EQ(selected, PipelineType::LM_CB);
     addVisionModelFiles();

@@ -589,8 +589,8 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
             return StatusCode::INTERNAL_ERROR;
         }
 
-        if (pipelineType == PipelineType::OMNI && !(hasTalkerModel || hasAudioDecoderModel)) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model does not have a talker or audio decoder required by the OMNI pipeline. Use {} instead.",
+        if (pipelineType == PipelineType::OMNI && !isOmni) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "The OMNI pipeline requires multimodal capabilities and a talker or audio decoder. Use {} instead.",
                 isMultimodal ? "a VLM or VLM_CB pipeline" : "an LM or LM_CB pipeline");
             return StatusCode::INTERNAL_ERROR;
         }
