@@ -47,7 +47,7 @@ Example:
 
 | Base OS | Default version |
 |---|---|
-| Ubuntu 22.04 | `24.39.31294` |
+| Ubuntu 22.04 | `24.52.32224` |
 | Ubuntu 24.04 | `26.31.39395` |
 | Ubuntu 26.04 | `26.31.39395` |
 | Red Hat | `25.18.33578` |

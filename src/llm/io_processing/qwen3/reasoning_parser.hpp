@@ -42,7 +42,7 @@ private:
 public:
     Qwen3ReasoningParser() = delete;
 
-    static OutputParsingConfig defaultParsingConfig() {
+    static OutputParsingConfig getDefaultReasoningParsingConfig() {
         OutputParsingConfig cfg;
         cfg.startTags = {"<think>"};
         cfg.endTags = {"</think>"};
@@ -52,7 +52,7 @@ public:
     explicit Qwen3ReasoningParser(ov::genai::Tokenizer& tokenizer,
         std::optional<OutputParsingConfig> configOverride = std::nullopt) :
         BaseOutputParser(tokenizer,
-            configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+            configOverride.has_value() ? std::move(*configOverride) : getDefaultReasoningParsingConfig()) {}
 
     void resetState() override { phaseEntryTagConsumed_ = false; }
 

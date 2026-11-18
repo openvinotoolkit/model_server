@@ -18,10 +18,6 @@ setlocal EnableExtensions EnableDelayedExpansion
 set "ROOT=%~dp0"
 for %%I in ("%ROOT%.") do set "ROOT=%%~fI"
 set "LOCAL_TOOLS_DIR=%ROOT%\.windows_make_tools"
-:: Bazel / Python startup can inherit stale PYTHONHOME/PYTHONPATH values from a different
-:: service install; clear them before configuring the expected runtime.
-if defined PYTHONHOME set "PYTHONHOME="
-if defined PYTHONPATH set "PYTHONPATH="
 set "SETUP_EXIT_CODE=0"
 :: Load chosen dependency versions from versions.mk
 for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
@@ -95,7 +91,11 @@ set "CURL_PATH_WINDOWS=C:\opt\curl-!curl_version!-win64-mingw\bin"
 set "CURL_PATH=/c/opt/curl-!curl_version!-win64-mingw/bin"
 set "CURL_BIN=%CURL_PATH%/curl.exe"
 set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;!CURL_PATH_WINDOWS!;%ROOT%\.venv-style\Scripts;%LOCAL_TOOLS_DIR%;%PATH%;"
-set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
+if exist "%cd%\bazel-bin\src\python\binding" (
+    set "setPythonPath=%cd%\bazel-bin\src\python\binding"
+) else (
+    set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
+)
 :: Bazel normally exports TEST_SRCDIR/TEST_WORKSPACE when a test binary is launched under Bazel.
 :: For direct Windows invocation, seed them only if they are not already present.
 if not defined TEST_SRCDIR set "TEST_SRCDIR=%cd%\bazel-bin"
@@ -120,8 +120,6 @@ set "BAZEL_VC_FULL_VERSION=14.44.35207"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
 set "PATH=%setPath%"
-set "PYTHONHOME=C:\opt\Python312"
-set "PYTHONPATH=C:\opt\Python312;%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Set paths with libs for execution - affects PATH
@@ -140,7 +138,7 @@ if !errorlevel! neq 0 (
     goto :exit_build_error
 )
 set "PYTHONHOME=C:\opt\Python312"
-set "PYTHONPATH=C:\opt\Python312;%setPythonPath%"
+set "PYTHONPATH=C:\opt\Python312;%setPythonPath%;%cd%\bazel-bin\src\python;%cd%\bazel-bin\src"
 
 :exit_build
 echo [INFO] Setup finished

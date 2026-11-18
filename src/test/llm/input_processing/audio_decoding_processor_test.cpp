@@ -107,6 +107,30 @@ TEST(AudioDecodingProcessorTest, ValidWavAudioDecodedSuccessfully) {
     EXPECT_EQ(req.inputAudios[0].get_element_type(), ov::element::f32);
 }
 
+TEST(AudioDecodingProcessorTest, MultipartInputResamplesWavTo16Khz) {
+    const std::string wavData = buildWavBuffer(/*numSamples=*/240, /*sampleRate=*/24000);
+    InputRequest req;
+    req.multipartAudioInputs.push_back({wavData});
+    AudioDecodingProcessor processor;
+
+    ASSERT_TRUE(processor.process(req).ok());
+    ASSERT_EQ(req.inputAudios.size(), 1u);
+    EXPECT_EQ(req.inputAudios[0].get_shape()[0], 160u);
+    EXPECT_EQ(req.inputAudios[0].get_element_type(), ov::element::f32);
+}
+
+TEST(AudioDecodingProcessorTest, MultipartInputRejectsMalformedAudio) {
+    const std::string malformedAudio = "not valid audio";
+    InputRequest req;
+    req.multipartAudioInputs.push_back({malformedAudio});
+    AudioDecodingProcessor processor;
+
+    const auto status = processor.process(req);
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_TRUE(req.inputAudios.empty());
+}
+
 TEST(AudioDecodingProcessorTest, AudioPartReplacedWithIndexedTag) {
     const std::string wavData = buildWavBuffer(16);
     const std::string base64 = toBase64(wavData);

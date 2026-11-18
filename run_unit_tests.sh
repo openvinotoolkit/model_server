@@ -26,6 +26,10 @@ if [ -f /etc/redhat-release ] ; then dist="--//:distro=redhat" ; fi
 debug_bazel_flags=${debug_bazel_flags:-"--config=mp_on $dist"}
 TEST_FILTER="--test_filter=*"
 UNIT_TEST_TARGETS="//src:ovms_test //src:python_runtime_library_test //src/python:pythoninterpretermodule_lifecycle_test //src/python:pythoninterpretermodule_backend_failure_test //src/python:pythoninterpretermodule_borrowed_interpreter_test"
+if [[ ! "${debug_bazel_flags}" =~ --config(=|[[:space:]]+)mp_off([[:space:]]|$) &&
+            ! "${debug_bazel_flags}" =~ MEDIAPIPE_DISABLE=1([[:space:]]|$) ]]; then
+        UNIT_TEST_TARGETS+=" //src/image_utils:no_opencv_runtime_test"
+fi
 SHARED_OPTIONS=" \
 --jobs=$JOBS \
 ${debug_bazel_flags} \

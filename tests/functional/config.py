@@ -100,7 +100,7 @@ language_models_enabled = get_bool("TT_LANGUAGE_MODELS_ENABLED", True)
 mediapipe_disable = bool(get_int("MEDIAPIPE_DISABLE", 0))
 
 # Kept for external test suites; Python support is always enabled.
-python_disable = False
+python_disable = False  # pylint: disable=invalid-name
 
 """ TT_WIN_PY_VERSION - Python version for virtualenv on Windows OS """
 windows_python_version = os.environ.get("TT_WIN_PY_VERSION", "3.12")
@@ -296,8 +296,9 @@ performance_test_timeout_minutes = get_int("TT_PERFORMANCE_TEST_TIMEOUT_MINUTES"
         Possible options (case insensitive): 
         ubuntu22 - use default Ubuntu 22.04 image
         ubuntu24 - use default Ubuntu 24.04 image
+        ubuntu26 - use default Ubuntu 26.04 image
         redhat - use UBI 9.7 based
-        ubuntu22,ubuntu24,redhat - iterate all tests both for ubuntu and redhat   
+        ubuntu22,ubuntu24,ubuntu26,redhat - iterate all tests both for ubuntu and redhat   
         windows - can't iterate (supports only BINARY ovms type)
 """
 __base_os = os.environ.get("BASE_OS", OsType.Ubuntu24)

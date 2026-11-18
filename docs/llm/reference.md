@@ -113,6 +113,9 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional ChatTemplateEngine chat_template_engine` - template renderer: `JINJA` or `MINJA`. Defaults to Jinja when Python is available, otherwise Minja. An explicitly selected engine must have a usable chat template; Jinja also requires Python;
 -    `optional bool enable_tool_guided_generation` - enable enforcing tool schema during generation. Requires setting response parser. [default = false];
 -    `optional SparseAttentionConfig sparse_attention_config` - Sparse attention configuration. Disabled if not specified.
+-    `optional VisionInputOptions input_vision` - visual input settings:
+      - `optional float video_fps` - requested sampling rate for an encoded video source supplied as a `video_url` string. Must be finite and greater than zero when set. When unset, frames are retained up to `video_max_frames`. Sampling uses MP4 timestamps.
+      - `optional uint32 video_max_frames` - maximum number of frames retained from one encoded video source or supplied in a frame array. Must be greater than zero [default = 32]. If the requested FPS would produce more frames than this limit, or a frame array exceeds it, the request is rejected. Encoded-video pixels must also fit the request-wide [`--max_video_decode_pixels`](../parameters.md#input-media-decode-protection) budget; exceeding it rejects the request rather than reducing the selected frame count.
 
 ### Caching settings
 The value of `cache_size` might have performance and stability implications. It is used for storing LLM model KV cache data. Adjust it based on your environment capabilities, model size and expected level of concurrency.
@@ -319,6 +322,29 @@ We recommend using templates from the [vLLM repository](https://github.com/vllm-
 When `tool_parser` is used, it's possible to leverage tool guided generation with `enable_tool_guided_generation` option. That setting pushes the model to generate tool calls that matches the schemas specified in the `tools`.
 
 > **Note**: When `enable_tool_guided_generation` is set, but model server fails to load any tool schema from the request, the request will still be processed, but tool guided generation will be disabled.
+
+Tool-guided generation is supported by the `hermes3` (including Qwen3), `llama3`,
+`phi4`, and `devstral` tool parsers. For these formats, `tool_choice: "required"`
+activates guidance regardless of `enable_tool_guided_generation` and requires at
+least one call. A named function choice also activates guidance regardless of
+the flag and requires exactly one call to that function. If `parameters` is
+omitted, the function is treated as parameterless and accepts an empty argument
+object. Explicit parameter schemas are left unchanged.
+
+Tool-guided generation and `response_format` are not supported together. If tool
+guidance activates, its grammar takes precedence over `response_format`.
+Structured-output validation failures retain the existing fallback to
+unconstrained generation.
+
+With the `qwen3` reasoning parser, thinking and `response_format` can be used in
+one request without enabling tool guidance. The model can produce free-form
+thinking followed by a final answer constrained by the requested format;
+reasoning is returned separately from final content. A thinking opener already
+present in the chat template's generation prompt is not generated a second time.
+Existing `chat_template_kwargs`, including `enable_thinking: false`, remain
+effective. Channel-based reasoning formats such as Harmony are not covered by
+this response-format envelope. A request that reaches its token limit during
+thinking or the final answer can still return incomplete output.
 
 ### OpenVINO runtime settings
 

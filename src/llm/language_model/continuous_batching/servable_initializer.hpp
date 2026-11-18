@@ -16,6 +16,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 
 #include <openvino/genai/scheduler_config.hpp>
@@ -33,9 +34,11 @@ namespace ovms {
 class Status;
 
 class ContinuousBatchingServableInitializer : public GenAiServableInitializer {
+    std::optional<LLMMetricReporterFactory> createMetricReporter;
     static ov::genai::SchedulerConfig prepareDraftPipelineSchedulerConfig(const mediapipe::LLMCalculatorOptions& nodeOptions);
 
 public:
+    explicit ContinuousBatchingServableInitializer(std::optional<LLMMetricReporterFactory> createMetricReporter = std::nullopt);
     Status initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) override;
 };
 }  // namespace ovms

@@ -14,9 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <algorithm>
-#include <unordered_set>
-
 #include "src/logging.hpp"
 #include "src/stringutils.hpp"
 #include "utils.hpp"
@@ -42,6 +39,7 @@
 #include "default_content_parser.hpp"
 #include "minicpm5/minicpm5_tool_parser.hpp"
 #include "minicpm5/minicpm5_reasoning_parser.hpp"
+#include "qwen3asr/content_parser.hpp"
 
 namespace ovms {
 OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const std::string& tag) const {
@@ -186,7 +184,8 @@ std::optional<Delta> OutputParser::parseReasoningChunk(const std::vector<int64_t
     return result;
 }
 
-OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName, const ToolsSchemas_t& toolNameSchemaMap) :
+OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName,
+    const ToolsSchemas_t& toolNameSchemaMap, const std::string& contentParserName) :
     tokenizer(tokenizer) {
     if (toolParserName == "llama3") {
         toolParser = std::make_unique<Llama3ToolParser>(tokenizer);
@@ -237,7 +236,9 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     // minicpm5's <s>/<|im_end|> must be visible before parser-owned phases begin). For all other
     // parser combinations the content phase decodes with skip_special_tokens=true (the default,
     // lower noise). Each parser that requires this sets defaultDecodingWithSpecialTokens in its config.
-    if (toolParserName == "onyx" || reasoningParserName == "onyx")
+    if (contentParserName == "qwen3asr")
+        contentParser = std::make_unique<Qwen3AsrContentParser>(tokenizer);
+    else if (toolParserName == "onyx" || reasoningParserName == "onyx")
         contentParser = std::make_unique<OnyxContentParser>(tokenizer);
     else if (toolParserName == "gptoss" || reasoningParserName == "gptoss")
         contentParser = std::make_unique<GptOssContentParser>(tokenizer);
@@ -249,6 +250,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         contentParser = std::make_unique<DefaultContentParser>(tokenizer, std::vector<std::string>{"<|im_end|>"});
     else if (toolParserName == "minicpm5")
         contentParser = std::make_unique<DefaultContentParser>(tokenizer, std::vector<std::string>{"<s>", "<|im_end|>"});
+    else if (!contentParserName.empty())
+        throw std::runtime_error("Unsupported content parser: \"" + contentParserName + "\"");
     else
         contentParser = std::make_unique<DefaultContentParser>(tokenizer);
 
@@ -345,19 +348,6 @@ void OutputParser::setImplicitReasoningStart(bool value) {
     if (processingPhase == UNKNOWN || processingPhase == REASONING) {
         processingPhase = value ? REASONING : UNKNOWN;
     }
-}
-
-void OutputParser::detectAndSetImplicitReasoningStart(const std::string& renderedPrompt) {
-    if (!reasoningParser) {
-        return;
-    }
-    std::string trimmed = renderedPrompt;
-    rtrim(trimmed);
-    const auto& startTags = reasoningParser->getParsingConfig().startTags;
-    bool detected = std::any_of(startTags.begin(), startTags.end(),
-        [&](const std::string& tag) { return !tag.empty() && endsWith(trimmed, tag); });
-    setImplicitReasoningStart(detected);
-    return;
 }
 
 std::optional<Delta> OutputParser::parseChunk(const std::string& chunkResponse, const std::vector<int64_t>& tokens, const bool toolsAvailable, ov::genai::GenerationFinishReason finishReason) {

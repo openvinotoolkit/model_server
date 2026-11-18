@@ -277,7 +277,9 @@ TEST_F(Gemma4OutputParserTest, ParseReasoningWithOpenerFollowedBySpaceThenKeywor
 }
 
 TEST_F(Gemma4OutputParserTest, ImplicitStartStillConsumesGeneratedChannelHeader) {
-    outputParserWithRegularToolParsing->detectAndSetImplicitReasoningStart("<|turn>model\n<|channel>");
+    const auto context = ovms::determineReasoningContext(ovms::getDefaultReasoningParsingConfig("gemma4"), "<|turn>model\n<|channel>");
+    EXPECT_TRUE(context.implicitStart);
+    outputParserWithRegularToolParsing->setImplicitReasoningStart(context.implicitStart);
     std::vector<std::pair<std::string, std::optional<std::string>>> chunks{
         {"thought\n", std::nullopt},
         {"Some reasoning content", R"({"delta":{"reasoning_content":"Some reasoning content"}})"},
