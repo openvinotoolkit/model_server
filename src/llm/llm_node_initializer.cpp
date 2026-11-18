@@ -17,6 +17,7 @@
 #include <string>
 #include <utility>
 
+#include "src/graph_metadata.hpp"
 #include "src/mediapipe_internal/graph_side_packets.hpp"
 #include "src/mediapipe_internal/node_initializer.hpp"
 #include "src/stringutils.hpp"
@@ -25,6 +26,8 @@
 #include "mediapipe/framework/calculator.pb.h"
 
 #include "src/logging.hpp"
+#include "src/metrics/llm_metric_reporter.hpp"
+#include "src/metrics/metric_provider.hpp"
 
 namespace ovms {
 class LlmNodeInitializer : public NodeInitializer {
@@ -39,7 +42,9 @@ public:
         const std::string& graphName,
         const std::string& basePath,
         GraphSidePackets& sidePackets,
-        PythonBackend* /*pythonBackend*/) override {
+        GraphMetadata& metadata,
+        PythonBackend* /*pythonBackend*/,
+        const MetricProvider* metrics) override {
         auto& genAiServableMap = sidePackets.genAiServableMap;
         if (!nodeConfig.node_options().size()) {
             SPDLOG_ERROR("LLM node missing options in graph: {}. ", graphName);
@@ -54,11 +59,20 @@ public:
             SPDLOG_ERROR("LLM node name: {} already used in graph: {}. ", nodeName, graphName);
             return StatusCode::LLM_NODE_NAME_ALREADY_EXISTS;
         }
+        LLMMetricReporterFactory createMetricReporter = [metrics, graphName, nodeName]() {
+            return std::make_shared<LLMMetricReporter>(
+                metrics ? &metrics->getMetricConfig() : nullptr,
+                metrics ? metrics->getMetricRegistry() : nullptr, graphName, nodeName);
+        };
         std::shared_ptr<GenAiServable> servable;
-        Status status = initializeGenAiServable(servable, nodeConfig, basePath);
+        Status status = initializeGenAiServable(servable, nodeConfig, basePath, std::move(createMetricReporter));
         if (!status.ok()) {
             SPDLOG_ERROR("Failed to process LLM node graph {}", graphName);
             return status;
+        }
+        const auto maxModelLength = servable->getProperties()->maxModelLength;
+        if (maxModelLength.has_value() && !metadata.setInt("max_model_len", maxModelLength.value())) {
+            SPDLOG_WARN("Metadata key max_model_len is already set in graph: {}, ignoring the value from LLM node: {}", graphName, nodeName);
         }
         genAiServableMap.insert(std::pair<std::string, std::shared_ptr<GenAiServable>>(nodeName, std::move(servable)));
         sidePackets.genAiExecutionContextMap.emplace(

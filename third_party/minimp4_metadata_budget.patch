@@ -1,0 +1,48 @@
+--- a/minimp4.h
++++ b/minimp4.h
+@@ -307,7 +307,8 @@
+     int64_t read_size;
+     MP4D_track_t *track;
+     int (*read_callback)(int64_t offset, void *buffer, size_t size, void *token);
+-    void *token;
++    void *token;
++    size_t metadata_allocated_bytes;
+ 
+     unsigned track_count; // number of tracks in the movie
+ 
+@@ -2596,18 +2597,22 @@
+ */
+ enum { MINIMP4_MAX_ALLOC_BYTES = 256u * 1024u * 1024u };
+ 
+-static void *minimp4_bounded_malloc(size_t size)
++static void *minimp4_bounded_malloc(MP4D_demux_t *mp4, size_t size)
+ {
+-    if (size > MINIMP4_MAX_ALLOC_BYTES)
++    if (size > MINIMP4_MAX_ALLOC_BYTES ||
++        mp4->metadata_allocated_bytes > MINIMP4_MAX_ALLOC_BYTES - size)
+         return NULL;
+-    return malloc(size);
++    void *memory = malloc(size);
++    if (memory)
++        mp4->metadata_allocated_bytes += size;
++    return memory;
+ }
+ 
+ // A malformed file can carry the same table box (stsc, stco/co64, ...)
+ // twice for one track; re-running a MALLOC for a field that's already
+ // populated would leak the earlier block. free() is a no-op on NULL, so
+ // this is free for the (common) single-occurrence case.
+-#define MALLOC(t, p, size) { free(p); p = (t)minimp4_bounded_malloc(size); if (!(p)) { ERROR("out of memory"); } }
++#define MALLOC(t, p, size) { free(p); p = (t)minimp4_bounded_malloc(mp4, size); if (!(p)) { ERROR("out of memory"); } }
+ 
+ /*
+  *   On error: release resources.
+@@ -3207,7 +3212,7 @@
+             if (!tr)
+                 break;
+             tr->object_type_indication = MP4_OBJECT_TYPE_AVC;
+-            tr->dsi = (unsigned char*)minimp4_bounded_malloc((size_t)box_bytes);
++            tr->dsi = (unsigned char*)minimp4_bounded_malloc(mp4, (size_t)box_bytes);
+             if (!tr->dsi)
+             {
+                 ERROR("out of memory");

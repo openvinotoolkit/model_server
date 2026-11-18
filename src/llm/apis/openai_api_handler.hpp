@@ -57,6 +57,7 @@ enum class Endpoint {
     CHAT_COMPLETIONS,
     COMPLETIONS,
     RESPONSES,
+    TRANSCRIPTIONS,
     TOKENIZE,
 };
 
@@ -106,6 +107,7 @@ protected:
     ov::genai::Tokenizer tokenizer;
     const std::string toolParserName;
     const std::string reasoningParserName;
+    std::optional<uint32_t> videoMaxFrames;
 
     // Output parser is used to parse chat completions response to extract specific fields like tool calls and reasoning.
     std::shared_ptr<OutputParser> outputParser = nullptr;
@@ -157,7 +159,8 @@ public:
 
     // Request parsing only; output parsing is initialized after input and generation setup.
     absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
-        std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt);
+        std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt,
+        std::optional<uint32_t> videoMaxFrames = std::nullopt);
 
     // Shared parsing (non-virtual)
     absl::Status parseTools();
@@ -182,7 +185,7 @@ public:
     absl::StatusOr<InputRequest> extractInputRequest();
 
     /** Constructs output parsers after generation setup and applies the detected prompt state. */
-    void initOutputParser(const ReasoningGenerationContext& reasoningContext);
+    void initOutputParser(const ReasoningGenerationContext& reasoningContext, const std::string& contentParserName = "");
 
     // Verbose response configuration
     void enableVerboseResponse(const std::string& promptAfterTemplate) {
@@ -225,6 +228,7 @@ public:
     std::string serializeUnaryResponse(const std::vector<std::vector<Delta>>& allDeltas,
         const std::vector<ov::genai::GenerationFinishReason>& finishReasons);
     virtual std::string serializeStreamingChunk(Delta delta, ov::genai::GenerationFinishReason finishReason) = 0;
+    virtual bool requiresSeparateStreamingFinishEvent() const { return false; }
     virtual std::string serializeStreamingUsageChunk() = 0;
     virtual std::string serializeStreamingHandshakeChunk() = 0;
 

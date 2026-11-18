@@ -16,6 +16,7 @@
 #include "kfs_graph_executor_impl.hpp"
 
 #include <chrono>
+#include <cstring>
 #include <limits>
 #include <sstream>
 #include <string>
@@ -39,7 +40,6 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "mediapipe/framework/calculator_graph.h"
 #include "mediapipe/framework/formats/image_frame.h"
-#include "mediapipe/framework/formats/image_frame_opencv.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
 #pragma GCC diagnostic push
@@ -47,10 +47,6 @@
 #include "mediapipe/framework/formats/tensor.h"
 #include "mediapipe/framework/port/status.h"
 #pragma GCC diagnostic pop
-#pragma warning(push)
-#pragma warning(disable : 6269 6294 6201)
-#include "opencv2/opencv.hpp"
-#pragma warning(pop)
 
 namespace ovms {
 
@@ -505,9 +501,18 @@ Status receiveAndSerializePacket<mediapipe::ImageFrame>(const ::mediapipe::Packe
         output->add_shape(received.Height());
         output->add_shape(received.Width());
         output->add_shape(received.NumberOfChannels());
-        cv::Mat image = mediapipe::formats::MatView(&received);
-
-        response.add_raw_output_contents()->assign(reinterpret_cast<char*>(image.data), image.cols * image.rows * image.channels() * image.elemSize1());
+        const size_t rowBytes = static_cast<size_t>(received.Width()) * received.NumberOfChannels() * received.ChannelSize();
+        const size_t outputBytes = rowBytes * received.Height();
+        auto* rawOutput = response.add_raw_output_contents();
+        if (rowBytes == static_cast<size_t>(received.WidthStep())) {
+            rawOutput->assign(reinterpret_cast<const char*>(received.PixelData()), outputBytes);
+        } else {
+            rawOutput->resize(outputBytes);
+            for (int row = 0; row < received.Height(); ++row) {
+                std::memcpy(rawOutput->data() + row * rowBytes,
+                    received.PixelData() + static_cast<size_t>(row) * received.WidthStep(), rowBytes);
+            }
+        }
         return StatusCode::OK;
     }
     HANDLE_PACKET_RECEIVAL_EXCEPTIONS();

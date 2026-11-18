@@ -133,4 +133,12 @@ bool containsEmbeddedNull(const std::string& value);
 
 void escapeSpecialCharacters(std::string& text);
 
+/**
+ * @brief Checks if the string contains only alphanumeric characters or underscores
+ *
+ * @param name
+ * @return true if the string contains only alphanumeric characters or underscores, false otherwise
+ */
+bool isAlphanumericOrUnderscore(const std::string& name);
+
 }  // namespace ovms

@@ -48,15 +48,18 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
         // Remove empty tool_calls arrays to avoid adding empty tool calls to the input prompt.
         processors.emplace_back(std::make_unique<EmptyToolCallsArrayRemovingProcessor>());
 
-        if (context.config.supportsVisualInputs) {
+        if (context.config.visionInputConfig.has_value()) {
             const auto& settings = Config::instance().getServerSettings();
             processors.emplace_back(std::make_unique<ImageDecodingProcessor>(
                 settings.allowedLocalMediaPath,
                 settings.allowedMediaDomains));
             processors.emplace_back(std::make_unique<VideoFramesProcessor>(
                 settings.allowedLocalMediaPath,
-                settings.allowedMediaDomains));
+                settings.allowedMediaDomains,
+                context.config.visionInputConfig->videoFps,
+                context.config.visionInputConfig->videoMaxFrames));
         }
+
         if (context.config.audioInputConfig.has_value()) {
             processors.emplace_back(std::make_unique<AudioDecodingProcessor>(
                 context.config.audioInputConfig->resamplingRequired));
@@ -78,7 +81,7 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
     // - LM: provides inputIds for inference.
     // - VLM: provides inputIds for usage statistics and max-length checks
     //   (the VLM pipeline tokenizes internally; inputIds is not passed to it).
-    if (!context.config.supportsVisualInputs || isChatPath) {
+    if (!context.config.visionInputConfig.has_value() || isChatPath) {
         processors.emplace_back(std::make_unique<TokenizationProcessor>(
             context.tokenizer, addSpecialTokens));
     }

@@ -148,6 +148,8 @@ dist/ubuntu24
 - non-English grapheme-to-phoneme conversion,
 - fallback phonemization of some out-of-vocabulary (OOV) English words.
 
+During global initialization, `ESPEAK_DATA_PATH` takes precedence. If it is unset or empty, OVMS uses data relative to the process executable when available: `../share/espeak-ng-data` relative to the executable directory on Linux, or `espeak-ng-data` next to the executable on Windows. This also applies to the C API, where the path is relative to the host application executable, not the OVMS library. Set `ESPEAK_DATA_PATH` explicitly if the data is elsewhere. The fallback is checked once per server instance during global initialization.
+
 If you do not need Kokoro non-English support and can accept reduced English OOV fallback behavior, you can:
 
 - skip building `espeak-ng` during image/package build:

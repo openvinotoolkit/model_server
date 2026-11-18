@@ -74,6 +74,7 @@ public:
     }
 
     // Interface methods
+    absl::Status validateEndpoint(Endpoint endpoint) const override;
     std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() override;
     std::shared_ptr<GenAiServableProperties> getProperties() override;
     absl::Status parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
