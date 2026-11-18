@@ -528,7 +528,7 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
     std::filesystem::path parsedModelsPathFs(parsedModelsPath);
 
     // Existence of talker model indicates omni pipeline
-    bool hasTalkerModel = std::filesystem::exists(parsedModelsPathFs / "openvino_talker_model.xml");
+    const bool hasTalkerModel = std::filesystem::exists(parsedModelsPathFs / "openvino_talker_model.xml");
     const bool hasAudioDecoderModel = std::filesystem::exists(parsedModelsPathFs / "openvino_audio_decoder_model.xml");
     const bool hasTextEmbeddingsModel = std::filesystem::exists(parsedModelsPathFs / "openvino_text_embeddings_model.xml");
     const bool hasVisionEmbeddingsModel = std::filesystem::exists(parsedModelsPathFs / "openvino_vision_embeddings_model.bin");
