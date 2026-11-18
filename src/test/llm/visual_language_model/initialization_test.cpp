@@ -31,7 +31,8 @@ Status callDeterminePipelineType(PipelineType& pipelineType, const std::string& 
     const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig = config.node(0);
     mediapipe::LLMCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
-    return determinePipelineType(pipelineType, nodeOptions, "");
+    ModelsFormat modelsFormat{ModelsFormat::NONE};
+    return determinePipelineType(pipelineType, nodeOptions, "", modelsFormat);
 }
 
 // Initialization tests

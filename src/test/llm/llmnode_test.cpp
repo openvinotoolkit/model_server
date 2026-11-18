@@ -4965,15 +4965,18 @@ TEST_F(GGUFPipelineSelectionTest, TextAutoAndExplicitSelection) {
     mediapipe::LLMCalculatorOptions options;
     options.set_models_path(writeMetadata("qwen35"));
     PipelineType pipelineType{PipelineType::LM};
-    EXPECT_EQ(determinePipelineType(pipelineType, options, "", &modelsFormat), StatusCode::OK);
+    EXPECT_EQ(determinePipelineType(pipelineType, options, "", modelsFormat), StatusCode::OK);
     EXPECT_EQ(modelsFormat, ModelsFormat::GGUF);
     EXPECT_EQ(pipelineType, PipelineType::LM_CB);
     options.set_device("NPU");
-    EXPECT_EQ(determinePipelineType(pipelineType, options, "", &modelsFormat), StatusCode::OK);
+    EXPECT_EQ(determinePipelineType(pipelineType, options, "", modelsFormat), StatusCode::OK);
     EXPECT_EQ(pipelineType, PipelineType::LM);
     EXPECT_EQ(modelsFormat, ModelsFormat::GGUF);
     options.set_pipeline_type(mediapipe::LLMCalculatorOptions::LM_CB);
-    EXPECT_EQ(determinePipelineType(pipelineType, options, "", &modelsFormat), StatusCode::OK);
+    EXPECT_EQ(determinePipelineType(pipelineType, options, "", modelsFormat), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
+    EXPECT_EQ(modelsFormat, ModelsFormat::GGUF);
+    options.set_pipeline_type(mediapipe::LLMCalculatorOptions::LM);
+    EXPECT_EQ(determinePipelineType(pipelineType, options, "", modelsFormat), StatusCode::OK);
     EXPECT_EQ(pipelineType, PipelineType::LM);
     EXPECT_EQ(modelsFormat, ModelsFormat::GGUF);
 }
@@ -4982,7 +4985,7 @@ TEST_F(GGUFPipelineSelectionTest, UnknownArchitectureDelegatesSupportToGenai) {
     mediapipe::LLMCalculatorOptions options;
     options.set_models_path(writeMetadata("future_architecture", 2));
     PipelineType pipelineType{PipelineType::LM};
-    EXPECT_EQ(determinePipelineType(pipelineType, options, "", &modelsFormat), StatusCode::OK);
+    EXPECT_EQ(determinePipelineType(pipelineType, options, "", modelsFormat), StatusCode::OK);
     EXPECT_EQ(pipelineType, PipelineType::LM_CB);
     EXPECT_EQ(modelsFormat, ModelsFormat::GGUF);
 }

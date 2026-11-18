@@ -6,7 +6,7 @@ OVMS selects the OpenVINO GGUF frontend automatically for `.gguf` models; no rea
 
 GGUF detection uses the `.gguf` filename extension. GenAI validates model metadata and architecture support when loading the selected pipeline.
 
- This preview supports text generation with `LM` and `LM_CB` only. `AUTO` selects `LM_CB`, or `LM` on NPU; NPU also overrides an explicit `LM_CB` selection. Companion vision projectors are not loaded.
+ This preview supports text generation with `LM` and `LM_CB` only. `AUTO` selects `LM_CB`, or `LM` on NPU. Companion vision projectors are not loaded.
 
 Currently recommended model is Ternary-Bonsai-2-27B PQ2_0.
 The model is recommended for GPU and the gguf support is in preview mode, so other models and hardware may not give satisfactory performance for 2026.5 release.
@@ -24,7 +24,7 @@ Deploy the model:
 :sync: docker
 Start docker container:
 ```bash
-mkdir models
+mkdir -p ${HOME}/models
 docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v ${HOME}/models:/models/:rw \
   -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
   openvino/model_server:weekly \
@@ -39,7 +39,7 @@ docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v ${HOME}/models:/mode
 :::{tab-item} Bare metal (Windows)
 :sync: bare-metal
 ```bat
-mkdir models
+mkdir C:/models
 ovms --rest_port 8000 ^
   --model_repository_path C:/models/ ^
   --task text_generation ^

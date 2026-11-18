@@ -81,6 +81,6 @@ std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath);
 GenAiServableProperties::DraftModelStrategy detectDraftModelStrategy(const std::string& draftPath);
 Status determinePipelineTypeFromGGUF(const std::filesystem::path& ggufPath, const mediapipe::LLMCalculatorOptions& nodeOptions, PipelineType& pipelineType);
 Status determinePipelineTypeFromIR(const std::filesystem::path& irPath, const mediapipe::LLMCalculatorOptions& nodeOptions, PipelineType& pipelineType);
-Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath, ModelsFormat* detectedFormat = nullptr);
+Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath, ModelsFormat& detectedFormat);
 Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath);
 }  // namespace ovms

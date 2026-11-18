@@ -502,7 +502,11 @@ Status determinePipelineTypeFromGGUF(const std::filesystem::path& ggufPath, cons
     pipelineType = nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::LM ? PipelineType::LM : PipelineType::LM_CB;
 
     if (nodeOptions.device() == "NPU") {
-        pipelineType = PipelineType::LM;  // NPU device uses LM
+        if (nodeOptions.pipeline_type() != mediapipe::LLMCalculatorOptions::AUTO && nodeOptions.pipeline_type() != mediapipe::LLMCalculatorOptions::LM) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "GGUF models on NPU device support only LM pipeline type.");
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
+        pipelineType = PipelineType::LM;
     }
 
     return StatusCode::OK;
@@ -571,7 +575,7 @@ Status determinePipelineTypeFromIR(const std::filesystem::path& irPath, const me
     return StatusCode::OK;
 }
 
-Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath, ModelsFormat* detectedFormat) {
+Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath, ModelsFormat& detectedFormat) {
     // Assuming that models_path is always set
     std::string parsedModelsPath;
     auto status = parseModelsPath(parsedModelsPath, nodeOptions.models_path(), graphPath);
@@ -583,9 +587,7 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
 
     const bool isGGUF = parsedModelsPathFs.extension() == ".gguf";
     status = isGGUF ? determinePipelineTypeFromGGUF(parsedModelsPathFs, nodeOptions, pipelineType) : determinePipelineTypeFromIR(parsedModelsPathFs, nodeOptions, pipelineType);
-    if (status == StatusCode::OK && detectedFormat != nullptr) {
-        *detectedFormat = isGGUF ? ModelsFormat::GGUF : ModelsFormat::IR;
-    }
+    detectedFormat = isGGUF ? ModelsFormat::GGUF : ModelsFormat::IR;
 
     return status;
 }
@@ -599,7 +601,7 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         // Need to initialize pipelineType with some value to avoid compiler warning;
         // determinePipelineType will set it properly.
         PipelineType pipelineType{PipelineType::LM_CB};
-        status = determinePipelineType(pipelineType, nodeOptions, graphPath, &modelsFormat);
+        status = determinePipelineType(pipelineType, nodeOptions, graphPath, modelsFormat);
         if (status != StatusCode::OK) {
             return status;
         }
