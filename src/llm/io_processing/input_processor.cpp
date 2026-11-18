@@ -59,6 +59,7 @@ InputProcessor::InputProcessor(InputProcessorContext& context,
                 context.config.visionInputConfig->videoFps,
                 context.config.visionInputConfig->videoMaxFrames));
         }
+
         if (context.config.audioInputConfig.has_value()) {
             processors.emplace_back(std::make_unique<AudioDecodingProcessor>(
                 context.config.audioInputConfig->resamplingRequired));
