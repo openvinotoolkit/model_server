@@ -185,7 +185,7 @@ public:
     absl::StatusOr<InputRequest> extractInputRequest();
 
     /** Constructs output parsers after generation setup and applies the detected prompt state. */
-    void initOutputParser(const ReasoningGenerationContext& reasoningContext, const std::string& contentParserName = "");
+    void initOutputParser(const ModelGenerationContext& generationContext, std::string contentParserName = {});
 
     // Verbose response configuration
     void enableVerboseResponse(const std::string& promptAfterTemplate) {

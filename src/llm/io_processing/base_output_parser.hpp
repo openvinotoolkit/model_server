@@ -97,10 +97,10 @@ protected:
 
 public:
     BaseOutputParser() = delete;
-    explicit BaseOutputParser(ov::genai::Tokenizer& tokenizer) :
+    explicit BaseOutputParser(ov::genai::Tokenizer& tokenizer, const ModelGenerationContext&) :
         tokenizer(tokenizer) {}
 
-    explicit BaseOutputParser(ov::genai::Tokenizer& tokenizer, OutputParsingConfig config) :
+    explicit BaseOutputParser(ov::genai::Tokenizer& tokenizer, OutputParsingConfig config, const ModelGenerationContext&) :
         tokenizer(tokenizer),
         parsingConfig(std::move(config)) {
         resolveSpecialTokenIds();

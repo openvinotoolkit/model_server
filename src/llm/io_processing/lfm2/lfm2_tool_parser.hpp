@@ -57,9 +57,9 @@ public:
     }
 
     explicit Lfm2ToolParser(ov::genai::Tokenizer& tokenizer,
-        std::optional<OutputParsingConfig> configOverride = std::nullopt) :
+        std::optional<OutputParsingConfig> configOverride, const ModelGenerationContext& context) :
         BaseOutputParser(tokenizer,
-            configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+            configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig(), context) {}
 
     void resetState() override {
         streamingContent.clear();

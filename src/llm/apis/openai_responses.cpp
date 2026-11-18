@@ -858,16 +858,14 @@ absl::Status OpenAIResponsesHandler::parseResponsesPart(std::optional<uint32_t> 
 
 void OpenAIResponsesHandler::serializeToolChoice(Writer<StringBuffer>& writer) const {
     writer.String("tool_choice");
-    if (request.toolChoice.empty()) {
-        writer.String("auto");
-    } else if (request.toolChoice == "auto" || request.toolChoice == "none" || request.toolChoice == "required") {
-        writer.String(request.toolChoice.c_str());
+    if (request.toolChoice != ToolChoiceMode::NamedFunction) {
+        writer.String(getToolChoice().c_str());
     } else {
         writer.StartObject();
         writer.String("type");
         writer.String("function");
         writer.String("name");
-        writer.String(request.toolChoice.c_str());
+        writer.String(request.toolChoiceFunctionName.value().c_str());
         writer.EndObject();
     }
 }

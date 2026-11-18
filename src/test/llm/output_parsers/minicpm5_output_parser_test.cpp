@@ -103,7 +103,7 @@ protected:
     }
 
     void SetUp() override {
-        outputParser = std::make_unique<OutputParser>(*minicpm5Tokenizer, "minicpm5", "minicpm5", minicpm5ToolsSchemas);
+        outputParser = std::make_unique<OutputParser>(*minicpm5Tokenizer, "minicpm5", "minicpm5", minicpm5ToolsSchemas, ovms::ModelGenerationContext{});
     }
 
     std::vector<int64_t> encodeInput(const std::string& input) {
@@ -261,10 +261,11 @@ TEST_F(Minicpm5OutputParserTest, ParseMixedStringAndIntegerParams) {
 // without emitting <think>, and terminates with </think>.
 // We simulate that here via setImplicitReasoningStart(true).
 TEST_F(Minicpm5OutputParserTest, ParseReasoningWithoutStartingTag) {
-    auto scopedParser = std::make_unique<OutputParser>(*minicpm5Tokenizer, "minicpm5", "minicpm5", minicpm5ToolsSchemas);
-    const auto context = ovms::determineReasoningContext(ovms::getDefaultReasoningParsingConfig("minicpm5"), "Some text\n<|im_start|>assistant\n<think>");
-    EXPECT_TRUE(context.implicitStart);
-    scopedParser->setImplicitReasoningStart(context.implicitStart);
+    auto scopedParser = std::make_unique<OutputParser>(*minicpm5Tokenizer, "minicpm5", "minicpm5", minicpm5ToolsSchemas, ovms::ModelGenerationContext{});
+    const std::string prompt = "Some text\n<|im_start|>assistant\n<think>";
+    const auto context = ovms::determineModelGenerationContext(ovms::getDefaultReasoningParsingConfig("minicpm5"), prompt);
+    EXPECT_TRUE(context.reasoning.implicitStart);
+    scopedParser->setImplicitReasoningStart(context.reasoning.implicitStart);
 
     // Encode the reasoning text without BOS (in production these are generated
     // tokens, not prompt tokens — the model never emits <think> itself).
@@ -287,7 +288,7 @@ TEST_F(Minicpm5OutputParserTest, ParseWithThinkBlockHandledByReasoningParser) {
     constexpr int64_t thinkEndTokenId = 9;    // </think> token ID in MiniCPM5
 
     auto outputParserWithReasoning =
-        std::make_unique<OutputParser>(*minicpm5Tokenizer, "minicpm5", "minicpm5", minicpm5ToolsSchemas);
+        std::make_unique<OutputParser>(*minicpm5Tokenizer, "minicpm5", "minicpm5", minicpm5ToolsSchemas, ovms::ModelGenerationContext{});
 
     auto encode = [](ov::genai::Tokenizer& tok, const std::string& text) {
         auto tensor = tok.encode(text, ov::genai::add_special_tokens(false)).input_ids;
@@ -314,12 +315,12 @@ TEST_F(Minicpm5OutputParserTest, ParseWithThinkBlockHandledByReasoningParser) {
 
 TEST_F(Minicpm5OutputParserTest, RequiresSpecialTokens) {
     // Both parsers declare needsSpecialTokens via OutputParsingConfig.
-    Minicpm5ToolParser toolParser(*minicpm5Tokenizer, minicpm5ToolsSchemas);
+    Minicpm5ToolParser toolParser(*minicpm5Tokenizer, minicpm5ToolsSchemas, ModelGenerationContext{});
     EXPECT_TRUE(toolParser.getParsingConfig().needsSpecialTokens);
-    Minicpm5ReasoningParser reasoningParser(*minicpm5Tokenizer);
+    Minicpm5ReasoningParser reasoningParser(*minicpm5Tokenizer, std::nullopt, ModelGenerationContext{});
     EXPECT_TRUE(reasoningParser.getParsingConfig().needsSpecialTokens);
     EXPECT_NO_THROW({
-        OutputParser parser(*minicpm5Tokenizer, "minicpm5", "minicpm5", minicpm5ToolsSchemas);
+        OutputParser parser(*minicpm5Tokenizer, "minicpm5", "minicpm5", minicpm5ToolsSchemas, ovms::ModelGenerationContext{});
         (void)parser;
     });
 }

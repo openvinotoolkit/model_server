@@ -324,12 +324,34 @@ When `tool_parser` is used, it's possible to leverage tool guided generation wit
 > **Note**: When `enable_tool_guided_generation` is set, but model server fails to load any tool schema from the request, the request will still be processed, but tool guided generation will be disabled.
 
 Tool-guided generation is supported by the `hermes3` (including Qwen3), `llama3`,
-`phi4`, and `devstral` tool parsers. For these formats, `tool_choice: "required"`
+`phi4`, `devstral`, `mistral`, `qwen3coder`, and `gptoss` tool parsers. For these formats, `tool_choice: "required"`
 activates guidance regardless of `enable_tool_guided_generation` and requires at
 least one call. A named function choice also activates guidance regardless of
 the flag and requires exactly one call to that function. If `parameters` is
 omitted, the function is treated as parameterless and accepts an empty argument
 object. Explicit parameter schemas are left unchanged.
+
+Mistral guidance uses the `[TOOL_CALLS]`-prefixed JSON-array format. A named
+choice allows exactly one call inside that array; `required` allows one or more.
+Qwen3-Coder guidance uses `<tool_call>` and `<function=...>` wrappers with
+schema-constrained `<parameter=...>` values, rather than JSON tool-call objects.
+Guidance activates only at `[TOOL_CALLS]` for Mistral and `<tool_call>` for
+Qwen3-Coder. Bare arrays and function tags remain output-parser fallbacks, not
+guidance triggers, so ordinary JSON or XML text does not activate tool guidance.
+
+GPT-OSS guidance constrains Harmony assistant messages, including the
+`to=functions.<name>` recipient, JSON arguments, and `<|call|>` tool handoff.
+Recipient-first and commentary/analysis-channel-first tool headers are supported.
+Free-form analysis or commentary can precede a required call. Named choice allows
+exactly one tool call; auto choice also permits a final answer without calling a
+tool. An unfinished assistant header in the rendered prompt is shared with the
+grammar builder and output parser, so the generated continuation does not repeat
+that header. This does not extend GPT-OSS reasoning support for `response_format`.
+
+A named function choice must match a function in `tools`. Named choices and
+`tool_choice: "required"` are rejected when no usable tools are provided, including
+missing, null, or empty tool lists. Functions named `auto`, `none`, or `required`
+can still be selected using the named-function object form of `tool_choice`.
 
 Tool-guided generation and `response_format` are not supported together. If tool
 guidance activates, its grammar takes precedence over `response_format`.

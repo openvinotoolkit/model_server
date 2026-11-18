@@ -168,7 +168,7 @@ private:
 public:
     OnyxToolParser() = delete;
     explicit OnyxToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas,
-        std::optional<OutputParsingConfig> configOverride = std::nullopt);
+        std::optional<OutputParsingConfig> configOverride, const ModelGenerationContext& context);
 
     void resetState() override {
         streamParser.reset();

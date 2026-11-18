@@ -16,18 +16,29 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace ovms {
 
-struct ReasoningGenerationContext {
-    std::string begin;
-    std::string end;
-    bool implicitStart = false;
-    bool completedInPrompt = false;
+struct ModelGenerationContext {
+    struct ReasoningState {
+        std::string begin;
+        std::string end;
+        bool implicitStart = false;
+        bool completedInPrompt = false;
+    };
+
+    // Non-owning input view; the rendered prompt must outlive this context.
+    std::string_view renderedPrompt;
+    ReasoningState reasoning;
 };
 
-// Configuration for a parser's phase-boundary detection and tokenizer decode mode.
+// Per-parser configuration for phase detection, generation startup, and tokenizer decode mode.
+// Starts from predefined format settings or a config override. During construction, a parser
+// may derive promptContinuationStartTags and startsInsidePhase from ModelGenerationContext.
+// These request-specific settings describe how generated output continues the rendered prompt;
+// they remain available across resets without retaining or replaying prompt text.
 //
 // Phase detection:
 //   startTags          — text-based start-boundary strings (matched against decoded text).
@@ -39,13 +50,24 @@ struct ReasoningGenerationContext {
 //                        A start-tag token detected this way is synthesised as text before
 //                        being passed to parseChunk(), so the sub-parser state machine
 //                        receives the expected boundary string.
-//   preambleStartTags  — text-based tags checked only in the UNKNOWN (preamble) phase.
-//                        These are alternative entry points that cannot appear mid-stream.
+//   unknownPhaseStartTags — additional starts checked while phase detection is UNKNOWN.
+//                           UNKNOWN is re-entered after a phase ends, so these may identify
+//                           later reasoning/tool segments, not only the first output tokens.
+//   promptContinuationStartTags — start-tag continuations checked only at byte zero of the
+//                                 first generated output when the prompt ends mid-header.
+//                                 These identify the generated suffix; prompt text is not replayed.
 //   endTags            — text-based end-boundary strings (checked in TOOL_CALLS_PROCESSING_TOOL
 //                        and REASONING phases; the earliest matching boundary ends the phase).
 //   stringsToErase     — strings stripped from this parser's output before emission
 //                        (e.g. BOS/EOS tokens that leak due to special-token decode mode,
 //                        or chat-template structural markers).
+//
+// Generation startup:
+//   startsInsidePhase - the parser determines that the prompt already entered its phase.
+//                       OutputParser can select that phase without waiting for a generated
+//                       start tag (tool parsing still requires available tools). Reset restores
+//                       this initial routing state; promptContinuationStartTags instead handle
+//                       cases where the generated suffix must still identify the first phase.
 //
 // Tokenizer decode mode flag (evaluated by OutputParser::needSpecialTokensForCurrentDecode):
 //   needsSpecialTokens — Decode with skip_special_tokens=false while this parser is in its
@@ -69,10 +91,13 @@ struct ReasoningGenerationContext {
 struct OutputParsingConfig {
     std::vector<std::string> startTags;
     std::vector<std::string> tokenIdStartTags;
-    std::vector<std::string> preambleStartTags;
+    std::vector<std::string> unknownPhaseStartTags;
+    std::vector<std::string> promptContinuationStartTags;
     std::vector<std::string> endTags;
     std::vector<std::string> stringsToErase;
 
+    // The prompt already entered this parser's phase; reset preserves this initial state.
+    bool startsInsidePhase = false;
     bool needsSpecialTokens = false;
     // See comment block above.
     bool defaultDecodingWithSpecialTokens = false;
@@ -82,6 +107,6 @@ struct OutputParsingConfig {
 OutputParsingConfig getDefaultReasoningParsingConfig(const std::string& parserName);
 
 /** Determines the generation's reasoning state from parser metadata and the rendered prompt. */
-ReasoningGenerationContext determineReasoningContext(const OutputParsingConfig& config, const std::string& renderedPrompt);
+ModelGenerationContext determineModelGenerationContext(const OutputParsingConfig& config, const std::string& renderedPrompt);
 
 }  // namespace ovms

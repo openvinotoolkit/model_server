@@ -26,6 +26,25 @@
 
 namespace ovms {
 
+GptOssReasoningParser::GptOssReasoningParser(ov::genai::Tokenizer& tokenizer,
+    std::optional<OutputParsingConfig> configOverride, const ModelGenerationContext& context) :
+    BaseOutputParser(tokenizer,
+        configOverride.has_value() ? std::move(*configOverride) : getDefaultReasoningParsingConfig(), context) {
+    const auto promptState = GptOssGenerationContextAdapter::adapt(context);
+    promptAnalysisHeaderOpen = promptState.header == GptOssGenerationContext::Header::Channel &&
+                               promptState.channel == "analysis";
+    parsingConfig.promptContinuationStartTags.clear();
+    if (promptAnalysisHeaderOpen) {
+        parsingConfig.promptContinuationStartTags = {"<|message|>"};
+    }
+    resetState();
+}
+
+void GptOssReasoningParser::resetState() {
+    state = promptAnalysisHeaderOpen ? StreamState::WAITING_FOR_MESSAGE_START : StreamState::UNKNOWN;
+    pendingMessageStart.clear();
+}
+
 std::optional<Delta> GptOssReasoningParser::parseChunk(const std::string& newChunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
     SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming | GPT Reason | Processing Chunk [{}]", newChunk);
 
@@ -34,6 +53,24 @@ std::optional<Delta> GptOssReasoningParser::parseChunk(const std::string& newChu
     }
 
     std::string chunk = newChunk;
+    if (state == StreamState::WAITING_FOR_MESSAGE_START) {
+        pendingMessageStart += chunk;
+        const std::string messageStart = "<|message|>";
+        if (pendingMessageStart.size() < messageStart.size() &&
+            messageStart.compare(0, pendingMessageStart.size(), pendingMessageStart) == 0) {
+            return std::nullopt;
+        }
+        if (startsWith(pendingMessageStart, messageStart)) {
+            chunk = pendingMessageStart.substr(messageStart.size());
+        } else {
+            chunk = std::move(pendingMessageStart);
+        }
+        pendingMessageStart.clear();
+        state = StreamState::READING_REASONING;
+        if (chunk.empty()) {
+            return std::nullopt;
+        }
+    }
 
     const std::size_t startPos = chunk.find(parsingConfig.startTags[0]);
     if (startPos != std::string::npos) {

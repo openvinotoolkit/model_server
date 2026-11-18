@@ -29,7 +29,7 @@ public:
     using std::runtime_error::runtime_error;
 };
 
-struct ReasoningGenerationContext;
+struct ModelGenerationContext;
 
 /*
  * DecodingMethod enum is used to properly set defaults and validate GenerationConfig depending on whether pipeline has been
@@ -84,8 +84,8 @@ protected:
     void setToolGrammar(const OpenAIRequest& request, const std::shared_ptr<ov::genai::StructuredOutputConfig::TriggeredTags>& tags);
     static ov::genai::StructuredOutputConfig::StructuralTag buildToolArgumentGrammar(const std::string& schema);
     void setTaggedToolGrammar(const OpenAIRequest& request, const ToolCallFormat& format);
-    virtual void applyToolGuidance(const OpenAIRequest& request);
-    void applyResponseFormatGuidance(const OpenAIRequest& request, const ReasoningGenerationContext& reasoningContext, const std::string& reasoningParserName);
+    virtual void applyToolGuidance(const OpenAIRequest& request, const ModelGenerationContext& generationContext);
+    void applyResponseFormatGuidance(const OpenAIRequest& request, const ModelGenerationContext& generationContext, const std::string& reasoningParserName);
 
 public:
     BaseGenerationConfigBuilder() = delete;
@@ -123,7 +123,7 @@ public:
     void unsetStructuredOutputConfig();
 
     /** Selects tool guidance or response formatting and composes any supported reasoning envelope. */
-    void configureStructuredGeneration(const OpenAIRequest& request, const ReasoningGenerationContext& reasoningContext, const std::string& reasoningParserName);
+    void configureStructuredGeneration(const OpenAIRequest& request, const ModelGenerationContext& generationContext, const std::string& reasoningParserName);
 
     /*
      * Fills sampling parameters from the OpenAI request. Structured output is

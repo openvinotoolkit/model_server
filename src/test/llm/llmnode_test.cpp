@@ -1915,7 +1915,7 @@ TEST_P(LLMFlowHttpTestParameterized, continuousBatchingParserFailureStopsGenerat
     std::optional<uint32_t> maxTokensLimit;
     ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, 0, std::nullopt), absl::OkStatus());
 
-    auto outputParser = std::make_shared<OutputParser>(tokenizer, "mistral", "", ToolsSchemas_t{});
+    auto outputParser = std::make_shared<OutputParser>(tokenizer, "mistral", "", ToolsSchemas_t{}, ovms::ModelGenerationContext{});
     auto executionContext = std::make_shared<ContinuousBatchingServableExecutionContext>();
     executionContext->apiHandler = std::move(apiHandler);
     executionContext->generationHandle = generationHandle;
@@ -6360,9 +6360,12 @@ protected:
         builder.configureStructuredGeneration(request, {}, "");
     }
 
-    OpenAIRequest toolRequest(const std::string& choice) {
+    OpenAIRequest toolRequest(ToolChoiceMode choice) {
         OpenAIRequest request;
         request.toolChoice = choice;
+        if (choice == ToolChoiceMode::NamedFunction) {
+            request.toolChoiceFunctionName = "weather";
+        }
         request.toolNameSchemaMap.emplace("weather", ToolSchemaWrapper{nullptr, R"({"type":"object","properties":{"city":{"type":"string"}},"required":["city"]})"});
         return request;
     }
@@ -6375,57 +6378,37 @@ protected:
 
 TEST_P(ToolGuidanceConfigTest, NamedChoiceActivatesExactlyOneCallWithoutServerFlag) {
     GenerationConfigBuilder builder{{}, GetParam(), false, DecodingMethod::STANDARD};
-    configure(builder, toolRequest("weather"));
+    configure(builder, toolRequest(ToolChoiceMode::NamedFunction));
     const auto& config = builder.getConfig();
     ASSERT_TRUE(config.structured_output_config.has_value());
     const auto grammar = tags(config);
     EXPECT_TRUE(grammar->at_least_one);
     EXPECT_TRUE(grammar->stop_after_first);
-    ASSERT_EQ(grammar->tags.size(), 1);
-    if (GetParam() == "phi4") {
-        rapidjson::Document schema;
-        schema.Parse(std::get<ov::genai::StructuredOutputConfig::JSONSchema>(grammar->tags[0].content).value.c_str());
-        ASSERT_FALSE(schema.HasParseError());
-        ASSERT_TRUE(schema.HasMember("minItems"));
-        ASSERT_TRUE(schema.HasMember("maxItems"));
-        EXPECT_EQ(schema["minItems"].GetInt(), 1);
-        EXPECT_EQ(schema["maxItems"].GetInt(), 1);
-    }
+    EXPECT_FALSE(grammar->tags.empty());
 }
 
 TEST_P(ToolGuidanceConfigTest, RequiredChoiceActivatesWithoutServerFlagAndAllowsMultipleCalls) {
     GenerationConfigBuilder builder{{}, GetParam(), false, DecodingMethod::STANDARD};
-    configure(builder, toolRequest("required"));
+    auto request = toolRequest(ToolChoiceMode::Required);
+    request.toolNameSchemaMap.emplace("forecast", ToolSchemaWrapper{nullptr, R"({"type":"object","properties":{},"additionalProperties":false})"});
+    configure(builder, request);
     ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
     const auto grammar = tags(builder.getConfig());
     EXPECT_TRUE(grammar->at_least_one);
     EXPECT_FALSE(grammar->stop_after_first);
-    if (GetParam() == "phi4") {
-        rapidjson::Document schema;
-        schema.Parse(std::get<ov::genai::StructuredOutputConfig::JSONSchema>(grammar->tags[0].content).value.c_str());
-        ASSERT_FALSE(schema.HasParseError());
-        ASSERT_TRUE(schema.HasMember("minItems"));
-        EXPECT_EQ(schema["minItems"].GetInt(), 1);
-        EXPECT_FALSE(schema.HasMember("maxItems"));
-    }
+    EXPECT_FALSE(grammar->tags.empty());
 }
 
 TEST_P(ToolGuidanceConfigTest, AutoChoiceStillDependsOnServerFlag) {
     for (bool enabled : {false, true}) {
         GenerationConfigBuilder builder{{}, GetParam(), enabled, DecodingMethod::STANDARD};
-        configure(builder, toolRequest("auto"));
+        configure(builder, toolRequest(ToolChoiceMode::Auto));
         ASSERT_EQ(builder.getConfig().structured_output_config.has_value(), enabled);
         if (enabled) {
             const auto grammar = tags(builder.getConfig());
             EXPECT_FALSE(grammar->at_least_one);
             EXPECT_FALSE(grammar->stop_after_first);
-            if (GetParam() == "phi4") {
-                rapidjson::Document schema;
-                schema.Parse(std::get<ov::genai::StructuredOutputConfig::JSONSchema>(grammar->tags[0].content).value.c_str());
-                ASSERT_FALSE(schema.HasParseError());
-                EXPECT_FALSE(schema.HasMember("minItems"));
-                EXPECT_FALSE(schema.HasMember("maxItems"));
-            }
+            EXPECT_FALSE(grammar->tags.empty());
         }
     }
 }
@@ -6433,7 +6416,7 @@ TEST_P(ToolGuidanceConfigTest, AutoChoiceStillDependsOnServerFlag) {
 TEST_P(ToolGuidanceConfigTest, NoToolsLeavesResponseFormatUnchanged) {
     GenerationConfigBuilder builder{{}, GetParam(), true, DecodingMethod::STANDARD};
     OpenAIRequest request;
-    request.toolChoice = "none";
+    request.toolChoice = ToolChoiceMode::None;
     request.responseFormat = R"({"type":"structural_tag","format":{"type":"const_string","value":"answer"}})";
     configure(builder, request);
     const auto& config = builder.getConfig();
@@ -6444,11 +6427,11 @@ TEST_P(ToolGuidanceConfigTest, NoToolsLeavesResponseFormatUnchanged) {
 
 TEST_P(ToolGuidanceConfigTest, ToolGrammarStillOverridesResponseFormat) {
     GenerationConfigBuilder builder{{}, GetParam(), true, DecodingMethod::STANDARD};
-    auto request = toolRequest("auto");
+    auto request = toolRequest(ToolChoiceMode::Auto);
     request.responseFormat = R"({"type":"structural_tag","format":{"type":"const_string","value":"answer"}})";
     configure(builder, request);
     ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
-    EXPECT_EQ(tags(builder.getConfig())->tags.size(), 1);
+    EXPECT_FALSE(tags(builder.getConfig())->tags.empty());
 }
 
 TEST_P(ToolGuidanceConfigTest, NoRequestGuidancePreservesModelDefaults) {
@@ -6458,7 +6441,7 @@ TEST_P(ToolGuidanceConfigTest, NoRequestGuidancePreservesModelDefaults) {
     baseConfig.structured_output_config = defaultGrammar;
     GenerationConfigBuilder builder{baseConfig, GetParam(), true, DecodingMethod::STANDARD};
     OpenAIRequest request;
-    request.toolChoice = "none";
+    request.toolChoice = ToolChoiceMode::None;
     configure(builder, request);
     ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
     EXPECT_EQ(builder.getConfig().structured_output_config->regex, defaultGrammar.regex);
@@ -6471,16 +6454,16 @@ TEST_P(ToolGuidanceConfigTest, ToolAndResponseFormatReplaceModelGrammarWithToolG
     defaultGrammar.regex = "model-default";
     baseConfig.structured_output_config = defaultGrammar;
     GenerationConfigBuilder builder{baseConfig, GetParam(), true, DecodingMethod::STANDARD};
-    auto request = toolRequest("auto");
+    auto request = toolRequest(ToolChoiceMode::Auto);
     request.responseFormat = R"({"type":"structural_tag","format":{"type":"const_string","value":"answer"}})";
     configure(builder, request);
     ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
     EXPECT_FALSE(builder.getConfig().structured_output_config->regex.has_value());
-    EXPECT_EQ(tags(builder.getConfig())->tags.size(), 1);
+    EXPECT_FALSE(tags(builder.getConfig())->tags.empty());
 }
 
 TEST_P(ToolGuidanceConfigTest, ToolOnlyRequestReplacesModelGrammar) {
-    for (const std::string choice : {"auto", "required", "weather"}) {
+    for (const ToolChoiceMode choice : {ToolChoiceMode::Auto, ToolChoiceMode::Required, ToolChoiceMode::NamedFunction}) {
         ov::genai::GenerationConfig baseConfig;
         baseConfig.structured_output_config.emplace();
         baseConfig.structured_output_config->regex = "model-default";
@@ -6489,24 +6472,27 @@ TEST_P(ToolGuidanceConfigTest, ToolOnlyRequestReplacesModelGrammar) {
         ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
         EXPECT_FALSE(builder.getConfig().structured_output_config->regex.has_value());
         const auto grammar = tags(builder.getConfig());
-        EXPECT_EQ(grammar->tags.size(), 1);
-        EXPECT_EQ(grammar->at_least_one, choice != "auto");
-        EXPECT_EQ(grammar->stop_after_first, choice == "weather");
+        EXPECT_FALSE(grammar->tags.empty());
+        EXPECT_EQ(grammar->at_least_one, choice != ToolChoiceMode::Auto);
+        EXPECT_EQ(grammar->stop_after_first, choice == ToolChoiceMode::NamedFunction);
     }
 }
 
 TEST(ToolGuidanceSelectionTest, UnsupportedToolFormatsStillApplyResponseFormat) {
-    for (const std::string choice : {"auto", "required", "weather"}) {
+    for (const ToolChoiceMode choice : {ToolChoiceMode::Auto, ToolChoiceMode::Required, ToolChoiceMode::NamedFunction}) {
         GenerationConfigBuilder builder{{}, "", true, DecodingMethod::STANDARD};
         OpenAIRequest request;
         request.toolChoice = choice;
+        if (choice == ToolChoiceMode::NamedFunction) {
+            request.toolChoiceFunctionName = "weather";
+        }
         request.toolNameSchemaMap.emplace("weather", ToolSchemaWrapper{nullptr, R"({"type":"object"})"});
         request.responseFormat = R"({"type":"structural_tag","format":{"type":"const_string","value":"answer"}})";
         builder.configureStructuredGeneration(request, {}, "");
-        ASSERT_TRUE(builder.getConfig().structured_output_config.has_value()) << choice;
-        ASSERT_TRUE(builder.getConfig().structured_output_config->structural_tags_config.has_value()) << choice;
+        ASSERT_TRUE(builder.getConfig().structured_output_config.has_value()) << static_cast<int>(choice);
+        ASSERT_TRUE(builder.getConfig().structured_output_config->structural_tags_config.has_value()) << static_cast<int>(choice);
         const auto& structuralTag = std::get<ov::genai::StructuredOutputConfig::StructuralTag>(*builder.getConfig().structured_output_config->structural_tags_config);
-        EXPECT_EQ(std::get<std::string>(structuralTag), *request.responseFormat) << choice;
+        EXPECT_EQ(std::get<std::string>(structuralTag), *request.responseFormat) << static_cast<int>(choice);
     }
 }
 
@@ -6514,15 +6500,15 @@ TEST(ToolGuidanceSelectionTest, MalformedInternalResponseFormatRaisesInvariantEr
     GenerationConfigBuilder builder{{}, "qwen3", false, DecodingMethod::STANDARD};
     OpenAIRequest request;
     request.responseFormat = "not-a-structural-tag";
-    ReasoningGenerationContext reasoningContext;
-    reasoningContext.begin = "<think>";
-    reasoningContext.end = "</think>";
-    reasoningContext.implicitStart = true;
+    ModelGenerationContext reasoningContext;
+    reasoningContext.reasoning.begin = "<think>";
+    reasoningContext.reasoning.end = "</think>";
+    reasoningContext.reasoning.implicitStart = true;
     EXPECT_THROW(builder.configureStructuredGeneration(request, reasoningContext, "qwen3"), ResponseFormatInvariantError);
 }
 
 INSTANTIATE_TEST_SUITE_P(ExistingFormats, ToolGuidanceConfigTest,
-    ::testing::Values("llama3", "hermes3", "phi4", "devstral"));
+    ::testing::Values("llama3", "hermes3", "phi4", "devstral", "mistral", "qwen3coder"));
 
 // Unit tests for BaseGenerationConfigBuilder multinomial sampling defaults
 

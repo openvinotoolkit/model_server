@@ -18,7 +18,7 @@
 
 namespace ovms {
 
-void Hermes3GenerationConfigBuilder::applyToolGuidance(const OpenAIRequest& request) {
+void Hermes3GenerationConfigBuilder::applyToolGuidance(const OpenAIRequest& request, const ModelGenerationContext&) {
     setTaggedToolGrammar(request, {"<tool_call>", "<tool_call>\n{\"name\": ", ", \"arguments\": ", "}\n</tool_call>", true});
 }
 
