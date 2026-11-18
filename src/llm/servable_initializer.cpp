@@ -540,7 +540,7 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
     // indicates a multimodal pipeline.
     // But if it has talker model, it means it is Omni pipeline which is built out of VLM Pipeline and Talker
     bool isOmni = hasTalkerModel && isMultimodal;
-    
+
     // If pipeline type is not explicitly defined by the user, we need to determine it based on the content of the models directory and configuration
     if (nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::AUTO) {
         if (isOmni) {
