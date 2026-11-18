@@ -971,6 +971,22 @@ TEST_F(GraphCreationTest, chatTemplateEngineIsEmittedOnlyWhenExplicit) {
     EXPECT_NE(createGraphAndReadContents(hfSettings).find("chat_template_engine: MINJA"), std::string::npos);
 }
 
+TEST_F(GraphCreationTest, inputVisionIsEmittedOnlyWhenExplicit) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
+    hfSettings.graphSettings = ovms::TextGenGraphSettingsImpl{};
+
+    EXPECT_EQ(createGraphAndReadContents(hfSettings).find("input_vision:"), std::string::npos);
+
+    auto& graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
+    graphSettings.inputVideoFps = 1.5F;
+    graphSettings.inputVideoMaxFrames = 8;
+    const std::string contents = createGraphAndReadContents(hfSettings);
+    EXPECT_NE(contents.find("input_vision: {"), std::string::npos);
+    EXPECT_NE(contents.find("video_fps: 1.5,"), std::string::npos);
+    EXPECT_NE(contents.find("video_max_frames: 8,"), std::string::npos);
+}
+
 TEST_F(GraphCreationTest, positivePluginConfigOne) {
     ovms::HFSettingsImpl hfSettings;
     hfSettings.task = ovms::TEXT_GENERATION_GRAPH;

@@ -72,7 +72,7 @@ protected:
 public:
     OmniModelLegacyServable() {
         properties = std::make_shared<OmniModelLegacyServableProperties>();
-        properties->inputProcessorContext.config.supportsVisualInputs = true;
+        properties->inputProcessorContext.config.visionInputConfig = VisionInputConfig{};
         properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig{};
     }
 

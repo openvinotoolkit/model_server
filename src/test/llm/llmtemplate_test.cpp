@@ -293,7 +293,7 @@ TEST_F(LLMChatTemplateTest, VlmWithoutAudioCapabilityRejectsAudioInput) {
     servable = std::make_shared<ContinuousBatchingServable>();
     auto properties = servable->getProperties();
     properties->chatTemplateStatus = ChatTemplateStatus::AVAILABLE;
-    properties->inputProcessorContext.config.supportsVisualInputs = true;
+    properties->inputProcessorContext.config.visionInputConfig = VisionInputConfig{};
 
     auto context = servable->createExecutionContext();
     ov::genai::ChatHistory history;
@@ -703,6 +703,21 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTojsonIndentWorks) {
     EXPECT_THAT(finalPrompt, ::testing::HasSubstr("get_weather"));
     // Verify indentation is present — indent=2 produces newlines and spaces inside JSON
     EXPECT_THAT(finalPrompt, ::testing::HasSubstr("  \"type\": \"function\""));
+}
+
+TEST_F(LLMChatTemplateTest, ChatTemplateTojsonEnsureAscii) {
+    std::string jinjaTemplate =
+        "{{ messages[0]['content'] | tojson(ensure_ascii=True) }}|"
+        "{{ messages[0]['content'] | tojson(ensure_ascii=False) }}";
+    ASSERT_TRUE(CreateJinjaConfig(jinjaTemplate));
+    LoadTemplateProcessor();
+
+    std::string finalPrompt;
+    std::string payloadBody = R"({"messages":[{"role":"user","content":"caf\u00e9 \u2603"}]})";
+    ASSERT_TRUE(render(payloadBody, finalPrompt));
+
+    const std::string expected = "\"caf\\u00e9 \\u2603\"|\"caf\xC3\xA9 \xE2\x98\x83\"";
+    EXPECT_EQ(finalPrompt, expected);
 }
 
 std::string configTemplate = R"(

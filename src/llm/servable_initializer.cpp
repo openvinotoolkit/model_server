@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -44,6 +45,7 @@
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "src/status.hpp"
 #include "io_processing/chat_template/analyzer.hpp"
+#include "io_processing/chat_template/adjuster.hpp"
 #include "io_processing/chat_template/probe.hpp"
 #include "io_processing/parser_config_validation.hpp"
 #include "runtime_chat_template_runtime_loader.hpp"
@@ -150,11 +152,21 @@ GenAiServableProperties::DraftModelStrategy detectDraftModelStrategy(const std::
 
 static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Chat template is unavailable. Servable will not respond to /chat/completions endpoint.";
 
-static void configureInputProcessingCapabilities(const std::shared_ptr<GenAiServableProperties>& properties) {
+static Status configureInputProcessingCapabilities(const std::shared_ptr<GenAiServableProperties>& properties,
+    const mediapipe::LLMCalculatorOptions& nodeOptions) {
+    VisionInputConfig videoConfig;
+    Status status = configureVideoInputProcessing(videoConfig, nodeOptions);
+    if (status != StatusCode::OK) {
+        return status;
+    }
+    if (properties->inputProcessorContext.config.visionInputConfig.has_value()) {
+        properties->inputProcessorContext.config.visionInputConfig = videoConfig;
+    }
     if (!properties->inputProcessorContext.config.audioInputConfig.has_value() &&
         std::filesystem::exists(std::filesystem::path(properties->modelsPath) / "openvino_audio_embeddings_model.xml")) {
         properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig{true};
     }
+    return StatusCode::OK;
 }
 
 // Dry-run probes: render the chat template with synthetic inputs to empirically
@@ -256,12 +268,14 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
             selectedSource == ChatTemplateSource::CHAT_TEMPLATE_JINJA ? "chat_template.jinja" : "GenAI tokenizer/model");
     }
 
-    // Phase 2: load the chosen source with the selected engine.
-    if (selectedSource != ChatTemplateSource::NONE) {
-        if (properties->chatTemplateEngine == ChatTemplateEngine::JINJA) {
-            if (selectedSource == ChatTemplateSource::CHAT_TEMPLATE_JINJA) {
-                properties->tokenizer.set_chat_template(templateSource);
-            }
+    // Phase 2: load the chosen source with the selected engine. Apply adjustments if needed.
+    if (selectedSource != ChatTemplateSource::NONE && !templateSource.empty()) {
+        const bool isJinja = properties->chatTemplateEngine == ChatTemplateEngine::JINJA;
+        ChatTemplateAdjusterConfig adjusterConfig = isJinja ? ChatTemplateAdjusterConfig::forJinja() : ChatTemplateAdjusterConfig::forMinja();
+        ChatTemplateAdjuster(adjusterConfig).adjust(templateSource);
+        properties->tokenizer.set_chat_template(templateSource);
+
+        if (isJinja) {
             std::string errorMessage;
             SPDLOG_LOGGER_INFO(llm_calculator_logger, "Preparing selected chat template with Python Jinja");
             if (properties->preparedChatTemplate.prepare(
@@ -276,13 +290,6 @@ Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableP
                 templateLoadError = errorMessage;
             }
         } else {
-            if (selectedSource == ChatTemplateSource::CHAT_TEMPLATE_JINJA) {
-                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Setting selected chat template on tokenizer for Minja");
-                properties->tokenizer.set_chat_template(templateSource);
-                templateSource = properties->tokenizer.get_chat_template();
-            } else {
-                SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using GenAI-resolved chat template already set on tokenizer for Minja");
-            }
             properties->chatTemplateStatus = probeChatTemplateBasicRenderMinja(properties->tokenizer) ? ChatTemplateStatus::AVAILABLE : ChatTemplateStatus::INCOMPATIBLE;
         }
 
@@ -556,10 +563,22 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
     return StatusCode::OK;
 }
 
-Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath) {
+Status configureVideoInputProcessing(VisionInputConfig& config, const mediapipe::LLMCalculatorOptions& nodeOptions) {
+    const auto& visionOptions = nodeOptions.input_vision();
+    if ((visionOptions.has_video_fps() && (!std::isfinite(visionOptions.video_fps()) || visionOptions.video_fps() <= 0.0F)) || visionOptions.video_max_frames() == 0) {
+        SPDLOG_ERROR("input_vision.video_fps must be finite and greater than zero when provided, and input_vision.video_max_frames must be greater than zero");
+        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+    }
+    config.videoMaxFrames = visionOptions.video_max_frames();
+    config.videoFps = visionOptions.has_video_fps() ? std::optional<float>{visionOptions.video_fps()} : std::nullopt;
+    return StatusCode::OK;
+}
+
+Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig,
+    std::string graphPath, std::optional<LLMMetricReporterFactory> createMetricReporter) {
     mediapipe::LLMCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
-    Status status;
+    Status status = StatusCode::OK;
     if (nodeOptions.has_models_path()) {
         // Need to initialize pipelineType with some value to avoid compiler warning;
         // determinePipelineType will set it properly.
@@ -570,7 +589,7 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         }
         if (pipelineType == PipelineType::LM_CB) {
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Language Model Continuous Batching servable");
-            ContinuousBatchingServableInitializer cbServableInitializer;
+            ContinuousBatchingServableInitializer cbServableInitializer(std::move(createMetricReporter));
             servable = std::make_shared<ContinuousBatchingServable>();
             status = cbServableInitializer.initialize(servable, nodeOptions, graphPath);
             if (status != StatusCode::OK) {
@@ -597,7 +616,7 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
                 }
             }
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Visual Language Model Continuous Batching servable");
-            ContinuousBatchingServableInitializer cbServableInitializer;
+            ContinuousBatchingServableInitializer cbServableInitializer(std::move(createMetricReporter));
             servable = std::make_shared<VisualLanguageModelServable>();
             status = cbServableInitializer.initialize(servable, nodeOptions, graphPath);
             if (status != StatusCode::OK) {
@@ -637,7 +656,10 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         return StatusCode::INTERNAL_ERROR;
     }
     servable->determineDecodingMethod();
-    configureInputProcessingCapabilities(servable->getProperties());
+    status = configureInputProcessingCapabilities(servable->getProperties(), nodeOptions);
+    if (status != StatusCode::OK) {
+        return status;
+    }
     return StatusCode::OK;
 }
 }  // namespace ovms

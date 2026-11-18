@@ -28,6 +28,7 @@ namespace ovms {
 class GraphMetadata;
 struct GraphSidePackets;
 class PythonBackend;
+class MetricProvider;
 
 class NodeInitializer {
 public:
@@ -39,7 +40,8 @@ public:
         const std::string& basePath,
         GraphSidePackets& sidePackets,
         GraphMetadata& metadata,
-        PythonBackend* pythonBackend) = 0;
+        PythonBackend* pythonBackend,
+        const MetricProvider* metrics) = 0;
 };
 
 class NodeInitializerRegistry {
