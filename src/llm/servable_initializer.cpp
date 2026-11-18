@@ -393,8 +393,8 @@ void GenAiServableInitializer::applyGlobalCacheDir(std::shared_ptr<GenAiServable
     }
 }
 
-void GenAiServableInitializer::applyDefaultGGUFReader(std::shared_ptr<GenAiServableProperties> properties, const std::string& modelsPath) {
-    if (std::filesystem::path(modelsPath).extension() != ".gguf") {
+void GenAiServableInitializer::applyDefaultGGUFReader(std::shared_ptr<GenAiServableProperties> properties, const ModelsFormat& modelsFormat) {
+    if (modelsFormat != ModelsFormat::GGUF) {
         return;
     }
 
@@ -609,7 +609,7 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Language Model Continuous Batching servable");
             ContinuousBatchingServableInitializer cbServableInitializer;
             servable = std::make_shared<ContinuousBatchingServable>();
-            status = cbServableInitializer.initialize(servable, nodeOptions, graphPath);
+            status = cbServableInitializer.initialize(servable, nodeOptions, graphPath, modelsFormat);
             if (status != StatusCode::OK) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
                 return status;
@@ -636,7 +636,7 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Visual Language Model Continuous Batching servable");
             ContinuousBatchingServableInitializer cbServableInitializer;
             servable = std::make_shared<VisualLanguageModelServable>();
-            status = cbServableInitializer.initialize(servable, nodeOptions, graphPath);
+            status = cbServableInitializer.initialize(servable, nodeOptions, graphPath, modelsFormat);
             if (status != StatusCode::OK) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
                 return status;
@@ -644,7 +644,7 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         } else if (pipelineType == PipelineType::LM) {
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Language Model Legacy servable");
             LegacyServableInitializer legacyServableInitializer;
-            status = legacyServableInitializer.initialize(servable, nodeOptions, graphPath);
+            status = legacyServableInitializer.initialize(servable, nodeOptions, graphPath, modelsFormat);
             if (status != StatusCode::OK) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
                 return status;
@@ -652,7 +652,7 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         } else if (pipelineType == PipelineType::VLM) {
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Visual Language Model Legacy servable");
             VisualLanguageModelLegacyServableInitializer legacyServableInitializer;
-            status = legacyServableInitializer.initialize(servable, nodeOptions, graphPath);
+            status = legacyServableInitializer.initialize(servable, nodeOptions, graphPath, modelsFormat);
             if (status != StatusCode::OK) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
                 return status;
@@ -660,7 +660,7 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         } else if (pipelineType == PipelineType::OMNI) {
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Omni Model Legacy servable");
             OmniModelLegacyServableInitializer omniServableInitializer;
-            status = omniServableInitializer.initialize(servable, nodeOptions, graphPath);
+            status = omniServableInitializer.initialize(servable, nodeOptions, graphPath, modelsFormat);
             if (status != StatusCode::OK) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
                 return status;

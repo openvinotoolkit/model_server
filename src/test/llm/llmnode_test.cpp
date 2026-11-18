@@ -4993,7 +4993,7 @@ TEST_F(GGUFPipelineSelectionTest, UnknownArchitectureDelegatesSupportToGenai) {
 TEST(GenAiServableInitializerTest, DefaultGgufReaderSelection) {
     auto properties = std::make_shared<GenAiServableProperties>();
 
-    GenAiServableInitializer::applyDefaultGGUFReader(properties, "/models/model.gguf");
+    GenAiServableInitializer::applyDefaultGGUFReader(properties, ModelsFormat::GGUF);
     ASSERT_EQ(properties->pluginConfig.count("GGUF_READER"), 1);
 #ifdef _WIN32
     EXPECT_EQ(properties->pluginConfig["GGUF_READER"].as<std::string>(), "NATIVE");
@@ -5002,11 +5002,11 @@ TEST(GenAiServableInitializerTest, DefaultGgufReaderSelection) {
 #endif
 
     properties->pluginConfig["GGUF_READER"] = "LEGACY";
-    GenAiServableInitializer::applyDefaultGGUFReader(properties, "/models/another.gguf");
+    GenAiServableInitializer::applyDefaultGGUFReader(properties, ModelsFormat::GGUF);
     EXPECT_EQ(properties->pluginConfig["GGUF_READER"].as<std::string>(), "LEGACY");
 
     properties->pluginConfig.clear();
-    GenAiServableInitializer::applyDefaultGGUFReader(properties, "/models/exported_ir");
+    GenAiServableInitializer::applyDefaultGGUFReader(properties, ModelsFormat::IR);
     EXPECT_EQ(properties->pluginConfig.count("GGUF_READER"), 0);
 }
 

@@ -41,7 +41,7 @@
 #include "servable_initializer.hpp"
 
 namespace ovms {
-Status OmniModelLegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) {
+Status OmniModelLegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath, const ModelsFormat& modelsFormat) {
     std::string parsedModelsPath;
     auto status = parseModelsPath(parsedModelsPath, nodeOptions.models_path(), graphPath);
     if (!status.ok()) {

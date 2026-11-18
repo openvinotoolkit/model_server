@@ -41,7 +41,7 @@
 #include "../../servable_initializer.hpp"
 
 namespace ovms {
-Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) {
+Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath, const ModelsFormat& modelsFormat) {
     std::string parsedModelsPath;
     auto status = parseModelsPath(parsedModelsPath, nodeOptions.models_path(), graphPath);
     if (!status.ok()) {
@@ -138,7 +138,7 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
         return status;
     }
 
-    applyDefaultGGUFReader(properties, parsedModelsPath);
+    applyDefaultGGUFReader(properties, modelsFormat);
     applyGlobalCacheDir(properties);
 
     // Max prompt len is NPU specific property

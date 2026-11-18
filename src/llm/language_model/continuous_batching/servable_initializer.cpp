@@ -133,7 +133,7 @@ ov::genai::SchedulerConfig ContinuousBatchingServableInitializer::prepareDraftPi
     return config;
 }
 
-Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) {
+Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath, const ModelsFormat& modelsFormat) {
     std::string parsedModelsPath;
     auto status = parseModelsPath(parsedModelsPath, nodeOptions.models_path(), graphPath);
     if (!status.ok()) {
@@ -254,7 +254,7 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
         return status;
     }
 
-    applyDefaultGGUFReader(properties, parsedModelsPath);
+    applyDefaultGGUFReader(properties, modelsFormat);
     applyGlobalCacheDir(properties);
 
     if (properties->device == "CPU") {

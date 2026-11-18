@@ -60,7 +60,7 @@ public:
     // (continuous batching and legacy, LM and VLM) since they all construct GenAI pipelines
     // directly and would otherwise never apply the server-level cache_dir.
     static void applyGlobalCacheDir(std::shared_ptr<GenAiServableProperties> properties);
-    static void applyDefaultGGUFReader(std::shared_ptr<GenAiServableProperties> properties, const std::string& modelsPath);
+    static void applyDefaultGGUFReader(std::shared_ptr<GenAiServableProperties> properties, const ModelsFormat& modelsFormat);
     static ChatTemplateEngine determineChatTemplateEngine(const mediapipe::LLMCalculatorOptions& nodeOptions);
     static ChatTemplateEngine determineChatTemplateModeWithRuntimeContext(const mediapipe::LLMCalculatorOptions& nodeOptions,
         bool pythonRuntimeAvailable);
@@ -69,7 +69,7 @@ public:
     It is strictly connected with the servable, so implementation of this method in a derived class should be aware of the specific servable class structure
     and fill both common and servable specific properties required for the servable to implement its interface.
     */
-    virtual Status initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) = 0;
+    virtual Status initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath, const ModelsFormat& modelsFormat) = 0;
 };
 Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string graphPath);
 std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath);
