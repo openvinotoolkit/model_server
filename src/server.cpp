@@ -335,6 +335,7 @@ Server::~Server() {
 
 Status Server::ensureGlobalInit() {
     std::call_once(globalInitFlag, [this]() {
+        setDefaultEspeakDataPath();
         if (GetEnvVar("OPENCV_IO_MAX_IMAGE_PIXELS").empty()) {
             SetEnvironmentVar("OPENCV_IO_MAX_IMAGE_PIXELS", std::to_string(OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS));
         }
