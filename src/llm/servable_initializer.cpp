@@ -540,20 +540,19 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
     // indicates a multimodal pipeline.
     // But if it has talker model, it means it is Omni pipeline which is built out of VLM Pipeline and Talker
     bool isOmni = hasTalkerModel && isMultimodal;
-    bool isVLM = !hasTalkerModel && isMultimodal;
-
+    
     // If pipeline type is not explicitly defined by the user, we need to determine it based on the content of the models directory and configuration
     if (nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::AUTO) {
         if (isOmni) {
             pipelineType = PipelineType::OMNI;
         } else if (nodeOptions.device() == "NPU") {
-            if (isVLM) {
+            if (isMultimodal) {
                 pipelineType = PipelineType::VLM;
             } else {
                 pipelineType = PipelineType::LM;
             }
         } else {
-            if (isVLM) {
+            if (isMultimodal) {
                 pipelineType = PipelineType::VLM_CB;
             } else {
                 pipelineType = PipelineType::LM_CB;
@@ -581,13 +580,15 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
             return StatusCode::INTERNAL_ERROR;
         }
 
-        if (isVLM && (pipelineType != PipelineType::VLM && pipelineType != PipelineType::VLM_CB)) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Models directory content indicates VLM pipeline, but pipeline type is set to non-VLM type.");
+        if (isMultimodal && (pipelineType != PipelineType::VLM && pipelineType != PipelineType::VLM_CB && pipelineType != PipelineType::OMNI)) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Models directory content indicates a multimodal model, but the selected pipeline type is {}.",
+                mediapipe::LLMCalculatorOptions_PipelineType_Name(nodeOptions.pipeline_type()));
             return StatusCode::INTERNAL_ERROR;
         }
 
-        if (!isVLM && (pipelineType == PipelineType::VLM || pipelineType == PipelineType::VLM_CB)) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Models directory content indicates non-VLM pipeline, but pipeline type is set to VLM type.");
+        if (!isMultimodal && (pipelineType == PipelineType::VLM || pipelineType == PipelineType::VLM_CB || pipelineType == PipelineType::OMNI)) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Models directory content does not indicate a multimodal model, but the selected pipeline type is {}.",
+                mediapipe::LLMCalculatorOptions_PipelineType_Name(nodeOptions.pipeline_type()));
             return StatusCode::INTERNAL_ERROR;
         }
     }
