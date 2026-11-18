@@ -2050,6 +2050,7 @@ cc_test(
                 "test/multipart_calculator_test.cpp",
                 "test/llm/assisted_decoding_test.cpp",
                 "test/llm/llmnode_test.cpp",
+                "test/llm_metric_reporter_test.cpp",
                 "test/llm/tokenize_endpoint_test.cpp",
                 "test/llm/max_model_length_test.cpp",
                 "test/llm/text_streamer_test.cpp",
@@ -2246,6 +2247,7 @@ cc_test(
                 "//:not_disable_mediapipe": [
                     ":config_export_full_test",
                 "//src/llm:genai_servables",
+                "//src/llm:chat_template_adjuster",
                 "//src/llm:output_parsers",
                 "//src/llm:video_utils",
                 ":test_llm_output_parser_tests",
@@ -3015,6 +3017,7 @@ cc_library(
     hdrs = ["test/llm/output_parsers/output_parser_test_utils.hpp"],
     srcs = [
         "test/llm/chat_template_analyzer_test.cpp",
+        "test/llm/chat_template_adjuster_test.cpp",
         "test/llm/chat_template_adapter_test.cpp",
         "test/llm/chat_template_end_to_end_minja_test.cpp",
         "test/llm/chat_template_and_parser_onyx_roundtrip_test.cpp",
@@ -3022,6 +3025,7 @@ cc_library(
     deps = [
         "@com_google_googletest//:gtest",
         "//src/llm:chat_template_analyzer",
+        "//src/llm:chat_template_adjuster",
         "//src/llm:chat_template_probe",
         "//src/llm:io_processing_input_processors",
         "//src/llm:output_parsers",

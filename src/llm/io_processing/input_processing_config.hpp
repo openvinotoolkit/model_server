@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <cstdint>
 #include <optional>
 
 namespace ovms {
@@ -23,12 +24,20 @@ struct AudioInputConfig {
     bool resamplingRequired = false;
 };
 
+// Must match the video_max_frames default in llm_calculator.proto.
+constexpr uint32_t DEFAULT_VIDEO_MAX_FRAMES = 32;
+
+struct VisionInputConfig {
+    std::optional<float> videoFps;
+    uint32_t videoMaxFrames = DEFAULT_VIDEO_MAX_FRAMES;
+};
+
 // Deployment-level configuration for InputProcessor, populated once at servable init.
 struct InputProcessingConfig {
-    // Enables image and video decoding.
-    // TokenizationProcessor still runs (to populate inputIds for usage statistics
+    // An empty value means image and video input is unsupported.
+    // When set, TokenizationProcessor still runs (to populate inputIds for usage statistics
     // and max-length checks) but inputIds is not passed to the VLM pipeline.
-    bool supportsVisualInputs = false;
+    std::optional<VisionInputConfig> visionInputConfig;
     // An empty value means audio input is unsupported.
     std::optional<AudioInputConfig> audioInputConfig;
 };

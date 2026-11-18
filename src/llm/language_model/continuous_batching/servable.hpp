@@ -25,14 +25,17 @@
 namespace ovms {
 
 class LLMExecutorWrapper;
+class LLMMetricReporter;
 
 struct ContinuousBatchingServableExecutionContext : public GenAiServableExecutionContext {
     ov::genai::GenerationHandle generationHandle;
+    bool completedMetricsRecorded = false;
 };
 
 struct ContinuousBatchingServableProperties : public GenAiServableProperties {
     ov::genai::SchedulerConfig schedulerConfig;
     std::shared_ptr<ov::genai::ContinuousBatchingPipeline> pipeline;
+    std::shared_ptr<LLMMetricReporter> metricReporter;
     std::shared_ptr<LLMExecutorWrapper> llmExecutorWrapper;
 };
 
@@ -41,6 +44,8 @@ protected:
     std::shared_ptr<ContinuousBatchingServableProperties> properties;
     void notifyExecutorThread();
     void logPerfMetrics(ov::genai::PerfMetrics& perfMetrics);
+    bool canRecordCompletedRequestMetrics(const GenAiServableExecutionContext& executionContext) const;
+    void recordCompletedRequestMetrics(GenAiServableExecutionContext& executionContext);
     void stopGenerationOnResponseError(const std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext);
 
 public:
