@@ -22,8 +22,8 @@ from openai import OpenAI
 
 parser = argparse.ArgumentParser(
     description="Run MTEB benchmark against OVMS embeddings endpoint")
-parser.add_argument('--service_url', required=False, default='http://localhost:8000/v3/embeddings',
-                    help='Specify url to embeddings endpoint.',
+parser.add_argument('--service_url', required=False, default='http://localhost:8000/v1',
+                    help='Specify API base URL.',
                     dest='service_url')
 parser.add_argument('--model_name', default='Alibaba-NLP/gte-large-en-v1.5',
                     help='Model name to query. default: Alibaba-NLP/gte-large-en-v1.5',
