@@ -14,14 +14,11 @@
 // limitations under the License.
 //*****************************************************************************
 #include "env_guard.hpp"
+#include "windows_executable_path.hpp"
 
 #include <spdlog/spdlog.h>
 
 #include <stdlib.h>
-
-#ifdef _WIN32
-#include <Windows.h>
-#endif
 
 const std::string GetEnvVar(const std::string& var) {
     std::string val = "";
@@ -49,21 +46,9 @@ void setDefaultEspeakDataPath(const std::filesystem::path& executablePath) {
 
 void setDefaultEspeakDataPath() {
 #ifdef _WIN32
-    std::wstring executablePath(MAX_PATH, L'\0');
-    for (;;) {
-        const DWORD length = GetModuleFileNameW(nullptr, executablePath.data(), static_cast<DWORD>(executablePath.size()));
-        if (length == 0) {
-            return;
-        }
-        if (length < executablePath.size()) {
-            executablePath.resize(length);
-            setDefaultEspeakDataPath(std::filesystem::path(executablePath));
-            return;
-        }
-        if (executablePath.size() >= 32768) {
-            return;
-        }
-        executablePath.resize(executablePath.size() * 2);
+    const auto executablePath = ovms::getWindowsExecutablePath();
+    if (!executablePath.empty()) {
+        setDefaultEspeakDataPath(executablePath);
     }
 #elif __linux__
     std::error_code error;

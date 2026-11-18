@@ -20,12 +20,7 @@
 #include <string>
 #include <vector>
 
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <Windows.h>
-#endif
+#include "src/utils/windows_executable_path.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 6326 28182 6011 28020)
@@ -75,21 +70,9 @@ inline void addPackagedPythonPath() {
 #ifdef __linux__
     addPackagedPythonPath(std::filesystem::canonical("/proc/self/exe"));
 #elif defined(_WIN32)
-    std::wstring executablePath(MAX_PATH, L'\0');
-    for (;;) {
-        const DWORD pathLength = GetModuleFileNameW(nullptr, executablePath.data(), static_cast<DWORD>(executablePath.size()));
-        if (pathLength == 0) {
-            return;
-        }
-        if (pathLength < executablePath.size()) {
-            executablePath.resize(pathLength);
-            addPackagedPythonPath(std::filesystem::path(executablePath));
-            return;
-        }
-        if (executablePath.size() >= 32768) {
-            return;
-        }
-        executablePath.resize(executablePath.size() * 2);
+    const auto executablePath = getWindowsExecutablePath();
+    if (!executablePath.empty()) {
+        addPackagedPythonPath(executablePath);
     }
 #endif
 }

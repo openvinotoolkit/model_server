@@ -30,6 +30,7 @@ if [ "$ov_use_binary" == "0" ] ; then cp -v /openvino_tokenizers/build/src/libop
 # Narrow python filter to versioned interpreter SONAMEs only, so libovmspython.so and libpython_calculators.so are still copied.
 find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d \
     ! -name "libgtest.so" ! -name "*gtest*" ! -name "*googletest*" \
+	! -name "libno_opencv_audit.so" \
     ! -name "*params" ! -name "*.hana.*" ! -name "*runfiles_manifest*" \
     ! -name "py_generate_pipeline.cpython*" ! -name "lib_node_*" \
     ! -name "libazure-*" ! -name "pyovms.so" ! -name "*.repo_mapping" \
