@@ -21,6 +21,8 @@
 #include <chrono>
 #include <cstdlib>
 #include <exception>
+#include <cmath>
+#include <iomanip>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
@@ -34,13 +36,18 @@
 #include "src/port/rapidjson_writer.hpp"
 #include "src/audio/speech_to_text/streaming_s2t.hpp"
 #include "src/logging.hpp"
-#include "movinet_video_stream.hpp"
+#include "mediapipe/framework/formats/detection.pb.h"
+#include "mediapipe/framework/formats/image_frame.h"
+#include "src/mediapipe_internal/live_graph_config.hpp"
+#include "vp8_video_stream.hpp"
+#include "src/movinet/classification.hpp"
 
 namespace ovms {
 
 namespace {
 
 constexpr char OpenAiEventsChannelLabel[] = "oai-events";
+constexpr char VideoInputStream[] = "video";
 
 std::string nextEventId() {
     static std::atomic<uint64_t> counter{0};
@@ -340,6 +347,188 @@ Status WebRtcSessionController::Session::startAudioSession(std::unique_ptr<Media
     return StatusCode::OK;
 }
 
+Status WebRtcSessionController::Session::startVideoGraphSession(
+    std::unique_ptr<MediapipeGraphExecutorInterface> executor) {
+    if (!executor)
+        return Status(StatusCode::MEDIAPIPE_EXECUTION_ERROR, "Missing managed video graph executor");
+    const bool tracking = executor->supportsSession(VideoTrackingLiveGraphProfile);
+    const bool classification = executor->supportsSession(VideoClassificationLiveGraphProfile);
+    if (tracking == classification)
+        return Status(StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID,
+            "Video graph must support exactly one tracking or classification profile");
+    const std::string profile = tracking ? VideoTrackingLiveGraphProfile : VideoClassificationLiveGraphProfile;
+    const std::weak_ptr<Session> weakSession = weak_from_this();
+    std::unique_ptr<LiveGraphSession> candidate;
+    const auto status = executor->startSession(profile,
+        [weakSession](const std::string& stream, const LiveGraphPacket& packet) {
+            if (const auto activeSession = weakSession.lock())
+                return activeSession->handleVideoOutput(stream, packet);
+            return Status(StatusCode::OK);
+        }, candidate);
+    if (!status.ok())
+        return status;
+    videoGraphSession = std::shared_ptr<LiveGraphSession>(std::move(candidate));
+    return StatusCode::OK;
+}
+
+void WebRtcSessionController::Session::pushDecodedVideoFrame(
+    std::shared_ptr<mediapipe::ImageFrame> frame, uint32_t timestamp) {
+    std::shared_ptr<LiveGraphSession> graph;
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        graph = videoGraphSession;
+    }
+    if (!graph)
+        return;
+    const auto timestampUs = videoTimestampUnwrapper.toMicroseconds(timestamp);
+    if (!timestampUs || !frame) {
+        const size_t dropped = ++droppedVideoFrames;
+        if (dropped == 1 || dropped % 100 == 0)
+            SPDLOG_LOGGER_WARN(webrtc_logger, "Dropping invalid or non-monotonic video frame for session {} (dropped={})", id, dropped);
+        return;
+    }
+
+    VideoFrameMetadata metadata;
+    {
+        std::lock_guard<std::mutex> lock(videoMetadataMutex);
+        if (videoFrameMetadata.size() >= static_cast<size_t>(LiveGraphVideoInputQueueSize)) {
+            const size_t dropped = ++droppedVideoFrames;
+            if (dropped == 1 || dropped % 100 == 0)
+                SPDLOG_LOGGER_WARN(webrtc_logger, "Dropping video frame due to graph backpressure for session {} (dropped={})", id, dropped);
+            return;
+        }
+        metadata = {++nextVideoFrame, timestamp, static_cast<uint32_t>(frame->Width()),
+            static_cast<uint32_t>(frame->Height())};
+        videoFrameMetadata.push_back(metadata);
+    }
+
+    const auto status = graph->send(VideoInputStream, LiveGraphPacket::make(std::move(frame)), *timestampUs);
+    if (status.ok())
+        return;
+
+    {
+        std::lock_guard<std::mutex> lock(videoMetadataMutex);
+        const auto pending = std::find_if(videoFrameMetadata.begin(), videoFrameMetadata.end(),
+            [&metadata](const VideoFrameMetadata& item) { return item.frame == metadata.frame; });
+        if (pending != videoFrameMetadata.end())
+            videoFrameMetadata.erase(pending);
+    }
+    const size_t dropped = ++droppedVideoFrames;
+    const std::string message = status.string();
+    if (message.find("full") != std::string::npos || message.find("Full") != std::string::npos) {
+        if (dropped == 1 || dropped % 100 == 0)
+            SPDLOG_LOGGER_WARN(webrtc_logger, "Dropping video frame due to graph backpressure for session {} (dropped={}): {}", id, dropped, message);
+        return;
+    }
+    SPDLOG_LOGGER_ERROR(webrtc_logger, "Could not submit video frame for session {}: {}", id, message);
+    sendUserError(message);
+}
+
+Status WebRtcSessionController::Session::handleVideoOutput(
+    const std::string& stream, const LiveGraphPacket& packet) {
+    const auto* classification = stream == "classification" ? packet.getIf<VideoClassification>() : nullptr;
+    const auto* detections = stream == "tracked_detections" ? packet.getIf<std::vector<mediapipe::Detection>>() : nullptr;
+    if (stream != "tracked_detections" && stream != "classification")
+        return Status(StatusCode::MEDIAPIPE_EXECUTION_ERROR, "Unexpected live video graph output stream: " + stream);
+    if (!detections && !classification)
+        return Status(StatusCode::MEDIAPIPE_EXECUTION_ERROR, "Live video graph output payload type mismatch");
+
+    VideoFrameMetadata metadata;
+    {
+        std::lock_guard<std::mutex> lock(videoMetadataMutex);
+        if (videoFrameMetadata.empty())
+            return Status(StatusCode::MEDIAPIPE_EXECUTION_ERROR, "Video graph output has no matching input frame");
+        metadata = videoFrameMetadata.front();
+        videoFrameMetadata.pop_front();
+    }
+
+    if (classification) {
+        enqueueEvent(openAiEvent("conversation.item.input_video_classification.completed", [&](auto& writer) {
+            writer.Key("item_id");
+            writer.String(("video_" + id + "_" + std::to_string(metadata.frame)).c_str());
+            writer.Key("frame");
+            writer.Uint64(metadata.frame);
+            writer.Key("rtp_timestamp");
+            writer.Uint(metadata.timestamp);
+            writer.Key("label");
+            writer.String(classification->label.c_str());
+            writer.Key("score");
+            writer.Double(classification->score);
+            writer.Key("transcript");
+            writer.String(classification->label.c_str());
+        }), true);
+        return StatusCode::OK;
+    }
+
+    std::ostringstream transcript;
+    bool hasTranscriptObject = false;
+    const std::string event = openAiEvent("conversation.item.input_video_tracking.completed",
+        [&](auto& writer) {
+            writer.Key("item_id");
+            writer.String(("video_" + id + "_" + std::to_string(metadata.frame)).c_str());
+            writer.Key("frame");
+            writer.Uint64(metadata.frame);
+            writer.Key("rtp_timestamp");
+            writer.Uint(metadata.timestamp);
+            writer.Key("width");
+            writer.Uint(metadata.width);
+            writer.Key("height");
+            writer.Uint(metadata.height);
+            writer.Key("objects");
+            writer.StartArray();
+            for (const auto& detection : *detections) {
+                if (!detection.has_location_data() ||
+                    !detection.location_data().has_relative_bounding_box())
+                    continue;
+                const auto& box = detection.location_data().relative_bounding_box();
+                if (!std::isfinite(box.xmin()) || !std::isfinite(box.ymin()) ||
+                    !std::isfinite(box.width()) || !std::isfinite(box.height()))
+                    continue;
+                const double x = std::clamp(static_cast<double>(box.xmin()), 0.0, 1.0);
+                const double y = std::clamp(static_cast<double>(box.ymin()), 0.0, 1.0);
+                const double width = std::clamp(static_cast<double>(box.width()), 0.0, 1.0 - x);
+                const double height = std::clamp(static_cast<double>(box.height()), 0.0, 1.0 - y);
+                const int64_t objectId = detection.detection_id();
+                const std::string label = detection.label_size() ? detection.label(0) : std::string{};
+                const double score = detection.score_size() ? detection.score(0) : 0.0;
+                if (!std::isfinite(score))
+                    continue;
+
+                writer.StartObject();
+                writer.Key("id");
+                writer.Int64(objectId);
+                writer.Key("label");
+                writer.String(label.c_str(), static_cast<rapidjson::SizeType>(label.size()));
+                writer.Key("score");
+                writer.Double(score);
+                writer.Key("box");
+                writer.StartObject();
+                writer.Key("x");
+                writer.Double(x);
+                writer.Key("y");
+                writer.Double(y);
+                writer.Key("w");
+                writer.Double(width);
+                writer.Key("h");
+                writer.Double(height);
+                writer.EndObject();
+                writer.EndObject();
+
+                if (hasTranscriptObject)
+                    transcript << ", ";
+                hasTranscriptObject = true;
+                transcript << label << '#' << objectId << " [" << std::fixed << std::setprecision(2)
+                           << x << ',' << y << ',' << width << ',' << height << ']';
+            }
+            writer.EndArray();
+            writer.Key("transcript");
+            const std::string text = transcript.str();
+            writer.String(text.c_str(), static_cast<rapidjson::SizeType>(text.size()));
+        });
+    enqueueEvent(event);
+    return StatusCode::OK;
+}
+
 void WebRtcSessionController::Session::commitAudio() {
     std::shared_ptr<StreamingS2TSession> adapter;
     {
@@ -412,16 +601,20 @@ void WebRtcSessionController::Session::transcribeUtterance(AudioChunk utterance)
 
 void WebRtcSessionController::Session::shutdown() {
     std::shared_ptr<StreamingS2TSession> activeSession;
-    std::shared_ptr<MovinetVideoStream> activeVideo;
+    std::shared_ptr<Vp8VideoStream> activeVideo;
+    std::shared_ptr<LiveGraphSession> activeVideoGraph;
     {
         std::lock_guard<std::mutex> lock(mutex);
         transcriptChannel.reset();
         activeSession = std::move(audioSession);
         activeVideo = std::move(videoSession);
+        activeVideoGraph = std::move(videoGraphSession);
     }
     peer.close();
     if (activeVideo)
         activeVideo->stop();
+    if (activeVideoGraph)
+        activeVideoGraph->cancel();
     if (activeSession)
         activeSession->cancel();
     activeSession.reset();
@@ -561,9 +754,16 @@ std::string WebRtcSessionController::announceHostCandidate(const std::string& ca
 WebRtcSessionController::CreateCallResult WebRtcSessionController::createRealtimeCall(const std::string& offerSdp,
     std::unique_ptr<MediapipeGraphExecutorInterface> executor,
     OfferResult& result) {
+    return createRealtimeCall(offerSdp, std::move(executor), {}, result);
+}
+
+WebRtcSessionController::CreateCallResult WebRtcSessionController::createRealtimeCall(const std::string& offerSdp,
+    std::unique_ptr<MediapipeGraphExecutorInterface> audioExecutor,
+    std::unique_ptr<MediapipeGraphExecutorInterface> videoExecutor,
+    OfferResult& result) {
     // Realtime call clients never close sessions explicitly, so reclaim dead ones before admitting new calls.
     removeDisconnectedRealtimeCalls();
-    return negotiateSession(offerSdp, std::move(executor), result);
+    return negotiateSession(offerSdp, std::move(audioExecutor), std::move(videoExecutor), result);
 }
 
 void WebRtcSessionController::removeDisconnectedRealtimeCalls() {
@@ -586,7 +786,8 @@ void WebRtcSessionController::removeDisconnectedRealtimeCalls() {
 }
 
 WebRtcSessionController::CreateCallResult WebRtcSessionController::negotiateSession(const std::string& offerSdp,
-    std::unique_ptr<MediapipeGraphExecutorInterface> executor, OfferResult& result) {
+    std::unique_ptr<MediapipeGraphExecutorInterface> executor,
+    std::unique_ptr<MediapipeGraphExecutorInterface> videoExecutor, OfferResult& result) {
     if (offerSdp.empty()) {
         SPDLOG_LOGGER_WARN(webrtc_logger, "Rejected realtime call creation, offer is empty");
         return CreateCallResult::InvalidOffer;
@@ -629,16 +830,20 @@ WebRtcSessionController::CreateCallResult WebRtcSessionController::negotiateSess
         if (state == rtc::PeerConnection::State::Disconnected ||
             state == rtc::PeerConnection::State::Failed || state == rtc::PeerConnection::State::Closed) {
             std::shared_ptr<StreamingS2TSession> audioSession;
-            std::shared_ptr<MovinetVideoStream> videoSession;
+            std::shared_ptr<Vp8VideoStream> videoSession;
+            std::shared_ptr<LiveGraphSession> videoGraphSession;
             {
                 std::lock_guard<std::mutex> lock(session->mutex);
                 audioSession = std::move(session->audioSession);
                 videoSession = std::move(session->videoSession);
+                videoGraphSession = std::move(session->videoGraphSession);
             }
             if (audioSession)
                 audioSession->cancel();
             if (videoSession)
                 videoSession->stop();
+            if (videoGraphSession)
+                videoGraphSession->cancel();
             return;
         }
         if (state != rtc::PeerConnection::State::Connected) {
@@ -688,39 +893,21 @@ WebRtcSessionController::CreateCallResult WebRtcSessionController::negotiateSess
         }
         activeSession->descriptionReady.notify_all();
     });
-    const char* videoModelPath = std::getenv("OVMS_WEBRTC_VIDEO_MODEL");
-    if (videoModelPath && offerSdp.find("m=video ") != std::string::npos) {
+    const bool videoGraphRequested = static_cast<bool>(videoExecutor);
+    if (videoGraphRequested) {
+        if (offerSdp.find("m=video ") == std::string::npos) {
+            session->shutdown();
+            return CreateCallResult::InvalidOffer;
+        }
         try {
-            const char* labelsPath = std::getenv("OVMS_WEBRTC_VIDEO_LABELS");
-            if (!labelsPath || !*labelsPath || !*videoModelPath)
-                throw std::runtime_error("Set OVMS_WEBRTC_VIDEO_MODEL and OVMS_WEBRTC_VIDEO_LABELS to nonempty paths");
-            std::shared_ptr<MovinetVideoModel> model;
-            {
-                std::lock_guard<std::mutex> lock(mutex_);
-                if (!videoModel_)
-                    videoModel_ = std::make_shared<MovinetVideoModel>(videoModelPath, labelsPath);
-                model = videoModel_;
-            }
+            const auto status = session->startVideoGraphSession(std::move(videoExecutor));
+            if (!status.ok())
+                throw std::runtime_error(status.string());
             const std::weak_ptr<Session> weakSession = session;
-            session->videoSession = std::make_shared<MovinetVideoStream>(std::move(model),
-                [weakSession](size_t frame, uint32_t timestamp, const std::string& label, float score) {
-                    if (const auto current = weakSession.lock()) {
-                        current->enqueueEvent(openAiEvent("conversation.item.input_video_classification.completed", [&](auto& writer) {
-                            writer.Key("item_id");
-                            writer.String(("video_" + current->id + "_" + std::to_string(frame)).c_str());
-                            writer.Key("frame");
-                            writer.Uint64(frame);
-                            writer.Key("rtp_timestamp");
-                            writer.Uint(timestamp);
-                            writer.Key("label");
-                            writer.String(label.c_str());
-                            writer.Key("score");
-                            writer.Double(score);
-                            writer.Key("transcript");
-                            writer.String(label.c_str());
-                        }),
-                            true);
-                    }
+            session->videoSession = std::make_shared<Vp8VideoStream>(
+                [weakSession](std::shared_ptr<mediapipe::ImageFrame> frame, uint32_t timestamp) {
+                    if (const auto current = weakSession.lock())
+                        current->pushDecodedVideoFrame(std::move(frame), timestamp);
                 },
                 [weakSession](const std::string& error) {
                     if (const auto current = weakSession.lock())
@@ -728,7 +915,7 @@ WebRtcSessionController::CreateCallResult WebRtcSessionController::negotiateSess
                 });
             session->peer.onVideoFrame([weakSession](rtc::binary data, rtc::FrameInfo info) {
                 if (const auto current = weakSession.lock()) {
-                    std::shared_ptr<MovinetVideoStream> video;
+                    std::shared_ptr<Vp8VideoStream> video;
                     {
                         std::lock_guard<std::mutex> lock(current->mutex);
                         video = current->videoSession;
@@ -738,11 +925,12 @@ WebRtcSessionController::CreateCallResult WebRtcSessionController::negotiateSess
                 }
             });
         } catch (const std::exception& exception) {
-            SPDLOG_LOGGER_ERROR(webrtc_logger, "Cannot start MoViNet video: {}", exception.what());
+            SPDLOG_LOGGER_ERROR(webrtc_logger, "Cannot start live video graph: {}", exception.what());
             session->shutdown();
             return CreateCallResult::InternalError;
         }
     }
+
     if (executor) {
         const std::weak_ptr<Session> weakSession = session;
         const auto status = session->startAudioSession(std::move(executor));
@@ -798,7 +986,7 @@ WebRtcSessionController::CreateCallResult WebRtcSessionController::negotiateSess
     std::optional<rtc::Description> remoteDescription;
     try {
         remoteDescription.emplace(opusPreferredOffer, "offer");
-        if (session->videoSession) {
+        if (session->videoSession || session->videoGraphSession) {
             size_t videoTracks = 0;
             for (int index = 0; index < remoteDescription->mediaCount(); ++index) {
                 auto entry = remoteDescription->media(index);
@@ -808,7 +996,7 @@ WebRtcSessionController::CreateCallResult WebRtcSessionController::negotiateSess
                 if (media->type() != "video")
                     continue;
                 if (++videoTracks > 1)
-                    throw std::invalid_argument("MoViNet POC supports one video track per call");
+                    throw std::invalid_argument("Video POC supports one video track per call");
                 bool hasVp8 = false;
                 for (int payload : media->payloadTypes()) {
                     const auto* codec = media->rtpMap(payload);
@@ -818,7 +1006,7 @@ WebRtcSessionController::CreateCallResult WebRtcSessionController::negotiateSess
                         media->removeRtpMap(payload);
                 }
                 if (!hasVp8)
-                    throw std::invalid_argument("MoViNet video POC requires VP8");
+                    throw std::invalid_argument("Video POC requires VP8");
                 media->setDirection(rtc::Description::Direction::SendOnly);
             }
         }

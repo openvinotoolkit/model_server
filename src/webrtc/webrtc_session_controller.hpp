@@ -16,6 +16,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <condition_variable>
 #include <deque>
 #include <mutex>
@@ -31,11 +32,15 @@
 #include "opus_audio_codec.hpp"
 #include "src/mediapipe_internal/mediapipe_graph_executor_interface.hpp"
 #include "src/audio/speech_to_text/streaming_s2t_session.hpp"
+#include "rtp_timestamp_unwrapper.hpp"
+
+namespace mediapipe {
+class ImageFrame;
+}
 
 namespace ovms {
 
-class MovinetVideoModel;
-class MovinetVideoStream;
+class Vp8VideoStream;
 
 class WebRtcSessionController {
 public:
@@ -69,6 +74,9 @@ public:
     /// server ICE candidates and OpenAI transcription events are exchanged on the "oai-events" channel.
     CreateCallResult createRealtimeCall(const std::string& offerSdp,
         std::unique_ptr<MediapipeGraphExecutorInterface> executor, OfferResult& result);
+    CreateCallResult createRealtimeCall(const std::string& offerSdp,
+        std::unique_ptr<MediapipeGraphExecutorInterface> audioExecutor,
+        std::unique_ptr<MediapipeGraphExecutorInterface> videoExecutor, OfferResult& result);
     bool removeSession(const std::string& sessionId);
     size_t sessionCount() const;
 
@@ -87,6 +95,9 @@ private:
         void handleClientEvent(const std::string& message);
         std::string nextItemId();
         Status startAudioSession(std::unique_ptr<MediapipeGraphExecutorInterface> executor);
+        Status startVideoGraphSession(std::unique_ptr<MediapipeGraphExecutorInterface> executor);
+        void pushDecodedVideoFrame(std::shared_ptr<mediapipe::ImageFrame> frame, uint32_t timestamp);
+        Status handleVideoOutput(const std::string& stream, const LiveGraphPacket& packet);
         void commitAudio();
         // Utterance-based ASR (e.g. Whisper): buffers audio until silence or an explicit commit.
         void pushUtteranceAudio(const AudioChunk& frame);
@@ -101,7 +112,19 @@ private:
         OpusAudioCodec codec;
         AudioUtteranceBuffer utteranceBuffer;
         std::shared_ptr<StreamingS2TSession> audioSession;
-        std::shared_ptr<MovinetVideoStream> videoSession;
+        std::shared_ptr<Vp8VideoStream> videoSession;
+        std::shared_ptr<LiveGraphSession> videoGraphSession;
+        struct VideoFrameMetadata {
+            size_t frame;
+            uint32_t timestamp;
+            uint32_t width;
+            uint32_t height;
+        };
+        std::mutex videoMetadataMutex;
+        std::deque<VideoFrameMetadata> videoFrameMetadata;
+        RtpTimestampUnwrapper videoTimestampUnwrapper;
+        size_t nextVideoFrame = 0;
+        size_t droppedVideoFrames = 0;
         std::string currentItemId;
         bool hasAudio = false;
         uint64_t itemCounter = 0;
@@ -122,7 +145,8 @@ private:
     };
 
     CreateCallResult negotiateSession(const std::string& offerSdp,
-        std::unique_ptr<MediapipeGraphExecutorInterface> executor, OfferResult& result);
+        std::unique_ptr<MediapipeGraphExecutorInterface> executor,
+        std::unique_ptr<MediapipeGraphExecutorInterface> videoExecutor, OfferResult& result);
     void removeDisconnectedRealtimeCalls();
 
     mutable std::mutex mutex_;
@@ -130,7 +154,6 @@ private:
     std::string announcedIp_;
     uint64_t nextSessionId_ = 1;
     std::unordered_map<std::string, std::shared_ptr<Session>> sessions_;
-    std::shared_ptr<MovinetVideoModel> videoModel_;
 };
 
 }  // namespace ovms

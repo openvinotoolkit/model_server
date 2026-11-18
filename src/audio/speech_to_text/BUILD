@@ -132,7 +132,6 @@ ovms_cc_library(
         "//src:libmodelconfigjsonparser",
         "//src/mediapipe_internal:node_initializer",
         "//src/mediapipe_internal:live_graph_config",
-        "//src/mediapipe_internal:streaming_s2t_graph",
         ":streaming_s2t",
         ":streaming_s2t_session",
         "//src/webrtc:stt_audio_adapter",

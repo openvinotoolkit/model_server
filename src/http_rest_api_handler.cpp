@@ -65,6 +65,7 @@
 #include "src/servable_management/servablemanagermodule.hpp"
 #include "server.hpp"
 #include "src/logging.hpp"
+#include "src/mediapipe_internal/live_graph_config.hpp"
 #include "status.hpp"
 #include "stringutils.hpp"
 #include "multi_part_parser.hpp"
@@ -1193,22 +1194,49 @@ Status HttpRestApiHandler::processRealtimeCall(const HttpRequestComponents& requ
     }
     if (isMultiPart) {
         modelName = getRealtimeSessionModel(multiPartParser->getFieldByName("session"));
-        if (modelName.empty()) {
+        const char* configuredVideoGraph = std::getenv("OVMS_WEBRTC_VIDEO_GRAPH");
+        const bool videoGraphOnly = configuredVideoGraph && *configuredVideoGraph &&
+                                    offerSdp.find("m=video ") != std::string::npos;
+        if (modelName.empty() && !videoGraphOnly) {
             SPDLOG_LOGGER_WARN(webrtc_logger, "Realtime call session does not name a transcription model");
             return Status(StatusCode::REST_INVALID_REQUEST, "The session field must be a JSON object setting audio.input.transcription.model or model");
         }
     }
     std::unique_ptr<MediapipeGraphExecutorInterface> executor;
-    // POC-only video alias; ordinary audio calls still use their managed ASR graph.
-    const bool videoOnly = modelName == "movinet" && std::getenv("OVMS_WEBRTC_VIDEO_MODEL");
-    if (videoOnly && offerSdp.find("m=video ") == std::string::npos)
-        return Status(StatusCode::REST_INVALID_REQUEST, "The movinet model requires a VP8 video track");
+    std::unique_ptr<MediapipeGraphExecutorInterface> videoExecutor;
+    const char* configuredVideoGraph = std::getenv("OVMS_WEBRTC_VIDEO_GRAPH");
+    const bool videoGraphRequested = configuredVideoGraph && *configuredVideoGraph &&
+                                     offerSdp.find("m=video ") != std::string::npos;
+    if (videoGraphRequested) {
+        auto status = modelManager.createPipeline(videoExecutor, configuredVideoGraph);
+        if (!status.ok()) {
+            SPDLOG_LOGGER_ERROR(webrtc_logger, "Could not load configured WebRTC video graph {}: {}",
+                configuredVideoGraph, status.string());
+            return Status(StatusCode::REST_INVALID_REQUEST,
+                "OVMS_WEBRTC_VIDEO_GRAPH must name a loaded MediaPipe graph");
+        }
+        const bool tracking = videoExecutor->supportsSession(VideoTrackingLiveGraphProfile);
+        const bool classification = videoExecutor->supportsSession(VideoClassificationLiveGraphProfile);
+        if (tracking == classification) {
+            SPDLOG_LOGGER_ERROR(webrtc_logger, "Configured WebRTC video graph {} must expose one supported video profile",
+                configuredVideoGraph);
+            return Status(StatusCode::REST_INVALID_REQUEST,
+                "Configured video graph must support exactly one tracking or classification profile");
+        }
+    }
+
+    // A configured video graph name is also the video-only session model.
+    const bool videoOnly = videoGraphRequested &&
+                           (modelName.empty() || modelName == configuredVideoGraph);
+    if (modelName.empty() && !videoOnly)
+        return getRealtimeCallExecutor(modelName, executor);
     auto status = videoOnly ? Status(StatusCode::OK) : getRealtimeCallExecutor(modelName, executor);
     if (!status.ok())
         return status;
 
     WebRtcSessionController::OfferResult result;
-    const auto createResult = webRtcSessionController.createRealtimeCall(offerSdp, std::move(executor), result);
+    const auto createResult = webRtcSessionController.createRealtimeCall(offerSdp, std::move(executor),
+        std::move(videoExecutor), result);
     switch (createResult) {
     case WebRtcSessionController::CreateCallResult::InvalidOffer:
         return Status(StatusCode::REST_INVALID_REQUEST, "The SDP offer is invalid");

@@ -866,6 +866,7 @@ ovms_cc_library(
             "libovms_kfs_utils",
             "libovms_kfs_grpc_inference_service_h",
             "mediapipe_executor_interface",
+            "//src/mediapipe_internal:live_graph_config",
             "modelchangesubscription",
             "//src/servable_management:modelmanager",
             "//src/servable_management:servablemanagermodule",
@@ -2318,6 +2319,7 @@ cc_test(
                 "//src/audio/speech_to_text:s2t_calculator",
                 "//src/audio/text_to_speech:t2s_calculator",
                 "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
+                "//src/mediapipe_internal:live_graph_config",
                 "//src/llm:llmcalculator_registration",
                 "//src/embeddings:embeddingscalculator_ov",
                 "//src/rerank:rerankcalculator_ov",
@@ -2328,6 +2330,7 @@ cc_test(
                 "@mediapipe//mediapipe/framework/stream_handler:early_close_input_stream_handler",
                 "@mediapipe//mediapipe/framework/stream_handler:sync_set_input_stream_handler",
                 "@mediapipe//mediapipe/framework/stream_handler:timestamp_align_input_stream_handler",
+                "@mediapipe//mediapipe/framework/formats:image_frame",
             ],
             "//:disable_mediapipe": [],
         }),
@@ -2343,6 +2346,28 @@ cc_test(
             "-Wl,-rpath,$$ORIGIN/ovms_test.runfiles/azure/lib",
         ],
         "//src:windows": [],
+    }),
+)
+
+cc_test(
+    name = "movinet_calculator_test",
+    srcs = ["test/movinet_calculator_test.cpp"],
+    deps = [
+        "//src/movinet:movinet_calculator",
+        "//src/movinet:movinet_calculator_cc_proto",
+        "//src/movinet:classification",
+        "//src/mediapipe_internal:libovms_mediapipe",
+        "//src/mediapipe_internal:mediapipegraphexecutor_h",
+        "//src/mediapipe_internal:live_graph_config",
+        "//src:kfs_graph_executor_impl",
+        "//src:libovms_mediapipe_http_executor",
+        "//third_party:openvino",
+        "@com_google_googletest//:gtest_main",
+    ],
+    linkstatic = 1,
+    target_compatible_with = select({
+        "//:not_disable_mediapipe": [],
+        "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
 

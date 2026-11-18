@@ -1,0 +1,93 @@
+input_stream: "video"
+output_stream: "tracked_detections"
+
+node: {
+  calculator: "ImageToTensorCalculator"
+  input_stream: "IMAGE:video"
+  output_stream: "TENSORS:image_tensor"
+  node_options: {
+    [type.googleapis.com/mediapipe.ImageToTensorCalculatorOptions] {
+      output_tensor_width: 416
+      output_tensor_height: 416
+      keep_aspect_ratio: false
+      output_tensor_float_range { min: 0.0 max: 255.0 }
+    }
+  }
+}
+
+node {
+  calculator: "OpenVINOModelServerSessionCalculator"
+  output_side_packet: "SESSION:session"
+  node_options: {
+    [type.googleapis.com/mediapipe.OpenVINOModelServerSessionCalculatorOptions]: {
+      servable_name: "yolox_tiny-fp16-ov"
+      servable_version: "1"
+    }
+  }
+}
+
+node {
+  calculator: "OpenVINOInferenceCalculator"
+  input_side_packet: "SESSION:session"
+  input_stream: "TENSORS:image_tensor"
+  output_stream: "OVTENSORS2:detection_tensors"
+  node_options: {
+    [type.googleapis.com/mediapipe.OpenVINOInferenceCalculatorOptions]: {
+      input_order_list: ["image"]
+      output_order_list: ["boxes", "labels"]
+    }
+  }
+}
+
+node {
+  calculator: "OVYoloXTensorsToDetectionsCalculator"
+  input_stream: "TENSORS:detection_tensors"
+  output_stream: "DETECTIONS:detections"
+  node_options: {
+    [type.googleapis.com/mediapipe.OVYoloXTensorsToDetectionsCalculatorOptions] {
+      conf_thresh: 0.1
+      input_size: 416.0
+    }
+  }
+}
+
+node {
+  calculator: "NonMaxSuppressionCalculator"
+  input_stream: "detections"
+  output_stream: "filtered_detections"
+  node_options: {
+    [type.googleapis.com/mediapipe.NonMaxSuppressionCalculatorOptions] {
+      min_suppression_threshold: 0.45
+      max_num_detections: 100
+      overlap_type: INTERSECTION_OVER_UNION
+      return_empty_detections: true
+    }
+  }
+}
+
+node {
+  calculator: "DetectionLabelIdToTextCalculator"
+  input_stream: "filtered_detections"
+  output_stream: "output_detections"
+  node_options: {
+    [type.googleapis.com/mediapipe.DetectionLabelIdToTextCalculatorOptions] {
+      label_map_path: "/demo/coco_80cl.txt"
+    }
+  }
+}
+
+node {
+  calculator: "ByteTrackCalculator"
+  input_stream: "DETECTIONS:output_detections"
+  output_stream: "DETECTIONS:tracked_detections"
+  options: {
+    [mediapipe.ByteTrackCalculatorOptions.ext] {
+      track_high_threshold: 0.7
+      track_low_threshold: 0.55
+      new_track_threshold: 0.35
+      matching_threshold: 0.8
+      track_buffer: 60
+      fuse_score: false
+    }
+  }
+}

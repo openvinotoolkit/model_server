@@ -51,8 +51,30 @@
 #include "src/utils/env_guard.hpp"
 #include "webrtc_session_controller.hpp"
 #include "webrtc_peer_connection.hpp"
+#include "rtp_timestamp_unwrapper.hpp"
 
 namespace ovms {
+
+TEST(RtpTimestampUnwrapperTest, ConvertsIncreasingTimestampsAndHandlesWraparound) {
+    RtpTimestampUnwrapper unwrapper;
+    const auto first = unwrapper.toMicroseconds(0xfffffff0);
+    const auto wrapped = unwrapper.toMicroseconds(0x20);
+
+    ASSERT_TRUE(first);
+    ASSERT_TRUE(wrapped);
+    EXPECT_GT(*wrapped, *first);
+    EXPECT_EQ(*wrapped - *first, 534);
+}
+
+TEST(RtpTimestampUnwrapperTest, RejectsDuplicateAndBackwardTimestamps) {
+    RtpTimestampUnwrapper unwrapper;
+    ASSERT_TRUE(unwrapper.toMicroseconds(90000));
+    EXPECT_FALSE(unwrapper.toMicroseconds(90000));
+    EXPECT_FALSE(unwrapper.toMicroseconds(89999));
+    const auto nextFrame = unwrapper.toMicroseconds(180000);
+    ASSERT_TRUE(nextFrame);
+    EXPECT_EQ(*nextFrame, 2000000);
+}
 
 TEST(WebRtcSessionControllerTest, RejectsEmptyOffer) {
     WebRtcSessionController controller;

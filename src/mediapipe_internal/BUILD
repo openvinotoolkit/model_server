@@ -28,6 +28,7 @@ ovms_cc_library(
     deps = [
         ":live_graph_session_api",
         "@mediapipe//mediapipe/framework:calculator_graph",
+        "@mediapipe//mediapipe/framework/formats:image_frame",
     ],
     visibility = ["//visibility:public"],
 )
@@ -67,7 +68,11 @@ ovms_cc_library(
     ],
     deps = [
         ":graph_side_packets",
+        ":live_graph_config",
+        ":streaming_s2t_graph",
+        "//src:libovmslogging",
         "//src:libovmsstatus",
+        "@mediapipe//mediapipe/framework:calculator_graph",
     ],
     visibility = ["//visibility:public"],
 )
@@ -307,6 +312,7 @@ ovms_cc_library(
         "//src/audio/text_to_speech:t2s_calculator",
         "//src/yolox:ov_yolox_tensors_to_detections_calculator",
         "//src/bytetrack/calculators:bytetrack_calculators",
+        "//src/movinet:movinet_calculator",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,

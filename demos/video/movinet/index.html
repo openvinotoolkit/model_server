@@ -1,0 +1,133 @@
+<!doctype html>
+<!-- Copyright 2026 Intel Corporation
+     Licensed under the Apache License, Version 2.0.
+     https://www.apache.org/licenses/LICENSE-2.0 -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>OVMS MoViNet WebRTC POC</title>
+</head>
+<body>
+  <h1>MoViNet activity recognition over VP8 / WebRTC</h1>
+  <p>Use localhost or HTTPS for camera access. Predictions describe the whole frame.</p>
+  <p><label>OVMS URL <input id="url" value="http://localhost:9112" size="40"></label></p>
+  <p><label>Session model <input id="model" value="movinet"></label>
+    <label><input id="audio" type="checkbox"> Also send microphone (select a served ASR model)</label></p>
+  <button id="start">Start</button>
+  <button id="stop" disabled>Stop / reset history</button>
+  <p id="status">Stopped</p>
+  <video id="preview" autoplay muted playsinline width="480"></video>
+  <h2 id="activity">No prediction</h2>
+  <pre id="details"></pre>
+  <h2>ASR (if enabled)</h2>
+  <pre id="transcript"></pre>
+  <script>
+    const element = (id) => document.getElementById(id);
+    const iceTimeoutMs = 10000;
+    let peer = null;
+    let media = null;
+    let callPath = null;
+    let server = "";
+
+    async function stop() {
+      const currentPeer = peer;
+      const currentMedia = media;
+      const currentPath = callPath;
+      peer = null;
+      media = null;
+      callPath = null;
+      if (currentMedia) currentMedia.getTracks().forEach((track) => track.stop());
+      if (currentPeer) currentPeer.close();
+      element("preview").srcObject = null;
+      element("start").disabled = false;
+      element("stop").disabled = true;
+      element("status").textContent = "Stopped";
+      if (currentPath) {
+        const response = await fetch(server + currentPath + "/hangup", {method: "POST"});
+        if (!response.ok) throw new Error("Hangup failed: " + await response.text());
+      }
+    }
+
+    function gatherIce(connection) {
+      if (connection.iceGatheringState === "complete") return Promise.resolve();
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          connection.removeEventListener("icegatheringstatechange", changed);
+          reject(new Error("ICE gathering timed out"));
+        }, iceTimeoutMs);
+        function changed() {
+          if (connection.iceGatheringState === "complete") {
+            clearTimeout(timer);
+            connection.removeEventListener("icegatheringstatechange", changed);
+            resolve();
+          }
+        }
+        connection.addEventListener("icegatheringstatechange", changed);
+        changed();
+      });
+    }
+
+    async function start() {
+      element("start").disabled = true;
+      element("activity").textContent = "Waiting for video";
+      element("transcript").textContent = "";
+      server = element("url").value.replace(/\/$/, "");
+      peer = new RTCPeerConnection({iceServers: []});
+      const connection = peer;
+      connection.onconnectionstatechange = () => {
+        element("status").textContent = connection.connectionState;
+      };
+      const channel = connection.createDataChannel("oai-events");
+      channel.onmessage = ({data}) => {
+        try {
+          const event = JSON.parse(data);
+          if (event.type === "session.created") callPath = "/v1/realtime/calls/" + event.session.id;
+          if (event.type === "conversation.item.input_video_classification.completed") {
+            element("activity").textContent = event.label + " (" + (event.score * 100).toFixed(1) + "%)";
+            element("details").textContent = JSON.stringify(event, null, 2);
+          } else if (event.type === "conversation.item.input_audio_transcription.completed") {
+            element("transcript").textContent += event.transcript + "\n";
+          } else if (event.type === "error") {
+            element("details").textContent = JSON.stringify(event, null, 2);
+          }
+        } catch (error) {
+          element("details").textContent = "Invalid server event: " + error;
+        }
+      };
+      media = await navigator.mediaDevices.getUserMedia({
+        video: {width: 640, height: 480, frameRate: {ideal: 8, max: 10}},
+        audio: element("audio").checked
+      });
+      element("preview").srcObject = media;
+      for (const track of media.getTracks()) connection.addTrack(track, media);
+      const vp8 = RTCRtpSender.getCapabilities("video").codecs.filter(
+        (codec) => codec.mimeType.toLowerCase() === "video/vp8");
+      if (!vp8.length) throw new Error("This browser does not support VP8");
+      connection.getTransceivers().filter(
+        (transceiver) => transceiver.sender.track.kind === "video"
+      ).forEach((transceiver) => transceiver.setCodecPreferences(vp8));
+      await connection.setLocalDescription(await connection.createOffer());
+      await gatherIce(connection);
+      const form = new FormData();
+      form.append("sdp", connection.localDescription.sdp);
+      form.append("session", JSON.stringify({type: "transcription", model: element("model").value}));
+      const response = await fetch(server + "/v1/realtime/calls", {method: "POST", body: form});
+      if (!response.ok) throw new Error("Call failed: " + await response.text());
+      callPath = response.headers.get("Location");
+      await connection.setRemoteDescription({type: "answer", sdp: await response.text()});
+      element("stop").disabled = false;
+    }
+
+    async function reportFailure(error) {
+      element("details").textContent = String(error);
+      try {
+        await stop();
+      } catch (cleanupError) {
+        element("details").textContent += "\n" + cleanupError;
+      }
+    }
+    element("start").onclick = () => start().catch(reportFailure);
+    element("stop").onclick = () => stop().catch(reportFailure);
+  </script>
+</body>
+</html>

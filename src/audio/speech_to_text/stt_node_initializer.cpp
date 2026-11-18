@@ -20,7 +20,6 @@
 #include "src/mediapipe_internal/graph_side_packets.hpp"
 #include "src/mediapipe_internal/node_initializer.hpp"
 #include "src/mediapipe_internal/live_graph_config.hpp"
-#include "src/mediapipe_internal/streaming_s2t_graph.hpp"
 #include "src/stringutils.hpp"
 #include "s2t_servable.hpp"
 #include "streaming_s2t_session.hpp"
@@ -44,13 +43,10 @@ public:
         const auto servable = sidePackets.sttServableMap.find(node.name());
         if (servable == sidePackets.sttServableMap.end())
             return Status(StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID, "Missing initialized STT resources");
-        auto profile = std::make_shared<LiveGraphConfig>();
-        profile->graph = config;
-        profile->graph.set_max_queue_size(64);
-        profile->graph.clear_input_stream();
-        profile->graph.add_input_stream("audio");
-        profile->graph.clear_output_stream();
-        profile->graph.add_output_stream("events");
+        constexpr int AudioInputQueueSize = 64;
+        auto profile = makeLiveGraphConfig(config, AudioInputQueueSize,
+            {{"audio", LiveGraphStreamCodec::typed<StreamingS2TInput>()}},
+            {{"events", LiveGraphStreamCodec::typed<StreamingS2TEvent>()}});
         auto* audioNode = profile->graph.mutable_node(0);
         audioNode->clear_input_stream();
         audioNode->add_input_stream("AUDIO:audio");
@@ -58,19 +54,8 @@ public:
         audioNode->add_output_stream("EVENT:events");
         audioNode->clear_input_stream_info();
         audioNode->clear_input_stream_handler();
-        profile->inputs.emplace("audio", LiveGraphStreamCodec::typed<StreamingS2TInput>());
-        profile->outputs.emplace("events", LiveGraphStreamCodec::typed<StreamingS2TEvent>());
-        mediapipe::CalculatorGraph validationGraph;
-        StreamingS2TGraphExecution validation(validationGraph);
-        const auto status = validation.initialize(profile->graph);
-        if (!status.ok()) {
-            SPDLOG_ERROR("Invalid live STT graph: {}", status.ToString());
-            return Status(StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID, status.ToString());
-        }
         const char* name = servable->second->streamingBackend ? STT_INCREMENTAL_PROFILE : STT_UTTERANCE_PROFILE;
-        if (!sidePackets.liveGraphProfiles.emplace(name, std::move(profile)).second)
-            return Status(StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID, "Duplicate live STT profile");
-        return StatusCode::OK;
+        return registerLiveGraphProfile(name, std::move(profile), sidePackets);
     }
 
     bool matches(const std::string& calculatorName) const override {

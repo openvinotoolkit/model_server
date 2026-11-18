@@ -21,10 +21,15 @@
 #include <string>
 
 #include "mediapipe/framework/calculator.pb.h"
+#include "mediapipe/framework/formats/image_frame.h"
 #include "mediapipe/framework/packet.h"
 #include "live_graph_session.hpp"
 
 namespace ovms {
+
+inline constexpr int LiveGraphVideoInputQueueSize = 4;
+inline constexpr char VideoTrackingLiveGraphProfile[] = "video.object-tracking";
+inline constexpr char VideoClassificationLiveGraphProfile[] = "video.classification";
 
 /// Runtime-only conversion between a profile's declared payload and MediaPipe.
 struct LiveGraphStreamCodec {
@@ -48,6 +53,26 @@ struct LiveGraphStreamCodec {
                 const auto owner = std::make_shared<mediapipe::Packet>(input);
                 return observer(stream, LiveGraphPacket::share<T>(
                     std::shared_ptr<const T>(owner, &owner->Get<T>())));
+            }};
+    }
+
+    static LiveGraphStreamCodec imageFrame() {
+        return {
+            [](const LiveGraphPacket& input, mediapipe::Packet& output) -> Status {
+                const auto* frame = input.getIf<std::shared_ptr<mediapipe::ImageFrame>>();
+                if (!frame || !*frame)
+                    return Status(StatusCode::MEDIAPIPE_EXECUTION_ERROR, "Live graph input payload type mismatch");
+                output = mediapipe::PointToForeign<mediapipe::ImageFrame>(frame->get(),
+                    [owner = *frame] {});
+                return StatusCode::OK;
+            },
+            [](const mediapipe::Packet& input, LiveGraphSession::Observer& observer, const std::string& stream) -> Status {
+                const auto status = input.ValidateAsType<mediapipe::ImageFrame>();
+                if (!status.ok())
+                    return Status(StatusCode::MEDIAPIPE_EXECUTION_ERROR, status.ToString());
+                const auto owner = std::make_shared<mediapipe::Packet>(input);
+                return observer(stream, LiveGraphPacket::share<mediapipe::ImageFrame>(
+                    std::shared_ptr<const mediapipe::ImageFrame>(owner, &owner->Get<mediapipe::ImageFrame>())));
             }};
     }
 };

@@ -31,6 +31,7 @@ void buildInputSidePackets(std::map<std::string, mediapipe::Packet>& inputSidePa
     inputSidePackets[RERANK_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<RerankServableMap>(sidePackets.rerankServableMap).At(ts);
     inputSidePackets[STT_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<SttServableMap>(sidePackets.sttServableMap).At(ts);
     inputSidePackets[TTS_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<TtsServableMap>(sidePackets.ttsServableMap).At(ts);
+    inputSidePackets[MOVINET_SESSION_SIDE_PACKET_TAG] = mediapipe::MakePacket<MovinetResourcesMap>(sidePackets.movinetResourcesMap).At(ts);
 }
 
 }  // namespace ovms

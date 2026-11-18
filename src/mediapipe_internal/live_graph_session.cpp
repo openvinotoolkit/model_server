@@ -41,6 +41,7 @@ class LiveGraphSessionImpl final : public LiveGraphSession {
     std::mutex inputMutex_;
     std::set<std::string> closedInputs_;
     int64_t timestamp_ = 0;
+    bool timestampInitialized_ = false;
     bool cancelled_ = false;
     bool started_ = false;
 
@@ -89,6 +90,25 @@ public:
 
     Status send(const std::string& streamName, const LiveGraphPacket& packet) override {
         std::lock_guard<std::mutex> lock(inputMutex_);
+        return sendLocked(streamName, packet, 0, true);
+    }
+
+    Status send(const std::string& streamName, const LiveGraphPacket& packet,
+        int64_t timestampMicroseconds) override {
+        std::lock_guard<std::mutex> lock(inputMutex_);
+        if ((timestampInitialized_ && timestampMicroseconds <= timestamp_) || timestampMicroseconds < 0)
+            return Status(StatusCode::MEDIAPIPE_EXECUTION_ERROR, "Live graph timestamp must be strictly increasing and non-negative");
+        const auto status = sendLocked(streamName, packet, timestampMicroseconds, false);
+        if (status.ok()) {
+            timestamp_ = timestampMicroseconds;
+            timestampInitialized_ = true;
+        }
+        return status;
+    }
+
+private:
+    Status sendLocked(const std::string& streamName, const LiveGraphPacket& packet,
+        int64_t timestamp, bool useAutomaticTimestamp) {
         if (cancelled_ || closedInputs_.count(streamName))
             return Status(StatusCode::MEDIAPIPE_EXECUTION_ERROR, "Live graph input is closed");
         const auto stream = config_->inputs.find(streamName);
@@ -103,10 +123,15 @@ public:
         const auto status = stream->second.encode(packet, input);
         if (!status.ok())
             return status;
+        if (useAutomaticTimestamp) {
+            timestamp = ++timestamp_;
+            timestampInitialized_ = true;
+        }
         return executionStatus(graph_.AddPacketToInputStream(streamName,
-            input.At(mediapipe::Timestamp(++timestamp_))));
+            input.At(mediapipe::Timestamp(timestamp))));
     }
 
+public:
     Status closeInput(const std::string& streamName) override {
         std::lock_guard<std::mutex> lock(inputMutex_);
         if (cancelled_ || closedInputs_.count(streamName))

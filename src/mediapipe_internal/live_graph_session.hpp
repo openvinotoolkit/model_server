@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>
@@ -62,6 +63,9 @@ public:
     /// Sends to a declared input with a monotonically increasing session timestamp.
     /// Payload types are checked before enqueueing. Queue overflow returns an error.
     virtual Status send(const std::string& streamName, const LiveGraphPacket& packet) = 0;
+    /// Sends to a declared input using a strictly increasing MediaPipe timestamp in microseconds.
+    virtual Status send(const std::string& streamName, const LiveGraphPacket& packet,
+        int64_t timestampMicroseconds) = 0;
     /// Closes one input permanently; domain-specific boundaries are ordinary packets.
     virtual Status closeInput(const std::string& streamName) = 0;
     /// Requests cancellation without joining workers. Destruction waits for shutdown.

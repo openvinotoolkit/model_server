@@ -28,6 +28,7 @@ inline const std::string EMBEDDINGS_SESSION_SIDE_PACKET_TAG = "embeddings_servab
 inline const std::string RERANK_SESSION_SIDE_PACKET_TAG = "rerank_servable";
 inline const std::string STT_SESSION_SIDE_PACKET_TAG = "s2t_servable";
 inline const std::string TTS_SESSION_SIDE_PACKET_TAG = "t2s_servable";
+inline const std::string MOVINET_SESSION_SIDE_PACKET_TAG = "movinet_resources";
 inline constexpr int64_t STARTING_TIMESTAMP_VALUE = 0;
 
 }  // namespace ovms

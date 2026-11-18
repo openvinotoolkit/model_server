@@ -26,10 +26,13 @@
 
 #include "gtest/gtest.h"
 #include "mediapipe/framework/calculator_framework.h"
+#include "mediapipe/framework/formats/detection.pb.h"
+#include "mediapipe/framework/formats/image_frame.h"
 #include "src/mediapipe_internal/graph_side_packets.hpp"
 #include "src/mediapipe_internal/live_graph_config.hpp"
 #include "src/mediapipe_internal/live_graph_session_impl.hpp"
 #include "src/mediapipe_internal/mediapipegraphexecutor.hpp"
+#include "src/mediapipe_internal/node_initializer.hpp"
 
 namespace ovms {
 namespace {
@@ -48,6 +51,39 @@ public:
 };
 REGISTER_CALCULATOR(LiveSessionEchoCalculator);
 
+class LiveSessionTimestampEchoCalculator : public mediapipe::CalculatorBase {
+public:
+    static absl::Status GetContract(mediapipe::CalculatorContract* contract) {
+        contract->Inputs().Index(0).Set<std::string>();
+        contract->Outputs().Index(0).Set<int64_t>();
+        return absl::OkStatus();
+    }
+
+    absl::Status Process(mediapipe::CalculatorContext* context) override {
+        context->Outputs().Index(0).AddPacket(
+            mediapipe::MakePacket<int64_t>(context->InputTimestamp().Microseconds())
+                .At(context->InputTimestamp()));
+        return absl::OkStatus();
+    }
+};
+REGISTER_CALCULATOR(LiveSessionTimestampEchoCalculator);
+
+class LiveVideoEmptyDetectionCalculator : public mediapipe::CalculatorBase {
+public:
+    static absl::Status GetContract(mediapipe::CalculatorContract* contract) {
+        contract->Inputs().Tag("IMAGE").Set<mediapipe::ImageFrame>();
+        contract->Outputs().Tag("DETECTIONS").Set<std::vector<mediapipe::Detection>>();
+        return absl::OkStatus();
+    }
+
+    absl::Status Process(mediapipe::CalculatorContext* context) override {
+        auto detections = std::make_unique<std::vector<mediapipe::Detection>>();
+        context->Outputs().Tag("DETECTIONS").Add(detections.release(), context->InputTimestamp());
+        return absl::OkStatus();
+    }
+};
+REGISTER_CALCULATOR(LiveVideoEmptyDetectionCalculator);
+
 std::shared_ptr<LiveGraphConfig> echoProfile() {
     auto profile = std::make_shared<LiveGraphConfig>();
     profile->graph.add_input_stream("text");
@@ -58,6 +94,19 @@ std::shared_ptr<LiveGraphConfig> echoProfile() {
     node->add_output_stream("result");
     profile->inputs.emplace("text", LiveGraphStreamCodec::typed<std::string>());
     profile->outputs.emplace("result", LiveGraphStreamCodec::typed<std::string>());
+    return profile;
+}
+
+std::shared_ptr<LiveGraphConfig> timestampProfile() {
+    auto profile = std::make_shared<LiveGraphConfig>();
+    profile->graph.add_input_stream("text");
+    profile->graph.add_output_stream("result");
+    auto* node = profile->graph.add_node();
+    node->set_calculator("LiveSessionTimestampEchoCalculator");
+    node->add_input_stream("text");
+    node->add_output_stream("result");
+    profile->inputs.emplace("text", LiveGraphStreamCodec::typed<std::string>());
+    profile->outputs.emplace("result", LiveGraphStreamCodec::typed<int64_t>());
     return profile;
 }
 
@@ -100,6 +149,97 @@ TEST_F(LiveGraphSessionTest, ChecksTypesNamesAndClosedInputsWithoutPoisoningSess
     ASSERT_NE(received[0].getIf<std::string>(), nullptr);
     EXPECT_EQ(*received[0].getIf<std::string>(), "hello");
     EXPECT_EQ(received[0].getIf<int>(), nullptr);
+}
+
+TEST_F(LiveGraphSessionTest, AcceptsOnlyStrictlyIncreasingExplicitTimestamps) {
+    std::vector<int64_t> timestamps;
+    std::mutex timestampMutex;
+    std::condition_variable timestampReady;
+    std::unique_ptr<LiveGraphSession> session;
+    ASSERT_TRUE(createLiveGraphSession(timestampProfile(), {}, nullptr,
+        [&timestamps, &timestampMutex, &timestampReady](const std::string&, const LiveGraphPacket& packet) {
+            const auto* timestamp = packet.getIf<int64_t>();
+            if (!timestamp)
+                return Status(StatusCode::MEDIAPIPE_EXECUTION_ERROR, "Unexpected timestamp output payload");
+            {
+                std::lock_guard<std::mutex> lock(timestampMutex);
+                timestamps.push_back(*timestamp);
+            }
+            timestampReady.notify_all();
+            return Status(StatusCode::OK);
+        }, session).ok());
+
+    const auto packet = LiveGraphPacket::make(std::string("frame"));
+    ASSERT_TRUE(session->send("text", packet, 100000).ok());
+    ASSERT_TRUE(session->send("text", packet, 133333).ok());
+    EXPECT_FALSE(session->send("text", packet, 133333).ok());
+    EXPECT_FALSE(session->send("text", packet, 120000).ok());
+    std::unique_lock<std::mutex> lock(timestampMutex);
+    ASSERT_TRUE(timestampReady.wait_for(lock, std::chrono::seconds(10), [&] { return timestamps.size() == 2; }));
+    EXPECT_EQ(timestamps, (std::vector<int64_t>{100000, 133333}));
+}
+
+TEST(LiveGraphStreamCodecTest, ImageFramePacketRetainsSharedFrameOwner) {
+    LiveGraphStreamCodec codec = LiveGraphStreamCodec::imageFrame();
+    mediapipe::Packet packet;
+    {
+        auto frame = std::make_shared<mediapipe::ImageFrame>(mediapipe::ImageFormat::SRGB, 2, 2);
+        const auto input = LiveGraphPacket::make(std::move(frame));
+        ASSERT_TRUE(codec.encode(input, packet).ok());
+    }
+    ASSERT_TRUE(packet.ValidateAsType<mediapipe::ImageFrame>().ok());
+    EXPECT_EQ(packet.Get<mediapipe::ImageFrame>().Width(), 2);
+    EXPECT_EQ(packet.Get<mediapipe::ImageFrame>().Height(), 2);
+}
+
+TEST(LiveGraphProfileTest, RejectsInvalidGraphWithoutRegisteringProfile) {
+    auto profile = echoProfile();
+    profile->graph.mutable_node(0)->set_calculator("MissingLiveProfileCalculator");
+    GraphSidePackets resources;
+    const auto status = registerLiveGraphProfile("invalid", std::move(profile), resources);
+    EXPECT_FALSE(status.ok());
+    EXPECT_TRUE(resources.liveGraphProfiles.empty());
+}
+
+TEST(LiveGraphProfileTest, RejectsDuplicateWithoutReplacingRegisteredProfile) {
+    GraphSidePackets resources;
+    auto profile = makeLiveGraphConfig(echoProfile()->graph, LiveGraphVideoInputQueueSize,
+        {{"text", LiveGraphStreamCodec::typed<std::string>()}},
+        {{"result", LiveGraphStreamCodec::typed<std::string>()}});
+    ASSERT_TRUE(registerLiveGraphProfile("echo", profile, resources).ok());
+    EXPECT_FALSE(registerLiveGraphProfile("echo", echoProfile(), resources).ok());
+    ASSERT_EQ(resources.liveGraphProfiles.size(), 1);
+    EXPECT_EQ(resources.liveGraphProfiles.at("echo"), profile);
+}
+
+TEST(LiveGraphProfileTest, RegistersVideoTrackingProfileForByteTrackGraphs) {
+    mediapipe::CalculatorGraphConfig config;
+    config.add_input_stream("video");
+    config.add_output_stream("tracked_detections");
+    auto* detectionNode = config.add_node();
+    detectionNode->set_calculator("LiveVideoEmptyDetectionCalculator");
+    detectionNode->add_input_stream("IMAGE:video");
+    detectionNode->add_output_stream("DETECTIONS:detections");
+    auto* trackerNode = config.add_node();
+    trackerNode->set_calculator("ByteTrackCalculator");
+    trackerNode->add_input_stream("DETECTIONS:detections");
+    trackerNode->add_output_stream("DETECTIONS:tracked_detections");
+
+    GraphSidePackets sidePackets;
+    for (const auto& initializer : NodeInitializerRegistry::instance().all())
+        ASSERT_TRUE(initializer->prepareLiveGraph(config, sidePackets).ok());
+
+    const auto profile = sidePackets.liveGraphProfiles.find("video.object-tracking");
+    ASSERT_NE(profile, sidePackets.liveGraphProfiles.end());
+    ASSERT_EQ(profile->second->inputs.size(), 1);
+    ASSERT_EQ(profile->second->outputs.size(), 1);
+    EXPECT_TRUE(profile->second->inputs.count("video"));
+    EXPECT_TRUE(profile->second->outputs.count("tracked_detections"));
+    EXPECT_EQ(profile->second->graph.max_queue_size(), LiveGraphVideoInputQueueSize);
+    for (const auto& node : profile->second->graph.node()) {
+        EXPECT_NE(node.calculator(), "DetectionColorByIdCalculator");
+        EXPECT_NE(node.calculator(), "AnnotationOverlayCalculator");
+    }
 }
 
 TEST_F(LiveGraphSessionTest, SessionsRetainLeaseAndRunIndependentlyOfExecutor) {

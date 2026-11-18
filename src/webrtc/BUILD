@@ -77,13 +77,13 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
-    name = "movinet_video_stream",
-    srcs = ["movinet_video_stream.cpp"],
-    hdrs = ["movinet_video_stream.hpp"],
+    name = "vp8_video_stream",
+    srcs = ["vp8_video_stream.cpp"],
+    hdrs = ["vp8_video_stream.hpp"],
     deps = [
         "//src:libovmslogging",
-        "//third_party:openvino",
         "//third_party:opencv",
+        "@mediapipe//mediapipe/framework/formats:image_frame",
         "@libvpx//:vpx",
     ],
     target_compatible_with = select({
@@ -116,18 +116,25 @@ ovms_cc_library(
 ovms_cc_library(
     name = "webrtc_session_controller",
     srcs = ["webrtc_session_controller.cpp"],
-    hdrs = ["webrtc_session_controller.hpp"],
+    hdrs = [
+        "rtp_timestamp_unwrapper.hpp",
+        "webrtc_session_controller.hpp",
+    ],
     deps = [
         ":audio_utterance_buffer",
         ":opus_audio_codec",
         ":webrtc_peer_connection",
-        ":movinet_video_stream",
+        ":vp8_video_stream",
+        "//src/movinet:classification",
         "//src:mediapipe_executor_interface",
+        "//src/mediapipe_internal:live_graph_config",
         "//src/audio/speech_to_text:streaming_s2t",
         "//src/audio/speech_to_text:streaming_s2t_session",
         "//src/port:rapidjson_document",
         "//src/port:rapidjson_stringbuffer",
         "//src/port:rapidjson_writer",
+        "@mediapipe//mediapipe/framework/formats:detection_cc_proto",
+        "@mediapipe//mediapipe/framework/formats:image_frame",
         "@libdatachannel//:libdatachannel",
     ],
     target_compatible_with = select({

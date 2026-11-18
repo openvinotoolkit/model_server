@@ -25,6 +25,7 @@ ovms_cc_library(
     name = "bytetrack_calculators",
     deps = [
         "//src/bytetrack/utils:detection_color_by_id_calculator",
+        ":video_tracking_node_initializer",
         ":kalman_filter",
         ":kalman_matrices",
         ":strack",
@@ -35,6 +36,20 @@ ovms_cc_library(
         "//src/mediapipe_internal:__pkg__",
     ],
     alwayslink = 1
+)
+
+ovms_cc_library(
+    name = "video_tracking_node_initializer",
+    srcs = ["video_tracking_node_initializer.cpp"],
+    deps = [
+        "//src/mediapipe_internal:live_graph_config",
+        "//src/mediapipe_internal:node_initializer",
+        "@mediapipe//mediapipe/framework/formats:detection_cc_proto",
+        "@mediapipe//mediapipe/calculators/tensor:image_to_tensor_calculator",
+        "@mediapipe//mediapipe/calculators/util:detection_label_id_to_text_calculator",
+        "@mediapipe//mediapipe/calculators/util:non_max_suppression_calculator",
+    ],
+    alwayslink = 1,
 )
 
 mediapipe_proto_library(
