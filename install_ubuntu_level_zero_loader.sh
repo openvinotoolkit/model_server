@@ -35,4 +35,10 @@ esac
 loader_package=$(mktemp /tmp/level-zero-loader.XXXXXX.deb)
 trap 'rm -f "$loader_package"' EXIT
 curl -fL "$loader_url" -o "$loader_package"
+case "$BASE_OS" in
+    ubuntu22) loader_sha256=7c304e93835d96025c90f6a3d8f2ce5edf142c24da9f4871113a4f0225fef22e ;;
+    ubuntu24) loader_sha256=d4001dc474d3cb74ded50a449b9f646cfdfbb31e69e70b8af38f2d18273dfce1 ;;
+    ubuntu26) loader_sha256=ddd80bf4c5cef21716bc1d7370cc055dc8803451c6e644a98d3dd534d91bc1b2 ;;
+esac
+printf '%s  %s\n' "$loader_sha256" "$loader_package" | sha256sum --check --status -
 dpkg -i "$loader_package"
