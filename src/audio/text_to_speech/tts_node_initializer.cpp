@@ -40,7 +40,9 @@ public:
         const std::string& graphName,
         const std::string& basePath,
         GraphSidePackets& sidePackets,
-        PythonBackend* /*pythonBackend*/) override {
+        GraphMetadata& /*metadata*/,
+        PythonBackend* /*pythonBackend*/,
+        const MetricProvider* /*metrics*/) override {
         auto& ttsServableMap = sidePackets.ttsServableMap;
         if (!nodeConfig.node_options().size()) {
             SPDLOG_ERROR("TextToSpeech node missing options in graph: {}. ", graphName);

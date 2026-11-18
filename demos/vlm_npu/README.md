@@ -67,7 +67,8 @@ curl http://localhost:8000/v3/models
       "id": "OpenVINO/Phi-3.5-vision-instruct-fp16-ov",
       "object": "model",
       "created": 1773742559,
-      "owned_by": "OVMS"
+      "owned_by": "OVMS",
+      "max_model_len": 131072
     }
   ]
 }

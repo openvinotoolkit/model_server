@@ -59,6 +59,9 @@ absl::Status OmniModelLegacyServable::validateEndpoint(Endpoint endpoint) const 
     if (endpoint == Endpoint::COMPLETIONS) {
         return absl::InvalidArgumentError("Omni Servable does not support the /completions endpoint. Use /chat/completions or /responses.");
     }
+    if (endpoint == Endpoint::TRANSCRIPTIONS) {
+        return absl::InvalidArgumentError("Omni Servable does not support audio transcriptions");
+    }
     return absl::OkStatus();
 }
 
@@ -99,7 +102,7 @@ absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServable
     }
     auto& config = ovms::Config::instance();
 
-    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains);
+    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains, getProperties()->inputProcessorContext.config.visionInputConfig->videoMaxFrames);
     if (!status.ok()) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;

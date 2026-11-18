@@ -44,6 +44,11 @@ public:
         const MetricLabels& labels = {},
         const BucketBoundaries& bucketBoundaries = {});
 
+    /// WARNING: Destroys the underlying series without resetting the supplied handle.
+    /// All handles referencing that series become dangling, including handles returned by other
+    /// addMetric() calls with the same labels; subsequent use is undefined behavior.
+    /// Do not use in server lifecycle code: reporters and in-flight requests may retain handles,
+    /// and series must persist until registry destruction.
     void remove(std::unique_ptr<MetricType>& metric);
 
 private:

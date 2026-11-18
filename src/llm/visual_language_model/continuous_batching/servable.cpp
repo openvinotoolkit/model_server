@@ -70,6 +70,10 @@ absl::Status VisualLanguageModelServable::validateEndpoint(Endpoint endpoint) co
     if (endpoint == Endpoint::COMPLETIONS) {
         return absl::InvalidArgumentError("VLM Servable does not support the /completions endpoint. Use /chat/completions or /responses.");
     }
+    const auto& audioInputConfig = properties->inputProcessorContext.config.audioInputConfig;
+    if (endpoint == Endpoint::TRANSCRIPTIONS && !audioInputConfig.has_value()) {
+        return absl::InvalidArgumentError("VLM Servable does not support audio transcriptions");
+    }
     return absl::OkStatus();
 }
 
@@ -83,6 +87,9 @@ std::shared_ptr<GenAiServableProperties> VisualLanguageModelServable::getPropert
 
 absl::Status VisualLanguageModelServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto status = GenAiServable::prepareCompleteResponse(executionContext);
+    if (status.ok() && canRecordCompletedRequestMetrics(*executionContext)) {
+        recordCompletedRequestMetrics(*executionContext);
+    }
     if (status.ok() && llm_calculator_logger->should_log(spdlog::level::debug)) {
         auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
         auto perfMetrics = vlmExecutionContext->generationHandle->get_vlm_perf_metrics();
@@ -96,6 +103,9 @@ absl::Status VisualLanguageModelServable::preparePartialResponse(std::shared_ptr
     if (!status.ok()) {
         stopGenerationOnResponseError(std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext));
         return status;
+    }
+    if (!executionContext->sendLoopbackSignal && canRecordCompletedRequestMetrics(*executionContext)) {
+        recordCompletedRequestMetrics(*executionContext);
     }
     if (status.ok() &&
         !executionContext->sendLoopbackSignal &&

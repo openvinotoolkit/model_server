@@ -14,8 +14,11 @@
 // limitations under the License.
 //*****************************************************************************
 #include <future>
+#include <limits>
 #include <memory>
+#include <stdexcept>
 #include <thread>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -23,6 +26,7 @@
 #include <gtest/gtest.h>
 
 #include "src/metrics/metric.hpp"
+#include "src/metrics/calculator_metrics.hpp"
 #include "src/metrics/metric_family.hpp"
 #include "src/metrics/metric_registry.hpp"
 
@@ -32,9 +36,266 @@ using testing::ContainsRegex;
 using testing::HasSubstr;
 using testing::Not;
 
+static_assert(!std::is_copy_constructible_v<CalculatorCounter>);
+static_assert(!std::is_copy_assignable_v<CalculatorCounter>);
+static_assert(!std::is_copy_constructible_v<CalculatorGauge>);
+static_assert(!std::is_copy_assignable_v<CalculatorGauge>);
+static_assert(!std::is_copy_constructible_v<CalculatorHistogram>);
+static_assert(!std::is_copy_assignable_v<CalculatorHistogram>);
+
 TEST(Metrics, RegistryEmpty) {
     MetricRegistry registry;
     EXPECT_EQ(registry.collect().size(), 0);
+}
+
+TEST(CalculatorMetricsTest, RegistersAndUpdatesAcrossInstancesAndScrapes) {
+    MetricRegistry registry;
+    CalculatorMetrics metrics(&registry, "graph", "node");
+    auto first = metrics.getOrRegisterCounter("custom_events_total", "Events.");
+    auto second = metrics.getOrRegisterCounter("custom_events_total", "Events.");
+    EXPECT_EQ(first, second);
+    first->increment();
+    second->increment(2);
+    const std::string scrape = registry.collect();
+    EXPECT_THAT(scrape, HasSubstr("custom_events_total{name=\"graph\",node=\"node\"} 3\n"));
+    EXPECT_EQ(scrape, registry.collect());
+}
+
+TEST(MetricRegistryTest, ReRegistersCustomFamilyAfterRemoval) {
+    MetricRegistry registry;
+    auto first = registry.registerCustomFamily<MetricCounter>("custom_events_total", "Events.");
+
+    ASSERT_TRUE(registry.remove(first));
+    auto second = registry.registerCustomFamily<MetricCounter>("custom_events_total", "Events.");
+
+    ASSERT_NE(first, second);
+    auto metric = second->addMetric();
+    metric->increment();
+    EXPECT_THAT(registry.collect(), HasSubstr("custom_events_total 1\n"));
+}
+
+TEST(MetricRegistryTest, ReRegistersCustomFamilyAfterRemovalThroughAnotherWrapper) {
+    MetricRegistry registry;
+    auto registered = registry.registerCustomFamily<MetricCounter>("custom_events_total", "Events.");
+    auto otherWrapper = registry.createFamily<MetricCounter>("custom_events_total", "Events.");
+
+    ASSERT_NE(otherWrapper, nullptr);
+    ASSERT_TRUE(registry.remove(otherWrapper));
+    auto reRegistered = registry.registerCustomFamily<MetricCounter>("custom_events_total", "Events.");
+
+    ASSERT_NE(reRegistered, registered);
+    auto metric = reRegistered->addMetric();
+    metric->increment();
+    EXPECT_THAT(registry.collect(), HasSubstr("custom_events_total 1\n"));
+}
+
+TEST(CalculatorMetricsTest, RegistersAndUpdatesGauge) {
+    MetricRegistry registry;
+    CalculatorMetrics metrics(&registry, "graph", "node");
+    auto gauge = metrics.getOrRegisterGauge("custom_queue_depth", "Queued requests.");
+    EXPECT_EQ(gauge, metrics.getOrRegisterGauge("custom_queue_depth", "Queued requests."));
+    gauge->set(4);
+    gauge->add(2);
+    EXPECT_THAT(registry.collect(), HasSubstr("custom_queue_depth{name=\"graph\",node=\"node\"} 6\n"));
+    gauge->add(0);
+    EXPECT_THAT(registry.collect(), HasSubstr("custom_queue_depth{name=\"graph\",node=\"node\"} 6\n"));
+    gauge->add(-1);
+    EXPECT_THAT(registry.collect(), HasSubstr("custom_queue_depth{name=\"graph\",node=\"node\"} 5\n"));
+    gauge->set(-1.5);
+    EXPECT_THAT(registry.collect(), HasSubstr("custom_queue_depth{name=\"graph\",node=\"node\"} -1.5\n"));
+}
+
+TEST(CalculatorMetricsTest, RegistersAndUpdatesHistogram) {
+    MetricRegistry registry;
+    CalculatorMetrics metrics(&registry, "graph", "node");
+    const std::vector<double> buckets{0.1, 1, 5};
+    auto histogram = metrics.getOrRegisterHistogram("custom_request_duration_seconds", "Request duration.", buckets);
+    EXPECT_EQ(histogram, metrics.getOrRegisterHistogram("custom_request_duration_seconds", "Request duration.", buckets));
+    histogram->observe(0.5);
+    histogram->observe(3);
+    const std::string scrape = registry.collect();
+    EXPECT_THAT(scrape, HasSubstr("custom_request_duration_seconds_count{name=\"graph\",node=\"node\"} 2\n"));
+    EXPECT_THAT(scrape, HasSubstr("custom_request_duration_seconds_sum{name=\"graph\",node=\"node\"} 3.5\n"));
+    EXPECT_THAT(scrape, HasSubstr("custom_request_duration_seconds_bucket{name=\"graph\",node=\"node\",le=\"1\"} 1\n"));
+    EXPECT_THAT(scrape, HasSubstr("custom_request_duration_seconds_bucket{name=\"graph\",node=\"node\",le=\"5\"} 2\n"));
+}
+
+TEST(CalculatorMetricsTest, RejectsNamesCollidingWithHistogramSamples) {
+    const std::vector<std::string> suffixes{"_count", "_sum", "_bucket"};
+    for (const auto& suffix : suffixes) {
+        const std::string histogramName = "custom_latency_seconds";
+        const std::string generatedName = histogramName + suffix;
+        {
+            MetricRegistry registry;
+            CalculatorMetrics metrics(&registry, "graph", "node");
+            metrics.getOrRegisterHistogram(histogramName, "Latency.", {1, 2});
+            EXPECT_THROW(metrics.getOrRegisterGauge(generatedName, "Generated sample collision."), std::invalid_argument);
+        }
+        {
+            MetricRegistry registry;
+            CalculatorMetrics metrics(&registry, "graph", "node");
+            metrics.getOrRegisterGauge(generatedName, "Gauge.");
+            EXPECT_THROW(metrics.getOrRegisterHistogram(histogramName, "Latency.", {1, 2}), std::invalid_argument);
+        }
+    }
+}
+
+TEST(CalculatorMetricsTest, NodeAndGraphScopesAreIndependent) {
+    MetricRegistry registry;
+    CalculatorMetrics first(&registry, "graph", "first");
+    CalculatorMetrics second(&registry, "graph", "second");
+    CalculatorMetrics other(&registry, "other", "first");
+    first.getOrRegisterCounter("custom_events_total", "Events.")->increment();
+    second.getOrRegisterCounter("custom_events_total", "Events.")->increment(2);
+    other.getOrRegisterCounter("custom_events_total", "Events.")->increment(3);
+    EXPECT_THAT(registry.collect(), HasSubstr("custom_events_total{name=\"graph\",node=\"first\"} 1\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("custom_events_total{name=\"graph\",node=\"second\"} 2\n"));
+    EXPECT_THAT(registry.collect(), HasSubstr("custom_events_total{name=\"other\",node=\"first\"} 3\n"));
+}
+
+TEST(CalculatorMetricsTest, InvalidRegistrationsFailExplicitly) {
+    MetricRegistry registry;
+    CalculatorMetrics metrics(&registry, "graph", "node");
+    for (const char* name : {"events_total", "ovms_events_total", "custom_events", "custom_bad-name_total", "custom__total"}) {
+        EXPECT_THROW(metrics.getOrRegisterCounter(name, "Events."), std::invalid_argument);
+    }
+    EXPECT_NO_THROW(metrics.getOrRegisterCounter("custom_a_total", "Events."));
+    EXPECT_THROW(metrics.getOrRegisterCounter("custom_events_total", ""), std::invalid_argument);
+    metrics.getOrRegisterCounter("custom_events_total", "Events.");
+    EXPECT_THROW(metrics.getOrRegisterCounter("custom_events_total", "Different help."), std::invalid_argument);
+    CalculatorMetrics other(&registry, "graph", "other");
+    EXPECT_THROW(other.getOrRegisterCounter("custom_events_total", "Different help."), std::invalid_argument);
+    EXPECT_THROW(metrics.getOrRegisterHistogram("custom_empty_buckets", "Latency.", {}), std::invalid_argument);
+    EXPECT_THROW(metrics.getOrRegisterHistogram("custom_unsorted_buckets", "Latency.", {2, 1}), std::invalid_argument);
+    EXPECT_THROW(metrics.getOrRegisterHistogram("custom_duplicate_buckets", "Latency.", {1, 1}), std::invalid_argument);
+    EXPECT_THROW(metrics.getOrRegisterHistogram("custom_nonfinite_buckets", "Latency.", {1, std::numeric_limits<double>::infinity()}), std::invalid_argument);
+    EXPECT_THROW(metrics.getOrRegisterGauge("custom_bad-name", "Gauge."), std::invalid_argument);
+    EXPECT_THAT(registry.collect(), HasSubstr("custom_events_total{name=\"graph\",node=\"node\"} 0\n"));
+}
+
+TEST(CalculatorMetricsTest, InvalidUpdatesAreIgnored) {
+    MetricRegistry registry;
+    CalculatorMetrics metrics(&registry, "graph", "node");
+    auto counter = metrics.getOrRegisterCounter("custom_events_total", "Events.");
+    auto gauge = metrics.getOrRegisterGauge("custom_temperature", "Temperature.");
+    auto histogram = metrics.getOrRegisterHistogram("custom_latency_seconds", "Latency.", {1, 2});
+    counter->increment(3);
+    gauge->set(-2);
+    histogram->observe(1);
+    const std::string before = registry.collect();
+
+    for (double value : {-1.0, std::numeric_limits<double>::quiet_NaN(),
+             std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()}) {
+        EXPECT_NO_THROW(counter->increment(value));
+    }
+    for (double value : {std::numeric_limits<double>::quiet_NaN(),
+             std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()}) {
+        EXPECT_NO_THROW(gauge->set(value));
+        EXPECT_NO_THROW(gauge->add(value));
+        EXPECT_NO_THROW(histogram->observe(value));
+    }
+    EXPECT_EQ(registry.collect(), before);
+}
+
+TEST(CalculatorMetricsTest, DisabledMetricsReturnUsableNoOpHandles) {
+    CalculatorMetrics metrics(nullptr, "graph", "node");
+    auto counter = metrics.getOrRegisterCounter("custom_events_total", "Events.");
+    auto gauge = metrics.getOrRegisterGauge("custom_queue_depth", "Queued requests.");
+    auto histogram = metrics.getOrRegisterHistogram("custom_latency_seconds", "Latency.", {1, 2});
+    ASSERT_NE(counter, nullptr);
+    ASSERT_NE(gauge, nullptr);
+    ASSERT_NE(histogram, nullptr);
+    counter->increment(3);
+    gauge->set(3);
+    gauge->add(1);
+    gauge->add(-1);
+    histogram->observe(1.5);
+    EXPECT_EQ(counter, metrics.getOrRegisterCounter("custom_events_total", "Events."));
+    EXPECT_EQ(gauge, metrics.getOrRegisterGauge("custom_queue_depth", "Queued requests."));
+    EXPECT_EQ(histogram, metrics.getOrRegisterHistogram("custom_latency_seconds", "Latency.", {1, 2}));
+}
+
+TEST(CalculatorMetricsTest, ReloadedScopeContinuesSeriesOfAllMetricTypes) {
+    MetricRegistry registry;
+    const std::vector<double> buckets{1, 2};
+    std::shared_ptr<CalculatorCounter> retainedCounter;
+    {
+        CalculatorMetrics unloadedScope(&registry, "graph", "node");
+        retainedCounter = unloadedScope.getOrRegisterCounter("custom_events_total", "Events.");
+        retainedCounter->increment();
+        unloadedScope.getOrRegisterGauge("custom_queue_depth", "Queued requests.")->set(4);
+        unloadedScope.getOrRegisterHistogram("custom_latency_seconds", "Latency.", buckets)->observe(1.5);
+    }
+    const std::string unloadedScrape = registry.collect();
+    EXPECT_THAT(unloadedScrape, HasSubstr("custom_events_total{name=\"graph\",node=\"node\"} 1\n"));
+    EXPECT_THAT(unloadedScrape, HasSubstr("custom_queue_depth{name=\"graph\",node=\"node\"} 4\n"));
+    EXPECT_THAT(unloadedScrape, HasSubstr("custom_latency_seconds_count{name=\"graph\",node=\"node\"} 1\n"));
+
+    CalculatorMetrics reloadedScope(&registry, "graph", "node");
+    auto counter = reloadedScope.getOrRegisterCounter("custom_events_total", "Events.");
+    auto gauge = reloadedScope.getOrRegisterGauge("custom_queue_depth", "Queued requests.");
+    auto histogram = reloadedScope.getOrRegisterHistogram("custom_latency_seconds", "Latency.", buckets);
+    EXPECT_EQ(registry.collect(), unloadedScrape);
+    counter->increment(2);
+    retainedCounter->increment(100);
+    gauge->add(1);
+    histogram->observe(0.5);
+    const std::string reloadedScrape = registry.collect();
+    EXPECT_THAT(reloadedScrape, HasSubstr("custom_events_total{name=\"graph\",node=\"node\"} 103\n"));
+    EXPECT_THAT(reloadedScrape, HasSubstr("custom_queue_depth{name=\"graph\",node=\"node\"} 5\n"));
+    EXPECT_THAT(reloadedScrape, HasSubstr("custom_latency_seconds_count{name=\"graph\",node=\"node\"} 2\n"));
+    EXPECT_THAT(reloadedScrape, HasSubstr("custom_latency_seconds_sum{name=\"graph\",node=\"node\"} 2\n"));
+}
+
+TEST(CalculatorMetricsTest, RegistrationTypeAndHistogramBucketsMustMatchAcrossScopes) {
+    MetricRegistry registry;
+    CalculatorMetrics first(&registry, "graph", "first");
+    CalculatorMetrics second(&registry, "graph", "second");
+    first.getOrRegisterGauge("custom_events_total", "Events.")->set(3);
+    second.getOrRegisterGauge("custom_events_total", "Events.")->set(5);
+    EXPECT_THROW(second.getOrRegisterCounter("custom_events_total", "Events."), std::invalid_argument);
+
+    first.getOrRegisterHistogram("custom_latency_seconds", "Latency.", {1, 2});
+    second.getOrRegisterHistogram("custom_latency_seconds", "Latency.", {1, 2})->observe(1.5);
+    EXPECT_THROW(second.getOrRegisterHistogram("custom_latency_seconds", "Latency.", {1, 3}), std::invalid_argument);
+    EXPECT_THROW(second.getOrRegisterHistogram("custom_latency_seconds", "Different help.", {1, 2}), std::invalid_argument);
+    const std::string scrape = registry.collect();
+    EXPECT_THAT(scrape, HasSubstr("custom_events_total{name=\"graph\",node=\"first\"} 3\n"));
+    EXPECT_THAT(scrape, HasSubstr("custom_events_total{name=\"graph\",node=\"second\"} 5\n"));
+    EXPECT_THAT(scrape, HasSubstr("custom_latency_seconds_count{name=\"graph\",node=\"second\"} 1\n"));
+}
+
+TEST(CalculatorMetricsTest, ConcurrentRegistrationUpdatesAndScrapes) {
+    MetricRegistry registry;
+    CalculatorMetrics metrics(&registry, "graph", "node");
+    auto writer = std::async(std::launch::async, [&]() {
+        for (int i = 0; i < 1000; ++i) {
+            metrics.getOrRegisterCounter("custom_events_total", "Events.")->increment();
+        }
+    });
+    for (int i = 0; i < 100; ++i) {
+        registry.collect();
+    }
+    writer.get();
+    EXPECT_THAT(registry.collect(), HasSubstr("custom_events_total{name=\"graph\",node=\"node\"} 1000\n"));
+}
+
+TEST(CalculatorMetricsTest, ConflictingBuiltInFamilyTypeFailsRegistration) {
+    MetricRegistry registry;
+    auto family = registry.createFamily<MetricGauge>("custom_events_total", "Events.");
+    ASSERT_NE(family, nullptr);
+    CalculatorMetrics metrics(&registry, "graph", "node");
+    EXPECT_THROW(metrics.getOrRegisterCounter("custom_events_total", "Events."), std::invalid_argument);
+    EXPECT_TRUE(registry.collect().empty());
+}
+
+TEST(CalculatorMetricsTest, ConflictingCustomMetricTypeFailsRegistration) {
+    MetricRegistry registry;
+    auto family = registry.createFamily<MetricGauge>("custom_request_duration_seconds", "Request duration.");
+    ASSERT_NE(family, nullptr);
+    CalculatorMetrics metrics(&registry, "graph", "node");
+    EXPECT_THROW(metrics.getOrRegisterHistogram("custom_request_duration_seconds", "Request duration.", {1, 2}), std::invalid_argument);
+    EXPECT_TRUE(registry.collect().empty());
 }
 
 TEST(MetricsCounter, IncrementDefault) {

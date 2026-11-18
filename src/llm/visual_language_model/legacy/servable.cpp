@@ -75,6 +75,9 @@ absl::Status VisualLanguageModelLegacyServable::validateEndpoint(Endpoint endpoi
     if (endpoint == Endpoint::COMPLETIONS) {
         return absl::InvalidArgumentError("VLM Servable does not support the /completions endpoint. Use /chat/completions or /responses.");
     }
+    if (endpoint == Endpoint::TRANSCRIPTIONS) {
+        return absl::InvalidArgumentError("Legacy VLM Servable does not support audio transcriptions");
+    }
     return absl::OkStatus();
 }
 
@@ -116,7 +119,7 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
     }
     auto& config = ovms::Config::instance();
 
-    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains);
+    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains, getProperties()->inputProcessorContext.config.visionInputConfig->videoMaxFrames);
     if (!status.ok()) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;

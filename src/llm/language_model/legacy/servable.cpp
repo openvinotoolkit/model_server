@@ -42,6 +42,13 @@
 
 namespace ovms {
 
+absl::Status LegacyServable::validateEndpoint(Endpoint endpoint) const {
+    if (endpoint == Endpoint::TRANSCRIPTIONS) {
+        return absl::InvalidArgumentError("This servable does not support audio transcriptions");
+    }
+    return absl::OkStatus();
+}
+
 void LegacyServable::logPerfMetrics(ov::genai::PerfMetrics& perfMetrics) {
     const size_t inputTokenCount = perfMetrics.get_num_input_tokens();
     const size_t outputTokenCount = perfMetrics.get_num_generated_tokens();
@@ -106,7 +113,8 @@ absl::Status LegacyServable::parseRequest(std::shared_ptr<GenAiServableExecution
         return absl::InvalidArgumentError(std::string("Failed to create API handler: ") + e.what());
     }
 
-    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength);
+    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength,
+        std::nullopt, std::nullopt);
     if (!status.ok()) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;

@@ -323,14 +323,17 @@ absl::Status OpenAIApiHandler::parseTools() {
 }
 
 absl::Status OpenAIApiHandler::parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
-    std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains) {
+    std::optional<std::string> allowedLocalMediaPath, std::optional<std::vector<std::string>> allowedMediaDomains,
+    std::optional<uint32_t> videoMaxFrames) {
+    this->videoMaxFrames = videoMaxFrames;
     return parseRequestImpl(maxTokensLimit, bestOfLimit, maxModelLength, allowedLocalMediaPath, allowedMediaDomains);
 }
 
-void OpenAIApiHandler::initOutputParser(const ReasoningGenerationContext& reasoningContext) {
-    if (toolParserName.empty() && reasoningParserName.empty())
+void OpenAIApiHandler::initOutputParser(const ReasoningGenerationContext& reasoningContext, const std::string& contentParserName) {
+    if (toolParserName.empty() && reasoningParserName.empty() && contentParserName.empty())
         return;
-    outputParser = std::make_shared<OutputParser>(tokenizer, toolParserName, reasoningParserName, request.toolNameSchemaMap);
+    outputParser = std::make_shared<OutputParser>(tokenizer, toolParserName, reasoningParserName,
+        request.toolNameSchemaMap, contentParserName);
     outputParser->setImplicitReasoningStart(reasoningContext.implicitStart);
 }
 

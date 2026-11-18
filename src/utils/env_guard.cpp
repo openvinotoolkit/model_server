@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include "env_guard.hpp"
+#include "windows_executable_path.hpp"
 
 #include <spdlog/spdlog.h>
 
@@ -25,6 +26,37 @@ const std::string GetEnvVar(const std::string& var) {
     if (envCred)
         val = std::string(envCred);
     return val;
+}
+
+void setDefaultEspeakDataPath(const std::filesystem::path& executablePath) {
+    const char* existingPath = std::getenv("ESPEAK_DATA_PATH");
+    if (existingPath != nullptr && existingPath[0] != '\0') {
+        return;
+    }
+#ifdef _WIN32
+    const auto dataPath = executablePath.parent_path() / "espeak-ng-data";
+#else
+    const auto dataPath = executablePath.parent_path() / ".." / "share" / "espeak-ng-data";
+#endif
+    std::error_code error;
+    if (std::filesystem::is_directory(dataPath, error)) {
+        SetEnvironmentVar("ESPEAK_DATA_PATH", dataPath.lexically_normal().string());
+    }
+}
+
+void setDefaultEspeakDataPath() {
+#ifdef _WIN32
+    const auto executablePath = ovms::getWindowsExecutablePath();
+    if (!executablePath.empty()) {
+        setDefaultEspeakDataPath(executablePath);
+    }
+#elif __linux__
+    std::error_code error;
+    const auto executablePath = std::filesystem::read_symlink("/proc/self/exe", error);
+    if (!error) {
+        setDefaultEspeakDataPath(executablePath);
+    }
+#endif
 }
 
 void SetEnvironmentVar(const std::string& var, const std::string& val) {

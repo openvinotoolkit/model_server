@@ -3249,6 +3249,29 @@ TEST(OvmsGraphCliParserTest, invalidChatTemplateEngineIsRejected) {
     EXPECT_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"), std::invalid_argument);
 }
 
+TEST(OvmsGraphCliParserTest, inputVideoOptions) {
+    ovms::HFSettingsImpl hfSettings;
+    ovms::GraphCLIParser parser;
+    parser.parse({"--input_video_fps", "1.5", "--input_video_max_frames", "8"});
+    parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model");
+    const auto& graphSettings = std::get<ovms::TextGenGraphSettingsImpl>(hfSettings.graphSettings);
+    ASSERT_TRUE(graphSettings.inputVideoFps.has_value());
+    EXPECT_FLOAT_EQ(graphSettings.inputVideoFps.value(), 1.5F);
+    EXPECT_EQ(graphSettings.inputVideoMaxFrames, 8);
+}
+
+TEST(OvmsGraphCliParserTest, invalidInputVideoOptionsAreRejected) {
+    for (const auto& args : std::vector<std::vector<std::string>>{
+             {"--input_video_fps", "0"},
+             {"--input_video_fps", "-1"},
+             {"--input_video_max_frames", "0"}}) {
+        ovms::HFSettingsImpl hfSettings;
+        ovms::GraphCLIParser parser;
+        parser.parse(args);
+        EXPECT_THROW(parser.prepare(ovms::HF_PULL_MODE, hfSettings, "test_model"), std::invalid_argument) << args[0] << " " << args[1];
+    }
+}
+
 TEST(OvmsGraphCliParserTest, embeddingsMaxLengthZeroThrowsInvalidArgument) {
     ovms::HFSettingsImpl hfSettings;
     ovms::EmbeddingsGraphCLIParser parser;

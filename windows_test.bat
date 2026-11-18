@@ -92,7 +92,6 @@ set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 set "openvinoBatch=call !BAZEL_SHORT_PATH!\openvino\setupvars.bat"
 
 set "opencvBatch=call C:\opt\opencv_!opencv_version!\setup_vars_opencv4.cmd"
-set "PYTHONHOME=C:\opt\Python312"
 
 :: Set required libraries paths
 %openvinoBatch%
@@ -106,8 +105,8 @@ if !errorlevel! neq 0 (
     exit /b !errorlevel!
 )
 
-if defined PYTHONPATH set "PYTHONPATH=C:\opt\Python312;%PYTHONPATH%;%setPythonPath%"
-if not defined PYTHONPATH set "PYTHONPATH=C:\opt\Python312;%setPythonPath%"
+set "PYTHONHOME=C:\opt\Python312"
+set "PYTHONPATH=C:\opt\Python312;%setPythonPath%"
 
 :: Start bazel build test
 %buildTestCommand% 2>&1 | tee win_build_test.log

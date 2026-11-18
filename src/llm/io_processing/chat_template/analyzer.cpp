@@ -127,7 +127,7 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
     }
 
     // Reasoning-only detection (no tool parser matched but template has reasoning tags)
-    if (contains(templateSource, "<think>") || contains(templateSource, "content.split('</think>')")) {
+    if (contains(templateSource, "<think>") || contains(templateSource, "</think>")) {
         result.detectedReasoningParser = "qwen3";
     }
 
