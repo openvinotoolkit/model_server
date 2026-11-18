@@ -59,7 +59,7 @@ protected:
 
     void SetUp() override {
         // For Gemma4 model there is only tool parser available
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*gemma4Tokenizer, "gemma4", "gemma4", EMPTY_TOOLS_SCHEMA);
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*gemma4Tokenizer, "gemma4", "gemma4", EMPTY_TOOLS_SCHEMA, ovms::ModelGenerationContext{});
     }
 
     void assertChunkEqual(const std::optional<ovms::Delta>& doc, const std::optional<std::string>& expectedDelta, const std::string& chunk) {
@@ -277,9 +277,10 @@ TEST_F(Gemma4OutputParserTest, ParseReasoningWithOpenerFollowedBySpaceThenKeywor
 }
 
 TEST_F(Gemma4OutputParserTest, ImplicitStartStillConsumesGeneratedChannelHeader) {
-    const auto context = ovms::determineReasoningContext(ovms::getDefaultReasoningParsingConfig("gemma4"), "<|turn>model\n<|channel>");
-    EXPECT_TRUE(context.implicitStart);
-    outputParserWithRegularToolParsing->setImplicitReasoningStart(context.implicitStart);
+    const std::string prompt = "<|turn>model\n<|channel>";
+    const auto context = ovms::determineModelGenerationContext(ovms::getDefaultReasoningParsingConfig("gemma4"), prompt);
+    EXPECT_TRUE(context.reasoning.implicitStart);
+    outputParserWithRegularToolParsing->setImplicitReasoningStart(context.reasoning.implicitStart);
     std::vector<std::pair<std::string, std::optional<std::string>>> chunks{
         {"thought\n", std::nullopt},
         {"Some reasoning content", R"({"delta":{"reasoning_content":"Some reasoning content"}})"},

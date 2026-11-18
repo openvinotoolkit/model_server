@@ -27,7 +27,7 @@ class Qwen3AsrContentParser final : public BaseOutputParser {
     bool asrTextStarted = false;
 
 public:
-    explicit Qwen3AsrContentParser(ov::genai::Tokenizer& tokenizer);
+    explicit Qwen3AsrContentParser(ov::genai::Tokenizer& tokenizer, const ModelGenerationContext& context);
 
     void resetState() override;
     std::optional<Delta> parseChunk(const std::string& chunkResponse,

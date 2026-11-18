@@ -54,14 +54,14 @@ public:
         // decodes to empty with skip_special_tokens=true).
         cfg.startTags = {"<|python_tag|>"};
         cfg.tokenIdStartTags = {"<|python_tag|>"};
-        cfg.preambleStartTags = {"{"};
+        cfg.unknownPhaseStartTags = {"{"};
         return cfg;
     }
 
     explicit Llama3ToolParser(ov::genai::Tokenizer& tokenizer,
-        std::optional<OutputParsingConfig> configOverride = std::nullopt) :
+        std::optional<OutputParsingConfig> configOverride, const ModelGenerationContext& context) :
         BaseOutputParser(tokenizer,
-            configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+            configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig(), context) {}
 
     void resetState() override {
         lastJson.SetNull();

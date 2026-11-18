@@ -94,7 +94,7 @@ TEST_F(ParserConfigValidationTest, SupportedNamesStringContainsAllParsers) {
 
 TEST_F(ParserConfigValidationTest, OutputParserThrowsOnUnknownToolParser) {
     try {
-        OutputParser parser(*parserConfigValidationTokenizer, "totally_invalid_parser", "", PARSER_CONFIG_VALIDATION_EMPTY_TOOLS_SCHEMA);
+        OutputParser parser(*parserConfigValidationTokenizer, "totally_invalid_parser", "", PARSER_CONFIG_VALIDATION_EMPTY_TOOLS_SCHEMA, ovms::ModelGenerationContext{});
         FAIL() << "OutputParser should have thrown for unknown tool parser name";
     } catch (const std::runtime_error& e) {
         const std::string what = e.what();
@@ -107,7 +107,7 @@ TEST_F(ParserConfigValidationTest, OutputParserThrowsOnUnknownToolParser) {
 
 TEST_F(ParserConfigValidationTest, OutputParserThrowsOnUnknownReasoningParser) {
     try {
-        OutputParser parser(*parserConfigValidationTokenizer, "", "totally_invalid_reasoning", PARSER_CONFIG_VALIDATION_EMPTY_TOOLS_SCHEMA);
+        OutputParser parser(*parserConfigValidationTokenizer, "", "totally_invalid_reasoning", PARSER_CONFIG_VALIDATION_EMPTY_TOOLS_SCHEMA, ovms::ModelGenerationContext{});
         FAIL() << "OutputParser should have thrown for unknown reasoning parser name";
     } catch (const std::runtime_error& e) {
         const std::string what = e.what();
@@ -120,8 +120,20 @@ TEST_F(ParserConfigValidationTest, OutputParserThrowsOnUnknownReasoningParser) {
 
 TEST_F(ParserConfigValidationTest, OutputParserAcceptsEmptyNames) {
     EXPECT_NO_THROW({
-        OutputParser parser(*parserConfigValidationTokenizer, "", "", PARSER_CONFIG_VALIDATION_EMPTY_TOOLS_SCHEMA);
+        OutputParser parser(*parserConfigValidationTokenizer, "", "", PARSER_CONFIG_VALIDATION_EMPTY_TOOLS_SCHEMA, ovms::ModelGenerationContext{});
         EXPECT_FALSE(parser.isToolParserAvailable());
         EXPECT_FALSE(parser.isReasoningParserAvailable());
     });
+}
+
+TEST_F(ParserConfigValidationTest, OutputParserThrowsOnUnknownContentParser) {
+    try {
+        OutputParser parser(*parserConfigValidationTokenizer, "", "", PARSER_CONFIG_VALIDATION_EMPTY_TOOLS_SCHEMA,
+            ovms::ModelGenerationContext{}, "totally_invalid_content");
+        FAIL() << "OutputParser should have thrown for unknown content parser name";
+    } catch (const std::runtime_error& error) {
+        const std::string what = error.what();
+        EXPECT_NE(what.find("Unsupported content parser"), std::string::npos) << what;
+        EXPECT_NE(what.find("totally_invalid_content"), std::string::npos) << what;
+    }
 }

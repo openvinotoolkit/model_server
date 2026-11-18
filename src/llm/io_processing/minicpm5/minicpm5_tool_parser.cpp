@@ -276,9 +276,9 @@ std::optional<std::string> Minicpm5ToolParserImpl::getCurrentFunctionName() cons
 
 // ---- Minicpm5ToolParser ----
 
-Minicpm5ToolParser::Minicpm5ToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas) :
+Minicpm5ToolParser::Minicpm5ToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas, const ModelGenerationContext& context) :
     BaseOutputParser(tokenizer,
-        defaultParsingConfig()),
+        defaultParsingConfig(), context),
     toolSchemas(toolSchemas),
     toolsParametersTypes(createToolsParametersTypesMap(toolSchemas)),
     streamParser(this->toolsParametersTypes) {}

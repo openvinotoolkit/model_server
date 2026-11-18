@@ -57,7 +57,7 @@ protected:
     }
 
     void SetUp() override {
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*llama3Tokenizer, "llama3", "", EMPTY_TOOLS_SCHEMA);
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*llama3Tokenizer, "llama3", "", EMPTY_TOOLS_SCHEMA, ovms::ModelGenerationContext{});
     }
 };
 
@@ -203,7 +203,7 @@ TEST_F(Llama3OutputParserTest, HolisticStreaming) {
 
     for (auto lastFinishReason : {ov::genai::GenerationFinishReason::NONE, ov::genai::GenerationFinishReason::STOP, ov::genai::GenerationFinishReason::LENGTH}) {
         // Need to have new output parser per case to simulate separate request processing
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*llama3Tokenizer, "llama3", "", EMPTY_TOOLS_SCHEMA);
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*llama3Tokenizer, "llama3", "", EMPTY_TOOLS_SCHEMA, ovms::ModelGenerationContext{});
         auto chunkToDeltaVecCopy = chunkToDeltaVec;
         if (lastFinishReason == ov::genai::GenerationFinishReason::NONE) {
             chunkToDeltaVecCopy.push_back({"Paris\"}}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":1,"function":{"arguments":" \""}}]}})"});
@@ -326,7 +326,7 @@ TEST_F(Llama3OutputParserTest, StreamingToolWithComplexArguments) {
             "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"nested_value2\"}}]}}"},
     };
 
-    auto outputParser = std::make_unique<OutputParser>(*llama3Tokenizer, "llama3", "", EMPTY_TOOLS_SCHEMA);
+    auto outputParser = std::make_unique<OutputParser>(*llama3Tokenizer, "llama3", "", EMPTY_TOOLS_SCHEMA, ovms::ModelGenerationContext{});
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
         std::optional<ovms::Delta> doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
         if (!expectedDelta.has_value() && !doc.has_value()) {

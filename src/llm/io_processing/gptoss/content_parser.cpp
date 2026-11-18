@@ -61,18 +61,29 @@ OutputParsingConfig GptOssContentParser::defaultParsingConfig() {
 }
 
 GptOssContentParser::GptOssContentParser(ov::genai::Tokenizer& tokenizer,
-    std::optional<OutputParsingConfig> configOverride) :
+    std::optional<OutputParsingConfig> configOverride, const ModelGenerationContext& context) :
     BaseOutputParser(tokenizer,
-        configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+        configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig(), context) {
+    promptState = GptOssGenerationContextAdapter::adapt(context);
+    parsingConfig.promptContinuationStartTags.clear();
+    if (promptState.header == GptOssGenerationContext::Header::Assistant ||
+        (promptState.header == GptOssGenerationContext::Header::Channel && promptState.channel != "analysis")) {
+        parsingConfig.promptContinuationStartTags = {MESSAGE_TAG};
+    }
+    resetState();
+}
 
 void GptOssContentParser::resetState() {
     streamState = StreamState::READING_HEADER;
     pendingInput.clear();
     processedChunkSize = 0;
     shouldEmitCurrentMessageBody = false;
+    assistantRoleAlreadyInPrompt = promptState.header == GptOssGenerationContext::Header::Assistant;
+    initialChannelMessagePending = promptState.header == GptOssGenerationContext::Header::Channel &&
+                                   promptState.channel != "analysis";
 }
 
-bool GptOssContentParser::shouldEmitBody(const std::string& header) const {
+bool GptOssContentParser::shouldEmitBody(const std::string& header, bool roleAlreadyInPrompt) const {
     if (header.find("to=functions.") != std::string::npos) {
         return false;
     }
@@ -89,7 +100,7 @@ bool GptOssContentParser::shouldEmitBody(const std::string& header) const {
     }
 
     if (channelPos == std::string::npos) {
-        return author.find("assistant") == 0;
+        return roleAlreadyInPrompt || author.find("assistant") == 0;
     }
     const std::size_t channelStart = channelPos + CHANNEL_TAG.size();
     const std::size_t channelEnd = header.find_first_of(" \t\r\n<", channelStart);
@@ -119,7 +130,8 @@ GptOssContentParser::ParseProgress GptOssContentParser::consumeHeader(std::strin
     }
 
     const std::string header = pendingInput.substr(0, messagePos);
-    shouldEmitCurrentMessageBody = shouldEmitBody(header);
+    shouldEmitCurrentMessageBody = shouldEmitBody(header, assistantRoleAlreadyInPrompt);
+    assistantRoleAlreadyInPrompt = false;
     pendingInput.erase(0, messagePos + MESSAGE_TAG.size());
     streamState = StreamState::READING_BODY;
     return ParseProgress::ADVANCED;
@@ -152,6 +164,21 @@ std::optional<Delta> GptOssContentParser::parseChunk(const std::string& chunk,
     const std::vector<int64_t>& /*tokens*/,
     ov::genai::GenerationFinishReason /*finishReason*/) {
     appendNewChunk(chunk);
+
+    if (initialChannelMessagePending) {
+        const std::size_t messagePos = pendingInput.find(MESSAGE_TAG);
+        if (messagePos == std::string::npos) {
+            if (pendingInput.size() < MESSAGE_TAG.size() && MESSAGE_TAG.compare(0, pendingInput.size(), pendingInput) == 0) {
+                return std::nullopt;
+            }
+            initialChannelMessagePending = false;
+        } else {
+            pendingInput.erase(0, messagePos + MESSAGE_TAG.size());
+            streamState = StreamState::READING_BODY;
+            shouldEmitCurrentMessageBody = true;
+            initialChannelMessagePending = false;
+        }
+    }
 
     std::string content;
     bool wasMessageConsumed = false;

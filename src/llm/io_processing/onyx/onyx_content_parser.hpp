@@ -43,7 +43,7 @@ class OnyxContentParser : public BaseOutputParser {
 public:
     OnyxContentParser() = delete;
     explicit OnyxContentParser(ov::genai::Tokenizer& tokenizer,
-        std::optional<OutputParsingConfig> configOverride = std::nullopt);
+        std::optional<OutputParsingConfig> configOverride, const ModelGenerationContext& context);
 
     static OutputParsingConfig defaultParsingConfig();
 

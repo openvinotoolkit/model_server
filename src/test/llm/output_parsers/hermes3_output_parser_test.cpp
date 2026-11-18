@@ -55,7 +55,7 @@ protected:
 
     void SetUp() override {
         // For Hermes3 model there is only tool parser available
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*hermes3Tokenizer, "hermes3", "", EMPTY_TOOLS_SCHEMA);
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*hermes3Tokenizer, "hermes3", "", EMPTY_TOOLS_SCHEMA, ovms::ModelGenerationContext{});
     }
 };
 

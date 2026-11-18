@@ -199,19 +199,28 @@ absl::Status OpenAIApiHandler::ensureArgumentsInToolCalls(Value& messageObj) {
 
 absl::Status OpenAIApiHandler::parseTools() {
     auto toolChoiceIt = doc.FindMember("tool_choice");
-    std::string toolChoice{"auto"};
+    ToolChoiceMode toolChoice = ToolChoiceMode::Auto;
+    std::optional<std::string> toolChoiceFunctionName;
     if (toolChoiceIt != doc.MemberEnd() && !toolChoiceIt->value.IsNull()) {
         if (toolChoiceIt->value.IsString()) {
-            toolChoice = toolChoiceIt->value.GetString();
-            if (toolChoice != "none" && toolChoice != "auto" && toolChoice != "required")
+            const std::string mode = toolChoiceIt->value.GetString();
+            if (mode == "none") {
+                toolChoice = ToolChoiceMode::None;
+            } else if (mode == "auto") {
+                toolChoice = ToolChoiceMode::Auto;
+            } else if (mode == "required") {
+                toolChoice = ToolChoiceMode::Required;
+            } else {
                 return absl::InvalidArgumentError("tool_choice should be either 'none' or 'auto' or 'required'");
+            }
         } else if (toolChoiceIt->value.IsObject()) {
+            toolChoice = ToolChoiceMode::NamedFunction;
             auto toolChoiceObj = toolChoiceIt->value.GetObject();
             auto toolChoiceFunctionIt = toolChoiceObj.FindMember("function");
             if (toolChoiceFunctionIt != toolChoiceObj.MemberEnd() && toolChoiceFunctionIt->value.IsObject()) {
                 auto nameIt = toolChoiceFunctionIt->value.GetObject().FindMember("name");
                 if (nameIt != toolChoiceFunctionIt->value.GetObject().MemberEnd() && nameIt->value.IsString()) {
-                    toolChoice = nameIt->value.GetString();
+                    toolChoiceFunctionName = nameIt->value.GetString();
                 } else {
                     return absl::InvalidArgumentError("tool_choice.function.name is not a valid string");
                 }
@@ -222,7 +231,7 @@ absl::Status OpenAIApiHandler::parseTools() {
                     if (nameIt == toolChoiceObj.MemberEnd() || !nameIt->value.IsString()) {
                         return absl::InvalidArgumentError("tool_choice.name is not a valid string");
                     }
-                    toolChoice = nameIt->value.GetString();
+                    toolChoiceFunctionName = nameIt->value.GetString();
                 } else {
                     return absl::InvalidArgumentError("tool_choice.function is not a valid JSON object");
                 }
@@ -231,7 +240,10 @@ absl::Status OpenAIApiHandler::parseTools() {
             return absl::InvalidArgumentError("tool_choice is not a valid JSON object or string");
         }
     }
-    if (toolChoice == "none") {
+    if (toolChoice == ToolChoiceMode::NamedFunction && (!toolChoiceFunctionName.has_value() || toolChoiceFunctionName->empty())) {
+        return absl::InvalidArgumentError("tool_choice function name must not be empty");
+    }
+    if (toolChoice == ToolChoiceMode::None) {
         // remove tools from the request
         doc.RemoveMember("tools");
     }
@@ -282,9 +294,7 @@ absl::Status OpenAIApiHandler::parseTools() {
                 }
             }
 
-            // If toolChoice is set to "auto", we keep all tools
-            // If toolChoice is set to a specific function name, we keep only that tool
-            if (toolChoice != "auto" && toolChoice != "required" && toolChoice != functionName) {
+            if (toolChoice == ToolChoiceMode::NamedFunction && toolChoiceFunctionName.value() != functionName) {
                 it->value.Erase(&obj);
                 continue;
             }
@@ -314,11 +324,20 @@ absl::Status OpenAIApiHandler::parseTools() {
             ToolSchemaWrapper schemaReprs{parametersValue, std::move(parametersStr)};
             request.toolNameSchemaMap[functionName] = std::move(schemaReprs);
         }
-    } else {
-        toolChoice = "none";  // If tools are not provided, set toolChoice to "none"
+    }
+
+    if (toolChoice == ToolChoiceMode::NamedFunction && request.toolNameSchemaMap.empty()) {
+        return absl::InvalidArgumentError("tool_choice function name does not match any provided tool");
+    }
+    if (toolChoice == ToolChoiceMode::Required && request.toolNameSchemaMap.empty()) {
+        return absl::InvalidArgumentError("tool_choice 'required' requires at least one tool");
+    }
+    if (it == doc.MemberEnd() || it->value.IsNull()) {
+        toolChoice = ToolChoiceMode::None;
     }
 
     request.toolChoice = toolChoice;
+    request.toolChoiceFunctionName = std::move(toolChoiceFunctionName);
     return absl::OkStatus();
 }
 
@@ -329,12 +348,11 @@ absl::Status OpenAIApiHandler::parseRequest(std::optional<uint32_t> maxTokensLim
     return parseRequestImpl(maxTokensLimit, bestOfLimit, maxModelLength, allowedLocalMediaPath, allowedMediaDomains);
 }
 
-void OpenAIApiHandler::initOutputParser(const ReasoningGenerationContext& reasoningContext, const std::string& contentParserName) {
+void OpenAIApiHandler::initOutputParser(const ModelGenerationContext& generationContext, std::string contentParserName) {
     if (toolParserName.empty() && reasoningParserName.empty() && contentParserName.empty())
         return;
     outputParser = std::make_shared<OutputParser>(tokenizer, toolParserName, reasoningParserName,
-        request.toolNameSchemaMap, contentParserName);
-    outputParser->setImplicitReasoningStart(reasoningContext.implicitStart);
+        request.toolNameSchemaMap, generationContext, std::move(contentParserName));
 }
 
 absl::StatusOr<std::optional<ov::genai::JsonContainer>> OpenAIApiHandler::parseToolsToJsonContainer() {
@@ -438,7 +456,19 @@ StreamOptions OpenAIApiHandler::getStreamOptions() const { return request.stream
 bool OpenAIApiHandler::isStream() const { return request.stream; }
 Endpoint OpenAIApiHandler::getEndpoint() const { return endpoint; }
 std::string OpenAIApiHandler::getModel() const { return request.model; }
-std::string OpenAIApiHandler::getToolChoice() const { return request.toolChoice; }
+std::string OpenAIApiHandler::getToolChoice() const {
+    switch (request.toolChoice) {
+    case ToolChoiceMode::None:
+        return "none";
+    case ToolChoiceMode::Auto:
+        return "auto";
+    case ToolChoiceMode::Required:
+        return "required";
+    case ToolChoiceMode::NamedFunction:
+        return request.toolChoiceFunctionName.value();
+    }
+    return "auto";
+}
 const std::shared_ptr<OutputParser>& OpenAIApiHandler::getOutputParser() const { return outputParser; }
 
 void OpenAIApiHandler::setPromptTokensUsage(size_t promptTokens) {

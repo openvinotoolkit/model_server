@@ -32,7 +32,7 @@ class DefaultContentParser final : public BaseOutputParser {
 public:
     DefaultContentParser() = delete;
     explicit DefaultContentParser(ov::genai::Tokenizer& tokenizer,
-        std::vector<std::string> stringsToErase = {});
+        std::vector<std::string> stringsToErase, const ModelGenerationContext& context);
 
     std::optional<Delta> parseChunk(const std::string& buffer,
         const std::vector<int64_t>& tokens,

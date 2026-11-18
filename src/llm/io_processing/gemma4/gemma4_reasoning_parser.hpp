@@ -39,7 +39,7 @@ public:
     static OutputParsingConfig getDefaultReasoningParsingConfig() {
         OutputParsingConfig cfg;
         cfg.startTags = {"<|channel>"};
-        cfg.preambleStartTags = {"thought\n"};
+        cfg.unknownPhaseStartTags = {"thought\n"};
         cfg.tokenIdStartTags = {"<|channel>"};
         cfg.endTags = {"<channel|>"};
         cfg.needsSpecialTokens = true;
@@ -47,9 +47,9 @@ public:
     }
 
     explicit Gemma4ReasoningParser(ov::genai::Tokenizer& tokenizer,
-        std::optional<OutputParsingConfig> configOverride = std::nullopt) :
+        std::optional<OutputParsingConfig> configOverride, const ModelGenerationContext& context) :
         Qwen3ReasoningParser(tokenizer,
-            configOverride.has_value() ? std::move(*configOverride) : getDefaultReasoningParsingConfig()) {
+            configOverride.has_value() ? std::move(*configOverride) : getDefaultReasoningParsingConfig(), context) {
         resolveSpecialTokenIds();
     }
 

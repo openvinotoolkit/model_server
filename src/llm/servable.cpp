@@ -304,7 +304,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         return status;
     }
 
-    const auto reasoningContext = determineReasoningContext(
+    const auto generationContext = determineModelGenerationContext(
         getDefaultReasoningParsingConfig(getProperties()->reasoningParserName), req.promptText);
 
     GenerationConfigBuilder configBuilder(getProperties()->baseGenerationConfig,
@@ -312,7 +312,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
         getProperties()->enableToolGuidedGeneration,
         getProperties()->decodingMethod);
     try {
-        configBuilder.build(executionContext->apiHandler->getRequest(), reasoningContext,
+        configBuilder.build(executionContext->apiHandler->getRequest(), generationContext,
             getProperties()->reasoningParserName, getProperties()->tokenizer);
     } catch (const ResponseFormatInvariantError&) {
         return absl::InternalError("Request processing failed");
@@ -346,7 +346,7 @@ absl::Status GenAiServable::prepareInputs(std::shared_ptr<GenAiServableExecution
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "{}", getPromptTokensString(req.inputIds));
     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "Pipeline input text: {}", req.promptText);
 
-    executionContext->apiHandler->initOutputParser(reasoningContext, getProperties()->contentParserName);
+    executionContext->apiHandler->initOutputParser(generationContext, getProperties()->contentParserName);
     initializeTextStreamer(executionContext);
     return absl::OkStatus();
 }

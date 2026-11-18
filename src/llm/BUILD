@@ -596,6 +596,20 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
 )
 
+ovms_cc_library(
+    name = "io_processing_model_generation_context",
+    hdrs = ["io_processing/output_parsing_config.hpp"],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "io_processing_gptoss_generation_context",
+    hdrs = ["io_processing/gptoss/generation_context.hpp"],
+    srcs = ["io_processing/gptoss/generation_context.cpp"],
+    deps = [":io_processing_model_generation_context"],
+    visibility = ["//visibility:public"],
+)
+
 ovms_cc_library( # TODO split further so we don't have to recompile everything when changing one parser ...
     name = "output_parsers",
     hdrs = [
@@ -607,6 +621,7 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
             "io_processing/gptoss/reasoning_parser.hpp",
             "io_processing/gptoss/tool_parser.hpp",
             "io_processing/gptoss/content_parser.hpp",
+            "io_processing/gptoss/generation_context.hpp",
             "io_processing/gptoss/harmony.hpp",
             "io_processing/output_parser.hpp",
     ],
@@ -631,6 +646,8 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
         "//third_party:genai",
         ":partial_json_builder",
         ":io_processing_base_output_parser",
+        ":io_processing_gptoss_generation_context",
+        ":io_processing_model_generation_context",
         ":io_processing_parser_config_validation",
         ":io_processing_qwen3coder_tool_parser",
         ":io_processing_lfm2_tool_parser",
@@ -652,24 +669,33 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
 ovms_cc_library(
     name = "generation_config_builders",
     hdrs = ["io_processing/base_generation_config_builder.hpp",
-            "io_processing/output_parsing_config.hpp",
             "io_processing/phi4/generation_config_builder.hpp",
             "io_processing/llama3/generation_config_builder.hpp",
             "io_processing/hermes3/generation_config_builder.hpp",
             "io_processing/devstral/generation_config_builder.hpp",
+            "io_processing/qwen3coder/generation_config_builder.hpp",
+            "io_processing/mistral/generation_config_builder.hpp",
+            "io_processing/gptoss/generation_config_builder.hpp",
+            "io_processing/gptoss/generation_context.hpp",
             "io_processing/generation_config_builder.hpp"],
     srcs = ["io_processing/base_generation_config_builder.cpp",
             "io_processing/phi4/generation_config_builder.cpp",
             "io_processing/llama3/generation_config_builder.cpp",
             "io_processing/hermes3/generation_config_builder.cpp",
-            "io_processing/devstral/generation_config_builder.cpp"],
+            "io_processing/devstral/generation_config_builder.cpp",
+            "io_processing/qwen3coder/generation_config_builder.cpp",
+            "io_processing/mistral/generation_config_builder.cpp",
+            "io_processing/gptoss/generation_config_builder.cpp"],
     deps = [
         "@com_github_tencent_rapidjson//:rapidjson",
         "//src/port:rapidjson_stringbuffer",
         "//src/port:rapidjson_writer",
         ":openai_request",
         "//src:libovmslogging",
-        "//third_party:genai",],
+        "//third_party:genai",
+        ":io_processing_gptoss_generation_context",
+        ":io_processing_model_generation_context",
+    ],
     visibility = ["//visibility:public"],
 )
 
