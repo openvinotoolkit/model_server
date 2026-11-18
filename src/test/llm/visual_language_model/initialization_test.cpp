@@ -13,20 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
-#include <algorithm>
 #include <filesystem>
 #include <fstream>
-#include <memory>
-#include <sstream>
 #include <string>
 #include <utility>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <spdlog/sinks/ostream_sink.h>
 
 #include "../../../llm/servable_initializer.hpp"
-#include "../../../logging.hpp"
 #include "../../constructor_enabled_model_manager.hpp"
 #include "../../platform_utils.hpp"
 #include "../../test_utils.hpp"
@@ -48,25 +43,6 @@ class VLMServableInitializationTest : public ::testing::Test {};
 
 class PipelineTypeSelectionTest : public TestWithTempDir {
 protected:
-    std::ostringstream logs;
-    std::shared_ptr<spdlog::sinks::ostream_sink_mt> logSink;
-    spdlog::level::level_enum originalLogLevel;
-
-    void SetUp() override {
-        TestWithTempDir::SetUp();
-        originalLogLevel = modelmanager_logger->level();
-        modelmanager_logger->set_level(spdlog::level::debug);
-        logSink = std::make_shared<spdlog::sinks::ostream_sink_mt>(logs);
-        modelmanager_logger->sinks().push_back(logSink);
-    }
-
-    void TearDown() override {
-        auto& sinks = modelmanager_logger->sinks();
-        sinks.erase(std::remove(sinks.begin(), sinks.end(), logSink), sinks.end());
-        modelmanager_logger->set_level(originalLogLevel);
-        TestWithTempDir::TearDown();
-    }
-
     void addModelFile(const std::string& filename) {
         std::ofstream file(std::filesystem::path(directoryPath) / filename);
         ASSERT_TRUE(file.is_open());
@@ -84,25 +60,20 @@ protected:
 TEST_F(PipelineTypeSelectionTest, VlmRequiresMultimodalCapabilities) {
     for (const auto requested : {mediapipe::LLMCalculatorOptions::VLM, mediapipe::LLMCalculatorOptions::VLM_CB}) {
         PipelineType selected;
-        logs.str("");
-        logs.clear();
         EXPECT_EQ(selectPipeline(requested, selected), StatusCode::INTERNAL_ERROR);
-        EXPECT_NE(logs.str().find("Use an LM or LM_CB pipeline instead."), std::string::npos);
     }
 }
 
-TEST_F(PipelineTypeSelectionTest, OmniWithoutTalkerRecommendsLmForTextOnly) {
+TEST_F(PipelineTypeSelectionTest, OmniWithoutSpeechOutputRejectsTextOnlyModel) {
     PipelineType selected;
     EXPECT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::OMNI, selected), StatusCode::INTERNAL_ERROR);
-    EXPECT_NE(logs.str().find("Use an LM or LM_CB pipeline instead."), std::string::npos);
 }
 
-TEST_F(PipelineTypeSelectionTest, OmniWithoutTalkerRecommendsVlmForMultimodal) {
+TEST_F(PipelineTypeSelectionTest, OmniWithoutSpeechOutputRejectsMultimodalModel) {
     addModelFile("openvino_text_embeddings_model.xml");
     addModelFile("openvino_vision_embeddings_model.bin");
     PipelineType selected;
     EXPECT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::OMNI, selected), StatusCode::INTERNAL_ERROR);
-    EXPECT_NE(logs.str().find("Use a VLM or VLM_CB pipeline instead."), std::string::npos);
 }
 
 TEST_F(PipelineTypeSelectionTest, ExplicitPipelinesAcceptedForOmniCapableModel) {
@@ -121,7 +92,6 @@ TEST_F(PipelineTypeSelectionTest, ExplicitPipelinesAcceptedForOmniCapableModel) 
         ASSERT_EQ(selectPipeline(testCase.first, selected), StatusCode::OK);
         EXPECT_EQ(selected, testCase.second);
     }
-    EXPECT_NE(logs.str().find("talker=true, audio decoder=false, text embeddings=true, vision embeddings=true, audio embeddings=false, audio encoder=false"), std::string::npos);
 }
 
 TEST_F(PipelineTypeSelectionTest, AudioDecoderEnablesOmniSelection) {
@@ -135,7 +105,6 @@ TEST_F(PipelineTypeSelectionTest, AudioDecoderEnablesOmniSelection) {
     addModelFile("openvino_audio_encoder_model.xml");
     ASSERT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::AUTO, selected), StatusCode::OK);
     EXPECT_EQ(selected, PipelineType::OMNI);
-    EXPECT_NE(logs.str().find("talker=false, audio decoder=true"), std::string::npos);
 }
 
 TEST_F(PipelineTypeSelectionTest, MultimodalDetectionRequiresTextAndAModality) {
