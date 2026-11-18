@@ -335,6 +335,7 @@ Server::~Server() {
 
 Status Server::ensureGlobalInit() {
     std::call_once(globalInitFlag, [this]() {
+        setDefaultEspeakDataPath();
         if (GetEnvVar("OPENCV_IO_MAX_IMAGE_PIXELS").empty()) {
             SetEnvironmentVar("OPENCV_IO_MAX_IMAGE_PIXELS", std::to_string(OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS));
         }
@@ -595,7 +596,6 @@ std::variant<std::pair<ServerSettingsImpl, ModelsSettingsImpl>, std::pair<int, s
 }
 
 int Server::startServerFromSettings(ServerSettingsImpl& serverSettings, ModelsSettingsImpl& modelsSettings) {
-    setDefaultEspeakDataPath();
     OvmsExitGuard exitStatusGuard(*this);
     installSignalHandlers();
     int result = OVMS_EX_OK;
