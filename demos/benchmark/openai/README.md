@@ -400,6 +400,17 @@ and timing statistics. Missing usage or an incomplete stream fails the request.
 ## vLLM bench tool
 
 
+Start the pre-converted LFM3 model from Hugging Face.
+
+```bash
+docker run -d --rm --name ovms \
+	--user "$(id -u):$(id -g)" -p 8000:8000 \
+	-v "${HOME}/models:/models:rw" \
+	openvino/model_server:weekly --rest_port 8000 \
+	--source_model OpenVINO/LFM3-VL-2B-int4-ov \
+	--model_repository_path /models
+```
+
 
 Install vLLM and download the Spec-Bench
 ```bash
@@ -409,7 +420,7 @@ curl -O https://raw.githubusercontent.com/hemingkx/Spec-Bench/refs/heads/main/da
 
 Run benchmark with 10 requests sent sequentially:
 ```bash
-vllm bench serve --model OpenVINO/Qwen3.8-27B-int4-ov --dataset-name spec_bench --dataset-path "question.jsonl" --num-prompts 10 \
+vllm bench serve --model OpenVINO/LFM3-VL-2B-int4-ov --dataset-name spec_bench --dataset-path "question.jsonl" --num-prompts 10 \
 --spec-bench-category "summarization" --backend openai-chat --host localhost --port 8000 --endpoint /v1/chat/completions --max-concurrency 1
 ```
 
@@ -434,7 +445,7 @@ without `/v1`; `--endpoint-type chat` appends `/v1/chat/completions`.
 Send two sequential requests, each containing one generated 224x224 JPEG image:
 
 ```bash
-aiperf profile --model vlm --url http://localhost:8000 \
+aiperf profile --model OpenVINO/LFM3-VL-2B-int4-ov --url http://localhost:8000 \
 	--endpoint-type chat --streaming --tokenizer builtin \
 	--concurrency 1 --request-count 2 \
 	--prompt-input-tokens-mean 32 --prompt-input-tokens-stddev 0 \
@@ -456,7 +467,7 @@ tokens also increase the server-reported prompt usage.
 Use a longer run at concurrency 1, with a larger text prompt:
 
 ```bash
-aiperf profile --model vlm --url http://localhost:8000 \
+aiperf profile --model OpenVINO/LFM3-VL-2B-int4-ov --url http://localhost:8000 \
 	--endpoint-type chat --streaming --tokenizer builtin \
 	--concurrency 1 --request-count 20 \
 	--prompt-input-tokens-mean 128 --prompt-input-tokens-stddev 0 \
