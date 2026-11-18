@@ -25,7 +25,7 @@ Deploy the model:
 Start docker container:
 ```bash
 mkdir models
-docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/models/:rw \
+docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v ${HOME}/models:/models/:rw \
   -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
   openvino/model_server:weekly \
     --rest_port 8000 \
@@ -41,7 +41,7 @@ docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/model
 ```bat
 mkdir models
 ovms --rest_port 8000 ^
-  --model_repository_path ./models/ ^
+  --model_repository_path C:/models/ ^
   --task text_generation ^
   --source_model "prism-ml/Ternary-Bonsai-2-27B-gguf" ^
   --gguf_filename Ternary-Bonsai-2-27B-PQ2_0.gguf ^
