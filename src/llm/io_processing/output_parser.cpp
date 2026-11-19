@@ -227,7 +227,7 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         reasoningParser = std::make_unique<Lfm25ReasoningParser>(tokenizer);
     } else if (reasoningParserName == "onyx") {
         reasoningParser = std::make_unique<OnyxReasoningParser>(tokenizer);
-    } else if (reasoningParserName == "devstral") { 
+    } else if (reasoningParserName == "devstral") {
         reasoningParser = std::make_unique<DevstralReasoningParser>(tokenizer);
     } else if (!reasoningParserName.empty()) {
         throw std::runtime_error("Unsupported reasoning parser: \"" + reasoningParserName +

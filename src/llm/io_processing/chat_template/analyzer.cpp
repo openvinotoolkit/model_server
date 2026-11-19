@@ -97,7 +97,7 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
     if (contains(templateSource, "[TOOL_CALLS]") && contains(templateSource, "[ARGS]")) {
         result.detectedToolParser = "devstral";
         result.caps.supportsToolCalls = true;
-        if(contains(templateSource, "[THINK]") && contains(templateSource, "[/THINK]")) {
+        if (contains(templateSource, "[THINK]") && contains(templateSource, "[/THINK]")) {
             result.detectedReasoningParser = "devstral";
         }
         return result;
