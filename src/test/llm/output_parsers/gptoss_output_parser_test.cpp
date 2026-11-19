@@ -190,14 +190,36 @@ TEST(GptOssToolGuidanceConfigTest, MessageSequenceMatchesToolChoice) {
                     } else if (first->end == "<|end|>") {
                         foundReasoning = true;
                         EXPECT_TRUE(std::holds_alternative<SOC::AnyText>(first->content));
-                        if (requiresCall) {
-                            const auto remaining = std::get<std::shared_ptr<SOC::Concat>>(sequence->elements.back());
-                            ASSERT_EQ(remaining->elements.size(), 3);
-                            EXPECT_TRUE(std::holds_alternative<SOC::EBNF>(remaining->elements.front()));
-                            const auto mandatoryCalls = std::get<std::shared_ptr<SOC::Union>>(remaining->elements[1]);
-                            ASSERT_FALSE(mandatoryCalls->elements.empty());
-                            for (const auto& call : mandatoryCalls->elements) {
+                        ASSERT_GE(sequence->elements.size(), 3);
+                        const auto& preamble = std::get<SOC::EBNF>(sequence->elements[1]).value;
+                        if (first->begin.find("<|channel|>commentary") != std::string::npos) {
+                            EXPECT_NE(preamble.find("root ::= commentary*"), std::string::npos);
+                            EXPECT_EQ(preamble.find("root ::= analysis* commentary*"), std::string::npos);
+                        } else {
+                            EXPECT_NE(preamble.find("root ::= analysis* commentary*"), std::string::npos);
+                        }
+                        if (sequence->elements.size() == 4) {
+                            const auto toolCalls = std::get<std::shared_ptr<SOC::Union>>(sequence->elements[2]);
+                            ASSERT_FALSE(toolCalls->elements.empty());
+                            for (const auto& call : toolCalls->elements) {
                                 EXPECT_EQ(std::get<std::shared_ptr<SOC::Tag>>(call)->end, "<|call|>");
+                            }
+                            const auto afterCall = std::get<std::shared_ptr<SOC::TagsWithSeparator>>(sequence->elements[3]);
+                            for (const auto& message : afterCall->tags) {
+                                if (message.end == "<|end|>") {
+                                    EXPECT_EQ(message.begin.find("<|channel|>analysis"), std::string::npos);
+                                }
+                            }
+                        } else {
+                            EXPECT_FALSE(requiresCall);
+                            foundFinal = true;
+                            const auto finalAnswer = std::get<std::shared_ptr<SOC::TagsWithSeparator>>(sequence->elements[2]);
+                            EXPECT_TRUE(finalAnswer->at_least_one);
+                            EXPECT_TRUE(finalAnswer->stop_after_first);
+                            EXPECT_TRUE(finalAnswer->separator.empty());
+                            ASSERT_FALSE(finalAnswer->tags.empty());
+                            for (const auto& finalMessage : finalAnswer->tags) {
+                                EXPECT_EQ(finalMessage.end, "<|return|>");
                             }
                         }
                     } else {
@@ -248,6 +270,20 @@ protected:
 
     TokenBuilder builder;
 };
+
+TEST_F(GptOssOutputUnaryParserTest, PromptChannelContinuationDoesNotExposeToolResponseBody) {
+    const std::string prompt = "<|start|>assistant<|channel|>commentary";
+    const auto context = determineModelGenerationContext(getDefaultReasoningParsingConfig("gptoss"), prompt);
+    GptOssContentParser parser(*gptOssTokenizer, std::nullopt, context);
+
+    const auto delta = parser.parseChunk("<|start|>functions.echo<|message|>private tool result<|end|>",
+        {}, ov::genai::GenerationFinishReason::STOP);
+
+    ASSERT_TRUE(delta.has_value());
+    const auto* content = std::get_if<ContentDelta>(&*delta);
+    ASSERT_NE(content, nullptr);
+    EXPECT_TRUE(content->text.empty());
+}
 
 //
 //
@@ -309,7 +345,8 @@ TEST_F(GptOssOutputUnaryParserTest, InitializedToolRecipientSurvivesResetWithout
 
 TEST_F(GptOssOutputUnaryParserTest, ToolGuidanceHandlesPrefilledHeadersAndReasoning) {
     for (const std::string header : {"", "<|start|>assistant", "<|start|>assistant<|channel|>analysis",
-             "<|start|>assistant to=functions.", "<|start|>assistant<|channel|>commentary to=functions.",
+             "<|start|>assistant<|channel|>commentary", "<|start|>assistant to=functions.",
+             "<|start|>assistant<|channel|>commentary to=functions.",
              "<|start|>assistant<|channel|>analysis to=functions."}) {
         for (const ToolChoiceMode choice : {ToolChoiceMode::Auto, ToolChoiceMode::Required, ToolChoiceMode::NamedFunction}) {
             SCOPED_TRACE(header);
@@ -335,11 +372,15 @@ TEST_F(GptOssOutputUnaryParserTest, ToolGuidanceHandlesPrefilledHeadersAndReason
             const std::string fullCall = "<|start|>assistant to=functions.echo <|channel|>commentary json<|message|>{\"value\":1}<|call|>";
             const bool toolHeader = gptOssContext.header == GptOssGenerationContext::Header::ToolRecipient;
             const bool assistantHeaderToolCall = header == "<|start|>assistant";
+            const bool commentaryHeader = gptOssContext.header == GptOssGenerationContext::Header::Channel &&
+                                          gptOssContext.channel == "commentary";
             std::string output;
             if (toolHeader) {
                 output = header.find("<|channel|>") == std::string::npos
                              ? "echo <|channel|>commentary json<|message|>{\"value\":1}<|call|>"
                              : "echo<|message|>{\"value\":1}<|call|>";
+            } else if (commentaryHeader) {
+                output = " to=functions.echo<|message|>{\"value\":1}<|call|>";
             } else if (assistantHeaderToolCall) {
                 output = fullCall.substr(header.size());
             } else {
@@ -365,7 +406,7 @@ TEST_F(GptOssOutputUnaryParserTest, ToolGuidanceHandlesPrefilledHeadersAndReason
             response.Parse(handler.serializeUnaryResponse(deltas, ov::genai::GenerationFinishReason::STOP).c_str());
             ASSERT_FALSE(response.HasParseError());
             const auto& message = response["choices"][0]["message"];
-            if (!toolHeader && !assistantHeaderToolCall) {
+            if (!toolHeader && !assistantHeaderToolCall && !commentaryHeader) {
                 EXPECT_STREQ(message["reasoning_content"].GetString(), "thinking");
             }
             const auto& calls = message["tool_calls"];

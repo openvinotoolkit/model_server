@@ -18,15 +18,30 @@
 
 #include <memory>
 
+#include "src/port/rapidjson_document.hpp"
+
 namespace ovms {
 
 void Qwen3CoderGenerationConfigBuilder::applyToolGuidance(const OpenAIRequest& request, const ModelGenerationContext&) {
     using SOC = ov::genai::StructuredOutputConfig;
     auto tags = std::make_shared<SOC::TriggeredTags>();
     tags->triggers.push_back("<tool_call>");
+    rapidjson::Document parameterlessSchema;
+    parameterlessSchema.Parse(R"({"type":"object","properties":{},"additionalProperties":false})");
     for (const auto& [name, schema] : request.toolNameSchemaMap) {
+        rapidjson::Document parsedSchema;
+        const rapidjson::Value* parameters = schema.rapidjsonRepr;
+        if (parameters == nullptr) {
+            parsedSchema.Parse(schema.stringRepr.c_str());
+            parameters = &parsedSchema;
+        }
+        // The XML converter emits invalid EBNF for the closed empty-object schema.
+        // Match only optional whitespace so an empty parameter block stays valid.
+        const SOC::StructuralTag arguments = *parameters == parameterlessSchema
+                                                 ? SOC::StructuralTag(SOC::Regex(R"([ \t\r\n]*)"))
+                                                 : SOC::StructuralTag(SOC::QwenXMLParametersFormat(schema.stringRepr));
         tags->tags.emplace_back("<tool_call>\n<function=" + name + ">\n",
-            SOC::QwenXMLParametersFormat(schema.stringRepr), "\n</function>\n</tool_call>");
+            arguments, "\n</function>\n</tool_call>");
     }
     setToolGrammar(request, tags);
 }

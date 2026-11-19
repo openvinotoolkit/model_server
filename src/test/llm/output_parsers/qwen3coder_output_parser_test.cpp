@@ -140,6 +140,46 @@ TEST(Qwen3CoderToolGuidanceConfigTest, XmlFramingAndSchemasMatchTools) {
     }
 }
 
+TEST(Qwen3CoderToolGuidanceConfigTest, ParameterlessFunctionsUseEmptyParameterBlock) {
+    using SOC = ov::genai::StructuredOutputConfig;
+    const std::string schema = R"({"additionalProperties":false,"properties":{},"type":"object"})";
+    rapidjson::Document schemaDoc;
+    schemaDoc.Parse(schema.c_str());
+    ASSERT_FALSE(schemaDoc.HasParseError());
+    for (const bool useParsedSchema : {false, true}) {
+        SCOPED_TRACE(useParsedSchema);
+        OpenAIRequest request;
+        request.toolChoice = ToolChoiceMode::Required;
+        request.toolNameSchemaMap.emplace("clock", ToolSchemaWrapper{useParsedSchema ? &schemaDoc : nullptr, schema});
+        GenerationConfigBuilder builder{{}, "qwen3coder", false, DecodingMethod::STANDARD};
+        builder.configureStructuredGeneration(request, {}, "");
+        ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
+        const auto& structuralTag = std::get<SOC::StructuralTag>(*builder.getConfig().structured_output_config->structural_tags_config);
+        const auto tags = std::get<std::shared_ptr<SOC::TriggeredTags>>(structuralTag);
+        ASSERT_EQ(tags->tags.size(), 1);
+        EXPECT_EQ(tags->tags.front().begin, "<tool_call>\n<function=clock>\n");
+        EXPECT_EQ(std::get<SOC::Regex>(tags->tags.front().content).value, R"([ \t\r\n]*)");
+        EXPECT_EQ(tags->tags.front().end, "\n</function>\n</tool_call>");
+        EXPECT_TRUE(tags->at_least_one);
+        EXPECT_EQ(request.toolNameSchemaMap.at("clock").stringRepr, schema);
+    }
+}
+
+TEST(Qwen3CoderToolGuidanceConfigTest, EmptyPropertiesWithExtraConstraintsKeepSchemaConversion) {
+    using SOC = ov::genai::StructuredOutputConfig;
+    const std::string schema = R"({"type":"object","properties":{},"additionalProperties":false,"minProperties":1})";
+    OpenAIRequest request;
+    request.toolChoice = ToolChoiceMode::Required;
+    request.toolNameSchemaMap.emplace("clock", ToolSchemaWrapper{nullptr, schema});
+    GenerationConfigBuilder builder{{}, "qwen3coder", false, DecodingMethod::STANDARD};
+    builder.configureStructuredGeneration(request, {}, "");
+    ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
+    const auto& structuralTag = std::get<SOC::StructuralTag>(*builder.getConfig().structured_output_config->structural_tags_config);
+    const auto tags = std::get<std::shared_ptr<SOC::TriggeredTags>>(structuralTag);
+    ASSERT_EQ(tags->tags.size(), 1);
+    EXPECT_EQ(std::get<SOC::QwenXMLParametersFormat>(tags->tags.front().content).json_schema, schema);
+}
+
 TEST_F(Qwen3CoderOutputParserTest, NamedToolGuidanceValidatesAndPreservesStringArguments) {
     OpenAIRequest request;
     request.toolChoice = ToolChoiceMode::NamedFunction;

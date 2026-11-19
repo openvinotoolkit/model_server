@@ -17,7 +17,7 @@
 
 #include <string>
 
-#include "../output_parsing_config.hpp"
+#include "../model_generation_context.hpp"
 
 namespace ovms {
 
