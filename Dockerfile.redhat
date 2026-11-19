@@ -14,13 +14,13 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.7
+ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.9
 ARG BUILD_IMAGE=build
 ARG PKG_IMAGE=pkg
-ARG RELEASE_BASE_IMAGE=registry.access.redhat.com/ubi9/ubi-minimal:9.7
+ARG RELEASE_BASE_IMAGE=registry.access.redhat.com/ubi9/ubi-minimal:9.9
 
 FROM $BASE_IMAGE as base_build
-ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.7
+ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.9
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
@@ -55,6 +55,7 @@ ENV PATH=/opt/rh/gcc-toolset-13/root/usr/bin:${PATH} \
     CC=/opt/rh/gcc-toolset-13/root/usr/bin/gcc \
     CXX=/opt/rh/gcc-toolset-13/root/usr/bin/g++
 
+# hadolint ignore=DL3003
 RUN curl -fsSL https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/nasm-2.16.03.tar.gz -o /tmp/nasm.tar.gz && \
     echo "5bc940dd8a4245686976a8f7e96ba9340a0915f2d5b88356874890e207bdb581  /tmp/nasm.tar.gz" | sha256sum -c - && \
     mkdir /tmp/nasm && \
