@@ -96,11 +96,22 @@ cache gauges retain their latest values; waiting does not imply an empty cache
 or zero utilization. KV-cache size is reported in bytes and can also change
 with dynamic allocation; it is not total device memory.
 
-LLM metric series are kept across graph reload and idle-unload: counters and
-histograms continue from their previous values, while the cache and
-scheduled-request gauges are set to `0` when the pipeline stops. After a reload,
-only the new pipeline updates these gauges. See the
-[developer guide](./developer_guide.md#llm-metric-series-lifecycle) for details.
+### LLM metric series lifecycle
+
+LLM metric series are identified by the graph and node name and are owned by the
+metric registry, which keeps them until the server stops. Graph unload,
+idle-unload and reload do not remove or reset them: the reloaded pipeline
+continues the same series, so token counters and timing histograms keep
+accumulating. A request that completes on the previous pipeline after a reload
+is counted in the same series. Counters reset only on server restart;
+Prometheus handles that in `rate()` and `increase()`.
+
+The cache utilization, cache size and scheduled-request gauges describe the
+running pipeline. OVMS sets them to `0` when the pipeline stops, so an unloaded
+graph does not keep exporting its last values. After a reload the previous
+pipeline can stay alive until its requests finish; only the newest pipeline of a
+graph node updates these gauges, so the previous one cannot overwrite or reset
+the values of its replacement.
 
 Prompt and generated-token counters increase once per successfully completed
 request, for both unary and streaming responses. Failed and cancelled requests

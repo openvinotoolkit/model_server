@@ -111,9 +111,9 @@ events->increment();
 ```
 
 To count multiple events in a packet, call
-`events->increment(static_cast<double>(eventCount))`.
-Use gauges with `set` or `add` (accepting positive, zero, or negative finite values); record histogram samples
-with `observe`. Histogram bucket boundaries must be finite and strictly
+`events->increment(static_cast<double>(eventCount))`. Use gauges with `set` or
+`add` (accepting positive, zero, or negative finite values), and record histogram
+samples with `observe`. Histogram bucket boundaries must be finite and strictly
 increasing, and the same metric name must use identical boundaries everywhere.
 No registry lookup, metric-name construction or registration is needed in
 `Process`. Scrapes do not reset counters or histograms; use Prometheus `rate()`
