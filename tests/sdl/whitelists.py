@@ -117,15 +117,13 @@ libraries = {
         'libpython_calculators.so',
         'libtbb.so',
     },
-    OvmsBaseType.UBUNTU: set(),
-    OvmsBaseType.UBUNTU24: {
+    OvmsBaseType.UBUNTU: {
         'libopenvino_intel_npu_compiler.so',
         'libopenvino_intel_npu_compiler_loader.so',
         'libopenvino_intel_npu_vm_runtime.so',
     },
-    OvmsBaseType.UBUNTU26: {
-        'libopenvino_intel_gpu_plugin_ocl.so',
-    },
+    OvmsBaseType.UBUNTU24: set(),
+    OvmsBaseType.UBUNTU26: set(),
     OvmsBaseType.REDHAT: set(),
     OvmsBaseType.WINDOWS: {
         'espeak-ng.dll',
