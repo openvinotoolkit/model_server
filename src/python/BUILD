@@ -211,7 +211,7 @@ ovms_cc_library(
 ovms_cc_library(
     name = "python_runtime_path",
     hdrs = ["python_runtime_path.hpp"],
-    deps = PYBIND_DEPS,
+    deps = PYBIND_DEPS + ["//src/utils:windows_executable_path"],
     visibility = ["//visibility:public"],
 )
 
