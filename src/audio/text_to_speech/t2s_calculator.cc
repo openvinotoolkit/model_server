@@ -236,15 +236,17 @@ public:
                 disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "after generation");
                 if (!disconnectStatus.ok())
                     return disconnectStatus;
-                void* ppData;
-                size_t pDataSize;
                 if (responseFormat == ovms::audio_utils::TextToSpeechResponseFormat::WAV) {
-                    ovms::audio_utils::prepareAudioOutput(&ppData, pDataSize, generatedSpeech.output_sample_rate, speechSize, cpuTensor.data<const float>());
+                    void* ppData = nullptr;
+                    size_t pDataSize = 0;
+                    constexpr uint16_t bitsPerSample = 16;
+                    ovms::audio_utils::prepareAudioOutput(&ppData, pDataSize, generatedSpeech.output_sample_rate, bitsPerSample, speechSize, cpuTensor.data<const float>());
+                    output = std::make_unique<std::string>(reinterpret_cast<char*>(ppData), pDataSize);
+                    drwav_free(ppData, nullptr);
                 } else {
-                    ovms::audio_utils::prepareRawPcm16LEOutput(&ppData, pDataSize, speechSize, cpuTensor.data<const float>());
+                    auto pcm16 = ovms::audio_utils::convertWaveformToPcm16(speechSize, cpuTensor.data<const float>());
+                    output = std::make_unique<std::string>(reinterpret_cast<const char*>(pcm16.data()), pcm16.size() * sizeof(int16_t));
                 }
-                output = std::make_unique<std::string>(reinterpret_cast<char*>(ppData), pDataSize);
-                std::free(ppData);
             } else {
                 return absl::InvalidArgumentError(absl::StrCat("Unsupported URI: ", payload.uri));
             }

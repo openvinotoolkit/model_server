@@ -602,7 +602,7 @@ TEST_F(AudioUtilsSampleRateTest, prepareAudioOutputRejectsOversizedSpeech) {
     void* ppData = nullptr;
     size_t pDataSize = 0;
     EXPECT_THROW(
-        prepareAudioOutput(&ppData, pDataSize, sampleRate, oversizedSpeech, &dummyWaveform),
+        prepareAudioOutput(&ppData, pDataSize, sampleRate, /*bitsPerSample=*/16, oversizedSpeech, &dummyWaveform),
         std::runtime_error);
 }
 
@@ -616,7 +616,7 @@ TEST_F(AudioUtilsSampleRateTest, prepareAudioOutputRejectsOversizedSpeechWithCus
     void* ppData = nullptr;
     size_t pDataSize = 0;
     EXPECT_THROW(
-        prepareAudioOutput(&ppData, pDataSize, sampleRate, speechSize, &dummyWaveform),
+        prepareAudioOutput(&ppData, pDataSize, sampleRate, /*bitsPerSample=*/16, speechSize, &dummyWaveform),
         std::runtime_error);
     UnSetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
 }
@@ -630,7 +630,7 @@ TEST_F(AudioUtilsSampleRateTest, prepareAudioOutputAcceptsSmallSpeech) {
     void* ppData = nullptr;
     size_t pDataSize = 0;
     EXPECT_NO_THROW(
-        prepareAudioOutput(&ppData, pDataSize, sampleRate, speechSize, waveform.data()));
+        prepareAudioOutput(&ppData, pDataSize, sampleRate, /*bitsPerSample=*/16, speechSize, waveform.data()));
     if (ppData) {
         free(ppData);  // drwav allocates via DRWAV_MALLOC
     }
@@ -650,7 +650,7 @@ TEST_F(AudioUtilsSampleRateTest, prepareAudioOutputRejectsWhenHeaderPushesOverLi
     void* ppData = nullptr;
     size_t pDataSize = 0;
     EXPECT_THROW(
-        prepareAudioOutput(&ppData, pDataSize, sampleRate, speechSize, waveform.data()),
+        prepareAudioOutput(&ppData, pDataSize, sampleRate, /*bitsPerSample=*/16, speechSize, waveform.data()),
         std::runtime_error);
     UnSetEnvironmentVar("OVMS_AUDIO_MAX_FILE_SIZE_BYTES");
 }
@@ -660,7 +660,7 @@ TEST_F(AudioUtilsSampleRateTest, prepareAudioOutputProducesPcm16Wav) {
     std::array<float, 3> waveform{0.0f, 0.5f, -0.5f};
     void* ppData = nullptr;
     size_t pDataSize = 0;
-    ASSERT_NO_THROW(prepareAudioOutput(&ppData, pDataSize, sampleRate, waveform.size(), waveform.data()));
+    ASSERT_NO_THROW(prepareAudioOutput(&ppData, pDataSize, sampleRate, /*bitsPerSample=*/16, waveform.size(), waveform.data()));
     ASSERT_NE(ppData, nullptr);
     std::string wav(reinterpret_cast<const char*>(ppData), pDataSize);
     EXPECT_TRUE(isWavBuffer(wav));
@@ -674,33 +674,39 @@ TEST_F(AudioUtilsSampleRateTest, prepareAudioOutputProducesPcm16Wav) {
     free(ppData);
 }
 
-TEST_F(AudioUtilsSampleRateTest, prepareRawPcm16LEOutputProducesLittleEndianSamples) {
-    std::array<float, 2> waveform{0.0f, 0.5f};
+TEST_F(AudioUtilsSampleRateTest, prepareAudioOutputProducesFloat32Wav) {
+    constexpr uint32_t sampleRate = 24000;
+    std::array<float, 3> waveform{0.0f, 0.5f, -0.5f};
     void* ppData = nullptr;
     size_t pDataSize = 0;
-    ASSERT_NO_THROW(prepareRawPcm16LEOutput(&ppData, pDataSize, waveform.size(), waveform.data()));
+    ASSERT_NO_THROW(prepareAudioOutput(&ppData, pDataSize, sampleRate, /*bitsPerSample=*/32, waveform.size(), waveform.data()));
     ASSERT_NE(ppData, nullptr);
-    ASSERT_EQ(pDataSize, waveform.size() * sizeof(int16_t));
-    const auto* bytes = reinterpret_cast<const unsigned char*>(ppData);
+    std::string wav(reinterpret_cast<const char*>(ppData), pDataSize);
+    EXPECT_TRUE(isWavBuffer(wav));
+    EXPECT_EQ(readLe16(wav.data() + 20), 3);   // IEEE float
+    EXPECT_EQ(readLe16(wav.data() + 22), 1);   // mono
+    EXPECT_EQ(readLe16(wav.data() + 34), 32);  // float32
+    drwav_free(ppData, nullptr);
+}
+
+TEST_F(AudioUtilsSampleRateTest, convertWaveformToPcm16ProducesLittleEndianSamples) {
+    std::array<float, 2> waveform{0.0f, 0.5f};
+    auto pcm16 = convertWaveformToPcm16(waveform.size(), waveform.data());
+    ASSERT_EQ(pcm16.size(), waveform.size());
+    const auto* bytes = reinterpret_cast<const unsigned char*>(pcm16.data());
     EXPECT_EQ(bytes[0], 0x00);
     EXPECT_EQ(bytes[1], 0x00);
     EXPECT_EQ(bytes[2], 0xFF);
     EXPECT_EQ(bytes[3], 0x3F);
-    free(ppData);
 }
 
-TEST_F(AudioUtilsSampleRateTest, prepareRawPcm16LEOutputMapsNaNToSilence) {
+TEST_F(AudioUtilsSampleRateTest, convertWaveformToPcm16MapsNaNToSilence) {
     std::array<float, 3> waveform{0.0f, std::numeric_limits<float>::quiet_NaN(), 0.5f};
-    void* ppData = nullptr;
-    size_t pDataSize = 0;
-    ASSERT_NO_THROW(prepareRawPcm16LEOutput(&ppData, pDataSize, waveform.size(), waveform.data()));
-    ASSERT_NE(ppData, nullptr);
-    ASSERT_EQ(pDataSize, waveform.size() * sizeof(int16_t));
-    const auto* pcm16 = reinterpret_cast<const int16_t*>(ppData);
+    auto pcm16 = convertWaveformToPcm16(waveform.size(), waveform.data());
+    ASSERT_EQ(pcm16.size(), waveform.size());
     EXPECT_EQ(pcm16[0], 0);
     EXPECT_EQ(pcm16[1], 0);
     EXPECT_EQ(pcm16[2], 16383);
-    free(ppData);
 }
 
 }  // namespace

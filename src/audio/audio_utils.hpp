@@ -48,9 +48,9 @@ std::vector<float> readWithoutResample(const std::string_view& audioData, const 
 
 std::optional<TextToSpeechResponseFormat> tryParseTextToSpeechResponseFormat(std::string_view format);
 
-void prepareAudioOutput(void** ppData, size_t& pDataSize, uint32_t sampleRate, size_t speechSize, const float* waveformPtr);
+std::vector<int16_t> convertWaveformToPcm16(size_t speechSize, const float* waveformPtr);
 
-void prepareRawPcm16LEOutput(void** ppData, size_t& pDataSize, size_t speechSize, const float* waveformPtr);
+void prepareAudioOutput(void** ppData, size_t& pDataSize, uint32_t sampleRate, uint16_t bitsPerSample, size_t speechSize, const float* waveformPtr);
 
 // Throws if the estimated resampled audio buffer size would exceed the maximum allowed size
 void validateAudioFileSize(

@@ -113,6 +113,28 @@ TEST_F(Text2SpeechHttpTest, explicitPcmResponseFormat) {
     EXPECT_EQ(response.size() % sizeof(int16_t), 0u);
 }
 
+TEST_F(Text2SpeechHttpTest, v3EndpointSupportsPcmResponseFormat) {
+    const std::string v3Endpoint = "/v3/audio/speech";
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", v3Endpoint, headers), ovms::StatusCode::OK);
+    std::string requestBody = R"(
+        {
+            "model": ")" + modelName +
+                              R"(",
+            "input": "The quick brown fox jumped over the lazy dog.",
+            "voice": "af_alloy",
+            "response_format": "pcm"
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(v3Endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    EXPECT_EQ(responseComponents.contentType, ContentType::CUSTOM);
+    EXPECT_EQ(responseComponents.customContentType, "application/octet-stream");
+    EXPECT_FALSE(isWavBuffer(response));
+    EXPECT_FALSE(response.empty());
+    EXPECT_EQ(response.size() % sizeof(int16_t), 0u);
+}
+
 TEST_F(Text2SpeechHttpTest, unsupportedResponseFormatRejected) {
     std::string requestBody = R"(
         {
