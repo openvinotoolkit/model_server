@@ -975,10 +975,11 @@ def set_item_image_parameter(item):
 
 
 def apply_conditional_run_type_marks(item):
-    """Resolve conditional_run_type and conditional_run_type_by_model meta-markers.
+    """Resolve conditional_run_type, conditional_run_type_by_model and conditional_run_type_by_param meta-markers.
 
     conditional_run_type: assigns single_mark when device+OS match, default_mark otherwise.
     conditional_run_type_by_model: assigns mark based on model_type membership in model collections.
+    conditional_run_type_by_param: assigns mark based on value of the param_name test parameter.
     """
     params = getattr(getattr(item, 'callspec', None), 'params', {})
 
@@ -1014,6 +1015,12 @@ def apply_conditional_run_type_marks(item):
         default_mark = marker.kwargs.get("default_mark")
         if default_mark:
             item.add_marker(getattr(pytest.mark, default_mark))
+        return
+
+    for marker in item.iter_markers(MarkConditionalRunType.CONDITIONAL_RUN_TYPE_BY_PARAM):
+        param_value = params.get(marker.kwargs["param_name"])
+        mark_name = marker.kwargs["value_mark_map"].get(param_value, marker.kwargs["default_mark"])
+        item.add_marker(getattr(pytest.mark, mark_name))
         return
 
 
