@@ -15,24 +15,12 @@
 //*****************************************************************************
 #pragma once
 
+#include "model_generation_context.hpp"
+
 #include <string>
-#include <string_view>
 #include <vector>
 
 namespace ovms {
-
-struct ModelGenerationContext {
-    struct ReasoningState {
-        std::string begin;
-        std::string end;
-        bool implicitStart = false;
-        bool completedInPrompt = false;
-    };
-
-    // Non-owning input view; the rendered prompt must outlive this context.
-    std::string_view renderedPrompt;
-    ReasoningState reasoning;
-};
 
 // Per-parser configuration for phase detection, generation startup, and tokenizer decode mode.
 // Starts from predefined format settings or a config override. During construction, a parser

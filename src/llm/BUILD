@@ -409,6 +409,7 @@ ovms_cc_library(
         ":io_processing_delta",
         ":io_processing_utils",
         ":apis_tool_schema_wrapper",
+        ":io_processing_model_generation_context",
         "//third_party:genai",
     ],
 )
@@ -618,7 +619,8 @@ ovms_cc_library(
 
 ovms_cc_library(
     name = "io_processing_model_generation_context",
-    hdrs = ["io_processing/output_parsing_config.hpp"],
+    hdrs = ["io_processing/model_generation_context.hpp",
+            "io_processing/output_parsing_config.hpp"],
     visibility = ["//visibility:public"],
 )
 

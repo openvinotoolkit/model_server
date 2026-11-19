@@ -166,16 +166,17 @@ std::optional<Delta> GptOssContentParser::parseChunk(const std::string& chunk,
     appendNewChunk(chunk);
 
     if (initialChannelMessagePending) {
-        const std::size_t messagePos = pendingInput.find(MESSAGE_TAG);
-        if (messagePos == std::string::npos) {
-            if (pendingInput.size() < MESSAGE_TAG.size() && MESSAGE_TAG.compare(0, pendingInput.size(), pendingInput) == 0) {
-                return std::nullopt;
-            }
-            initialChannelMessagePending = false;
-        } else {
-            pendingInput.erase(0, messagePos + MESSAGE_TAG.size());
+        const bool messageStartMatches = pendingInput.size() >= MESSAGE_TAG.size() &&
+                                         pendingInput.compare(0, MESSAGE_TAG.size(), MESSAGE_TAG) == 0;
+        if (messageStartMatches) {
+            pendingInput.erase(0, MESSAGE_TAG.size());
             streamState = StreamState::READING_BODY;
             shouldEmitCurrentMessageBody = true;
+            initialChannelMessagePending = false;
+        } else if (pendingInput.size() < MESSAGE_TAG.size() &&
+                   MESSAGE_TAG.compare(0, pendingInput.size(), pendingInput) == 0) {
+            return std::nullopt;
+        } else {
             initialChannelMessagePending = false;
         }
     }

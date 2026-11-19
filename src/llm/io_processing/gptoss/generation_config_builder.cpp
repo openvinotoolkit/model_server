@@ -15,7 +15,6 @@
 //*****************************************************************************
 
 #include "generation_config_builder.hpp"
-#include "../output_parsing_config.hpp"
 #include "generation_context.hpp"
 
 #include <memory>
@@ -67,14 +66,13 @@ void GptOssGenerationConfigBuilder::applyToolGuidance(const OpenAIRequest& reque
         }
     }
 
-    auto beforeCall = std::make_shared<SOC::TagsWithSeparator>();
-    beforeCall->separator = "";
-    beforeCall->tags = {
-        SOC::Tag("<|start|>assistant<|channel|>analysis<|message|>", SOC::AnyText{}, "<|end|>"),
+    const std::vector<SOC::Tag> analysisMessages{
+        SOC::Tag("<|start|>assistant<|channel|>analysis<|message|>", SOC::AnyText{}, "<|end|>")};
+    const std::vector<SOC::Tag> commentaryMessages{
         SOC::Tag("<|start|>assistant<|channel|>commentary<|message|>", SOC::AnyText{}, "<|end|>")};
     auto afterCall = std::make_shared<SOC::TagsWithSeparator>();
     afterCall->separator = "";
-    afterCall->tags = beforeCall->tags;
+    afterCall->tags = commentaryMessages;
     if (!namedChoice) {
         afterCall->tags.insert(afterCall->tags.end(), toolMessages.begin(), toolMessages.end());
     }
@@ -87,13 +85,18 @@ void GptOssGenerationConfigBuilder::applyToolGuidance(const OpenAIRequest& reque
     for (const auto& message : toolMessages) {
         toolAlternatives->elements.emplace_back(std::make_shared<SOC::Tag>(message));
     }
-    // We need a mandatory tool-call rule after zero or more reasoning messages.
-    // XGrammar allows TagsWithSeparator only as the last element of a sequence, so
-    // it cannot express this prefix. Use EBNF to allow the tool-call rule to follow.
-    // The body rules
-    // exclude a complete <|end|> marker while allowing partial marker text as content.
-    const SOC::EBNF reasoningPrefix(R"(root ::= message*
-message ::= "<|start|>assistant<|channel|>" ("analysis" | "commentary") "<|message|>" body "<|end|>"
+    // Before the first action, GPT-OSS may emit analysis messages followed by commentary.
+    // It cannot return to analysis after the parser routes to content or a tool call.
+    // After these opening messages, auto must produce a tool call or final answer;
+    // required and named choices must produce a tool call.
+
+    // Why raw EBNF and not built-in grammar constructs?
+    // XGrammar only allows TagsWithSeparator as the last item in a sequence, but this
+    // repeated message sequence precedes that required choice, so it is expressed in EBNF.
+    // The body rules allow partial <|end|> text as content but stop at the complete delimiter.
+    const SOC::EBNF analysisThenCommentaryPrefix(R"(root ::= analysis* commentary*
+analysis ::= "<|start|>assistant<|channel|>analysis<|message|>" body "<|end|>"
+commentary ::= "<|start|>assistant<|channel|>commentary<|message|>" body "<|end|>"
 body ::= "" | [^<] body | "<" after-open
 after-open ::= "" | "<" after-open | "|" after-pipe | [^<|] body
 after-pipe ::= "" | "<" after-open | "e" after-e | [^<e] body
@@ -102,9 +105,16 @@ after-n ::= "" | "<" after-open | "d" after-d | [^<d] body
 after-d ::= "" | "<" after-open | "|" after-end-pipe | [^<|] body
 after-end-pipe ::= "" | "<" after-open | [^<>] body
 )");
-    const SOC::StructuralTag continuation = requiresCall
-                                                ? SOC::StructuralTag(std::make_shared<SOC::Concat>(std::vector<SOC::StructuralTag>{reasoningPrefix, toolAlternatives, afterCall}))
-                                                : SOC::StructuralTag(afterCall);
+    const SOC::EBNF commentaryOnlyPrefix(R"(root ::= commentary*
+commentary ::= "<|start|>assistant<|channel|>commentary<|message|>" body "<|end|>"
+body ::= "" | [^<] body | "<" after-open
+after-open ::= "" | "<" after-open | "|" after-pipe | [^<|] body
+after-pipe ::= "" | "<" after-open | "e" after-e | [^<e] body
+after-e ::= "" | "<" after-open | "n" after-n | [^<n] body
+after-n ::= "" | "<" after-open | "d" after-d | [^<d] body
+after-d ::= "" | "<" after-open | "|" after-end-pipe | [^<|] body
+after-end-pipe ::= "" | "<" after-open | [^<>] body
+)");
     auto initialMessages = std::make_shared<SOC::Union>();
     const auto initialAlternatives = [&](const std::vector<SOC::Tag>& messages) {
         auto alternatives = std::make_shared<SOC::Union>();
@@ -120,10 +130,26 @@ after-end-pipe ::= "" | "<" after-open | [^<>] body
     if (!firstTools->elements.empty()) {
         initialMessages->elements.emplace_back(std::make_shared<SOC::Concat>(std::vector<SOC::StructuralTag>{firstTools, afterCall}));
     }
-    const auto firstReasoning = initialAlternatives(beforeCall->tags);
-    if (!firstReasoning->elements.empty()) {
-        initialMessages->elements.emplace_back(std::make_shared<SOC::Concat>(std::vector<SOC::StructuralTag>{firstReasoning, continuation}));
-    }
+    const auto firstAnalysis = initialAlternatives(analysisMessages);
+    const auto firstCommentary = initialAlternatives(commentaryMessages);
+    const auto addFirstTextMessagePaths = [&](const std::shared_ptr<SOC::Union>& firstMessage, const SOC::EBNF& remainingOpeningMessages) {
+        if (firstMessage->elements.empty()) {
+            return;
+        }
+        initialMessages->elements.emplace_back(std::make_shared<SOC::Concat>(
+            std::vector<SOC::StructuralTag>{firstMessage, remainingOpeningMessages, toolAlternatives, afterCall}));
+        if (!requiresCall) {
+            auto finalAnswer = std::make_shared<SOC::TagsWithSeparator>();
+            finalAnswer->separator = "";
+            finalAnswer->at_least_one = true;
+            finalAnswer->stop_after_first = true;
+            finalAnswer->tags = finalMessages;
+            initialMessages->elements.emplace_back(std::make_shared<SOC::Concat>(
+                std::vector<SOC::StructuralTag>{firstMessage, remainingOpeningMessages, finalAnswer}));
+        }
+    };
+    addFirstTextMessagePaths(firstAnalysis, analysisThenCommentaryPrefix);
+    addFirstTextMessagePaths(firstCommentary, commentaryOnlyPrefix);
     if (!requiresCall) {
         const auto firstFinal = initialAlternatives(finalMessages);
         if (!firstFinal->elements.empty()) {
