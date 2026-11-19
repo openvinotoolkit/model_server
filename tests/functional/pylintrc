@@ -69,9 +69,6 @@ fail-under=10
 # format. Because '\\' represents the directory delimiter on Windows systems,
 # it can't be used as an escape character.
 ignore-paths=
-    tests/functional/constants/metrics.py,
-    tests/functional/constants/ovms_images.py,
-    tests/functional/constants/paths.py,
     tests/functional/constants/pipelines.py,  # (R0801: duplicate code with models.py)
     tests/functional/data/ovms_capi_wrapper/ovms_autopxd.py,
     tests/functional/data/ovms_capi_wrapper/setup.py,
@@ -83,8 +80,6 @@ ignore-paths=
     tests/functional/data/python_custom_nodes/ovms_corrupted/python_model_loopback_multiple_use_of_valid_outputs.py,
     tests/functional/data/python_custom_nodes/ovms_corrupted/python_model_loopback_return_instead_of_yield.py,
     tests/functional/data/python_custom_nodes/ovms_corrupted/python_model_writing_to_loopback_output_in_execute.py,
-    tests/functional/fixtures/ovms.py,
-    tests/functional/fixtures/server.py,
     tests/functional/object_model/cpu_extension.py,  # C0103: Attribute name doesn't conform to naming style (invalid-name)
     tests/functional/object_model/custom_node.py,
     tests/functional/object_model/dmesg_log_monitor.py,
@@ -106,7 +101,6 @@ ignore-paths=
     tests/functional/utils/core.py,
     tests/functional/utils/docker.py,
     tests/functional/utils/git_operations.py,
-    tests/functional/utils/hooks.py,
     tests/functional/utils/http/client_auth/auth.py,
     tests/functional/utils/inference/capi.py,
     tests/functional/utils/inference/communication/grpc.py,

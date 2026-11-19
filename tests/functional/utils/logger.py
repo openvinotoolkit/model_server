@@ -21,6 +21,7 @@ import logging
 import os
 import re
 import weakref
+from collections.abc import Mapping
 from datetime import datetime
 from typing import Generator, List, Tuple, Union, cast
 
@@ -109,6 +110,13 @@ class SensitiveKeysStrippingFilter(logging.Filter):
                      for var in dir(config)
                      if cls.is_matching_variable(var)])
 
+    @classmethod
+    def add_sensitive_values(cls, *values) -> None:
+        cls()
+        for value in values:
+            if isinstance(value, str) and value and value not in cls.sensitive_values_to_be_masked:
+                cls.sensitive_values_to_be_masked.append(value)
+
     @staticmethod
     def is_matching_variable(var) -> bool:
         if config.sensitive_keys_to_be_masked.match(var):
@@ -133,18 +141,18 @@ class SensitiveKeysStrippingFilter(logging.Filter):
             args = tuple(self.strip_sensitive_data(arg) for arg in args)
         return args
 
-    def strip_sensitive_data(self, data: Union[dict, str]) -> Union[dict, str]:
+    def strip_sensitive_data(self, data):
         if config.strip_sensitive_data:
-            if isinstance(data, str) and len(data) > 0:
-                data = self.strip_sensitive_str_values(data)
-            elif isinstance(data, dict):
-                data = self.strip_sensitive_dict_values(data.copy())
+            return self.strip_sensitive_value(data)
         return data
 
-    def strip_sensitive_dict_values(self, data: dict) -> dict:
-        for key, value in data.items():
-            if value in self.sensitive_values_to_be_masked:
-                data[key] = "***<masked by logger>***"
+    def strip_sensitive_value(self, data):
+        if isinstance(data, str):
+            return self.strip_sensitive_str_values(data) if data else data
+        if isinstance(data, Mapping):
+            return {key: self.strip_sensitive_value(value) for key, value in data.items()}
+        if isinstance(data, (list, tuple)):
+            return type(data)(self.strip_sensitive_value(value) for value in data)
         return data
 
     def strip_sensitive_str_values(self, data: str) -> str:
@@ -152,6 +160,11 @@ class SensitiveKeysStrippingFilter(logging.Filter):
         for sensitive_value_to_be_masked in self.sensitive_values_to_be_masked:
             stripped_data = stripped_data.replace(sensitive_value_to_be_masked, "***<masked by logger>***")
         return stripped_data
+
+
+# Handler filters apply to records from every logger, including third-party ones.
+for _handler in logging.getLogger().handlers:
+    _handler.addFilter(SensitiveKeysStrippingFilter())
 
 
 class LoggerType:
@@ -307,6 +320,7 @@ class OvmsFileHandler(logging.FileHandler):
         super().__init__(file_path, mode, encoding, delay)
         fmt = logging.Formatter(logger_format)
         self.setFormatter(fmt)
+        self.addFilter(SensitiveKeysStrippingFilter())
 
     @staticmethod
     def safe_node_id(item: "Item"):

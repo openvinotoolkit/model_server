@@ -144,10 +144,6 @@ def skip_if_machine_is_not_reserved_for_test_session():
                    msg=FrameworkMessages.MACHINE_NOT_RESERVED_FOR_TEST_SESSION)
 
 
-def skip_if_run_in_parallel():
-    return skip_if(not is_single_threaded(), msg=FrameworkMessages.RUN_IN_PARALLEL)
-
-
 def get_xdist_worker_string():
     return os.environ.get("PYTEST_XDIST_WORKER", "master")
 

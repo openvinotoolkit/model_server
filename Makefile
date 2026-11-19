@@ -260,6 +260,8 @@ PYTHON_CLIENT_TEST_REST_PORT ?= 9280
 PYTHON_CLIENT_TEST_CONTAINER_NAME ?= python-client-test$(shell date +%Y-%m-%d-%H.%M.%S)
 
 TEST_PATH ?= tests/functional/
+# An empty or '.' TEST_PATH would make pytest scan the whole repository.
+FUNCTIONAL_TEST_PATH := $(if $(filter-out .,$(strip $(TEST_PATH))),$(strip $(TEST_PATH)),tests/functional/)
 
 VERBOSE_LOGS ?= OFF
 
@@ -581,7 +583,7 @@ test_checksec: venv
 	@echo "Checksec check success."
 
 test_functional: venv
-	@export OVMS_CPP_DOCKER_IMAGE=$(OVMS_CPP_DOCKER_IMAGE) && export OVMS_CPP_IMAGE_TAG=$(OVMS_CPP_IMAGE_TAG);. $(ACTIVATE); pytest --confcutdir=tests/functional --junitxml=report.xml --html=report.html --self-contained-html -v -rA -s $(TEST_PATH)
+	@export OVMS_CPP_DOCKER_IMAGE=$(OVMS_CPP_DOCKER_IMAGE) && export OVMS_CPP_IMAGE_TAG=$(OVMS_CPP_IMAGE_TAG);. $(ACTIVATE); pytest -n $${TT_XDIST_WORKERS:-4} --dist loadgroup --confcutdir=tests/functional --junitxml=report.xml --html=report.html --self-contained-html -v -rA -s $(FUNCTIONAL_TEST_PATH)
 
 test_python_clients:
 	@echo "Prepare docker image"

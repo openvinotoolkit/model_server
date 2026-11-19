@@ -62,7 +62,7 @@ def add_test_finalizer(request: FixtureRequest) -> Callable[..., None]:
 
 @pytest.fixture(scope="function", autouse=True)
 def context(request, sigterm_cleaner, target_device, ovms_type, base_os):
-    context = Context(request.scope, request.node.nodeid, request.node)
+    context = Context(request.scope, request.node.nodeid, request.node) # pylint: disable=redefined-outer-name
     request.addfinalizer(context.cleanup)
     sigterm_cleaner.test_objects.append(context)
 
