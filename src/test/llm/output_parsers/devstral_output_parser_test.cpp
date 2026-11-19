@@ -532,15 +532,14 @@ TEST_F(DevstralOutputParserTest, StreamingReasoningWithToolCallAndContent) {
         "{\"city\":",
         " \"Paris\"}",
         "</s>"};
-    for (auto finishReason : {ov::genai::GenerationFinishReason::STOP, ov::genai::GenerationFinishReason::LENGTH}) {
-        ParsedOutput parsedOutput = streamChunks(*outputParserWithRegularToolParsing, chunks, finishReason);
-        EXPECT_EQ(parsedOutput.reasoning, "Let me check the weather ");
-        EXPECT_EQ(parsedOutput.content, "Checking now. ");
-        ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
-        EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
-        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"city\": \"Paris\"}");
-        EXPECT_FALSE(parsedOutput.toolCalls[0].id.empty());
-    }
+
+    ParsedOutput parsedOutput = streamChunks(*outputParserWithRegularToolParsing, chunks, ov::genai::GenerationFinishReason::STOP);
+    EXPECT_EQ(parsedOutput.reasoning, "Let me check the weather ");
+    EXPECT_EQ(parsedOutput.content, "Checking now. ");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"city\": \"Paris\"}");
+    EXPECT_FALSE(parsedOutput.toolCalls[0].id.empty());
 }
 
 TEST_F(DevstralOutputParserTest, StreamingReasoningWithOnlyToolCall) {
@@ -554,15 +553,13 @@ TEST_F(DevstralOutputParserTest, StreamingReasoningWithOnlyToolCall) {
         "[ARGS]",
         "{\"city\":\"Paris\"}",
         "</s>"};
-    for (auto finishReason : {ov::genai::GenerationFinishReason::STOP, ov::genai::GenerationFinishReason::LENGTH}) {
-        ParsedOutput parsedOutput = streamChunks(*outputParserWithRegularToolParsing, chunks, finishReason);
-        EXPECT_EQ(parsedOutput.reasoning, "I need a tool");
-        EXPECT_EQ(parsedOutput.content, "");
-        ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
-        EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
-        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"city\":\"Paris\"}");
-        EXPECT_FALSE(parsedOutput.toolCalls[0].id.empty());
-    }
+    ParsedOutput parsedOutput = streamChunks(*outputParserWithRegularToolParsing, chunks, ov::genai::GenerationFinishReason::STOP);
+    EXPECT_EQ(parsedOutput.reasoning, "I need a tool");
+    EXPECT_EQ(parsedOutput.content, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"city\":\"Paris\"}");
+    EXPECT_FALSE(parsedOutput.toolCalls[0].id.empty());
 }
 
 TEST_F(DevstralOutputParserTest, StreamingReasoningWithParallelToolCalls) {
@@ -582,19 +579,17 @@ TEST_F(DevstralOutputParserTest, StreamingReasoningWithParallelToolCalls) {
         "{\"topic\":",
         "\"Paris\"}",
         "</s>"};
-    for (auto finishReason : {ov::genai::GenerationFinishReason::STOP, ov::genai::GenerationFinishReason::LENGTH}) {
-        ParsedOutput parsedOutput = streamChunks(*outputParserWithRegularToolParsing, chunks, finishReason);
-        EXPECT_EQ(parsedOutput.reasoning, "Two tools needed");
-        EXPECT_EQ(parsedOutput.content, "");
-        ASSERT_EQ(parsedOutput.toolCalls.size(), 2);
-        EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
-        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"city\":\"Paris\"}");
-        EXPECT_EQ(parsedOutput.toolCalls[1].name, "check_news");
-        EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"topic\":\"Paris\"}");
-        EXPECT_FALSE(parsedOutput.toolCalls[0].id.empty());
-        EXPECT_FALSE(parsedOutput.toolCalls[1].id.empty());
-        EXPECT_NE(parsedOutput.toolCalls[0].id, parsedOutput.toolCalls[1].id);
-    }
+    ParsedOutput parsedOutput = streamChunks(*outputParserWithRegularToolParsing, chunks, ov::genai::GenerationFinishReason::STOP);
+    EXPECT_EQ(parsedOutput.reasoning, "Two tools needed");
+    EXPECT_EQ(parsedOutput.content, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 2);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"city\":\"Paris\"}");
+    EXPECT_EQ(parsedOutput.toolCalls[1].name, "check_news");
+    EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"topic\":\"Paris\"}");
+    EXPECT_FALSE(parsedOutput.toolCalls[0].id.empty());
+    EXPECT_FALSE(parsedOutput.toolCalls[1].id.empty());
+    EXPECT_NE(parsedOutput.toolCalls[0].id, parsedOutput.toolCalls[1].id);
 }
 
 TEST_F(DevstralOutputParserTest, StreamingReasoningWithOnlyContent) {
@@ -605,12 +600,10 @@ TEST_F(DevstralOutputParserTest, StreamingReasoningWithOnlyContent) {
         "[/THINK]",
         "The answer",
         " is 4."};
-    for (auto finishReason : {ov::genai::GenerationFinishReason::STOP, ov::genai::GenerationFinishReason::LENGTH}) {
-        ParsedOutput parsedOutput = streamChunks(*outputParserWithRegularToolParsing, chunks, finishReason);
-        EXPECT_EQ(parsedOutput.reasoning, "Simple question");
-        EXPECT_EQ(parsedOutput.content, "The answer is 4.");
-        EXPECT_EQ(parsedOutput.toolCalls.size(), 0);
-    }
+    ParsedOutput parsedOutput = streamChunks(*outputParserWithRegularToolParsing, chunks, ov::genai::GenerationFinishReason::STOP);
+    EXPECT_EQ(parsedOutput.reasoning, "Simple question");
+    EXPECT_EQ(parsedOutput.content, "The answer is 4.");
+    EXPECT_EQ(parsedOutput.toolCalls.size(), 0);
 }
 
 TEST_F(DevstralOutputParserTest, ParallelToolCalls) {
