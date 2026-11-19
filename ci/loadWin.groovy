@@ -122,15 +122,15 @@ def clean() {
 
 def build(){
     println "OVMS_PYTHON_ENABLED=${env.OVMS_PYTHON_ENABLED}"
-    def pythonOption = env.OVMS_PYTHON_ENABLED == "0" ? "--no_python" : "--with_python"
-    def status = bat(returnStatus: true, script: '@windows_build.bat ' + get_short_bazel_path() + ' ' + pythonOption + ' --with_tests') 
+    def packagePythonOption = env.OVMS_PYTHON_ENABLED == "0" ? "" : "--with_python"
+    def status = bat(returnStatus: true, script: '@windows_build.bat ' + get_short_bazel_path() + ' --with_tests')
     status = bat(returnStatus: true, script: '@grep "Build completed successfully" win_build.log"')
     if (status != 0) {
         error "Error: Windows build failed ${status}. Check win_build.log for details."
     } else {
         echo "Build successful."
     }
-    def status_pkg = bat(returnStatus: true, script: '@windows_create_package.bat ' + get_short_bazel_path() + ' ' + pythonOption)
+    def status_pkg = bat(returnStatus: true, script: '@windows_create_package.bat ' + get_short_bazel_path() + ' ' + packagePythonOption)
     if (status_pkg != 0) {
         error "Error: Windows package failed ${status_pkg}."
     } else {
@@ -254,12 +254,10 @@ def download_package(){
 }
 
 def unit_test(){
-    println "OVMS_PYTHON_ENABLED=${env.OVMS_PYTHON_ENABLED}"
-    def pythonOption = env.OVMS_PYTHON_ENABLED == "0" ? "--no_python" : "--with_python"
     boolean hasError = false
     def errorReasons = []
 
-    def status = bat(returnStatus: true, script: '@windows_test.bat ' + get_short_bazel_path() + ' ' + pythonOption)
+    def status = bat(returnStatus: true, script: '@windows_test.bat ' + get_short_bazel_path())
     
     // First, check if test script itself failed (before test execution)
     if (status != 0) {
@@ -340,6 +338,15 @@ def unit_test(){
     }
 }
 
+def functional_test(String artifactsPath = null){
+    def packagePath = artifactsPath ?: env.WORKSPACE + '\\dist\\windows\\ovms.zip'
+    def status = bat(returnStatus: true, script: '@windows_test_functional.bat "' + packagePath + '"')
+    if (status != 0) {
+        error "Error: functional_test() failed with exit code ${status}. Check pytest-functional.xml for details."
+    }
+    echo "Functional tests finished successfully."
+}
+
 // Post build steps
 def archive_build_artifacts(){
     // Left for tests when enabled - junit allowEmptyResults: true, testResults: "logs/**/*.xml"
@@ -354,6 +361,7 @@ def archive_test_artifacts(){
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_test_summary.log"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_test_log.zip"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_install_service_test.log"
+    archiveArtifacts allowEmptyArchive: true, artifacts: "pytest-functional.xml"
 }
 
 def archive_bdba_reports(){

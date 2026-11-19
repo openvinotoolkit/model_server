@@ -14,7 +14,9 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <condition_variable>
 #include <memory>
+#include <mutex>
 #include <thread>
 
 #include "../module.hpp"
@@ -30,9 +32,16 @@ class Config;
 class PythonBackend;
 
 class PythonInterpreterModule : public Module, public PythonRuntimeModuleApi {
+    using LifecycleThread = std::jthread;
+
     std::unique_ptr<PythonBackend> pythonBackend;
     mutable std::unique_ptr<py::gil_scoped_release> GILScopedRelease;
+    std::condition_variable_any shutdownCondition;
+    std::mutex lifecycleMtx;
+    std::mutex lifecycleControlMtx;
+    LifecycleThread lifecycleThread;
     std::thread::id threadId;
+    bool startCalled = false;
     bool ownsInterpreter;
 
 public:
@@ -46,6 +55,8 @@ public:
     bool ownsPythonInterpreter() const override;
 
 private:
+    Status initialize();
+    void shutdownOnLifecycleThread() noexcept;
     // Load MediaPipe Python calculators plugin after interpreter is operational
     void loadPythonCalculatorsPlugin();
 };

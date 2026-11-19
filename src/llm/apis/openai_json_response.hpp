@@ -88,7 +88,7 @@ public:
         return true;
     }
 
-    /* 
+    /*
     API specific methods. Following convention:
     - regular name methods (e.g., FinishReason) write a key-value pair
     - methods with Object suffix (e.g., LogprobObject) write a JSON object

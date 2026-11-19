@@ -50,9 +50,6 @@
 #include "../../../mediapipe_internal/mediapipe_utils.hpp"
 #include "../../text_utils.hpp"
 #include "../../../tokenize/tokenize_parser.hpp"
-#if (PYTHON_DISABLE == 0)
-#endif
-#include "../../io_processing/generation_config_builder.hpp"
 #include "src/audio/audio_utils.hpp"
 #include "servable.hpp"
 
@@ -61,6 +58,9 @@ namespace ovms {
 absl::Status OmniModelLegacyServable::validateEndpoint(Endpoint endpoint) const {
     if (endpoint == Endpoint::COMPLETIONS) {
         return absl::InvalidArgumentError("Omni Servable does not support the /completions endpoint. Use /chat/completions or /responses.");
+    }
+    if (endpoint == Endpoint::TRANSCRIPTIONS) {
+        return absl::InvalidArgumentError("Omni Servable does not support audio transcriptions");
     }
     return absl::OkStatus();
 }
@@ -102,59 +102,13 @@ absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServable
     }
     auto& config = ovms::Config::instance();
 
-    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains);
+    auto status = executionContext->apiHandler->parseRequest(getProperties()->maxTokensLimit, getProperties()->bestOfLimit, getProperties()->maxModelLength, config.getServerSettings().allowedLocalMediaPath, config.getServerSettings().allowedMediaDomains, getProperties()->inputProcessorContext.config.visionInputConfig->videoMaxFrames);
     if (!status.ok()) {
         SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to parse request: {}", status.message());
         return status;
     }
 
-    ov::AnyMap streamerConfig;
-    if (omniExecutionContext->apiHandler->isStream()) {
-        const bool userWantsSpecialTokens = !omniExecutionContext->apiHandler->getRequest().skipSpecialTokens;
-        if (userWantsSpecialTokens) {
-            streamerConfig.insert(ov::genai::skip_special_tokens(false));
-        }
-        const bool audioRequested = omniExecutionContext->apiHandler->getRequest().audioOutputRequested;
-        auto ovmsCallback = [& ctx = *omniExecutionContext, audioRequested](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
-            if (ctx.clientDisconnected.load()) {
-                ctx.deltaChannel.signalComplete();
-                return ov::genai::StreamingStatus::CANCEL;
-            }
-            // When audio output is requested, don't signal channel complete on text end.
-            // Audio chunks will follow via speech_streamer, channel is completed by executor.
-            ctx.deltaChannel.push(std::move(delta), isLast && !audioRequested);
-            return ov::genai::StreamingStatus::RUNNING;
-        };
-        omniExecutionContext->textStreamer = std::make_shared<OVMSTextStreamer>(
-            getProperties()->tokenizer,
-            omniExecutionContext->apiHandler->getOutputParser(),
-            omniExecutionContext->apiHandler->areToolsAvailable(),
-            std::move(ovmsCallback),
-            streamerConfig);
-    } else {
-        const bool userWantsSpecialTokens = !omniExecutionContext->apiHandler->getRequest().skipSpecialTokens;
-        if (userWantsSpecialTokens) {
-            streamerConfig.insert(ov::genai::skip_special_tokens(false));
-        }
-        auto unaryCallback = [& ctx = *omniExecutionContext](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
-            if (ctx.clientDisconnected.load()) {
-                return ov::genai::StreamingStatus::CANCEL;
-            }
-            ctx.deltaChannel.push(std::move(delta), isLast);
-            return ov::genai::StreamingStatus::RUNNING;
-        };
-        omniExecutionContext->textStreamer = std::make_shared<OVMSTextStreamer>(
-            getProperties()->tokenizer,
-            nullptr,
-            false,
-            std::move(unaryCallback),
-            streamerConfig);
-    }
-    GenerationConfigBuilder configBuilder(getProperties()->baseGenerationConfig,
-        getProperties()->toolParserName,
-        getProperties()->enableToolGuidedGeneration,
-        getProperties()->decodingMethod);
-    auto inputRequestResult = omniExecutionContext->apiHandler->extractInputRequest(configBuilder);
+    auto inputRequestResult = omniExecutionContext->apiHandler->extractInputRequest();
     if (!inputRequestResult.ok()) {
         return inputRequestResult.status();
     }
@@ -175,9 +129,53 @@ absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServable
         omniExecutionContext->speechConfig.speaker = req.audioVoice;
     }
 
+    return absl::OkStatus();
+}
+
+void OmniModelLegacyServable::initializeTextStreamer(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    auto omniExecutionContext = std::static_pointer_cast<OmniModelLegacyServableExecutionContext>(executionContext);
+    const auto& req = omniExecutionContext->apiHandler->getRequest();
+    ov::AnyMap streamerConfig;
+    if (!req.skipSpecialTokens) {
+        streamerConfig.insert(ov::genai::skip_special_tokens(false));
+    }
+    if (omniExecutionContext->apiHandler->isStream()) {
+        const bool audioRequested = req.audioOutputRequested;
+        auto ovmsCallback = [&ctx = *omniExecutionContext, audioRequested](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
+            if (ctx.clientDisconnected.load()) {
+                ctx.deltaChannel.signalComplete();
+                return ov::genai::StreamingStatus::CANCEL;
+            }
+            // When audio output is requested, don't signal channel complete on text end.
+            // Audio chunks will follow via speech_streamer, channel is completed by executor.
+            ctx.deltaChannel.push(std::move(delta), isLast && !audioRequested);
+            return ov::genai::StreamingStatus::RUNNING;
+        };
+        omniExecutionContext->textStreamer = std::make_shared<OVMSTextStreamer>(
+            getProperties()->tokenizer,
+            omniExecutionContext->apiHandler->getOutputParser(),
+            omniExecutionContext->apiHandler->areToolsAvailable(),
+            std::move(ovmsCallback),
+            streamerConfig);
+    } else {
+        auto unaryCallback = [&ctx = *omniExecutionContext](Delta delta, bool isLast) -> ov::genai::StreamingStatus {
+            if (ctx.clientDisconnected.load()) {
+                return ov::genai::StreamingStatus::CANCEL;
+            }
+            ctx.deltaChannel.push(std::move(delta), isLast);
+            return ov::genai::StreamingStatus::RUNNING;
+        };
+        omniExecutionContext->textStreamer = std::make_shared<OVMSTextStreamer>(
+            getProperties()->tokenizer,
+            omniExecutionContext->apiHandler->getOutputParser(),
+            omniExecutionContext->apiHandler->areToolsAvailable(),
+            std::move(unaryCallback),
+            streamerConfig);
+    }
+
     // Prepare speech streamer for streaming audio output via SSE
     if (req.audioOutputRequested && omniExecutionContext->textStreamer) {
-        omniExecutionContext->speechStreamer = [& ctx = *omniExecutionContext](const ov::Tensor& audio_chunk) -> ov::genai::StreamingStatus {
+        omniExecutionContext->speechStreamer = [&ctx = *omniExecutionContext](const ov::Tensor& audio_chunk) -> ov::genai::StreamingStatus {
             if (ctx.clientDisconnected.load()) {
                 return ov::genai::StreamingStatus::CANCEL;
             }
@@ -200,8 +198,6 @@ absl::Status OmniModelLegacyServable::parseRequest(std::shared_ptr<GenAiServable
             return ov::genai::StreamingStatus::RUNNING;
         };
     }
-
-    return absl::OkStatus();
 }
 
 absl::Status OmniModelLegacyServable::scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {

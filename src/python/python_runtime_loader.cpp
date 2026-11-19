@@ -16,6 +16,7 @@
 #include "python_runtime_loader.hpp"
 
 #include <cstdlib>
+#include <filesystem>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -25,6 +26,9 @@
 #include <dlfcn.h>
 using PythonLibraryHandle = void*;
 #elif _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 using PythonLibraryHandle = HMODULE;
 #endif
@@ -46,6 +50,9 @@ PythonLibraryHandle pythonRuntimeHandle = nullptr;
 CreatePythonInterpreterModuleFn createPythonInterpreterModuleFn = nullptr;
 ValidatePythonEnvironmentFn validatePythonEnvironmentFn = nullptr;
 ConfigureRuntimeLoggingFn configureRuntimeLoggingFn = nullptr;
+#ifdef _WIN32
+DLL_DIRECTORY_COOKIE pythonDllDirectoryCookie = nullptr;
+#endif
 
 void applyConfiguredLoggingToRuntimeLibrary() {
     if (configureRuntimeLoggingFn == nullptr) {
@@ -66,6 +73,10 @@ void unloadPythonRuntimeLibrary() {
     dlclose(pythonRuntimeHandle);
 #elif _WIN32
     FreeLibrary(pythonRuntimeHandle);
+    if (pythonDllDirectoryCookie != nullptr) {
+        RemoveDllDirectory(pythonDllDirectoryCookie);
+        pythonDllDirectoryCookie = nullptr;
+    }
 #endif
     pythonRuntimeHandle = nullptr;
 }
@@ -220,6 +231,9 @@ Module* ensurePythonRuntimeLoaded() {
             exeDir = exePath.substr(0, separatorPos);
         }
 
+        const auto pythonDirectory = std::filesystem::absolute(std::filesystem::path(exeDir) / "python").wstring();
+        pythonDllDirectoryCookie = AddDllDirectory(pythonDirectory.c_str());
+
         std::vector<std::string> executableRelativeCandidates{
             exeDir + "\\libovmspython.dll",
             exeDir + "\\src\\python\\libovmspython.dll",
@@ -238,7 +252,11 @@ Module* ensurePythonRuntimeLoaded() {
     }
 
     for (const auto& candidate : candidates) {
-        pythonRuntimeHandle = LoadLibraryA(candidate.c_str());
+        const auto absoluteCandidate = std::filesystem::absolute(std::filesystem::path(candidate));
+        pythonRuntimeHandle = LoadLibraryExW(
+            absoluteCandidate.c_str(),
+            nullptr,
+            LOAD_LIBRARY_SEARCH_DEFAULT_DIRS | LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_USER_DIRS);
         if (pythonRuntimeHandle != nullptr) {
             break;
         }
@@ -246,6 +264,10 @@ Module* ensurePythonRuntimeLoaded() {
 
     if (pythonRuntimeHandle == nullptr) {
         DWORD error = GetLastError();
+        if (pythonDllDirectoryCookie != nullptr) {
+            RemoveDllDirectory(pythonDllDirectoryCookie);
+            pythonDllDirectoryCookie = nullptr;
+        }
         SPDLOG_WARN("Python runtime library libovmspython.dll failed to load: {} ({})", error, std::system_category().message(error));
         return nullptr;
     }

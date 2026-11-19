@@ -28,27 +28,27 @@ template <>
 MetricFamily<MetricCounter>::MetricFamily(const std::string& name, const std::string& description, prometheus::Registry& registryImplRef) :
     registryImplRef(registryImplRef),
     familyImplRef(&prometheus::BuildCounter()
-                       .Name(name)
-                       .Help(description)
-                       .Register(this->registryImplRef)) {
+            .Name(name)
+            .Help(description)
+            .Register(this->registryImplRef)) {
 }
 
 template <>
 MetricFamily<MetricGauge>::MetricFamily(const std::string& name, const std::string& description, prometheus::Registry& registryImplRef) :
     registryImplRef(registryImplRef),
     familyImplRef(&prometheus::BuildGauge()
-                       .Name(name)
-                       .Help(description)
-                       .Register(this->registryImplRef)) {
+            .Name(name)
+            .Help(description)
+            .Register(this->registryImplRef)) {
 }
 
 template <>
 MetricFamily<MetricHistogram>::MetricFamily(const std::string& name, const std::string& description, prometheus::Registry& registryImplRef) :
     registryImplRef(registryImplRef),
     familyImplRef(&prometheus::BuildHistogram()
-                       .Name(name)
-                       .Help(description)
-                       .Register(this->registryImplRef)) {
+            .Name(name)
+            .Help(description)
+            .Register(this->registryImplRef)) {
 }
 
 template <>

@@ -225,7 +225,8 @@ public:
 };
 std::unique_ptr<std::thread> EmbeddingsHttpTest::t;
 
-const int EMBEDDING_OUTPUT_SIZE = 384;
+const int EMBEDDING_OUTPUT_SIZE = 768;
+const int NON_NORMALIZED_EMBEDDING_L2_NORM = 15;
 
 TEST_P(EmbeddingsHttpTest, simplePositive) {
     auto modelName = GetParam();
@@ -295,7 +296,7 @@ TEST_P(EmbeddingsHttpTest, simplePositiveNoNorm) {
         sum += value.GetDouble() * value.GetDouble();
     }
     double norm = std::max(std::sqrt(sum), double(1e-12));
-    ASSERT_NEAR(norm, 9.5, 1);  // norm of a not normalized vector
+    ASSERT_NEAR(norm, NON_NORMALIZED_EMBEDDING_L2_NORM, 1);
     ASSERT_EQ(d["data"][0]["index"], 0);
 }
 

@@ -123,6 +123,7 @@ ovms_cc_library(
         ":optimum_export",
         "@ovms//src/graph_export:graph_export_paths",
         "@ovms//src:cpp_headers",
+        "@ovms//src:module_names",
         "@ovms//src:libovmsstring_utils",
         "@ovms//src:libovmslogging",
         "@ovms//src:libovms_server_settings",

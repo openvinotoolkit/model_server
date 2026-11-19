@@ -135,7 +135,7 @@ if __name__ == "__main__":
         ]
     else:
         cache_entries  = """
-            "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wuninitialized ",
+            "CMAKE_CXX_FLAGS": " -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wno-error=deprecated-declarations -Wno-error=array-bounds -Wuninitialized ",
             "ZLIB_INCLUDE_DIR": "../drogon_cmake.ext_build_deps/include",  # This is a hack because drogon does not allow absolute path
             "ZLIB_LIBRARY": "@zlib//:zlib",
             "JSONCPP_INCLUDE_DIR": "@jsoncpp//:jsoncpp",

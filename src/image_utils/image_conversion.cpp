@@ -106,8 +106,8 @@ std::vector<std::string> saveImagesStbi(const ov::Tensor& tensor) {
     size_t channels = tensor.get_shape()[3];
     size_t imageSize = height * width * channels;
 
-    if (channels != 3 && channels != 1) {
-        throw std::runtime_error{"Only 1 or 3 channel images are supported for saving"};
+    if (channels != 3 && channels != 1 && channels != 4) {
+        throw std::runtime_error{"Only 1, 3, or 4 channel images are supported for saving"};
     }
     if (batchSize == 0) {
         throw std::runtime_error{"Tensor batch size cannot be zero"};

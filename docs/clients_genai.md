@@ -506,6 +506,18 @@ curl http://localhost:8000/v3/models
 :::
 ::::
 
+Besides `id`, `object`, `created` and `owned_by`, an entry can carry additional fields describing the servable. For text generation models it includes `max_model_len`, the context length in tokens that the server enforces, read from the model's `config.json`. The field is omitted when the model does not declare a context length and for servables of other types. It is also reported for models unloaded due to inactivity, using the value from their last load.
+
+```json
+{
+  "id": "OpenVINO/Qwen3-8B-int4-ov",
+  "object": "model",
+  "created": 1784334119,
+  "owned_by": "OVMS",
+  "max_model_len": 40960
+}
+```
+
 ### Retrieve model
 
 ::::{tab-set}

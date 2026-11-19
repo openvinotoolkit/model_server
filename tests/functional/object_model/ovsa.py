@@ -122,7 +122,7 @@ class OvsaCerts(SslCertificates):
             destination_path.mkdir(parents=True)
 
         logger.info("Generate Certs")
-        with SelfDeletingFileLock(f"{Path(destination_path, '.dir.lock')}") as fl:
+        with SelfDeletingFileLock(f"{Path(destination_path, '.dir.lock')}") as _fl:
             certs = OvsaCerts(mount_a_dir=mount_a_dir, nginx_mtls_path=destination_path)
             if certs.are_valid() and skip_if_valid:
                 logger.info("Certificates are still valid and do not require generation")

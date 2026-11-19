@@ -30,7 +30,6 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "io_processing/delta.hpp"
 #include "openvino/genai/perf_metrics.hpp"
-#include "openvino/genai/text_streamer.hpp"
 #include "mediapipe/framework/calculator.pb.h"
 #pragma GCC diagnostic pop
 #pragma warning(pop)
@@ -45,6 +44,7 @@
 #include "runtime_chat_template_runtime_loader.hpp"
 
 namespace ovms {
+class OVMSTextStreamer;
 
 // Some pipelines internals rely on request_id, so for now we provide increasing ID
 static std::atomic<uint64_t> currentRequestId = 0;
@@ -57,10 +57,10 @@ GenAiServable support.
 This header contains the interface for GenAiServable and its properties and execution context.
 All classes in this file should not be instantiated, but rather extended by derived classes.
 
-GenAiServable is an interface for derived classes that implement logic for specific types of pipelines. 
+GenAiServable is an interface for derived classes that implement logic for specific types of pipelines.
 It uses both GenAiServableProperties and GenAiServableExecutionContext (or rather their extensions) to facilitate implementation.
 
-GenAiServableProperties is a container for data initialized when the servable is loaded and it is reused 
+GenAiServableProperties is a container for data initialized when the servable is loaded and it is reused
 for every request, in contrary to GenAiServableExecutionContext that is created multiple times during servable lifespan.
 GenAiServableProperties are initialized by servable initializer (see servable_initializer.hpp).
 
@@ -73,11 +73,6 @@ Note that GenAiServableExecutionContext pointer is the only parameter most of th
 enum class GenerationPhase {
     INPUT_TOKEN_PROCESSING,
     OUTPUT_TOKEN_PROCESSING,
-};
-
-enum class ChatTemplateEngine {
-    MINJA,  // Use GenAI's apply_chat_template (minja-based)
-    JINJA,  // Use Python Jinja2 module for chat template processing
 };
 
 // Thread-safe channel for parsed streaming deltas.
@@ -149,7 +144,9 @@ struct GenAiServableExecutionContext {
     std::vector<ov::genai::GenerationOutput> generationOutputs;
     std::unique_ptr<ov::genai::PerfMetrics> perfMetrics;
     std::string response;
-    std::shared_ptr<ov::genai::TextStreamer> textStreamer;
+    std::shared_ptr<OVMSTextStreamer> textStreamer;
+    // Loopback iterations can occur before the calculator emits its first frame.
+    bool streamFrameEmitted = false;
     bool sendLoopbackSignal = false;
     bool lifecyclePrimed = false;  // true once RESPONSES lifecycle events have been primed
     DeltaChannel deltaChannel;     // thread-safe delta queue used by all streaming paths
@@ -178,22 +175,40 @@ struct LegacyServableExecutionContextBase : public GenAiServableExecutionContext
 // Defined in servable.cpp. Both Legacy servable overrides delegate here.
 absl::Status prepareLegacyPartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
+enum class ChatTemplateEngine {
+    NONE,
+    MINJA,  // Use GenAI's apply_chat_template (minja-based)
+    JINJA,  // Use Python Jinja2 module for chat template processing
+};
+
+enum class ChatTemplateStatus {
+    NOT_CHECKED,
+    AVAILABLE,
+    MISSING,
+    LOAD_FAILED,
+    INCOMPATIBLE,
+};
+
+enum class ChatTemplateSource {
+    NONE,
+    CHAT_TEMPLATE_JINJA,
+    GENAI_TOKENIZER,
+};
+
 struct GenAiServableProperties {
     // General configuration
     std::string modelsPath;
     ov::genai::GenerationConfig baseGenerationConfig;
     std::string toolParserName;
     std::string reasoningParserName;
+    std::string contentParserName;
     std::string device;
     ov::AnyMap pluginConfig;
     ov::AnyMap tokenizerPluginConfig;
     bool enableToolGuidedGeneration = false;
-#if (PYTHON_DISABLE == 0)
-    ChatTemplateEngine chatTemplateEngine = ChatTemplateEngine::JINJA;
-#else
-    ChatTemplateEngine chatTemplateEngine = ChatTemplateEngine::MINJA;
-#endif
-    bool chatTemplateEngineExplicit = false;
+    ChatTemplateEngine chatTemplateEngine = ChatTemplateEngine::NONE;
+    ChatTemplateStatus chatTemplateStatus = ChatTemplateStatus::NOT_CHECKED;
+    ChatTemplateSource chatTemplateSource = ChatTemplateSource::NONE;
     // Chat template analysis
     ChatTemplateCaps chatTemplateCaps;
     // Sampling
@@ -217,6 +232,10 @@ struct GenAiServableProperties {
 };
 
 class GenAiServable {
+protected:
+    /** Constructs the text streamer after output-parser initialization. */
+    virtual void initializeTextStreamer(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
+
 public:
     GenAiServable() = default;
     GenAiServable(GenAiServable&&) = default;
@@ -246,8 +265,7 @@ public:
 
     // Override to reject endpoints not supported by this servable.
     // Called after endpoint is determined. Return non-OK to reject.
-    virtual absl::Status validateEndpoint(Endpoint endpoint) const {
-        (void)endpoint;
+    virtual absl::Status validateEndpoint(Endpoint) const {
         return absl::OkStatus();
     }
 
@@ -259,15 +277,15 @@ public:
 
     /*
     parseRequest method implementation MUST fill executionContext apiHandler field and parse request.
-    For streaming requests, it MUST initialize the textStreamer field of executionContext.
     Base implementation creates OpenAIChatCompletionsHandler and calls its parseRequest method.
-    Additionally it initializes textStreamer for streaming requests.
+    Output parsers and streamers are constructed after generation setup in prepareInputs.
     */
     virtual absl::Status parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 
     /*
     prepareInputs method implementation MUST fill executionContext inputRequest.inputIds field.
     Base implementation applies chat template to the payload body and encodes it with tokenizer.
+    It then configures generation and initializes output parsing and streaming.
     */
     virtual absl::Status prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext);
 

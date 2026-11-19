@@ -25,8 +25,10 @@ class CalculatorGraphConfig_Node;
 }
 
 namespace ovms {
+class GraphMetadata;
 struct GraphSidePackets;
 class PythonBackend;
+class MetricProvider;
 
 class NodeInitializer {
 public:
@@ -37,7 +39,9 @@ public:
         const std::string& graphName,
         const std::string& basePath,
         GraphSidePackets& sidePackets,
-        PythonBackend* pythonBackend) = 0;
+        GraphMetadata& metadata,
+        PythonBackend* pythonBackend,
+        const MetricProvider* metrics) = 0;
 };
 
 class NodeInitializerRegistry {

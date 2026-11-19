@@ -15,12 +15,14 @@
 //*****************************************************************************
 
 #pragma once
+#include <exception>
 #include <memory>
 #include <iostream>
 #include <string>
 #include <openvino/genai/generation_config.hpp>
 #include <openvino/genai/tokenizer.hpp>
 #include "base_generation_config_builder.hpp"
+#include "output_parsing_config.hpp"
 #include "phi4/generation_config_builder.hpp"
 #include "llama3/generation_config_builder.hpp"
 #include "hermes3/generation_config_builder.hpp"
@@ -73,6 +75,26 @@ public:
 
     void parseConfigFromRequest(const OpenAIRequest& request) {
         builder_impl->parseConfigFromRequest(request);
+    }
+
+    void configureStructuredGeneration(const OpenAIRequest& request, const ReasoningGenerationContext& reasoningContext, const std::string& reasoningParserName) {
+        builder_impl->configureStructuredGeneration(request, reasoningContext, reasoningParserName);
+    }
+
+    /** Builds sampling and structured-output parameters after input rendering, retaining grammar-validation fallback. */
+    void build(const OpenAIRequest& request, const ReasoningGenerationContext& reasoningContext, const std::string& reasoningParserName, ov::genai::Tokenizer& tokenizer) {
+        parseConfigFromRequest(request);
+        adjustConfigForDecodingMethod();
+        try {
+            configureStructuredGeneration(request, reasoningContext, reasoningParserName);
+            validateStructuredOutputConfig(tokenizer);
+        } catch (const ResponseFormatInvariantError& e) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Response format invariant failed during structured generation setup: {}", e.what());
+            throw;
+        } catch (const std::exception& e) {
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Structured output will not be applied due to grammar validation failure: {}", e.what());
+            unsetStructuredOutputConfig();
+        }
     }
 
     void addStopString(const std::string& decodedStopString) {

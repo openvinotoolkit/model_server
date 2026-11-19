@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=no-member
 
 import pytest
 
@@ -101,7 +102,7 @@ class TestPoolPart:
         for start, stop in TestManager.pool_part_ranges:
             try:
                 PoolPart(start, stop)
-            except AssertionError as e:
+            except AssertionError as _e:
                 pytest.fail(f"Creating PoolPart should succeed with range: "
                             f"start {start}, stp: {stop}")
 

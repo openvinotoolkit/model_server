@@ -44,12 +44,18 @@ protected:
                                               output_stream: "DETECTIONS:tracked_detections"
                                               options: {
                                                       [mediapipe.ByteTrackCalculatorOptions.ext] {
-                                                        track_high_threshold:)pb", track_high_threshold, R"pb(
-                                                                                                               track_low_threshold:)pb", track_low_threshold, R"pb(
-                                                                                                                                                                    new_track_threshold:)pb", new_track_threshold, R"pb(
-                                                                                                                                                                                                                         matching_threshold:)pb", matching_threshold, R"pb(
-                                                                                                                                                                                                                                                                            track_buffer:)pb", track_buffer, R"pb(
-                                                                                                                                                                                                                                                                                                                   fuse_score:)pb", fuse_score ? "true" : "false", R"pb(
+                                                        track_high_threshold:)pb",
+            track_high_threshold, R"pb(
+                                                                                                               track_low_threshold:)pb",
+            track_low_threshold, R"pb(
+                                                                                                                                                                    new_track_threshold:)pb",
+            new_track_threshold, R"pb(
+                                                                                                                                                                                                                         matching_threshold:)pb",
+            matching_threshold, R"pb(
+                                                                                                                                                                                                                                                                            track_buffer:)pb",
+            track_buffer, R"pb(
+                                                                                                                                                                                                                                                                                                                   fuse_score:)pb",
+            fuse_score ? "true" : "false", R"pb(
                                                                                                                                                                                                                                                                                                                                                                          }
                                                                                                                                                                                                                                                                                                                                                                          }
 )pb");

@@ -13,17 +13,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <algorithm>
+#include <array>
+#include <cstdint>
 #include <filesystem>
+#include <stdexcept>
 #include <string>
 #include <system_error>
 
+#include "absl/strings/escaping.h"
 #include <gtest/gtest.h>
 #include <openvino/genai/chat_history.hpp>
+#include <zlib.h>
 
 #include "../../../llm/io_processing/input_processors/image_decoding_processor.hpp"
 #include "../../../llm/io_processing/image_utils.hpp"
 #include "../../../llm/io_processing/input_request.hpp"
 #include "src/config.hpp"
+#include "src/test/environment.hpp"
 
 using namespace ovms;
 
@@ -170,6 +177,113 @@ static InputRequest makeImageUrlRequest(const std::string& url) {
     return makeChatRequest(history);
 }
 
+static void appendBigEndianUint32(std::string& output, uint32_t value) {
+    output.push_back(static_cast<char>(value >> 24));
+    output.push_back(static_cast<char>(value >> 16));
+    output.push_back(static_cast<char>(value >> 8));
+    output.push_back(static_cast<char>(value));
+}
+
+static void appendPngChunk(std::string& output, const char* type, const std::string& data) {
+    appendBigEndianUint32(output, static_cast<uint32_t>(data.size()));
+    output.append(type, 4);
+    output.append(data);
+
+    uLong crc = crc32(0L, Z_NULL, 0);
+    crc = crc32(crc, reinterpret_cast<const Bytef*>(type), 4);
+    crc = crc32(crc, reinterpret_cast<const Bytef*>(data.data()), static_cast<uInt>(data.size()));
+    appendBigEndianUint32(output, static_cast<uint32_t>(crc));
+}
+
+static std::string makeLarge16BitGrayPng(const uint32_t width, const uint32_t height) {
+    const uint64_t uncompressedSize = static_cast<uint64_t>(height) * (1 + static_cast<uint64_t>(width) * 2);
+    std::array<Bytef, 64 * 1024> input{};
+    std::array<Bytef, 64 * 1024> compressedChunk{};
+    std::string compressed;
+    z_stream stream{};
+    if (deflateInit(&stream, Z_BEST_SPEED) != Z_OK) {
+        throw std::runtime_error("Failed to initialize PNG compressor");
+    }
+
+    uint64_t remaining = uncompressedSize;
+    int result = Z_OK;
+    do {
+        const uInt inputSize = static_cast<uInt>(std::min<uint64_t>(remaining, input.size()));
+        stream.next_in = input.data();
+        stream.avail_in = inputSize;
+        remaining -= inputSize;
+        const int flush = remaining == 0 ? Z_FINISH : Z_NO_FLUSH;
+
+        do {
+            stream.next_out = compressedChunk.data();
+            stream.avail_out = static_cast<uInt>(compressedChunk.size());
+            result = deflate(&stream, flush);
+            if (result != Z_OK && result != Z_STREAM_END) {
+                deflateEnd(&stream);
+                throw std::runtime_error("Failed to compress PNG data");
+            }
+            compressed.append(reinterpret_cast<const char*>(compressedChunk.data()),
+                compressedChunk.size() - stream.avail_out);
+        } while (stream.avail_out == 0);
+    } while (remaining != 0);
+
+    if (result != Z_STREAM_END) {
+        deflateEnd(&stream);
+        throw std::runtime_error("PNG compressor did not finish");
+    }
+    deflateEnd(&stream);
+
+    std::string png("\x89PNG\r\n\x1a\n", 8);
+    std::string header;
+    appendBigEndianUint32(header, width);
+    appendBigEndianUint32(header, height);
+    header.push_back(16);  // 16-bit depth
+    header.push_back(0);   // Grayscale
+    header.append("\0\0\0", 3);
+    appendPngChunk(png, "IHDR", header);
+    appendPngChunk(png, "IDAT", compressed);
+    appendPngChunk(png, "IEND", "");
+    return png;
+}
+
+static std::string makeRgbPng() {
+    const std::string scanline{"\0\x0a\x14\x1e", 4};
+    std::array<Bytef, 64> compressed{};
+    uLongf compressedSize = compressed.size();
+    if (compress2(compressed.data(), &compressedSize,
+            reinterpret_cast<const Bytef*>(scanline.data()), static_cast<uLong>(scanline.size()), Z_BEST_SPEED) != Z_OK) {
+        throw std::runtime_error("Failed to compress RGB PNG test image");
+    }
+
+    std::string png("\x89PNG\r\n\x1a\n", 8);
+    std::string header;
+    appendBigEndianUint32(header, 1);
+    appendBigEndianUint32(header, 1);
+    header.push_back(8);  // 8-bit depth
+    header.push_back(2);  // RGB
+    header.append("\0\0\0", 3);
+    appendPngChunk(png, "IHDR", header);
+    appendPngChunk(png, "IDAT", std::string(reinterpret_cast<const char*>(compressed.data()), compressedSize));
+    appendPngChunk(png, "IEND", "");
+    return png;
+}
+
+TEST(ImageDecodingProcessorTest, Base64RgbImagePreservesVlmRgbTensorContract) {
+    const std::string encoded = absl::Base64Escape(makeRgbPng());
+    InputRequest request = makeImageUrlRequest("data:image/png;base64," + encoded);
+    ImageDecodingProcessor processor(std::nullopt, std::nullopt);
+
+    const auto status = processor.process(request);
+
+    ASSERT_TRUE(status.ok()) << status.message();
+    ASSERT_EQ(request.inputImages.size(), 1u);
+    const auto& image = request.inputImages.front();
+    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+    EXPECT_EQ(image.get_shape(), (ov::Shape{1, 1, 1, 3}));
+    const std::array<uint8_t, 3> expected{10, 20, 30};
+    EXPECT_EQ(std::memcmp(image.data<uint8_t>(), expected.data(), expected.size()), 0);
+}
+
 TEST(ImageDecodingProcessorTest, Base64InvalidDataRejected) {
     InputRequest req = makeImageUrlRequest("data:image/jpeg;base64,NOT_VALID_BASE64!!!");
     ImageDecodingProcessor processor(std::nullopt, std::nullopt);
@@ -177,6 +291,30 @@ TEST(ImageDecodingProcessorTest, Base64InvalidDataRejected) {
     EXPECT_FALSE(status.ok());
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
     EXPECT_EQ(status.message(), "Invalid base64 string in request");
+}
+
+// This image is only about 1.5 MB compressed, but stb expands it to roughly
+// 1.4 GiB before format conversion and requires a machine with sufficient memory.
+TEST(ImageDecodingProcessorTest, Large16BitDataUrlWithRaisedBudgetIsRejected) {
+    // This regression test is too resource-intensive for precommit runs.
+    SKIP_AND_EXIT_IF_NOT_RUNNING_UNSTABLE();
+
+    constexpr uint32_t width = 26755;
+    constexpr uint32_t height = 26755;
+    constexpr uint64_t pixels = static_cast<uint64_t>(width) * height;
+    ScopedImageDecodeBudget budgetGuard(pixels, false);
+
+    const std::string base64 = absl::Base64Escape(makeLarge16BitGrayPng(width, height));
+    InputRequest req = makeImageUrlRequest("data:image/png;base64," + base64);
+    ImageDecodingProcessor processor(std::nullopt, std::nullopt);
+
+    const auto status = processor.process(req);
+
+    EXPECT_FALSE(status.ok());
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_EQ(std::string(status.message()).find("Image parsing failed:"), 0u);
+    EXPECT_TRUE(req.inputImages.empty());
+    EXPECT_EQ(req.totalDecodedPixels, 0u);
 }
 
 TEST(ImageDecodingProcessorTest, HttpUrlDomainNotInAllowList) {
@@ -196,6 +334,13 @@ TEST(ImageDecodingProcessorTest, HttpUrlWithNoAllowedDomainsConfiguredRejected) 
     EXPECT_FALSE(status.ok());
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
     EXPECT_EQ(status.message(), "Given url does not match any allowed domain from allowed_media_domains");
+}
+
+TEST(ImageDecodingProcessorTest, HttpRedirectWithoutPermissionReturnsConfigurationGuidance) {
+    const auto status = validateHttpDownloadResponse(302, false, "image");
+
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_EQ(status.message(), "Failed to download image from external URL because redirects are not allowed. Set OVMS_MEDIA_URL_ALLOW_REDIRECTS=1 environment variable to allow redirects.");
 }
 
 TEST(ImageDecodingProcessorTest, ChunkedImageLargerThanLimitRejected) {
@@ -231,7 +376,7 @@ TEST(ImageDecodingProcessorTest, LocalFilesystemDisabledRejected) {
     const auto status = processor.process(req);
     EXPECT_FALSE(status.ok());
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
-    EXPECT_EQ(status.message(), "Loading images from local filesystem is disabled.");
+    EXPECT_EQ(status.message(), "Loading media from local filesystem is disabled.");
 }
 
 TEST(ImageDecodingProcessorTest, LocalPathTraversalWithDotDotRejected) {
@@ -421,7 +566,7 @@ TEST(ImageDecodingProcessorTest, InterleavedTextAndImageUrlInContentArray) {
     const auto status = processor.process(req);
     EXPECT_FALSE(status.ok());
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
-    EXPECT_EQ(status.message(), "Loading images from local filesystem is disabled.");
+    EXPECT_EQ(status.message(), "Loading media from local filesystem is disabled.");
 }
 
 TEST(ImageDecodingProcessorTest, SymlinkEscapeInsideAllowedPathRejected) {

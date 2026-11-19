@@ -28,9 +28,9 @@
 using namespace ovms;
 
 #ifdef _WIN32
-const std::string minicpm5TokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\openbmb\\MiniCPM5-1B";
+const std::string minicpm5TokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\OpenVINO\\MiniCPM5-1B-int4-ov";
 #else
-const std::string minicpm5TokenizerPath = "/ovms/src/test/llm_testing/openbmb/MiniCPM5-1B";
+const std::string minicpm5TokenizerPath = "/ovms/src/test/llm_testing/OpenVINO/MiniCPM5-1B-int4-ov";
 #endif
 
 using ovms::ParameterType;
@@ -256,13 +256,15 @@ TEST_F(Minicpm5OutputParserTest, ParseMixedStringAndIntegerParams) {
 }
 
 // In production, MiniCPM5's chat template appends <think> at the end of the
-// prompt; detectAndSetImplicitReasoningStart detects it and sets the parser
+// prompt; the detected reasoning context is applied to set the parser
 // into implicit reasoning mode. The model then outputs reasoning text directly
 // without emitting <think>, and terminates with </think>.
 // We simulate that here via setImplicitReasoningStart(true).
 TEST_F(Minicpm5OutputParserTest, ParseReasoningWithoutStartingTag) {
     auto scopedParser = std::make_unique<OutputParser>(*minicpm5Tokenizer, "minicpm5", "minicpm5", minicpm5ToolsSchemas);
-    scopedParser->detectAndSetImplicitReasoningStart("Some text\n<|im_start|>assistant\n<think>");
+    const auto context = ovms::determineReasoningContext(ovms::getDefaultReasoningParsingConfig("minicpm5"), "Some text\n<|im_start|>assistant\n<think>");
+    EXPECT_TRUE(context.implicitStart);
+    scopedParser->setImplicitReasoningStart(context.implicitStart);
 
     // Encode the reasoning text without BOS (in production these are generated
     // tokens, not prompt tokens — the model never emits <think> itself).
@@ -391,6 +393,26 @@ TEST(Minicpm5ToolParserImplTest, SingleCallNoContent) {
     EXPECT_EQ(calls[0].arguments, R"({"city":"Berlin"})");
     EXPECT_EQ(parser.getCurrentState(), Minicpm5ToolParserImpl::State::Content);
     EXPECT_FALSE(calls[0].id.empty());
+}
+
+// A string parameter keeps the model's text as written. The last two values would otherwise be
+// reparsed as JSON, the last one after its single quotes were converted to double quotes.
+TEST(Minicpm5ToolParserImplTest, StringParameterKeepsOriginalText) {
+    const std::vector<std::pair<std::string, std::string>> valuesAndExpectedArguments = {
+        {"1.10", R"({"query":"1.10"})"},
+        {"[1, 2,   3]", R"({"query":"[1, 2,   3]"})"},
+        {"{'a': 1}", R"({"query":"{'a': 1}"})"},
+    };
+    for (const auto& [value, expectedArguments] : valuesAndExpectedArguments) {
+        const std::string input = R"(<function name="search"><param name="query">)" + value + R"(</param></function>)";
+        auto content = input;
+        Minicpm5ToolParserImpl parser(minicpm5TypeMap);
+        auto callsOpt = parser.parseChunk(content);
+        ASSERT_TRUE(callsOpt.has_value()) << input;
+        auto& calls = callsOpt.value();
+        ASSERT_EQ(calls.size(), 1u) << input;
+        EXPECT_EQ(calls[0].arguments, expectedArguments) << input;
+    }
 }
 
 TEST(Minicpm5ToolParserImplTest, SingleCallWithEmptyParam) {

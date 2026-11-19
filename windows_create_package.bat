@@ -42,12 +42,12 @@ IF "%~1"=="" (
     set "output_user_root=%1"
 )
 
-IF "%~2"=="--with_python" (
+IF /I "%~2"=="--with_python" (
     echo Self contained Python will be included in the package
-    set "with_python=true"
+    set "include_python=true"
 ) ELSE (
     echo Self contained Python will not be included in the package
-    set "with_python=false"
+    set "include_python=false"
 )
 
 :: Set default USE_OV_BINARY if not set
@@ -129,37 +129,36 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 
 set "dest_dir=C:\opt"
 
-if /i "%with_python%"=="true" (
-    if exist %cd%\bazel-bin\src\python\libovmspython.dll (
-        set "libovmspython_src=%cd%\bazel-bin\src\python\libovmspython.dll"
-    ) else if exist %cd%\bazel-out\x64_windows-opt\bin\src\python\libovmspython.dll (
-        set "libovmspython_src=%cd%\bazel-out\x64_windows-opt\bin\src\python\libovmspython.dll"
-    )
-    if not defined libovmspython_src (
-        echo Missing libovmspython.dll in bazel output. Ensure //src/python:libovmspython is built.
-        exit /b 1
-    )
+if exist %cd%\bazel-bin\src\python\libovmspython.dll (
+    set "libovmspython_src=%cd%\bazel-bin\src\python\libovmspython.dll"
+) else if exist %cd%\bazel-out\x64_windows-opt\bin\src\python\libovmspython.dll (
+    set "libovmspython_src=%cd%\bazel-out\x64_windows-opt\bin\src\python\libovmspython.dll"
+)
+if not defined libovmspython_src (
+    echo Missing libovmspython.dll in bazel output. Ensure //src/python:libovmspython is built.
+    exit /b 1
+)
 
-    if exist %cd%\bazel-bin\src\python\libpython_calculators.dll (
-        set "libpython_calculators_src=%cd%\bazel-bin\src\python\libpython_calculators.dll"
-    ) else if exist %cd%\bazel-out\x64_windows-opt\bin\src\python\libpython_calculators.dll (
-        set "libpython_calculators_src=%cd%\bazel-out\x64_windows-opt\bin\src\python\libpython_calculators.dll"
-    )
-    if not defined libpython_calculators_src (
-        echo Missing libpython_calculators.dll in bazel output. Ensure //src/python:libpython_calculators is built.
-        exit /b 1
-    )
+if exist %cd%\bazel-bin\src\python\libpython_calculators.dll (
+    set "libpython_calculators_src=%cd%\bazel-bin\src\python\libpython_calculators.dll"
+) else if exist %cd%\bazel-out\x64_windows-opt\bin\src\python\libpython_calculators.dll (
+    set "libpython_calculators_src=%cd%\bazel-out\x64_windows-opt\bin\src\python\libpython_calculators.dll"
+)
+if not defined libpython_calculators_src (
+    echo Missing libpython_calculators.dll in bazel output. Ensure //src/python:libpython_calculators is built.
+    exit /b 1
+)
 
-    :: Copy pyovms module
-    md dist\windows\ovms\python
-    copy %cd%\bazel-out\x64_windows-opt\bin\src\python\binding\pyovms.pyd dist\windows\ovms\python
-    if !errorlevel! neq 0 exit /b !errorlevel!
+:: Copy Python runtime libraries and binding required by ovms.exe.
+copy "!libovmspython_src!" dist\windows\ovms
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy "!libpython_calculators_src!" dist\windows\ovms
+if !errorlevel! neq 0 exit /b !errorlevel!
+md dist\windows\ovms\python
+copy %cd%\bazel-out\x64_windows-opt\bin\src\python\binding\pyovms.pyd dist\windows\ovms\python
+if !errorlevel! neq 0 exit /b !errorlevel!
 
-    :: Copy shared OVMS python runtime libraries required by ovms.exe when Python is enabled.
-    copy "!libovmspython_src!" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
-    copy "!libpython_calculators_src!" dist\windows\ovms
-    if !errorlevel! neq 0 exit /b !errorlevel!
+if /i "%include_python%"=="true" (
     :: Prepare self-contained python
     set "python_version=3.12.10"
 
@@ -189,6 +188,20 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 
 :: Copy from bazel-out if the genai is from sources
 copy %cd%\bazel-out\x64_windows-opt\bin\src\opencv_world!opencv_dll_ver!.dll dist\windows\ovms
+if !errorlevel! neq 0 exit /b !errorlevel!
+set "opencv_decoder_src=%cd%\bazel-out\x64_windows-opt\bin\src\image_utils\ovms_opencv_image_decoder.dll"
+if not exist "!opencv_decoder_src!" (
+    echo Missing ovms_opencv_image_decoder.dll. Ensure //src/image_utils:opencv_image_decoder is built.
+    exit /b 1
+)
+copy /Y "!opencv_decoder_src!" dist\windows\ovms
+if !errorlevel! neq 0 exit /b !errorlevel!
+set "opencv_calculators_src=%cd%\bazel-out\x64_windows-opt\bin\src\lib\ovms_opencv_calculators.dll"
+if not exist "!opencv_calculators_src!" (
+    echo Missing ovms_opencv_calculators.dll. Ensure //src/lib:ovms_opencv_calculators is built.
+    exit /b 1
+)
+copy /Y "!opencv_calculators_src!" dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\openvino_genai.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
@@ -294,15 +307,24 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 dist\windows\ovms\ovms.exe --help
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-if /i "%with_python%"=="true" (
-    if not exist dist\windows\ovms\libovmspython.dll (
-        echo Packaging validation failed: libovmspython.dll is missing from dist\windows\ovms.
-        exit /b 1
-    )
-    if not exist dist\windows\ovms\libpython_calculators.dll (
-        echo Packaging validation failed: libpython_calculators.dll is missing from dist\windows\ovms.
-        exit /b 1
-    )
+python src\test\no_opencv_server_test.py "%cd%" - "%cd%\dist\windows\ovms\ovms.exe" --expect-opencv
+if !errorlevel! neq 0 exit /b !errorlevel!
+
+if not exist dist\windows\ovms\libovmspython.dll (
+    echo Packaging validation failed: libovmspython.dll is missing from dist\windows\ovms.
+    exit /b 1
+)
+if not exist dist\windows\ovms\libpython_calculators.dll (
+    echo Packaging validation failed: libpython_calculators.dll is missing from dist\windows\ovms.
+    exit /b 1
+)
+if not exist dist\windows\ovms\ovms_opencv_image_decoder.dll (
+    echo Packaging validation failed: ovms_opencv_image_decoder.dll is missing from dist\windows\ovms.
+    exit /b 1
+)
+if not exist dist\windows\ovms\ovms_opencv_calculators.dll (
+    echo Packaging validation failed: ovms_opencv_calculators.dll is missing from dist\windows\ovms.
+    exit /b 1
 )
 
 cd dist\windows

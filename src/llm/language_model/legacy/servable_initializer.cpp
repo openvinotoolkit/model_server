@@ -74,19 +74,11 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
         }
     }
-    if (nodeOptions.has_chat_template_engine()) {
-        properties->chatTemplateEngineExplicit = true;
-#if (PYTHON_DISABLE == 0)
-        properties->chatTemplateEngine = (nodeOptions.chat_template_engine() == mediapipe::LLMCalculatorOptions::JINJA)
-                                             ? ChatTemplateEngine::JINJA
-                                             : ChatTemplateEngine::MINJA;
-#else
-        if (nodeOptions.chat_template_engine() == mediapipe::LLMCalculatorOptions::JINJA) {
-            SPDLOG_ERROR("chat_template_engine=JINJA requires Python support.");
-            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
-        }
-        properties->chatTemplateEngine = ChatTemplateEngine::MINJA;
-#endif
+    try {
+        properties->chatTemplateEngine = determineChatTemplateEngine(nodeOptions);
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Failed to determine chat template engine: {}", e.what());
+        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
     }
 
     properties->schedulerConfig.max_num_batched_tokens = nodeOptions.max_num_batched_tokens();
@@ -176,6 +168,14 @@ Status LegacyServableInitializer::initialize(std::shared_ptr<GenAiServable>& ser
     status = loadChatTemplate(properties, parsedModelsPath);
     if (!status.ok()) {
         return status;
+    }
+    const auto chatTemplateAnalysis = properties->chatTemplateStatus == ChatTemplateStatus::AVAILABLE ? std::optional<ChatTemplateAnalysisResult>{analyzeChatTemplate(properties)} : std::nullopt;
+    selectOutputParsers(properties, chatTemplateAnalysis);
+    if (nodeOptions.has_chat_template_engine()) {
+        status = validateChatTemplateAvailability(properties);
+        if (!status.ok()) {
+            return status;
+        }
     }
     properties->legacyExecutor = std::make_shared<LegacyExecutorWrapper>(properties->pipeline);
     if (nodeOptions.has_max_tokens_limit()) {

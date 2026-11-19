@@ -17,8 +17,6 @@
 import re
 
 from tests.functional.utils.environment_info import CurrentOsInfo
-from tests.functional.constants.os_type import OsType
-from tests.functional.config import base_os
 from tests.functional.constants.ovms import CurrentOvmsType
 
 
@@ -143,8 +141,7 @@ class OvmsMessages:
     ERROR_NOT_VALID_JSON = "Error: The file is not valid json"
     ERROR_MODEL_NOT_FOUND = "Model with requested name is not found"
     ERROR_PIPELINE_NOT_FOUND = "Pipeline with requested name is not found"
-    ERROR_FAILED_TO_PARSE = "error parsing options: Argument '{}' failed to parse" if OsType.Windows in base_os \
-        else "error parsing options: Argument ‘{}’ failed to parse"
+    ERROR_FAILED_TO_PARSE = "error parsing options: Argument '{}' failed to parse"
     ERROR_WRONG_BATCH_SIZE = "Wrong batch size parameter provided"
     ERROR_FAILED_TO_PARSE_SHAPE_SHORT = "There was an error parsing shape"
     ERROR_FAILED_TO_PARSE_SHAPE = "There was an error parsing shape {}"
@@ -222,6 +219,7 @@ class OvmsMessages:
     ERROR_CFG_KEY_ERROR = "Keyword:{} Key: #{}"
     USE_CONFIG_PATH_OR_MODEL_PATH_WITH_SPARE_MODEL = "Use either config_path or model_path with model_name"
     USE_CONFIG_PATH_WITHOUT_MODEL = "Use config_path or model_path with model_name"
+    ERROR_LOADING_MODEL_NO_VALID_MODEL = "Error loading model: no valid model file found for model"
     ERROR_LOADING_MODEL = "Error occurred while loading model: {}"
     ERROR_LOADING_MODEL_INTERNAL_SERVER_ERROR = (
         "Error occurred while loading model: {}; version: {}; error: Internal server error"
@@ -413,6 +411,9 @@ class OvmsMessages:
         'Create new stream for another request.'
     )
 
+    FAILED_TO_PREPARE_JINJA_CHAT_TEMPLATE = "Failed to prepare Jinja chat template"
+    CHAT_TEMPLATE_NOT_COMPATIBLE_WITH_MINJA = "Chat template is not compatible with minja"
+    DISABLING_CHAT_COMPLETIONS = "Disabling /chat/completions endpoint for this model."
     CHAT_TEMPLATE_NOT_LOADED = (
         "Warning: Chat template has not been loaded properly. Servable will not respond to /chat/completions endpoint"
     )

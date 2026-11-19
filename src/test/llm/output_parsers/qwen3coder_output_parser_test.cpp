@@ -28,10 +28,10 @@
 using namespace ovms;
 
 #ifdef _WIN32
-const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\Qwen\\Qwen3-8B";
+const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\OpenVINO\\Qwen3-8B-int4-ov";
 #else
 // Hardcoded for usage in docker container
-const std::string tokenizerPath = "/ovms/src/test/llm_testing/Qwen/Qwen3-8B";
+const std::string tokenizerPath = "/ovms/src/test/llm_testing/OpenVINO/Qwen3-8B-int4-ov";
 #endif
 
 using ovms::ParameterType;
@@ -946,7 +946,12 @@ const std::vector<std::tuple<std::string, std::string, std::string, std::string>
     {"object_tool", "arg1", "{\"a\":1,\"b\":{\"c\":\"asd\"}}", "{\"arg1\":{\"a\":1,\"b\":{\"c\":\"asd\"}}}"},
     {"list_tool", "arg1", "[1, 2, 3]", "{\"arg1\":[1,2,3]}"},
     {"list_tool", "arg1", "[\"a\",\"b\",\"c\"]", "{\"arg1\":[\"a\",\"b\",\"c\"]}"},
-    {"object_tool", "arg1", "[{\"a\":1},{\"b\":2}]", "{\"arg1\":[{\"a\":1},{\"b\":2}]}"}};
+    {"object_tool", "arg1", "[{\"a\":1},{\"b\":2}]", "{\"arg1\":[{\"a\":1},{\"b\":2}]}"},
+    // A string parameter keeps the model's text as written, even when that text is valid JSON.
+    {"string_tool", "arg1", "1.10", "{\"arg1\":\"1.10\"}"},
+    {"string_tool", "arg1", "1e3", "{\"arg1\":\"1e3\"}"},
+    {"string_tool", "arg1", "[1, 2,   3]", "{\"arg1\":\"[1, 2,   3]\"}"},
+    {"string_tool", "arg1", "{\"a\": 1,  \"b\": 2}", "{\"arg1\":\"{\\\"a\\\": 1,  \\\"b\\\": 2}\"}"}};
 
 INSTANTIATE_TEST_SUITE_P(
     Qwen3CoderOutputParserParametrizedTestInstance,

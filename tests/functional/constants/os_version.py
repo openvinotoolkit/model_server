@@ -20,23 +20,26 @@ REDHAT_MINIMAL_BASE_IMAGE = "registry.access.redhat.com/ubi9/ubi-minimal:9.7"
 REDHAT_COMMON_BASE_IMAGE = "registry.access.redhat.com/ubi9/ubi:9.7"
 UBUNTU_22_BASE_IMAGE = "ubuntu:22.04"
 UBUNTU_24_BASE_IMAGE = "ubuntu:24.04"
+UBUNTU_26_BASE_IMAGE = "ubuntu:26.04"
 
 os_type_to_base_image = {
     OsType.Redhat: REDHAT_COMMON_BASE_IMAGE,
     OsType.Ubuntu22: UBUNTU_22_BASE_IMAGE,
     OsType.Ubuntu24: UBUNTU_24_BASE_IMAGE,
+    OsType.Ubuntu26: UBUNTU_26_BASE_IMAGE,
 }
 
 os_type_to_base_image_binary_docker = {
     OsType.Redhat: REDHAT_COMMON_BASE_IMAGE,
     OsType.Ubuntu22: UBUNTU_22_BASE_IMAGE,
-    OsType.Ubuntu24: UBUNTU_24_BASE_IMAGE
+    OsType.Ubuntu24: UBUNTU_24_BASE_IMAGE,
+    OsType.Ubuntu26: UBUNTU_26_BASE_IMAGE,
 }
 
-OPENVINO_UBUNTU_20_DEV_IMAGE = "openvino/ubuntu20_dev:2024.6.0"
-OPENVINO_MODEL_SERVER_LATEST = "openvino/model_server:latest"
-OPENVINO_MODEL_SERVER_LATEST_GPU = "openvino/model_server:latest-gpu"
-OPENVINO_MODEL_SERVER_LATEST_PY = "openvino/model_server:latest-py"
-OPENVINO_MODEL_SERVER_WEEKLY = "openvino/model_server:weekly"
+OPENVINO_MODEL_SERVER = "openvino/model_server"
+OPENVINO_MODEL_SERVER_LATEST = f"{OPENVINO_MODEL_SERVER}:latest"
+OPENVINO_MODEL_SERVER_LATEST_GPU = f"{OPENVINO_MODEL_SERVER}:latest-gpu"
+OPENVINO_MODEL_SERVER_LATEST_PY = f"{OPENVINO_MODEL_SERVER}:latest-py"
+OPENVINO_MODEL_SERVER_WEEKLY = f"{OPENVINO_MODEL_SERVER}:weekly"
 NO_DOC_UPDATE_IMAGES = [OPENVINO_MODEL_SERVER_LATEST, OPENVINO_MODEL_SERVER_LATEST_GPU,
                         OPENVINO_MODEL_SERVER_LATEST_PY, OPENVINO_MODEL_SERVER_WEEKLY]

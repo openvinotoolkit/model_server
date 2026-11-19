@@ -64,14 +64,11 @@ Integrations <ovms_demos_integrations>
 |[Using input strings](universal-sentence-encoder/README.md)|Handling AI model with text as the model input.|
 |[Using output strings](image_classification_with_string_output/README.md)|Handling AI model with string output.|
 |[Natural Language Processing with BERT](bert_question_answering/python/README.md)|Provide a knowledge source and a query and use BERT model for question answering via gRPC API. This demo uses dynamic shape feature.|
-|[Benchmark App](benchmark/python/README.md)|Generate traffic and measure performance of the model served in OpenVINO Model Server.|
+|[Benchmark Clients](benchmark/README.md)|Generate traffic and measure performance of models served in OpenVINO Model Server.|
 
 ## MediaPipe
 | Demo | Description |
 |---|---|
-|[Object Detection](./mediapipe/object_detection/README.md)|A pipeline implementing object detection.|
-|[Iris](./mediapipe/iris_tracking/README.md)|A pipeline implementing iris detection.|
-|[Holistic](./mediapipe/holistic_tracking/README.md)|A complex pipeline linking several image analytical models and image transformations.|
 |[Realtime Stream Analysis](real_time_stream_analysis/python/README.md)|Analyze RTSP video stream in real time with generic application template for custom pre and post processing routines.|
 |[Image classification](./mediapipe/image_classification/README.md)|Basic example with a single inference node.|
 |[Chain of models](./mediapipe/multi_model_graph/README.md)|A chain of models in a graph.|

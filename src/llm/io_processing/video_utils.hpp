@@ -29,7 +29,26 @@
 
 namespace ovms {
 
-constexpr int64_t MAX_VIDEO_FRAMES = 1024;
+// Calculates how many decoded frames can be retained after applying the
+// administrator's FPS and maximum-frame settings to a client video source.
+absl::StatusOr<size_t> calculateSelectedVideoFrameCount(uint64_t durationUnits,
+    uint32_t timescale, uint32_t sampleCount, std::optional<float> requestedFps, uint32_t maxDecodedFrames);
+
+// Returns whether reserving frameCount decoded frames fits the remaining pixel budget.
+bool videoFrameAllocationFitsBudget(size_t framePixels, size_t frameCount,
+    size_t totalAllocatedPixels, size_t maxAllowedPixels);
+
+class VideoFrameSelector {
+public:
+    VideoFrameSelector(std::optional<long double> frameInterval, size_t maxSelectedFrames);
+    bool shouldSelect(uint64_t timestamp);
+
+private:
+    const std::optional<long double> frameInterval;
+    const size_t maxSelectedFrames{0};
+    size_t selectedFrameCount{0};
+    long double nextSelectedTimestamp{0.0L};
+};
 
 // Loads a sequence of video frames from a list of frame references (base64 data
 // URIs, HTTP/HTTPS URLs, or local file paths) and stacks them into a single
@@ -38,6 +57,16 @@ constexpr int64_t MAX_VIDEO_FRAMES = 1024;
 absl::StatusOr<ov::Tensor> loadVideoFrames(const std::vector<std::string>& frameSources,
     const std::optional<std::string>& allowedLocalMediaPath,
     const std::optional<std::vector<std::string>>& allowedMediaDomains,
-    size_t& totalAllocatedPixels);
+    uint32_t maxDecodedFrames, size_t& totalAllocatedPixels);
+
+// Decodes an H.264/AVC MP4 source, sampling at requestedFps when provided.
+// With requestedFps, the request is rejected if the estimated sampled frame
+// count exceeds maxDecodedFrames; otherwise, the maxDecodedFrames is the
+// used frames count is also rejected if the selected frames exceed the remaining
+// decoded-pixel budget.
+absl::StatusOr<ov::Tensor> decodeVideoSource(const std::string& videoSource,
+    const std::optional<std::string>& allowedLocalMediaPath,
+    const std::optional<std::vector<std::string>>& allowedMediaDomains,
+    std::optional<float> requestedFps, uint32_t maxDecodedFrames, size_t& totalAllocatedPixels);
 
 }  // namespace ovms

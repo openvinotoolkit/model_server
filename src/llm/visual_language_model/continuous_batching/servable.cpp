@@ -29,8 +29,6 @@
 #include "../../../logging.hpp"
 #include "../../../tokenize/tokenize_parser.hpp"
 #include "../../text_utils.hpp"
-#if (PYTHON_DISABLE == 0)
-#endif
 
 namespace ovms {
 
@@ -58,9 +56,12 @@ void VisualLanguageModelServable::logPerfMetrics(ov::genai::VLMPerfMetrics& perf
 
 absl::Status VisualLanguageModelServable::addRequestToPipeline(std::shared_ptr<ContinuousBatchingServableExecutionContext>& executionContext) {
     auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
-    vlmExecutionContext->generationHandle = properties->pipeline->add_request(currentRequestId++,  // to be removed from API?
-        vlmExecutionContext->inputRequest.promptText, vlmExecutionContext->inputRequest.inputImages,
+    vlmExecutionContext->generationHandle = properties->pipeline->add_request(
+        currentRequestId++,  // to be removed from API?
+        vlmExecutionContext->inputRequest.promptText,
+        vlmExecutionContext->inputRequest.inputImages,
         vlmExecutionContext->inputRequest.inputVideos,
+        vlmExecutionContext->inputRequest.inputAudios,
         vlmExecutionContext->inputRequest.generationConfig);
     return absl::OkStatus();
 }
@@ -68,6 +69,10 @@ absl::Status VisualLanguageModelServable::addRequestToPipeline(std::shared_ptr<C
 absl::Status VisualLanguageModelServable::validateEndpoint(Endpoint endpoint) const {
     if (endpoint == Endpoint::COMPLETIONS) {
         return absl::InvalidArgumentError("VLM Servable does not support the /completions endpoint. Use /chat/completions or /responses.");
+    }
+    const auto& audioInputConfig = properties->inputProcessorContext.config.audioInputConfig;
+    if (endpoint == Endpoint::TRANSCRIPTIONS && !audioInputConfig.has_value()) {
+        return absl::InvalidArgumentError("VLM Servable does not support audio transcriptions");
     }
     return absl::OkStatus();
 }
@@ -82,6 +87,9 @@ std::shared_ptr<GenAiServableProperties> VisualLanguageModelServable::getPropert
 
 absl::Status VisualLanguageModelServable::prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto status = GenAiServable::prepareCompleteResponse(executionContext);
+    if (status.ok() && canRecordCompletedRequestMetrics(*executionContext)) {
+        recordCompletedRequestMetrics(*executionContext);
+    }
     if (status.ok() && llm_calculator_logger->should_log(spdlog::level::debug)) {
         auto vlmExecutionContext = std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext);
         auto perfMetrics = vlmExecutionContext->generationHandle->get_vlm_perf_metrics();
@@ -92,6 +100,13 @@ absl::Status VisualLanguageModelServable::prepareCompleteResponse(std::shared_pt
 
 absl::Status VisualLanguageModelServable::preparePartialResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     auto status = GenAiServable::preparePartialResponse(executionContext);
+    if (!status.ok()) {
+        stopGenerationOnResponseError(std::static_pointer_cast<VisualLanguageModelServableExecutionContext>(executionContext));
+        return status;
+    }
+    if (!executionContext->sendLoopbackSignal && canRecordCompletedRequestMetrics(*executionContext)) {
+        recordCompletedRequestMetrics(*executionContext);
+    }
     if (status.ok() &&
         !executionContext->sendLoopbackSignal &&
         llm_calculator_logger->should_log(spdlog::level::debug)) {

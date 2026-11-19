@@ -21,6 +21,7 @@
 #include "src/stringutils.hpp"
 #include "src/timer.hpp"
 #include "src/logging.hpp"
+#include <cstring>
 #include <cstdlib>
 #include <limits>
 #include <stdexcept>
@@ -34,7 +35,7 @@ namespace ovms::audio_utils {
 
 static void validateAudioFileSizeAgainstMaxValue(size_t fileSize);
 
-bool isWavBuffer(const std::string buf) {
+bool isWavBuffer(const std::string_view buf) {
     // RIFF ref: https://en.wikipedia.org/wiki/Resource_Interchange_File_Format
     // WAV ref: https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html
     SPDLOG_TRACE("isWavBuffer: buf {}", buf.substr(0, 12));
@@ -42,7 +43,8 @@ bool isWavBuffer(const std::string buf) {
         return false;
     }
 
-    uint32_t chunk_size = *reinterpret_cast<const uint32_t*>(buf.data() + 4);
+    uint32_t chunk_size;
+    std::memcpy(&chunk_size, buf.data() + 4, sizeof(chunk_size));
     SPDLOG_TRACE("isWavBuffer: chunk_size {}", chunk_size);
     if (chunk_size + 8 != buf.size()) {
         return false;
@@ -175,7 +177,7 @@ std::vector<float> readMp3(const std::string_view& mp3Data, uint32_t targetSampl
     if (mp3.totalPCMFrameCount != std::numeric_limits<uint64_t>::max()) {
         try {
             if (targetSampleRate > 0) {
-                validateAudioFileSize(mp3.totalPCMFrameCount, mp3.sampleRate, targetSampleRate, mp3.channels, sizeof(float));
+                validateAudioFileSize(mp3.totalPCMFrameCount, mp3.sampleRate, targetSampleRate, /*will be downmixed to mono*/ 1, sizeof(float));
             }
         } catch (...) {
             drmp3_uninit(&mp3);
@@ -194,10 +196,20 @@ std::vector<float> readMp3(const std::string_view& mp3Data, uint32_t targetSampl
                 break;
             }
             if (pcmf32.size() > AUDIO_BUFFER_SIZE_LIMIT) {
-                drmp3_uninit(&mp3);
                 throw std::overflow_error("Decoded audio buffer size overflow");
             }
-            pcmf32.insert(pcmf32.end(), tempBuffer, tempBuffer + framesRead * mp3.channels);
+            if (mp3.channels == 1) {
+                pcmf32.insert(pcmf32.end(), tempBuffer, tempBuffer + framesRead);
+            } else {
+                // Down-mix interleaved stereo to mono so that readMp3 honours the same
+                // "mono float32 PCM samples" contract as readWav. Done per chunk so the
+                // size guard below keeps measuring the final buffer.
+                const size_t writeOffset = pcmf32.size();
+                pcmf32.resize(writeOffset + framesRead);
+                for (drmp3_uint64 frame = 0; frame < framesRead; frame++) {
+                    pcmf32[writeOffset + frame] = (tempBuffer[2 * frame] + tempBuffer[2 * frame + 1]) * 0.5f;
+                }
+            }
             validateAudioFileSizeAgainstMaxValue(pcmf32.size() * sizeof(float));
         }
     } catch (...) {

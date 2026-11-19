@@ -22,6 +22,8 @@
 #include <utility>
 #include <vector>
 
+#include "../metrics/calculator_metrics.hpp"
+
 namespace ovms {
 
 class PythonNodeResources;
@@ -68,6 +70,7 @@ private:
 using GenAiExecutionContextMap = std::unordered_map<std::string, std::shared_ptr<GenAiExecutionContextHolder>>;
 
 struct GraphSidePackets {
+    CalculatorMetricsMap calculatorMetrics;
     PythonNodeResourcesMap pythonNodeResourcesMap;
     GenAiServableMap genAiServableMap;
     GenAiExecutionContextMap genAiExecutionContextMap;
@@ -79,6 +82,7 @@ struct GraphSidePackets {
     std::vector<std::string> loraAliases;
     bool hideBaseModelInRouting = false;
     void clear() {
+        calculatorMetrics.clear();
         pythonNodeResourcesMap.clear();
         genAiServableMap.clear();
         genAiExecutionContextMap.clear();
@@ -91,7 +95,8 @@ struct GraphSidePackets {
         hideBaseModelInRouting = false;
     }
     bool empty() {
-        return (pythonNodeResourcesMap.empty() &&
+        return (calculatorMetrics.empty() &&
+                pythonNodeResourcesMap.empty() &&
                 genAiServableMap.empty() &&
                 genAiExecutionContextMap.empty() &&
                 imageGenPipelinesMap.empty() &&

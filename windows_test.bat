@@ -40,25 +40,19 @@ set /p bazelVersion=<"%~dp0.bazelversion"
 set "bazelPath=C:\opt\bazel-%bazelVersion%-windows-x86_64.exe"
 set "OVMS_MEDIA_URL_ALLOW_REDIRECTS=1"
 
-IF "%~3"=="" (
-    set "gtestFilter=*"
-) ELSE (
-    set "gtestFilter=%3"
-)
+set "ovmsGtestFilter=%~2"
+if "!ovmsGtestFilter!"=="" set "ovmsGtestFilter=*"
 
-IF "%~2"=="--with_python" (
-    set "bazelBuildArgs=--config=win_mp_on_py_on --action_env OpenVINO_DIR=%openvino_dir%"
-    set "testTargets=//src:ovms_test //src:python_runtime_library_test"
-    set "runPythonRuntimeTest=%cd%\bazel-bin\src\python_runtime_library_test.exe --gtest_filter=!gtestFilter!"
-) ELSE (
-    set "bazelBuildArgs=--config=win_mp_on_py_off --action_env OpenVINO_DIR=%openvino_dir%"
-    set "testTargets=//src:ovms_test"
-    set "runPythonRuntimeTest="
-)
+set "bazelBuildArgs=--config=win_mp_on --action_env OpenVINO_DIR=%openvino_dir%"
+set "testTargets=//src:ovms_test //src:python_runtime_library_test //src/python:pythoninterpretermodule_lifecycle_test //src/python:pythoninterpretermodule_backend_failure_test //src/python:pythoninterpretermodule_borrowed_interpreter_test"
+set "runPythonRuntimeTest=%cd%\bazel-bin\src\python_runtime_library_test.exe"
+set "runPythonInterpreterLifecycleTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed //src/python:pythoninterpretermodule_lifecycle_test"
+set "runPythonInterpreterBackendFailureTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed //src/python:pythoninterpretermodule_backend_failure_test"
+set "runPythonInterpreterBorrowedTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed //src/python:pythoninterpretermodule_borrowed_interpreter_test"
 
 set "buildTestCommand=%bazelPath% %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %testTargets%"
 set "changeConfigsCmd=python windows_change_test_configs.py"
-set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=!gtestFilter! > win_full_test.log 2>&1"
+set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=!ovmsGtestFilter! > win_full_test.log 2>&1"
 
 :: Load chosen dependency versions from versions.mk
 for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
@@ -95,7 +89,6 @@ set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 set "openvinoBatch=call !BAZEL_SHORT_PATH!\openvino\setupvars.bat"
 
 set "opencvBatch=call C:\opt\opencv_!opencv_version!\setup_vars_opencv4.cmd"
-set "PYTHONHOME=C:\opt\Python312"
 
 :: Set required libraries paths
 %openvinoBatch%
@@ -108,7 +101,9 @@ if !errorlevel! neq 0 (
     echo [ERROR] OpenCV setup_vars_opencv4.cmd failed with error code !errorlevel! >> win_full_test.log
     exit /b !errorlevel!
 )
-set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
+
+set "PYTHONHOME=C:\opt\Python312"
+set "PYTHONPATH=C:\opt\Python312;%setPythonPath%"
 
 :: Start bazel build test
 %buildTestCommand% 2>&1 | tee win_build_test.log
@@ -125,7 +120,7 @@ if !errorlevel! neq 0 (
     echo [ERROR] windows_change_test_configs.py failed with error code !errorlevel! >> win_full_test.log
     exit /b !errorlevel!
 )
-:: Download LLMs
+:: Download LLM test models
 call %cd%\windows_prepare_llm_models.bat %cd%\src\test\llm_testing
 if !errorlevel! neq 0 (
     echo [ERROR] windows_prepare_llm_models.bat failed with error code !errorlevel! >> win_full_test.log
@@ -148,11 +143,18 @@ echo Running: %runTest%
 %runTest%
 set "testExitCode=!errorlevel!"
 
-IF "%~2"=="--with_python" (
-    echo Running: %runPythonRuntimeTest%
-    %runPythonRuntimeTest% >> win_full_test.log 2>&1
-    set "pythonTestExitCode=!errorlevel!"
-)
+echo Running: %runPythonRuntimeTest%
+%runPythonRuntimeTest% >> win_full_test.log 2>&1
+set "pythonTestExitCode=!errorlevel!"
+echo Running: %runPythonInterpreterLifecycleTest%
+%runPythonInterpreterLifecycleTest% >> win_full_test.log 2>&1
+set "pythonInterpreterLifecycleExitCode=!errorlevel!"
+echo Running: %runPythonInterpreterBackendFailureTest%
+%runPythonInterpreterBackendFailureTest% >> win_full_test.log 2>&1
+set "pythonInterpreterBackendFailureExitCode=!errorlevel!"
+echo Running: %runPythonInterpreterBorrowedTest%
+%runPythonInterpreterBorrowedTest% >> win_full_test.log 2>&1
+set "pythonInterpreterBorrowedExitCode=!errorlevel!"
 
 :: Cut tests log to results
 set regex="\[  .* ms"
@@ -181,6 +183,10 @@ if !hasPassed! equ 0 if !hasFailed! neq 0 (
 call %cd%\windows_parse_tests.bat win_full_test.log win_test_summary.log
 set "parseExitCode=!errorlevel!"
 if !parseExitCode! neq 0 exit /b !parseExitCode!
+
+if !pythonInterpreterLifecycleExitCode! neq 0 exit /b !pythonInterpreterLifecycleExitCode!
+if !pythonInterpreterBackendFailureExitCode! neq 0 exit /b !pythonInterpreterBackendFailureExitCode!
+if !pythonInterpreterBorrowedExitCode! neq 0 exit /b !pythonInterpreterBorrowedExitCode!
 
 echo [INFO] Tests finished with no failures. Check the summary in win_test_summary.log.
 exit /b 0

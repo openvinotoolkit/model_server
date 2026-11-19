@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <filesystem>
 #include <map>
 #include <optional>
 #include <unordered_map>
@@ -23,6 +24,8 @@
 void SetEnvironmentVar(const std::string& var, const std::string& val);
 void UnSetEnvironmentVar(const std::string& var);
 const std::string GetEnvVar(const std::string& var);
+void setDefaultEspeakDataPath(const std::filesystem::path& executablePath);
+void setDefaultEspeakDataPath();
 
 struct EnvGuard {
     EnvGuard();

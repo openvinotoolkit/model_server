@@ -20,6 +20,13 @@
 
 namespace ovms {
 
+struct ReasoningGenerationContext {
+    std::string begin;
+    std::string end;
+    bool implicitStart = false;
+    bool completedInPrompt = false;
+};
+
 // Configuration for a parser's phase-boundary detection and tokenizer decode mode.
 //
 // Phase detection:
@@ -70,5 +77,11 @@ struct OutputParsingConfig {
     // See comment block above.
     bool defaultDecodingWithSpecialTokens = false;
 };
+
+/** Returns default reasoning boundaries without constructing a parser or resolving token IDs. */
+OutputParsingConfig getDefaultReasoningParsingConfig(const std::string& parserName);
+
+/** Determines the generation's reasoning state from parser metadata and the rendered prompt. */
+ReasoningGenerationContext determineReasoningContext(const OutputParsingConfig& config, const std::string& renderedPrompt);
 
 }  // namespace ovms

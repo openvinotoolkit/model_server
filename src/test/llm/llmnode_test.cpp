@@ -20,9 +20,13 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <regex>
 #include <sstream>
+#include <stdexcept>
 #include <string>
+#include <thread>
+#include <vector>
 
 #include <fmt/ranges.h>
 
@@ -30,12 +34,10 @@
 #include <gtest/gtest.h>
 #include <openvino/genai/continuous_batching_pipeline.hpp>
 #include <openvino/openvino.hpp>
-#if (PYTHON_DISABLE == 0)
 #pragma warning(push)
 #pragma warning(disable : 6326 28182 6011 28020)
 #include <pybind11/embed.h>
 #pragma warning(pop)
-#endif
 
 #include "../../http_rest_api_handler.hpp"
 #include "../../config.hpp"
@@ -44,16 +46,22 @@
 #include "../../llm/apis/openai_completions.hpp"
 #include "../../llm/apis/openai_json_response.hpp"
 #include "../../llm/io_processing/base_generation_config_builder.hpp"
+#include "../../llm/io_processing/generation_config_builder.hpp"
+#include "../../llm/io_processing/output_parser.hpp"
 #include "../../llm/language_model/continuous_batching/llm_executor.hpp"
 #include "../../llm/language_model/continuous_batching/servable.hpp"
+#include "../../llm/ovms_text_streamer.hpp"
 #include "../../llm/servable.hpp"
 #include "../../llm/servable_initializer.hpp"
 #include "../../llm/text_utils.hpp"
 #include "../../mediapipe_internal/mediapipefactory.hpp"
 #include "../../mediapipe_internal/mediapipegraphdefinition.hpp"
+#include "../../metrics/llm_metric_reporter.hpp"
+#include "../../metrics/metric_config.hpp"
 #include "../../ov_utils.hpp"
 #include "../../server.hpp"
 #include "src/filesystem/filesystem.hpp"
+#include "src/graph_metadata.hpp"
 #include "src/graph_export/graph_export.hpp"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
@@ -66,6 +74,136 @@
 #include "src/test/environment.hpp"
 
 using namespace ovms;
+
+class LLMCompletionMetricsTest : public ::testing::Test {
+protected:
+    class TestServable : public ContinuousBatchingServable {
+    public:
+        using ContinuousBatchingServable::canRecordCompletedRequestMetrics;
+        using ContinuousBatchingServable::properties;
+        using ContinuousBatchingServable::recordCompletedRequestMetrics;
+    };
+
+    MetricRegistry registry;
+    MetricConfig metricConfig;
+    TestServable servable;
+    ContinuousBatchingServableExecutionContext context;
+
+    void SetUp() override {
+        ASSERT_EQ(metricConfig.loadFromCLIString(true,
+                      METRIC_NAME_LLM_PROMPT_TOKENS + "," + METRIC_NAME_LLM_GENERATED_TOKENS + "," +
+                          METRIC_NAME_LLM_TTFT + "," + METRIC_NAME_LLM_TPOT),
+            StatusCode::OK);
+        servable.properties->metricReporter =
+            std::make_shared<LLMMetricReporter>(&metricConfig, &registry, "model", "llm");
+        context.perfMetrics = std::make_unique<ov::genai::PerfMetrics>();
+        context.perfMetrics->num_input_tokens = 100;
+        context.perfMetrics->num_generated_tokens = 7;
+        context.perfMetrics->ttft = {20, 0};
+        context.perfMetrics->tpot = {50, 0};
+        context.perfMetrics->m_evaluated = true;
+    }
+};
+
+TEST_F(LLMCompletionMetricsTest, RecordsTokenCountsAndTimingHistogramsOnlyOnce) {
+    ASSERT_TRUE(servable.canRecordCompletedRequestMetrics(context));
+    servable.recordCompletedRequestMetrics(context);
+    EXPECT_FALSE(servable.canRecordCompletedRequestMetrics(context));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_prompt_tokens_total{name=\"model\",node=\"llm\"} 100\n"));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_generated_tokens_total{name=\"model\",node=\"llm\"} 7\n"));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"model\",node=\"llm\"} 1\n"));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_ttft_milliseconds_sum{name=\"model\",node=\"llm\"} 20\n"));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_tpot_milliseconds_count{name=\"model\",node=\"llm\"} 1\n"));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_tpot_milliseconds_sum{name=\"model\",node=\"llm\"} 50\n"));
+}
+
+TEST_F(LLMCompletionMetricsTest, MissingPerformanceMetricsCanBePublishedAtCompletion) {
+    auto metrics = std::move(context.perfMetrics);
+    EXPECT_FALSE(servable.canRecordCompletedRequestMetrics(context));
+    EXPECT_FALSE(context.completedMetricsRecorded);
+    context.perfMetrics = std::move(metrics);
+    ASSERT_TRUE(servable.canRecordCompletedRequestMetrics(context));
+    servable.recordCompletedRequestMetrics(context);
+    EXPECT_TRUE(context.completedMetricsRecorded);
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_prompt_tokens_total{name=\"model\",node=\"llm\"} 100\n"));
+}
+
+TEST_F(LLMCompletionMetricsTest, InvalidTimingSamplesDoNotDiscardTokenCounts) {
+    for (float ttft : {0.0f, -1.0f, std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::infinity()}) {
+        context.completedMetricsRecorded = false;
+        context.perfMetrics->ttft.mean = ttft;
+        context.perfMetrics->tpot.mean = ttft;
+        ASSERT_TRUE(servable.canRecordCompletedRequestMetrics(context));
+        servable.recordCompletedRequestMetrics(context);
+    }
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_prompt_tokens_total{name=\"model\",node=\"llm\"} 400\n"));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_generated_tokens_total{name=\"model\",node=\"llm\"} 28\n"));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"model\",node=\"llm\"} 0\n"));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_tpot_milliseconds_count{name=\"model\",node=\"llm\"} 0\n"));
+}
+
+TEST_F(LLMCompletionMetricsTest, DisabledCompletionMetricsDoNotEvaluatePerformanceStatistics) {
+    MetricRegistry gaugeOnlyRegistry;
+    MetricConfig gaugeOnlyConfig;
+    ASSERT_EQ(gaugeOnlyConfig.loadFromCLIString(true, METRIC_NAME_LLM_SCHEDULED_REQUESTS), StatusCode::OK);
+    servable.properties->metricReporter =
+        std::make_shared<LLMMetricReporter>(&gaugeOnlyConfig, &gaugeOnlyRegistry, "model", "llm");
+    context.perfMetrics->m_evaluated = false;
+    EXPECT_FALSE(servable.canRecordCompletedRequestMetrics(context));
+    EXPECT_FALSE(context.completedMetricsRecorded);
+    EXPECT_FALSE(context.perfMetrics->m_evaluated);
+    EXPECT_THAT(gaugeOnlyRegistry.collect(), testing::Not(testing::HasSubstr(METRIC_NAME_LLM_PROMPT_TOKENS)));
+}
+
+TEST_F(LLMCompletionMetricsTest, CompletionMetricsWorkWithoutPromptCounter) {
+    MetricRegistry selectedRegistry;
+    MetricConfig selectedConfig;
+    ASSERT_EQ(selectedConfig.loadFromCLIString(true, METRIC_NAME_LLM_GENERATED_TOKENS + "," + METRIC_NAME_LLM_TTFT), StatusCode::OK);
+    servable.properties->metricReporter =
+        std::make_shared<LLMMetricReporter>(&selectedConfig, &selectedRegistry, "model", "llm");
+    ASSERT_TRUE(servable.canRecordCompletedRequestMetrics(context));
+    servable.recordCompletedRequestMetrics(context);
+    EXPECT_THAT(selectedRegistry.collect(), testing::Not(testing::HasSubstr(METRIC_NAME_LLM_PROMPT_TOKENS)));
+    EXPECT_THAT(selectedRegistry.collect(), testing::HasSubstr("ovms_llm_generated_tokens_total{name=\"model\",node=\"llm\"} 7\n"));
+    EXPECT_THAT(selectedRegistry.collect(), testing::HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"model\",node=\"llm\"} 1\n"));
+}
+
+TEST_F(LLMCompletionMetricsTest, FailedPartialResponseDoesNotRecordCompletionMetrics) {
+    auto executionContext = std::make_shared<ContinuousBatchingServableExecutionContext>();
+    executionContext->perfMetrics = std::move(context.perfMetrics);
+    std::shared_ptr<GenAiServableExecutionContext> baseContext = executionContext;
+    // Missing generation output fails response preparation before any completion accounting.
+    EXPECT_FALSE(servable.preparePartialResponse(baseContext).ok());
+    EXPECT_FALSE(executionContext->completedMetricsRecorded);
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_prompt_tokens_total{name=\"model\",node=\"llm\"} 0\n"));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_generated_tokens_total{name=\"model\",node=\"llm\"} 0\n"));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_ttft_milliseconds_count{name=\"model\",node=\"llm\"} 0\n"));
+    EXPECT_THAT(registry.collect(), testing::HasSubstr("ovms_llm_tpot_milliseconds_count{name=\"model\",node=\"llm\"} 0\n"));
+}
+
+TEST(VideoInputConfigTest, RejectsInvalidValues) {
+    mediapipe::LLMCalculatorOptions options;
+    VisionInputConfig config;
+    options.mutable_input_vision()->set_video_max_frames(0);
+    EXPECT_EQ(configureVideoInputProcessing(config, options), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
+    options.mutable_input_vision()->set_video_max_frames(32);
+    options.mutable_input_vision()->set_video_fps(0.0F);
+    EXPECT_EQ(configureVideoInputProcessing(config, options), StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED);
+}
+
+TEST(VideoInputConfigTest, AppliesDefaultsAndExplicitValues) {
+    mediapipe::LLMCalculatorOptions options;
+    VisionInputConfig config;
+    ASSERT_EQ(configureVideoInputProcessing(config, options), StatusCode::OK);
+    EXPECT_EQ(config.videoMaxFrames, DEFAULT_VIDEO_MAX_FRAMES);
+    EXPECT_FALSE(config.videoFps.has_value());
+    options.mutable_input_vision()->set_video_max_frames(8);
+    options.mutable_input_vision()->set_video_fps(1.5F);
+    ASSERT_EQ(configureVideoInputProcessing(config, options), StatusCode::OK);
+    EXPECT_EQ(config.videoMaxFrames, 8);
+    ASSERT_TRUE(config.videoFps.has_value());
+    EXPECT_FLOAT_EQ(config.videoFps.value(), 1.5F);
+}
 
 struct TestParameters {
     std::string modelName;
@@ -453,6 +591,51 @@ TEST_F(LLMFlowHttpQueueGraphTest, streamChatCompletionsQueueGraph) {
     });
     ASSERT_EQ(
         handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
+}
+
+TEST_F(LLMFlowHttpQueueGraphTest, tokenizeThenStreamChatQueueGraph) {
+    const std::string tokenizeEndpoint = "/v3/tokenize";
+    const std::string streamChatEndpoint = "/v3/chat/completions";
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", tokenizeEndpoint, headers), ovms::StatusCode::OK);
+    const std::string tokenizeRequest = R"({"model":"lm_cb_regular_queue","text":"hello"})";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(tokenizeEndpoint, tokenizeRequest, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    parsedResponse.Parse(response.c_str());
+    ASSERT_FALSE(parsedResponse.HasParseError());
+    ASSERT_TRUE(parsedResponse["tokens"].IsArray());
+    ASSERT_GT(parsedResponse["tokens"].Size(), 0);
+
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", streamChatEndpoint, headers), ovms::StatusCode::OK);
+    response.clear();
+    const std::string streamChatRequest = R"({
+        "model":"lm_cb_regular_queue",
+        "stream":true,
+        "seed":1,
+        "max_tokens":5,
+        "messages":[{"role":"user","content":"Say hello"}]
+    })";
+    EXPECT_CALL(*writer, PartialReply(::testing::_)).Times(::testing::AtLeast(1)).WillOnce([](const std::string& chunk) {
+        const std::string dataPrefix = "data:";
+        ASSERT_EQ(chunk.compare(0, dataPrefix.size(), dataPrefix), 0);
+        const size_t newline = chunk.find('\n');
+        ASSERT_NE(newline, std::string::npos);
+        rapidjson::Document firstChunk;
+        firstChunk.Parse(chunk.substr(dataPrefix.size(), newline - dataPrefix.size()).c_str());
+        ASSERT_FALSE(firstChunk.HasParseError());
+        ASSERT_TRUE(firstChunk.IsObject());
+        ASSERT_TRUE(firstChunk.HasMember("object"));
+        ASSERT_TRUE(firstChunk["object"].IsString());
+        EXPECT_STREQ(firstChunk["object"].GetString(), "chat.completion.chunk");
+        ASSERT_TRUE(firstChunk.HasMember("choices"));
+        ASSERT_TRUE(firstChunk["choices"].IsArray());
+        EXPECT_GT(firstChunk["choices"].Size(), 0);
+    });
+    EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_)).Times(0);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(streamChatEndpoint, streamChatRequest, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::PARTIAL_END);
 }
 
@@ -1367,6 +1550,43 @@ TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsNonVlmWithVideoRejecte
         ovms::StatusCode::PARTIAL_END);
 }
 
+// Non-VLM (text-only) servables reject requests that contain input_audio content at
+// the servable level, before any processor runs.
+// Verify that the error propagates all the way to an HTTP 400 response.
+TEST_P(LLMFlowHttpTestParameterized, streamChatCompletionsNonVlmWithAudioRejected) {
+    auto params = GetParam();
+    if (params.modelName.find("vlm") != std::string::npos) {
+        GTEST_SKIP();  // audio rejection check runs only for non-VLM servables
+    }
+    std::string requestBody = R"(
+        {
+            "model": ")" + params.modelName +
+                              R"(",
+            "stream": true,
+            "max_tokens": 5,
+            "messages": [
+            {
+                "role": "user",
+                "content": [{"type": "text", "text": "What is this?"}, {"type": "input_audio", "input_audio": {"data": "UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA="}}]
+            }
+            ]
+        }
+    )";
+
+    EXPECT_CALL(*writer, PartialReplyWithStatus(::testing::_, ::testing::_))
+        .WillOnce([this](std::string response, ovms::HTTPStatusCode code) {
+            ASSERT_EQ(response, "{\"error\":\"Mediapipe execution failed. MP status - INVALID_ARGUMENT: CalculatorGraph::Run() failed: \\nCalculator::Process() for node \\\"llmNode1\\\" failed: This servable does not support audio input\"}");
+            rapidjson::Document d;
+            rapidjson::ParseResult ok = d.Parse(response.c_str());
+            ASSERT_EQ(ok.Code(), 0);
+            ASSERT_EQ(code, ovms::HTTPStatusCode::BAD_REQUEST);
+        });
+    EXPECT_CALL(*writer, PartialReplyEnd()).Times(1);
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpointChatCompletions, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::PARTIAL_END);
+}
+
 TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsJsonNMultipleStopStrings) {
     auto params = GetParam();
     std::string requestBody = R"(
@@ -1663,6 +1883,67 @@ TEST_P(LLMFlowHttpTestParameterized, unaryToolBadSchema) {
         ovms::StatusCode::OK);
 }
 
+TEST_P(LLMFlowHttpTestParameterized, continuousBatchingParserFailureStopsGenerationHandle) {
+    const auto params = GetParam();
+    if (params.modelName != "lm_cb_regular") {
+        GTEST_SKIP();
+    }
+
+    config.max_new_tokens = 1024;
+    config.rng_seed = 1;
+    config.temperature = 0;
+    ov::genai::Tokenizer tokenizer = cbPipe->get_tokenizer();
+    const auto inputIds = tokenizer.encode("keep the request active", ov::genai::add_special_tokens(false)).input_ids;
+    auto generationHandle = cbPipe->add_request(currentRequestId++, inputIds, config);
+    ASSERT_NE(generationHandle, nullptr);
+
+    struct GenerationHandleCleanup {
+        ov::genai::GenerationHandle handle;
+        std::shared_ptr<LLMExecutorWrapper> executor;
+        ~GenerationHandleCleanup() {
+            handle->stop();
+            executor->notifyNewRequestArrived();
+        }
+    } cleanup{generationHandle, llmExecutorWrapper};
+    ASSERT_EQ(generationHandle->get_status(), ov::genai::GenerationStatus::RUNNING);
+
+    rapidjson::Document requestDocument;
+    requestDocument.Parse(R"({"model":"lm_cb_regular","stream":true,"messages":[{"role":"user","content":"hello"}]})");
+    ASSERT_FALSE(requestDocument.HasParseError());
+    auto apiHandler = std::make_shared<OpenAIChatCompletionsHandler>(
+        requestDocument, Endpoint::CHAT_COMPLETIONS, std::chrono::system_clock::now(), tokenizer);
+    std::optional<uint32_t> maxTokensLimit;
+    ASSERT_EQ(apiHandler->parseRequest(maxTokensLimit, 0, std::nullopt), absl::OkStatus());
+
+    auto outputParser = std::make_shared<OutputParser>(tokenizer, "mistral", "", ToolsSchemas_t{});
+    auto executionContext = std::make_shared<ContinuousBatchingServableExecutionContext>();
+    executionContext->apiHandler = std::move(apiHandler);
+    executionContext->generationHandle = generationHandle;
+    auto* context = executionContext.get();
+    executionContext->textStreamer = std::make_shared<OVMSTextStreamer>(
+        tokenizer, outputParser, true,
+        [context](Delta delta, bool isLast) {
+            context->deltaChannel.push(std::move(delta), isLast);
+            return ov::genai::StreamingStatus::RUNNING;
+        },
+        ov::AnyMap{});
+
+    const std::string malformedToolCall = "[{\"arguments\": {\"x\": 1}, \"name\": \"foo\"}]";
+    const auto generatedIds = tokenizer.encode(malformedToolCall, ov::genai::add_special_tokens(false)).input_ids;
+    executionContext->generationOutputs.resize(1);
+    executionContext->generationOutputs[0].generated_ids.assign(
+        generatedIds.data<int64_t>(), generatedIds.data<int64_t>() + generatedIds.get_size());
+    executionContext->generationOutputs[0].finish_reason = ov::genai::GenerationFinishReason::STOP;
+
+    std::shared_ptr<GenAiServableExecutionContext> baseExecutionContext = executionContext;
+    ContinuousBatchingServable servable;
+    const absl::Status status = servable.preparePartialResponse(baseExecutionContext);
+
+    EXPECT_EQ(status.code(), absl::StatusCode::kInternal);
+    EXPECT_NE(status.message().find("Tool call name is missing in generated output"), std::string::npos) << status;
+    EXPECT_EQ(generationHandle->get_status(), ov::genai::GenerationStatus::STOP);
+}
+
 TEST_P(LLMFlowHttpTestParameterized, unaryCompletionsJsonLogprobs) {
     auto params = GetParam();
     // TODO: In the next step we should break this suite into smaller ones, use proper configuration instead of skipping
@@ -1949,10 +2230,12 @@ TEST_P(LLMFlowHttpTestParameterized, unaryChatCompletionsStoppedByMaxModelLength
         GTEST_SKIP();
     }
     std::string prompt;
-    // 131066 "hello " words + the dummy chat template's ~5 tokens of literal overhead
-    // ("User"/":"/"\n"/"Assistant"/":") yields exactly 131071 prompt tokens - one under the
+    const uint32_t overheadTokens = 41;
+    const uint32_t maxModelLength = 131072;
+    // 131066 "hello " words + the dummy chat template's ~41 tokens of literal overhead
+    // SYSTEM_PROMPT + ("User"/":"/"\n"/"Assistant"/":") yields exactly 131071 prompt tokens - one under the
     // dummy model's 131072 (128k) max length - leaving exactly 1 token of generation budget.
-    for (int i = 0; i < 131066; i++) {
+    for (int i = 0; i < (int)(maxModelLength - overheadTokens - 1); i++) {
         prompt += "hello ";
     }
     std::string requestBody = R"(
@@ -2636,9 +2919,33 @@ TEST_P(LLMFlowHttpTestParameterized, streamCompletionsUsage) {
     }
 }
 
-// Unique leading nonce keeps the prompt out of the prefix cache filled by earlier runs (e.g. --gtest_repeat).
-static std::string uniquePrefixCachingPrompt() {
-    std::string prompt = "Request " + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + ".";
+class LLMPrefixCachingHttpTest : public LLMFlowHttpTest {
+    std::unique_ptr<std::thread> serverThread;
+
+public:
+    static void SetUpTestSuite() {}
+    static void TearDownTestSuite() {}
+
+    void SetUp() override {
+        std::string port = "9173";
+        ovms::Server& server = ovms::Server::instance();
+        ::SetUpServer(serverThread, server, port, getGenericFullPathForSrcTest("/ovms/src/test/llm/config.json").c_str(), 60);
+        LLMFlowHttpTest::SetUp();
+    }
+
+    void TearDown() override {
+        LLMFlowHttpTest::TearDown();
+        ovms::Server& server = ovms::Server::instance();
+        server.setShutdownRequest(1);
+        if (serverThread && serverThread->joinable()) {
+            serverThread->join();
+        }
+        server.setShutdownRequest(0);
+    }
+};
+
+static std::string prefixCachingPrompt() {
+    std::string prompt = "Request.";
     for (int i = 0; i < 16; ++i) {
         prompt += " The quick brown fox jumps over the lazy dog.";
     }
@@ -2659,8 +2966,8 @@ static uint64_t extractUsageField(const std::string& response, const std::string
     return std::stoull(match[1].str());
 }
 
-TEST_F(LLMFlowHttpTest, unaryChatCompletionsReportsPrefixCacheHit) {
-    const std::string content = uniquePrefixCachingPrompt();
+TEST_F(LLMPrefixCachingHttpTest, unaryChatCompletionsReportsPrefixCacheHit) {
+    const std::string content = prefixCachingPrompt();
     const std::string unaryRequest = R"({"model": "lm_cb_prefix_caching", "max_tokens": 5, "ignore_eos": true, "messages": [{"role": "user", "content": ")" + content + R"("}]})";
 
     ASSERT_EQ(handler->dispatchToProcessor(endpointChatCompletions, unaryRequest, &response, comp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
@@ -2680,8 +2987,8 @@ TEST_F(LLMFlowHttpTest, unaryChatCompletionsReportsPrefixCacheHit) {
     EXPECT_EQ(parsedResponse["usage"]["total_tokens"].GetUint64(), firstPromptTokens + 5) << response;
 }
 
-TEST_F(LLMFlowHttpTest, streamChatCompletionsReportsPrefixCacheHit) {
-    const std::string content = uniquePrefixCachingPrompt();
+TEST_F(LLMPrefixCachingHttpTest, streamChatCompletionsReportsPrefixCacheHit) {
+    const std::string content = prefixCachingPrompt();
     std::vector<std::string> responses;
     EXPECT_CALL(*writer, PartialReply(::testing::_))
         .WillRepeatedly([&responses](std::string response) {
@@ -2722,11 +3029,11 @@ static std::string lastUsageObject(const std::vector<std::string>& responses) {
     return pos == std::string::npos ? "" : stream.substr(pos);
 }
 
-TEST_F(LLMFlowHttpTest, unaryResponsesReportsPrefixCacheHit) {
+TEST_F(LLMPrefixCachingHttpTest, unaryResponsesReportsPrefixCacheHit) {
     const std::string endpointResponses = "/v1/responses";
     ovms::HttpRequestComponents responsesComp;
     ASSERT_EQ(handler->parseRequestComponents(responsesComp, "POST", endpointResponses, headers), ovms::StatusCode::OK);
-    const std::string request = prefixCachingResponsesRequest(uniquePrefixCachingPrompt(), false);
+    const std::string request = prefixCachingResponsesRequest(prefixCachingPrompt(), false);
 
     ASSERT_EQ(handler->dispatchToProcessor(endpointResponses, request, &response, responsesComp, responseComponents, writer, multiPartParser), ovms::StatusCode::OK);
     parsedResponse.Parse(response.c_str());
@@ -2746,11 +3053,11 @@ TEST_F(LLMFlowHttpTest, unaryResponsesReportsPrefixCacheHit) {
     EXPECT_EQ(parsedResponse["usage"]["total_tokens"].GetUint64(), firstInputTokens + 5) << response;
 }
 
-TEST_F(LLMFlowHttpTest, streamResponsesReportsPrefixCacheHit) {
+TEST_F(LLMPrefixCachingHttpTest, streamResponsesReportsPrefixCacheHit) {
     const std::string endpointResponses = "/v1/responses";
     ovms::HttpRequestComponents responsesComp;
     ASSERT_EQ(handler->parseRequestComponents(responsesComp, "POST", endpointResponses, headers), ovms::StatusCode::OK);
-    const std::string request = prefixCachingResponsesRequest(uniquePrefixCachingPrompt(), true);
+    const std::string request = prefixCachingResponsesRequest(prefixCachingPrompt(), true);
     std::vector<std::string> responses;
     EXPECT_CALL(*writer, PartialReply(::testing::_))
         .WillRepeatedly([&responses](std::string response) {
@@ -4487,6 +4794,36 @@ INSTANTIATE_TEST_SUITE_P(
 // We could consider adding tests for non-CB path in the future in the separate test suite
 class LLMOptionsHttpTestPython : public ::testing::Test {};
 
+TEST(LLMChatTemplateEngine, PropertiesStartUnset) {
+    const GenAiServableProperties properties{};
+    EXPECT_EQ(properties.chatTemplateEngine, ChatTemplateEngine::NONE);
+}
+
+TEST(LLMChatTemplateEngine, UnsetSelectsJinjaWhenPythonRuntimeIsAvailable) {
+    const mediapipe::LLMCalculatorOptions nodeOptions;
+    EXPECT_EQ(GenAiServableInitializer::determineChatTemplateModeWithRuntimeContext(nodeOptions, true), ChatTemplateEngine::JINJA);
+}
+
+TEST(LLMChatTemplateEngine, UnsetSelectsMinjaWhenPythonRuntimeIsUnavailable) {
+    const mediapipe::LLMCalculatorOptions nodeOptions;
+    EXPECT_EQ(GenAiServableInitializer::determineChatTemplateModeWithRuntimeContext(nodeOptions, false), ChatTemplateEngine::MINJA);
+}
+
+TEST(LLMChatTemplateEngine, ExplicitMinjaDoesNotRequirePythonRuntime) {
+    mediapipe::LLMCalculatorOptions nodeOptions;
+    nodeOptions.set_chat_template_engine(mediapipe::LLMCalculatorOptions::MINJA);
+    EXPECT_EQ(GenAiServableInitializer::determineChatTemplateEngine(nodeOptions), ChatTemplateEngine::MINJA);
+    EXPECT_EQ(GenAiServableInitializer::determineChatTemplateModeWithRuntimeContext(nodeOptions, false), ChatTemplateEngine::MINJA);
+    EXPECT_EQ(GenAiServableInitializer::determineChatTemplateModeWithRuntimeContext(nodeOptions, true), ChatTemplateEngine::MINJA);
+}
+
+TEST(LLMChatTemplateEngine, ExplicitJinjaRequiresPythonRuntime) {
+    mediapipe::LLMCalculatorOptions nodeOptions;
+    nodeOptions.set_chat_template_engine(mediapipe::LLMCalculatorOptions::JINJA);
+    EXPECT_EQ(GenAiServableInitializer::determineChatTemplateModeWithRuntimeContext(nodeOptions, true), ChatTemplateEngine::JINJA);
+    EXPECT_THROW(GenAiServableInitializer::determineChatTemplateModeWithRuntimeContext(nodeOptions, false), std::runtime_error);
+}
+
 class LLMOptionsHttpTest : public LLMOptionsHttpTestPython {
 public:
     std::string modelsPath;
@@ -4537,9 +4874,14 @@ void TestLLMNodeOptionsCheckDefault(std::string& modelsPath) {
     adjustConfigForTargetPlatform(testPbtxt);
     ::mediapipe::CalculatorGraphConfig config;
     ASSERT_TRUE(::google::protobuf::TextFormat::ParseFromString(testPbtxt, &config));
+    MetricRegistry registry;
+    MetricConfig metricConfig;
+    ASSERT_EQ(metricConfig.loadFromCLIString(true, METRIC_NAME_LLM_GENERATED_TOKENS), StatusCode::OK);
+    auto metricReporter = std::make_shared<LLMMetricReporter>(&metricConfig, &registry, "model", "llm");
     std::shared_ptr<GenAiServable> servable;
-    ASSERT_EQ(initializeGenAiServable(servable, config.node(0), ""), StatusCode::OK);
+    ASSERT_EQ(initializeGenAiServable(servable, config.node(0), "", [&metricReporter]() { return metricReporter; }), StatusCode::OK);
     auto properties = std::static_pointer_cast<ContinuousBatchingServableProperties>(servable->getProperties());
+    ASSERT_EQ(properties->metricReporter, metricReporter);
     ASSERT_EQ(properties->schedulerConfig.max_num_batched_tokens, 256);
     ASSERT_EQ(properties->schedulerConfig.cache_size, 0);
     ASSERT_EQ(properties->schedulerConfig.dynamic_split_fuse, true);
@@ -5875,11 +6217,8 @@ TEST_F(IsolatedServableTests, PromtSizeBetweenDefaultAndNonDefaultMaxPromptLenNP
 class LLMStartWithTaskParameter : public ::testing::Test {
 protected:
     static std::unique_ptr<std::thread> t;
-    // Not migrated to the dummy LLM model: --task text_generation auto-detection
-    // (TextGenerationDetector::scan in src/default_task_detector.cpp) only
-    // recognizes architectures ending in ForCausalLM/ForConditionalGeneration;
-    // the dummy model reports GPT2LMHeadModel, which isn't matched.
-    std::string srcModelDir = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct");
+
+    std::string srcModelDir = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov");
 #ifdef __linux__
     std::string tempDir;
     std::string modelDir;
@@ -5889,6 +6228,7 @@ protected:
     std::string graphPath = modelDir + "/graph.pbtxt";
     std::string graphPathRenamed = modelDir + "/graph.pbtxt.bak";
 #endif
+    bool graphFileCreatedByTest = false;
 
     void SetUp() override {
         ovms::Config::instance().setInMemoryGraphPbtxt(std::nullopt);
@@ -5899,6 +6239,11 @@ protected:
         modelDir = tempDir;
         graphPath = modelDir + "/graph.pbtxt";
 #endif
+        if (!std::filesystem::exists(graphPath)) {
+            std::ofstream graphFile(graphPath);
+            ASSERT_TRUE(graphFile.is_open()) << "Failed to create " << graphPath;
+            graphFileCreatedByTest = true;
+        }
     }
     void TearDown() override {
         ovms::Server& server = ovms::Server::instance();
@@ -5916,6 +6261,9 @@ protected:
                 std::filesystem::remove(graphPath);
             }
             std::filesystem::rename(graphPathRenamed, graphPath);
+        }
+        if (graphFileCreatedByTest && std::filesystem::exists(graphPath)) {
+            std::filesystem::remove(graphPath);
         }
 #endif
     }
@@ -5938,7 +6286,7 @@ TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskWithoutGraphFile) {
     ovms::Server& server = ovms::Server::instance();
     ::SetUpServer(t, server, port,
         modelDir.c_str(),
-        "SmolLM2",
+        "dummy",
         60,
         "text_generation");
     ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED);
@@ -5953,7 +6301,7 @@ TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskDoesNotModifyExisting
     ovms::Server& server = ovms::Server::instance();
     ::SetUpServer(t, server, port,
         modelDir.c_str(),
-        "SmolLM2",
+        "dummy",
         60,
         "text_generation");
     ASSERT_EQ(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED);
@@ -5969,7 +6317,7 @@ TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskAndValidPipelineType)
     randomizeAndEnsureFree(port);
     std::string fullModelPath = getGenericFullPathForSrcTest(modelDir.c_str());
     char* argv[] = {(char*)"ovms",
-        (char*)"--model_name", (char*)"SmolLM2",
+        (char*)"--model_name", (char*)"dummy",
         (char*)"--model_path", (char*)fullModelPath.c_str(),
         (char*)"--port", (char*)port.c_str(),
         (char*)"--task", (char*)"text_generation",
@@ -5989,7 +6337,7 @@ TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskAndInvalidPipelineTyp
     randomizeAndEnsureFree(port);
     std::string fullModelPath = getGenericFullPathForSrcTest(modelDir.c_str());
     char* argv[] = {(char*)"ovms",
-        (char*)"--model_name", (char*)"SmolLM2",
+        (char*)"--model_name", (char*)"dummy",
         (char*)"--model_path", (char*)fullModelPath.c_str(),
         (char*)"--port", (char*)port.c_str(),
         (char*)"--task", (char*)"text_generation",
@@ -6004,6 +6352,177 @@ TEST_F(LLMStartWithTaskParameter, StartWithModelPathAndTaskAndInvalidPipelineTyp
     ASSERT_NE(server.getModuleState(ovms::SERVABLE_MANAGER_MODULE_NAME), ovms::ModuleState::INITIALIZED)
         << "Server should not start with invalid pipeline_type";
 }
+
+class ToolGuidanceConfigTest : public ::testing::TestWithParam<std::string> {
+protected:
+    void configure(GenerationConfigBuilder& builder, const OpenAIRequest& request) {
+        builder.parseConfigFromRequest(request);
+        builder.configureStructuredGeneration(request, {}, "");
+    }
+
+    OpenAIRequest toolRequest(const std::string& choice) {
+        OpenAIRequest request;
+        request.toolChoice = choice;
+        request.toolNameSchemaMap.emplace("weather", ToolSchemaWrapper{nullptr, R"({"type":"object","properties":{"city":{"type":"string"}},"required":["city"]})"});
+        return request;
+    }
+
+    std::shared_ptr<ov::genai::StructuredOutputConfig::TriggeredTags> tags(const ov::genai::GenerationConfig& config) {
+        const auto& structuralTag = std::get<ov::genai::StructuredOutputConfig::StructuralTag>(*config.structured_output_config->structural_tags_config);
+        return std::get<std::shared_ptr<ov::genai::StructuredOutputConfig::TriggeredTags>>(structuralTag);
+    }
+};
+
+TEST_P(ToolGuidanceConfigTest, NamedChoiceActivatesExactlyOneCallWithoutServerFlag) {
+    GenerationConfigBuilder builder{{}, GetParam(), false, DecodingMethod::STANDARD};
+    configure(builder, toolRequest("weather"));
+    const auto& config = builder.getConfig();
+    ASSERT_TRUE(config.structured_output_config.has_value());
+    const auto grammar = tags(config);
+    EXPECT_TRUE(grammar->at_least_one);
+    EXPECT_TRUE(grammar->stop_after_first);
+    ASSERT_EQ(grammar->tags.size(), 1);
+    if (GetParam() == "phi4") {
+        rapidjson::Document schema;
+        schema.Parse(std::get<ov::genai::StructuredOutputConfig::JSONSchema>(grammar->tags[0].content).value.c_str());
+        ASSERT_FALSE(schema.HasParseError());
+        ASSERT_TRUE(schema.HasMember("minItems"));
+        ASSERT_TRUE(schema.HasMember("maxItems"));
+        EXPECT_EQ(schema["minItems"].GetInt(), 1);
+        EXPECT_EQ(schema["maxItems"].GetInt(), 1);
+    }
+}
+
+TEST_P(ToolGuidanceConfigTest, RequiredChoiceActivatesWithoutServerFlagAndAllowsMultipleCalls) {
+    GenerationConfigBuilder builder{{}, GetParam(), false, DecodingMethod::STANDARD};
+    configure(builder, toolRequest("required"));
+    ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
+    const auto grammar = tags(builder.getConfig());
+    EXPECT_TRUE(grammar->at_least_one);
+    EXPECT_FALSE(grammar->stop_after_first);
+    if (GetParam() == "phi4") {
+        rapidjson::Document schema;
+        schema.Parse(std::get<ov::genai::StructuredOutputConfig::JSONSchema>(grammar->tags[0].content).value.c_str());
+        ASSERT_FALSE(schema.HasParseError());
+        ASSERT_TRUE(schema.HasMember("minItems"));
+        EXPECT_EQ(schema["minItems"].GetInt(), 1);
+        EXPECT_FALSE(schema.HasMember("maxItems"));
+    }
+}
+
+TEST_P(ToolGuidanceConfigTest, AutoChoiceStillDependsOnServerFlag) {
+    for (bool enabled : {false, true}) {
+        GenerationConfigBuilder builder{{}, GetParam(), enabled, DecodingMethod::STANDARD};
+        configure(builder, toolRequest("auto"));
+        ASSERT_EQ(builder.getConfig().structured_output_config.has_value(), enabled);
+        if (enabled) {
+            const auto grammar = tags(builder.getConfig());
+            EXPECT_FALSE(grammar->at_least_one);
+            EXPECT_FALSE(grammar->stop_after_first);
+            if (GetParam() == "phi4") {
+                rapidjson::Document schema;
+                schema.Parse(std::get<ov::genai::StructuredOutputConfig::JSONSchema>(grammar->tags[0].content).value.c_str());
+                ASSERT_FALSE(schema.HasParseError());
+                EXPECT_FALSE(schema.HasMember("minItems"));
+                EXPECT_FALSE(schema.HasMember("maxItems"));
+            }
+        }
+    }
+}
+
+TEST_P(ToolGuidanceConfigTest, NoToolsLeavesResponseFormatUnchanged) {
+    GenerationConfigBuilder builder{{}, GetParam(), true, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.toolChoice = "none";
+    request.responseFormat = R"({"type":"structural_tag","format":{"type":"const_string","value":"answer"}})";
+    configure(builder, request);
+    const auto& config = builder.getConfig();
+    ASSERT_TRUE(config.structured_output_config.has_value());
+    const auto& structuralTag = std::get<ov::genai::StructuredOutputConfig::StructuralTag>(*config.structured_output_config->structural_tags_config);
+    EXPECT_EQ(std::get<std::string>(structuralTag), *request.responseFormat);
+}
+
+TEST_P(ToolGuidanceConfigTest, ToolGrammarStillOverridesResponseFormat) {
+    GenerationConfigBuilder builder{{}, GetParam(), true, DecodingMethod::STANDARD};
+    auto request = toolRequest("auto");
+    request.responseFormat = R"({"type":"structural_tag","format":{"type":"const_string","value":"answer"}})";
+    configure(builder, request);
+    ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
+    EXPECT_EQ(tags(builder.getConfig())->tags.size(), 1);
+}
+
+TEST_P(ToolGuidanceConfigTest, NoRequestGuidancePreservesModelDefaults) {
+    ov::genai::GenerationConfig baseConfig;
+    ov::genai::StructuredOutputConfig defaultGrammar;
+    defaultGrammar.regex = "model-default";
+    baseConfig.structured_output_config = defaultGrammar;
+    GenerationConfigBuilder builder{baseConfig, GetParam(), true, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.toolChoice = "none";
+    configure(builder, request);
+    ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
+    EXPECT_EQ(builder.getConfig().structured_output_config->regex, defaultGrammar.regex);
+    EXPECT_FALSE(builder.getConfig().structured_output_config->structural_tags_config.has_value());
+}
+
+TEST_P(ToolGuidanceConfigTest, ToolAndResponseFormatReplaceModelGrammarWithToolGrammar) {
+    ov::genai::GenerationConfig baseConfig;
+    ov::genai::StructuredOutputConfig defaultGrammar;
+    defaultGrammar.regex = "model-default";
+    baseConfig.structured_output_config = defaultGrammar;
+    GenerationConfigBuilder builder{baseConfig, GetParam(), true, DecodingMethod::STANDARD};
+    auto request = toolRequest("auto");
+    request.responseFormat = R"({"type":"structural_tag","format":{"type":"const_string","value":"answer"}})";
+    configure(builder, request);
+    ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
+    EXPECT_FALSE(builder.getConfig().structured_output_config->regex.has_value());
+    EXPECT_EQ(tags(builder.getConfig())->tags.size(), 1);
+}
+
+TEST_P(ToolGuidanceConfigTest, ToolOnlyRequestReplacesModelGrammar) {
+    for (const std::string choice : {"auto", "required", "weather"}) {
+        ov::genai::GenerationConfig baseConfig;
+        baseConfig.structured_output_config.emplace();
+        baseConfig.structured_output_config->regex = "model-default";
+        GenerationConfigBuilder builder{baseConfig, GetParam(), true, DecodingMethod::STANDARD};
+        configure(builder, toolRequest(choice));
+        ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
+        EXPECT_FALSE(builder.getConfig().structured_output_config->regex.has_value());
+        const auto grammar = tags(builder.getConfig());
+        EXPECT_EQ(grammar->tags.size(), 1);
+        EXPECT_EQ(grammar->at_least_one, choice != "auto");
+        EXPECT_EQ(grammar->stop_after_first, choice == "weather");
+    }
+}
+
+TEST(ToolGuidanceSelectionTest, UnsupportedToolFormatsStillApplyResponseFormat) {
+    for (const std::string choice : {"auto", "required", "weather"}) {
+        GenerationConfigBuilder builder{{}, "", true, DecodingMethod::STANDARD};
+        OpenAIRequest request;
+        request.toolChoice = choice;
+        request.toolNameSchemaMap.emplace("weather", ToolSchemaWrapper{nullptr, R"({"type":"object"})"});
+        request.responseFormat = R"({"type":"structural_tag","format":{"type":"const_string","value":"answer"}})";
+        builder.configureStructuredGeneration(request, {}, "");
+        ASSERT_TRUE(builder.getConfig().structured_output_config.has_value()) << choice;
+        ASSERT_TRUE(builder.getConfig().structured_output_config->structural_tags_config.has_value()) << choice;
+        const auto& structuralTag = std::get<ov::genai::StructuredOutputConfig::StructuralTag>(*builder.getConfig().structured_output_config->structural_tags_config);
+        EXPECT_EQ(std::get<std::string>(structuralTag), *request.responseFormat) << choice;
+    }
+}
+
+TEST(ToolGuidanceSelectionTest, MalformedInternalResponseFormatRaisesInvariantError) {
+    GenerationConfigBuilder builder{{}, "qwen3", false, DecodingMethod::STANDARD};
+    OpenAIRequest request;
+    request.responseFormat = "not-a-structural-tag";
+    ReasoningGenerationContext reasoningContext;
+    reasoningContext.begin = "<think>";
+    reasoningContext.end = "</think>";
+    reasoningContext.implicitStart = true;
+    EXPECT_THROW(builder.configureStructuredGeneration(request, reasoningContext, "qwen3"), ResponseFormatInvariantError);
+}
+
+INSTANTIATE_TEST_SUITE_P(ExistingFormats, ToolGuidanceConfigTest,
+    ::testing::Values("llama3", "hermes3", "phi4", "devstral"));
 
 // Unit tests for BaseGenerationConfigBuilder multinomial sampling defaults
 
@@ -6904,4 +7423,264 @@ TEST_F(LLMIdleUnloadTest, FailedWakeLeavesGraphSleepingAndRetryable) {
     EXPECT_EQ(okStatus, StatusCode::OK) << okStatus.string();
     EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::AVAILABLE);
     EXPECT_NE(def.getGenAiServable("llmNode"), nullptr);
+}
+
+// ---------------------------------------------------------------------------
+// Graph metadata: max_model_len reported by an LLM node and the snapshot lifecycle.
+// These tests require the dummy LLM model fixture (src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov).
+// ---------------------------------------------------------------------------
+
+class LLMGraphMetadataTest : public TestWithTempDir {
+protected:
+    ConstructorEnabledModelManager manager;
+
+    // Copies the dummy model and sets the context length in its config.json, or removes it if not given.
+    std::string createModelCopy(const std::string& name, std::optional<uint32_t> maxModelLength) {
+        const std::filesystem::path source = getGenericFullPathForSrcTest("/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov");
+        const std::filesystem::path destination = std::filesystem::path(directoryPath) / name;
+        std::filesystem::copy(source, destination, std::filesystem::copy_options::recursive);
+        std::stringstream content;
+        {
+            std::ifstream ifs(destination / "config.json");
+            if (!ifs.is_open()) {
+                ADD_FAILURE() << "Could not open " << (destination / "config.json").generic_string();
+                return {};
+            }
+            content << ifs.rdbuf();
+        }
+        rapidjson::Document config;
+        if (config.Parse(content.str().c_str()).HasParseError() || !config.IsObject()) {
+            ADD_FAILURE() << "config.json of " << destination.generic_string() << " is not a valid JSON object";
+            return {};
+        }
+        for (const char* field : {"max_position_embeddings", "n_positions", "seq_len", "seq_length", "n_ctx", "sliding_window", "text_config"}) {
+            config.RemoveMember(field);
+        }
+        if (maxModelLength.has_value()) {
+            config.AddMember(rapidjson::StringRef("max_position_embeddings"), rapidjson::Value(maxModelLength.value()), config.GetAllocator());
+        }
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        config.Accept(writer);
+        std::ofstream ofs(destination / "config.json");
+        ofs << buffer.GetString();
+        if (!ofs) {
+            ADD_FAILURE() << "Could not write " << (destination / "config.json").generic_string();
+            return {};
+        }
+        return destination.generic_string();
+    }
+
+    static std::string buildPbtxt(const std::string& modelsPath) {
+        std::string testPbtxt = R"(
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+
+        node: {
+        name: "llmNode"
+        calculator: "HttpLLMCalculator"
+        input_stream: "LOOPBACK:loopback"
+        input_stream: "HTTP_REQUEST_PAYLOAD:input"
+        input_side_packet: "LLM_NODE_RESOURCES:llm"
+        output_stream: "LOOPBACK:loopback"
+        output_stream: "HTTP_RESPONSE_PAYLOAD:output"
+        input_stream_info: {
+            tag_index: 'LOOPBACK:0',
+            back_edge: true
+        }
+        node_options: {
+            [type.googleapis.com / mediapipe.LLMCalculatorOptions]: {
+                models_path: ")" +
+                                modelsPath + R"("
+                cache_size: 1
+            }
+        }
+        input_stream_handler {
+            input_stream_handler: "SyncSetInputStreamHandler",
+            options {
+            [mediapipe.SyncSetInputStreamHandlerOptions.ext] {
+                sync_set {
+                tag_index: "LOOPBACK:0"
+                }
+            }
+            }
+        }
+        }
+    )";
+        adjustConfigForTargetPlatform(testPbtxt);
+        return testPbtxt;
+    }
+
+    static std::optional<int64_t> maxModelLenOf(const std::shared_ptr<const GraphMetadata>& metadata) {
+        if (!metadata) {
+            return std::nullopt;
+        }
+        const auto* value = metadata->find("max_model_len");
+        if (!value) {
+            return std::nullopt;
+        }
+        const auto* intValue = std::get_if<int64_t>(value);
+        if (!intValue) {
+            return std::nullopt;
+        }
+        return *intValue;
+    }
+};
+
+TEST_F(LLMGraphMetadataTest, LLMNodeReportsMaxModelLen) {
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, buildPbtxt(createModelCopy("model", 4096)), nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    EXPECT_EQ(maxModelLenOf(def.getMetadata()), std::optional<int64_t>(4096));
+}
+
+TEST_F(LLMGraphMetadataTest, UnknownMaxModelLenLeavesKeyAbsent) {
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, buildPbtxt(createModelCopy("model", std::nullopt)), nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    auto metadata = def.getMetadata();
+    ASSERT_NE(metadata, nullptr);
+    EXPECT_EQ(metadata->find("max_model_len"), nullptr);
+    EXPECT_TRUE(metadata->empty());
+}
+
+TEST_F(LLMGraphMetadataTest, ReloadReplacesMetadata) {
+    const std::string pbtxt4096 = buildPbtxt(createModelCopy("model4096", 4096));
+    const std::string pbtxt8192 = buildPbtxt(createModelCopy("model8192", 8192));
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, pbtxt4096, nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    auto before = def.getMetadata();
+    ASSERT_EQ(maxModelLenOf(before), std::optional<int64_t>(4096));
+
+    def.inputConfig = pbtxt8192;
+    ASSERT_EQ(def.reload(manager, mgc), StatusCode::OK);
+    EXPECT_EQ(maxModelLenOf(def.getMetadata()), std::optional<int64_t>(8192));
+    // Snapshot taken before the reload is immutable
+    EXPECT_EQ(maxModelLenOf(before), std::optional<int64_t>(4096));
+}
+
+TEST_F(LLMGraphMetadataTest, RetireClearsMetadata) {
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, buildPbtxt(createModelCopy("model", 4096)), nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    ASSERT_NE(def.getMetadata(), nullptr);
+    def.retire();
+    EXPECT_EQ(def.getMetadata(), nullptr);
+}
+
+TEST_F(LLMGraphMetadataTest, FailedReloadLeavesNoMetadata) {
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, buildPbtxt(createModelCopy("model", 4096)), nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    ASSERT_NE(def.getMetadata(), nullptr);
+
+    // Metadata is cleared on a failed reload, whichever stage fails
+    def.inputConfig = buildPbtxt((std::filesystem::path(directoryPath) / "nonexistent").generic_string());
+    EXPECT_FALSE(def.reload(manager, mgc).ok());
+    EXPECT_EQ(def.getMetadata(), nullptr);
+}
+
+TEST_F(LLMGraphMetadataTest, MetadataKeptWhileSleepingAndRestoredOnWakeUp) {
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, buildPbtxt(createModelCopy("model", 4096)), nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    auto before = def.getMetadata();
+    ASSERT_EQ(maxModelLenOf(before), std::optional<int64_t>(4096));
+
+    ASSERT_EQ(def.putToSleep(), StatusCode::OK);
+    ASSERT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+    EXPECT_EQ(def.getMetadata(), before);
+
+    std::atomic<bool> stop{false};
+    std::atomic<uint64_t> blankReads{0};
+    std::thread reader([&]() {
+        while (!stop) {
+            if (maxModelLenOf(def.getMetadata()) != std::optional<int64_t>(4096)) {
+                ++blankReads;
+            }
+            std::this_thread::yield();
+        }
+    });
+    const Status wakeUpStatus = def.wakeUpIfSleeping(manager);
+    stop = true;
+    reader.join();
+    ASSERT_EQ(wakeUpStatus, StatusCode::OK);
+    EXPECT_EQ(blankReads, 0u);
+    EXPECT_EQ(maxModelLenOf(def.getMetadata()), std::optional<int64_t>(4096));
+}
+
+TEST_F(LLMGraphMetadataTest, FailedWakeUpKeepsMetadata) {
+    const std::string pbtxt = buildPbtxt(createModelCopy("model", 4096));
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    mgc.setIdleUnloadTimeoutSeconds(10);
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, pbtxt, nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+    auto before = def.getMetadata();
+    ASSERT_EQ(maxModelLenOf(before), std::optional<int64_t>(4096));
+    ASSERT_EQ(def.putToSleep(), StatusCode::OK);
+
+    // The graph goes back to sleep and stays listed, so it keeps the metadata of its last successful load
+    def.inputConfig = buildPbtxt((std::filesystem::path(directoryPath) / "nonexistent").generic_string());
+    std::atomic<bool> stop{false};
+    std::atomic<uint64_t> blankReads{0};
+    std::thread reader([&]() {
+        while (!stop) {
+            if (maxModelLenOf(def.getMetadata()) != std::optional<int64_t>(4096)) {
+                ++blankReads;
+            }
+            std::this_thread::yield();
+        }
+    });
+    const Status wakeUpStatus = def.wakeUpIfSleeping(manager);
+    stop = true;
+    reader.join();
+    EXPECT_FALSE(wakeUpStatus.ok());
+    EXPECT_EQ(def.getStateCode(), ovms::PipelineDefinitionStateCode::SLEEPING);
+    EXPECT_EQ(blankReads, 0u);
+    EXPECT_EQ(def.getMetadata(), before);
+
+    def.inputConfig = pbtxt;
+    ASSERT_EQ(def.wakeUpIfSleeping(manager), StatusCode::OK);
+    EXPECT_EQ(maxModelLenOf(def.getMetadata()), std::optional<int64_t>(4096));
+}
+
+TEST_F(LLMGraphMetadataTest, ReadersSeeOldOrNewSnapshotDuringReloads) {
+    const std::string pbtxt4096 = buildPbtxt(createModelCopy("model4096", 4096));
+    const std::string pbtxt8192 = buildPbtxt(createModelCopy("model8192", 8192));
+    ovms::MediapipeGraphConfig mgc{"mediaMetadata", "", ""};
+    DummyMediapipeGraphDefinition def("mediaMetadata", mgc, pbtxt4096, nullptr);
+    ASSERT_EQ(def.validate(manager), StatusCode::OK);
+
+    std::atomic<bool> stop{false};
+    std::atomic<uint64_t> reads{0};
+    std::atomic<uint64_t> unexpected{0};
+    std::vector<std::thread> readers;
+    for (int i = 0; i < 4; ++i) {
+        readers.emplace_back([&]() {
+            while (!stop) {
+                // Always the old or the new complete snapshot, never an empty one
+                auto value = maxModelLenOf(def.getMetadata());
+                if (!value.has_value() || (value.value() != 4096 && value.value() != 8192)) {
+                    ++unexpected;
+                }
+                ++reads;
+                std::this_thread::yield();
+            }
+        });
+    }
+    bool reloadsSucceeded = true;
+    for (int i = 0; i < 6 && reloadsSucceeded; ++i) {
+        def.inputConfig = (i % 2 == 0) ? pbtxt8192 : pbtxt4096;
+        reloadsSucceeded = def.reload(manager, mgc).ok();
+    }
+    stop = true;
+    for (auto& reader : readers) {
+        reader.join();
+    }
+    EXPECT_TRUE(reloadsSucceeded);
+    EXPECT_EQ(unexpected, 0u);
+    EXPECT_GT(reads, 0u);
+    EXPECT_EQ(maxModelLenOf(def.getMetadata()), std::optional<int64_t>(4096));
 }

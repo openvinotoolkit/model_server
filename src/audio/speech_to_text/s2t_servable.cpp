@@ -77,11 +77,8 @@ absl::Status SttServable::parseTemperature(const HttpPayload& payload, ov::genai
     if (temperatureStr.size() > 0) {
         SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received temperature: {}", temperatureStr);
         auto temp = ovms::stof(temperatureStr);
-        if (!temp.has_value()) {
-            temp = ovms::stou32(temperatureStr);
-            if (!temp.has_value())
-                return absl::InvalidArgumentError("Invalid temperature type.");
-        }
+        if (!temp.has_value())
+            return absl::InvalidArgumentError("Invalid temperature type.");
         config.temperature = temp.value();
         if (config.temperature != 0) {
             config.do_sample = true;

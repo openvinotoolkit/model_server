@@ -247,8 +247,13 @@ void ModelManager::logPluginConfiguration() {
 }
 
 ModelManager::~ModelManager() {
+    // Callers must stop using the manager before destruction; Server shuts down gRPC/HTTP first.
+    // join() stops manager-owned background work before the factory is destroyed.
     join();
     models.clear();
+#if (MEDIAPIPE_DISABLE == 0)
+    mediapipeFactory.reset();
+#endif
 }
 
 Status ModelManager::start(const Config& config) {
@@ -371,6 +376,7 @@ Status ModelManager::startFromConfig() {
     }
 
     ModelConfig& modelConfig = it->second;
+    modelConfig.setDisableInputCountValidation(config.disableInputCountValidation());
 
     status = modelConfig.parsePluginConfig(config.pluginConfig(), modelConfig.getPluginConfig());
     if (!status.ok()) {

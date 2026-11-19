@@ -51,14 +51,13 @@ using namespace rapidjson;
 
 namespace ovms {
 
-class GenerationConfigBuilder;
-
 ov::genai::JsonContainer rapidJsonValueToJsonContainer(const rapidjson::Value& value);
 
 enum class Endpoint {
     CHAT_COMPLETIONS,
     COMPLETIONS,
     RESPONSES,
+    TRANSCRIPTIONS,
     TOKENIZE,
 };
 
@@ -108,6 +107,7 @@ protected:
     ov::genai::Tokenizer tokenizer;
     const std::string toolParserName;
     const std::string reasoningParserName;
+    std::optional<uint32_t> videoMaxFrames;
 
     // Output parser is used to parse chat completions response to extract specific fields like tool calls and reasoning.
     std::shared_ptr<OutputParser> outputParser = nullptr;
@@ -129,13 +129,13 @@ protected:
     // Shared parsing helpers
     absl::Status parseCommonPart(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength);
     absl::Status parseResponseFormat();
+    absl::Status parseThinkingFromChatTemplateKwargs();
     // Validates effort against the OpenAI reasoning_effort enum and merges its chat-template
     // representation (reasoning_effort, reasoning_strength mapped onto low/medium/high/xhigh,
     // enable_thinking) into doc's chat_template_kwargs, without overwriting keys the request
     // already set explicitly.
     absl::Status applyReasoningEffort(const std::string& effort);
     absl::Status ensureArgumentsInToolCalls(Value& messageObj);
-    void initOutputParser();
     // Assemble a ParsedOutput from a sequence of streaming Delta variants produced by OVMSTextStreamer.
     static ParsedOutput parsedOutputFromDeltas(const std::vector<Delta>& deltas);
 
@@ -157,9 +157,10 @@ public:
     OpenAIApiHandler(OpenAIApiHandler&&) = delete;
     OpenAIApiHandler& operator=(OpenAIApiHandler&&) = delete;
 
-    // Request parsing: non-virtual wrapper; calls parseRequestImpl() then initOutputParser().
+    // Request parsing only; output parsing is initialized after input and generation setup.
     absl::Status parseRequest(std::optional<uint32_t> maxTokensLimit, uint32_t bestOfLimit, std::optional<uint32_t> maxModelLength,
-        std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt);
+        std::optional<std::string> allowedLocalMediaPath = std::nullopt, std::optional<std::vector<std::string>> allowedMediaDomains = std::nullopt,
+        std::optional<uint32_t> videoMaxFrames = std::nullopt);
 
     // Shared parsing (non-virtual)
     absl::Status parseTools();
@@ -180,10 +181,11 @@ public:
     std::string getModel() const;
     std::string getToolChoice() const;
     const std::shared_ptr<OutputParser>& getOutputParser() const;
-    // Builds a complete InputRequest: runs the full generation config pipeline
-    // (parse → adjust → validate) on the provided builder using this handler's
-    // request and tokenizer, then populates input from the parsed request.
-    absl::StatusOr<InputRequest> extractInputRequest(GenerationConfigBuilder& configBuilder);
+    /** Extracts input and template context from the parsed request without configuring generation. */
+    absl::StatusOr<InputRequest> extractInputRequest();
+
+    /** Constructs output parsers after generation setup and applies the detected prompt state. */
+    void initOutputParser(const ReasoningGenerationContext& reasoningContext, const std::string& contentParserName = "");
 
     // Verbose response configuration
     void enableVerboseResponse(const std::string& promptAfterTemplate) {
@@ -226,6 +228,7 @@ public:
     std::string serializeUnaryResponse(const std::vector<std::vector<Delta>>& allDeltas,
         const std::vector<ov::genai::GenerationFinishReason>& finishReasons);
     virtual std::string serializeStreamingChunk(Delta delta, ov::genai::GenerationFinishReason finishReason) = 0;
+    virtual bool requiresSeparateStreamingFinishEvent() const { return false; }
     virtual std::string serializeStreamingUsageChunk() = 0;
     virtual std::string serializeStreamingHandshakeChunk() = 0;
 
@@ -233,6 +236,10 @@ public:
     virtual std::string serializeStreamingCreatedEvent();
     virtual std::string serializeStreamingInProgressEvent();
     virtual std::string serializeFailedEvent(const std::string& errorMessage, ResponsesErrorCode errorCode = ResponsesErrorCode::SERVER_ERROR);
+
+    // Endpoint-specific error payload for a streaming generation failure.
+    // The default preserves lifecycle-based Responses API failure serialization.
+    virtual std::string serializeStreamingError(const std::string& errorMessage);
 };
 
 // Free functions shared across handlers

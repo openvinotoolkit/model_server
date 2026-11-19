@@ -15,6 +15,7 @@
 //*****************************************************************************
 #include <atomic>
 #include <mutex>
+#include <sstream>
 #include <string>
 
 #pragma warning(push)
@@ -33,6 +34,9 @@
 #include "../http_payload.hpp"
 #include "../logging.hpp"
 #include "../mediapipe_internal/graph_side_packets.hpp"
+#include "../mediapipe_internal/ovms_calculator_base.hpp"
+#include "../mediapipe_calculators/utils/timestamp_advance_guard.hpp"
+#include "../metrics/metric_config.hpp"
 #include "../profiler.hpp"
 #include "apis/openai_completions.hpp"
 #include "servable.hpp"
@@ -44,7 +48,7 @@ namespace mediapipe {
 const std::string LLM_SESSION_SIDE_PACKET_TAG = "LLM_NODE_RESOURCES";
 const std::string LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG = "LLM_NODE_EXECUTION_CONTEXTS";
 
-class HttpLLMCalculator : public CalculatorBase {
+class HttpLLMCalculator : public OvmsCalculatorBase {
     std::shared_ptr<GenAiServable> servable;
     std::shared_ptr<GenAiExecutionContextHolder> executionContextHolder;
     std::shared_ptr<GenAiServableExecutionContext> executionContext;
@@ -55,6 +59,23 @@ class HttpLLMCalculator : public CalculatorBase {
 
     mediapipe::Timestamp iterationBeginTimestamp{0};
 
+    void logAvailableMetricFamilies(CalculatorContext* cc) const {
+        if (!llm_calculator_logger->should_log(spdlog::level::debug)) {
+            return;
+        }
+        std::ostringstream metricFamilies;
+        const auto& availableMetrics = ovms::MetricConfig::getLLMMetricFamilies();
+        for (size_t i = 0; i < availableMetrics.size(); ++i) {
+            if (i > 0) {
+                metricFamilies << ", ";
+            }
+            metricFamilies << availableMetrics[i];
+        }
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger,
+            "LLMCalculator [Node: {}] Available metric families (select with --metrics_list or {}): {}",
+            cc->NodeName(), ovms::ALL_LLM_METRICS_PRESET, metricFamilies.str());
+    }
+
 public:
     static absl::Status GetContract(CalculatorContract* cc) {
         RET_CHECK(!cc->Inputs().GetTags().empty());
@@ -62,6 +83,7 @@ public:
         cc->Inputs().Tag(INPUT_TAG_NAME).Set<ovms::HttpPayload>();
         cc->Inputs().Tag(LOOPBACK_TAG_NAME).Set<bool>();
         cc->InputSidePackets().Tag(LLM_SESSION_SIDE_PACKET_TAG).Set<ovms::GenAiServableMap>();
+        SetCalculatorMetricsContract(cc);
         if (cc->InputSidePackets().HasTag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG)) {
             cc->InputSidePackets().Tag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG).Set<ovms::GenAiExecutionContextMap>();
         }
@@ -79,11 +101,16 @@ public:
     absl::Status Open(CalculatorContext* cc) final {
         OVMS_PROFILE_FUNCTION();
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Open start", cc->NodeName());
+        const auto metricsStatus = InitializeCalculatorMetrics(cc);
+        if (!metricsStatus.ok()) {
+            SPDLOG_LOGGER_ERROR(llm_calculator_logger, "LLMCalculator [Node: {}] Metrics initialization failed: {}", cc->NodeName(), metricsStatus.ToString());
+            return metricsStatus;
+        }
+        logAvailableMetricFamilies(cc);
         ovms::GenAiServableMap servableMap = cc->InputSidePackets().Tag(LLM_SESSION_SIDE_PACKET_TAG).Get<ovms::GenAiServableMap>();
         auto it = servableMap.find(cc->NodeName());
         RET_CHECK(it != servableMap.end()) << "Could not find initialized LLM node named: " << cc->NodeName();
         this->servable = it->second;
-
         if (cc->InputSidePackets().HasTag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG) && !cc->InputSidePackets().Tag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG).IsEmpty()) {
             ovms::GenAiExecutionContextMap executionContextMap = cc->InputSidePackets().Tag(LLM_EXECUTION_CONTEXT_SIDE_PACKET_TAG).Get<ovms::GenAiExecutionContextMap>();
             auto contextIt = executionContextMap.find(cc->NodeName());
@@ -97,17 +124,26 @@ public:
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator [Node: {}] Open end", cc->NodeName());
         return absl::OkStatus();
     }
-    absl::Status handleGenerationError(CalculatorContext* cc, const char* errorMessage) {
-        if (executionContext->apiHandler && executionContext->apiHandler->isStream()) {
-            std::string failedEvent = executionContext->apiHandler->serializeFailedEvent(errorMessage);
+    absl::Status handlePreSchedulingError(CalculatorContext* cc, absl::Status status) {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator [Node: {}] Request processing failed: {}", cc->NodeName(), status.ToString());
+        return status;
+    }
+
+    absl::Status handlePostSchedulingError(CalculatorContext* cc, absl::Status status, TimestampAdvanceGuard& timestampAdvanceGuard) {
+        if (executionContext->apiHandler && executionContext->apiHandler->isStream() && executionContext->streamFrameEmitted) {
+            const std::string errorMessage(status.message());
+            std::string failedEvent = executionContext->apiHandler->serializeStreamingError(errorMessage);
             if (!failedEvent.empty()) {
                 executionContext->response = wrapTextInServerSideEventMessage(failedEvent);
                 executionContext->response += wrapTextInServerSideEventMessage("[DONE]");
                 cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(executionContext->response)}, iterationBeginTimestamp);
+                timestampAdvanceGuard.markSucceeded();
                 return absl::OkStatus();
             }
+            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Failed to serialize streaming generation error for node {}", cc->NodeName());
+            return absl::InternalError("Failed to serialize streaming generation error");
         }
-        return absl::InvalidArgumentError(errorMessage);
+        return status;
     }
 
     absl::Status Process(CalculatorContext* cc) final {
@@ -125,45 +161,52 @@ public:
             return absl::OkStatus();
         }
 
+        TimestampAdvanceGuard timestampAdvanceGuard(iterationBeginTimestamp);
         executionContext->response = "";  // always enter new process with initialized, empty response
+        if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
+            executionContext->streamFrameEmitted = false;
+        }
+        bool postSchedulingPhase = !cc->Inputs().Tag(LOOPBACK_TAG_NAME).IsEmpty();
         try {
             // First iteration of Process()
             if (!cc->Inputs().Tag(INPUT_TAG_NAME).IsEmpty()) {
                 auto status = servable->loadRequest(executionContext, cc->Inputs().Tag(INPUT_TAG_NAME).Get<ovms::HttpPayload>());
                 if (status != absl::OkStatus())
-                    return status;
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Request loaded successfully", cc->NodeName());
+                    return handlePreSchedulingError(cc, std::move(status));
+                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Request loaded successfully", cc->NodeName());
 
                 // Tokenize endpoint doesn't require full servable path and it ends workflow after tokenization, it does not need additional processing
                 if (executionContext->endpoint == Endpoint::TOKENIZE) {
                     OVMS_PROFILE_SCOPE("Tokenize generation cycle");
                     status = servable->processTokenizeRequest(executionContext);
                     if (status != absl::OkStatus())
-                        return status;
-                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Tokenization response prepared, sending it down the graph", cc->NodeName());
+                        return handlePreSchedulingError(cc, std::move(status));
+                    SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Tokenization response prepared, sending it down the graph", cc->NodeName());
 
                     std::string& response = executionContext->response;
                     cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(response)}, iterationBeginTimestamp);
+                    timestampAdvanceGuard.markSucceeded();
                     return absl::OkStatus();
                 }
 
                 // Creates internal API handler in executionContext with data from the payload and parses the request
                 status = servable->parseRequest(executionContext);
                 if (status != absl::OkStatus())
-                    return status;
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Request parsed successfully", cc->NodeName());
+                    return handlePreSchedulingError(cc, std::move(status));
+                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Request parsed successfully", cc->NodeName());
 
                 // Runs necessary preprocessing on the input data like chat template application, tokenization or operations on visual data etc.
                 // Depending on the pipeline type, after calling this method executionContext should contain all necessary data to start the generation.
                 status = servable->prepareInputs(executionContext);
                 if (status != absl::OkStatus())
-                    return status;
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Input for the pipeline prepared successfully", cc->NodeName());
+                    return handlePreSchedulingError(cc, std::move(status));
+                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Input for the pipeline prepared successfully", cc->NodeName());
 
                 status = servable->scheduleExecution(executionContext);
                 if (status != absl::OkStatus())
-                    return status;
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator  [Node: {}] Pipeline execution scheduled successfully", cc->NodeName());
+                    return handlePreSchedulingError(cc, std::move(status));
+                postSchedulingPhase = true;
+                SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Pipeline execution scheduled successfully", cc->NodeName());
 
                 // For streaming, emit response.created event after scheduling execution.
                 // The response object now exists in the system. response.in_progress will
@@ -173,11 +216,12 @@ public:
                     std::string createdEvent = executionContext->apiHandler->serializeStreamingCreatedEvent();
                     if (!createdEvent.empty()) {
                         executionContext->response = wrapTextInServerSideEventMessage(createdEvent);
+                        executionContext->streamFrameEmitted = true;
                         cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(executionContext->response)}, iterationBeginTimestamp);
                         executionContext->response = "";
                         cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, iterationBeginTimestamp);
-                        auto now = std::chrono::system_clock::now();
-                        iterationBeginTimestamp = ::mediapipe::Timestamp(std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());
+                        timestampAdvanceGuard.markSucceeded();
+                        SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Process end", cc->NodeName());
                         return absl::OkStatus();
                     }
                 }
@@ -187,12 +231,12 @@ public:
                 OVMS_PROFILE_SCOPE("Unary generation cycle");
                 auto status = servable->readCompleteExecutionResults(executionContext);
                 if (status != absl::OkStatus())
-                    return status;
+                    return handlePostSchedulingError(cc, std::move(status), timestampAdvanceGuard);
                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Received complete execution results, preparing response", cc->NodeName());
 
                 status = servable->prepareCompleteResponse(executionContext);
                 if (status != absl::OkStatus())
-                    return status;
+                    return handlePostSchedulingError(cc, std::move(status), timestampAdvanceGuard);
                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Response prepared, sending it down the graph", cc->NodeName());
 
                 std::string& response = executionContext->response;
@@ -200,15 +244,20 @@ public:
             } else {  // Streaming scenario
                 OVMS_PROFILE_SCOPE("Stream generation cycle");
                 auto status = servable->readPartialExecutionResults(executionContext);
-                if (status != absl::OkStatus())
-                    return status;
+                if (status != absl::OkStatus()) {
+                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming generation failed: {}", status.ToString());
+                    return handlePostSchedulingError(cc, std::move(status), timestampAdvanceGuard);
+                }
                 SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Received partial execution results", cc->NodeName());
 
                 status = servable->preparePartialResponse(executionContext);
-                if (status != absl::OkStatus())
-                    return status;
+                if (status != absl::OkStatus()) {
+                    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Streaming response serialization failed: {}", status.ToString());
+                    return handlePostSchedulingError(cc, std::move(status), timestampAdvanceGuard);
+                }
                 std::string& response = executionContext->response;
                 if (!response.empty()) {
+                    executionContext->streamFrameEmitted = true;
                     SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Response prepared, sending it down the graph", cc->NodeName());
                     cc->Outputs().Tag(OUTPUT_TAG_NAME).Add(new std::string{std::move(response)}, iterationBeginTimestamp);
                 }
@@ -216,17 +265,25 @@ public:
                     cc->Outputs().Tag(LOOPBACK_TAG_NAME).Add(new bool{true}, iterationBeginTimestamp);
             }
         } catch (ov::AssertFailure& e) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator [Node: {}] Response generation failed: {}", cc->NodeName(), e.what());
-            return handleGenerationError(cc, e.what());
+            if (postSchedulingPhase) {
+                return handlePostSchedulingError(cc, absl::InternalError(e.what()), timestampAdvanceGuard);
+            } else {
+                return handlePreSchedulingError(cc, absl::InternalError(e.what()));
+            }
         } catch (const std::exception& e) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator [Node: {}] Response generation failed: {}", cc->NodeName(), e.what());
-            return handleGenerationError(cc, e.what());
+            if (postSchedulingPhase) {
+                return handlePostSchedulingError(cc, absl::InternalError(e.what()), timestampAdvanceGuard);
+            } else {
+                return handlePreSchedulingError(cc, absl::InternalError(e.what()));
+            }
         } catch (...) {
-            SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "LLMCalculator [Node: {}] Response generation failed due to unknown error", cc->NodeName());
-            return handleGenerationError(cc, "Response generation failed");
+            if (postSchedulingPhase) {
+                return handlePostSchedulingError(cc, absl::InternalError("Response generation failed"), timestampAdvanceGuard);
+            } else {
+                return handlePreSchedulingError(cc, absl::InternalError("Request processing failed"));
+            }
         }
-        auto now = std::chrono::system_clock::now();
-        iterationBeginTimestamp = ::mediapipe::Timestamp(std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count());
+        timestampAdvanceGuard.markSucceeded();
         SPDLOG_LOGGER_TRACE(llm_calculator_logger, "LLMCalculator  [Node: {}] Process end", cc->NodeName());
         return absl::OkStatus();
     }

@@ -16,6 +16,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -32,11 +33,12 @@ namespace ovms {
 using InputPayload = std::variant<ov::genai::ChatHistory, std::string>;
 
 // Per-request data passed through the InputProcessor chain.
-// parseRequest() calls extractInputRequest() which fills input + generationConfig in one step;
-// InputProcessor fills the remaining output fields.
+// Input extraction and processing precede generation configuration in prepareInputs().
 struct InputRequest {
-    InputPayload input;                            // set in parseRequest()
-    ov::genai::GenerationConfig generationConfig;  // set in parseRequest()
+    InputPayload input;  // set in parseRequest()
+    std::vector<std::string_view> multipartAudioInputs;
+
+    ov::genai::GenerationConfig generationConfig;  // set after input processing
 
     std::string promptText;               // written by ChatTemplateProcessor / RawPromptExtractor
     ov::Tensor inputIds;                  // written by TokenizationProcessor (all paths)
@@ -44,9 +46,11 @@ struct InputRequest {
     std::vector<ov::Tensor> inputVideos;
     std::vector<ov::Tensor> inputAudios;
 
-    // Running total of decoded pixels across all image_url and video_url parts in
-    // this request.
+    // Running total of decoded pixels across all image_url and frame-array video_url
+    // parts in this request.
     size_t totalDecodedPixels = 0;
+    // Running total of decoded pixels from encoded-video sources in this request.
+    size_t totalDecodedVideoPixels = 0;
 };
 
 }  // namespace ovms

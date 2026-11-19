@@ -33,9 +33,17 @@ ovms_cc_library(
     name = "env_guard",
     hdrs = ["env_guard.hpp",],
     srcs = ["env_guard.cpp",],
+    linkstatic = 1,
     deps = [
+        ":windows_executable_path",
         "@com_github_gabime_spdlog//:spdlog",
     ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
+    name = "windows_executable_path",
+    hdrs = ["windows_executable_path.hpp"],
     visibility = ["//visibility:public"],
 )
 

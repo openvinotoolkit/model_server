@@ -133,9 +133,9 @@ constexpr int WEBP_DIMENSION_BITS_14 = 14;
     return true;
 }
 
-    // Attempts to read the image dimensions (width and height) using stb_image.
-    // Returns true if successful, false otherwise.
-    [[nodiscard]] bool tryReadImageDimensionsStbi(std::string_view imageBytes, int& width, int& height) {
+// Attempts to read the image dimensions (width and height) using stb_image.
+// Returns true if successful, false otherwise.
+[[nodiscard]] bool tryReadImageDimensionsStbi(std::string_view imageBytes, int& width, int& height) {
     width = 0;
     height = 0;
     if (imageBytes.empty() || imageBytes.size() > static_cast<size_t>(std::numeric_limits<int>::max()))

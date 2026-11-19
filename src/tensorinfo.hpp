@@ -40,8 +40,8 @@ class TensorInfo;
 using tensor_map_t = std::map<std::string, std::shared_ptr<const TensorInfo>>;
 
 /**
-     * @brief Class containing information about the tensor
-     */
+ * @brief Class containing information about the tensor
+ */
 class TensorInfo {
 public:
     enum class ProcessingHint {
@@ -52,19 +52,19 @@ public:
     };
 
     /**
-         * @brief Construct a new Tensor Info object
-         * 
-         */
+     * @brief Construct a new Tensor Info object
+     *
+     */
     TensorInfo() = default;
     TensorInfo(const TensorInfo&) = default;
 
     /**
-         * @brief Construct a new Tensor Info object
-         * 
-         * @param name 
-         * @param precision 
-         * @param shape
-         */
+     * @brief Construct a new Tensor Info object
+     *
+     * @param name
+     * @param precision
+     * @param shape
+     */
     TensorInfo(const std::string& name,
         const Precision& precision,
         const shape_t& shape);
@@ -73,13 +73,13 @@ public:
         const Shape& shape);
 
     /**
-         * @brief Construct a new Tensor Info object
-         * 
-         * @param name 
-         * @param precision 
-         * @param shape
-         * @param layout 
-         */
+     * @brief Construct a new Tensor Info object
+     *
+     * @param name
+     * @param precision
+     * @param shape
+     * @param layout
+     */
     TensorInfo(const std::string& name,
         const Precision& precision,
         const shape_t& shape,
@@ -90,13 +90,13 @@ public:
         const Layout& layout);
 
     /**
-         * @brief Construct a new Tensor Info object
-         * 
-         * @param name 
-         * @param precision 
-         * @param shape
-         * @param layout 
-         */
+     * @brief Construct a new Tensor Info object
+     *
+     * @param name
+     * @param precision
+     * @param shape
+     * @param layout
+     */
     TensorInfo(const std::string& name,
         const std::string& mapping,
         const Precision& precision,
@@ -113,64 +113,64 @@ public:
         const shape_t& shape);
 
     /**
-         * @brief Get the Name object
-         * 
-         * @return const std::string& 
-         */
+     * @brief Get the Name object
+     *
+     * @return const std::string&
+     */
     const std::string& getName() const;
 
     /**
-         * @brief Get the tensor name - as in model or mapped name
-         * 
-         * @return const std::string& 
-         */
+     * @brief Get the tensor name - as in model or mapped name
+     *
+     * @return const std::string&
+     */
     const std::string& getMappedName() const;
 
     /**
-         * @brief Get the Precision object
-         * 
-         * @return const InferenceEngine::Precision
-         */
+     * @brief Get the Precision object
+     *
+     * @return const InferenceEngine::Precision
+     */
     const Precision getPrecision() const;
 
     ov::element::Type getOvPrecision() const;
 
     /**
-        * @brief Get the Precision As String object
-        *
-        * @return const std::string
-        */
+     * @brief Get the Precision As String object
+     *
+     * @return const std::string
+     */
     const std::string& getPrecisionAsString() const;
 
     /**
-        * @brief Get the string representation of TensorInfo object
-        *
-        * @return String representation
-        */
+     * @brief Get the string representation of TensorInfo object
+     *
+     * @return String representation
+     */
     std::string asString() const;
 
     static const std::string& getPrecisionAsString(Precision precision);
 
     /**
-         * @brief Get the layout name from Layout
-         *
-         * @param Layout
-         * @return std::string
-         */
+     * @brief Get the layout name from Layout
+     *
+     * @param Layout
+     * @return std::string
+     */
     static const std::string& getStringFromLayout(const Layout& layout);
 
     /**
-         * @brief Get the Layout string
-         *
-         * @return const Layout&
-         */
+     * @brief Get the Layout string
+     *
+     * @return const Layout&
+     */
     const Layout& getLayout() const;
 
     /**
-         * @brief Gets input shape
-         *
-         * @return shape
-         */
+     * @brief Gets input shape
+     *
+     * @return shape
+     */
     const Shape& getShape() const;
 
     ProcessingHint getPreProcessingHint() const;
@@ -194,30 +194,30 @@ public:
 
 protected:
     /**
-         * @brief Input name
-         */
+     * @brief Input name
+     */
     std::string name;
 
     /**
-         * @brief Mapping name
-         */
+     * @brief Mapping name
+     */
     std::string mapping;
 
     Precision precision;
 
     /**
-         * @brief Model input shape
-         */
+     * @brief Model input shape
+     */
     Shape shape;
 
     /**
-         * @brief Tensor layout
-         */
+     * @brief Tensor layout
+     */
     Layout layout;
 
     /**
-         * @brief Information if influenced by demultiplexer
-         */
+     * @brief Information if influenced by demultiplexer
+     */
     bool influencedByDemultiplexer = false;
 
     void createProcessingHints();
