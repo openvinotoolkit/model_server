@@ -157,8 +157,8 @@ ARG VERBOSE_LOGS=OFF
 ARG LTO_ENABLE=OFF
 
 # hadolint ignore=DL3041
-RUN curl -fsSL -o /tmp/opencl-headers.rpm https://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/opencl-headers-2.2-1.20180306gite986688.el8.noarch.rpm && \
-    echo "04b159a7182de1964e3dd32ad9aaf7cd4dcf2926050b126063a38d51c5f72381  /tmp/opencl-headers.rpm" | sha256sum -c - && \
+RUN curl -fsSL -o /tmp/opencl-headers.rpm https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/opencl-headers-3.0-6.20201007gitd65bcc5.el9.noarch.rpm && \
+    echo "1c915447fc325e6d2eb820c97c37fb55c3a7ddf5c6bc44416bfda40c55e38be9  /tmp/opencl-headers.rpm" | sha256sum -c - && \
     dnf install -y -d6 /tmp/opencl-headers.rpm \
             gdb \
             java-11-openjdk-devel \
