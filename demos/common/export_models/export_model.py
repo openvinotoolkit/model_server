@@ -57,6 +57,8 @@ parser_text.add_argument('--prompt_lookup_decoding', action='store_true', help='
 parser_text.add_argument('--reasoning_parser', choices=["qwen3", "gptoss", "lfm2", "gemma4"], help='Set the type of the reasoning parser for reasoning content extraction', dest='reasoning_parser')
 parser_text.add_argument('--tool_parser', choices=["llama3", "phi4", "hermes3", "mistral", "qwen3coder", "gptoss", "devstral", "lfm2", "gemma4"], help='Set the type of the tool parser for tool calls extraction', dest='tool_parser')
 parser_text.add_argument('--enable_tool_guided_generation', action='store_true', help='Enables enforcing tool schema during generation. Requires setting tool_parser', dest='enable_tool_guided_generation')
+parser_text.add_argument('--input_video_fps', type=float, default=None, help='Sampling rate for encoded video inputs. Must be greater than zero. If not set, frames are retained up to input_video_max_frames.', dest='input_video_fps')
+parser_text.add_argument('--input_video_max_frames', type=int, default=None, help='Maximum number of frames retained from one encoded video or supplied in a frame array. Must be greater than zero. Default in the server: 32.', dest='input_video_max_frames')
 
 parser_embeddings_ov = subparsers.add_parser('embeddings_ov', help='export model for embeddings endpoint with directory structure aligned with OpenVINO tools')
 add_common_arguments(parser_embeddings_ov)
@@ -257,6 +259,13 @@ node: {
           tool_parser: "{{tool_parser}}",{% endif %}
           {%- if enable_tool_guided_generation %}
           enable_tool_guided_generation: {% if not enable_tool_guided_generation %}false{% else %} true{% endif%},{% endif %}
+          {%- if input_video_fps is not none or input_video_max_frames is not none %}
+          input_vision: {
+            {%- if input_video_fps is not none %}
+            video_fps: {{input_video_fps}},{% endif %}
+            {%- if input_video_max_frames is not none %}
+            video_max_frames: {{input_video_max_frames}},{% endif %}
+          },{% endif %}
       }
   }
   input_stream_handler {

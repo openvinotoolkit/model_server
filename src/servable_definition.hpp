@@ -15,14 +15,18 @@
 //*****************************************************************************
 #pragma once
 
+#include <memory>
 #include <string>
 
 namespace ovms {
+
+class GraphMetadata;
 
 class ServableDefinition {
 public:
     virtual ~ServableDefinition() = default;
     virtual const std::string& getName() const = 0;
+    virtual std::shared_ptr<const GraphMetadata> getMetadata() const { return nullptr; }
 };
 
 }  // namespace ovms

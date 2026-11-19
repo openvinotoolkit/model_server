@@ -47,6 +47,11 @@
 #include "../../../llm/io_processing/input_processor_context.hpp"
 #include "../../../llm/io_processing/input_request.hpp"
 #include "../../../llm/runtime_chat_template_runtime_loader.hpp"
+#include "../../../llm/servable.hpp"
+#include "../../../config.hpp"
+#include "../../../http_payload.hpp"
+#include "../../../multi_part_parser.hpp"
+#include "../../../utils/rapidjson_utils.hpp"
 #include "../../platform_utils.hpp"
 #include "../../wav_test_utils.hpp"
 
@@ -71,6 +76,70 @@ constexpr const char* TINY_PNG =
 
 static std::unique_ptr<ov::genai::Tokenizer> sharedTokenizer;
 static std::unique_ptr<PreparedChatTemplateRuntime> sharedPreparedRuntimeTemplate;
+
+class MultipartParserForTest : public MultiPartParser {
+public:
+    MultipartParserForTest(const std::string& audioData, const std::string& prompt, const std::string& stream, const std::string& streamOptions) :
+        audioData(audioData),
+        prompt(prompt),
+        stream(stream),
+        streamOptions(streamOptions) {}
+
+    bool parse() override { return true; }
+    bool hasParseError() const override { return false; }
+    std::vector<std::string> getArrayFieldByName(const std::string&) const override { return {}; }
+    std::string getFieldByName(const std::string& name) const override {
+        if (name == "model") {
+            return "m";
+        }
+        if (name == "prompt") {
+            return prompt;
+        }
+        if (name == "stream_options") {
+            return streamOptions;
+        }
+        return name == "stream" ? stream : "";
+    }
+    std::string_view getFileContentByFieldName(const std::string& name) const override {
+        return name == "file" ? std::string_view(audioData) : std::string_view{};
+    }
+    std::vector<std::string_view> getFilesArrayByFieldName(const std::string&) const override { return {}; }
+    std::set<std::string> getAllFieldNames() const override { return {"file", "model", "prompt"}; }
+
+private:
+    const std::string& audioData;
+    const std::string& prompt;
+    const std::string& stream;
+    const std::string& streamOptions;
+};
+
+class TranscriptionTestServable : public GenAiServable {
+public:
+    TranscriptionTestServable() :
+        properties(std::make_shared<GenAiServableProperties>()) {}
+
+    absl::Status validateEndpoint(Endpoint endpoint) const override {
+        return endpoint == Endpoint::TRANSCRIPTIONS ? absl::OkStatus() : absl::InvalidArgumentError("Unsupported endpoint");
+    }
+    std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() override {
+        return std::make_shared<GenAiServableExecutionContext>();
+    }
+    std::shared_ptr<GenAiServableProperties> getProperties() override {
+        return properties;
+    }
+    absl::Status scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>&) override {
+        return absl::OkStatus();
+    }
+    absl::Status readCompleteExecutionResults(std::shared_ptr<GenAiServableExecutionContext>&) override {
+        return absl::OkStatus();
+    }
+    absl::Status readPartialExecutionResults(std::shared_ptr<GenAiServableExecutionContext>&) override {
+        return absl::OkStatus();
+    }
+
+private:
+    std::shared_ptr<GenAiServableProperties> properties;
+};
 
 class InputProcessingIntegrationTest : public testing::TestWithParam<Endpoint> {
 protected:
@@ -105,6 +174,7 @@ protected:
     // Run result — owns the Document so the handler's reference stays valid.
     // ------------------------------------------------------------------
     struct RunResult {
+        absl::Status loadStatus;
         absl::Status parseStatus;
         absl::Status processStatus;
         InputRequest req;
@@ -150,7 +220,9 @@ protected:
         result.req = std::move(*reqResult);
 
         InputProcessorContext ctx;
-        ctx.config.supportsVisualInputs = supportsVisualInputs;
+        if (supportsVisualInputs) {
+            ctx.config.visionInputConfig = VisionInputConfig{};
+        }
         ctx.config.audioInputConfig = audioInputConfig;
         ctx.tokenizer = *sharedTokenizer;
         ctx.templateProcessor = sharedPreparedRuntimeTemplate.get();
@@ -167,6 +239,37 @@ protected:
                 result.processStatus = absl::InvalidArgumentError(e.what());
             }
         }
+        return result;
+    }
+
+    RunResult runMultipartTranscriptionPipeline(const std::string& audioData, const std::string& prompt = "", const std::string& stream = "", const std::string& streamOptions = "") {
+        RunResult result;
+        auto parser = std::make_shared<MultipartParserForTest>(audioData, prompt, stream, streamOptions);
+        HttpPayload payload;
+        payload.parsedJson = std::make_shared<rapidjson::Document>();
+        payload.uri = "/v1/audio/transcriptions";
+        payload.multipartParser = std::move(parser);
+
+        TranscriptionTestServable servable;
+        const auto properties = servable.getProperties();
+        properties->chatTemplateStatus = ChatTemplateStatus::AVAILABLE;
+        properties->tokenizer = *sharedTokenizer;
+        properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig::withResampling();
+        properties->inputProcessorContext.tokenizer = *sharedTokenizer;
+        properties->inputProcessorContext.templateProcessor = sharedPreparedRuntimeTemplate.get();
+
+        auto context = servable.createExecutionContext();
+        result.loadStatus = servable.loadRequest(context, payload);
+        if (!result.loadStatus.ok()) {
+            return result;
+        }
+        result.parseStatus = servable.parseRequest(context);
+        if (!result.parseStatus.ok()) {
+            return result;
+        }
+        result.handler = context->apiHandler;
+        result.processStatus = servable.prepareInputs(context);
+        result.req = std::move(context->inputRequest);
         return result;
     }
 
@@ -508,6 +611,117 @@ TEST_P(InputProcessingIntegrationTest, VlmAudioInput_ResamplesTo16Khz) {
     EXPECT_EQ(result.req.inputAudios[0].get_shape()[0], 160u);
 }
 
+TEST_P(InputProcessingIntegrationTest, MultipartTranscription_DecodesAudioAndUsesIndexedTag) {
+    const std::string wavData = buildWavBuffer(/*numSamples=*/240, /*sampleRate=*/24000);
+    auto result = runMultipartTranscriptionPipeline(wavData);
+
+    ASSERT_TRUE(result.loadStatus.ok()) << result.loadStatus.message();
+    ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
+    ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
+    ASSERT_EQ(result.req.inputAudios.size(), 1u);
+    EXPECT_EQ(result.req.inputAudios[0].get_shape()[0], 160u);
+
+    const auto& chatHistory = std::get<ov::genai::ChatHistory>(result.req.input);
+    ASSERT_EQ(chatHistory.size(), 1u);
+    EXPECT_EQ(chatHistory[0]["content"].as_string().value_or(""), "<ov_genai_audio_0>");
+    EXPECT_NE(result.req.promptText.find("<ov_genai_audio_0>"), std::string::npos);
+}
+
+TEST_P(InputProcessingIntegrationTest, MultipartTranscription_UsesPromptAsSystemMessage) {
+    const std::string prompt = "Transcribe in English.";
+    auto result = runMultipartTranscriptionPipeline(buildWavBuffer(160), prompt);
+
+    ASSERT_TRUE(result.loadStatus.ok()) << result.loadStatus.message();
+    ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
+    ASSERT_TRUE(result.processStatus.ok()) << result.processStatus.message();
+
+    const auto& chatHistory = std::get<ov::genai::ChatHistory>(result.req.input);
+    ASSERT_EQ(chatHistory.size(), 2u);
+    EXPECT_EQ(chatHistory[0]["role"].as_string().value_or(""), "system");
+    EXPECT_EQ(chatHistory[0]["content"].as_string().value_or(""), prompt);
+    EXPECT_NE(result.req.promptText.find(prompt), std::string::npos);
+    EXPECT_EQ(chatHistory[1]["content"].as_string().value_or(""), "<ov_genai_audio_0>");
+}
+
+TEST_P(InputProcessingIntegrationTest, MultipartTranscription_EnablesStreaming) {
+    auto result = runMultipartTranscriptionPipeline(buildWavBuffer(160), "", "true");
+
+    ASSERT_TRUE(result.loadStatus.ok()) << result.loadStatus.message();
+    ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
+    ASSERT_NE(result.handler, nullptr);
+    EXPECT_TRUE(result.handler->isStream());
+}
+
+TEST_P(InputProcessingIntegrationTest, MultipartTranscription_ParsesStreamingUsageOptions) {
+    auto result = runMultipartTranscriptionPipeline(buildWavBuffer(160), "", "true", R"({"include_usage":true})");
+
+    ASSERT_TRUE(result.loadStatus.ok()) << result.loadStatus.message();
+    ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
+    ASSERT_NE(result.handler, nullptr);
+    EXPECT_TRUE(result.handler->getStreamOptions().includeUsage);
+}
+
+TEST_P(InputProcessingIntegrationTest, MultipartTranscription_RejectsMalformedStreamOptions) {
+    auto result = runMultipartTranscriptionPipeline(buildWavBuffer(160), "", "true", "{");
+
+    EXPECT_EQ(result.loadStatus.code(), absl::StatusCode::kInvalidArgument);
+}
+
+TEST_P(InputProcessingIntegrationTest, MultipartTranscription_RejectsExcessivelyNestedStreamOptions) {
+    const std::string streamOptions = std::string(DEFAULT_MAX_JSON_NESTING_DEPTH + 1, '[') + "0" +
+                                      std::string(DEFAULT_MAX_JSON_NESTING_DEPTH + 1, ']');
+    auto result = runMultipartTranscriptionPipeline(buildWavBuffer(160), "", "true", streamOptions);
+
+    EXPECT_EQ(result.loadStatus.code(), absl::StatusCode::kInvalidArgument);
+}
+
+TEST_P(InputProcessingIntegrationTest, MultipartTranscription_EnforcesStreamOptionsComplexityLimit) {
+    auto& config = const_cast<ServerSettingsImpl&>(Config::instance().getServerSettings());
+    const auto previousMaxComplexity = config.jsonMaxComplexity;
+    struct JsonMaxComplexityGuard {
+        ServerSettingsImpl& config;
+        std::optional<size_t> previousMaxComplexity;
+        ~JsonMaxComplexityGuard() {
+            config.jsonMaxComplexity = previousMaxComplexity;
+        }
+    } restore{config, previousMaxComplexity};
+    config.jsonMaxComplexity = 3;
+
+    auto result = runMultipartTranscriptionPipeline(buildWavBuffer(160), "", "true", R"({"include_usage":true})");
+
+    EXPECT_EQ(result.loadStatus.code(), absl::StatusCode::kInvalidArgument);
+}
+
+TEST_P(InputProcessingIntegrationTest, MultipartTranscription_RejectsInvalidStreamOptions) {
+    auto result = runMultipartTranscriptionPipeline(buildWavBuffer(160), "", "true", R"({"include_usage":"true"})");
+
+    ASSERT_TRUE(result.loadStatus.ok()) << result.loadStatus.message();
+    EXPECT_EQ(result.parseStatus.code(), absl::StatusCode::kInvalidArgument);
+}
+
+TEST_P(InputProcessingIntegrationTest, MultipartTranscription_RejectsStreamOptionsWithoutStreaming) {
+    auto result = runMultipartTranscriptionPipeline(buildWavBuffer(160), "", "false", R"({"include_usage":true})");
+
+    ASSERT_TRUE(result.loadStatus.ok()) << result.loadStatus.message();
+    EXPECT_EQ(result.parseStatus.code(), absl::StatusCode::kInvalidArgument);
+}
+
+TEST_P(InputProcessingIntegrationTest, MultipartTranscription_RejectsInvalidStreamDuringLoad) {
+    auto result = runMultipartTranscriptionPipeline(buildWavBuffer(160), "", "invalid");
+
+    EXPECT_EQ(result.loadStatus.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_EQ(result.loadStatus.message(), "stream must be true or false");
+}
+
+TEST_P(InputProcessingIntegrationTest, MultipartTranscription_RejectsMalformedAudio) {
+    auto result = runMultipartTranscriptionPipeline("not valid audio");
+
+    ASSERT_TRUE(result.loadStatus.ok()) << result.loadStatus.message();
+    ASSERT_TRUE(result.parseStatus.ok()) << result.parseStatus.message();
+    EXPECT_EQ(result.processStatus.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_TRUE(result.req.inputAudios.empty());
+}
+
 TEST_P(InputProcessingIntegrationTest, OmniAudioInput_PreservesNativeSampleRate) {
     const std::string audioB64 = toBase64(buildWavBuffer(240, /*sampleRate=*/24000));
     const std::string json = (GetParam() == Endpoint::CHAT_COMPLETIONS)
@@ -769,7 +983,7 @@ TEST(InputProcessingEquivalenceTest, ChatAndResponsesProduceSamePromptAndImages)
         auto req = std::move(*reqResult);
 
         InputProcessorContext ctx;
-        ctx.config.supportsVisualInputs = true;
+        ctx.config.visionInputConfig = VisionInputConfig{};
         ctx.tokenizer = tokenizer;
         ctx.templateProcessor = &preparedRuntimeTemplate;
 

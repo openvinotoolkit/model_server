@@ -150,11 +150,11 @@ public:
             return absl::InvalidArgumentError(absl::StrCat("Unsupported URI: ", payload.uri));
         }
         try {
-            if (payload.multipartParser->hasParseError())
+            if (payload.multipartParser->hasParseError()) {
                 return absl::InvalidArgumentError("Failed to parse multipart data");
-
-            std::string streamField = payload.multipartParser->getFieldByName("stream");
-            bool requestStreaming = (streamField == "true") && hasLoopback_;
+            }
+            const std::string streamField = payload.multipartParser->getFieldByName("stream");
+            const bool requestStreaming = streamField == "true" && hasLoopback_;
             if (streamField == "true" && endpoint == Endpoint::TRANSLATIONS) {
                 return absl::InvalidArgumentError("streaming is not supported for translations endpoint");
             }
@@ -162,14 +162,14 @@ public:
                 return absl::InvalidArgumentError("streaming is not supported for this graph configuration (LOOPBACK not configured)");
             }
 
-            std::string_view file = payload.multipartParser->getFileContentByFieldName("file");
+            const std::string_view file = payload.multipartParser->getFileContentByFieldName("file");
             if (file.empty()) {
-                return absl::InvalidArgumentError(absl::StrCat("File parsing fails"));
+                return absl::InvalidArgumentError("File parsing fails");
             }
 
             std::vector<float> rawSpeech;
             try {
-                if (ovms::audio_utils::isWavBuffer(std::string(file))) {
+                if (ovms::audio_utils::isWavBuffer(file)) {
                     SPDLOG_DEBUG("Received file format: wav");
                     rawSpeech = ovms::audio_utils::readWav(file);
                 } else {

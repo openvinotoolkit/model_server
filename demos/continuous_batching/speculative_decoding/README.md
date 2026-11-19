@@ -73,9 +73,9 @@ print(response.choices[0].message)
 
 ## Check performance
 
-Check the deployed model's performance by using the vLLM benchmark script and the Sonnet dataset.
+Check the deployed model's performance by using the vLLM benchmark script and the Spec-Bench dataset.
 
-Install vLLM and download the Sonnet dataset:
+Install vLLM and download the Spec-Bench dataset:
 ```bash
 pip install vllm[bench] --extra-index-url https://wheels.vllm.ai/0.32.0/cpu --extra-index-url https://download.pytorch.org/whl/cpu
 curl -O https://raw.githubusercontent.com/hemingkx/Spec-Bench/refs/heads/main/data/spec_bench/question.jsonl

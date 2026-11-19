@@ -27,6 +27,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ARG BASE_IMAGE
 RUN apt-get update && apt-get install --no-install-recommends -y \
             build-essential \
+            nasm \
             make \
             cmake \
             automake \
@@ -185,7 +186,7 @@ ARG SDL_OPS="-Wl,-z,relro,-z,now,-z,noexecstack -fPIE -pie -fstack-protector-str
 RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_repo.git /openvino && cd /openvino && git checkout $ov_branch && git submodule update --init --recursive
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ]; then \
-    cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" ${SDL_OPS} -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF -DENABLE_SYSTEM_LEVEL_ZERO=OFF .. && \
+    cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DCMAKE_CXX_FLAGS=" ${SDL_OPS} -Wno-error=parentheses " -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU_PROTOPIPE=OFF -DGPU_RT_TYPE=COMBINED -DBUILD_SHARED_LIBS=ON .. && \
     make --jobs=$JOBS && \
     make install ; \
     fi
@@ -238,7 +239,7 @@ RUN mkdir -p /opt/intel/openvino/python/openvino_tokenizers/lib ; \
     ln -s /ovms/lib/libopenvino_tokenizers.so /opt/intel/openvino/python/openvino_tokenizers/lib/libopenvino_tokenizers.so
 # hadolint ignore=DL3003
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; \
-    cd /openvino_tokenizers && cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_CXX_FLAGS=" ${SDL_OPS} " -S ./ -B ./build/ && cmake --build ./build/ --parallel $JOBS && cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/ && \
+    cd /openvino_tokenizers && cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_CXX_FLAGS=" ${SDL_OPS} " -DCMAKE_INSTALL_BINDIR=bin -DCMAKE_INSTALL_INCLUDEDIR=include -S ./ -B ./build/ && cmake --build ./build/ --parallel $JOBS && cp /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/ && \
     cp build/python/* /opt/intel/openvino/python/openvino_tokenizers/
 ARG ov_genai_branch=master
 ARG ov_genai_repo=openvinotoolkit/openvino.genai
@@ -262,8 +263,11 @@ RUN apt-get update ; \
 WORKDIR /ovms
 # GPU testing in build img
 COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
+COPY ./install_ubuntu_level_zero_loader.sh /usr/local/bin/install_level_zero_loader.sh
 ARG INSTALL_DRIVER_VERSION="26.31.39395"
 RUN /tmp/install_gpu_drivers.sh && \
+    bash /usr/local/bin/install_level_zero_loader.sh && \
+    rm -f /usr/local/bin/install_level_zero_loader.sh && \
     groupadd --gid 5000 ovms && \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 # GPU testing in build img
@@ -273,6 +277,7 @@ COPY .bazelrc .user.bazelr[c] .bazelversion WORKSPACE /ovms/
 COPY external /ovms/external/
 # This path is required for namespace to setup Python dependencies for testing the binding
 COPY src/BUILD /ovms/src/BUILD
+COPY src/mediapipe_internal/BUILD src/mediapipe_internal/runtime_plugin.bzl /ovms/src/mediapipe_internal/
 COPY src/python/binding/BUILD /ovms/src/python/binding/BUILD
 COPY src/python/binding/tests/requirements.txt /ovms/src/python/binding/tests/requirements.txt
 
@@ -371,10 +376,10 @@ ARG CAPI_FLAGS="--strip=always --config mp_off --//:distro=ubuntu"
 ARG JOBS=40
 ARG FUZZER_BUILD=0
 WORKDIR /ovms
-RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:ovms_shared //src:ovms_optional_plugins
 
 # C-API benchmark app
-RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --niter 2 --nstreams 1 --servable_name "dummy"; fi;
+RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$FUZZER_BUILD" == "0" ]; then bazel build --jobs=$JOBS ${CAPI_FLAGS} //src:capi_benchmark && ./bazel-bin/src/capi_benchmark --config_path /ovms/src/test/configs/config_cpu_dummy.json --niter 2 --nstreams 1 --servable_name "dummy"; fi;
 
 ARG FUZZER_BUILD=0
 # C api app with bazel
@@ -433,6 +438,7 @@ COPY release_files/drivers /drivers
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG INSTALL_DRIVER_VERSION="26.31.39395"
 COPY ./install_ubuntu_gpu_drivers.sh /tmp/install_gpu_drivers.sh
+COPY ./install_ubuntu_level_zero_loader.sh /usr/local/bin/install_level_zero_loader.sh
 # hadolint ignore=DL3003,SC2164
 RUN apt-get update ; \
     if [ "$BASE_OS" == "ubuntu26" ]; then apt-get install -y --no-install-recommends curl ca-certificates libxml2-16; else apt-get install -y --no-install-recommends curl ca-certificates libxml2; fi || exit 1; \
@@ -441,6 +447,9 @@ RUN apt-get update ; \
     # no system package is required at runtime.
     if [ "$GPU" == "1" ] ; then \
     /tmp/install_gpu_drivers.sh || exit 1; \
+    fi ; \
+    if [[ "$GPU" == "1" || "$NPU" == "1" ]]; then \
+        bash /usr/local/bin/install_level_zero_loader.sh || exit 1; \
     fi ; \
     if [ "$NPU" == "1" ] ; then \
         mkdir /tmp/npu_deps && cd /tmp/npu_deps ; \
@@ -467,7 +476,7 @@ RUN apt-get update ; \
         dpkg -i ./*.deb || exit 1; rm -Rf /tmp/npu_deps ; \
     fi ; \
     apt-get clean ; \
-    rm -rf /tmp/install_gpu_drivers.sh && \
+    rm -rf /tmp/install_gpu_drivers.sh /usr/local/bin/install_level_zero_loader.sh && \
     rm -rf /var/lib/apt/lists/* && rm -rf /tmp/* && \
     groupadd --gid 5000 ovms && \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
@@ -488,13 +497,7 @@ RUN apt-get update -y ; \
 
 ENV LD_LIBRARY_PATH=/ovms/lib
 ENV PATH="$PATH:/ovms/bin"
-# When espeak-ng data is present in the package, point runtime to it.
-# Keep this conditional to avoid exporting a non-existent path when
-# espeak support is disabled.
-# Install a default OpenCV pre-decode pixel guard so oversized image
-# headers are rejected before allocation. ~1GB decoded budget / 16 B worst-case per pixel.
-# Only set when unset so operators can override.
-ENTRYPOINT ["/bin/bash", "-c", "if [ -d /ovms/share/espeak-ng-data ]; then export ESPEAK_DATA_PATH=/ovms/share/espeak-ng-data; fi; if [ -z \"$OPENCV_IO_MAX_IMAGE_PIXELS\" ]; then export OPENCV_IO_MAX_IMAGE_PIXELS=67108864; fi; exec /ovms/bin/ovms \"$@\"", "--"]
+ENTRYPOINT ["/ovms/bin/ovms"]
 
 RUN echo "The source code of added GPL components is stored in https://storage.openvinotoolkit.org/repositories/openvino/ci_dependencies/container_gpl_sources/" > /ovms/thirdparty-licenses/GPL.txt
 USER ovms

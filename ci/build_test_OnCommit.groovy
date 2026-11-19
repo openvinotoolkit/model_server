@@ -437,12 +437,16 @@ pipeline {
                   script {
                     withGithubStageStatus('jenkins/oncommit/doc-tests-linux', 'Linux doc tests') {
                       println "Running on NODE = ${env.NODE_NAME}"
-                      checkout scm
+                      def ovms_c_repo_path = ""
+                      dir ('documentation_source') {
+                        deleteDir()
+                        checkout scm
+                        ovms_c_repo_path = sh(returnStdout:true, script: "pwd").strip()
+                      }
                       dir ('documentation_tests') {
                         checkout scmGit(branches: [[name: validation_branch]], userRemoteConfigs: [[credentialsId: 'workflow-lab', url: 'https://github.com/intel-innersource/frameworks.ai.openvino.model-server.tests.git']])
                         sh "pwd"
                         def pwd = sh(returnStdout:true, script: "pwd").strip()
-                        def ovms_c_repo_path = sh(returnStdout:true, script: "cd .. && pwd").strip()
                         def test_doc_files_str = test_doc_files_linux.split('\n').collect { 'U-' + it }.join(' or ')
                         sh "make create-venv TT_OVMS_C_REPO_PATH=${ovms_c_repo_path} && rm -f tests/functional && ln -s ${ovms_c_repo_path}/tests/functional tests/functional"
                         def cmd_venv_activate = ". .venv/bin/activate"

@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "src/llm/io_processing/base_output_parser.hpp"
+#include "src/llm/io_processing/devstral/tool_parser.hpp"
 #include "src/llm/io_processing/output_parser.hpp"
 #include "output_parser_test_utils.hpp"
 #include "test/platform_utils.hpp"
@@ -358,4 +359,169 @@ TEST_F(DevstralOutputParserTest, ToolCallsWithoutToolsInTheRequestStreaming) {
             FAIL() << "Mismatch between expectedDelta and doc for chunk: " << chunk;
         }
     }
+}
+
+TEST_F(DevstralOutputParserTest, ParallelToolCallsStreamingWithSplitTagsAndEmptyArguments) {
+    for (auto finishReason : {ov::genai::GenerationFinishReason::STOP, ov::genai::GenerationFinishReason::LENGTH}) {
+        for (const std::string& lastArguments : {std::string{}, std::string{"{\"city\":\"London\"}"}}) {
+            outputParserWithRegularToolParsing->resetStreamingState();
+            std::vector<ToolCall> toolCalls;
+            std::string content;
+            auto collectDelta = [&](const std::optional<Delta>& delta) {
+                if (!delta.has_value())
+                    return;
+                if (const auto* contentDelta = std::get_if<ContentDelta>(&*delta)) {
+                    content += contentDelta->text;
+                } else if (const auto* toolDelta = std::get_if<ToolCallDelta>(&*delta)) {
+                    ASSERT_GE(toolDelta->index, 0);
+                    const auto index = static_cast<size_t>(toolDelta->index);
+                    if (index >= toolCalls.size())
+                        toolCalls.resize(index + 1);
+                    if (toolDelta->name)
+                        toolCalls[index].name = *toolDelta->name;
+                    if (toolDelta->id)
+                        toolCalls[index].id = *toolDelta->id;
+                    toolCalls[index].arguments += toolDelta->arguments;
+                }
+            };
+            const std::vector<std::string> chunks{
+                "[TOOL_CALLS]first[ARGS]",
+                "{\"city\":\"Paris\"}[TO",
+                "OL_",
+                "CALLS]",
+                "empty[ARGS]",
+                "[TOOL",
+                "_CALLS]",
+                "last[ARGS]",
+                lastArguments};
+            for (const auto& chunk : chunks) {
+                collectDelta(outputParserWithRegularToolParsing->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE));
+            }
+            collectDelta(outputParserWithRegularToolParsing->parseChunk("", {}, true, finishReason));
+            EXPECT_TRUE(content.empty());
+            ASSERT_EQ(toolCalls.size(), 3);
+            EXPECT_EQ(toolCalls[0].name, "first");
+            EXPECT_EQ(toolCalls[0].arguments, "{\"city\":\"Paris\"}");
+            EXPECT_EQ(toolCalls[1].name, "empty");
+            EXPECT_EQ(toolCalls[1].arguments, "{}");
+            EXPECT_EQ(toolCalls[2].name, "last");
+            EXPECT_EQ(toolCalls[2].arguments, lastArguments.empty() ? "{}" : lastArguments);
+            for (const auto& toolCall : toolCalls)
+                EXPECT_FALSE(toolCall.id.empty());
+            EXPECT_NE(toolCalls[0].id, toolCalls[1].id);
+            EXPECT_NE(toolCalls[1].id, toolCalls[2].id);
+            EXPECT_NE(toolCalls[0].id, toolCalls[2].id);
+        }
+    }
+}
+
+TEST_F(DevstralOutputParserTest, ParallelToolCallsWithBoundaryAfterArgsTag) {
+    for (auto finishReason : {ov::genai::GenerationFinishReason::NONE, ov::genai::GenerationFinishReason::STOP, ov::genai::GenerationFinishReason::LENGTH}) {
+        DevstralToolParser parser(*devstralTokenizer, EMPTY_TOOLS_SCHEMA);
+        auto delta = parser.parseChunk("[TOOL_CALLS]first[ARGS]", {}, ov::genai::GenerationFinishReason::NONE);
+        ASSERT_TRUE(delta.has_value());
+        const auto* toolDelta = std::get_if<ToolCallDelta>(&*delta);
+        ASSERT_NE(toolDelta, nullptr);
+        EXPECT_EQ(toolDelta->index, 0);
+        EXPECT_EQ(toolDelta->name, "first");
+        EXPECT_TRUE(toolDelta->id.has_value());
+        EXPECT_TRUE(toolDelta->arguments.empty());
+
+        delta = parser.parseChunk("{}[TOOL_CALLS]", {}, ov::genai::GenerationFinishReason::NONE);
+        ASSERT_TRUE(delta.has_value());
+        toolDelta = std::get_if<ToolCallDelta>(&*delta);
+        ASSERT_NE(toolDelta, nullptr);
+        EXPECT_EQ(toolDelta->index, 0);
+        EXPECT_EQ(toolDelta->arguments, "{}");
+
+        delta = parser.parseChunk("second[ARGS]{}[TOOL_CALLS]third[ARGS]{}</s>", {}, finishReason);
+        ASSERT_TRUE(delta.has_value());
+        toolDelta = std::get_if<ToolCallDelta>(&*delta);
+        ASSERT_NE(toolDelta, nullptr);
+        EXPECT_EQ(toolDelta->index, 1);
+        EXPECT_EQ(toolDelta->name, "second");
+        ASSERT_TRUE(toolDelta->id.has_value());
+        EXPECT_FALSE(toolDelta->id->empty());
+        EXPECT_EQ(toolDelta->arguments, "{}");
+        const std::string secondId = *toolDelta->id;
+
+        delta = parser.parseChunk("", {}, finishReason);
+        ASSERT_TRUE(delta.has_value());
+        toolDelta = std::get_if<ToolCallDelta>(&*delta);
+        ASSERT_NE(toolDelta, nullptr);
+        EXPECT_EQ(toolDelta->index, 2);
+        EXPECT_EQ(toolDelta->name, "third");
+        ASSERT_TRUE(toolDelta->id.has_value());
+        EXPECT_FALSE(toolDelta->id->empty());
+        EXPECT_NE(*toolDelta->id, secondId);
+        EXPECT_EQ(toolDelta->arguments, "{}");
+        EXPECT_FALSE(parser.parseChunk("", {}, finishReason).has_value());
+    }
+}
+
+TEST_F(DevstralOutputParserTest, FinalStopFlushesArgumentsAfterParallelCallBoundary) {
+    DevstralToolParser parser(*devstralTokenizer, EMPTY_TOOLS_SCHEMA);
+    auto delta = parser.parseChunk("[TOOL_CALLS]first[ARGS]", {}, ov::genai::GenerationFinishReason::NONE);
+    ASSERT_TRUE(delta.has_value());
+    const auto* toolDelta = std::get_if<ToolCallDelta>(&*delta);
+    ASSERT_NE(toolDelta, nullptr);
+    EXPECT_EQ(toolDelta->name, "first");
+    EXPECT_TRUE(toolDelta->arguments.empty());
+
+    delta = parser.parseChunk("{}[TOOL_CALLS]last[ARGS]{}", {}, ov::genai::GenerationFinishReason::NONE);
+    ASSERT_TRUE(delta.has_value());
+    toolDelta = std::get_if<ToolCallDelta>(&*delta);
+    ASSERT_NE(toolDelta, nullptr);
+    EXPECT_EQ(toolDelta->index, 0);
+    EXPECT_EQ(toolDelta->arguments, "{}");
+
+    delta = parser.parseChunk("", {}, ov::genai::GenerationFinishReason::STOP);
+    ASSERT_TRUE(delta.has_value());
+    toolDelta = std::get_if<ToolCallDelta>(&*delta);
+    ASSERT_NE(toolDelta, nullptr);
+    EXPECT_EQ(toolDelta->index, 1);
+    EXPECT_EQ(toolDelta->name, "last");
+    ASSERT_TRUE(toolDelta->id.has_value());
+    EXPECT_FALSE(toolDelta->id->empty());
+    EXPECT_EQ(toolDelta->arguments, "{}");
+}
+
+TEST_F(DevstralOutputParserTest, ParallelToolCalls) {
+    std::string input = "[TOOL_CALLS]get_weather[ARGS]{\"city\":\"Paris\"}[TOOL_CALLS]search_flights[ARGS]{\"from\":\"Gdańsk\",\"to\":\"Paris\", \"date\":\"2026-11-03\"}[TOOL_CALLS]check_news[ARGS]{\"topic\":\"Paris\"}";
+    std::string testInput = input;
+    auto generatedTensor = devstralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*devstralTokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "");
+    EXPECT_EQ(parsedOutput.reasoning, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 3);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"city\":\"Paris\"}");
+    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
+    EXPECT_EQ(parsedOutput.toolCalls[1].name, "search_flights");
+    EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"from\":\"Gdańsk\",\"to\":\"Paris\",\"date\":\"2026-11-03\"}");
+    EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);
+    EXPECT_EQ(parsedOutput.toolCalls[2].name, "check_news");
+    EXPECT_EQ(parsedOutput.toolCalls[2].arguments, "{\"topic\":\"Paris\"}");
+    EXPECT_EQ(parsedOutput.toolCalls[2].id.empty(), false);
+}
+
+TEST_F(DevstralOutputParserTest, ParallelToolCallsWithContent) {
+    std::string input = "Content before tool calls [TOOL_CALLS]get_weather[ARGS]{\"city\":\"Paris\"}[TOOL_CALLS]search_flights[ARGS]{\"from\":\"Gdańsk\",\"to\":\"Paris\", \"date\":\"2026-11-03\"}[TOOL_CALLS]check_news[ARGS]{\"topic\":\"Paris\"}";
+    std::string testInput = input;
+    auto generatedTensor = devstralTokenizer->encode(testInput, ov::genai::add_special_tokens(false)).input_ids;
+    std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
+    ParsedOutput parsedOutput = ovms::test::parseWithStreamer(*devstralTokenizer, *outputParserWithRegularToolParsing, generatedTokens, true, true);
+    EXPECT_EQ(parsedOutput.content, "Content before tool calls ");
+    EXPECT_EQ(parsedOutput.reasoning, "");
+    ASSERT_EQ(parsedOutput.toolCalls.size(), 3);
+    EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
+    EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"city\":\"Paris\"}");
+    EXPECT_EQ(parsedOutput.toolCalls[0].id.empty(), false);
+    EXPECT_EQ(parsedOutput.toolCalls[1].name, "search_flights");
+    EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"from\":\"Gdańsk\",\"to\":\"Paris\",\"date\":\"2026-11-03\"}");
+    EXPECT_EQ(parsedOutput.toolCalls[1].id.empty(), false);
+    EXPECT_EQ(parsedOutput.toolCalls[2].name, "check_news");
+    EXPECT_EQ(parsedOutput.toolCalls[2].arguments, "{\"topic\":\"Paris\"}");
+    EXPECT_EQ(parsedOutput.toolCalls[2].id.empty(), false);
 }

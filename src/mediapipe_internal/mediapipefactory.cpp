@@ -63,7 +63,7 @@ Status MediapipeFactory::createDefinition(const std::string& pipelineName,
         return StatusCode::PIPELINE_DEFINITION_ALREADY_EXIST;
     }
     std::shared_ptr<MediapipeGraphDefinition> graphDefinition = std::make_shared<MediapipeGraphDefinition>(
-        pipelineName, config, metrics.getMetricRegistry(), &metrics.getMetricConfig(), pythonBackend, lazyLoad);
+        pipelineName, config, &metrics, pythonBackend, lazyLoad);
     Status stat = StatusCode::OK;
     if (!lazyLoad) {
         stat = graphDefinition->validate(checker);
