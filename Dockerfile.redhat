@@ -14,13 +14,13 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.7
+ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.9
 ARG BUILD_IMAGE=build
 ARG PKG_IMAGE=pkg
-ARG RELEASE_BASE_IMAGE=registry.access.redhat.com/ubi9/ubi-minimal:9.7
+ARG RELEASE_BASE_IMAGE=registry.access.redhat.com/ubi9/ubi-minimal:9.9
 
 FROM $BASE_IMAGE as base_build
-ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.7
+ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.9
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
@@ -45,7 +45,6 @@ RUN echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf && \
             libtool \
             libxml2-devel \
             make \
-            nasm \
             openssl-devel \
             patch \
             pkg-config \
@@ -55,6 +54,18 @@ RUN echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf && \
 ENV PATH=/opt/rh/gcc-toolset-13/root/usr/bin:${PATH} \
     CC=/opt/rh/gcc-toolset-13/root/usr/bin/gcc \
     CXX=/opt/rh/gcc-toolset-13/root/usr/bin/g++
+
+# hadolint ignore=DL3003
+RUN curl -fsSL https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/nasm-2.16.03.tar.gz -o /tmp/nasm.tar.gz && \
+    echo "5bc940dd8a4245686976a8f7e96ba9340a0915f2d5b88356874890e207bdb581  /tmp/nasm.tar.gz" | sha256sum -c - && \
+    mkdir /tmp/nasm && \
+    tar -xzf /tmp/nasm.tar.gz --strip-components=1 -C /tmp/nasm && \
+    cd /tmp/nasm && \
+    ./configure --prefix=/usr/local && \
+    make -j ${JOBS} && \
+    make install && \
+    cd / && \
+    rm -rf /tmp/nasm /tmp/nasm.tar.gz
 
 ####### Azure SDK (modern azure-sdk-for-cpp: azure-core, azure-storage-blobs, azure-storage-files-shares)
 ARG SDL_OPS="-Wl,-z,relro,-z,now,-z,noexecstack -Wall -Wextra -Wimplicit-fallthrough -fPIE -pie -fstack-protector-strong -fexceptions -fasynchronous-unwind-tables -fcf-protection -fpic -O2 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fno-strict-overflow -Wall -Wno-unknown-pragmas -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv -fstack-clash-protection -Wformat -Wformat-security -Werror=format-security -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wuninitialized"
@@ -146,8 +157,8 @@ ARG VERBOSE_LOGS=OFF
 ARG LTO_ENABLE=OFF
 
 # hadolint ignore=DL3041
-RUN curl -fsSL -o /tmp/opencl-headers.rpm https://vault.centos.org/centos/8-stream/PowerTools/x86_64/os/Packages/opencl-headers-2.2-1.20180306gite986688.el8.noarch.rpm && \
-    echo "04b159a7182de1964e3dd32ad9aaf7cd4dcf2926050b126063a38d51c5f72381  /tmp/opencl-headers.rpm" | sha256sum -c - && \
+RUN curl -fsSL -o /tmp/opencl-headers.rpm https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/opencl-headers-3.0-6.20201007gitd65bcc5.el9.noarch.rpm && \
+    echo "1c915447fc325e6d2eb820c97c37fb55c3a7ddf5c6bc44416bfda40c55e38be9  /tmp/opencl-headers.rpm" | sha256sum -c - && \
     dnf install -y -d6 /tmp/opencl-headers.rpm \
             gdb \
             java-11-openjdk-devel \
