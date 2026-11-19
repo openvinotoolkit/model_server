@@ -970,8 +970,8 @@ begin
   Command :=
     '$ws = New-Object -ComObject WScript.Shell; ' +
     '$s = $ws.CreateShortcut(''' + ShortcutPath + '''); ' +
-    '$s.TargetPath = ''cmd.exe''; ' +
-    '$s.Arguments = ''/K powershell.exe -NoProfile -ExecutionPolicy Bypass -File ""' + ScriptPath + '"" -ModelName ""' + ModelName + '"" -InstallDir ""' + InstallDir + '"" -ModelRepositoryPath ""' + ModelRepositoryPath + '""''; ' +
+    '$s.TargetPath = ''powershell.exe''; ' +
+    '$s.Arguments = ''-NoProfile -ExecutionPolicy Bypass -NoExit -File "' + ScriptPath + '" -ModelName "' + ModelName + '" -InstallDir "' + InstallDir + '" -ModelRepositoryPath "' + ModelRepositoryPath + '"''; ' +
     '$s.WorkingDirectory = ''' + InstallDir + '''; ' +
     '$s.WindowStyle = 1; ' +
     '$s.Save();';
