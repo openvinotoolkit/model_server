@@ -72,7 +72,10 @@ public:
     /// Register a custom metric family. Every registration must use the same type, help text, and histogram buckets.
     template <typename MetricType>
     std::shared_ptr<MetricFamily<MetricType>> registerCustomFamily(const std::string& name, const std::string& help,
-        const std::vector<double>& bucketBoundaries = {}) {
+        const std::vector<double>& bucketBoundaries = {}, bool* newlyCreated = nullptr) {
+        if (newlyCreated) {
+            *newlyCreated = false;
+        }
         std::lock_guard<std::mutex> lock(customFamiliesMutex);
         const auto existing = customFamilies.find(name);
         if (existing != customFamilies.end()) {
@@ -91,6 +94,9 @@ public:
             throw std::invalid_argument("Cannot register custom metric family '" + name + "'");
         }
         customFamilies.emplace(name, CustomFamilyRegistration{help, std::type_index(typeid(MetricType)), bucketBoundaries, isHistogram, family});
+        if (newlyCreated) {
+            *newlyCreated = true;
+        }
         return family;
     }
 

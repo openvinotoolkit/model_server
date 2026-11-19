@@ -320,7 +320,7 @@ OVMS supports custom counters, gauges, and histograms in C++ MediaPipe
 calculators. These metrics are exposed on the existing `/metrics` endpoint with
 graph and calculator-node labels. For setup instructions, API usage, naming
 rules, and lifecycle details, see the
-[developer guide](./developer_guide.md#custom-metrics-in-c-calculators).
+[custom metrics guide](./custom_metrics.md).
 
 ## Visualize with Grafana
 
