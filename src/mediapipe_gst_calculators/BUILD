@@ -71,7 +71,7 @@ ovms_cc_library(
     alwayslink = 1,
     visibility = ["//visibility:public"],
     deps = [
-        "//src:ovms_lib",
+        "//src:ovms_header",
         "@mediapipe_calculators//:mediapipe_calculators",
     ],
     additional_linkopts = LINKOPTS_ADJUSTED,
@@ -86,7 +86,7 @@ ovms_cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/mpi:intel_mpi",
-        "//src:ovms_lib",
+        "//src:ovms_header",
         "@mediapipe_calculators//:mediapipe_calculators",
     ],
     additional_linkopts = LINKOPTS_ADJUSTED,
