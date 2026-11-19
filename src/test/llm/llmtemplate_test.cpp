@@ -293,7 +293,7 @@ TEST_F(LLMChatTemplateTest, VlmWithoutAudioCapabilityRejectsAudioInput) {
     servable = std::make_shared<ContinuousBatchingServable>();
     auto properties = servable->getProperties();
     properties->chatTemplateStatus = ChatTemplateStatus::AVAILABLE;
-    properties->inputProcessorContext.config.supportsVisualInputs = true;
+    properties->inputProcessorContext.config.visionInputConfig = VisionInputConfig{};
 
     auto context = servable->createExecutionContext();
     ov::genai::ChatHistory history;
@@ -303,6 +303,28 @@ TEST_F(LLMChatTemplateTest, VlmWithoutAudioCapabilityRejectsAudioInput) {
     const auto status = servable->validateInputCompatibility(context);
     EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
     EXPECT_EQ(status.message(), "This servable does not support audio input");
+}
+
+TEST_F(LLMChatTemplateTest, DetectsQwenAsrContentParserWithoutChatTemplateAnalysis) {
+    std::string config = R"({"architectures":["Qwen3ASRForConditionalGeneration"]})";
+    ASSERT_TRUE(createConfigFileWithContent(config, directoryPath + "/config.json"));
+    auto properties = std::make_shared<GenAiServableProperties>();
+    properties->modelsPath = directoryPath;
+
+    GenAiServableInitializer::selectOutputParsers(properties, std::nullopt);
+
+    EXPECT_EQ(properties->contentParserName, "qwen3asr");
+}
+
+TEST_F(LLMChatTemplateTest, NonObjectModelConfigDoesNotSelectContentParser) {
+    std::string config = R"([])";
+    ASSERT_TRUE(createConfigFileWithContent(config, directoryPath + "/config.json"));
+    auto properties = std::make_shared<GenAiServableProperties>();
+    properties->modelsPath = directoryPath;
+
+    GenAiServableInitializer::selectOutputParsers(properties, std::nullopt);
+
+    EXPECT_TRUE(properties->contentParserName.empty());
 }
 
 TEST_F(LLMChatTemplateTest, MissingTemplateClearsDisabledParsers) {
@@ -703,6 +725,21 @@ TEST_F(LLMChatTemplateTest, ChatTemplateTojsonIndentWorks) {
     EXPECT_THAT(finalPrompt, ::testing::HasSubstr("get_weather"));
     // Verify indentation is present — indent=2 produces newlines and spaces inside JSON
     EXPECT_THAT(finalPrompt, ::testing::HasSubstr("  \"type\": \"function\""));
+}
+
+TEST_F(LLMChatTemplateTest, ChatTemplateTojsonEnsureAscii) {
+    std::string jinjaTemplate =
+        "{{ messages[0]['content'] | tojson(ensure_ascii=True) }}|"
+        "{{ messages[0]['content'] | tojson(ensure_ascii=False) }}";
+    ASSERT_TRUE(CreateJinjaConfig(jinjaTemplate));
+    LoadTemplateProcessor();
+
+    std::string finalPrompt;
+    std::string payloadBody = R"({"messages":[{"role":"user","content":"caf\u00e9 \u2603"}]})";
+    ASSERT_TRUE(render(payloadBody, finalPrompt));
+
+    const std::string expected = "\"caf\\u00e9 \\u2603\"|\"caf\xC3\xA9 \xE2\x98\x83\"";
+    EXPECT_EQ(finalPrompt, expected);
 }
 
 std::string configTemplate = R"(

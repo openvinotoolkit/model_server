@@ -14,14 +14,19 @@
 // limitations under the License.
 //*****************************************************************************
 #include <atomic>
+#include <chrono>
 #include <condition_variable>
 #include <fstream>
+#include <iterator>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <set>
 #include <sstream>
 #include <string>
 #include <thread>
+#include <tuple>
+#include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -29,6 +34,7 @@
 #include "../config.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../kfs_frontend/kfs_grpc_inference_service.hpp"
+#include "../mediapipe_runtime_api.hpp"
 #include "src/metrics/metric_config.hpp"
 #include "src/metrics/metric_module.hpp"
 #include "../precision.hpp"
@@ -700,6 +706,222 @@ TEST_F(MetricFlowTest, CurrentGraphs) {
 
 // Test MP metrics when mediapipe is enabled at build time
 #if (MEDIAPIPE_DISABLE == 0)
+class LLMMetricsFlowTest : public TestWithTempDir, public ::testing::WithParamInterface<std::tuple<bool, bool, bool>> {
+protected:
+    static constexpr const char* GRAPH_NAME = "metrics_llm";
+    const std::string seriesLabels = std::string{"{name=\""} + GRAPH_NAME + "\",node=\"llmNode1\"} ";
+    ServerWithMockedManagerModule server;
+    spdlog::level::level_enum previousLogLevel = spdlog::level::info;
+    std::string graphContent;
+
+    void SetUp() override {
+#ifdef _WIN32
+        GTEST_SKIP() << "LLM metrics flow tests require Linux test models";
+#endif
+        TestWithTempDir::SetUp();
+        previousLogLevel = llm_calculator_logger->level();
+        llm_calculator_logger->set_level(spdlog::level::info);
+        std::vector<std::string> arguments{"ovms", "--config_path", "/unused", "--rest_port", "8080"};
+        std::vector<char*> argv;
+        for (auto& argument : arguments) {
+            argv.push_back(argument.data());
+        }
+        Config::instance().parse(argv.size(), argv.data());
+        const std::string sourceGraphPath = getGenericFullPathForSrcTest(std::get<0>(GetParam()) ? "/ovms/src/test/llm/visual_language_model/vlm_cb_regular.pbtxt" : "/ovms/src/test/llm/lm_cb_regular.pbtxt");
+        std::ifstream graphFile(sourceGraphPath);
+        graphContent.assign(std::istreambuf_iterator<char>(graphFile), std::istreambuf_iterator<char>());
+        graphContent.insert(0, std::get<2>(GetParam()) ? "# OVMS_GRAPH_QUEUE_MAX_SIZE: 2\n" : "# OVMS_GRAPH_QUEUE_MAX_SIZE: 0\n");
+        ASSERT_NO_FATAL_FAILURE(loadConfigWithGraphFile("graph.pbtxt"));
+    }
+
+    void TearDown() override {
+        auto& factory = server.getManager().getMediapipeFactory();
+        if (factory.definitionExists(GRAPH_NAME)) {
+            EXPECT_EQ(factory.retireDefinition(GRAPH_NAME), StatusCode::OK);
+        }
+        llm_calculator_logger->set_level(previousLogLevel);
+        TestWithTempDir::TearDown();
+    }
+
+    // Writes the graph under the given file name and loads a configuration pointing to it.
+    void loadConfigWithGraphFile(const std::string& graphFileName) {
+        const std::string graphPath = directoryPath + "/" + graphFileName;
+        ASSERT_TRUE(createConfigFileWithContent(graphContent, graphPath));
+        const std::string content = R"({
+            "model_config_list": [],
+            "mediapipe_config_list": [{"name": ")" +
+                                    std::string{GRAPH_NAME} + R"(", "graph_path": ")" + graphPath + R"("}],
+            "monitoring": {"metrics": {
+                "enable": true,
+                "metrics_list": [
+                    "ovms_kv_cache_utilization_percent",
+                    "ovms_kv_cache_size_bytes",
+                    "ovms_llm_prompt_tokens_total",
+                    "ovms_llm_generated_tokens_total",
+                    "ovms_llm_scheduled_requests",
+                    "ovms_llm_ttft_milliseconds",
+                    "ovms_llm_tpot_milliseconds"
+                ]
+            }}
+        })";
+        const std::string configPath = directoryPath + "/config.json";
+        ASSERT_TRUE(createConfigFileWithContent(content, configPath));
+        ASSERT_EQ(server.getManager().loadConfig(configPath), StatusCode::OK);
+    }
+
+    void sendChatCompletionRequest(size_t maxTokens = 5) {
+        HttpRestApiHandler handler(server, 5);
+        const std::string endpoint = "/v1/chat/completions";
+        HttpRequestComponents requestComponents;
+        HttpResponseComponents responseComponents;
+        const std::unordered_map<std::string, std::string> headers{{"content-type", "application/json"}};
+        ASSERT_EQ(handler.parseRequestComponents(requestComponents, "POST", endpoint, headers), StatusCode::OK);
+        auto writer = std::make_shared<MockedServerRequestInterface>();
+        auto parser = std::make_shared<MockedMultiPartParser>();
+        ON_CALL(*writer, PartialReplyBegin(testing::_)).WillByDefault(testing::Invoke([](std::function<void()> fn) { fn(); }));
+        const bool streaming = std::get<1>(GetParam());
+        const std::string request = std::string{R"({
+            "model": ")"} + GRAPH_NAME +
+                                    R"(",
+            "messages": [{"role": "user", "content": "What is the weather like today?"}],
+            "max_tokens": )" + std::to_string(maxTokens) +
+                                    R"(,
+            "temperature": 0,
+            "stream": )" + (streaming ? "true" : "false") +
+                                    "}";
+        std::string response;
+        ASSERT_EQ(handler.dispatchToProcessor(endpoint, request, &response, requestComponents,
+                      responseComponents, writer, parser),
+            streaming ? StatusCode::PARTIAL_END : StatusCode::OK);
+    }
+
+    // Counter and histogram samples, which accumulate over completed requests.
+    static std::string completedRequestSamples(const std::string& scrape) {
+        std::istringstream lines(scrape);
+        std::string line;
+        std::string samples;
+        while (std::getline(lines, line)) {
+            for (const auto& family : {METRIC_NAME_LLM_PROMPT_TOKENS, METRIC_NAME_LLM_GENERATED_TOKENS, METRIC_NAME_LLM_TTFT, METRIC_NAME_LLM_TPOT}) {
+                if (line.rfind(family, 0) == 0) {
+                    samples += line + "\n";
+                }
+            }
+        }
+        return samples;
+    }
+
+    void expectCompletedRequestCount(const std::string& scrape, int count) const {
+        EXPECT_THAT(scrape, HasSubstr("ovms_llm_ttft_milliseconds_count" + seriesLabels + std::to_string(count) + "\n"));
+        EXPECT_THAT(scrape, HasSubstr("ovms_llm_tpot_milliseconds_count" + seriesLabels + std::to_string(count) + "\n"));
+    }
+};
+
+TEST_P(LLMMetricsFlowTest, PublishesAtInfoLevelAndPreservesSeriesAcrossIdleUnload) {
+    for (int i = 1; i <= 2; ++i) {
+        ASSERT_NO_FATAL_FAILURE(sendChatCompletionRequest());
+        const std::string scrape = server.collect();
+        EXPECT_THAT(scrape, HasSubstr("ovms_kv_cache_utilization_percent" + seriesLabels));
+        EXPECT_THAT(scrape, HasSubstr("ovms_kv_cache_size_bytes" + seriesLabels));
+        EXPECT_THAT(scrape, HasSubstr("ovms_llm_prompt_tokens_total" + seriesLabels));
+        EXPECT_THAT(scrape, Not(HasSubstr("ovms_llm_prompt_tokens_total" + seriesLabels + "0\n")));
+        EXPECT_THAT(scrape, Not(HasSubstr("ovms_llm_ttft_milliseconds_sum" + seriesLabels + "0\n")));
+        EXPECT_THAT(scrape, HasSubstr("ovms_llm_scheduled_requests" + seriesLabels));
+        EXPECT_THAT(scrape, HasSubstr("ovms_llm_generated_tokens_total" + seriesLabels));
+        EXPECT_THAT(scrape, Not(HasSubstr("ovms_llm_generated_tokens_total" + seriesLabels + "0\n")));
+        EXPECT_THAT(scrape, Not(HasSubstr("ovms_llm_tpot_milliseconds_sum" + seriesLabels + "0\n")));
+        expectCompletedRequestCount(scrape, i);
+    }
+    const std::string samplesBeforeUnload = completedRequestSamples(server.collect());
+    auto& manager = server.getManager();
+    auto& factory = manager.getMediapipeFactory();
+    ASSERT_EQ(factory.putToSleepDefinition(GRAPH_NAME), StatusCode::OK);
+    const std::string unloadedScrape = server.collect();
+    EXPECT_EQ(completedRequestSamples(unloadedScrape), samplesBeforeUnload);
+    EXPECT_THAT(unloadedScrape, HasSubstr("ovms_kv_cache_utilization_percent" + seriesLabels + "0\n"));
+    EXPECT_THAT(unloadedScrape, HasSubstr("ovms_kv_cache_size_bytes" + seriesLabels + "0\n"));
+    EXPECT_THAT(unloadedScrape, HasSubstr("ovms_llm_scheduled_requests" + seriesLabels + "0\n"));
+
+    ASSERT_EQ(factory.wakeUpDefinition(GRAPH_NAME, manager), StatusCode::OK);
+    EXPECT_EQ(completedRequestSamples(server.collect()), samplesBeforeUnload);
+    ASSERT_NO_FATAL_FAILURE(sendChatCompletionRequest());
+    expectCompletedRequestCount(server.collect(), 3);
+}
+
+TEST_P(LLMMetricsFlowTest, PreservesSeriesAcrossGraphReload) {
+    ASSERT_NO_FATAL_FAILURE(sendChatCompletionRequest());
+    const std::string samplesBeforeReload = completedRequestSamples(server.collect());
+    expectCompletedRequestCount(samplesBeforeReload, 1);
+
+    const std::string reloadedGraphFileName = "graph_reloaded.pbtxt";
+    ASSERT_NO_FATAL_FAILURE(loadConfigWithGraphFile(reloadedGraphFileName));
+    const auto* definition = server.getManager().getMediapipeFactory().findDefinitionByName(GRAPH_NAME);
+    ASSERT_NE(definition, nullptr);
+    ASSERT_EQ(definition->getMediapipeGraphConfig().getGraphPath(), directoryPath + "/" + reloadedGraphFileName);
+
+    EXPECT_EQ(completedRequestSamples(server.collect()), samplesBeforeReload);
+    ASSERT_NO_FATAL_FAILURE(sendChatCompletionRequest());
+    expectCompletedRequestCount(server.collect(), 2);
+}
+
+TEST_P(LLMMetricsFlowTest, SupersededExecutorDoesNotResetReplacementCacheSize) {
+    const std::string cacheSizePrefix = METRIC_NAME_KV_CACHE_SIZE + seriesLabels;
+    const std::string zeroCacheSize = cacheSizePrefix + "0";
+    const auto cacheSizeSample = [&]() {
+        std::istringstream lines(server.collect());
+        std::string line;
+        while (std::getline(lines, line)) {
+            if (line.rfind(cacheSizePrefix, 0) == 0) {
+                return line;
+            }
+        }
+        return std::string{};
+    };
+    const auto waitForCacheSizeChange = [&](const std::string& previousSample) {
+        constexpr auto publicationTimeout = std::chrono::seconds{10};
+        const auto deadline = std::chrono::steady_clock::now() + publicationTimeout;
+        std::string sample;
+        do {
+            sample = cacheSizeSample();
+            if (!sample.empty() && sample != zeroCacheSize && sample != previousSample) {
+                return sample;
+            }
+            std::this_thread::yield();
+        } while (std::chrono::steady_clock::now() < deadline);
+        return sample;
+    };
+
+    // A one-token request stays below the ten-step update interval, so nonzero cache
+    // size is published only when the executor returns to waiting.
+    constexpr size_t warmupTokens = 1;
+    ASSERT_NO_FATAL_FAILURE(sendChatCompletionRequest(warmupTokens));
+    const std::string originalSample = waitForCacheSizeChange(zeroCacheSize);
+    ASSERT_FALSE(originalSample.empty());
+    ASSERT_NE(originalSample, zeroCacheSize);
+    auto* definition = server.getManager().getMediapipeFactory().findDefinitionByName(GRAPH_NAME);
+    ASSERT_NE(definition, nullptr);
+    std::unique_ptr<MediapipeGraphExecutor> oldExecutor;
+    ASSERT_EQ(definition->create(oldExecutor), StatusCode::OK);
+
+    const std::string originalCacheConfig = "cache_size: 1";
+    const size_t cacheConfigPosition = graphContent.find(originalCacheConfig);
+    ASSERT_NE(cacheConfigPosition, std::string::npos);
+    graphContent.replace(cacheConfigPosition, originalCacheConfig.size(), "cache_size: 2");
+    ASSERT_NO_FATAL_FAILURE(loadConfigWithGraphFile("graph_reloaded.pbtxt"));
+    ASSERT_NO_FATAL_FAILURE(sendChatCompletionRequest(warmupTokens));
+
+    // A different size proves the replacement has published; it cannot publish again while idle.
+    const std::string replacementSample = waitForCacheSizeChange(originalSample);
+    ASSERT_FALSE(replacementSample.empty());
+    ASSERT_NE(replacementSample, zeroCacheSize);
+    ASSERT_NE(replacementSample, originalSample);
+
+    oldExecutor.reset();
+    EXPECT_EQ(cacheSizeSample(), replacementSample);
+}
+
+INSTANTIATE_TEST_SUITE_P(LLMAndVLM, LLMMetricsFlowTest,
+    ::testing::Combine(::testing::Bool(), ::testing::Bool(), ::testing::Bool()));
+
 std::string MetricFlowTest::prepareConfigContent() {
     auto configContent = std::string{R"({
         "monitoring": {

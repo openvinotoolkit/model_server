@@ -211,7 +211,7 @@ ovms_cc_library(
 ovms_cc_library(
     name = "python_runtime_path",
     hdrs = ["python_runtime_path.hpp"],
-    deps = PYBIND_DEPS,
+    deps = PYBIND_DEPS + ["//src/utils:windows_executable_path"],
     visibility = ["//visibility:public"],
 )
 
@@ -286,6 +286,7 @@ ovms_cc_library(
 
 cc_test(
     name = "pythoninterpretermodule_lifecycle_test",
+    linkstatic = True,
     srcs = [
         "pythoninterpretermodule.cpp",
         "pythoninterpretermodule_lifecycle_test.cpp",
@@ -313,6 +314,7 @@ cc_test(
 
 cc_test(
     name = "pythoninterpretermodule_backend_failure_test",
+    linkstatic = True,
     srcs = [
         "pythoninterpretermodule.cpp",
         "pythoninterpretermodule_backend_failure_test.cpp",
@@ -337,6 +339,7 @@ cc_test(
 
 cc_test(
     name = "pythoninterpretermodule_borrowed_interpreter_test",
+    linkstatic = True,
     srcs = [
         "pythoninterpretermodule.cpp",
         "pythoninterpretermodule_borrowed_interpreter_test.cpp",

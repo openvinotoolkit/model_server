@@ -40,7 +40,8 @@ public:
         const std::string& basePath,
         GraphSidePackets& sidePackets,
         GraphMetadata& /*metadata*/,
-        PythonBackend* /*pythonBackend*/) override {
+        PythonBackend* /*pythonBackend*/,
+        const MetricProvider* /*metrics*/) override {
         auto& rerankServableMap = sidePackets.rerankServableMap;
         if (!nodeConfig.node_options().size()) {
             SPDLOG_ERROR("Rerank node missing options in graph: {}. ", graphName);

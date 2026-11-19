@@ -1,0 +1,24 @@
+--- a/minimp4.h
++++ b/minimp4.h
+@@ -3025,12 +3025,18 @@
+                             ERROR("out of memory");
+                         }
+                         ts_capacity = (unsigned)new_capacity;
+-                        tr->timestamp = (unsigned int*)realloc(tr->timestamp, ts_capacity * sizeof(unsigned));
+-                        tr->duration  = (unsigned int*)realloc(tr->duration,  ts_capacity * sizeof(unsigned));
+-                        if (!tr->timestamp || !tr->duration)
++                        unsigned int *timestamp = (unsigned int*)realloc(tr->timestamp, ts_capacity * sizeof(unsigned));
++                        if (!timestamp)
+                         {
+                             ERROR("out of memory");
+                         }
++                        tr->timestamp = timestamp;
++                        unsigned int *duration = (unsigned int*)realloc(tr->duration, ts_capacity * sizeof(unsigned));
++                        if (!duration)
++                        {
++                            ERROR("out of memory");
++                        }
++                        tr->duration = duration;
+                     }
+                     for (j = 0; j < sc; j++)
+                     {

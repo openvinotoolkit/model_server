@@ -33,6 +33,7 @@ Unless stated otherwise, run host commands from the repository root and build-co
     - [Operating Systems and Proxies](#operating-systems-and-proxies)
     - [GPU Access and Tests](#gpu-access-and-tests)
     - [Full Release Builds](#full-release-builds)
+- [Metrics](#metrics)
 
 ## Prerequisites
 
@@ -402,19 +403,7 @@ In a CPU smoke test with freshly built OVMS and OpenVINO 2026.5.0, all 1,000 req
 
 ### Run Performance Tests
 
-Use the [Python benchmark client](../demos/benchmark/python/README.md) for latency and throughput measurements. The legacy `tests/performance` scripts and their Make targets are no longer available. Build the client image on the Linux host, from the repository root:
-
-```text
-docker build -t benchmark_client demos/benchmark/python
-```
-
-With the release container from [Run an Inference Client](#run-an-inference-client) running, execute the benchmark on the Linux host:
-
-```text
-docker run --rm --network=host benchmark_client -a localhost -p 9180 -m resnet --api GRPC -b 1 -c 1 -t 30
-```
-
-The benchmark reports latency and throughput without validating classification accuracy. Increase `-c` for concurrency measurements and adjust `-p` to the published host port. Performance measurements should use release builds, not GDB or minitrace builds. For a request-reproduction workload rather than a performance measurement, point the client at the build container's `9178` instead.
+Use the [benchmark overview](../demos/benchmark/README.md) to choose a workload. For classic models such as ResNet50, follow the [KServe benchmark guide](../demos/benchmark/kserve/README.md), which covers REST and gRPC clients. For LLM, VLM, embeddings, reranking, and audio workloads, use the [OpenAI benchmark guide](../demos/benchmark/openai/README.md). Performance measurements should use release builds, not GDB or minitrace builds.
 
 ### Test a Packaged Binary
 
@@ -484,4 +473,9 @@ make docker_build RUN_TESTS=0
 ```
 
 This includes the builder, package, and release-image stages. The default images include `openvino/model_server:latest`, the GPU image/tag, the NGINX MTLS image, and `openvino/model_server-build:latest`. See [Building From Source](./build_from_source.md) for detailed options. Use `RUN_TESTS=1` when tests should run as part of the image build.
+
+## Metrics
+
+For built-in and LLM metrics, and for custom metrics in C++ calculators, see the
+[metrics documentation](./metrics.md).
 

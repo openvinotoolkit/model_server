@@ -48,6 +48,16 @@ We are introducing a set of calculators which can bring to the graphs execution 
 
 Check their [documentation](https://github.com/openvinotoolkit/mediapipe/blob/main/mediapipe/calculators/ovms)
 
+### Optional OpenCV calculators
+
+OpenCV-dependent image calculators use an optional runtime plugin on both Linux and Windows. Their upstream calculator sources are unchanged.
+
+Install the matching calculator plugin and OpenCV dependencies from the same OVMS release. A graph that needs an OpenCV calculator fails deployment with an explicit dependency diagnostic if the plugin or its dependencies cannot be loaded. Other graphs remain usable. The plugin remains loaded for the process lifetime, even after the graph is unloaded. Numeric models and graphs that do not use OpenCV calculators do not require the plugin.
+
+When OVMS is embedded as a locally loaded shared library, the calculator loader promotes the already-loaded host library to global symbol visibility before loading the plugin. This allows the plugin to share the host's MediaPipe registries and types without requiring callers to load OVMS with `RTLD_GLOBAL`. Failure to promote the host is reported as a deployment error.
+
+On Windows, the DLL is loaded from the OVMS package directory and registers calculator factories into the host MediaPipe registries. The DLL and OpenCV libraries may be omitted when deploying only models and graphs that do not use OpenCV calculators. The stb fallback for [encoded model inputs](./binary_input.md) does not replace operations inside upstream MediaPipe calculators.
+
 ## PythonExecutorCalculator
 
 `PythonExecutorCalculator` enables Python code execution in a graph node. Learn more about [Python nodes](python_support/reference.md).
@@ -282,7 +292,7 @@ Currently the graph tracing on the model server side is not supported. If you wo
 
 ### Benchmarking
 While you implemented and deployed the graph you have several options to test the performance.
-To validate the throughput for unary requests you can use the [benchmark client](../demos/benchmark/python/README.md#mediapipe-benchmarking) .
+To validate throughput for unary KServe requests, use the [KServe benchmark client](../demos/benchmark/kserve/README.md). It accepts `.npy` input files for numeric tensors and raw files for `BYTES` inputs.
 
 For streaming gRPC connections, there is available [rtsp_client](../demos/real_time_stream_analysis/python/README.md).
 It can generate the load to gRPC stream and the mediapipe graph based on the content from RTSP video stream, MPG4 file or from the local camera.

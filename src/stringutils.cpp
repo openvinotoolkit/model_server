@@ -318,4 +318,15 @@ void escapeSpecialCharacters(std::string& text) {
     text = std::move(escaped);
 }
 
+bool isAlphanumericOrUnderscore(const std::string& name) {
+    for (char c : name) {
+        const bool isAllowed = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                               (c >= '0' && c <= '9') || c == '_';
+        if (!isAllowed) {
+            return false;
+        }
+    }
+    return true;
+}
+
 }  // namespace ovms

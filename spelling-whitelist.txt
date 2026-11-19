@@ -52,3 +52,7 @@ src/test/llm/llmnode_test.cpp
 nowNs ==> knowns, nouns
 src/test/servable_group_manager_test.cpp:229: groupD
 src/test/servable_group_manager_test.cpp:231: groupD
+assertIn ==> asserting, assert in, assertion
+src/test/llm/llmtemplate_test.cpp:738: caf ==> calf
+src/test/llm/llmtemplate_test.cpp:741: caf ==> calf
+src/test/llm/llmtemplate_test.cpp:741: caf ==> calf
