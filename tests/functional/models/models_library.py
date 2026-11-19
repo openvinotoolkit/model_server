@@ -39,8 +39,8 @@ class ModelsLibrary:
             list,
             {
                 TargetDevice.CPU: [mg.DummyCyclicLlavaOvHf] + mg.extra_generative_models,
-                TargetDevice.GPU: [mg.Gemma34bItInt4OvHf] + mg.extra_generative_models,
-                TargetDevice.NPU: [mg.Gemma34bItInt4CwOvHf] + mg.extra_generative_models,
+                TargetDevice.GPU: [mg.Gemma34bItInt4OvHf] + mg.extra_generative_models,     # CVS-200014
+                TargetDevice.NPU: [mg.Gemma34bItInt4CwOvHf] + mg.extra_generative_models,   # CVS-200065
             },
         )
 

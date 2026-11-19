@@ -1161,6 +1161,7 @@ def generic_test_deselect(item):
 RUN_TYPE_ENABLED = [
     (MarkRunType.TEST_MARK_ON_COMMIT, config.run_on_commit_tests),
     (MarkRunType.TEST_MARK_REGRESSION, config.run_regression_tests),
+    (MarkRunType.TEST_MARK_REGRESSION_SINGLE, config.run_regression_single_tests),
 ]
 
 

@@ -36,9 +36,10 @@ from tests.functional.constants.generative_ai import GenerativeAIPluginConfig
 from tests.functional.constants.os_type import OsType
 from tests.functional.constants.ovms import CurrentTarget as ct
 from tests.functional.constants.ovms_cohere import OvmsCohereRequestParamsBuilder
-from tests.functional.constants.ovms_openai import OvmsOpenAIRequestParamsBuilder
+from tests.functional.constants.ovms_openai import MaxPromptLenValues, OvmsOpenAIRequestParamsBuilder
 from tests.functional.constants.ovms_messages import OvmsMessages
 from tests.functional.constants.paths import Paths
+from tests.functional.constants.target_device import TargetDevice
 from tests.functional.fixtures.server import start_ovms
 from tests.functional.models.models_datasets import FeatureExtractionModelDataset
 from tests.functional.models.models_generative import Qwen3Embedding06BFp16OvHf
@@ -93,6 +94,16 @@ class GenerativeAIUtils:
         )
         request_params = request_params_builder.request_params
         return request_params
+
+    @staticmethod
+    def get_npu_plugin_config_device_properties():
+        return {
+            TargetDevice.NPU: {
+                GenerativeAIPluginConfig.NPUW_DEVICES: TargetDevice.CPU,
+                GenerativeAIPluginConfig.NPUW_ONLINE_PIPELINE: "NONE",
+                GenerativeAIPluginConfig.MAX_PROMPT_LEN: MaxPromptLenValues.NPU_DEFAULT,
+            }
+        }
 
     @staticmethod
     def prepare_llm_curl_request(api_type, endpoint, port, model, request_params, tmp_path, dataset=None):

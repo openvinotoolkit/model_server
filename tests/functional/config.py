@@ -444,12 +444,16 @@ huggingface_token_file_path = get_path(
 huggingface_token = os.environ.get("HF_TOKEN") or get_token_value(huggingface_token_file_path, None)
 
 """ TT_ON_COMMIT_TESTS - False -> api-on-commit tests are not run,
-                        True -> api-on-commit tests are run, default: True """
+                         True -> api-on-commit tests are run, default: True """
 run_on_commit_tests = get_bool("TT_ON_COMMIT_TESTS", True)
 
 """ TT_RUN_REGRESSION_TESTS - False -> api-regression tests are not run,
-                             True -> api-regression tests are run, default: False """
+                              True -> api-regression tests are run, default: False """
 run_regression_tests = get_bool("TT_RUN_REGRESSION_TESTS", False)
+
+"""TT_REGRESSION_SINGLE_TESTS - False -> api_regression_single tests are not run,
+                                True -> api_regression_single tests are run, default: False"""
+run_regression_single_tests = get_bool("TT_REGRESSION_SINGLE_TESTS", False)
 
 """ TT_CLEAN_GENERATIVE_MODELS - remove unused models from TT_MODELS_PATH """
 clean_downloaded_models = get_bool("TT_CLEAN_GENERATIVE_MODELS", False)

@@ -349,7 +349,7 @@ class OvmsMessages:
     MEDIAPIPE_CALCULATOR_FAILED_TO_LOAD_MODEL = "OpenVINOModelServerSessionCalculator failed to load the model"
     MEDIAPIPE_MESSAGE_CONTAINS_OV_GENAI_IMAGE_TAG = "Message contains restricted <ov_genai_image> tag"
     MEDIAPIPE_REQUEST_PROCESSING_FAILED = "Request processing failed, check its correctness"
-    MEDIAPIPE_URL_IMAGE_INVALID_ARGUMENT_FILESYSTEM_DISABLED = "Loading images from local filesystem is disabled"
+    MEDIAPIPE_LOADING_MEDIA_FROM_LOCAL_FILESYSTEM_DISABLED = "Loading media from local filesystem is disabled"
     MEDIAPIPE_FAILED_TO_DOWNLOAD_IMAGE_HTTP_STATUS = "Failed to download image from external URL: HTTP status {}."
     MEDIAPIPE_FAILED_TO_DOWNLOAD_IMAGE_REDIRECTS_NOT_ALLOWED = \
         ("Failed to download image from external URL because redirects are not allowed. "
@@ -360,7 +360,6 @@ class OvmsMessages:
         "Given filepath is not subpath of allowed_local_media_path"
     MEDIAPIPE_URL_DOES_NOT_MATCH_ALLOWED_DOMAIN = \
         "Given url does not match any allowed domain from allowed_media_domains"
-    MEDIAPIPE_LOADING_IMAGES_FROM_LOCAL_FILESYSTEM_DISABLED = "Loading images from local filesystem is disabled"
     MEDIAPIPE_IMAGE_FORMAT_DECODED_SIZE_CANNOT_BE_VERIFIED = "Image format decoded size cannot be verified"
     MEDIAPIPE_IMAGE_LOADING_FAILED = "Image loading failed"
 

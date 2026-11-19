@@ -20,10 +20,12 @@ import pytest
 
 from tests.functional.models.models import PipelineType, model_with_pipeline_type
 from tests.functional.models.models_datasets import (
+    LargeLanguageModelDataset,
     LongPromptLanguageModelDataset,
     LongPromptSingleMessageLanguageModelDataset,
     MediumPromptLanguageModelDataset,
     MediumPromptSingleMessageLanguageModelDataset,
+    SingleMessageLanguageModelDataset,
 )
 from tests.functional.models.models_library import ModelsLib
 from tests.functional.constants.components import OvmsComponents
@@ -36,7 +38,6 @@ from tests.functional.constants.ovms_type import OvmsType
 from tests.functional.constants.requirements import Requirements
 from tests.functional.constants.target_device import TargetDevice
 from tests.functional.constants.target_device_configuration import nginx_mtls_not_supported_for_test
-from tests.functional.models import models_generative as mg
 from tests.functional.object_model.inference_helpers import run_llm_inference
 from tests.functional.utils.context import Context
 from tests.functional.utils.generative_ai.utils import calculate_generative_test_timeout, GenerativeAIUtils
@@ -46,7 +47,6 @@ from tests.functional.utils.process_multi import run_command_in_parallel
 from tests.functional.utils.test_framework import (
     skip_if_language_models_not_enabled,
     skip_if_mediapipe_disabled,
-    skip_if_runtime,
 )
 
 logger = get_logger(__name__)
@@ -111,10 +111,16 @@ class TestTextGeneration:
 
         if model_type.is_vision_language:
             dataset = model_type().get_default_dataset()
-        elif model_type.single_message_dataset:
-            dataset = LongPromptSingleMessageLanguageModelDataset
+        elif context.target_device == TargetDevice.NPU:
+            if model_type.single_message_dataset:
+                dataset = SingleMessageLanguageModelDataset
+            else:
+                dataset = LargeLanguageModelDataset
         else:
-            dataset = LongPromptLanguageModelDataset
+            if model_type.single_message_dataset:
+                dataset = LongPromptSingleMessageLanguageModelDataset
+            else:
+                dataset = LongPromptLanguageModelDataset
 
         step("Run simple inference")
         run_llm_inference(
@@ -129,8 +135,11 @@ class TestTextGeneration:
 
         GenerativeAIUtils.unload_model_and_verify(model, result, port, openai_rest_api_type, endpoint, request_params)
 
-    @pytest.mark.api_on_commit
-    @pytest.mark.devices_supported_for_test(TargetDevice.CPU, TargetDevice.GPU, TargetDevice.NPU)
+    @pytest.mark.conditional_run_type(
+        single_mark="api_regression_single",
+        default_mark="api_on_commit",
+        single_if_device=[TargetDevice.GPU, TargetDevice.NPU],
+    )
     @pytest.mark.reqids(Requirements.llm, Requirements.openai_api, Requirements.sdl)
     @pytest.mark.model_type(ModelsLib.various_large_and_vision_language_models_on_commit)
     @pytest.mark.parametrize("endpoint", [OpenAIWrapper.CHAT_COMPLETIONS])
@@ -141,7 +150,7 @@ class TestTextGeneration:
     @pytest.mark.parametrize("pipeline_type", PipelineType.TEXT_GENERATION)
     @pytest.mark.parametrize("ovms_log_level", [Ovms.LOG_LEVEL_INFO, Ovms.LOG_LEVEL_DEBUG, Ovms.LOG_LEVEL_TRACE])
     @pytest.mark.parametrize("sequential_requests", [3], ids=lambda x: f"sequential_requests={x}")
-    @pytest.mark.parametrize("parallel_requests", [16], ids=lambda x: f"parallel_requests={x}")
+    @pytest.mark.parametrize("parallel_requests", [32], ids=lambda x: f"parallel_requests={x}")
     @pytest.mark.parametrize("request_type", ["curl"], ids=lambda x: f"request_type={x}")  # also available: "python"
     @pytest.mark.timeout(calculate_generative_test_timeout(960))
     def test_text_generation_endpoints_multiple_requests(
@@ -178,8 +187,6 @@ class TestTextGeneration:
         4. Trigger large number of requests
         5. Check similarity (non-dummy models)
         """
-        skip_if_runtime(model_type==mg.Gemma34bItInt4CwOvHf, "VLM dummy model not yet enabled for NPU")
-
         model, result, port, request_params = GenerativeAIUtils.prepare_resources(
             context,
             model_with_pipeline_type(model_type, pipeline_type),
@@ -192,12 +199,16 @@ class TestTextGeneration:
             temperature=temperature,
         )
 
-        if model_type.is_vision_language:
-            dataset = model_type().get_default_dataset()
-        elif model_type.single_message_dataset:
-            dataset = MediumPromptSingleMessageLanguageModelDataset
+        if context.target_device == TargetDevice.NPU:
+            if model_type.single_message_dataset:
+                dataset = SingleMessageLanguageModelDataset
+            else:
+                dataset = LargeLanguageModelDataset
         else:
-            dataset = MediumPromptLanguageModelDataset
+            if model_type.single_message_dataset:
+                dataset = MediumPromptSingleMessageLanguageModelDataset
+            else:
+                dataset = MediumPromptLanguageModelDataset
 
         reference_outputs = None
         if not model_type.is_dummy:
