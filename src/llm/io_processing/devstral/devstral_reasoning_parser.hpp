@@ -29,6 +29,8 @@ public:
         OutputParsingConfig cfg;
         cfg.startTags = {"[THINK]"};
         cfg.endTags = {"[/THINK]"};
+        cfg.needsSpecialTokens = true;
+        cfg.defaultDecodingWithSpecialTokens = true;
         return cfg;
     }
 
