@@ -379,14 +379,23 @@ public:
         failedRequestsGuard.disable();
         INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getRequestsMetric(executionContext, true));
 
-        auto status = graph.WaitUntilIdle();
+        bool hasSourceNode = false;
+        for (const auto& node : this->config.node()) {
+            if (node.input_stream_size() == 0 && node.output_stream_size() > 0) {
+                hasSourceNode = true;
+                break;
+            }
+        }
+        auto status = hasSourceNode ? graph.CloseAllInputStreams() : graph.WaitUntilIdle();
         if (!status.ok()) {
             INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getGraphErrorMetric(executionContext));
         }
         resetLlmExecutionContexts(this->sidePacketMaps.genAiExecutionContextMap);
-        MP_RETURN_ON_FAIL(status, "graph wait until idle", mediapipeAbslToOvmsStatus(status.code()));
+        MP_RETURN_ON_FAIL(status, "graph finish request inputs", mediapipeAbslToOvmsStatus(status.code()));
 
-        MP_RETURN_ON_FAIL(graph.CloseAllPacketSources(), "graph close all packet sources", StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR);
+        if (!hasSourceNode) {
+            MP_RETURN_ON_FAIL(graph.CloseAllPacketSources(), "graph close all packet sources", StatusCode::MEDIAPIPE_GRAPH_CLOSE_INPUT_STREAM_ERROR);
+        }
         for (auto& [outputStreamName, poller] : outputPollers) {
             size_t receivedOutputs = 0;
             SPDLOG_DEBUG("Will wait for output stream: {} packet", outputStreamName);

@@ -1,0 +1,55 @@
+# Copyright 2026 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Split graph with fan-out: GStreamer/VA source feeds both ModelManager
+# inference (via C-API) and a file-output sink (via imp_video_encoder_*).
+#
+#   source -> inference -> detections
+#   source -> sink      -> output file
+
+input_side_packet: "VIDEO_PATH:video_path"
+input_side_packet: "WIDTH:width"
+input_side_packet: "HEIGHT:height"
+input_side_packet: "SERVABLE_NAME:servable_name"
+input_side_packet: "SERVABLE_VERSION:servable_version"
+input_side_packet: "INPUT_NAME:input_name"
+input_side_packet: "SERVER:server"
+input_side_packet: "OUTPUT_PATH:output_path"
+input_side_packet: "FRAMERATE:framerate"
+output_stream: "DETECTIONS:detections"
+
+node {
+  calculator: "GstVideoSourceCalculator"
+  input_side_packet: "VIDEO_PATH:video_path"
+  input_side_packet: "WIDTH:width"
+  input_side_packet: "HEIGHT:height"
+  output_stream: "FRAME:frame"
+}
+
+node {
+  calculator: "GstCapiInferenceCalculator"
+  input_stream: "FRAME:frame"
+  input_side_packet: "SERVABLE_NAME:servable_name"
+  input_side_packet: "SERVABLE_VERSION:servable_version"
+  input_side_packet: "INPUT_NAME:input_name"
+  input_side_packet: "SERVER:server"
+  output_stream: "DETECTIONS:detections"
+}
+
+node {
+  calculator: "GstVideoSinkCalculator"
+  input_stream: "FRAME:frame"
+  input_side_packet: "OUTPUT_PATH:output_path"
+  input_side_packet: "FRAMERATE:framerate"
+}

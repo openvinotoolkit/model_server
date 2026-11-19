@@ -32,6 +32,12 @@
 
 Configuration options for the server are defined only via command-line options and determine configuration common for all served models.
 
+The following configuration is available only in a JSON `config_path` file.
+
+| Option | Value format | Description |
+|---|---|---|
+| `"va_display"` | object | Optional Linux VA-API display owner for GStreamer/VA-surface workflows. Requires `target_device` (for example, `"GPU.0"`) and `render_node` (for example, `"/dev/dri/renderD128"`). GPU models using the shared display must use the same target device. See the [GStreamer VA display runbook](gstreamer_va_display_runbook.md). |
+
 | Option  | Value format  | Description  |
 |---|---|---|
 | `port` | `integer` | Number of the port used by gRPC sever. |
