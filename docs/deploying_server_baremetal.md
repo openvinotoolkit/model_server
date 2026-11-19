@@ -65,7 +65,7 @@ Install system dependencies, then download, extract, and verify the package:
 sudo apt update
 sudo apt install -y curl ca-certificates libxml2-16
 curl -fLO https://storage.openvinotoolkit.org/repositories/openvino_model_server/packages/weekly/latest/ovms_ubuntu26.tar.gz
-tar -xzf ovms_ubuntu26_weekly.tar.gz
+tar -xzf ovms_ubuntu26.tar.gz
 ./ovms/bin/ovms --version
 ```
 
