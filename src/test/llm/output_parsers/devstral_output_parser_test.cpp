@@ -78,7 +78,7 @@ protected:
         };
 
         static ovms::ToolsSchemas_t toolsSchemas = convertStringToolSchemasStringToToolsSchemas(toolSchemasInput);
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*devstralTokenizer, "devstral", "", toolsSchemas);
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*devstralTokenizer, "devstral", "devstral", toolsSchemas);
     }
 };
 
@@ -484,6 +484,133 @@ TEST_F(DevstralOutputParserTest, FinalStopFlushesArgumentsAfterParallelCallBound
     ASSERT_TRUE(toolDelta->id.has_value());
     EXPECT_FALSE(toolDelta->id->empty());
     EXPECT_EQ(toolDelta->arguments, "{}");
+}
+
+static ParsedOutput streamChunks(OutputParser& parser, const std::vector<std::string>& chunks, ov::genai::GenerationFinishReason finishReason) {
+    parser.resetStreamingState();
+    ParsedOutput result;
+    std::vector<ToolCall> toolCalls;
+    auto collectDelta = [&](const std::optional<Delta>& delta) {
+        if (!delta.has_value())
+            return;
+        if (const auto* contentDelta = std::get_if<ContentDelta>(&*delta)) {
+            result.content += contentDelta->text;
+        } else if (const auto* reasoningDelta = std::get_if<ReasoningDelta>(&*delta)) {
+            result.reasoning += reasoningDelta->text;
+        } else if (const auto* toolDelta = std::get_if<ToolCallDelta>(&*delta)) {
+            ASSERT_GE(toolDelta->index, 0);
+            const auto index = static_cast<size_t>(toolDelta->index);
+            if (index >= toolCalls.size())
+                toolCalls.resize(index + 1);
+            if (toolDelta->name)
+                toolCalls[index].name = *toolDelta->name;
+            if (toolDelta->id)
+                toolCalls[index].id = *toolDelta->id;
+            toolCalls[index].arguments += toolDelta->arguments;
+        }
+    };
+    for (const auto& chunk : chunks) {
+        collectDelta(parser.parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE));
+    }
+    collectDelta(parser.parseChunk("", {}, true, finishReason));
+    result.toolCalls = std::move(toolCalls);
+    return result;
+}
+
+TEST_F(DevstralOutputParserTest, StreamingReasoningWithToolCallAndContent) {
+    const std::vector<std::string> chunks{
+        "[THINK]Let me",
+        " check the",
+        " weather [/TH",
+        "INK]",
+        "Checking ",
+        "now. ",
+        "[TOOL_CALLS]",
+        "get_",
+        "weather",
+        "[ARGS]",
+        "{\"city\":",
+        " \"Paris\"}",
+        "</s>"};
+    for (auto finishReason : {ov::genai::GenerationFinishReason::STOP, ov::genai::GenerationFinishReason::LENGTH}) {
+        ParsedOutput parsedOutput = streamChunks(*outputParserWithRegularToolParsing, chunks, finishReason);
+        EXPECT_EQ(parsedOutput.reasoning, "Let me check the weather ");
+        EXPECT_EQ(parsedOutput.content, "Checking now. ");
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+        EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
+        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"city\": \"Paris\"}");
+        EXPECT_FALSE(parsedOutput.toolCalls[0].id.empty());
+    }
+}
+
+TEST_F(DevstralOutputParserTest, StreamingReasoningWithOnlyToolCall) {
+    const std::vector<std::string> chunks{
+        "[THINK]",
+        "I need",
+        " a tool",
+        "[/THINK]",
+        "[TOOL_CALLS]",
+        "get_weather",
+        "[ARGS]",
+        "{\"city\":\"Paris\"}",
+        "</s>"};
+    for (auto finishReason : {ov::genai::GenerationFinishReason::STOP, ov::genai::GenerationFinishReason::LENGTH}) {
+        ParsedOutput parsedOutput = streamChunks(*outputParserWithRegularToolParsing, chunks, finishReason);
+        EXPECT_EQ(parsedOutput.reasoning, "I need a tool");
+        EXPECT_EQ(parsedOutput.content, "");
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 1);
+        EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
+        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"city\":\"Paris\"}");
+        EXPECT_FALSE(parsedOutput.toolCalls[0].id.empty());
+    }
+}
+
+TEST_F(DevstralOutputParserTest, StreamingReasoningWithParallelToolCalls) {
+    const std::vector<std::string> chunks{
+        "[THINK]",
+        "Two tools",
+        " needed",
+        "[/THINK]",
+        "[TOOL_CALLS]",
+        "get_weather",
+        "[ARGS]",
+        "{\"city\":",
+        "\"Paris\"}",
+        "[TOOL_CALLS]",
+        "check_news",
+        "[ARGS]",
+        "{\"topic\":",
+        "\"Paris\"}",
+        "</s>"};
+    for (auto finishReason : {ov::genai::GenerationFinishReason::STOP, ov::genai::GenerationFinishReason::LENGTH}) {
+        ParsedOutput parsedOutput = streamChunks(*outputParserWithRegularToolParsing, chunks, finishReason);
+        EXPECT_EQ(parsedOutput.reasoning, "Two tools needed");
+        EXPECT_EQ(parsedOutput.content, "");
+        ASSERT_EQ(parsedOutput.toolCalls.size(), 2);
+        EXPECT_EQ(parsedOutput.toolCalls[0].name, "get_weather");
+        EXPECT_EQ(parsedOutput.toolCalls[0].arguments, "{\"city\":\"Paris\"}");
+        EXPECT_EQ(parsedOutput.toolCalls[1].name, "check_news");
+        EXPECT_EQ(parsedOutput.toolCalls[1].arguments, "{\"topic\":\"Paris\"}");
+        EXPECT_FALSE(parsedOutput.toolCalls[0].id.empty());
+        EXPECT_FALSE(parsedOutput.toolCalls[1].id.empty());
+        EXPECT_NE(parsedOutput.toolCalls[0].id, parsedOutput.toolCalls[1].id);
+    }
+}
+
+TEST_F(DevstralOutputParserTest, StreamingReasoningWithOnlyContent) {
+    const std::vector<std::string> chunks{
+        "[THINK]",
+        "Simple",
+        " question",
+        "[/THINK]",
+        "The answer",
+        " is 4."};
+    for (auto finishReason : {ov::genai::GenerationFinishReason::STOP, ov::genai::GenerationFinishReason::LENGTH}) {
+        ParsedOutput parsedOutput = streamChunks(*outputParserWithRegularToolParsing, chunks, finishReason);
+        EXPECT_EQ(parsedOutput.reasoning, "Simple question");
+        EXPECT_EQ(parsedOutput.content, "The answer is 4.");
+        EXPECT_EQ(parsedOutput.toolCalls.size(), 0);
+    }
 }
 
 TEST_F(DevstralOutputParserTest, ParallelToolCalls) {
