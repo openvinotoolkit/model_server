@@ -25,6 +25,7 @@
 #include "minicpm5/minicpm5_reasoning_parser.hpp"
 #include "lfm2/lfm25_reasoning_parser.hpp"
 #include "onyx/onyx_reasoning_parser.hpp"
+#include "devstral/devstral_reasoning_parser.hpp"
 
 namespace ovms {
 
@@ -49,6 +50,9 @@ OutputParsingConfig getDefaultReasoningParsingConfig(const std::string& parserNa
     }
     if (parserName == "onyx") {
         return OnyxReasoningParser::getDefaultReasoningParsingConfig();
+    }
+    if (parserName == "devstral") {
+        return DevstralReasoningParser::getDefaultReasoningParsingConfig();
     }
     throw std::runtime_error("Unsupported reasoning parser: \"" + parserName +
                              "\". Supported reasoning parsers are: " + getSupportedReasoningParserNamesAsString());

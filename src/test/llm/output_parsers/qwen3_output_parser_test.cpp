@@ -20,6 +20,7 @@
 
 #include "../../../llm/io_processing/base_output_parser.hpp"
 #include "../../../llm/io_processing/output_parser.hpp"
+#include "../../../llm/io_processing/parser_config_validation.hpp"
 #include "output_parser_test_utils.hpp"
 #include "../../platform_utils.hpp"
 
@@ -60,7 +61,7 @@ protected:
 };
 
 TEST(ReasoningContextTest, DefaultMetadataDetectsReasoningWithoutParserInstances) {
-    for (const std::string parserName : {"qwen3", "gemma4", "gptoss", "minicpm5", "lfm2", "onyx"}) {
+    for (const auto& parserName : getSupportedReasoningParserNames()) {
         const auto config = getDefaultReasoningParsingConfig(parserName);
         ASSERT_FALSE(config.startTags.empty()) << parserName;
         const auto context = determineReasoningContext(config, "assistant\n" + config.startTags.front() + "\n");
@@ -70,6 +71,12 @@ TEST(ReasoningContextTest, DefaultMetadataDetectsReasoningWithoutParserInstances
     const auto context = determineReasoningContext(getDefaultReasoningParsingConfig(""), "assistant\n<think>\n");
     EXPECT_FALSE(context.implicitStart);
     EXPECT_TRUE(context.begin.empty());
+}
+
+TEST(ReasoningContextTest, DevstralMetadataUsesThinkTags) {
+    const auto config = getDefaultReasoningParsingConfig("devstral");
+    EXPECT_EQ(config.startTags, std::vector<std::string>{"[THINK]"});
+    EXPECT_EQ(config.endTags, std::vector<std::string>{"[/THINK]"});
 }
 
 TEST(ReasoningContextTest, EmptyMetadataReturnsEmptyContext) {
