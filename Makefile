@@ -648,6 +648,7 @@ ifeq ($(RUN_GPU_TESTS),1)
 		-e https_proxy=${https_proxy} \
 		-e RUN_TESTS=1 \
 		-e RUN_GPU_TESTS=$(RUN_GPU_TESTS) \
+		-e CHECK_COVERAGE=$(CHECK_COVERAGE) \
 		-e JOBS=$(JOBS) \
 		-e OVMS_TEST_FILTER="$(OVMS_TEST_FILTER)" \
 		-e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} \
@@ -656,6 +657,7 @@ ifeq ($(RUN_GPU_TESTS),1)
 		exit_code=$$? ;\
 		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/test_logs.tar.gz . ;\
 		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/linux_tests_summary.log . ;\
+		if [ "$(CHECK_COVERAGE)" = "1" ]; then docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/genhtml . ; fi ;\
 		docker rm -f $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ;\
 		exit $$exit_code
 else
@@ -666,6 +668,7 @@ else
 		$(GIT_CONFIG_MOUNT) \
 		-e https_proxy=${https_proxy} \
 		-e RUN_TESTS=1 \
+		-e CHECK_COVERAGE=$(CHECK_COVERAGE) \
 		-e JOBS=$(JOBS) \
 		-e OVMS_TEST_FILTER="$(OVMS_TEST_FILTER)" \
 		-e debug_bazel_flags=${BAZEL_DEBUG_FLAGS} \
@@ -674,6 +677,7 @@ else
 		exit_code=$$? ; \
 		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/test_logs.tar.gz . ;\
 		docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/linux_tests_summary.log . ;\
+		if [ "$(CHECK_COVERAGE)" = "1" ]; then docker container cp $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX):/ovms/genhtml . ; fi ;\
 		docker rm -f $(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) ;\
 		exit $$exit_code
 endif
