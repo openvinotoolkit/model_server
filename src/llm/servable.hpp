@@ -201,6 +201,7 @@ struct GenAiServableProperties {
     ov::genai::GenerationConfig baseGenerationConfig;
     std::string toolParserName;
     std::string reasoningParserName;
+    std::string contentParserName;
     std::string device;
     ov::AnyMap pluginConfig;
     ov::AnyMap tokenizerPluginConfig;
@@ -264,8 +265,7 @@ public:
 
     // Override to reject endpoints not supported by this servable.
     // Called after endpoint is determined. Return non-OK to reject.
-    virtual absl::Status validateEndpoint(Endpoint endpoint) const {
-        (void)endpoint;
+    virtual absl::Status validateEndpoint(Endpoint) const {
         return absl::OkStatus();
     }
 

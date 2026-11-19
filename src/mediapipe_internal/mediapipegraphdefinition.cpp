@@ -54,6 +54,7 @@
 #include "mediapipe_utils.hpp"
 #include "mediapipegraphexecutor.hpp"
 #include "node_initializer.hpp"
+#include "opencv_calculators_plugin_loader.hpp"
 
 namespace ovms {
 
@@ -240,6 +241,7 @@ Status MediapipeGraphDefinition::validateForConfigLoadableness() {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Trying to parse empty mediapipe graph definition: {} failed", this->getName(), this->chosenConfig);
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
+    loadOpenCvCalculatorsPlugin();
     if (this->chosenConfig.find("HttpLLMCalculator") != std::string::npos ||
         this->chosenConfig.find("LLMCalculatorOptions") != std::string::npos) {
         loadLlmCalculatorsPlugin();
@@ -248,7 +250,14 @@ Status MediapipeGraphDefinition::validateForConfigLoadableness() {
     bool success = ::google::protobuf::TextFormat::ParseFromString(this->chosenConfig, &this->config);
     if (!success) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Trying to parse mediapipe graph definition: {} failed", this->getName(), this->chosenConfig);
-        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+        std::vector<std::string> operations;
+        static const std::regex calculatorPattern(R"re(calculator\s*:\s*["']([^"']+)["'])re");
+        for (std::sregex_iterator it(this->chosenConfig.begin(), this->chosenConfig.end(), calculatorPattern), end; it != end; ++it) {
+            operations.push_back((*it)[1].str());
+        }
+        return Status(StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID,
+            "Failed parsing graph calculator/operation/options: " + joins(operations, ", ") +
+                getOpenCvCalculatorsPluginDiagnostic());
     }
     return StatusCode::OK;
 }
@@ -297,7 +306,8 @@ Status MediapipeGraphDefinition::validateReferencedNodesRegistered() {
         missingNamesList);
     return Status(
         StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR,
-        "Missing registered calculators/subgraphs: " + missingNamesList);
+        "Missing registered calculators/subgraphs: " + missingNamesList +
+            getOpenCvCalculatorsPluginDiagnostic());
 }
 
 Status MediapipeGraphDefinition::dryInitializeTest() {
@@ -307,7 +317,8 @@ Status MediapipeGraphDefinition::dryInitializeTest() {
         if (!absStatus.ok()) {
             const std::string absMessage = absStatus.ToString();
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph: {} initialization failed with message: {}", this->getName(), absMessage);
-            return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
+            return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR,
+                absMessage + getOpenCvCalculatorsPluginDiagnostic());
         }
     } catch (std::exception& e) {
         SPDLOG_ERROR("Exception caught whilie trying to initialize MediaPipe graph: {}", e.what());

@@ -20,6 +20,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 #include <iterator>
@@ -162,9 +163,11 @@ static Status configureInputProcessingCapabilities(const std::shared_ptr<GenAiSe
     if (properties->inputProcessorContext.config.visionInputConfig.has_value()) {
         properties->inputProcessorContext.config.visionInputConfig = videoConfig;
     }
+    const std::filesystem::path modelsPath(properties->modelsPath);
     if (!properties->inputProcessorContext.config.audioInputConfig.has_value() &&
-        std::filesystem::exists(std::filesystem::path(properties->modelsPath) / "openvino_audio_embeddings_model.xml")) {
-        properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig{true};
+        (std::filesystem::exists(modelsPath / "openvino_audio_embeddings_model.xml") ||
+            std::filesystem::exists(modelsPath / "openvino_audio_encoder_model.xml"))) {
+        properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig::withResampling();
     }
     return StatusCode::OK;
 }
@@ -341,6 +344,27 @@ ChatTemplateAnalysisResult GenAiServableInitializer::analyzeChatTemplate(std::sh
     return analysisResult;
 }
 
+static void detectDefaultContentParser(const std::shared_ptr<GenAiServableProperties>& properties) {
+    const std::string configPath = FileSystem::appendSlash(properties->modelsPath) + "config.json";
+    std::ifstream ifs(configPath);
+    if (!ifs.is_open()) {
+        return;
+    }
+    rapidjson::Document modelConfig;
+    rapidjson::IStreamWrapper isw(ifs);
+    rapidjson::ParseResult parseResult = modelConfig.ParseStream(isw);
+    if (parseResult.Code() || !modelConfig.IsObject() || !modelConfig.HasMember("architectures") || !modelConfig["architectures"].IsArray()) {
+        return;
+    }
+    for (const auto& architecture : modelConfig["architectures"].GetArray()) {
+        if (architecture.IsString() && std::string_view(architecture.GetString(), architecture.GetStringLength()) == "Qwen3ASRForConditionalGeneration") {
+            properties->contentParserName = "qwen3asr";
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected content_parser: {}", properties->contentParserName);
+            break;
+        }
+    }
+}
+
 void GenAiServableInitializer::selectOutputParsers(
     const std::shared_ptr<GenAiServableProperties>& properties,
     const std::optional<ChatTemplateAnalysisResult>& analysisResult) {
@@ -367,6 +391,8 @@ void GenAiServableInitializer::selectOutputParsers(
         SPDLOG_LOGGER_INFO(llm_calculator_logger, "Reasoning parser explicitly disabled");
         properties->reasoningParserName.clear();
     }
+
+    detectDefaultContentParser(properties);
 }
 
 Status GenAiServableInitializer::validateChatTemplateAvailability(
@@ -502,27 +528,34 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
     std::filesystem::path parsedModelsPathFs(parsedModelsPath);
 
     // Existence of talker model indicates omni pipeline
-    bool hasTalkerModel = std::filesystem::exists(parsedModelsPathFs / "openvino_talker_model.xml");
-    bool hasVlmModels = (std::filesystem::exists(parsedModelsPathFs / "openvino_text_embeddings_model.xml") &&
-                         std::filesystem::exists(parsedModelsPathFs / "openvino_vision_embeddings_model.bin"));
+    const bool hasTalkerModel = std::filesystem::exists(parsedModelsPathFs / "openvino_talker_model.xml");
+    const bool hasAudioDecoderModel = std::filesystem::exists(parsedModelsPathFs / "openvino_audio_decoder_model.xml");
+    const bool hasTextEmbeddingsModel = std::filesystem::exists(parsedModelsPathFs / "openvino_text_embeddings_model.xml");
+    const bool hasVisionEmbeddingsModel = std::filesystem::exists(parsedModelsPathFs / "openvino_vision_embeddings_model.bin");
+    const bool hasAudioEmbeddingsModel = std::filesystem::exists(parsedModelsPathFs / "openvino_audio_embeddings_model.xml");
+    const bool hasAudioEncoderModel = std::filesystem::exists(parsedModelsPathFs / "openvino_audio_encoder_model.xml");
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model capabilities for {}: talker={}, audio decoder={}, text embeddings={}, vision embeddings={}, audio embeddings={}, audio encoder={}",
+        parsedModelsPath, hasTalkerModel, hasAudioDecoderModel, hasTextEmbeddingsModel, hasVisionEmbeddingsModel, hasAudioEmbeddingsModel, hasAudioEncoderModel);
+    const bool isMultimodal = hasTextEmbeddingsModel &&
+                              (hasVisionEmbeddingsModel || hasAudioEmbeddingsModel || hasAudioEncoderModel);
 
-    // Existence of text embeddings and vision embeddings models indicates we are dealing with VLM pipeline
+    // Text embeddings plus vision embeddings, audio embeddings, or an audio encoder
+    // indicates a multimodal pipeline.
     // But if it has talker model, it means it is Omni pipeline which is built out of VLM Pipeline and Talker
-    bool isOmni = hasTalkerModel && hasVlmModels;
-    bool isVLM = !hasTalkerModel && hasVlmModels;
+    bool isOmni = (hasTalkerModel || hasAudioDecoderModel) && isMultimodal;
 
     // If pipeline type is not explicitly defined by the user, we need to determine it based on the content of the models directory and configuration
     if (nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::AUTO) {
         if (isOmni) {
             pipelineType = PipelineType::OMNI;
         } else if (nodeOptions.device() == "NPU") {
-            if (isVLM) {
+            if (isMultimodal) {
                 pipelineType = PipelineType::VLM;
             } else {
                 pipelineType = PipelineType::LM;
             }
         } else {
-            if (isVLM) {
+            if (isMultimodal) {
                 pipelineType = PipelineType::VLM_CB;
             } else {
                 pipelineType = PipelineType::LM_CB;
@@ -550,13 +583,15 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
             return StatusCode::INTERNAL_ERROR;
         }
 
-        if (isVLM && (pipelineType != PipelineType::VLM && pipelineType != PipelineType::VLM_CB)) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Models directory content indicates VLM pipeline, but pipeline type is set to non-VLM type.");
+        if (!isMultimodal && (pipelineType == PipelineType::VLM || pipelineType == PipelineType::VLM_CB)) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model does not have multimodal capabilities required by pipeline {}. Use an LM or LM_CB pipeline instead.",
+                mediapipe::LLMCalculatorOptions_PipelineType_Name(nodeOptions.pipeline_type()));
             return StatusCode::INTERNAL_ERROR;
         }
 
-        if (!isVLM && (pipelineType == PipelineType::VLM || pipelineType == PipelineType::VLM_CB)) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Models directory content indicates non-VLM pipeline, but pipeline type is set to VLM type.");
+        if (pipelineType == PipelineType::OMNI && !isOmni) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "The OMNI pipeline requires multimodal capabilities and a talker or audio decoder. Use {} instead.",
+                isMultimodal ? "a VLM or VLM_CB pipeline" : "an LM or LM_CB pipeline");
             return StatusCode::INTERNAL_ERROR;
         }
     }
@@ -656,7 +691,8 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         return StatusCode::INTERNAL_ERROR;
     }
     servable->determineDecodingMethod();
-    status = configureInputProcessingCapabilities(servable->getProperties(), nodeOptions);
+    auto properties = servable->getProperties();
+    status = configureInputProcessingCapabilities(properties, nodeOptions);
     if (status != StatusCode::OK) {
         return status;
     }

@@ -42,6 +42,13 @@
 
 namespace ovms {
 
+absl::Status LegacyServable::validateEndpoint(Endpoint endpoint) const {
+    if (endpoint == Endpoint::TRANSCRIPTIONS) {
+        return absl::InvalidArgumentError("This servable does not support audio transcriptions");
+    }
+    return absl::OkStatus();
+}
+
 void LegacyServable::logPerfMetrics(ov::genai::PerfMetrics& perfMetrics) {
     const size_t inputTokenCount = perfMetrics.get_num_input_tokens();
     const size_t outputTokenCount = perfMetrics.get_num_generated_tokens();

@@ -246,6 +246,44 @@ static std::string makeLarge16BitGrayPng(const uint32_t width, const uint32_t he
     return png;
 }
 
+static std::string makeRgbPng() {
+    const std::string scanline{"\0\x0a\x14\x1e", 4};
+    std::array<Bytef, 64> compressed{};
+    uLongf compressedSize = compressed.size();
+    if (compress2(compressed.data(), &compressedSize,
+            reinterpret_cast<const Bytef*>(scanline.data()), static_cast<uLong>(scanline.size()), Z_BEST_SPEED) != Z_OK) {
+        throw std::runtime_error("Failed to compress RGB PNG test image");
+    }
+
+    std::string png("\x89PNG\r\n\x1a\n", 8);
+    std::string header;
+    appendBigEndianUint32(header, 1);
+    appendBigEndianUint32(header, 1);
+    header.push_back(8);  // 8-bit depth
+    header.push_back(2);  // RGB
+    header.append("\0\0\0", 3);
+    appendPngChunk(png, "IHDR", header);
+    appendPngChunk(png, "IDAT", std::string(reinterpret_cast<const char*>(compressed.data()), compressedSize));
+    appendPngChunk(png, "IEND", "");
+    return png;
+}
+
+TEST(ImageDecodingProcessorTest, Base64RgbImagePreservesVlmRgbTensorContract) {
+    const std::string encoded = absl::Base64Escape(makeRgbPng());
+    InputRequest request = makeImageUrlRequest("data:image/png;base64," + encoded);
+    ImageDecodingProcessor processor(std::nullopt, std::nullopt);
+
+    const auto status = processor.process(request);
+
+    ASSERT_TRUE(status.ok()) << status.message();
+    ASSERT_EQ(request.inputImages.size(), 1u);
+    const auto& image = request.inputImages.front();
+    EXPECT_EQ(image.get_element_type(), ov::element::u8);
+    EXPECT_EQ(image.get_shape(), (ov::Shape{1, 1, 1, 3}));
+    const std::array<uint8_t, 3> expected{10, 20, 30};
+    EXPECT_EQ(std::memcmp(image.data<uint8_t>(), expected.data(), expected.size()), 0);
+}
+
 TEST(ImageDecodingProcessorTest, Base64InvalidDataRejected) {
     InputRequest req = makeImageUrlRequest("data:image/jpeg;base64,NOT_VALID_BASE64!!!");
     ImageDecodingProcessor processor(std::nullopt, std::nullopt);

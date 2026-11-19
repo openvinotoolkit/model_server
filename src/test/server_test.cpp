@@ -14,6 +14,8 @@
 // limitations under the License.
 //*****************************************************************************
 #include <chrono>
+#include <cstdlib>
+#include <filesystem>
 #include <random>
 #include <thread>
 
@@ -33,10 +35,13 @@
 #include "../ovms_exit_codes.hpp"
 #include "../prediction_service_utils.hpp"
 #include "src/servable_management/servablemanagermodule.hpp"
+#include "src/utils/env_guard.hpp"
 #include "../server.hpp"
 #include "../version.hpp"
 #include "c_api_test_utils.hpp"
 #include "mockmodelinstancechangingstates.hpp"
+#include "test_utils.hpp"
+#include "test_with_temp_dir.hpp"
 
 using ovms::ModelManager;
 using ovms::Module;
@@ -54,6 +59,64 @@ using grpc::ClientContext;
 
 const std::string portOldDefault{"9178"};
 const std::string typicalRestDefault{"9179"};
+
+class EspeakDataPathTest : public TestWithTempDir {
+protected:
+    EnvGuard environment;
+};
+
+TEST_F(EspeakDataPathTest, UsesBundledDataWhenPresent) {
+    environment.unset("ESPEAK_DATA_PATH");
+    const std::filesystem::path root(directoryPath);
+#ifdef _WIN32
+    const auto executablePath = root / "ovms.exe";
+    const auto dataPath = root / "espeak-ng-data";
+#else
+    const auto executablePath = root / "bin" / "ovms";
+    const auto dataPath = root / "share" / "espeak-ng-data";
+    std::filesystem::create_directories(executablePath.parent_path());
+#endif
+    std::filesystem::create_directories(dataPath);
+    setDefaultEspeakDataPath(executablePath);
+    EXPECT_EQ(GetEnvVar("ESPEAK_DATA_PATH"), dataPath.lexically_normal().string());
+}
+
+TEST_F(EspeakDataPathTest, PreservesExplicitOverride) {
+    environment.set("ESPEAK_DATA_PATH", "custom-path");
+    const std::filesystem::path root(directoryPath);
+#ifdef _WIN32
+    const auto executablePath = root / "ovms.exe";
+    std::filesystem::create_directories(root / "espeak-ng-data");
+#else
+    const auto executablePath = root / "bin" / "ovms";
+    std::filesystem::create_directories(executablePath.parent_path());
+    std::filesystem::create_directories(root / "share" / "espeak-ng-data");
+#endif
+    setDefaultEspeakDataPath(executablePath);
+    EXPECT_EQ(GetEnvVar("ESPEAK_DATA_PATH"), "custom-path");
+}
+
+TEST_F(EspeakDataPathTest, UsesBundledDataWhenEnvironmentIsEmpty) {
+    environment.set("ESPEAK_DATA_PATH", "");
+    const std::filesystem::path root(directoryPath);
+#ifdef _WIN32
+    const auto executablePath = root / "ovms.exe";
+    const auto dataPath = root / "espeak-ng-data";
+#else
+    const auto executablePath = root / "bin" / "ovms";
+    const auto dataPath = root / "share" / "espeak-ng-data";
+    std::filesystem::create_directories(executablePath.parent_path());
+#endif
+    std::filesystem::create_directories(dataPath);
+    setDefaultEspeakDataPath(executablePath);
+    EXPECT_EQ(GetEnvVar("ESPEAK_DATA_PATH"), dataPath.lexically_normal().string());
+}
+
+TEST_F(EspeakDataPathTest, LeavesMissingDataUnset) {
+    environment.unset("ESPEAK_DATA_PATH");
+    setDefaultEspeakDataPath(std::filesystem::path(directoryPath) / "bin" / "ovms");
+    EXPECT_EQ(std::getenv("ESPEAK_DATA_PATH"), nullptr);
+}
 
 struct Configuration {
     std::string address = "localhost";
@@ -187,6 +250,46 @@ static void requestRestServerAlive(const char* httpPort, httplib::StatusCode sta
         return;
     }
     return;
+}
+
+class ServerGlobalInitializationTest : public ::testing::Test, public Server {
+protected:
+    EnvGuard environment;
+    ScopedOVMSConfigGuard configGuard;
+
+    void initializeServer() {
+        auto serverSettings = configGuard.getServerSettings();
+        auto modelSettings = configGuard.getModelSettings();
+        serverSettings.grpcBindAddress = "invalid address";
+        EXPECT_EQ(startFromSettings(&serverSettings, &modelSettings).getCode(), ovms::StatusCode::OPTIONS_USAGE_ERROR);
+    }
+};
+
+TEST_F(ServerGlobalInitializationTest, SetsOpenCvPixelLimitOnceWhenUnset) {
+    environment.unset("OPENCV_IO_MAX_IMAGE_PIXELS");
+    initializeServer();
+    EXPECT_EQ(GetEnvVar("OPENCV_IO_MAX_IMAGE_PIXELS"), std::to_string(ovms::OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS));
+    environment.set("OPENCV_IO_MAX_IMAGE_PIXELS", "123");
+    initializeServer();
+    EXPECT_EQ(GetEnvVar("OPENCV_IO_MAX_IMAGE_PIXELS"), "123");
+}
+
+TEST_F(ServerGlobalInitializationTest, SetsOpenCvPixelLimitWhenEmpty) {
+    environment.set("OPENCV_IO_MAX_IMAGE_PIXELS", "");
+    initializeServer();
+    EXPECT_EQ(GetEnvVar("OPENCV_IO_MAX_IMAGE_PIXELS"), std::to_string(ovms::OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS));
+}
+
+TEST_F(ServerGlobalInitializationTest, PreservesExplicitOpenCvPixelLimit) {
+    environment.set("OPENCV_IO_MAX_IMAGE_PIXELS", "123");
+    initializeServer();
+    EXPECT_EQ(GetEnvVar("OPENCV_IO_MAX_IMAGE_PIXELS"), "123");
+}
+
+TEST_F(ServerGlobalInitializationTest, PreservesZeroOpenCvPixelLimit) {
+    environment.set("OPENCV_IO_MAX_IMAGE_PIXELS", "0");
+    initializeServer();
+    EXPECT_EQ(GetEnvVar("OPENCV_IO_MAX_IMAGE_PIXELS"), "0");
 }
 
 TEST(Server, ServerNotAliveBeforeStart) {

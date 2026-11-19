@@ -16,6 +16,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -34,7 +35,9 @@ using InputPayload = std::variant<ov::genai::ChatHistory, std::string>;
 // Per-request data passed through the InputProcessor chain.
 // Input extraction and processing precede generation configuration in prepareInputs().
 struct InputRequest {
-    InputPayload input;                            // set in parseRequest()
+    InputPayload input;  // set in parseRequest()
+    std::vector<std::string_view> multipartAudioInputs;
+
     ov::genai::GenerationConfig generationConfig;  // set after input processing
 
     std::string promptText;               // written by ChatTemplateProcessor / RawPromptExtractor

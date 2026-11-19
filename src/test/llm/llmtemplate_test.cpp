@@ -305,6 +305,28 @@ TEST_F(LLMChatTemplateTest, VlmWithoutAudioCapabilityRejectsAudioInput) {
     EXPECT_EQ(status.message(), "This servable does not support audio input");
 }
 
+TEST_F(LLMChatTemplateTest, DetectsQwenAsrContentParserWithoutChatTemplateAnalysis) {
+    std::string config = R"({"architectures":["Qwen3ASRForConditionalGeneration"]})";
+    ASSERT_TRUE(createConfigFileWithContent(config, directoryPath + "/config.json"));
+    auto properties = std::make_shared<GenAiServableProperties>();
+    properties->modelsPath = directoryPath;
+
+    GenAiServableInitializer::selectOutputParsers(properties, std::nullopt);
+
+    EXPECT_EQ(properties->contentParserName, "qwen3asr");
+}
+
+TEST_F(LLMChatTemplateTest, NonObjectModelConfigDoesNotSelectContentParser) {
+    std::string config = R"([])";
+    ASSERT_TRUE(createConfigFileWithContent(config, directoryPath + "/config.json"));
+    auto properties = std::make_shared<GenAiServableProperties>();
+    properties->modelsPath = directoryPath;
+
+    GenAiServableInitializer::selectOutputParsers(properties, std::nullopt);
+
+    EXPECT_TRUE(properties->contentParserName.empty());
+}
+
 TEST_F(LLMChatTemplateTest, MissingTemplateClearsDisabledParsers) {
     servable = std::make_shared<ContinuousBatchingServable>();
     auto properties = servable->getProperties();

@@ -329,10 +329,11 @@ absl::Status OpenAIApiHandler::parseRequest(std::optional<uint32_t> maxTokensLim
     return parseRequestImpl(maxTokensLimit, bestOfLimit, maxModelLength, allowedLocalMediaPath, allowedMediaDomains);
 }
 
-void OpenAIApiHandler::initOutputParser(const ReasoningGenerationContext& reasoningContext) {
-    if (toolParserName.empty() && reasoningParserName.empty())
+void OpenAIApiHandler::initOutputParser(const ReasoningGenerationContext& reasoningContext, const std::string& contentParserName) {
+    if (toolParserName.empty() && reasoningParserName.empty() && contentParserName.empty())
         return;
-    outputParser = std::make_shared<OutputParser>(tokenizer, toolParserName, reasoningParserName, request.toolNameSchemaMap);
+    outputParser = std::make_shared<OutputParser>(tokenizer, toolParserName, reasoningParserName,
+        request.toolNameSchemaMap, contentParserName);
     outputParser->setImplicitReasoningStart(reasoningContext.implicitStart);
 }
 

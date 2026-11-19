@@ -231,4 +231,3 @@ It is recommended to compare accuracy results versus OpenVINO benchmark app.
 
 It is possible to enforce a specific runtime precision by using a plugin config parameter `INFERENCE_PRECISION_HINT`. For example:
  `--plugin_config "{\"INFERENCE_PRECISION_HINT\": \"f32\"}"`.
-

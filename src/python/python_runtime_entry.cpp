@@ -112,8 +112,10 @@ bool ensureInterpreterInitialized(std::string& details) {
 
 // Validates Python-related environment paths needed by runtime checks.
 // - If PYTHONHOME is set, it must point to an existing directory.
-// - If PYTHONPATH is set, at least one non-empty entry must exist on disk.
-//   Non-existing entries are tolerated as long as at least one valid entry exists.
+// - If PYTHONPATH is set, it must contain at least one non-empty entry that
+//   exists on disk. We intentionally do not reject user PYTHONPATH entries here
+//   because OVMS adds the packaged binding directory later and the real import
+//   check below is the authoritative validation for pyovms availability.
 bool validateEnvPaths(std::string& details) {
     if (const char* pythonHome = std::getenv("PYTHONHOME"); pythonHome != nullptr && pythonHome[0] != '\0') {
         std::error_code ec;
@@ -131,16 +133,16 @@ bool validateEnvPaths(std::string& details) {
 #endif
         std::string pathValue(pythonPath);
         size_t start = 0;
-        bool hadNonEmptyEntry = false;
-        bool hasExistingEntry = false;
+        bool hadExistingEntry = false;
         while (start <= pathValue.size()) {
             size_t end = pathValue.find(separator, start);
-            std::string directory = (end == std::string::npos) ? pathValue.substr(start) : pathValue.substr(start, end - start);
-            if (!directory.empty()) {
-                hadNonEmptyEntry = true;
+            std::string entry = (end == std::string::npos) ? pathValue.substr(start) : pathValue.substr(start, end - start);
+            if (!entry.empty()) {
                 std::error_code ec;
-                if (std::filesystem::exists(std::filesystem::path(directory), ec) && !ec) {
-                    hasExistingEntry = true;
+                const auto path = std::filesystem::path(entry);
+                if (std::filesystem::exists(path, ec) && !ec) {
+                    hadExistingEntry = true;
+                    break;
                 }
             }
             if (end == std::string::npos) {
@@ -149,8 +151,8 @@ bool validateEnvPaths(std::string& details) {
             start = end + 1;
         }
 
-        if (hadNonEmptyEntry && !hasExistingEntry) {
-            details = "PYTHONPATH does not contain any existing directory";
+        if (!hadExistingEntry) {
+            details = "PYTHONPATH does not contain any existing path entries";
             return false;
         }
     }

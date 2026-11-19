@@ -14,6 +14,12 @@ Check supported [Speech Recognition Models](https://openvinotoolkit.github.io/op
 
 **Client**: curl or Python for using OpenAI client package
 
+Install the client dependency before running the Python examples:
+
+```console
+pip install openai
+```
+
 ## Speech generation
 Kokoro is the primary example in this demo, but SpeechT5 remains supported for existing deployments.
 
@@ -56,7 +62,7 @@ ovms --rest_port 8000 --source_model OpenVINO/Kokoro-82M-int8-ov --model_reposit
 
 
 ```bash
-curl http://localhost:8000/v3/audio/speech -H "Content-Type: application/json" -d "{\"model\": \"Kokoro-82M-int8-ov\", \"voice\": \"af_alloy\", \"input\": \"The quick brown fox jumped over the lazy dog\"}" -o speech.wav
+curl http://localhost:8000/v1/audio/speech -H "Content-Type: application/json" -d "{\"model\": \"Kokoro-82M-int8-ov\", \"voice\": \"af_alloy\", \"input\": \"The quick brown fox jumped over the lazy dog\"}" -o speech.wav
 ```
 :::
 
@@ -68,7 +74,7 @@ from openai import OpenAI
 
 prompt = "The quick brown fox jumped over the lazy dog"
 filename = "speech.wav"
-url="http://localhost:8000/v3"
+url="http://localhost:8000/v1"
 
 
 speech_file_path = Path(__file__).parent / "speech.wav"
@@ -89,26 +95,8 @@ print("Generation finished")
 Play speech.wav file to check generated speech.
 
 ## Benchmarking speech generation
-An asynchronous benchmarking client can be used to access the model server performance with various load conditions. Below are execution examples captured on Intel(R) Core(TM) Ultra 7 258V.
-
-> **Note:** `RTFx` (Real-Time Factor, inverted) is calculated as `generated_audio_duration / generation_time`.
-> Values greater than `1.0x` mean faster-than-real-time generation, while values below `1.0x` mean slower-than-real-time.
-
-```console
-pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/benchmark/v3/requirements.txt openai>=1.0.0
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/benchmark/v3/benchmark.py -o benchmark.py
-python benchmark.py --api_url http://localhost:8000/v3/audio/speech --model Kokoro-82M-int8-ov --batch_size 1 --limit 1000 --request_rate inf --backend text2speech --dataset edinburghcstr/ami --hf-subset ihm --voice af_alloy
-Number of documents: 1000
-100%|█████████████████████████████████████████████████████████████████████████████████| 1000/1000 [16:37<00:00,  1.00it/s]
-Success rate: 100.0%. (1000/1000)
-Mean latency: 1506.60 ms
-Median latency: 1072.72 ms
-Mean RTFx: 3.655x
-Median RTFx: 3.899x
-```
-
-> **Note:** `RTFx` (Real-Time Factor, inverted) is calculated as `generated_audio_duration / generation_time`.
-> Values greater than `1.0x` mean faster-than-real-time generation, while values below `1.0x` mean slower-than-real-time.
+For synthetic and real-text benchmark examples, setup, and RTFx interpretation, see
+[Speech Generation](../benchmark/openai/README.md#speech-generation) in the benchmark guide.
 
 ## Transcription
 ### Model preparation
@@ -153,7 +141,7 @@ Transcribe the speech.wav file generated in the [Speech generation](#speech-gene
 
 
 ```bash
-curl http://localhost:8000/v3/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="whisper-large-v3-turbo-fp16-ov" -F language="en"
+curl http://localhost:8000/v1/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="whisper-large-v3-turbo-fp16-ov" -F language="en"
 ```
 ```json
 {"text": " The quick brown fox jumped over the lazy dog."}
@@ -167,7 +155,7 @@ from pathlib import Path
 from openai import OpenAI
 
 filename = "speech.wav"
-url="http://localhost:8000/v3"
+url="http://localhost:8000/v1"
 
 
 speech_file_path = Path(__file__).parent / filename
@@ -190,7 +178,7 @@ The quick brown fox jumped over the lazy dog.
 :::{dropdown} **Streaming call with cURL**
 
 ```bash
-curl -N http://localhost:8000/v3/audio/transcriptions \
+curl -N http://localhost:8000/v1/audio/transcriptions \
   -H "Content-Type: multipart/form-data" \
   -F file="@speech.wav" \
   -F model="whisper-large-v3-turbo-fp16-ov" \
@@ -212,7 +200,7 @@ data: {"type":"transcript.text.done","text":"The quick brown fox jumped over the
 
 
 ```bash
-curl http://localhost:8000/v3/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="whisper-large-v3-turbo-fp16-ov" -F language="en" -F timestamp_granularities[]="segment"
+curl http://localhost:8000/v1/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="whisper-large-v3-turbo-fp16-ov" -F language="en" -F timestamp_granularities[]="segment"
 ```
 ```json
 {"text":" A quick brown fox jumped over the lazy dog","segments":[{"text":" A quick brown fox jumped over the lazy dog","start":0.0,"end":3.1399998664855957}]}
@@ -226,7 +214,7 @@ from pathlib import Path
 from openai import OpenAI
 
 filename = "speech.wav"
-url="http://localhost:8000/v3"
+url="http://localhost:8000/v1"
 
 
 speech_file_path = Path(__file__).parent / filename
@@ -309,7 +297,7 @@ curl http://localhost:8000/v1/models
 :::{dropdown} **Unary call with cURL (word timestamps)**
 
 ```bash
-curl http://localhost:8000/v3/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="whisper-large-v3-turbo-word-ts" -F language="en" -F timestamp_granularities[]="word"
+curl http://localhost:8000/v1/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="whisper-large-v3-turbo-word-ts" -F language="en" -F timestamp_granularities[]="word"
 ```
 
 Example response:
@@ -325,7 +313,7 @@ from pathlib import Path
 from openai import OpenAI
 
 filename = "speech.wav"
-url="http://localhost:8000/v3"
+url="http://localhost:8000/v1"
 
 
 speech_file_path = Path(__file__).parent / filename
@@ -362,7 +350,7 @@ Download and apply OVMS API compatibility patch:
 
 Set OpenAI-compatible endpoint variables for OVMS:
 ```text
-export OPENAI_BASE_URL=http://localhost:8000/v3
+export OPENAI_BASE_URL=http://localhost:8000/v1
 export OPENAI_API_KEY="unused"
 ```
 
@@ -414,7 +402,7 @@ mkdir -p ${HOME}/models
 # in case GPU is available
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
 
-docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:weekly --rest_port 8000 --source_model OpenVINO/Kokoro-82M-int8-ov --model_repository_path /models --model_name Kokoro-82M-int8-ov
+docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:weekly --rest_port 8000 --source_model OpenVINO/Kokoro-82M-int8-ov --model_repository_path /models --model_name Kokoro-82M-int8-ov --target_device CPU
 ```
 
 **Deploying on Bare Metal**
@@ -428,8 +416,8 @@ ovms --rest_port 8000 --source_model OpenVINO/Kokoro-82M-int8-ov --model_reposit
 
 For non-English text, set the `language` field explicitly so OpenVINO GenAI selects the correct phonemization path. Voice selection does not infer the language.
 
-```console
-curl -fS http://localhost:8000/v3/audio/speech -H "Content-Type: application/json" -d "{\"model\": \"Kokoro-82M-int8-ov\", \"voice\": \"ef_dora\", \"language\": \"es\", \"input\": \"Madrid es la capital de España\"}" -o speech_spanish.wav
+```bash
+curl --fail-with-body -sS http://localhost:8000/v1/audio/speech -H "Content-Type: application/json" -d "{\"model\": \"Kokoro-82M-int8-ov\", \"voice\": \"ef_dora\", \"language\": \"es\", \"input\": \"Madrid es la capital de España\"}" -o speech_spanish.wav
 ```
 
 ### Deployment
@@ -463,7 +451,7 @@ Translate the speech_spanish.wav file generated above.
 
 
 ```bash
-curl http://localhost:8000/v3/audio/translations -H "Content-Type: multipart/form-data" -F file="@speech_spanish.wav" -F model="whisper-large-v3-fp16-ov"
+curl http://localhost:8000/v1/audio/translations -H "Content-Type: multipart/form-data" -F file="@speech_spanish.wav" -F model="whisper-large-v3-fp16-ov"
 ```
 ```json
 {"text": " Madrid is the capital of Spain."}
@@ -472,12 +460,12 @@ curl http://localhost:8000/v3/audio/translations -H "Content-Type: multipart/for
 
 :::{dropdown} **Unary call with python OpenAI library**
 
-```python
+```code
 from pathlib import Path
 from openai import OpenAI
 
 filename = "speech_spanish.wav"
-url="http://localhost:8000/v3"
+url="http://localhost:8000/v1"
 
 
 speech_file_path = Path(__file__).parent / filename

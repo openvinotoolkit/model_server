@@ -30,6 +30,7 @@ if [ "$ov_use_binary" == "0" ] ; then cp -v /openvino_tokenizers/build/src/libop
 # Narrow python filter to versioned interpreter SONAMEs only, so libovmspython.so and libpython_calculators.so are still copied.
 find /ovms/bazel-out/k8-*/bin -iname '*.so*' ! -type d \
     ! -name "libgtest.so" ! -name "*gtest*" ! -name "*googletest*" \
+	! -name "libno_opencv_audit.so" \
     ! -name "*params" ! -name "*.hana.*" ! -name "*runfiles_manifest*" \
     ! -name "py_generate_pipeline.cpython*" ! -name "lib_node_*" \
     ! -name "libazure-*" ! -name "pyovms.so" ! -name "*.repo_mapping" \
@@ -59,7 +60,7 @@ fi
 # rules_foreign_cc places the cmake install tree under copy_<rule>/espeak-ng/
 # inside bazel-out. Both the shared library (picked up by the find above)
 # and the espeak-ng-data directory are required at runtime.
-ESPEAK_DATA_SRC=$(find /ovms/bazel-out/k8-*/bin/external/espeak_ng -type d -name 'espeak-ng-data' 2>/dev/null | head -n 1 || true)
+ESPEAK_DATA_SRC=$(find /ovms/bazel-out/k8-*/bin/external/espeak_ng -type f -path '*/espeak-ng-data/phontab' -printf '%h\n' 2>/dev/null | head -n 1 || true)
 if [ -n "$ESPEAK_DATA_SRC" ] && [ -d "$ESPEAK_DATA_SRC" ] ; then
     mkdir -p /ovms_release/share
     cp -rL "$ESPEAK_DATA_SRC" /ovms_release/share/ ;
@@ -169,12 +170,25 @@ if [ "$FUZZER_BUILD" == "0" ]; then
 		echo "OVMS binary must not link directly against libpython."
 		exit 1
 	fi
+	if echo "$ovms_needed" | grep -Eiq '[(]NEEDED[)].*opencv'; then
+		echo "OVMS binary must not link directly against OpenCV; use optional runtime plugins."
+		exit 1
+	fi
+	if [ ! -f ../lib/libovms_opencv_image_decoder.so ]; then
+		echo "Missing optional OpenCV image decoder plugin in package staging."
+		exit 1
+	fi
 	if [[ "$debug_bazel_flags" != *"mp_off"* && "$debug_bazel_flags" != *"disable_mediapipe"* ]]; then
 		if ! command -v nm >/dev/null 2>&1; then
 			echo "Cannot verify OVMS MediaPipe symbols: nm is unavailable."
 			exit 1
 		fi
-		exported_symbols=$(nm -D ./ovms | awk '$2 ~ /^[A-TV-Z]$/ { print $3 }')
+		runtime_library=../lib/libovms_mediapipe_runtime_shared.so
+		if [ ! -f "$runtime_library" ]; then
+			echo "Missing MediaPipe runtime shared library: $runtime_library."
+			exit 1
+		fi
+		exported_symbols=$(nm -D "$runtime_library" | awk '$2 ~ /^[A-TV-Z]$/ { print $3 }')
 		for symbol in \
 			OVMS_MPFactoryCreate \
 			OVMS_MPFactoryDestroy \
@@ -203,8 +217,7 @@ if [ "$FUZZER_BUILD" == "0" ]; then
 			fi
 		done
 
-		registration_artifacts=(./ovms ../lib/libovms_llm_calculators.so)
-		registration_artifacts+=(../lib/libovmspython.so ../lib/libpython_calculators.so)
+		registration_artifacts=(./ovms ../lib/libovms_mediapipe_runtime_shared.so ../lib/libovms_llm_calculators.so ../lib/libovms_opencv_calculators.so ../lib/libovmspython.so ../lib/libpython_calculators.so)
 		registration_symbol_sets=()
 		for artifact in "${registration_artifacts[@]}"; do
 			if [ ! -f "$artifact" ]; then
@@ -216,7 +229,8 @@ if [ "$FUZZER_BUILD" == "0" ]; then
 				exit 1
 			}
 			calculator_options=$(printf '%s\n' "$defined_symbols" \
-				| grep -oE '\b[A-Za-z_][A-Za-z0-9_]*CalculatorOptions\b' \
+				| grep -oE '\b[A-Za-z_][A-Za-z0-9_]*CalculatorOptions::ext$' \
+				| sed 's/::ext$//' \
 				| sort -u)
 			registration_symbol_sets+=("$calculator_options")
 		done
