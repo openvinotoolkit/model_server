@@ -86,6 +86,37 @@ class DatasetInputTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(requests, [['audio payload']])
 
 
+
+class SpeechTokenCountTests(unittest.IsolatedAsyncioTestCase):
+    async def test_counts_tokens_only_for_successful_requests(self):
+        docs = benchmark.Dataset.from_dict({'audio': [0, 1]})
+
+        def tokenize(text, **_):
+            return {'input_ids': text.split()}
+
+        for backend in ('speech2text', 'translations'):
+            for successes in ((True, True), (True, False), (False, False)):
+                with self.subTest(backend=backend, successes=successes):
+                    async def receive_response(request_func_input, pbar):
+                        success = successes[request_func_input.documents[0]]
+                        return benchmark.RequestFuncOutput(
+                            success=success,
+                            text='{"text": "hello world"}' if success else '',
+                            error='' if success else 'Service Unavailable',
+                        )
+
+                    settings = {'backend': backend, 'tokenizer': None, 'max_concurrency': 2}
+                    with patch.object(benchmark, 'args', settings, create=True), \
+                            patch.object(benchmark, 'batch_size', 1, create=True), \
+                            patch.object(benchmark, 'load_tokenizer', return_value=tokenize):
+                        result = await benchmark.benchmark(docs, 'test-model', 'unused', float('inf'),
+                                                           receive_response)
+
+                    self.assertEqual(result['successes'], list(successes))
+                    self.assertEqual(result['token_count'], [2 if success else 0 for success in successes])
+                    self.assertEqual(result['errors'], ['' if success else 'Service Unavailable'
+                                                        for success in successes])
+
 class VLMInputTests(unittest.TestCase):
     def test_requested_and_corrected_aliases(self):
         for output_flag, turn_flag in (('--output_lenght', '--turn_lenght'),
