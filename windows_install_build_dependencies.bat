@@ -524,6 +524,7 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 %python312_path%\python.exe -m pip install "numpy==2.2.5" "Jinja2==3.1.6" "MarkupSafe==3.0.2" "pytest==8.3.5"
 if !errorlevel! neq 0 exit /b !errorlevel!
 echo [INFO] Legacy Python %python312_version% installed: %python312_path%
+set "PYTHONHOME=C:\opt\Python314"
 goto install_curl
 :::::::::::::::::::::: Uninstall function
 :UninstallPython
