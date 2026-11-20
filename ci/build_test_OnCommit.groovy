@@ -100,7 +100,9 @@ pipeline {
                 git_diff = sh (script: "git diff --name-only HEAD^..HEAD", returnStdout: true).trim()
               }
 
-              if (git_diff =~ /src|third_party|external|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|\.bazel|\.bzl|\.groovy|BUILD|create_package\.sh|WORKSPACE|(\n|^)run_unit_tests\.sh|versions\.mk/) {
+                def composerInputs = /(?m)^(docker_compose\.py|prepare_llm_models\.sh|install_ubuntu_(gpu_drivers|level_zero_loader)\.sh|tests\/functional\/(docker_compose_(demo_probe|smoke_test)\.py|utils\/ports\.py)|demos\/classification_using_paddlepaddle_model\/python\/download_model\.py)$|^tests\/docker_compose_fixtures\//
+                if ((git_diff =~ /src|third_party|external|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|\.bazel|\.bzl|\.groovy|BUILD|create_package\.sh|WORKSPACE|(\n|^)run_unit_tests\.sh|versions\.mk/) ||
+                  (git_diff =~ composerInputs)) {
                   image_build_needed = "true"
               }
               if (git_diff =~ /(\n|^)client/) {

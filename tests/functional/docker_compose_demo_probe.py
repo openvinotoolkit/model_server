@@ -37,9 +37,6 @@ MODEL_DIRS = {
     "tensorflow": "src/test/dummy_tflite",
     "onnx": "demos/using_onnx_model/python/workspace/resnet50-onnx",
     "paddle": "demos/classification_using_paddlepaddle_model/python/model",
-    "espeak": "src/test/llm_testing/hexgrad/Kokoro-82M",
-    "gpu": "src/test/llm_testing/thenlper/gte-small/ov",
-    "npu": "src/test/llm_testing/thenlper/gte-small/ov",
 }
 
 
@@ -163,20 +160,21 @@ def model_mounts(component, work_dir):
         handler = "src/test/mediapipe/python/scripts/add_two_inputs.py"
         return (mount(ROOT / "src/test/mediapipe/graphpythonsummator.pbtxt", "/summator.pbtxt")
                 + mount(ROOT / handler, f"/ovms/{handler}"))
-    model_dir = ROOT / MODEL_DIRS[component]
-    graph_path = model_dir / "graph.pbtxt"
-    llm_path = os.environ.get("TEST_LLM_PATH")
-    if llm_path and component in ("gpu", "npu", "espeak"):
+    graph_path = None
+    if component in ("gpu", "npu", "espeak"):
+        llm_path = Path(os.environ.get("TEST_LLM_PATH") or ROOT / "src/test/llm_testing").resolve()
         if component == "espeak":
-            model_dir = Path(llm_path).resolve() / "OpenVINO/Kokoro-82M-int8-ov"
+            model_dir = llm_path / "OpenVINO/Kokoro-82M-int8-ov"
             graph_path = ROOT / "src/test/audio/graph_tts.pbtxt"
         else:
-            model_dir = Path(llm_path).resolve() / "OpenVINO/bge-base-en-v1.5-int8-ov"
+            model_dir = llm_path / "OpenVINO/bge-base-en-v1.5-int8-ov"
             graph_path = ROOT / "src/test/embeddings/graph_ov.pbtxt"
+    else:
+        model_dir = ROOT / MODEL_DIRS[component]
     if not model_dir.is_dir():
         raise RuntimeError(f"missing model directory {model_dir}; see composer.md for one-time setup")
     args = mount(model_dir, "/model")
-    if component in ("gpu", "npu", "espeak"):
+    if graph_path is not None:
         graph = graph_path.read_text()
         graph = re.sub(r'models_path:.*', 'models_path: "/model"', graph)
         graph_name = "tts.pbtxt" if component == "espeak" else "embeddings.pbtxt"

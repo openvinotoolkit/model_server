@@ -45,13 +45,17 @@ DEFAULT_GPU_DRIVER_VERSION = {
 NPU_DRIVER_DOWNLOADS = {
     "22.04": [
         "curl -fL -O https://github.com/intel/linux-npu-driver/releases/download/v1.26.0/linux-npu-driver-v1.26.0.20251125-19665715237-ubuntu2204.tar.gz",
+        "echo 'cfdbcc9adc1ea20d498ebd9cbdb5c212f6fc940e1034ef7a72e239a8636f653a  linux-npu-driver-v1.26.0.20251125-19665715237-ubuntu2204.tar.gz' | sha256sum -c -",
         "tar -xf linux-npu-driver-v1.26.0.20251125-19665715237-ubuntu2204.tar.gz",
         "curl -fL -O https://github.com/oneapi-src/level-zero/releases/download/v1.24.2/level-zero_1.24.2+u22.04_amd64.deb",
+        "echo '7c304e93835d96025c90f6a3d8f2ce5edf142c24da9f4871113a4f0225fef22e  level-zero_1.24.2+u22.04_amd64.deb' | sha256sum -c -",
     ],
     "24.04": [
         "curl -fL -O https://github.com/intel/linux-npu-driver/releases/download/v1.35.0/linux-npu-driver-v1.35.0.20260722-29947505341-ubuntu2404.tar.gz",
+        "echo '398343e53fdac6023ad0856ef88bb6011b1e12447a112be55e85e27ef7f96c66  linux-npu-driver-v1.35.0.20260722-29947505341-ubuntu2404.tar.gz' | sha256sum -c -",
         "tar -xf linux-npu-driver-v1.35.0.20260722-29947505341-ubuntu2404.tar.gz",
         "curl -fL -O https://github.com/oneapi-src/level-zero/releases/download/v1.33.1/libze1_1.33.1+u24.04_amd64.deb",
+        "echo '298d6d3656a13f112497f557be2cb557efb67374bc7d069aa77a9115db909e1d  libze1_1.33.1+u24.04_amd64.deb' | sha256sum -c -",
     ],
     "26.04": [
         "curl -fL -O https://github.com/intel/linux-npu-driver/releases/download/v1.38.0/linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2604.tar.gz",
