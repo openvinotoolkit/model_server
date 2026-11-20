@@ -34,10 +34,12 @@ import sys
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DOCKERFILE_NAME = "Dockerfile.compose"
 GPU_DRIVERS_SCRIPT = "install_ubuntu_gpu_drivers.sh"
+LEVEL_ZERO_LOADER_SCRIPT = "install_ubuntu_level_zero_loader.sh"
 
 DEFAULT_GPU_DRIVER_VERSION = {
     "22.04": "24.39.31294",
     "24.04": "26.31.39395",
+    "26.04": "26.31.39395",
 }
 
 NPU_DRIVER_DOWNLOADS = {
@@ -50,6 +52,11 @@ NPU_DRIVER_DOWNLOADS = {
         "curl -fL -O https://github.com/intel/linux-npu-driver/releases/download/v1.35.0/linux-npu-driver-v1.35.0.20260722-29947505341-ubuntu2404.tar.gz",
         "tar -xf linux-npu-driver-v1.35.0.20260722-29947505341-ubuntu2404.tar.gz",
         "curl -fL -O https://github.com/oneapi-src/level-zero/releases/download/v1.33.1/libze1_1.33.1+u24.04_amd64.deb",
+    ],
+    "26.04": [
+        "curl -fL -O https://github.com/intel/linux-npu-driver/releases/download/v1.38.0/linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2604.tar.gz",
+        "echo '83685e6d92f4db1ca65e442846d487c7feb1335634b33994292ceb38f933bcc7  linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2604.tar.gz' | sha256sum -c -",
+        "tar -xf linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2604.tar.gz",
     ],
 }
 
@@ -165,14 +172,15 @@ def filter_stage(full_image, flags):
 
 def release_stage(base_image, info, flags):
     os_version = info["os_version"]
+    xml_package = "libxml2-16" if os_version == "26.04" else "libxml2"
     df = """
 FROM {base} AS release
 ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 WORKDIR /
-RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates libxml2 && \\
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates {xml_package} && \\
     apt-get clean && rm -rf /var/lib/apt/lists/*
-""".format(base=base_image)
+""".format(base=base_image, xml_package=xml_package)
 
     if flags.gpu:
         driver_version = flags.gpu_driver_version or DEFAULT_GPU_DRIVER_VERSION[os_version]
@@ -180,6 +188,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certifi
 COPY {script} /tmp/install_gpu_drivers.sh
 RUN INSTALL_DRIVER_VERSION="{version}" /tmp/install_gpu_drivers.sh && rm -f /tmp/install_gpu_drivers.sh
 """.format(script=GPU_DRIVERS_SCRIPT, version=driver_version)
+
+    if os_version == "26.04" and (flags.gpu or flags.npu):
+        df += """
+COPY {script} /tmp/install_level_zero_loader.sh
+RUN BASE_OS=ubuntu26 bash /tmp/install_level_zero_loader.sh && rm -f /tmp/install_level_zero_loader.sh
+""".format(script=LEVEL_ZERO_LOADER_SCRIPT)
 
     if flags.npu:
         df += """
@@ -255,9 +269,14 @@ def main():
     base_image = flags.base_image or info["base_image"] or "ubuntu:{}".format(info["os_version"])
 
     os.makedirs(flags.work_dir, exist_ok=True)
+    scripts = []
     if flags.gpu:
-        src = os.path.join(SCRIPT_DIR, GPU_DRIVERS_SCRIPT)
-        dst = os.path.join(flags.work_dir, GPU_DRIVERS_SCRIPT)
+        scripts.append(GPU_DRIVERS_SCRIPT)
+    if info["os_version"] == "26.04" and (flags.gpu or flags.npu):
+        scripts.append(LEVEL_ZERO_LOADER_SCRIPT)
+    for script in scripts:
+        src = os.path.join(SCRIPT_DIR, script)
+        dst = os.path.join(flags.work_dir, script)
         if not (os.path.exists(dst) and os.path.samefile(src, dst)):
             shutil.copy(src, dst)
 
