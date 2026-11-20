@@ -21,7 +21,7 @@ Optional features copy the relevant artifacts from the full image and install
 the required system dependencies.
 
 Example:
-    python3 docker_compose.py --full-image openvino/model_server:weekly --gpu --onnx -o ovms-gpu
+    python3 compose.py --full-image openvino/model_server:weekly --gpu --onnx -o ovms-gpu
 """
 
 import argparse
@@ -35,6 +35,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DOCKERFILE_NAME = "Dockerfile.compose"
 GPU_DRIVERS_SCRIPT = "install_ubuntu_gpu_drivers.sh"
 LEVEL_ZERO_LOADER_SCRIPT = "install_ubuntu_level_zero_loader.sh"
+DEFAULT_FULL_IMAGE = "openvino/model_server:weekly"
 
 DEFAULT_GPU_DRIVER_VERSION = {
     "22.04": "24.52.32224",
@@ -174,6 +175,10 @@ def filter_stage(full_image, flags):
     return df
 
 
+def needs_level_zero_loader(os_version, flags):
+    return (flags.gpu or flags.npu) and (os_version == "26.04" or not flags.npu)
+
+
 def release_stage(base_image, info, flags):
     os_version = info["os_version"]
     xml_package = "libxml2-16" if os_version == "26.04" else "libxml2"
@@ -193,11 +198,11 @@ COPY {script} /tmp/install_gpu_drivers.sh
 RUN INSTALL_DRIVER_VERSION="{version}" /tmp/install_gpu_drivers.sh && rm -f /tmp/install_gpu_drivers.sh
 """.format(script=GPU_DRIVERS_SCRIPT, version=driver_version)
 
-    if os_version == "26.04" and (flags.gpu or flags.npu):
+    if needs_level_zero_loader(os_version, flags):
         df += """
 COPY {script} /tmp/install_level_zero_loader.sh
-RUN BASE_OS=ubuntu26 bash /tmp/install_level_zero_loader.sh && rm -f /tmp/install_level_zero_loader.sh
-""".format(script=LEVEL_ZERO_LOADER_SCRIPT)
+RUN BASE_OS={base_os} bash /tmp/install_level_zero_loader.sh && rm -f /tmp/install_level_zero_loader.sh
+""".format(script=LEVEL_ZERO_LOADER_SCRIPT, base_os="ubuntu" + os_version.split(".")[0])
 
     if flags.npu:
         df += """
@@ -240,7 +245,8 @@ def main():
         description="Compose a custom OVMS docker image with selected features from a full OVMS image. "
                     "By default all optional features are disabled. Approximate size increases are measured "
                     "against the default image from openvino/model_server-gpu:latest on Ubuntu 24.04.")
-    parser.add_argument("--full-image", required=True, help="Full OVMS docker image including all components.")
+    parser.add_argument("--full-image", default=DEFAULT_FULL_IMAGE,
+                        help="Source OVMS Docker image (default: %(default)s).")
     parser.add_argument("-o", "--output-name", default="ovms-custom", help="Name of the generated image. Default: ovms-custom")
     parser.add_argument("--base-image", help="Base image for the generated image. Default: base image of the full image.")
     parser.add_argument("--gpu", action="store_true", help="Adds Intel GPU support and drivers (about +500 MB).")
@@ -276,7 +282,7 @@ def main():
     scripts = []
     if flags.gpu:
         scripts.append(GPU_DRIVERS_SCRIPT)
-    if info["os_version"] == "26.04" and (flags.gpu or flags.npu):
+    if needs_level_zero_loader(info["os_version"], flags):
         scripts.append(LEVEL_ZERO_LOADER_SCRIPT)
     for script in scripts:
         src = os.path.join(SCRIPT_DIR, script)

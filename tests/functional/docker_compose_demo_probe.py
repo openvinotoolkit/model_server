@@ -137,6 +137,11 @@ def validate_response(component, payload, repo_fixture):
         validate_wav(payload)
         return
     result = json.loads(payload)
+    if component == "base":
+        text = result["choices"][0]["text"]
+        if not isinstance(text, str) or not text.strip() or result["usage"]["completion_tokens"] <= 0:
+            raise ValueError("empty CPU text completion")
+        return
     if component in ("gpu", "npu"):
         if not result["data"][0]["embedding"]:
             raise ValueError("empty embedding")
@@ -161,9 +166,12 @@ def model_mounts(component, work_dir):
         return (mount(ROOT / "src/test/mediapipe/graphpythonsummator.pbtxt", "/summator.pbtxt")
                 + mount(ROOT / handler, f"/ovms/{handler}"))
     graph_path = None
-    if component in ("gpu", "npu", "espeak"):
+    if component in ("base", "gpu", "npu", "espeak"):
         llm_path = Path(os.environ.get("TEST_LLM_PATH") or ROOT / "src/test/llm_testing").resolve()
-        if component == "espeak":
+        if component == "base":
+            model_dir = llm_path / "mzeglars/dummy-cyclic-gpt2-ov"
+            graph_path = ROOT / "src/test/llm/lm_cb_regular.pbtxt"
+        elif component == "espeak":
             model_dir = llm_path / "OpenVINO/Kokoro-82M-int8-ov"
             graph_path = ROOT / "src/test/audio/graph_tts.pbtxt"
         else:
@@ -177,10 +185,13 @@ def model_mounts(component, work_dir):
     if graph_path is not None:
         graph = graph_path.read_text()
         graph = re.sub(r'models_path:.*', 'models_path: "/model"', graph)
-        graph_name = "tts.pbtxt" if component == "espeak" else "embeddings.pbtxt"
-        if component in ("gpu", "npu"):
-            graph = re.sub(r'^([ \t]*models_path:.*)$', r'\1\n        target_device: "' + component.upper() + '"',
-                           re.sub(r'^\s*target_device:.*$', '', graph, flags=re.MULTILINE), flags=re.MULTILINE)
+        graph_name = {"base": "llm.pbtxt", "espeak": "tts.pbtxt"}.get(component, "embeddings.pbtxt")
+        if component in ("base", "gpu", "npu"):
+            device = "CPU" if component == "base" else component.upper()
+            device_field = "device" if component == "base" else "target_device"
+            graph = re.sub(rf'^[ \t]*{device_field}:.*$', '', graph, flags=re.MULTILINE)
+            graph = re.sub(r'^([ \t]*models_path:.*)$', rf'\1\n        {device_field}: "{device}"',
+                           graph, flags=re.MULTILINE)
         path = work_dir / graph_name
         path.write_text(graph)
         args += mount(path, f"/{graph_name}")
@@ -206,7 +217,7 @@ def demo_request(component, fixture, endpoint, repo_fixture):
 
 
 def run_demo(component, fixtures, image, container, work_dir, device_args):
-    endpoint = {"gpu": "/v1/embeddings", "npu": "/v1/embeddings",
+    endpoint = {"base": "/v3/completions", "gpu": "/v1/embeddings", "npu": "/v1/embeddings",
                 "espeak": "/v1/audio/speech"}.get(component, "/v2/models/smoke/infer")
     fixture = (fixtures / component).resolve()
     repo_fixture = fixture == FIXTURES / component

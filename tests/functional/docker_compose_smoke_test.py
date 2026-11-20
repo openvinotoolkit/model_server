@@ -43,7 +43,7 @@ ARTIFACTS = {
 }
 SIZES_MB = (0, 500, 300, 50, 95, 5, 2, 5, 10)
 ERRORS = (OSError, subprocess.SubprocessError, RuntimeError, ValueError, KeyError, IndexError, TypeError)
-MISSING_DEVICE_FAILURES = {
+MISSING_DEVICE_SKIPS = {
     ("`gpu`", "GPU smoke test requires a host render device under /dev/dri"),
     ("`gpu` Level 2", "GPU Level 2 requires a host render device"),
     ("`npu` Level 2", "missing host NPU device /dev/accel/accel0"),
@@ -63,13 +63,13 @@ def parse_args():
     parser.add_argument("--skip-pull", action="store_true", help="Use the local source image without pulling it.")
     parser.add_argument("--with-python", action="store_true", help="Also retain Python in non-Python images.")
     parser.add_argument("--with-opencv", action="store_true", help="Also retain OpenCV in non-OpenCV images.")
-    parser.add_argument("--report", type=Path, default=probe.ROOT / "test_log/docker_compose_smoke_report.log",
-                        help="Report path (default: test_log/docker_compose_smoke_report.log).")
+    parser.add_argument("--report", type=Path, default=probe.ROOT / "docker_compose_smoke_report.log",
+                        help="Report path (default: docker_compose_smoke_report.log in the repository root).")
     parser.add_argument("--demo", dest="fixtures", action="store_const", const=probe.FIXTURES,
                         help="Run Level 2 using repository fixtures.")
     parser.add_argument("--demo-fixtures", dest="fixtures", type=Path, metavar="DIR",
                         help="Run Level 2 using a custom fixture directory.")
-    parser.add_argument("--demo-component", action="append", choices=list(ARTIFACTS)[1:],
+    parser.add_argument("--demo-component", action="append", choices=list(ARTIFACTS),
                         help="Limit Level 2 to this component (repeatable; requires --demo or --demo-fixtures).")
     parser.add_argument("--allow-cpu-fallback", action="store_true",
                         help="Check the GPU image's artifacts on CPU if no render device exists; "
@@ -90,7 +90,7 @@ def run_smoke(args, component, image, container, work_dir, device_args):
     if args.skip_pull:
         flags.append("--skip-pull")
     print(f"Building {image} from {args.full_image}", flush=True)
-    result = subprocess.run([sys.executable, str(probe.ROOT / "docker_compose.py"), "--full-image", args.full_image,
+    result = subprocess.run([sys.executable, str(probe.ROOT / "compose.py"), "--full-image", args.full_image,
                              "--output-name", image, "--work-dir", str(work_dir), *flags], check=False, timeout=900)
     if result.returncode:
         raise RuntimeError(f"composer build failed (exit {result.returncode}); see command output")
@@ -141,7 +141,7 @@ def component_checks(args, component, work_dir):
         return
 
     demo_selected = not args.demo_component or component in args.demo_component
-    if args.fixtures is not None and component != "base" and demo_selected:
+    if args.fixtures is not None and demo_selected:
         try:
             if component == "gpu" and not device_args:
                 raise RuntimeError("GPU Level 2 requires a host render device")
@@ -157,7 +157,7 @@ def report_passed(path):
             continue
         component, status, detail = (cell.strip() for cell in line.strip("|").split("|"))
         found_result = True
-        if status != "PASS" and (status != "FAIL" or (component, detail) not in MISSING_DEVICE_FAILURES):
+        if status != "PASS" and (status != "SKIP" or (component, detail) not in MISSING_DEVICE_SKIPS):
             return False
     return found_result
 
@@ -179,10 +179,13 @@ def main():
             print(f"Running composer smoke test: {component}", flush=True)
             with TemporaryDirectory() as work_dir:
                 for level, passed, detail in component_checks(args, component, Path(work_dir)):
+                    label = f"`{component}`{level}"
                     status = "PASS" if passed else "FAIL"
+                    if not passed and (label, detail) in MISSING_DEVICE_SKIPS:
+                        status = "SKIP"
                     print(f"{status}: {component}{level}: {detail}", flush=True)
                     summary = " ".join(detail.splitlines()).replace("|", "/")
-                    report.write(f"| `{component}`{level} | {status} | {summary} |\n")
+                    report.write(f"| {label} | {status} | {summary} |\n")
     passed = report_passed(args.report)
     verdict = f"Overall result: {'PASS' if passed else 'FAIL'}"
     with args.report.open("a", encoding="utf-8") as report:
