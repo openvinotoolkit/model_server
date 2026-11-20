@@ -815,11 +815,6 @@ Status HttpRestApiHandler::processOpenAI(const std::string_view uri, const HttpR
 #endif
 }
 
-Status HttpRestApiHandler::processOpenAI(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) {
-    HttpResponseComponents response_components;
-    return processOpenAI(uri, request_components, response, request_body, response_components, std::move(serverReaderWriter), std::move(multiPartParser));
-}
-
 Status HttpRestApiHandler::processMetrics(const HttpRequestComponents& request_components, HttpResponseComponents& response_components, std::string& response, const std::string& request_body) {
     auto module = this->ovmsServer.getModule(METRICS_MODULE_NAME);
     if (nullptr == module) {
