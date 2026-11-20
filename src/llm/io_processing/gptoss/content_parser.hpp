@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 
+#include "generation_context.hpp"
 #include "../base_output_parser.hpp"
 
 namespace ovms {
@@ -40,8 +41,11 @@ class GptOssContentParser final : public BaseOutputParser {
     std::string pendingInput;
     std::size_t processedChunkSize = 0;
     bool shouldEmitCurrentMessageBody = false;
+    GptOssGenerationContext promptState;
+    bool assistantRoleAlreadyInPrompt = false;
+    bool initialChannelMessagePending = false;
 
-    bool shouldEmitBody(const std::string& header) const;
+    bool shouldEmitBody(const std::string& header, bool assistantRoleAlreadyInPrompt) const;
     void appendNewChunk(const std::string& chunk);
     ParseProgress consumeHeader(std::string& content);
     ParseProgress consumeBody(std::string& content, bool& wasMessageConsumed);
@@ -52,7 +56,8 @@ public:
     static OutputParsingConfig defaultParsingConfig();
 
     explicit GptOssContentParser(ov::genai::Tokenizer& tokenizer,
-        std::optional<OutputParsingConfig> configOverride = std::nullopt);
+        std::optional<OutputParsingConfig> configOverride,
+        const ModelGenerationContext& context);
 
     void resetState() override;
 

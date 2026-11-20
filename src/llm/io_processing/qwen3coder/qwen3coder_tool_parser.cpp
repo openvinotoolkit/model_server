@@ -265,17 +265,13 @@ std::optional<ToolCalls_t> Qwen3CoderToolParserImpl::finalizeOnGenerationEnd() {
 }
 
 Qwen3CoderToolParser::Qwen3CoderToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas,
-    std::optional<OutputParsingConfig> configOverride) :
+    std::optional<OutputParsingConfig> configOverride, const ModelGenerationContext& context) :
     BaseOutputParser(tokenizer, [&]() {
         if (configOverride.has_value())
             return std::move(*configOverride);
         OutputParsingConfig cfg;
         cfg.startTags = {TOOL_START_TAG, FUNCTION_NAME_TAG};
-        return cfg;
-    }()),
-    toolSchemas(toolSchemas),
-    toolsParametersTypes(createToolsParametersTypesMap(toolSchemas)),
-    streamParser(this->toolsParametersTypes) {
+        return cfg; }(), context), toolSchemas(toolSchemas), toolsParametersTypes(createToolsParametersTypesMap(toolSchemas)), streamParser(this->toolsParametersTypes) {
 }
 
 std::optional<std::string> Qwen3CoderToolParserImpl::getCurrentFunctionName() const {

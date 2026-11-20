@@ -27,6 +27,9 @@
 #include "llama3/generation_config_builder.hpp"
 #include "hermes3/generation_config_builder.hpp"
 #include "devstral/generation_config_builder.hpp"
+#include "qwen3coder/generation_config_builder.hpp"
+#include "mistral/generation_config_builder.hpp"
+#include "gptoss/generation_config_builder.hpp"
 #include "../apis/openai_request.hpp"
 #include "../../logging.hpp"
 
@@ -49,6 +52,12 @@ public:
             builder_impl = std::make_unique<Phi4GenerationConfigBuilder>(baseConfig, enableToolGuidedGeneration, decodingMethod);
         } else if (toolParserName == "devstral") {
             builder_impl = std::make_unique<DevstralGenerationConfigBuilder>(baseConfig, enableToolGuidedGeneration, decodingMethod);
+        } else if (toolParserName == "qwen3coder") {
+            builder_impl = std::make_unique<Qwen3CoderGenerationConfigBuilder>(baseConfig, enableToolGuidedGeneration, decodingMethod);
+        } else if (toolParserName == "mistral") {
+            builder_impl = std::make_unique<MistralGenerationConfigBuilder>(baseConfig, enableToolGuidedGeneration, decodingMethod);
+        } else if (toolParserName == "gptoss") {
+            builder_impl = std::make_unique<GptOssGenerationConfigBuilder>(baseConfig, enableToolGuidedGeneration, decodingMethod);
         } else {
             if (enableToolGuidedGeneration) {
                 SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Option enable_tool_guided_generation is set, but will not be effective since no valid tool parser has been provided.");
@@ -77,16 +86,16 @@ public:
         builder_impl->parseConfigFromRequest(request);
     }
 
-    void configureStructuredGeneration(const OpenAIRequest& request, const ReasoningGenerationContext& reasoningContext, const std::string& reasoningParserName) {
-        builder_impl->configureStructuredGeneration(request, reasoningContext, reasoningParserName);
+    void configureStructuredGeneration(const OpenAIRequest& request, const ModelGenerationContext& generationContext, const std::string& reasoningParserName) {
+        builder_impl->configureStructuredGeneration(request, generationContext, reasoningParserName);
     }
 
     /** Builds sampling and structured-output parameters after input rendering, retaining grammar-validation fallback. */
-    void build(const OpenAIRequest& request, const ReasoningGenerationContext& reasoningContext, const std::string& reasoningParserName, ov::genai::Tokenizer& tokenizer) {
+    void build(const OpenAIRequest& request, const ModelGenerationContext& generationContext, const std::string& reasoningParserName, ov::genai::Tokenizer& tokenizer) {
         parseConfigFromRequest(request);
         adjustConfigForDecodingMethod();
         try {
-            configureStructuredGeneration(request, reasoningContext, reasoningParserName);
+            configureStructuredGeneration(request, generationContext, reasoningParserName);
             validateStructuredOutputConfig(tokenizer);
         } catch (const ResponseFormatInvariantError& e) {
             SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Response format invariant failed during structured generation setup: {}", e.what());

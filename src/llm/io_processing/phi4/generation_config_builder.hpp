@@ -29,6 +29,6 @@ public:
         BaseGenerationConfigBuilder(baseConfig, enableToolGuidedGeneration, decodingMethod) {}
 
     bool supportsToolGuidance() const override { return true; }
-    void applyToolGuidance(const OpenAIRequest& request) override;
+    void applyToolGuidance(const OpenAIRequest& request, const ModelGenerationContext& generationContext) override;
 };
 }  // namespace ovms

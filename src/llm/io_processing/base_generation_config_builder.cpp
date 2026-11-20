@@ -141,12 +141,12 @@ void BaseGenerationConfigBuilder::setStructuralTagsConfig(const ov::genai::Struc
 }
 
 bool BaseGenerationConfigBuilder::requiresNamedToolCall(const OpenAIRequest& request) {
-    return !request.toolChoice.empty() && request.toolChoice != "auto" && request.toolChoice != "none" && request.toolChoice != "required";
+    return request.toolChoice == ToolChoiceMode::NamedFunction;
 }
 
 bool BaseGenerationConfigBuilder::shouldApplyToolGuidance(const OpenAIRequest& request) const {
     return supportsToolGuidance() && !request.toolNameSchemaMap.empty() &&
-           (enableToolGuidedGeneration || request.toolChoice == "required" || requiresNamedToolCall(request));
+           (enableToolGuidedGeneration || request.toolChoice == ToolChoiceMode::Required || requiresNamedToolCall(request));
 }
 
 bool BaseGenerationConfigBuilder::shouldApplyResponseFormatGuidance(const OpenAIRequest& request) {
@@ -158,7 +158,7 @@ bool BaseGenerationConfigBuilder::shouldApplyResponseFormatGuidance(const OpenAI
 void BaseGenerationConfigBuilder::setToolGrammar(const OpenAIRequest& request, const std::shared_ptr<ov::genai::StructuredOutputConfig::TriggeredTags>& tags) {
     config.structured_output_config.emplace();
     const bool namedChoice = requiresNamedToolCall(request);
-    tags->at_least_one = request.toolChoice == "required" || namedChoice;
+    tags->at_least_one = request.toolChoice == ToolChoiceMode::Required || namedChoice;
     tags->stop_after_first = namedChoice;
     setStructuralTagsConfig(tags);
 }
@@ -195,21 +195,22 @@ void BaseGenerationConfigBuilder::unsetStructuredOutputConfig() {
     config.structured_output_config.reset();
 }
 
-void BaseGenerationConfigBuilder::applyToolGuidance(const OpenAIRequest&) {
+void BaseGenerationConfigBuilder::applyToolGuidance(const OpenAIRequest&, const ModelGenerationContext&) {
 }
 
-void BaseGenerationConfigBuilder::configureStructuredGeneration(const OpenAIRequest& request, const ReasoningGenerationContext& reasoningContext, const std::string& reasoningParserName) {
+void BaseGenerationConfigBuilder::configureStructuredGeneration(const OpenAIRequest& request, const ModelGenerationContext& generationContext, const std::string& reasoningParserName) {
     if (shouldApplyToolGuidance(request)) {
-        applyToolGuidance(request);
+        applyToolGuidance(request, generationContext);
     } else if (shouldApplyResponseFormatGuidance(request)) {
-        applyResponseFormatGuidance(request, reasoningContext, reasoningParserName);
+        applyResponseFormatGuidance(request, generationContext, reasoningParserName);
     } else {
         // No request-specific guidance; preserve model defaults.
     }
 }
 
-void BaseGenerationConfigBuilder::applyResponseFormatGuidance(const OpenAIRequest& request, const ReasoningGenerationContext& reasoningContext, const std::string& reasoningParserName) {
+void BaseGenerationConfigBuilder::applyResponseFormatGuidance(const OpenAIRequest& request, const ModelGenerationContext& generationContext, const std::string& reasoningParserName) {
     using SOC = ov::genai::StructuredOutputConfig;
+    const auto& reasoningContext = generationContext.reasoning;
     config.structured_output_config.emplace();
     SOC::StructuralTag answerFormat = *request.responseFormat;
     // TODO: Hardcoded for qwen3 now - should be generalized

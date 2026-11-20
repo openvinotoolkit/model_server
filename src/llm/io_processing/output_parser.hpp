@@ -30,6 +30,8 @@ namespace ovms {
 // OutputParser orchestrates the streaming parsing pipeline.
 //
 // Responsibilities of OutputParser (the orchestrator):
+//   - Initialization: construct every selected parser with the generic generation context,
+//     then derive startup routing from their completed configuration.
 //   - Phase lifecycle: detect phase transitions by looking for start/end tags declared
 //     in each parser's OutputParsingConfig; switch the active phase accordingly.
 //   - Buffer management: accumulate decoded text in StreamOutputCache, hold it while a
@@ -39,13 +41,20 @@ namespace ovms {
 //   - Routing: deliver each flush exclusively to the parser that owns the current phase.
 //     A specific parser's parseChunk() is only ever called with text that belongs to its
 //     active phase — the parser does not need to detect or handle phase transitions.
+//   - Prompt continuation: on the first generated output only, match configured
+//     promptContinuationStartTags at byte zero to route text that completes a prompt-open
+//     header. The prompt text itself is never added to StreamOutputCache.
 //   - Coordination: manage the interplay between tool, reasoning, and content parsers
 //     across the full generation sequence.
 //
 // Responsibilities of BaseOutputParser subclasses (the specific parsers):
+//   - Adapt the generic generation context during construction when format-specific
+//     startup state is needed. Retain owned state, not the rendered-prompt view;
+//     resetState() restores that state without adapting the prompt again.
 //   - Declare phase boundaries by returning a correctly populated OutputParsingConfig
-//     (startTags, endTag, preambleStartTags, etc.).  This is the sole coupling point
-//     with the orchestrator — no knowledge of OutputParser internals is required.
+//     (startTags, endTags, unknownPhaseStartTags, promptContinuationStartTags, etc.).
+//     This is the sole coupling point with the orchestrator — no knowledge of
+//     OutputParser internals is required.
 //   - Implement parseChunk() to process the text it receives during its active phase.
 //     The parser may maintain arbitrary internal state and buffers to satisfy its own
 //     format requirements; OutputParser does not inspect or constrain that state.
@@ -70,6 +79,7 @@ public:
     public:
         TagLookupStatus lookupTag(const std::string& tag) const;
         TagLookupStatus lookupTags(const std::vector<std::string>& tags) const;
+        TagLookupStatus lookupPromptContinuationStartTags(const std::vector<std::string>& tags) const;
         void add(const std::string& chunk);
         void clear();
         const std::string& getBuffer() const;
@@ -90,9 +100,11 @@ private:
     std::unique_ptr<BaseOutputParser> contentParser = nullptr;
 
     // Streaming related members
-    ProcessingPhase processingPhase = UNKNOWN;
+    ProcessingPhase initialProcessingPhase = UNKNOWN;
+    ProcessingPhase activeProcessingPhase = UNKNOWN;
     StreamOutputCache streamOutputCache;
     bool implicitReasoningStart = false;
+    bool promptContinuationCheckNeeded = false;
 
     // Baseline decode mode for content/unknown phases — true when the model/output format
     // needs special tokens visible before any parser-owned phase becomes active.
@@ -106,11 +118,12 @@ private:
 
     std::optional<Delta> parseToolCallChunk(const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase = TOOL_CALLS_PROCESSING_TOOL);
     std::optional<Delta> parseReasoningChunk(const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason, ProcessingPhase newPhase = REASONING);
+    bool hasPromptContinuationStartTags() const;
 
 public:
     OutputParser() = delete;
     explicit OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName,
-        const ToolsSchemas_t& toolNameSchemaMap, const std::string& contentParserName = "");
+        const ToolsSchemas_t& toolNameSchemaMap, const ModelGenerationContext& generationContext, std::string contentParserName = {});
 
     bool isToolParserAvailable() const;
     bool isReasoningParserAvailable() const;

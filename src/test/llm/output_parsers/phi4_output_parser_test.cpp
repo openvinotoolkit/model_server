@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "../../../llm/io_processing/base_output_parser.hpp"
+#include "../../../llm/io_processing/generation_config_builder.hpp"
 #include "../../../llm/io_processing/output_parser.hpp"
 #include "output_parser_test_utils.hpp"
 #include "../../platform_utils.hpp"
@@ -54,9 +55,43 @@ protected:
     }
 
     void SetUp() override {
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*phi4Tokenizer, "phi4", "", EMPTY_TOOLS_SCHEMA);
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*phi4Tokenizer, "phi4", "", EMPTY_TOOLS_SCHEMA, ovms::ModelGenerationContext{});
     }
 };
+
+TEST(Phi4ToolGuidanceConfigTest, ArrayCallCountMatchesToolChoice) {
+    for (const ToolChoiceMode choice : {ToolChoiceMode::Auto, ToolChoiceMode::Required, ToolChoiceMode::NamedFunction}) {
+        SCOPED_TRACE(static_cast<int>(choice));
+        const bool namedChoice = choice == ToolChoiceMode::NamedFunction;
+        OpenAIRequest request;
+        request.toolChoice = choice;
+        if (namedChoice)
+            request.toolChoiceFunctionName = "weather";
+        const std::string argumentsSchema = R"({"type":"object","properties":{"city":{"type":"string"}},"required":["city"]})";
+        request.toolNameSchemaMap.emplace("weather", ToolSchemaWrapper{nullptr, argumentsSchema});
+        if (!namedChoice)
+            request.toolNameSchemaMap.emplace("forecast", ToolSchemaWrapper{nullptr, argumentsSchema});
+        GenerationConfigBuilder builder{{}, "phi4", true, DecodingMethod::STANDARD};
+        builder.configureStructuredGeneration(request, {}, "");
+        ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
+        using SOC = ov::genai::StructuredOutputConfig;
+        const auto& structuralTag = std::get<SOC::StructuralTag>(*builder.getConfig().structured_output_config->structural_tags_config);
+        const auto tags = std::get<std::shared_ptr<SOC::TriggeredTags>>(structuralTag);
+        ASSERT_EQ(tags->tags.size(), 1);
+        rapidjson::Document schema;
+        schema.Parse(std::get<SOC::JSONSchema>(tags->tags.front().content).value.c_str());
+        ASSERT_FALSE(schema.HasParseError());
+        ASSERT_EQ(schema.HasMember("minItems"), choice != ToolChoiceMode::Auto);
+        if (schema.HasMember("minItems")) {
+            EXPECT_EQ(schema["minItems"].GetInt(), 1);
+        }
+        ASSERT_EQ(schema.HasMember("maxItems"), namedChoice);
+        if (namedChoice) {
+            EXPECT_EQ(schema["maxItems"].GetInt(), 1);
+        }
+        EXPECT_EQ(schema["items"]["anyOf"].Size(), namedChoice ? 1 : 2);
+    }
+}
 
 TEST_F(Phi4OutputParserTest, ParseToolCallOutputWithSingleToolCall) {
     std::string input = "functools[{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}]";
@@ -216,7 +251,7 @@ TEST_F(Phi4OutputParserTest, HolisticStreaming) {
 
     for (auto lastFinishReason : {ov::genai::GenerationFinishReason::NONE, ov::genai::GenerationFinishReason::STOP, ov::genai::GenerationFinishReason::LENGTH}) {
         // Need to have new output parser per case to simulate separate request processing
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*phi4Tokenizer, "phi4", "", EMPTY_TOOLS_SCHEMA);
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*phi4Tokenizer, "phi4", "", EMPTY_TOOLS_SCHEMA, ovms::ModelGenerationContext{});
         auto chunkToDeltaVecCopy = chunkToDeltaVec;
         if (lastFinishReason == ov::genai::GenerationFinishReason::NONE) {
             chunkToDeltaVecCopy.push_back({"Paris\"}}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":2,"function":{"arguments":"Paris\"}"}}]}})"});
@@ -339,7 +374,7 @@ TEST_F(Phi4OutputParserTest, StreamingToolWithComplexArguments) {
             "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"}}\"}}]}}"},
     };
 
-    auto outputParser = std::make_unique<OutputParser>(*phi4Tokenizer, "phi4", "", EMPTY_TOOLS_SCHEMA);
+    auto outputParser = std::make_unique<OutputParser>(*phi4Tokenizer, "phi4", "", EMPTY_TOOLS_SCHEMA, ovms::ModelGenerationContext{});
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
         std::optional<ovms::Delta> doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
         if (!expectedDelta.has_value() && !doc.has_value()) {

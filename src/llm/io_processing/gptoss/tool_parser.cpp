@@ -42,6 +42,33 @@ void GptOssToolParser::clearHeaderState() {
     functionNameCache.clear();
 }
 
+GptOssToolParser::GptOssToolParser(ov::genai::Tokenizer& tokenizer,
+    std::optional<OutputParsingConfig> configOverride, const ModelGenerationContext& context) :
+    BaseOutputParser(tokenizer,
+        configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig(), context) {
+    promptState = GptOssGenerationContextAdapter::adapt(context);
+    parsingConfig.startsInsidePhase = promptState.header == GptOssGenerationContext::Header::ToolRecipient;
+    parsingConfig.promptContinuationStartTags.clear();
+    if (promptState.header == GptOssGenerationContext::Header::Assistant ||
+        (promptState.header == GptOssGenerationContext::Header::Channel && promptState.channel != "final")) {
+        parsingConfig.promptContinuationStartTags = {" to=functions."};
+    }
+    resetState();
+}
+
+void GptOssToolParser::resetState() {
+    streamState = StreamState::READING_HEADER;
+    toolCallIndex = promptState.header == GptOssGenerationContext::Header::ToolRecipient ? 0 : -1;
+    clearHeaderState();
+    initialRecipientContinuationPending = promptState.header == GptOssGenerationContext::Header::Assistant ||
+                                          (promptState.header == GptOssGenerationContext::Header::Channel && promptState.channel != "final");
+    initialRecipientNamePending = promptState.header == GptOssGenerationContext::Header::ToolRecipient;
+    if (initialRecipientNamePending) {
+        functionNameCache = promptState.partialToolName;
+        isStreamingFunctionName = true;
+    }
+}
+
 // <|start|>assistant to=functions.foo <|constrain|>json<|message|>{...}<|call|>
 // consumeToolCallStartTag -> consumeHeader -> consumeConstrain -> consumeMessage
 std::optional<Delta> GptOssToolParser::parseChunk(const std::string& newChunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
@@ -91,10 +118,34 @@ bool GptOssToolParser::consumeToolCallStartTag(std::string& chunk) {
             return true;
         }
     }
+    if (initialRecipientContinuationPending) {
+        for (const auto& parsingStartTag : parsingConfig.promptContinuationStartTags) {
+            if (chunk.compare(0, parsingStartTag.size(), parsingStartTag) == 0) {
+                toolCallIndex++;
+                clearHeaderState();
+                chunk = chunk.substr(parsingStartTag.size());
+                initialRecipientNamePending = true;
+                initialRecipientContinuationPending = false;
+                return true;
+            }
+        }
+    }
     return false;
 }
 
 GptOssToolParser::StepResult GptOssToolParser::consumeHeader(std::string& chunk, std::optional<Delta>& pendingDelta) {
+    if (initialRecipientNamePending) {
+        const std::size_t nameEnd = chunk.find_first_of(" \t\n\r<");
+        if (nameEnd == std::string::npos) {
+            functionNameCache += chunk;
+            chunk.clear();
+            return needMoreInput();
+        }
+        functionNameCache.append(chunk, 0, nameEnd);
+        chunk.erase(0, nameEnd);
+        initialRecipientNamePending = false;
+        isStreamingFunctionName = false;
+    }
     const StreamState startingState = streamState;
     if (consumeCompleteHeader(chunk, pendingDelta)) {
         return pendingDelta.has_value() ? emitDelta(std::move(*pendingDelta)) : needMoreInput();

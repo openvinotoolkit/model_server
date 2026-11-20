@@ -66,52 +66,52 @@ std::unique_ptr<ov::genai::Tokenizer> DefaultContentParserTest::tokenizer;
 // ── No erase tags ──────────────────────────────────────────────────────────
 
 TEST_F(DefaultContentParserTest, PassThrough_NoTags) {
-    DefaultContentParser parser(*tokenizer);
+    DefaultContentParser parser(*tokenizer, {}, ModelGenerationContext{});
     EXPECT_EQ(parseContent(parser, "hello world"), "hello world");
 }
 
 TEST_F(DefaultContentParserTest, EmptyBuffer_NoTags) {
-    DefaultContentParser parser(*tokenizer);
+    DefaultContentParser parser(*tokenizer, {}, ModelGenerationContext{});
     EXPECT_EQ(parseContent(parser, ""), "");
 }
 
 // ── Single erase tag ───────────────────────────────────────────────────────
 
 TEST_F(DefaultContentParserTest, TagFullyPresent_Erased) {
-    DefaultContentParser parser(*tokenizer, {"<|eot|>"});
+    DefaultContentParser parser(*tokenizer, {"<|eot|>"}, ModelGenerationContext{});
     EXPECT_EQ(parseContent(parser, "<|eot|>"), "");
 }
 
 TEST_F(DefaultContentParserTest, TagInMiddle_SurroundingsKept) {
-    DefaultContentParser parser(*tokenizer, {"<|eom|>"});
+    DefaultContentParser parser(*tokenizer, {"<|eom|>"}, ModelGenerationContext{});
     EXPECT_EQ(parseContent(parser, "before<|eom|>after"), "beforeafter");
 }
 
 TEST_F(DefaultContentParserTest, TagAtEnd_Erased) {
-    DefaultContentParser parser(*tokenizer, {"<|im_end|>"});
+    DefaultContentParser parser(*tokenizer, {"<|im_end|>"}, ModelGenerationContext{});
     EXPECT_EQ(parseContent(parser, "text<|im_end|>"), "text");
 }
 
 TEST_F(DefaultContentParserTest, TagAtStart_Erased) {
-    DefaultContentParser parser(*tokenizer, {"<s>"});
+    DefaultContentParser parser(*tokenizer, {"<s>"}, ModelGenerationContext{});
     EXPECT_EQ(parseContent(parser, "<s>text"), "text");
 }
 
 TEST_F(DefaultContentParserTest, TagRepeated_AllInstancesErased) {
-    DefaultContentParser parser(*tokenizer, {"<|eot|>"});
+    DefaultContentParser parser(*tokenizer, {"<|eot|>"}, ModelGenerationContext{});
     EXPECT_EQ(parseContent(parser, "a<|eot|>b<|eot|>c"), "abc");
 }
 
 // ── Partial match → hold (return nullopt) ──────────────────────────────────
 
 TEST_F(DefaultContentParserTest, PartialTag_Hold) {
-    DefaultContentParser parser(*tokenizer, {"<|eot|>"});
+    DefaultContentParser parser(*tokenizer, {"<|eot|>"}, ModelGenerationContext{});
     // Buffer ends with "<|eot" — suffix overlaps with prefix of "<|eot|>"
     EXPECT_EQ(parseContent(parser, "text.<|eot"), std::nullopt);
 }
 
 TEST_F(DefaultContentParserTest, SingleCharOverlap_Hold) {
-    DefaultContentParser parser(*tokenizer, {"<|im_end|>"});
+    DefaultContentParser parser(*tokenizer, {"<|im_end|>"}, ModelGenerationContext{});
     // Buffer ends with "<" which is the first char of "<|im_end|>"
     EXPECT_EQ(parseContent(parser, "text<"), std::nullopt);
 }
@@ -119,12 +119,12 @@ TEST_F(DefaultContentParserTest, SingleCharOverlap_Hold) {
 // ── Multiple erase tags ────────────────────────────────────────────────────
 
 TEST_F(DefaultContentParserTest, MultipleTags_AllErased) {
-    DefaultContentParser parser(*tokenizer, {"<s>", "<|im_end|>"});
+    DefaultContentParser parser(*tokenizer, {"<s>", "<|im_end|>"}, ModelGenerationContext{});
     EXPECT_EQ(parseContent(parser, "<s>hello<|im_end|>"), "hello");
 }
 
 TEST_F(DefaultContentParserTest, MultipleTags_OnlyPresentOnesErased) {
-    DefaultContentParser parser(*tokenizer, {"<s>", "<|im_end|>"});
+    DefaultContentParser parser(*tokenizer, {"<s>", "<|im_end|>"}, ModelGenerationContext{});
     EXPECT_EQ(parseContent(parser, "<s>hello"), "hello");
 }
 
@@ -133,7 +133,7 @@ TEST_F(DefaultContentParserTest, MultipleTags_OnlyPresentOnesErased) {
 TEST_F(DefaultContentParserTest, CompleteWinsOverIncomplete_Emits) {
     // tag1 = "<turn|>" is fully present; tag2 = "<|tool_response>" is partially overlapping.
     // Expected: content is emitted (not held), with tag1 erased.
-    DefaultContentParser parser(*tokenizer, {"<turn|>", "<|tool_response>"});
+    DefaultContentParser parser(*tokenizer, {"<turn|>", "<|tool_response>"}, ModelGenerationContext{});
     // Buffer: "text<turn|>end<" — "<turn|>" FOUND_COMPLETE, "<" is first char of "<|tool_response>" FOUND_INCOMPLETE
     auto result = parseContent(parser, "text<turn|>end<");
     ASSERT_TRUE(result.has_value()) << "Should emit, not hold: FOUND_COMPLETE beats FOUND_INCOMPLETE";
@@ -143,7 +143,7 @@ TEST_F(DefaultContentParserTest, CompleteWinsOverIncomplete_Emits) {
 // ── Content parser ignores tokens parameter ────────────────────────────────
 
 TEST_F(DefaultContentParserTest, NonEmptyTokensIgnored) {
-    DefaultContentParser parser(*tokenizer, {"<|eot|>"});
+    DefaultContentParser parser(*tokenizer, {"<|eot|>"}, ModelGenerationContext{});
     auto result = parser.parseChunk("hello", {1, 2, 3}, ov::genai::GenerationFinishReason::NONE);
     ASSERT_TRUE(result.has_value());
     const auto* cd = std::get_if<ContentDelta>(&*result);

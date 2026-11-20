@@ -22,6 +22,7 @@
 
 #include "src/port/rapidjson_document.hpp"
 
+#include "generation_context.hpp"
 #include "../base_output_parser.hpp"
 
 namespace ovms {
@@ -37,9 +38,12 @@ protected:
 
     enum class StreamState : int {
         UNKNOWN = 0,
-        READING_REASONING = 1,
+        WAITING_FOR_MESSAGE_START = 1,
+        READING_REASONING = 2,
     };
     StreamState state = StreamState::UNKNOWN;
+    bool promptAnalysisHeaderOpen = false;
+    std::string pendingMessageStart;
 
 public:
     GptOssReasoningParser() = delete;
@@ -54,11 +58,10 @@ public:
     }
 
     explicit GptOssReasoningParser(ov::genai::Tokenizer& tokenizer,
-        std::optional<OutputParsingConfig> configOverride = std::nullopt) :
-        BaseOutputParser(tokenizer,
-            configOverride.has_value() ? std::move(*configOverride) : getDefaultReasoningParsingConfig()) {}
+        std::optional<OutputParsingConfig> configOverride,
+        const ModelGenerationContext& context);
 
-    void resetState() override { state = StreamState::UNKNOWN; }
+    void resetState() override;
 
     std::optional<Delta> parseChunk(const std::string& chunk, const std::vector<int64_t>& tokens, ov::genai::GenerationFinishReason finishReason) override;
 };

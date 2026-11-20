@@ -129,7 +129,7 @@ protected:
     }
 
     void SetUp() override {
-        outputParser = std::make_unique<OutputParser>(*opt125mTokenizer, "onyx", "onyx", toolsSchemas);
+        outputParser = std::make_unique<OutputParser>(*opt125mTokenizer, "onyx", "onyx", toolsSchemas, ovms::ModelGenerationContext{});
     }
 
     ParsedOutput generateParsedOutput(const std::string& input, bool toolsAvailable = true) {
@@ -699,7 +699,7 @@ TEST_F(OnyxOutputParserTest, StreamingContentOnly) {
 TEST_F(OnyxOutputParserTest, StreamingToolEnvelopeNotLeakedWhenSchemasFilledAfterConstruction) {
     // Production code always constructs OutputParser after parseTools() populates the schemas,
     // so schemas are always present at construction time.
-    OutputParser parser(*opt125mTokenizer, "onyx", "onyx", toolsSchemas);
+    OutputParser parser(*opt125mTokenizer, "onyx", "onyx", toolsSchemas, ovms::ModelGenerationContext{});
 
     // Harmony envelope for a tool call, split the way a real generation streams it.
     // The routing prefix "to=get_weather" must be absorbed as a start-tag, not flushed as content.

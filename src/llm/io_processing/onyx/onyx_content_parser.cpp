@@ -48,9 +48,9 @@ OutputParsingConfig OnyxContentParser::defaultParsingConfig() {
 }
 
 OnyxContentParser::OnyxContentParser(ov::genai::Tokenizer& tokenizer,
-    std::optional<OutputParsingConfig> configOverride) :
+    std::optional<OutputParsingConfig> configOverride, const ModelGenerationContext& context) :
     BaseOutputParser(tokenizer,
-        configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+        configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig(), context) {}
 
 std::optional<Delta> OnyxContentParser::parseChunk(
     const std::string& buffer,

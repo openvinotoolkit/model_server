@@ -26,8 +26,8 @@ const std::string asrTextMarker = "<asr_text>";
 
 }  // namespace
 
-Qwen3AsrContentParser::Qwen3AsrContentParser(ov::genai::Tokenizer& tokenizer) :
-    BaseOutputParser(tokenizer) {}
+Qwen3AsrContentParser::Qwen3AsrContentParser(ov::genai::Tokenizer& tokenizer, const ModelGenerationContext& context) :
+    BaseOutputParser(tokenizer, context) {}
 
 void Qwen3AsrContentParser::resetState() {
     asrTextStarted = false;

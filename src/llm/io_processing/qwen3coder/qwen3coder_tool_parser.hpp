@@ -160,7 +160,7 @@ private:
 public:
     Qwen3CoderToolParser() = delete;
     explicit Qwen3CoderToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas,
-        std::optional<OutputParsingConfig> configOverride = std::nullopt);
+        std::optional<OutputParsingConfig> configOverride, const ModelGenerationContext& context);
     void resetState() override {
         streamParser.reset();
         toolCallIndex = -1;

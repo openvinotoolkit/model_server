@@ -167,7 +167,7 @@ public:
         return cfg;
     }
 
-    explicit Minicpm5ToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas);
+    explicit Minicpm5ToolParser(ov::genai::Tokenizer& tokenizer, const ToolsSchemas_t& toolSchemas, const ModelGenerationContext& context);
 
     void resetState() override {
         streamParser.reset();
