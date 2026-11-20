@@ -23,8 +23,8 @@ set "bazelStartupCmd=--output_user_root=%BAZEL_SHORT_PATH%"
 set /p bazelVersion=<"%~dp0.bazelversion"
 set "bazelPath=C:\opt\bazel-%bazelVersion%-windows-x86_64.exe"
 set "setPath=C:\opt;C:\opt\Python314\;C:\opt\Python314\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
-if %2 EQU 1 (set "cleanCmd=%bazelPath% %bazelStartupCmd% clean --expunge") else ( set "cleanCmd=%bazelPath% %bazelStartupCmd% clean" )
-
+::if %2 EQU 1 (set "cleanCmd=%bazelPath% %bazelStartupCmd% clean --expunge") else ( set "cleanCmd=%bazelPath% %bazelStartupCmd% clean" )
+set "cleanCmd=%bazelPath% %bazelStartupCmd% clean --expunge"
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
 set "PATH=%setPath%"
 
