@@ -44,6 +44,9 @@ public:
 
     // API for MP calculators to get all field names.
     virtual std::set<std::string> getAllFieldNames() const = 0;
+
+    // Destructor for virtual class.
+    virtual ~MultiPartParser() = default;
 };
 
 }  // namespace ovms
