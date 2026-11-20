@@ -112,6 +112,32 @@ python benchmark.py ovms-vlm --url http://localhost:8000 --input_length 128 --ou
 filename, HTTP(S) URL, or image data URI. Local files are embedded as base64 data
 URIs; remote image URLs must be accessible to the server.
 
+For audio-capable models, `--audio` accepts a local WAV or MP3 file and sends it
+as `input_audio` in the first user message. The same file is used for every
+conversation, and audio output is disabled by requesting only text:
+
+```bash
+python benchmark.py ovms-vlm --url http://localhost:8120 --model qwen3-omni-30b-a3b-instruct --audio sample.wav --input_length 32 --output_length 64 --max_concurrency 1 --limit 10
+```
+
+Alternatively, `--audio_dataset` loads the dataset's `audio` column and sends a
+different sample per conversation. Use `--hf-subset` and `--split` to select the
+dataset configuration, and `--limit all` to use the entire split:
+
+```bash
+python benchmark.py ovms-vlm --url http://localhost:8120 --model qwen3-omni-30b-a3b-instruct --audio_dataset hf-audio/open-asr-leaderboard --hf-subset librispeech --split test.clean --limit 200 --input_length 32 --output_length 64 --max_concurrency 1
+```
+
+Dataset audio is decoded and encoded as WAV before timing. The prepared audio
+is held in memory, so a whole split may require substantial client memory. Audio
+decoding may require the dependencies for the installed Hugging Face `datasets`
+version (such as TorchCodec for `datasets` 4 and later).
+
+The benchmark reports token throughput and latency, not transcription accuracy.
+It uses synthetic text unless `--text_input_file` is provided, and it requests
+`ignore_eos=true`, so output length and timing may differ from normal transcription.
+For multi-turn requests, the audio remains in the conversation history.
+
 Each independent VLM conversation starts with a random leading identifier in its
 first user message. It is generated and token-checked before timing and counts
 within `--input_length`. This prevents identical initial prompts from unintentionally

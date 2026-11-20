@@ -75,7 +75,7 @@ parser.add_argument('--model', required=False, help='Served model name; auto-det
 parser.add_argument('--request_rate', required=False, default='inf', help='Average amount of requests per seconds in random distribution', dest='request_rate')
 parser.add_argument('--batch_size', required=False, type=positive_int, default=None, help='Strings per request; default 16, or 1 for ovms-vlm and image-gen', dest='batch_size')
 parser.add_argument('--voice', required=False, help='Voice name for text2speech backend', dest='voice')
-parser.add_argument('--limit', required=False, type=positive_int, default=1000, help='Number of documents, or independent conversations for ovms-vlm', dest='limit')
+parser.add_argument('--limit', required=False, type=lambda value: None if value == 'all' else positive_int(value), default=1000, help='Number of documents or conversations; all is supported with --audio_dataset', dest='limit')
 parser.add_argument('--split', required=False, default='train', help='Dataset split', dest='split')
 parser.add_argument('--hf-subset', required=False, help='Hf dataset subset', dest='subset')
 parser.add_argument('--trust-remote-code', required=False, type=bool, default=False, help='Trust remote code from huggingface', dest='trust_remote_code')
@@ -86,6 +86,8 @@ parser.add_argument('--text_input_file', help='UTF-8 file for the first VLM user
 parser.add_argument('--output_length', '--output_lenght', dest='output_length', type=positive_int, default=128, help='Maximum output tokens per VLM turn; sends ignore_eos=true')
 parser.add_argument('--max_concurrency', type=positive_int, default=100, help='Maximum simultaneous requests; VLM conversations run sequential turns within this limit')
 parser.add_argument('--image', help='Image HTTP(S) URL, data URI, or local filename for the first VLM user message')
+parser.add_argument('--audio', help='Local WAV or MP3 file for the first VLM user message')
+parser.add_argument('--audio_dataset', help='Hugging Face dataset with an audio column for VLM requests')
 parser.add_argument('--turns', type=positive_int, default=1, help='Requests per VLM conversation, including the first turn')
 parser.add_argument('--turn_length', '--turn_lenght', dest='turn_length', type=positive_int, default=128, help='New text tokens added to each subsequent VLM user turn')
 parser.add_argument('--steps', type=positive_int, default=50, help='Denoising steps for image-gen')
@@ -223,6 +225,30 @@ def image_context_url(image):
     return f'data:{media_type};base64,{base64.b64encode(path.read_bytes()).decode("ascii")}'
 
 
+def audio_context(audio):
+    path = Path(audio)
+    audio_format = path.suffix.lower().lstrip('.')
+    if audio_format not in ('wav', 'mp3'):
+        raise ValueError('Audio file must have a .wav or .mp3 extension')
+    data = path.read_bytes()
+    if not data:
+        raise ValueError('Audio file must not be empty')
+    return {'data': base64.b64encode(data).decode('ascii'), 'format': audio_format}
+
+
+def audio_dataset_context(audio):
+    import soundfile
+
+    buffer = io.BytesIO()
+    if isinstance(audio, dict):
+        samples, sample_rate = audio['array'], audio['sampling_rate']
+    else:
+        decoded = audio.get_all_samples()
+        samples, sample_rate = decoded.data.cpu().numpy().T, decoded.sample_rate
+    soundfile.write(buffer, samples, sample_rate, format='WAV')
+    return {'data': base64.b64encode(buffer.getvalue()).decode('ascii'), 'format': 'wav'}
+
+
 def prepare_documents():
     if args['backend'] == 'image-gen':
         return Dataset.from_dict({'text': ['Draw a picture of a cute cat'] * args['limit']})
@@ -241,10 +267,22 @@ def prepare_documents():
                     truncate_input_text(source, args['input_length'], token_count))
             args['turn_text'] = synthetic_token_text(tokenizer, args['turn_length'])
         args['image_url'] = image_context_url(args['image']) if args['image'] else None
+        args['audio_input'] = audio_context(args['audio']) if args['audio'] else None
+        audio_inputs = None
+        if args['audio_dataset']:
+            dataset = load_dataset(args['audio_dataset'], args['subset'], trust_remote_code=args['trust_remote_code'],
+                                   split=args['split'], streaming=True)
+            samples = dataset.select_columns(['audio'])
+            if args['limit'] is not None:
+                samples = islice(samples, args['limit'])
+            audio_inputs = [audio_dataset_context(sample['audio']) for sample in samples]
+            if not audio_inputs:
+                raise ValueError('Audio dataset contains no samples')
+            args['limit'] = len(audio_inputs)
         used = set()
         texts = [unique_initial_text(text, args['input_length'], token_count, used)
                   for index in range(args['limit'])]
-        return Dataset.from_dict({'text': texts})
+        return Dataset.from_dict({'text': texts, 'audio_input': audio_inputs} if audio_inputs is not None else {'text': texts})
     docs = Dataset.from_dict({})
     if args['dataset'] == 'synthetic':
         dummy_text = 'hi ' * args['length']
@@ -377,9 +415,14 @@ async def read_vlm_stream(response, output, started):
 
 
 async def async_request_vlm(request_func_input: RequestFuncInput, pbar=None):
-    content = [{'type': 'text', 'text': request_func_input.documents[0]}]
+    document = request_func_input.documents[0]
+    text = document['text'] if isinstance(document, dict) else document
+    audio_input = document['audio_input'] if isinstance(document, dict) else args.get('audio_input')
+    content = [{'type': 'text', 'text': text}]
     if args['image_url']:
         content.append({'type': 'image_url', 'image_url': {'url': args['image_url']}})
+    if audio_input:
+        content.append({'type': 'input_audio', 'input_audio': audio_input})
     messages = [{'role': 'user', 'content': content}]
     outputs = []
     async with aiohttp.ClientSession(timeout=AIOHTTP_TIMEOUT, read_bufsize=100000) as session:
@@ -394,6 +437,8 @@ async def async_request_vlm(request_func_input: RequestFuncInput, pbar=None):
                 'stream': True,
                 'stream_options': {'include_usage': True},
             }
+            if audio_input:
+                payload['modalities'] = ['text']
             output = RequestFuncOutput()
             started = time.perf_counter()
             try:
@@ -673,10 +718,15 @@ async def get_request(
     documents_all: arrow_dataset.Dataset,
     request_rate: float,
 ) -> AsyncGenerator[List[str], None]:
+    dataset_audio = args['backend'] == 'ovms-vlm' and 'audio_input' in documents_all.column_names
     input_column = 'audio' if args['backend'] in ('speech2text', 'translations') else 'text'
-    documents = documents_all.select_columns([input_column]).iter(batch_size=batch_size)
+    columns = ['text', 'audio_input'] if dataset_audio else [input_column]
+    documents = documents_all.select_columns(columns).iter(batch_size=batch_size)
     for request in documents:
-        yield request[input_column]
+        if dataset_audio:
+            yield [{'text': text, 'audio_input': audio} for text, audio in zip(request['text'], request['audio_input'])]
+        else:
+            yield request[input_column]
         if request_rate == float("inf"):
             # If the request rate is infinity, then we don't need to wait.
             continue
@@ -784,6 +834,14 @@ def main(argv=None):
         parser.error('--tokenizer is not supported with ovms-vlm; VLM uses OVMS /v1/tokenize')
     if args['text_input_file'] and args['backend'] != 'ovms-vlm':
         parser.error('--text_input_file is only supported for ovms-vlm')
+    if args['audio'] and args['backend'] != 'ovms-vlm':
+        parser.error('--audio is only supported for ovms-vlm')
+    if args['audio_dataset'] and args['backend'] != 'ovms-vlm':
+        parser.error('--audio_dataset is only supported for ovms-vlm')
+    if args['audio'] and args['audio_dataset']:
+        parser.error('--audio and --audio_dataset cannot be used together')
+    if args['limit'] is None and not args['audio_dataset']:
+        parser.error('--limit all requires --audio_dataset')
     args['batch_size'] = args['batch_size'] or (1 if args['backend'] in ('ovms-vlm', 'image-gen') else 16)
     batch_size = args['batch_size']
     if args['backend'] in ('ovms-vlm', 'text2speech', 'speech2text', 'translations', 'image-gen') and batch_size != 1:

@@ -41,6 +41,15 @@ class WordTokenizer:
 
 
 class DatasetInputTests(unittest.IsolatedAsyncioTestCase):
+    async def test_vlm_requests_use_distinct_dataset_audio(self):
+        audio_inputs = [{'data': 'first', 'format': 'wav'}, {'data': 'second', 'format': 'wav'}]
+        docs = benchmark.Dataset.from_dict({'text': ['first prompt', 'second prompt'], 'audio_input': audio_inputs})
+        benchmark.args = {'backend': 'ovms-vlm'}
+        benchmark.batch_size = 1
+        requests = [request async for request in benchmark.get_request(docs, float('inf'))]
+        self.assertEqual(requests, [[{'text': 'first prompt', 'audio_input': audio_inputs[0]}],
+                                    [{'text': 'second prompt', 'audio_input': audio_inputs[1]}]])
+
     async def test_text_to_speech_streams_only_requested_text(self):
         def examples():
             for index in range(2):
@@ -167,6 +176,66 @@ class VLMInputTests(unittest.TestCase):
             self.assertTrue(encoded.startswith('data:image/png;base64,'))
             self.assertEqual(base64.b64decode(encoded.split(',', 1)[1]), payload)
             self.assertEqual(benchmark.image_context_url(encoded), encoded)
+
+    def test_audio_file_formats_and_validation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for extension in ('wav', 'MP3'):
+                path = Path(directory) / f'audio.{extension}'
+                path.write_bytes(b'audio bytes')
+                result = benchmark.audio_context(str(path))
+                self.assertEqual(result['format'], extension.lower())
+                self.assertEqual(base64.b64decode(result['data']), b'audio bytes')
+            path = Path(directory) / 'empty.wav'
+            path.touch()
+            with self.assertRaisesRegex(ValueError, 'must not be empty'):
+                benchmark.audio_context(str(path))
+            with self.assertRaisesRegex(ValueError, 'wav or .mp3'):
+                benchmark.audio_context(str(Path(directory) / 'audio.ogg'))
+
+    def test_audio_rejected_for_other_backends(self):
+        with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            benchmark.main(['speech2text', '--audio', 'sample.wav'])
+
+    def test_prepare_vlm_encodes_audio(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'audio.wav'
+            path.write_bytes(b'audio bytes')
+            benchmark.args = vars(benchmark.parser.parse_args(['ovms-vlm', '--model', 'test',
+                                                               '--audio', str(path), '--limit', '1',
+                                                               '--input_length', '10', '--turn_length', '2']))
+            with patch.object(benchmark, 'tokenize_texts', side_effect=lambda text, model:
+                              [list(range(len(text.split())))]):
+                benchmark.prepare_documents()
+        self.assertEqual(base64.b64decode(benchmark.args['audio_input']['data']), b'audio bytes')
+        self.assertEqual(benchmark.args['audio_input']['format'], 'wav')
+
+    def test_prepare_vlm_audio_dataset_with_limits(self):
+        dataset = benchmark.Dataset.from_dict({'audio': [
+            {'array': [0.0, 0.1], 'sampling_rate': 16000},
+            {'array': [0.2, 0.3], 'sampling_rate': 16000},
+        ]}).to_iterable_dataset()
+        for limit, expected in (('1', 1), ('all', 2), ('10', 2)):
+            with self.subTest(limit=limit):
+                benchmark.args = vars(benchmark.parser.parse_args([
+                    'ovms-vlm', '--model', 'test', '--audio_dataset', 'example', '--hf-subset', 'clean',
+                    '--split', 'test', '--limit', limit, '--input_length', '10', '--turn_length', '2']))
+                with patch.object(benchmark, 'load_dataset', return_value=dataset) as load_dataset, \
+                        patch.object(benchmark, 'tokenize_texts', side_effect=lambda text, model:
+                                     [list(range(len(text.split())))]):
+                    docs = benchmark.prepare_documents()
+                load_dataset.assert_called_once_with('example', 'clean', trust_remote_code=False, split='test', streaming=True)
+                self.assertEqual(len(docs), expected)
+                self.assertEqual(benchmark.args['limit'], expected)
+                self.assertEqual(docs[0]['audio_input']['format'], 'wav')
+                if expected == 2:
+                    self.assertNotEqual(docs[0]['audio_input']['data'], docs[1]['audio_input']['data'])
+
+    def test_audio_dataset_argument_validation(self):
+        for arguments in (['ovms-vlm', '--audio', 'file.wav', '--audio_dataset', 'example'],
+                          ['speech2text', '--audio_dataset', 'example'],
+                          ['ovms-vlm', '--limit', 'all']):
+            with self.subTest(arguments=arguments), redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                benchmark.main(arguments)
 
     def test_prepare_vlm_uses_server_tokenizer_without_hf_dataset(self):
         benchmark.args = vars(benchmark.parser.parse_args(['ovms-vlm', '--limit', '3',
@@ -575,6 +644,25 @@ class VLMRequestTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([output.cached_tokens for output in outputs], [0, 5, 10])
         self.assertTrue(all(output.ttft is not None for output in outputs))
         self.assertTrue(all(output.tpot is not None for output in outputs))
+
+    async def test_audio_input_requests_text_only_and_preserves_history(self):
+        audio = {'data': base64.b64encode(b'audio bytes').decode('ascii'), 'format': 'mp3'}
+        benchmark.args['audio_input'] = audio
+        outputs = await benchmark.async_request_vlm(benchmark.RequestFuncInput(self.url, ['initial'], 'test-model'))
+        self.assertTrue(all(output.success for output in outputs))
+        for payload in self.payloads:
+            self.assertEqual(payload['modalities'], ['text'])
+            self.assertEqual(payload['messages'][0]['content'][2], {'type': 'input_audio', 'input_audio': audio})
+        self.assertEqual([output.output_tokens for output in outputs], [4, 4, 4])
+
+    async def test_dataset_audio_is_used_in_request(self):
+        audio = {'data': 'dataset-audio', 'format': 'wav'}
+        document = {'text': 'transcribe', 'audio_input': audio}
+        outputs = await benchmark.async_request_vlm(benchmark.RequestFuncInput(self.url, [document], 'test-model'))
+        self.assertTrue(all(output.success for output in outputs))
+        for payload in self.payloads:
+            self.assertEqual(payload['modalities'], ['text'])
+            self.assertEqual(payload['messages'][0]['content'][2], {'type': 'input_audio', 'input_audio': audio})
 
     async def test_concurrency_and_all_turns_counted(self):
         self.require_overlap = True
