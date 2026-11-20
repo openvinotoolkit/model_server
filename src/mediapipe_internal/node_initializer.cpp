@@ -17,7 +17,44 @@
 
 #include <utility>
 
+#include "mediapipe/framework/calculator_graph.h"
+#include "src/logging.hpp"
+#include "graph_side_packets.hpp"
+#include "live_graph_config.hpp"
+#include "streaming_s2t_graph.hpp"
+
 namespace ovms {
+std::shared_ptr<LiveGraphConfig> makeLiveGraphConfig(const mediapipe::CalculatorGraphConfig& config,
+    int queueSize, std::map<std::string, LiveGraphStreamCodec> inputs,
+    std::map<std::string, LiveGraphStreamCodec> outputs) {
+    auto profile = std::make_shared<LiveGraphConfig>();
+    profile->graph = config;
+    profile->graph.set_max_queue_size(queueSize);
+    profile->graph.clear_input_stream();
+    profile->graph.clear_output_stream();
+    for (const auto& entry : inputs)
+        profile->graph.add_input_stream(entry.first);
+    for (const auto& entry : outputs)
+        profile->graph.add_output_stream(entry.first);
+    profile->inputs = std::move(inputs);
+    profile->outputs = std::move(outputs);
+    return profile;
+}
+
+Status registerLiveGraphProfile(const std::string& name, std::shared_ptr<LiveGraphConfig> profile,
+    GraphSidePackets& sidePackets) {
+    mediapipe::CalculatorGraph graph;
+    StreamingS2TGraphExecution validation(graph);
+    const auto status = validation.initialize(profile->graph);
+    if (!status.ok()) {
+        SPDLOG_ERROR("Invalid live graph profile {}: {}", name, status.ToString());
+        return Status(StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID, status.ToString());
+    }
+    if (!sidePackets.liveGraphProfiles.emplace(name, std::move(profile)).second)
+        return Status(StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID, "Duplicate live graph profile: " + name);
+    return StatusCode::OK;
+}
+
 NodeInitializerRegistry& NodeInitializerRegistry::instance() {
     static NodeInitializerRegistry registry;
     return registry;

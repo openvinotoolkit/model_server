@@ -500,6 +500,23 @@ libgit2_engine()
 load("@ovms//third_party/drogon:drogon.bzl", "drogon_cpp")
 drogon_cpp()
 
+### libdatachannel (WebRTC data channels + media transport)
+load("@ovms//third_party/libdatachannel:libdatachannel.bzl", "libdatachannel_repository")
+libdatachannel_repository()
+
+### libopus codec
+load("@ovms//third_party/opus:opus.bzl", "opus_repository")
+opus_repository()
+
+### VP8 decoder for the opt-in WebRTC video POC
+http_archive(
+    name = "libvpx",
+    urls = ["https://github.com/webmproject/libvpx/archive/refs/tags/v1.15.2.tar.gz"],
+    sha256 = "26fcd3db88045dee380e581862a6ef106f49b74b6396ee95c2993a260b4636aa",
+    strip_prefix = "libvpx-1.15.2",
+    build_file = "@ovms//third_party/libvpx:BUILD",
+)
+
 ### espeak-ng (built from source via Bazel; gated by --//:espeak flag)
 load("@ovms//third_party/espeak_ng:espeak_ng.bzl", "espeak_ng")
 espeak_ng()

@@ -18,7 +18,7 @@ load("@mediapipe//mediapipe/framework:more_selects.bzl", "more_selects")
 load("//src/mediapipe_internal:runtime_plugin.bzl", "runtime_plugin_deps")
 load("//:common_settings.bzl",
     "COMMON_STATIC_TEST_COPTS", "COMMON_STATIC_LIBS_COPTS", "COMMON_STATIC_LIBS_LINKOPTS", "COMMON_FUZZER_COPTS", "COMMON_FUZZER_LINKOPTS", "COMMON_LOCAL_DEFINES",
-    "PYBIND_HEADERS_ONLY", "COPTS_CLOUD", "COPTS_TESTS",
+    "PYBIND_HEADERS_ONLY", "COPTS_CLOUD", "COPTS_TESTS", "COMMON_DEFINES",
     "create_config_settings", "PYBIND_DEPS", "ovms_cc_library", "ovms_cc_test_library")
 
 exports_files([
@@ -44,6 +44,35 @@ LINKOPTS_ADJUSTED = COMMON_STATIC_LIBS_LINKOPTS + select({
 config_setting(
     name = "windows",
     values = {"cpu": "x64_windows"},
+    visibility = ["//visibility:public"],
+)
+
+more_selects.config_setting_negation(
+    name = "not_windows",
+    negate = ":windows",
+)
+
+config_setting(
+    name = "build_with_webrtc",
+    define_values = {"BUILD_WITH_WEBRTC": "1"},
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "build_with_experimental_voxtral",
+    define_values = {"BUILD_WITH_EXPERIMENTAL_VOXTRAL": "1"},
+    visibility = ["//visibility:public"],
+)
+
+selects.config_setting_group(
+    name = "webrtc_enabled",
+    match_all = [":build_with_webrtc", ":not_windows"],
+    visibility = ["//visibility:public"],
+)
+
+selects.config_setting_group(
+    name = "experimental_voxtral_enabled",
+    match_all = [":webrtc_enabled", ":build_with_experimental_voxtral"],
     visibility = ["//visibility:public"],
 )
 
@@ -127,6 +156,13 @@ cc_shared_library(
             "@gemmlowp//:__subpackages__",
             "@flatbuffers//:__subpackages__",],
         "//:disable_mediapipe": []
+        })
+      + select({
+            "//src:webrtc_enabled": [
+                "@libdatachannel//:__subpackages__",
+                "@libopus//:__subpackages__",
+            ],
+            "//conditions:default": [],
         })
       + [
           "@pybind11//:__subpackages__",
@@ -730,6 +766,7 @@ ovms_cc_library(
     deps = [
         "cpp_headers",
         "mediapipe_executor_interface",
+        "//src/audio/speech_to_text:streaming_s2t_session",
         "libovms_execution_context",
         "libovmsstatus",
         "libovmslogging",
@@ -884,6 +921,7 @@ ovms_cc_library(
             "rest_parser_utils",
             "libovms_cliparser",
             "libovms_config",
+            "libmultipart_parser",
             "//src/mediapipe_internal:pipelinedefinitionstatus",
             "ovms_exit_codes",
             "libovms_execution_context",
@@ -895,6 +933,7 @@ ovms_cc_library(
             "libovms_kfs_utils",
             "libovms_kfs_grpc_inference_service_h",
             "mediapipe_executor_interface",
+            "//src/mediapipe_internal:live_graph_config",
             "modelchangesubscription",
             "//src/servable_management:modelmanager",
             "//src/servable_management:servablemanagermodule",
@@ -948,6 +987,9 @@ ovms_cc_library(
             "kfs_python_tensor_bridge",
             "copyable_object_wrapper",
          ] + select({
+                "//src:webrtc_enabled": ["//src/webrtc:webrtc_session_controller"],
+                "//conditions:default": [],
+            }) + select({
                 "//:not_disable_cloud": [
                     "//src/filesystem:libovmsazurefilesystem",
                     ],
@@ -983,6 +1025,10 @@ ovms_cc_library(
         "//conditions:default": [],
     }),
     alwayslink = 1,
+    defines = COMMON_DEFINES + select({
+        "//src:webrtc_enabled": ["BUILD_WITH_WEBRTC"],
+        "//conditions:default": [],
+    }),
 )
 
 ovms_cc_library(
@@ -1825,6 +1871,7 @@ ovms_cc_library(
     hdrs = ["ov_utils.hpp",],
     srcs = ["ov_utils.cpp",],
     deps = [
+            "libovms_config",
             "//third_party:openvino",
             "libovmslogging",
             "libovmsstatus",
@@ -2105,6 +2152,7 @@ cc_test(
                 "test/mediapipe_validation_test.cpp", # Mediapipe enabled
                 "test/get_mediapipe_graph_metadata_response_test.cpp",
                 "test/mediapipe_framework_test.cpp",
+                "test/live_graph_session_test.cpp",
                 "test/http_openai_handler_test.cpp",
                 "test/multipart_calculator_test.cpp",
                 "test/llm/assisted_decoding_test.cpp",
@@ -2353,6 +2401,7 @@ cc_test(
                 "//src/audio/speech_to_text:s2t_calculator",
                 "//src/audio/text_to_speech:t2s_calculator",
                 "//src/mediapipe_internal:libovms_mediapipe_runtime_c_api_exports",
+                "//src/mediapipe_internal:live_graph_config",
                 "//src/llm:llmcalculator_registration",
                 "//src/embeddings:embeddingscalculator_ov",
                 "//src/rerank:rerankcalculator_ov",
@@ -2363,6 +2412,7 @@ cc_test(
                 "@mediapipe//mediapipe/framework/stream_handler:early_close_input_stream_handler",
                 "@mediapipe//mediapipe/framework/stream_handler:sync_set_input_stream_handler",
                 "@mediapipe//mediapipe/framework/stream_handler:timestamp_align_input_stream_handler",
+                "@mediapipe//mediapipe/framework/formats:image_frame",
             ],
             "//:disable_mediapipe": [],
         }),
@@ -2378,6 +2428,28 @@ cc_test(
             "-Wl,-rpath,$$ORIGIN/ovms_test.runfiles/azure/lib",
         ],
         "//src:windows": [],
+    }),
+)
+
+cc_test(
+    name = "movinet_calculator_test",
+    srcs = ["test/movinet_calculator_test.cpp"],
+    deps = [
+        "//src/movinet:movinet_calculator",
+        "//src/movinet:movinet_calculator_cc_proto",
+        "//src/movinet:classification",
+        "//src/mediapipe_internal:libovms_mediapipe",
+        "//src/mediapipe_internal:mediapipegraphexecutor_h",
+        "//src/mediapipe_internal:live_graph_config",
+        "//src:kfs_graph_executor_impl",
+        "//src:libovms_mediapipe_http_executor",
+        "//third_party:openvino",
+        "@com_google_googletest//:gtest_main",
+    ],
+    linkstatic = 1,
+    target_compatible_with = select({
+        "//:not_disable_mediapipe": [],
+        "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
 

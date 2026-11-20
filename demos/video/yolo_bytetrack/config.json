@@ -1,0 +1,17 @@
+{
+  "model_config_list": [
+    {
+      "config": {
+        "name": "yolox_tiny-fp16-ov",
+        "base_path": "yolox_tiny-fp16-ov"
+      }
+    }
+  ],
+  "mediapipe_config_list": [
+    {
+      "name": "YoloByteTrackWebRTC",
+      "base_path": "./",
+      "graph_path": "graph.pbtxt"
+    }
+  ]
+}

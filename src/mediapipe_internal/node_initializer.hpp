@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #pragma once
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -22,13 +23,25 @@
 
 namespace mediapipe {
 class CalculatorGraphConfig_Node;
+class CalculatorGraphConfig;
 }
 
 namespace ovms {
 class GraphMetadata;
 struct GraphSidePackets;
+struct LiveGraphConfig;
+struct LiveGraphStreamCodec;
 class PythonBackend;
 class MetricProvider;
+
+/// Copy a graph and replace its external streams with the supplied live codecs.
+std::shared_ptr<LiveGraphConfig> makeLiveGraphConfig(const mediapipe::CalculatorGraphConfig& config,
+    int queueSize, std::map<std::string, LiveGraphStreamCodec> inputs,
+    std::map<std::string, LiveGraphStreamCodec> outputs);
+
+/// Validate through the runtime's STT-aware initializer and register a unique profile.
+Status registerLiveGraphProfile(const std::string& name, std::shared_ptr<LiveGraphConfig> profile,
+    GraphSidePackets& sidePackets);
 
 class NodeInitializer {
 public:
@@ -42,6 +55,11 @@ public:
         GraphMetadata& metadata,
         PythonBackend* pythonBackend,
         const MetricProvider* metrics) = 0;
+    /// Optionally prepares transport-independent execution profiles after resources load.
+    virtual Status prepareLiveGraph(const ::mediapipe::CalculatorGraphConfig&,
+        GraphSidePackets&) {
+        return StatusCode::OK;
+    }
 };
 
 class NodeInitializerRegistry {

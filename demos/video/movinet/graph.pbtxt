@@ -1,0 +1,17 @@
+input_stream: "video"
+output_stream: "classification"
+input_side_packet: "movinet_resources"
+
+node {
+  name: "movinet"
+  calculator: "MovinetCalculator"
+  input_stream: "IMAGE:video"
+  output_stream: "CLASSIFICATION:classification"
+  input_side_packet: "MOVINET_RESOURCES:movinet_resources"
+  node_options {
+    [type.googleapis.com/mediapipe.MovinetCalculatorOptions] {
+      model_path: "/ovms/models/OpenVINO/movinet_openvino/movinet_a0_stream.xml"
+      labels_path: "/ovms/local/movinet/kinetics_600_labels.txt"
+    }
+  }
+}

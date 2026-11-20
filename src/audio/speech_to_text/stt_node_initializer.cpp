@@ -19,8 +19,10 @@
 
 #include "src/mediapipe_internal/graph_side_packets.hpp"
 #include "src/mediapipe_internal/node_initializer.hpp"
+#include "src/mediapipe_internal/live_graph_config.hpp"
 #include "src/stringutils.hpp"
 #include "s2t_servable.hpp"
+#include "streaming_s2t_session.hpp"
 #include "mediapipe/framework/calculator.pb.h"
 #include "src/audio/speech_to_text/s2t_calculator.pb.h"
 
@@ -31,8 +33,33 @@ class SttNodeInitializer : public NodeInitializer {
     static constexpr const char* CALCULATOR_NAME = "S2tCalculator";
 
 public:
+    Status prepareLiveGraph(const ::mediapipe::CalculatorGraphConfig& config,
+        GraphSidePackets& sidePackets) override {
+        if (config.node_size() != 1 || sidePackets.sttServableMap.size() != 1)
+            return StatusCode::OK;
+        const auto& node = config.node(0);
+        if (node.calculator() != CALCULATOR_NAME && node.calculator() != "StreamingS2TCalculator")
+            return StatusCode::OK;
+        const auto servable = sidePackets.sttServableMap.find(node.name());
+        if (servable == sidePackets.sttServableMap.end())
+            return Status(StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID, "Missing initialized STT resources");
+        constexpr int AudioInputQueueSize = 64;
+        auto profile = makeLiveGraphConfig(config, AudioInputQueueSize,
+            {{"audio", LiveGraphStreamCodec::typed<StreamingS2TInput>()}},
+            {{"events", LiveGraphStreamCodec::typed<StreamingS2TEvent>()}});
+        auto* audioNode = profile->graph.mutable_node(0);
+        audioNode->clear_input_stream();
+        audioNode->add_input_stream("AUDIO:audio");
+        audioNode->clear_output_stream();
+        audioNode->add_output_stream("EVENT:events");
+        audioNode->clear_input_stream_info();
+        audioNode->clear_input_stream_handler();
+        const char* name = servable->second->streamingBackend ? STT_INCREMENTAL_PROFILE : STT_UTTERANCE_PROFILE;
+        return registerLiveGraphProfile(name, std::move(profile), sidePackets);
+    }
+
     bool matches(const std::string& calculatorName) const override {
-        return endsWith(calculatorName, CALCULATOR_NAME);
+        return endsWith(calculatorName, CALCULATOR_NAME) || calculatorName == "StreamingS2TCalculator";
     }
     Status initialize(
         const ::mediapipe::CalculatorGraphConfig_Node& nodeConfig,
@@ -63,6 +90,10 @@ public:
             return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
         }
         auto servable = std::make_shared<SttServable>(nodeOptions, basePath);
+        if (nodeConfig.calculator() == "StreamingS2TCalculator" && !servable->streamingBackend) {
+            SPDLOG_ERROR("StreamingS2TCalculator requires an incremental ASR backend in graph: {}", graphName);
+            return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+        }
         sttServableMap.insert(std::pair<std::string, std::shared_ptr<SttServable>>(nodeName, std::move(servable)));
         return StatusCode::OK;
     }

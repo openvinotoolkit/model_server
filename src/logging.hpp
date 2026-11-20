@@ -28,6 +28,7 @@ extern std::shared_ptr<spdlog::logger> s3_logger;
 extern std::shared_ptr<spdlog::logger> modelmanager_logger;
 extern std::shared_ptr<spdlog::logger> dag_executor_logger;
 extern std::shared_ptr<spdlog::logger> capi_logger;
+extern std::shared_ptr<spdlog::logger> webrtc_logger;
 #if (MEDIAPIPE_DISABLE == 0)
 extern std::shared_ptr<spdlog::logger> mediapipe_logger;
 extern std::shared_ptr<spdlog::logger> llm_executor_logger;

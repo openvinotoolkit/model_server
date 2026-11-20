@@ -34,6 +34,8 @@ struct EmbeddingsServable;
 struct RerankServable;
 struct SttServable;
 class TtsServable;
+struct LiveGraphConfig;
+class MovinetResources;
 
 using PythonNodeResourcesMap = std::unordered_map<std::string, std::shared_ptr<PythonNodeResources>>;
 using GenAiServableMap = std::unordered_map<std::string, std::shared_ptr<GenAiServable>>;
@@ -42,6 +44,7 @@ using SttServableMap = std::unordered_map<std::string, std::shared_ptr<SttServab
 using TtsServableMap = std::unordered_map<std::string, std::shared_ptr<TtsServable>>;
 using EmbeddingsServableMap = std::unordered_map<std::string, std::shared_ptr<EmbeddingsServable>>;
 using ImageGenerationPipelinesMap = std::unordered_map<std::string, std::shared_ptr<ImageGenerationPipelines>>;
+using MovinetResourcesMap = std::unordered_map<std::string, std::shared_ptr<MovinetResources>>;
 
 // Holds a per-graph LLM execution context that is swapped between requests.
 // The mutex synchronizes the handoff between the executor thread (which creates
@@ -79,6 +82,8 @@ struct GraphSidePackets {
     RerankServableMap rerankServableMap;
     SttServableMap sttServableMap;
     TtsServableMap ttsServableMap;
+    MovinetResourcesMap movinetResourcesMap;
+    std::unordered_map<std::string, std::shared_ptr<const LiveGraphConfig>> liveGraphProfiles;
     std::vector<std::string> loraAliases;
     bool hideBaseModelInRouting = false;
     void clear() {
@@ -91,6 +96,8 @@ struct GraphSidePackets {
         rerankServableMap.clear();
         sttServableMap.clear();
         ttsServableMap.clear();
+        movinetResourcesMap.clear();
+        liveGraphProfiles.clear();
         loraAliases.clear();
         hideBaseModelInRouting = false;
     }
@@ -103,7 +110,9 @@ struct GraphSidePackets {
                 embeddingsServableMap.empty() &&
                 rerankServableMap.empty() &&
                 sttServableMap.empty() &&
-                ttsServableMap.empty());
+                ttsServableMap.empty() &&
+                movinetResourcesMap.empty() &&
+                liveGraphProfiles.empty());
     }
 };
 }  // namespace ovms

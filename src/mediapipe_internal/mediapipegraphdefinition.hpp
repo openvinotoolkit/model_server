@@ -76,7 +76,6 @@ public:
     const MediapipeGraphConfig& getMediapipeGraphConfig() const { return this->mgconfig; }
     MediapipeServableMetricReporter& getMetricReporter() const override { return *this->reporter; }
     Status create(std::unique_ptr<MediapipeGraphExecutor>& pipeline);
-
     Status reload(const ServableNameChecker& checker, const MediapipeGraphConfig& config);
     Status validate(const ServableNameChecker& checker);
     void retire();

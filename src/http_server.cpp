@@ -55,6 +55,9 @@ static const ovms::HTTPStatusCode http(const ovms::Status& status) {
         {StatusCode::REST_INVALID_URL, ovms::HTTPStatusCode::BAD_REQUEST},
         {StatusCode::REST_UNSUPPORTED_METHOD, ovms::HTTPStatusCode::NONE_ACC},
         {StatusCode::REST_NOT_FOUND, ovms::HTTPStatusCode::NOT_FOUND},
+        {StatusCode::REST_INVALID_REQUEST, ovms::HTTPStatusCode::BAD_REQUEST},
+        {StatusCode::REST_TOO_MANY_REQUESTS, ovms::HTTPStatusCode::TOO_MANY_REQUESTS},
+        {StatusCode::UNAUTHORIZED, ovms::HTTPStatusCode::UNAUTHORIZED},
 
         // REST parser failure
         {StatusCode::REST_BODY_IS_NOT_AN_OBJECT, ovms::HTTPStatusCode::BAD_REQUEST},
@@ -213,12 +216,17 @@ std::unique_ptr<DrogonHttpServer> createAndStartDrogonHttpServer(const std::stri
 
         if (responseComponents.contentType == ContentType::PLAIN_TEXT) {
             resp->setContentTypeCode(drogon::CT_TEXT_PLAIN);
+        } else if (responseComponents.contentType == ContentType::SDP && status.ok()) {
+            resp->setContentTypeString("application/sdp");
         } else {
             resp->setContentTypeCode(drogon::CT_APPLICATION_JSON);
         }
 
         if (responseComponents.inferenceHeaderContentLength.has_value()) {
             resp->addHeader("inference-header-content-length", std::to_string(responseComponents.inferenceHeaderContentLength.value()));
+        }
+        if (responseComponents.location.has_value() && status.ok()) {
+            resp->addHeader("Location", responseComponents.location.value());
         }
 
         resp->setBody(output);
