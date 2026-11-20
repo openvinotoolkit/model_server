@@ -77,7 +77,7 @@ OpenVINO Model Server supports using [NPU device](https://docs.openvino.ai/2026/
 ### Container
 Example command to run container with NPU:
 ```bash
-docker run --device /dev/accel -p 9000:9000 --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) \
+docker run --device /dev/accel -p 9000:9000 --group-add=$(stat -c "%g" /dev/accel/accel0) -u $(id -u):$(id -g) \
 -v ${PWD}/model:/opt/model openvino/model_server:latest-gpu --model_path /opt/model --model_name resnet --port 9000 --target_device NPU --batch_size 1
 ```
 
