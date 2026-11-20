@@ -55,6 +55,7 @@ NPU_DRIVER_DOWNLOADS = {
 
 # Artifacts in /ovms/lib removed unless the corresponding feature is requested.
 GPU_LIBS = ["libopenvino_intel_gpu_plugin.so*"]
+OPENCV_LIBS = ["libopencv*.so*"]
 NPU_LIBS = [
     "libopenvino_intel_npu_plugin.so*",
     "libopenvino_intel_npu_compiler.so*",
@@ -123,6 +124,7 @@ def inspect_full_image(image, skip_pull):
         "python_version": python_version.group(1) if python_version else None,
         # Older builds link libpython into the ovms binary, so Python cannot be dropped.
         "python_required": "libpython" in ldd_ovms,
+        "opencv_required": "libopencv" in ldd_ovms,
     }
 
 
@@ -130,6 +132,8 @@ def filter_stage(full_image, flags):
     removed = []
     if not flags.gpu:
         removed += GPU_LIBS
+    if not flags.opencv:
+        removed += OPENCV_LIBS
     if not flags.npu:
         removed += NPU_LIBS
     if not flags.tensorflow:
@@ -216,18 +220,20 @@ USER ovms
 def main():
     parser = argparse.ArgumentParser(
         description="Compose a custom OVMS docker image with selected features from a full OVMS image. "
-                    "By default all optional features are disabled.")
+                    "By default all optional features are disabled. Approximate size increases are measured "
+                    "against the default image from openvino/model_server-gpu:latest on Ubuntu 24.04.")
     parser.add_argument("--full-image", required=True, help="Full OVMS docker image including all components.")
     parser.add_argument("-o", "--output-name", default="ovms-custom", help="Name of the generated image. Default: ovms-custom")
     parser.add_argument("--base-image", help="Base image for the generated image. Default: base image of the full image.")
-    parser.add_argument("--gpu", action="store_true", help="Adds support for Intel GPU accelerators. Installs GPU drivers and OV GPU plugin.")
+    parser.add_argument("--gpu", action="store_true", help="Adds Intel GPU support and drivers (about +500 MB).")
     parser.add_argument("--gpu-driver-version", help="GPU driver version passed to {}.".format(GPU_DRIVERS_SCRIPT))
-    parser.add_argument("--npu", action="store_true", help="Adds support for Intel NPU accelerators. Installs NPU drivers and OV NPU plugin and compiler.")
-    parser.add_argument("--python", action="store_true", help="Adds support for jinja chat template engine and python custom nodes. Install Python library and Python bindings.")
-    parser.add_argument("--tensorflow", action="store_true", help="Enables direct loading of TensorFlow and TensorFlow Lite models.")
-    parser.add_argument("--paddle", action="store_true", help="Enables direct loading of PaddlePaddle models.")
-    parser.add_argument("--onnx", action="store_true", help="Enables direct loading of ONNX models.")
-    parser.add_argument("--espeak", action="store_true", help="Adds support for text-to-speech with Kokoro model. Installs espeak-ng library.")
+    parser.add_argument("--npu", action="store_true", help="Adds Intel NPU support, compiler, and drivers (about +300 MB).")
+    parser.add_argument("--opencv", action="store_true", help="Keeps upstream OpenCV shared libraries (about +50 MB).")
+    parser.add_argument("--python", action="store_true", help="Adds Python runtime and custom-node support (about +95 MB).")
+    parser.add_argument("--tensorflow", action="store_true", help="Enables TensorFlow and TensorFlow Lite model loading (about +5 MB).")
+    parser.add_argument("--paddle", action="store_true", help="Enables PaddlePaddle model loading (about +2 MB).")
+    parser.add_argument("--onnx", action="store_true", help="Enables ONNX model loading (about +5 MB).")
+    parser.add_argument("--espeak", action="store_true", help="Adds eSpeak library and data for Kokoro TTS (about +10 MB).")
     parser.add_argument("--work-dir", default=".", help="Directory for the generated Dockerfile and build context. Default: current directory.")
     parser.add_argument("--skip-pull", action="store_true", help="Do not pull the full image.")
     parser.add_argument("--dry-run", action="store_true", help="Only generate {}, do not build the image.".format(DOCKERFILE_NAME))
@@ -241,6 +247,8 @@ def main():
     if info["python_required"] and not flags.python:
         fail("ovms in {} is linked with libpython{}; use --python or a full image built without Python (py_off)".format(
             flags.full_image, info["python_version"]))
+    if info["opencv_required"] and not flags.opencv:
+        fail("ovms in {} depends on OpenCV libraries; use --opencv".format(flags.full_image))
     if flags.python and not info["python_version"]:
         fail("--python requested but ovms in {} is built without Python support".format(flags.full_image))
 
