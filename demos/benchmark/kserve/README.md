@@ -663,42 +663,6 @@ The default-version and explicit-version config URLs both returned valid model
 configurations. These shared-machine runs confirm compatibility, not reference
 performance or a controlled comparison with the earlier Python measurements.
 
-### Validation Notes
-
-Both performance-hint deployments were tested on Linux using this demo's virtual
-environment and `openvino/model_server:latest`, with host ports 19020/18020.
-The Python gRPC/REST commands and perf_analyzer gRPC commands each completed
-5,000 requests in both modes. OVMS selected 1 stream for `LATENCY` and 112 streams
-for `THROUGHPUT` on the test host; the selected counts are hardware-dependent.
-The REST perf_analyzer runs in the preceding section were tested separately with
-an updated OVMS binary and explicit `NUM_STREAMS=20`, not these hint deployments.
-Windows deployment and WSL execution were not tested.
-
-Earlier Python input-validation runs used this demo's `.venv`, tritonclient 2.60.0, and
-`openvino/model_server:latest` (reporting OVMS 2026.5.0.f55a2d2bd). Host ports
-19000/18000 were used because the default ports were occupied.
-
-| Input | Protocol | Concurrency | Result |
-|---|---|---|---|
-| FP32 tensor | gRPC | 1 and 20 | 5000/5000 successful requests per run |
-| FP32 tensor | REST | 1 and 20 | 5000/5000 successful requests per run |
-| JPEG/BYTES | gRPC | 1 | 5000/5000 successful requests |
-| JPEG/BYTES | REST | 20 | 5000/5000 successful requests |
-
-Run the focused tests on either OS:
-
-```text
-python -m unittest -v test_benchmark
-```
-
-Tests cover dynamic/static shapes, multiple inputs, numeric files, BYTES payloads,
-failure accounting, latency statistics, spawned worker execution, initialization
-failure, and interval-based peak concurrency. The process implementation was also
-verified on a 20-stream server with 5,000 tensor requests per REST/gRPC run,
-100 JPEG/BYTES requests per protocol at concurrency 4, and an all-failing inference
-run that preserved the JSON report and exit code 1. All dependencies
-were also resolved as Windows Python 3.12 wheels, but execution on Windows was not
-tested.
 
 Stop the Linux demo server when finished:
 
