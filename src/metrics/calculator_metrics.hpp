@@ -34,7 +34,7 @@ class MetricRegistry;
 class CalculatorCounter {
     std::unique_ptr<MetricCounter> metric;
     CalculatorCounter(MetricRegistry* registry, const std::string& name, const std::string& help,
-        const std::string& graphName, const std::string& nodeName, bool* newlyRegistered);
+        const std::string& graphName, const std::string& nodeName);
     friend class CalculatorMetrics;
 
 public:
@@ -50,7 +50,7 @@ public:
 class CalculatorGauge {
     std::unique_ptr<MetricGauge> metric;
     CalculatorGauge(MetricRegistry* registry, const std::string& name, const std::string& help,
-        const std::string& graphName, const std::string& nodeName, bool* newlyRegistered);
+        const std::string& graphName, const std::string& nodeName);
     friend class CalculatorMetrics;
 
 public:
@@ -68,8 +68,7 @@ public:
 class CalculatorHistogram {
     std::unique_ptr<MetricHistogram> metric;
     CalculatorHistogram(MetricRegistry* registry, const std::string& name, const std::string& help,
-        const std::string& graphName, const std::string& nodeName, const std::vector<double>& bucketBoundaries,
-        bool* newlyRegistered);
+        const std::string& graphName, const std::string& nodeName, const std::vector<double>& bucketBoundaries);
     friend class CalculatorMetrics;
 
 public:

@@ -13,9 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <algorithm>
 #include <future>
 #include <limits>
 #include <memory>
+#include <sstream>
 #include <stdexcept>
 #include <thread>
 #include <type_traits>
@@ -24,7 +26,9 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <spdlog/sinks/ostream_sink.h>
 
+#include "src/logging.hpp"
 #include "src/metrics/metric.hpp"
 #include "src/metrics/calculator_metrics.hpp"
 #include "src/metrics/metric_family.hpp"
@@ -89,21 +93,51 @@ TEST(MetricRegistryTest, ReRegistersCustomFamilyAfterRemovalThroughAnotherWrappe
     EXPECT_THAT(registry.collect(), HasSubstr("custom_events_total 1\n"));
 }
 
-TEST(MetricRegistryTest, ReportsOnlyNewCustomFamilyRegistrations) {
+class CalculatorMetricsLoggingTest : public testing::Test {
+protected:
+    std::ostringstream logs;
+    std::shared_ptr<spdlog::logger> previousLogger;
+
+    void SetUp() override {
+        auto sink = std::make_shared<spdlog::sinks::ostream_sink_mt>(logs);
+        auto logger = std::make_shared<spdlog::logger>("metric_test", sink);
+        logger->set_pattern("[%l] %v");
+        logger->set_level(spdlog::level::info);
+        previousLogger = std::exchange(modelmanager_logger, logger);
+    }
+    void TearDown() override {
+        modelmanager_logger = std::move(previousLogger);
+    }
+};
+
+TEST_F(CalculatorMetricsLoggingTest, LogsOncePerMetricAndScopeIncludingDisabledMetrics) {
+    auto registerMetrics = [](CalculatorMetrics& metrics) {
+        metrics.getOrRegisterCounter("custom_events_total", "Events.");
+        metrics.getOrRegisterGauge("custom_queue_depth", "Queued requests.");
+        metrics.getOrRegisterHistogram("custom_latency", "Latency.", {1, 2});
+    };
     MetricRegistry registry;
-    bool newlyCreated = false;
-    auto first = registry.registerCustomFamily<MetricCounter>("custom_events_total", "Events.", {}, &newlyCreated);
-    ASSERT_NE(first, nullptr);
-    EXPECT_TRUE(newlyCreated);
+    CalculatorMetrics first(&registry, "graph", "first");
+    CalculatorMetrics second(&registry, "graph", "second");
+    CalculatorMetrics disabled(nullptr, "graph", "disabled");
+    for (CalculatorMetrics* scope : {&first, &second, &disabled}) {
+        registerMetrics(*scope);
+        registerMetrics(*scope);
+    }
+    CalculatorMetrics reloaded(&registry, "graph", "first");
+    reloaded.getOrRegisterCounter("custom_events_total", "Events.");
+    reloaded.getOrRegisterCounter("custom_events_total", "Events.");
 
-    auto existing = registry.registerCustomFamily<MetricCounter>("custom_events_total", "Events.", {}, &newlyCreated);
-    EXPECT_EQ(existing, first);
-    EXPECT_FALSE(newlyCreated);
-
-    ASSERT_TRUE(registry.remove(first));
-    auto reRegistered = registry.registerCustomFamily<MetricCounter>("custom_events_total", "Events.", {}, &newlyCreated);
-    EXPECT_NE(reRegistered, nullptr);
-    EXPECT_TRUE(newlyCreated);
+    const std::string output = logs.str();
+    EXPECT_EQ(std::count(output.begin(), output.end(), '\n'), 10);
+    for (const char* name : {"custom_events_total", "custom_queue_depth", "custom_latency"}) {
+        for (const char* node : {"first", "second"}) {
+            EXPECT_THAT(output, HasSubstr(std::string("[info] Registered custom metric '") + name +
+                                              "' for graph 'graph' node '" + node + "'"));
+        }
+        EXPECT_THAT(output, HasSubstr(std::string("[info] Custom metric '") + name +
+                                          "' for graph 'graph' node 'disabled' is a no-op because metrics are disabled or unavailable"));
+    }
 }
 
 TEST(CalculatorMetricsTest, RegistersAndUpdatesGauge) {

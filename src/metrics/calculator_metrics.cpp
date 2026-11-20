@@ -72,11 +72,21 @@ std::string conflictingRegistrationMessage(const std::string& name) {
            "all registrations for the same metric name must match";
 }
 
+void logRegistration(bool registryAvailable, const std::string& name, const std::string& graphName, const std::string& nodeName) {
+    if (registryAvailable) {
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Registered custom metric '{}' for graph '{}' node '{}'",
+            name, graphName, nodeName);
+    } else {
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Custom metric '{}' for graph '{}' node '{}' is a no-op because metrics are disabled or unavailable",
+            name, graphName, nodeName);
+    }
+}
+
 }  // namespace
 
 CalculatorCounter::CalculatorCounter(MetricRegistry* registry, const std::string& name, const std::string& help,
-    const std::string& graphName, const std::string& nodeName, bool* newlyRegistered) :
-    metric(registry ? registry->registerCustomFamily<MetricCounter>(name, help, {}, newlyRegistered)->addMetric(makeScopeLabels(graphName, nodeName))
+    const std::string& graphName, const std::string& nodeName) :
+    metric(registry ? registry->registerCustomFamily<MetricCounter>(name, help)->addMetric(makeScopeLabels(graphName, nodeName))
                     : nullptr) {}
 
 CalculatorCounter::~CalculatorCounter() = default;
@@ -92,8 +102,8 @@ void CalculatorCounter::increment(double value) {
 }
 
 CalculatorGauge::CalculatorGauge(MetricRegistry* registry, const std::string& name, const std::string& help,
-    const std::string& graphName, const std::string& nodeName, bool* newlyRegistered) :
-    metric(registry ? registry->registerCustomFamily<MetricGauge>(name, help, {}, newlyRegistered)->addMetric(makeScopeLabels(graphName, nodeName))
+    const std::string& graphName, const std::string& nodeName) :
+    metric(registry ? registry->registerCustomFamily<MetricGauge>(name, help)->addMetric(makeScopeLabels(graphName, nodeName))
                     : nullptr) {}
 
 CalculatorGauge::~CalculatorGauge() = default;
@@ -119,9 +129,8 @@ void CalculatorGauge::add(double value) {
 }
 
 CalculatorHistogram::CalculatorHistogram(MetricRegistry* registry, const std::string& name, const std::string& help,
-    const std::string& graphName, const std::string& nodeName, const std::vector<double>& bucketBoundaries,
-    bool* newlyRegistered) :
-    metric(registry ? registry->registerCustomFamily<MetricHistogram>(name, help, bucketBoundaries, newlyRegistered)
+    const std::string& graphName, const std::string& nodeName, const std::vector<double>& bucketBoundaries) :
+    metric(registry ? registry->registerCustomFamily<MetricHistogram>(name, help, bucketBoundaries)
                           ->addMetric(makeScopeLabels(graphName, nodeName), bucketBoundaries)
                     : nullptr) {}
 
@@ -167,14 +176,10 @@ std::shared_ptr<CalculatorCounter> CalculatorMetrics::getOrRegisterCounter(const
         if (auto existing = findCompatibleRegistration<CalculatorCounter>(name, help)) {
             return existing;
         }
-        bool newlyRegistered = false;
         auto counter = std::shared_ptr<CalculatorCounter>(
-            new CalculatorCounter(registry, name, help, graphName, nodeName, &newlyRegistered));
+            new CalculatorCounter(registry, name, help, graphName, nodeName));
         metrics.emplace(name, Registration{help, {}, counter});
-        if (newlyRegistered) {
-            SPDLOG_LOGGER_INFO(modelmanager_logger, "Registered custom metric '{}' for graph '{}' node '{}'",
-                name, graphName, nodeName);
-        }
+        logRegistration(registry != nullptr, name, graphName, nodeName);
         return counter;
     } catch (const std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Custom counter registration failed for graph {} node {} metric {}: {}",
@@ -192,14 +197,10 @@ std::shared_ptr<CalculatorGauge> CalculatorMetrics::getOrRegisterGauge(const std
         if (auto existing = findCompatibleRegistration<CalculatorGauge>(name, help)) {
             return existing;
         }
-        bool newlyRegistered = false;
         auto gauge = std::shared_ptr<CalculatorGauge>(
-            new CalculatorGauge(registry, name, help, graphName, nodeName, &newlyRegistered));
+            new CalculatorGauge(registry, name, help, graphName, nodeName));
         metrics.emplace(name, Registration{help, {}, gauge});
-        if (newlyRegistered) {
-            SPDLOG_LOGGER_INFO(modelmanager_logger, "Registered custom metric '{}' for graph '{}' node '{}'",
-                name, graphName, nodeName);
-        }
+        logRegistration(registry != nullptr, name, graphName, nodeName);
         return gauge;
     } catch (const std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Custom gauge registration failed for graph {} node {} metric {}: {}",
@@ -218,14 +219,10 @@ std::shared_ptr<CalculatorHistogram> CalculatorMetrics::getOrRegisterHistogram(c
         if (auto existing = findCompatibleRegistration<CalculatorHistogram>(name, help, bucketBoundaries)) {
             return existing;
         }
-        bool newlyRegistered = false;
         auto histogram = std::shared_ptr<CalculatorHistogram>(
-            new CalculatorHistogram(registry, name, help, graphName, nodeName, bucketBoundaries, &newlyRegistered));
+            new CalculatorHistogram(registry, name, help, graphName, nodeName, bucketBoundaries));
         metrics.emplace(name, Registration{help, bucketBoundaries, histogram});
-        if (newlyRegistered) {
-            SPDLOG_LOGGER_INFO(modelmanager_logger, "Registered custom metric '{}' for graph '{}' node '{}'",
-                name, graphName, nodeName);
-        }
+        logRegistration(registry != nullptr, name, graphName, nodeName);
         return histogram;
     } catch (const std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Custom histogram registration failed for graph {} node {} metric {}: {}",

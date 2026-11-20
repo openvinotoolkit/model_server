@@ -140,6 +140,10 @@ or `increase()` to calculate counter changes over time.
   Custom metrics still work when a list selects a subset of built-in metrics.
 - With metrics disabled, registration returns a valid no-op handle, so processing
   need not contain null checks. Names and values are still validated.
+- Registration logs an INFO message once per metric and graph/node scope, not
+  for each request. When metrics are disabled or the registry is unavailable,
+  the message indicates that the handle is a no-op. A graph reload creates a
+  new scope and can log the registration again.
 - Metrics persist across requests and calculator `Close` calls. Do not remove
   them in `Close`: other calculator instances can share the series.
 - The metric registry owns the series and keeps them until the server stops.
