@@ -100,7 +100,9 @@ pipeline {
                 git_diff = sh (script: "git diff --name-only HEAD^..HEAD", returnStdout: true).trim()
               }
 
-              if (git_diff =~ /src|third_party|external|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|\.bazel|\.bzl|\.groovy|BUILD|create_package\.sh|WORKSPACE|(\n|^)run_unit_tests\.sh|versions\.mk/) {
+                def composerInputs = /(?m)^(prepare_llm_models\.sh|install_ubuntu_(gpu_drivers|level_zero_loader)\.sh|tests\/functional\/(docker_compose_(demo_probe|smoke_test)\.py|utils\/ports\.py)|demos\/classification_using_paddlepaddle_model\/python\/download_model\.py)$|^(tests\/docker_compose_fixtures|tools\/docker_image_composer)\//
+                if ((git_diff =~ /src|third_party|external|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|\.bazel|\.bzl|\.groovy|BUILD|create_package\.sh|WORKSPACE|(\n|^)run_unit_tests\.sh|versions\.mk/) ||
+                  (git_diff =~ composerInputs)) {
                   image_build_needed = "true"
               }
               if (git_diff =~ /(\n|^)client/) {
@@ -357,6 +359,26 @@ pipeline {
                       archiveArtifacts allowEmptyArchive: true, artifacts: "linux_tests_summary.log"
                   }
                 }
+                }
+                timeout(time: 5, unit: 'MINUTES') {
+                  withGithubStageStatus('jenkins/oncommit/composer-tests-linux', 'Linux composer smoke tests') {
+                    try {
+                      sh """#!/bin/bash
+set -o pipefail
+{
+bash tools/docker_image_composer/prepare_models.sh && \\
+TEST_LLM_PATH="${HOME}/ovms_models/llm_models_ovms/OVMS_C" \\
+python3 -m tests.functional.docker_compose_smoke_test openvino/model_server:${shortCommit} \\
+  all --skip-pull --allow-cpu-fallback --demo \\
+  --demo-component base --demo-component opencv --demo-component python --demo-component tensorflow \\
+  --demo-component paddle --demo-component onnx \\
+  --report docker_compose_smoke_report.log
+} 2>&1 | tee docker_compose_smoke.log
+"""
+                    } finally {
+                      archiveArtifacts allowEmptyArchive: true, artifacts: 'docker_compose_smoke_report.log,docker_compose_smoke.log'
+                    }
+                  }
                 }
               } 
               }
