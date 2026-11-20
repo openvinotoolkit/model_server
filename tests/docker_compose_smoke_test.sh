@@ -23,7 +23,8 @@ Options:
     --with-python     Also retain Python in a non-Python component image.
     --with-opencv     Also retain OpenCV libraries in a non-OpenCV component image.
     --report PATH     Write the Markdown run report to PATH.
-    --demo-fixtures DIR  Also run component-specific demo requests. See composer.md.
+    --demo            Run Level 2 using repository fixtures.
+    --demo-fixtures DIR  Run Level 2 using a custom fixture directory.
     -h, --help        Show this help and exit.
 
 The default report is test_log/docker_compose_smoke_report.md in the repository.
@@ -78,6 +79,10 @@ while [[ $# -gt 0 ]]; do
             fi
             REPORT_FILE=$2
             shift
+            ;;
+        --demo)
+            DEMO_FIXTURES="$ROOT_DIR/tests/docker_compose_fixtures"
+            RUN_OPTIONS+=(--demo)
             ;;
         --demo-fixtures)
             if [[ $# -lt 2 || -z $2 || $2 == --* ]]; then

@@ -1,0 +1,1 @@
+{"model_config_list":[{"config":{"name":"smoke","base_path":"/model","layout":"NHWC:NCHW","mean":"[123.675,116.28,103.53]","scale":"[58.395,57.12,57.375]","shape":"(1,224,224,3)","color_format":"BGR:RGB","precision":"uint8:fp32"}}]}
