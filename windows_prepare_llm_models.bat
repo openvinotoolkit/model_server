@@ -59,7 +59,7 @@ set "ONYX_MODEL=OpenVINO/Muse-Glimmer-30B-int4-ov"
 echo Downloading LLM testing models to directory %~1
 set "PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
 set "PYTHONPATH="
-C:\opt\Python312\python.exe -m venv .venv
+C:\opt\Python314\python.exe -m venv .venv
 if !errorlevel! neq 0 exit /b !errorlevel!
 call .\.venv\Scripts\Activate.bat
 if !errorlevel! neq 0 exit /b !errorlevel!

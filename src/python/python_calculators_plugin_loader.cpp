@@ -229,7 +229,7 @@ void logLikelyMissingWindowsDependencies() {
     const std::vector<std::string> likelyDependencies = {
         "libpython_calculators.dll",  // The plugin itself
         "libovmspython.dll",          // Python runtime support
-        "python312.dll",              // Python interpreter
+        "python314.dll",              // Python interpreter
         "openvino.dll",               // OpenVINO core
         "openvino_genai.dll",         // OpenVINO GenAI
     };

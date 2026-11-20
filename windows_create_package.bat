@@ -160,7 +160,7 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 
 if /i "%include_python%"=="true" (
     :: Prepare self-contained python
-    set "python_version=3.12.10"
+    set "python_version=3.14.10"
 
     call %cd%\windows_prepare_python.bat %dest_dir% !python_version!
     if !errorlevel! neq 0 (
@@ -173,11 +173,11 @@ if /i "%include_python%"=="true" (
         echo Error occurred when creating Python environment for the distribution.
         exit /b !errorlevel!
     )
-    if not exist dist\windows\ovms\python\python312.zip (
-        echo Packaging validation failed: embedded stdlib python312.zip is missing from dist\windows\ovms\python.
+    if not exist dist\windows\ovms\python\python314.zip (
+        echo Packaging validation failed: embedded stdlib python314.zip is missing from dist\windows\ovms\python.
         exit /b 1
     )
-    .\dist\windows\ovms\python\python.exe -m pip install "setuptools==80.9.0" "Jinja2==3.1.6" "MarkupSafe==3.0.2"
+    .\dist\windows\ovms\python\python.exe -m pip install "setuptools==84.2.1" "Jinja2==3.1.6" "MarkupSafe==3.0.4"
     if !errorlevel! neq 0 (
         echo Error during Python dependencies for LLM installation. The package will not be fully functional.
     )

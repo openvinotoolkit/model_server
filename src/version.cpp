@@ -17,10 +17,10 @@
 
 namespace ovms {
 const char* getProjectVersion() {
-    return "REPLACE_PROJECT_VERSION";
+    return "2026.5.0.d554b8529";
 }
 
 const char* getBazelBuildFlags() {
-    return "REPLACE_BAZEL_BUILD_FLAGS";
+    return "--config=win_mp_on";
 }
 }  // namespace ovms

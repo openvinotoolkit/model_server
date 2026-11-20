@@ -46,11 +46,12 @@ IF "%3"=="1" (
 set "BAZEL_SHORT_PATH=C:\%output_user_root%"
 set "opt_install_dir=C:\opt"
 
-:: Python 312 needs to be first in the windows path, as well as MSYS tools
+:: Python 314 needs to be first in the windows path, as well as MSYS tools
 set "CMAKE_BIN_DIR=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin"
 set "CMAKE_BIN=%CMAKE_BIN_DIR%\cmake.exe"
-set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;%CMAKE_BIN_DIR%;%SystemRoot%\System32;C:\opt\msys64\usr\bin\;%PATH%;"
-set "PYTHONHOME=C:\opt\Python312"
+set "setPath=C:\opt;C:\opt\Python314\;C:\opt\Python314\Scripts\;%CMAKE_BIN_DIR%;%SystemRoot%\System32;C:\opt\msys64\usr\bin\;%PATH%;"
+set "PYTHONHOME=C:\opt\Python314"
+set "PYTHONPATH="
 :: Ensure the Windows Python interpreter wins over any MSYS/shim Python during CMake configure steps.
 set "PATH=%setPath%"
 
@@ -420,7 +421,8 @@ echo [INFO] Bazel installed: %bazel_file%
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Python
-set "python_version=3.12.10"
+set "python_version=!WINDOWS_PYTHON314_VERSION!"
+if not defined python_version set "python_version=3.14.10"
 echo [INFO] Installing python %python_version% ...
 for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
         set MAJOR_VER=%%a
@@ -429,7 +431,7 @@ for /f "tokens=1,2 delims=." %%a in ("%python_version%") do (
 set "python_dir=python%MAJOR_VER%%MINOR_VER%"
 set "python_path=%opt_install_dir%\%python_dir%"
 set "python_full_name=python-%python_version%-amd64"
-::https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe
+::https://www.python.org/ftp/python/3.14.10/python-3.14.10-amd64.exe
 set "python_url=https://www.python.org/ftp/python/%python_version%/%python_full_name%.exe"
 
 IF /I EXIST %python_path%\python.exe (
@@ -483,14 +485,49 @@ IF /I EXIST %python_path%\python.exe (
 )
 python --version
 if !errorlevel! neq 0 exit /b !errorlevel!
+:: Python 3.14 and pip must be bootstrapped without PYTHONHOME/PYTHONPATH
+:: inherited from another OVMS checkout or a previous build shell.
+set "PYTHONHOME=%python_path%"
+set "PYTHONPATH="
 %python_path%\python.exe -m ensurepip
 if !errorlevel! neq 0 exit /b !errorlevel!
 %python_path%\python.exe -m pip install --upgrade pip
 if !errorlevel! neq 0 exit /b !errorlevel!
 :: setuptools<60.0 required for numpy1.23 on python311 to install
-%python_path%\python.exe -m pip install "numpy==2.2.5" "Jinja2==3.1.6" "MarkupSafe==3.0.2" "pytest==8.3.5"
+%python_path%\python.exe -m pip install "numpy==2.5.5" "Jinja2==3.1.6" "MarkupSafe==3.0.4" "pytest==9.2.0" "setuptools==84.2.1"
 if !errorlevel! neq 0 exit /b !errorlevel!
 echo [INFO] Python %python_version% installed: %python_path%
+
+:: Keep Python 3.12 installed for active legacy branches while Python 3.14 migration branches are adopted.
+set "python312_version=!WINDOWS_PYTHON312_VERSION!"
+if not defined python312_version set "python312_version=3.12.10"
+set "python312_dir=python312"
+set "python312_path=%opt_install_dir%\%python312_dir%"
+set "python312_full_name=python-%python312_version%-amd64"
+set "python312_url=https://www.python.org/ftp/python/%python312_version%/%python312_full_name%.exe"
+
+IF /I NOT EXIST %python312_path%\python.exe (
+    curl %python312_url% -o %opt_install_dir%\%python312_full_name%.exe
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    set "python_full_name=%python312_full_name%"
+    set "python_path=%python312_path%"
+    call :UninstallPython
+    if !errorlevel! neq 0 exit /b !errorlevel!
+    call :InstallPython
+)
+if not exist %python312_path%\python.exe (
+    echo "Python 3.12 installation failed."
+    exit /b 1
+)
+set "PYTHONHOME=%python312_path%"
+set "PYTHONPATH="
+%python312_path%\python.exe -m ensurepip
+if !errorlevel! neq 0 exit /b !errorlevel!
+%python312_path%\python.exe -m pip install --upgrade pip
+if !errorlevel! neq 0 exit /b !errorlevel!
+%python312_path%\python.exe -m pip install "numpy==2.2.5" "Jinja2==3.1.6" "MarkupSafe==3.0.2" "pytest==8.3.5"
+if !errorlevel! neq 0 exit /b !errorlevel!
+echo [INFO] Legacy Python %python312_version% installed: %python312_path%
 goto install_curl
 :::::::::::::::::::::: Uninstall function
 :UninstallPython
@@ -532,7 +569,7 @@ for /l %%i in (1,1,300) do (
 exit /b 0
 :::::::::::::::::::::: Uninstall function end
 
-:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:::::::::::::::::::::::
 ::::::::::::::::::::::: Install curl ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :install_curl
 echo [INFO] Installing curl ...
@@ -605,7 +642,7 @@ set "opencv_ver=%OPENCV_VERSION%"
 set "opencv_dir=%opt_install_dir%\opencv_git_%opencv_ver%"
 set "opencv_contrib_dir=%opt_install_dir%\opencv_contrib_git_%opencv_ver%"
 set "opencv_install=%opt_install_dir%\opencv_%opencv_ver%"
-set "opencv_flags=-D BUILD_LIST=core,improc,imgcodecs,calib3d,features2d,highgui,imgproc,video,videoio,optflow -D CMAKE_BUILD_TYPE=Release -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_opencv_ts=OFF -D BUILD_opencv_aruco=OFF -D BUILD_opencv_bgsegm=OFF -D BUILD_opencv_bioinspired=OFF -D BUILD_opencv_ccalib=OFF -D BUILD_opencv_datasets=OFF -D BUILD_opencv_dnn=OFF -D BUILD_opencv_dnn_objdetect=OFF -D BUILD_opencv_dpm=OFF -D BUILD_opencv_face=OFF -D BUILD_opencv_fuzzy=OFF -D BUILD_opencv_hfs=OFF -D BUILD_opencv_img_hash=OFF -D BUILD_opencv_js=OFF -D BUILD_opencv_line_descriptor=OFF -D BUILD_opencv_phase_unwrapping=OFF -D BUILD_opencv_plot=OFF -D BUILD_opencv_quality=OFF -D BUILD_opencv_reg=OFF -D BUILD_opencv_rgbd=OFF -D BUILD_opencv_saliency=OFF -D BUILD_opencv_shape=OFF -D BUILD_opencv_structured_light=OFF -D BUILD_opencv_surface_matching=OFF -D BUILD_opencv_world=ON -D BUILD_opencv_xobjdetect=OFF -D BUILD_opencv_xphoto=OFF -D BUILD_opencv_python=OFF -D BUILD_opencv_python3=OFF -D BUILD_opencv_python_bindings_generator=OFF -D CV_ENABLE_INTRINSICS=ON -D WITH_EIGEN=ON -D WITH_PTHREADS=ON -D WITH_JPEG=ON -D WITH_PNG=ON -D WITH_TIFF=OFF -D WITH_OPENEXR=OFF -D WITH_NASM=ON -D CMAKE_ASM_NASM_COMPILER=%msys_path%\usr\bin\nasm.exe -D PYTHON_EXECUTABLE=C:/opt/Python312/python.exe -D PYTHON3_EXECUTABLE=C:/opt/Python312/python.exe -D Python3_EXECUTABLE=C:/opt/Python312/python.exe"
+set "opencv_flags=-D BUILD_LIST=core,improc,imgcodecs,calib3d,features2d,highgui,imgproc,video,videoio,optflow -D CMAKE_BUILD_TYPE=Release -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D BUILD_opencv_ts=OFF -D BUILD_opencv_aruco=OFF -D BUILD_opencv_bgsegm=OFF -D BUILD_opencv_bioinspired=OFF -D BUILD_opencv_ccalib=OFF -D BUILD_opencv_datasets=OFF -D BUILD_opencv_dnn=OFF -D BUILD_opencv_dnn_objdetect=OFF -D BUILD_opencv_dpm=OFF -D BUILD_opencv_face=OFF -D BUILD_opencv_fuzzy=OFF -D BUILD_opencv_hfs=OFF -D BUILD_opencv_img_hash=OFF -D BUILD_opencv_js=OFF -D BUILD_opencv_line_descriptor=OFF -D BUILD_opencv_phase_unwrapping=OFF -D BUILD_opencv_plot=OFF -D BUILD_opencv_quality=OFF -D BUILD_opencv_reg=OFF -D BUILD_opencv_rgbd=OFF -D BUILD_opencv_saliency=OFF -D BUILD_opencv_shape=OFF -D BUILD_opencv_structured_light=OFF -D BUILD_opencv_surface_matching=OFF -D BUILD_opencv_world=ON -D BUILD_opencv_xobjdetect=OFF -D BUILD_opencv_xphoto=OFF -D BUILD_opencv_python=OFF -D BUILD_opencv_python3=OFF -D BUILD_opencv_python_bindings_generator=OFF -D CV_ENABLE_INTRINSICS=ON -D WITH_EIGEN=ON -D WITH_PTHREADS=ON -D WITH_JPEG=ON -D WITH_PNG=ON -D WITH_TIFF=OFF -D WITH_OPENEXR=OFF -D WITH_NASM=ON -D CMAKE_ASM_NASM_COMPILER=%msys_path%\usr\bin\nasm.exe -D PYTHON_EXECUTABLE=C:/opt/Python314/python.exe -D PYTHON3_EXECUTABLE=C:/opt/Python314/python.exe -D Python3_EXECUTABLE=C:/opt/Python314/python.exe"
 
 echo [INFO] Installing OpenCV %opencv_ver% ...
 set "opencv_binary_ver=%opencv_ver:.=%"
