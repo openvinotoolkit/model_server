@@ -35,9 +35,9 @@ Use the image composer to build a smaller release image from an existing OVMS im
 
 Run the composer from the root of the OVMS source checkout. It requires Python 3, Docker with Buildx, and an OVMS source image based on Ubuntu 22.04, 24.04, or 26.04. Check the source image's Ubuntu version before using a rolling tag such as `latest` or `weekly`.
 
-For example, build an image with ONNX model loading and OpenCV, then check that the server starts:
+From the checkout root, build an image with ONNX model loading and OpenCV, then check that the server starts:
 
-```bash
+```text
 python3 docker_compose.py --full-image openvino/model_server:2026.4 \
     --onnx --opencv --output-name ovms-custom:onnx
 docker run --rm ovms-custom:onnx --help
