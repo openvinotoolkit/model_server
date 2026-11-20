@@ -233,7 +233,27 @@ TEST_F(KFSRestParserTest, parseValidRequestFP64) {
     ASSERT_THAT(proto.inputs()[0].shape(), ElementsAre(2, 2));
     ASSERT_EQ(proto.inputs()[0].datatype(), "FP64");
     ASSERT_EQ(proto.inputs()[0].contents().fp64_contents_size(), 4);
-    ASSERT_THAT(proto.inputs()[0].contents().fp64_contents(), ElementsAre(1.1f, 2.2f, 3.3f, 4.4f));
+    ASSERT_THAT(proto.inputs()[0].contents().fp64_contents(), ElementsAre(1.1, 2.2, 3.3, 4.4));
+}
+
+TEST_F(KFSRestParserTest, parseValidRequestFP64PreservesPrecision) {
+    std::string request = R"({
+    "inputs" : [
+        {
+        "name" : "input0",
+        "shape" : [ 1 ],
+        "datatype" : "FP64",
+        "data" : [ 1.23456789012345 ]
+        }
+    ]
+    })";
+    auto status = parser.parse(request.c_str());
+    ASSERT_EQ(status, StatusCode::OK);
+
+    auto proto = parser.getProto();
+    ASSERT_EQ(proto.inputs_size(), 1);
+    ASSERT_EQ(proto.inputs()[0].contents().fp64_contents_size(), 1);
+    EXPECT_DOUBLE_EQ(proto.inputs()[0].contents().fp64_contents(0), 1.23456789012345);
 }
 
 TEST_F(KFSRestParserTest, parseValidRequestFP32) {
