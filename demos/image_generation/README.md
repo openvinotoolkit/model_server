@@ -36,55 +36,12 @@ This command pulls the `OpenVINO/stable-diffusion-v1-5-int8-ov` quantized model 
 
 > **NOTE:** Optionally, to only download the model and omit the serving part, use `--pull` parameter.
 
-### CPU
-
-::::{tab-set}
-:::{tab-item} Docker (Linux)
-:sync: docker
-Start docker container:
-```bash
-mkdir -p ${HOME}/models
-
-docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v ${HOME}/models:/models:rw \
-  -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
-  openvino/model_server:latest \
-    --rest_port 8000 \
-    --model_repository_path /models \
-    --task image_generation \
-    --source_model OpenVINO/stable-diffusion-v1-5-int8-ov
-```
-:::
-
-:::{tab-item} Bare metal (Windows)
-:sync: bare-metal
-
-Assuming you have unpacked model server package, make sure to:
-
-- **On Windows**: run `setupvars` script
-- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
-
-as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
-
-
-```bat
-if not exist c:\models mkdir c:\models
-
-ovms --rest_port 8000 ^
-  --model_repository_path c:\models ^
-  --task image_generation ^
-  --source_model OpenVINO/stable-diffusion-v1-5-int8-ov
-```
-:::
-
-::::
-
 ### GPU
 
 ::::{tab-set}
 :::{tab-item} Docker (Linux)
 :sync: docker
-In case you want to use Intel GPU device to run the generation, add extra docker parameters `--device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` to `docker run` command, use the docker image with GPU support. Export the models with precision matching the GPU capacity and adjust pipeline configuration.
-It can be applied using the commands below:
+Start docker container:
 ```bash
 mkdir -p ${HOME}/models
 
@@ -103,7 +60,14 @@ docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
 :::{tab-item} Bare metal (Windows)
 :sync: bare-metal
 
-If you run on GPU make sure to have appropriate drivers installed, so the device is accessible for the model server.
+Assuming you have unpacked model server package, make sure to:
+
+- **On Windows**: run `setupvars` script
+- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
+
+as mentioned in [deployment guide](../../docs/deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
+
+Make sure to have appropriate GPU drivers installed, so the device is accessible for the model server.
 
 ```bat
 if not exist c:\models mkdir c:\models
@@ -227,10 +191,12 @@ If you already have a model on disk (downloaded via Option 1 with `--pull`, or v
 
 ```bash
 docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
-  openvino/model_server:latest \
+  --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
+  openvino/model_server:latest-gpu \
     --rest_port 8000 \
     --model_name OpenVINO/stable-diffusion-v1-5-int8-ov \
-    --model_path /models/OpenVINO/stable-diffusion-v1-5-int8-ov
+    --model_path /models/OpenVINO/stable-diffusion-v1-5-int8-ov \
+    --target_device GPU
 ```
 :::
 
@@ -240,7 +206,8 @@ docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
 ```bat
 ovms --rest_port 8000 ^
   --model_name OpenVINO/stable-diffusion-v1-5-int8-ov ^
-  --model_path c:\models\OpenVINO\stable-diffusion-v1-5-int8-ov
+  --model_path c:\models\OpenVINO\stable-diffusion-v1-5-int8-ov ^
+  --target_device GPU
 ```
 :::
 
