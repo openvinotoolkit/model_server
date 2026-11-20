@@ -282,7 +282,8 @@ pipeline {
                     sh "echo test:linux --test_env https_proxy=${env.HTTPS_PROXY} >> .user.bazelrc"
                     sh "echo test:linux --test_env http_proxy=${env.HTTP_PROXY} >> .user.bazelrc"
                     withCredentials([usernamePassword(credentialsId: 'workflow_lab_mediapipe', usernameVariable: 'GIT_USERNAME', passwordVariable: 'TOKEN')]) {
-                      sh "make ovms_builder_image BASE_OS=ubuntu24 RUN_TESTS=${runTestsFlag} OPTIMIZE_BUILDING_TESTS=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
+                      sh "make ovms_builder_image BASE_OS=ubuntu24 RUN_TESTS=${runTestsFlag} OPTIMIZE_BUILDING_TESTS=1 VERBOSE_LOGS=ON NO_DOCKER_CACHE=true OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
+                      archiveArtifacts artifacts: 'linux_build.log'
 
                       // release_image
                       sh "make release_image BASE_OS=ubuntu24 RUN_TESTS=0 GPU=1 NPU=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
