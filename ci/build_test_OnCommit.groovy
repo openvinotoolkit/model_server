@@ -358,6 +358,23 @@ pipeline {
                   }
                 }
                 }
+                timeout(time: 5, unit: 'MINUTES') {
+                  withGithubStageStatus('jenkins/oncommit/composer-tests-linux', 'Linux composer smoke tests') {
+                    try {
+                      sh """#!/bin/bash
+set -o pipefail
+mkdir -p test_log
+python3 -m tests.functional.docker_compose_smoke_test openvino/model_server:${shortCommit} \\
+  all --skip-pull --allow-cpu-fallback --demo \\
+  --demo-component opencv --demo-component python --demo-component tensorflow \\
+  --demo-component paddle --demo-component onnx \\
+  --report test_log/docker_compose_smoke_report.md 2>&1 | tee test_log/docker_compose_smoke.log
+"""
+                    } finally {
+                      archiveArtifacts allowEmptyArchive: true, artifacts: 'test_log/docker_compose_smoke_report.md,test_log/docker_compose_smoke.log'
+                    }
+                  }
+                }
               } 
               }
             }
