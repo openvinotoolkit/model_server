@@ -60,7 +60,7 @@ If `language` is omitted, OVMS defaults to `en-us`. For non-English text, set `l
 | voice | ✅ | ✅ | string | The voice to use when generating the audio. OVMS first checks graph-configured or model-local voice embeddings, then forwards the value as a model-native speaker name when the backend supports it. If not provided, model default voice will be used. |
 | language | ✅ | ❌ | string | Optional phonemization language passed to the OpenVINO GenAI speech generation pipeline. Supported values for Kokoro are `en-us`, `en-gb`, `es`, `fr-fr`, `it`, `pt-br`, `hi`. Defaults to `en-us`. |
 | instructions | ✅ | ✅ | string | Additional generation instructions forwarded to the OpenVINO GenAI speech generation pipeline for models that support prompt-based voice control. |
-| response_format | ✅ | ✅ | string | Output format. Supported values are `wav` (default, 16-bit PCM WAV) and `pcm` (raw signed 16-bit little-endian samples). |
+| response_format | ✅ | ✅ | string | Output format. Supported values are `wav` (default, 16-bit PCM WAV) and `pcm` (raw signed 16-bit little-endian samples at the model's native sample rate). |
 | speed | ✅ | ✅ | number | The speed of the generated audio. |
 | stream_format | ❌ | ✅ | string | The format to stream the audio in. |
 

@@ -196,7 +196,8 @@ public:
                     if (!responseFormatIt->value.IsString()) {
                         return absl::InvalidArgumentError("response_format field is not a string");
                     }
-                    auto requestedFormat = ovms::audio_utils::tryParseTextToSpeechResponseFormat(responseFormatIt->value.GetString());
+                    const std::string_view format(responseFormatIt->value.GetString(), responseFormatIt->value.GetStringLength());
+                    auto requestedFormat = ovms::audio_utils::tryParseTextToSpeechResponseFormat(format);
                     if (!requestedFormat.has_value()) {
                         return absl::InvalidArgumentError("Unsupported response_format. Supported formats are wav and pcm");
                     }

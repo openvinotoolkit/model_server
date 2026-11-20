@@ -709,4 +709,8 @@ TEST_F(AudioUtilsSampleRateTest, convertWaveformToPcm16MapsNaNToSilence) {
     EXPECT_EQ(pcm16[2], 16383);
 }
 
+TEST_F(AudioUtilsSampleRateTest, responseFormatRejectsEmbeddedNull) {
+    EXPECT_FALSE(tryParseTextToSpeechResponseFormat(std::string_view("pcm\0flac", 8)).has_value());
+    EXPECT_FALSE(tryParseTextToSpeechResponseFormat(std::string_view("wav\0mp3", 7)).has_value());
+}
 }  // namespace

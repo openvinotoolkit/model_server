@@ -93,7 +93,8 @@ std::optional<ovms::audio_utils::TextToSpeechResponseFormat> getRequestedTextToS
     if (!responseFormatIt->value.IsString()) {
         return std::nullopt;
     }
-    return ovms::audio_utils::tryParseTextToSpeechResponseFormat(responseFormatIt->value.GetString());
+    const std::string_view format(responseFormatIt->value.GetString(), responseFormatIt->value.GetStringLength());
+    return ovms::audio_utils::tryParseTextToSpeechResponseFormat(format);
 }
 
 }  // namespace
