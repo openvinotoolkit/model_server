@@ -31,7 +31,8 @@ Select base OS:
 - `ubuntu22` for Ubuntu 22.04
 - `ubuntu24` for Ubuntu 24.04 (default)
 - `ubuntu26` for Ubuntu 26.04
-- `redhat` for Red Hat UBI 9.8
+- `redhat` or `redhat9` for Red Hat UBI 9.8
+- `redhat10` for Red Hat UBI 10.3
 
 ```text
 make release_image BASE_OS=redhat
@@ -50,9 +51,9 @@ Example:
 | Ubuntu 22.04 | `24.52.32224` |
 | Ubuntu 24.04 | `26.31.39395` |
 | Ubuntu 26.04 | `26.31.39395` |
-| Red Hat | `25.18.33578` |
+| Red Hat UBI 9 and UBI 10 | `26.40.40196.8` |
 
-See [install_ubuntu_gpu_drivers.sh](../install_ubuntu_gpu_drivers.sh) and [install_redhat_gpu_drivers.sh](../install_redhat_gpu_drivers.sh) for the installer cases.
+See [install_ubuntu_gpu_drivers.sh](../install_ubuntu_gpu_drivers.sh) for Ubuntu installer cases. Red Hat driver components are built from source in [Dockerfile.redhat](../Dockerfile.redhat).
 
 
 Example:
@@ -109,6 +110,16 @@ Example:
 make release_image GPU=1
 ```
 
+### `NPU`
+
+Set `NPU=1` to include NPU runtime drivers. For Red Hat, this builds the v1.39.1 NPU driver and compiler from source:
+
+```text
+make release_image BASE_OS=redhat NPU=1
+```
+
+The host must provide a compatible `intel_vpu` kernel driver and firmware. Firmware inside the image is not loaded by the host kernel. Pass the NPU device and its group to the container as described in [Using NPU device Plugin](accelerators.md#using-npu-device-plugin).
+
 ### `TOKEN`
 
 GitHub Personal Access Token (PAT) used to run builds with an authenticated GitHub user when cloning source repositories. This serves as a workaround for GitHub connection stability issues and API rate limits during the build.
@@ -134,6 +145,8 @@ The binary packages includes the `ovms` executable and linked libraries for bare
 make targz_package
 tree dist/ubuntu24
 ```
+
+For `BASE_OS=redhat`, `redhat9`, or `redhat10`, this target also builds the GPU and NPU drivers from source and exports `ovms-drivers.tar.gz` and its SHA-256 checksum under `dist/redhat9` or `dist/redhat10`. The archive contains separate `gpu/` and `npu/` filesystem roots, including driver licenses and NPU firmware. The target host must provide compatible system dependencies, the NPU kernel driver, and host-installed firmware.
 
 ```text
 dist/ubuntu24
