@@ -105,8 +105,8 @@ if __name__ == "__main__":
     # Execute the Python script with Python variables removed. These variables
     # point to the Windows CPython installation and can corrupt MSYS /usr/bin/python3.
     python_environment = dict(repository_ctx.os.environ)
-    python_environment.pop("PYTHONHOME", None)
-    python_environment.pop("PYTHONPATH", None)
+    python_environment["PYTHONHOME"] = ""
+    python_environment["PYTHONPATH"] = ""
     result = repository_ctx.execute([python_binary, "remove_japanese_txt.py"], environment=python_environment)
 
     # Log the script's stdout and stderr
