@@ -97,6 +97,21 @@ absl::Status SttServable::updateTranscriptionConfig(ov::genai::ASRGenerationConf
         SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received language: {}", language);
         config.language = "<|" + language + "|>";
     }
+    std::string prompt = payload.multipartParser->getFieldByName("prompt");
+    if (prompt.size() > 0) {
+        SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received prompt: {}", prompt);
+        config.initial_prompt = prompt;
+    }
+    std::string hotwords = payload.multipartParser->getFieldByName("hotwords");
+    if (hotwords.size() > 0) {
+        SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received hotwords: {}", hotwords);
+        config.hotwords = hotwords;
+    }
+    std::string context = payload.multipartParser->getFieldByName("context");
+    if (context.size() > 0) {
+        SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received context: {}", context);
+        config.context = context;
+    }
     std::vector<std::string> timestampsTypes = payload.multipartParser->getArrayFieldByName("timestamp_granularities[]");
     config.word_timestamps = false;
     for (const auto& timestampsType : timestampsTypes) {
