@@ -136,8 +136,8 @@ cp -r /opt/intel/openvino/python /ovms_release/lib/python
 if [ "$FUZZER_BUILD" == "0" ]; then mv /ovms_release/lib/pyovms.so /ovms_release/lib/python ; fi
 mv /ovms_release/lib/python/bin/convert_tokenizer /ovms_release/bin/convert_tokenizer
 chmod +x /ovms_release/bin/convert_tokenizer
-mkdir -p /ovms_release/lib/python/openvino_genai-2026.5.dist-info
-echo $'Metadata-Version: 1.0\nName: openvino-genai\nVersion: 2026.5\nRequires-Python: >=3.9\nRequires-Dist: openvino-genai~=2027.0.0' > /ovms_release/lib/python/openvino_genai-2026.5.dist-info/METADATA
+mkdir -p /ovms_release/lib/python/openvino_genai-2027.0.0.dist-info
+echo $'Metadata-Version: 1.0\nName: openvino-genai\nVersion: 2027.0.0\nRequires-Python: >=3.9\nRequires-Dist: openvino-genai~=2027.0.0' > /ovms_release/lib/python/openvino_genai-2027.0.0.dist-info/METADATA
 
 if [ -f /opt/intel/openvino/runtime/lib/intel64/plugins.xml ]; then cp /opt/intel/openvino/runtime/lib/intel64/plugins.xml /ovms_release/lib/ ; fi
 find /opt/intel/openvino/runtime/lib/intel64/ -iname '*.mvcmd*' -exec cp -vP {} /ovms_release/lib/ \;
