@@ -18,6 +18,7 @@
 
 import json
 import math
+import os
 import re
 import struct
 import subprocess
@@ -163,16 +164,28 @@ def model_mounts(component, work_dir):
         return (mount(ROOT / "src/test/mediapipe/graphpythonsummator.pbtxt", "/summator.pbtxt")
                 + mount(ROOT / handler, f"/ovms/{handler}"))
     model_dir = ROOT / MODEL_DIRS[component]
+    graph_path = model_dir / "graph.pbtxt"
+    llm_path = os.environ.get("TEST_LLM_PATH")
+    if llm_path and component in ("gpu", "npu", "espeak"):
+        if component == "espeak":
+            model_dir = Path(llm_path).resolve() / "OpenVINO/Kokoro-82M-int8-ov"
+            graph_path = ROOT / "src/test/audio/graph_tts.pbtxt"
+        else:
+            model_dir = Path(llm_path).resolve() / "OpenVINO/bge-base-en-v1.5-int8-ov"
+            graph_path = ROOT / "src/test/embeddings/graph_ov.pbtxt"
     if not model_dir.is_dir():
         raise RuntimeError(f"missing model directory {model_dir}; see composer.md for one-time setup")
     args = mount(model_dir, "/model")
-    if component in ("gpu", "npu"):
-        graph = (model_dir / "graph.pbtxt").read_text()
+    if component in ("gpu", "npu", "espeak"):
+        graph = graph_path.read_text()
         graph = re.sub(r'models_path:.*', 'models_path: "/model"', graph)
-        graph = re.sub(r'target_device:.*', f'target_device: "{component.upper()}"', graph)
-        path = work_dir / "embeddings.pbtxt"
+        graph_name = "tts.pbtxt" if component == "espeak" else "embeddings.pbtxt"
+        if component in ("gpu", "npu"):
+            graph = re.sub(r'^([ \t]*models_path:.*)$', r'\1\n        target_device: "' + component.upper() + '"',
+                           re.sub(r'^\s*target_device:.*$', '', graph, flags=re.MULTILINE), flags=re.MULTILINE)
+        path = work_dir / graph_name
         path.write_text(graph)
-        args += mount(path, "/embeddings.pbtxt")
+        args += mount(path, f"/{graph_name}")
     return args
 
 

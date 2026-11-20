@@ -63,8 +63,8 @@ def parse_args():
     parser.add_argument("--skip-pull", action="store_true", help="Use the local source image without pulling it.")
     parser.add_argument("--with-python", action="store_true", help="Also retain Python in non-Python images.")
     parser.add_argument("--with-opencv", action="store_true", help="Also retain OpenCV in non-OpenCV images.")
-    parser.add_argument("--report", type=Path, default=probe.ROOT / "test_log/docker_compose_smoke_report.md",
-                        help="Markdown report path (default: test_log/docker_compose_smoke_report.md).")
+    parser.add_argument("--report", type=Path, default=probe.ROOT / "test_log/docker_compose_smoke_report.log",
+                        help="Report path (default: test_log/docker_compose_smoke_report.log).")
     parser.add_argument("--demo", dest="fixtures", action="store_const", const=probe.FIXTURES,
                         help="Run Level 2 using repository fixtures.")
     parser.add_argument("--demo-fixtures", dest="fixtures", type=Path, metavar="DIR",
