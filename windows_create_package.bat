@@ -186,8 +186,8 @@ if /i "%include_python%"=="true" (
 copy C:\%output_user_root%\openvino\runtime\3rdparty\tbb\bin\tbb12.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-:: Copy from bazel-out if the genai is from sources
-copy %cd%\bazel-out\x64_windows-opt\bin\src\opencv_world!opencv_dll_ver!.dll dist\windows\ovms
+:: Copy OpenCV runtime from the installed C:\opt layout
+copy /Y "C:\opt\opencv_!opencv_version!\x64\vc17\bin\opencv_world!opencv_dll_ver!.dll" dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 set "opencv_decoder_src=%cd%\bazel-out\x64_windows-opt\bin\src\image_utils\ovms_opencv_image_decoder.dll"
 if not exist "!opencv_decoder_src!" (

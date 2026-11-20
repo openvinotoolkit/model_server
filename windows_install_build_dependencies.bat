@@ -63,15 +63,15 @@ if defined GITHUB_TOKEN (
 )
 
 :: Bazel compilation settings
-set VS_2022_BT="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
-IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :msvc_error
+set "VS_2022_BT=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
+IF /I EXIST "%VS_2022_BT%" goto :msvc_bt ELSE goto :msvc_error
 
 :msvc_error
 echo [ERROR] Required MSVC compiler not installed
 goto :exit_build_error
 :msvc_bt
 echo [INFO] Using MSVC %VS_2022_BT%
-set BAZEL_VS=%VS_2022_BT%
+set "BAZEL_VS=%VS_2022_BT%"
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: Check directories
@@ -485,10 +485,6 @@ IF /I EXIST %python_path%\python.exe (
 )
 python --version
 if !errorlevel! neq 0 exit /b !errorlevel!
-:: Python 3.14 and pip must be bootstrapped without PYTHONHOME/PYTHONPATH
-:: inherited from another OVMS checkout or a previous build shell.
-set "PYTHONHOME=%python_path%"
-set "PYTHONPATH="
 %python_path%\python.exe -m ensurepip
 if !errorlevel! neq 0 exit /b !errorlevel!
 %python_path%\python.exe -m pip install --upgrade pip
@@ -613,7 +609,7 @@ set "curl_lib=%curl_path%\bin\libcurl-x64.lib"
 IF /I EXIST %curl_lib% (
     echo [INFO] file exists %curl_lib% 
 ) ELSE (
-    set "CURL_LIB_PATH=%BAZEL_VS:"=%\VC\Tools\MSVC\*"
+    set "CURL_LIB_PATH=%BAZEL_VS:"="%\VC\Tools\MSVC\*"
     echo !CURL_LIB_PATH!
     for /d %%F in ("!CURL_LIB_PATH!") do (
         echo Matched directory: %%F
