@@ -133,10 +133,10 @@ TEST_F(CalculatorMetricsLoggingTest, LogsOncePerMetricAndScopeIncludingDisabledM
     for (const char* name : {"custom_events_total", "custom_queue_depth", "custom_latency"}) {
         for (const char* node : {"first", "second"}) {
             EXPECT_THAT(output, HasSubstr(std::string("[info] Registered custom metric '") + name +
-                                              "' for graph 'graph' node '" + node + "'"));
+                                          "' for graph 'graph' node '" + node + "'"));
         }
         EXPECT_THAT(output, HasSubstr(std::string("[info] Custom metric '") + name +
-                                          "' for graph 'graph' node 'disabled' is a no-op because metrics are disabled or unavailable"));
+                                      "' for graph 'graph' node 'disabled' is a no-op because metrics are disabled or unavailable"));
     }
 }
 
