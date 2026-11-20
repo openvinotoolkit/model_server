@@ -90,7 +90,8 @@ def run_smoke(args, component, image, container, work_dir, device_args):
     if args.skip_pull:
         flags.append("--skip-pull")
     print(f"Building {image} from {args.full_image}", flush=True)
-    result = subprocess.run([sys.executable, str(probe.ROOT / "compose.py"), "--full-image", args.full_image,
+    composer = probe.ROOT / "tools/docker_image_composer/compose.py"
+    result = subprocess.run([sys.executable, str(composer), "--full-image", args.full_image,
                              "--output-name", image, "--work-dir", str(work_dir), *flags], check=False, timeout=900)
     if result.returncode:
         raise RuntimeError(f"composer build failed (exit {result.returncode}); see command output")

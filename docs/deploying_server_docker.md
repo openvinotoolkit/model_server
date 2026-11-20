@@ -38,7 +38,7 @@ Run the composer from the root of the OVMS source checkout. It requires Python 3
 From the checkout root, build an image with ONNX model loading and OpenCV, then check that the server starts:
 
 ```text
-python3 compose.py --full-image openvino/model_server:weekly \
+python3 tools/docker_image_composer/compose.py --full-image openvino/model_server:weekly \
     --onnx --opencv --output-name ovms-custom:onnx
 docker run --rm ovms-custom:onnx --help
 ```
@@ -58,7 +58,7 @@ To serve a model, use the resulting image tag in place of `openvino/model_server
 
 Combine flags as needed. If the source OVMS executable depends on Python or OpenCV, the composer requires the corresponding flag rather than removing those libraries. GPU and NPU use still requires compatible hardware and [device access for the container](accelerators.md).
 
-The composer defaults to `openvino/model_server:weekly` and pulls the current version of that tag on each run. Use `--full-image` to select another tag or pin an image by digest. Use `--skip-pull` to reuse an image already available locally. Use `--dry-run` to generate `Dockerfile.compose` without building it, or run `python3 compose.py --help` for the full option list.
+The composer defaults to `openvino/model_server:weekly` and pulls the current version of that tag on each run. Use `--full-image` to select another tag or pin an image by digest. Use `--skip-pull` to reuse an image already available locally. Use `--dry-run` to generate `Dockerfile.compose` without building it, or run `python3 tools/docker_image_composer/compose.py --help` for the full option list.
 
 #### Step 2. Prepare Data for Serving
 
