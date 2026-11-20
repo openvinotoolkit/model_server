@@ -286,6 +286,13 @@ public:
 
         GraphReinitGuard reinitOnFailureGuard(*this->guard->graphHelper, this->config, this->sidePacketMaps);
 
+        enum : unsigned int {
+            PROCESS,
+            TIMER_END2
+        };
+        Timer<TIMER_END2> timer;
+        timer.start(PROCESS);
+
         size_t numberOfPacketsCreated = 0;
         ::mediapipe::CalculatorGraph& graph = this->guard->graph;
         auto ovms_status = createAndPushPacketsImpl(
@@ -318,6 +325,10 @@ public:
         reinitOnFailureGuard.dismiss();
         // Increment timestamp for next request reusing this graph from the queue
         this->guard->graphHelper->currentTimestamp = ::mediapipe::Timestamp(this->guard->graphHelper->currentTimestamp.Value() + 1);
+        timer.stop(PROCESS);
+        double processTime = timer.template elapsed<std::chrono::microseconds>(PROCESS);
+        OBSERVE_IF_ENABLED(this->mediapipeServableMetricReporter->getProcessingTimeMetric(executionContext), processTime);
+        INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getResponsesMetric(executionContext));
         SPDLOG_DEBUG("Received all output stream packets for graph: {}", this->name);
         return StatusCode::OK;
     }
