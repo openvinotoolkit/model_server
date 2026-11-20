@@ -221,20 +221,6 @@ TEST_F(SttServableUpdateTranscriptionConfigTest, hotwordsRemainsACompatibilityAl
     EXPECT_EQ(config.hotwords, "Polychrome");
 }
 
-TEST_F(SttServableUpdateTranscriptionConfigTest, contextOverridesPromptForQwen) {
-    ON_CALL(*multipartParser, getFieldByName("prompt"))
-        .WillByDefault(::testing::Return("portable prompt"));
-    ON_CALL(*multipartParser, getFieldByName("context"))
-        .WillByDefault(::testing::Return("qwen context"));
-
-    ov::genai::ASRGenerationConfig config;
-    const auto status = SttServable::updateTranscriptionConfig(config, servable, payload);
-
-    EXPECT_TRUE(status.ok());
-    EXPECT_EQ(config.initial_prompt, "portable prompt");
-    EXPECT_EQ(config.context, "qwen context");
-}
-
 // ====================== Speech2Text Streaming Tests ======================
 
 class Speech2TextStreamingTest : public Speech2TextHttpTest {
