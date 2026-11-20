@@ -176,8 +176,7 @@ std::shared_ptr<CalculatorCounter> CalculatorMetrics::getOrRegisterCounter(const
         if (auto existing = findCompatibleRegistration<CalculatorCounter>(name, help)) {
             return existing;
         }
-        auto counter = std::shared_ptr<CalculatorCounter>(
-            new CalculatorCounter(registry, name, help, graphName, nodeName));
+        auto counter = std::shared_ptr<CalculatorCounter>(new CalculatorCounter(registry, name, help, graphName, nodeName));
         metrics.emplace(name, Registration{help, {}, counter});
         logRegistration(registry != nullptr, name, graphName, nodeName);
         return counter;
@@ -197,8 +196,7 @@ std::shared_ptr<CalculatorGauge> CalculatorMetrics::getOrRegisterGauge(const std
         if (auto existing = findCompatibleRegistration<CalculatorGauge>(name, help)) {
             return existing;
         }
-        auto gauge = std::shared_ptr<CalculatorGauge>(
-            new CalculatorGauge(registry, name, help, graphName, nodeName));
+        auto gauge = std::shared_ptr<CalculatorGauge>(new CalculatorGauge(registry, name, help, graphName, nodeName));
         metrics.emplace(name, Registration{help, {}, gauge});
         logRegistration(registry != nullptr, name, graphName, nodeName);
         return gauge;
