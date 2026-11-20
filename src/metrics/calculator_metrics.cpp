@@ -72,6 +72,16 @@ std::string conflictingRegistrationMessage(const std::string& name) {
            "all registrations for the same metric name must match";
 }
 
+void logRegistration(bool registryAvailable, const std::string& name, const std::string& graphName, const std::string& nodeName) {
+    if (registryAvailable) {
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Registered custom metric '{}' for graph '{}' node '{}'",
+            name, graphName, nodeName);
+    } else {
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Custom metric '{}' for graph '{}' node '{}' is a no-op because metrics are disabled or unavailable",
+            name, graphName, nodeName);
+    }
+}
+
 }  // namespace
 
 CalculatorCounter::CalculatorCounter(MetricRegistry* registry, const std::string& name, const std::string& help,
@@ -168,6 +178,7 @@ std::shared_ptr<CalculatorCounter> CalculatorMetrics::getOrRegisterCounter(const
         }
         auto counter = std::shared_ptr<CalculatorCounter>(new CalculatorCounter(registry, name, help, graphName, nodeName));
         metrics.emplace(name, Registration{help, {}, counter});
+        logRegistration(registry != nullptr, name, graphName, nodeName);
         return counter;
     } catch (const std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Custom counter registration failed for graph {} node {} metric {}: {}",
@@ -187,6 +198,7 @@ std::shared_ptr<CalculatorGauge> CalculatorMetrics::getOrRegisterGauge(const std
         }
         auto gauge = std::shared_ptr<CalculatorGauge>(new CalculatorGauge(registry, name, help, graphName, nodeName));
         metrics.emplace(name, Registration{help, {}, gauge});
+        logRegistration(registry != nullptr, name, graphName, nodeName);
         return gauge;
     } catch (const std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Custom gauge registration failed for graph {} node {} metric {}: {}",
@@ -208,6 +220,7 @@ std::shared_ptr<CalculatorHistogram> CalculatorMetrics::getOrRegisterHistogram(c
         auto histogram = std::shared_ptr<CalculatorHistogram>(
             new CalculatorHistogram(registry, name, help, graphName, nodeName, bucketBoundaries));
         metrics.emplace(name, Registration{help, bucketBoundaries, histogram});
+        logRegistration(registry != nullptr, name, graphName, nodeName);
         return histogram;
     } catch (const std::exception& e) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Custom histogram registration failed for graph {} node {} metric {}: {}",
