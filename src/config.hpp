@@ -21,6 +21,12 @@
 
 #include "capi_frontend/server_settings.hpp"
 
+#ifdef __linux__
+#define OVMS_CONFIG_EXPORT __attribute__((visibility("default")))
+#else
+#define OVMS_CONFIG_EXPORT
+#endif
+
 namespace ovms {
 
 /**
@@ -67,11 +73,7 @@ public:
     /**
      * @brief Gets the instance of the config
      */
-    static Config& instance() {
-        static Config instance;
-
-        return instance;
-    }
+    OVMS_CONFIG_EXPORT static Config& instance();
 
     /**
      * @brief Parse the commandline parameters
