@@ -159,6 +159,82 @@ INSTANTIATE_TEST_SUITE_P(
         return name;
     });
 
+class SttServableUpdateTranscriptionConfigTest : public ::testing::Test {
+protected:
+    HttpPayload payload;
+    std::shared_ptr<MockedMultiPartParser> multipartParser = std::make_shared<MockedMultiPartParser>();
+    std::shared_ptr<SttServable> servable;
+
+    void SetUp() override {
+        payload.multipartParser = multipartParser;
+        ON_CALL(*multipartParser, getFieldByName(::testing::_))
+            .WillByDefault(::testing::Return(std::string{}));
+        ON_CALL(*multipartParser, getArrayFieldByName(::testing::_))
+            .WillByDefault(::testing::Return(std::vector<std::string>{}));
+    }
+};
+
+TEST_F(SttServableUpdateTranscriptionConfigTest, promptSetsWhisperInitialPromptAndQwenContext) {
+    ON_CALL(*multipartParser, getFieldByName("prompt"))
+        .WillByDefault(::testing::Return("previous transcription"));
+
+    ov::genai::ASRGenerationConfig config;
+    const auto status = SttServable::updateTranscriptionConfig(config, servable, payload);
+
+    EXPECT_TRUE(status.ok());
+    EXPECT_EQ(config.initial_prompt, "previous transcription");
+    EXPECT_EQ(config.context, "previous transcription");
+}
+
+TEST_F(SttServableUpdateTranscriptionConfigTest, officialKeywordsArePassedAsWhisperHotwords) {
+    ON_CALL(*multipartParser, getArrayFieldByName("keywords[]"))
+        .WillByDefault(::testing::Return(std::vector<std::string>{"OpenVINO", "Model Server"}));
+    ON_CALL(*multipartParser, getFieldByName("hotwords"))
+        .WillByDefault(::testing::Return("ignored alias"));
+
+    ov::genai::ASRGenerationConfig config;
+    const auto status = SttServable::updateTranscriptionConfig(config, servable, payload);
+
+    EXPECT_TRUE(status.ok());
+    EXPECT_EQ(config.hotwords, "OpenVINO Model Server");
+}
+
+TEST_F(SttServableUpdateTranscriptionConfigTest, keywordsWithoutBracketsAreSupported) {
+    ON_CALL(*multipartParser, getArrayFieldByName("keywords"))
+        .WillByDefault(::testing::Return(std::vector<std::string>{"Qwen", "ASR"}));
+
+    ov::genai::ASRGenerationConfig config;
+    const auto status = SttServable::updateTranscriptionConfig(config, servable, payload);
+
+    EXPECT_TRUE(status.ok());
+    EXPECT_EQ(config.hotwords, "Qwen ASR");
+}
+
+TEST_F(SttServableUpdateTranscriptionConfigTest, hotwordsRemainsACompatibilityAlias) {
+    ON_CALL(*multipartParser, getFieldByName("hotwords"))
+        .WillByDefault(::testing::Return("Polychrome"));
+
+    ov::genai::ASRGenerationConfig config;
+    const auto status = SttServable::updateTranscriptionConfig(config, servable, payload);
+
+    EXPECT_TRUE(status.ok());
+    EXPECT_EQ(config.hotwords, "Polychrome");
+}
+
+TEST_F(SttServableUpdateTranscriptionConfigTest, contextOverridesPromptForQwen) {
+    ON_CALL(*multipartParser, getFieldByName("prompt"))
+        .WillByDefault(::testing::Return("portable prompt"));
+    ON_CALL(*multipartParser, getFieldByName("context"))
+        .WillByDefault(::testing::Return("qwen context"));
+
+    ov::genai::ASRGenerationConfig config;
+    const auto status = SttServable::updateTranscriptionConfig(config, servable, payload);
+
+    EXPECT_TRUE(status.ok());
+    EXPECT_EQ(config.initial_prompt, "portable prompt");
+    EXPECT_EQ(config.context, "qwen context");
+}
+
 // ====================== Speech2Text Streaming Tests ======================
 
 class Speech2TextStreamingTest : public Speech2TextHttpTest {
