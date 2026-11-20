@@ -174,80 +174,8 @@ ovms --rest_port 8000 ^
 ::::
 
 
-### SDXL model deployment
-
-To deploy an SDXL model (higher quality, 1024×1024 native resolution), use a different `--source_model`:
-
-::::{tab-set}
-:::{tab-item} Docker (Linux) — GPU
-:sync: docker
-
-Start docker container:
-```bash
-mkdir -p ${HOME}/models
-
-docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
-  --user $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
-  -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
-  openvino/model_server:latest-gpu \
-    --rest_port 8000 \
-    --model_repository_path /models \
-    --task image_generation \
-    --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov \
-    --target_device GPU
-```
-:::
-
-:::{tab-item} Bare metal (Windows)
-:sync: bare-metal
-
-```bat
-if not exist c:\models mkdir c:\models
-
-ovms --rest_port 8000 ^
-  --model_repository_path c:\models ^
-  --task image_generation ^
-  --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov ^
-  --target_device GPU
-```
-:::
-
-::::
-
-> **NOTE:** SDXL models require more RAM/vRAM than SD 1.5. Use `--resolution 1024x1024` when deploying on NPU.
-
-
 ## Option 2. Serving a pre-downloaded model
-
-If you already have a model on disk (downloaded via Option 1 with `--pull`, or via `huggingface-cli`, or converted with [Export Models Tool](../common/export_models/README.md)), you can start the server pointing directly to the model directory using `--model_name` and `--model_path`:
-
-::::{tab-set}
-:::{tab-item} Docker (Linux)
-:sync: docker
-
-```bash
-docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
-  openvino/model_server:latest \
-    --rest_port 8000 \
-    --model_name OpenVINO/stable-diffusion-v1-5-int8-ov \
-    --model_path /models/OpenVINO/stable-diffusion-v1-5-int8-ov
-```
-:::
-
-:::{tab-item} Bare metal (Windows)
-:sync: bare-metal
-
-```bat
-ovms --rest_port 8000 ^
-  --model_name OpenVINO/stable-diffusion-v1-5-int8-ov ^
-  --model_path c:\models\OpenVINO\stable-diffusion-v1-5-int8-ov
-```
-:::
-
-::::
-
-> **NOTE:** The `graph.pbtxt` configuration file is auto-generated at runtime when using `--task image_generation`. You can also customize it manually — see [Image Generation calculator reference](../../docs/image_generation/reference.md) for all available options.
-
+If you have already downloaded, converted and quantized the model using the OVMS or [Export Models Tool](../common/export_models/README.md),  place the model folder in the model repository directory and start the server with appropriate configuration. For details check [Starting the Server](../../docs/starting_server.md).
 
 ## Readiness Check
 
@@ -619,6 +547,42 @@ This section demonstrates how to serve multiple LoRA adapters with a single SDXL
 
 The following command starts OVMS with Stable Diffusion XL and 5 LoRA adapters for different artistic styles:
 
+#### CPU
+
+::::{tab-set}
+:::{tab-item} Docker (Linux)
+:sync: docker
+```bash
+mkdir -p models
+
+docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/models/:rw \
+  -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+  openvino/model_server:latest \
+    --rest_port 8000 \
+    --model_repository_path /models/ \
+    --task image_generation \
+    --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov \
+    --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,thepoint=alvdansen/the-point@araminta_k_the_point.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors,chalk=Norod78/sdxl-chalkboarddrawing-lora@SDXL_ChalkBoardDrawing_LoRA_r8.safetensors,blend=@xray:0.5+@ukiyo:0.4"
+```
+:::
+
+:::{tab-item} Bare metal (Windows)
+:sync: bare-metal
+```bat
+if not exist c:\models mkdir c:\models
+
+ovms --rest_port 8000 ^
+  --model_repository_path c:\models ^
+  --task image_generation ^
+  --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov ^
+  --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,thepoint=alvdansen/the-point@araminta_k_the_point.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors,chalk=Norod78/sdxl-chalkboarddrawing-lora@SDXL_ChalkBoardDrawing_LoRA_r8.safetensors,blend=@xray:0.5+@ukiyo:0.4"
+```
+:::
+
+::::
+
+#### GPU
+
 ::::{tab-set}
 :::{tab-item} Docker (Linux)
 :sync: docker
@@ -634,7 +598,7 @@ docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/model
     --task image_generation \
     --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov \
     --target_device GPU \
-    --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,thepoint=alvdansen/the-point@araminta_k_the_point.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors,chalk=Norod78/sdxl-chalkboarddrawing-lora@SDXL_ChalkBoardDrawing_LoRA_r8.safetensors"
+    --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,thepoint=alvdansen/the-point@araminta_k_the_point.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors,chalk=Norod78/sdxl-chalkboarddrawing-lora@SDXL_ChalkBoardDrawing_LoRA_r8.safetensors,blend=@xray:0.5+@ukiyo:0.4"
 ```
 :::
 
@@ -648,7 +612,7 @@ ovms --rest_port 8000 ^
   --task image_generation ^
   --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov ^
   --target_device GPU ^
-  --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,thepoint=alvdansen/the-point@araminta_k_the_point.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors,chalk=Norod78/sdxl-chalkboarddrawing-lora@SDXL_ChalkBoardDrawing_LoRA_r8.safetensors"
+  --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,thepoint=alvdansen/the-point@araminta_k_the_point.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors,chalk=Norod78/sdxl-chalkboarddrawing-lora@SDXL_ChalkBoardDrawing_LoRA_r8.safetensors,blend=@xray:0.5+@ukiyo:0.4"
 ```
 :::
 
@@ -801,12 +765,19 @@ for style_name, style_config in styles.items():
 
 To blend multiple adapters, define a **composite adapter** at startup using the `@alias:alpha` syntax:
 
-```bash
+```text
 --source_loras="xray=...,ukiyo=...,blend=@xray:0.5+@ukiyo:0.4"
 ```
 
 Then use the composite alias as the model name:
 ```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:8000/v3",
+    api_key="unused"
+)
+
 response = client.images.generate(
     model="blend",  # activates both xray and ukiyo
     prompt="a cute cat in sunglasses",
@@ -820,6 +791,12 @@ response = client.images.generate(
 
 You can override individual component alphas at request time:
 ```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:8000/v3",
+    api_key="unused"
+)
 response = client.images.generate(
     model="blend",
     prompt="a cute cat in sunglasses",
