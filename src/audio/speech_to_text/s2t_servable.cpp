@@ -129,11 +129,6 @@ absl::Status SttServable::updateTranscriptionConfig(ov::genai::ASRGenerationConf
             config.hotwords = hotwords;
         }
     }
-    const std::string context = payload.multipartParser->getFieldByName("context");
-    if (!context.empty()) {
-        SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received context: {}", context);
-        config.context = context;
-    }
     std::vector<std::string> timestampsTypes = payload.multipartParser->getArrayFieldByName("timestamp_granularities[]");
     config.word_timestamps = false;
     for (const auto& timestampsType : timestampsTypes) {
