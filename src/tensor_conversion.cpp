@@ -22,107 +22,86 @@
 #include <vector>
 
 #include <openvino/openvino.hpp>
+#include "image_utils/image_decoder.hpp"
+#include "tensor_conversion_common.hpp"
 #include "predict_request_validation_utils_impl.hpp"
 #include "logging.hpp"
-#pragma warning(push)
-#pragma warning(disable : 6269 6294 6201)
-#include "opencv2/opencv.hpp"
-#pragma warning(pop)
 #include "profiler.hpp"
 #include "status.hpp"
 
 namespace ovms {
 namespace tensor_conversion {
-Status resizeMat(const cv::Mat& src, cv::Mat& dst, const dimension_value_t height, const dimension_value_t width) {
+Status convertEncodedImagesToOVTensor(const std::vector<std::string_view>& encodedImages, ov::Tensor& tensor,
+    const TensorInfo& tensorInfo, const std::string* buffer) {
     OVMS_PROFILE_FUNCTION();
-    cv::resize(src, dst, cv::Size(width, height));
-    return StatusCode::OK;
-}
-Status getInputs(const std::string* buffer, std::vector<std::string>& inputs) {
+    Dimension targetHeight = getTensorInfoHeightDim(tensorInfo);
+    Dimension targetWidth = getTensorInfoWidthDim(tensorInfo);
+    const bool resizeSupported = isResizeSupported(tensorInfo);
+    const bool enforceResolutionAlignment = !resizeSupported;
+    std::vector<std::string_view> inputs;
+    auto status = getInputs(buffer, inputs);
+    if (status != StatusCode::OK) {
+        return status;
+    }
     if (buffer == nullptr) {
-        return StatusCode::OK;
+        inputs = encodedImages;
     }
-    size_t offset = 0;
-    while (offset + sizeof(uint32_t) <= buffer->size()) {
-        uint64_t inputSize = *(reinterpret_cast<const uint32_t*>(buffer->data() + offset));
-        offset += sizeof(uint32_t);
-        if (offset + inputSize > buffer->size())
-            break;
-        inputs.push_back(buffer->substr(offset, inputSize));
-        offset += inputSize;
-    }
-    if (offset != buffer->size()) {
-        return StatusCode::IMAGE_PARSING_FAILED;
-    }
-    return StatusCode::OK;
-}
-
-shape_t getShapeFromImages(const std::vector<cv::Mat>& images, const TensorInfo& tensorInfo) {
-    OVMS_PROFILE_FUNCTION();
-    shape_t dims;
-    dims.push_back(images.size());
-    if (tensorInfo.isInfluencedByDemultiplexer()) {
-        dims.push_back(1);
-    }
-    dims.push_back(images[0].rows);
-    dims.push_back(images[0].cols);
-    dims.push_back(images[0].channels());
-    return dims;
-}
-
-ov::Tensor createTensorFromMats(const std::vector<cv::Mat>& images, const TensorInfo& tensorInfo) {
-    OVMS_PROFILE_FUNCTION();
-    if (images.empty()) {
-        return ov::Tensor();
-    }
-    ov::Shape shape = getShapeFromImages(images, tensorInfo);
-    ov::element::Type precision = tensorInfo.getOvPrecision();
-    ov::Tensor tensor(precision, shape);
-    char* ptr = (char*)tensor.data();
-    const size_t firstImageSizeBytes = images[0].total() * images[0].elemSize();
-    for (const auto& image : images) {
-        const size_t imageSizeBytes = image.total() * image.elemSize();
-        if (imageSizeBytes != firstImageSizeBytes) {
-            SPDLOG_DEBUG("Image conversion failed due to inconsistent image size in one batch. Expected bytes: {} current bytes: {}",
-                firstImageSizeBytes,
-                imageSizeBytes);
-            return ov::Tensor();
+    std::vector<ov::Tensor> images;
+    size_t totalAllocatedPixels = 0;
+    const size_t maxAllowedImagePixels = request_validation_utils::getMaxImageDecodePixels();
+    for (size_t i = 0; i < inputs.size(); ++i) {
+        const std::string_view encodedImage = inputs[i];
+        status = checkEstimatedImageSize(encodedImage, tensorInfo.getMappedName(), totalAllocatedPixels, maxAllowedImagePixels);
+        if (status != StatusCode::OK) {
+            return status;
         }
-        memcpy(ptr, (char*)image.data, imageSizeBytes);
-        ptr += imageSizeBytes;
+        ov::Tensor image;
+        status = image_utils::decodeImage(encodedImage, image);
+        if (!status.ok()) {
+            return status;
+        }
+        if (image.get_shape().size() != 4) {
+            SPDLOG_ERROR("Decoded image tensor has unexpected rank: {}", image.get_shape().size());
+            return StatusCode::INTERNAL_ERROR;
+        }
+        status = accumulateAndCheckDecodedImageSize(image, tensorInfo, totalAllocatedPixels, maxAllowedImagePixels);
+        if (status != StatusCode::OK) {
+            return status;
+        }
+        const ov::Tensor* firstImage = images.empty() ? nullptr : &images.front();
+        status = validateInput(tensorInfo, image, firstImage, enforceResolutionAlignment);
+        if (status != StatusCode::OK) {
+            return status;
+        }
+        if (i == 0) {
+            updateTargetResolution(targetHeight, targetWidth, image);
+        }
+        if (!isSupportedImagePrecision(tensorInfo.getPrecision())) {
+            return StatusCode::INVALID_PRECISION;
+        }
+        if (!targetHeight.isStatic() || !targetWidth.isStatic()) {
+            return StatusCode::INTERNAL_ERROR;
+        }
+        const size_t targetHeightValue = static_cast<size_t>(targetHeight.getStaticValue());
+        const size_t targetWidthValue = static_cast<size_t>(targetWidth.getStaticValue());
+        if (!resizeSupported && (image.get_shape()[1] != targetHeightValue || image.get_shape()[2] != targetWidthValue)) {
+            return StatusCode::INVALID_SHAPE;
+        }
+        ov::Tensor processed;
+        status = image_utils::preprocessImage(image, processed, tensorInfo.getOvPrecision(), targetHeightValue, targetWidthValue);
+        if (!status.ok()) {
+            return status;
+        }
+        image = std::move(processed);
+        if (firstImage != nullptr && image.get_shape()[3] != firstImage->get_shape()[3]) {
+            SPDLOG_DEBUG("Binary data sent to input: {} has mixed channel count within one batch. First image channels: {} current image channels: {}",
+                tensorInfo.getMappedName(), firstImage->get_shape()[3], image.get_shape()[3]);
+            return StatusCode::INVALID_NO_OF_CHANNELS;
+        }
+        images.push_back(std::move(image));
     }
-    return tensor;
-}
-
-ov::Tensor convertMatsToTensor(std::vector<cv::Mat>& images, const TensorInfo& tensorInfo) {
-    OVMS_PROFILE_FUNCTION();
-    switch (tensorInfo.getPrecision()) {
-    case ovms::Precision::FP32:
-    case ovms::Precision::I32:
-    case ovms::Precision::FP64:
-    case ovms::Precision::I8:
-    case ovms::Precision::U8:
-    case ovms::Precision::FP16:
-    case ovms::Precision::U16:
-    case ovms::Precision::I16:
-        return createTensorFromMats(images, tensorInfo);
-    case ovms::Precision::MIXED:
-    case ovms::Precision::Q78:
-    case ovms::Precision::BIN:
-    case ovms::Precision::BOOL:
-    case ovms::Precision::CUSTOM:
-    default:
-        return ov::Tensor();
-    }
-}
-Status validateResolutionAgainstFirstBatchImage(const cv::Mat input, cv::Mat* firstBatchImage) {
-    OVMS_PROFILE_FUNCTION();
-    if (input.cols == firstBatchImage->cols && input.rows == firstBatchImage->rows) {
-        return StatusCode::OK;
-    }
-    SPDLOG_DEBUG("Each binary image in request needs to have resolution matched. First cols: {}, rows: {}, current cols: {}, rows: {}",
-        firstBatchImage->cols, firstBatchImage->rows, input.cols, input.rows);
-    return StatusCode::BINARY_IMAGES_RESOLUTION_MISMATCH;
+    tensor = createTensorFromImages(images, tensorInfo);
+    return tensor ? StatusCode::OK : StatusCode::IMAGE_PARSING_FAILED;
 }
 }  // namespace tensor_conversion
 }  // namespace ovms

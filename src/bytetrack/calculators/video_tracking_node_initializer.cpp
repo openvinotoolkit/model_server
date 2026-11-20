@@ -35,7 +35,8 @@ public:
     }
 
     Status initialize(const ::mediapipe::CalculatorGraphConfig_Node&,
-        const std::string&, const std::string&, GraphSidePackets&, PythonBackend*) override {
+        const std::string&, const std::string&, GraphSidePackets&, GraphMetadata&,
+        PythonBackend*, const MetricProvider*) override {
         return StatusCode::OK;
     }
 

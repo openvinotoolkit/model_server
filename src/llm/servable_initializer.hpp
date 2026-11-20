@@ -15,7 +15,9 @@
 //*****************************************************************************
 #pragma once
 
+#include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 
 #pragma warning(push)
@@ -27,6 +29,7 @@
 #pragma warning(pop)
 #include "src/llm/llm_calculator.pb.h"
 #include "src/llm/servable.hpp"
+#include "io_processing/chat_template/analyzer.hpp"
 
 namespace ovms {
 
@@ -43,12 +46,22 @@ enum class PipelineType {
 
 class Status;
 class GenAiServable;
+class LLMMetricReporter;
 struct GenAiServableProperties;
+
+// Creates the metric reporter of an LLM node. It is invoked only for pipelines that publish
+// LLM metrics, once the pipeline is ready, so other pipelines and failed loads register no series.
+// Pass std::nullopt instead of a factory to disable metric reporter creation.
+using LLMMetricReporterFactory = std::function<std::shared_ptr<LLMMetricReporter>()>;
 
 class GenAiServableInitializer {
 public:
     virtual ~GenAiServableInitializer() = default;
     static Status loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory);
+    static ChatTemplateAnalysisResult analyzeChatTemplate(std::shared_ptr<GenAiServableProperties> properties);
+    static void selectOutputParsers(const std::shared_ptr<GenAiServableProperties>& properties,
+        const std::optional<ChatTemplateAnalysisResult>& analysisResult);
+    static Status validateChatTemplateAvailability(const std::shared_ptr<GenAiServableProperties>& properties);
     // Propagates the global --cache_dir (ServerSettings) into the pipeline plugin config
     // when the node did not set an explicit CACHE_DIR. Shared by every GenAI initializer
     // (continuous batching and legacy, LM and VLM) since they all construct GenAI pipelines
@@ -65,6 +78,7 @@ public:
     virtual Status initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) = 0;
 };
 Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string graphPath);
+Status configureVideoInputProcessing(VisionInputConfig& config, const mediapipe::LLMCalculatorOptions& nodeOptions);
 std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath);
 // Detects draft model strategy from model artifacts without a full model load.
 // Scans the tail of the draft model XML (walking backward in bounded chunks/lines, up to a line cap)
@@ -73,5 +87,6 @@ std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath);
 // Throws std::runtime_error if the XML is missing or cannot be opened/read.
 GenAiServableProperties::DraftModelStrategy detectDraftModelStrategy(const std::string& draftPath);
 Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath);
-Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath);
+Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig,
+    std::string graphPath, std::optional<LLMMetricReporterFactory> createMetricReporter = std::nullopt);
 }  // namespace ovms

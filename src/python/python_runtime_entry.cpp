@@ -17,6 +17,7 @@
 #include "../module.hpp"
 #include "pythoninterpretermodule.hpp"
 #include "python_runtime_env.hpp"
+#include "python_runtime_path.hpp"
 
 #include <cstdlib>
 #include <filesystem>
@@ -75,13 +76,12 @@ bool ensureInterpreterInitialized(std::string& details) {
     if (!validateEnvPaths(details)) {
         return false;
     }
-    if (Py_IsInitialized()) {
-        return true;
-    }
-
     try {
-        py::initialize_interpreter();
-        PyEval_SaveThread();
+        if (!Py_IsInitialized()) {
+            py::initialize_interpreter();
+            PyEval_SaveThread();
+        }
+        ovms::addPackagedPythonPath();
         return true;
     } catch (const py::error_already_set& e) {
         details = e.what();
@@ -112,8 +112,10 @@ bool ensureInterpreterInitialized(std::string& details) {
 
 // Validates Python-related environment paths needed by runtime checks.
 // - If PYTHONHOME is set, it must point to an existing directory.
-// - If PYTHONPATH is set, at least one non-empty entry must exist on disk.
-//   Non-existing entries are tolerated as long as at least one valid entry exists.
+// - If PYTHONPATH is set, it must contain at least one non-empty entry that
+//   exists on disk. We intentionally do not reject user PYTHONPATH entries here
+//   because OVMS adds the packaged binding directory later and the real import
+//   check below is the authoritative validation for pyovms availability.
 bool validateEnvPaths(std::string& details) {
     if (const char* pythonHome = std::getenv("PYTHONHOME"); pythonHome != nullptr && pythonHome[0] != '\0') {
         std::error_code ec;
@@ -131,16 +133,16 @@ bool validateEnvPaths(std::string& details) {
 #endif
         std::string pathValue(pythonPath);
         size_t start = 0;
-        bool hadNonEmptyEntry = false;
-        bool hasExistingEntry = false;
+        bool hadExistingEntry = false;
         while (start <= pathValue.size()) {
             size_t end = pathValue.find(separator, start);
-            std::string directory = (end == std::string::npos) ? pathValue.substr(start) : pathValue.substr(start, end - start);
-            if (!directory.empty()) {
-                hadNonEmptyEntry = true;
+            std::string entry = (end == std::string::npos) ? pathValue.substr(start) : pathValue.substr(start, end - start);
+            if (!entry.empty()) {
                 std::error_code ec;
-                if (std::filesystem::exists(std::filesystem::path(directory), ec) && !ec) {
-                    hasExistingEntry = true;
+                const auto path = std::filesystem::path(entry);
+                if (std::filesystem::exists(path, ec) && !ec) {
+                    hadExistingEntry = true;
+                    break;
                 }
             }
             if (end == std::string::npos) {
@@ -149,8 +151,8 @@ bool validateEnvPaths(std::string& details) {
             start = end + 1;
         }
 
-        if (hadNonEmptyEntry && !hasExistingEntry) {
-            details = "PYTHONPATH does not contain any existing directory";
+        if (!hadExistingEntry) {
+            details = "PYTHONPATH does not contain any existing path entries";
             return false;
         }
     }
@@ -208,6 +210,7 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_validatePythonEnvironment(const char*
         }
         {
             py::gil_scoped_acquire acquire;
+            ovms::addPackagedPythonPath();
             // Validate that OVMS Python bindings are importable and executable.
             py::module_::import("pyovms");
         }
@@ -246,6 +249,28 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_ensurePythonInterpreterInitialized(co
 
     if (errorMessage != nullptr) {
         setRuntimeOutput(std::string(PY_RUNTIME_INIT_ERROR_PREFIX) + details, errorMessage);
+    }
+    return false;
+}
+
+extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_ensureChatTemplateRuntimeInitialized(const char** errorMessage) {
+    if (!OVMS_ensurePythonInterpreterInitialized(errorMessage)) {
+        return false;
+    }
+
+    py::gil_scoped_acquire acquire;
+    try {
+        py::module_::import("json");
+        py::module_::import("pathlib");
+        py::module_::import("datetime");
+        py::module_::import("jinja2");
+        py::module_::import("jinja2.sandbox");
+        py::module_::import("jinja2.ext");
+        return true;
+    } catch (const std::exception& error) {
+        setRuntimeOutput(error.what(), errorMessage);
+    } catch (...) {
+        setRuntimeOutput("Failed to initialize Python chat template dependencies", errorMessage);
     }
     return false;
 }
@@ -353,7 +378,7 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_createPreparedChatTemplateRuntime(
                 jinja_env.globals["raise_exception"] = raise_exception
                 jinja_env.globals["strftime_now"] = strftime_now
                 jinja_env.filters["from_json"] = json.loads
-                jinja_env.filters["tojson"] = lambda value, indent=None: json.dumps(value, ensure_ascii=False, indent=indent)
+                jinja_env.filters["tojson"] = lambda value, ensure_ascii=False, indent=None: json.dumps(value, ensure_ascii=ensure_ascii, indent=indent)
 
                 tool_chat_template = None
 
@@ -372,11 +397,6 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_createPreparedChatTemplateRuntime(
                 if tool_use_template_file.is_file():
                     with open(tool_use_template_file, "r", encoding="utf-8") as f:
                         tool_chat_template = f.read()
-
-                chat_template_jinja_file = Path(models_path) / "chat_template.jinja"
-                if chat_template_jinja_file.is_file():
-                    with open(chat_template_jinja_file, "r", encoding="utf-8") as f:
-                        chat_template = f.read()
 
                 prepared_chat_template = jinja_env.from_string(chat_template)
                 prepared_tool_template = jinja_env.from_string(tool_chat_template) if tool_chat_template is not None else prepared_chat_template
@@ -448,11 +468,12 @@ extern "C" PYTHON_RUNTIME_EXPORT bool OVMS_applyPreparedChatTemplateRuntime(
             "bos_token"_a = prepared->bosToken,
             "eos_token"_a = prepared->eosToken);
 
+        // TODO: Group chat-template runtime logging in a follow-up change.
+        SPDLOG_DEBUG("Applying chat template via Python Jinja renderer");
         py::exec(R"(
             import json
             output = ""
             error = ""
-            print("OVMS: prepared Python Jinja renderer executing", flush=True)
             try:
                 request_json = json.loads(request_body)
                 messages = request_json["messages"]

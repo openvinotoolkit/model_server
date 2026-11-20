@@ -17,7 +17,7 @@
 import filelock
 
 
-class Locker(object):
+class Locker:
     """Manage reservation lock across multiple reservation manager processes"""
     def __init__(
             self,

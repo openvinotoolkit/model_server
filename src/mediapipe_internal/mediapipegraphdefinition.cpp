@@ -31,11 +31,14 @@
 #include "src/execution_context.hpp"
 #include "src/audio/speech_to_text/s2t_servable.hpp"
 #include "src/audio/speech_to_text/s2t_calculator.pb.h"
+#include "src/graph_metadata.hpp"
 #include "../config.hpp"
 #include "../llm/llm_calculators_plugin_loader.hpp"
 #include "src/utils/env_guard.hpp"
 #include "src/filesystem/filesystem.hpp"
 #include "src/metrics/metric.hpp"
+#include "src/metrics/metric_config.hpp"
+#include "src/metrics/metric_provider.hpp"
 #include "../model_metric_reporter.hpp"
 #include "../ov_utils.hpp"
 #include "../servable_definition_unload_guard.hpp"
@@ -55,6 +58,7 @@
 #include "mediapipe_utils.hpp"
 #include "mediapipegraphexecutor.hpp"
 #include "node_initializer.hpp"
+#include "opencv_calculators_plugin_loader.hpp"
 
 namespace ovms {
 
@@ -64,6 +68,29 @@ const std::string MediapipeGraphDefinition::SCHEDULER_CLASS_NAME{"Mediapipe"};
 
 MediapipeGraphDefinition::~MediapipeGraphDefinition() = default;
 
+namespace {
+Status initializeCalculatorMetricsForNode(
+    const ::mediapipe::CalculatorGraphConfig_Node& node,
+    GraphSidePackets& sidePacketMaps,
+    const MetricProvider* metricsProvider,
+    const std::string& graphName) {
+    const bool usesMetrics = std::find(node.input_side_packet().begin(), node.input_side_packet().end(),
+                                 "CALCULATOR_METRICS:calculator_metrics") != node.input_side_packet().end();
+    if (!usesMetrics) {
+        return StatusCode::OK;
+    }
+    if (node.name().empty()) {
+        SPDLOG_ERROR("Custom metrics require a named node in graph {}", graphName);
+        return StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR;
+    }
+    sidePacketMaps.calculatorMetrics.emplace(node.name(),
+        std::make_shared<CalculatorMetrics>(
+            metricsProvider && metricsProvider->getMetricConfig().metricsEnabled ? metricsProvider->getMetricRegistry() : nullptr,
+            graphName, node.name()));
+    return StatusCode::OK;
+}
+}  // namespace
+
 const tensor_map_t MediapipeGraphDefinition::getInputsInfo() const {
     std::shared_lock lock(metadataMtx);
     return this->inputsInfo;
@@ -72,6 +99,16 @@ const tensor_map_t MediapipeGraphDefinition::getInputsInfo() const {
 const tensor_map_t MediapipeGraphDefinition::getOutputsInfo() const {
     std::shared_lock lock(metadataMtx);
     return this->outputsInfo;
+}
+
+std::shared_ptr<const GraphMetadata> MediapipeGraphDefinition::getMetadata() const {
+    std::lock_guard<std::mutex> lock(metadataSnapshotMtx);
+    return this->metadata;
+}
+
+void MediapipeGraphDefinition::clearMetadata() {
+    std::lock_guard<std::mutex> lock(metadataSnapshotMtx);
+    this->metadata.reset();
 }
 
 Status MediapipeGraphDefinition::validateForConfigFileExistence() {
@@ -208,6 +245,7 @@ Status MediapipeGraphDefinition::validateForConfigLoadableness() {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Trying to parse empty mediapipe graph definition: {} failed", this->getName(), this->chosenConfig);
         return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
     }
+    loadOpenCvCalculatorsPlugin();
     if (this->chosenConfig.find("HttpLLMCalculator") != std::string::npos ||
         this->chosenConfig.find("LLMCalculatorOptions") != std::string::npos) {
         loadLlmCalculatorsPlugin();
@@ -216,7 +254,14 @@ Status MediapipeGraphDefinition::validateForConfigLoadableness() {
     bool success = ::google::protobuf::TextFormat::ParseFromString(this->chosenConfig, &this->config);
     if (!success) {
         SPDLOG_LOGGER_ERROR(modelmanager_logger, "Trying to parse mediapipe graph definition: {} failed", this->getName(), this->chosenConfig);
-        return StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID;
+        std::vector<std::string> operations;
+        static const std::regex calculatorPattern(R"re(calculator\s*:\s*["']([^"']+)["'])re");
+        for (std::sregex_iterator it(this->chosenConfig.begin(), this->chosenConfig.end(), calculatorPattern), end; it != end; ++it) {
+            operations.push_back((*it)[1].str());
+        }
+        return Status(StatusCode::MEDIAPIPE_GRAPH_CONFIG_FILE_INVALID,
+            "Failed parsing graph calculator/operation/options: " + joins(operations, ", ") +
+                getOpenCvCalculatorsPluginDiagnostic());
     }
     for (auto& node : *this->config.mutable_node()) {
         if (node.calculator() != "S2tCalculator" || node.node_options_size() == 0)
@@ -286,7 +331,8 @@ Status MediapipeGraphDefinition::validateReferencedNodesRegistered() {
         missingNamesList);
     return Status(
         StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR,
-        "Missing registered calculators/subgraphs: " + missingNamesList);
+        "Missing registered calculators/subgraphs: " + missingNamesList +
+            getOpenCvCalculatorsPluginDiagnostic());
 }
 
 Status MediapipeGraphDefinition::dryInitializeTest() {
@@ -296,7 +342,8 @@ Status MediapipeGraphDefinition::dryInitializeTest() {
         if (!absStatus.ok()) {
             const std::string absMessage = absStatus.ToString();
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "Mediapipe graph: {} initialization failed with message: {}", this->getName(), absMessage);
-            return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR, std::move(absMessage));
+            return Status(StatusCode::MEDIAPIPE_GRAPH_INITIALIZATION_ERROR,
+                absMessage + getOpenCvCalculatorsPluginDiagnostic());
         }
     } catch (std::exception& e) {
         SPDLOG_ERROR("Exception caught whilie trying to initialize MediaPipe graph: {}", e.what());
@@ -416,15 +463,17 @@ Status MediapipeGraphDefinition::initializeQueueIfRequired() {
 
 MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
     const MediapipeGraphConfig& config,
-    MetricRegistry* registry,
-    const MetricConfig* metricConfig,
+    const MetricProvider* metricsProvider,
     PythonBackend* pythonBackend,
     bool lazyLoad) :
     SingleVersionServableDefinition(name),
     sidePacketMaps(std::make_shared<GraphSidePackets>()),
     status(SCHEDULER_CLASS_NAME, getName()),
     pythonBackend(pythonBackend),
-    reporter(std::make_unique<MediapipeServableMetricReporter>(metricConfig, registry, name)) {
+    metricsProvider(metricsProvider),
+    reporter(std::make_unique<MediapipeServableMetricReporter>(
+        metricsProvider ? &metricsProvider->getMetricConfig() : nullptr,
+        metricsProvider ? metricsProvider->getMetricRegistry() : nullptr, name)) {
     mgconfig = config;
     idleUnloadTimeoutSecondsCache.store(mgconfig.getIdleUnloadTimeoutSeconds(), std::memory_order_relaxed);
     passKfsRequestFlag = false;
@@ -604,8 +653,13 @@ Status MediapipeGraphDefinition::setStreamTypes() {
 }
 
 Status MediapipeGraphDefinition::reload(const ServableNameChecker& checker, const MediapipeGraphConfig& config) {
+    const bool clearMetadataOnFailure = true;
+    return doReload(checker, config, clearMetadataOnFailure);
+}
+
+Status MediapipeGraphDefinition::doReload(const ServableNameChecker& checker, const MediapipeGraphConfig& config, bool clearMetadataOnFailure) {
     // Serialize against unload()/wakeUp() on the watcher/request threads.
-    // Recursive: wakeUpIfSleeping() already holds this and calls reload().
+    // Recursive: wakeUpIfSleeping() already holds this and calls doReload().
     std::lock_guard<std::recursive_mutex> lock(lifecycleMtx);
     // block creating new unloadGuards
     this->status.handle(ReloadEvent());
@@ -617,7 +671,11 @@ Status MediapipeGraphDefinition::reload(const ServableNameChecker& checker, cons
     idleUnloadTimeoutSecondsCache.store(this->mgconfig.getIdleUnloadTimeoutSeconds(), std::memory_order_relaxed);
     this->queue.reset();
     this->sidePacketMaps = std::make_shared<GraphSidePackets>();
-    return validate(checker);
+    Status validationStatus = validate(checker);
+    if (!validationStatus.ok() && clearMetadataOnFailure) {
+        clearMetadata();
+    }
+    return validationStatus;
 }
 
 void MediapipeGraphDefinition::retire() {
@@ -625,6 +683,7 @@ void MediapipeGraphDefinition::retire() {
     // Block creating new unloadGuards
     this->status.handle(RetireEvent());
     unloadComponentsAfterPendingExecutorsAreCreated();
+    clearMetadata();
 }
 
 bool MediapipeGraphDefinition::isIdleUnloadEnabled() const {
@@ -706,7 +765,10 @@ Status MediapipeGraphDefinition::wakeUpIfSleeping(const ServableNameChecker& che
     SPDLOG_LOGGER_INFO(modelmanager_logger,
         "Mediapipe graph {} is SLEEPING; triggering lazy wake-up reload", getName());
     auto start = std::chrono::steady_clock::now();
-    Status reloadStatus = reload(checker, this->mgconfig);
+    // A graph that fails to wake up goes back to sleep and stays listed, so it keeps reporting
+    // the metadata from its last successful load.
+    const bool clearMetadataOnFailure = false;
+    Status reloadStatus = doReload(checker, this->mgconfig, clearMetadataOnFailure);
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now() - start);
     if (reloadStatus.ok()) {
@@ -763,12 +825,17 @@ Status MediapipeGraphDefinition::initializeNodes() {
         }
     } guard{*sidePacketMaps, success};
 
+    GraphMetadata graphMetadata;
     auto& registry = NodeInitializerRegistry::instance();
     for (int i = 0; i < config.node().size(); i++) {
         const auto& node = config.node(i);
+        Status metricsStatus = initializeCalculatorMetricsForNode(node, *sidePacketMaps, metricsProvider, getName());
+        if (!metricsStatus.ok()) {
+            return metricsStatus;
+        }
         for (const auto& initializer : registry.all()) {
             if (initializer->matches(node.calculator())) {
-                Status status = initializer->initialize(node, getName(), mgconfig.getBasePath(), *sidePacketMaps, pythonBackend);
+                Status status = initializer->initialize(node, getName(), mgconfig.getBasePath(), *sidePacketMaps, graphMetadata, pythonBackend, metricsProvider);
                 if (!status.ok()) {
                     return status;
                 }
@@ -783,6 +850,11 @@ Status MediapipeGraphDefinition::initializeNodes() {
     // Register LoRA aliases for routing from initialized image gen pipelines
     this->loraAliases = sidePacketMaps->loraAliases;
     this->hideBaseModelInRouting = sidePacketMaps->hideBaseModelInRouting;
+    auto snapshot = std::make_shared<const GraphMetadata>(std::move(graphMetadata));
+    {
+        std::lock_guard<std::mutex> lock(metadataSnapshotMtx);
+        this->metadata = std::move(snapshot);
+    }
     success = true;
     return StatusCode::OK;
 }

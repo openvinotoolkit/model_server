@@ -48,6 +48,7 @@ enum RequestType { ConfigReload,
     KFS_GetModelReady,
     KFS_Infer,
     KFS_GetModelMetadata,
+    KFS_GetModelConfig,
     KFS_GetServerReady,
     KFS_GetServerLive,
     KFS_GetServerMetadata,
@@ -102,6 +103,7 @@ public:
 
     static const std::string kfs_modelreadyRegexExp;
     static const std::string kfs_modelmetadataRegexExp;
+    static const std::string kfs_modelconfigRegexExp;
     static const std::string kfs_inferRegexExp;
 
     static const std::string metricsRegexExp;
@@ -171,6 +173,7 @@ public:
 
     Status processConfigStatusRequest(std::string& response, ModelManager& manager);
     Status processModelMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
+    Status processModelConfigKFSRequest(const HttpRequestComponents& request_components, std::string& response);
     Status processModelReadyKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processInferKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::optional<int>& inferenceHeaderContentLength);
     Status processMetrics(const HttpRequestComponents& request_components, HttpResponseComponents& response_components, std::string& response, const std::string& request_body);
@@ -204,6 +207,7 @@ private:
 
     const std::regex kfs_modelreadyRegex;
     const std::regex kfs_modelmetadataRegex;
+    const std::regex kfs_modelconfigRegex;
 
     const std::regex kfs_inferRegex;
     const std::regex kfs_serverreadyRegex;

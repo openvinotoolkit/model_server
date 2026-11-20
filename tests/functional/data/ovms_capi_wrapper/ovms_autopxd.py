@@ -43,8 +43,8 @@ class OvmsAutoPxd(AutoPxd):
             if type_decl:
                 # inline struct, add a reference to whatever name it was defined on the top level
                 self.append(escape(name))
-        else:
-            return self.visit_Block(node, kind)
+            return None
+        return self.visit_Block(node, kind)
 
     def translate(self, code):
         self.visit(parse(code=code))
@@ -64,7 +64,7 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="Script translates OVMS header file to .pxd file")
     parser.add_argument("-i", "--input_file", help="OVMS header file path")
     parser.add_argument("-o", "--output_file", help=".pxd output file path")
-    
+
     args = parser.parse_args()
 
     if len(sys.argv) !=5:
@@ -73,5 +73,5 @@ if __name__ == "__main__":
     input_file_path = Path(args.input_file)
     output_file_path = Path(args.output_file)
 
-    with open(output_file_path, "w") as file_object:
-        file_object.write(OvmsAutoPxd(input_file_path.name).translate(input_file_path.read_text()))
+    with open(output_file_path, "w", encoding="utf-8") as file_object:
+        file_object.write(OvmsAutoPxd(input_file_path.name).translate(input_file_path.read_text(encoding="utf-8")))

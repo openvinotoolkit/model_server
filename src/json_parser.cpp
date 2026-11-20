@@ -63,14 +63,14 @@ std::string toGenericPath(const std::string& path) {
 }
 
 /**
-* @brief Parses json node for plugin config keys and values
-* 
-* @param pluginConfig output representing plugin_config_t map
-* 
-* @param json node representing plugin_config
-*
-* @return status
-*/
+ * @brief Parses json node for plugin config keys and values
+ *
+ * @param pluginConfig output representing plugin_config_t map
+ *
+ * @param json node representing plugin_config
+ *
+ * @return status
+ */
 Status JsonParser::parsePluginConfig(const rapidjson::Value& node, plugin_config_t& pluginConfig) {
     if (!node.IsObject()) {
         return StatusCode::PLUGIN_CONFIG_WRONG_FORMAT;
@@ -170,12 +170,12 @@ Status JsonParser::parsePluginConfig(const rapidjson::Value& node, plugin_config
 }
 
 /**
-* @brief Parses string for plugin config keys and values
-* 
-* @param string representing plugin_config
-* 
-* @return status
-*/
+ * @brief Parses string for plugin config keys and values
+ *
+ * @param string representing plugin_config
+ *
+ * @return status
+ */
 Status JsonParser::parsePluginConfig(std::string command, plugin_config_t& pluginConfig) {
     rapidjson::Document node;
     if (command.empty()) {

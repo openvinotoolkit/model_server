@@ -29,9 +29,9 @@ node {
     }
     node_options: {
         [type.googleapis.com/mediapipe.LLMCalculatorOptions]: {
-          models_path: "/ovms/src/test/llm_testing/facebook/opt-125m"
+          models_path: "/ovms/src/test/llm_testing/OpenVINO/LFM2.5-350M-int8-ov"
           cache_size: 1,
-          tool_parser: "phi4" # fake tool parser to enable negative testing for tools
+          tool_parser: "lfm2"
           enable_tool_guided_generation: true
         }
     }

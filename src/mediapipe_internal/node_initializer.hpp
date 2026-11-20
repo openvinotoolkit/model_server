@@ -27,10 +27,12 @@ class CalculatorGraphConfig;
 }
 
 namespace ovms {
+class GraphMetadata;
 struct GraphSidePackets;
 struct LiveGraphConfig;
 struct LiveGraphStreamCodec;
 class PythonBackend;
+class MetricProvider;
 
 /// Copy a graph and replace its external streams with the supplied live codecs.
 std::shared_ptr<LiveGraphConfig> makeLiveGraphConfig(const mediapipe::CalculatorGraphConfig& config,
@@ -50,7 +52,9 @@ public:
         const std::string& graphName,
         const std::string& basePath,
         GraphSidePackets& sidePackets,
-        PythonBackend* pythonBackend) = 0;
+        GraphMetadata& metadata,
+        PythonBackend* pythonBackend,
+        const MetricProvider* metrics) = 0;
     /// Optionally prepares transport-independent execution profiles after resources load.
     virtual Status prepareLiveGraph(const ::mediapipe::CalculatorGraphConfig&,
         GraphSidePackets&) {

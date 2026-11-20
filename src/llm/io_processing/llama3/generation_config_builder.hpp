@@ -20,7 +20,7 @@ namespace ovms {
 
 /*
  * Llama3GenerationConfigBuilder extends BaseGenerationConfigBuilder to provide specific configuration for Llama3 models.
- * It overrides the parseConfigFromRequest method to set tool guided generation config.
+ * It provides Llama3 tool grammar construction for the shared structured-output setup.
  */
 class Llama3GenerationConfigBuilder : public BaseGenerationConfigBuilder {
 public:
@@ -28,6 +28,7 @@ public:
     explicit Llama3GenerationConfigBuilder(const ov::genai::GenerationConfig& baseConfig, bool enableToolGuidedGeneration, DecodingMethod decodingMethod) :
         BaseGenerationConfigBuilder(baseConfig, enableToolGuidedGeneration, decodingMethod) {}
 
-    void parseConfigFromRequest(const OpenAIRequest& request) override;
+    bool supportsToolGuidance() const override { return true; }
+    void applyToolGuidance(const OpenAIRequest& request) override;
 };
 }  // namespace ovms

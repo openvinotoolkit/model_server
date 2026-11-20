@@ -110,7 +110,7 @@ void MistralToolParser::clearState() {
 }
 
 std::optional<Delta> MistralToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
-    /* 
+    /*
     Mistral with vLLM template produces tool calls in the format (beginning [TOOL_CALL] is skipped by the mode or just not visible during streaming):
     [{"name": [function name], "arguments": [function arguments as JSON]}, ...]
 

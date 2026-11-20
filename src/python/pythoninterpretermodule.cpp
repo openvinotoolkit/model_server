@@ -31,6 +31,7 @@
 #include "../module_names.hpp"
 #include "src/status.hpp"
 #include "python_backend.hpp"
+#include "python_runtime_path.hpp"
 
 namespace py = pybind11;
 
@@ -66,6 +67,7 @@ Status PythonInterpreterModule::initialize() {
 
     try {
         py::gil_scoped_acquire acquire;
+        addPackagedPythonPath();
         py::exec(R"(
             import sys
             print("Python version:")
@@ -77,6 +79,9 @@ Status PythonInterpreterModule::initialize() {
         SPDLOG_ERROR("Python initialization check failed: {}. "
                      "Python interpreter may be corrupted or missing required modules.",
             e.what());
+        return StatusCode::PYTHON_INTERPRETER_INITIALIZATION_FAILED;
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Failed to configure Python module search paths: {}", e.what());
         return StatusCode::PYTHON_INTERPRETER_INITIALIZATION_FAILED;
     }
 

@@ -16,8 +16,10 @@
 #include <algorithm>
 #include <fstream>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 #include <openvino/genai/cache_eviction.hpp>
 #include <openvino/genai/sparse_attention.hpp>
@@ -133,6 +135,9 @@ ov::genai::SchedulerConfig ContinuousBatchingServableInitializer::prepareDraftPi
     return config;
 }
 
+ContinuousBatchingServableInitializer::ContinuousBatchingServableInitializer(std::optional<LLMMetricReporterFactory> createMetricReporter) :
+    createMetricReporter(std::move(createMetricReporter)) {}
+
 Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) {
     std::string parsedModelsPath;
     auto status = parseModelsPath(parsedModelsPath, nodeOptions.models_path(), graphPath);
@@ -161,7 +166,6 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
         }
     }
-    properties->chatTemplateEngineExplicit = nodeOptions.has_chat_template_engine();
     try {
         properties->chatTemplateEngine = determineChatTemplateEngine(nodeOptions);
     } catch (const std::exception& e) {
@@ -293,12 +297,26 @@ Status ContinuousBatchingServableInitializer::initialize(std::shared_ptr<GenAiSe
     if (!status.ok()) {
         return status;
     }
+    const auto chatTemplateAnalysis = properties->chatTemplateStatus == ChatTemplateStatus::AVAILABLE ? std::optional<ChatTemplateAnalysisResult>{analyzeChatTemplate(properties)} : std::nullopt;
+    selectOutputParsers(properties, chatTemplateAnalysis);
+
+    if (nodeOptions.has_chat_template_engine()) {
+        status = validateChatTemplateAvailability(properties);
+        if (!status.ok()) {
+            return status;
+        }
+    }
     if (nodeOptions.has_max_tokens_limit()) {
         properties->maxTokensLimit = nodeOptions.max_tokens_limit();
     }
     properties->maxModelLength = parseMaxModelLength(parsedModelsPath);
 
-    properties->llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(properties->pipeline, properties->schedulerConfig.cache_size == 0);
+    // Created last, so a load that fails earlier registers no metric series.
+    if (createMetricReporter.has_value()) {
+        properties->metricReporter = createMetricReporter.value()();
+    }
+    properties->llmExecutorWrapper = std::make_shared<LLMExecutorWrapper>(
+        properties->pipeline, properties->schedulerConfig.cache_size == 0, properties->metricReporter);
 
     return StatusCode::OK;
 }

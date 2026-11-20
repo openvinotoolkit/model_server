@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=no-member
 
 import itertools
 import os
@@ -21,21 +22,19 @@ import shutil
 import sys
 import time
 import warnings
-import pytest
-
 from collections import Counter, defaultdict, namedtuple
-from docker import errors as docker_errors
+from huggingface_hub.errors import GatedRepoError
 from itertools import groupby
 from pathlib import Path
+
+import pytest
+from docker import errors as docker_errors
 from _pytest.mark import Mark, MarkDecorator
 from _pytest.python import Function
 
 from tests.functional import config
-from tests.functional.models.models_library import ModelsLib, ModelsLibrary
-from tests.functional.utils.download import wget_file
-from tests.functional.utils.reservation_manager.args import parse_args
-from tests.functional.utils.reservation_manager.manager import Manager as ReservationManager
 from tests.functional.config import (
+    airplane_mode,
     build_test_image,
     c_api_wrapper_dir,
     cleanup_env_on_startup,
@@ -62,11 +61,15 @@ from tests.functional.config import (
 from tests.functional.constants.os_type import get_host_os, OsType, UBUNTU
 from tests.functional.constants.os_version import os_type_to_base_image_binary_docker
 from tests.functional.constants.ovms import (
+    API_TYPE_PARAM_NAME,
     BASE_OS_PARAM_NAME,
-    CURRENT_TARGET_DEVICE_DICT_ARGUMENT,
+    CLOUD_TYPE_PARAM_NAME,
+    ENDPOINT_PARAM_NAME,
+    MODEL_TYPE_PARAM_NAME,
     OVMS_TYPE_PARAM_NAME,
     TARGET_DEVICE_PARAM_NAME,
     TMP_REPOS_DIR_ARGUMENT,
+    USES_CONFIG_PARAM_NAME,
     USES_MAPPING_PARAM_NAME,
 )
 from tests.functional.constants.ovms_images import (
@@ -89,10 +92,16 @@ from tests.functional.constants.ovms_type import (
 from tests.functional.constants.paths import Paths
 from tests.functional.constants.target_device import MAX_WORKERS_PER_TARGET_DEVICE, TargetDevice
 from tests.functional.constants.ovms_binaries import calculate_ovms_binary_name
+from tests.functional.models.models_library import ModelsLib, ModelsLibrary
+from tests.functional.object_model.dmesg_log_monitor import DmesgLogMonitor
 from tests.functional.object_model.ovms_info import OvmsInfo
+from tests.functional.object_model.ovsa import OvsaCerts
 from tests.functional.utils.core import TmpDir
 from tests.functional.utils.docker import DockerClient, DockerContainer, DOCKER_CONTAINER_TMP_PATH
+from tests.functional.utils.download import wget_file
+from tests.functional.utils.inference.serving.openai import OpenAIWrapper
 from tests.functional.utils.environment_info import EnvironmentInfo
+from tests.functional.utils.helpers import get_base_device
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.marks import (
     MarkConditionalRunType,
@@ -103,9 +112,9 @@ from tests.functional.utils.marks import (
 )
 from tests.functional.utils.ov_hf_downloader import OVHfDownloader
 from tests.functional.utils.process import PID_STATE_ZOMBIE, Process, get_pid_name, get_pid_status
+from tests.functional.utils.reservation_manager.args import parse_args
+from tests.functional.utils.reservation_manager.manager import Manager as ReservationManager
 from tests.functional.utils.test_framework import change_dir_permissions, get_test_object_prefix, is_xdist_master
-from tests.functional.utils.helpers import get_base_device
-from tests.functional.object_model.ovsa import OvsaCerts
 
 logger = get_logger(__name__)
 
@@ -135,22 +144,14 @@ TIMEOUT_MULTIPLIER: dict = {
     "AUTO_HETERO_MULTI": 3,
 }
 
-CURRENT_TARGET_DEVICE_DICT = {}
-
-DEVICE_ID_TO_DETAILED_TARGET_DEVICE_NAME_MAP = defaultdict(lambda: ("", []), {})
-
 SkippedItem = namedtuple("SkippedItem", "test_name reason")
 
 
 def init_environment(_config):
-    global CURRENT_TARGET_DEVICE_DICT
-    # additional constant CURRENT_TARGET_DEVICE_DICT needs to be used due to being unable to read
-    # current_target_device_dict from config when using xdist=0
-    _config.current_target_device_dict = CURRENT_TARGET_DEVICE_DICT
-
     if not machine_is_reserved_for_test_session:
         return
     init_cleanup()
+    dmesg_cleanup()
 
 
 def init_cleanup():
@@ -159,6 +160,16 @@ def init_cleanup():
             cleanup_ovms_processes()
         else:
             cleanup_docker(cleanup_docker_containers)
+
+
+def dmesg_cleanup():
+    if all([
+        config.cleanup_env_on_startup,
+        not config.disable_dmesg_log_monitor,
+        get_host_os() != OsType.Windows,
+    ]):
+        dmesg_log_monitor = DmesgLogMonitor()
+        dmesg_log_monitor.clear_dmesg_buffer()
 
 
 def clean_container(container):
@@ -208,7 +219,7 @@ def cleanup_tmp_repos_dir(config):
     try:
         shutil.rmtree(config.tmp_repos_dir)
     except PermissionError as e:
-        if get_host_os() == OsType.Windows and type(e) == PermissionError:
+        if get_host_os() == OsType.Windows and isinstance(e, PermissionError):
             change_dir_permissions(config.tmp_repos_dir)
             shutil.rmtree(config.tmp_repos_dir)
 
@@ -320,7 +331,7 @@ def run_docker_build_ovms_image(cmd, ovms_image_name, cwd, timeout=None):
     print(f"Building {ovms_image_name} image using cmd: {cmd}")
     proc = Process()
     proc.disable_check_stderr()
-    code, stdout, stderr = proc.run_and_check_return_all(cmd, cwd=cwd, timeout=timeout)
+    _code, stdout, stderr = proc.run_and_check_return_all(cmd, cwd=cwd, timeout=timeout)
     assert (f"naming to {ovms_image_name}" in stderr) or (
         f"Successfully tagged {ovms_image_name}" in stdout
     ), f"Image was not built successfully; stderr: {stderr}"
@@ -395,7 +406,7 @@ def build_ovms_capi_image():
                 shutil.copy(os.path.join(ovms_c_repo_path, gpu_install_script), ovms_capi_dst_path)
         else:
             for gpu_install_script in GPU_INSTALL_SCRIPTS[base_os]:
-                with open(os.path.join(ovms_capi_dst_path, gpu_install_script), "a"):
+                with open(os.path.join(ovms_capi_dst_path, gpu_install_script), "a", encoding="utf-8"):
                     pass
 
         dockerfile = f"Dockerfile.{UBUNTU if UBUNTU in base_os else base_os}"
@@ -411,8 +422,8 @@ def build_ovms_capi_image():
 
 def prepare_ovms_package():
     if all([
-        all([OvmsType.CAPI not in ovms_type for ovms_type in config.ovms_types]),
-        all([OvmsType.BINARY not in ovms_type for ovms_type in config.ovms_types]),
+        all(OvmsType.CAPI not in ovms_type for ovms_type in config.ovms_types),
+        all(OvmsType.BINARY not in ovms_type for ovms_type in config.ovms_types),
     ]):
         return
 
@@ -435,7 +446,7 @@ def get_models_to_download():
         various_models_value = getattr(ModelsLib, various_models_name)
         if isinstance(various_models_value, dict):
             for target_device in target_devices:
-                models_to_download.extend(various_models_value[target_device])
+                models_to_download.extend(various_models_value[get_base_device(target_device)])
         else:
             models_to_download.extend(various_models_value)
     return list(set(models_to_download))
@@ -443,14 +454,22 @@ def get_models_to_download():
 
 def download_models():
     models_to_download = get_models_to_download()
-    for model_type in models_to_download:
-        if model_type.is_local:
-            ov_hf_downloader = OVHfDownloader(model_type)
-            ov_hf_downloader.check_and_update_hf_model()
-
+    try:
+        for model_type in models_to_download:
+            if model_type.is_local:
+                ov_hf_downloader = OVHfDownloader(model_type)
+                ov_hf_downloader.check_and_update_hf_model()
+    except GatedRepoError as e:
+        msg = f"{str(e)}\nProvide huggingface_token with either HF_TOKEN or HF_TOKEN_FILE_PATH envs."
+        logger.error(msg)
+        pytest.exit(msg, returncode=-1)
+    except Exception as e:
+        logger.exception(str(e))
+        msg = "Failed to download required models."
+        logger.error(msg)
+        pytest.exit(msg, returncode=-1)
 
 def get_docker_images(images_to_download):
-    images_to_download.add(config.minio_image)
     for target_device, base_os in itertools.product(config.target_devices, config.base_os):
         ovms_image = calculate_ovms_image_name(target_device, base_os)
         if config.ovms_image_local:
@@ -461,6 +480,9 @@ def get_docker_images(images_to_download):
 
 
 def download_docker_images():
+    if airplane_mode:
+        print("Skipping downloading required resources")
+        return
     docker_ovms_types = [
         OvmsType.DOCKER, OvmsType.DOCKER_CMD_LINE, OvmsType.BINARY_DOCKER, OvmsType.CAPI_DOCKER
     ]
@@ -476,6 +498,9 @@ def download_docker_images():
 
 
 def download_resources_master():
+    if airplane_mode:
+        print("Skipping downloading required resources")
+        return
     print("Download required resources")
     download_models()
     download_docker_images()
@@ -483,8 +508,6 @@ def download_resources_master():
 
 def init_ovms_config_retrieved_from_master(pytest_config):
     config.tmp_repos_dir = pytest_config.workerinput[TMP_REPOS_DIR_ARGUMENT]
-    global CURRENT_TARGET_DEVICE_DICT
-    CURRENT_TARGET_DEVICE_DICT = pytest_config.workerinput[CURRENT_TARGET_DEVICE_DICT_ARGUMENT]
 
 
 def build_local_resources():
@@ -505,11 +528,15 @@ def get_marker_args(metafunc, marker_name):
     return
 
 
+def get_target_device_id(target_device):
+    return config.target_device_ids.get(target_device, target_device)
+
+
 def get_ids_with_target_device(parameter, func):
     # return id for target_device
     if parameter in vars(TargetDevice).values() or (isinstance(parameter, str) and get_base_device(parameter)
                                                     in vars(TargetDevice).values()):
-        return CURRENT_TARGET_DEVICE_DICT.get(parameter, parameter)
+        return get_target_device_id(parameter)
     # return custom id
     return func(parameter)
 
@@ -535,7 +562,7 @@ def parametrize_model_type(metafunc):
             for model_type in get_models_for_device(args, device_type)
         ]
         ids_list = [
-            f"{CURRENT_TARGET_DEVICE_DICT.get(device_type, device_type)}-{model_type.__name__}"
+            f"{get_target_device_id(device_type)}-{model_type.__name__}"
             for device_type, model_type in params_list
         ]
         metafunc.parametrize(
@@ -550,7 +577,7 @@ def parametrize_model_type(metafunc):
         for model_aux_type in get_models_for_device(aux_args, device_type)
     ]
     ids_list = [
-        f"{CURRENT_TARGET_DEVICE_DICT.get(device_type, device_type)}"
+        f"{get_target_device_id(device_type)}"
         f"-{model_type.__name__}-{model_aux_type.__name__}"
         for device_type, model_type, model_aux_type in params_list
     ]
@@ -599,11 +626,12 @@ def parametrize_iteration_info(metafunc):
     # [(ModelsLib.various_models, 0, False, True)] -> ("CPU", ([(ModelsLib.various_models["CPU"][0], False, True)])
     params_list = []
     for device_type in config.target_devices:
+        base_device = get_base_device(device_type)
         for _iteration_info_item in args:
             iteration_info = []
             for _iteration_info in _iteration_info_item:
                 iteration_info.append(
-                    (_iteration_info[0][device_type][_iteration_info[1]], _iteration_info[2], _iteration_info[3])
+                    (_iteration_info[0][base_device][_iteration_info[1]], _iteration_info[2], _iteration_info[3])
                 )
             params_list.append((device_type, iteration_info))
     ids_list = lambda i: get_ids_with_target_device(i, ModelsLib.generate_ids_for_iteration_info)
@@ -619,11 +647,15 @@ def parametrize_input_shape(metafunc):
         params_list = [
             (device_type, shape)
             for device_type in config.target_devices
-            for shape in args[0](args[1][device_type][args[2]])
+            for shape in args[0](args[1][get_base_device(device_type)][args[2]])
         ]
     args = get_marker_args(metafunc, MarkTestParameters.INPUT_SHAPE_NO_AUTO)
     if args is not None:
-        params_list = [(device_type, shape) for device_type in config.target_devices for shape in args[0][device_type]]
+        params_list = [
+            (device_type, shape)
+            for device_type in config.target_devices
+            for shape in args[0][get_base_device(device_type)]
+        ]
     if params_list:
         ids_list = lambda i: get_ids_with_target_device(i, ModelsLib.generate_model_shape_ids)
         metafunc.parametrize(f"{TARGET_DEVICE_PARAM_NAME}, {MarkTestParameters.INPUT_SHAPE}", params_list, ids=ids_list)
@@ -640,12 +672,12 @@ def parametrize_plugin_config(metafunc):
         (device_type, plugin_config) for device_type in config.target_devices
         for plugin_config in args[0][get_base_device(device_type)]
     ]
-    ids_list = lambda i: get_ids_with_target_device(i, lambda x: "-".join(map(lambda y: "%s=%s" % y, x.items())))
+    ids_list = lambda i: get_ids_with_target_device(i, lambda x: "-".join(map(lambda y: f"{y[0]}={y[1]}", x.items())))
     metafunc.parametrize(f"{TARGET_DEVICE_PARAM_NAME}, {MarkTestParameters.PLUGIN_CONFIG}", params_list, ids=ids_list)
 
 
 def parametrize_target_device(metafunc):
-    ids = [CURRENT_TARGET_DEVICE_DICT.get(x, x) for x in config.target_devices]
+    ids = [get_target_device_id(x) for x in config.target_devices]
     metafunc.parametrize(TARGET_DEVICE_PARAM_NAME, config.target_devices, ids=ids)
 
 
@@ -755,12 +787,15 @@ def parametrize_base_os(metafunc):
     metafunc.parametrize(BASE_OS_PARAM_NAME, params, ids=ids)
 
 
+SENSITIVE_ENV_VAR_RE = re.compile(r"PASS|TOKEN|SECRET|CREDENTIALS|CONNECTION_STRING|KEY", re.IGNORECASE)
+
+
 def log_configuration_variables():
     logger.info("============== configuration variables ==============")
     pt_env_vars = list(filter(lambda x: x[0].startswith("TT_"), os.environ.items()))
     pt_env_vars.sort()
-    for env_var in pt_env_vars:
-        logger.info("{}={}".format(*env_var))
+    for name, value in pt_env_vars:
+        logger.info(f"{name}={'***' if SENSITIVE_ENV_VAR_RE.search(name) else value}")
 
 
 def mute_warnings():
@@ -937,10 +972,11 @@ def set_item_image_parameter(item):
 
 
 def apply_conditional_run_type_marks(item):
-    """Resolve conditional_run_type and conditional_run_type_by_model meta-markers.
+    """Resolve conditional_run_type, conditional_run_type_by_model and conditional_run_type_by_param meta-markers.
 
     conditional_run_type: assigns single_mark when device+OS match, default_mark otherwise.
     conditional_run_type_by_model: assigns mark based on model_type membership in model collections.
+    conditional_run_type_by_param: assigns mark based on value of the param_name test parameter.
     """
     params = getattr(getattr(item, 'callspec', None), 'params', {})
 
@@ -950,7 +986,7 @@ def apply_conditional_run_type_marks(item):
         single_if_device = marker.kwargs.get("single_if_device")
         single_if_os = marker.kwargs.get("single_if_os")
 
-        device = params.get(TARGET_DEVICE_PARAM_NAME, "")
+        device = get_base_device(params.get(TARGET_DEVICE_PARAM_NAME, ""))
         base_os = str(params.get(BASE_OS_PARAM_NAME, "")).lower()
 
         is_single = True
@@ -967,7 +1003,7 @@ def apply_conditional_run_type_marks(item):
         model_type = params.get(MarkTestParameters.MODEL_TYPE)
         if model_type is None:
             continue
-        device = params.get(TARGET_DEVICE_PARAM_NAME, "")
+        device = get_base_device(params.get(TARGET_DEVICE_PARAM_NAME, ""))
         for mark_name, model_collection in marker.kwargs.get("model_mark_map", {}).items():
             device_models = set(model_collection.get(device, []))
             if model_type in device_models:
@@ -976,6 +1012,12 @@ def apply_conditional_run_type_marks(item):
         default_mark = marker.kwargs.get("default_mark")
         if default_mark:
             item.add_marker(getattr(pytest.mark, default_mark))
+        return
+
+    for marker in item.iter_markers(MarkConditionalRunType.CONDITIONAL_RUN_TYPE_BY_PARAM):
+        param_value = params.get(marker.kwargs["param_name"])
+        mark_name = marker.kwargs["value_mark_map"].get(param_value, marker.kwargs["default_mark"])
+        item.add_marker(getattr(pytest.mark, mark_name))
         return
 
 
@@ -1008,11 +1050,53 @@ def update_parent_markers(item, marker_types):
                 item.own_markers.append(components)
 
 
+def generic_test_deselect(item):
+    """
+    Pytest test cases are generated as Cartesian products of all given arguments.
+    Same of parameters combinations are incompatible or contradictory and cannot be applied.
+
+    In this function check generic @pytest.mark.parametrize / @fixture symbols from `item`.
+    """
+    target_device = item.callspec.params.get(TARGET_DEVICE_PARAM_NAME, None)
+    ovms_type = item.callspec.params.get(OVMS_TYPE_PARAM_NAME, None)
+    api_type = item.callspec.params.get(API_TYPE_PARAM_NAME, None)
+    base_os = item.callspec.params.get(BASE_OS_PARAM_NAME, None)
+    use_config = item.callspec.params.get(USES_CONFIG_PARAM_NAME, None)
+    cloud_type = item.callspec.params.get(CLOUD_TYPE_PARAM_NAME, None)
+    model_type = item.callspec.params.get(MODEL_TYPE_PARAM_NAME, None)
+    use_mapping = item.callspec.params.get(USES_MAPPING_PARAM_NAME, None)
+    endpoint = item.callspec.params.get(ENDPOINT_PARAM_NAME, None)
+
+    # Disable completions endpoint for VLM models
+    if endpoint == OpenAIWrapper.COMPLETIONS and getattr(model_type, "is_vision_language", False):
+        return True
+
+    return False
+
+
+# Check which of test_runners would be used.
+RUN_TYPE_ENABLED = [
+    (MarkRunType.TEST_MARK_ON_COMMIT, config.run_on_commit_tests),
+    (MarkRunType.TEST_MARK_REGRESSION, config.run_regression_tests),
+]
+
+
+def mark_type_test_deselected(item, run_type_enabled_dict):
+    _type_mark = MarkRunType.get_test_type_mark(item)
+    return any(_type_mark == run_type and not enabled for run_type, enabled in run_type_enabled_dict)
+
+
 def deselect(item, test_type, required_marker_ids, excluded_marker_ids):
     # Validate different scenarios where test should be deselected from execution during `collect` stage.
     if isinstance(item, Function):
         if test_type is None:
             raise RuntimeError("Test do not have test_type: " + item.name)
+
+        if generic_test_deselect(item):
+            return True
+
+        if mark_type_test_deselected(item, RUN_TYPE_ENABLED):
+            return True
 
         if required_marker_ids:
             for required_marker_id_list in required_marker_ids:
@@ -1020,7 +1104,8 @@ def deselect(item, test_type, required_marker_ids, excluded_marker_ids):
                     # make sure that item is not deselected by other marker
                     return deselect_by_excluded_marker_ids(item, excluded_marker_ids)
             return True
-        elif excluded_marker_ids:
+
+        if excluded_marker_ids:
             return deselect_by_excluded_marker_ids(item, excluded_marker_ids)
 
     return False
@@ -1110,7 +1195,7 @@ def log_labeled_stats(issues):
     msg = ["Skipped tests statistic:"]
     issues_sorted_by_quantity = sorted(issues.items(), key=lambda i: i[1], reverse=True)
     for issue, quantity in issues_sorted_by_quantity:
-        msg.append("{:>11}: {:>6}".format(issue, quantity))
+        msg.append(f"{issue:>11}: {quantity:>6}")
     logger.info("\n".join(msg))
 
 
@@ -1118,8 +1203,8 @@ def log_others(other_items):
     msg = ["Skipped tests not labeled with issue:"]
     items_grouped_by_reason = groupby(other_items, key=lambda i: i.reason)
     for reason, items in list(items_grouped_by_reason):
-        msg.append("{}:".format(reason))
-        msg.extend("|---{}".format(item.test_name) for item in list(items))
+        msg.append(f"{reason}:")
+        msg.extend(f"|---{item.test_name}" for item in list(items))
     logger.info("\n".join(msg))
 
 

@@ -117,7 +117,7 @@ void Hermes3ToolParser::clearState() {
 }
 
 std::optional<Delta> Hermes3ToolParser::parseChunk(const std::string& chunk, const std::vector<int64_t>& /*tokens*/, ov::genai::GenerationFinishReason finishReason) {
-    /* 
+    /*
     We first collect data until we have full function name - that's when we return the first delta.
     Every next delta contains next parts of the arguments. Hermes3 generates arguments as JSON, but OpenAI API expects them in a string format.
     That's why once we reach 'arguments' key, we add double quote to force string type and escape all double quotes that come in next parts.

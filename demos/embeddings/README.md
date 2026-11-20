@@ -159,12 +159,6 @@ pip install "transformers<5"  # WA for optimum-intel and model support for new t
 python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --model_name gte-large-en-v1.5 --pooling CLS --extra_quantization_params "--library sentence_transformers"
 ```
 :::
-:::{tab-item} nomic-ai/nomic-embed-text-v1.5
-:sync: nomic-embed-text-v1.5
-```console
-python export_model.py embeddings_ov --source_model nomic-ai/nomic-embed-text-v1.5 --model_name nomic-embed-text-v1.5 --pooling MEAN --extra_quantization_params "--library sentence_transformers"
-```
-:::
 :::{tab-item} sentence-transformers/all-mpnet-base-v2
 :sync: all-mpnet-base-v2
 ```console
@@ -231,12 +225,6 @@ pip install "transformers<5"  # WA for optimum-intel and model support for new t
 python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --model_name gte-large-en-v1.5 --pooling CLS --weight-format int8 --target_device GPU --extra_quantization_params "--library sentence_transformers" --config_file_path models/config.json --model_repository_path models
 ```
 :::
-:::{tab-item} nomic-ai/nomic-embed-text-v1.5
-:sync: nomic-embed-text-v1.5
-```console
-python export_model.py embeddings_ov --source_model nomic-ai/nomic-embed-text-v1.5 --model_name nomic-embed-text-v1.5 --pooling MEAN --weight-format int8 --target_device GPU --extra_quantization_params "--library sentence_transformers" --config_file_path models/config.json --model_repository_path models
-```
-:::
 :::{tab-item} sentence-transformers/all-mpnet-base-v2
 :sync: all-mpnet-base-v2
 ```console
@@ -258,15 +246,20 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 :::{tab-item} BAAI/bge-large-en-v1.5
 :sync: BAAI/bge-large-en-v1.5-fp16
 ```console
-python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --pooling CLS --weight-format fp16 --target_device NPU --config_file_path models/config.json --model_repository_path models --max_length 1000
+python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --model_name bge-large-en-v1.5 --pooling CLS --weight-format fp16 --target_device NPU --config_file_path models/config.json --model_repository_path models --max_length 400
 ```
 :::
 ::::
 > **Note** For NPU Set `--max_length` as low as possible to speed up model loading and inference.
+
 > **Note** For NPU Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision. For int4 precisions, add required extra parameter `--extra_quantization_params "--sym --ratio 1.0 --group-size -1"`
+
 > **Note** For NPU the pooling mode --pooling LAST has the best accuracy.
+
 > **Note** For NPU and the weight-format int4, use `--extra_quantization_params "--sym --ratio 1.0 --group-size -1"`
+
 > **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance.
+
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
 
 You should have a model folder like below:
@@ -316,7 +309,6 @@ All models supported by [optimum-intel](https://github.com/huggingface/optimum-i
 |intfloat/multilingual-e5-large-instruct|MEAN|CPU,GPU|
 |intfloat/multilingual-e5-large|MEAN|CPU,GPU|
 |Alibaba-NLP/gte-large-en-v1.5|CLS|CPU,GPU|
-|nomic-ai/nomic-embed-text-v1.5|MEAN|CPU,GPU|
 |sentence-transformers/all-mpnet-base-v2|MEAN|CPU,GPU,NPU|
 
 ## Server Deployment
@@ -374,7 +366,7 @@ curl http://localhost:8000/v3/models/bge-large-en-v1.5
 
 :::{dropdown} **Request embeddings with cURL**
 ```bash
-curl http://localhost:8000/v3/embeddings -H "Content-Type: application/json" -d "{ \"model\": \"bge-large-en-v1.5\", \"input\": \"hello world\"}"
+curl http://localhost:8000/v1/embeddings -H "Content-Type: application/json" -d "{ \"model\": \"bge-large-en-v1.5\", \"input\": \"hello world\"}"
 ```
 ```json
 {
@@ -405,7 +397,7 @@ curl http://localhost:8000/v3/embeddings -H "Content-Type: application/json" -d 
 :::{dropdown} **Request embeddings with OpenAI Python package**
 
 ```bash
-pip3 install openai "numpy<2"
+pip3 install openai numpy
 ```
 ```bash
 echo '
@@ -413,7 +405,7 @@ from openai import OpenAI
 import numpy as np
 
 client = OpenAI(
-  base_url="http://localhost:8000/v3",
+  base_url="http://localhost:8000/v1",
   api_key="unused"
 )
 model = "bge-large-en-v1.5"
@@ -436,45 +428,8 @@ It will report results like `Similarity score as cos_sim 0.9605122725993963`.
 :::
 
 ## Benchmarking feature extraction
-
-An asynchronous benchmarking client can be used to access the model server performance with various load conditions. Below are execution examples captured on Intel(R) Core(TM) Ultra X7 368H.
-```console
-git clone https://github.com/openvinotoolkit/model_server
-pushd .
-cd model_server/demos/benchmark/v3/
-pip install -r requirements.txt
-python benchmark.py --api_url http://localhost:8000/v3/embeddings --dataset synthetic --synthetic_length 5 --request_rate 10 --batch_size 1 --model bge-large-en-v1.5 --tokenizer BAAI/bge-large-en-v1.5 
-Number of documents: 1000
-100%|██████████████████████████████████████| 1000/1000 [01:40<00:00,  9.92it/s]
-Tokens: 5000
-Success rate: 100.0%. (1000/1000)
-Throughput - Tokens per second: 49.6
-Mean latency: 12.75 ms
-Median latency: 12.43 ms
-Average document length: 5.0 tokens
-
-
-python benchmark.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 32 --dataset synthetic --synthetic_length 510 --model bge-large-en-v1.5 --tokenizer BAAI/bge-large-en-v1.5 
-Number of documents: 1000
-100%|██████████████████████████████████████| 32/32 [00:13<00:00,  2.43it/s]
-Tokens: 510000
-Success rate: 100.0%. (32/32)
-Throughput - Tokens per second: 38,746.8
-Mean latency: 6851.76 ms
-Median latency: 6790.46 ms
-Average document length: 510.0 tokens
-
-
-python benchmark.py --api_url http://localhost:8000/v3/embeddings --request_rate inf --batch_size 1 --dataset Cohere/wikipedia-2023-11-embed-multilingual-v3 --hf-subset simple --model bge-large-en-v1.5 --tokenizer BAAI/bge-large-en-v1.5
-Number of documents: 1000
-100%|██████████████████████████████████████| 1000/1000 [00:11<00:00, 89.84it/s]
-Tokens: 66568
-Success rate: 100.0%. (1000/1000)
-Throughput - Tokens per second: 5,980.8
-Mean latency: 1037.83 ms
-Median latency: 912.00 ms
-Average document length: 66.568 tokens
-```
+For synthetic and Hugging Face dataset examples, setup, and token-counting details,
+see [Text Embeddings](../benchmark/openai/README.md#text-embeddings) in the benchmark guide.
 
 ## RAG with Model Server
 
@@ -488,9 +443,8 @@ A simple method of testing the response accuracy is via comparing the response f
 
 The script [compare_results.py](https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/compare_results.py) can assist with such experiment.
 ```bash
-popd
-cd model_server/demos/embeddings
-python compare_results.py --model_name bge-large-en-v1.5 --hf_model_name BAAI/bge-large-en-v1.5 --service_url http://localhost:8000/v3/embeddings --pooling CLS --input "hello world" --input "goodbye world"
+curl -fL https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/compare_results.py -o compare_results.py
+python compare_results.py --model_name bge-large-en-v1.5 --hf_model_name BAAI/bge-large-en-v1.5 --service_url http://localhost:8000/v1 --pooling CLS --input "hello world" --input "goodbye world"
 
 input ['hello world', 'goodbye world']
 HF Duration: 93.921 ms BertModel
@@ -522,7 +476,7 @@ It is easy also to run model evaluation using [MTEB](https://github.com/embeddin
 ```console
 pip install mteb tiktoken einops openai --extra-index-url "https://download.pytorch.org/whl/cpu"
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/ovms_mteb.py -o ovms_mteb.py
-python ovms_mteb.py --model_name bge-large-en-v1.5 --service_url http://localhost:8000/v3
+python ovms_mteb.py --model_name bge-large-en-v1.5 --service_url http://localhost:8000/v1
 ```
 Results will be stored in `results` folder:
 ```json
@@ -611,7 +565,7 @@ The `tokenize` endpoint provides a simple API for tokenizing input text using th
 
 Example usage:
 ```console
-curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"bge-large-en-v1.5\", \"text\": \"hello world\" }"
+curl http://localhost:8000/v1/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"bge-large-en-v1.5\", \"text\": \"hello world\" }"
 ```
 Response:
 ```json
@@ -628,7 +582,7 @@ It's possible to use additional parameters:
 
  Example usage:
 ```console
-curl http://localhost:8000/v3/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"bge-large-en-v1.5\", \"text\": \"hello world\", \"max_length\": 10, \"pad_to_max_length\": true, \"padding_side\": \"left\", \"add_special_tokens\": true }"
+curl http://localhost:8000/v1/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"bge-large-en-v1.5\", \"text\": \"hello world\", \"max_length\": 10, \"pad_to_max_length\": true, \"padding_side\": \"left\", \"add_special_tokens\": true }"
 ```
 
 Response:

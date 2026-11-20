@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# pylint: disable=no-member
 
 import os
 from pathlib import Path
@@ -32,7 +33,7 @@ def _get_current_git_repo_object():
         return None
     try:
         repo = Repo(current_directory, search_parent_directories=True)
-    except (NoSuchPathError, InvalidGitRepositoryError) as e:
+    except (NoSuchPathError, InvalidGitRepositoryError) as _e:
         print(f"Cannot get repo from current directory: {current_directory}")
         return None
     return repo

@@ -112,7 +112,8 @@ S3FileSystem::S3FileSystem(const Aws::SDKOptions& options, const std::string& s3
     const char* s3_endpoint = std::getenv("S3_ENDPOINT");
     const char* http_proxy = std::getenv("http_proxy") != nullptr ? std::getenv("http_proxy") : std::getenv("HTTP_PROXY");
     const char* https_proxy = std::getenv("https_proxy") != nullptr ? std::getenv("https_proxy") : std::getenv("HTTPS_PROXY");
-    const std::string default_proxy = https_proxy != nullptr ? std::string(https_proxy) : http_proxy != nullptr ? std::string(http_proxy) : "";
+    const std::string default_proxy = https_proxy != nullptr ? std::string(https_proxy) : http_proxy != nullptr ? std::string(http_proxy)
+                                                                                                                : "";
 
     if ((secret_key != nullptr) && (key_id != nullptr)) {
         credentials.SetAWSAccessKeyId(key_id);

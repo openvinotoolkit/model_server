@@ -251,7 +251,8 @@ public:
 
     Status initialize(const mediapipe::CalculatorGraphConfig_Node& node,
         const std::string& graphName, const std::string& basePath,
-        GraphSidePackets& sidePackets, PythonBackend*) override {
+        GraphSidePackets& sidePackets, GraphMetadata&,
+        PythonBackend*, const MetricProvider*) override {
         mediapipe::MovinetCalculatorOptions options;
         if (node.name().empty() || node.node_options_size() != 1 ||
             !node.node_options(0).UnpackTo(&options) ||

@@ -43,7 +43,9 @@ public:
         const std::string& graphName,
         const std::string& basePath,
         GraphSidePackets& sidePackets,
-        PythonBackend* /*pythonBackend*/) override {
+        GraphMetadata& /*metadata*/,
+        PythonBackend* /*pythonBackend*/,
+        const MetricProvider* /*metrics*/) override {
         auto& imageGenPipelinesMap = sidePackets.imageGenPipelinesMap;
         if (!nodeConfig.node_options().size()) {
             SPDLOG_ERROR("Image Gen node missing options in graph: {}. ", graphName);

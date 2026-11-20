@@ -46,6 +46,7 @@ class MediapipeFactory {
 public:
     MediapipeFactory() = delete;
     MediapipeFactory(PythonBackend* pythonBackend = nullptr);
+    // metrics must outlive the resulting graph definition, including lazy loads.
     Status createDefinition(const std::string& pipelineName,
         const MediapipeGraphConfig& config,
         MetricProvider& metrics,

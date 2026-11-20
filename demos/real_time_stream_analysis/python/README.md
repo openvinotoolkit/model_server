@@ -18,12 +18,12 @@ All the client scenarios mentioned below can read the input content from mention
 
 In the demo will be used two gRPC communication patterns which might be advantageous depending on the scenario.
 
-- gRPC streaming - recommended for MediaPipe graphs especially for stateful analysis
-- gRPC unary calls - recommended for inference only on DAG graphs
+- gRPC streaming - recommended especially for stateful analysis
+- gRPC unary calls
 
 
 ## Requirements
-- on the client side it could be Windows, Mac or Linux. FFMPEG should be preinstalled in order to follow the scenario with RTSP client. Python3.7+ is needed.
+- on the client side it could be Windows, Mac or Linux. FFMPEG should be preinstalled in order to follow the scenario with RTSP client. Python 3.10 or newer is needed.
 - the server can be deployed on Linux, MacOS (only with CPU execution on x86_64 arch) or on Windows operating system  (including inside WSL).
 - images sent over gRPC are not encoded, so there should be good network connectivity between the client and the server. At least 100Mb/s for real-time video analysis at high rate.
 
@@ -37,38 +37,28 @@ Using the streaming API has the following advantages:
 - support for stateful pipelines like object tracking when the response is dependent on the sequence of requests
 
 
-### Preparing the model server for gRPC streaming with a Holistic graph
+### Preparing the model server for gRPC streaming with image classification
 
-The [holistic graph](https://github.com/openvinotoolkit/model_server/blob/main/demos/mediapipe/holistic_tracking/holistic_tracking.pbtxt) is expecting and IMAGE object on the input and returns an IMAGE on the output.
-As such it doesn't require any preprocessing and postprocessing. In this demo the returned stream will be just visualized or sent to the target sink.
+This demo uses the [MediaPipe ResNet image-classification graph](../../mediapipe/image_classification/README.md). The graph accepts a `FP32` tensor named `in` with shape `1x3x224x224` and returns the ResNet scores as `out`. The client resizes each frame to `224x224` for inference, then draws the predicted class on the original frame. Therefore, the output video retains the input stream's resolution unless `--ffmpeg_output_width` or `--ffmpeg_output_height` is specified.
 
-The model server with the holistic use case can be deployed using steps from [this](../../mediapipe/holistic_tracking/README.md#server-deployment) article.
-
-[Check more info about this use case](../../mediapipe/holistic_tracking/README.md)
-
-> **Note** All the graphs with an image on input and output can be applied here without any changes on the client application.
-
-Here is an example of the server deployment procedure:
+Download the ResNet model and start OVMS:
 ```console
 git clone https://github.com/openvinotoolkit/model_server.git
-cd model_server/demos/mediapipe/holistic_tracking
-curl --create-dirs https://raw.githubusercontent.com/openvinotoolkit/mediapipe/v2023.3/mediapipe/modules/hand_landmark/handedness.txt -o mediapipe/modules/hand_landmark/handedness.txt 
-curl https://storage.googleapis.com/mediapipe-assets/face_detection_short_range.tflite -o face_detection_short_range/1/face_detection_short_range.tflite --create-dirs
-curl https://storage.googleapis.com/mediapipe-assets/face_landmark.tflite -o face_landmark/1/face_landmark.tflite --create-dirs
-curl https://storage.googleapis.com/mediapipe-assets/hand_landmark_full.tflite -o hand_landmark_full/1/hand_landmark_full.tflite --create-dirs
-curl https://storage.googleapis.com/mediapipe-assets/hand_recrop.tflite -o hand_recrop/1/hand_recrop.tflite --create-dirs
-curl https://storage.googleapis.com/mediapipe-assets/iris_landmark.tflite -o iris_landmark/1/iris_landmark.tflite --create-dirs
-curl https://storage.googleapis.com/mediapipe-assets/palm_detection_full.tflite -o palm_detection_full/1/palm_detection_full.tflite --create-dirs
-curl https://storage.googleapis.com/mediapipe-assets/pose_detection.tflite -o pose_detection/1/pose_detection.tflite --create-dirs
-curl https://storage.googleapis.com/mediapipe-assets/pose_landmark_full.tflite -o pose_landmark_full/1/pose_landmark_full.tflite --create-dirs
+cd model_server/demos/mediapipe/image_classification
+curl -L --create-dirs https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.bin -o resnetMediapipe/model/1/resnet50.bin
+curl -L --create-dirs https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.xml -o resnetMediapipe/model/1/resnet50.xml
 ```
 ```bash
-chmod -R 755 .
-docker run -d -v $PWD/mediapipe:/mediapipe -v $PWD:/models -p 9000:9000 openvino/model_server:latest --config_path /models/config_holistic.json --port 9000
+chmod -R 755 resnetMediapipe
 ```
+```bash
+docker run -d -v ${PWD}:/mediapipe -p 9000:9000 openvino/model_server:latest --config_path /mediapipe/config.json --port 9000
+```
+For a bare-metal deployment, run this command from the image-classification demo directory.
 ```bat
-ovms --config_path config_holistic.json --port 9000
+ovms --config_path config.json --port 9000
 ```
+
 ### Start the client with real time stream analysis
 
 Prepare the python environment from [model_server](https://github.com/openvinotoolkit/model_server) repo cloned in previous step and install required dependencies:
@@ -78,34 +68,31 @@ pip install -r ../../common/stream_client/requirements.txt
 ```
 For the use case with RTSP client, install also FFMPEG component on the host.
 
-Alternatively build a docker image with the client with the following command:
-```bash
-docker build ../../common/stream_client/ -t rtsp_client
-```
 
 Client parameters:
 ```console
 python client.py --help
-usage: client.py [-h] [--grpc_address GRPC_ADDRESS]
-                      [--input_stream INPUT_STREAM]
-                      [--output_stream OUTPUT_STREAM]
-                      [--model_name MODEL_NAME] [--input_name INPUT_NAME]
-                      [--verbose] [--benchmark]
-                      [--limit_stream_duration LIMIT_STREAM_DURATION]
-                      [--limit_frames LIMIT_FRAMES]
+usage: client.py [-h] [--grpc_address GRPC_ADDRESS] [--ffmpeg_output_width FFMPEG_OUTPUT_WIDTH] [--ffmpeg_output_height FFMPEG_OUTPUT_HEIGHT] [--input_stream INPUT_STREAM] [--output_stream OUTPUT_STREAM]
+                 [--model_name MODEL_NAME] [--input_name INPUT_NAME] [--output_name OUTPUT_NAME] [--verbose] [--benchmark] [--limit_stream_duration LIMIT_STREAM_DURATION] [--limit_frames LIMIT_FRAMES]
 
 options:
   -h, --help            show this help message and exit
   --grpc_address GRPC_ADDRESS
                         Specify url to grpc service
+  --ffmpeg_output_width FFMPEG_OUTPUT_WIDTH
+                        Width of the output video
+  --ffmpeg_output_height FFMPEG_OUTPUT_HEIGHT
+                        Height of the output video
   --input_stream INPUT_STREAM
                         Url of input rtsp stream
   --output_stream OUTPUT_STREAM
                         Url of output rtsp stream
   --model_name MODEL_NAME
-                        Name of the model
+                        Name of the MediaPipe graph
   --input_name INPUT_NAME
-                        Name of the model's input
+                        Name of the graph input
+  --output_name OUTPUT_NAME
+                        Name of the graph output
   --verbose             Should client dump debug information
   --benchmark           Should client collect processing times
   --limit_stream_duration LIMIT_STREAM_DURATION
@@ -117,11 +104,11 @@ options:
 
 #### Reading from the local camera and visualization on the screen
 
-```
+```text
 python client.py --grpc_address localhost:9000 --input_stream 0 --output_stream screen
 ```
 
-The parameter `--input_stream 0 ` indicates the camera ID `0`.
+The parameter `--input_stream 0` indicates camera ID `0`. The client displays each source frame with the predicted ImageNet class name overlaid.
 
 
 #### Reading from the encoded video file and saving results to a file
@@ -158,11 +145,13 @@ mediamtx
 
 Then write to the server using ffmpeg, example using video or camera
 
+The file source below loops at real-time speed for up to five minutes, then exits automatically.
+
 ```console
-ffmpeg -stream_loop -1 -i ./video.mp4 -f rtsp -rtsp_transport tcp rtsp://localhost:8554/channel1
+ffmpeg -re -stream_loop -1 -i ./video.mp4 -t 300 -f rtsp -rtsp_transport tcp rtsp://localhost:8554/channel1
 ```
 
-```
+```text
 ffmpeg -f dshow -i video="HP HD Camera" -f rtsp -rtsp_transport tcp rtsp://localhost:8080/channel1
 ```
 
@@ -173,8 +162,8 @@ python client.py --grpc_address localhost:9000 --input_stream 'rtsp://localhost:
 
 The results can be examined with ffplay utility which reads and display the altered content.
 
-```console
-ffplay -pixel_format yuv420p -video_size 704x704 -rtsp_transport tcp rtsp://localhost:8554/channel2
+```text
+ffplay -rtsp_transport tcp rtsp://localhost:8554/channel2
 ```
 
 
@@ -188,22 +177,6 @@ The key advantage of that mode is easier load balancing and scalability, because
 > **Note** Depending on the output format, there might be needed a custom postprocessing function implementation.
 
 
-## Metric integrations
+## Metrics
 
-Following the steps from [metrics documentation](../../../docs/metrics.md#visualize-with-grafana) one can setup
-visualisation of metrics using grafana.
-
-In OpenVINO Model Server repository one can find [grafana_mediapipe.json](../../../extras/grafana_mediapipe.json) that can be used to visualize 
-metrics about mediapipe graphs' status.
-
-Here are some exemplary visualisations included in above mentioned grafana dashboard:
-
-- Processing time metric is used to track the time a particular mediapipe graph is opened. In this case it can be used to represent how long it took to process single video.
-
-![processing_time_distr](assets/processing_time_distr.png)
-![processing_time](assets/processing_time.png)
-
-- Request latency metric shows the time difference between subsequent requests.
-
-![request_latency_distr](assets/request_latency_distr.png)
-![request_latency](assets/request_latency.png)
+For MediaPipe graph metric definitions and Grafana visualization, see the [metrics documentation](../../../docs/metrics.md#metrics-implementation-for-mediapipe-graphs).

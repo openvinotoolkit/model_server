@@ -34,6 +34,7 @@
 #include <openvino/opsets/opset13.hpp>
 
 #include "mediapipe/framework/formats/image_frame.h"
+#include "src/graph_metadata.hpp"
 #include "src/mediapipe_internal/graph_side_packets.hpp"
 #include "src/mediapipe_internal/live_graph_config.hpp"
 #include "src/mediapipe_internal/mediapipegraphexecutor.hpp"
@@ -98,11 +99,12 @@ protected:
         options.set_model_path("model.xml");
         options.set_labels_path("labels.txt");
         node->add_node_options()->PackFrom(options);
+        GraphMetadata metadata;
         bool matched = false;
         for (const auto& initializer : NodeInitializerRegistry::instance().all()) {
             if (initializer->matches(node->calculator())) {
                 matched = true;
-                const auto status = initializer->initialize(*node, "movinet", directory.string(), resources, nullptr);
+                const auto status = initializer->initialize(*node, "movinet", directory.string(), resources, metadata, nullptr, nullptr);
                 ASSERT_TRUE(status.ok()) << status.string();
             }
         }
@@ -224,7 +226,8 @@ TEST_F(MovinetCalculatorTest, RejectsInvalidResourcesBeforeOpeningSessions) {
         if (!initializer->matches(node.calculator()))
             continue;
         GraphSidePackets invalid;
-        const auto status = initializer->initialize(node, "invalid", directory.string(), invalid, nullptr);
+        GraphMetadata metadata;
+        const auto status = initializer->initialize(node, "invalid", directory.string(), invalid, metadata, nullptr, nullptr);
         EXPECT_FALSE(status.ok());
         EXPECT_TRUE(invalid.movinetResourcesMap.empty());
         EXPECT_FALSE(initializer->prepareLiveGraph(config, invalid).ok());

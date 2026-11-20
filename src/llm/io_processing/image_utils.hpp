@@ -15,6 +15,7 @@
 //*****************************************************************************
 #pragma once
 
+#include <cstdio>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -23,6 +24,7 @@
 
 #pragma warning(push)
 #pragma warning(disable : 6001 4324 6385 6386)
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #pragma warning(pop)
 
@@ -42,6 +44,16 @@ struct ImageDownloadContext {
 
     size_t append(const void* downloadedChunk, size_t size, size_t nmemb) noexcept;
 };
+
+bool isRemoteMediaSource(const std::string& mediaSource);
+
+absl::Status validateMediaSource(const std::string& mediaSource,
+    const std::optional<std::string>& allowedLocalMediaPath,
+    const std::optional<std::vector<std::string>>& allowedMediaDomains);
+
+absl::Status downloadMediaToFile(const std::string& mediaSource, std::FILE* output,
+    size_t sizeLimit, size_t& downloadedBytes);
+absl::Status validateHttpDownloadResponse(int64_t httpCode, bool redirectsAllowed, std::string_view mediaType);
 
 absl::StatusOr<ov::Tensor> fetchAndDecodeImage(const std::string& imageSource,
     const std::optional<std::string>& allowedLocalMediaPath,

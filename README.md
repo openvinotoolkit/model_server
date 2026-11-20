@@ -182,7 +182,7 @@ Binary pre-production packages (Linux & Windows): [storage.openvinotoolkit.org](
 ## Contributing
 
 Contributions are welcome! Please open an issue or pull request on GitHub.  
-See [security policy](security.md) for responsible disclosure.
+See the [contributing guide](docs/contributing.md) for contribution guidelines. For responsible disclosure, see the [security policy](security.md).
 
 ---
 

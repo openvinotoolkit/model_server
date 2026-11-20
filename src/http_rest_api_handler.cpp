@@ -27,6 +27,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 #include <ctime>
@@ -45,6 +46,7 @@
 #include "execution_context.hpp"
 #include "filesystem/filesystem.hpp"
 #include "config_status_utils.hpp"
+#include "graph_metadata.hpp"
 #include "grpcservermodule.hpp"
 #include "kfs_frontend/kfs_grpc_inference_service.hpp"
 #include "kfs_frontend/kfs_utils.hpp"
@@ -66,6 +68,7 @@
 #include "server.hpp"
 #include "src/logging.hpp"
 #include "src/mediapipe_internal/live_graph_config.hpp"
+#include "servable_definition.hpp"
 #include "status.hpp"
 #include "stringutils.hpp"
 #include "multi_part_parser.hpp"
@@ -114,6 +117,8 @@ const std::string HttpRestApiHandler::kfs_modelreadyRegexExp =
     R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/(ready)))";
 const std::string HttpRestApiHandler::kfs_modelmetadataRegexExp =
     R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/)?)";
+const std::string HttpRestApiHandler::kfs_modelconfigRegexExp =
+    R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?/config)";
 const std::string HttpRestApiHandler::kfs_inferRegexExp =
     R"(/v2/models/([^/]+)(?:/versions/([0-9]+))?(?:/(infer)))";
 const std::string HttpRestApiHandler::kfs_serverreadyRegexExp =
@@ -140,6 +145,7 @@ HttpRestApiHandler::HttpRestApiHandler(ovms::Server& ovmsServer, int timeout_in_
     configStatusRegex(configStatusRegexExp),
     kfs_modelreadyRegex(kfs_modelreadyRegexExp),
     kfs_modelmetadataRegex(kfs_modelmetadataRegexExp),
+    kfs_modelconfigRegex(kfs_modelconfigRegexExp),
     kfs_inferRegex(kfs_inferRegexExp),
     kfs_serverreadyRegex(kfs_serverreadyRegexExp),
     kfs_serverliveRegex(kfs_serverliveRegexExp),
@@ -198,6 +204,9 @@ void HttpRestApiHandler::registerAll() {
     });
     registerHandler(KFS_GetModelMetadata, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processModelMetadataKFSRequest(request_components, response, request_body);
+    });
+    registerHandler(KFS_GetModelConfig, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
+        return processModelConfigKFSRequest(request_components, response);
     });
     registerHandler(KFS_Infer, [this](const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser) -> Status {
         return processInferKFSRequest(request_components, response, request_body, response_components.inferenceHeaderContentLength);
@@ -619,7 +628,7 @@ static Status createV3HttpPayload(
 }
 #endif
 
-void parseModel(rapidjson::Writer<rapidjson::StringBuffer>& writer, const std::string& name, const time_t timestamp) {
+void parseModel(rapidjson::Writer<rapidjson::StringBuffer>& writer, const std::string& name, const time_t timestamp, const GraphMetadata* metadata) {
     writer.StartObject();
     writer.String("id");
     writer.String(name.c_str());
@@ -629,7 +638,16 @@ void parseModel(rapidjson::Writer<rapidjson::StringBuffer>& writer, const std::s
     writer.Int64(timestamp);
     writer.String("owned_by");
     writer.String("OVMS");
+    if (metadata) {
+        static const std::unordered_set<std::string> reservedKeys{"id", "object", "created", "owned_by"};
+        metadata->writeMembers(writer, reservedKeys);
+    }
     writer.EndObject();
+}
+
+static std::shared_ptr<const GraphMetadata> getServableMetadata(const ModelManager& modelManager, const std::string& name) {
+    const auto* definition = modelManager.findServableDefinition(name);
+    return definition ? definition->getMetadata() : nullptr;
 }
 
 Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, std::string& response) {
@@ -648,7 +666,7 @@ Status HttpRestApiHandler::processRetrieveModelRequest(const std::string& name, 
     }
     time_t timestamp;
     time(&timestamp);
-    parseModel(writer, name, timestamp);
+    parseModel(writer, name, timestamp, getServableMetadata(modelManager, name).get());
     response = buffer.GetString();
     return StatusCode::OK;
 }
@@ -662,7 +680,7 @@ Status HttpRestApiHandler::processListModelsRequest(std::string& response) {
     writer.String("data");
     writer.StartArray();
     for (auto const& name : modelManager.getNamesOfAvailableServables()) {
-        parseModel(writer, name, timestamp);
+        parseModel(writer, name, timestamp, getServableMetadata(modelManager, name).get());
     }
     writer.EndArray();
     writer.String("object");
@@ -944,6 +962,54 @@ Status HttpRestApiHandler::processModelMetadataKFSRequest(const HttpRequestCompo
     return StatusCode::OK;
 }
 
+Status HttpRestApiHandler::processModelConfigKFSRequest(const HttpRequestComponents& request_components, std::string& response) {
+    ::KFSModelMetadataRequest request;
+    ::KFSModelMetadataResponse metadata;
+    request.set_name(request_components.model_name);
+    if (request_components.model_version.has_value()) {
+        request.set_version(std::to_string(request_components.model_version.value()));
+    }
+    KFSModelExtraMetadata extraMetadata;
+    const Status status = kfsGrpcImpl.ModelMetadataImpl(nullptr, &request, &metadata, ExecutionContext{ExecutionContext::Interface::REST, ExecutionContext::Method::ModelMetadata}, extraMetadata);
+    if (!status.ok()) {
+        return status;
+    }
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    writer.StartObject();
+    writer.Key("name");
+    writer.String(metadata.name().c_str());
+    writer.Key("max_batch_size");
+    writer.Int(0);
+    const auto writeTensors = [&writer](const auto& tensors) {
+        writer.StartArray();
+        for (const auto& tensor : tensors) {
+            writer.StartObject();
+            writer.Key("name");
+            writer.String(tensor.name().c_str());
+            writer.Key("data_type");
+            const std::string datatype = tensor.datatype() == "BYTES" ? "TYPE_STRING" : "TYPE_" + tensor.datatype();
+            writer.String(datatype.c_str());
+            writer.Key("dims");
+            writer.StartArray();
+            for (const int64_t dimension : tensor.shape()) {
+                writer.Int64(dimension);
+            }
+            writer.EndArray();
+            writer.EndObject();
+        }
+        writer.EndArray();
+    };
+    writer.Key("input");
+    writeTensors(metadata.inputs());
+    writer.Key("output");
+    writeTensors(metadata.outputs());
+    writer.EndObject();
+    response.assign(buffer.GetString(), buffer.GetSize());
+    return StatusCode::OK;
+}
+
 static Status parseInferenceHeaderContentLength(HttpRequestComponents& requestComponents,
     const std::unordered_map<std::string, std::string>& headers) {
     for (auto& header : headers) {
@@ -1014,6 +1080,7 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
                    std::regex_match(request_path, sm, kfs_serverreadyRegex) ||
                    std::regex_match(request_path, sm, kfs_servermetadataRegex) ||
                    std::regex_match(request_path, sm, kfs_modelmetadataRegex) ||
+                   std::regex_match(request_path, sm, kfs_modelconfigRegex) ||
                    std::regex_match(request_path, sm, kfs_modelreadyRegex) ||
                    std::regex_match(request_path, sm, v3_ListModelsRegex) ||
                    std::regex_match(request_path, sm, v3_RetrieveModelRegex) ||
@@ -1045,6 +1112,16 @@ Status HttpRestApiHandler::parseRequestComponents(HttpRequestComponents& request
             if (!status.ok())
                 return status;
             requestComponents.type = KFS_GetModelMetadata;
+            return StatusCode::OK;
+        }
+        if (std::regex_match(request_path, sm, kfs_modelconfigRegex)) {
+            requestComponents.model_name = urlDecode(sm[1]);
+            std::string model_version_str = sm[2];
+            const Status status = parseModelVersion(model_version_str, requestComponents.model_version);
+            if (!status.ok()) {
+                return status;
+            }
+            requestComponents.type = KFS_GetModelConfig;
             return StatusCode::OK;
         }
         if (std::regex_match(request_path, sm, kfs_modelreadyRegex)) {

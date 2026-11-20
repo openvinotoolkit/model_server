@@ -14,17 +14,21 @@
 // limitations under the License.
 //*****************************************************************************
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 #include <iterator>
+#include <optional>
 
 #include <spdlog/spdlog.h>
 
+#include <rapidjson/document.h>
 #include <openvino/runtime/properties.hpp>
 #include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
@@ -42,6 +46,7 @@
 #include "../mediapipe_internal/mediapipe_utils.hpp"
 #include "src/status.hpp"
 #include "io_processing/chat_template/analyzer.hpp"
+#include "io_processing/chat_template/adjuster.hpp"
 #include "io_processing/chat_template/probe.hpp"
 #include "io_processing/parser_config_validation.hpp"
 #include "runtime_chat_template_runtime_loader.hpp"
@@ -146,7 +151,26 @@ GenAiServableProperties::DraftModelStrategy detectDraftModelStrategy(const std::
     return DS::FAST_DRAFT;
 }
 
-static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template has not been loaded properly. Servable will not respond to /chat/completions endpoint.";
+static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Chat template is unavailable. Servable will not respond to /chat/completions endpoint.";
+
+static Status configureInputProcessingCapabilities(const std::shared_ptr<GenAiServableProperties>& properties,
+    const mediapipe::LLMCalculatorOptions& nodeOptions) {
+    VisionInputConfig videoConfig;
+    Status status = configureVideoInputProcessing(videoConfig, nodeOptions);
+    if (status != StatusCode::OK) {
+        return status;
+    }
+    if (properties->inputProcessorContext.config.visionInputConfig.has_value()) {
+        properties->inputProcessorContext.config.visionInputConfig = videoConfig;
+    }
+    const std::filesystem::path modelsPath(properties->modelsPath);
+    if (!properties->inputProcessorContext.config.audioInputConfig.has_value() &&
+        (std::filesystem::exists(modelsPath / "openvino_audio_embeddings_model.xml") ||
+            std::filesystem::exists(modelsPath / "openvino_audio_encoder_model.xml"))) {
+        properties->inputProcessorContext.config.audioInputConfig = AudioInputConfig::withResampling();
+    }
+    return StatusCode::OK;
+}
 
 // Dry-run probes: render the chat template with synthetic inputs to empirically
 // detect what the template requires. This is model-agnostic and tests actual
@@ -154,7 +178,7 @@ static const std::string CHAT_TEMPLATE_WARNING_MESSAGE = "Warning: Chat template
 // Probes for:
 //   - requiresObjectArguments (workaround: string→object conversion of tool_call arguments)
 static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServableProperties> properties) {
-    if (properties->tokenizer.get_chat_template().empty()) {
+    if (properties->chatTemplateStatus != ChatTemplateStatus::AVAILABLE) {
         return;
     }
     if (!properties->chatTemplateCaps.supportsToolCalls) {
@@ -162,7 +186,7 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
     }
 
     if (properties->chatTemplateEngine == ChatTemplateEngine::JINJA && properties->preparedChatTemplate.isPrepared()) {
-        if (!probeChatTemplateCapsJinja([& templateProcessor = properties->preparedChatTemplate](const std::string& body, std::string& output) {
+        if (!probeChatTemplateCapsJinja([&templateProcessor = properties->preparedChatTemplate](const std::string& body, std::string& output) {
                 return templateProcessor.apply(body, output);
             },
                 properties->chatTemplateCaps)) {
@@ -186,108 +210,205 @@ static void probeServableChatTemplateCaps(std::shared_ptr<GenAiServablePropertie
 }
 
 Status GenAiServableInitializer::loadChatTemplate(std::shared_ptr<GenAiServableProperties> properties, const std::string& chatTemplateDirectory) {
-    const bool shouldWarnOnEmptyTemplate = (properties->chatTemplateEngine == ChatTemplateEngine::MINJA);
-    if (shouldWarnOnEmptyTemplate) {
-        if (properties->tokenizer.get_chat_template().empty()) {
-            SPDLOG_LOGGER_DEBUG(modelmanager_logger, CHAT_TEMPLATE_WARNING_MESSAGE);
-        }
-    }
+    properties->chatTemplateStatus = ChatTemplateStatus::NOT_CHECKED;
+    properties->chatTemplateSource = ChatTemplateSource::NONE;
 
-    // In some cases we apply chat template by python's jinja, but in all other cases, when GenAI applies chat template
-    // we ensure here that it is chat_template.jinja that is prioritized, rather than openvino_tokenizer.xml.
-    std::filesystem::path chatTemplateJinjaPath = std::filesystem::path(chatTemplateDirectory) / "chat_template.jinja";
-    if (std::filesystem::exists(chatTemplateJinjaPath)) {
+    const std::string genAiResolvedTemplate = properties->chatTemplateEngine == ChatTemplateEngine::JINJA ? properties->tokenizer.get_original_chat_template() : properties->tokenizer.get_chat_template();
+    // Phase 1: choose exactly one source. GenAI has already resolved tokenizer/model metadata.
+    std::string templateSource;
+    std::string templateLoadError;
+    ChatTemplateSource selectedSource = ChatTemplateSource::NONE;
+    bool templateSourceReadFailed = false;
+    const std::filesystem::path chatTemplateJinjaPath = std::filesystem::path(chatTemplateDirectory) / "chat_template.jinja";
+    SPDLOG_LOGGER_INFO(llm_calculator_logger, "Checking chat template override: {}", chatTemplateJinjaPath.string());
+    std::error_code fileStatusError;
+    const bool fileExists = std::filesystem::exists(chatTemplateJinjaPath, fileStatusError);
+    if (fileStatusError) {
+        templateSourceReadFailed = true;
+        SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to inspect chat template file {}: {}",
+            chatTemplateJinjaPath.string(), fileStatusError.message());
+    } else if (fileExists) {
         std::ifstream chatTemplateFile(chatTemplateJinjaPath);
-        if (chatTemplateFile.is_open()) {
-            std::string chatTemplateContent((std::istreambuf_iterator<char>(chatTemplateFile)),
-                std::istreambuf_iterator<char>());
-            if (!chatTemplateContent.empty()) {
-                properties->tokenizer.set_chat_template(chatTemplateContent);
-                SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Using the chat template from: {}", chatTemplateJinjaPath.string());
-            }
-        } else {
+        if (!chatTemplateFile.is_open()) {
+            templateSourceReadFailed = true;
             SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed to open chat template file: {}", chatTemplateJinjaPath.string());
+        } else {
+            bool fileReadFailed = false;
+            try {
+                templateSource.assign(std::istreambuf_iterator<char>(chatTemplateFile), std::istreambuf_iterator<char>());
+            } catch (const std::ios_base::failure& e) {
+                templateSource.clear();
+                fileReadFailed = true;
+                SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed while reading chat template file {}: {}",
+                    chatTemplateJinjaPath.string(), e.what());
+            }
+            if (!fileReadFailed && chatTemplateFile.bad()) {
+                templateSource.clear();
+                fileReadFailed = true;
+                SPDLOG_LOGGER_ERROR(llm_calculator_logger, "Failed while reading chat template file: {}", chatTemplateJinjaPath.string());
+            }
+            if (fileReadFailed) {
+                templateSourceReadFailed = true;
+            } else if (templateSource.empty()) {
+                SPDLOG_LOGGER_WARN(llm_calculator_logger, "Chat template file is empty; trying GenAI's resolved template");
+            } else {
+                selectedSource = ChatTemplateSource::CHAT_TEMPLATE_JINJA;
+            }
+        }
+    } else {
+        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template file not found: {}", chatTemplateJinjaPath.string());
+    }
+
+    if (selectedSource == ChatTemplateSource::NONE) {
+        templateSource = genAiResolvedTemplate;
+        if (!templateSource.empty()) {
+            selectedSource = ChatTemplateSource::GENAI_TOKENIZER;
         }
     }
 
-    // Analyze the chat template to detect capabilities and model family
-    std::string templateSource = properties->tokenizer.get_chat_template();
-    if (templateSource.empty() && properties->chatTemplateEngine == ChatTemplateEngine::JINJA && properties->chatTemplateEngineExplicit) {
-        return Status(StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED, "chat_template_engine=JINJA requires a chat template");
-    }
-    if (!templateSource.empty()) {
-        auto analysisResult = ChatTemplateAnalyzer::analyze(templateSource);
-        properties->chatTemplateCaps = analysisResult.caps;
-        SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template capabilities: {}",
-            analysisResult.caps.toString());
-        // Auto-detect or report manually configured tool parser
-        if (isParserDisabled(properties->toolParserName)) {
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Tool parser explicitly disabled");
-            properties->toolParserName.clear();
-        } else if (!properties->toolParserName.empty()) {
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured tool_parser: {}", properties->toolParserName);
-        } else if (analysisResult.detectedToolParser.has_value()) {
-            properties->toolParserName = analysisResult.detectedToolParser.value();
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected tool_parser: {}", properties->toolParserName);
-        }
-        // Auto-detect or report manually configured reasoning parser
-        if (isParserDisabled(properties->reasoningParserName)) {
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Reasoning parser explicitly disabled");
-            properties->reasoningParserName.clear();
-        } else if (!properties->reasoningParserName.empty()) {
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured reasoning_parser: {}", properties->reasoningParserName);
-        } else if (analysisResult.detectedReasoningParser.has_value()) {
-            properties->reasoningParserName = analysisResult.detectedReasoningParser.value();
-            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected reasoning_parser: {}", properties->reasoningParserName);
-        }
+    if (selectedSource != ChatTemplateSource::NONE) {
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Selected chat template source: {}",
+            selectedSource == ChatTemplateSource::CHAT_TEMPLATE_JINJA ? "chat_template.jinja" : "GenAI tokenizer/model");
     }
 
-    if (properties->chatTemplateEngine == ChatTemplateEngine::JINJA) {
-        std::string initializationError;
-        const bool pythonInitialized = ensurePythonRuntimeInitialized(initializationError);
-        if (pythonInitialized) {
+    // Phase 2: load the chosen source with the selected engine. Apply adjustments if needed.
+    if (selectedSource != ChatTemplateSource::NONE && !templateSource.empty()) {
+        const bool isJinja = properties->chatTemplateEngine == ChatTemplateEngine::JINJA;
+        ChatTemplateAdjusterConfig adjusterConfig = isJinja ? ChatTemplateAdjusterConfig::forJinja() : ChatTemplateAdjusterConfig::forMinja();
+        ChatTemplateAdjuster(adjusterConfig).adjust(templateSource);
+        properties->tokenizer.set_chat_template(templateSource);
+
+        if (isJinja) {
             std::string errorMessage;
-            const bool chatTemplatePrepared = properties->preparedChatTemplate.prepare(
-                chatTemplateDirectory,
-                properties->tokenizer.get_chat_template(),
-                properties->tokenizer.get_bos_token(),
-                properties->tokenizer.get_eos_token(),
-                errorMessage);
-            if (!chatTemplatePrepared) {
-                if (properties->chatTemplateEngineExplicit) {
-                    return Status(StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED,
-                        "Failed to prepare Jinja chat template: " + errorMessage);
-                }
-                SPDLOG_LOGGER_WARN(llm_calculator_logger,
-                    "Failed to prepare Jinja chat template; falling back to Minja: {}", errorMessage);
-                properties->chatTemplateEngine = ChatTemplateEngine::MINJA;
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Preparing selected chat template with Python Jinja");
+            if (properties->preparedChatTemplate.prepare(
+                    chatTemplateDirectory,
+                    templateSource,
+                    properties->tokenizer.get_bos_token(),
+                    properties->tokenizer.get_eos_token(),
+                    errorMessage)) {
+                properties->chatTemplateStatus = ChatTemplateStatus::AVAILABLE;
+            } else {
+                properties->chatTemplateStatus = ChatTemplateStatus::LOAD_FAILED;
+                templateLoadError = errorMessage;
             }
         } else {
-            if (properties->chatTemplateEngineExplicit) {
-                return Status(StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED,
-                    "Python is required for chat_template_engine=JINJA: " + initializationError);
-            }
-            SPDLOG_LOGGER_WARN(llm_calculator_logger,
-                "Python interpreter initialization failed; falling back to Minja chat template rendering: {}",
-                initializationError);
-            properties->chatTemplateEngine = ChatTemplateEngine::MINJA;
+            properties->chatTemplateStatus = probeChatTemplateBasicRenderMinja(properties->tokenizer) ? ChatTemplateStatus::AVAILABLE : ChatTemplateStatus::INCOMPATIBLE;
         }
-    }
-    if (properties->chatTemplateEngine == ChatTemplateEngine::MINJA &&
-        !probeChatTemplateBasicRenderMinja(properties->tokenizer)) {
-        SPDLOG_LOGGER_ERROR(llm_calculator_logger,
-            "Chat template is not compatible with minja — basic rendering failed. "
-            "Disabling /chat/completions endpoint for this model.");
-        properties->tokenizer.set_chat_template("");
-        return StatusCode::OK;
-    }
-    probeServableChatTemplateCaps(properties);
 
-    // Populate the InputProcessorContext from the now-fully-initialized properties.
+        if (properties->chatTemplateStatus == ChatTemplateStatus::AVAILABLE) {
+            properties->chatTemplateSource = selectedSource;
+        }
+    } else {
+        properties->chatTemplateStatus = templateSourceReadFailed ? ChatTemplateStatus::LOAD_FAILED : ChatTemplateStatus::MISSING;
+    }
+
+    if (properties->chatTemplateStatus != ChatTemplateStatus::AVAILABLE) {
+        if (properties->chatTemplateStatus == ChatTemplateStatus::MISSING) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "{} No configured template source was found.", CHAT_TEMPLATE_WARNING_MESSAGE);
+        } else if (properties->chatTemplateStatus == ChatTemplateStatus::LOAD_FAILED) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger,
+                "{} Selected template source failed to load. Error: {}",
+                CHAT_TEMPLATE_WARNING_MESSAGE, templateLoadError.empty() ? "source could not be read" : templateLoadError);
+        } else {
+            SPDLOG_LOGGER_WARN(llm_calculator_logger,
+                "Selected template source is incompatible with Minja; disabling /chat/completions endpoint.");
+        }
+        properties->tokenizer.set_chat_template("");
+        templateSource.clear();
+        selectedSource = ChatTemplateSource::NONE;
+    }
+
+    properties->inputProcessorContext.tokenizer = properties->tokenizer;
+    properties->inputProcessorContext.templateProcessor =
+        properties->preparedChatTemplate.isPrepared() ? &properties->preparedChatTemplate : nullptr;
+    return StatusCode::OK;
+}
+
+ChatTemplateAnalysisResult GenAiServableInitializer::analyzeChatTemplate(std::shared_ptr<GenAiServableProperties> properties) {
+    const std::string templateSource = properties->chatTemplateEngine == ChatTemplateEngine::JINJA ? properties->tokenizer.get_original_chat_template() : properties->tokenizer.get_chat_template();
+    auto analysisResult = ChatTemplateAnalyzer::analyze(templateSource);
+    properties->chatTemplateCaps = analysisResult.caps;
+    SPDLOG_LOGGER_DEBUG(llm_calculator_logger, "Chat template capabilities: {}",
+        analysisResult.caps.toString());
+
+    probeServableChatTemplateCaps(properties);
+    SPDLOG_LOGGER_INFO(llm_calculator_logger, "Chat template loaded successfully. Engine: {}, Source: {}",
+        properties->chatTemplateEngine == ChatTemplateEngine::JINJA ? "JINJA" : "MINJA",
+        properties->chatTemplateSource == ChatTemplateSource::CHAT_TEMPLATE_JINJA ? "chat_template.jinja" : "GenAI-resolved tokenizer/model template");
+
     properties->inputProcessorContext.tokenizer = properties->tokenizer;
     properties->inputProcessorContext.chatTemplateCaps = properties->chatTemplateCaps;
     properties->inputProcessorContext.templateProcessor =
         properties->preparedChatTemplate.isPrepared() ? &properties->preparedChatTemplate : nullptr;
+    return analysisResult;
+}
+
+static void detectDefaultContentParser(const std::shared_ptr<GenAiServableProperties>& properties) {
+    const std::string configPath = FileSystem::appendSlash(properties->modelsPath) + "config.json";
+    std::ifstream ifs(configPath);
+    if (!ifs.is_open()) {
+        return;
+    }
+    rapidjson::Document modelConfig;
+    rapidjson::IStreamWrapper isw(ifs);
+    rapidjson::ParseResult parseResult = modelConfig.ParseStream(isw);
+    if (parseResult.Code() || !modelConfig.IsObject() || !modelConfig.HasMember("architectures") || !modelConfig["architectures"].IsArray()) {
+        return;
+    }
+    for (const auto& architecture : modelConfig["architectures"].GetArray()) {
+        if (architecture.IsString() && std::string_view(architecture.GetString(), architecture.GetStringLength()) == "Qwen3ASRForConditionalGeneration") {
+            properties->contentParserName = "qwen3asr";
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected content_parser: {}", properties->contentParserName);
+            break;
+        }
+    }
+}
+
+void GenAiServableInitializer::selectOutputParsers(
+    const std::shared_ptr<GenAiServableProperties>& properties,
+    const std::optional<ChatTemplateAnalysisResult>& analysisResult) {
+    if (!isParserDisabled(properties->toolParserName)) {
+        if (!properties->toolParserName.empty()) {
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured tool_parser: {}", properties->toolParserName);
+        } else if (analysisResult.has_value() && analysisResult->detectedToolParser.has_value()) {
+            properties->toolParserName = analysisResult->detectedToolParser.value();
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected tool_parser: {}", properties->toolParserName);
+        }
+    } else {
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Tool parser explicitly disabled");
+        properties->toolParserName.clear();
+    }
+
+    if (!isParserDisabled(properties->reasoningParserName)) {
+        if (!properties->reasoningParserName.empty()) {
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Using manually configured reasoning_parser: {}", properties->reasoningParserName);
+        } else if (analysisResult.has_value() && analysisResult->detectedReasoningParser.has_value()) {
+            properties->reasoningParserName = analysisResult->detectedReasoningParser.value();
+            SPDLOG_LOGGER_INFO(llm_calculator_logger, "Auto-detected reasoning_parser: {}", properties->reasoningParserName);
+        }
+    } else {
+        SPDLOG_LOGGER_INFO(llm_calculator_logger, "Reasoning parser explicitly disabled");
+        properties->reasoningParserName.clear();
+    }
+
+    detectDefaultContentParser(properties);
+}
+
+Status GenAiServableInitializer::validateChatTemplateAvailability(
+    const std::shared_ptr<GenAiServableProperties>& properties) {
+    if (properties->chatTemplateStatus != ChatTemplateStatus::AVAILABLE) {
+        const char* failureReason = "template availability could not be determined";
+        if (properties->chatTemplateStatus == ChatTemplateStatus::LOAD_FAILED) {
+            failureReason = "the selected template could not be loaded";
+        } else if (properties->chatTemplateStatus == ChatTemplateStatus::INCOMPATIBLE) {
+            failureReason = "the selected template is incompatible with the configured engine";
+        } else if (properties->chatTemplateStatus == ChatTemplateStatus::MISSING) {
+            failureReason = "no chat template was found";
+        }
+        return Status(StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED,
+            "Explicit chat_template_engine requires a compatible chat template, but " + std::string(failureReason) + ".");
+    }
     return StatusCode::OK;
 }
 
@@ -311,6 +432,10 @@ void GenAiServableInitializer::applyGlobalCacheDir(std::shared_ptr<GenAiServable
 
 ChatTemplateEngine GenAiServableInitializer::determineChatTemplateEngine(
     const mediapipe::LLMCalculatorOptions& nodeOptions) {
+    if (nodeOptions.has_chat_template_engine() &&
+        nodeOptions.chat_template_engine() == mediapipe::LLMCalculatorOptions::MINJA) {
+        return ChatTemplateEngine::MINJA;
+    }
     std::string initializationError;
     const bool pythonRuntimeAvailable = ensurePythonRuntimeInitialized(initializationError);
     return determineChatTemplateModeWithRuntimeContext(nodeOptions, pythonRuntimeAvailable);
@@ -403,27 +528,34 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
     std::filesystem::path parsedModelsPathFs(parsedModelsPath);
 
     // Existence of talker model indicates omni pipeline
-    bool hasTalkerModel = std::filesystem::exists(parsedModelsPathFs / "openvino_talker_model.xml");
-    bool hasVlmModels = (std::filesystem::exists(parsedModelsPathFs / "openvino_text_embeddings_model.xml") &&
-                         std::filesystem::exists(parsedModelsPathFs / "openvino_vision_embeddings_model.bin"));
+    const bool hasTalkerModel = std::filesystem::exists(parsedModelsPathFs / "openvino_talker_model.xml");
+    const bool hasAudioDecoderModel = std::filesystem::exists(parsedModelsPathFs / "openvino_audio_decoder_model.xml");
+    const bool hasTextEmbeddingsModel = std::filesystem::exists(parsedModelsPathFs / "openvino_text_embeddings_model.xml");
+    const bool hasVisionEmbeddingsModel = std::filesystem::exists(parsedModelsPathFs / "openvino_vision_embeddings_model.bin");
+    const bool hasAudioEmbeddingsModel = std::filesystem::exists(parsedModelsPathFs / "openvino_audio_embeddings_model.xml");
+    const bool hasAudioEncoderModel = std::filesystem::exists(parsedModelsPathFs / "openvino_audio_encoder_model.xml");
+    SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Model capabilities for {}: talker={}, audio decoder={}, text embeddings={}, vision embeddings={}, audio embeddings={}, audio encoder={}",
+        parsedModelsPath, hasTalkerModel, hasAudioDecoderModel, hasTextEmbeddingsModel, hasVisionEmbeddingsModel, hasAudioEmbeddingsModel, hasAudioEncoderModel);
+    const bool isMultimodal = hasTextEmbeddingsModel &&
+                              (hasVisionEmbeddingsModel || hasAudioEmbeddingsModel || hasAudioEncoderModel);
 
-    // Existence of text embeddings and vision embeddings models indicates we are dealing with VLM pipeline
+    // Text embeddings plus vision embeddings, audio embeddings, or an audio encoder
+    // indicates a multimodal pipeline.
     // But if it has talker model, it means it is Omni pipeline which is built out of VLM Pipeline and Talker
-    bool isOmni = hasTalkerModel && hasVlmModels;
-    bool isVLM = !hasTalkerModel && hasVlmModels;
+    bool isOmni = (hasTalkerModel || hasAudioDecoderModel) && isMultimodal;
 
     // If pipeline type is not explicitly defined by the user, we need to determine it based on the content of the models directory and configuration
     if (nodeOptions.pipeline_type() == mediapipe::LLMCalculatorOptions::AUTO) {
         if (isOmni) {
             pipelineType = PipelineType::OMNI;
         } else if (nodeOptions.device() == "NPU") {
-            if (isVLM) {
+            if (isMultimodal) {
                 pipelineType = PipelineType::VLM;
             } else {
                 pipelineType = PipelineType::LM;
             }
         } else {
-            if (isVLM) {
+            if (isMultimodal) {
                 pipelineType = PipelineType::VLM_CB;
             } else {
                 pipelineType = PipelineType::LM_CB;
@@ -451,25 +583,40 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
             return StatusCode::INTERNAL_ERROR;
         }
 
-        if (isVLM && (pipelineType != PipelineType::VLM && pipelineType != PipelineType::VLM_CB)) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Models directory content indicates VLM pipeline, but pipeline type is set to non-VLM type.");
+        if (!isMultimodal && (pipelineType == PipelineType::VLM || pipelineType == PipelineType::VLM_CB)) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Model does not have multimodal capabilities required by pipeline {}. Use an LM or LM_CB pipeline instead.",
+                mediapipe::LLMCalculatorOptions_PipelineType_Name(nodeOptions.pipeline_type()));
             return StatusCode::INTERNAL_ERROR;
         }
 
-        if (!isVLM && (pipelineType == PipelineType::VLM || pipelineType == PipelineType::VLM_CB)) {
-            SPDLOG_LOGGER_ERROR(modelmanager_logger, "Models directory content indicates non-VLM pipeline, but pipeline type is set to VLM type.");
+        if (pipelineType == PipelineType::OMNI && !isOmni) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "The OMNI pipeline requires multimodal capabilities and a talker or audio decoder. Use {} instead.",
+                isMultimodal ? "a VLM or VLM_CB pipeline" : "an LM or LM_CB pipeline");
             return StatusCode::INTERNAL_ERROR;
         }
     }
     return StatusCode::OK;
 }
 
-Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig, std::string graphPath) {
+Status configureVideoInputProcessing(VisionInputConfig& config, const mediapipe::LLMCalculatorOptions& nodeOptions) {
+    const auto& visionOptions = nodeOptions.input_vision();
+    if ((visionOptions.has_video_fps() && (!std::isfinite(visionOptions.video_fps()) || visionOptions.video_fps() <= 0.0F)) || visionOptions.video_max_frames() == 0) {
+        SPDLOG_ERROR("input_vision.video_fps must be finite and greater than zero when provided, and input_vision.video_max_frames must be greater than zero");
+        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+    }
+    config.videoMaxFrames = visionOptions.video_max_frames();
+    config.videoFps = visionOptions.has_video_fps() ? std::optional<float>{visionOptions.video_fps()} : std::nullopt;
+    return StatusCode::OK;
+}
+
+Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig,
+    std::string graphPath, std::optional<LLMMetricReporterFactory> createMetricReporter) {
     mediapipe::LLMCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
-    Status status;
+    Status status = StatusCode::OK;
     if (nodeOptions.has_models_path()) {
-        // need to initialize pipelineType with some value to avoid compiler warning, determinePipelineType will set it properly
+        // Need to initialize pipelineType with some value to avoid compiler warning;
+        // determinePipelineType will set it properly.
         PipelineType pipelineType{PipelineType::LM_CB};
         status = determinePipelineType(pipelineType, nodeOptions, graphPath);
         if (status != StatusCode::OK) {
@@ -477,7 +624,7 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         }
         if (pipelineType == PipelineType::LM_CB) {
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Language Model Continuous Batching servable");
-            ContinuousBatchingServableInitializer cbServableInitializer;
+            ContinuousBatchingServableInitializer cbServableInitializer(std::move(createMetricReporter));
             servable = std::make_shared<ContinuousBatchingServable>();
             status = cbServableInitializer.initialize(servable, nodeOptions, graphPath);
             if (status != StatusCode::OK) {
@@ -504,7 +651,7 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
                 }
             }
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Visual Language Model Continuous Batching servable");
-            ContinuousBatchingServableInitializer cbServableInitializer;
+            ContinuousBatchingServableInitializer cbServableInitializer(std::move(createMetricReporter));
             servable = std::make_shared<VisualLanguageModelServable>();
             status = cbServableInitializer.initialize(servable, nodeOptions, graphPath);
             if (status != StatusCode::OK) {
@@ -544,6 +691,11 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         return StatusCode::INTERNAL_ERROR;
     }
     servable->determineDecodingMethod();
+    auto properties = servable->getProperties();
+    status = configureInputProcessingCapabilities(properties, nodeOptions);
+    if (status != StatusCode::OK) {
+        return status;
+    }
     return StatusCode::OK;
 }
 }  // namespace ovms

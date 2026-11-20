@@ -9,12 +9,12 @@ src/shape.cpp:438: strIn
 src/shape.cpp:488: strIn
 src/shape.cpp:507: strIn
 src/shape.hpp:123: strIn
-src/test/modelconfig_test.cpp:638: OptionA
-src/test/modelconfig_test.cpp:644: OptionA
-src/test/modelconfig_test.cpp:650: OptionA
-src/test/modelconfig_test.cpp:656: OptionA
-src/test/modelconfig_test.cpp:662: OptionA
-src/test/modelconfig_test.cpp:668: OptionA
+src/test/modelconfig_test.cpp:639: OptionA
+src/test/modelconfig_test.cpp:645: OptionA
+src/test/modelconfig_test.cpp:651: OptionA
+src/test/modelconfig_test.cpp:657: OptionA
+src/test/modelconfig_test.cpp:663: OptionA
+src/test/modelconfig_test.cpp:669: OptionA
 src/test/modelinstance_test.cpp:1093: THROUGHTPUT
 src/test/llm/output_parsers/qwen3_output_parser_test.cpp:720: thi
 third_party/aws-sdk-cpp/aws-sdk-cpp.bz
@@ -26,8 +26,8 @@ release_files/thirdparty-licenses/libgt2.LICENSE.txt:1040: aheared ==> adhered
 release_files/thirdparty-licenses/libgt2.LICENSE.txt:1065: rouines ==> routines
 release_files/thirdparty-licenses/libgt2.LICENSE.txt:1083: publically ==> publicly
 src/test/llm/output_parsers/qwen3coder_output_parser_test.cpp
-demos/vlm_npu/README.md:157: mane ==> main, many, maine
-demos/vlm_npu/README.md:218: mane ==> main, many, maine
+demos/vlm_npu/README.md:158: mane ==> main, many, maine
+demos/vlm_npu/README.md:219: mane ==> main, many, maine
 demos/integration_with_OpenWebUI/README.md:423: Buildin ==> Building, Build in
 src/test/llm/output_parsers/lfm2_output_parser_test.cpp
 src/test/llm/output_parsers/lfm25_output_parser_test.cpp
@@ -52,3 +52,7 @@ src/test/llm/llmnode_test.cpp
 nowNs ==> knowns, nouns
 src/test/servable_group_manager_test.cpp:229: groupD
 src/test/servable_group_manager_test.cpp:231: groupD
+assertIn ==> asserting, assert in, assertion
+src/test/llm/llmtemplate_test.cpp:738: caf ==> calf
+src/test/llm/llmtemplate_test.cpp:741: caf ==> calf
+src/test/llm/llmtemplate_test.cpp:741: caf ==> calf

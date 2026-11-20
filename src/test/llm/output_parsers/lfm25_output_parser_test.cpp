@@ -30,10 +30,10 @@
 using namespace ovms;
 
 #ifdef _WIN32
-const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\LiquidAI\\LFM2.5-8B-A1B";
+const std::string tokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\OpenVINO\\LFM2.5-8B-A1B-int4-ov";
 #else
 // Hardcoded for usage in docker container
-const std::string tokenizerPath = "/ovms/src/test/llm_testing/LiquidAI/LFM2.5-8B-A1B";
+const std::string tokenizerPath = "/ovms/src/test/llm_testing/OpenVINO/LFM2.5-8B-A1B-int4-ov";
 #endif
 
 static std::unique_ptr<ov::genai::Tokenizer> lfm25Tokenizer;

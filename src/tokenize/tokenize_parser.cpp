@@ -22,7 +22,7 @@
 #include "src/port/rapidjson_writer.hpp"
 
 namespace ovms {
-absl::Status TokenizeParser::parseTokenizeResponse(rapidjson::StringBuffer& buffer, const ov::genai::TokenizedInputs& tokens, const ov::AnyMap& parameters) {
+absl::Status TokenizeParser::parseTokenizeResponse(rapidjson::StringBuffer& buffer, const ov::genai::TokenizedInputs& tokens, const ov::AnyMap& parameters, bool inputIsBatch) {
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
 
     writer.StartObject();
@@ -35,7 +35,9 @@ absl::Status TokenizeParser::parseTokenizeResponse(rapidjson::StringBuffer& buff
         return absl::InvalidArgumentError("Invalid input ids tensor shape");
     }
 
-    const bool isBatched = outputShape[0] > 1;
+    // The response follows the shape of the request: a list of strings always gets a list of token lists,
+    // including a list with a single string.
+    const bool isBatched = inputIsBatch || outputShape[0] > 1;
     if (isBatched) {
         writer.StartArray();
     }
@@ -68,16 +70,17 @@ std::variant<TokenizeRequest, std::string> TokenizeParser::validateTokenizeReque
         return "Received json is not an object";
 
     auto parsedInput = parseInput(parsedJson, "text");
-
-    if (std::holds_alternative<std::string>(parsedInput)) {
-        return std::get<std::string>(parsedInput);
+    if (!parsedInput.ok()) {
+        return std::string(parsedInput.status().message());
+    }
+    auto& inputVariant = parsedInput.value();
+    if (auto* text = std::get_if<std::string>(&inputVariant)) {
+        request.input = std::vector<std::string>{std::move(*text)};
+    } else if (auto* texts = std::get_if<std::vector<std::string>>(&inputVariant)) {
+        request.input = std::move(*texts);
+        request.inputIsBatch = true;
     } else {
-        auto inputVariant = std::get<TokenizeRequest::InputDataType>(parsedInput);
-        if (std::holds_alternative<std::vector<std::string>>(inputVariant)) {
-            request.input = std::get<std::vector<std::string>>(inputVariant);
-        } else {
-            request.input = std::get<std::vector<std::vector<int64_t>>>(inputVariant);
-        }
+        request.input = std::get<std::vector<std::vector<int64_t>>>(inputVariant);
     }
 
     auto it = parsedJson.FindMember("max_length");
@@ -137,7 +140,7 @@ std::variant<TokenizeRequest, std::string> TokenizeParser::validateTokenizeReque
     return request;
 }
 
-std::variant<TokenizeRequest::InputDataType, std::string> TokenizeParser::parseInput(rapidjson::Document& parsedJson, const std::string& field_name) {
+absl::StatusOr<TokenizeRequest::InputDataType> TokenizeParser::parseInput(rapidjson::Document& parsedJson, const std::string& field_name) {
     enum class InputType {
         NONE,
         STRING,
@@ -149,28 +152,30 @@ std::variant<TokenizeRequest::InputDataType, std::string> TokenizeParser::parseI
     std::vector<std::string> input_strings;
     std::vector<std::vector<std::string>> input_string_vectors;
     std::vector<std::vector<int64_t>> input_tokens;
+    bool isSingleString = false;
 
     auto it = parsedJson.FindMember(field_name.c_str());
 
     if (it != parsedJson.MemberEnd()) {
         if (it->value.IsString()) {
             input_strings.push_back(it->value.GetString());
+            isSingleString = true;
         } else if (it->value.IsArray()) {
             if (it->value.GetArray().Size() == 0) {
-                return field_name + " array should not be empty";
+                return absl::InvalidArgumentError(field_name + " array should not be empty");
             }
             InputType input_type = InputType::NONE;
             for (auto& input : it->value.GetArray()) {
                 if (input.IsArray()) {
                     const auto array = input.GetArray();
                     if (array.Size() == 0) {
-                        return "inner arrays in " + field_name + " should not be empty";
+                        return absl::InvalidArgumentError("inner arrays in " + field_name + " should not be empty");
                     }
                     if (input_type != InputType::NONE && input_type != InputType::INT_VEC && input_type != InputType::STRING_VEC)
-                        return field_name + " must be homogeneous";
+                        return absl::InvalidArgumentError(field_name + " must be homogeneous");
                     if (array[0].IsInt()) {
                         if (input_type == InputType::STRING_VEC)
-                            return field_name + " must be homogeneous";
+                            return absl::InvalidArgumentError(field_name + " must be homogeneous");
                         input_type = InputType::INT_VEC;
                         std::vector<int64_t> ints;
                         ints.reserve(array.Size());
@@ -178,12 +183,12 @@ std::variant<TokenizeRequest::InputDataType, std::string> TokenizeParser::parseI
                             if (val.IsInt())
                                 ints.push_back(val.GetInt());
                             else
-                                return field_name + " must be homogeneous";
+                                return absl::InvalidArgumentError(field_name + " must be homogeneous");
                         }
                         input_tokens.emplace_back(std::move(ints));
                     } else if (array[0].IsString()) {
                         if (input_type == InputType::INT_VEC)
-                            return field_name + " must be homogeneous";
+                            return absl::InvalidArgumentError(field_name + " must be homogeneous");
                         input_type = InputType::STRING_VEC;
                         std::vector<std::string> strings;
                         strings.reserve(array.Size());
@@ -191,44 +196,47 @@ std::variant<TokenizeRequest::InputDataType, std::string> TokenizeParser::parseI
                             if (val.IsString())
                                 strings.push_back(val.GetString());
                             else
-                                return field_name + " must be homogeneous";
+                                return absl::InvalidArgumentError(field_name + " must be homogeneous");
                         }
                         input_string_vectors.emplace_back(std::move(strings));
                     } else {
-                        return "every element in " + field_name + " array should be either string or int";
+                        return absl::InvalidArgumentError("every element in " + field_name + " array should be either string or int");
                     }
                 } else if (input.IsString()) {
                     if (input_type != InputType::NONE && input_type != InputType::STRING)
-                        return field_name + " must be homogeneous";
+                        return absl::InvalidArgumentError(field_name + " must be homogeneous");
                     input_type = InputType::STRING;
                     input_strings.push_back(input.GetString());
                 } else if (input.IsInt()) {
                     if (input_type != InputType::NONE && input_type != InputType::INT)
-                        return field_name + " must be homogeneous";
+                        return absl::InvalidArgumentError(field_name + " must be homogeneous");
                     input_type = InputType::INT;
                     if (input_tokens.size() == 0) {
                         input_tokens.push_back(std::vector<int64_t>());
                     }
                     input_tokens[0].push_back(input.GetInt());
                 } else {
-                    return "every element in " + field_name + " array should be either string or int";
+                    return absl::InvalidArgumentError("every element in " + field_name + " array should be either string or int");
                 }
             }
         } else {
-            return field_name + " should be string, array of strings or array of integers";
+            return absl::InvalidArgumentError(field_name + " should be string, array of strings or array of integers");
         }
     } else {
-        return field_name + " field is required";
+        return absl::InvalidArgumentError(field_name + " field is required");
     }
 
     if (input_strings.size() > 0) {
+        if (isSingleString) {
+            return std::move(input_strings.front());
+        }
         return input_strings;
     } else if (input_tokens.size() > 0) {
         return input_tokens;
     } else if (input_string_vectors.size() > 0) {
         return input_string_vectors;
     } else {
-        return field_name + " field is required";
+        return absl::InvalidArgumentError(field_name + " field is required");
     }
 }
 
