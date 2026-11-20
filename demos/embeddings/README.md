@@ -50,6 +50,22 @@ ovms --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-
 ovms --add_to_config --config_path /models/config.json --model_name bge-base-en-v1.5-int8-ov --model_path OpenVINO/bge-base-en-v1.5-int8-ov
 ```
 :::
+:::{tab-item} OpenVINO/bge-m3-int4-ov
+:sync: bge-m3-int4-ov
+**Using docker image**
+```bash
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-m3-int4-ov --pooling CLS --task embeddings
+
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name bge-m3-int4-ov --model_path OpenVINO/bge-m3-int4-ov
+```
+
+**On Bare Metal (Windows/Linux)**
+```console
+ovms --pull --model_repository_path /models --source_model OpenVINO/bge-m3-int4-ov --pooling CLS --task embeddings
+
+ovms --add_to_config --config_path /models/config.json --model_name bge-m3-int4-ov --model_path OpenVINO/bge-m3-int4-ov
+```
+:::
 ::::
 
 **GPU**
@@ -86,6 +102,22 @@ ovms --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-
 ovms --add_to_config --config_path /models/config.json --model_name bge-base-en-v1.5-int8-ov --model_path OpenVINO/bge-base-en-v1.5-int8-ov
 ```
 :::
+:::{tab-item} OpenVINO/bge-m3-int4-ov
+:sync: bge-m3-int4-ov
+**Using docker image**
+```bash
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-m3-int4-ov --pooling CLS --target_device GPU --task embeddings
+
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name bge-m3-int4-ov --model_path OpenVINO/bge-m3-int4-ov
+```
+
+**On Bare Metal (Windows/Linux)**
+```console
+ovms --pull --model_repository_path /models --source_model OpenVINO/bge-m3-int4-ov --pooling CLS --target_device GPU --task embeddings
+
+ovms --add_to_config --config_path /models/config.json --model_name bge-m3-int4-ov --model_path OpenVINO/bge-m3-int4-ov
+```
+:::
 ::::
 
 ### Pulling OpenVINO IR with tokenizer conversion
@@ -99,52 +131,127 @@ curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/m
 pip3 install huggingface_hub "openvino-tokenizers[transformers]"
 ```
 
-Then download the model, create `graph.pbtxt` and add the model to `config.json`:
+Download the model with the script. The command is the same on Linux and Windows:
 
 ::::{tab-set}
 :::{tab-item} thenlper/gte-small
 :sync: thenlper/gte-small
-```bash
+```console
 python download_ir_with_tokenizer.py --model_id thenlper/gte-small --output_dir models
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --configure --model_path /models/thenlper/gte-small --task embeddings --pooling CLS
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name thenlper/gte-small --model_path thenlper/gte-small
 ```
 :::
 :::{tab-item} sentence-transformers/all-MiniLM-L12-v2
 :sync: sentence-transformers/all-MiniLM-L12-v2
-```bash
+```console
 python download_ir_with_tokenizer.py --model_id sentence-transformers/all-MiniLM-L12-v2 --output_dir models
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --configure --model_path /models/sentence-transformers/all-MiniLM-L12-v2 --task embeddings --pooling MEAN
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name sentence-transformers/all-MiniLM-L12-v2 --model_path sentence-transformers/all-MiniLM-L12-v2
 ```
 :::
 :::{tab-item} sentence-transformers/all-distilroberta-v1
 :sync: sentence-transformers/all-distilroberta-v1
-```bash
+```console
 python download_ir_with_tokenizer.py --model_id sentence-transformers/all-distilroberta-v1 --output_dir models
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --configure --model_path /models/sentence-transformers/all-distilroberta-v1 --task embeddings --pooling MEAN
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name sentence-transformers/all-distilroberta-v1 --model_path sentence-transformers/all-distilroberta-v1
 ```
 :::
 :::{tab-item} intfloat/multilingual-e5-large
 :sync: intfloat/multilingual-e5-large
-```bash
+```console
 python download_ir_with_tokenizer.py --model_id intfloat/multilingual-e5-large --output_dir models
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --configure --model_path /models/intfloat/multilingual-e5-large --task embeddings --pooling MEAN
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name intfloat/multilingual-e5-large --model_path intfloat/multilingual-e5-large
 ```
 :::
 :::{tab-item} sentence-transformers/all-mpnet-base-v2
 :sync: sentence-transformers/all-mpnet-base-v2
-```bash
+```console
 python download_ir_with_tokenizer.py --model_id sentence-transformers/all-mpnet-base-v2 --output_dir models
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --configure --model_path /models/sentence-transformers/all-mpnet-base-v2 --task embeddings --pooling MEAN
-docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name sentence-transformers/all-mpnet-base-v2 --model_path sentence-transformers/all-mpnet-base-v2
 ```
 :::
 ::::
 
-> **Note** To run the model on GPU, add `--target_device GPU` to the `--configure` command. On bare metal, run the same `ovms` commands without the `docker run ... openvino/model_server:latest` prefix.
+Then create `graph.pbtxt` and add the model to `config.json`:
+
+::::{tab-set}
+:::{tab-item} thenlper/gte-small
+:sync: thenlper/gte-small
+**Using docker image**
+```bash
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --configure --model_path /models/thenlper/gte-small --task embeddings --pooling CLS
+
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name thenlper/gte-small --model_path thenlper/gte-small
+```
+
+**On Bare Metal (Windows/Linux)**
+```console
+ovms --configure --model_path models/thenlper/gte-small --task embeddings --pooling CLS
+
+ovms --add_to_config --config_path models/config.json --model_name thenlper/gte-small --model_path thenlper/gte-small
+```
+:::
+:::{tab-item} sentence-transformers/all-MiniLM-L12-v2
+:sync: sentence-transformers/all-MiniLM-L12-v2
+**Using docker image**
+```bash
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --configure --model_path /models/sentence-transformers/all-MiniLM-L12-v2 --task embeddings --pooling MEAN
+
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name sentence-transformers/all-MiniLM-L12-v2 --model_path sentence-transformers/all-MiniLM-L12-v2
+```
+
+**On Bare Metal (Windows/Linux)**
+```console
+ovms --configure --model_path models/sentence-transformers/all-MiniLM-L12-v2 --task embeddings --pooling MEAN
+
+ovms --add_to_config --config_path models/config.json --model_name sentence-transformers/all-MiniLM-L12-v2 --model_path sentence-transformers/all-MiniLM-L12-v2
+```
+:::
+:::{tab-item} sentence-transformers/all-distilroberta-v1
+:sync: sentence-transformers/all-distilroberta-v1
+**Using docker image**
+```bash
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --configure --model_path /models/sentence-transformers/all-distilroberta-v1 --task embeddings --pooling MEAN
+
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name sentence-transformers/all-distilroberta-v1 --model_path sentence-transformers/all-distilroberta-v1
+```
+
+**On Bare Metal (Windows/Linux)**
+```console
+ovms --configure --model_path models/sentence-transformers/all-distilroberta-v1 --task embeddings --pooling MEAN
+
+ovms --add_to_config --config_path models/config.json --model_name sentence-transformers/all-distilroberta-v1 --model_path sentence-transformers/all-distilroberta-v1
+```
+:::
+:::{tab-item} intfloat/multilingual-e5-large
+:sync: intfloat/multilingual-e5-large
+**Using docker image**
+```bash
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --configure --model_path /models/intfloat/multilingual-e5-large --task embeddings --pooling MEAN
+
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name intfloat/multilingual-e5-large --model_path intfloat/multilingual-e5-large
+```
+
+**On Bare Metal (Windows/Linux)**
+```console
+ovms --configure --model_path models/intfloat/multilingual-e5-large --task embeddings --pooling MEAN
+
+ovms --add_to_config --config_path models/config.json --model_name intfloat/multilingual-e5-large --model_path intfloat/multilingual-e5-large
+```
+:::
+:::{tab-item} sentence-transformers/all-mpnet-base-v2
+:sync: sentence-transformers/all-mpnet-base-v2
+**Using docker image**
+```bash
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --configure --model_path /models/sentence-transformers/all-mpnet-base-v2 --task embeddings --pooling MEAN
+
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name sentence-transformers/all-mpnet-base-v2 --model_path sentence-transformers/all-mpnet-base-v2
+```
+
+**On Bare Metal (Windows/Linux)**
+```console
+ovms --configure --model_path models/sentence-transformers/all-mpnet-base-v2 --task embeddings --pooling MEAN
+
+ovms --add_to_config --config_path models/config.json --model_name sentence-transformers/all-mpnet-base-v2 --model_path sentence-transformers/all-mpnet-base-v2
+```
+:::
+::::
+
+> **Note** To run the model on GPU, add `--target_device GPU` to the `--configure` command.
 
 **NPU**
 ::::{tab-set}
