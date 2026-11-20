@@ -88,150 +88,63 @@ ovms --add_to_config --config_path /models/config.json --model_name bge-base-en-
 :::
 ::::
 
-### Export model
+### Pulling OpenVINO IR with tokenizer conversion
 
-Here, the original Pytorch LLM model and the tokenizer will be converted to IR format and optionally quantized.
-That ensures faster initialization time, better performance and lower memory consumption.
+Some HuggingFace repositories already include OpenVINO IR of the model in the `openvino` directory, but without the tokenizer and detokenizer models.
+The script below downloads only that directory and generates the tokenizer and detokenizer with `convert_tokenizer`. It stops if the repository has no `openvino` directory.
 
-Download export script, install it's dependencies and create directory for the models:
+Download the script and install its dependencies:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip3 install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
-mkdir models 
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/download_ir_with_tokenizer.py -o download_ir_with_tokenizer.py
+pip3 install huggingface_hub "openvino-tokenizers[transformers]"
 ```
 
-Run `export_model.py` script to download and quantize the model:
+Then download the model, create `graph.pbtxt` and add the model to `config.json`:
 
-**CPU**
 ::::{tab-set}
-:::{tab-item} BAAI/bge-large-en-v1.5
-:sync: bge-large-en-v1.5
-```console
-python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --model_name bge-large-en-v1.5 --pooling CLS --weight-format int8 --config_file_path models/config.json --model_repository_path models
-```
-:::
-:::{tab-item} BAAI/bge-large-zh-v1.5
-:sync: bge-large-zh-v1.5
-```console
-python export_model.py embeddings_ov --source_model BAAI/bge-large-zh-v1.5 --model_name bge-large-zh-v1.5 --pooling CLS --weight-format int8 --config_file_path models/config.json --model_repository_path models
-```
-:::
 :::{tab-item} thenlper/gte-small
-:sync: gte-small
-```console
-python export_model.py embeddings_ov --source_model thenlper/gte-small --model_name gte-small --pooling CLS --weight-format int8 --config_file_path models/config.json --model_repository_path models
+:sync: thenlper/gte-small
+```bash
+python download_ir_with_tokenizer.py --model_id thenlper/gte-small --output_dir models
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --configure --model_path /models/thenlper/gte-small --task embeddings --pooling CLS
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name thenlper/gte-small --model_path thenlper/gte-small
 ```
 :::
 :::{tab-item} sentence-transformers/all-MiniLM-L12-v2
-:sync: all-MiniLM-L12-v2
-```console
-python export_model.py embeddings_ov --source_model sentence-transformers/all-MiniLM-L12-v2 --model_name all-MiniLM-L12-v2 --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
+:sync: sentence-transformers/all-MiniLM-L12-v2
+```bash
+python download_ir_with_tokenizer.py --model_id sentence-transformers/all-MiniLM-L12-v2 --output_dir models
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --configure --model_path /models/sentence-transformers/all-MiniLM-L12-v2 --task embeddings --pooling MEAN
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name sentence-transformers/all-MiniLM-L12-v2 --model_path sentence-transformers/all-MiniLM-L12-v2
 ```
 :::
 :::{tab-item} sentence-transformers/all-distilroberta-v1
-:sync: all-distilroberta-v1
-```console
-python export_model.py embeddings_ov --source_model sentence-transformers/all-distilroberta-v1 --model_name all-distilroberta-v1 --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
-```
-:::
-:::{tab-item} mixedbread-ai/deepset-mxbai-embed-de-large-v1
-:sync: deepset-mxbai-embed-de-large-v1
-```console
-python export_model.py embeddings_ov --source_model mixedbread-ai/deepset-mxbai-embed-de-large-v1 --model_name deepset-mxbai-embed-de-large-v1 --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
-```
-:::
-:::{tab-item} intfloat/multilingual-e5-large-instruct
-:sync: multilingual-e5-large-instruc
-```console
-python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-large-instruct --model_name multilingual-e5-large-instruct --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
+:sync: sentence-transformers/all-distilroberta-v1
+```bash
+python download_ir_with_tokenizer.py --model_id sentence-transformers/all-distilroberta-v1 --output_dir models
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --configure --model_path /models/sentence-transformers/all-distilroberta-v1 --task embeddings --pooling MEAN
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name sentence-transformers/all-distilroberta-v1 --model_path sentence-transformers/all-distilroberta-v1
 ```
 :::
 :::{tab-item} intfloat/multilingual-e5-large
-:sync: multilingual-e5-large
-```console
-python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-large --model_name multilingual-e5-large --pooling MEAN --weight-format int8 --config_file_path models/config.json --model_repository_path models
-```
-:::
-:::{tab-item} Alibaba-NLP/gte-large-en-v1.5
-:sync: gte-large-en-v1.5
-```text
-pip install "transformers<5"  # WA for optimum-intel and model support for new transformers
-python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --model_name gte-large-en-v1.5 --pooling CLS --extra_quantization_params "--library sentence_transformers"
+:sync: intfloat/multilingual-e5-large
+```bash
+python download_ir_with_tokenizer.py --model_id intfloat/multilingual-e5-large --output_dir models
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --configure --model_path /models/intfloat/multilingual-e5-large --task embeddings --pooling MEAN
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name intfloat/multilingual-e5-large --model_path intfloat/multilingual-e5-large
 ```
 :::
 :::{tab-item} sentence-transformers/all-mpnet-base-v2
-:sync: all-mpnet-base-v2
-```console
-python export_model.py embeddings_ov --source_model sentence-transformers/all-mpnet-base-v2 --model_name all-mpnet-base-v2 --pooling MEAN
+:sync: sentence-transformers/all-mpnet-base-v2
+```bash
+python download_ir_with_tokenizer.py --model_id sentence-transformers/all-mpnet-base-v2 --output_dir models
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --configure --model_path /models/sentence-transformers/all-mpnet-base-v2 --task embeddings --pooling MEAN
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name sentence-transformers/all-mpnet-base-v2 --model_path sentence-transformers/all-mpnet-base-v2
 ```
 :::
 ::::
 
-
-**GPU**
-::::{tab-set}
-:::{tab-item} BAAI/bge-large-en-v1.5
-:sync: bge-large-en-v1.5
-```console
-python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --model_name bge-large-en-v1.5 --pooling CLS --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
-```
-:::
-:::{tab-item} BAAI/bge-large-zh-v1.5
-:sync: bge-large-zh-v1.5
-```console
-python export_model.py embeddings_ov --source_model BAAI/bge-large-zh-v1.5 --model_name bge-large-zh-v1.5  --pooling CLS --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
-```
-:::
-:::{tab-item} thenlper/gte-small
-:sync: gte-small
-```console
-python export_model.py embeddings_ov --source_model thenlper/gte-small --model_name gte-small --pooling CLS --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
-```
-:::
-:::{tab-item} sentence-transformers/all-MiniLM-L12-v2
-:sync: all-MiniLM-L12-v2
-```console
-python export_model.py embeddings_ov --source_model sentence-transformers/all-MiniLM-L12-v2 --model_name all-MiniLM-L12-v2 --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
-```
-:::
-:::{tab-item} sentence-transformers/all-distilroberta-v1
-:sync: all-distilroberta-v1
-```console
-python export_model.py embeddings_ov --source_model sentence-transformers/all-distilroberta-v1 --model_name all-distilroberta-v1 --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
-```
-:::
-:::{tab-item} mixedbread-ai/deepset-mxbai-embed-de-large-v1
-:sync: deepset-mxbai-embed-de-large-v1
-```console
-python export_model.py embeddings_ov --source_model mixedbread-ai/deepset-mxbai-embed-de-large-v1 --model_name deepset-mxbai-embed-de-large-v1 --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
-```
-:::
-:::{tab-item} intfloat/multilingual-e5-large-instruct
-:sync: multilingual-e5-large-instruc
-```console
-python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-large-instruct --model_name multilingual-e5-large-instruct --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
-```
-:::
-:::{tab-item} intfloat/multilingual-e5-large
-:sync: multilingual-e5-large
-```console
-python export_model.py embeddings_ov --source_model intfloat/multilingual-e5-large --model_name multilingual-e5-large --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
-```
-:::
-:::{tab-item} Alibaba-NLP/gte-large-en-v1.5
-:sync: gte-large-en-v1.5
-```text
-pip install "transformers<5"  # WA for optimum-intel and model support for new transformers
-python export_model.py embeddings_ov --source_model Alibaba-NLP/gte-large-en-v1.5 --model_name gte-large-en-v1.5 --pooling CLS --weight-format int8 --target_device GPU --extra_quantization_params "--library sentence_transformers" --config_file_path models/config.json --model_repository_path models
-```
-:::
-:::{tab-item} sentence-transformers/all-mpnet-base-v2
-:sync: all-mpnet-base-v2
-```console
-python export_model.py embeddings_ov --source_model sentence-transformers/all-mpnet-base-v2 --model_name all-mpnet-base-v2 --pooling MEAN --weight-format int8 --target_device GPU --config_file_path models/config.json --model_repository_path models
-```
-:::
-::::
+> **Note** To run the model on GPU, add `--target_device GPU` to the `--configure` command. On bare metal, run the same `ovms` commands without the `docker run ... openvino/model_server:latest` prefix.
 
 **NPU**
 ::::{tab-set}
@@ -245,71 +158,18 @@ docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/mo
 :::
 :::{tab-item} BAAI/bge-large-en-v1.5
 :sync: BAAI/bge-large-en-v1.5-fp16
-```console
-python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --model_name bge-large-en-v1.5 --pooling CLS --weight-format fp16 --target_device NPU --config_file_path models/config.json --model_repository_path models --max_length 400
+```bash
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --pooling LAST --task embeddings --target_device NPU --max_length 400
+
+docker run --user $(id -u):$(id -g) --rm -v $(pwd)/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name bge-base-en-v1.5-int8-ov --model_path OpenVINO/bge-base-en-v1.5-int8-ov
 ```
 :::
 ::::
 > **Note** For NPU Set `--max_length` as low as possible to speed up model loading and inference.
 
-> **Note** For NPU Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision. For int4 precisions, add required extra parameter `--extra_quantization_params "--sym --ratio 1.0 --group-size -1"`
-
 > **Note** For NPU the pooling mode --pooling LAST has the best accuracy.
 
-> **Note** For NPU and the weight-format int4, use `--extra_quantization_params "--sym --ratio 1.0 --group-size -1"`
-
-> **Note** Change the `--weight-format` to quantize the model to `fp16`, `int8` or `int4` precision to reduce memory consumption and improve performance.
-
 > **Note:** The users in China need to set environment variable HF_ENDPOINT="https://hf-mirror.com" before running the export script to connect to the HF Hub.
-
-You should have a model folder like below:
-
-```
-tree models
-models
-├── BAAI
-│   └── bge-large-en-v1.5
-│       ├── config.json
-│       ├── graph.pbtxt
-│       ├── openvino_model.bin
-│       ├── openvino_model.xml
-│       ├── openvino_tokenizer.bin
-│       ├── openvino_tokenizer.xml
-│       ├── special_tokens_map.json
-│       ├── tokenizer_config.json
-│       ├── tokenizer.json
-│       └── vocab.txt
-└── config.json
-```
-
-The default configuration of the `EmbeddingsCalculatorOV` should work in most cases but the parameters can be tuned inside the `node_options` section in the `graph.pbtxt` file. They can be set automatically via export parameters in the `export_model.py` script.
-
-For example:
-`python export_model.py embeddings_ov --source_model BAAI/bge-large-en-v1.5 --weight-format int8 --skip_normalize --config_file_path models/config.json`
-
-> **Note:** By default OVMS returns first token embeddings as sequence embeddings (called CLS pooling). It can be changed using `--pooling` option if needed by the model. Supported values are CLS, MEAN and LAST. For example:
-```console
-python export_model.py embeddings_ov --source_model Qwen/Qwen3-Embedding-0.6B --weight-format fp16 --pooling LAST --model_name Qwen3-Embedding-0.6B --config_file_path models/config.json
-```
-
-## Tested models
-All models supported by [optimum-intel](https://github.com/huggingface/optimum-intel) should be compatible. The demo is validated against following Hugging Face models:
-
-|Model name|Pooling|Devices|
-|---|---|---|
-|OpenVINO/Qwen3-Embedding-0.6B-int8-ov|LAST|CPU,GPU,NPU|
-|OpenVINO/bge-base-en-v1.5-int8-ov|CLS|CPU,GPU,NPU|
-|Qwen/Qwen3-Embedding-0.6B|LAST|CPU,GPU,NPU|
-|BAAI/bge-large-en-v1.5|CLS|CPU,GPU,NPU|
-|BAAI/bge-large-zh-v1.5|CLS|CPU,GPU,NPU|
-|thenlper/gte-small|CLS|CPU,GPU,NPU|
-|sentence-transformers/all-MiniLM-L12-v2|MEAN|CPU,GPU|
-|sentence-transformers/all-distilroberta-v1|MEAN|CPU,GPU|
-|mixedbread-ai/deepset-mxbai-embed-de-large-v1|MEAN|CPU,GPU|
-|intfloat/multilingual-e5-large-instruct|MEAN|CPU,GPU|
-|intfloat/multilingual-e5-large|MEAN|CPU,GPU|
-|Alibaba-NLP/gte-large-en-v1.5|CLS|CPU,GPU|
-|sentence-transformers/all-mpnet-base-v2|MEAN|CPU,GPU,NPU|
 
 ## Server Deployment
 
@@ -357,16 +217,16 @@ ovms --rest_port 8000 --config_path ./models/config.json
 
 Wait for the model to load. You can check the status with a simple command below:
 ```bash
-curl http://localhost:8000/v3/models/bge-large-en-v1.5
+curl http://localhost:8000/v3/models/bge-base-en-v1.5-int8-ov
 
-{"id":"bge-large-en-v1.5","object":"model","created":1763997378,"owned_by":"OVMS"}
+{"id":"bge-base-en-v1.5-int8-ov","object":"model","created":1763997378,"owned_by":"OVMS"}
 ```
 
 ## Client code
 
 :::{dropdown} **Request embeddings with cURL**
 ```bash
-curl http://localhost:8000/v1/embeddings -H "Content-Type: application/json" -d "{ \"model\": \"bge-large-en-v1.5\", \"input\": \"hello world\"}"
+curl http://localhost:8000/v1/embeddings -H "Content-Type: application/json" -d "{ \"model\": \"bge-base-en-v1.5-int8-ov\", \"input\": \"hello world\"}"
 ```
 ```json
 {
@@ -408,7 +268,7 @@ client = OpenAI(
   base_url="http://localhost:8000/v1",
   api_key="unused"
 )
-model = "bge-large-en-v1.5"
+model = "bge-base-en-v1.5-int8-ov"
 embedding_responses = client.embeddings.create(
     input=[
         "That is a happy person",
@@ -444,7 +304,7 @@ A simple method of testing the response accuracy is via comparing the response f
 The script [compare_results.py](https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/compare_results.py) can assist with such experiment.
 ```bash
 curl -fL https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/compare_results.py -o compare_results.py
-python compare_results.py --model_name bge-large-en-v1.5 --hf_model_name BAAI/bge-large-en-v1.5 --service_url http://localhost:8000/v1 --pooling CLS --input "hello world" --input "goodbye world"
+python compare_results.py --model_name bge-base-en-v1.5-int8-ov --hf_model_name OpenVINO/bge-base-en-v1.5-int8-ov --service_url http://localhost:8000/v1 --pooling CLS --input "hello world" --input "goodbye world"
 
 input ['hello world', 'goodbye world']
 HF Duration: 93.921 ms BertModel
