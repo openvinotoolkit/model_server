@@ -401,7 +401,6 @@ def export_text_generation_model(model_repository_path, source_model, model_name
     ### Export model
     if os.path.isfile(os.path.join(source_model, 'openvino_model.xml')) or os.path.isfile(os.path.join(source_model, 'openvino_language_model.xml')):
         print("OV model is source folder. Skipping conversion.")
-        model_path = source_model
     elif source_model.startswith("OpenVINO/"):
         if precision:
             print("Precision change is not supported for OpenVINO models. Parameter --weight-format {} will be ignored.".format(precision))
