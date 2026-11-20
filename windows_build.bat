@@ -52,7 +52,7 @@ IF "!buildIntegrity!"=="true" (
     set "buildWithIntegrity="
 )
 
-set "bazelStartupCmd=--output_user_root=c:\baz2_tmp"
+set "bazelStartupCmd=--output_user_root=!BAZEL_SHORT_PATH!"
 set "openvino_dir=!BAZEL_SHORT_PATH!/openvino/runtime/cmake"
 set /p bazelVersion=<"%~dp0.bazelversion"
 set "bazelPath=C:\opt\bazel-%bazelVersion%-windows-x86_64.exe"
