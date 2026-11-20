@@ -26,13 +26,21 @@ for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
 )
 
 if not exist "%LOCAL_TOOLS_DIR%" mkdir "%LOCAL_TOOLS_DIR%"
+if exist "%ROOT%\.venv\pyvenv.cfg" (
+    findstr /i /c:"Python314" "%ROOT%\.venv\pyvenv.cfg" >nul
+    if errorlevel 1 rmdir /s /q "%ROOT%\.venv"
+)
+if exist "%ROOT%\.venv-style\pyvenv.cfg" (
+    findstr /i /c:"Python314" "%ROOT%\.venv-style\pyvenv.cfg" >nul
+    if errorlevel 1 rmdir /s /q "%ROOT%\.venv-style"
+)
 if not exist "%ROOT%\.venv\Scripts\python.exe" (
     echo [INFO] Creating local .venv for repo Python dependencies...
-    "C:\opt\Python312\python.exe" -m venv "%ROOT%\.venv"
+    "C:\opt\Python314\python.exe" -m venv "%ROOT%\.venv"
 )
 if not exist "%ROOT%\.venv-style\Scripts\python.exe" (
     echo [INFO] Creating local .venv-style for style tools...
-    "C:\opt\Python312\python.exe" -m venv "%ROOT%\.venv-style"
+    "C:\opt\Python314\python.exe" -m venv "%ROOT%\.venv-style"
 )
 if not exist "%ROOT%\.venv-style\Scripts\clang-format.exe" (
     echo [INFO] Installing style dependencies into .venv-style...
@@ -43,8 +51,8 @@ if exist "%LOCAL_TOOLS_DIR%\python3" del /f /q "%LOCAL_TOOLS_DIR%\python3"
 if exist "%LOCAL_TOOLS_DIR%\lscpu" del /f /q "%LOCAL_TOOLS_DIR%\lscpu"
 if exist "%LOCAL_TOOLS_DIR%\git" del /f /q "%LOCAL_TOOLS_DIR%\git"
 > "%LOCAL_TOOLS_DIR%\python3.bat" echo @echo off
->> "%LOCAL_TOOLS_DIR%\python3.bat" echo if exist "C:\opt\Python312\python.exe" (
->> "%LOCAL_TOOLS_DIR%\python3.bat" echo   "C:\opt\Python312\python.exe" %%*
+>> "%LOCAL_TOOLS_DIR%\python3.bat" echo if exist "C:\opt\Python314\python.exe" (
+>> "%LOCAL_TOOLS_DIR%\python3.bat" echo   "C:\opt\Python314\python.exe" %%*
 >> "%LOCAL_TOOLS_DIR%\python3.bat" echo   exit /b %%ERRORLEVEL%%
 >> "%LOCAL_TOOLS_DIR%\python3.bat" echo )
 >> "%LOCAL_TOOLS_DIR%\python3.bat" echo if where python ^>NUL 2^>NUL (
@@ -90,7 +98,7 @@ if exist "%LOCAL_TOOLS_DIR%\git" del /f /q "%LOCAL_TOOLS_DIR%\git"
 set "CURL_PATH_WINDOWS=C:\opt\curl-!curl_version!-win64-mingw\bin"
 set "CURL_PATH=/c/opt/curl-!curl_version!-win64-mingw/bin"
 set "CURL_BIN=%CURL_PATH%/curl.exe"
-set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;!CURL_PATH_WINDOWS!;%ROOT%\.venv-style\Scripts;%LOCAL_TOOLS_DIR%;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python314\;C:\opt\Python314\Scripts\;C:\opt\msys64\usr\bin\;!CURL_PATH_WINDOWS!;%ROOT%\.venv-style\Scripts;%LOCAL_TOOLS_DIR%;%PATH%;"
 if exist "%cd%\bazel-bin\src\python\binding" (
     set "setPythonPath=%cd%\bazel-bin\src\python\binding"
 ) else (
@@ -103,8 +111,8 @@ if not defined TEST_WORKSPACE set "TEST_WORKSPACE=."
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Bazel compilation settings
-set VS_2022_BT="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
-IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :msvc_error
+set "VS_2022_BT=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
+IF /I EXIST "%VS_2022_BT%" goto :msvc_bt ELSE goto :msvc_error
 
 :msvc_error
 echo [ERROR] Required MSVC compiler not installed
@@ -112,10 +120,10 @@ set "SETUP_EXIT_CODE=1"
 goto :exit_build_error
 :msvc_bt
 echo [INFO] Using MSVC %VS_2022_BT%
-set BAZEL_VS=%VS_2022_BT%
+set "BAZEL_VS=%VS_2022_BT%"
 
 :: Bazel compilation settings end
-set "BAZEL_VC=%BAZEL_VS:"=%\VC"
+set "BAZEL_VC=%BAZEL_VS%\VC"
 set "BAZEL_VC_FULL_VERSION=14.44.35207"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
@@ -137,8 +145,8 @@ if !errorlevel! neq 0 (
     set "SETUP_EXIT_CODE=!errorlevel!"
     goto :exit_build_error
 )
-set "PYTHONHOME=C:\opt\Python312"
-set "PYTHONPATH=C:\opt\Python312;%setPythonPath%;%cd%\bazel-bin\src\python;%cd%\bazel-bin\src"
+set "PYTHONHOME=C:\opt\Python314"
+set "PYTHONPATH=C:\opt\Python314;%setPythonPath%;%cd%\bazel-bin\src\python;%cd%\bazel-bin\src"
 
 :exit_build
 echo [INFO] Setup finished
@@ -149,6 +157,6 @@ echo [ERROR] Setup finished with error
 if "!SETUP_EXIT_CODE!"=="0" set "SETUP_EXIT_CODE=!errorlevel!"
 
 :propagate_env
-:: Do not leak PYTHONHOME/PYTHONPATH back into the parent environment.
-:: Those variables break venv activation and force the system Python instead of the repo-local runtime.
-endlocal & set "PATH=%PATH%" & set "TEST_SRCDIR=%TEST_SRCDIR%" & set "TEST_WORKSPACE=%TEST_WORKSPACE%" & set "BAZEL_VS=%BAZEL_VS%" & set "BAZEL_VC=%BAZEL_VC%" & set "BAZEL_SH=%BAZEL_SH%" & set "BAZEL_VC_FULL_VERSION=%BAZEL_VC_FULL_VERSION%" & set "CURL_PATH=%CURL_PATH%" & set "CURL_PATH_WINDOWS=%CURL_PATH_WINDOWS%" & set "CURL_BIN=%CURL_BIN%" & set "HTTP_PROXY=%HTTP_PROXY%" & set "HTTPS_PROXY=%HTTPS_PROXY%" & set "NO_PROXY=%NO_PROXY%" & set "http_proxy=%http_proxy%" & set "https_proxy=%https_proxy%" & set "no_proxy=%no_proxy%" & exit /b %SETUP_EXIT_CODE%
+:: Export repo-local Python runtime variables so inherited machine-level Python312
+:: configuration cannot break Python314 commands in the caller shell.
+endlocal & set "PATH=%PATH%" & set "TEST_SRCDIR=%TEST_SRCDIR%" & set "TEST_WORKSPACE=%TEST_WORKSPACE%" & set "BAZEL_VS=%BAZEL_VS%" & set "BAZEL_VC=%BAZEL_VC%" & set "BAZEL_SH=%BAZEL_SH%" & set "BAZEL_VC_FULL_VERSION=%BAZEL_VC_FULL_VERSION%" & set "CURL_PATH=%CURL_PATH%" & set "CURL_PATH_WINDOWS=%CURL_PATH_WINDOWS%" & set "CURL_BIN=%CURL_BIN%" & set "PYTHONHOME=C:\opt\Python314" & set "PYTHONPATH=" & set "HTTP_PROXY=%HTTP_PROXY%" & set "HTTPS_PROXY=%HTTPS_PROXY%" & set "NO_PROXY=%NO_PROXY%" & set "http_proxy=%http_proxy%" & set "https_proxy=%https_proxy%" & set "no_proxy=%no_proxy%" & exit /b %SETUP_EXIT_CODE%
