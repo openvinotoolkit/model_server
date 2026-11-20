@@ -28,7 +28,7 @@ from tempfile import TemporaryDirectory
 if __package__:
     from . import docker_compose_demo_probe as probe
 else:
-    import docker_compose_demo_probe as probe
+    import docker_compose_demo_probe as probe  # pylint: disable=import-error
 
 ARTIFACTS = {
     "base": (),
@@ -52,7 +52,8 @@ MISSING_DEVICE_FAILURES = {
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Build composed OVMS images and run bounded KServe inference. All mode runs sequentially and reports each result.",
+        description="Build composed OVMS images and run bounded KServe inference. "
+        "All mode runs sequentially and reports each result.",
         epilog="Approximate size increases over the Ubuntu 24.04 baseline: "
         + ", ".join(f"{name} +{size} MB" for name, size in zip(ARTIFACTS, SIZES_MB))
         + ". GPU inference needs a host render device; NPU execution requires Level 2 fixtures and NPU hardware.",
@@ -71,7 +72,8 @@ def parse_args():
     parser.add_argument("--demo-component", action="append", choices=list(ARTIFACTS)[1:],
                         help="Limit Level 2 to this component (repeatable; requires --demo or --demo-fixtures).")
     parser.add_argument("--allow-cpu-fallback", action="store_true",
-                        help="Check the GPU image's artifacts on CPU if no render device exists; do not validate GPU inference.")
+                        help="Check the GPU image's artifacts on CPU if no render device exists; "
+                        "do not validate GPU inference.")
     args = parser.parse_args()
     if args.demo_component and args.fixtures is None:
         parser.error("--demo-component requires --demo or --demo-fixtures")
@@ -89,7 +91,7 @@ def run_smoke(args, component, image, container, work_dir, device_args):
         flags.append("--skip-pull")
     print(f"Building {image} from {args.full_image}", flush=True)
     result = subprocess.run([sys.executable, str(probe.ROOT / "docker_compose.py"), "--full-image", args.full_image,
-                             "--output-name", image, "--work-dir", str(work_dir), *flags], timeout=900)
+                             "--output-name", image, "--work-dir", str(work_dir), *flags], check=False, timeout=900)
     if result.returncode:
         raise RuntimeError(f"composer build failed (exit {result.returncode}); see command output")
 
@@ -127,7 +129,8 @@ def component_checks(args, component, work_dir):
     device_args = []
     try:
         if component == "gpu":
-            render_node = next((node for node in sorted(Path("/dev/dri").glob("renderD*")) if node.is_char_device()), None)
+            render_nodes = sorted(Path("/dev/dri").glob("renderD*"))
+            render_node = next((node for node in render_nodes if node.is_char_device()), None)
             if render_node is None and not args.allow_cpu_fallback:
                 raise RuntimeError("GPU smoke test requires a host render device under /dev/dri")
             if render_node is not None:
@@ -137,7 +140,8 @@ def component_checks(args, component, work_dir):
         yield "", False, str(error)
         return
 
-    if args.fixtures is not None and component != "base" and (not args.demo_component or component in args.demo_component):
+    demo_selected = not args.demo_component or component in args.demo_component
+    if args.fixtures is not None and component != "base" and demo_selected:
         try:
             if component == "gpu" and not device_args:
                 raise RuntimeError("GPU Level 2 requires a host render device")

@@ -28,7 +28,7 @@ from pathlib import Path
 if __package__:
     from .utils.ports import probe_port
 else:
-    from utils.ports import probe_port
+    from utils.ports import probe_port  # pylint: disable=import-error
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "tests/docker_compose_fixtures"
@@ -43,7 +43,7 @@ MODEL_DIRS = {
 
 
 def docker(*args, check=True, timeout=15):
-    result = subprocess.run(["docker", *args], capture_output=True, text=True, timeout=timeout)
+    result = subprocess.run(["docker", *args], capture_output=True, text=True, check=False, timeout=timeout)
     if check and result.returncode:
         raise RuntimeError(f"docker {args[0]} failed: {result.stderr.strip() or result.stdout.strip()}")
     return result
@@ -62,7 +62,7 @@ def request(url, timeout, body=None, header_length=None):
             command += ["-H", "Content-Type: application/octet-stream",
                         "-H", f"Inference-Header-Content-Length: {header_length}"]
         command += ["--data-binary", "@-"]
-    result = subprocess.run([*command, url], input=body, capture_output=True, timeout=timeout + 2)
+    result = subprocess.run([*command, url], input=body, capture_output=True, check=False, timeout=timeout + 2)
     if result.returncode:
         error = result.stderr.decode(errors="replace").strip()
         detail = result.stdout[:1024].decode(errors="replace").strip()
