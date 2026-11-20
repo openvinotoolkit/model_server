@@ -26,6 +26,8 @@ FROM $BASE_IMAGE AS gpu-build
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 ARG JOBS=50
 ARG BASE_OS
+
+#hadolint ignore=DL3041
 RUN case "$BASE_OS" in redhat|redhat9) redhat_major=9; libdrm_devel=libdrm-devel ;; redhat10) redhat_major=10; libdrm_devel=libdrm-devel-2.4.123-1.el10 ;; *) exit 1 ;; esac && \
     rpm --import https://www.centos.org/keys/RPM-GPG-KEY-CentOS-Official-SHA256 && \
     dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${redhat_major}.noarch.rpm && \
@@ -96,6 +98,7 @@ RUN find /gpu-root/usr/lib64 -type f -name '*.so*' -exec strip --strip-unneeded 
 FROM gpu-${GPU} AS gpu-runtime
 
 FROM gpu-build AS npu-build
+SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 ARG JOBS=50
 RUN case "$BASE_OS" in redhat|redhat9) redhat_major=9 ;; redhat10) redhat_major=10 ;; *) exit 1 ;; esac && \
     dnf --repofrompath=centos-crb,https://mirror.stream.centos.org/${redhat_major}-stream/CRB/\$basearch/os/ \
