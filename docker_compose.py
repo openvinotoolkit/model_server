@@ -37,7 +37,7 @@ GPU_DRIVERS_SCRIPT = "install_ubuntu_gpu_drivers.sh"
 LEVEL_ZERO_LOADER_SCRIPT = "install_ubuntu_level_zero_loader.sh"
 
 DEFAULT_GPU_DRIVER_VERSION = {
-    "22.04": "24.39.31294",
+    "22.04": "24.52.32224",
     "24.04": "26.31.39395",
     "26.04": "26.31.39395",
 }
