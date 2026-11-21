@@ -82,6 +82,8 @@ message LLMCalculatorOptions {
       OMNI = 4;
       // Default option. If selected, pipeline type will be inferred by the serving
       AUTO = 5;
+      // Omni model with multimodal inputs and continuous-batched text output
+      OMNI_CB = 6;
     }
 
     required string models_path = 1;

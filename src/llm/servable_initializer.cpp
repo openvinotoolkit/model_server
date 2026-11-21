@@ -59,6 +59,7 @@
 #include "servable_initializer.hpp"
 #include "visual_language_model/continuous_batching/servable.hpp"
 #include "visual_language_model/legacy/servable_initializer.hpp"
+#include "omni_model/continuous_batching/servable.hpp"
 #include "omni_model/legacy/servable_initializer.hpp"
 #include "omni_model/legacy/servable.hpp"
 
@@ -578,6 +579,9 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
         case mediapipe::LLMCalculatorOptions::OMNI:
             pipelineType = PipelineType::OMNI;
             break;
+        case mediapipe::LLMCalculatorOptions::OMNI_CB:
+            pipelineType = PipelineType::OMNI_CB;
+            break;
         default:
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "LLM node options do not contain any recognized pipeline configuration.");
             return StatusCode::INTERNAL_ERROR;
@@ -589,7 +593,7 @@ Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCal
             return StatusCode::INTERNAL_ERROR;
         }
 
-        if (pipelineType == PipelineType::OMNI && !isOmni) {
+        if ((pipelineType == PipelineType::OMNI || pipelineType == PipelineType::OMNI_CB) && !isOmni) {
             SPDLOG_LOGGER_ERROR(modelmanager_logger, "The OMNI pipeline requires multimodal capabilities and a talker or audio decoder. Use {} instead.",
                 isMultimodal ? "a VLM or VLM_CB pipeline" : "an LM or LM_CB pipeline");
             return StatusCode::INTERNAL_ERROR;
@@ -631,7 +635,7 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());
                 return status;
             }
-        } else if (pipelineType == PipelineType::VLM_CB) {
+        } else if (pipelineType == PipelineType::VLM_CB || pipelineType == PipelineType::OMNI_CB) {
             // VLM uses CB engine, so initialization part is shared (both servables share the same properties),
             // therefore we can use CB servable initializer to initialize VLM servable
             if (!nodeOptions.draft_models_path().empty()) {
@@ -650,9 +654,13 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
                     return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
                 }
             }
-            SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Visual Language Model Continuous Batching servable");
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing {} Continuous Batching servable", pipelineType == PipelineType::OMNI_CB ? "Omni Model" : "Visual Language Model");
             ContinuousBatchingServableInitializer cbServableInitializer(std::move(createMetricReporter));
-            servable = std::make_shared<VisualLanguageModelServable>();
+            if (pipelineType == PipelineType::OMNI_CB) {
+                servable = std::make_shared<OmniModelServable>();
+            } else {
+                servable = std::make_shared<VisualLanguageModelServable>();
+            }
             status = cbServableInitializer.initialize(servable, nodeOptions, graphPath);
             if (status != StatusCode::OK) {
                 SPDLOG_LOGGER_ERROR(modelmanager_logger, "Error during LLM node resources initialization: {}", status.string());

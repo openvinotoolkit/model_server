@@ -111,12 +111,14 @@ TEST_F(PipelineTypeSelectionTest, VlmRequiresMultimodalCapabilities) {
 TEST_F(PipelineTypeSelectionTest, OmniRejectsEmptyModelDirectory) {
     PipelineType selected;
     EXPECT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::OMNI, selected), StatusCode::INTERNAL_ERROR);
+    EXPECT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::OMNI_CB, selected), StatusCode::INTERNAL_ERROR);
 }
 
 TEST_F(PipelineTypeSelectionTest, OmniWithoutSpeechOutputRejectsMultimodalModel) {
     addVisionModelFiles();
     PipelineType selected;
     EXPECT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::OMNI, selected), StatusCode::INTERNAL_ERROR);
+    EXPECT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::OMNI_CB, selected), StatusCode::INTERNAL_ERROR);
 }
 
 TEST_F(PipelineTypeSelectionTest, ExplicitPipelinesAcceptedForOmniCapableModel) {
@@ -128,6 +130,7 @@ TEST_F(PipelineTypeSelectionTest, ExplicitPipelinesAcceptedForOmniCapableModel) 
         {mediapipe::LLMCalculatorOptions::VLM, PipelineType::VLM},
         {mediapipe::LLMCalculatorOptions::VLM_CB, PipelineType::VLM_CB},
         {mediapipe::LLMCalculatorOptions::OMNI, PipelineType::OMNI},
+        {mediapipe::LLMCalculatorOptions::OMNI_CB, PipelineType::OMNI_CB},
     };
     for (const auto& testCase : cases) {
         PipelineType selected;
@@ -146,6 +149,8 @@ TEST_F(PipelineTypeSelectionTest, AudioDecoderEnablesOmniSelection) {
     addAudioEncoderModel();
     ASSERT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::OMNI, selected), StatusCode::OK);
     EXPECT_EQ(selected, PipelineType::OMNI);
+    ASSERT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::OMNI_CB, selected), StatusCode::OK);
+    EXPECT_EQ(selected, PipelineType::OMNI_CB);
     ASSERT_EQ(selectPipeline(mediapipe::LLMCalculatorOptions::AUTO, selected), StatusCode::OK);
     EXPECT_EQ(selected, PipelineType::OMNI);
 }

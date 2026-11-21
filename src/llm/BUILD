@@ -700,6 +700,7 @@ ovms_cc_library(
             "visual_language_model/legacy/servable.hpp",
             "visual_language_model/legacy/servable_initializer.hpp",
             "visual_language_model/legacy/legacy_executor.hpp",
+            "omni_model/continuous_batching/servable.hpp",
             "omni_model/legacy/servable.hpp",
             "omni_model/legacy/servable_initializer.hpp",
                 "omni_model/legacy/legacy_executor.hpp",

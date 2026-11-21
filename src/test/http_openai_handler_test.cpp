@@ -36,6 +36,7 @@
 #include "../llm/io_processing/output_parser.hpp"
 #include "../llm/io_processing/generation_config_builder.hpp"
 #include "../llm/language_model/legacy/servable.hpp"
+#include "../llm/omni_model/continuous_batching/servable.hpp"
 #include "../llm/omni_model/legacy/servable.hpp"
 #include "../llm/ovms_text_streamer.hpp"
 #include "../llm/visual_language_model/legacy/servable.hpp"
@@ -6074,6 +6075,37 @@ class TestableOmniModelLegacyServable : public ovms::OmniModelLegacyServable {
 public:
     using ovms::OmniModelLegacyServable::initializeTextStreamer;
 };
+
+TEST_F(HttpOpenAIHandlerParsingTest, OmniCBRequestOutputModalities) {
+    ovms::OmniModelServable servable;
+    servable.getProperties()->tokenizer = *tokenizer;
+    servable.getProperties()->bestOfLimit = 0;
+    const std::pair<ovms::Endpoint, std::string> cases[] = {
+        {ovms::Endpoint::CHAT_COMPLETIONS, R"({"model":"llama","messages":[{"role":"user","content":"hi"}],"modalities":["text"]})"},
+        {ovms::Endpoint::CHAT_COMPLETIONS, R"({"model":"llama","messages":[{"role":"user","content":"hi"}],"modalities":["text","audio"],"audio":{"voice":"m02","format":"wav"}})"},
+        {ovms::Endpoint::RESPONSES, R"({"model":"llama","input":[{"role":"user","content":[{"type":"input_text","text":"hi"}]}],"modalities":["text"]})"},
+        {ovms::Endpoint::RESPONSES, R"({"model":"llama","input":[{"role":"user","content":[{"type":"input_text","text":"hi"}]}],"modalities":["text","audio"],"audio":{"voice":"m02","format":"pcm16"}})"},
+    };
+    for (size_t index = 0; index < std::size(cases); ++index) {
+        SCOPED_TRACE(index);
+        auto context = servable.createExecutionContext();
+        context->endpoint = cases[index].first;
+        context->payload.client = std::make_shared<NeverDisconnectedClient>();
+        context->payload.parsedJson = std::make_shared<rapidjson::Document>();
+        context->payload.parsedJson->Parse(cases[index].second.c_str());
+        ASSERT_FALSE(context->payload.parsedJson->HasParseError());
+        auto status = servable.parseRequest(context);
+        if (index % 2 == 0) {
+            EXPECT_TRUE(status.ok()) << status;
+        } else {
+            EXPECT_EQ(status, absl::InvalidArgumentError("Audio output is not supported by OMNI_CB. Use the OMNI pipeline for audio output."));
+        }
+    }
+    EXPECT_TRUE(servable.getProperties()->inputProcessorContext.config.audioInputConfig.has_value());
+    EXPECT_TRUE(servable.getProperties()->inputProcessorContext.config.visionInputConfig.has_value());
+    EXPECT_FALSE(servable.validateEndpoint(ovms::Endpoint::COMPLETIONS).ok());
+    EXPECT_FALSE(servable.validateEndpoint(ovms::Endpoint::TRANSCRIPTIONS).ok());
+}
 
 TEST_F(HttpOpenAIHandlerParsingTest, OmniUnaryStreamerSeparatesReasoningAndPreservesAudioTranscript) {
     auto ctx = makeOmniChatContext(tokenizer,

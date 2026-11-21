@@ -40,6 +40,7 @@ enum class PipelineType {
     LM_CB,   // Single modality (text only), text generation based on ContinuousBatchingPipeline
     VLM_CB,  // Multimodal (text and image), text generation based on ContinuousBatchingPipeline
     OMNI,    // Omni model (text, image, audio input; text + speech output) based on OmniPipeline
+    OMNI_CB, // Omni model with continuous-batched text output
 
     // Note that *_CB pipelines do not support execution on NPU
 };
