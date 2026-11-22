@@ -127,6 +127,15 @@ if !errorlevel! equ 0 (
 copy C:\%output_user_root%\openvino\runtime\bin\intel64\Release\*.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
+set "level_zero_source=C:\%output_user_root%\level-zero-1.24.2"
+set "level_zero_loader=C:\%output_user_root%\level-zero-build-1.24.2\bin\Release\ze_loader.dll"
+if not exist "%level_zero_loader%" (
+    echo Missing Level Zero loader: %level_zero_loader%. Run windows_install_build_dependencies.bat first.
+    exit /b 1
+)
+copy /Y "%level_zero_loader%" dist\windows\ovms\ze_loader.dll
+if !errorlevel! neq 0 exit /b !errorlevel!
+
 set "dest_dir=C:\opt"
 
 if exist %cd%\bazel-bin\src\python\libovmspython.dll (
@@ -237,6 +246,10 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 set "license_dest=%cd%\dist\windows\ovms\thirdparty-licenses\"
 md %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
+copy /Y "%level_zero_source%\LICENSE" "%license_dest%level-zero.LICENSE.txt"
+if !errorlevel! neq 0 exit /b !errorlevel!
+copy /Y "%level_zero_source%\third_party\spdlog_headers\LICENSE" "%license_dest%level-zero-spdlog.LICENSE.txt"
+if !errorlevel! neq 0 exit /b !errorlevel!
 copy C:\opt\opencv_!opencv_version!\etc\licenses\* %license_dest%
 if !errorlevel! neq 0 exit /b !errorlevel!
 IF "%OV_USE_BINARY%"=="1" (
@@ -312,6 +325,10 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 
 if not exist dist\windows\ovms\libovmspython.dll (
     echo Packaging validation failed: libovmspython.dll is missing from dist\windows\ovms.
+    exit /b 1
+)
+if not exist dist\windows\ovms\ze_loader.dll (
+    echo Packaging validation failed: ze_loader.dll is missing from dist\windows\ovms.
     exit /b 1
 )
 if not exist dist\windows\ovms\libpython_calculators.dll (

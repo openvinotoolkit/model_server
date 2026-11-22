@@ -15,8 +15,16 @@
 //*****************************************************************************
 #pragma once
 
+#include <cstdlib>
+#include <string>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
+inline bool gpuTestsRequested() {
+    const char* value = std::getenv("RUN_GPU_TESTS");
+    return value != nullptr && std::string(value) == "1";
+}
 
 #define SKIP_AND_EXIT_IF_NO_GPU()                                                                               \
     if (GPUEnvironment::shouldSkipWithoutGPU()) {                                                               \

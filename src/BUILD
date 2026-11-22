@@ -414,12 +414,18 @@ ovms_cc_library(
 )
 ovms_cc_library(
     name = "libovms_systeminfo",
-    hdrs = ["systeminfo.hpp"],
-    srcs = ["systeminfo.cpp"],
+    hdrs = ["systeminfo.hpp", "gpu_memory_info_internal.hpp"],
+    srcs = ["systeminfo.cpp", "gpu_memory_info.cpp"],
     deps = [
         "libovmslogging",
         "libovmsstatus",
+        "//third_party:openvino",
+        "@level_zero_headers//:headers",
     ],
+    additional_linkopts = select({
+        "//src:windows": [],
+        "//conditions:default": ["-ldl"],
+    }),
     visibility = ["//visibility:public",],
 )
 ovms_cc_library(
@@ -2035,6 +2041,18 @@ cc_binary(
         "//:disable_mediapipe": [],
     }),
     # linkstatic = False,  # Use for dynamic linking when necessary
+)
+
+cc_test(
+    name = "systeminfo_test",
+    linkstatic = 1,
+    srcs = ["test/systeminfo_test.cpp", "test/gpuenvironment.hpp"],
+    copts = COMMON_STATIC_TEST_COPTS,
+    deps = [
+        ":libovms_systeminfo",
+        "//third_party:openvino",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 cc_test(

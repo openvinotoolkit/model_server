@@ -24,6 +24,8 @@
 #include "src/filesystem/filesystem.hpp"
 #include "../modelinstance.hpp"
 #include "../ov_utils.hpp"
+#include "../systeminfo.hpp"
+#include "gpuenvironment.hpp"
 #include "test_utils.hpp"
 
 using testing::ElementsAre;
@@ -399,6 +401,44 @@ TEST(RecommendTargetDevice, MultipleDiscreteGpusWithZeroVramReturnsFirst) {
         {"GPU.0", /*isDiscrete=*/true, /*freeMemBytes=*/0},
         {"GPU.1", /*isDiscrete=*/true, /*freeMemBytes=*/0}};
     EXPECT_EQ(ovms::recommendTargetDevice(gpuDevices), "GPU.0");
+}
+
+TEST(RecommendTargetDevice, KnownZeroMemoryPreferredOverUnavailable) {
+    const std::vector<ovms::GpuDeviceInfo> gpuDevices{
+        {"GPU.0", true, std::nullopt},
+        {"GPU.1", true, 0}};
+    EXPECT_EQ(ovms::recommendTargetDevice(gpuDevices), "GPU.1");
+}
+
+TEST(RecommendTargetDevice, UnavailableMemoryReturnsFirstDiscreteGpu) {
+    const std::vector<ovms::GpuDeviceInfo> gpuDevices{
+        {"GPU.0", true, std::nullopt},
+        {"GPU.1", true, std::nullopt}};
+    EXPECT_EQ(ovms::recommendTargetDevice(gpuDevices), "GPU.0");
+}
+
+TEST(RecommendTargetDevice, UnsignedLargeMemoryValuesCompareCorrectly) {
+    const std::vector<ovms::GpuDeviceInfo> gpuDevices{
+        {"GPU.0", true, uint64_t{1} << 63},
+        {"GPU.1", true, 1}};
+    EXPECT_EQ(ovms::recommendTargetDevice(gpuDevices), "GPU.0");
+}
+
+TEST(RecommendTargetDevice, HardwareUsesSysmanFreeMemory) {
+    if (!gpuTestsRequested())
+        GTEST_SKIP() << "Set RUN_GPU_TESTS=1 to test real GPU selection";
+    ov::Core core;
+    const auto memoryInfo = ovms::getGpuMemoryInfo(core);
+    ASSERT_EQ(memoryInfo.status, ovms::GpuMemoryStatus::AVAILABLE) << memoryInfo.reason;
+    std::vector<ovms::GpuDeviceInfo> gpuDevices;
+    for (const auto& device : memoryInfo.devices) {
+        gpuDevices.push_back({device.deviceId, device.deviceType == ovms::GpuDeviceType::DISCRETE, device.availablePhysicalBytes});
+    }
+    ASSERT_FALSE(gpuDevices.empty()) << "No OpenVINO GPUs discovered";
+    ASSERT_TRUE(std::any_of(gpuDevices.begin(), gpuDevices.end(), [](const auto& device) {
+        return device.isDiscrete && device.freeMemBytes.has_value();
+    })) << "No discrete GPU exposes a Sysman memory reading";
+    EXPECT_EQ(ovms::recommendTargetDevice(), ovms::recommendTargetDevice(gpuDevices));
 }
 
 TEST(RecommendTargetDevice, MixedDiscreteAndIntegratedPrefersDiscrete) {

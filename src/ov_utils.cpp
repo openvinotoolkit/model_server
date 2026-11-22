@@ -187,7 +187,11 @@ std::string recommendTargetDevice(const std::vector<GpuDeviceInfo>& gpuDevices) 
             [](const GpuDeviceInfo& a, const GpuDeviceInfo& b) {
                 return a.freeMemBytes < b.freeMemBytes;
             });
-        SPDLOG_LOGGER_INFO(modelmanager_logger, "Multiple discrete GPUs found, recommending {} with {} bytes free VRAM", best->name, best->freeMemBytes);
+        if (best->freeMemBytes) {
+            SPDLOG_LOGGER_INFO(modelmanager_logger, "Multiple discrete GPUs found, recommending {} with {} bytes free physical memory", best->name, *best->freeMemBytes);
+        } else {
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Free GPU memory is unavailable; recommending the first discrete GPU: {}", best->name);
+        }
         return best->name;
     }
 
@@ -202,45 +206,21 @@ std::string recommendTargetDevice(const std::vector<GpuDeviceInfo>& gpuDevices) 
 
 std::string recommendTargetDevice() {
     static ov::Core core;
-    auto availableDevices = core.get_available_devices();
+    const auto memoryInfo = getGpuMemoryInfo(core);
+    if (memoryInfo.status != GpuMemoryStatus::AVAILABLE) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "GPU memory telemetry unavailable or incomplete: {}", memoryInfo.reason);
+    }
 
     std::vector<GpuDeviceInfo> gpuDevices;
-
-    for (const auto& device : availableDevices) {
-        if (device.find("GPU") != 0) {
-            continue;
+    gpuDevices.reserve(memoryInfo.devices.size());
+    for (const auto& device : memoryInfo.devices) {
+        if (device.deviceType == GpuDeviceType::UNKNOWN) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "GPU type unavailable for {}; treating as integrated/unknown GPU", device.deviceId);
         }
-
-        GpuDeviceInfo info;
-        info.name = device;
-
-        try {
-            auto deviceType = core.get_property(device, ov::device::type);
-            info.isDiscrete = (deviceType == ov::device::Type::DISCRETE);
-        } catch (const std::exception& e) {
-            SPDLOG_LOGGER_WARN(modelmanager_logger, "Failed to get DEVICE_TYPE for {}: {}; treating as integrated/unknown GPU", device, e.what());
-            info.isDiscrete = false;
+        if (device.deviceType == GpuDeviceType::DISCRETE && !device.availablePhysicalBytes) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "Free physical memory unavailable for {}: {}", device.deviceId, device.reason);
         }
-
-        try {
-            uint64_t totalMem = core.get_property(device, "GPU_DEVICE_TOTAL_MEM_SIZE").as<uint64_t>();
-            uint64_t usedMem = 0;
-            try {
-                auto memStats = core.get_property(device, "GPU_MEMORY_STATISTICS").as<std::map<std::string, uint64_t>>();
-                auto it = memStats.find("usm_device");
-                if (it != memStats.end()) {
-                    usedMem = it->second;
-                }
-            } catch (...) {
-                // Memory statistics may not be available before any model is loaded
-            }
-            info.freeMemBytes = static_cast<int64_t>(totalMem) - static_cast<int64_t>(usedMem);
-        } catch (const std::exception& e) {
-            SPDLOG_LOGGER_WARN(modelmanager_logger, "Failed to get memory info for {}: {}", device, e.what());
-            info.freeMemBytes = 0;
-        }
-
-        gpuDevices.push_back(info);
+        gpuDevices.push_back({device.deviceId, device.deviceType == GpuDeviceType::DISCRETE, device.availablePhysicalBytes});
     }
 
     return recommendTargetDevice(gpuDevices);
