@@ -94,7 +94,7 @@ BASE_OS ?= ubuntu24
 BASE_OS_TAG ?= latest
 
 BASE_OS_TAG_UBUNTU ?= 24.04
-BASE_OS_TAG_REDHAT ?= $(if $(filter redhat10,$(BASE_OS)),10.3,9.8)
+BASE_OS_TAG_REDHAT ?= $(if $(filter redhat10,$(BASE_OS)),10.3,9.9)
 
 INSTALL_RPMS_FROM_URL ?=
 BUILD_IMAGE ?= build

@@ -14,10 +14,10 @@
 # limitations under the License.
 #
 
-ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.8
+ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.9
 ARG BUILD_IMAGE=build
 ARG PKG_IMAGE=pkg
-ARG RELEASE_BASE_IMAGE=registry.access.redhat.com/ubi9/ubi-minimal:9.8
+ARG RELEASE_BASE_IMAGE=registry.access.redhat.com/ubi9/ubi-minimal:9.9
 ARG BASE_OS=redhat
 ARG GPU=0
 ARG NPU=0
@@ -578,7 +578,9 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_do
     fi ; \
     if [ "$NPU" == "1" ] ; then ldconfig || exit 1; fi ; \
     # For image with Python enabled install Python library
-    $DNF_TOOL install -y python3-libs --setopt=install_weak_deps=0 --nodocs; \
+    . /etc/os-release; \
+    case "$VERSION_ID" in 9|9.*) python_runtime=python3.12-libs ;; *) python_runtime=python3-libs ;; esac; \
+    $DNF_TOOL install -y "$python_runtime" --setopt=install_weak_deps=0 --nodocs; \
     $DNF_TOOL install -y shadow-utils; \
     $DNF_TOOL clean all ; \
     cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \

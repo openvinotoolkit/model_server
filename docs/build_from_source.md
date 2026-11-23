@@ -31,7 +31,7 @@ Select base OS:
 - `ubuntu22` for Ubuntu 22.04
 - `ubuntu24` for Ubuntu 24.04 (default)
 - `ubuntu26` for Ubuntu 26.04
-- `redhat` or `redhat9` for Red Hat UBI 9.8
+- `redhat` or `redhat9` for Red Hat UBI 9.9
 - `redhat10` for Red Hat UBI 10.3
 
 ```text
