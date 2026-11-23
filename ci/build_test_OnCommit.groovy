@@ -365,13 +365,12 @@ pipeline {
                     try {
                       sh """#!/bin/bash
 set -o pipefail
+rm -f -- docker_compose_smoke_report.log docker_compose_smoke.log
 {
 bash tools/docker_image_composer/prepare_models.sh && \\
 TEST_LLM_PATH="${HOME}/ovms_models/llm_models_ovms/OVMS_C" \\
 python3 -m tests.functional.docker_compose_smoke_test openvino/model_server:${shortCommit} \\
   all --skip-pull --allow-cpu-fallback --demo \\
-  --demo-component base --demo-component opencv --demo-component python --demo-component tensorflow \\
-  --demo-component paddle --demo-component onnx \\
   --report docker_compose_smoke_report.log
 } 2>&1 | tee docker_compose_smoke.log
 """
