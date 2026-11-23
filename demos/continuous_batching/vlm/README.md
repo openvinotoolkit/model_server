@@ -304,6 +304,8 @@ The picture features a zebra standing in a grassy area. The zebra is characteriz
 
 This example uses [LFM3-VL-2B](https://huggingface.co/OpenVINO/LFM3-VL-2B-int4-ov) to describe a [30-second Intel commercial](https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/video/Sheldon%20Cooper%20Jim%20Parsons%20at%20Intels%20Lab.mp4). Pass the H.264 MP4 URL as a string in `video_url.url`. OVMS downloads the video, decodes and samples frames on the server, and passes those frames to the model. The client does not need to extract frames, and the model does not receive the audio track.
 
+See the [Chat Completions API reference](../../../docs/model_server_rest_api_chat.md) for video input formats and sampling behavior. The [deployment parameters](../../../docs/parameters.md) include `--input_video_fps` and `--input_video_max_frames`; [input media decode protection](../../../docs/parameters.md#input-media-decode-protection) documents encoded-file size and decoded-pixel limits.
+
 Deploy LFM3-VL-2B with a build that supports MP4 decoding. These examples use port `8000`, like the image examples above. Stop the image demo server before starting this deployment on the same port. For an existing deployment, make sure it serves the model and includes `storage.openvinotoolkit.org` in [`--allowed_media_domains`](../../../docs/parameters.md#server-configuration-options) before sending the request.
 
 :::{dropdown} **Deploying with Docker**
@@ -315,7 +317,6 @@ docker run -d ${GPU_ARGS} --rm -u "$(id -u):$(id -g)" -p 8000:8000 \
   -v "${HOME}/models:/models:rw" openvino/model_server:weekly \
   --rest_port 8000 --model_repository_path /models \
   --source_model OpenVINO/LFM3-VL-2B-int4-ov \
-  --model_name LFM3-VL-2B-int4-ov \
   --allowed_media_domains storage.openvinotoolkit.org
 ```
 :::
@@ -326,13 +327,13 @@ If you run on GPU make sure to have appropriate drivers installed, so the device
 
 ```bat
 mkdir c:\models
-ovms --rest_port 8000 --source_model OpenVINO/LFM3-VL-2B-int4-ov --model_repository_path c:\models --model_name LFM3-VL-2B-int4-ov --allowed_media_domains storage.openvinotoolkit.org
+ovms --rest_port 8000 --source_model OpenVINO/LFM3-VL-2B-int4-ov --model_repository_path c:\models --allowed_media_domains storage.openvinotoolkit.org
 ```
 :::
 
 ### Readiness Check
 
-Wait for `LFM3-VL-2B-int4-ov` to appear in the model listing:
+Wait for `OpenVINO/LFM3-VL-2B-int4-ov` to appear in the model listing:
 
 ```console
 curl http://localhost:8000/v1/models
@@ -349,7 +350,7 @@ curl --silent --show-error --fail-with-body \
   http://localhost:8000/v1/chat/completions \
   -H 'Content-Type: application/json' --data @- <<'JSON'
 {
-  "model": "LFM3-VL-2B-int4-ov",
+  "model": "OpenVINO/LFM3-VL-2B-int4-ov",
   "messages": [
     {
       "role": "user",
@@ -371,73 +372,6 @@ JSON
 ```
 
 In the response, `choices[0].message.content` contains the description and `usage.completion_tokens` reports the number of generated tokens. See the [Chat Completions API reference](../../../docs/model_server_rest_api_chat.md) for supported video inputs and frame limits.
-:::
-
-:::{dropdown} **Unary call with python requests library**
-
-```console
-pip3 install requests
-```
-```python
-import requests
-
-base_url = "http://localhost:8000/v1"
-model_name = "LFM3-VL-2B-int4-ov"
-video_url = "https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/video/Sheldon%20Cooper%20Jim%20Parsons%20at%20Intels%20Lab.mp4"
-
-payload = {
-  "model": model_name,
-  "messages": [
-    {
-      "role": "user",
-      "content": [
-        {"type": "text", "text": "Describe this video. What happens in it?"},
-        {"type": "video_url", "video_url": {"url": video_url}},
-      ],
-    }
-  ],
-  "temperature": 0.0,
-  "max_completion_tokens": 5000,
-}
-response = requests.post(base_url + "/chat/completions", json=payload)
-response.raise_for_status()
-print(response.json()["choices"][0]["message"]["content"])
-```
-:::
-
-:::{dropdown} **Streaming request with OpenAI client using chat/completions**
-
-```console
-pip3 install openai
-```
-```python
-from openai import OpenAI
-
-base_url = "http://localhost:8000/v1"
-model_name = "LFM3-VL-2B-int4-ov"
-video_url = "https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/data/video/Sheldon%20Cooper%20Jim%20Parsons%20at%20Intels%20Lab.mp4"
-
-client = OpenAI(api_key="unused", base_url=base_url)
-stream = client.chat.completions.create(
-  model=model_name,
-  messages=[
-    {
-      "role": "user",
-      "content": [
-        {"type": "text", "text": "Describe this video. What happens in it?"},
-        {"type": "video_url", "video_url": {"url": video_url}},
-      ],
-    }
-  ],
-  temperature=0.0,
-  max_completion_tokens=5000,
-  stream=True,
-)
-for chunk in stream:
-  if chunk.choices and chunk.choices[0].delta.content is not None:
-    print(chunk.choices[0].delta.content, end="", flush=True)
-print()
-```
 :::
 
 ## Testing the model accuracy over serving API
