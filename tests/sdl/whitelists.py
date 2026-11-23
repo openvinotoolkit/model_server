@@ -276,7 +276,6 @@ packages = {
         'nginx',
     },
     OvmsBaseType.REDHAT: {
-        "findutils",
         'libtirpc',
         'mpdecimal',
         'libnsl2',
