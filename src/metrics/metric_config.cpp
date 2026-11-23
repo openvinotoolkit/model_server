@@ -15,9 +15,11 @@
 //*****************************************************************************
 #include "metric_config.hpp"
 
+#include <algorithm>
 #include <regex>
 #include <sstream>
 #include <string>
+#include <vector>
 #pragma warning(push)
 #pragma warning(disable : 6313)
 #include <rapidjson/document.h>
@@ -128,11 +130,9 @@ Status MetricConfig::parseMetricsConfig(const rapidjson::Value& metrics, bool fo
     if (status == StatusCode::OK && this->metricsEnabled) {
         SPDLOG_LOGGER_INFO(modelmanager_logger, "Metrics enabled.");
 
-        std::stringstream ss;
-        for (const auto& family : this->enabledFamiliesList) {
-            ss << family << ", ";
-        }
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Enabled metrics list: ", ss.str());
+        std::vector<std::string> sortedEnabledFamilies(enabledFamiliesList.begin(), enabledFamiliesList.end());
+        std::sort(sortedEnabledFamilies.begin(), sortedEnabledFamilies.end());
+        SPDLOG_LOGGER_INFO(modelmanager_logger, "Enabled built-in metric families: {}", joins(sortedEnabledFamilies, ", "));
     }
 
     return status;

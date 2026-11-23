@@ -16,29 +16,37 @@
 #
 set -euo pipefail
 
-case "${BASE_OS:?BASE_OS must be set}" in
-    ubuntu22)
-        loader_url="https://github.com/oneapi-src/level-zero/releases/download/v1.24.2/level-zero_1.24.2+u22.04_amd64.deb"
-        ;;
-    ubuntu24)
-        loader_url="https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20261110T100000Z/pool/main/l/level-zero-loader/libze1_1.34.0-1~24.04~ppa1_amd64.deb"
-        ;;
-    ubuntu26)
-        loader_url="https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20261110T100000Z/pool/main/l/level-zero-loader/libze1_1.34.0-1~26.04~ppa1_amd64.deb"
-        ;;
-    *)
-        printf 'Unsupported BASE_OS: %s\n' "$BASE_OS" >&2
-        exit 1
-        ;;
-esac
+base_os=${BASE_OS:?BASE_OS must be set}
+work_dir=$(mktemp -d)
+trap 'rm -rf -- "$work_dir"' EXIT
 
-loader_package=$(mktemp /tmp/level-zero-loader.XXXXXX.deb)
-trap 'rm -f "$loader_package"' EXIT
-curl -fL "$loader_url" -o "$loader_package"
-case "$BASE_OS" in
-    ubuntu22) loader_sha256=7c304e93835d96025c90f6a3d8f2ce5edf142c24da9f4871113a4f0225fef22e ;;
-    ubuntu24) loader_sha256=4ea0d892f5e2b82db3c15c9e9a97327b6323189972b75fe4fc8b029a3aa3d26d ;;
-    ubuntu26) loader_sha256=d2e3a395ff0b40add337330dcd9e86857963bc173c84a532b5c1cda0dbe7a184 ;;
-esac
-printf '%s  %s\n' "$loader_sha256" "$loader_package" | sha256sum --check --status -
-dpkg -i "$loader_package"
+read_pin() {
+    awk -v key="${1}_${base_os^^}" '$1 == key && $2 == "?=" { print $3; exit }' \
+        /usr/local/share/ovms-versions.mk
+}
+
+download_verified() {
+    local url checksum
+    url=$(read_pin "${1}_URL")
+    checksum=$(read_pin "${1}_SHA256")
+    if [[ -z $url || ! $checksum =~ ^[a-f0-9]{64}$ ]]; then
+        printf 'Missing URL or invalid SHA-256 for %s on %s\n' "$1" "$base_os" >&2
+        exit 1
+    fi
+    curl --retry 5 --retry-delay 2 -fL "$url" -o "$2"
+    printf '%s  %s\n' "$checksum" "$2" | sha256sum --check -
+}
+
+download_verified LEVEL_ZERO_LOADER "$work_dir/loader.deb"
+if [[ ${NPU:-0} == 1 ]]; then
+    download_verified NPU_DRIVER "$work_dir/npu.tar.gz"
+    mkdir "$work_dir/npu"
+    tar -xf "$work_dir/npu.tar.gz" -C "$work_dir/npu"
+    apt-get update
+    apt-get install -y --no-install-recommends libtbb12
+    dpkg -i "$work_dir/loader.deb" "$work_dir/npu/"*.deb
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+else
+    dpkg -i "$work_dir/loader.deb"
+fi
