@@ -65,8 +65,8 @@ if defined PYTHONHOME set "PYTHONHOME="
 if defined PYTHONPATH set "PYTHONPATH="
 
 :: Prefer the Python installed by windows_install_build_dependencies.bat
-IF EXIST "C:\opt\Python312\python.exe" (
-    set "PATH=C:\opt\Python312\;C:\opt\Python312\Scripts\;%PATH%"
+IF EXIST "C:\opt\Python314\python.exe" (
+    set "PATH=C:\opt\Python314\;C:\opt\Python314\Scripts\;%PATH%"
 )
 
 where python >nul 2>&1

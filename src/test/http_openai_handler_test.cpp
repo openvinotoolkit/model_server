@@ -25,6 +25,7 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include "absl/strings/escaping.h"
 
 #include "../config.hpp"
 #include "../http_rest_api_handler.hpp"
@@ -150,7 +151,8 @@ TEST_F(HttpOpenAIHandlerAuthorizationTest, CorrectApiKey) {
     std::shared_ptr<MockedMultiPartParser> multiPartParser = std::make_shared<MockedMultiPartParser>();
     auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
     std::string response;
-    auto status = handler->processOpenAI("/v1/completions", comp, response, requestBody, streamPtr, multiPartParser);
+    ovms::HttpResponseComponents responseComponents;
+    auto status = handler->processOpenAI("/v1/completions", comp, response, requestBody, responseComponents, streamPtr, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::OK) << status.string();
 }
 
@@ -170,7 +172,8 @@ TEST_F(HttpOpenAIHandlerAuthorizationTest, CorrectApiKeyMissingModel) {
     std::shared_ptr<MockedMultiPartParser> multiPartParser = std::make_shared<MockedMultiPartParser>();
     auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
     std::string response;
-    auto status = handler->processOpenAI("/v1/completions", comp, response, requestBody, streamPtr, multiPartParser);
+    ovms::HttpResponseComponents responseComponents;
+    auto status = handler->processOpenAI("/v1/completions", comp, response, requestBody, responseComponents, streamPtr, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::MEDIAPIPE_DEFINITION_NAME_MISSING) << status.string();
 }
 
@@ -187,7 +190,8 @@ TEST_F(HttpOpenAIHandlerAuthorizationTest, IncorrectApiKey) {
     std::shared_ptr<MockedMultiPartParser> multiPartParser = std::make_shared<MockedMultiPartParser>();
     auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
     std::string response;
-    auto status = handler->processOpenAI("/v1/completions", comp, response, requestBody, streamPtr, multiPartParser);
+    ovms::HttpResponseComponents responseComponents;
+    auto status = handler->processOpenAI("/v1/completions", comp, response, requestBody, responseComponents, streamPtr, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::UNAUTHORIZED) << status.string();
 }
 
@@ -203,7 +207,8 @@ TEST_F(HttpOpenAIHandlerAuthorizationTest, MissingApiKey) {
     std::shared_ptr<MockedMultiPartParser> multiPartParser = std::make_shared<MockedMultiPartParser>();
     auto streamPtr = std::static_pointer_cast<ovms::HttpAsyncWriter>(stream);
     std::string response;
-    auto status = handler->processOpenAI("/v1/completions", comp, response, requestBody, streamPtr, multiPartParser);
+    ovms::HttpResponseComponents responseComponents;
+    auto status = handler->processOpenAI("/v1/completions", comp, response, requestBody, responseComponents, streamPtr, multiPartParser);
     ASSERT_EQ(status, ovms::StatusCode::UNAUTHORIZED) << status.string();
 }
 
@@ -6104,6 +6109,38 @@ TEST_F(HttpOpenAIHandlerParsingTest, OmniUnaryStreamerSeparatesReasoningAndPrese
     EXPECT_STREQ(message["reasoning_content"].GetString(), "analysis");
     EXPECT_STREQ(message["content"].GetString(), R"({"answer":"yes"})");
     EXPECT_STREQ(message["audio"]["transcript"].GetString(), R"({"answer":"yes"})");
+}
+
+TEST_F(HttpOpenAIHandlerParsingTest, OmniUnaryWavOutputPreservesFloat32Format) {
+    auto ctx = makeOmniChatContext(tokenizer,
+        R"({"model":"llama","messages":[{"role":"user","content":"hi"}],"modalities":["audio"],"audio":{"voice":"m02","format":"wav"}})");
+    ASSERT_NE(ctx, nullptr);
+    ctx->audioOutputRequested = true;
+    ctx->audioFormat = ovms::OpenAIRequest::AudioFormat::WAV;
+    ov::Tensor waveform(ov::element::f32, {2});
+    waveform.data<float>()[0] = 0.25f;
+    waveform.data<float>()[1] = -0.25f;
+    ctx->results.speech_result.waveforms.push_back(waveform);
+    ctx->deltaChannel.signalComplete();
+
+    std::shared_ptr<ovms::GenAiServableExecutionContext> ctxBase = ctx;
+    ovms::OmniModelLegacyServable servable;
+    ASSERT_EQ(servable.prepareCompleteResponse(ctxBase), absl::OkStatus());
+
+    rapidjson::Document response;
+    response.Parse(ctxBase->response.c_str());
+    ASSERT_FALSE(response.HasParseError());
+    const auto& audio = response["choices"][0]["message"]["audio"]["data"];
+    ASSERT_TRUE(audio.IsString());
+    std::string wav;
+    ASSERT_TRUE(absl::Base64Unescape(audio.GetString(), &wav));
+    ASSERT_GE(wav.size(), 44u);
+    uint16_t format = 0;
+    uint16_t bitsPerSample = 0;
+    std::memcpy(&format, wav.data() + 20, sizeof(format));
+    std::memcpy(&bitsPerSample, wav.data() + 34, sizeof(bitsPerSample));
+    EXPECT_EQ(format, 3);
+    EXPECT_EQ(bitsPerSample, 32);
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, OmniUnaryStreamerParsesToolCalls) {

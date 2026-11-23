@@ -25,6 +25,7 @@ from pathlib import Path
 from tests.functional.constants.os_type import OsType
 from tests.functional.constants.ovms_type import OvmsType
 from tests.functional.utils.core import TmpDir, get_token_value
+from tests.functional.utils.gpu_devices import resolve_default_gpu
 from tests.functional.utils.helpers import (
     generate_test_object_name,
     get_bool,
@@ -103,7 +104,7 @@ mediapipe_disable = bool(get_int("MEDIAPIPE_DISABLE", 0))
 python_disable = False  # pylint: disable=invalid-name
 
 """ TT_WIN_PY_VERSION - Python version for virtualenv on Windows OS """
-windows_python_version = os.environ.get("TT_WIN_PY_VERSION", "3.12")
+windows_python_version = os.environ.get("TT_WIN_PY_VERSION", "3.14")
 
 """ TT_DOCKER_REGISTRY - Docker registry """
 docker_registry = os.environ.get("TT_DOCKER_REGISTRY", None)
@@ -132,8 +133,10 @@ start_container_command = os.environ.get("START_CONTAINER_COMMAND", "")
 """OVMS_BINARY_PATH - path to ovms binary file; when specified, tests are executed against provided binary."""
 ovms_binary_path = os.environ.get("OVMS_BINARY_PATH", None)
 
-""" TT_TARGET_DEVICE - list of devices separated by a comma "CPU,GPU,NPU" """
-target_devices = get_target_devices()
+""" TT_TARGET_DEVICE - devices separated by a comma "CPU,GPU,NPU"; GPU without index is the first discrete GPU """
+requested_target_devices = get_target_devices()
+target_devices = resolve_default_gpu(requested_target_devices)
+target_device_ids = dict(zip(target_devices, requested_target_devices))
 
 # Reservation manager values, for details study tests.functional.utils.reservation_manager
 """ TT_GRPC_OVMS_STARTING_PORT - Grpc port where ovms should be exposed"""

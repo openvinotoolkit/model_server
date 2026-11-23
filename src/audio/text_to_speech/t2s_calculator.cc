@@ -190,6 +190,19 @@ public:
                     return absl::InvalidArgumentError(
                         absl::StrCat("speed must be between speed_min (", speedMin, ") and speed_max (", speedMax, ")"));
                 }
+                auto responseFormat = ovms::audio_utils::TextToSpeechResponseFormat::WAV;
+                auto responseFormatIt = payload.parsedJson->FindMember("response_format");
+                if (responseFormatIt != payload.parsedJson->MemberEnd()) {
+                    if (!responseFormatIt->value.IsString()) {
+                        return absl::InvalidArgumentError("response_format field is not a string");
+                    }
+                    const std::string_view format(responseFormatIt->value.GetString(), responseFormatIt->value.GetStringLength());
+                    auto requestedFormat = ovms::audio_utils::tryParseTextToSpeechResponseFormat(format);
+                    if (!requestedFormat.has_value()) {
+                        return absl::InvalidArgumentError("Unsupported response_format. Supported formats are wav and pcm");
+                    }
+                    responseFormat = requestedFormat.value();
+                }
                 ov::genai::Text2SpeechDecodedResults generatedSpeech;
                 std::unique_lock lock(pipe->ttsPipelineMutex);
                 auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before generation");
@@ -224,12 +237,17 @@ public:
                 disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "after generation");
                 if (!disconnectStatus.ok())
                     return disconnectStatus;
-                void* ppData;
-                size_t pDataSize;
-                uint16_t bitsPerSample = static_cast<uint16_t>(generatedSpeech.speeches[0].get_element_type().bitwidth());
-                ovms::audio_utils::prepareAudioOutput(&ppData, pDataSize, generatedSpeech.output_sample_rate, bitsPerSample, speechSize, cpuTensor.data<const float>());
-                output = std::make_unique<std::string>(reinterpret_cast<char*>(ppData), pDataSize);
-                drwav_free(ppData, NULL);
+                if (responseFormat == ovms::audio_utils::TextToSpeechResponseFormat::WAV) {
+                    void* ppData = nullptr;
+                    size_t pDataSize = 0;
+                    constexpr uint16_t bitsPerSample = 16;
+                    ovms::audio_utils::prepareAudioOutput(&ppData, pDataSize, generatedSpeech.output_sample_rate, bitsPerSample, speechSize, cpuTensor.data<const float>());
+                    output = std::make_unique<std::string>(reinterpret_cast<char*>(ppData), pDataSize);
+                    drwav_free(ppData, nullptr);
+                } else {
+                    auto pcm16 = ovms::audio_utils::convertWaveformToPcm16(speechSize, cpuTensor.data<const float>());
+                    output = std::make_unique<std::string>(reinterpret_cast<const char*>(pcm16.data()), pcm16.size() * sizeof(int16_t));
+                }
             } else {
                 return absl::InvalidArgumentError(absl::StrCat("Unsupported URI: ", payload.uri));
             }

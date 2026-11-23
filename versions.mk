@@ -42,3 +42,7 @@ GENAI_PACKAGE_SHA256_WINDOWS ?= 008c93eba381cc834a55b9925f977bf0daaf9e673901185c
 # Third-party dependency versions (used for binary builds)
 OPENCV_VERSION ?= 4.14.0
 CURL_VERSION ?= 8.22.0_2
+
+# Windows Python runtime and build interpreters.
+WINDOWS_PYTHON312_VERSION ?= 3.12.10
+WINDOWS_PYTHON314_VERSION ?= 3.14.10

@@ -252,6 +252,8 @@ class MarkConditionalRunType(MarkMeta):
         "Conditionally assign single/non-single run type mark based on device and OS"
     CONDITIONAL_RUN_TYPE_BY_MODEL = "conditional_run_type_by_model", \
         "Conditionally assign run type mark based on model_type membership in model collections"
+    CONDITIONAL_RUN_TYPE_BY_PARAM = "conditional_run_type_by_param", \
+        "Conditionally assign run type mark based on value of a test parameter"
 
 
 class MarkRunType(ConditionalMark):

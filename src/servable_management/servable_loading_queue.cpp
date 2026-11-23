@@ -105,8 +105,6 @@ void ServableLoadingQueue::workerLoop() {
         if (observer) {
             observer(TaskEvent::Executed, task);
         }
-        SPDLOG_LOGGER_DEBUG(modelmanager_logger, "Processing {} task for: {}",
-            static_cast<int>(task.type), task.name);
         Status status = this->processor(task);
         task.completion.set_value(status);
     }

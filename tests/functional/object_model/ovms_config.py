@@ -31,6 +31,7 @@ from tests.functional.constants.pipelines import Pipeline
 from tests.functional.object_model.custom_loader import CustomLoader
 from tests.functional.object_model.ovms_params import MetricsPolicy, OvmsParams
 from tests.functional.object_model.test_environment import TestEnvironment
+from tests.functional.utils.helpers import get_base_device
 from tests.functional.utils.remote_test_environment import copy_custom_lib_to_host
 
 logger = get_logger(__name__)
@@ -83,7 +84,7 @@ class OvmsConfig:
             metrics["metrics_list"] = parameters.metrics_list
 
         if enable_plugin_config_target_device:
-            plugin_config_target_device = Ovms.PLUGIN_CONFIG[parameters.target_device]
+            plugin_config_target_device = Ovms.PLUGIN_CONFIG[get_base_device(parameters.target_device)]
             if plugin_config_target_device:
                 for model_config in config_dict[Config.MODEL_CONFIG_LIST]:
                     plugin_config = model_config[Config.CONFIG].get(Config.PLUGIN_CONFIG, None)
