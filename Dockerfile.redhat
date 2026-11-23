@@ -28,15 +28,22 @@ ARG JOBS=50
 ARG BASE_OS
 
 #hadolint ignore=DL3041
-RUN case "$BASE_OS" in redhat|redhat9) redhat_major=9; libdrm_devel=libdrm-devel ;; redhat10) redhat_major=10; libdrm_devel=libdrm-devel-2.4.123-1.el10 ;; *) exit 1 ;; esac && \
+RUN case "$BASE_OS" in \
+    redhat|redhat9) redhat_major=9; libdrm_devel=libdrm-devel; python_packages=(python3.12 python3.12-devel python3.12-pip); python_path=/usr/bin/python3.12; expected_python=3.12 ;; \
+    redhat10) redhat_major=10; libdrm_devel=libdrm-devel-2.4.123-1.el10; python_packages=(python3 python3-devel python3-pip); python_path=/usr/bin/python3; expected_python=3.12 ;; \
+        *) exit 1 ;; \
+    esac && \
     rpm --import https://www.centos.org/keys/RPM-GPG-KEY-CentOS-Official-SHA256 && \
     dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${redhat_major}.noarch.rpm && \
     dnf --repofrompath=centos-crb,https://mirror.stream.centos.org/${redhat_major}-stream/CRB/\$basearch/os/ \
         --repofrompath=centos-app,https://mirror.stream.centos.org/${redhat_major}-stream/AppStream/\$basearch/os/ \
         --repofrompath=centos-base,https://mirror.stream.centos.org/${redhat_major}-stream/BaseOS/\$basearch/os/ \
         install -y --setopt=install_weak_deps=0 \
-        gcc-c++ cmake make git patch pkg-config flex bison python3 python3-mako python3-pyyaml ninja-build \
+        gcc-c++ cmake make git patch pkg-config flex bison "${python_packages[@]}" ninja-build \
         libxml2-devel zlib-devel libzstd-devel libva-devel "$libdrm_devel" ocl-icd-devel opencl-headers && \
+    ln -sf "$python_path" /usr/local/bin/python3 && \
+    python3 --version | grep -q "^Python ${expected_python//./\\.}\\." && \
+    PIP_BREAK_SYSTEM_PACKAGES=1 python3 -m pip install --no-cache-dir 'Mako==1.3.10' 'PyYAML==6.0.2' && \
     dnf clean all
 
 ENV PKG_CONFIG_PATH=/usr/lib64/pkgconfig:/usr/lib/pkgconfig \
@@ -100,11 +107,12 @@ FROM gpu-${GPU} AS gpu-runtime
 FROM gpu-build AS npu-build
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 ARG JOBS=50
-RUN case "$BASE_OS" in redhat|redhat9) redhat_major=9 ;; redhat10) redhat_major=10 ;; *) exit 1 ;; esac && \
+# hadolint ignore=DL3041
+RUN case "$BASE_OS" in redhat|redhat9) redhat_major=9; python_devel=python3.12-devel ;; redhat10) redhat_major=10; python_devel=python3-devel ;; *) exit 1 ;; esac && \
     dnf --repofrompath=centos-crb,https://mirror.stream.centos.org/${redhat_major}-stream/CRB/\$basearch/os/ \
         --repofrompath=centos-app,https://mirror.stream.centos.org/${redhat_major}-stream/AppStream/\$basearch/os/ \
         --repofrompath=centos-base,https://mirror.stream.centos.org/${redhat_major}-stream/BaseOS/\$basearch/os/ \
-        install -y --setopt=install_weak_deps=0 git-lfs python3-devel tbb-devel libedit-devel && \
+        install -y --setopt=install_weak_deps=0 git-lfs "$python_devel" tbb-devel libedit-devel && \
     dnf clean all
 WORKDIR /npu-src
 RUN git lfs install && \
@@ -161,7 +169,11 @@ ARG LTO_CXX_FLAGS=""
 ARG LTO_LD_FLAGS="-Wl,-z,relro"
 
 # hadolint ignore=DL3041
-RUN case "$BASE_OS" in redhat|redhat9) redhat_major=9 ;; redhat10) redhat_major=10 ;; *) exit 1 ;; esac && \
+RUN case "$BASE_OS" in \
+        redhat|redhat9) redhat_major=9; python_packages=(python3.12 python3.12-devel python3.12-pip); python_path=/usr/bin/python3.12; expected_python=3.12 ;; \
+        redhat10) redhat_major=10; python_packages=(python3 python3-devel python3-pip); python_path=/usr/bin/python3; expected_python=3.12 ;; \
+        *) exit 1 ;; \
+    esac && \
     echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf && \
     curl -fsSL -o /tmp/epel-release.rpm https://dl.fedoraproject.org/pub/epel/epel-release-latest-${redhat_major}.noarch.rpm && \
     dnf install -y /tmp/epel-release.rpm && dnf update -d6 -y && dnf install -d6 -y \
@@ -177,7 +189,9 @@ RUN case "$BASE_OS" in redhat|redhat9) redhat_major=9 ;; redhat10) redhat_major=
             openssl-devel \
             patch \
             pkg-config \
-            wget && \
+                wget "${python_packages[@]}" && \
+            ln -sf "$python_path" /usr/local/bin/python3 && \
+            python3 --version | grep -q "^Python ${expected_python//./\\.}\\." && \
             dnf clean all
 
 # hadolint ignore=DL3003
@@ -299,9 +313,6 @@ RUN case "$BASE_OS" in redhat|redhat9) redhat_major=9 ;; redhat10) redhat_major=
             unzip \
             vim \
             xz \
-            python3 \
-            python3-devel \
-            python3-pip \
             libicu-devel && \
             dnf clean all
 # Note: espeak-ng is no longer installed from dnf; it is built from source
@@ -579,7 +590,7 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_do
     if [ "$NPU" == "1" ] ; then ldconfig || exit 1; fi ; \
     # For image with Python enabled install Python library
     . /etc/os-release; \
-    case "$VERSION_ID" in 9|9.*) python_runtime=python3.12-libs ;; *) python_runtime=python3-libs ;; esac; \
+    case "$VERSION_ID" in 9|9.*) python_runtime=python3.12-libs ;; 10|10.*) python_runtime=python3-libs ;; *) python_runtime=python3-libs ;; esac; \
     $DNF_TOOL install -y "$python_runtime" --setopt=install_weak_deps=0 --nodocs; \
     $DNF_TOOL install -y shadow-utils; \
     $DNF_TOOL clean all ; \
