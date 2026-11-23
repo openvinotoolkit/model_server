@@ -111,25 +111,26 @@ protected:
 };
 
 TEST_F(CalculatorMetricsLoggingTest, LogsOncePerMetricAndScopeIncludingDisabledMetrics) {
+    constexpr int EXPECTED_NUMBER_OF_LOG_LINES = 10;  // 3 metrics x 3 scopes, plus 1 reloaded counter.
     auto registerMetrics = [](CalculatorMetrics& metrics) {
-        metrics.getOrRegisterCounter("custom_events_total", "Events.");
-        metrics.getOrRegisterGauge("custom_queue_depth", "Queued requests.");
-        metrics.getOrRegisterHistogram("custom_latency", "Latency.", {1, 2});
+        metrics.getOrRegisterCounter("custom_events_total", "Events.");  // 1 line first time; 0 on repeat.
+        metrics.getOrRegisterGauge("custom_queue_depth", "Queued requests.");  // 1 line first time; 0 on repeat.
+        metrics.getOrRegisterHistogram("custom_latency", "Latency.", {1, 2});  // 1 line first time; 0 on repeat.
     };
     MetricRegistry registry;
     CalculatorMetrics first(&registry, "graph", "first");
     CalculatorMetrics second(&registry, "graph", "second");
     CalculatorMetrics disabled(nullptr, "graph", "disabled");
     for (CalculatorMetrics* scope : {&first, &second, &disabled}) {
-        registerMetrics(*scope);
-        registerMetrics(*scope);
+        registerMetrics(*scope);  // 3 lines: one for each metric, including no-op logs for disabled metrics.
+        registerMetrics(*scope);  // 0 lines: all three metrics are already registered for this scope.
     }
     CalculatorMetrics reloaded(&registry, "graph", "first");
-    reloaded.getOrRegisterCounter("custom_events_total", "Events.");
-    reloaded.getOrRegisterCounter("custom_events_total", "Events.");
+    reloaded.getOrRegisterCounter("custom_events_total", "Events.");  // 1 line: this scope object registers it once.
+    reloaded.getOrRegisterCounter("custom_events_total", "Events.");  // 0 lines: already registered on this object.
 
     const std::string output = logs.str();
-    EXPECT_EQ(std::count(output.begin(), output.end(), '\n'), 10);
+    EXPECT_EQ(std::count(output.begin(), output.end(), '\n'), EXPECTED_NUMBER_OF_LOG_LINES);
     for (const char* name : {"custom_events_total", "custom_queue_depth", "custom_latency"}) {
         for (const char* node : {"first", "second"}) {
             EXPECT_THAT(output, HasSubstr(std::string("[info] Registered custom metric '") + name +
