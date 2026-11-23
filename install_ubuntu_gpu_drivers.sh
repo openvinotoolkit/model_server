@@ -35,7 +35,11 @@ download_verified_deb() {
 
 # Check if INSTALL_DRIVER_VERSION is set
 # In case it is not set we reach default switch condition and leave apt in abnormal state
-if [ -z "$INSTALL_DRIVER_VERSION" ]; then
+if [[ -z ${INSTALL_DRIVER_VERSION:-} && -n ${BASE_OS:-} && -r /usr/local/share/ovms-versions.mk ]]; then
+    INSTALL_DRIVER_VERSION=$(awk -v key="GPU_DRIVER_VERSION_${BASE_OS^^}" \
+        '$1 == key && $2 == "?=" { print $3; exit }' /usr/local/share/ovms-versions.mk)
+fi
+if [ -z "${INSTALL_DRIVER_VERSION:-}" ]; then
     echo "Error: INSTALL_DRIVER_VERSION cannot be empty."
     exit 1
 fi
