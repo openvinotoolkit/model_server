@@ -349,14 +349,18 @@ class OvmsMessages:
     MEDIAPIPE_CALCULATOR_FAILED_TO_LOAD_MODEL = "OpenVINOModelServerSessionCalculator failed to load the model"
     MEDIAPIPE_MESSAGE_CONTAINS_OV_GENAI_IMAGE_TAG = "Message contains restricted <ov_genai_image> tag"
     MEDIAPIPE_REQUEST_PROCESSING_FAILED = "Request processing failed, check its correctness"
-    MEDIAPIPE_URL_IMAGE_INVALID_ARGUMENT_FILESYSTEM_DISABLED = "Loading images from local filesystem is disabled"
+    MEDIAPIPE_LOADING_MEDIA_FROM_LOCAL_FILESYSTEM_DISABLED = "Loading media from local filesystem is disabled"
+    MEDIAPIPE_DOWNLOADED_IMAGE_EXCEEDS_SIZE_LIMIT = "Downloaded image exceeds the size limit"
+    MEDIAPIPE_FAILED_TO_DOWNLOAD_IMAGE_HTTP_STATUS = "Failed to download image from external URL: HTTP status {}."
+    MEDIAPIPE_FAILED_TO_DOWNLOAD_IMAGE_REDIRECTS_NOT_ALLOWED = \
+        ("Failed to download image from external URL because redirects are not allowed. "
+         "Set OVMS_MEDIA_URL_ALLOW_REDIRECTS=1 environment variable to allow redirects.")
     MEDIAPIPE_URL_IMAGE_PARSING_FAILED = "Image parsing failed"
     MEDIAPIPE_IMAGE_PARSING_FAILED = "Image file parsing failed"
     MEDIAPIPE_IMAGE_NOT_SUBPATH_OF_ALLOWED_LOCAL_MEDIA_PATH = \
         "Given filepath is not subpath of allowed_local_media_path"
     MEDIAPIPE_URL_DOES_NOT_MATCH_ALLOWED_DOMAIN = \
         "Given url does not match any allowed domain from allowed_media_domains"
-    MEDIAPIPE_LOADING_IMAGES_FROM_LOCAL_FILESYSTEM_DISABLED = "Loading images from local filesystem is disabled"
     MEDIAPIPE_IMAGE_FORMAT_DECODED_SIZE_CANNOT_BE_VERIFIED = "Image format decoded size cannot be verified"
     MEDIAPIPE_IMAGE_LOADING_FAILED = "Image loading failed"
 
@@ -411,9 +415,8 @@ class OvmsMessages:
         'Create new stream for another request.'
     )
 
-    FAILED_TO_PREPARE_JINJA_CHAT_TEMPLATE = "Failed to prepare Jinja chat template"
-    CHAT_TEMPLATE_NOT_COMPATIBLE_WITH_MINJA = "Chat template is not compatible with minja"
-    DISABLING_CHAT_COMPLETIONS = "Disabling /chat/completions endpoint for this model."
+    CHAT_REQUEST_UNAVAILABLE = "Chat requests are unavailable because the chat template could not be loaded."
+    CHAT_TEMPLATE_UNAVAILABLE = "Chat template is unavailable. Servable will not respond to /chat/completions endpoint."
     CHAT_TEMPLATE_NOT_LOADED = (
         "Warning: Chat template has not been loaded properly. Servable will not respond to /chat/completions endpoint"
     )
@@ -434,7 +437,7 @@ class OvmsMessages:
         "All requests: {}; Scheduled requests: {}; Cache type: static, cache usage: {}%"
     LLM_CACHE_USAGE = "Cache usage {}%;"
     LLM_CALCULATOR_CLOSE = "LLMCalculator [Node: LLMExecutor ] Close"
-    LLM_STREAM_GENERATION_CANCELLED = "graph wait until done CANCELLED"
+    LLM_STREAM_GENERATION_CANCELLED = "Graph {}: Done execution"
     LLM_UNARY_GENERATION_CANCELLED = "Mediapipe execution failed. MP status - CANCELLED"
     LLM_STREAM_GENERATION_DONE = "data: [DONE]"
     LLM_UNARY_GENERATION_DONE = "Complete unary response"
