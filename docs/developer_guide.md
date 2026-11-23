@@ -476,6 +476,8 @@ This includes the builder, package, and release-image stages. The default images
 
 ## Metrics
 
-For built-in and LLM metrics, and for custom metrics in C++ calculators, see the
-[metrics documentation](./metrics.md).
+For built-in and LLM metrics, see the [metrics documentation](./metrics.md).
 
+When adding a feature or implementing a custom calculator, you can register
+metrics tailored to your use case. They are exposed on the Prometheus-compatible
+`/metrics` endpoint. See the [custom metrics implementation guide](./custom_metrics.md).
