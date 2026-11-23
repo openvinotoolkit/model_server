@@ -110,9 +110,12 @@ The calculator supports the following `node_options` for tuning the pipeline con
 -    `optional CacheEvictionConfig cache_eviction_config` - KV cache eviction configuration. Disabled if not specified.
 -    `optional string reasoning_parser` - name of the parser to use for reasoning content extraction from model output before creating a response;
 -    `optional string tool_parser` - name of the parser to use for tool calls extraction from model output before creating a response;
--    `optional ChatTemplateEngine chat_template_engine` - template renderer: `JINJA` or `MINJA`. Defaults to Jinja when Python is available, otherwise Minja. Explicit Jinja fails initialization if Python or the template is unavailable;
+-    `optional ChatTemplateEngine chat_template_engine` - template renderer: `JINJA` or `MINJA`. Defaults to Jinja when Python is available, otherwise Minja. An explicitly selected engine must have a usable chat template; Jinja also requires Python;
 -    `optional bool enable_tool_guided_generation` - enable enforcing tool schema during generation. Requires setting response parser. [default = false];
 -    `optional SparseAttentionConfig sparse_attention_config` - Sparse attention configuration. Disabled if not specified.
+-    `optional VisionInputOptions input_vision` - visual input settings:
+      - `optional float video_fps` - requested sampling rate for an encoded video source supplied as a `video_url` string. Must be finite and greater than zero when set. When unset, frames are retained up to `video_max_frames`. Sampling uses MP4 timestamps.
+      - `optional uint32 video_max_frames` - maximum number of frames retained from one encoded video source or supplied in a frame array. Must be greater than zero [default = 32]. If the requested FPS would produce more frames than this limit, or a frame array exceeds it, the request is rejected. Encoded-video pixels must also fit the request-wide [`--max_video_decode_pixels`](../parameters.md#input-media-decode-protection) budget; exceeding it rejects the request rather than reducing the selected frame count.
 
 ### Caching settings
 The value of `cache_size` might have performance and stability implications. It is used for storing LLM model KV cache data. Adjust it based on your environment capabilities, model size and expected level of concurrency.
@@ -314,11 +317,34 @@ ovms --rest_port 8000 --model_path /model --model_name my-model --task text_gene
 ```
 
 Note that using `tools` might require a chat template other than the original. 
-We recommend using templates from the [vLLM repository](https://github.com/vllm-project/vllm/tree/main/examples) for `hermes3`, `llama3`, `phi4`, `mistral`, `devstral`, `gptoss`, and `qwen3coder` models (if available). Save the selected template as `chat_template.jinja` in the model directory and it will be used instead of the default one. If a template is not available for your model, please refer to the model's documentation or use the default template provided by the model server.
+We recommend using templates from the [vLLM repository](https://github.com/vllm-project/vllm/tree/main/examples) for `hermes3`, `llama3`, `phi4`, `mistral`, `devstral`, `gptoss`, and `qwen3coder` models (if available). Save the selected template as `chat_template.jinja` in the model directory and it will take precedence over GenAI's resolved template. If no chat template is available, provide one or use `/completions`, which does not require a chat template.
 
 When `tool_parser` is used, it's possible to leverage tool guided generation with `enable_tool_guided_generation` option. That setting pushes the model to generate tool calls that matches the schemas specified in the `tools`.
 
 > **Note**: When `enable_tool_guided_generation` is set, but model server fails to load any tool schema from the request, the request will still be processed, but tool guided generation will be disabled.
+
+Tool-guided generation is supported by the `hermes3` (including Qwen3), `llama3`,
+`phi4`, and `devstral` tool parsers. For these formats, `tool_choice: "required"`
+activates guidance regardless of `enable_tool_guided_generation` and requires at
+least one call. A named function choice also activates guidance regardless of
+the flag and requires exactly one call to that function. If `parameters` is
+omitted, the function is treated as parameterless and accepts an empty argument
+object. Explicit parameter schemas are left unchanged.
+
+Tool-guided generation and `response_format` are not supported together. If tool
+guidance activates, its grammar takes precedence over `response_format`.
+Structured-output validation failures retain the existing fallback to
+unconstrained generation.
+
+With the `qwen3` reasoning parser, thinking and `response_format` can be used in
+one request without enabling tool guidance. The model can produce free-form
+thinking followed by a final answer constrained by the requested format;
+reasoning is returned separately from final content. A thinking opener already
+present in the chat template's generation prompt is not generated a second time.
+Existing `chat_template_kwargs`, including `enable_thinking: false`, remain
+effective. Channel-based reasoning formats such as Harmony are not covered by
+this response-format envelope. A request that reaches its token limit during
+thinking or the final answer can still return incomplete output.
 
 ### OpenVINO runtime settings
 
@@ -402,9 +428,9 @@ When sending a request to `/completions` endpoint, model server adds `bos_token_
 When sending a request to `/chat/completions` endpoint, model server will try to apply chat template to request `messages` contents.
 
 Loading chat template proceeds as follows:
-1. If `chat_template.jinja` is present, try to load template from it.
-2. If there is no `chat_template.jinja` and `tokenizer_config.json` exists, try to read template from its `chat_template` field. If it's not present, use default template.
-3. If `tokenizer_config.json` exists try to read `eos_token` and `bos_token` fields. If they are not present, both values are set to empty string.
+1. Try to read `chat_template.jinja`. If it is readable and non-empty, use it for either Jinja or Minja.
+2. If it is missing, empty, or cannot be read, use the chat template already resolved by GenAI from the tokenizer/model files, if one is available.
+3. Independently, GenAI reads `eos_token` and `bos_token` from `tokenizer_config.json`; if absent, both values are set to empty strings.
 
 If both `chat_template.jinja` file and `chat_template` field from `tokenizer_config.json` are successfully loaded, `chat_template.jinja` takes precedence over `tokenizer_config.json`.
 
@@ -412,7 +438,7 @@ After loading the template, the server analyzes its source to automatically dete
 
 Template is not applied for calls to `/completions`, so it doesn't have to exist, if you plan to work only with `/completions`.
 
-Errors during configuration files processing (access issue, corrupted file, incorrect content) result in servable loading failure.
+The server logs the selected template source. Once a source is selected, Jinja preparation or Minja compatibility probing determines whether chat requests can use it; failure at this stage does not trigger another source fallback. If no usable template remains, the server records whether it is missing, failed to load, or incompatible with Minja. With an implicit engine, model initialization continues in completion-only mode; chat requests fail while `/completions` remains available. An explicitly configured `chat_template_engine` requires a compatible template, otherwise model initialization fails.
 
 When working with tools, `/chat/completions` API accepts `tool_choice` parameter which gives additional control over model behavior related to tool calling.
 `tool_choice` accepts three special string values:

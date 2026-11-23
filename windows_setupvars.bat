@@ -15,18 +15,95 @@
 ::
 @echo on
 setlocal EnableExtensions EnableDelayedExpansion
-:: Bazel / Python startup can inherit stale PYTHONHOME values from a different
-:: service install; clear them before configuring the expected runtime.
-if defined PYTHONHOME set "PYTHONHOME="
+set "ROOT=%~dp0"
+for %%I in ("%ROOT%.") do set "ROOT=%%~fI"
+set "LOCAL_TOOLS_DIR=%ROOT%\.windows_make_tools"
 set "SETUP_EXIT_CODE=0"
 :: Load chosen dependency versions from versions.mk
 for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
     if "%%A"=="OPENCV_VERSION" if "!opencv_version!"=="" set "opencv_version=%%B"
     if "%%A"=="CURL_VERSION" if "!curl_version!"=="" set "curl_version=%%B"
 )
+
+if not exist "%LOCAL_TOOLS_DIR%" mkdir "%LOCAL_TOOLS_DIR%"
+if exist "%ROOT%\.venv\pyvenv.cfg" (
+    findstr /i /c:"Python314" "%ROOT%\.venv\pyvenv.cfg" >nul
+    if errorlevel 1 rmdir /s /q "%ROOT%\.venv"
+)
+if exist "%ROOT%\.venv-style\pyvenv.cfg" (
+    findstr /i /c:"Python314" "%ROOT%\.venv-style\pyvenv.cfg" >nul
+    if errorlevel 1 rmdir /s /q "%ROOT%\.venv-style"
+)
+if not exist "%ROOT%\.venv\Scripts\python.exe" (
+    echo [INFO] Creating local .venv for repo Python dependencies...
+    "C:\opt\Python314\python.exe" -m venv "%ROOT%\.venv"
+)
+if not exist "%ROOT%\.venv-style\Scripts\python.exe" (
+    echo [INFO] Creating local .venv-style for style tools...
+    "C:\opt\Python314\python.exe" -m venv "%ROOT%\.venv-style"
+)
+if not exist "%ROOT%\.venv-style\Scripts\clang-format.exe" (
+    echo [INFO] Installing style dependencies into .venv-style...
+    "%ROOT%\.venv-style\Scripts\python.exe" -m pip install --disable-pip-version-check --no-input -r "%ROOT%\ci\style_requirements.txt"
+)
+
+if exist "%LOCAL_TOOLS_DIR%\python3" del /f /q "%LOCAL_TOOLS_DIR%\python3"
+if exist "%LOCAL_TOOLS_DIR%\lscpu" del /f /q "%LOCAL_TOOLS_DIR%\lscpu"
+if exist "%LOCAL_TOOLS_DIR%\git" del /f /q "%LOCAL_TOOLS_DIR%\git"
+> "%LOCAL_TOOLS_DIR%\python3.bat" echo @echo off
+>> "%LOCAL_TOOLS_DIR%\python3.bat" echo if exist "C:\opt\Python314\python.exe" (
+>> "%LOCAL_TOOLS_DIR%\python3.bat" echo   "C:\opt\Python314\python.exe" %%*
+>> "%LOCAL_TOOLS_DIR%\python3.bat" echo   exit /b %%ERRORLEVEL%%
+>> "%LOCAL_TOOLS_DIR%\python3.bat" echo )
+>> "%LOCAL_TOOLS_DIR%\python3.bat" echo if where python ^>NUL 2^>NUL (
+>> "%LOCAL_TOOLS_DIR%\python3.bat" echo   python %%*
+>> "%LOCAL_TOOLS_DIR%\python3.bat" echo   exit /b %%ERRORLEVEL%%
+>> "%LOCAL_TOOLS_DIR%\python3.bat" echo )
+>> "%LOCAL_TOOLS_DIR%\python3.bat" echo echo [ERROR] python3 shim could not find a Python 3 interpreter. 1^>^&2
+>> "%LOCAL_TOOLS_DIR%\python3.bat" echo exit /b 127
+> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo @echo off
+>> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo if exist "C:\opt\msys64\usr\bin\lscpu.exe" (
+>> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo   "C:\opt\msys64\usr\bin\lscpu.exe" %%*
+>> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo   exit /b %%ERRORLEVEL%%
+>> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo )
+>> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo if where lscpu ^>NUL 2^>NUL (
+>> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo   lscpu %%*
+>> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo   exit /b %%ERRORLEVEL%%
+>> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo )
+>> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo set "core_count=%NUMBER_OF_PROCESSORS%"
+>> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo if not defined core_count set "core_count=1"
+>> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo echo Core(s) per socket: %%core_count%%
+>> "%LOCAL_TOOLS_DIR%\lscpu.bat" echo echo Socket(s): 1
+> "%LOCAL_TOOLS_DIR%\git.bat" echo @echo off
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo if exist "C:\Program Files\Git\bin\git.exe" (
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo   "C:\Program Files\Git\bin\git.exe" %%*
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo   exit /b %%ERRORLEVEL%%
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo )
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo if exist "C:\Program Files\Git\cmd\git.exe" (
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo   "C:\Program Files\Git\cmd\git.exe" %%*
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo   exit /b %%ERRORLEVEL%%
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo )
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo for /f "delims=" %%%%G in ('where.exe git.exe 2^>NUL') do (
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo   "%%%%G" %%*
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo   exit /b %%ERRORLEVEL%%
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo )
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo if where git ^>NUL 2^>NUL (
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo   git %%*
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo   exit /b %%ERRORLEVEL%%
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo )
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo echo [ERROR] Git for Windows was not found in the expected installation paths. 1^>^&2
+>> "%LOCAL_TOOLS_DIR%\git.bat" echo exit /b 127
+
 :: Setting up default OVMS compilation environment variables
-set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-!curl_version!-win64-mingw\bin;%PATH%;"
-set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
+set "CURL_PATH_WINDOWS=C:\opt\curl-!curl_version!-win64-mingw\bin"
+set "CURL_PATH=/c/opt/curl-!curl_version!-win64-mingw/bin"
+set "CURL_BIN=%CURL_PATH%/curl.exe"
+set "setPath=C:\opt;C:\opt\Python314\;C:\opt\Python314\Scripts\;C:\opt\msys64\usr\bin\;!CURL_PATH_WINDOWS!;%ROOT%\.venv-style\Scripts;%LOCAL_TOOLS_DIR%;%PATH%;"
+if exist "%cd%\bazel-bin\src\python\binding" (
+    set "setPythonPath=%cd%\bazel-bin\src\python\binding"
+) else (
+    set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
+)
 :: Bazel normally exports TEST_SRCDIR/TEST_WORKSPACE when a test binary is launched under Bazel.
 :: For direct Windows invocation, seed them only if they are not already present.
 if not defined TEST_SRCDIR set "TEST_SRCDIR=%cd%\bazel-bin"
@@ -34,8 +111,8 @@ if not defined TEST_WORKSPACE set "TEST_WORKSPACE=."
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Bazel compilation settings
-set VS_2022_BT="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
-IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :msvc_error
+set "VS_2022_BT=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
+IF /I EXIST "%VS_2022_BT%" goto :msvc_bt ELSE goto :msvc_error
 
 :msvc_error
 echo [ERROR] Required MSVC compiler not installed
@@ -43,15 +120,14 @@ set "SETUP_EXIT_CODE=1"
 goto :exit_build_error
 :msvc_bt
 echo [INFO] Using MSVC %VS_2022_BT%
-set BAZEL_VS=%VS_2022_BT%
+set "BAZEL_VS=%VS_2022_BT%"
 
 :: Bazel compilation settings end
-set "BAZEL_VC=%BAZEL_VS:"=%\VC"
+set "BAZEL_VC=%BAZEL_VS%\VC"
 set "BAZEL_VC_FULL_VERSION=14.44.35207"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
 set "PATH=%setPath%"
-set "PYTHONHOME=C:\opt\Python312"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Set paths with libs for execution - affects PATH
@@ -69,7 +145,8 @@ if !errorlevel! neq 0 (
     set "SETUP_EXIT_CODE=!errorlevel!"
     goto :exit_build_error
 )
-set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
+set "PYTHONHOME=C:\opt\Python314"
+set "PYTHONPATH=C:\opt\Python314;%setPythonPath%;%cd%\bazel-bin\src\python;%cd%\bazel-bin\src"
 
 :exit_build
 echo [INFO] Setup finished
@@ -80,4 +157,6 @@ echo [ERROR] Setup finished with error
 if "!SETUP_EXIT_CODE!"=="0" set "SETUP_EXIT_CODE=!errorlevel!"
 
 :propagate_env
-endlocal & set "PATH=%PATH%" & set "PYTHONPATH=%PYTHONPATH%" & set "PYTHONHOME=%PYTHONHOME%" & set "TEST_SRCDIR=%TEST_SRCDIR%" & set "TEST_WORKSPACE=%TEST_WORKSPACE%" & set "BAZEL_VS=%BAZEL_VS%" & set "BAZEL_VC=%BAZEL_VC%" & set "BAZEL_SH=%BAZEL_SH%" & set "BAZEL_VC_FULL_VERSION=%BAZEL_VC_FULL_VERSION%" & exit /b %SETUP_EXIT_CODE%
+:: Export repo-local Python runtime variables so inherited machine-level Python312
+:: configuration cannot break Python314 commands in the caller shell.
+endlocal & set "PATH=%PATH%" & set "TEST_SRCDIR=%TEST_SRCDIR%" & set "TEST_WORKSPACE=%TEST_WORKSPACE%" & set "BAZEL_VS=%BAZEL_VS%" & set "BAZEL_VC=%BAZEL_VC%" & set "BAZEL_SH=%BAZEL_SH%" & set "BAZEL_VC_FULL_VERSION=%BAZEL_VC_FULL_VERSION%" & set "CURL_PATH=%CURL_PATH%" & set "CURL_PATH_WINDOWS=%CURL_PATH_WINDOWS%" & set "CURL_BIN=%CURL_BIN%" & set "PYTHONHOME=C:\opt\Python314" & set "PYTHONPATH=" & set "HTTP_PROXY=%HTTP_PROXY%" & set "HTTPS_PROXY=%HTTPS_PROXY%" & set "NO_PROXY=%NO_PROXY%" & set "http_proxy=%http_proxy%" & set "https_proxy=%https_proxy%" & set "no_proxy=%no_proxy%" & exit /b %SETUP_EXIT_CODE%

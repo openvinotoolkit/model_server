@@ -21,6 +21,8 @@
 #include "src/stringutils.hpp"
 #include "src/timer.hpp"
 #include "src/logging.hpp"
+#include <cmath>
+#include <cstring>
 #include <cstdlib>
 #include <limits>
 #include <stdexcept>
@@ -32,9 +34,52 @@
 
 namespace ovms::audio_utils {
 
+namespace {
+
+int16_t convertFloatSampleToPcm16(float sample) {
+    if (std::isnan(sample)) {
+        return 0;
+    }
+    if (sample > 1.0f) {
+        sample = 1.0f;
+    }
+    if (sample < -1.0f) {
+        sample = -1.0f;
+    }
+    return static_cast<int16_t>(sample * 32767.0f);
+}
+
+}  // namespace
+
 static void validateAudioFileSizeAgainstMaxValue(size_t fileSize);
 
-bool isWavBuffer(const std::string buf) {
+std::vector<int16_t> convertWaveformToPcm16(size_t speechSize, const float* waveformPtr) {
+    if (waveformPtr == nullptr && speechSize > 0) {
+        throw std::runtime_error("Audio waveform pointer is null");
+    }
+    constexpr size_t bytesPerSample = sizeof(int16_t);
+    if (speechSize > std::numeric_limits<size_t>::max() / bytesPerSample) {
+        throw std::runtime_error("Synthesized audio buffer size overflows maximum representable value");
+    }
+    validateAudioFileSizeAgainstMaxValue(speechSize * bytesPerSample);
+    std::vector<int16_t> pcm16(speechSize);
+    for (size_t i = 0; i < speechSize; ++i) {
+        pcm16[i] = convertFloatSampleToPcm16(waveformPtr[i]);
+    }
+    return pcm16;
+}
+
+std::optional<TextToSpeechResponseFormat> tryParseTextToSpeechResponseFormat(std::string_view format) {
+    if (format == "wav") {
+        return TextToSpeechResponseFormat::WAV;
+    }
+    if (format == "pcm") {
+        return TextToSpeechResponseFormat::PCM;
+    }
+    return std::nullopt;
+}
+
+bool isWavBuffer(const std::string_view buf) {
     // RIFF ref: https://en.wikipedia.org/wiki/Resource_Interchange_File_Format
     // WAV ref: https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html
     SPDLOG_TRACE("isWavBuffer: buf {}", buf.substr(0, 12));
@@ -42,7 +87,8 @@ bool isWavBuffer(const std::string buf) {
         return false;
     }
 
-    uint32_t chunk_size = *reinterpret_cast<const uint32_t*>(buf.data() + 4);
+    uint32_t chunk_size;
+    std::memcpy(&chunk_size, buf.data() + 4, sizeof(chunk_size));
     SPDLOG_TRACE("isWavBuffer: chunk_size {}", chunk_size);
     if (chunk_size + 8 != buf.size()) {
         return false;
@@ -242,10 +288,13 @@ void prepareAudioOutput(void** ppData, size_t& pDataSize, uint32_t sampleRate, u
     if (waveformPtr == nullptr && speechSize > 0) {
         throw std::runtime_error("Audio waveform pointer is null");
     }
+    if (bitsPerSample != 16 && bitsPerSample != 32) {
+        throw std::runtime_error("Unsupported WAV bits per sample");
+    }
     // Guard against oversized synthesized audio buffers — mirrors the decode paths
     // (readWav / readMp3) which both call validateAudioFileSizeAgainstMaxValue.
     const size_t bytesPerSample = bitsPerSample / 8;
-    if (bytesPerSample == 0 || speechSize > std::numeric_limits<size_t>::max() / bytesPerSample) {
+    if (speechSize > std::numeric_limits<size_t>::max() / bytesPerSample) {
         throw std::runtime_error("Synthesized audio buffer size overflows maximum representable value");
     }
     validateAudioFileSizeAgainstMaxValue(speechSize * bytesPerSample);
@@ -257,22 +306,27 @@ void prepareAudioOutput(void** ppData, size_t& pDataSize, uint32_t sampleRate, u
     timer.start(OUTPUT_PREPARATION);
     drwav_data_format format;
     format.container = drwav_container_riff;
-    format.format = DR_WAVE_FORMAT_IEEE_FLOAT;
+    format.format = bitsPerSample == 16 ? DR_WAVE_FORMAT_PCM : DR_WAVE_FORMAT_IEEE_FLOAT;
     format.channels = 1;
     format.sampleRate = sampleRate;
     format.bitsPerSample = bitsPerSample;
+    std::vector<int16_t> pcm16;
+    const void* samples = waveformPtr;
+    if (bitsPerSample == 16) {
+        pcm16 = convertWaveformToPcm16(speechSize, waveformPtr);
+        samples = pcm16.data();
+    }
     drwav wav;
-    size_t totalSamples = speechSize * format.channels;
 
     auto status = drwav_init_memory_write(&wav, ppData, &pDataSize, &format, nullptr);
     if (status == DRWAV_FALSE) {
         throw std::runtime_error("Failed to initialize WAV memory writer");
     }
-    drwav_uint64 framesWritten = drwav_write_pcm_frames(&wav, totalSamples, waveformPtr);
+    drwav_uint64 framesWritten = drwav_write_pcm_frames(&wav, speechSize, samples);
     // Finalize the WAV container before any cleanup path; drwav_uninit is safe
     // to call even when fewer frames than expected were written.
     drwav_uninit(&wav);
-    if (framesWritten != totalSamples) {
+    if (framesWritten != speechSize) {
         drwav_free(*ppData, nullptr);
         *ppData = nullptr;
         pDataSize = 0;

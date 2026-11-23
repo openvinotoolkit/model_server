@@ -130,10 +130,6 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, const
                 "\"__verbose\" object with additional debug information.",
                 cxxopts::value<bool>()->default_value("false"),
                 "VERBOSE_RESPONSE")
-            ("disable_input_count_validation",
-                "When enabled, OVMS allows inference requests to include additional, unrecognized inputs beyond the model/pipeline signature (extra inputs are ignored). Required inputs must still be present, and shape/precision validation is still performed for recognized inputs. Default: false (extra inputs cause the request to be rejected).",
-                cxxopts::value<bool>()->default_value("false"),
-                "DISABLE_INPUT_COUNT_VALIDATION")
 #ifdef MTR_ENABLED
             ("trace_path",
                 "Path to the trace file",
@@ -191,6 +187,14 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, const
                 "which is controlled separately by the OPENCV_IO_MAX_IMAGE_PIXELS environment variable read at startup.",
                 cxxopts::value<uint64_t>()->default_value(std::to_string(OVMS_DEFAULT_MAX_IMAGE_DECODE_PIXELS)),
                 "MAX_IMAGE_DECODE_PIXELS")
+            ("max_encoded_video_file_size_bytes",
+                "Maximum size in bytes of an encoded H.264/AVC MP4 source accepted for decoding, including downloaded remote sources.",
+                cxxopts::value<uint64_t>()->default_value(std::to_string(OVMS_DEFAULT_MAX_ENCODED_VIDEO_FILE_SIZE_BYTES)),
+                "MAX_ENCODED_VIDEO_FILE_SIZE_BYTES")
+            ("max_video_decode_pixels",
+                "Maximum total number of decoded video pixels (the sum of width x height across encoded-video frames in a request).",
+                cxxopts::value<uint64_t>()->default_value(std::to_string(OVMS_DEFAULT_MAX_VIDEO_DECODE_PIXELS)),
+                "MAX_VIDEO_DECODE_PIXELS")
             ("allow_unestimatable_image_formats",
                 "Flag allowing input images whose decoded size cannot be estimated (formats OVMS cannot inspect the header of) "
                 "to be decoded anyway. Disabled by default, so such images are rejected. Enable only if you must accept formats "
@@ -321,6 +325,10 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, const
                 "Resets model precision.",
                 cxxopts::value<std::string>(),
                 "PRECISION")
+            ("disable_input_count_validation",
+                "When enabled, inference requests may include additional, unrecognized inputs beyond the model signature (extra inputs are ignored). Required inputs must still be present, and shape/precision validation is still performed for recognized inputs. Default: false (extra inputs cause the request to be rejected).",
+                cxxopts::value<bool>(),
+                "DISABLE_INPUT_COUNT_VALIDATION")
             ("model_version_policy",
                 "Model version policy",
                 cxxopts::value<std::string>(),
@@ -413,9 +421,14 @@ std::variant<bool, std::pair<int, std::string>> CLIParser::parse(int argc, const
                 }
 
                 if (shouldInferTask) {
-                    inferredTaskParameter = determineDefaultTaskParameter(modelPath, sourceModel, modelRepositoryPath);
+                    std::string taskInferenceError;
+                    inferredTaskParameter = determineDefaultTaskParameter(modelPath, sourceModel, modelRepositoryPath, &taskInferenceError);
                     if (!result->count("task") && !inferredTaskParameter.has_value()) {
-                        ss << "error parsing options - Could not infer model task - specify --task value explicitly" << std::endl;
+                        ss << "error parsing options - Could not infer model task - specify --task value explicitly";
+                        if (!taskInferenceError.empty()) {
+                            ss << ". " << taskInferenceError;
+                        }
+                        ss << std::endl;
                         return std::make_pair(OVMS_EX_USAGE, ss.str());
                     }
                 }
@@ -612,8 +625,6 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
         serverSettings.logPath = result->operator[]("log_path").as<std::string>();
     if (result->count("verbose_response"))
         serverSettings.verboseResponse = result->operator[]("verbose_response").as<bool>();
-    if (result->count("disable_input_count_validation"))
-        serverSettings.disableInputCountValidation = result->operator[]("disable_input_count_validation").as<bool>();
 
     if (result->count("grpc_channel_arguments"))
         serverSettings.grpcChannelArguments = result->operator[]("grpc_channel_arguments").as<std::string>();
@@ -644,6 +655,8 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
         serverSettings.grpcMemoryQuota = result->operator[]("grpc_memory_quota").as<size_t>();
 
     serverSettings.maxImageDecodePixels = result->operator[]("max_image_decode_pixels").as<uint64_t>();
+    serverSettings.maxEncodedVideoFileSizeBytes = result->operator[]("max_encoded_video_file_size_bytes").as<uint64_t>();
+    serverSettings.maxVideoDecodePixels = result->operator[]("max_video_decode_pixels").as<uint64_t>();
     serverSettings.allowUnestimatableImageFormats = result->operator[]("allow_unestimatable_image_formats").as<bool>();
     if (result->count("json_max_complexity"))
         serverSettings.jsonMaxComplexity = result->operator[]("json_max_complexity").as<size_t>();
@@ -740,6 +753,11 @@ void CLIParser::prepareModel(ModelsSettingsImpl& modelsSettings, HFSettingsImpl&
         }
         modelsSettings.precision = result->operator[]("precision").as<std::string>();
         modelsSettings.userSetSingleModelArguments.push_back("precision");
+    }
+
+    if (result->count("disable_input_count_validation")) {
+        modelsSettings.disableInputCountValidation = result->operator[]("disable_input_count_validation").as<bool>();
+        modelsSettings.userSetSingleModelArguments.push_back("disable_input_count_validation");
     }
 
     if (result->count("model_version_policy")) {

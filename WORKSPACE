@@ -224,6 +224,7 @@ http_archive(
         "@ovms//third_party/mediapipe:ovms_calculator_graph_visibility.diff",
         "@ovms//third_party/mediapipe:ovms_constinit_definition.diff",
         "@ovms//third_party/mediapipe:ovms_msvc_api3_calculator_context.diff",
+        "@ovms//third_party/mediapipe:ovms_plugin_type_identity.diff",
     ],
     patch_args = ["-p1"],
     patch_tool = "patch",
@@ -334,7 +335,30 @@ new_local_repository(
 new_local_repository(
     name = "linux_opencv",
     build_file = "@//third_party/opencv:BUILD",
-    path = "/opt/opencv/",
+    path = "/opt/opencv/"
+)
+
+http_archive(
+    name = "minimp4",
+    build_file = "@//third_party:minimp4.BUILD",
+    patches = [
+        "@//third_party:minimp4_avcc_bounds.patch",
+        "@//third_party:minimp4_metadata_budget.patch",
+        "@//third_party:minimp4_nal_length.patch",
+        "@//third_party:minimp4_realloc.patch",
+    ],
+    patch_args = ["-p1", "--binary"],
+    sha256 = "1049558a37f4dca34f5a5ff76b04c0d14705e3e66974afc650b9b76d19ccfd08",
+    strip_prefix = "minimp4-2a3014a7753cfcba4442adeb469431967238fe6a",
+    url = "https://github.com/lieff/minimp4/archive/2a3014a7753cfcba4442adeb469431967238fe6a.tar.gz",
+)
+
+http_archive(
+    name = "openh264",
+    build_file = "@//third_party:openh264.BUILD",
+    sha256 = "2238d3e5956ef0d288dd43842a0220015cf72c4327d98684e8bc47ffa7cf5308",
+    strip_prefix = "openh264-1bca62311e447fd9c39fc93de2c4b96cd5ce971c",
+    url = "https://github.com/cisco/openh264/archive/1bca62311e447fd9c39fc93de2c4b96cd5ce971c.tar.gz",
 )
 
 new_local_repository(
@@ -400,7 +424,7 @@ http_archive(
   urls = ["https://github.com/pybind/pybind11/archive/v2.11.1.tar.gz"],
 )
 load("@pybind11_bazel//:python_configure.bzl", "python_configure")
-python_configure(name = "local_config_python")
+python_configure(name = "local_config_python", python_version = "3")
 bind(
     name = "python_headers",
     actual = "@local_config_python//:python_headers",
@@ -603,6 +627,9 @@ http_archive(
     url = "https://github.com/nothings/stb/archive/5c205738c191bcb0abc65c4febfa9bd25ff35234.tar.gz",
     sha256 = "cfeab9f800961882d6d22ddf36e965523b33002f4f937de08321304c9ba72af3",
     strip_prefix = "stb-5c205738c191bcb0abc65c4febfa9bd25ff35234",
+    patches = ["@ovms//third_party/stb:stb_image_convert_format16_overflow.patch"],
+    patch_args = ["-p1"],
+    patch_tool = "patch",
     build_file_content = """
 cc_library(
     name = "image",

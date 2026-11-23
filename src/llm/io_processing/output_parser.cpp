@@ -14,9 +14,6 @@
 // limitations under the License.
 //*****************************************************************************
 
-#include <algorithm>
-#include <unordered_set>
-
 #include "src/logging.hpp"
 #include "src/stringutils.hpp"
 #include "utils.hpp"
@@ -31,6 +28,7 @@
 #include "qwen3/reasoning_parser.hpp"
 #include "qwen3coder/qwen3coder_tool_parser.hpp"
 #include "devstral/tool_parser.hpp"
+#include "devstral/devstral_reasoning_parser.hpp"
 #include "gemma4/gemma4_reasoning_parser.hpp"
 #include "gptoss/reasoning_parser.hpp"
 #include "lfm2/lfm2_tool_parser.hpp"
@@ -42,6 +40,7 @@
 #include "default_content_parser.hpp"
 #include "minicpm5/minicpm5_tool_parser.hpp"
 #include "minicpm5/minicpm5_reasoning_parser.hpp"
+#include "qwen3asr/content_parser.hpp"
 
 namespace ovms {
 OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const std::string& tag) const {
@@ -49,7 +48,7 @@ OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const s
         return TagLookupStatus::NOT_FOUND;
     }
     if (tag.size() > buffer.size()) {
-        /* 
+        /*
         If the tag is longer than the buffer, we check if the buffer and tag overlap (either partially or fully for exact match)
         They do overlap, we assume that tag may appear in the future, so we return FOUND_INCOMPLETE
         otherwise we return NOT_FOUND
@@ -60,7 +59,7 @@ OutputParser::TagLookupStatus OutputParser::StreamOutputCache::lookupTag(const s
             return TagLookupStatus::NOT_FOUND;
         }
     } else if (tag.size() < buffer.size()) {
-        /* 
+        /*
         If the tag is shorter than the buffer, we check:
            a) if the tag is a substring of the buffer (tag is fully matched)
            b) if the buffer and tag overlap (part of the tag is matched)
@@ -186,7 +185,8 @@ std::optional<Delta> OutputParser::parseReasoningChunk(const std::vector<int64_t
     return result;
 }
 
-OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName, const ToolsSchemas_t& toolNameSchemaMap) :
+OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName,
+    const ToolsSchemas_t& toolNameSchemaMap, const std::string& contentParserName) :
     tokenizer(tokenizer) {
     if (toolParserName == "llama3") {
         toolParser = std::make_unique<Llama3ToolParser>(tokenizer);
@@ -227,6 +227,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         reasoningParser = std::make_unique<Lfm25ReasoningParser>(tokenizer);
     } else if (reasoningParserName == "onyx") {
         reasoningParser = std::make_unique<OnyxReasoningParser>(tokenizer);
+    } else if (reasoningParserName == "devstral") {
+        reasoningParser = std::make_unique<DevstralReasoningParser>(tokenizer);
     } else if (!reasoningParserName.empty()) {
         throw std::runtime_error("Unsupported reasoning parser: \"" + reasoningParserName +
                                  "\". Supported reasoning parsers are: " + getSupportedReasoningParserNamesAsString());
@@ -237,7 +239,9 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
     // minicpm5's <s>/<|im_end|> must be visible before parser-owned phases begin). For all other
     // parser combinations the content phase decodes with skip_special_tokens=true (the default,
     // lower noise). Each parser that requires this sets defaultDecodingWithSpecialTokens in its config.
-    if (toolParserName == "onyx" || reasoningParserName == "onyx")
+    if (contentParserName == "qwen3asr")
+        contentParser = std::make_unique<Qwen3AsrContentParser>(tokenizer);
+    else if (toolParserName == "onyx" || reasoningParserName == "onyx")
         contentParser = std::make_unique<OnyxContentParser>(tokenizer);
     else if (toolParserName == "gptoss" || reasoningParserName == "gptoss")
         contentParser = std::make_unique<GptOssContentParser>(tokenizer);
@@ -249,6 +253,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         contentParser = std::make_unique<DefaultContentParser>(tokenizer, std::vector<std::string>{"<|im_end|>"});
     else if (toolParserName == "minicpm5")
         contentParser = std::make_unique<DefaultContentParser>(tokenizer, std::vector<std::string>{"<s>", "<|im_end|>"});
+    else if (!contentParserName.empty())
+        throw std::runtime_error("Unsupported content parser: \"" + contentParserName + "\"");
     else
         contentParser = std::make_unique<DefaultContentParser>(tokenizer);
 
@@ -345,19 +351,6 @@ void OutputParser::setImplicitReasoningStart(bool value) {
     if (processingPhase == UNKNOWN || processingPhase == REASONING) {
         processingPhase = value ? REASONING : UNKNOWN;
     }
-}
-
-void OutputParser::detectAndSetImplicitReasoningStart(const std::string& renderedPrompt) {
-    if (!reasoningParser) {
-        return;
-    }
-    std::string trimmed = renderedPrompt;
-    rtrim(trimmed);
-    const auto& startTags = reasoningParser->getParsingConfig().startTags;
-    bool detected = std::any_of(startTags.begin(), startTags.end(),
-        [&](const std::string& tag) { return !tag.empty() && endsWith(trimmed, tag); });
-    setImplicitReasoningStart(detected);
-    return;
 }
 
 std::optional<Delta> OutputParser::parseChunk(const std::string& chunkResponse, const std::vector<int64_t>& tokens, const bool toolsAvailable, ov::genai::GenerationFinishReason finishReason) {

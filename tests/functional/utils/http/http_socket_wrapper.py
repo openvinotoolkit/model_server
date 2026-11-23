@@ -29,7 +29,9 @@ class HttpSocketWrapper:
         self.host = host
         self.port = port
 
-    def send(self, method, path, body='', headers={}):
+    def send(self, method, path, body='', headers=None):
+        if headers is None:
+            headers = {}
         default_headers = {"Host": f"{self.host}:{self.port}",
                            "Content-Length": str(len(body)),
                            "Connection": 'close'}

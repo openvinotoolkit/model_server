@@ -198,6 +198,20 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
         oss << R"(
             cache_interval_multiplier: )" << graphSettings.cacheIntervalMultiplier.value() << R"(,)";
     }
+    if (graphSettings.inputVideoFps.has_value() || graphSettings.inputVideoMaxFrames.has_value()) {
+        oss << R"(
+            input_vision: {)";
+        if (graphSettings.inputVideoFps.has_value()) {
+            oss << R"(
+                video_fps: )" << graphSettings.inputVideoFps.value() << R"(,)";
+        }
+        if (graphSettings.inputVideoMaxFrames.has_value()) {
+            oss << R"(
+                video_max_frames: )" << graphSettings.inputVideoMaxFrames.value() << R"(,)";
+        }
+        oss << R"(
+            },)";
+    }
     if (graphSettings.dynamicSplitFuse != "true") {
         oss << R"(
             dynamic_split_fuse: false,)";

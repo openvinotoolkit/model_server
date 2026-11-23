@@ -46,8 +46,8 @@
 #include "graphqueue.hpp"
 
 namespace ovms {
-class MetricConfig;
-class MetricRegistry;
+class MetricProvider;
+class GraphMetadata;
 class ServableNameChecker;
 class MediapipeGraphExecutor;
 class Status;
@@ -58,8 +58,7 @@ public:
     virtual ~MediapipeGraphDefinition();
     MediapipeGraphDefinition(const std::string name,
         const MediapipeGraphConfig& config = MGC,
-        MetricRegistry* registry = nullptr,
-        const MetricConfig* metricConfig = nullptr,
+        const MetricProvider* metricsProvider = nullptr,
         PythonBackend* pythonBackend = nullptr,
         bool lazyLoad = false);
 
@@ -68,6 +67,7 @@ public:
     }
     const std::vector<std::string>& getLoraAliases() const { return loraAliases; }
     bool shouldHideBaseModelInRouting() const { return hideBaseModelInRouting; }
+    std::shared_ptr<const GraphMetadata> getMetadata() const override;
 
     const PipelineDefinitionStateCode getStateCode() const { return status.getStateCode(); }
     bool isAvailable() const override { return status.isAvailable(); }
@@ -156,6 +156,7 @@ private:
     StatusCode notLoadedYetCode() const override;
     StatusCode notLoadedAnymoreCode() const override;
     void unloadComponentsAfterPendingExecutorsAreCreated();
+    Status doReload(const ServableNameChecker& checker, const MediapipeGraphConfig& config, bool clearMetadataOnFailure);
 
     tensor_map_t inputsInfo;
     tensor_map_t outputsInfo;
@@ -164,6 +165,12 @@ private:
     std::vector<std::string> outputNames;
     std::vector<std::string> inputSidePacketNames;
 
+    // Immutable snapshot published by initializeNodes(). Has its own mutex because metadataMtx is held
+    // for the whole validation, which would make readers wait for a reload to finish.
+    mutable std::mutex metadataSnapshotMtx;
+    std::shared_ptr<const GraphMetadata> metadata;
+    void clearMetadata();
+
     std::vector<std::string> loraAliases;
     // When using LoRA adapters with STATIC/FUSE Adapter Config mode, lora weights are always active
     // and since that's true we want to expose only lora aliases/composite aliases in routing, and hide base model.
@@ -171,6 +178,8 @@ private:
 
     PythonBackend* pythonBackend;
 
+    // The provider must outlive the graph definition.
+    const MetricProvider* metricsProvider;
     std::unique_ptr<MediapipeServableMetricReporter> reporter;
     std::shared_ptr<GraphQueue> queue;
 

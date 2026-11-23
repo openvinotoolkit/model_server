@@ -45,12 +45,11 @@ void OmniModelLegacyExecutor::processRequest() {
     } else {
         SPDLOG_LOGGER_TRACE(llm_executor_logger, "Omni generation started");
         try {
-            std::vector<ov::genai::VideoMetadata> videosMetadata;
             requestExecutionContext->results = pipe->generate(
                 requestExecutionContext->inputRequest.promptText,
                 requestExecutionContext->inputRequest.inputImages,
                 requestExecutionContext->inputRequest.inputVideos,
-                videosMetadata,
+                {},
                 requestExecutionContext->inputRequest.inputAudios,
                 requestExecutionContext->inputRequest.generationConfig,
                 requestExecutionContext->speechConfig,

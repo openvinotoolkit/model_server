@@ -28,7 +28,7 @@ class Minicpm5ReasoningParser : public Qwen3ReasoningParser {
 public:
     Minicpm5ReasoningParser() = delete;
 
-    static OutputParsingConfig defaultParsingConfig() {
+    static OutputParsingConfig getDefaultReasoningParsingConfig() {
         OutputParsingConfig cfg;
         cfg.startTags = {"<think>"};
         cfg.tokenIdStartTags = {"<think>"};
@@ -41,6 +41,6 @@ public:
     explicit Minicpm5ReasoningParser(ov::genai::Tokenizer& tokenizer,
         std::optional<OutputParsingConfig> configOverride = std::nullopt) :
         Qwen3ReasoningParser(tokenizer,
-            configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+            configOverride.has_value() ? std::move(*configOverride) : getDefaultReasoningParsingConfig()) {}
 };
 }  // namespace ovms

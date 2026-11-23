@@ -18,6 +18,7 @@
 #include <openvino/genai/tokenizer.hpp>
 #include <vector>
 #include <string>
+#include <utility>
 
 #include "../qwen3/reasoning_parser.hpp"
 
@@ -35,19 +36,20 @@ protected:
 
 public:
     Gemma4ReasoningParser() = delete;
+    static OutputParsingConfig getDefaultReasoningParsingConfig() {
+        OutputParsingConfig cfg;
+        cfg.startTags = {"<|channel>"};
+        cfg.preambleStartTags = {"thought\n"};
+        cfg.tokenIdStartTags = {"<|channel>"};
+        cfg.endTags = {"<channel|>"};
+        cfg.needsSpecialTokens = true;
+        return cfg;
+    }
+
     explicit Gemma4ReasoningParser(ov::genai::Tokenizer& tokenizer,
         std::optional<OutputParsingConfig> configOverride = std::nullopt) :
-        Qwen3ReasoningParser(tokenizer, [&]() -> std::optional<OutputParsingConfig> {
-            if (configOverride.has_value())
-                return configOverride;
-            OutputParsingConfig cfg;
-            cfg.startTags = {"<|channel>"};
-            cfg.preambleStartTags = {"thought\n"};
-            cfg.tokenIdStartTags = {"<|channel>"};
-            cfg.endTags = {"<channel|>"};
-            cfg.needsSpecialTokens = true;
-            return cfg;
-        }()) {
+        Qwen3ReasoningParser(tokenizer,
+            configOverride.has_value() ? std::move(*configOverride) : getDefaultReasoningParsingConfig()) {
         resolveSpecialTokenIds();
     }
 

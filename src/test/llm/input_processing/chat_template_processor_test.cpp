@@ -24,8 +24,8 @@
 //      the same tokenizer/template through standard Python Jinja2.
 //
 // Each tokenizer-based group uses a different fixture:
-//   - SmolLM2-360M-Instruct: a model WITH a chat template (positive tests).
-//   - BAAI/bge-reranker-base: a model WITHOUT a chat template (negative
+//   - mzeglars/dummy-cyclic-gpt2-ov: a model WITH a chat template (positive tests).
+//   - OpenVINO/bge-reranker-base-int8-ov: a model WITHOUT a chat template (negative
 //                             test for the "Failed to apply chat template" path).
 //
 // Error path NOT covered here:
@@ -35,6 +35,8 @@
 
 #include <memory>
 #include <string>
+#include <iostream>
+#include <fstream>
 
 #include <gtest/gtest.h>
 #include <openvino/genai/tokenizer.hpp>
@@ -47,12 +49,10 @@
 namespace ovms {
 namespace {
 
-// SmolLM2-360M-Instruct injects this default system turn when the first
+// Dummy model injects this default system turn when the first
 // message role is not 'system' (from tokenizer_config.json chat_template).
-constexpr const char* SMOL_DEFAULT_SYSTEM =
-    "<|im_start|>system\n"
-    "You are a helpful AI assistant named SmolLM, trained by Hugging Face"
-    "<|im_end|>\n";
+constexpr const char* LLM_DEFAULT_SYSTEM = "<|im_start|>system\\n"
+                                           "You are Dummy, a helpful AI assistant that explains what OpenVINO is to users.<|im_end|>\n";
 
 static InputRequest makeChatRequest(ov::genai::ChatHistory history) {
     InputRequest req;
@@ -61,7 +61,7 @@ static InputRequest makeChatRequest(ov::genai::ChatHistory history) {
 }
 
 // ---------------------------------------------------------------------------
-// Fixture: SmolLM2-360M-Instruct (model WITH a chat template)
+// Fixture: mzeglars/dummy-cyclic-gpt2-ov (model WITH a chat template)
 // ---------------------------------------------------------------------------
 
 static std::unique_ptr<ov::genai::Tokenizer> sharedTokenizer;
@@ -69,8 +69,14 @@ static std::unique_ptr<ov::genai::Tokenizer> sharedTokenizer;
 class ChatTemplateProcessorTest : public ::testing::Test {
 protected:
     static void SetUpTestSuite() {
-        sharedTokenizer = std::make_unique<ov::genai::Tokenizer>(getGenericFullPathForSrcTest(
-            "/ovms/src/test/llm_testing/HuggingFaceTB/SmolLM2-360M-Instruct"));
+        const std::string modelPath = getGenericFullPathForSrcTest(
+            "/ovms/src/test/llm_testing/mzeglars/dummy-cyclic-gpt2-ov");
+        sharedTokenizer = std::make_unique<ov::genai::Tokenizer>(modelPath);
+        std::ifstream templateFile(modelPath + "/chat_template.jinja");
+        ASSERT_TRUE(templateFile.is_open()) << "Failed to open chat_template.jinja in " << modelPath;
+        const std::string chatTemplate{
+            std::istreambuf_iterator<char>(templateFile), std::istreambuf_iterator<char>()};
+        sharedTokenizer->set_chat_template(chatTemplate);
     }
 
     static void TearDownTestSuite() {
@@ -95,9 +101,9 @@ TEST_F(ChatTemplateProcessorTest, TextMessage_DefaultSystemInjected_GenerationPr
     ASSERT_TRUE(status.ok()) << status.message();
 
     const std::string expected =
-        std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\nWhat is OpenVINO?<|im_end|>\n"
-        "<|im_start|>assistant\n";
+        std::string(LLM_DEFAULT_SYSTEM) +
+        "User: What is OpenVINO?"
+        "Assistant: ";
     EXPECT_EQ(req.promptText, expected);
 }
 
@@ -115,9 +121,10 @@ TEST_F(ChatTemplateProcessorTest, ExplicitSystemMessage_SuppressesDefaultSystemI
     ASSERT_TRUE(status.ok()) << status.message();
 
     const std::string expected =
-        "<|im_start|>system\nYou are a custom assistant.<|im_end|>\n"
-        "<|im_start|>user\nHello.<|im_end|>\n"
-        "<|im_start|>assistant\n";
+        std::string(LLM_DEFAULT_SYSTEM) +
+        "System: You are a custom assistant.\n"
+        "User: Hello."
+        "Assistant: ";
     EXPECT_EQ(req.promptText, expected);
     EXPECT_EQ(req.promptText.find("SmolLM"), std::string::npos)
         << "Default system injection must be absent when an explicit system message is provided";
@@ -138,11 +145,12 @@ TEST_F(ChatTemplateProcessorTest, MultiTurnConversation_AllTurnsRendered) {
     ASSERT_TRUE(status.ok()) << status.message();
 
     const std::string expected =
-        "<|im_start|>system\nBe concise.<|im_end|>\n"
-        "<|im_start|>user\nFirst question.<|im_end|>\n"
-        "<|im_start|>assistant\nFirst answer.<|im_end|>\n"
-        "<|im_start|>user\nSecond question.<|im_end|>\n"
-        "<|im_start|>assistant\n";
+        std::string(LLM_DEFAULT_SYSTEM) +
+        "System: Be concise.\n"
+        "User: First question."
+        "Assistant: First answer.\n"
+        "User: Second question."
+        "Assistant: ";
     EXPECT_EQ(req.promptText, expected);
 }
 
@@ -160,10 +168,10 @@ TEST_F(ChatTemplateProcessorTest, AddGenerationPromptFalse_OmitsGenerationPrompt
     ASSERT_TRUE(status.ok()) << status.message();
 
     const std::string expected =
-        std::string(SMOL_DEFAULT_SYSTEM) +
-        "<|im_start|>user\nWhat is OpenVINO?<|im_end|>\n";
+        std::string(LLM_DEFAULT_SYSTEM) +
+        "User: What is OpenVINO?";
     EXPECT_EQ(req.promptText, expected);
-    EXPECT_EQ(req.promptText.find("<|im_start|>assistant"), std::string::npos)
+    EXPECT_EQ(req.promptText.find("Assistant: "), std::string::npos)
         << "add_generation_prompt=false must omit the trailing generation prompt";
 }
 
@@ -199,7 +207,7 @@ TEST_F(ChatTemplateProcessorTest, PromptTextPopulated_ChatHistoryVariantPreserve
 }
 
 // A message with empty string content must still produce a non-empty prompt —
-// the SmolLM2 template wraps every turn with start/end tokens regardless of
+// the dummy model template wraps every turn with start/end tokens regardless of
 // content length, so an empty content string does not trigger the empty-prompt
 // safety net in ChatTemplateProcessor.
 TEST_F(ChatTemplateProcessorTest, EmptyStringContent_TemplateStillProducesOutput) {
@@ -216,13 +224,13 @@ TEST_F(ChatTemplateProcessorTest, EmptyStringContent_TemplateStillProducesOutput
 
 // ---------------------------------------------------------------------------
 // Negative test — model WITHOUT a chat template
-// (BAAI/bge-reranker-base has no chat_template specified anywhere)
+// (OpenVINO/bge-reranker-base-int8-ov has no chat_template specified anywhere)
 // ChatTemplateProcessor must catch that exception and return kInvalidArgument.
 // ---------------------------------------------------------------------------
 
 TEST(ChatTemplateProcessorNoChatTemplateTest, TokenizerWithoutChatTemplate_ReturnsError) {
     const std::string path = getGenericFullPathForSrcTest(
-        "/ovms/src/test/llm_testing/BAAI/bge-reranker-base/ov");
+        "/ovms/src/test/llm_testing/OpenVINO/bge-reranker-base-int8-ov");
     ov::genai::Tokenizer tokenizer(path);
 
     ov::genai::ChatHistory history;

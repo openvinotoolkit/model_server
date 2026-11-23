@@ -209,43 +209,8 @@ OVMS reranking: [0.9968273 0.0913821]
 ```
 
 ## Performance benchmarking
-
-An asynchronous benchmarking client can be used to access the model server performance with various load conditions. Below are execution examples captured on Intel(R) Core(TM) Ultra X7 368H.
-```bash
-cd model_server/demos/benchmark/v3/
-pip install -r requirements.txt
-python benchmark.py --api_url http://127.0.0.1:8000/v3/rerank --backend ovms_rerank --dataset synthetic --synthetic_length 500 --request_rate inf --batch_size 20 --model BAAI/bge-reranker-large
-Number of documents: 1000
-100%|██████████████████████████████████████| 50/50 [00:13<00:00,  3.64it/s]
-Tokens: 501000
-Success rate: 100.0%. (50/50)
-Throughput - Tokens per second: 36,516.5
-Mean latency: 6960.67 ms
-Median latency: 6913.43 ms
-Average document length: 501.0 tokens
-
-python benchmark.py --api_url http://127.0.0.1:8000/v3/rerank --backend ovms_rerank --dataset synthetic --synthetic_length 500 --request_rate inf --batch_size 20 --model BAAI/bge-reranker-large
-Number of documents: 1000
-100%|██████████████████████████████████████| 50/50 [00:13<00:00,  3.69it/s]
-Tokens: 501000
-Success rate: 100.0%. (50/50)
-Throughput - Tokens per second: 36,963.0
-Mean latency: 6846.51 ms
-Median latency: 6811.82 ms
-Average document length: 501.0 tokens
-
-python benchmark.py --api_url http://127.0.0.1:8000/v3/rerank --backend ovms_rerank --dataset Cohere/wikipedia-2023-11-embed-multilingual-v3 --hf-subset simple --request_rate inf --batch_size 20 --model BAAI/bge-reranker-large
-Number of documents: 1000
-100%|██████████████████████████████████████| 50/50 [00:03<00:00, 12.69it/s]
-Tokens: 75147
-Success rate: 100.0%. (50/50)
-Throughput - Tokens per second: 19,071.0
-Mean latency: 1805.52 ms
-Median latency: 1768.86 ms
-Average document length: 75.147 tokens
-
-
-```
+For synthetic and Hugging Face dataset examples, setup, and token-counting details,
+see [Documents Reranking](../benchmark/openai/README.md#documents-reranking) in the benchmark guide.
 ## Tested models
 
 ```

@@ -40,22 +40,19 @@ set /p bazelVersion=<"%~dp0.bazelversion"
 set "bazelPath=C:\opt\bazel-%bazelVersion%-windows-x86_64.exe"
 set "OVMS_MEDIA_URL_ALLOW_REDIRECTS=1"
 
-IF "%~2"=="" (
-    set "gtestFilter=*"
-) ELSE (
-    set "gtestFilter=%2"
-)
+set "ovmsGtestFilter=%~2"
+if "!ovmsGtestFilter!"=="" set "ovmsGtestFilter=*"
 
 set "bazelBuildArgs=--config=win_mp_on --action_env OpenVINO_DIR=%openvino_dir%"
 set "testTargets=//src:ovms_test //src:python_runtime_library_test //src/python:pythoninterpretermodule_lifecycle_test //src/python:pythoninterpretermodule_backend_failure_test //src/python:pythoninterpretermodule_borrowed_interpreter_test"
-set "runPythonRuntimeTest=%cd%\bazel-bin\src\python_runtime_library_test.exe --gtest_filter=!gtestFilter!"
-set "runPythonInterpreterLifecycleTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=!gtestFilter! //src/python:pythoninterpretermodule_lifecycle_test"
-set "runPythonInterpreterBackendFailureTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=!gtestFilter! //src/python:pythoninterpretermodule_backend_failure_test"
-set "runPythonInterpreterBorrowedTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed --test_filter=!gtestFilter! //src/python:pythoninterpretermodule_borrowed_interpreter_test"
+set "runPythonRuntimeTest=%cd%\bazel-bin\src\python_runtime_library_test.exe"
+set "runPythonInterpreterLifecycleTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed //src/python:pythoninterpretermodule_lifecycle_test"
+set "runPythonInterpreterBackendFailureTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed //src/python:pythoninterpretermodule_backend_failure_test"
+set "runPythonInterpreterBorrowedTest=bazel %bazelStartupCmd% test %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --test_output=streamed //src/python:pythoninterpretermodule_borrowed_interpreter_test"
 
 set "buildTestCommand=%bazelPath% %bazelStartupCmd% build %bazelBuildArgs% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %testTargets%"
 set "changeConfigsCmd=python windows_change_test_configs.py"
-set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=!gtestFilter! > win_full_test.log 2>&1"
+set "runTest=%cd%\bazel-bin\src\ovms_test.exe --gtest_filter=!ovmsGtestFilter! > win_full_test.log 2>&1"
 
 :: Load chosen dependency versions from versions.mk
 for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
@@ -65,23 +62,23 @@ for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
 
 :: Setting PATH environment variable based on default windows node settings: Added ovms_windows specific python settings and c:/opt and removed unused Nvidia and OCL specific tools.
 :: When changing the values here you can print the node default PATH value and base your changes on it.
-set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-!curl_version!-win64-mingw\bin;c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\;%PATH%;"
+set "setPath=C:\opt;C:\opt\Python314\;C:\opt\Python314\Scripts\;C:\opt\msys64\usr\bin\;C:\opt\curl-!curl_version!-win64-mingw\bin;c:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\;%PATH%;"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Bazel compilation settings
-set VS_2022_BT="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
-IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :msvc_error
+set "VS_2022_BT=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
+IF /I EXIST "%VS_2022_BT%" goto :msvc_bt ELSE goto :msvc_error
 :msvc_error
 echo [ERROR] Required MSVC compiler not installed
 echo [ERROR] windows_test.bat failed before test parsing stage.
 exit /b 1
 :msvc_bt
 echo [INFO] Using MSVC %VS_2022_BT%
-set BAZEL_VS=%VS_2022_BT%
+set "BAZEL_VS=%VS_2022_BT%"
 
 :: Bazel compilation settings end
-set "BAZEL_VC=%BAZEL_VS:"=%\VC"
+set "BAZEL_VC=%BAZEL_VS%\VC"
 set "BAZEL_VC_FULL_VERSION=14.44.35207"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
@@ -92,7 +89,6 @@ set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 set "openvinoBatch=call !BAZEL_SHORT_PATH!\openvino\setupvars.bat"
 
 set "opencvBatch=call C:\opt\opencv_!opencv_version!\setup_vars_opencv4.cmd"
-set "PYTHONHOME=C:\opt\Python312"
 
 :: Set required libraries paths
 %openvinoBatch%
@@ -105,7 +101,9 @@ if !errorlevel! neq 0 (
     echo [ERROR] OpenCV setup_vars_opencv4.cmd failed with error code !errorlevel! >> win_full_test.log
     exit /b !errorlevel!
 )
-set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
+
+set "PYTHONHOME=C:\opt\Python314"
+set "PYTHONPATH=C:\opt\Python314;%setPythonPath%"
 
 :: Start bazel build test
 %buildTestCommand% 2>&1 | tee win_build_test.log
@@ -122,7 +120,7 @@ if !errorlevel! neq 0 (
     echo [ERROR] windows_change_test_configs.py failed with error code !errorlevel! >> win_full_test.log
     exit /b !errorlevel!
 )
-:: Download LLMs
+:: Download LLM test models
 call %cd%\windows_prepare_llm_models.bat %cd%\src\test\llm_testing
 if !errorlevel! neq 0 (
     echo [ERROR] windows_prepare_llm_models.bat failed with error code !errorlevel! >> win_full_test.log

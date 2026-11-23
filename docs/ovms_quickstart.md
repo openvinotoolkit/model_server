@@ -80,14 +80,18 @@ docker run -d -u $(id -u) --rm -v ${PWD}/model:/model -p 9000:9000 openvino/mode
 During this step, the `model` folder is mounted to the Docker container.  This folder will be used as the model storage.
 :::
 :::{dropdown} **Deploying on Bare Metal**
-Assuming you have unpacked model server package, make sure to:
+Download and unpack the package for your operating system as described in the
+[deployment guide](deploying_server_baremetal.md). No environment variable setup
+is required.
 
-- **On Windows**: run `setupvars` script
-- **On Linux**: set `LD_LIBRARY_PATH` and `PATH` environment variables
-
-as mentioned in [deployment guide](deploying_server_baremetal.md), in every new shell that will start OpenVINO Model Server.
-```bat
+On Linux:
+```sh
 ovms --model_name faster_rcnn --model_path model --port 9000
+```
+
+On Windows:
+```bat
+ovms.exe --model_name faster_rcnn --model_path model --port 9000
 ```
 :::
 ### Step 5: Prepare the Example Client Components

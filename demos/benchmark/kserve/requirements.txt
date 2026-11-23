@@ -1,0 +1,2 @@
+numpy>=1.24,<3
+tritonclient[grpc,http]==2.60.0

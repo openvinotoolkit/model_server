@@ -1,0 +1,4 @@
+{
+  "architectures": ["Qwen3TTSForConditionalGeneration"],
+  "tts_model_type": "voice_design"
+}

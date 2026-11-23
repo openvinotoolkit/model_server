@@ -49,7 +49,8 @@ curl http://localhost:8000/v1/models
       "id": "Qwen3-30B-A3B-Instruct-2507-int4-ov",
       "object": "model",
       "created": 1784334119,
-      "owned_by": "OVMS"
+      "owned_by": "OVMS",
+      "max_model_len": 262144
     }
   ],
   "object": "list"

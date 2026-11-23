@@ -57,15 +57,17 @@ set "openvino_dir=!BAZEL_SHORT_PATH!/openvino/runtime/cmake"
 set /p bazelVersion=<"%~dp0.bazelversion"
 set "bazelPath=C:\opt\bazel-%bazelVersion%-windows-x86_64.exe"
 
-set "buildCommand=%bazelPath% %bazelStartupCmd% build  %buildWithIntegrity% %bazelBuildArgs% --action_env OpenVINO_DIR=%openvino_dir% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %buildTargets% 2>&1 | tee win_build.log"
+set "buildCommand=%bazelPath% %bazelStartupCmd% build --keep_going %buildWithIntegrity% %bazelBuildArgs% --action_env OpenVINO_DIR=%openvino_dir% --jobs=%NUMBER_OF_PROCESSORS% --verbose_failures %buildTargets% 2>&1 | tee win_build.log"
 set "setOvmsVersionCmd=python windows_set_ovms_version.py"
 
 :: Setting PATH environment variable based on default windows node settings: Added ovms_windows specific python settings and c:/opt and removed unused Nvidia and OCL specific tools.
 :: When changing the values here you can print the node default PATH value and base your changes on it.
-set "setPath=C:\opt;C:\opt\Python312\;C:\opt\Python312\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
-set "PYTHONHOME=C:\opt\Python312"
+set "setPath=C:\opt;C:\opt\Python314\;C:\opt\Python314\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
+set "PYTHONHOME=C:\opt\Python314"
+set "PYTHONPATH=C:\opt\Python314"
 set "envPath=win_environment.log"
 set "setPythonPath=%cd%\bazel-out\x64_windows-opt\bin\src\python\binding"
+set "basePythonPath=C:\opt\Python314;%setPythonPath%"
 set "BAZEL_SH=C:\opt\msys64\usr\bin\bash.exe"
 
 :: Load chosen dependency versions from versions.mk
@@ -74,19 +76,19 @@ for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
 )
 
 :: Bazel compilation settings
-set VS_2022_BT="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
-IF /I EXIST %VS_2022_BT% goto :msvc_bt ELSE goto :msvc_error
+set "VS_2022_BT=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
+IF /I EXIST "%VS_2022_BT%" goto :msvc_bt ELSE goto :msvc_error
 
 :msvc_error
 echo [ERROR] Required MSVC compiler not installed
 goto :exit_build_error
 :msvc_bt
 echo [INFO] Using MSVC %VS_2022_BT%
-set BAZEL_VS=%VS_2022_BT%
+set "BAZEL_VS=%VS_2022_BT%"
 
 :: Bazel compilation settings end
 :msvc_end
-set "BAZEL_VC=%BAZEL_VS:"=%\VC"
+set "BAZEL_VC=%BAZEL_VS%\VC"
 set "BAZEL_VC_FULL_VERSION=14.44.35207"
 
 :: Set proper PATH environment variable: Remove other python paths and add c:\opt with bazel to PATH
@@ -96,11 +98,15 @@ set "PATH=%setPath%"
 set "openvinoBatch=call !BAZEL_SHORT_PATH!\openvino\setupvars.bat"
 set "opencvBatch=call C:\opt\opencv_!opencv_version!\setup_vars_opencv4.cmd"
 
-:: Set required libraries paths
+:: OpenVINO and OpenCV setup scripts are used only for dependency DLLs and library paths.
+:: Their Python environment is not the repo runtime; pin the canonical Python 3.14 once.
 %openvinoBatch%
 if !errorlevel! neq 0 exit /b !errorlevel!
 %opencvBatch%
-set "PYTHONPATH=%PYTHONPATH%;%setPythonPath%"
+if !errorlevel! neq 0 exit /b !errorlevel!
+
+set "PYTHONHOME=C:\opt\Python314"
+set "PYTHONPATH=%basePythonPath%"
 
 :: Log all environment variables
 set > %envPath%

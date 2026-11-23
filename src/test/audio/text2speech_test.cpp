@@ -19,6 +19,7 @@
 #include <gtest/gtest.h>
 
 #include "../../audio/audio_utils.hpp"
+#include "../../audio/text_to_speech/t2s_servable.hpp"
 #include "../../http_rest_api_handler.hpp"
 #include "../../server.hpp"
 #include "../test_http_utils.hpp"
@@ -28,6 +29,21 @@
 
 using namespace ovms;
 using namespace ovms::audio_utils;
+
+namespace {
+
+uint16_t readLe16(const char* ptr) {
+    return static_cast<uint16_t>(static_cast<unsigned char>(ptr[0])) |
+           (static_cast<uint16_t>(static_cast<unsigned char>(ptr[1])) << 8);
+}
+
+void expectPcm16Wav(const std::string& response) {
+    ASSERT_GE(response.size(), 44u);
+    EXPECT_EQ(readLe16(response.data() + 20), 1);
+    EXPECT_EQ(readLe16(response.data() + 34), 16);
+}
+
+}  // namespace
 
 class Text2SpeechHttpTest : public V3HttpTest {
 protected:
@@ -65,9 +81,90 @@ TEST_F(Text2SpeechHttpTest, simplePositive) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::OK);
+    EXPECT_EQ(responseComponents.contentType, ContentType::CUSTOM);
+    EXPECT_EQ(responseComponents.customContentType, "audio/wav");
+    expectPcm16Wav(response);
     EXPECT_NO_THROW({
         auto wav = readWav(response);
     });
+}
+
+TEST_F(Text2SpeechHttpTest, explicitWavResponseFormat) {
+    std::string requestBody = R"(
+        {
+            "model": ")" + modelName +
+                              R"(",
+            "input": "The quick brown fox jumped over the lazy dog.",
+            "voice": "af_alloy",
+            "response_format": "wav"
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    EXPECT_EQ(responseComponents.contentType, ContentType::CUSTOM);
+    EXPECT_EQ(responseComponents.customContentType, "audio/wav");
+    expectPcm16Wav(response);
+    EXPECT_NO_THROW({
+        auto wav = readWav(response);
+    });
+}
+
+TEST_F(Text2SpeechHttpTest, explicitPcmResponseFormat) {
+    std::string requestBody = R"(
+        {
+            "model": ")" + modelName +
+                              R"(",
+            "input": "The quick brown fox jumped over the lazy dog.",
+            "voice": "af_alloy",
+            "response_format": "pcm"
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    EXPECT_EQ(responseComponents.contentType, ContentType::CUSTOM);
+    EXPECT_EQ(responseComponents.customContentType, "application/octet-stream");
+    EXPECT_FALSE(isWavBuffer(response));
+    EXPECT_FALSE(response.empty());
+    EXPECT_EQ(response.size() % sizeof(int16_t), 0u);
+}
+
+TEST_F(Text2SpeechHttpTest, v3EndpointSupportsPcmResponseFormat) {
+    const std::string v3Endpoint = "/v3/audio/speech";
+    ASSERT_EQ(handler->parseRequestComponents(comp, "POST", v3Endpoint, headers), ovms::StatusCode::OK);
+    std::string requestBody = R"(
+        {
+            "model": ")" + modelName +
+                              R"(",
+            "input": "The quick brown fox jumped over the lazy dog.",
+            "voice": "af_alloy",
+            "response_format": "pcm"
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(v3Endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+    EXPECT_EQ(responseComponents.contentType, ContentType::CUSTOM);
+    EXPECT_EQ(responseComponents.customContentType, "application/octet-stream");
+    EXPECT_FALSE(isWavBuffer(response));
+    EXPECT_FALSE(response.empty());
+    EXPECT_EQ(response.size() % sizeof(int16_t), 0u);
+}
+
+TEST_F(Text2SpeechHttpTest, unsupportedResponseFormatRejected) {
+    std::string requestBody = R"(
+        {
+            "model": ")" + modelName +
+                              R"(",
+            "input": "The quick brown fox jumped over the lazy dog.",
+            "voice": "af_alloy",
+            "response_format": "mp3"
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
 }
 
 TEST_F(Text2SpeechHttpTest, emptyInput) {
@@ -128,6 +225,28 @@ TEST_F(Text2SpeechHttpTest, nonExistingVoiceRequested) {
     ASSERT_EQ(
         handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
         ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST_F(Text2SpeechHttpTest, instructionsMustBeString) {
+    std::string requestBody = R"(
+        {
+            "model": ")" + modelName +
+                              R"(",
+            "input": "The quick brown fox jumped over the lazy dog.",
+            "voice": "af_alloy",
+            "instructions": 123
+        }
+    )";
+    ASSERT_EQ(
+        handler->dispatchToProcessor(endpoint, requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::MEDIAPIPE_EXECUTION_ERROR);
+}
+
+TEST(Text2SpeechServableTest, LoadsBuiltinQwenCustomVoiceSpeakers) {
+    const auto aliases = TtsServable::loadBuiltinSpeakerAliases(getGenericFullPathForSrcTest("/ovms/src/test/models_config_json/qwen3_tts_customvoice_runtime/config.json"));
+
+    EXPECT_THAT(aliases, testing::Contains(testing::Pair("ryan", "ryan")));
+    EXPECT_THAT(aliases, testing::Contains(testing::Pair("serena", "serena")));
 }
 
 TEST_F(Text2SpeechHttpTest, speedBelowDefaultMinRejected) {
@@ -269,7 +388,7 @@ TEST_F(Text2SpeechConfigTest, NodeNameMissing) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            models_path: "/ovms/src/test/llm_testing/OpenVINO/Kokoro-82M-int8-ov"
             target_device: "CPU"
         }
         }
@@ -292,7 +411,7 @@ TEST_F(Text2SpeechConfigTest, SidePacketMissing) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            models_path: "/ovms/src/test/llm_testing/OpenVINO/Kokoro-82M-int8-ov"
             target_device: "CPU"
         }
         }
@@ -339,7 +458,7 @@ TEST_F(Text2SpeechConfigTest, InvalidPluginConfig) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            models_path: "/ovms/src/test/llm_testing/OpenVINO/Kokoro-82M-int8-ov"
             plugin_config: 'INVALID',
             target_device: "CPU"
         }
@@ -364,7 +483,7 @@ TEST_F(Text2SpeechConfigTest, MissingVoicesInGraphUsesModelVoicesDir) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            models_path: "/ovms/src/test/llm_testing/OpenVINO/Kokoro-82M-int8-ov"
             plugin_config: '{"NUM_STREAMS": "1" }',
             target_device: "CPU"
         }
@@ -389,7 +508,7 @@ TEST_F(Text2SpeechConfigTest, NonExistingVoicePath) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            models_path: "/ovms/src/test/llm_testing/OpenVINO/Kokoro-82M-int8-ov"
             plugin_config: '{"NUM_STREAMS": "1" }',
             target_device: "CPU"
             voices: [
@@ -420,7 +539,7 @@ TEST_F(Text2SpeechConfigTest, VoiceMissingPath) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            models_path: "/ovms/src/test/llm_testing/OpenVINO/Kokoro-82M-int8-ov"
             plugin_config: '{"NUM_STREAMS": "1" }',
             target_device: "CPU"
             voices: [
@@ -450,7 +569,7 @@ TEST_F(Text2SpeechConfigTest, CustomSpeedBoundsConfigured) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            models_path: "/ovms/src/test/llm_testing/OpenVINO/Kokoro-82M-int8-ov"
             plugin_config: '{"NUM_STREAMS": "1" }',
             target_device: "CPU"
             speed_min: 0.5
@@ -477,7 +596,7 @@ TEST_F(Text2SpeechConfigTest, InvertedSpeedBoundsRejected) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            models_path: "/ovms/src/test/llm_testing/OpenVINO/Kokoro-82M-int8-ov"
             plugin_config: '{"NUM_STREAMS": "1" }',
             target_device: "CPU"
             speed_min: 2.0
@@ -505,7 +624,7 @@ TEST_F(Text2SpeechConfigTest, EqualSpeedBoundsAccepted) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            models_path: "/ovms/src/test/llm_testing/OpenVINO/Kokoro-82M-int8-ov"
             plugin_config: '{"NUM_STREAMS": "1" }',
             target_device: "CPU"
             speed_min: 1.0
@@ -532,7 +651,7 @@ TEST_F(Text2SpeechConfigTest, VoiceInvalidFile) {
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
         node_options: {
         [type.googleapis.com / mediapipe.T2sCalculatorOptions]: {
-            models_path: "/ovms/src/test/llm_testing/hexgrad/Kokoro-82M"
+            models_path: "/ovms/src/test/llm_testing/OpenVINO/Kokoro-82M-int8-ov"
             plugin_config: '{"NUM_STREAMS": "1" }',
             target_device: "CPU"
             voices: [

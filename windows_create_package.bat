@@ -160,7 +160,7 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 
 if /i "%include_python%"=="true" (
     :: Prepare self-contained python
-    set "python_version=3.12.10"
+    set "python_version=3.14.10"
 
     call %cd%\windows_prepare_python.bat %dest_dir% !python_version!
     if !errorlevel! neq 0 (
@@ -173,11 +173,11 @@ if /i "%include_python%"=="true" (
         echo Error occurred when creating Python environment for the distribution.
         exit /b !errorlevel!
     )
-    if not exist dist\windows\ovms\python\python312.zip (
-        echo Packaging validation failed: embedded stdlib python312.zip is missing from dist\windows\ovms\python.
+    if not exist dist\windows\ovms\python\python314.zip (
+        echo Packaging validation failed: embedded stdlib python314.zip is missing from dist\windows\ovms\python.
         exit /b 1
     )
-    .\dist\windows\ovms\python\python.exe -m pip install "setuptools==80.9.0" "Jinja2==3.1.6" "MarkupSafe==3.0.2"
+    .\dist\windows\ovms\python\python.exe -m pip install "setuptools==84.2.1" "Jinja2==3.1.6" "MarkupSafe==3.0.4"
     if !errorlevel! neq 0 (
         echo Error during Python dependencies for LLM installation. The package will not be fully functional.
     )
@@ -186,8 +186,22 @@ if /i "%include_python%"=="true" (
 copy C:\%output_user_root%\openvino\runtime\3rdparty\tbb\bin\tbb12.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 
-:: Copy from bazel-out if the genai is from sources
-copy %cd%\bazel-out\x64_windows-opt\bin\src\opencv_world!opencv_dll_ver!.dll dist\windows\ovms
+:: Copy OpenCV runtime from the installed C:\opt layout
+copy /Y "C:\opt\opencv_!opencv_version!\x64\vc17\bin\opencv_world!opencv_dll_ver!.dll" dist\windows\ovms
+if !errorlevel! neq 0 exit /b !errorlevel!
+set "opencv_decoder_src=%cd%\bazel-out\x64_windows-opt\bin\src\image_utils\ovms_opencv_image_decoder.dll"
+if not exist "!opencv_decoder_src!" (
+    echo Missing ovms_opencv_image_decoder.dll. Ensure //src/image_utils:opencv_image_decoder is built.
+    exit /b 1
+)
+copy /Y "!opencv_decoder_src!" dist\windows\ovms
+if !errorlevel! neq 0 exit /b !errorlevel!
+set "opencv_calculators_src=%cd%\bazel-out\x64_windows-opt\bin\src\lib\ovms_opencv_calculators.dll"
+if not exist "!opencv_calculators_src!" (
+    echo Missing ovms_opencv_calculators.dll. Ensure //src/lib:ovms_opencv_calculators is built.
+    exit /b 1
+)
+copy /Y "!opencv_calculators_src!" dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 copy /Y %cd%\bazel-out\x64_windows-opt\bin\src\openvino_genai.dll dist\windows\ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
@@ -293,12 +307,23 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 dist\windows\ovms\ovms.exe --help
 if !errorlevel! neq 0 exit /b !errorlevel!
 
+python src\test\no_opencv_server_test.py "%cd%" - "%cd%\dist\windows\ovms\ovms.exe" --expect-opencv
+if !errorlevel! neq 0 exit /b !errorlevel!
+
 if not exist dist\windows\ovms\libovmspython.dll (
     echo Packaging validation failed: libovmspython.dll is missing from dist\windows\ovms.
     exit /b 1
 )
 if not exist dist\windows\ovms\libpython_calculators.dll (
     echo Packaging validation failed: libpython_calculators.dll is missing from dist\windows\ovms.
+    exit /b 1
+)
+if not exist dist\windows\ovms\ovms_opencv_image_decoder.dll (
+    echo Packaging validation failed: ovms_opencv_image_decoder.dll is missing from dist\windows\ovms.
+    exit /b 1
+)
+if not exist dist\windows\ovms\ovms_opencv_calculators.dll (
+    echo Packaging validation failed: ovms_opencv_calculators.dll is missing from dist\windows\ovms.
     exit /b 1
 )
 

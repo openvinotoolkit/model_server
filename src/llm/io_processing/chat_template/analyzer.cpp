@@ -97,6 +97,9 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
     if (contains(templateSource, "[TOOL_CALLS]") && contains(templateSource, "[ARGS]")) {
         result.detectedToolParser = "devstral";
         result.caps.supportsToolCalls = true;
+        if (contains(templateSource, "[THINK]") && contains(templateSource, "[/THINK]")) {
+            result.detectedReasoningParser = "devstral";
+        }
         return result;
     }
 
@@ -127,7 +130,7 @@ ChatTemplateAnalysisResult ChatTemplateAnalyzer::analyze(const std::string& temp
     }
 
     // Reasoning-only detection (no tool parser matched but template has reasoning tags)
-    if (contains(templateSource, "<think>") || contains(templateSource, "content.split('</think>')")) {
+    if (contains(templateSource, "<think>") || contains(templateSource, "</think>")) {
         result.detectedReasoningParser = "qwen3";
     }
 

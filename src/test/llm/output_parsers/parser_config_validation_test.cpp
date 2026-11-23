@@ -26,9 +26,9 @@
 using namespace ovms;
 
 #ifdef _WIN32
-const std::string parserConfigValidationTokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\microsoft\\Phi-4-mini-instruct";
+const std::string parserConfigValidationTokenizerPath = getWindowsRepoRootPath() + "\\src\\test\\llm_testing\\OpenVINO\\Phi-4-reasoning-int4-ov";
 #else
-const std::string parserConfigValidationTokenizerPath = "/ovms/src/test/llm_testing/microsoft/Phi-4-mini-instruct";
+const std::string parserConfigValidationTokenizerPath = "/ovms/src/test/llm_testing/OpenVINO/Phi-4-reasoning-int4-ov";
 #endif
 
 static ovms::ToolsSchemas_t PARSER_CONFIG_VALIDATION_EMPTY_TOOLS_SCHEMA = {};
@@ -73,7 +73,7 @@ TEST_F(ParserConfigValidationTest, NoneIsAcceptedAsDisabledParser) {
 
 TEST_F(ParserConfigValidationTest, RegistryHasExpectedReasoningParsers) {
     const auto& names = getSupportedReasoningParserNames();
-    for (const auto& expected : {"qwen3", "gemma4", "gptoss", "lfm2", "onyx"}) {
+    for (const auto& expected : {"qwen3", "gemma4", "gptoss", "lfm2", "onyx", "devstral"}) {
         EXPECT_NE(std::find(names.begin(), names.end(), expected), names.end())
             << "Expected reasoning parser '" << expected << "' missing from registry";
     }

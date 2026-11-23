@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <iostream>
 #include <optional>
 #include <stdexcept>
@@ -101,7 +102,15 @@ void GraphCLIParser::createOptions() {
         ("cache_interval_multiplier",
             "Multiplier for the KV cache block interval. Controls the granularity of cache allocation. Default: unset.",
             cxxopts::value<uint64_t>(),
-            "CACHE_INTERVAL_MULTIPLIER");
+            "CACHE_INTERVAL_MULTIPLIER")
+        ("input_video_fps",
+            "Sampling rate for encoded video inputs. Must be greater than zero. Default: unset (frames are retained up to input_video_max_frames).",
+            cxxopts::value<float>(),
+            "INPUT_VIDEO_FPS")
+        ("input_video_max_frames",
+            "Maximum number of frames retained from one encoded video or supplied in a frame array. Must be greater than zero. Default: 32.",
+            cxxopts::value<uint32_t>(),
+            "INPUT_VIDEO_MAX_FRAMES");
 
     options->add_options("plugin config")
         ("max_prompt_len",
@@ -208,6 +217,20 @@ void GraphCLIParser::prepare(OvmsServerMode serverMode, HFSettingsImpl& hfSettin
         graphSettings.enableToolGuidedGeneration = result->operator[]("enable_tool_guided_generation").as<std::string>();
         if (result->count("cache_interval_multiplier")) {
             graphSettings.cacheIntervalMultiplier = result->operator[]("cache_interval_multiplier").as<uint64_t>();
+        }
+        if (result->count("input_video_fps")) {
+            const float fps = result->operator[]("input_video_fps").as<float>();
+            if (!std::isfinite(fps) || fps <= 0.0F) {
+                throw std::invalid_argument("input_video_fps must be finite and greater than zero");
+            }
+            graphSettings.inputVideoFps = fps;
+        }
+        if (result->count("input_video_max_frames")) {
+            const uint32_t maxFrames = result->operator[]("input_video_max_frames").as<uint32_t>();
+            if (maxFrames == 0) {
+                throw std::invalid_argument("input_video_max_frames must be greater than zero");
+            }
+            graphSettings.inputVideoMaxFrames = maxFrames;
         }
 
         // Plugin configuration

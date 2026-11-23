@@ -127,6 +127,18 @@ TEST_F(ChatTemplateAnalyzerTest, detectsPhi4) {
     EXPECT_TRUE(result.caps.supportsToolCalls);
 }
 
+// --- Phi-4 reasoning ---
+
+TEST_F(ChatTemplateAnalyzerTest, detectsPhi4Reasoning) {
+    std::string tmpl = loadTemplate("chat_template_phi4_reasoning.jinja");
+    ASSERT_FALSE(tmpl.empty());
+    auto result = ChatTemplateAnalyzer::analyze(tmpl);
+    ASSERT_FALSE(result.detectedToolParser.has_value());
+    ASSERT_TRUE(result.detectedReasoningParser.has_value());
+    EXPECT_EQ(result.detectedReasoningParser.value(), "qwen3");
+    EXPECT_FALSE(result.caps.supportsToolCalls);
+}
+
 // --- Devstral ---
 
 TEST_F(ChatTemplateAnalyzerTest, detectsDevstral) {
@@ -148,6 +160,31 @@ TEST_F(ChatTemplateAnalyzerTest, detectsMistral) {
     ASSERT_TRUE(result.detectedToolParser.has_value());
     EXPECT_EQ(result.detectedToolParser.value(), "mistral");
     EXPECT_FALSE(result.detectedReasoningParser.has_value());
+    EXPECT_TRUE(result.caps.supportsToolCalls);
+}
+
+// --- Mistral-3-Instruct ---
+
+TEST_F(ChatTemplateAnalyzerTest, detectsMistral3AsDevstralToolParser) {
+    std::string tmpl = loadTemplate("chat_template_mistral3.jinja");
+    ASSERT_FALSE(tmpl.empty());
+    auto result = ChatTemplateAnalyzer::analyze(tmpl);
+    ASSERT_TRUE(result.detectedToolParser.has_value());
+    EXPECT_EQ(result.detectedToolParser.value(), "devstral");
+    EXPECT_FALSE(result.detectedReasoningParser.has_value());
+    EXPECT_TRUE(result.caps.supportsToolCalls);
+}
+
+// --- Mistral-3-Reasoning ---
+
+TEST_F(ChatTemplateAnalyzerTest, detectsMistral3Reasoning) {
+    std::string tmpl = loadTemplate("chat_template_mistral3_reasoning.jinja");
+    ASSERT_FALSE(tmpl.empty());
+    auto result = ChatTemplateAnalyzer::analyze(tmpl);
+    ASSERT_TRUE(result.detectedToolParser.has_value());
+    EXPECT_EQ(result.detectedToolParser.value(), "devstral");
+    EXPECT_TRUE(result.detectedReasoningParser.has_value());
+    EXPECT_EQ(result.detectedReasoningParser.value(), "devstral");
     EXPECT_TRUE(result.caps.supportsToolCalls);
 }
 

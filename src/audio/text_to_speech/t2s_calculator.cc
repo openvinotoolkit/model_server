@@ -54,6 +54,31 @@ namespace mediapipe {
 
 const std::string TTS_SESSION_SIDE_PACKET_TAG = "TTS_NODE_RESOURCES";
 
+static std::string resolveBuiltinSpeakerName(const ovms::TtsServable& servable, const std::string& voiceName) {
+    auto speakerIt = servable.builtinSpeakerAliases.find(voiceName);
+    if (speakerIt != servable.builtinSpeakerAliases.end()) {
+        return speakerIt->second;
+    }
+    speakerIt = servable.builtinSpeakerAliases.find(ovms::toLowerCopy(voiceName));
+    if (speakerIt != servable.builtinSpeakerAliases.end()) {
+        return speakerIt->second;
+    }
+    return voiceName;
+}
+
+static bool isKnownVoice(const ovms::TtsServable& servable, const std::string& voiceName) {
+    if (servable.voices.find(voiceName) != servable.voices.end()) {
+        return true;
+    }
+    if (servable.builtinSpeakerAliases.find(voiceName) != servable.builtinSpeakerAliases.end()) {
+        return true;
+    }
+    if (servable.builtinSpeakerAliases.find(ovms::toLowerCopy(voiceName)) != servable.builtinSpeakerAliases.end()) {
+        return true;
+    }
+    return false;
+}
+
 static absl::Status checkClientDisconnected(const ovms::HttpPayload& payload, const std::string& nodeName, const char* context) {
     if (payload.client && payload.client->isDisconnected()) {
         SPDLOG_LOGGER_DEBUG(t2s_calculator_logger, "Client disconnected {} [Node: {}]", context, nodeName);
@@ -131,6 +156,14 @@ public:
                     }
                     voiceName = voiceIt->value.GetString();
                 }
+                std::optional<std::string> instructions;
+                auto instructionsIt = payload.parsedJson->FindMember("instructions");
+                if (instructionsIt != payload.parsedJson->MemberEnd() && !instructionsIt->value.IsNull()) {
+                    if (!instructionsIt->value.IsString()) {
+                        return absl::InvalidArgumentError("instructions field is not a string");
+                    }
+                    instructions = instructionsIt->value.GetString();
+                }
                 std::string language = "en-us";
                 auto languageIt = payload.parsedJson->FindMember("language");
                 if (languageIt != payload.parsedJson->MemberEnd()) {
@@ -157,6 +190,19 @@ public:
                     return absl::InvalidArgumentError(
                         absl::StrCat("speed must be between speed_min (", speedMin, ") and speed_max (", speedMax, ")"));
                 }
+                auto responseFormat = ovms::audio_utils::TextToSpeechResponseFormat::WAV;
+                auto responseFormatIt = payload.parsedJson->FindMember("response_format");
+                if (responseFormatIt != payload.parsedJson->MemberEnd()) {
+                    if (!responseFormatIt->value.IsString()) {
+                        return absl::InvalidArgumentError("response_format field is not a string");
+                    }
+                    const std::string_view format(responseFormatIt->value.GetString(), responseFormatIt->value.GetStringLength());
+                    auto requestedFormat = ovms::audio_utils::tryParseTextToSpeechResponseFormat(format);
+                    if (!requestedFormat.has_value()) {
+                        return absl::InvalidArgumentError("Unsupported response_format. Supported formats are wav and pcm");
+                    }
+                    responseFormat = requestedFormat.value();
+                }
                 ov::genai::Text2SpeechDecodedResults generatedSpeech;
                 std::unique_lock lock(pipe->ttsPipelineMutex);
                 auto disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "before generation");
@@ -164,13 +210,18 @@ public:
                     return disconnectStatus;
                 const ov::Tensor* speakerEmbedding = nullptr;
                 ov::AnyMap properties{{"language", language}, {"speed", speed}};
+                if (instructions.has_value()) {
+                    properties["instruct"] = instructions.value();
+                }
                 if (voiceName.has_value()) {
                     auto speakerIt = pipe->voices.find(voiceName.value());
                     if (speakerIt != pipe->voices.end()) {
                         speakerEmbedding = &speakerIt->second;
                     } else {
-                        // SpeechT5 and other models only support pre-loaded speaker embeddings
-                        return absl::InvalidArgumentError(absl::StrCat("Requested voice '", voiceName.value(), "' not found in available voices"));
+                        if (!isKnownVoice(*pipe, voiceName.value())) {
+                            return absl::InvalidArgumentError(absl::StrCat("Requested voice '", voiceName.value(), "' not found in available voices"));
+                        }
+                        properties["speaker"] = resolveBuiltinSpeakerName(*pipe, voiceName.value());
                     }
                 }
                 if (speakerEmbedding != nullptr) {
@@ -186,12 +237,17 @@ public:
                 disconnectStatus = checkClientDisconnected(payload, cc->NodeName(), "after generation");
                 if (!disconnectStatus.ok())
                     return disconnectStatus;
-                void* ppData;
-                size_t pDataSize;
-                uint16_t bitsPerSample = static_cast<uint16_t>(generatedSpeech.speeches[0].get_element_type().bitwidth());
-                ovms::audio_utils::prepareAudioOutput(&ppData, pDataSize, generatedSpeech.output_sample_rate, bitsPerSample, speechSize, cpuTensor.data<const float>());
-                output = std::make_unique<std::string>(reinterpret_cast<char*>(ppData), pDataSize);
-                drwav_free(ppData, NULL);
+                if (responseFormat == ovms::audio_utils::TextToSpeechResponseFormat::WAV) {
+                    void* ppData = nullptr;
+                    size_t pDataSize = 0;
+                    constexpr uint16_t bitsPerSample = 16;
+                    ovms::audio_utils::prepareAudioOutput(&ppData, pDataSize, generatedSpeech.output_sample_rate, bitsPerSample, speechSize, cpuTensor.data<const float>());
+                    output = std::make_unique<std::string>(reinterpret_cast<char*>(ppData), pDataSize);
+                    drwav_free(ppData, nullptr);
+                } else {
+                    auto pcm16 = ovms::audio_utils::convertWaveformToPcm16(speechSize, cpuTensor.data<const float>());
+                    output = std::make_unique<std::string>(reinterpret_cast<const char*>(pcm16.data()), pcm16.size() * sizeof(int16_t));
+                }
             } else {
                 return absl::InvalidArgumentError(absl::StrCat("Unsupported URI: ", payload.uri));
             }
