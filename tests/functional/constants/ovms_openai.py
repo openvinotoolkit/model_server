@@ -41,6 +41,7 @@ class MaxTokensValues:
     DEFAULT_COMPARE_JINJA = 50
     VLM_COMPARE = 50
     COMPARE = 100
+    BASIC_WITH_REASONING = 500
     COMPARE_LONG = 1000
     CACHE_OVERLOAD = 100000
     SHORT = 10
@@ -126,6 +127,7 @@ class OvmsCommonRequestParams:
 @dataclass
 class OvmsCommonCompletionsRequestParams(OpenAICommonCompletionsRequestParams, OvmsCommonRequestParams):
     ignore_eos: bool = None
+    skip_special_tokens: bool = None
     length_penalty: float = None
     include_stop_str_in_output: bool = None
     top_k: int = None
@@ -180,6 +182,7 @@ class OvmsCompletionsRequestParams(OvmsCommonCompletionsRequestParams, OpenAICom
 class OvmsResponsesRequestParams(OpenAIResponsesRequestParams, OvmsCommonRequestParams):
     stop: Union[str, list] = None
     ignore_eos: bool = None
+    skip_special_tokens: bool = None
     include_stop_str_in_output: bool = None
     logprobs: bool = None
     response_format: dict = None

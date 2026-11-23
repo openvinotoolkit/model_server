@@ -64,7 +64,6 @@ from tests.functional.constants.ovms import (
     API_TYPE_PARAM_NAME,
     BASE_OS_PARAM_NAME,
     CLOUD_TYPE_PARAM_NAME,
-    CURRENT_TARGET_DEVICE_DICT_ARGUMENT,
     ENDPOINT_PARAM_NAME,
     MODEL_TYPE_PARAM_NAME,
     OVMS_TYPE_PARAM_NAME,
@@ -145,19 +144,10 @@ TIMEOUT_MULTIPLIER: dict = {
     "AUTO_HETERO_MULTI": 3,
 }
 
-CURRENT_TARGET_DEVICE_DICT = {}
-
-DEVICE_ID_TO_DETAILED_TARGET_DEVICE_NAME_MAP = defaultdict(lambda: ("", []), {})
-
 SkippedItem = namedtuple("SkippedItem", "test_name reason")
 
 
 def init_environment(_config):
-    global CURRENT_TARGET_DEVICE_DICT
-    # additional constant CURRENT_TARGET_DEVICE_DICT needs to be used due to being unable to read
-    # current_target_device_dict from config when using xdist=0
-    _config.current_target_device_dict = CURRENT_TARGET_DEVICE_DICT
-
     if not machine_is_reserved_for_test_session:
         return
     init_cleanup()
@@ -456,7 +446,7 @@ def get_models_to_download():
         various_models_value = getattr(ModelsLib, various_models_name)
         if isinstance(various_models_value, dict):
             for target_device in target_devices:
-                models_to_download.extend(various_models_value[target_device])
+                models_to_download.extend(various_models_value[get_base_device(target_device)])
         else:
             models_to_download.extend(various_models_value)
     return list(set(models_to_download))
@@ -518,8 +508,6 @@ def download_resources_master():
 
 def init_ovms_config_retrieved_from_master(pytest_config):
     config.tmp_repos_dir = pytest_config.workerinput[TMP_REPOS_DIR_ARGUMENT]
-    global CURRENT_TARGET_DEVICE_DICT
-    CURRENT_TARGET_DEVICE_DICT = pytest_config.workerinput[CURRENT_TARGET_DEVICE_DICT_ARGUMENT]
 
 
 def build_local_resources():
@@ -540,11 +528,15 @@ def get_marker_args(metafunc, marker_name):
     return
 
 
+def get_target_device_id(target_device):
+    return config.target_device_ids.get(target_device, target_device)
+
+
 def get_ids_with_target_device(parameter, func):
     # return id for target_device
     if parameter in vars(TargetDevice).values() or (isinstance(parameter, str) and get_base_device(parameter)
                                                     in vars(TargetDevice).values()):
-        return CURRENT_TARGET_DEVICE_DICT.get(parameter, parameter)
+        return get_target_device_id(parameter)
     # return custom id
     return func(parameter)
 
@@ -570,7 +562,7 @@ def parametrize_model_type(metafunc):
             for model_type in get_models_for_device(args, device_type)
         ]
         ids_list = [
-            f"{CURRENT_TARGET_DEVICE_DICT.get(device_type, device_type)}-{model_type.__name__}"
+            f"{get_target_device_id(device_type)}-{model_type.__name__}"
             for device_type, model_type in params_list
         ]
         metafunc.parametrize(
@@ -585,7 +577,7 @@ def parametrize_model_type(metafunc):
         for model_aux_type in get_models_for_device(aux_args, device_type)
     ]
     ids_list = [
-        f"{CURRENT_TARGET_DEVICE_DICT.get(device_type, device_type)}"
+        f"{get_target_device_id(device_type)}"
         f"-{model_type.__name__}-{model_aux_type.__name__}"
         for device_type, model_type, model_aux_type in params_list
     ]
@@ -634,11 +626,12 @@ def parametrize_iteration_info(metafunc):
     # [(ModelsLib.various_models, 0, False, True)] -> ("CPU", ([(ModelsLib.various_models["CPU"][0], False, True)])
     params_list = []
     for device_type in config.target_devices:
+        base_device = get_base_device(device_type)
         for _iteration_info_item in args:
             iteration_info = []
             for _iteration_info in _iteration_info_item:
                 iteration_info.append(
-                    (_iteration_info[0][device_type][_iteration_info[1]], _iteration_info[2], _iteration_info[3])
+                    (_iteration_info[0][base_device][_iteration_info[1]], _iteration_info[2], _iteration_info[3])
                 )
             params_list.append((device_type, iteration_info))
     ids_list = lambda i: get_ids_with_target_device(i, ModelsLib.generate_ids_for_iteration_info)
@@ -654,11 +647,15 @@ def parametrize_input_shape(metafunc):
         params_list = [
             (device_type, shape)
             for device_type in config.target_devices
-            for shape in args[0](args[1][device_type][args[2]])
+            for shape in args[0](args[1][get_base_device(device_type)][args[2]])
         ]
     args = get_marker_args(metafunc, MarkTestParameters.INPUT_SHAPE_NO_AUTO)
     if args is not None:
-        params_list = [(device_type, shape) for device_type in config.target_devices for shape in args[0][device_type]]
+        params_list = [
+            (device_type, shape)
+            for device_type in config.target_devices
+            for shape in args[0][get_base_device(device_type)]
+        ]
     if params_list:
         ids_list = lambda i: get_ids_with_target_device(i, ModelsLib.generate_model_shape_ids)
         metafunc.parametrize(f"{TARGET_DEVICE_PARAM_NAME}, {MarkTestParameters.INPUT_SHAPE}", params_list, ids=ids_list)
@@ -680,7 +677,7 @@ def parametrize_plugin_config(metafunc):
 
 
 def parametrize_target_device(metafunc):
-    ids = [CURRENT_TARGET_DEVICE_DICT.get(x, x) for x in config.target_devices]
+    ids = [get_target_device_id(x) for x in config.target_devices]
     metafunc.parametrize(TARGET_DEVICE_PARAM_NAME, config.target_devices, ids=ids)
 
 
@@ -975,10 +972,11 @@ def set_item_image_parameter(item):
 
 
 def apply_conditional_run_type_marks(item):
-    """Resolve conditional_run_type and conditional_run_type_by_model meta-markers.
+    """Resolve conditional_run_type, conditional_run_type_by_model and conditional_run_type_by_param meta-markers.
 
     conditional_run_type: assigns single_mark when device+OS match, default_mark otherwise.
     conditional_run_type_by_model: assigns mark based on model_type membership in model collections.
+    conditional_run_type_by_param: assigns mark based on value of the param_name test parameter.
     """
     params = getattr(getattr(item, 'callspec', None), 'params', {})
 
@@ -988,7 +986,7 @@ def apply_conditional_run_type_marks(item):
         single_if_device = marker.kwargs.get("single_if_device")
         single_if_os = marker.kwargs.get("single_if_os")
 
-        device = params.get(TARGET_DEVICE_PARAM_NAME, "")
+        device = get_base_device(params.get(TARGET_DEVICE_PARAM_NAME, ""))
         base_os = str(params.get(BASE_OS_PARAM_NAME, "")).lower()
 
         is_single = True
@@ -1005,7 +1003,7 @@ def apply_conditional_run_type_marks(item):
         model_type = params.get(MarkTestParameters.MODEL_TYPE)
         if model_type is None:
             continue
-        device = params.get(TARGET_DEVICE_PARAM_NAME, "")
+        device = get_base_device(params.get(TARGET_DEVICE_PARAM_NAME, ""))
         for mark_name, model_collection in marker.kwargs.get("model_mark_map", {}).items():
             device_models = set(model_collection.get(device, []))
             if model_type in device_models:
@@ -1014,6 +1012,12 @@ def apply_conditional_run_type_marks(item):
         default_mark = marker.kwargs.get("default_mark")
         if default_mark:
             item.add_marker(getattr(pytest.mark, default_mark))
+        return
+
+    for marker in item.iter_markers(MarkConditionalRunType.CONDITIONAL_RUN_TYPE_BY_PARAM):
+        param_value = params.get(marker.kwargs["param_name"])
+        mark_name = marker.kwargs["value_mark_map"].get(param_value, marker.kwargs["default_mark"])
+        item.add_marker(getattr(pytest.mark, mark_name))
         return
 
 

@@ -14,17 +14,16 @@
 # limitations under the License.
 #
 
-from collections import defaultdict
-
 from tests.functional.constants.target_device import TargetDevice
 from tests.functional.models import models_generative as mg
+from tests.functional.utils.helpers import DeviceAwareDefaultDict
 
 
 class ModelsLibrary:
 
     @property
     def various_mini_large_language_models(self):
-        return defaultdict(
+        return DeviceAwareDefaultDict(
             list,
             {
                 TargetDevice.CPU: [mg.LFM25350MInt8OvHf],
@@ -35,7 +34,7 @@ class ModelsLibrary:
 
     @property
     def various_mini_vision_language_models(self):
-        return defaultdict(
+        return DeviceAwareDefaultDict(
             list,
             {
                 TargetDevice.CPU: [mg.Gemma34bItInt4OvHf],
@@ -46,7 +45,7 @@ class ModelsLibrary:
 
     @property
     def various_large_and_vision_language_models_on_commit(self):
-        return defaultdict(
+        return DeviceAwareDefaultDict(
             list,
             {
                 TargetDevice.CPU:

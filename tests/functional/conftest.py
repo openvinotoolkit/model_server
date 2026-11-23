@@ -20,10 +20,7 @@ import pytest
 
 from tests.functional.config import enable_pytest_plugins, pytest_keyword_filter, machine_is_reserved_for_test_session
 from tests.functional.constants.components import OvmsComponents
-from tests.functional.constants.ovms import (
-    CURRENT_TARGET_DEVICE_DICT_ARGUMENT,
-    TMP_REPOS_DIR_ARGUMENT,
-)
+from tests.functional.constants.ovms import TMP_REPOS_DIR_ARGUMENT
 from tests.functional.utils import hooks
 from tests.functional.utils.logger import OvmsFileHandler, get_logger
 from tests.functional.utils.marks import MarksRegistry
@@ -105,7 +102,6 @@ if enable_pytest_plugins:
 
     def pytest_configure_node(node):
         node.workerinput[TMP_REPOS_DIR_ARGUMENT] = node.config.tmp_repos_dir
-        node.workerinput[CURRENT_TARGET_DEVICE_DICT_ARGUMENT] = node.config.current_target_device_dict
 
 
     MarksRegistry.MARK_ENUMS.extend([OvmsComponents])
