@@ -29,20 +29,9 @@ struct FindFilterResult {
 
 inline std::optional<FindFilterResult> findFilter(const std::string& source, const std::string& function,
     size_t searchFrom) {
-    char quote = '\0';
     bool escaped = false;
     for (size_t pipe = searchFrom; pipe < source.size(); ++pipe) {
         const char value = source[pipe];
-        if (quote != '\0') {
-            if (escaped) {
-                escaped = false;
-            } else if (value == '\\') {
-                escaped = true;
-            } else if (value == quote) {
-                quote = '\0';
-            }
-            continue;
-        }
         if (value != '|') {
             continue;
         }

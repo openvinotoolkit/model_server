@@ -594,7 +594,7 @@ absl::StatusOr<ov::Tensor> decodeH264Video(MP4D_demux_t& mp4, unsigned videoTrac
         unsigned timestamp = 0;
         unsigned duration = 0;
         const MP4D_file_offset_t offset = MP4D_frame_offset(&mp4, videoTrackIndex, sampleIndex, &sampleBytes, &timestamp, &duration);
-        if (offset < 0 || static_cast<uint64_t>(offset) > file.size || sampleBytes > file.size - static_cast<size_t>(offset) ||
+        if (static_cast<uint64_t>(offset) > file.size || sampleBytes > file.size - static_cast<size_t>(offset) ||
             sampleBytes > static_cast<unsigned>(std::numeric_limits<int>::max()) - parameterSets.size()) {
             decodeStatus = absl::InvalidArgumentError("MP4 source has an invalid video sample");
             break;

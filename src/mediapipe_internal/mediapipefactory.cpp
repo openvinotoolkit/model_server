@@ -38,7 +38,7 @@
 
 namespace ovms {
 
-static void logRegisteredNames(std::unordered_set<std::string> registrySet, std::string registryName) {
+static void logRegisteredNames(std::unordered_set<std::string> registrySet, const std::string& registryName) {
     std::vector<std::string> names(registrySet.begin(), registrySet.end());
     std::sort(names.begin(), names.end());
     auto result = joins(names, ", ");

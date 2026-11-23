@@ -508,7 +508,7 @@ public:
      *
      * @param configBatchSize
      */
-    static std::tuple<Mode, std::optional<Dimension>> extractBatchingParams(std::string configBatchSize);
+    static std::tuple<Mode, std::optional<Dimension>> extractBatchingParams(const std::string& configBatchSize);
 
     /**
      * @brief Get the model version policy
@@ -535,7 +535,7 @@ public:
 
          * @return status
          */
-    Status parseModelVersionPolicy(std::string command);
+    Status parseModelVersionPolicy(const std::string& command);
 
     /**
      * @brief Get the nireq

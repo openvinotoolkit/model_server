@@ -200,7 +200,7 @@ bool ModelConfig::isShapeConfigurationEqual(const ModelConfig& rhs) const {
     return true;
 }
 
-std::tuple<Mode, std::optional<Dimension>> ModelConfig::extractBatchingParams(std::string configBatchSize) {
+std::tuple<Mode, std::optional<Dimension>> ModelConfig::extractBatchingParams(const std::string& configBatchSize) {
     Mode batchingMode = FIXED;
     std::optional<Dimension> effectiveBatchSize = std::nullopt;
     if (configBatchSize == "auto") {
@@ -220,7 +220,7 @@ std::tuple<Mode, std::optional<Dimension>> ModelConfig::extractBatchingParams(st
     return std::tuple<Mode, std::optional<Dimension>>{batchingMode, effectiveBatchSize};
 }
 
-Status ModelConfig::parseModelVersionPolicy(std::string command) {
+Status ModelConfig::parseModelVersionPolicy(const std::string& command) {
     rapidjson::Document node;
     if (command == "") {
         modelVersionPolicy = ModelVersionPolicy::getDefaultVersionPolicy();

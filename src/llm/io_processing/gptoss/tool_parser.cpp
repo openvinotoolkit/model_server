@@ -181,7 +181,7 @@ bool GptOssToolParser::consumeCompleteHeader(std::string& chunk, std::optional<D
     const std::size_t headerEnd = std::min(constrainPos, messagePos);
     const std::size_t functionPos = chunk.find("functions.");
     if (functionPos != std::string::npos && headerEnd != std::string::npos && functionPos < headerEnd) {
-        const std::size_t nameStart = functionPos + std::string("functions.").size();
+        const std::size_t nameStart = functionPos + strlen("functions.");
         const std::size_t nameEnd = chunk.find_first_of(" \t\n\r<", nameStart);
         functionNameCache = chunk.substr(nameStart, nameEnd == std::string::npos ? std::string::npos : nameEnd - nameStart);
         if (!functionNameCache.empty()) {

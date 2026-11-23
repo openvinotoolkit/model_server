@@ -377,7 +377,7 @@ static Status handleBinaryInputs(::KFSRequest& grpc_request, const std::string& 
     return StatusCode::OK;
 }
 
-Status HttpRestApiHandler::prepareGrpcRequest(const std::string modelName, const std::optional<int64_t>& modelVersion, const std::string& request_body, ::KFSRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength) {
+Status HttpRestApiHandler::prepareGrpcRequest(const std::string& modelName, const std::optional<int64_t>& modelVersion, const std::string& request_body, ::KFSRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength) {
     KFSRestParser requestParser;
 
     size_t endOfJson = inferenceHeaderContentLength.value_or(request_body.length());
@@ -1161,7 +1161,7 @@ Status HttpRestApiHandler::processRequest(
     return dispatchToProcessor(request_path, request_body, response, requestComponents, responseComponents, std::move(serverReaderWriter), std::move(multiPartParser));
 }
 
-inline static std::string createErrorJsonWithMessage(std::string message) {
+inline static std::string createErrorJsonWithMessage(const std::string& message) {
     return "{\n\t\"error\": \"" + message + "\"\n}";
 }
 

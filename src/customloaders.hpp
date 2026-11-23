@@ -58,7 +58,7 @@ public:
      *
      * @return status
      */
-    Status add(std::string name, std::shared_ptr<CustomLoaderInterface> loaderInsterface, void* library);
+    Status add(const std::string& name, std::shared_ptr<CustomLoaderInterface> loaderInsterface, void* library);
 
     /**
      * @brief remove an existing customLoader referenced by it's name
