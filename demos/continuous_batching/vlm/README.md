@@ -348,8 +348,7 @@ Unlike the image examples, these video requests use only Chat Completions: the [
 ```bash
 curl --silent --show-error --fail-with-body \
   http://localhost:8000/v1/chat/completions \
-  -H 'Content-Type: application/json' --data @- <<'JSON'
-{
+  -H 'Content-Type: application/json' -d '{
   "model": "OpenVINO/LFM3-VL-2B-int4-ov",
   "messages": [
     {
@@ -367,8 +366,7 @@ curl --silent --show-error --fail-with-body \
   ],
   "temperature": 0.0,
   "max_completion_tokens": 5000
-}
-JSON
+}'
 ```
 
 In the response, `choices[0].message.content` contains the description and `usage.completion_tokens` reports the number of generated tokens. See the [Chat Completions API reference](../../../docs/model_server_rest_api_chat.md) for supported video inputs and frame limits.
