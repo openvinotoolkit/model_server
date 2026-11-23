@@ -21,10 +21,10 @@ case "${BASE_OS:?BASE_OS must be set}" in
         loader_url="https://github.com/oneapi-src/level-zero/releases/download/v1.24.2/level-zero_1.24.2+u22.04_amd64.deb"
         ;;
     ubuntu24)
-        loader_url="https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20260830T100000Z/pool/main/l/level-zero-loader/libze1_1.32.0-1~24.04~ppa1_amd64.deb"
+        loader_url="https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20261110T100000Z/pool/main/l/level-zero-loader/libze1_1.34.0-1~24.04~ppa1_amd64.deb"
         ;;
     ubuntu26)
-        loader_url="https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20260830T100000Z/pool/main/l/level-zero-loader/libze1_1.32.0-1~26.04~ppa1_amd64.deb"
+        loader_url="https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20261110T100000Z/pool/main/l/level-zero-loader/libze1_1.34.0-1~26.04~ppa1_amd64.deb"
         ;;
     *)
         printf 'Unsupported BASE_OS: %s\n' "$BASE_OS" >&2
@@ -37,8 +37,8 @@ trap 'rm -f "$loader_package"' EXIT
 curl -fL "$loader_url" -o "$loader_package"
 case "$BASE_OS" in
     ubuntu22) loader_sha256=7c304e93835d96025c90f6a3d8f2ce5edf142c24da9f4871113a4f0225fef22e ;;
-    ubuntu24) loader_sha256=d4001dc474d3cb74ded50a449b9f646cfdfbb31e69e70b8af38f2d18273dfce1 ;;
-    ubuntu26) loader_sha256=ddd80bf4c5cef21716bc1d7370cc055dc8803451c6e644a98d3dd534d91bc1b2 ;;
+    ubuntu24) loader_sha256=4ea0d892f5e2b82db3c15c9e9a97327b6323189972b75fe4fc8b029a3aa3d26d ;;
+    ubuntu26) loader_sha256=d2e3a395ff0b40add337330dcd9e86857963bc173c84a532b5c1cda0dbe7a184 ;;
 esac
 printf '%s  %s\n' "$loader_sha256" "$loader_package" | sha256sum --check --status -
 dpkg -i "$loader_package"

@@ -461,17 +461,17 @@ RUN apt-get update ; \
             curl -fL -O https://github.com/oneapi-src/level-zero/releases/download/v1.24.2/level-zero_1.24.2+u22.04_amd64.deb && \
             echo "7c304e93835d96025c90f6a3d8f2ce5edf142c24da9f4871113a4f0225fef22e  level-zero_1.24.2+u22.04_amd64.deb" | sha256sum -c - || exit 1 ; \
         elif [[ "$BASE_IMAGE" == *"26.04"* ]] ; then \
-            curl -fL -O https://github.com/intel/linux-npu-driver/releases/download/v1.38.0/linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2604.tar.gz && \
-            echo "83685e6d92f4db1ca65e442846d487c7feb1335634b33994292ceb38f933bcc7  linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2604.tar.gz" | sha256sum -c - && \
-            tar -xf linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2604.tar.gz && \
-            curl --retry 5 --retry-all-errors --retry-delay 2 -fL -O https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20260830T100000Z/pool/main/l/level-zero-loader/libze1_1.32.0-1~26.04~ppa1_amd64.deb && \
-            echo "ddd80bf4c5cef21716bc1d7370cc055dc8803451c6e644a98d3dd534d91bc1b2  libze1_1.32.0-1~26.04~ppa1_amd64.deb" | sha256sum -c - || exit 1 ; \
+            curl -fL -O https://github.com/intel/linux-npu-driver/releases/download/v1.39.1/linux-npu-driver-v1.39.1.20261119-44517102376-ubuntu2604.tar.gz && \
+            echo "8003e3edc70ba5e4015df3c526a263fc950ee451d05d10c32813debad8957e96  linux-npu-driver-v1.39.1.20261119-44517102376-ubuntu2604.tar.gz" | sha256sum -c - && \
+            tar -xf linux-npu-driver-v1.39.1.20261119-44517102376-ubuntu2604.tar.gz && \
+            curl --retry 5 --retry-all-errors --retry-delay 2 -fL -O https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20261110T100000Z/pool/main/l/level-zero-loader/libze1_1.34.0-1~26.04~ppa1_amd64.deb && \
+            echo "d2e3a395ff0b40add337330dcd9e86857963bc173c84a532b5c1cda0dbe7a184  libze1_1.34.0-1~26.04~ppa1_amd64.deb" | sha256sum -c - || exit 1 ; \
         else \
-            curl -fL -O https://github.com/intel/linux-npu-driver/releases/download/v1.38.0/linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2404.tar.gz && \
-            echo "1efcd4b60c22abee751d8f2705962cbcc2a569de45c7e0e670cf08afbfcdc1d2  linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2404.tar.gz" | sha256sum -c - && \
-            tar -xf linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2404.tar.gz && \
-            curl --retry 5 --retry-all-errors --retry-delay 2 -fL -O https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20260830T100000Z/pool/main/l/level-zero-loader/libze1_1.32.0-1~24.04~ppa1_amd64.deb && \
-            echo "d4001dc474d3cb74ded50a449b9f646cfdfbb31e69e70b8af38f2d18273dfce1  libze1_1.32.0-1~24.04~ppa1_amd64.deb" | sha256sum -c - || exit 1 ; \
+            curl -fL -O https://github.com/intel/linux-npu-driver/releases/download/v1.39.1/linux-npu-driver-v1.39.1.20261119-44517102376-ubuntu2404.tar.gz && \
+            echo "884a461b152281f259cd6759a8ae17a77968712b939543607360ec562d4741fc  linux-npu-driver-v1.39.1.20261119-44517102376-ubuntu2404.tar.gz" | sha256sum -c - && \
+            tar -xf linux-npu-driver-v1.39.1.20261119-44517102376-ubuntu2404.tar.gz && \
+            curl --retry 5 --retry-all-errors --retry-delay 2 -fL -O https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20261110T100000Z/pool/main/l/level-zero-loader/libze1_1.34.0-1~24.04~ppa1_amd64.deb && \
+            echo "4ea0d892f5e2b82db3c15c9e9a97327b6323189972b75fe4fc8b029a3aa3d26d  libze1_1.34.0-1~24.04~ppa1_amd64.deb" | sha256sum -c - || exit 1 ; \
         fi ; \
         dpkg -i ./*.deb || exit 1; rm -Rf /tmp/npu_deps ; \
     fi ; \
