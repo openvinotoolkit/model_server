@@ -496,6 +496,26 @@ ovms_cc_library(
 )
 
 ovms_cc_library(
+    name = "io_processing_devstral_tool_parser",
+    hdrs = [
+        "io_processing/devstral/devstral_reasoning_parser.hpp",
+        "io_processing/devstral/tool_parser.hpp",
+    ],
+    srcs = [
+        "io_processing/devstral/tool_parser.cpp",
+    ],
+    deps = [                
+        "//src:libovmslogging",
+        "//src:libovmsstring_utils",
+        ":io_processing_utils",
+        ":io_processing_base_output_parser",
+        ":io_processing_qwen3_reasoning_parser",
+        ":apis_tool_schema_wrapper",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+ovms_cc_library(
     name = "io_processing_qwen3_reasoning_parser",
     hdrs = ["io_processing/qwen3/reasoning_parser.hpp"],
     srcs = ["io_processing/qwen3/reasoning_parser.cpp"],
@@ -602,7 +622,6 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
             "io_processing/hermes3/tool_parser.hpp",
             "io_processing/llama3/tool_parser.hpp",
             "io_processing/phi4/tool_parser.hpp",
-            "io_processing/devstral/tool_parser.hpp",
             "io_processing/mistral/tool_parser.hpp",
             "io_processing/gptoss/reasoning_parser.hpp",
             "io_processing/gptoss/tool_parser.hpp",
@@ -614,7 +633,6 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
             "io_processing/hermes3/tool_parser.cpp",
             "io_processing/llama3/tool_parser.cpp",
             "io_processing/phi4/tool_parser.cpp",
-            "io_processing/devstral/tool_parser.cpp",
             "io_processing/mistral/tool_parser.cpp",
             "io_processing/gptoss/reasoning_parser.cpp",
             "io_processing/gptoss/tool_parser.cpp",
@@ -636,6 +654,7 @@ ovms_cc_library( # TODO split further so we don't have to recompile everything w
         ":io_processing_lfm2_tool_parser",
         ":io_processing_gemma4_tool_parser",
         ":io_processing_minicpm5_tool_parser",
+        ":io_processing_devstral_tool_parser",
         ":io_processing_qwen3_reasoning_parser",
         ":io_processing_onyx_tool_parser",
         ":io_processing_onyx_reasoning_parser",

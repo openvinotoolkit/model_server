@@ -73,7 +73,7 @@ TEST_F(ParserConfigValidationTest, NoneIsAcceptedAsDisabledParser) {
 
 TEST_F(ParserConfigValidationTest, RegistryHasExpectedReasoningParsers) {
     const auto& names = getSupportedReasoningParserNames();
-    for (const auto& expected : {"qwen3", "gemma4", "gptoss", "lfm2", "onyx"}) {
+    for (const auto& expected : {"qwen3", "gemma4", "gptoss", "lfm2", "onyx", "devstral"}) {
         EXPECT_NE(std::find(names.begin(), names.end(), expected), names.end())
             << "Expected reasoning parser '" << expected << "' missing from registry";
     }
