@@ -59,3 +59,6 @@ LEVEL_ZERO_LOADER_URL_UBUNTU24 ?= https://snapshot.ppa.launchpadcontent.net/kobu
 LEVEL_ZERO_LOADER_SHA256_UBUNTU24 ?= d4001dc474d3cb74ded50a449b9f646cfdfbb31e69e70b8af38f2d18273dfce1
 LEVEL_ZERO_LOADER_URL_UBUNTU26 ?= https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20260830T100000Z/pool/main/l/level-zero-loader/libze1_1.32.0-1~26.04~ppa1_amd64.deb
 LEVEL_ZERO_LOADER_SHA256_UBUNTU26 ?= ddd80bf4c5cef21716bc1d7370cc055dc8803451c6e644a98d3dd534d91bc1b2
+# Windows Python runtime and build interpreters.
+WINDOWS_PYTHON312_VERSION ?= 3.12.10
+WINDOWS_PYTHON314_VERSION ?= 3.14.10
