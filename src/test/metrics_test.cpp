@@ -113,7 +113,7 @@ protected:
 TEST_F(CalculatorMetricsLoggingTest, LogsOncePerMetricAndScopeIncludingDisabledMetrics) {
     constexpr int EXPECTED_NUMBER_OF_LOG_LINES = 10;  // 3 metrics x 3 scopes, plus 1 reloaded counter.
     auto registerMetrics = [](CalculatorMetrics& metrics) {
-        metrics.getOrRegisterCounter("custom_events_total", "Events.");  // 1 line first time; 0 on repeat.
+        metrics.getOrRegisterCounter("custom_events_total", "Events.");        // 1 line first time; 0 on repeat.
         metrics.getOrRegisterGauge("custom_queue_depth", "Queued requests.");  // 1 line first time; 0 on repeat.
         metrics.getOrRegisterHistogram("custom_latency", "Latency.", {1, 2});  // 1 line first time; 0 on repeat.
     };
