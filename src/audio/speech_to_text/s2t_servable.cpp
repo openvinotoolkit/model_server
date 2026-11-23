@@ -97,20 +97,41 @@ absl::Status SttServable::updateTranscriptionConfig(ov::genai::ASRGenerationConf
         SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received language: {}", language);
         config.language = "<|" + language + "|>";
     }
-    std::string prompt = payload.multipartParser->getFieldByName("prompt");
-    if (prompt.size() > 0) {
+    // The only OpenAI-compatible steering parameter is "prompt". It is translated internally to the
+    // backend-specific fields: Whisper initial_prompt and the Qwen3-ASR system message (context).
+    const std::string prompt = payload.multipartParser->getFieldByName("prompt");
+    if (!prompt.empty()) {
         SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received prompt: {}", prompt);
         config.initial_prompt = prompt;
+        config.context = prompt;
     }
-    std::string hotwords = payload.multipartParser->getFieldByName("hotwords");
-    if (hotwords.size() > 0) {
-        SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received hotwords: {}", hotwords);
-        config.hotwords = hotwords;
+    // OpenAI-compatible "keywords" array is translated internally to Whisper hotwords.
+    std::vector<std::string> keywords = payload.multipartParser->getArrayFieldByName("keywords[]");
+    if (keywords.empty()) {
+        keywords = payload.multipartParser->getArrayFieldByName("keywords");
     }
-    std::string context = payload.multipartParser->getFieldByName("context");
-    if (context.size() > 0) {
-        SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received context: {}", context);
-        config.context = context;
+    if (!keywords.empty()) {
+        std::string hotwords;
+        for (const auto& keyword : keywords) {
+            if (keyword.empty()) {
+                continue;
+            }
+            if (!hotwords.empty()) {
+                hotwords += ' ';
+            }
+            hotwords += keyword;
+        }
+        if (!hotwords.empty()) {
+            SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received keywords: {}", hotwords);
+            config.hotwords = std::move(hotwords);
+        }
+    } else {
+        // "hotwords" is kept as an OVMS compatibility alias for "keywords".
+        const std::string hotwords = payload.multipartParser->getFieldByName("hotwords");
+        if (!hotwords.empty()) {
+            SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received hotwords: {}", hotwords);
+            config.hotwords = hotwords;
+        }
     }
     std::vector<std::string> timestampsTypes = payload.multipartParser->getArrayFieldByName("timestamp_granularities[]");
     config.word_timestamps = false;

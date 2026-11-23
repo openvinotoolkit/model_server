@@ -44,9 +44,9 @@ curl -X POST http://localhost:8000/v3/audio/translations \
 | include | ❌ | ✅ | array | Additional information to include in the transcription response. |
 | known_speaker_names | ❌ | ✅ | array | List of speaker names corresponding to the audio samples |
 | known_speaker_references | ❌ | ✅ | array | Optional list of audio samples with known speaker references matching known_speaker_names |
-| prompt | ✅ | ✅ | string | An optional text to guide the model's style or continue a previous audio segment. Passed as `initial_prompt` (supported by Whisper models, ignored by Qwen3-ASR). |
-| hotwords | ✅ | ❌ | string | Space-separated list of hotwords used to steer the transcription to particular spellings. Passed as `hotwords` (supported by Whisper models, ignored by Qwen3-ASR). |
-| context | ✅ | ❌ | string | Context passed as a previous transcription to steer spelling or style. Supported by Qwen3-ASR models only. |
+| keywords | ✅ | ✅ | array | Words or phrases used to steer spelling and style. Passed as Whisper `hotwords` and applied to every processing window. Ignored by Qwen3-ASR. |
+| prompt | ✅ | ✅ | string | Optional text that guides model style or continues a previous audio segment. Internally mapped to Whisper `initial_prompt` (first processing window) and to the Qwen3-ASR system message (chat-template context). |
+| hotwords | ✅ | ❌ | string | OVMS compatibility alias for `keywords`. Used as Whisper `hotwords`; ignored by Qwen3-ASR. |
 | response_format | ❌ | ✅ | string | The format of the output. |
 | stream | ✅ | ✅ | boolean | Generate the response in streaming mode. **Note**: Streaming is not supported for translations endpoint. |
 | temperature | ✅ | ✅ | float (default: `1.0`) | The sampling temperature, cannot be negative. |

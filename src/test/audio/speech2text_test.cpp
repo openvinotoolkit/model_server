@@ -169,12 +169,13 @@ protected:
     std::shared_ptr<SttServable> servable;
     // Fields present in the simulated multipart request; absent fields return empty.
     std::unordered_map<std::string, std::string> requestFields;
+    std::unordered_map<std::string, std::vector<std::string>> requestArrays;
     std::set<std::string> fieldsRead;
 
     void SetUp() override {
         payload.multipartParser = multipartParser;
         // updateTranscriptionConfig reads every field it handles, so the mock is
-        // driven from requestFields rather than from per-field expectations.
+        // driven from the request maps rather than from per-field expectations.
         ON_CALL(*multipartParser, getFieldByName(::testing::_))
             .WillByDefault(::testing::Invoke([this](const std::string& name) {
                 fieldsRead.insert(name);
@@ -184,24 +185,65 @@ protected:
         EXPECT_CALL(*multipartParser, getFieldByName(::testing::_))
             .Times(::testing::AnyNumber());
         ON_CALL(*multipartParser, getArrayFieldByName(::testing::_))
-            .WillByDefault(::testing::Return(std::vector<std::string>{}));
+            .WillByDefault(::testing::Invoke([this](const std::string& name) {
+                fieldsRead.insert(name);
+                auto it = requestArrays.find(name);
+                return it == requestArrays.end() ? std::vector<std::string>{} : it->second;
+            }));
+        EXPECT_CALL(*multipartParser, getArrayFieldByName(::testing::_))
+            .Times(::testing::AnyNumber());
     }
 };
 
-TEST_F(SttServableUpdateTranscriptionConfigTest, promptFieldSetsInitialPrompt) {
-    requestFields["prompt"] = "Polychrome";
+TEST_F(SttServableUpdateTranscriptionConfigTest, promptSetsWhisperInitialPromptAndQwenContext) {
+    requestFields["prompt"] = "previous transcription";
 
     ov::genai::ASRGenerationConfig config;
     auto status = SttServable::updateTranscriptionConfig(config, servable, payload);
     EXPECT_TRUE(status.ok());
     ASSERT_TRUE(config.initial_prompt.has_value());
-    EXPECT_EQ(config.initial_prompt.value(), "Polychrome");
+    EXPECT_EQ(config.initial_prompt.value(), "previous transcription");
+    ASSERT_TRUE(config.context.has_value());
+    EXPECT_EQ(config.context.value(), "previous transcription");
     EXPECT_FALSE(config.hotwords.has_value());
-    EXPECT_FALSE(config.context.has_value());
     EXPECT_EQ(1u, fieldsRead.count("prompt"));
 }
 
-TEST_F(SttServableUpdateTranscriptionConfigTest, hotwordsFieldSetsHotwords) {
+TEST_F(SttServableUpdateTranscriptionConfigTest, officialKeywordsArePassedAsWhisperHotwords) {
+    requestArrays["keywords[]"] = {"OpenVINO", "Model Server"};
+    // The alias must not win over the official OpenAI parameter.
+    requestFields["hotwords"] = "ignored alias";
+
+    ov::genai::ASRGenerationConfig config;
+    auto status = SttServable::updateTranscriptionConfig(config, servable, payload);
+    EXPECT_TRUE(status.ok());
+    ASSERT_TRUE(config.hotwords.has_value());
+    EXPECT_EQ(config.hotwords.value(), "OpenVINO Model Server");
+    EXPECT_FALSE(config.initial_prompt.has_value());
+    EXPECT_FALSE(config.context.has_value());
+}
+
+TEST_F(SttServableUpdateTranscriptionConfigTest, keywordsWithoutBracketsAreSupported) {
+    requestArrays["keywords"] = {"Qwen", "ASR"};
+
+    ov::genai::ASRGenerationConfig config;
+    auto status = SttServable::updateTranscriptionConfig(config, servable, payload);
+    EXPECT_TRUE(status.ok());
+    ASSERT_TRUE(config.hotwords.has_value());
+    EXPECT_EQ(config.hotwords.value(), "Qwen ASR");
+}
+
+TEST_F(SttServableUpdateTranscriptionConfigTest, emptyKeywordsEntriesAreSkipped) {
+    requestArrays["keywords[]"] = {"OpenVINO", "", "Model Server"};
+
+    ov::genai::ASRGenerationConfig config;
+    auto status = SttServable::updateTranscriptionConfig(config, servable, payload);
+    EXPECT_TRUE(status.ok());
+    ASSERT_TRUE(config.hotwords.has_value());
+    EXPECT_EQ(config.hotwords.value(), "OpenVINO Model Server");
+}
+
+TEST_F(SttServableUpdateTranscriptionConfigTest, hotwordsRemainsACompatibilityAlias) {
     requestFields["hotwords"] = "Polychrome";
 
     ov::genai::ASRGenerationConfig config;
@@ -214,23 +256,24 @@ TEST_F(SttServableUpdateTranscriptionConfigTest, hotwordsFieldSetsHotwords) {
     EXPECT_EQ(1u, fieldsRead.count("hotwords"));
 }
 
-TEST_F(SttServableUpdateTranscriptionConfigTest, contextFieldSetsContext) {
-    requestFields["context"] = "previous transcription";
+TEST_F(SttServableUpdateTranscriptionConfigTest, promptIsTheOnlySteeringTextParameter) {
+    // "context" is not an OpenAI-compatible parameter, so it must not be read from the request.
+    requestFields["prompt"] = "prompt text";
+    requestFields["context"] = "ignored";
 
     ov::genai::ASRGenerationConfig config;
     auto status = SttServable::updateTranscriptionConfig(config, servable, payload);
     EXPECT_TRUE(status.ok());
+    ASSERT_TRUE(config.initial_prompt.has_value());
+    EXPECT_EQ(config.initial_prompt.value(), "prompt text");
     ASSERT_TRUE(config.context.has_value());
-    EXPECT_EQ(config.context.value(), "previous transcription");
-    EXPECT_FALSE(config.initial_prompt.has_value());
-    EXPECT_FALSE(config.hotwords.has_value());
-    EXPECT_EQ(1u, fieldsRead.count("context"));
+    EXPECT_EQ(config.context.value(), "prompt text");
+    EXPECT_EQ(0u, fieldsRead.count("context"));
 }
 
 TEST_F(SttServableUpdateTranscriptionConfigTest, allSteeringFieldsTogether) {
     requestFields["prompt"] = "prompt text";
-    requestFields["hotwords"] = "hotword";
-    requestFields["context"] = "context text";
+    requestArrays["keywords[]"] = {"hotword"};
 
     ov::genai::ASRGenerationConfig config;
     auto status = SttServable::updateTranscriptionConfig(config, servable, payload);
@@ -240,7 +283,7 @@ TEST_F(SttServableUpdateTranscriptionConfigTest, allSteeringFieldsTogether) {
     ASSERT_TRUE(config.hotwords.has_value());
     EXPECT_EQ(config.hotwords.value(), "hotword");
     ASSERT_TRUE(config.context.has_value());
-    EXPECT_EQ(config.context.value(), "context text");
+    EXPECT_EQ(config.context.value(), "prompt text");
 }
 
 TEST_F(SttServableUpdateTranscriptionConfigTest, noSteeringFieldsLeaveConfigDefaults) {
