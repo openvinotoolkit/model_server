@@ -233,13 +233,31 @@ curl http://localhost/v1/chat/completions \
 
 To send an encoded MP4, set `video_url.url` to its source string:
 
-```json
-{
-  "type": "video_url",
-  "video_url": {
-    "url": "https://media.example.com/video.mp4"
-  }
-}
+```
+curl http://localhost/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+  "model": "qwen3-vl",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "Describe this video."
+        },
+        {
+          "type": "video_url",
+          "video_url": {
+            "url": "https://media.example.com/video.mp4"
+          }
+        }
+      ]
+    }
+  ],
+  "temperature": 0.0,
+  "max_completion_tokens": 128
+}'
 ```
 
 **Note**: A frame-array `video_url.url` contains at least one string and at most `video_max_frames` strings. An encoded source is an MP4 path or URL containing H.264/AVC video. Local paths require `--allowed_local_media_path`; URLs require a matching `--allowed_media_domains` entry. Encoded MP4 sources use the model's `video_fps` and `video_max_frames` calculator options. The default frame limit is 32; when FPS is unset, frames are retained up to that limit. If the requested FPS would produce more frames than `video_max_frames`, the request is rejected. Sampling uses MP4 timestamps, including for variable-frame-rate MP4s. All decoded frames of a single video must share the same height, width and channel count. Encoded-video pixels count toward the request-wide [`--max_video_decode_pixels`](parameters.md#input-media-decode-protection) budget; requests exceeding it are rejected rather than sampled down further. Frame-array pixels count toward `--max_image_decode_pixels`. The encoded file size is bounded by `--max_encoded_video_file_size_bytes` for both local files and downloaded sources. Multiple `video_url` parts, and mixing `image_url` and `video_url` in one message, are supported.
