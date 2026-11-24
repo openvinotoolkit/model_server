@@ -347,11 +347,21 @@ def functional_test(String artifactsPath = null){
 // Post build steps
 def archive_build_artifacts(){
     // Left for tests when enabled - junit allowEmptyResults: true, testResults: "logs/**/*.xml"
-    archiveArtifacts allowEmptyArchive: true, artifacts: "dist\\windows\\ovms.zip"
-    archiveArtifacts allowEmptyArchive: false, artifacts: "dist\\windows\\OVMS-Setup.exe"
-    archiveArtifacts allowEmptyArchive: false, artifacts: "build_installer.log"
-    archiveArtifacts allowEmptyArchive: true, artifacts: "win_environment.log"
-    archiveArtifacts allowEmptyArchive: true, artifacts: "win_build.log"
+    if (fileExists("dist\\windows\\ovms.zip")) {
+        archiveArtifacts allowEmptyArchive: true, artifacts: "dist\\windows\\ovms.zip"
+    }
+    if (fileExists("dist\\windows\\OVMS-Setup.exe")) {
+        archiveArtifacts allowEmptyArchive: true, artifacts: "dist\\windows\\OVMS-Setup.exe"
+    }
+    if (fileExists("build_installer.log")) {
+        archiveArtifacts allowEmptyArchive: true, artifacts: "build_installer.log"
+    }
+    if (fileExists("win_environment.log")) {
+        archiveArtifacts allowEmptyArchive: true, artifacts: "win_environment.log"
+    }
+    if (fileExists("win_build.log")) {
+        archiveArtifacts allowEmptyArchive: true, artifacts: "win_build.log"
+    }
 }
 
 def archive_test_artifacts(){

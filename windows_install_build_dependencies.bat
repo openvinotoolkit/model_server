@@ -405,12 +405,13 @@ if "!inno_setup_skip_install!"=="1" (
 ) else (
     IF /I NOT EXIST "%opt_install_dir%\%inno_setup_exe%" (
         echo [INFO] Downloading Inno Setup installer: %inno_setup_url%
-        "%wget_path%" -O "%opt_install_dir%\%inno_setup_exe%" "%inno_setup_url%"
+        curl -L --fail --show-error -o "%opt_install_dir%\%inno_setup_exe%" "%inno_setup_url%"
         if !errorlevel! neq 0 exit /b !errorlevel!
     )
 
     IF /I EXIST "%opt_install_dir%\%inno_setup_exe%" (
-        start "Installing_InnoSetup" "%opt_install_dir%\%inno_setup_exe%" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART %inno_setup_install_mode% /DIR="%inno_setup_dir%"
+        echo [INFO] Running Inno Setup installer: "%opt_install_dir%\%inno_setup_exe%"
+        start "" "%opt_install_dir%\%inno_setup_exe%" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART %inno_setup_install_mode% /DIR="%inno_setup_dir%"
         set "inno_setup_finished=0"
         for /l %%i in (1,1,200) do (
             echo Timeout iteration: %%i
@@ -418,15 +419,18 @@ if "!inno_setup_skip_install!"=="1" (
             if !errorlevel! neq 0 (
                 echo Process "%inno_setup_exe%" finished
                 set "inno_setup_finished=1"
+                goto :inno_setup_process_finished
             ) else (
                 echo Process "%inno_setup_exe%" in progress ...
                 ping 1.1.1.1 -n 3 > nul
             )
         )
 
+:inno_setup_process_finished
         if "!inno_setup_finished!"=="0" (
-            taskkill /f /t /im %inno_setup_exe%
-            if !errorlevel! neq 0 exit /b !errorlevel!
+            echo [ERROR] Inno Setup installer timed out
+            taskkill /f /t /im %inno_setup_exe% > nul 2>&1
+            exit /b 1
         )
     )
 )
