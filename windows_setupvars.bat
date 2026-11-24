@@ -31,7 +31,7 @@ if exist "%ROOT%\.venv\pyvenv.cfg" (
     if errorlevel 1 rmdir /s /q "%ROOT%\.venv"
 )
 if exist "%ROOT%\.venv-style\pyvenv.cfg" (
-    findstr /i /c:"Python314" "%ROOT%\.venv-style\pyvenv.cfg" >nul
+    findstr /i /c:"Python312" "%ROOT%\.venv-style\pyvenv.cfg" >nul
     if errorlevel 1 rmdir /s /q "%ROOT%\.venv-style"
 )
 if not exist "%ROOT%\.venv\Scripts\python.exe" (
@@ -40,7 +40,7 @@ if not exist "%ROOT%\.venv\Scripts\python.exe" (
 )
 if not exist "%ROOT%\.venv-style\Scripts\python.exe" (
     echo [INFO] Creating local .venv-style for style tools...
-    "C:\opt\Python314\python.exe" -m venv "%ROOT%\.venv-style"
+    "C:\opt\Python312\python.exe" -m venv "%ROOT%\.venv-style"
 )
 if not exist "%ROOT%\.venv-style\Scripts\clang-format.exe" (
     echo [INFO] Installing style dependencies into .venv-style...

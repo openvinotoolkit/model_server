@@ -1,3 +1,19 @@
+#
+# Copyright (c) 2026 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 param(
     [Parameter(Mandatory = $true)][string]$InstallDir,
     [Parameter(Mandatory = $true)][string]$DataDir,
@@ -63,12 +79,12 @@ function Ensure-SystemPythonRequirements {
         $pythonCommand = "py"
         $pythonName = "py"
     } else {
-        throw "System Python was selected, but no Python executable was found on PATH. Install Python 3.12 and try again."
+        throw "System Python was selected, but no Python executable was found on PATH. Install Python 3.14 and try again."
     }
 
     try {
         if ($pythonName -eq "py") {
-            $versionOutput = & $pythonCommand -3.12 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>$null
+            $versionOutput = & $pythonCommand -3.14 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>$null
         } else {
             $versionOutput = & $pythonCommand -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>$null
         }
@@ -78,8 +94,8 @@ function Ensure-SystemPythonRequirements {
             throw "Unable to detect the system Python version."
         }
 
-        if ($versionText -ne "3.12") {
-            throw "System Python version $versionText is not supported. OVMS requires Python 3.12 when using the system-python option."
+        if ($versionText -ne "3.14") {
+            throw "System Python version $versionText is not supported. OVMS requires Python 3.14 when using the system-Python option."
         }
 
         $pipArgs = @(
@@ -87,13 +103,13 @@ function Ensure-SystemPythonRequirements {
             "pip",
             "install",
             "--disable-pip-version-check",
-            "setuptools==80.9.0",
+            "setuptools==84.2.1",
             "Jinja2==3.1.6",
-            "MarkupSafe==3.0.2"
+            "MarkupSafe==3.0.4"
         )
 
         if ($pythonName -eq "py") {
-            & $pythonCommand -3.12 @pipArgs
+            & $pythonCommand -3.14 @pipArgs
         } else {
             & $pythonCommand @pipArgs
         }

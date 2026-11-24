@@ -23,7 +23,7 @@ ifeq ($(filter MINGW% MSYS% CYGWIN%,$(UNAME_S)),)
 	VIRTUALENV_EXE := python3 -m venv
 else
 	VIRTUALENV_BIN_DIR := Scripts
-	VIRTUALENV_EXE := python -m venv
+	VIRTUALENV_EXE := C:/opt/Python312/python.exe -m venv
 endif
 BASH_BIN := $(shell command -v bash 2>/dev/null || command -v sh 2>/dev/null || echo /bin/bash)
 GIT_BIN := $(shell command -v git 2>/dev/null || command -v git.exe 2>/dev/null || echo )

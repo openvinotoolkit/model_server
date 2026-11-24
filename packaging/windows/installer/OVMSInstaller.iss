@@ -1,3 +1,17 @@
+; Copyright (c) 2026 Intel Corporation
+;
+; Licensed under the Apache License, Version 2.0 (the "License");
+; you may not use this file except in compliance with the License.
+; You may obtain a copy of the License at
+;
+;      http://www.apache.org/licenses/LICENSE-2.0
+;
+; Unless required by applicable law or agreed to in writing, software
+; distributed under the License is distributed on an "AS IS" BASIS,
+; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+; See the License for the specific language governing permissions and
+; limitations under the License.
+
 #define AppName "OpenVINO Model Server"
 #define AppPublisher "OpenVINO"
 #ifndef SourceRoot
@@ -197,10 +211,12 @@ function DetectSystemPythonPath: String;
 begin
   Result := '';
 
-  if FileExists(ExpandConstant('{commonpf64}\Python312\python.exe')) then
-    Result := ExpandConstant('{commonpf64}\Python312\python.exe')
-  else if FileExists(ExpandConstant('{localappdata}\Programs\Python\Python312\python.exe')) then
-    Result := ExpandConstant('{localappdata}\Programs\Python\Python312\python.exe')
+  if FileExists(ExpandConstant('{commonpf64}\Python314\python.exe')) then
+    Result := ExpandConstant('{commonpf64}\Python314\python.exe')
+  else if FileExists(ExpandConstant('{localappdata}\Programs\Python\Python314\python.exe')) then
+    Result := ExpandConstant('{localappdata}\Programs\Python\Python314\python.exe')
+  else if FileExists(ExpandConstant('{sd}\opt\Python314\python.exe')) then
+    Result := ExpandConstant('{sd}\opt\Python314\python.exe')
   else if FileExists(ExpandConstant('{win}\python.exe')) then
     Result := ExpandConstant('{win}\python.exe');
 end;
@@ -1056,7 +1072,7 @@ begin
   if ResultCode = 0 then
   begin
     if Variant = 'system' then
-      Message := 'System Python configuration succeeded.' + #13#10 + 'The detected Python 3.12 environment is ready for OVMS.'
+      Message := 'System Python configuration succeeded.' + #13#10 + 'The detected Python 3.14 environment is ready for OVMS.'
     else
       Message := 'Embedded Python configuration succeeded.';
 
