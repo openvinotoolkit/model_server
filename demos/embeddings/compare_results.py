@@ -106,10 +106,10 @@ for res in OVMS_embeddings:
         diff = np.abs(ovmsresult - HF_embeddings[i])
         print(f"Max difference: {diff.max():.6f}")
         print(f"Mean difference: {diff.mean():.6f}")
-    if (np.linalg.norm(ovmsresult - HF_embeddings[i]) < 0.06):
+    if ((norm := np.linalg.norm(ovmsresult - HF_embeddings[i])) < 0.06):
         print("[PASS] Np linalg.norm")
     else:
-        print("[FAIL] Np linalg.norm")
+        print(f"[FAIL] Np linalg.norm: {norm}")
         failed+=1
     i+=1
 

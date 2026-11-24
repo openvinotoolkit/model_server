@@ -26,7 +26,8 @@ OV_SUBDIR = "openvino"
 
 parser = argparse.ArgumentParser(description='Download OpenVINO IR of an embedding model from HuggingFace and generate tokenizer/detokenizer')
 parser.add_argument('--model_id', required=True, help='HuggingFace model id, e.g. thenlper/gte-small')
-parser.add_argument('--output_dir', default='models', help='Root directory where the model will be stored')
+parser.add_argument('--output_dir', default='C:/models' if os.name == 'nt' else os.path.expanduser('~/models'),
+                    help='Root directory where the model will be stored (default: C:/models on Windows, ${HOME}/models on Linux)')
 parser.add_argument('--revision', default=None, help='Model revision (branch, tag or commit)')
 parser.add_argument('--trust_remote_code', action='store_true', help='Pass --trust-remote-code to convert_tokenizer')
 args = parser.parse_args()
