@@ -2,28 +2,20 @@
 
 The installer is built with Inno Setup from `OVMSInstaller.iss`.
 
-It expects the OVMS portable package to already exist at:
+It expects the OVMS portable package at:
 
 ```text
 dist/windows/ovms
 ```
 
-The installer adds:
+The installer provides:
 
 - OVMS files under `C:\Program Files\OVMS`.
-- Data folders under `C:\ProgramData\OVMS`.
-- Default settings and install marker files.
-- Start Menu shortcuts.
-- Optional PATH entry.
-- Optional start-at-login entry for the tray app.
-- Optional Windows Service registration.
-- A standard Apps & Features uninstaller.
+- Per-user data under `%LOCALAPPDATA%\OVMS`.
+- Three Python modes: system Python, embedded Python, or no Python.
+- Optional OVMS PATH configuration.
+- Optional Windows service installation and service control.
+- Repair and uninstall actions.
+- Start Menu server-control shortcuts.
 
-The installer must be fully offline once built. It should not download Python,
-.NET, OpenVINO, GenAI, or model-server dependencies during installation. The
-OVMS package and self-contained tray app must already be present in the
-installer payload.
-
-The uninstaller stops managed OVMS processes, removes optional service/startup
-configuration, removes installer-created PATH entries, and removes installed
-program files. Data under `C:\ProgramData\OVMS` is preserved by default.
+The installer is fully offline. All runtime dependencies required by the package must be present in `dist/windows/ovms` before building.

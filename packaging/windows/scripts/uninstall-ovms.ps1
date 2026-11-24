@@ -43,6 +43,9 @@ if (Test-Path $runtimePath) {
 [Environment]::SetEnvironmentVariable("OVMS_DIR", $null, "User")
 [Environment]::SetEnvironmentVariable("PYTHONHOME", $null, "User")
 [Environment]::SetEnvironmentVariable("ESPEAK_DATA_PATH", $null, "User")
+[Environment]::SetEnvironmentVariable("OVMS_DIR", $null, "Machine")
+[Environment]::SetEnvironmentVariable("PYTHONHOME", $null, "Machine")
+[Environment]::SetEnvironmentVariable("ESPEAK_DATA_PATH", $null, "Machine")
 
 switch ($DataMode) {
     "PreserveAll" {

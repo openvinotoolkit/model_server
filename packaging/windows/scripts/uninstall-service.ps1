@@ -65,6 +65,14 @@ try {
         }
     }
 
+    $serviceRegistryPath = "SYSTEM\CurrentControlSet\Services\ovms"
+    $serviceRegistryKey = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey($serviceRegistryPath, $true)
+    if ($null -ne $serviceRegistryKey) {
+        $serviceRegistryKey.DeleteValue("Environment", $false)
+        $serviceRegistryKey.Close()
+        Write-SetupLog -Message "[INFO] Removed OVMS service-specific environment registry values." -LogPath $SetupLogPath
+    }
+
     Write-SetupLog -Message "[INFO] OVMS service cleanup completed." -LogPath $SetupLogPath
 } catch {
     Write-SetupLog -Message "[ERROR] OVMS service cleanup failed: $($_.Exception.Message)" -LogPath $SetupLogPath

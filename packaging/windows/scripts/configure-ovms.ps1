@@ -17,7 +17,8 @@
 param(
     [Parameter(Mandatory = $true)][string]$InstallDir,
     [Parameter(Mandatory = $true)][string]$DataDir,
-    [string]$PackageVariant = "python_on",
+    [string]$ModelRepositoryPath = "",
+    [ValidateSet("system", "embedded", "none")][string]$PythonVariant = "none",
     [string]$RunMode = "user-login",
     [int]$RestPort = 8000,
     [int]$GrpcPort = 0,
@@ -63,7 +64,8 @@ trap {
 
 function Ensure-SystemPythonRequirements {
     param(
-        [Parameter(Mandatory = $true)][string]$Variant
+        [Parameter(Mandatory = $true)][string]$Variant,
+        [Parameter(Mandatory = $true)][string]$InstallDir
     )
 
     if ($Variant -ne "system") {
@@ -83,6 +85,12 @@ function Ensure-SystemPythonRequirements {
     }
 
     try {
+        $pythonBindingDir = Join-Path $InstallDir "python"
+        $pythonBindingModule = Join-Path $pythonBindingDir "pyovms.pyd"
+        if (-not (Test-Path -LiteralPath $pythonBindingModule)) {
+            throw "OVMS Python binding was not found at '$pythonBindingModule'. Reinstall OVMS with Python support enabled."
+        }
+
         if ($pythonName -eq "py") {
             $versionOutput = & $pythonCommand -3.14 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>$null
         } else {
@@ -117,22 +125,117 @@ function Ensure-SystemPythonRequirements {
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to install the required Python dependencies for the system-Python configuration."
         }
+
+        $escapedInstallDir = $InstallDir.Replace('\\', '\\\\').Replace("'", "\\'")
+        $validateBindingCommand = "import os,sys; install_dir='${escapedInstallDir}'; binding_dir=os.path.join(install_dir,'python'); os.add_dll_directory(install_dir) if hasattr(os,'add_dll_directory') else None; sys.path.insert(0,binding_dir) if binding_dir not in sys.path else None; import pyovms"
+        if ($pythonName -eq "py") {
+            & $pythonCommand -3.14 -c $validateBindingCommand
+        } else {
+            & $pythonCommand -c $validateBindingCommand
+        }
+
+        if ($LASTEXITCODE -ne 0) {
+            throw "System Python cannot import OVMS bindings (pyovms). Ensure '$pythonBindingDir' is available and DLL loading from '$InstallDir' is allowed."
+        }
     } catch {
         throw "System Python validation failed: $($_.Exception.Message)"
     }
 }
 
-$modelsDir = Join-Path $DataDir "models"
-$logsDir = Join-Path $DataDir "logs"
-$configPath = Join-Path $modelsDir "config.json"
 $settingsPath = Join-Path $DataDir "settings.json"
 $installMarkerPath = Join-Path $DataDir "install.json"
-$logPath = Join-Path $logsDir "ovms_server.log"
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
-Ensure-SystemPythonRequirements -Variant $PackageVariant
+Ensure-SystemPythonRequirements -Variant $PythonVariant -InstallDir $InstallDir
 
-New-Item -ItemType Directory -Force -Path $DataDir, $modelsDir, $logsDir, (Join-Path $DataDir "packages"), (Join-Path $DataDir "downloads"), (Join-Path $DataDir "diagnostics") | Out-Null
+$existingSettings = $null
+if (Test-Path -LiteralPath $settingsPath) {
+    try {
+        $existingSettings = Get-Content -LiteralPath $settingsPath -Raw | ConvertFrom-Json -ErrorAction Stop
+    } catch {
+        Write-SetupLog -Message "[WARN] Existing settings file is invalid and will be regenerated: $settingsPath" -LogPath $SetupLogPath
+    }
+}
+
+$hasModelRepositoryOverride = $PSBoundParameters.ContainsKey("ModelRepositoryPath") -and -not [string]::IsNullOrWhiteSpace($ModelRepositoryPath)
+if ($hasModelRepositoryOverride) {
+    $modelsDir = $ModelRepositoryPath.Trim()
+} elseif ($existingSettings -and -not [string]::IsNullOrWhiteSpace([string]$existingSettings.modelRepositoryPath)) {
+    $modelsDir = [string]$existingSettings.modelRepositoryPath
+} else {
+    $modelsDir = Join-Path $DataDir "models"
+}
+
+if ($hasModelRepositoryOverride) {
+    $configPath = Join-Path $modelsDir "config.json"
+} elseif ($existingSettings -and -not [string]::IsNullOrWhiteSpace([string]$existingSettings.configPath)) {
+    $configPath = [string]$existingSettings.configPath
+} else {
+    $configPath = Join-Path $modelsDir "config.json"
+}
+
+$logsDir = Join-Path $DataDir "logs"
+if ($existingSettings -and -not [string]::IsNullOrWhiteSpace([string]$existingSettings.logPath)) {
+    $logPath = [string]$existingSettings.logPath
+} else {
+    $logPath = Join-Path $logsDir "ovms_server.log"
+}
+
+if ($PSBoundParameters.ContainsKey("RestPort")) {
+    $effectiveRestPort = $RestPort
+} elseif ($existingSettings -and $null -ne $existingSettings.restPort) {
+    $effectiveRestPort = [int]$existingSettings.restPort
+} else {
+    $effectiveRestPort = 8000
+}
+
+if ($PSBoundParameters.ContainsKey("GrpcPort")) {
+    $effectiveGrpcPort = $GrpcPort
+} elseif ($existingSettings -and $null -ne $existingSettings.grpcPort) {
+    $effectiveGrpcPort = [int]$existingSettings.grpcPort
+} else {
+    $effectiveGrpcPort = 0
+}
+
+if ($PSBoundParameters.ContainsKey("BindAddress")) {
+    $effectiveBindAddress = $BindAddress
+} elseif ($existingSettings -and -not [string]::IsNullOrWhiteSpace([string]$existingSettings.bindAddress)) {
+    $effectiveBindAddress = [string]$existingSettings.bindAddress
+} else {
+    $effectiveBindAddress = "127.0.0.1"
+}
+
+if ($PSBoundParameters.ContainsKey("LogLevel")) {
+    $effectiveLogLevel = $LogLevel
+} elseif ($existingSettings -and -not [string]::IsNullOrWhiteSpace([string]$existingSettings.logLevel)) {
+    $effectiveLogLevel = [string]$existingSettings.logLevel
+} else {
+    $effectiveLogLevel = "INFO"
+}
+
+if ($PSBoundParameters.ContainsKey("RunMode")) {
+    $effectiveRunMode = $RunMode
+} elseif ($existingSettings -and -not [string]::IsNullOrWhiteSpace([string]$existingSettings.runMode)) {
+    $effectiveRunMode = [string]$existingSettings.runMode
+} else {
+    $effectiveRunMode = "user-login"
+}
+
+$configDir = Split-Path -Parent $configPath
+$logDir = Split-Path -Parent $logPath
+
+$pathsToEnsure = @(
+    $DataDir,
+    $modelsDir,
+    $logsDir,
+    (Join-Path $DataDir "packages"),
+    (Join-Path $DataDir "downloads"),
+    (Join-Path $DataDir "diagnostics"),
+    $configDir,
+    $logDir
+) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+
+New-Item -ItemType Directory -Force -Path $pathsToEnsure | Out-Null
 
 if (-not (Test-Path $configPath)) {
     [System.IO.File]::WriteAllText($configPath, '{"model_config_list":[]}', $utf8NoBom)
@@ -144,12 +247,11 @@ $settings = [ordered]@{
     modelRepositoryPath = $modelsDir
     configPath = $configPath
     logPath = $logPath
-    restPort = $RestPort
-    grpcPort = $GrpcPort
-    bindAddress = $BindAddress
-    logLevel = $LogLevel
-    runMode = $RunMode
-    packageVariant = $PackageVariant
+    restPort = $effectiveRestPort
+    grpcPort = $effectiveGrpcPort
+    bindAddress = $effectiveBindAddress
+    logLevel = $effectiveLogLevel
+    runMode = $effectiveRunMode
 }
 
 $tmpSettings = "$settingsPath.tmp"
@@ -174,7 +276,6 @@ $installMarker = [ordered]@{
     installDir = $InstallDir
     dataDir = $DataDir
     version = $version
-    packageVariant = $PackageVariant
     installedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
     installerVersion = "1.0.0"
 }

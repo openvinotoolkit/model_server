@@ -96,6 +96,7 @@ Source: "{#OvmsSourceDir}\libpython_calculators.dll"; DestDir: "{app}"; Componen
 Source: "{#OvmsSourceDir}\git2.dll"; DestDir: "{app}"; Components: core; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\tbb12.dll"; DestDir: "{app}"; Components: core; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\thirdparty-licenses\*"; DestDir: "{app}\thirdparty-licenses"; Components: core; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#OvmsSourceDir}\python\pyovms.pyd"; DestDir: "{app}\python"; Components: python_system python_embedded; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\python\*"; DestDir: "{app}\python"; Components: python_embedded; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#OvmsSourceDir}\espeak-ng.dll"; DestDir: "{app}"; Components: espeak; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\espeak-ng-data\*"; DestDir: "{app}\espeak-ng-data"; Components: espeak; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -117,10 +118,6 @@ Source: "{#SourceRoot}\packaging\windows\scripts\start-ovms.ps1"; DestDir: "{app
 Source: "{#SourceRoot}\packaging\windows\scripts\stop-ovms.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 Source: "{#SourceRoot}\packaging\windows\scripts\uninstall-ovms.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 Source: "{#SourceRoot}\packaging\windows\scripts\uninstall-service.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
-Source: "{#SourceRoot}\packaging\windows\scripts\upgrade-package.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
-Source: "{#SourceRoot}\packaging\windows\scripts\validate-install.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
-Source: "{#SourceRoot}\packaging\windows\settings\settings.template.json"; DestDir: "{app}\templates"; Flags: ignoreversion
-Source: "{#OvmsSourceDir}\*"; DestDir: "{localappdata}\OVMS\packages\source"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\Start OVMS Server"; Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\start-ovms.ps1"" -DataDir ""{localappdata}\OVMS"""
@@ -160,6 +157,9 @@ var
   // When True, the "Exit Setup?" confirmation is suppressed so Setup can
   // close cleanly after handing off to the existing uninstaller.
   SuppressCancelConfirm: Boolean;
+  LegacyInstallMigrationPending: Boolean;
+  LegacyInstallDirToMigrate: String;
+  LegacyUninstallStringToMigrate: String;
 
 function BoolToJson(Value: Boolean): String;
 begin
@@ -670,7 +670,7 @@ begin
   MarkerPath := ExpandConstant('{tmp}\ovms-running.txt');
   DeleteFile(MarkerPath);
   Exec('powershell.exe',
-    '-NoProfile -ExecutionPolicy Bypass -Command "if (Get-Process ovms -ErrorAction SilentlyContinue) { ''''running'''' | Set-Content -Path ''''' + MarkerPath + ''''' }"',
+    '-NoProfile -ExecutionPolicy Bypass -Command "if (Get-Process ovms -ErrorAction SilentlyContinue) { ''running'' | Set-Content -Path ''' + MarkerPath + ''' }"',
     '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Result := FileExists(MarkerPath);
   DeleteFile(MarkerPath);
@@ -729,6 +729,10 @@ var
   Lbl: TNewStaticText;
 begin
   InitializeSetupLog;
+
+  LegacyInstallMigrationPending := False;
+  LegacyInstallDirToMigrate := '';
+  LegacyUninstallStringToMigrate := '';
 
   if ExistingInstallDetected then
   begin
@@ -936,10 +940,20 @@ begin
   end;
 end;
 
+function GetOvmsDataDirForRunMode(RunMode: String): String;
+begin
+  if CompareText(RunMode, 'service') = 0 then
+    Result := ExpandConstant('{commonappdata}\OVMS')
+  else
+    Result := ExpandConstant('{localappdata}\OVMS');
+end;
+
 function RunPythonConfigurationForSelectedVariant: Boolean;
 var
   Variant: String;
   RunMode: String;
+  ModelRepositoryPath: String;
+  DataDir: String;
   ResultCode: Integer;
   LogPath: String;
   Message: String;
@@ -948,12 +962,16 @@ begin
   Result := True;
 
   Variant := GetSelectedPythonVariant;
-  if (Variant = '') or (Variant = 'none') then
+  if (Variant = '') then
     exit;
 
   RunMode := 'user-login';
   if Assigned(OvmsServiceModeRadio) and OvmsServiceModeRadio.Checked then
     RunMode := 'service';
+
+  DataDir := GetOvmsDataDirForRunMode(RunMode);
+
+  ModelRepositoryPath := GetSelectedModelRepositoryPath;
 
   ScriptPath := ExpandConstant('{app}\scripts\configure-ovms.ps1');
   if not FileExists(ScriptPath) then
@@ -966,13 +984,15 @@ begin
   LogPath := GetSetupLogPath;
 
   Exec('cmd.exe',
-    '/C powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + ScriptPath + '" -InstallDir "' + ExpandConstant('{app}') + '" -DataDir "' + ExpandConstant('{localappdata}\OVMS') + '" -PackageVariant "' + Variant + '" -RunMode "' + RunMode + '" -SetupLogPath "' + LogPath + '"',
+    '/C powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + ScriptPath + '" -InstallDir "' + ExpandConstant('{app}') + '" -DataDir "' + DataDir + '" -ModelRepositoryPath "' + ModelRepositoryPath + '" -PythonVariant "' + Variant + '" -RunMode "' + RunMode + '" -SetupLogPath "' + LogPath + '"',
     '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 
   if ResultCode = 0 then
   begin
     if Variant = 'system' then
       Message := 'System Python configuration succeeded.' + #13#10 + 'The detected Python 3.14 environment is ready for OVMS.'
+    else if Variant = 'none' then
+      Message := 'OVMS runtime configuration succeeded.' + #13#10 + 'Python support is disabled for this installation.'
     else
       Message := 'Embedded Python configuration succeeded.';
 
@@ -1005,8 +1025,6 @@ begin
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
-var
-  ResultCode: Integer;
 begin
   Result := True;
 
@@ -1040,16 +1058,11 @@ begin
   begin
     if (Length(ExistingInstallDir) > 0) and (CompareText(ExistingInstallDir, WizardForm.DirEdit.Text) <> 0) then
     begin
-      if DirExists(ExistingInstallDir) then
-      begin
-        Exec('cmd.exe', '/C rmdir /s /q "' + ExistingInstallDir + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-        if ResultCode <> 0 then
-        begin
-          MsgBox('Previous OVMS installation directory could not be removed automatically:' + #13#10 + ExistingInstallDir + #13#10#13#10 + 'Please delete it manually before continuing.', mbError, MB_OK);
-          Result := False;
-          exit;
-        end;
-      end;
+      // Do not delete the previous installation at directory-selection time.
+      // Keep the old install until the replacement is fully installed.
+      LegacyInstallMigrationPending := True;
+      LegacyInstallDirToMigrate := ExistingInstallDir;
+      LegacyUninstallStringToMigrate := ExistingUninstallString;
     end;
   end;
 end;
@@ -1057,8 +1070,11 @@ end;
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   ServiceScriptPath: String;
+  ConfigureScriptPath: String;
   RepairScriptPath: String;
+  PythonVariant: String;
   ResultCode: Integer;
+  RecoveryResultCode: Integer;
 begin
   if CurStep = ssPostInstall then
   begin
@@ -1097,8 +1113,7 @@ begin
       end;
     end;
 
-    if (WizardIsComponentSelected('python_system') or WizardIsComponentSelected('python_embedded') or WizardIsComponentSelected('python_none')) and
-       (GetSelectedPythonVariant <> 'none') then
+    if (WizardIsComponentSelected('python_system') or WizardIsComponentSelected('python_embedded') or WizardIsComponentSelected('python_none')) then
     begin
       SaveStringToFile(GetSetupLogPath, '[SETUP] Stage: configure Python runtime' + #13#10, True);
       RunPythonConfigurationForSelectedVariant;
@@ -1111,12 +1126,68 @@ begin
       if FileExists(ServiceScriptPath) then
       begin
         Exec('cmd.exe',
-          '/C powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + ServiceScriptPath + '" -InstallDir "' + ExpandConstant('{app}') + '" -DataDir "' + ExpandConstant('{localappdata}\OVMS') + '" -SetupLogPath "' + GetSetupLogPath + '"',
+          '/C powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + ServiceScriptPath + '" -InstallDir "' + ExpandConstant('{app}') + '" -DataDir "' + ExpandConstant('{commonappdata}\OVMS') + '" -SetupLogPath "' + GetSetupLogPath + '"',
           '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
         if ResultCode <> 0 then
         begin
-          MsgBox('OVMS service mode was selected, but the Windows service could not be started automatically after installation.' + #13#10 + 'Command output was logged to:' + #13#10 + GetSetupLogPath, mbError, MB_OK);
+          SaveStringToFile(GetSetupLogPath, '[SETUP] Service setup failed. Attempting run-mode recovery to user-login.' + #13#10, True);
+
+          PythonVariant := GetSelectedPythonVariant;
+          if PythonVariant = '' then
+            PythonVariant := 'none';
+
+          ConfigureScriptPath := ExpandConstant('{app}\scripts\configure-ovms.ps1');
+          RecoveryResultCode := 1;
+          if FileExists(ConfigureScriptPath) then
+          begin
+            Exec('cmd.exe',
+              '/C powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + ConfigureScriptPath + '" -InstallDir "' + ExpandConstant('{app}') + '" -DataDir "' + ExpandConstant('{localappdata}\OVMS') + '" -ModelRepositoryPath "' + GetSelectedModelRepositoryPath + '" -PythonVariant "' + PythonVariant + '" -RunMode "user-login" -SetupLogPath "' + GetSetupLogPath + '"',
+              '', SW_HIDE, ewWaitUntilTerminated, RecoveryResultCode);
+          end;
+
+          if RecoveryResultCode = 0 then
+          begin
+            MsgBox('OVMS service mode was selected, but elevated service setup failed.' + #13#10 +
+              'The installer recovered run mode to Manual - start in terminal.' + #13#10 +
+              'Details were logged to:' + #13#10 + GetSetupLogPath,
+              mbError, MB_OK);
+          end
+          else
+          begin
+            MsgBox('OVMS service mode was selected, but elevated service setup failed.' + #13#10 +
+              'Run-mode recovery to Manual mode also failed, so settings may still indicate service mode.' + #13#10 +
+              'Please run configure-ovms.ps1 manually with -RunMode user-login.' + #13#10 +
+              'Details were logged to:' + #13#10 + GetSetupLogPath,
+              mbError, MB_OK);
+          end;
         end;
+      end;
+    end;
+
+    if LegacyInstallMigrationPending and (LegacyInstallDirToMigrate <> '') and
+       (CompareText(LegacyInstallDirToMigrate, ExpandConstant('{app}')) <> 0) then
+    begin
+      SaveStringToFile(GetSetupLogPath,
+        '[SETUP] Legacy install preserved for controlled migration: ' + LegacyInstallDirToMigrate + #13#10, True);
+
+      if LegacyUninstallStringToMigrate <> '' then
+      begin
+        MsgBox(
+          'A previous OVMS installation was preserved at:' + #13#10 +
+          LegacyInstallDirToMigrate + #13#10#13#10 +
+          'The new installation completed successfully.' + #13#10 +
+          'To retire only installer-managed files from the old location, run its uninstaller:' + #13#10 +
+          LegacyUninstallStringToMigrate,
+          mbInformation, MB_OK);
+      end
+      else
+      begin
+        MsgBox(
+          'A previous OVMS installation was preserved at:' + #13#10 +
+          LegacyInstallDirToMigrate + #13#10#13#10 +
+          'The new installation completed successfully.' + #13#10 +
+          'No registered old uninstaller was found. If you want to retire the old installation, remove only installer-managed files manually.',
+          mbInformation, MB_OK);
       end;
     end;
 

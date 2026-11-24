@@ -15,35 +15,32 @@
 #
 
 param(
-    [Parameter(Mandatory = $true)][string]$InstallDir,
-    [switch]$PersistMachine
+    [Parameter(Mandatory = $true)][string]$InstallDir
 )
 
 $ErrorActionPreference = "Stop"
 
 $installDirFull = (Resolve-Path -LiteralPath $InstallDir).Path.TrimEnd("\")
 $pythonHome = Join-Path $installDirFull "python"
+$pythonBindingDir = $pythonHome
+$embeddedPythonExecutable = Join-Path $pythonHome "python.exe"
+$hasEmbeddedPython = Test-Path -LiteralPath $embeddedPythonExecutable
 $pythonScripts = Join-Path $pythonHome "Scripts"
 $espeakData = Join-Path $installDirFull "espeak-ng-data"
 
 $env:OVMS_DIR = $installDirFull
-if (Test-Path -LiteralPath $pythonHome) {
+if ($hasEmbeddedPython) {
     $env:PYTHONHOME = $pythonHome
     $env:PATH = (($installDirFull, $pythonHome, $pythonScripts, $env:PATH) -join ";")
 } else {
-    $env:PATH = (($installDirFull, $env:PATH) -join ";")
+    Remove-Item Env:PYTHONHOME -ErrorAction SilentlyContinue
+    if (Test-Path -LiteralPath $pythonBindingDir) {
+        $env:PATH = (($installDirFull, $pythonBindingDir, $env:PATH) -join ";")
+    } else {
+        $env:PATH = (($installDirFull, $env:PATH) -join ";")
+    }
 }
 
 if (Test-Path -LiteralPath $espeakData) {
     $env:ESPEAK_DATA_PATH = $espeakData
-}
-
-if ($PersistMachine) {
-    [Environment]::SetEnvironmentVariable("OVMS_DIR", $installDirFull, "Machine")
-    if (Test-Path -LiteralPath $pythonHome) {
-        [Environment]::SetEnvironmentVariable("PYTHONHOME", $pythonHome, "Machine")
-    }
-    if (Test-Path -LiteralPath $espeakData) {
-        [Environment]::SetEnvironmentVariable("ESPEAK_DATA_PATH", $espeakData, "Machine")
-    }
 }

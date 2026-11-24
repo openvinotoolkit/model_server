@@ -104,6 +104,8 @@ function Remove-DisabledComponentFiles {
             'openvino_intel_npu_plugin.dll',
             'openvino_intel_npu_vm_runtime.dll'
         )
+        onnx_frontend = @('openvino_onnx_frontend.dll')
+        paddle_frontend = @('openvino_paddle_frontend.dll')
         tensorflow_selected = @(
             'openvino_tensorflow_frontend.dll',
             'openvino_tensorflow_lite_frontend.dll'
