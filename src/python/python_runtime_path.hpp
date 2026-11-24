@@ -52,8 +52,6 @@ inline void addPackagedPythonPath(const std::filesystem::path& executablePath) {
     const std::vector<std::filesystem::path> candidateDirectories = {
         executablePath.parent_path() / "python",
         executablePath.parent_path() / "python" / "binding",
-        executablePath.parent_path() / "src" / "python",
-        executablePath.parent_path() / "src" / "python" / "binding",
     };
 
     for (const auto& candidate : candidateDirectories) {
