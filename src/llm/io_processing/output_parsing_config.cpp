@@ -15,7 +15,6 @@
 //*****************************************************************************
 
 #include <algorithm>
-
 #include "src/stringutils.hpp"
 #include "output_parsing_config.hpp"
 #include "parser_config_validation.hpp"
@@ -58,8 +57,9 @@ OutputParsingConfig getDefaultReasoningParsingConfig(const std::string& parserNa
                              "\". Supported reasoning parsers are: " + getSupportedReasoningParserNamesAsString());
 }
 
-ReasoningGenerationContext determineReasoningContext(const OutputParsingConfig& config, const std::string& renderedPrompt) {
-    ReasoningGenerationContext context;
+ModelGenerationContext determineModelGenerationContext(const OutputParsingConfig& config, const std::string& renderedPrompt) {
+    ModelGenerationContext context;
+    context.renderedPrompt = renderedPrompt;
     if (config.startTags.empty() && config.endTags.empty()) {
         return context;
     }
@@ -67,16 +67,16 @@ ReasoningGenerationContext determineReasoningContext(const OutputParsingConfig& 
     rtrim(trimmed);
     const auto start = std::find_if(config.startTags.begin(), config.startTags.end(),
         [&](const std::string& tag) { return !tag.empty() && endsWith(trimmed, tag); });
-    context.implicitStart = start != config.startTags.end();
-    if (context.implicitStart) {
-        context.begin = *start;
+    context.reasoning.implicitStart = start != config.startTags.end();
+    if (context.reasoning.implicitStart) {
+        context.reasoning.begin = *start;
     } else if (config.startTags.size() == 1) {
-        context.begin = config.startTags.front();
+        context.reasoning.begin = config.startTags.front();
     }
     if (config.endTags.size() == 1) {
-        context.end = config.endTags.front();
+        context.reasoning.end = config.endTags.front();
     }
-    context.completedInPrompt = std::any_of(config.endTags.begin(), config.endTags.end(),
+    context.reasoning.completedInPrompt = std::any_of(config.endTags.begin(), config.endTags.end(),
         [&](const std::string& tag) { return !tag.empty() && endsWith(trimmed, tag); });
     return context;
 }

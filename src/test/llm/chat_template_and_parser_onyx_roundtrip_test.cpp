@@ -100,7 +100,7 @@ protected:
         std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());
 
         ToolsSchemas_t toolsSchemas = makeToolsSchemas();
-        OutputParser outputParser(tokenizer, "onyx", "onyx", toolsSchemas);
+        OutputParser outputParser(tokenizer, "onyx", "onyx", toolsSchemas, ovms::ModelGenerationContext{});
         return ovms::test::parseWithStreamer(tokenizer, outputParser, generatedTokens, toolsAvailable);
     }
 };

@@ -59,7 +59,7 @@ protected:
 
     void SetUp() override {
         // For LFM2 model there is only tool parser available
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*lfm2Tokenizer, "lfm2", "", EMPTY_TOOLS_SCHEMA);
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*lfm2Tokenizer, "lfm2", "", EMPTY_TOOLS_SCHEMA, ovms::ModelGenerationContext{});
     }
 
     void assertChunkEqual(const std::optional<ovms::Delta>& doc, const std::optional<std::string>& expectedDelta, const std::string& chunk) {
@@ -162,7 +162,7 @@ TEST_F(LFM2OutputParserTest, ParseToolCallOutputWithSingleToolCall_ToolOnlyProdu
     // flush in OVMSTextStreamer::write(): with no reasoning parser present, there is no
     // defaultDecodingWithSpecialTokens source to keep the mode on, so <|tool_call_start|>
     // would decode to empty text without the proactive switch, silently losing all tool calls.
-    auto toolOnlyParser = std::make_unique<OutputParser>(*lfm2Tokenizer, "lfm2", "", EMPTY_TOOLS_SCHEMA);
+    auto toolOnlyParser = std::make_unique<OutputParser>(*lfm2Tokenizer, "lfm2", "", EMPTY_TOOLS_SCHEMA, ovms::ModelGenerationContext{});
     std::string input = "<|tool_call_start|>[example_tool(arg1=\"value1\", arg2=42)]<|tool_call_end|>";
     auto generatedTensor = lfm2Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
     std::vector<int64_t> generatedTokens(generatedTensor.data<int64_t>(), generatedTensor.data<int64_t>() + generatedTensor.get_size());

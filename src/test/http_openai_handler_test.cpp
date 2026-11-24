@@ -878,7 +878,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ResponseFormatContinuesImpl
     ASSERT_TRUE(result.ok()) << result.status();
     ASSERT_FALSE(result->generationConfig.structured_output_config.has_value());
     result->promptText = "<|im_start|>assistant\n<think>\n";
-    const auto reasoningContext = ovms::determineReasoningContext(ovms::getDefaultReasoningParsingConfig("qwen3"), result->promptText);
+    const auto reasoningContext = ovms::determineModelGenerationContext(ovms::getDefaultReasoningParsingConfig("qwen3"), result->promptText);
     builder.build(apiHandler->getRequest(), reasoningContext, "qwen3", *tokenizer);
     result->generationConfig = builder.getConfig();
     const auto& config = result->generationConfig.structured_output_config;
@@ -912,7 +912,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ResponseFormatAllowsExplici
     auto result = apiHandler->extractInputRequest();
     ASSERT_TRUE(result.ok()) << result.status();
     result->promptText = "<|im_start|>assistant\n";
-    const auto reasoningContext = ovms::determineReasoningContext(ovms::getDefaultReasoningParsingConfig("qwen3"), result->promptText);
+    const auto reasoningContext = ovms::determineModelGenerationContext(ovms::getDefaultReasoningParsingConfig("qwen3"), result->promptText);
     builder.build(apiHandler->getRequest(), reasoningContext, "qwen3", *tokenizer);
     result->generationConfig = builder.getConfig();
     ASSERT_TRUE(result->generationConfig.structured_output_config.has_value());
@@ -939,7 +939,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ResponseFormatUnchangedWhen
         auto result = apiHandler->extractInputRequest();
         ASSERT_TRUE(result.ok()) << result.status();
         result->promptText = prompt;
-        const auto reasoningContext = ovms::determineReasoningContext(ovms::getDefaultReasoningParsingConfig("qwen3"), result->promptText);
+        const auto reasoningContext = ovms::determineModelGenerationContext(ovms::getDefaultReasoningParsingConfig("qwen3"), result->promptText);
         builder.build(apiHandler->getRequest(), reasoningContext, "qwen3", *tokenizer);
         result->generationConfig = builder.getConfig();
         ASSERT_TRUE(result->generationConfig.structured_output_config.has_value());
@@ -969,7 +969,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ReasoningEnvelopeDoesNotRes
     ASSERT_TRUE(result.ok()) << result.status();
     ASSERT_FALSE(result->generationConfig.structured_output_config.has_value());
     result->promptText = "<|im_start|>assistant\n<think>\n";
-    const auto reasoningContext = ovms::determineReasoningContext(ovms::getDefaultReasoningParsingConfig("qwen3"), result->promptText);
+    const auto reasoningContext = ovms::determineModelGenerationContext(ovms::getDefaultReasoningParsingConfig("qwen3"), result->promptText);
     builder.build(apiHandler->getRequest(), reasoningContext, "qwen3", *tokenizer);
     result->generationConfig = builder.getConfig();
     EXPECT_FALSE(result->generationConfig.structured_output_config.has_value());
@@ -984,7 +984,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ReasoningEnvelopePreservesN
     auto result = apiHandler->extractInputRequest();
     ASSERT_TRUE(result.ok()) << result.status();
     result->promptText = "<|im_start|>assistant\n<think>\n";
-    const auto reasoningContext = ovms::determineReasoningContext(ovms::getDefaultReasoningParsingConfig("qwen3"), result->promptText);
+    const auto reasoningContext = ovms::determineModelGenerationContext(ovms::getDefaultReasoningParsingConfig("qwen3"), result->promptText);
     builder.build(apiHandler->getRequest(), reasoningContext, "qwen3", *tokenizer);
     result->generationConfig = builder.getConfig();
     ASSERT_TRUE(result->generationConfig.structured_output_config.has_value());
@@ -1008,13 +1008,22 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ReasoningEnvelopePreservesT
     auto result = apiHandler->extractInputRequest();
     ASSERT_TRUE(result.ok()) << result.status();
     result->promptText = "<|im_start|>assistant\n<think>\n";
-    const auto reasoningContext = ovms::determineReasoningContext(ovms::getDefaultReasoningParsingConfig("qwen3"), result->promptText);
+    const auto reasoningContext = ovms::determineModelGenerationContext(ovms::getDefaultReasoningParsingConfig("qwen3"), result->promptText);
     builder.build(apiHandler->getRequest(), reasoningContext, "qwen3", *tokenizer);
     result->generationConfig = builder.getConfig();
     ASSERT_TRUE(result->generationConfig.structured_output_config.has_value());
     using SOC = ov::genai::StructuredOutputConfig;
     const auto& structuralTag = std::get<SOC::StructuralTag>(*result->generationConfig.structured_output_config->structural_tags_config);
-    EXPECT_TRUE(std::holds_alternative<std::shared_ptr<SOC::TriggeredTags>>(structuralTag));
+    const auto sequence = std::get<std::shared_ptr<SOC::Concat>>(structuralTag);
+    ASSERT_EQ(sequence->elements.size(), 2);
+    const auto reasoning = std::get<std::shared_ptr<SOC::Tag>>(sequence->elements[0]);
+    EXPECT_TRUE(reasoning->begin.empty());
+    EXPECT_EQ(reasoning->end, "</think>");
+    EXPECT_TRUE(std::holds_alternative<SOC::AnyText>(reasoning->content));
+    const auto toolGrammar = std::get<std::shared_ptr<SOC::TriggeredTags>>(sequence->elements[1]);
+    ASSERT_EQ(toolGrammar->triggers, std::vector<std::string>{"<tool_call>"});
+    EXPECT_TRUE(toolGrammar->at_least_one);
+    EXPECT_FALSE(toolGrammar->stop_after_first);
 }
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ResponseFormatWithoutParsersKeepsDirectContentPath) {
@@ -1119,6 +1128,7 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingFunctionToolsWithAut
 
     EXPECT_TRUE(apiHandler->areToolsAvailable());
     EXPECT_EQ(apiHandler->getToolChoice(), "auto");
+    EXPECT_FALSE(apiHandler->getRequest().toolChoiceFunctionName.has_value());
 }
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingToolChoiceFunctionObjectSucceeds) {
@@ -1137,6 +1147,82 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingToolChoiceNoneRemove
 
     EXPECT_FALSE(apiHandler->areToolsAvailable());
     EXPECT_EQ(apiHandler->getToolChoice(), "none");
+    EXPECT_FALSE(apiHandler->getRequest().toolChoiceFunctionName.has_value());
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, RequiredAndNamedChoicesWithoutToolsFail) {
+    for (const std::string choice : {R"("required")", R"({"type":"function","function":{"name":"weather"}})", R"({"type":"function","name":"weather"})"}) {
+        for (const std::string tools : {"", R"(,"tools":null)", R"(,"tools":[])"}) {
+            SCOPED_TRACE(choice + tools);
+            const std::string json = createTextRequest("hi", ",\"tool_choice\":" + choice + tools);
+            doc.Parse(json.c_str());
+            ASSERT_FALSE(doc.HasParseError());
+            auto apiHandler = createHandler(endpoint());
+            const auto status = apiHandler->parseRequest(std::nullopt, 0, std::nullopt);
+            EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument) << status;
+        }
+    }
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, UnknownAndEmptyNamedToolChoicesFail) {
+    for (const std::string choice : {
+             R"({"type":"function","function":{"name":"unknown"}})",
+             R"({"type":"function","name":"unknown"})",
+             R"({"type":"function","function":{"name":""}})",
+             R"({"type":"function","name":""})"}) {
+        SCOPED_TRACE(choice);
+        const std::string json = createToolRequest(choice);
+        doc.Parse(json.c_str());
+        ASSERT_FALSE(doc.HasParseError());
+        auto apiHandler = createHandler(endpoint());
+        const auto status = apiHandler->parseRequest(std::nullopt, 0, std::nullopt);
+        EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument) << status;
+    }
+}
+
+TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, PolicyWordsRemainValidNamedFunctions) {
+    for (const std::string name : {"auto", "none", "required"}) {
+        for (const bool flatChoice : {false, true}) {
+            SCOPED_TRACE(name + (flatChoice ? " flat" : " nested"));
+            const std::string choice = flatChoice
+                                           ? R"({"type":"function","name":")" + name + R"("})"
+                                           : R"({"type":"function","function":{"name":")" + name + R"("}})";
+            const std::string tools = R"(,"tools":[{"type":"function","function":{"name":")" + name +
+                                      R"("}},{"type":"function","function":{"name":"other"}}])";
+            auto apiHandler = parseCurrentRequest(createTextRequest("hi", ",\"tool_choice\":" + choice + tools));
+            ASSERT_NE(apiHandler, nullptr);
+            const auto& request = apiHandler->getRequest();
+            EXPECT_EQ(request.toolChoice, ovms::ToolChoiceMode::NamedFunction);
+            ASSERT_TRUE(request.toolChoiceFunctionName.has_value());
+            EXPECT_EQ(request.toolChoiceFunctionName.value(), name);
+            ASSERT_EQ(request.toolNameSchemaMap.size(), 1);
+            EXPECT_EQ(request.toolNameSchemaMap.count(name), 1);
+            EXPECT_TRUE(apiHandler->areToolsAvailable());
+            ASSERT_EQ(doc["tools"].Size(), 1);
+
+            ovms::GenerationConfigBuilder builder{{}, "hermes3", false, ovms::DecodingMethod::STANDARD};
+            builder.configureStructuredGeneration(request, {}, "");
+            const auto& config = builder.getConfig();
+            ASSERT_TRUE(config.structured_output_config.has_value());
+            using SOC = ov::genai::StructuredOutputConfig;
+            const auto& structuralTag = std::get<SOC::StructuralTag>(*config.structured_output_config->structural_tags_config);
+            const auto tags = std::get<std::shared_ptr<SOC::TriggeredTags>>(structuralTag);
+            EXPECT_TRUE(tags->at_least_one);
+            EXPECT_TRUE(tags->stop_after_first);
+            ASSERT_EQ(tags->tags.size(), 1);
+            EXPECT_NE(tags->tags.front().begin.find("\"" + name + "\""), std::string::npos);
+
+            if (endpoint() == ovms::Endpoint::RESPONSES) {
+                const std::vector<ovms::Delta> deltas{ovms::ContentDelta{"answer"}};
+                rapidjson::Document response;
+                response.Parse(apiHandler->serializeUnaryResponse(deltas, ov::genai::GenerationFinishReason::STOP).c_str());
+                ASSERT_FALSE(response.HasParseError());
+                ASSERT_TRUE(response["tool_choice"].IsObject());
+                EXPECT_STREQ(response["tool_choice"]["type"].GetString(), "function");
+                EXPECT_STREQ(response["tool_choice"]["name"].GetString(), name.c_str());
+            }
+        }
+    }
 }
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ParsingMultimodalInputImageSucceeds) {
@@ -1610,14 +1696,26 @@ TEST_F(HttpOpenAIHandlerParsingTest, transcriptionOutputParserSuppressesSplitQwe
     doc.Parse(json.c_str());
     ASSERT_FALSE(doc.HasParseError());
 
-    auto outputParser = std::make_shared<ovms::OutputParser>(*tokenizer, "", "", ovms::ToolsSchemas_t{}, "qwen3asr");
-    EXPECT_FALSE(outputParser->parseChunk("language English<asr_", {}, false, ov::genai::GenerationFinishReason::NONE).has_value());
+    ovms::OpenAITranscriptionsHandler apiHandler(
+        doc, ovms::Endpoint::TRANSCRIPTIONS, std::chrono::system_clock::now(), *tokenizer);
+    ASSERT_TRUE(apiHandler.parseRequest(100, 0, std::nullopt).ok());
+    apiHandler.initOutputParser(ovms::ModelGenerationContext{}, "qwen3asr");
+    const auto& outputParser = apiHandler.getOutputParser();
+    ASSERT_NE(outputParser, nullptr);
+    EXPECT_FALSE(outputParser->isToolParserAvailable());
+    EXPECT_FALSE(outputParser->isReasoningParserAvailable());
+    for (const bool reset : {false, true}) {
+        if (reset) {
+            outputParser->resetStreamingState();
+        }
+        EXPECT_FALSE(outputParser->parseChunk("language English<asr_", {}, false, ov::genai::GenerationFinishReason::NONE).has_value());
 
-    const auto delta = outputParser->parseChunk("text>Transcribed ", {}, false, ov::genai::GenerationFinishReason::NONE);
-    ASSERT_TRUE(delta.has_value());
-    const auto* contentDelta = std::get_if<ovms::ContentDelta>(&*delta);
-    ASSERT_NE(contentDelta, nullptr);
-    EXPECT_EQ(contentDelta->text, "Transcribed ");
+        const auto delta = outputParser->parseChunk("text>Transcribed ", {}, false, ov::genai::GenerationFinishReason::NONE);
+        ASSERT_TRUE(delta.has_value());
+        const auto* contentDelta = std::get_if<ovms::ContentDelta>(&*delta);
+        ASSERT_NE(contentDelta, nullptr);
+        EXPECT_EQ(contentDelta->text, "Transcribed ");
+    }
 }
 
 TEST_F(HttpOpenAIHandlerParsingTest, serializeUnaryResponseIgnoresAudioDeltas) {
@@ -4013,7 +4111,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided3_ChoiceLast)
 }
 
 // Provide get_weather1, get_weather2, get_weather3 but take one - get_weather4 which does not exist
-// Expect OK and no tool selected
+// Reject a named choice that does not match any provided tool.
 TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided3_ChoiceNotInProvidedList) {
     std::string providedTools = R"(
        {"type": "function", "function": {"name": "get_weather1", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}},
@@ -4021,7 +4119,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, ParseRequestWithTools_Provided3_ChoiceNotIn
        {"type": "function", "function": {"name": "get_weather3", "description": "Get current temperature for a given location.", "parameters": {"type": "object", "properties": {"location": {"type": "string", "description": "City and country e.g. Bogot\u00e1, Colombia"}}, "required": ["location"], "additionalProperties": false}, "strict": true}}
 )";
     std::string toolsChoice = R"({"type": "function", "function": {"name": "get_weather4"}})";
-    assertRequestWithTools(providedTools, toolsChoice, std::vector<std::string>{});
+    assertRequestWithTools(providedTools, toolsChoice, absl::StatusCode::kInvalidArgument);
 }
 
 // Provide get_weather1, get_weather2, get_weather3 but tool_choice is not of type function
@@ -5866,7 +5964,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, legacyServablePreparePartialResponseRespons
 
 TEST_F(HttpOpenAIHandlerParsingTest, legacyServableParserExceptionCancelsGenerationAndReportsFailure) {
     ovms::ToolsSchemas_t emptyToolsSchema{};
-    auto outputParser = std::make_shared<ovms::OutputParser>(*tokenizer, "mistral", "", emptyToolsSchema);
+    auto outputParser = std::make_shared<ovms::OutputParser>(*tokenizer, "mistral", "", emptyToolsSchema, ovms::ModelGenerationContext{});
 
     int finalCallbackCount = 0;
     auto callback = [&](ovms::Delta /*delta*/, bool isLast) -> ov::genai::StreamingStatus {
@@ -6084,7 +6182,7 @@ TEST_F(HttpOpenAIHandlerParsingTest, OmniUnaryStreamerSeparatesReasoningAndPrese
     auto ctx = makeOmniChatContext(tokenizer,
         R"({"model":"llama","messages":[{"role":"user","content":"hi"}],"response_format":{"type":"json_object"},"modalities":["text","audio"],"audio":{"format":"pcm16"}})", "", "qwen3");
     ASSERT_NE(ctx, nullptr);
-    const auto reasoningContext = ovms::determineReasoningContext(
+    const auto reasoningContext = ovms::determineModelGenerationContext(
         ovms::getDefaultReasoningParsingConfig("qwen3"), "<think>\n");
     ctx->apiHandler->initOutputParser(reasoningContext);
     ctx->audioOutputRequested = true;

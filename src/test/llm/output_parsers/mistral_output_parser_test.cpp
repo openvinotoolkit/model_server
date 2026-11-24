@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "../../../llm/io_processing/base_output_parser.hpp"
+#include "../../../llm/io_processing/generation_config_builder.hpp"
 #include "../../../llm/io_processing/output_parser.hpp"
 #include "output_parser_test_utils.hpp"
 #include "../../platform_utils.hpp"
@@ -54,9 +55,109 @@ protected:
     }
 
     void SetUp() override {
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*mistralTokenizer, "mistral", "", EMPTY_TOOLS_SCHEMA);
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*mistralTokenizer, "mistral", "", EMPTY_TOOLS_SCHEMA, ovms::ModelGenerationContext{});
     }
 };
+TEST(MistralToolGuidanceConfigTest, ArrayFramingAndCallCountMatchToolChoice) {
+    for (const ToolChoiceMode choice : {ToolChoiceMode::Auto, ToolChoiceMode::Required, ToolChoiceMode::NamedFunction}) {
+        SCOPED_TRACE(static_cast<int>(choice));
+        const bool namedChoice = choice == ToolChoiceMode::NamedFunction;
+        OpenAIRequest request;
+        request.toolChoice = choice;
+        if (namedChoice)
+            request.toolChoiceFunctionName = "weather";
+        const std::string argumentsSchema = R"({"type":"object","properties":{"city":{"type":"string"}},"required":["city"]})";
+        request.toolNameSchemaMap.emplace("weather", ToolSchemaWrapper{nullptr, argumentsSchema});
+        if (!namedChoice)
+            request.toolNameSchemaMap.emplace("forecast", ToolSchemaWrapper{nullptr, argumentsSchema});
+        GenerationConfigBuilder builder{{}, "mistral", true, DecodingMethod::STANDARD};
+        builder.configureStructuredGeneration(request, {}, "");
+        ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
+        using SOC = ov::genai::StructuredOutputConfig;
+        const auto& structuralTag = std::get<SOC::StructuralTag>(*builder.getConfig().structured_output_config->structural_tags_config);
+        const auto tags = std::get<std::shared_ptr<SOC::TriggeredTags>>(structuralTag);
+        ASSERT_EQ(tags->triggers.size(), 1);
+        EXPECT_EQ(tags->triggers.front(), "[TOOL_CALLS]");
+        ASSERT_EQ(tags->tags.size(), 1);
+        EXPECT_EQ(tags->tags.front().begin, "[TOOL_CALLS][");
+        EXPECT_EQ(tags->tags.front().end, "]");
+        const auto calls = std::get<std::shared_ptr<SOC::TagsWithSeparator>>(tags->tags.front().content);
+        EXPECT_EQ(calls->separator, ", ");
+        EXPECT_TRUE(calls->at_least_one);
+        EXPECT_EQ(calls->stop_after_first, namedChoice);
+        ASSERT_EQ(calls->tags.size(), namedChoice ? 1 : 2);
+        for (const auto& call : calls->tags) {
+            EXPECT_EQ(call.begin, "{");
+            EXPECT_EQ(call.end, "}");
+            const auto content = std::get<std::shared_ptr<SOC::Concat>>(call.content);
+            ASSERT_EQ(content->elements.size(), 4);
+            EXPECT_EQ(std::get<SOC::Regex>(content->elements[0]).value, R"([ \t\r\n]*"name"[ \t\r\n]*:[ \t\r\n]*)");
+            EXPECT_EQ(std::get<SOC::Regex>(content->elements[2]).value, R"([ \t\r\n]*,[ \t\r\n]*"arguments"[ \t\r\n]*:[ \t\r\n]*)");
+            EXPECT_EQ(std::get<SOC::JSONSchema>(content->elements[3]).value, argumentsSchema);
+        }
+        if (namedChoice) {
+            const auto content = std::get<std::shared_ptr<SOC::Concat>>(calls->tags.front().content);
+            EXPECT_EQ(std::get<SOC::ConstString>(content->elements[1]).value, "\"weather\"");
+        }
+    }
+}
+
+TEST_F(MistralOutputParserTest, ToolGuidanceValidatesAndParsesWithReasoning) {
+    for (const ToolChoiceMode choice : {ToolChoiceMode::Auto, ToolChoiceMode::Required, ToolChoiceMode::NamedFunction}) {
+        SCOPED_TRACE(static_cast<int>(choice));
+        OpenAIRequest request;
+        request.toolChoice = choice;
+        if (choice == ToolChoiceMode::NamedFunction)
+            request.toolChoiceFunctionName = "example_tool";
+        request.toolNameSchemaMap.emplace("example_tool", ToolSchemaWrapper{nullptr,
+                                                              R"({"type":"object","properties":{"arg1":{"type":"string"},"arg2":{"type":"integer"}},"required":["arg1","arg2"],"additionalProperties":false})"});
+        const std::string prompt = "<think>\n";
+        const auto context = determineModelGenerationContext(getDefaultReasoningParsingConfig("qwen3"), prompt);
+        GenerationConfigBuilder builder{{}, "mistral", choice == ToolChoiceMode::Auto, DecodingMethod::STANDARD};
+        builder.build(request, context, "qwen3", *mistralTokenizer);
+        ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
+        using SOC = ov::genai::StructuredOutputConfig;
+        const auto& root = std::get<SOC::StructuralTag>(*builder.getConfig().structured_output_config->structural_tags_config);
+        const auto grammar = std::get<std::shared_ptr<SOC::Concat>>(root);
+        ASSERT_EQ(grammar->elements.size(), 2);
+        const auto reasoning = std::get<std::shared_ptr<SOC::Tag>>(grammar->elements[0]);
+        EXPECT_TRUE(reasoning->begin.empty());
+        EXPECT_EQ(reasoning->end, "</think>");
+        EXPECT_TRUE(std::holds_alternative<SOC::AnyText>(reasoning->content));
+        const auto tools = std::get<std::shared_ptr<SOC::TriggeredTags>>(grammar->elements[1]);
+        EXPECT_EQ(tools->at_least_one, choice != ToolChoiceMode::Auto);
+        EXPECT_EQ(tools->stop_after_first, choice == ToolChoiceMode::NamedFunction);
+
+        OutputParser parser(*mistralTokenizer, "mistral", "qwen3", EMPTY_TOOLS_SCHEMA, context);
+        const std::string call = R"({"name": "example_tool", "arguments": {"arg1":"value1","arg2":42}})";
+        const std::string calls = choice == ToolChoiceMode::Required ? call + ", " + call : call;
+        const auto encoded = mistralTokenizer->encode("thinking</think>[TOOL_CALLS][" + calls + "]", ov::genai::add_special_tokens(false)).input_ids;
+        const std::vector<int64_t> tokens(encoded.data<int64_t>(), encoded.data<int64_t>() + encoded.get_size());
+        const auto parsed = ovms::test::parseWithStreamer(*mistralTokenizer, parser, tokens, true, true);
+        EXPECT_EQ(parsed.reasoning, "thinking");
+        EXPECT_TRUE(parsed.content.empty());
+        ASSERT_EQ(parsed.toolCalls.size(), choice == ToolChoiceMode::Required ? 2 : 1);
+        for (const auto& toolCall : parsed.toolCalls) {
+            EXPECT_EQ(toolCall.name, "example_tool");
+            EXPECT_EQ(toolCall.arguments, R"({"arg1":"value1","arg2":42})");
+        }
+    }
+}
+
+TEST_F(MistralOutputParserTest, ToolGuidanceValidatesParameterlessAndReferencedArgumentSchemas) {
+    for (const std::string schema : {
+             R"({"type":"object","properties":{},"additionalProperties":false})",
+             R"({"type":"object","properties":{"location":{"$ref":"#/$defs/location"}},"required":["location"],"additionalProperties":false,"$defs":{"location":{"type":"string","enum":["Boston","Paris"]}}})"}) {
+        SCOPED_TRACE(schema);
+        OpenAIRequest request;
+        request.toolChoice = ToolChoiceMode::Required;
+        request.toolNameSchemaMap.emplace("weather", ToolSchemaWrapper{nullptr, schema});
+        GenerationConfigBuilder builder{{}, "mistral", false, DecodingMethod::STANDARD};
+        builder.build(request, {}, "", *mistralTokenizer);
+        ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
+    }
+}
+
 TEST_F(MistralOutputParserTest, ParseToolCallOutputWithSingleToolCall) {
     std::string input = "[TOOL_CALLS][{\"name\": \"example_tool\", \"arguments\": {\"arg1\": \"value1\", \"arg2\": 42}}]</s>";
     std::string testInput = input;
@@ -242,7 +343,7 @@ TEST_F(MistralOutputParserTest, HolisticStreaming) {
 
     for (auto lastFinishReason : {ov::genai::GenerationFinishReason::NONE, ov::genai::GenerationFinishReason::STOP, ov::genai::GenerationFinishReason::LENGTH}) {
         // Need to have new output parser per case to simulate separate request processing
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*mistralTokenizer, "mistral", "", EMPTY_TOOLS_SCHEMA);
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*mistralTokenizer, "mistral", "", EMPTY_TOOLS_SCHEMA, ovms::ModelGenerationContext{});
         auto chunkToDeltaVecCopy = chunkToDeltaVec;
         if (lastFinishReason == ov::genai::GenerationFinishReason::NONE) {
             chunkToDeltaVecCopy.push_back({"Paris\"}}", ov::genai::GenerationFinishReason::NONE, R"({"delta":{"tool_calls":[{"index":2,"function":{"arguments":"Paris\"}"}}]}})"});
@@ -365,7 +466,7 @@ TEST_F(MistralOutputParserTest, StreamingToolWithComplexArguments) {
             "{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"}}\"}}]}}"},
     };
 
-    auto outputParser = std::make_unique<OutputParser>(*mistralTokenizer, "mistral", "", EMPTY_TOOLS_SCHEMA);
+    auto outputParser = std::make_unique<OutputParser>(*mistralTokenizer, "mistral", "", EMPTY_TOOLS_SCHEMA, ovms::ModelGenerationContext{});
     for (const auto& [chunk, expectedDelta] : chunkToDeltaVec) {
         std::optional<ovms::Delta> doc = outputParser->parseChunk(chunk, {}, true, ov::genai::GenerationFinishReason::NONE);
         if (!expectedDelta.has_value() && !doc.has_value()) {

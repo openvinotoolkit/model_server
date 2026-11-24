@@ -51,9 +51,9 @@ public:
     }
 
     explicit OnyxReasoningParser(ov::genai::Tokenizer& tokenizer,
-        std::optional<OutputParsingConfig> configOverride = std::nullopt) :
+        std::optional<OutputParsingConfig> configOverride, const ModelGenerationContext& context) :
         BaseOutputParser(tokenizer,
-            configOverride.has_value() ? std::move(*configOverride) : getDefaultReasoningParsingConfig()) {}
+            configOverride.has_value() ? std::move(*configOverride) : getDefaultReasoningParsingConfig(), context) {}
 
     void resetState() override {
         headerConsumed = false;

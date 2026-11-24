@@ -23,12 +23,11 @@
 namespace ovms {
 
 DefaultContentParser::DefaultContentParser(ov::genai::Tokenizer& tokenizer,
-    std::vector<std::string> stringsToErase) :
+    std::vector<std::string> stringsToErase, const ModelGenerationContext& context) :
     BaseOutputParser(tokenizer, [&] {
         OutputParsingConfig cfg;
         cfg.stringsToErase = std::move(stringsToErase);
-        return cfg;
-    }()) {}
+        return cfg; }(), context) {}
 
 std::optional<Delta> DefaultContentParser::parseChunk(
     const std::string& buf,

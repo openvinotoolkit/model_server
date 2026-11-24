@@ -347,7 +347,7 @@ TEST_F(LLMChatTemplateTest, MissingTemplateClearsDisabledParsers) {
     EXPECT_TRUE(properties->reasoningParserName.empty());
 
     const ToolsSchemas_t toolSchemas;
-    OutputParser outputParser(properties->tokenizer, properties->toolParserName, properties->reasoningParserName, toolSchemas);
+    OutputParser outputParser(properties->tokenizer, properties->toolParserName, properties->reasoningParserName, toolSchemas, ovms::ModelGenerationContext{});
     EXPECT_FALSE(outputParser.isToolParserAvailable());
     EXPECT_FALSE(outputParser.isReasoningParserAvailable());
 }

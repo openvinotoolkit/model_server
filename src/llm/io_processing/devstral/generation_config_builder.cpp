@@ -18,8 +18,8 @@
 
 namespace ovms {
 
-void DevstralGenerationConfigBuilder::applyToolGuidance(const OpenAIRequest& request) {
-    setTaggedToolGrammar(request, {"[TOOL_CALLS]", "[TOOL_CALLS]", "[ARGS]", "", false});
+void DevstralGenerationConfigBuilder::applyToolGuidance(const OpenAIRequest& request, const ModelGenerationContext& generationContext) {
+    setTaggedToolGrammar(request, {"[TOOL_CALLS]", "[TOOL_CALLS]", "[ARGS]", "", false}, generationContext);
 }
 
 }  // namespace ovms

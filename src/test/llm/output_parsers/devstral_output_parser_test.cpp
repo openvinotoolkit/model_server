@@ -78,7 +78,8 @@ protected:
         };
 
         static ovms::ToolsSchemas_t toolsSchemas = convertStringToolSchemasStringToToolsSchemas(toolSchemasInput);
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*devstralTokenizer, "devstral", "devstral", toolsSchemas);
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(
+            *devstralTokenizer, "devstral", "devstral", toolsSchemas, ovms::ModelGenerationContext{});
     }
 };
 
@@ -220,7 +221,7 @@ TEST_F(DevstralOutputParserTest, HolisticStreaming) {
         {"get_weather", ToolSchemaWrapper{}}};
     for (auto lastFinishReason : {ov::genai::GenerationFinishReason::STOP, ov::genai::GenerationFinishReason::LENGTH}) {
         // Need to have new output parser per case to simulate separate request processing
-        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*devstralTokenizer, "devstral", "", tools_schemas);
+        outputParserWithRegularToolParsing = std::make_unique<OutputParser>(*devstralTokenizer, "devstral", "", tools_schemas, ovms::ModelGenerationContext{});
         auto chunkToDeltaVecCopy = chunkToDeltaVec;
         if (lastFinishReason == ov::genai::GenerationFinishReason::STOP) {
             chunkToDeltaVecCopy.push_back({"\"}", ov::genai::GenerationFinishReason::STOP, R"({"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"}"}}]}})"});
@@ -417,7 +418,7 @@ TEST_F(DevstralOutputParserTest, ParallelToolCallsStreamingWithSplitTagsAndEmpty
 
 TEST_F(DevstralOutputParserTest, ParallelToolCallsWithBoundaryAfterArgsTag) {
     for (auto finishReason : {ov::genai::GenerationFinishReason::NONE, ov::genai::GenerationFinishReason::STOP, ov::genai::GenerationFinishReason::LENGTH}) {
-        DevstralToolParser parser(*devstralTokenizer, EMPTY_TOOLS_SCHEMA);
+        DevstralToolParser parser(*devstralTokenizer, EMPTY_TOOLS_SCHEMA, std::nullopt, ModelGenerationContext{});
         auto delta = parser.parseChunk("[TOOL_CALLS]first[ARGS]", {}, ov::genai::GenerationFinishReason::NONE);
         ASSERT_TRUE(delta.has_value());
         const auto* toolDelta = std::get_if<ToolCallDelta>(&*delta);
@@ -460,7 +461,7 @@ TEST_F(DevstralOutputParserTest, ParallelToolCallsWithBoundaryAfterArgsTag) {
 }
 
 TEST_F(DevstralOutputParserTest, FinalStopFlushesArgumentsAfterParallelCallBoundary) {
-    DevstralToolParser parser(*devstralTokenizer, EMPTY_TOOLS_SCHEMA);
+    DevstralToolParser parser(*devstralTokenizer, EMPTY_TOOLS_SCHEMA, std::nullopt, ModelGenerationContext{});
     auto delta = parser.parseChunk("[TOOL_CALLS]first[ARGS]", {}, ov::genai::GenerationFinishReason::NONE);
     ASSERT_TRUE(delta.has_value());
     const auto* toolDelta = std::get_if<ToolCallDelta>(&*delta);

@@ -26,7 +26,7 @@
 
 namespace ovms {
 
-void Phi4GenerationConfigBuilder::applyToolGuidance(const OpenAIRequest& request) {
+void Phi4GenerationConfigBuilder::applyToolGuidance(const OpenAIRequest& request, const ModelGenerationContext& generationContext) {
     // Set tool guided generation config specific to Phi-4 model as described in template from:
     // https://github.com/vllm-project/vllm/blob/v0.9.2/examples/tool_chat_template_phi4_mini.jinja
 
@@ -39,7 +39,7 @@ void Phi4GenerationConfigBuilder::applyToolGuidance(const OpenAIRequest& request
     rapidjson::Document schema(rapidjson::kObjectType);
     auto& allocator = schema.GetAllocator();
     schema.AddMember("type", "array", allocator);
-    if (request.toolChoice == "required" || requiresNamedToolCall(request)) {
+    if (request.toolChoice == ToolChoiceMode::Required || requiresNamedToolCall(request)) {
         schema.AddMember("minItems", 1, allocator);
     }
     if (requiresNamedToolCall(request)) {
@@ -77,7 +77,7 @@ void Phi4GenerationConfigBuilder::applyToolGuidance(const OpenAIRequest& request
 
     tagItem.content = buildToolArgumentGrammar(buffer.GetString());
     triggeredTags->tags.push_back(tagItem);
-    setToolGrammar(request, triggeredTags);
+    setToolGrammar(request, triggeredTags, generationContext);
 }
 
 }  // namespace ovms

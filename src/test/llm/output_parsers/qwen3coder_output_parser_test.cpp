@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "src/llm/io_processing/base_output_parser.hpp"
+#include "src/llm/io_processing/generation_config_builder.hpp"
 #include "src/llm/io_processing/output_parser.hpp"
 #include "src/llm/io_processing/qwen3coder/qwen3coder_tool_parser.hpp"
 #include "output_parser_test_utils.hpp"
@@ -39,7 +40,7 @@ using ovms::ToolsParameterTypeMap_t;
 static std::unique_ptr<ov::genai::Tokenizer> qwen3Tokenizer;
 
 static std::map<std::string, std::string> toolSchemasInput = {
-    {"string_tool", R"({"properties": {"arg1": {"type": "string", "description": "A string argument."}}, "required": ["arg1"]})"},
+    {"string_tool", R"({"type": "object", "properties": {"arg1": {"type": "string", "description": "A string argument."}}, "required": ["arg1"]})"},
     {"cd", R"({"properties": {"folder": {"type": "string", "description": "Path"}}, "required": ["folder"]})"},
     {"string_int_tool", R"({"properties":{"arg1":{"type":"string","description":"A string argument."},"arg2":{"type":"integer","description":"An integer argument."}},"required":["arg1", "arg2"]})"},
     {"some_tool", R"({"properties":{"source":{"type":"string","description":"The name of the file or directory to copy."},"destination":{"type":"string","description":"The destination name to copy the file or directory to. If the destination is a directory, the source will be copied into this directory. No file paths allowed. "}},"required":[]})"},
@@ -99,7 +100,7 @@ protected:
     }
 
     void SetUp() override {
-        outputParser = std::make_unique<OutputParser>(*qwen3Tokenizer, "qwen3coder", "", toolsSchemas);
+        outputParser = std::make_unique<OutputParser>(*qwen3Tokenizer, "qwen3coder", "", toolsSchemas, ovms::ModelGenerationContext{});
     }
     std::tuple<ov::Tensor, std::vector<int64_t>, ParsedOutput> generateParsedOutput(const std::string& input) {
         auto generatedTensor = qwen3Tokenizer->encode(input, ov::genai::add_special_tokens(false)).input_ids;
@@ -108,6 +109,145 @@ protected:
         return {generatedTensor, generatedTokens, parsedOutput};
     }
 };
+TEST(Qwen3CoderToolGuidanceConfigTest, XmlFramingAndSchemasMatchTools) {
+    for (const ToolChoiceMode choice : {ToolChoiceMode::Auto, ToolChoiceMode::Required, ToolChoiceMode::NamedFunction}) {
+        SCOPED_TRACE(static_cast<int>(choice));
+        const bool namedChoice = choice == ToolChoiceMode::NamedFunction;
+        OpenAIRequest request;
+        request.toolChoice = choice;
+        if (namedChoice)
+            request.toolChoiceFunctionName = "weather";
+        const std::string argumentsSchema = R"({"type":"object","properties":{"city":{"type":"string"}},"required":["city"]})";
+        request.toolNameSchemaMap.emplace("weather", ToolSchemaWrapper{nullptr, argumentsSchema});
+        if (!namedChoice)
+            request.toolNameSchemaMap.emplace("forecast", ToolSchemaWrapper{nullptr, argumentsSchema});
+        GenerationConfigBuilder builder{{}, "qwen3coder", true, DecodingMethod::STANDARD};
+        builder.configureStructuredGeneration(request, {}, "");
+        ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
+        using SOC = ov::genai::StructuredOutputConfig;
+        const auto& structuralTag = std::get<SOC::StructuralTag>(*builder.getConfig().structured_output_config->structural_tags_config);
+        const auto tags = std::get<std::shared_ptr<SOC::TriggeredTags>>(structuralTag);
+        ASSERT_EQ(tags->triggers.size(), 1);
+        EXPECT_EQ(tags->triggers.front(), "<tool_call>");
+        ASSERT_EQ(tags->tags.size(), namedChoice ? 1 : 2);
+        for (const auto& tag : tags->tags) {
+            EXPECT_EQ(tag.end, "\n</function>\n</tool_call>");
+            EXPECT_EQ(std::get<SOC::QwenXMLParametersFormat>(tag.content).json_schema, argumentsSchema);
+        }
+        if (namedChoice) {
+            EXPECT_EQ(tags->tags.front().begin, "<tool_call>\n<function=weather>\n");
+        }
+    }
+}
+
+TEST(Qwen3CoderToolGuidanceConfigTest, ParameterlessFunctionsUseEmptyParameterBlock) {
+    using SOC = ov::genai::StructuredOutputConfig;
+    const std::string schema = R"({"additionalProperties":false,"properties":{},"type":"object"})";
+    rapidjson::Document schemaDoc;
+    schemaDoc.Parse(schema.c_str());
+    ASSERT_FALSE(schemaDoc.HasParseError());
+    for (const bool useParsedSchema : {false, true}) {
+        SCOPED_TRACE(useParsedSchema);
+        OpenAIRequest request;
+        request.toolChoice = ToolChoiceMode::Required;
+        request.toolNameSchemaMap.emplace("clock", ToolSchemaWrapper{useParsedSchema ? &schemaDoc : nullptr, schema});
+        GenerationConfigBuilder builder{{}, "qwen3coder", false, DecodingMethod::STANDARD};
+        builder.configureStructuredGeneration(request, {}, "");
+        ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
+        const auto& structuralTag = std::get<SOC::StructuralTag>(*builder.getConfig().structured_output_config->structural_tags_config);
+        const auto tags = std::get<std::shared_ptr<SOC::TriggeredTags>>(structuralTag);
+        ASSERT_EQ(tags->tags.size(), 1);
+        EXPECT_EQ(tags->tags.front().begin, "<tool_call>\n<function=clock>\n");
+        EXPECT_EQ(std::get<SOC::Regex>(tags->tags.front().content).value, R"([ \t\r\n]*)");
+        EXPECT_EQ(tags->tags.front().end, "\n</function>\n</tool_call>");
+        EXPECT_TRUE(tags->at_least_one);
+        EXPECT_EQ(request.toolNameSchemaMap.at("clock").stringRepr, schema);
+    }
+}
+
+TEST(Qwen3CoderToolGuidanceConfigTest, EmptyPropertiesWithExtraConstraintsKeepSchemaConversion) {
+    using SOC = ov::genai::StructuredOutputConfig;
+    const std::string schema = R"({"type":"object","properties":{},"additionalProperties":false,"minProperties":1})";
+    OpenAIRequest request;
+    request.toolChoice = ToolChoiceMode::Required;
+    request.toolNameSchemaMap.emplace("clock", ToolSchemaWrapper{nullptr, schema});
+    GenerationConfigBuilder builder{{}, "qwen3coder", false, DecodingMethod::STANDARD};
+    builder.configureStructuredGeneration(request, {}, "");
+    ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
+    const auto& structuralTag = std::get<SOC::StructuralTag>(*builder.getConfig().structured_output_config->structural_tags_config);
+    const auto tags = std::get<std::shared_ptr<SOC::TriggeredTags>>(structuralTag);
+    ASSERT_EQ(tags->tags.size(), 1);
+    EXPECT_EQ(std::get<SOC::QwenXMLParametersFormat>(tags->tags.front().content).json_schema, schema);
+}
+
+TEST_F(Qwen3CoderOutputParserTest, NamedToolGuidanceValidatesAndPreservesStringArguments) {
+    OpenAIRequest request;
+    request.toolChoice = ToolChoiceMode::NamedFunction;
+    request.toolChoiceFunctionName = "string_tool";
+    request.toolNameSchemaMap.emplace("string_tool", toolsSchemas.at("string_tool"));
+    GenerationConfigBuilder builder{{}, "qwen3coder", false, DecodingMethod::STANDARD};
+    builder.build(request, {}, "", *qwen3Tokenizer);
+    ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
+    const auto& structuralTag = std::get<ov::genai::StructuredOutputConfig::StructuralTag>(*builder.getConfig().structured_output_config->structural_tags_config);
+    const auto tags = std::get<std::shared_ptr<ov::genai::StructuredOutputConfig::TriggeredTags>>(structuralTag);
+    const auto result = generateParsedOutput(tags->tags.front().begin + "<parameter=arg1>123</parameter>" + tags->tags.front().end);
+    const auto& parsed = std::get<2>(result);
+    ASSERT_EQ(parsed.toolCalls.size(), 1);
+    EXPECT_EQ(parsed.toolCalls.front().name, "string_tool");
+    EXPECT_EQ(parsed.toolCalls.front().arguments, R"({"arg1":"123"})");
+}
+
+TEST_F(Qwen3CoderOutputParserTest, ToolGuidanceValidatesAndParsesWithReasoning) {
+    for (const ToolChoiceMode choice : {ToolChoiceMode::Auto, ToolChoiceMode::Required, ToolChoiceMode::NamedFunction}) {
+        SCOPED_TRACE(static_cast<int>(choice));
+        OpenAIRequest request;
+        request.toolChoice = choice;
+        if (choice == ToolChoiceMode::NamedFunction)
+            request.toolChoiceFunctionName = "string_tool";
+        request.toolNameSchemaMap.emplace("string_tool", toolsSchemas.at("string_tool"));
+        const std::string prompt = "<think>\n";
+        const auto context = determineModelGenerationContext(getDefaultReasoningParsingConfig("qwen3"), prompt);
+        GenerationConfigBuilder builder{{}, "qwen3coder", choice == ToolChoiceMode::Auto, DecodingMethod::STANDARD};
+        builder.build(request, context, "qwen3", *qwen3Tokenizer);
+        ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
+        using SOC = ov::genai::StructuredOutputConfig;
+        const auto& root = std::get<SOC::StructuralTag>(*builder.getConfig().structured_output_config->structural_tags_config);
+        const auto grammar = std::get<std::shared_ptr<SOC::Concat>>(root);
+        ASSERT_EQ(grammar->elements.size(), 2);
+        const auto reasoning = std::get<std::shared_ptr<SOC::Tag>>(grammar->elements[0]);
+        EXPECT_TRUE(reasoning->begin.empty());
+        EXPECT_EQ(reasoning->end, "</think>");
+        EXPECT_TRUE(std::holds_alternative<SOC::AnyText>(reasoning->content));
+        const auto tools = std::get<std::shared_ptr<SOC::TriggeredTags>>(grammar->elements[1]);
+        EXPECT_EQ(tools->at_least_one, choice != ToolChoiceMode::Auto);
+        EXPECT_EQ(tools->stop_after_first, choice == ToolChoiceMode::NamedFunction);
+
+        OutputParser parser(*qwen3Tokenizer, "qwen3coder", "qwen3", request.toolNameSchemaMap, context);
+        const std::string call = "<tool_call>\n<function=string_tool>\n<parameter=arg1>value1</parameter>\n</function>\n</tool_call>";
+        const std::string calls = choice == ToolChoiceMode::Required ? call + "\n" + call : call;
+        const auto encoded = qwen3Tokenizer->encode("thinking</think>" + calls, ov::genai::add_special_tokens(false)).input_ids;
+        const std::vector<int64_t> tokens(encoded.data<int64_t>(), encoded.data<int64_t>() + encoded.get_size());
+        const auto parsed = ovms::test::parseWithStreamer(*qwen3Tokenizer, parser, tokens, true, true);
+        EXPECT_EQ(parsed.reasoning, "thinking");
+        EXPECT_TRUE(parsed.content.empty());
+        ASSERT_EQ(parsed.toolCalls.size(), choice == ToolChoiceMode::Required ? 2 : 1);
+        for (const auto& toolCall : parsed.toolCalls) {
+            EXPECT_EQ(toolCall.name, "string_tool");
+            EXPECT_EQ(toolCall.arguments, R"({"arg1":"value1"})");
+        }
+    }
+}
+
+TEST_F(Qwen3CoderOutputParserTest, ToolGuidanceValidatesParameterlessFunctions) {
+    OpenAIRequest request;
+    request.toolChoice = ToolChoiceMode::Required;
+    request.toolNameSchemaMap.emplace("clock", ToolSchemaWrapper{nullptr,
+                                                   R"({"type":"object","properties":{},"additionalProperties":false})"});
+    GenerationConfigBuilder builder{{}, "qwen3coder", false, DecodingMethod::STANDARD};
+    builder.build(request, {}, "", *qwen3Tokenizer);
+    ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
+}
+
 TEST_F(Qwen3CoderOutputParserTest, Parse1ToolCall1Function1ArgumentTagsNewline) {
     std::string input = R"(
 "<tool_call>

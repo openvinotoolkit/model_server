@@ -23,6 +23,7 @@
 
 #include "src/port/rapidjson_document.hpp"
 
+#include "generation_context.hpp"
 #include "../base_output_parser.hpp"
 
 namespace ovms {
@@ -52,6 +53,9 @@ class GptOssToolParser : public BaseOutputParser {
     StreamState streamState = StreamState::READING_HEADER;
     std::string cache;
     bool isStreamingFunctionName = false;
+    bool initialRecipientNamePending = false;
+    bool initialRecipientContinuationPending = false;
+    GptOssGenerationContext promptState;
     int toolCallIndex = -1;
     std::string functionNameCache;
 
@@ -82,15 +86,10 @@ public:
     }
 
     explicit GptOssToolParser(ov::genai::Tokenizer& tokenizer,
-        std::optional<OutputParsingConfig> configOverride = std::nullopt) :
-        BaseOutputParser(tokenizer,
-            configOverride.has_value() ? std::move(*configOverride) : defaultParsingConfig()) {}
+        std::optional<OutputParsingConfig> configOverride,
+        const ModelGenerationContext& context);
 
-    void resetState() override {
-        streamState = StreamState::READING_HEADER;
-        toolCallIndex = -1;
-        clearHeaderState();
-    }
+    void resetState() override;
 
     // Known limitation: arguments arriving with the function name in one chunk are dropped.
     // The one-delta parser contract requires a higher-layer change to deliver both separately.

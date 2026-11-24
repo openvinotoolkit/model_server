@@ -36,6 +36,12 @@ namespace ovms {
 struct StreamOptions {
     bool includeUsage = false;
 };
+enum class ToolChoiceMode {
+    None,
+    Auto,
+    Required,
+    NamedFunction
+};
 // Class that maps OpenAI request content.
 struct OpenAIRequest {
     ov::genai::ChatHistory chatHistory;
@@ -81,7 +87,8 @@ struct OpenAIRequest {
     // Map that holds tool names and schemas for their arguments
     ToolsSchemas_t toolNameSchemaMap;
     // Holds value for tool_choice field as described in https://platform.openai.com/docs/api-reference/chat/create#chat_create-tool_choice
-    std::string toolChoice;
+    ToolChoiceMode toolChoice = ToolChoiceMode::Auto;
+    std::optional<std::string> toolChoiceFunctionName{std::nullopt};
 
     bool skipSpecialTokens{true};
 
