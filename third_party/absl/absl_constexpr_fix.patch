@@ -2,10 +2,16 @@ Work around gcc 13.3 rejecting the constexpr nullptr comparison in
 absl::container_internal::hash_policy_traits::get_hash_slot_fn (raw_hash_set.h),
 and guard ABSL_RETURN_IF_ERROR / ABSL_ASSIGN_OR_RETURN definitions in
 absl/status/status_macros.h so mediapipe's identically-named macros do not
-trigger -Werror=macro-redefined when both headers land in the same TU.
+trigger -Werror=macro-redefined when both headers land in the same TU. Use the
+intrinsics umbrella header required by GCC 14 when BMI2 is enabled.
 
 --- a/absl/container/internal/raw_hash_set.h
 +++ b/absl/container/internal/raw_hash_set.h
+@@ -228,3 +228,3 @@
+ #ifdef __BMI2__
+-#include <bmi2intrin.h>
++#include <immintrin.h>
+ #endif  // __BMI2__
 @@ -3860,7 +3860,7 @@
                    size_t{(std::numeric_limits<uint32_t>::max)()});
      static constexpr size_t kBackingArrayAlignment =
