@@ -18,7 +18,6 @@
 #include <openvino/genai/tokenizer.hpp>
 #include <stdexcept>
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include "../../../logging.hpp"
@@ -29,7 +28,7 @@
 
 namespace ovms {
 
-static constexpr std::string_view FUNCTIONS_PREFIX = "functions.";
+static const std::string FUNCTIONS_PREFIX = "functions.";
 
 /*
     Prepares document with {"arguments": "escaped_chunk"}
@@ -155,7 +154,7 @@ GptOssToolParser::StepResult GptOssToolParser::consumeMessage(std::string& chunk
 }
 
 GptOssToolParser::StepResult GptOssToolParser::consumePartialHeader(std::string chunk) {
-    if (!isStreamingFunctionName && startsWith(cache, std::string(FUNCTIONS_PREFIX))) {
+    if (!isStreamingFunctionName && startsWith(cache, FUNCTIONS_PREFIX)) {
         isStreamingFunctionName = true;
         functionNameCache.clear();
         const std::size_t dotPos = chunk.find('.');
