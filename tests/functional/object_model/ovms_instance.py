@@ -410,12 +410,15 @@ class OvmsInstance(ABC):
                 unexpected_messages.remove(msg)
         return unexpected_messages
 
-    def cleanup(self, timeout=30):
+    def release_target_device_lock(self):
         try:
             if self.target_device_lock_file and self.target_device_lock_file.is_locked:
                 self.target_device_lock_file.release()
         except Exception as e:
             logger.exception(e)
+
+    def cleanup(self, timeout=30):
+        self.release_target_device_lock()
 
         if artifacts_dir != "":
             unexpected_messages = []
