@@ -1,10 +1,62 @@
 # Omni Pipeline Demo
 
-Example clients for Qwen3-Omni multimodal model served by OpenVINO Model Server.
+Example clients for Qwen3-Omni models served by OpenVINO Model Server. The native Omni pipeline accepts text, images, and audio and can return both text and generated speech.
 
-**Requirements:** `pip install openai numpy sounddevice`
+Preconverted OpenVINO Omni models are expected to be available from the [OpenVINO Hugging Face organization](https://huggingface.co/OpenVINO). Until the desired model is published, use a locally prepared OpenVINO model directory.
 
-## Chat Completions API
+## Prerequisites
+
+**Model Server deployment**: Installed Docker Engine or OVMS binary package according to the [bare metal deployment guide](../../docs/deploying_server_baremetal.md).
+
+**Client**: Install the Python dependencies:
+
+```console
+pip install openai numpy sounddevice
+```
+
+## Server Deployment
+
+OVMS auto-detects the native, stateful `OMNI` pipeline from the model's talker assets.
+
+:::{dropdown} **Deploying with Docker**
+
+```bash
+mkdir -p ${HOME}/models
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
+  openvino/model_server:weekly --rest_port 8000 \
+  --source_model <openvino-omni-model> \
+  --model_repository_path /models \
+  --task text_generation
+```
+
+:::
+
+:::{dropdown} **Deploying on Bare Metal**
+
+```text
+ovms --rest_port 8000 \
+  --source_model <openvino-omni-model> \
+  --model_repository_path <models-directory> \
+  --task text_generation
+```
+
+:::
+
+Omni models can also be explicitly loaded as `VLM_CB` for continuous batching with text, image, and audio input, but that mode produces text only.
+
+See the [Omni model reference](../../docs/omni.md) for the model layout, request formats, and API details.
+
+## Readiness Check
+
+Wait for the model to load, then verify the model list:
+
+```console
+curl http://localhost:8000/v1/models
+```
+
+## Request Generation
+
+### Chat Completions API
 
 ```text
 # Text → text
@@ -20,7 +72,7 @@ python3 chat_completions.py --audio recording.wav --prompt "what is in the recor
 python3 chat_completions.py --audio recording.wav --image ./../common/static/images/gorilla.jpeg --prompt "Detect which animal is in the image and tell me product name which is described in the audio." --audio-output --voice m02 --save output.wav
 ```
 
-## Responses API
+### Responses API
 
 ```text
 # Text → text
@@ -42,8 +94,7 @@ python3 responses.py --audio recording.wav --prompt "what is in the recording?" 
 
 ## Available Voices
 
-`f04`, `f245`, `f37`, `m02`, `m31`, `m36`, `br_f019` (model-dependent)
-
+`f04`, `f245`, `f37`, `m02`, `m31`, `m36`, `br_f019` (model-dependent). Voice selection applies only to the native `OMNI` pipeline.
 
 ## API Reference
 

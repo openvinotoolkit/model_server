@@ -21,9 +21,15 @@ pip install openai
 ```
 
 ## Speech generation
-Kokoro is the primary example in this demo, but SpeechT5 remains supported for existing deployments.
 
-For Kokoro-based requests, the `language` field controls which OpenVINO GenAI phonemization path is used. The currently supported values are `en-us`, `en-gb`, `es`, `fr-fr`, `it`, `pt-br`, and `hi`. If `language` is omitted, OVMS defaults to `en-us`.
+Kokoro is the primary example in this demo, but SpeechT5 remains supported for existing deployments. OVMS also supports Qwen3 TTS `CustomVoice` and `VoiceDesign` variants through the same OpenAI-compatible endpoint:
+
+- `CustomVoice` selects a model-defined speaker with `voice`; optional `instructions` can guide delivery.
+- `VoiceDesign` creates the requested voice from `instructions`.
+- `Base` is not currently supported because it requires reference-audio fields outside the OpenAI `audio/speech` request schema.
+
+For Qwen3 TTS models, task detection and voice handling are model-driven, so no Kokoro-specific `language` field is required. For Kokoro-based requests, the `language` field controls which OpenVINO GenAI phonemization path is used. The currently supported values are `en-us`, `en-gb`, `es`, `fr-fr`, `it`, `pt-br`, and `hi`. If `language` is omitted, OVMS defaults to `en-us`.
+
 ### Model preparation
 This demo uses the official OpenVINO model [OpenVINO/Kokoro-82M-int8-ov](https://huggingface.co/OpenVINO/Kokoro-82M-int8-ov) available on HuggingFace.
 The model can be pulled directly by OVMS without any conversion step.
@@ -94,13 +100,82 @@ print("Generation finished")
 
 Play speech.wav file to check generated speech.
 
+:::{dropdown} **Qwen3 TTS CustomVoice request**
+
+Replace the model and voice names with values provided by the deployed model:
+
+```bash
+curl http://localhost:8000/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "<qwen3-tts-customvoice>",
+    "voice": "<model-speaker>",
+    "instructions": "Speak warmly and at a measured pace.",
+    "input": "Welcome to OpenVINO Model Server."
+  }' \
+  -o custom_voice.wav
+```
+
+:::
+
+:::{dropdown} **Qwen3 TTS VoiceDesign request**
+
+Describe the desired voice with `instructions` and omit `voice`:
+
+```bash
+curl http://localhost:8000/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "<qwen3-tts-voicedesign>",
+    "instructions": "A calm, clear adult voice with a warm conversational tone.",
+    "input": "Welcome to OpenVINO Model Server."
+  }' \
+  -o designed_voice.wav
+```
+
+:::
+
 ## Benchmarking speech generation
 For synthetic and real-text benchmark examples, setup, and RTFx interpretation, see
 [Speech Generation](../benchmark/openai/README.md#speech-generation) in the benchmark guide.
 
 ## Transcription
+
+### Qwen3 ASR with continuous batching
+
+Qwen3 ASR models can be served through the multimodal continuous-batching pipeline. This keeps `/v1/audio/transcriptions` compatible while allowing independent transcription requests to share the generation pipeline.
+
+Use this mode for a transcription service with sustained concurrent traffic; as a starting point, evaluate it when the service regularly handles at least four concurrent clients. For isolated requests or a very low-concurrency deployment, the dedicated speech-to-text pipeline remains a simpler choice. Measure latency and throughput on the target hardware because the audio-embedding work and model size affect the crossover point.
+
+:::{dropdown} **Deploying Qwen3 ASR with continuous batching**
+
+Deploy an OpenVINO Qwen3 ASR model as a text-generation task and explicitly select `VLM_CB`:
+
+```text
+ovms --rest_port 8000 \
+  --source_model <openvino-qwen3-asr-model> \
+  --model_repository_path <models-directory> \
+  --model_name qwen3-asr \
+  --task text_generation \
+  --pipeline_type VLM_CB
+```
+
+:::
+
+:::{dropdown} **Sending a transcription request**
+
+```bash
+curl http://localhost:8000/v1/audio/transcriptions \
+  -F 'model=qwen3-asr' \
+  -F 'file=@speech.wav'
+```
+
+:::
+
+This mode accepts transcription requests; it is not the `/audio/translations` pipeline. Continuous-batching configuration options such as `max_num_seqs`, `max_num_batched_tokens`, and `cache_size` can be tuned for the expected concurrency. Qwen3 ASR is auto-detected as `speech2text` when `--task` is omitted, so the explicit `--task text_generation --pipeline_type VLM_CB` selection is required for this deployment mode.
+
 ### Model preparation
-Many variances of Whisper models can be deployed in a single command by using pre-configured models from [OpenVINO HuggingFace organization](https://huggingface.co/collections/OpenVINO/speech-to-text) and used both for translations and transcriptions endpoints.
+Many variants of Whisper models can be deployed in a single command by using pre-configured models from the [OpenVINO HuggingFace organization](https://huggingface.co/collections/OpenVINO/speech-to-text) and used both for translation and transcription endpoints.
 In this demo we will use OpenVINO/whisper-large-v3-turbo-fp16-ov, which is a fine-tuned version of Whisper large-v3.
 
 :::{dropdown} **Deploying with Docker**

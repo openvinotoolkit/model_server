@@ -12,6 +12,8 @@ The are two endpoints exposed:
 
 Request body must be in `multipart/form-data` format.
 
+Qwen3 ASR models can use either the dedicated speech-to-text pipeline or the `VLM_CB` continuous-batching pipeline. To use continuous batching, deploy the model with `--task text_generation --pipeline_type VLM_CB`; this is useful for sustained concurrent transcription traffic, typically worth benchmarking from around four concurrent clients. The endpoint and multipart request format are unchanged. See the [Qwen3 ASR continuous-batching example](../demos/audio/README.md#qwen3-asr-with-continuous-batching).
+
 ### Example request
 #### Transcription
 ```

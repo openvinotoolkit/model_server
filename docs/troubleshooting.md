@@ -26,7 +26,7 @@ Start the server in debug mode with `--log_level DEBUG`. This exposes additional
 
 - Newly enabled LLM/VLM models may not always support the continuous batching pipeline, especially in preview or early-access scenarios.
     In that case, switch to the non-continuous-batching pipeline with `--pipeline_type LM`, `--pipeline_type VLM`, or `--pipeline_type OMNI` as appropriate.
-    Continuous batching variants are the defaults: `LM_CB`, `VLM_CB`, and `OMNI_CB`.
+    Continuous batching uses `LM_CB` or `VLM_CB`; there is no `OMNI_CB` pipeline.
     If the model loads only after changing the pipeline type, the issue is usually a pipeline-model compatibility mismatch rather than a corrupted model.
     NPU device can't use continuous batching pipeline.
     

@@ -1,7 +1,7 @@
 # VLM models via OpenAI API {#ovms_demos_continuous_batching_vlm}
 
-This demo shows how to deploy Vision Language Models in the OpenVINO Model Server.
-Text generation use case is exposed via OpenAI API `chat/completions` and `responses` endpoints.
+This demo shows how to deploy multimodal Vision Language Models in the OpenVINO Model Server.
+The text generation use case is exposed via OpenAI-compatible `chat/completions` and `responses` endpoints. VLMs with audio encoders can accept base64-encoded `wav` or `mp3` audio alongside text and images. Output from a VLM remains text-only; use the native Omni pipeline when generated speech is required.
 
 > **Note:** This demo was tested on 4th - 6th generation Intel® Xeon® Scalable Processors, Intel® Arc™ Xe2 GPU platforms on Ubuntu24 and Windows11. At least 22GB VRAM is needed to deploy model Qwen3.6-35B-A3B used in the demo. On platforms with less memory, use smaller model like [OpenVINO/Qwen3.5-4B-int4-ov](https://huggingface.co/OpenVINO/Qwen3.5-4B-int4-ov).
 
@@ -210,6 +210,30 @@ print(response.text)
   }
 }
 ```
+:::
+:::{dropdown} **Unary call with curl using audio input**
+
+Models with an audio encoder can process `input_audio` content parts. Encode the audio as base64 and set its container format:
+
+```bash
+AUDIO_DATA=$(base64 -w 0 recording.wav)
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"model\": \"<audio-capable-vlm-model>\",
+    \"messages\": [{
+      \"role\": \"user\",
+      \"content\": [
+        {\"type\": \"input_audio\", \"input_audio\": {\"data\": \"${AUDIO_DATA}\", \"format\": \"wav\"}},
+        {\"type\": \"text\", \"text\": \"Summarize the recording.\"}
+      ]
+    }],
+    \"max_completion_tokens\": 100
+  }"
+```
+
+The same audio part shape is supported by the Responses API. Audio support depends on the selected model having `openvino_audio_embeddings_model.xml` or `openvino_audio_encoder_model.xml`; a text-and-image-only VLM will reject the audio part.
+
 :::
 :::{dropdown} **Streaming request with OpenAI client using chat/completions**
 

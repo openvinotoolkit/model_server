@@ -7,11 +7,15 @@ OpenVINO Model Server supports **Qwen3-Omni** models — multimodal models that 
 - Qwen3-Omni Dense (INT4/INT8/FP16/FP32)
 - Qwen3-Omni MoE (INT4/INT8/FP16/FP32) - **does not work yet**
 
+Preconverted OpenVINO models are expected to be published in the [OpenVINO Hugging Face organization](https://huggingface.co/OpenVINO). Until the desired model is available there, use a model prepared locally in the supported OpenVINO model format.
+
 ## Quick Start
+
+Native Omni serving uses the stateful `OMNI` pipeline auto-detected from the model's talker assets. An Omni model can also be explicitly loaded as `VLM_CB` for continuous batching with text, image, and audio input, but that mode is text-only and does not load the talker for audio output.
 
 ### Model Setup
 
-The model directory must contain `openvino_talker_model.xml` — OVMS auto-detects it as an Omni pipeline.
+The model directory for native Omni serving must contain `openvino_talker_model.xml`. OVMS auto-detects it as the stateful Omni pipeline.
 
 ```
 models/qwen3-omni/
@@ -176,8 +180,9 @@ When `voice` is omitted, the model's default speaker is used.
 
 ## Current Limitations
 
-- **Speech generation starts after text generation** — not interleaved
-- **Performance** — it is still under ongoing development and may be slower than expected
+- Native Omni serving is stateful; there is no `OMNI_CB` pipeline.
+- Speech generation starts after text generation rather than interleaving text and audio tokens.
+- Speech-output performance is still under active development and should be benchmarked for the target workload.
 
 ## Demo Clients
 
