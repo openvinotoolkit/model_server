@@ -47,6 +47,7 @@ CURL_VERSION ?= 8.22.0_2
 GPU_DRIVER_VERSION_UBUNTU22 ?= 24.52.32224
 GPU_DRIVER_VERSION_UBUNTU24 ?= 26.31.39395
 GPU_DRIVER_VERSION_UBUNTU26 ?= 26.31.39395
+GPU_DRIVER_VERSION_REDHAT ?= 25.18.33578
 NPU_DRIVER_URL_UBUNTU22 ?= https://github.com/intel/linux-npu-driver/releases/download/v1.26.0/linux-npu-driver-v1.26.0.20251125-19665715237-ubuntu2204.tar.gz
 NPU_DRIVER_SHA256_UBUNTU22 ?= cfdbcc9adc1ea20d498ebd9cbdb5c212f6fc940e1034ef7a72e239a8636f653a
 NPU_DRIVER_URL_UBUNTU24 ?= https://github.com/intel/linux-npu-driver/releases/download/v1.38.0/linux-npu-driver-v1.38.0.20260910-34487311128-ubuntu2404.tar.gz

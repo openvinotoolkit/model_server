@@ -78,7 +78,7 @@ from tests.functional.constants.ovms_images import (
     calculate_ovms_test_image_name,
     calculate_ovms_image_name,
     get_ovms_calculated_images,
-    GPU_INSTALL_DRIVER_VERSION,
+    get_driver_version,
     GPU_INSTALL_SCRIPTS,
 )
 from tests.functional.constants.ovms_type import (
@@ -349,7 +349,7 @@ def get_ovms_capi_docker_build_cmd(ovms_image, base_os, dockerfile, ovms_binary_
         f"--build-arg OVMS_TEST_IMAGE={ovms_test_image} "
         f"--build-arg OVMS_DEPENDENCIES='{OVMS_CAPI_DEPENDENCIES[base_os]}' "
         f"--build-arg TOOLS_DEPENDENCIES='{OVMS_CAPI_TOOLS_DEPENDENCIES[target_device][base_os]}' "
-        f"--build-arg INSTALL_DRIVER_VERSION='{GPU_INSTALL_DRIVER_VERSION[base_os]}' "
+        f"--build-arg INSTALL_DRIVER_VERSION='{get_driver_version(base_os)}' "
         f"--build-arg http_proxy={http_proxy} "
         f"--build-arg https_proxy={https_proxy} "
         f"--build-arg no_proxy={no_proxy} "
