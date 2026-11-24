@@ -15,6 +15,8 @@
 //*****************************************************************************
 #pragma once
 
+#include <cstdint>
+#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -44,7 +46,8 @@ struct EmbeddingsRequest : TokenizeRequest {
         FLOAT,
         BASE64
     };
-    EncodingFormat encoding_format;
+    EncodingFormat encoding_format = EncodingFormat::FLOAT;
+    std::optional<uint64_t> dimensions;
 
     static std::variant<EmbeddingsRequest, std::string> fromJson(rapidjson::Document* request);
 };

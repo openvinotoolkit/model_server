@@ -437,3 +437,67 @@ TEST(EmbeddingsSerializationNew, negativeShapeMismatch) {
     auto status = handler.parseResponse(buffer, embeddingsTensor);
     ASSERT_FALSE(status.ok());
 }
+
+TEST(EmbeddingsDeserialization, invalidDimensions) {
+    for (const std::string dimensions : {"0", "-1", "1.5", "1.0", "\"2\"", "true", "null", "18446744073709551616"}) {
+        SCOPED_TRACE(dimensions);
+        const std::string body = R"({"input":"dummyInput","dimensions":)" + dimensions + "}";
+        rapidjson::Document document;
+        ASSERT_FALSE(document.Parse(body.c_str()).HasParseError());
+        ovms::EmbeddingsHandler handler(document);
+        const auto status = handler.parseRequest();
+        EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+        EXPECT_EQ(status.message(), "dimensions must be a positive integer");
+    }
+}
+
+TEST(EmbeddingsSerializationNew, dimensionsNormalizeEachBatchRow) {
+    std::vector<float> values{3, 4, 12, 0, -2, 5, 0, 0, 10};
+    ov::Tensor tensor(ov::element::f32, {3, 3}, values.data());
+    rapidjson::Document request;
+    ASSERT_FALSE(request.Parse(R"({"input":["one","two","three"],"dimensions":2})").HasParseError());
+    ovms::EmbeddingsHandler handler(request);
+    ASSERT_TRUE(handler.parseRequest().ok());
+    rapidjson::StringBuffer buffer;
+    ASSERT_TRUE(handler.parseResponse(buffer, tensor).ok());
+
+    rapidjson::Document response;
+    ASSERT_FALSE(response.Parse(buffer.GetString()).HasParseError());
+    const auto rows = response["data"].GetArray();
+    ASSERT_EQ(rows.Size(), 3);
+    const std::vector<std::vector<float>> expected{{0.6f, 0.8f}, {0.0f, -1.0f}, {0.0f, 0.0f}};
+    for (rapidjson::SizeType row = 0; row < rows.Size(); ++row) {
+        const auto embedding = rows[row]["embedding"].GetArray();
+        ASSERT_EQ(embedding.Size(), 2);
+        for (rapidjson::SizeType column = 0; column < embedding.Size(); ++column) {
+            EXPECT_FLOAT_EQ(embedding[column].GetFloat(), expected[row][column]);
+        }
+    }
+}
+
+TEST(EmbeddingsSerializationNew, dimensionsBase64) {
+    std::vector<float> values{2, 5};
+    ov::Tensor tensor(ov::element::f32, {1, 2}, values.data());
+    rapidjson::Document request;
+    ASSERT_FALSE(request.Parse(R"({"input":"one","dimensions":1,"encoding_format":"base64"})").HasParseError());
+    ovms::EmbeddingsHandler handler(request);
+    ASSERT_TRUE(handler.parseRequest().ok());
+    rapidjson::StringBuffer buffer;
+    ASSERT_TRUE(handler.parseResponse(buffer, tensor).ok());
+
+    rapidjson::Document response;
+    ASSERT_FALSE(response.Parse(buffer.GetString()).HasParseError());
+    EXPECT_STREQ(response["data"][0]["embedding"].GetString(), "AACAPw==");
+}
+
+TEST(EmbeddingsSerializationNew, dimensionsExceedModelOutput) {
+    ov::Tensor tensor(ov::element::f32, {1, 2});
+    rapidjson::Document request;
+    ASSERT_FALSE(request.Parse(R"({"input":"one","dimensions":3})").HasParseError());
+    ovms::EmbeddingsHandler handler(request);
+    ASSERT_TRUE(handler.parseRequest().ok());
+    rapidjson::StringBuffer buffer;
+    const auto status = handler.parseResponse(buffer, tensor);
+    EXPECT_EQ(status.code(), absl::StatusCode::kInvalidArgument);
+    EXPECT_EQ(status.message(), "dimensions exceeds the model output size of 2");
+}

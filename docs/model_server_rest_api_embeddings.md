@@ -54,10 +54,10 @@ curl http://localhost/v3/embeddings \
 | model | ✅ | ✅ | string (required) | Name of the model to use. Name assigned to a MediaPipe graph configured to schedule generation using desired embedding model.  |
 | input | ✅ | ✅ | string/list of strings (required) | Input text to embed, encoded as a string or a list of strings  |
 | encoding_format | ✅ | ✅ | float or base64 (default: `float`) | The format to return the embeddings in |
+| dimensions | ✅ | ✅ | integer (optional) | Return the first `dimensions` values of each embedding and L2-normalize the result. Accepts values from 1 through the model's output size. Omit to use the model's full output and configured normalization. Use a Matryoshka-trained model to preserve embedding quality when shortening vectors. |
 
 #### Unsupported params from OpenAI service:
 - user
-- dimensions
 
 ## Response
 
@@ -72,6 +72,7 @@ curl http://localhost/v3/embeddings \
 ## Error handling
 Endpoint can raise an error related to incorrect request in the following conditions:
 - Incorrect format of any of the fields based on the schema
+- `dimensions` exceeds the model's embedding output size
 - Any tokenized input text exceeds the maximum length of the model context. Make sure input documents are chunked to fit the model
 - The request body exceeds 2,000,000 bytes
 - The number of input documents exceeds `max_batch_size` (default 1024). Set `max_batch_size` in the embeddings graph node options or pass `--max_batch_size` when generating a graph with `--task embeddings`.

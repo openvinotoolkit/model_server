@@ -15,7 +15,7 @@
 //*****************************************************************************
 #include "embeddings_api.hpp"
 
-#include <algorithm>
+#include <cmath>
 #include <string>
 #include <utility>
 #include <variant>
@@ -63,7 +63,6 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
     }
 
     auto it = parsedJson->FindMember("encoding_format");
-    request.encoding_format = EncodingFormat::FLOAT;
     if (it != parsedJson->MemberEnd()) {
         if (it->value.IsString()) {
             if (it->value.GetString() == std::string("base64")) {
@@ -78,7 +77,14 @@ std::variant<EmbeddingsRequest, std::string> EmbeddingsRequest::fromJson(rapidjs
         }
     }
 
-    // TODO: dimensions (optional)
+    it = parsedJson->FindMember("dimensions");
+    if (it != parsedJson->MemberEnd()) {
+        if (!it->value.IsUint64() || it->value.GetUint64() == 0) {
+            return "dimensions must be a positive integer";
+        }
+        request.dimensions = it->value.GetUint64();
+    }
+
     // TODO: user (optional)
     return request;
 }
@@ -116,6 +122,19 @@ void EmbeddingsHandler::setPromptTokensUsage(int promptTokens) {
 #pragma warning(push)
 #pragma warning(disable : 4267)
 absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Tensor& embeddingsTensor) {
+    const auto shape = embeddingsTensor.get_shape();
+    if (shape.size() != 2) {
+        return absl::InvalidArgumentError("Invalid embeddings tensor shape");
+    }
+
+    const size_t batch_size = shape[0];
+    const size_t hidden_size = shape[1];
+    if (request.dimensions && *request.dimensions > hidden_size) {
+        return absl::InvalidArgumentError("dimensions exceeds the model output size of " + std::to_string(hidden_size));
+    }
+    const size_t output_size = static_cast<size_t>(request.dimensions.value_or(hidden_size));
+    const float* embeddings_data = embeddingsTensor.data<float>();
+
     Writer<StringBuffer> writer(buffer);
     writer.StartObject();
 
@@ -125,23 +144,22 @@ absl::Status EmbeddingsHandler::parseResponse(StringBuffer& buffer, const ov::Te
     writer.String("data");
     writer.StartArray();
 
-    const float* last_hidden_state_data = embeddingsTensor.data<float>();
-
-    std::vector<std::vector<float>> result;
-    const auto shape = embeddingsTensor.get_shape();
-
-    if (shape.size() != 2) {
-        return absl::InvalidArgumentError("Invalid embeddings tensor shape");
-    }
-
-    const size_t batch_size = shape[0];
-    const size_t hidden_size = shape[1];
-
     for (size_t batch = 0; batch < batch_size; batch++) {
         const auto batch_offset = batch * hidden_size;
-        const float* batch_data = last_hidden_state_data + batch_offset;
-        const std::vector<float> batch_result(batch_data, batch_data + hidden_size);
-        result.push_back(batch_result);
+        const float* batch_data = embeddings_data + batch_offset;
+        std::vector<float> batch_result(batch_data, batch_data + output_size);
+        if (request.dimensions) {
+            double sum_of_squares = 0;
+            for (double value : batch_result) {
+                sum_of_squares += value * value;
+            }
+            if (sum_of_squares > 0) {
+                const double norm = std::sqrt(sum_of_squares);
+                for (float& value : batch_result) {
+                    value = static_cast<float>(value / norm);
+                }
+            }
+        }
 
         writer.StartObject();
         writer.String("object");
