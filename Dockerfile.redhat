@@ -170,8 +170,8 @@ ARG LTO_LD_FLAGS="-Wl,-z,relro"
 
 # hadolint ignore=DL3041
 RUN case "$BASE_OS" in \
-        redhat|redhat9) redhat_major=9; python_packages=(python3.12 python3.12-devel python3.12-pip); python_path=/usr/bin/python3.12; expected_python=3.12 ;; \
-        redhat10) redhat_major=10; python_packages=(python3 python3-devel python3-pip); python_path=/usr/bin/python3; expected_python=3.12 ;; \
+    redhat|redhat9) redhat_major=9; python_packages=(python3.12 python3.12-devel python3.12-pip); python_path=/usr/bin/python3.12; expected_python=3.12; toolset_packages=(gcc-toolset-14-gcc-c++ gcc-toolset-14-binutils) ;; \
+    redhat10) redhat_major=10; python_packages=(python3 python3-devel python3-pip); python_path=/usr/bin/python3; expected_python=3.12; toolset_packages=() ;; \
         *) exit 1 ;; \
     esac && \
     echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf && \
@@ -189,10 +189,14 @@ RUN case "$BASE_OS" in \
             openssl-devel \
             patch \
             pkg-config \
-                wget "${python_packages[@]}" && \
+                wget "${python_packages[@]}" "${toolset_packages[@]}" && \
             ln -sf "$python_path" /usr/local/bin/python3 && \
             python3 --version | grep -q "^Python ${expected_python//./\\.}\\." && \
             dnf clean all
+
+ENV PATH=/opt/rh/gcc-toolset-14/root/usr/bin:${PATH} \
+    CC=gcc \
+    CXX=g++
 
 # hadolint ignore=DL3003
 RUN curl -fsSL https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/nasm-2.16.03.tar.gz -o /tmp/nasm.tar.gz && \
@@ -433,6 +437,9 @@ RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [
 # Build OpenVINO Model Server
 WORKDIR /ovms
 COPY .bazelrc .user.bazelr[c] .bazelversion WORKSPACE /ovms/
+RUN ln -sf "$(readlink /usr/local/bin/python3)-config" /usr/local/bin/python3-config && \
+    sed -i 's|/usr/bin/python3|/usr/local/bin/python3|g' /ovms/.bazelrc && \
+    printf '%s\n' 'build:linux --repo_env=PYTHON_BIN_PATH=/usr/local/bin/python3' >> /ovms/.bazelrc
 # since bazel does not have easy way to pass if down the dependencies to have select the sources
 # for libcurl & ssl we hack it this way
 RUN ln -s /usr/lib64 /usr/lib/x86_64-linux-gnu
