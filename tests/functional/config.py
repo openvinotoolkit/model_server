@@ -104,7 +104,7 @@ mediapipe_disable = bool(get_int("MEDIAPIPE_DISABLE", 0))
 python_disable = False  # pylint: disable=invalid-name
 
 """ TT_WIN_PY_VERSION - Python version for virtualenv on Windows OS """
-windows_python_version = os.environ.get("TT_WIN_PY_VERSION", "3.12")
+windows_python_version = os.environ.get("TT_WIN_PY_VERSION", "3.14")
 
 """ TT_DOCKER_REGISTRY - Docker registry """
 docker_registry = os.environ.get("TT_DOCKER_REGISTRY", None)

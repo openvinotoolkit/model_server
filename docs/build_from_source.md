@@ -52,7 +52,7 @@ Example:
 | Ubuntu 26.04 | `26.31.39395` |
 | Red Hat | `25.18.33578` |
 
-See [install_ubuntu_gpu_drivers.sh](../install_ubuntu_gpu_drivers.sh) and [install_redhat_gpu_drivers.sh](../install_redhat_gpu_drivers.sh) for the installer cases.
+The Ubuntu release build and image composer share the GPU defaults and the NPU and Level Zero download pins in [versions.mk](../versions.mk). Update each package URL and SHA-256 together. The GPU release-to-package mapping remains in [install_ubuntu_gpu_drivers.sh](../install_ubuntu_gpu_drivers.sh); see [install_redhat_gpu_drivers.sh](../install_redhat_gpu_drivers.sh) for Red Hat.
 
 
 Example:

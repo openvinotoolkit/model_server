@@ -102,9 +102,12 @@ if __name__ == "__main__":
     if not python_binary:
         fail("Python interpreter not found in PATH")
 
-    # Execute the Python script
-    # This patches drogon repo to remove txt files which break building, such as 中文.txt
-    result = repository_ctx.execute([python_binary, "remove_japanese_txt.py"], environment=repository_ctx.os.environ)
+    # Execute the Python script with Python variables removed. These variables
+    # point to the Windows CPython installation and can corrupt MSYS /usr/bin/python3.
+    python_environment = dict(repository_ctx.os.environ)
+    python_environment["PYTHONHOME"] = ""
+    python_environment["PYTHONPATH"] = ""
+    result = repository_ctx.execute([python_binary, "remove_japanese_txt.py"], environment=python_environment)
 
     # Log the script's stdout and stderr
     if result.return_code == 0:
