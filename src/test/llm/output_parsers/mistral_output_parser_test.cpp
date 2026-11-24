@@ -87,10 +87,17 @@ TEST(MistralToolGuidanceConfigTest, ArrayFramingAndCallCountMatchToolChoice) {
         EXPECT_EQ(calls->stop_after_first, namedChoice);
         ASSERT_EQ(calls->tags.size(), namedChoice ? 1 : 2);
         for (const auto& call : calls->tags) {
-            EXPECT_EQ(std::get<SOC::JSONSchema>(call.content).value, argumentsSchema);
+            EXPECT_EQ(call.begin, "{");
+            EXPECT_EQ(call.end, "}");
+            const auto content = std::get<std::shared_ptr<SOC::Concat>>(call.content);
+            ASSERT_EQ(content->elements.size(), 4);
+            EXPECT_EQ(std::get<SOC::Regex>(content->elements[0]).value, R"([ \t\r\n]*"name"[ \t\r\n]*:[ \t\r\n]*)");
+            EXPECT_EQ(std::get<SOC::Regex>(content->elements[2]).value, R"([ \t\r\n]*,[ \t\r\n]*"arguments"[ \t\r\n]*:[ \t\r\n]*)");
+            EXPECT_EQ(std::get<SOC::JSONSchema>(content->elements[3]).value, argumentsSchema);
         }
         if (namedChoice) {
-            EXPECT_EQ(calls->tags.front().begin, "{\"name\": \"weather\", \"arguments\": ");
+            const auto content = std::get<std::shared_ptr<SOC::Concat>>(calls->tags.front().content);
+            EXPECT_EQ(std::get<SOC::ConstString>(content->elements[1]).value, "\"weather\"");
         }
     }
 }

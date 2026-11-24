@@ -17,6 +17,7 @@
 #include "generation_config_builder.hpp"
 
 #include <memory>
+#include <vector>
 
 namespace ovms {
 
@@ -27,8 +28,14 @@ void MistralGenerationConfigBuilder::applyToolGuidance(const OpenAIRequest& requ
     calls->at_least_one = true;
     calls->stop_after_first = requiresNamedToolCall(request);
     for (const auto& [name, schema] : request.toolNameSchemaMap) {
-        calls->tags.emplace_back("{\"name\": " + SOC::format_for_json(name) + ", \"arguments\": ",
-            buildToolArgumentGrammar(schema.stringRepr), "}");
+        // Allow optional header whitespace: requiring a space after "name": caused repeated <unk>
+        // tokens in a Mistral probe; the relaxed header completed. The underlying cause is unconfirmed.
+        auto content = std::make_shared<SOC::Concat>(std::vector<SOC::StructuralTag>{
+            SOC::Regex(R"([ \t\r\n]*"name"[ \t\r\n]*:[ \t\r\n]*)"),
+            SOC::ConstString(SOC::format_for_json(name)),
+            SOC::Regex(R"([ \t\r\n]*,[ \t\r\n]*"arguments"[ \t\r\n]*:[ \t\r\n]*)"),
+            buildToolArgumentGrammar(schema.stringRepr)});
+        calls->tags.emplace_back("{", content, "}");
     }
     auto tags = std::make_shared<SOC::TriggeredTags>();
     tags->triggers.push_back("[TOOL_CALLS]");
