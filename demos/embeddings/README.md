@@ -263,8 +263,8 @@ docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/m
 docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name Qwen3-Embedding-0.6B-int8-ov --model_path OpenVINO/Qwen3-Embedding-0.6B-int8-ov
 ```
 :::
-:::{tab-item} BAAI/bge-large-en-v1.5
-:sync: BAAI/bge-large-en-v1.5-fp16
+:::{tab-item} OpenVINO/bge-base-en-v1.5-int8-ov
+:sync: OpenVINO/bge-base-en-v1.5-int8-ov
 ```bash
 docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --pooling LAST --task embeddings --target_device NPU --max_length 400
 
@@ -443,87 +443,156 @@ It is easy also to run model evaluation using [MTEB](https://github.com/embeddin
 ```console
 pip install mteb tiktoken einops openai --extra-index-url "https://download.pytorch.org/whl/cpu"
 curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/ovms_mteb.py -o ovms_mteb.py
-python ovms_mteb.py --model_name bge-large-en-v1.5 --service_url http://localhost:8000/v1
+python ovms_mteb.py --model_name bge-base-en-v1.5-int8-ov --service_url http://localhost:8000/v1
 ```
 Results will be stored in `results` folder:
 ```json
 {
   "dataset_revision": "0fd18e25b25c072e09e0d92ab615fda904d66300",
   "task_name": "Banking77Classification",
-  "mteb_version": "2.12.30",
+  "mteb_version": "2.27.22",
   "scores": {
     "test": [
       {
         "scores_per_experiment": [
           {
-            "accuracy": 0.835065,
-            "f1": 0.826769,
-            "f1_weighted": 0.826769
-          },
-          {
-            "accuracy": 0.841883,
-            "f1": 0.834859,
-            "f1_weighted": 0.834859
+            "accuracy": 0.835714,
+            "f1": 0.82741,
+            "f1_weighted": 0.82741,
+            "precision": 0.842506,
+            "precision_weighted": 0.842506,
+            "recall": 0.835714,
+            "recall_weighted": 0.835714,
+            "ap": null,
+            "ap_weighted": null
           },
           {
             "accuracy": 0.841234,
-            "f1": 0.833533,
-            "f1_weighted": 0.833533
+            "f1": 0.833948,
+            "f1_weighted": 0.833948,
+            "precision": 0.84872,
+            "precision_weighted": 0.84872,
+            "recall": 0.841234,
+            "recall_weighted": 0.841234,
+            "ap": null,
+            "ap_weighted": null
           },
           {
-            "accuracy": 0.843182,
-            "f1": 0.838652,
-            "f1_weighted": 0.838652
-          },
-          {
-            "accuracy": 0.839935,
-            "f1": 0.833928,
-            "f1_weighted": 0.833928
-          },
-          {
-            "accuracy": 0.84513,
-            "f1": 0.840801,
-            "f1_weighted": 0.840801
-          },
-          {
-            "accuracy": 0.836688,
-            "f1": 0.83106,
-            "f1_weighted": 0.83106
-          },
-          {
-            "accuracy": 0.836039,
-            "f1": 0.828459,
-            "f1_weighted": 0.828459
+            "accuracy": 0.841883,
+            "f1": 0.834378,
+            "f1_weighted": 0.834378,
+            "precision": 0.854342,
+            "precision_weighted": 0.854342,
+            "recall": 0.841883,
+            "recall_weighted": 0.841883,
+            "ap": null,
+            "ap_weighted": null
           },
           {
             "accuracy": 0.842532,
-            "f1": 0.834954,
-            "f1_weighted": 0.834954
+            "f1": 0.837997,
+            "f1_weighted": 0.837997,
+            "precision": 0.85386,
+            "precision_weighted": 0.85386,
+            "recall": 0.842532,
+            "recall_weighted": 0.842532,
+            "ap": null,
+            "ap_weighted": null
           },
           {
-            "accuracy": 0.833766,
-            "f1": 0.827428,
-            "f1_weighted": 0.827428
+            "accuracy": 0.83961,
+            "f1": 0.833709,
+            "f1_weighted": 0.833709,
+            "precision": 0.854358,
+            "precision_weighted": 0.854358,
+            "recall": 0.83961,
+            "recall_weighted": 0.83961,
+            "ap": null,
+            "ap_weighted": null
+          },
+          {
+            "accuracy": 0.844156,
+            "f1": 0.839925,
+            "f1_weighted": 0.839925,
+            "precision": 0.857884,
+            "precision_weighted": 0.857884,
+            "recall": 0.844156,
+            "recall_weighted": 0.844156,
+            "ap": null,
+            "ap_weighted": null
+          },
+          {
+            "accuracy": 0.837662,
+            "f1": 0.832103,
+            "f1_weighted": 0.832103,
+            "precision": 0.850791,
+            "precision_weighted": 0.850791,
+            "recall": 0.837662,
+            "recall_weighted": 0.837662,
+            "ap": null,
+            "ap_weighted": null
+          },
+          {
+            "accuracy": 0.836039,
+            "f1": 0.828496,
+            "f1_weighted": 0.828496,
+            "precision": 0.854481,
+            "precision_weighted": 0.854481,
+            "recall": 0.836039,
+            "recall_weighted": 0.836039,
+            "ap": null,
+            "ap_weighted": null
+          },
+          {
+            "accuracy": 0.843506,
+            "f1": 0.835978,
+            "f1_weighted": 0.835978,
+            "precision": 0.85638,
+            "precision_weighted": 0.85638,
+            "recall": 0.843506,
+            "recall_weighted": 0.843506,
+            "ap": null,
+            "ap_weighted": null
+          },
+          {
+            "accuracy": 0.834416,
+            "f1": 0.828135,
+            "f1_weighted": 0.828135,
+            "precision": 0.854075,
+            "precision_weighted": 0.854075,
+            "recall": 0.834416,
+            "recall_weighted": 0.834416,
+            "ap": null,
+            "ap_weighted": null
           }
         ],
-        "accuracy": 0.839545,
-        "f1": 0.833044,
-        "f1_weighted": 0.833044,
-        "main_score": 0.839545,
+        "accuracy": 0.839675,
+        "f1": 0.833208,
+        "f1_weighted": 0.833208,
+        "precision": 0.85274,
+        "precision_weighted": 0.85274,
+        "recall": 0.839675,
+        "recall_weighted": 0.839675,
+        "ap": NaN,
+        "ap_weighted": NaN,
+        "main_score": 0.839675,
         "hf_subset": "default",
         "languages": [
           "eng-Latn"
-        ]
+        ],
+        "mteb_version": "2.27.22"
       }
     ]
   },
-  "evaluation_time": 484.35,
-  "kg_co2_emissions": null
+  "evaluation_time": 127.6319568157196,
+  "kg_co2_emissions": null,
+  "date": null,
+  "evaluation_phases": null
 }
 ```
 Compare against local HuggingFace execution for reference:
 ```console
-mteb run -m thenlper/gte-small -t Banking77Classification --output_folder results
+mteb run -m BAAI/bge-base-en-v1.5 -t Banking77Classification --output_folder results
 ``` 
 
 # Usage of tokenize endpoint
@@ -532,7 +601,7 @@ The `tokenize` endpoint provides a simple API for tokenizing input text using th
 
 Example usage:
 ```console
-curl http://localhost:8000/v1/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"bge-large-en-v1.5\", \"text\": \"hello world\" }"
+curl http://localhost:8000/v1/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"bge-base-en-v1.5-int8-ov\", \"text\": \"hello world\" }"
 ```
 Response:
 ```json
@@ -549,7 +618,7 @@ It's possible to use additional parameters:
 
  Example usage:
 ```console
-curl http://localhost:8000/v1/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"bge-large-en-v1.5\", \"text\": \"hello world\", \"max_length\": 10, \"pad_to_max_length\": true, \"padding_side\": \"left\", \"add_special_tokens\": true }"
+curl http://localhost:8000/v1/tokenize -H "Content-Type: application/json" -d "{ \"model\": \"bge-base-en-v1.5-int8-ov\", \"text\": \"hello world\", \"max_length\": 10, \"pad_to_max_length\": true, \"padding_side\": \"left\", \"add_special_tokens\": true }"
 ```
 
 Response:
