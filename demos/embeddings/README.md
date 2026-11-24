@@ -411,7 +411,6 @@ A simple method of testing the response accuracy is via comparing the response f
 The script [compare_results.py](https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/compare_results.py) can assist with such experiment.
 ```bash
 curl -fL https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/compare_results.py -o compare_results.py
-pip install -U optimum-intel
 python compare_results.py --model_name bge-base-en-v1.5-int8-ov --hf_model_name BAAI/bge-base-en-v1.5 --service_url http://localhost:8000/v1 --pooling CLS --input "hello world" --input "goodbye world"
 
 input ['hello world', 'goodbye world']
