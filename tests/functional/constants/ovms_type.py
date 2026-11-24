@@ -42,8 +42,8 @@ OVMS_BINARY_PACKAGE_EXTENSIONS = (".tar.gz", ".zip")
 
 OVMS_CAPI_DEPENDENCIES = OVMS_BINARY_DEPENDENCIES
 
-OVMS_CAPI_UBUNTU_CPU_TOOLS = "build-essential ca-certificates"
-OVMS_CAPI_UBUNTU_GPU_TOOLS = "clinfo curl"
+OVMS_CAPI_UBUNTU_CPU_TOOLS = "build-essential ca-certificates curl"
+OVMS_CAPI_UBUNTU_GPU_TOOLS = "clinfo"
 OVMS_CAPI_UBUNTU_OPENCL_TOOLS = "opencl-clhpp-headers opencl-c-headers intel-opencl-icd"
 OVMS_CAPI_UBUNTU_VA_TOOLS = "gpg"
 
