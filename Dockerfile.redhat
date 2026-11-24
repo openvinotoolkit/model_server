@@ -439,7 +439,8 @@ WORKDIR /ovms
 COPY .bazelrc .user.bazelr[c] .bazelversion WORKSPACE /ovms/
 RUN ln -sf "$(readlink /usr/local/bin/python3)-config" /usr/local/bin/python3-config && \
     sed -i 's|/usr/bin/python3|/usr/local/bin/python3|g' /ovms/.bazelrc && \
-    printf '%s\n' 'build:linux --repo_env=PYTHON_BIN_PATH=/usr/local/bin/python3' >> /ovms/.bazelrc
+    printf '%s\n' 'build:linux --repo_env=PYTHON_BIN_PATH=/usr/local/bin/python3' \
+        'build:linux --test_env=PATH' >> /ovms/.bazelrc
 # since bazel does not have easy way to pass if down the dependencies to have select the sources
 # for libcurl & ssl we hack it this way
 RUN ln -s /usr/lib64 /usr/lib/x86_64-linux-gnu
