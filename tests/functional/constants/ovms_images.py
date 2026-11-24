@@ -16,7 +16,7 @@
 
 import re
 
-from ovms.hooks.hooks_utils import get_data_from_versions_mk
+from tests.functional.utils.other import get_data_from_versions_mk
 from tests.functional.utils.environment_info import EnvironmentInfo
 from tests.functional.constants.os_type import OsType, UBUNTU
 from tests.functional.constants.os_version import OPENVINO_MODEL_SERVER
