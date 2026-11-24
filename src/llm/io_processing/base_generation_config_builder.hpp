@@ -81,9 +81,10 @@ protected:
     virtual bool supportsToolGuidance() const { return false; }
     bool shouldApplyToolGuidance(const OpenAIRequest& request) const;
     static bool shouldApplyResponseFormatGuidance(const OpenAIRequest& request);
-    void setToolGrammar(const OpenAIRequest& request, const std::shared_ptr<ov::genai::StructuredOutputConfig::TriggeredTags>& tags);
+    void setToolGrammar(const OpenAIRequest& request, const std::shared_ptr<ov::genai::StructuredOutputConfig::TriggeredTags>& tags,
+        const ModelGenerationContext& generationContext);
     static ov::genai::StructuredOutputConfig::StructuralTag buildToolArgumentGrammar(const std::string& schema);
-    void setTaggedToolGrammar(const OpenAIRequest& request, const ToolCallFormat& format);
+    void setTaggedToolGrammar(const OpenAIRequest& request, const ToolCallFormat& format, const ModelGenerationContext& generationContext);
     virtual void applyToolGuidance(const OpenAIRequest& request, const ModelGenerationContext& generationContext);
     void applyResponseFormatGuidance(const OpenAIRequest& request, const ModelGenerationContext& generationContext, const std::string& reasoningParserName);
 

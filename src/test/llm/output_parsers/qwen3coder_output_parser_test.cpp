@@ -210,8 +210,19 @@ TEST_F(Qwen3CoderOutputParserTest, ToolGuidanceValidatesAndParsesWithReasoning) 
         GenerationConfigBuilder builder{{}, "qwen3coder", choice == ToolChoiceMode::Auto, DecodingMethod::STANDARD};
         builder.build(request, context, "qwen3", *qwen3Tokenizer);
         ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
-        OutputParser parser(*qwen3Tokenizer, "qwen3coder", "qwen3", request.toolNameSchemaMap, ovms::ModelGenerationContext{});
-        parser.setImplicitReasoningStart(context.reasoning.implicitStart);
+        using SOC = ov::genai::StructuredOutputConfig;
+        const auto& root = std::get<SOC::StructuralTag>(*builder.getConfig().structured_output_config->structural_tags_config);
+        const auto grammar = std::get<std::shared_ptr<SOC::Concat>>(root);
+        ASSERT_EQ(grammar->elements.size(), 2);
+        const auto reasoning = std::get<std::shared_ptr<SOC::Tag>>(grammar->elements[0]);
+        EXPECT_TRUE(reasoning->begin.empty());
+        EXPECT_EQ(reasoning->end, "</think>");
+        EXPECT_TRUE(std::holds_alternative<SOC::AnyText>(reasoning->content));
+        const auto tools = std::get<std::shared_ptr<SOC::TriggeredTags>>(grammar->elements[1]);
+        EXPECT_EQ(tools->at_least_one, choice != ToolChoiceMode::Auto);
+        EXPECT_EQ(tools->stop_after_first, choice == ToolChoiceMode::NamedFunction);
+
+        OutputParser parser(*qwen3Tokenizer, "qwen3coder", "qwen3", request.toolNameSchemaMap, context);
         const std::string call = "<tool_call>\n<function=string_tool>\n<parameter=arg1>value1</parameter>\n</function>\n</tool_call>";
         const std::string calls = choice == ToolChoiceMode::Required ? call + "\n" + call : call;
         const auto encoded = qwen3Tokenizer->encode("thinking</think>" + calls, ov::genai::add_special_tokens(false)).input_ids;

@@ -22,7 +22,7 @@
 
 namespace ovms {
 
-void Qwen3CoderGenerationConfigBuilder::applyToolGuidance(const OpenAIRequest& request, const ModelGenerationContext&) {
+void Qwen3CoderGenerationConfigBuilder::applyToolGuidance(const OpenAIRequest& request, const ModelGenerationContext& generationContext) {
     using SOC = ov::genai::StructuredOutputConfig;
     auto tags = std::make_shared<SOC::TriggeredTags>();
     tags->triggers.push_back("<tool_call>");
@@ -43,7 +43,7 @@ void Qwen3CoderGenerationConfigBuilder::applyToolGuidance(const OpenAIRequest& r
         tags->tags.emplace_back("<tool_call>\n<function=" + name + ">\n",
             arguments, "\n</function>\n</tool_call>");
     }
-    setToolGrammar(request, tags);
+    setToolGrammar(request, tags, generationContext);
 }
 
 }  // namespace ovms

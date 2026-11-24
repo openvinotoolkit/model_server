@@ -18,8 +18,8 @@
 
 namespace ovms {
 
-void Llama3GenerationConfigBuilder::applyToolGuidance(const OpenAIRequest& request, const ModelGenerationContext&) {
-    setTaggedToolGrammar(request, {"{\"name\":", "{\"name\": ", ", \"parameters\": ", "}", true});
+void Llama3GenerationConfigBuilder::applyToolGuidance(const OpenAIRequest& request, const ModelGenerationContext& generationContext) {
+    setTaggedToolGrammar(request, {"{\"name\":", "{\"name\": ", ", \"parameters\": ", "}", true}, generationContext);
 }
 
 }  // namespace ovms

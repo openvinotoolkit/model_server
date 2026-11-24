@@ -21,7 +21,7 @@
 
 namespace ovms {
 
-void MistralGenerationConfigBuilder::applyToolGuidance(const OpenAIRequest& request, const ModelGenerationContext&) {
+void MistralGenerationConfigBuilder::applyToolGuidance(const OpenAIRequest& request, const ModelGenerationContext& generationContext) {
     using SOC = ov::genai::StructuredOutputConfig;
     auto calls = std::make_shared<SOC::TagsWithSeparator>();
     calls->separator = ", ";
@@ -40,7 +40,7 @@ void MistralGenerationConfigBuilder::applyToolGuidance(const OpenAIRequest& requ
     auto tags = std::make_shared<SOC::TriggeredTags>();
     tags->triggers.push_back("[TOOL_CALLS]");
     tags->tags.emplace_back("[TOOL_CALLS][", calls, "]");
-    setToolGrammar(request, tags);
+    setToolGrammar(request, tags, generationContext);
 }
 
 }  // namespace ovms

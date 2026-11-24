@@ -116,8 +116,19 @@ TEST_F(MistralOutputParserTest, ToolGuidanceValidatesAndParsesWithReasoning) {
         GenerationConfigBuilder builder{{}, "mistral", choice == ToolChoiceMode::Auto, DecodingMethod::STANDARD};
         builder.build(request, context, "qwen3", *mistralTokenizer);
         ASSERT_TRUE(builder.getConfig().structured_output_config.has_value());
-        OutputParser parser(*mistralTokenizer, "mistral", "qwen3", EMPTY_TOOLS_SCHEMA, ovms::ModelGenerationContext{});
-        parser.setImplicitReasoningStart(context.reasoning.implicitStart);
+        using SOC = ov::genai::StructuredOutputConfig;
+        const auto& root = std::get<SOC::StructuralTag>(*builder.getConfig().structured_output_config->structural_tags_config);
+        const auto grammar = std::get<std::shared_ptr<SOC::Concat>>(root);
+        ASSERT_EQ(grammar->elements.size(), 2);
+        const auto reasoning = std::get<std::shared_ptr<SOC::Tag>>(grammar->elements[0]);
+        EXPECT_TRUE(reasoning->begin.empty());
+        EXPECT_EQ(reasoning->end, "</think>");
+        EXPECT_TRUE(std::holds_alternative<SOC::AnyText>(reasoning->content));
+        const auto tools = std::get<std::shared_ptr<SOC::TriggeredTags>>(grammar->elements[1]);
+        EXPECT_EQ(tools->at_least_one, choice != ToolChoiceMode::Auto);
+        EXPECT_EQ(tools->stop_after_first, choice == ToolChoiceMode::NamedFunction);
+
+        OutputParser parser(*mistralTokenizer, "mistral", "qwen3", EMPTY_TOOLS_SCHEMA, context);
         const std::string call = R"({"name": "example_tool", "arguments": {"arg1":"value1","arg2":42}})";
         const std::string calls = choice == ToolChoiceMode::Required ? call + ", " + call : call;
         const auto encoded = mistralTokenizer->encode("thinking</think>[TOOL_CALLS][" + calls + "]", ov::genai::add_special_tokens(false)).input_ids;
