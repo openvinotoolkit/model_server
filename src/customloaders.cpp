@@ -22,7 +22,7 @@
 
 namespace ovms {
 
-Status CustomLoaders::add(std::string name, std::shared_ptr<CustomLoaderInterface> loaderInterface, void* library) {
+Status CustomLoaders::add(const std::string& name, std::shared_ptr<CustomLoaderInterface> loaderInterface, void* library) {
     auto loaderIt = newCustomLoaderInterfacePtrs.emplace(name, std::make_pair(library, loaderInterface));
     // if the loader already exists, print an error message
     if (!loaderIt.second) {

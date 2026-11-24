@@ -436,7 +436,7 @@ Status MediapipeGraphDefinition::initializeQueueIfRequired() {
     return StatusCode::OK;
 }
 
-MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string name,
+MediapipeGraphDefinition::MediapipeGraphDefinition(const std::string& name,
     const MediapipeGraphConfig& config,
     const MetricProvider* metricsProvider,
     PythonBackend* pythonBackend,

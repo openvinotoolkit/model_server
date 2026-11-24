@@ -564,7 +564,7 @@ static Status getRequestInput(KFSInputTensorIteratorType& itr, const std::string
     }                                                                                                                                       \
     break;
 
-static Status validateRawInputContent(const size_t expectedBytes, const std::string bufferLocation, const std::string& requestedName, const KFSRequest& request) {
+static Status validateRawInputContent(const size_t expectedBytes, const std::string& bufferLocation, const std::string& requestedName, const KFSRequest& request) {
     if (expectedBytes != bufferLocation.size()) {
         std::stringstream ss;
         ss << "Expected: " << expectedBytes << " bytes; Actual: " << bufferLocation.size() << " bytes; input name: " << requestedName;

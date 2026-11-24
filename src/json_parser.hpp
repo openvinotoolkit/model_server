@@ -47,6 +47,6 @@ public:
      *
      * @return status
      */
-    static Status parsePluginConfig(std::string command, plugin_config_t& pluginConfig);
+    static Status parsePluginConfig(const std::string& command, plugin_config_t& pluginConfig);
 };
 }  // namespace ovms

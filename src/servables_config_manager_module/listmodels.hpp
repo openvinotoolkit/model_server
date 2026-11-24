@@ -46,7 +46,7 @@ static bool hasRequiredExtensions(const std::string& directoryPath, const std::a
     }
     return false;
 }
-std::unordered_map<std::string, ServableType_t> listServables(const std::string directoryPath);
+std::unordered_map<std::string, ServableType_t> listServables(const std::string& directoryPath);
 void addEntryAndReturnIfContainsModel(const std::filesystem::path& directoryPath, std::unordered_map<std::string, ovms::ServableType_t>& servablesList, std::string& dirName, bool& retFlag);
 void NewFunction(const std::filesystem::directory_entry& entry, std::unordered_map<std::string, ovms::ServableType_t>& servablesList, std::string& dirName, bool& retFlag);
 }  // namespace ovms
