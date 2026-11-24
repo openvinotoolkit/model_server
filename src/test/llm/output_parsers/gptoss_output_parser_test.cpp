@@ -343,6 +343,19 @@ TEST_F(GptOssOutputUnaryParserTest, InitializedToolRecipientSurvivesResetWithout
     }
 }
 
+TEST_F(GptOssOutputUnaryParserTest, SplitTabDelimiterDoesNotBecomePartOfToolName) {
+    GptOssToolParser parser(*gptOssTokenizer, std::nullopt, ModelGenerationContext{});
+    EXPECT_FALSE(parser.parseChunk("<|start|>assistant to=functions.", {}, ov::genai::GenerationFinishReason::NONE).has_value());
+    EXPECT_FALSE(parser.parseChunk("echo\t", {}, ov::genai::GenerationFinishReason::NONE).has_value());
+
+    const auto delta = parser.parseChunk("<|message|>", {}, ov::genai::GenerationFinishReason::NONE);
+    ASSERT_TRUE(delta.has_value());
+    const auto* call = std::get_if<ToolCallDelta>(&*delta);
+    ASSERT_NE(call, nullptr);
+    ASSERT_TRUE(call->name.has_value());
+    EXPECT_EQ(*call->name, "echo");
+}
+
 TEST_F(GptOssOutputUnaryParserTest, ToolGuidanceHandlesPrefilledHeadersAndReasoning) {
     for (const std::string header : {"", "<|start|>assistant", "<|start|>assistant<|channel|>analysis",
              "<|start|>assistant<|channel|>commentary", "<|start|>assistant to=functions.",

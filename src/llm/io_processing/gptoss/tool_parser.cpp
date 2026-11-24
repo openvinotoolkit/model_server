@@ -213,10 +213,10 @@ GptOssToolParser::StepResult GptOssToolParser::consumePartialHeader(std::string 
     }
 
     if (isStreamingFunctionName) {
-        const std::size_t spacePos = chunk.find(' ');
-        if (spacePos != std::string::npos) {
+        const std::size_t delimiterPos = chunk.find_first_of(" \t\n\r");
+        if (delimiterPos != std::string::npos) {
             isStreamingFunctionName = false;
-            chunk = chunk.substr(0, spacePos);
+            chunk = chunk.substr(0, delimiterPos);
             cache.clear();
         }
         if (!chunk.empty()) {
