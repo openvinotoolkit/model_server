@@ -100,7 +100,9 @@ pipeline {
                 git_diff = sh (script: "git diff --name-only HEAD^..HEAD", returnStdout: true).trim()
               }
 
-              if (git_diff =~ /src|third_party|external|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|\.bazel|\.bzl|\.groovy|BUILD|create_package\.sh|WORKSPACE|(\n|^)run_unit_tests\.sh|versions\.mk/) {
+                def composerInputs = /(?m)^(prepare_llm_models\.sh|install_ubuntu_(gpu_drivers|level_zero_loader)\.sh|tests\/functional\/(docker_compose_(demo_probe|smoke_test)\.py|utils\/ports\.py)|demos\/classification_using_paddlepaddle_model\/python\/download_model\.py)$|^(tests\/docker_compose_fixtures|tools\/docker_image_composer)\//
+                if ((git_diff =~ /src|third_party|external|(\n|^)Dockerfile|(\n|^)Makefile|\.c|\.h|\.bazel|\.bzl|\.groovy|BUILD|create_package\.sh|WORKSPACE|(\n|^)run_unit_tests\.sh|versions\.mk/) ||
+                  (git_diff =~ composerInputs)) {
                   image_build_needed = "true"
               }
               if (git_diff =~ /(\n|^)client/) {
@@ -358,6 +360,25 @@ pipeline {
                   }
                 }
                 }
+                timeout(time: 5, unit: 'MINUTES') {
+                  withGithubStageStatus('jenkins/oncommit/composer-tests-linux', 'Linux composer smoke tests') {
+                    try {
+                      sh """#!/bin/bash
+set -o pipefail
+rm -f -- docker_compose_smoke_report.log docker_compose_smoke.log
+{
+bash tools/docker_image_composer/prepare_models.sh && \\
+TEST_LLM_PATH="${HOME}/ovms_models/llm_models_ovms/OVMS_C" \\
+python3 -m tests.functional.docker_compose_smoke_test openvino/model_server:${shortCommit} \\
+  all --skip-pull --allow-cpu-fallback --demo \\
+  --report docker_compose_smoke_report.log
+} 2>&1 | tee docker_compose_smoke.log
+"""
+                    } finally {
+                      archiveArtifacts allowEmptyArchive: true, artifacts: 'docker_compose_smoke_report.log,docker_compose_smoke.log'
+                    }
+                  }
+                }
               } 
               }
             }
@@ -558,7 +579,7 @@ pipeline {
                         def current_path = bat(returnStdout: true, script: 'cd').trim().split('\n').last().trim()
                         def ovms_c_repo_path = bat(returnStdout: true, script: 'cd .. && cd').trim().split('\n').last().trim()
                         def cmd_link_ovms = "(if exist ${current_path}\\tests\\functional rmdir ${current_path}\\tests\\functional) && mklink /D ${current_path}\\tests\\functional ${ovms_c_repo_path}\\tests\\functional"
-                        def cmd_requirements = "(if not exist .venv virtualenv .venv --python=python3.12) && call .venv\\Scripts\\activate.bat && pip install -r ${ovms_c_repo_path}\\tests\\requirements.txt -r requirements.txt"
+                        def cmd_requirements = "(if not exist .venv virtualenv .venv --python=C:\\opt\\Python314\\python.exe) && call .venv\\Scripts\\activate.bat && pip install -r ${ovms_c_repo_path}\\tests\\requirements.txt -r requirements.txt"
                         def cmd_export = "set \"TT_OVMS_C_REPO_PATH=../\" && set \"TT_LOGGING_LEVEL_OVMS=DEBUG\" && set \"TT_RUN_REGRESSION_TESTS=True\" && set \"TT_REGRESSION_WEEKLY_TESTS=True\" && set \"TT_TARGET_DEVICE=CPU,GPU,NPU\" && set \"TT_BASE_OS=windows\" && set \"TT_OVMS_TYPE=BINARY\" && set \"TT_ENABLE_UAT_TESTS=True\" && set \"TT_ENABLE_SMOKE_TESTS=False\" && set \"TT_DISABLE_DMESG_LOG_MONITOR=True\" && set \"TT_OVMS_C_REPO_PATH=${ovms_c_repo_path}\" && set \"TT_WAIT_FOR_MESSAGES_TIMEOUT=1500\" && set \"PYTHONUTF8=1\" && set \"PYTHONIOENCODING=utf-8\" && set \"CORE_BRANCH=${env.CHANGE_BRANCH ?: 'main'}\" && set \"TT_REPO_FORK=${env.CHANGE_FORK ?: 'openvinotoolkit'}\""
                         def cmd_pytest = "pytest tests/non_functional/documentation -k \"${test_doc_files_str}\" -n 0 --dist loadgroup --basetemp=\"C:\\tmp\\pytest-${BRANCH_NAME}-${BUILD_NUMBER}\""
                         def cmd = ""

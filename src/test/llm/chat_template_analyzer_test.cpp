@@ -163,6 +163,31 @@ TEST_F(ChatTemplateAnalyzerTest, detectsMistral) {
     EXPECT_TRUE(result.caps.supportsToolCalls);
 }
 
+// --- Mistral-3-Instruct ---
+
+TEST_F(ChatTemplateAnalyzerTest, detectsMistral3AsDevstralToolParser) {
+    std::string tmpl = loadTemplate("chat_template_mistral3.jinja");
+    ASSERT_FALSE(tmpl.empty());
+    auto result = ChatTemplateAnalyzer::analyze(tmpl);
+    ASSERT_TRUE(result.detectedToolParser.has_value());
+    EXPECT_EQ(result.detectedToolParser.value(), "devstral");
+    EXPECT_FALSE(result.detectedReasoningParser.has_value());
+    EXPECT_TRUE(result.caps.supportsToolCalls);
+}
+
+// --- Mistral-3-Reasoning ---
+
+TEST_F(ChatTemplateAnalyzerTest, detectsMistral3Reasoning) {
+    std::string tmpl = loadTemplate("chat_template_mistral3_reasoning.jinja");
+    ASSERT_FALSE(tmpl.empty());
+    auto result = ChatTemplateAnalyzer::analyze(tmpl);
+    ASSERT_TRUE(result.detectedToolParser.has_value());
+    EXPECT_EQ(result.detectedToolParser.value(), "devstral");
+    EXPECT_TRUE(result.detectedReasoningParser.has_value());
+    EXPECT_EQ(result.detectedReasoningParser.value(), "devstral");
+    EXPECT_TRUE(result.caps.supportsToolCalls);
+}
+
 // --- Llama3 (no template file available — inline: TODO: Where to take it from?) ---
 
 TEST_F(ChatTemplateAnalyzerTest, detectsLlama3) {

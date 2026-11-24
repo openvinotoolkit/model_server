@@ -14,8 +14,6 @@
 # limitations under the License.
 #
 
-import errno
-import socket
 import threading
 
 import psutil
@@ -23,6 +21,7 @@ import psutil
 from tests.functional.utils.core import NamedSingletonMeta
 from tests.functional.utils.logger import get_logger
 from tests.functional.utils.helpers import get_xdist_worker_count, get_xdist_worker_nr
+from tests.functional.utils.ports import probe_port
 from tests.functional.constants.os_type import OsType, get_host_os
 
 logger = get_logger(__name__)
@@ -57,13 +56,7 @@ class PortManager(metaclass=NamedSingletonMeta):
                         break
         else:
             for port in self.allowed_ports:
-                try:
-                    sock = socket.socket()
-                    sock.bind(('', port))
-                    sock.close()
-                except socket.error as exc:
-                    if exc.errno != errno.EADDRINUSE:
-                        raise Exception(f"Not expected exception found in port manager {self.name}: {exc}")
+                if probe_port(port) is None:
                     unavailable_ports.append(port)
         if unavailable_ports:
             logger.warning(f"Unavailable ports found: {unavailable_ports}")
@@ -94,17 +87,10 @@ class PortManager(metaclass=NamedSingletonMeta):
                 self.reserved_ports.append(port)
                 self.allowed_ports.remove(port)
                 return port
-        else:
-            try:
-                sock = socket.socket()
-                sock.bind(('', port))
-                sock.close()
-                self.reserved_ports.append(port)
-                self.allowed_ports.remove(port)
-                return port
-            except socket.error as exc:
-                if exc.errno != errno.EADDRINUSE:
-                    raise Exception(f"Not expected exception found in port manager {self.name}: {exc}")
+        elif probe_port(port) is not None:
+            self.reserved_ports.append(port)
+            self.allowed_ports.remove(port)
+            return port
 
         self.allowed_ports.remove(port)
         return 0

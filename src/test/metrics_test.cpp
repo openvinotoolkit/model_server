@@ -13,9 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //*****************************************************************************
+#include <algorithm>
 #include <future>
 #include <limits>
 #include <memory>
+#include <sstream>
 #include <stdexcept>
 #include <thread>
 #include <type_traits>
@@ -24,7 +26,9 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <spdlog/sinks/ostream_sink.h>
 
+#include "src/logging.hpp"
 #include "src/metrics/metric.hpp"
 #include "src/metrics/calculator_metrics.hpp"
 #include "src/metrics/metric_family.hpp"
@@ -87,6 +91,54 @@ TEST(MetricRegistryTest, ReRegistersCustomFamilyAfterRemovalThroughAnotherWrappe
     auto metric = reRegistered->addMetric();
     metric->increment();
     EXPECT_THAT(registry.collect(), HasSubstr("custom_events_total 1\n"));
+}
+
+class CalculatorMetricsLoggingTest : public testing::Test {
+protected:
+    std::ostringstream logs;
+    std::shared_ptr<spdlog::logger> previousLogger;
+
+    void SetUp() override {
+        auto sink = std::make_shared<spdlog::sinks::ostream_sink_mt>(logs);
+        auto logger = std::make_shared<spdlog::logger>("metric_test", sink);
+        logger->set_pattern("[%l] %v");
+        logger->set_level(spdlog::level::info);
+        previousLogger = std::exchange(modelmanager_logger, logger);
+    }
+    void TearDown() override {
+        modelmanager_logger = std::move(previousLogger);
+    }
+};
+
+TEST_F(CalculatorMetricsLoggingTest, LogsOncePerMetricAndScopeIncludingDisabledMetrics) {
+    constexpr int EXPECTED_NUMBER_OF_LOG_LINES = 10;  // 3 metrics x 3 scopes, plus 1 reloaded counter.
+    auto registerMetrics = [](CalculatorMetrics& metrics) {
+        metrics.getOrRegisterCounter("custom_events_total", "Events.");        // 1 line first time; 0 on repeat.
+        metrics.getOrRegisterGauge("custom_queue_depth", "Queued requests.");  // 1 line first time; 0 on repeat.
+        metrics.getOrRegisterHistogram("custom_latency", "Latency.", {1, 2});  // 1 line first time; 0 on repeat.
+    };
+    MetricRegistry registry;
+    CalculatorMetrics first(&registry, "graph", "first");
+    CalculatorMetrics second(&registry, "graph", "second");
+    CalculatorMetrics disabled(nullptr, "graph", "disabled");
+    for (CalculatorMetrics* scope : {&first, &second, &disabled}) {
+        registerMetrics(*scope);  // 3 lines: one for each metric, including no-op logs for disabled metrics.
+        registerMetrics(*scope);  // 0 lines: all three metrics are already registered for this scope.
+    }
+    CalculatorMetrics reloaded(&registry, "graph", "first");
+    reloaded.getOrRegisterCounter("custom_events_total", "Events.");  // 1 line: this scope object registers it once.
+    reloaded.getOrRegisterCounter("custom_events_total", "Events.");  // 0 lines: already registered on this object.
+
+    const std::string output = logs.str();
+    EXPECT_EQ(std::count(output.begin(), output.end(), '\n'), EXPECTED_NUMBER_OF_LOG_LINES);
+    for (const char* name : {"custom_events_total", "custom_queue_depth", "custom_latency"}) {
+        for (const char* node : {"first", "second"}) {
+            EXPECT_THAT(output, HasSubstr(std::string("[info] Registered custom metric '") + name +
+                                          "' for graph 'graph' node '" + node + "'"));
+        }
+        EXPECT_THAT(output, HasSubstr(std::string("[info] Custom metric '") + name +
+                                      "' for graph 'graph' node 'disabled' is a no-op because metrics are disabled or unavailable"));
+    }
 }
 
 TEST(CalculatorMetricsTest, RegistersAndUpdatesGauge) {
