@@ -18,28 +18,169 @@ ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.9
 ARG BUILD_IMAGE=build
 ARG PKG_IMAGE=pkg
 ARG RELEASE_BASE_IMAGE=registry.access.redhat.com/ubi9/ubi-minimal:9.9
+ARG BASE_OS=redhat
+ARG GPU=0
+ARG NPU=0
+
+FROM $BASE_IMAGE AS gpu-build
+SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
+ARG JOBS=50
+ARG BASE_OS
+
+#hadolint ignore=DL3041
+RUN case "$BASE_OS" in \
+    redhat|redhat9) redhat_major=9; libdrm_devel=libdrm-devel; python_packages=(python3.12 python3.12-devel python3.12-pip); python_path=/usr/bin/python3.12; expected_python=3.12 ;; \
+    redhat10) redhat_major=10; libdrm_devel=libdrm-devel-2.4.123-1.el10; python_packages=(python3 python3-devel python3-pip); python_path=/usr/bin/python3; expected_python=3.12 ;; \
+        *) exit 1 ;; \
+    esac && \
+    rpm --import https://www.centos.org/keys/RPM-GPG-KEY-CentOS-Official-SHA256 && \
+    dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${redhat_major}.noarch.rpm && \
+    dnf --repofrompath=centos-crb,https://mirror.stream.centos.org/${redhat_major}-stream/CRB/\$basearch/os/ \
+        --repofrompath=centos-app,https://mirror.stream.centos.org/${redhat_major}-stream/AppStream/\$basearch/os/ \
+        --repofrompath=centos-base,https://mirror.stream.centos.org/${redhat_major}-stream/BaseOS/\$basearch/os/ \
+        install -y --setopt=install_weak_deps=0 \
+        gcc-c++ cmake make git patch pkg-config flex bison "${python_packages[@]}" ninja-build \
+        libxml2-devel zlib-devel libzstd-devel libva-devel "$libdrm_devel" ocl-icd-devel opencl-headers && \
+    ln -sf "$python_path" /usr/local/bin/python3 && \
+    python3 --version | grep -q "^Python ${expected_python//./\\.}\\." && \
+    PIP_BREAK_SYSTEM_PACKAGES=1 python3 -m pip install --no-cache-dir 'Mako==1.3.10' 'PyYAML==6.0.2' && \
+    dnf clean all
+
+ENV PKG_CONFIG_PATH=/usr/lib64/pkgconfig:/usr/lib/pkgconfig \
+    LD_LIBRARY_PATH=/usr/lib64:/usr/lib
+WORKDIR /gpu-src
+RUN git clone --depth 1 --branch v2.42.6 https://github.com/intel/intel-graphics-compiler.git igc && \
+    git clone --depth 1 --branch llvmorg-17.0.6 https://github.com/llvm/llvm-project.git llvm-project && \
+    git clone --depth 1 --branch ocl-open-170 https://github.com/intel/opencl-clang.git llvm-project/llvm/projects/opencl-clang && \
+    git clone --depth 1 --branch llvm_release_170 https://github.com/KhronosGroup/SPIRV-LLVM-Translator.git llvm-project/llvm/projects/llvm-spirv && \
+    git clone https://github.com/intel/vc-intrinsics.git vc-intrinsics && \
+    git -C vc-intrinsics checkout e2bb84f509f613b0e36bd131c3a90800b4fe8f88 && \
+    git clone https://github.com/KhronosGroup/SPIRV-Tools.git SPIRV-Tools && \
+    git -C SPIRV-Tools checkout 8903ea3e94370b9341cfe7c95a8274b3ae783b1b && \
+    git clone https://github.com/KhronosGroup/SPIRV-Headers.git SPIRV-Headers && \
+    git -C SPIRV-Headers checkout 50184103b19027f5c7080060712d6a9470cf59ee
+RUN git config --global user.name "IGC build" && \
+    git config --global user.email "igc-build@localhost" && \
+    cmake -S igc -B igc-build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib64 \
+        -DIGC_OPTION__LLVM_PREFERRED_VERSION=17.0.6 && \
+    cmake --build igc-build --parallel ${JOBS} && \
+    cmake --install igc-build && DESTDIR=/gpu-root cmake --install igc-build
+
+RUN git clone --depth 1 --branch intel-gmmlib-22.10.2 https://github.com/intel/gmmlib.git gmmlib && \
+    cmake -S gmmlib -B gmmlib-build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib64 && \
+    cmake --build gmmlib-build --parallel ${JOBS} && \
+    cmake --install gmmlib-build && DESTDIR=/gpu-root cmake --install gmmlib-build && \
+    git clone --depth 1 --branch v1.34.0 https://github.com/oneapi-src/level-zero.git level-zero && \
+    cmake -S level-zero -B level-zero-build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib64 && \
+    cmake --build level-zero-build --parallel ${JOBS} && \
+    cmake --install level-zero-build && DESTDIR=/gpu-root cmake --install level-zero-build
+
+ARG INSTALL_DRIVER_VERSION=26.40.40196.8
+RUN if [[ "$INSTALL_DRIVER_VERSION" != "26.40.40196.8" ]]; then echo "Unsupported GPU driver version: $INSTALL_DRIVER_VERSION" >&2; exit 1; fi && \
+    git clone --depth 1 --branch "$INSTALL_DRIVER_VERSION" https://github.com/intel/compute-runtime.git compute-runtime && \
+    cmake -S compute-runtime -B compute-runtime-build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib64 \
+        -DNEO_SKIP_UNIT_TESTS=1 -DNEO_ENABLE_I915_PRELIM_DETECTION=1 && \
+    cmake --build compute-runtime-build --parallel ${JOBS} && \
+    DESTDIR=/gpu-root cmake --install compute-runtime-build && \
+    install -Dm644 igc/LICENSE.md /gpu-root/usr/share/licenses/ovms-gpu/igc-LICENSE.md && \
+    install -Dm644 gmmlib/LICENSE.md /gpu-root/usr/share/licenses/ovms-gpu/gmmlib-LICENSE.md && \
+    install -Dm644 level-zero/LICENSES/MIT.txt /gpu-root/usr/share/licenses/ovms-gpu/level-zero-LICENSE.txt && \
+    install -Dm644 compute-runtime/LICENSE.md /gpu-root/usr/share/licenses/ovms-gpu/compute-runtime-LICENSE.md && \
+    install -Dm644 llvm-project/llvm/LICENSE.TXT /gpu-root/usr/share/licenses/ovms-gpu/llvm-LICENSE.txt && \
+    install -Dm644 llvm-project/llvm/projects/opencl-clang/LICENSE /gpu-root/usr/share/licenses/ovms-gpu/opencl-clang-LICENSE && \
+    install -Dm644 llvm-project/llvm/projects/llvm-spirv/LICENSE.TXT /gpu-root/usr/share/licenses/ovms-gpu/spirv-llvm-translator-LICENSE.txt && \
+    install -Dm644 vc-intrinsics/LICENSE.md /gpu-root/usr/share/licenses/ovms-gpu/vc-intrinsics-LICENSE.md && \
+    install -Dm644 SPIRV-Tools/LICENSE /gpu-root/usr/share/licenses/ovms-gpu/spirv-tools-LICENSE && \
+    install -Dm644 SPIRV-Headers/LICENSE /gpu-root/usr/share/licenses/ovms-gpu/spirv-headers-LICENSE
+
+FROM $BASE_IMAGE AS gpu-0
+RUN mkdir -p /gpu-root
+FROM gpu-build AS gpu-1
+RUN find /gpu-root/usr/lib64 -type f -name '*.so*' -exec strip --strip-unneeded {} + && \
+    rm -rf /gpu-root/usr/include /gpu-root/usr/bin /gpu-root/usr/lib64/pkgconfig
+FROM gpu-${GPU} AS gpu-runtime
+
+FROM gpu-build AS npu-build
+SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
+ARG JOBS=50
+# hadolint ignore=DL3041
+RUN case "$BASE_OS" in redhat|redhat9) redhat_major=9; python_devel=python3.12-devel ;; redhat10) redhat_major=10; python_devel=python3-devel ;; *) exit 1 ;; esac && \
+    dnf --repofrompath=centos-crb,https://mirror.stream.centos.org/${redhat_major}-stream/CRB/\$basearch/os/ \
+        --repofrompath=centos-app,https://mirror.stream.centos.org/${redhat_major}-stream/AppStream/\$basearch/os/ \
+        --repofrompath=centos-base,https://mirror.stream.centos.org/${redhat_major}-stream/BaseOS/\$basearch/os/ \
+        install -y --setopt=install_weak_deps=0 git-lfs "$python_devel" tbb-devel libedit-devel && \
+    dnf clean all
+WORKDIR /npu-src
+RUN git lfs install && \
+    git clone --depth 1 --branch v1.39.1 --recurse-submodules https://github.com/intel/linux-npu-driver.git driver && \
+    git clone --depth 1 --branch v2021.13.1 https://github.com/oneapi-src/oneTBB.git onetbb
+RUN cmake -S onetbb -B onetbb-build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib64 -DTBB_TEST=OFF && \
+    cmake --build onetbb-build --parallel ${JOBS} && \
+    DESTDIR=/npu-root cmake --install onetbb-build && \
+    install -Dm644 onetbb/LICENSE.txt /npu-root/usr/share/licenses/ovms-npu/onetbb-LICENSE.txt
+RUN --mount=type=cache,id=ovms-npu-${BASE_OS},target=/npu-src/driver-build,sharing=locked \
+    sed -i "s/ProcessorCount(PARALLEL_PROCESSES)/set(PARALLEL_PROCESSES ${JOBS})/" driver/compiler/npu_compiler_build.cmake && \
+    cmake -S driver -B driver-build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib64 \
+        -DENABLE_NPU_COMPILER_BUILD=ON -DENABLE_VALIDATION_BUILD=OFF && \
+    cmake --build driver-build --target npu_compiler_source --parallel ${JOBS} && \
+    compiler_shape_source=driver-build/compiler/src/npu_compiler/src/vpux_compiler/src/dialect/IE/utils/shape_infer.cpp && \
+    { grep -q '^#pragma GCC diagnostic warning "-Wmaybe-uninitialized"' "$compiler_shape_source" || \
+        sed -i '1i#pragma GCC diagnostic warning "-Wmaybe-uninitialized"' "$compiler_shape_source"; } && \
+    cmake --build driver-build --parallel ${JOBS} && \
+    DESTDIR=/npu-root cmake --install driver-build && \
+    DESTDIR=/npu-root cmake --install driver-build --component fw-npu && \
+    mkdir -p /npu-root/usr/lib && \
+    mv /npu-root/lib/firmware /npu-root/usr/lib/ && rmdir /npu-root/lib && \
+    find /npu-root/usr/lib/firmware/updates/intel/vpu -type f -name '*.bin' -size +1k -print -quit | grep -q . && \
+    mkdir -p /npu-root/usr/lib64 && \
+    cp -a /gpu-root/usr/lib64/libze_loader.so* /npu-root/usr/lib64/ && \
+    install -Dm644 driver/LICENSE.md /npu-root/usr/share/licenses/ovms-npu/driver-LICENSE.md && \
+    install -Dm644 driver/third-party-programs.txt /npu-root/usr/share/licenses/ovms-npu/third-party-programs.txt && \
+    install -Dm644 /gpu-src/level-zero/LICENSES/MIT.txt /npu-root/usr/share/licenses/ovms-npu/level-zero-LICENSE.txt
+
+FROM $BASE_IMAGE AS npu-0
+RUN mkdir -p /npu-root
+FROM npu-build AS npu-1
+RUN find /npu-root/usr/lib64 -type f -name '*.so*' -exec strip --strip-unneeded {} + && \
+    rm -rf /npu-root/usr/include /npu-root/usr/lib64/cmake /npu-root/usr/lib64/pkgconfig
+FROM npu-${NPU} AS npu-runtime
+
+FROM $BASE_IMAGE AS drivers-pkg
+COPY --from=gpu-1 /gpu-root/ /drivers/gpu/
+COPY --from=npu-1 /npu-root/ /drivers/npu/
+RUN tar -czf /ovms-drivers.tar.gz -C /drivers .
 
 FROM $BASE_IMAGE as base_build
-ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi:9.9
+ARG BASE_IMAGE
+ARG BASE_OS
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
-ARG JOBS=8
+ARG JOBS=50
 ARG VERBOSE_LOGS=OFF
 ARG LTO_ENABLE=OFF
 ARG LTO_CXX_FLAGS=""
 ARG LTO_LD_FLAGS="-Wl,-z,relro"
 
 # hadolint ignore=DL3041
-RUN echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf && \
-    curl -fsSL -o /tmp/epel-release.rpm https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && \
+RUN case "$BASE_OS" in \
+    redhat|redhat9) redhat_major=9; python_packages=(python3.12 python3.12-devel python3.12-pip); python_path=/usr/bin/python3.12; expected_python=3.12; toolset_packages=(gcc-toolset-14-gcc-c++ gcc-toolset-14-binutils) ;; \
+    redhat10) redhat_major=10; python_packages=(python3 python3-devel python3-pip); python_path=/usr/bin/python3; expected_python=3.12; toolset_packages=() ;; \
+        *) exit 1 ;; \
+    esac && \
+    echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf && \
+    curl -fsSL -o /tmp/epel-release.rpm https://dl.fedoraproject.org/pub/epel/epel-release-latest-${redhat_major}.noarch.rpm && \
     dnf install -y /tmp/epel-release.rpm && dnf update -d6 -y && dnf install -d6 -y \
             libuuid-devel \
             bc \
             cmake \
             gcc-c++ \
-            gcc-toolset-13-gcc-c++ \
-            gcc-toolset-13-binutils \
             git \
             libcurl-devel \
             libtool \
@@ -48,12 +189,14 @@ RUN echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf && \
             openssl-devel \
             patch \
             pkg-config \
-            wget && \
+                wget "${python_packages[@]}" "${toolset_packages[@]}" && \
+            ln -sf "$python_path" /usr/local/bin/python3 && \
+            python3 --version | grep -q "^Python ${expected_python//./\\.}\\." && \
             dnf clean all
 
-ENV PATH=/opt/rh/gcc-toolset-13/root/usr/bin:${PATH} \
-    CC=/opt/rh/gcc-toolset-13/root/usr/bin/gcc \
-    CXX=/opt/rh/gcc-toolset-13/root/usr/bin/g++
+ENV PATH=/opt/rh/gcc-toolset-14/root/usr/bin:${PATH} \
+    CC=gcc \
+    CXX=g++
 
 # hadolint ignore=DL3003
 RUN curl -fsSL https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/nasm-2.16.03.tar.gz -o /tmp/nasm.tar.gz && \
@@ -152,16 +295,19 @@ ARG BASE_IMAGE
 
 SHELL ["/bin/bash", "-xo", "pipefail", "-c"]
 
-ARG JOBS=40
+ARG JOBS=50
 ARG VERBOSE_LOGS=OFF
 ARG LTO_ENABLE=OFF
 
 # hadolint ignore=DL3041
-RUN curl -fsSL -o /tmp/opencl-headers.rpm https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/opencl-headers-3.0-6.20201007gitd65bcc5.el9.noarch.rpm && \
-    echo "1c915447fc325e6d2eb820c97c37fb55c3a7ddf5c6bc44416bfda40c55e38be9  /tmp/opencl-headers.rpm" | sha256sum -c - && \
-    dnf install -y -d6 /tmp/opencl-headers.rpm \
+RUN case "$BASE_OS" in redhat|redhat9) redhat_major=9 ;; redhat10) redhat_major=10 ;; *) exit 1 ;; esac && \
+    rpm --import https://www.centos.org/keys/RPM-GPG-KEY-CentOS-Official-SHA256 && \
+    dnf --repofrompath=centos-crb,https://mirror.stream.centos.org/${redhat_major}-stream/CRB/\$basearch/os/ \
+        --repofrompath=centos-app,https://mirror.stream.centos.org/${redhat_major}-stream/AppStream/\$basearch/os/ \
+        --repofrompath=centos-base,https://mirror.stream.centos.org/${redhat_major}-stream/BaseOS/\$basearch/os/ \
+        install -y -d6 opencl-headers ocl-icd-devel libva-devel \
             gdb \
-            java-11-openjdk-devel \
+            java-21-openjdk-devel \
             tzdata-java \
             libgusb.x86_64 \
             libusbx \
@@ -171,9 +317,6 @@ RUN curl -fsSL -o /tmp/opencl-headers.rpm https://mirror.stream.centos.org/9-str
             unzip \
             vim \
             xz \
-            python3.12 \
-            python3.12-devel \
-            python3.12-pip \
             libicu-devel && \
             dnf clean all
 # Note: espeak-ng is no longer installed from dnf; it is built from source
@@ -181,21 +324,12 @@ RUN curl -fsSL -o /tmp/opencl-headers.rpm https://mirror.stream.centos.org/9-str
 
 WORKDIR /
 
-ARG INSTALL_DRIVER_VERSION="25.18.33578"
-# GPU testing in build img & remote tensors dependencies
-WORKDIR /usr/lib64/
-RUN ln -s libOpenCL.so.1 libOpenCL.so
+COPY --from=gpu-build /gpu-root/ /
 WORKDIR /ovms
-COPY ./install_redhat_gpu_drivers.sh ./install_gpu_drivers.sh
-# hadolint ignore=SC1091
-RUN wget -q https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/libva-devel-2.22.0-1.el9.x86_64.rpm && \
-    echo "15265e154e43bd3e695d373bd10503005d508b99bc94689abfcbbe0f6a4624f2  libva-devel-2.22.0-1.el9.x86_64.rpm" | sha256sum -c - && \
-    rpm -ivh --nodeps ./libva-devel-2.22.0-1.el9.x86_64.rpm && \
-    if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf ; else export DNF_TOOL=microdnf ; fi ; source ./install_gpu_drivers.sh && \
-    groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
+RUN groupadd --gid 5000 ovms && groupadd --gid 44 video1 && \
     useradd --home-dir /home/ovms --create-home --uid 5000 --gid 5000 --groups 39,44 --shell /bin/bash --skel /dev/null ovms
 
-RUN python3.12 --version && python3.12 -m pip install "numpy<2.0.0" "Jinja2==3.1.6" "MarkupSafe==3.0.2"  --no-cache-dir
+RUN python3 --version && python3 -m pip install "numpy<2.0.0" "Jinja2==3.1.6" "MarkupSafe==3.0.2" --no-cache-dir
 
 # Set up Bazel
 ENV BAZEL_VERSION 7.4.1
@@ -229,8 +363,6 @@ ARG TEMP_DIR=/tmp/openvino_installer
 ARG CMAKE_BUILD_TYPE=Release
 ARG debug_bazel_flags="--strip=always  --config=mp_on --//:distro=redhat"
 
-RUN alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1 && alternatives --install /usr/bin/python3-config python3-config /usr/bin/python3.12-config 2
-
 ################### BUILD OPENVINO FROM SOURCE - buildarg ov_use_binary=0  ############################
 ARG SDL_OPS="-Wl,-z,relro,-z,now,-z,noexecstack -fPIE -pie -fstack-protector-strong -fexceptions -fasynchronous-unwind-tables -fcf-protection -fpic -O2 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fno-strict-overflow -Wno-unknown-pragmas -Wno-error=sign-compare -fno-delete-null-pointer-checks -fwrapv -fstack-clash-protection -Wformat -Wformat-security -s -D_GLIBCXX_USE_CXX11_ABI=1 -Wuninitialized"
 # hadolint ignore=DL3041
@@ -238,10 +370,10 @@ RUN dnf install -y gflags-devel gflags json-devel fdupes && \
     dnf clean all
 # hadolint ignore=DL3003
 RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; git clone https://github.com/$ov_repo.git /openvino && cd /openvino && git checkout $ov_branch && git submodule update --init --recursive
-RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; pip3.12 install --no-cache-dir -r /openvino/src/bindings/python/wheel/requirements-dev.txt
+RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; python3 -m pip install --no-cache-dir -r /openvino/src/bindings/python/wheel/requirements-dev.txt wheel==0.45.1
 WORKDIR /openvino/build
 RUN if [ "$ov_use_binary" == "0" ]; then true ; else exit 0 ; fi ; \
-    cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DENABLE_LTO=${LTO_ENABLE} -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DENABLE_INTEL_NPU=OFF -DGPU_RT_TYPE=COMBINED -DBUILD_SHARED_LIBS=ON -DCMAKE_CXX_FLAGS="  ${SDL_OPS} -Wno-error=parentheses  ${LTO_CXX_FLAGS} " -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" .. && \
+    cmake -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DENABLE_LTO=${LTO_ENABLE} -DENABLE_PYTHON=ON -DENABLE_SAMPLES=0 -DENABLE_CPPLINT=OFF -DENABLE_INTEL_NPU=ON -DENABLE_INTEL_NPU_PROTOPIPE=OFF -DGPU_RT_TYPE=COMBINED -DBUILD_SHARED_LIBS=ON -DCMAKE_CXX_FLAGS="  ${SDL_OPS} -Wno-error=parentheses  ${LTO_CXX_FLAGS} " -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" .. && \
     make --jobs=$JOBS && \
     make install
 RUN if [ "$ov_use_binary" == "0" ] ; then true ; else exit 0 ; fi ; \
@@ -287,8 +419,8 @@ RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false git 
     sed -i '/openvino~=/d' /openvino_tokenizers/pyproject.toml && \
     sed -i '/requires-python/d' /openvino_tokenizers/pyproject.toml && \
     cd /openvino_tokenizers && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE="${VERBOSE_LOGS}" -DCMAKE_CXX_FLAGS=" ${SDL_OPS} ${LTO_CXX_FLAGS} " -DCMAKE_SHARED_LINKER_FLAGS="${LTO_LD_FLAGS}" -S ./ -B ./build/  && cmake --build ./build/ --parallel $JOBS && cp -vP /openvino_tokenizers/build/src/lib*.so /opt/intel/openvino/runtime/lib/intel64/ && \
-    python3.12 -m pip wheel -v --no-deps --wheel-dir wheel /openvino_tokenizers && \
-    python3.12 -m pip install --no-cache-dir "$(find wheel -name 'openvino_tokenizers*.whl')" --target /opt/intel/openvino/python
+    python3 -m pip wheel -v --no-deps --wheel-dir wheel /openvino_tokenizers && \
+    python3 -m pip install --no-cache-dir "$(find wheel -name 'openvino_tokenizers*.whl')" --target /opt/intel/openvino/python
 
 WORKDIR /openvino_genai/
 ARG ov_genai_branch=master
@@ -305,6 +437,10 @@ RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false if [
 # Build OpenVINO Model Server
 WORKDIR /ovms
 COPY .bazelrc .user.bazelr[c] .bazelversion WORKSPACE /ovms/
+RUN ln -sf "$(readlink /usr/local/bin/python3)-config" /usr/local/bin/python3-config && \
+    sed -i 's|/usr/bin/python3|/usr/local/bin/python3|g' /ovms/.bazelrc && \
+    printf '%s\n' 'build:linux --repo_env=PYTHON_BIN_PATH=/usr/local/bin/python3' \
+        'build:linux --test_env=PATH' >> /ovms/.bazelrc
 # since bazel does not have easy way to pass if down the dependencies to have select the sources
 # for libcurl & ssl we hack it this way
 RUN ln -s /usr/lib64 /usr/lib/x86_64-linux-gnu
@@ -383,7 +519,7 @@ RUN /ovms/bazel-bin/src/ovms --version && /ovms/bazel-bin/src/ovms
 COPY release_files/thirdparty-licenses/ /ovms/release_files/thirdparty-licenses/
 COPY release_files/LICENSE /ovms/release_files/LICENSE
 COPY client /client
-RUN python3.12 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO backend':'$(/ovms/bazel-bin/src/ovms --version | grep 'OpenVINO backend' | cut -d' ' -f3)', \
+RUN python3 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENVINO backend':'$(/ovms/bazel-bin/src/ovms --version | grep 'OpenVINO backend' | cut -d' ' -f3)', \
     'BAZEL_BUILD_FLAGS':'${debug_bazel_flags}${minitrace_flags}}','BASE_IMAGE':'${BASE_IMAGE}' }; \
     print(json.dumps(m,indent=4))" > /ovms/release_files/metadata.json
 
@@ -392,7 +528,7 @@ RUN python3.12 -c "import json; m={'PROJECT_VERSION':'${PROJECT_VERSION}','OPENV
 FROM $BUILD_IMAGE as capi-build
 # C api shared library
 ARG CAPI_FLAGS="--strip=always  --config=mp_off --//:distro=redhat"
-ARG JOBS=40
+ARG JOBS=50
 ARG LTO_ENABLE=OFF
 WORKDIR /ovms
 RUN --mount=type=secret,id=gitconfig,target=/root/.gitconfig,required=false bazel build --jobs $JOBS ${CAPI_FLAGS} //src:ovms_shared //src:ovms_optional_plugins
@@ -435,12 +571,11 @@ LABEL "release"="2027"
 LABEL "summary"="OpenVINO(TM) Model Server"
 LABEL "description"="OpenVINO(TM) Model Server is a solution for serving AI models"
 LABEL "maintainer"="dariusz.trawinski@intel.com"
-ARG INSTALL_RPMS_FROM_URL=
-ARG INSTALL_DRIVER_VERSION="25.18.33578"
 ARG GPU=0
+ARG NPU=0
 ARG debug_bazel_flags=
 LABEL bazel-build-flags=${debug_bazel_flags}
-LABEL supported-devices="CPU=1 GPU=${GPU}"
+LABEL supported-devices="CPU=1 GPU=${GPU} NPU=${NPU}"
 ARG RELEASE_BASE_IMAGE
 LABEL base-image=${RELEASE_BASE_IMAGE}
 
@@ -448,7 +583,8 @@ ENV PYTHONPATH=/ovms/lib/python:/ovms/python_deps
 
 WORKDIR /
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-COPY ./install_redhat_gpu_drivers.sh /install_gpu_drivers.sh
+COPY --from=gpu-runtime /gpu-root/ /
+COPY --from=npu-runtime /npu-root/ /
 # hadolint ignore=DL3003,DL3041,SC2164,SC1091
 RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_downloads=8\nretries=50" >> /etc/dnf/dnf.conf ; else export DNF_TOOL=microdnf ; fi ; \
     $DNF_TOOL upgrade --setopt=install_weak_deps=0 --nodocs -y ; \
@@ -456,11 +592,14 @@ RUN if [ -f /usr/bin/dnf ] ; then export DNF_TOOL=dnf ; echo -e "max_parallel_do
     # build (controlled via --//:espeak=on/off in debug_bazel_flags);
     # no system package is required at runtime.
     if [ "$GPU" == "1" ] ; then \
-        $DNF_TOOL install -y wget --setopt=install_weak_deps=0 --nodocs && \
-        source /install_gpu_drivers.sh && rm -rf /install_gpu_drivers.sh; \
+        $DNF_TOOL install -y libdrm libva libedit libnl3 ocl-icd --setopt=install_weak_deps=0 --nodocs && \
+        ldconfig; \
     fi ; \
+    if [ "$NPU" == "1" ] ; then ldconfig || exit 1; fi ; \
     # For image with Python enabled install Python library
-    $DNF_TOOL install -y python3.12-libs --setopt=install_weak_deps=0 --nodocs; \
+    . /etc/os-release; \
+    case "$VERSION_ID" in 9|9.*) python_runtime=python3.12-libs ;; 10|10.*) python_runtime=python3-libs ;; *) python_runtime=python3-libs ;; esac; \
+    $DNF_TOOL install -y "$python_runtime" --setopt=install_weak_deps=0 --nodocs; \
     $DNF_TOOL install -y shadow-utils; \
     $DNF_TOOL clean all ; \
     cp -v /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt ; \
@@ -472,14 +611,31 @@ ENV PATH="$PATH:/ovms/bin"
 ENTRYPOINT ["/ovms/bin/ovms"]
 
 COPY --from=pkg /ovms_release /ovms
-COPY --from=build /usr/local/lib/python3.*/dist-packages/numpy /ovms/python_deps/numpy/
-COPY --from=build /usr/local/lib/python3.*/dist-packages/numpy-*.dist-info /ovms/python_deps/
-COPY --from=pkg /usr/local/lib/python3.12/site-packages/jinja2 /ovms/python_deps/jinja2
-COPY --from=pkg /usr/local/lib/python3.12/site-packages/jinja2-3.1.6.dist-info /ovms/python_deps/jinja2-3.1.6.dist-info
-COPY --from=pkg /usr/local/lib64/python3.12/site-packages/MarkupSafe-3.0.2.dist-info /ovms/python_deps/MarkupSafe-3.0.2.dist-info
-COPY --from=pkg /usr/local/lib64/python3.12/site-packages/markupsafe /ovms/python_deps/markupsafe
+COPY --from=build /usr/local/lib64/python3.*/site-packages/numpy /ovms/python_deps/numpy/
+COPY --from=build /usr/local/lib64/python3.*/site-packages/numpy.libs /ovms/python_deps/numpy.libs/
+COPY --from=build /usr/local/lib64/python3.*/site-packages/numpy-*.dist-info /ovms/python_deps/
+COPY --from=pkg /usr/local/lib/python3.*/site-packages/jinja2 /ovms/python_deps/jinja2
+COPY --from=pkg /usr/local/lib/python3.*/site-packages/jinja2-3.1.6.dist-info /ovms/python_deps/jinja2-3.1.6.dist-info
+COPY --from=pkg /usr/local/lib64/python3.*/site-packages/MarkupSafe-3.0.2.dist-info /ovms/python_deps/MarkupSafe-3.0.2.dist-info
+COPY --from=pkg /usr/local/lib64/python3.*/site-packages/markupsafe /ovms/python_deps/markupsafe
 
 RUN mkdir -p /licenses && \
     cp /ovms/LICENSE /licenses/LICENSE && \
-    cp -r /ovms/thirdparty-licenses /licenses/thirdparty-licenses
+    cp -r /ovms/thirdparty-licenses /licenses/thirdparty-licenses && \
+    if [ -d /usr/share/licenses/ovms-gpu ]; then cp -r /usr/share/licenses/ovms-gpu /licenses/ovms-gpu; fi && \
+    if [ -d /usr/share/licenses/ovms-npu ]; then cp -r /usr/share/licenses/ovms-npu /licenses/ovms-npu; fi && \
+    if [ "$NPU" == "1" ]; then \
+        test -f /usr/lib64/libze_loader.so.1 && \
+        test -f /usr/lib64/libze_intel_npu.so.1 && \
+        test -f /usr/lib64/libtbb.so.12 && \
+        test -f /usr/lib64/libopenvino_intel_npu_compiler.so && \
+        test -f /usr/lib64/libopenvino_intel_npu_compiler_loader.so && \
+        test -f /ovms/lib/libopenvino_intel_npu_plugin.so && \
+        for library in /usr/lib64/libze_loader.so.1 /usr/lib64/libze_intel_npu.so.1 \
+            /usr/lib64/libopenvino_intel_npu_compiler*.so /ovms/lib/libopenvino_intel_npu_plugin.so; do \
+            dependencies=$(ldd "$library") || exit 1; \
+            printf '%s\n' "$dependencies"; \
+            if grep -q 'not found' <<< "$dependencies"; then exit 1; fi; \
+        done || exit 1; \
+    fi
 USER ovms

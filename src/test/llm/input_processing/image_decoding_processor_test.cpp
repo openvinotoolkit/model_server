@@ -177,6 +177,10 @@ static InputRequest makeImageUrlRequest(const std::string& url) {
     return makeChatRequest(history);
 }
 
+constexpr uint8_t kRgbTestPixelRed = 10;
+constexpr uint8_t kRgbTestPixelGreen = 20;
+constexpr uint8_t kRgbTestPixelBlue = 30;
+
 static void appendBigEndianUint32(std::string& output, uint32_t value) {
     output.push_back(static_cast<char>(value >> 24));
     output.push_back(static_cast<char>(value >> 16));
@@ -247,7 +251,7 @@ static std::string makeLarge16BitGrayPng(const uint32_t width, const uint32_t he
 }
 
 static std::string makeRgbPng() {
-    const std::string scanline{"\0\x0a\x14\x1e", 4};
+    const std::array<uint8_t, 4> scanline{0, kRgbTestPixelRed, kRgbTestPixelGreen, kRgbTestPixelBlue};
     std::array<Bytef, 64> compressed{};
     uLongf compressedSize = compressed.size();
     if (compress2(compressed.data(), &compressedSize,
@@ -280,7 +284,7 @@ TEST(ImageDecodingProcessorTest, Base64RgbImagePreservesVlmRgbTensorContract) {
     const auto& image = request.inputImages.front();
     EXPECT_EQ(image.get_element_type(), ov::element::u8);
     EXPECT_EQ(image.get_shape(), (ov::Shape{1, 1, 1, 3}));
-    const std::array<uint8_t, 3> expected{10, 20, 30};
+    const std::array<uint8_t, 3> expected{kRgbTestPixelRed, kRgbTestPixelGreen, kRgbTestPixelBlue};
     EXPECT_EQ(std::memcmp(image.data<uint8_t>(), expected.data(), expected.size()), 0);
 }
 

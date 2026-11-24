@@ -42,3 +42,23 @@ GENAI_PACKAGE_SHA256_WINDOWS ?= 9151fa34b607000820491186ec4a7a62812ffbadcb00c3c6
 # Third-party dependency versions (used for binary builds)
 OPENCV_VERSION ?= 4.14.0
 CURL_VERSION ?= 8.22.0_2
+
+# Ubuntu accelerator defaults and verified runtime packages.
+GPU_DRIVER_VERSION_UBUNTU22 ?= 24.52.32224
+GPU_DRIVER_VERSION_UBUNTU24 ?= 26.31.39395
+GPU_DRIVER_VERSION_UBUNTU26 ?= 26.31.39395
+NPU_DRIVER_URL_UBUNTU22 ?= https://github.com/intel/linux-npu-driver/releases/download/v1.26.0/linux-npu-driver-v1.26.0.20251125-19665715237-ubuntu2204.tar.gz
+NPU_DRIVER_SHA256_UBUNTU22 ?= cfdbcc9adc1ea20d498ebd9cbdb5c212f6fc940e1034ef7a72e239a8636f653a
+NPU_DRIVER_URL_UBUNTU24 ?= https://github.com/intel/linux-npu-driver/releases/download/v1.39.1/linux-npu-driver-v1.39.1.20261119-44517102376-ubuntu2404.tar.gz
+NPU_DRIVER_SHA256_UBUNTU24 ?= 884a461b152281f259cd6759a8ae17a77968712b939543607360ec562d4741fc
+NPU_DRIVER_URL_UBUNTU26 ?= https://github.com/intel/linux-npu-driver/releases/download/v1.39.1/linux-npu-driver-v1.39.1.20261119-44517102376-ubuntu2604.tar.gz
+NPU_DRIVER_SHA256_UBUNTU26 ?= 8003e3edc70ba5e4015df3c526a263fc950ee451d05d10c32813debad8957e96
+LEVEL_ZERO_LOADER_URL_UBUNTU22 ?= https://github.com/oneapi-src/level-zero/releases/download/v1.24.2/level-zero_1.24.2+u22.04_amd64.deb
+LEVEL_ZERO_LOADER_SHA256_UBUNTU22 ?= 7c304e93835d96025c90f6a3d8f2ce5edf142c24da9f4871113a4f0225fef22e
+LEVEL_ZERO_LOADER_URL_UBUNTU24 ?= https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20261110T100000Z/pool/main/l/level-zero-loader/libze1_1.34.0-1~24.04~ppa1_amd64.deb
+LEVEL_ZERO_LOADER_SHA256_UBUNTU24 ?= 4ea0d892f5e2b82db3c15c9e9a97327b6323189972b75fe4fc8b029a3aa3d26d
+LEVEL_ZERO_LOADER_URL_UBUNTU26 ?= https://snapshot.ppa.launchpadcontent.net/kobuk-team/intel-graphics/ubuntu/20261110T100000Z/pool/main/l/level-zero-loader/libze1_1.34.0-1~26.04~ppa1_amd64.deb
+LEVEL_ZERO_LOADER_SHA256_UBUNTU26 ?= d2e3a395ff0b40add337330dcd9e86857963bc173c84a532b5c1cda0dbe7a184
+# Windows Python runtime and build interpreters.
+WINDOWS_PYTHON312_VERSION ?= 3.12.10
+WINDOWS_PYTHON314_VERSION ?= 3.14.10

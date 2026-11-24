@@ -113,7 +113,7 @@ static void listServables(const std::filesystem::path& directoryPath, std::unord
     }
     SPDLOG_TRACE("No servables found in directory: {}", directoryPath.string());
 }
-std::unordered_map<std::string, ServableType_t> listServables(const std::string directoryPath) {
+std::unordered_map<std::string, ServableType_t> listServables(const std::string& directoryPath) {
     SPDLOG_TRACE("Listing servables in directory: {}", directoryPath);
     std::unordered_map<std::string, ServableType_t> servablesList;
     std::filesystem::path path(directoryPath);

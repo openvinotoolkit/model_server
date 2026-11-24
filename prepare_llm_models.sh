@@ -17,8 +17,8 @@
 
 set -e
 
-if [ -z "$1" ]; then
-  echo "Error: No directory specified."
+if [[ -z ${1:-} ]]; then
+  echo "Usage: $0 <llm-model-directory> [docker]" >&2
   exit 1
 fi
 
@@ -51,7 +51,7 @@ if [ "$(python3 -c 'import sys; print(sys.version_info[1])')" -le "8" ]; then ec
 
 echo "Downloading LLM testing models to directory $1"
 export PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
-if [ "$2" = "docker" ]; then
+if [ "${2:-}" = "docker" ]; then
     export PATH=$PATH:/opt/intel/openvino/python/bin
     python3 -m pip install sentence_transformers==5.3.0
 else

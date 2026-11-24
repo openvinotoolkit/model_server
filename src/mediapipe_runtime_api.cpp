@@ -131,9 +131,6 @@ static void* resolveSymbol(void* handle, const char* name) {
 static void* loadMediapipeRuntimeLibrary() {
     constexpr const char* libraryName = "libovms_mediapipe_runtime_shared.so";
     std::vector<std::string> candidates;
-    if (const char* runfilesDirectory = std::getenv("RUNFILES_DIR")) {
-        candidates.push_back((std::filesystem::path(runfilesDirectory) / "ovms/src" / libraryName).string());
-    }
 
     Dl_info moduleInfo{};
     if (dladdr(reinterpret_cast<const void*>(&resolveSymbol), &moduleInfo) != 0 && moduleInfo.dli_fname != nullptr) {

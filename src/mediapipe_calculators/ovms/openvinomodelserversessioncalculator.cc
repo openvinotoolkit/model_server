@@ -150,7 +150,7 @@ absl::Status OpenVINOModelServerSessionCalculator::Open(CalculatorContext* cc) {
         std::unique_lock<std::mutex> lk(OpenVINOModelServerSessionCalculator::loadingMtx);
         bool isServerReady = false;
         bool isServerLive = false;
-        OVMS_ServerNew(&cserver);
+        ASSERT_CAPI_STATUS_NULL(OVMS_ServerNew(&cserver));
 
         ASSERT_CAPI_STATUS_NULL(OVMS_ServerLive(cserver, &isServerLive));
 
@@ -160,12 +160,12 @@ absl::Status OpenVINOModelServerSessionCalculator::Open(CalculatorContext* cc) {
             LOG(INFO) << "Will start new server";
             triedToStartOVMS = true;
             SettingsGuard guard;
-            OVMS_ServerSettingsNew(&guard.serverSettings);
-            OVMS_ModelsSettingsNew(&guard.modelsSettings);
-            OVMS_ServerSettingsSetGrpcPort(guard.serverSettings, 9178);
-            OVMS_ModelsSettingsSetConfigPath(guard.modelsSettings, options.server_config().c_str());
+            ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsNew(&guard.serverSettings));
+            ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsNew(&guard.modelsSettings));
+            ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetGrpcPort(guard.serverSettings, 9178));
+            ASSERT_CAPI_STATUS_NULL(OVMS_ModelsSettingsSetConfigPath(guard.modelsSettings, options.server_config().c_str()));
             LOG(INFO) << "state config file:" << options.server_config();
-            OVMS_ServerSettingsSetLogLevel(guard.serverSettings, OvmsLogLevel);
+            ASSERT_CAPI_STATUS_NULL(OVMS_ServerSettingsSetLogLevel(guard.serverSettings, OvmsLogLevel));
 
             ASSERT_CAPI_STATUS_NULL(OVMS_ServerStartFromConfigurationFile(cserver, guard.serverSettings, guard.modelsSettings));
 

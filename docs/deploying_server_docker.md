@@ -29,6 +29,37 @@ docker pull registry.connect.redhat.com/intel/openvino-model-server:latest
 
 > **NOTE**: You can also pull public image `openvino/model_server:weekly` with development version of the model server, which is built from the main branch. It allow you to evaluate the latest features ahead of official releases.
 
+##### Optional: Compose a Custom OVMS Image
+
+Use the image composer to build a smaller release image from an existing OVMS image without recompiling the server. By default, the composed image supports CPU inference with OpenVINO IR models. Feature flags retain optional components from the source image and install any required system packages; they cannot add OVMS components that the source image does not contain.
+
+Run the composer from the root of the OVMS source checkout. It requires Python 3, Docker with Buildx, and an OVMS source image based on Ubuntu 22.04, 24.04, or 26.04. Check the source image's Ubuntu version before using a rolling tag such as `latest` or `weekly`.
+
+From the checkout root, build an image with ONNX model loading and OpenCV, then check that the server starts:
+
+```text
+python3 tools/docker_image_composer/compose.py --full-image openvino/model_server:weekly \
+    --onnx --opencv --output-name ovms-custom:onnx
+docker run --rm ovms-custom:onnx --help
+```
+
+To serve a model, use the resulting image tag in place of `openvino/model_server:latest` in Step 2. That example uses an IR model; to serve an ONNX model instead, follow the [ONNX demo](../demos/using_onnx_model/python/README.md).
+
+| Flag | Feature |
+| --- | --- |
+| `--gpu` | Intel GPU inference, including GPU drivers. |
+| `--npu` | Intel NPU inference, including the compiler and drivers. |
+| `--opencv` | OpenCV shared libraries for server-side OpenCV features. |
+| `--python` | Python runtime and Python custom nodes. |
+| `--tensorflow` | Direct loading of TensorFlow and TensorFlow Lite models. |
+| `--paddle` | Direct loading of PaddlePaddle models. |
+| `--onnx` | Direct loading of ONNX models. |
+| `--espeak` | eSpeak library and data for Kokoro text-to-speech. |
+
+Combine flags as needed. If the source OVMS executable depends on Python or OpenCV, the composer requires the corresponding flag rather than removing those libraries. GPU and NPU use still requires compatible hardware and [device access for the container](accelerators.md).
+
+The composer defaults to `openvino/model_server:weekly` and pulls the current version of that tag on each run. Use `--full-image` to select another tag or pin an image by digest. Use `--skip-pull` to reuse an image already available locally. Use `--dry-run` to generate `Dockerfile.compose` without building it, or run `python3 tools/docker_image_composer/compose.py --help` for the full option list.
+
 #### Step 2. Prepare Data for Serving
 
 ##### 2.1 Start the container with the model
