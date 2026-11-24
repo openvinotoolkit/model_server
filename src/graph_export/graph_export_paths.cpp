@@ -24,6 +24,8 @@ namespace ovms {
 
 std::string getDraftModelDirectoryName(std::string draftModel) {
     std::replace(draftModel.begin(), draftModel.end(), '/', '-');
+    std::replace(draftModel.begin(), draftModel.end(), '\\', '-');
+    std::replace(draftModel.begin(), draftModel.end(), ':', '-');
     return draftModel;
 }
 

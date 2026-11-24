@@ -663,6 +663,33 @@ TEST_F(GraphCreationTest, positiveDraftAndFuse) {
     assertCreatedGraphEquals(hfSettings, expectedDraftAndFuseGraphContents);
 }
 
+TEST_F(GraphCreationTest, draftModelPathWithWindowsSeparators) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
+    ovms::TextGenGraphSettingsImpl graphSettings;
+    graphSettings.draftModelPath = R"(D:\Work\test\draft)";
+    hfSettings.graphSettings = std::move(graphSettings);
+
+    const std::string graphContents = createGraphAndReadContents(hfSettings);
+#ifdef _WIN32
+    EXPECT_NE(graphContents.find(R"(draft_models_path: "D:/Work/test/draft")"), std::string::npos);
+#else
+    EXPECT_NE(graphContents.find(R"(draft_models_path: "D:\\Work\\test\\draft")"), std::string::npos);
+#endif
+}
+
+TEST_F(GraphCreationTest, draftSourceModelWithWindowsSeparators) {
+    ovms::HFSettingsImpl hfSettings;
+    hfSettings.task = ovms::TEXT_GENERATION_GRAPH;
+    ovms::TextGenGraphSettingsImpl graphSettings;
+    graphSettings.draftModelDirName = R"(D:\Work\test\draft)";
+    hfSettings.graphSettings = std::move(graphSettings);
+
+    const std::string graphContents = createGraphAndReadContents(hfSettings);
+    EXPECT_NE(graphContents.find(R"(draft_models_path: "D--Work-test-draft")"), std::string::npos);
+    EXPECT_EQ(ovms::GraphExport::getDraftModelDirectoryName(R"(D:\Work\test\draft)"), "D--Work-test-draft");
+}
+
 const std::string expectedDraftEagle3GraphContents = R"(
     input_stream: "HTTP_REQUEST_PAYLOAD:input"
     output_stream: "HTTP_RESPONSE_PAYLOAD:output"
