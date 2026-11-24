@@ -64,19 +64,13 @@ Name: "core"; Description: "Core OVMS installation"; Types: full compact custom;
 Name: "python_system"; Description: "Use existing Python on this system and install Jinja, Setuptools and MarkupSafe"; Types: full custom; Flags: exclusive
 Name: "python_embedded"; Description: "Bundle embedded Python runtime"; Types: full custom; Flags: exclusive
 Name: "python_none"; Description: "Do not install bundled Python and do not use a system Python"; Types: full custom; Flags: exclusive
-Name: "espeak"; Description: "espeak / Kokoro support"; Types: full custom
-Name: "gstreamer"; Description: "GStreamer for media handling"; Types: full custom
+Name: "espeak"; Description: "eSpeak / Kokoro support"; Types: full custom
 Name: "npu"; Description: "NPU OpenVINO backend"; Types: full custom
 Name: "gpu"; Description: "Intel GPU driver / memory guidance"; Types: full custom
-Name: "cloud"; Description: "Cloud storage adapters (S3, Azure, GCS)"; Types: custom; Flags: fixed
 Name: "opencv_mp"; Description: "OpenCV for MediaPipe calculator"; Types: full custom
-Name: "gguf_frontend"; Description: "OpenVINO GGUF frontend"; Types: full custom
-Name: "ir_frontend"; Description: "OpenVINO IR frontend"; Types: full custom
 Name: "onnx_frontend"; Description: "OpenVINO ONNX frontend"; Types: full custom
 Name: "paddle_frontend"; Description: "OpenVINO PaddlePaddle frontend"; Types: full custom
-Name: "pytorch_frontend"; Description: "OpenVINO PyTorch frontend"; Types: full custom
-Name: "tensorflow_frontend"; Description: "OpenVINO TensorFlow frontend"; Types: full custom
-Name: "tensorflow_lite_frontend"; Description: "OpenVINO TensorFlow Lite frontend"; Types: full custom
+Name: "tensorflow_frontend"; Description: "OpenVINO TensorFlow and TensorFlow Lite frontends"; Types: full custom
 
 [Files]
 Source: "{#OvmsSourceDir}\ovms.exe"; DestDir: "{app}"; Components: core; Flags: ignoreversion
@@ -94,6 +88,8 @@ Source: "{#OvmsSourceDir}\openvino_auto_batch_plugin.dll"; DestDir: "{app}"; Com
 Source: "{#OvmsSourceDir}\openvino_hetero_plugin.dll"; DestDir: "{app}"; Components: core; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\openvino_intel_cpu_plugin.dll"; DestDir: "{app}"; Components: core; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\opencv_world4140.dll"; DestDir: "{app}"; Components: opencv_mp; Flags: ignoreversion
+Source: "{#OvmsSourceDir}\ovms_opencv_calculators.dll"; DestDir: "{app}"; Components: opencv_mp; Flags: ignoreversion
+Source: "{#OvmsSourceDir}\ovms_opencv_image_decoder.dll"; DestDir: "{app}"; Components: opencv_mp; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\libcurl-x64.dll"; DestDir: "{app}"; Components: core; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\libovmspython.dll"; DestDir: "{app}"; Components: core; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\libpython_calculators.dll"; DestDir: "{app}"; Components: core; Flags: ignoreversion
@@ -108,17 +104,13 @@ Source: "{#OvmsSourceDir}\openvino_intel_npu_compiler.dll"; DestDir: "{app}"; Co
 Source: "{#OvmsSourceDir}\openvino_intel_npu_compiler_loader.dll"; DestDir: "{app}"; Components: npu; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\openvino_intel_npu_plugin.dll"; DestDir: "{app}"; Components: npu; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\openvino_intel_npu_vm_runtime.dll"; DestDir: "{app}"; Components: npu; Flags: ignoreversion
-Source: "{#OvmsSourceDir}\openvino_gguf_frontend.dll"; DestDir: "{app}"; Components: gguf_frontend; Flags: ignoreversion
-Source: "{#OvmsSourceDir}\openvino_ir_frontend.dll"; DestDir: "{app}"; Components: ir_frontend; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\openvino_onnx_frontend.dll"; DestDir: "{app}"; Components: onnx_frontend; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\openvino_paddle_frontend.dll"; DestDir: "{app}"; Components: paddle_frontend; Flags: ignoreversion
-Source: "{#OvmsSourceDir}\openvino_pytorch_frontend.dll"; DestDir: "{app}"; Components: pytorch_frontend; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\openvino_tensorflow_frontend.dll"; DestDir: "{app}"; Components: tensorflow_frontend; Flags: ignoreversion
-Source: "{#OvmsSourceDir}\openvino_tensorflow_lite_frontend.dll"; DestDir: "{app}"; Components: tensorflow_lite_frontend; Flags: ignoreversion
+Source: "{#OvmsSourceDir}\openvino_tensorflow_lite_frontend.dll"; DestDir: "{app}"; Components: tensorflow_frontend; Flags: ignoreversion
 Source: "{#SourceRoot}\packaging\windows\scripts\configure-ovms.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 Source: "{#SourceRoot}\packaging\windows\scripts\install-service.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 Source: "{#SourceRoot}\packaging\windows\scripts\ovms-env.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
-Source: "{#SourceRoot}\packaging\windows\scripts\pull-model.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 Source: "{#SourceRoot}\packaging\windows\scripts\repair-package.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 Source: "{#SourceRoot}\packaging\windows\scripts\set-path.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 Source: "{#SourceRoot}\packaging\windows\scripts\start-ovms.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
@@ -165,8 +157,6 @@ var
   OvmsTerminalModeRadio: TNewRadioButton;
   OvmsServiceStatusLabel: TNewStaticText;
   StopOvmsServiceButton: TNewButton;
-  DownloadGptOssCheck: TNewCheckBox;
-  DownloadQwenCheck: TNewCheckBox;
   // When True, the "Exit Setup?" confirmation is suppressed so Setup can
   // close cleanly after handing off to the existing uninstaller.
   SuppressCancelConfirm: Boolean;
@@ -336,17 +326,6 @@ begin
     exit;
 
   Result := CompareVersionStrings(ExistingInstallVersion, '2026.5.0') < 0;
-end;
-
-function IsGstreamerAvailable: Boolean;
-begin
-  Result :=
-    DirExists(ExpandConstant('{sd}\gstreamer')) or
-    DirExists(ExpandConstant('{commonpf64}\GStreamer')) or
-    DirExists(ExpandConstant('{commonpf32}\GStreamer')) or
-    FileExists(ExpandConstant('{sd}\gstreamer\1.0\x86_64\bin\gst-launch-1.0.exe')) or
-    FileExists(ExpandConstant('{commonpf64}\GStreamer\1.0\x86_64\bin\gst-launch-1.0.exe')) or
-    FileExists(ExpandConstant('{commonpf32}\GStreamer\1.0\x86_64\bin\gst-launch-1.0.exe'));
 end;
 
 function IsIntelGpuDriverAvailable: Boolean;
@@ -641,21 +620,14 @@ begin
     '"pythonMode":"' + GetPythonModeValue('') +
     '",' +
     '"espeak":' + BoolToJson(WizardIsComponentSelected('espeak')) + ',' +
-    '"gstreamer":' + BoolToJson(WizardIsComponentSelected('gstreamer')) + ',' +
     '"npu":' + BoolToJson(WizardIsComponentSelected('npu')) + ',' +
     '"gpu":' + BoolToJson(WizardIsComponentSelected('gpu')) + ',' +
     '"opencv_mp":' + BoolToJson(WizardIsComponentSelected('opencv_mp')) + ',' +
-    '"downloadGptOss":' + BoolToJson(Assigned(DownloadGptOssCheck) and DownloadGptOssCheck.Checked) + ',' +
-    '"downloadQwen3":' + BoolToJson(Assigned(DownloadQwenCheck) and DownloadQwenCheck.Checked) + ',' +
-    '"cloud_storage":false,' +
     '"openvino_frontends":{' +
-      '"gguf":' + BoolToJson(WizardIsComponentSelected('gguf_frontend')) + ',' +
-      '"ir":' + BoolToJson(WizardIsComponentSelected('ir_frontend')) + ',' +
       '"onnx":' + BoolToJson(WizardIsComponentSelected('onnx_frontend')) + ',' +
       '"paddle":' + BoolToJson(WizardIsComponentSelected('paddle_frontend')) + ',' +
-      '"pytorch":' + BoolToJson(WizardIsComponentSelected('pytorch_frontend')) + ',' +
       '"tensorflow":' + BoolToJson(WizardIsComponentSelected('tensorflow_frontend')) + ',' +
-      '"tensorflow_lite":' + BoolToJson(WizardIsComponentSelected('tensorflow_lite_frontend')) +
+      '"tensorflow_lite":' + BoolToJson(WizardIsComponentSelected('tensorflow_frontend')) +
     '}' +
     '}';
 
@@ -755,7 +727,6 @@ end;
 procedure InitializeWizard;
 var
   Lbl: TNewStaticText;
-  ModelDownloadHeaderTop: Integer;
 begin
   InitializeSetupLog;
 
@@ -927,34 +898,6 @@ begin
   Lbl.WordWrap := True;
   Lbl.Caption := 'Run "Start OVMS Server" from Start Windows Menu.';
   Lbl.Height := ScaleY(26);
-
-  ModelDownloadHeaderTop := Lbl.Top + Lbl.Height + ScaleY(8);
-
-  Lbl := TNewStaticText.Create(AdditionalTasksPage);
-  Lbl.Parent := AdditionalTasksPage.Surface;
-  Lbl.Left := 0;
-  Lbl.Top := ModelDownloadHeaderTop;
-  Lbl.Width := AdditionalTasksPage.SurfaceWidth;
-  Lbl.AutoSize := False;
-  Lbl.WordWrap := True;
-  Lbl.Caption := 'Create start menu shortcuts for huggingface.com recommended models download';
-  Lbl.Height := ScaleY(26);
-
-  DownloadGptOssCheck := TNewCheckBox.Create(AdditionalTasksPage);
-  DownloadGptOssCheck.Parent := AdditionalTasksPage.Surface;
-  DownloadGptOssCheck.Left := 0;
-  DownloadGptOssCheck.Top := Lbl.Top + Lbl.Height + ScaleY(8);
-  DownloadGptOssCheck.Width := AdditionalTasksPage.SurfaceWidth;
-  DownloadGptOssCheck.Checked := GetSavedInstallOptionBool('downloadGptOss');
-  DownloadGptOssCheck.Caption := 'OpenVINO/gpt-oss-20b-int4-ov';
-
-  DownloadQwenCheck := TNewCheckBox.Create(AdditionalTasksPage);
-  DownloadQwenCheck.Parent := AdditionalTasksPage.Surface;
-  DownloadQwenCheck.Left := 0;
-  DownloadQwenCheck.Top := DownloadGptOssCheck.Top + DownloadGptOssCheck.Height + ScaleY(6);
-  DownloadQwenCheck.Width := AdditionalTasksPage.SurfaceWidth;
-  DownloadQwenCheck.Checked := GetSavedInstallOptionBool('downloadQwen3');
-  DownloadQwenCheck.Caption := 'OpenVINO/Qwen3-4B-int4-ov';
 end;
 
 function GetSelectedModelRepositoryPath: String;
@@ -965,49 +908,6 @@ begin
 
   if Result = '' then
     Result := GetDefaultModelRepositoryPath;
-end;
-
-procedure CreateModelPullStartMenuEntry(ModelName: String; ShortcutLabel: String; ModelRepositoryPath: String);
-var
-  ShortcutDir: String;
-  ShortcutPath: String;
-  InstallDir: String;
-  ScriptPath: String;
-  Command: String;
-  ResultCode: Integer;
-begin
-  InstallDir := ExpandConstant('{app}');
-  ShortcutDir := ExpandConstant('{userprograms}\OpenVINO Model Server');
-  CreateDir(ShortcutDir);
-
-  ScriptPath := InstallDir + '\scripts\pull-model.ps1';
-  ShortcutPath := ShortcutDir + '\' + ShortcutLabel + '.lnk';
-
-  Command :=
-    '$ws = New-Object -ComObject WScript.Shell; ' +
-    '$s = $ws.CreateShortcut(''' + ShortcutPath + '''); ' +
-    '$s.TargetPath = ''powershell.exe''; ' +
-    '$s.Arguments = ''-NoProfile -ExecutionPolicy Bypass -NoExit -File "' + ScriptPath + '" -ModelName "' + ModelName + '" -InstallDir "' + InstallDir + '" -ModelRepositoryPath "' + ModelRepositoryPath + '"''; ' +
-    '$s.WorkingDirectory = ''' + InstallDir + '''; ' +
-    '$s.WindowStyle = 1; ' +
-    '$s.Save();';
-
-  Exec('powershell.exe',
-    '-NoProfile -ExecutionPolicy Bypass -Command "' + Command + '"',
-    '',
-    SW_HIDE,
-    ewWaitUntilTerminated,
-    ResultCode);
-
-  if (ResultCode <> 0) or (not FileExists(ShortcutPath)) then
-  begin
-    ShortcutPath := ShortcutDir + '\' + ShortcutLabel + '.cmd';
-    SaveStringToFile(
-      ShortcutPath,
-      '@echo off' + #13#10 +
-      'powershell.exe -NoExit -NoProfile -ExecutionPolicy Bypass -File "' + ScriptPath + '" -ModelName "' + ModelName + '" -InstallDir "' + InstallDir + '" -ModelRepositoryPath "' + ModelRepositoryPath + '"',
-      False);
-  end;
 end;
 
 procedure PersistModelRepositoryPath;
@@ -1202,18 +1102,6 @@ begin
     begin
       SaveStringToFile(GetSetupLogPath, '[SETUP] Stage: configure Python runtime' + #13#10, True);
       RunPythonConfigurationForSelectedVariant;
-    end;
-
-    if ((Assigned(DownloadGptOssCheck) and DownloadGptOssCheck.Checked) or GetSavedInstallOptionBool('downloadGptOss')) then
-    begin
-      SaveStringToFile(GetSetupLogPath, '[SETUP] Stage: create gpt-oss download shortcut' + #13#10, True);
-      CreateModelPullStartMenuEntry('OpenVINO/gpt-oss-20b-int4-ov', 'Download OpenVINO.gpt-oss-20b-int4-ov', GetSelectedModelRepositoryPath);
-    end;
-
-    if ((Assigned(DownloadQwenCheck) and DownloadQwenCheck.Checked) or GetSavedInstallOptionBool('downloadQwen3')) then
-    begin
-      SaveStringToFile(GetSetupLogPath, '[SETUP] Stage: create Qwen download shortcut' + #13#10, True);
-      CreateModelPullStartMenuEntry('OpenVINO/Qwen3-4B-int4-ov', 'Download OpenVINO.Qwen3-4B-int4-ov', GetSelectedModelRepositoryPath);
     end;
 
     if Assigned(OvmsServiceModeRadio) and OvmsServiceModeRadio.Checked then

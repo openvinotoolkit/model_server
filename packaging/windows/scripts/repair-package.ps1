@@ -91,9 +91,12 @@ function Remove-DisabledComponentFiles {
     )
 
     $componentToFiles = @{
-        opencv_mp = @('opencv_world4140.dll')
+        opencv_mp = @(
+            'opencv_world4140.dll',
+            'ovms_opencv_calculators.dll',
+            'ovms_opencv_image_decoder.dll'
+        )
         espeak = @('espeak-ng.dll', 'espeak-ng-data')
-        gstreamer = @('gstreamer')
         gpu = @('openvino_intel_gpu_plugin.dll')
         npu = @(
             'openvino_intel_npu_compiler.dll',
@@ -101,13 +104,10 @@ function Remove-DisabledComponentFiles {
             'openvino_intel_npu_plugin.dll',
             'openvino_intel_npu_vm_runtime.dll'
         )
-        gguf_frontend = @('openvino_gguf_frontend.dll')
-        ir_frontend = @('openvino_ir_frontend.dll')
-        onnx_frontend = @('openvino_onnx_frontend.dll')
-        paddle_frontend = @('openvino_paddle_frontend.dll')
-        pytorch_frontend = @('openvino_pytorch_frontend.dll')
-        tensorflow_frontend = @('openvino_tensorflow_frontend.dll')
-        tensorflow_lite_frontend = @('openvino_tensorflow_lite_frontend.dll')
+        tensorflow_selected = @(
+            'openvino_tensorflow_frontend.dll',
+            'openvino_tensorflow_lite_frontend.dll'
+        )
         python_embedded = @('python')
     }
 
@@ -180,16 +180,11 @@ try {
     $componentSelection = @{
         opencv_mp = (Get-JsonBoolValue -Object $optionsJson -Paths @('opencv_mp'))
         espeak = (Get-JsonBoolValue -Object $optionsJson -Paths @('espeak'))
-        gstreamer = (Get-JsonBoolValue -Object $optionsJson -Paths @('gstreamer'))
         gpu = (Get-JsonBoolValue -Object $optionsJson -Paths @('gpu'))
         npu = (Get-JsonBoolValue -Object $optionsJson -Paths @('npu'))
-        gguf_frontend = (Get-JsonBoolValue -Object $optionsJson -Paths @('openvino_frontends.gguf'))
-        ir_frontend = (Get-JsonBoolValue -Object $optionsJson -Paths @('openvino_frontends.ir'))
         onnx_frontend = (Get-JsonBoolValue -Object $optionsJson -Paths @('openvino_frontends.onnx'))
         paddle_frontend = (Get-JsonBoolValue -Object $optionsJson -Paths @('openvino_frontends.paddle'))
-        pytorch_frontend = (Get-JsonBoolValue -Object $optionsJson -Paths @('openvino_frontends.pytorch'))
-        tensorflow_frontend = (Get-JsonBoolValue -Object $optionsJson -Paths @('openvino_frontends.tensorflow'))
-        tensorflow_lite_frontend = (Get-JsonBoolValue -Object $optionsJson -Paths @('openvino_frontends.tensorflow_lite'))
+        tensorflow_selected = (Get-JsonBoolValue -Object $optionsJson -Paths @('openvino_frontends.tensorflow'))
         python_embedded = ($pythonMode -eq 'embedded')
     }
 } catch {
