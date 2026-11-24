@@ -377,7 +377,7 @@ bandit:
 
 license-headers:
 	@echo "Checking license headers in files..."
-	@export PATH="$(STYLE_VENV_BIN):$$PATH"; "$(VIRTUALENV_STYLE_PYTHON)" '$(CI_DIR)/lib_search.py' . > missing_headers.txt
+	@export PATH="$(STYLE_VENV_BIN):$$PATH"; $(PYTHON_ENV_CLEAN) "$(VIRTUALENV_STYLE_PYTHON)" '$(CI_DIR)/lib_search.py' . > missing_headers.txt
 	@if ! grep -FRq "All files have headers" missing_headers.txt; then\
         echo "Files with missing headers";\
         cat missing_headers.txt;\
@@ -388,7 +388,7 @@ license-headers:
 sdl-check: venv-style hadolint bandit license-headers
 
 	@echo "Checking forbidden functions in files..."
-	@export PATH="$(STYLE_VENV_BIN):$$PATH"; "$(VIRTUALENV_STYLE_PYTHON)" '$(CI_DIR)/lib_search.py' . functions > forbidden_functions.txt
+	@export PATH="$(STYLE_VENV_BIN):$$PATH"; $(PYTHON_ENV_CLEAN) "$(VIRTUALENV_STYLE_PYTHON)" '$(CI_DIR)/lib_search.py' . functions > forbidden_functions.txt
 	@if ! grep -FRq "All files checked for forbidden functions" forbidden_functions.txt; then\
 		error Run python3 '$(CI_DIR)/lib_search.py' . functions - to see forbidden functions file list.;\
 	fi

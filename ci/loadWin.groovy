@@ -110,6 +110,10 @@ def install_dependencies() {
 
 def clean() {
     def output1 = bat(returnStdout: true, script: '@windows_clean_build.bat ' + get_short_bazel_path() + ' ' + env.OVMS_CLEAN_EXPUNGE)
+    def staleInstaller = bat(returnStatus: true, script: '@if exist "dist\\windows\\OVMS-Setup.exe" del /f /q "dist\\windows\\OVMS-Setup.exe" & if exist "build_installer.log" del /f /q "build_installer.log"')
+    if (staleInstaller != 0) {
+        error "Error: Deleting existing installer artifacts failed ${staleInstaller}. Check pipeline.log for details."
+    }
     if(fileExists('dist\\windows\\ovms')){
         def status_del = bat(returnStatus: true, script: '@rmdir /s /q dist\\windows\\ovms')
         if (status_del != 0) {
@@ -135,13 +139,6 @@ def build(){
         error "Error: Windows package failed ${status_pkg}."
     } else {
         echo "Windows package created successfully."
-    }
-    def unzipCmd = "tar -xf dist\\windows\\ovms.zip"
-    def status_unzip = bat(returnStatus: true, script: '@' + "${unzipCmd}")
-    if (status_unzip != 0) {
-        error "Error: Unzipping package failed: ${status_unzip}."
-    } else {
-        echo "Package unzipped successfully."
     }
 }
 
@@ -351,6 +348,8 @@ def functional_test(String artifactsPath = null){
 def archive_build_artifacts(){
     // Left for tests when enabled - junit allowEmptyResults: true, testResults: "logs/**/*.xml"
     archiveArtifacts allowEmptyArchive: true, artifacts: "dist\\windows\\ovms.zip"
+    archiveArtifacts allowEmptyArchive: false, artifacts: "dist\\windows\\OVMS-Setup.exe"
+    archiveArtifacts allowEmptyArchive: false, artifacts: "build_installer.log"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_environment.log"
     archiveArtifacts allowEmptyArchive: true, artifacts: "win_build.log"
 }

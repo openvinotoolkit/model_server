@@ -19,7 +19,7 @@
 @echo off
 setlocal EnableExtensions DisableDelayedExpansion
 set "BAZEL_SHORT_PATH=C:\%1"
-set "bazelStartupCmd=--output_user_root=%BAZEL_SHORT_PATH%"
+set "bazelStartupCmd=--output_user_root=!BAZEL_SHORT_PATH!"
 set /p bazelVersion=<"%~dp0.bazelversion"
 set "bazelPath=C:\opt\bazel-%bazelVersion%-windows-x86_64.exe"
 set "setPath=C:\opt;C:\opt\Python314\;C:\opt\Python314\Scripts\;C:\opt\msys64\usr\bin\;%PATH%;"
@@ -35,4 +35,6 @@ rm -rf win_build_test.log
 rm -rf win_full_test.log
 rm -rf win_test_summary.log
 rm -rf win_install_service_test.log
+rm -rf build_installer.log
+rm -rf dist\windows\OVMS-Setup.exe
 endlocal
