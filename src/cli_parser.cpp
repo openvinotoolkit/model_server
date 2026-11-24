@@ -596,7 +596,7 @@ void CLIParser::prepareServer(ServerSettingsImpl& serverSettings) {
 
     std::string defaultConfigPath = "";
     const char* envModelRepoPath = std::getenv("OVMS_MODEL_REPOSITORY_PATH");
-    if (envModelRepoPath != nullptr && std::string(envModelRepoPath).length() > 0) {
+    if (envModelRepoPath != nullptr && strlen(envModelRepoPath) > 0) {
         defaultConfigPath = std::string(envModelRepoPath) + "/config.json";
     }
     if (result->count("add_to_config")) {
