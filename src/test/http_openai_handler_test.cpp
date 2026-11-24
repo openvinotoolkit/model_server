@@ -1014,7 +1014,16 @@ TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ReasoningEnvelopePreservesT
     ASSERT_TRUE(result->generationConfig.structured_output_config.has_value());
     using SOC = ov::genai::StructuredOutputConfig;
     const auto& structuralTag = std::get<SOC::StructuralTag>(*result->generationConfig.structured_output_config->structural_tags_config);
-    EXPECT_TRUE(std::holds_alternative<std::shared_ptr<SOC::TriggeredTags>>(structuralTag));
+    const auto sequence = std::get<std::shared_ptr<SOC::Concat>>(structuralTag);
+    ASSERT_EQ(sequence->elements.size(), 2);
+    const auto reasoning = std::get<std::shared_ptr<SOC::Tag>>(sequence->elements[0]);
+    EXPECT_TRUE(reasoning->begin.empty());
+    EXPECT_EQ(reasoning->end, "</think>");
+    EXPECT_TRUE(std::holds_alternative<SOC::AnyText>(reasoning->content));
+    const auto toolGrammar = std::get<std::shared_ptr<SOC::TriggeredTags>>(sequence->elements[1]);
+    ASSERT_EQ(toolGrammar->triggers, std::vector<std::string>{"<tool_call>"});
+    EXPECT_TRUE(toolGrammar->at_least_one);
+    EXPECT_FALSE(toolGrammar->stop_after_first);
 }
 
 TEST_P(HttpOpenAIHandlerChatAndResponsesParsingTest, ResponseFormatWithoutParsersKeepsDirectContentPath) {
