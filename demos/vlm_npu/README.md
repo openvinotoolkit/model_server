@@ -223,7 +223,7 @@ The picture features a single zebra standing in a grassy field with well-defined
 
 ## Benchmarking VLM
 
-For setup instructions and usage examples for text-generation and VLM benchmarks, see [VLM Requests](../benchmark/openai#vlm-requests).
+For setup instructions and usage examples for text-generation and VLM benchmarks, see [VLM Requests](../benchmark/openai/README.md#vlm-requests).
 
 ## Testing the model accuracy over serving API
 
