@@ -20,7 +20,7 @@
 namespace ovms {
 
 bool DrogonMultiPartParser::parse() {
-    this->hasParseError_ = this->parser->parse(request) != 0;
+    this->hasParseError_ = this->parser.parse(request) != 0;
     return !this->hasParseError_;
 }
 
@@ -29,11 +29,16 @@ bool DrogonMultiPartParser::hasParseError() const {
 }
 
 std::string DrogonMultiPartParser::getFieldByName(const std::string& name) const {
-    return this->parser->getParameter<std::string>(name);
+    const auto& params = this->parser.getParameters();
+    auto it = params.find(name);
+    if (it == params.end()) {
+        return "";
+    }
+    return it->second;
 }
 
 std::vector<std::string> DrogonMultiPartParser::getArrayFieldByName(const std::string& name) const {
-    const auto& paramsVector = this->parser->getParametersVector();
+    const auto& paramsVector = this->parser.getParametersVector();
     auto it = paramsVector.find(name);
     if (it == paramsVector.end()) {
         return {};
@@ -42,7 +47,7 @@ std::vector<std::string> DrogonMultiPartParser::getArrayFieldByName(const std::s
 }
 
 std::string_view DrogonMultiPartParser::getFileContentByFieldName(const std::string& name) const {
-    auto fileMap = this->parser->getFilesMap();
+    auto fileMap = this->parser.getFilesMap();
     auto it = fileMap.find(name);
     if (it == fileMap.end()) {
         return "";
@@ -51,7 +56,7 @@ std::string_view DrogonMultiPartParser::getFileContentByFieldName(const std::str
 }
 
 std::vector<std::string_view> DrogonMultiPartParser::getFilesArrayByFieldName(const std::string& name) const {
-    const std::vector<drogon::HttpFile>& files = this->parser->getFiles();
+    const std::vector<drogon::HttpFile>& files = this->parser.getFiles();
     std::vector<std::string_view> result;
     for (const drogon::HttpFile& file : files) {
         if (file.getItemName() == name) {
@@ -63,11 +68,11 @@ std::vector<std::string_view> DrogonMultiPartParser::getFilesArrayByFieldName(co
 
 std::set<std::string> DrogonMultiPartParser::getAllFieldNames() const {
     std::set<std::string> fieldNames;
-    auto fileMap = this->parser->getFilesMap();
+    auto fileMap = this->parser.getFilesMap();
     for (const auto& [name, _] : fileMap) {
         fieldNames.insert(name);
     }
-    auto params = this->parser->getParameters();
+    auto params = this->parser.getParameters();
     for (const auto& [name, _] : params) {
         fieldNames.insert(name);
     }
