@@ -364,7 +364,7 @@ curl http://localhost:8000/v1/embeddings -H "Content-Type: application/json" -d 
 :::{dropdown} **Request embeddings with OpenAI Python package**
 
 ```bash
-pip3 install openai numpy
+pip install openai numpy
 ```
 ```bash
 echo '
@@ -410,6 +410,7 @@ A simple method of testing the response accuracy is via comparing the response f
 
 The script [compare_results.py](https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/compare_results.py) can assist with such experiment.
 ```bash
+pip install torch transformers openai numpy --extra-index-url "https://download.pytorch.org/whl/cpu"
 curl -fL https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/compare_results.py -o compare_results.py
 python compare_results.py --model_name bge-base-en-v1.5-int8-ov --hf_model_name BAAI/bge-base-en-v1.5 --service_url http://localhost:8000/v1 --pooling CLS --input "hello world" --input "goodbye world"
 
