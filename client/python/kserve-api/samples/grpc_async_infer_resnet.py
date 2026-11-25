@@ -89,6 +89,7 @@ if __name__ == '__main__':
     # optional preprocessing depending on the model
     imgs = np.load(args['images_numpy_path'],
                    mmap_mode='r', allow_pickle=False)
+    imgs = imgs.astype(np.float32, copy=False)
     imgs = imgs - np.min(imgs)  # Normalization 0-255
     imgs = imgs / np.ptp(imgs) * 255  # Normalization 0-255
     # imgs = imgs[:,:,:,::-1] # RGB to BGR
