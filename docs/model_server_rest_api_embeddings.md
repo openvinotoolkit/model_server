@@ -56,6 +56,8 @@ curl http://localhost/v3/embeddings \
 | encoding_format | ✅ | ✅ | float or base64 (default: `float`) | The format to return the embeddings in |
 | dimensions | ✅ | ✅ | integer (optional) | Return the first `dimensions` values of each embedding and L2-normalize the result. Accepts values from 1 through the model's output size. Omit to use the model's full output and configured normalization. Use a Matryoshka-trained model to preserve embedding quality when shortening vectors. |
 
+If the graph sets `normalize_embeddings: false`, requests that specify `dimensions` still apply L2 normalization. Requests that omit `dimensions` follow the graph's normalization setting. The server logs a warning when it initializes an embeddings node with `normalize_embeddings: false`.
+
 #### Unsupported params from OpenAI service:
 - user
 
