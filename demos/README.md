@@ -42,6 +42,11 @@ Integrations <ovms_demos_integrations>
 |---|---|
 |[Audio demos](audio/README.md)|Text-to-speech and automatic speech recognition demos.|
 
+## Omni
+| Demo | Description |
+|---|---|
+|[Omni models](omni/README.md)|Multimodal text, image, and audio input with text and speech output.|
+
 ## Text Embeddings
 | Demo | Description |
 |---|---|

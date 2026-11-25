@@ -186,6 +186,21 @@ docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 \
   --model_repository_path /models
 ```
 :::
+:::{tab-item} Qwen3 ASR
+:sync: qwen3-asr
+```bash
+mkdir -p ${HOME}/models
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 \
+  -v ${HOME}/models:/models:rw openvino/model_server:weekly \
+  --rest_port 8000 \
+  --source_model <qwen_asr_model> \
+  --model_name qwen3-asr \
+  --model_repository_path /models \
+  --task text_generation
+```
+
+OVMS automatically selects `VLM_CB` for Qwen3 ASR on CPU and GPU. Add `--pipeline_type VLM_CB` to make that selection explicit.
+:::
 ::::
 
 The same model selection can be used with the bare-metal binary by replacing the container and mount arguments with local paths. To use GPU in Docker, add `--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)` to the command.
@@ -277,6 +292,28 @@ with open("speech.wav", "rb") as audio_file:
 print(transcript.text)
 ```
 :::
+:::{tab-item} Qwen3 ASR
+:sync: qwen3-asr
+**cURL**
+```bash
+curl http://localhost:8000/v1/audio/transcriptions \
+  -F 'file=@speech.wav' \
+  -F 'model=qwen3-asr'
+```
+
+**OpenAI Python client**
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="not_used")
+with open("speech.wav", "rb") as audio_file:
+    transcript = client.audio.transcriptions.create(
+        model="qwen3-asr",
+        file=audio_file,
+    )
+print(transcript.text)
+```
+:::
 ::::
 
 ```json
@@ -348,7 +385,7 @@ print(transcript.segments)
 
 ### Qwen3 ASR continuous batching
 
-Whisper is usually the better choice for a small number of concurrent clients. Qwen3 ASR with `VLM_CB` is intended for higher concurrency, where requests can share the continuous-batching pipeline. Use `--pipeline_type VLM_CB` to make the automatically selected pipeline explicit.
+`VLM_CB` is the default Qwen3 ASR pipeline on CPU and GPU. Whisper is usually the better choice for a small number of concurrent clients, while Qwen3 ASR continuous batching is intended for higher concurrency.
 
 ```bash
 curl http://localhost:8000/v1/audio/transcriptions \

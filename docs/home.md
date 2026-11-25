@@ -139,6 +139,7 @@ print("Top-1 class index:", int(np.argmax(output[0])))
 - [Reranking](../demos/rerank/README.md) — Cohere-compatible API
 - [Image generation](../demos/image_generation/README.md) — OpenAI-compatible `/v1/images/generations`
 - [Speech recognition and TTS](../demos/audio/README.md) — OpenAI-compatible audio API
+- [Omni models](../demos/omni/README.md) — multimodal input with text and speech output
 - [GGUF model support](../demos/gguf/README.md)
 
 ### Classic Models and Pipelines
