@@ -28,11 +28,10 @@ parser = argparse.ArgumentParser(description='Download OpenVINO IR of an embeddi
 parser.add_argument('--model_id', required=True, help='HuggingFace model id, e.g. thenlper/gte-small')
 parser.add_argument('--output_dir', default='C:/models' if os.name == 'nt' else os.path.expanduser('~/models'),
                     help='Root directory where the model will be stored (default: C:/models on Windows, ${HOME}/models on Linux)')
-parser.add_argument('--revision', default=None, help='Model revision (branch, tag or commit)')
 parser.add_argument('--trust_remote_code', action='store_true', help='Pass --trust-remote-code to convert_tokenizer')
 args = parser.parse_args()
 
-repo_files = list_repo_files(args.model_id, revision=args.revision)
+repo_files = list_repo_files(args.model_id)
 if not any(f.startswith(OV_SUBDIR + "/") for f in repo_files):
     print(f"Repository {args.model_id} does not contain '{OV_SUBDIR}' directory. Stopping.")
     sys.exit(1)
@@ -40,12 +39,15 @@ if not any(f.startswith(OV_SUBDIR + "/") for f in repo_files):
 model_dir = os.path.join(args.output_dir, args.model_id)
 download_dir = os.path.join(model_dir, "_download")
 print(f"Downloading '{OV_SUBDIR}' directory of {args.model_id}")
-snapshot_download(repo_id=args.model_id, revision=args.revision, allow_patterns=[f"{OV_SUBDIR}/*"], local_dir=download_dir)
+snapshot_download(repo_id=args.model_id, allow_patterns=[f"{OV_SUBDIR}/*", "tokenizer.json", "tokenizer_config.json"], local_dir=download_dir)
 
 # Flatten <model_dir>/_download/openvino/* into <model_dir>
 src_dir = os.path.join(download_dir, OV_SUBDIR)
 for name in os.listdir(src_dir):
     shutil.move(os.path.join(src_dir, name), os.path.join(model_dir, name))
+for name in ("tokenizer.json", "tokenizer_config.json"):
+    if os.path.exists(path := os.path.join(download_dir, name)):
+        os.replace(path, os.path.join(model_dir, name))
 shutil.rmtree(download_dir)
 
 if shutil.which("convert_tokenizer") is None:
@@ -53,8 +55,6 @@ if shutil.which("convert_tokenizer") is None:
     sys.exit(1)
 
 cmd = ["convert_tokenizer", args.model_id, "--with-detokenizer", "-o", model_dir]
-if args.revision:
-    cmd += ["--revision", args.revision]
 if args.trust_remote_code:
     cmd.append("--trust-remote-code")
 print("Running:", " ".join(cmd))

@@ -27,8 +27,8 @@ docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/m
 docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name Qwen3-Embedding-0.6B-int8-ov --model_path OpenVINO/Qwen3-Embedding-0.6B-int8-ov
 ```
 
-**On Bare Metal (Windows/Linux)**
-```console
+**On Bare Metal (Windows)**
+```bat
 mkdir C:/models
 ovms --pull --model_repository_path C:/models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --task embeddings
 ovms --add_to_config --config_path C:/models/config.json --model_name OpenVINO/Qwen3-Embedding-0.6B-int8-ov --model_path OpenVINO/Qwen3-Embedding-0.6B-int8-ov
@@ -43,8 +43,8 @@ docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/m
 docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name bge-base-en-v1.5-int8-ov --model_path OpenVINO/bge-base-en-v1.5-int8-ov
 ```
 
-**On Bare Metal (Windows/Linux)**
-```console
+**On Bare Metal (Windows)**
+```bat
 ovms --pull --model_repository_path C:/models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --pooling CLS --task embeddings
 
 ovms --add_to_config --config_path C:/models/config.json --model_name bge-base-en-v1.5-int8-ov --model_path OpenVINO/bge-base-en-v1.5-int8-ov
@@ -59,8 +59,8 @@ docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/m
 docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name bge-m3-int4-ov --model_path OpenVINO/bge-m3-int4-ov
 ```
 
-**On Bare Metal (Windows/Linux)**
-```console
+**On Bare Metal (Windows)**
+```bat
 ovms --pull --model_repository_path C:/models --source_model OpenVINO/bge-m3-int4-ov --pooling CLS --task embeddings
 
 ovms --add_to_config --config_path C:/models/config.json --model_name bge-m3-int4-ov --model_path OpenVINO/bge-m3-int4-ov
@@ -79,8 +79,8 @@ docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/m
 docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name Qwen3-Embedding-0.6B-int8-ov --model_path OpenVINO/Qwen3-Embedding-0.6B-int8-ov
 ```
 
-**On Bare Metal (Windows/Linux)**
-```console
+**On Bare Metal (Windows)**
+```bat
 ovms --pull --model_repository_path C:/models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --target_device GPU --task embeddings
 
 ovms --add_to_config --config_path C:/models/config.json --model_name OpenVINO/Qwen3-Embedding-0.6B-int8-ov --model_path OpenVINO/Qwen3-Embedding-0.6B-int8-ov
@@ -95,8 +95,8 @@ docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/m
 docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name bge-base-en-v1.5-int8-ov --model_path OpenVINO/bge-base-en-v1.5-int8-ov
 ```
 
-**On Bare Metal (Windows/Linux)**
-```console
+**On Bare Metal (Windows)**
+```bat
 ovms --pull --model_repository_path C:/models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --pooling CLS --target_device GPU --task embeddings
 
 ovms --add_to_config --config_path C:/models/config.json --model_name bge-base-en-v1.5-int8-ov --model_path OpenVINO/bge-base-en-v1.5-int8-ov
@@ -111,8 +111,8 @@ docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/m
 docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name bge-m3-int4-ov --model_path OpenVINO/bge-m3-int4-ov
 ```
 
-**On Bare Metal (Windows/Linux)**
-```console
+**On Bare Metal (Windows)**
+```bat
 ovms --pull --model_repository_path C:/models --source_model OpenVINO/bge-m3-int4-ov --pooling CLS --target_device GPU --task embeddings
 
 ovms --add_to_config --config_path C:/models/config.json --model_name bge-m3-int4-ov --model_path OpenVINO/bge-m3-int4-ov
@@ -178,8 +178,8 @@ docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/m
 docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name thenlper/gte-small --model_path thenlper/gte-small
 ```
 
-**On Bare Metal (Windows/Linux)**
-```console
+**On Bare Metal (Windows)**
+```bat
 ovms --configure --model_path C:/models/thenlper/gte-small --task embeddings --pooling CLS
 
 ovms --add_to_config --config_path C:/models/config.json --model_name thenlper/gte-small --model_path thenlper/gte-small
@@ -194,11 +194,11 @@ docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/m
 docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name sentence-transformers/all-MiniLM-L12-v2 --model_path sentence-transformers/all-MiniLM-L12-v2
 ```
 
-**On Bare Metal (Windows/Linux)**
-```console
-ovms --configure --model_path models/sentence-transformers/all-MiniLM-L12-v2 --task embeddings --pooling MEAN
+**On Bare Metal (Windows)**
+```bat
+ovms --configure --model_path C:/models/sentence-transformers/all-MiniLM-L12-v2 --task embeddings --pooling MEAN
 
-ovms --add_to_config --config_path models/config.json --model_name sentence-transformers/all-MiniLM-L12-v2 --model_path sentence-transformers/all-MiniLM-L12-v2
+ovms --add_to_config --config_path C:/models/config.json --model_name sentence-transformers/all-MiniLM-L12-v2 --model_path sentence-transformers/all-MiniLM-L12-v2
 ```
 :::
 :::{tab-item} sentence-transformers/all-distilroberta-v1
@@ -210,8 +210,8 @@ docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/m
 docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name sentence-transformers/all-distilroberta-v1 --model_path sentence-transformers/all-distilroberta-v1
 ```
 
-**On Bare Metal (Windows/Linux)**
-```console
+**On Bare Metal (Windows)**
+```bat
 ovms --configure --model_path C:/models/sentence-transformers/all-distilroberta-v1 --task embeddings --pooling MEAN
 
 ovms --add_to_config --config_path C:/models/config.json --model_name sentence-transformers/all-distilroberta-v1 --model_path sentence-transformers/all-distilroberta-v1
@@ -226,8 +226,8 @@ docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/m
 docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name intfloat/multilingual-e5-large --model_path intfloat/multilingual-e5-large
 ```
 
-**On Bare Metal (Windows/Linux)**
-```console
+**On Bare Metal (Windows)**
+```bat
 ovms --configure --model_path C:/models/intfloat/multilingual-e5-large --task embeddings --pooling MEAN
 
 ovms --add_to_config --config_path C:/models/config.json --model_name intfloat/multilingual-e5-large --model_path intfloat/multilingual-e5-large
@@ -242,8 +242,8 @@ docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/m
 docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name sentence-transformers/all-mpnet-base-v2 --model_path sentence-transformers/all-mpnet-base-v2
 ```
 
-**On Bare Metal (Windows/Linux)**
-```console
+**On Bare Metal (Windows)**
+```bat
 ovms --configure --model_path C:/models/sentence-transformers/all-mpnet-base-v2 --task embeddings --pooling MEAN
 
 ovms --add_to_config --config_path C:/models/config.json --model_name sentence-transformers/all-mpnet-base-v2 --model_path sentence-transformers/all-mpnet-base-v2
@@ -266,7 +266,7 @@ docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/m
 :::{tab-item} OpenVINO/bge-base-en-v1.5-int8-ov
 :sync: OpenVINO/bge-base-en-v1.5-int8-ov
 ```bash
-docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --pooling LAST --task embeddings --target_device NPU --max_length 400
+docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/model_server:latest --pull --model_repository_path /models --source_model OpenVINO/bge-base-en-v1.5-int8-ov --pooling CLS --task embeddings --target_device NPU --max_length 400
 
 docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/model_server:latest --add_to_config --config_path /models/config.json --model_name bge-base-en-v1.5-int8-ov --model_path OpenVINO/bge-base-en-v1.5-int8-ov
 ```
