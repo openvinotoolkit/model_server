@@ -65,6 +65,8 @@ cv::Mat wrapNhwc(ov::Tensor tensor) {
     const auto& shape = tensor.get_shape();
     if (shape.size() != 4 || shape[0] != 1)
         throw std::runtime_error("OpenCV resize requires a single-image NHWC tensor");
+    if (!tensor.is_continuous())
+        throw std::runtime_error("OpenCV resize requires a contiguous tensor");
     return cv::Mat(static_cast<int>(shape[1]), static_cast<int>(shape[2]),
         CV_MAKETYPE(toCvDepth(tensor.get_element_type()), static_cast<int>(shape[3])), tensor.data());
 }

@@ -345,6 +345,19 @@ TEST(ImagePreprocessingCompatibility, LinearIntegerResizeDiffersFromOpenCvByAtMo
     }
 }
 
+TEST(ImagePreprocessingCompatibility, NonContiguousSourceIsReadWithStrides) {
+    ov::Tensor parent(ov::element::u8, {1, 2, 3, 3});
+    for (size_t i = 0; i < parent.get_size(); ++i)
+        parent.data<uint8_t>()[i] = static_cast<uint8_t>(i);
+    const ov::Tensor roi(parent, {0, 0, 0, 0}, {1, 2, 2, 3});
+    ASSERT_FALSE(roi.is_continuous());
+    ov::Tensor output;
+    const auto status = image_utils::preprocessImage(roi, output, ov::element::f32, 2, 2);
+    ASSERT_TRUE(status.ok()) << status.string();
+    const std::vector<float> expected{0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13, 14};
+    EXPECT_THAT(std::vector<float>(output.data<float>(), output.data<float>() + output.get_size()), ::testing::ElementsAreArray(expected));
+}
+
 TEST(ImagePreprocessingCompatibility, OpenCvPluginMatchesConvertThenResize) {
     if (!image_utils::openCvImageDecoderUnavailableReason().empty()) {
         GTEST_SKIP() << "Requires the OpenCV image decoder plugin";
