@@ -22,6 +22,7 @@ from enum import Enum
 
 from tests.functional.constants.os_type import OsType
 
+from tests.functional.config import resolved_target_devices
 from tests.functional.constants.target_device import TargetDevice
 from tests.functional.constants.ovms_type import OvmsType
 from tests.functional.utils.helpers import get_base_device
@@ -44,7 +45,9 @@ class Ovms:
     PLUGIN_CONFIG_GPU = PLUGIN_CONFIG_AUTO
     PLUGIN_CONFIG_NPU = PLUGIN_CONFIG_AUTO
     PLUGIN_CONFIG_AUTO_CUMULATIVE_THROUGHPUT = {"PERFORMANCE_HINT": "CUMULATIVE_THROUGHPUT"}
-    PLUGIN_CONFIG_HETERO = {"MULTI_DEVICE_PRIORITIES": "GPU,CPU"}
+    PLUGIN_CONFIG_HETERO = {
+        "MULTI_DEVICE_PRIORITIES": resolved_target_devices.get(TargetDevice.HETERO, TargetDevice.HETERO).split(":")[1]
+    }
 
     PLUGIN_CONFIG = {
         TargetDevice.CPU: PLUGIN_CONFIG_CPU,
