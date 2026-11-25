@@ -21,6 +21,7 @@ import re
 from collections import defaultdict
 from time import strftime
 
+from tests.functional.config import ovms_c_repo_path
 from tests.functional.constants.target_device import TargetDevice
 
 
@@ -171,3 +172,14 @@ def generate_test_object_name(separator="_", prefix=""):
     random_sha = hex(random.getrandbits(128))[2:8]
     name = separator.join([item for item in (prefix, date_str, random_sha) if item])
     return name
+
+
+def get_data_from_versions_mk():
+    filepath = os.path.join(ovms_c_repo_path, "versions.mk")
+    if not os.path.exists(filepath):
+        return None
+
+    with open(filepath, "r") as f:
+        data = f.read()
+
+    return data
