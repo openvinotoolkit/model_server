@@ -118,6 +118,7 @@ Source: "{#SourceRoot}\packaging\windows\scripts\start-ovms.ps1"; DestDir: "{app
 Source: "{#SourceRoot}\packaging\windows\scripts\stop-ovms.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 Source: "{#SourceRoot}\packaging\windows\scripts\uninstall-ovms.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 Source: "{#SourceRoot}\packaging\windows\scripts\uninstall-service.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
+Source: "{#SourceRoot}\packaging\windows\scripts\run-ovms.ps1"; DestDir: "{app}\scripts"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\Start OVMS Server"; Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\start-ovms.ps1"" -DataDir ""{localappdata}\OVMS"""
@@ -154,12 +155,18 @@ var
   OvmsTerminalModeRadio: TNewRadioButton;
   OvmsServiceStatusLabel: TNewStaticText;
   StopOvmsServiceButton: TNewButton;
+  OvmsProcessStatusLabel: TNewStaticText;
+  StopOvmsProcessButton: TNewButton;
   // When True, the "Exit Setup?" confirmation is suppressed so Setup can
   // close cleanly after handing off to the existing uninstaller.
   SuppressCancelConfirm: Boolean;
   LegacyInstallMigrationPending: Boolean;
   LegacyInstallDirToMigrate: String;
   LegacyUninstallStringToMigrate: String;
+
+procedure StopOvmsProcessButtonClick(Sender: TObject); forward;
+procedure UpdateOvmsProcessStatus; forward;
+function RunExistingUninstaller(UninstallString: String): Boolean; forward;
 
 function BoolToJson(Value: Boolean): String;
 begin
@@ -662,32 +669,50 @@ begin
   end;
 end;
 
-function HasRunningOvmsProcess: Boolean;
+function GetExternalRunningOvmsProcesses: String;
 var
-  ResultCode: Integer;
   MarkerPath: String;
+  ResultCode: Integer;
 begin
-  MarkerPath := ExpandConstant('{tmp}\ovms-running.txt');
+  Result := '';
+  MarkerPath := ExpandConstant('{tmp}\ovms-external-processes.txt');
   DeleteFile(MarkerPath);
+
   Exec('powershell.exe',
-    '-NoProfile -ExecutionPolicy Bypass -Command "if (Get-Process ovms -ErrorAction SilentlyContinue) { ''running'' | Set-Content -Path ''' + MarkerPath + ''' }"',
+    '-NoProfile -ExecutionPolicy Bypass -Command "if (Get-Process ovms -ErrorAction SilentlyContinue) { ''running'' | Set-Content -LiteralPath ''' + MarkerPath + ''' -Encoding ASCII }"',
     '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  Result := FileExists(MarkerPath);
+
+  if FileExists(MarkerPath) then
+  begin
+    Result := MarkerPath;
+  end;
   DeleteFile(MarkerPath);
 end;
 
-function RunExistingUninstaller(UninstallString: String): Boolean;
+function HasRunningOvmsProcess: Boolean;
+begin
+  Result := GetExternalRunningOvmsProcesses <> '';
+end;
+
+function IsOvmsProcessAtDestinationRunning: Boolean;
 var
   ResultCode: Integer;
+  DestinationPath: String;
 begin
   Result := False;
-  if UninstallString = '' then
-  begin
-    MsgBox('An existing OpenVINO Model Server install was detected, but its uninstaller could not be found.', mbError, MB_OK);
-    exit;
-  end;
 
-  Exec('cmd.exe', '/C ' + UninstallString, '', SW_SHOWNORMAL, ewWaitUntilTerminated, ResultCode);
+  DestinationPath := '';
+  if Assigned(WizardForm) and Assigned(WizardForm.DirEdit) then
+    DestinationPath := WizardForm.DirEdit.Text;
+  if DestinationPath = '' then
+    DestinationPath := ExistingInstallDir;
+  if DestinationPath = '' then
+    Exit;
+
+  DestinationPath := AddBackslash(DestinationPath) + 'ovms.exe';
+  Exec('powershell.exe',
+    '-NoProfile -ExecutionPolicy Bypass -Command "$dest=[IO.Path]::GetFullPath(''' + DestinationPath + ''').TrimEnd(''\\''); Get-Process ovms -ErrorAction SilentlyContinue | Where-Object { try { [IO.Path]::GetFullPath($_.Path).TrimEnd(''\\'').Equals($dest,[StringComparison]::OrdinalIgnoreCase) } catch { $false } } | Select-Object -First 1 | ForEach-Object { exit 0 }; exit 1"',
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Result := ResultCode = 0;
 end;
 
@@ -714,8 +739,8 @@ begin
     end;
 
     if MsgBox(
-      'A running ovms.exe process was detected, but it does not appear to be managed by this installer.' + #13#10#13#10 +
-      'Setup will not repair or uninstall unmanaged portable OVMS processes. Stop the running server before installing if it uses the same ports.' + #13#10#13#10 +
+      'Other running ovms.exe processes were detected outside this installer destination.' + #13#10#13#10 +
+      'This setup does not stop them. Stop external servers manually if they use conflicting ports.' + #13#10#13#10 +
       'Continue setup?',
       mbConfirmation, MB_YESNO) = IDNO then
     begin
@@ -822,6 +847,26 @@ begin
     StopOvmsServiceButton.Caption := 'Stop OVMS service';
     StopOvmsServiceButton.OnClick := @StopOvmsServiceButtonClick;
     UpdateOvmsServiceStatus;
+
+    OvmsProcessStatusLabel := TNewStaticText.Create(RuntimeSummaryPage);
+    OvmsProcessStatusLabel.Parent := RuntimeSummaryPage.Surface;
+    OvmsProcessStatusLabel.Left := 0;
+    OvmsProcessStatusLabel.Top := StopOvmsServiceButton.Top + StopOvmsServiceButton.Height + ScaleY(8);
+    OvmsProcessStatusLabel.Width := RuntimeSummaryPage.SurfaceWidth;
+    OvmsProcessStatusLabel.AutoSize := False;
+    OvmsProcessStatusLabel.WordWrap := True;
+    OvmsProcessStatusLabel.Caption := 'OVMS process from this installation: checking...';
+    OvmsProcessStatusLabel.Height := ScaleY(20);
+
+    StopOvmsProcessButton := TNewButton.Create(RuntimeSummaryPage);
+    StopOvmsProcessButton.Parent := RuntimeSummaryPage.Surface;
+    StopOvmsProcessButton.Left := 0;
+    StopOvmsProcessButton.Top := OvmsProcessStatusLabel.Top + OvmsProcessStatusLabel.Height + ScaleY(8);
+    StopOvmsProcessButton.Width := ScaleX(150);
+    StopOvmsProcessButton.Height := ScaleY(23);
+    StopOvmsProcessButton.Caption := 'Stop OVMS process';
+    StopOvmsProcessButton.OnClick := @StopOvmsProcessButtonClick;
+    UpdateOvmsProcessStatus;
   end;
 
   // Keep the install-options page available regardless of the selected Python
@@ -1021,6 +1066,7 @@ begin
     if Assigned(SettingsSummaryEdit) then
       SettingsSummaryEdit.Text := GetOvmsSettingsSummary;
     UpdateOvmsServiceStatus;
+    UpdateOvmsProcessStatus;
   end;
 end;
 
@@ -1047,11 +1093,21 @@ begin
     Result := True;
   end;
 
-  if (CurPageID = RuntimeSummaryPage.ID) and IsOvmsServiceRunning then
+  if (CurPageID = RuntimeSummaryPage.ID) then
   begin
-    MsgBox('The OVMS Windows service is still running. Stop it before continuing with the installation.', mbError, MB_OK);
-    Result := False;
-    Exit;
+    if IsOvmsServiceRunning then
+    begin
+      MsgBox('The OVMS Windows service is still running. Stop it before continuing with the installation.', mbError, MB_OK);
+      Result := False;
+      Exit;
+    end;
+
+    if IsOvmsProcessAtDestinationRunning then
+    begin
+      MsgBox('An OVMS process from this installation is still running. Stop it before continuing.', mbError, MB_OK);
+      Result := False;
+      Exit;
+    end;
   end;
 
   if (CurPageID = wpSelectDir) and ExistingInstallDetected then
@@ -1088,10 +1144,11 @@ begin
       if FileExists(RepairScriptPath) then
       begin
         Exec('cmd.exe',
-          '/C powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + RepairScriptPath + '" -InstallDir "' + ExpandConstant('{app}') + '" -DataDir "' + ExpandConstant('{localappdata}\OVMS') + '"',
+          '/C powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + RepairScriptPath + '" -InstallDir "' + ExpandConstant('{app}') + '" -DataDir "' + ExpandConstant('{localappdata}\OVMS') + '" -PackageSource "' + ExpandConstant('{app}') + '" >> "' + GetSetupLogPath + '" 2>&1',
           '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
         if ResultCode <> 0 then
         begin
+          SaveStringToFile(GetSetupLogPath, '[SETUP] Repair cleanup failed with exit code ' + IntToStr(ResultCode) + #13#10, True);
           MsgBox('Repair cleanup failed for the existing installation. Some deselected components may still be present.' + #13#10 + 'See the setup log for details: ' + GetSetupLogPath, mbError, MB_OK);
         end;
       end;
@@ -1244,6 +1301,53 @@ begin
   else
   begin
     DataModeChoice := 'RemoveSettingsKeepModels';
+  end;
+end;
+
+function RunExistingUninstaller(UninstallString: String): Boolean;
+var
+  ResultCode: Integer;
+begin
+  Result := False;
+  if UninstallString = '' then
+  begin
+    MsgBox('An existing OpenVINO Model Server install was detected, but its uninstaller could not be found.', mbError, MB_OK);
+    exit;
+  end;
+
+  Exec('cmd.exe', '/C ' + UninstallString, '', SW_SHOWNORMAL, ewWaitUntilTerminated, ResultCode);
+  Result := ResultCode = 0;
+end;
+
+procedure StopOvmsProcessButtonClick(Sender: TObject);
+var
+  ResultCode: Integer;
+  DestinationPath: String;
+begin
+  DestinationPath := ExpandConstant('{app}') + '\ovms.exe';
+  Exec('powershell.exe',
+    '-NoProfile -ExecutionPolicy Bypass -Command "$dest=[IO.Path]::GetFullPath(''' + DestinationPath + ''').TrimEnd(''\\''); Get-Process ovms -ErrorAction SilentlyContinue | Where-Object { try { [IO.Path]::GetFullPath($_.Path).TrimEnd(''\\'').Equals($dest,[StringComparison]::OrdinalIgnoreCase) } catch { $false } } | Stop-Process -Force -ErrorAction SilentlyContinue"',
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  UpdateOvmsProcessStatus;
+  MsgBox('Matching OVMS processes were stopped.', mbInformation, MB_OK);
+end;
+
+procedure UpdateOvmsProcessStatus;
+begin
+  if not Assigned(OvmsProcessStatusLabel) then
+    Exit;
+
+  if IsOvmsProcessAtDestinationRunning then
+  begin
+    OvmsProcessStatusLabel.Caption := 'OVMS process from this installation: running';
+    if Assigned(StopOvmsProcessButton) then
+      StopOvmsProcessButton.Enabled := True;
+  end
+  else
+  begin
+    OvmsProcessStatusLabel.Caption := 'OVMS process from this installation: stopped';
+    if Assigned(StopOvmsProcessButton) then
+      StopOvmsProcessButton.Enabled := False;
   end;
 end;
 

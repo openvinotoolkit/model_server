@@ -201,7 +201,7 @@ try {
 
     $binPath = "`"$ovmsExe`" --rest_port $($settings.restPort) --rest_bind_address `"$($settings.bindAddress)`" --config_path `"$($settings.configPath)`" --log_level $($settings.logLevel) --log_path `"$($settings.logPath)`""
     if ($settings.grpcPort -and [int]$settings.grpcPort -gt 0) {
-        $binPath += " --port $($settings.grpcPort)"
+        $binPath += " --port $($settings.grpcPort) --grpc_bind_address `"$($settings.bindAddress)`""
     }
 
     $existing = Get-Service ovms -ErrorAction SilentlyContinue

@@ -54,7 +54,12 @@ try {
     $pythonHome = Join-Path $installDirFull "python"
     $pythonScripts = Join-Path $pythonHome "Scripts"
     $required = @($installDirFull)
-    if (Test-Path -LiteralPath $pythonHome) {
+    if ($Action -eq "Add") {
+        if (Test-Path -LiteralPath $pythonHome) {
+            $required += $pythonHome
+            $required += $pythonScripts
+        }
+    } else {
         $required += $pythonHome
         $required += $pythonScripts
     }

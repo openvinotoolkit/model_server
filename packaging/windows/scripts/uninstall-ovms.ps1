@@ -40,12 +40,41 @@ if (Test-Path $runtimePath) {
 
 & (Join-Path $PSScriptRoot "uninstall-service.ps1")
 & (Join-Path $PSScriptRoot "set-path.ps1") -InstallDir $InstallDir -Action Remove
-[Environment]::SetEnvironmentVariable("OVMS_DIR", $null, "User")
-[Environment]::SetEnvironmentVariable("PYTHONHOME", $null, "User")
-[Environment]::SetEnvironmentVariable("ESPEAK_DATA_PATH", $null, "User")
-[Environment]::SetEnvironmentVariable("OVMS_DIR", $null, "Machine")
-[Environment]::SetEnvironmentVariable("PYTHONHOME", $null, "Machine")
-[Environment]::SetEnvironmentVariable("ESPEAK_DATA_PATH", $null, "Machine")
+
+function Remove-EnvironmentVariableIfMatches {
+    param(
+        [Parameter(Mandatory = $true)][string]$Name,
+        [Parameter(Mandatory = $true)][string]$TargetValue,
+        [Parameter(Mandatory = $true)][ValidateSet('User', 'Machine')][string]$Scope
+    )
+
+    $currentValue = [Environment]::GetEnvironmentVariable($Name, $Scope)
+    if ([string]::IsNullOrWhiteSpace($currentValue)) {
+        return
+    }
+
+    $matches = $false
+    if ($Name -eq 'OVMS_DIR' -or $Name -eq 'PYTHONHOME' -or $Name -eq 'ESPEAK_DATA_PATH') {
+        $normalizedCurrent = [System.IO.Path]::GetFullPath($currentValue).TrimEnd('\')
+        $normalizedTarget = [System.IO.Path]::GetFullPath($TargetValue).TrimEnd('\')
+        $matches = $normalizedCurrent.Equals($normalizedTarget, [System.StringComparison]::OrdinalIgnoreCase)
+    }
+
+    if ($matches) {
+        [Environment]::SetEnvironmentVariable($Name, $null, $Scope)
+        Write-Host "[INFO] Cleared $Scope $Name because it pointed to this OVMS installation."
+    }
+}
+
+$installDirFull = [System.IO.Path]::GetFullPath($InstallDir).TrimEnd('\')
+$pythonHome = Join-Path $installDirFull 'python'
+$espeakData = Join-Path $installDirFull 'espeak-ng-data'
+
+foreach ($scope in @('User', 'Machine')) {
+    Remove-EnvironmentVariableIfMatches -Name 'OVMS_DIR' -TargetValue $installDirFull -Scope $scope
+    Remove-EnvironmentVariableIfMatches -Name 'PYTHONHOME' -TargetValue $pythonHome -Scope $scope
+    Remove-EnvironmentVariableIfMatches -Name 'ESPEAK_DATA_PATH' -TargetValue $espeakData -Scope $scope
+}
 
 switch ($DataMode) {
     "PreserveAll" {

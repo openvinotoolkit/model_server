@@ -81,7 +81,7 @@ $args = @(
 )
 
 if ($settings.grpcPort -and [int]$settings.grpcPort -gt 0) {
-    $args += @("--port", $settings.grpcPort)
+    $args += @("--port", $settings.grpcPort, "--grpc_bind_address", $settings.bindAddress)
 }
 
 $commandText = "ovms " + (($args | ForEach-Object {
@@ -92,19 +92,26 @@ $commandText = "ovms " + (($args | ForEach-Object {
     }
 }) -join ' ')
 
+$escapedInstallDir = $settings.installDir.Replace("'", "''").TrimEnd('\')
+$escapedCommandText = $commandText.Replace("'", "''")
+
 $setupVarsPath = Join-Path $settings.installDir "setupvars.ps1"
+$runOvmsPath = Join-Path $settings.installDir "scripts\run-ovms.ps1"
+$escapedDataDir = ([string]$settings.dataDir).Replace("'", "''")
+$escapedSetupVarsPath = $setupVarsPath.Replace("'", "''")
+$escapedRunOvmsPath = $runOvmsPath.Replace("'", "''")
+
 $terminalCommand = @(
-    "Set-Location -LiteralPath '$($settings.installDir.TrimEnd('\\'))'",
+    "Set-Location -LiteralPath '$escapedInstallDir'",
     "try {",
-    "  . '$($setupVarsPath.Replace("'", "''"))'",
-    "  Write-Host ''",
+    "  . '$escapedSetupVarsPath'",
     "  Write-Host 'You can start ovms with:'",
-    "  Write-Host '  $commandText'",
-    "  Write-Host 'Call ovms --help for more options.'",
-    "  Write-Host ''",
+    "  Write-Host '  $escapedCommandText'",
+    "  & '$escapedRunOvmsPath' -DataDir '$escapedDataDir'",
+    "  exit `$LASTEXITCODE",
     "} catch {",
     "  Write-Error $_",
-    "  Write-Host 'Failed to initialize OVMS environment.'",
+    "  Write-Host 'Failed to initialize or run OVMS.'",
     "  Read-Host 'Press Enter to close this window'",
     "  exit 1",
     "}"

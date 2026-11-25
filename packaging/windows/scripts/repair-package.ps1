@@ -81,7 +81,7 @@ function Get-ManagedInstallFiles {
         }
     }
 
-    return $expected
+    Write-Output -NoEnumerate $expected
 }
 
 function Remove-DisabledComponentFiles {
@@ -110,7 +110,6 @@ function Remove-DisabledComponentFiles {
             'openvino_tensorflow_frontend.dll',
             'openvino_tensorflow_lite_frontend.dll'
         )
-        python_embedded = @('python')
     }
 
     $failedRemovals = @()
@@ -165,6 +164,98 @@ function Get-JsonBoolValue {
     return $false
 }
 
+function Test-DeselectedComponentPath {
+    param(
+        [Parameter(Mandatory = $true)][string]$RelativePath,
+        [Parameter(Mandatory = $true)][hashtable]$ComponentSelection,
+        [Parameter(Mandatory = $true)][string]$PythonMode
+    )
+
+    $relative = $RelativePath.Replace('\', '/').TrimStart('/')
+
+    if (-not $ComponentSelection.opencv_mp) {
+        foreach ($path in @('opencv_world4140.dll', 'ovms_opencv_calculators.dll', 'ovms_opencv_image_decoder.dll')) {
+            if ($relative.Equals($path, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+        }
+    }
+    if (-not $ComponentSelection.espeak) {
+        if ($relative.Equals('espeak-ng.dll', [System.StringComparison]::OrdinalIgnoreCase) -or
+            $relative.StartsWith('espeak-ng-data/', [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+    }
+    if (-not $ComponentSelection.gpu) {
+        if ($relative.Equals('openvino_intel_gpu_plugin.dll', [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+    }
+    if (-not $ComponentSelection.npu) {
+        foreach ($path in @('openvino_intel_npu_compiler.dll', 'openvino_intel_npu_compiler_loader.dll', 'openvino_intel_npu_plugin.dll', 'openvino_intel_npu_vm_runtime.dll')) {
+            if ($relative.Equals($path, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+        }
+    }
+    if (-not $ComponentSelection.onnx_frontend) {
+        if ($relative.Equals('openvino_onnx_frontend.dll', [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+    }
+    if (-not $ComponentSelection.paddle_frontend) {
+        if ($relative.Equals('openvino_paddle_frontend.dll', [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+    }
+    if (-not $ComponentSelection.tensorflow_selected) {
+        foreach ($path in @('openvino_tensorflow_frontend.dll', 'openvino_tensorflow_lite_frontend.dll')) {
+            if ($relative.Equals($path, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
+        }
+    }
+    if (-not $ComponentSelection.python_embedded) {
+        if ($relative.Equals('python', [System.StringComparison]::OrdinalIgnoreCase) -or
+            $relative.StartsWith('python/', [System.StringComparison]::OrdinalIgnoreCase)) {
+            if ($PythonMode -ieq 'none') {
+                return $true
+            }
+            if ($PythonMode -ieq 'system' -and
+                -not $relative.Equals('python/pyovms.pyd', [System.StringComparison]::OrdinalIgnoreCase)) {
+                return $true
+            }
+        }
+    }
+
+    return $false
+}
+
+function Remove-DisabledPythonFiles {
+    param(
+        [Parameter(Mandatory = $true)][string]$InstallDir,
+        [Parameter(Mandatory = $true)][string]$PythonMode
+    )
+
+    $pythonDir = Join-Path $InstallDir 'python'
+    if (-not (Test-Path -LiteralPath $pythonDir)) {
+        return
+    }
+
+    if ($PythonMode -ieq 'none') {
+        Remove-Item -LiteralPath $pythonDir -Recurse -Force -ErrorAction Stop
+        Write-Host "[INFO] Removed deselected component 'python': $pythonDir"
+        return
+    }
+
+    if ($PythonMode -ieq 'system') {
+        Get-ChildItem -LiteralPath $pythonDir -File -Recurse -Force -ErrorAction SilentlyContinue |
+            Where-Object {
+                $relative = Get-RelativePathNormalized -BasePath $pythonDir -FullPath $_.FullName
+                -not $relative.Replace('\', '/').Equals('pyovms.pyd', [System.StringComparison]::OrdinalIgnoreCase)
+            } |
+            ForEach-Object {
+                Remove-Item -LiteralPath $_.FullName -Force -ErrorAction Stop
+            }
+
+        Get-ChildItem -LiteralPath $pythonDir -Directory -Recurse -Force -ErrorAction SilentlyContinue |
+            Sort-Object -Property FullName -Descending |
+            ForEach-Object {
+                $children = Get-ChildItem -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue
+                if (-not $children) {
+                    Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue
+                }
+            }
+        Write-Host "[INFO] Removed embedded Python runtime; retained system-Python binding."
+    }
+}
+
 $managedInstallFiles = @{}
 if ($resolvedSource) {
     $managedInstallFiles = Get-ManagedInstallFiles -InstallDir $InstallDir -PackageRoot $resolvedSource
@@ -198,6 +289,7 @@ try {
 if ($componentSelection.Count -gt 0) {
     Remove-DisabledComponentFiles -InstallDir $InstallDir -ComponentSelection $componentSelection
 }
+Remove-DisabledPythonFiles -InstallDir $InstallDir -PythonMode $pythonMode
 
 $staleFiles = @()
 if ($managedInstallFiles.Count -gt 0) {
@@ -222,34 +314,31 @@ if ($managedInstallFiles.Count -gt 0) {
     }
 }
 
-$required = @(
-    "ovms.exe",
-    "setupvars.bat",
-    "setupvars.ps1",
-    "install_ovms_service.bat"
-)
-
 $repairedFiles = @()
-foreach ($file in $required) {
-    $destPath = Join-Path $InstallDir $file
-    if (-not (Test-Path $destPath)) {
-        if ($resolvedSource) {
-            $srcPath = Join-Path $resolvedSource $file
-            if (Test-Path $srcPath) {
-                $destDir = Split-Path -Parent $destPath
-                if (-not (Test-Path $destDir)) {
-                    New-Item -ItemType Directory -Force -Path $destDir | Out-Null
-                }
-                Copy-Item -Path $srcPath -Destination $destPath -Force
-                $repairedFiles += $file
-                Write-Host "[INFO] Restored missing file: $file"
-            } else {
-                Write-Warning "Missing file '$file' could not be restored: not found in package source."
-            }
-        } else {
-            Write-Warning "Missing file '$file' could not be restored: no package source available."
+if ($resolvedSource) {
+    $sourceFiles = Get-ChildItem -LiteralPath $resolvedSource -File -Recurse -ErrorAction Stop
+    foreach ($sourceFile in $sourceFiles) {
+        $relativePath = Get-RelativePathNormalized -BasePath $resolvedSource -FullPath $sourceFile.FullName
+        if (Test-DeselectedComponentPath -RelativePath $relativePath -ComponentSelection $componentSelection -PythonMode $pythonMode) {
+            continue
         }
+
+        $destPath = Join-Path $InstallDir $relativePath
+        if (Test-Path -LiteralPath $destPath) {
+            # Skip files that are already in the destination
+            continue
+        }
+
+        $destDir = Split-Path -Parent $destPath
+        if (-not (Test-Path -LiteralPath $destDir)) {
+            New-Item -ItemType Directory -Force -Path $destDir | Out-Null
+        }
+        Copy-Item -LiteralPath $sourceFile.FullName -Destination $destPath -Force -ErrorAction Stop
+        $repairedFiles += $relativePath
+        Write-Host "[INFO] Restored missing file: $relativePath"
     }
+} elseif (-not $resolvedSource) {
+    Write-Warning "Missing files could not be restored: no package source available."
 }
 
 $genAiInstalled = (Test-Path (Join-Path $InstallDir "openvino_genai.dll")) -and (Test-Path (Join-Path $InstallDir "openvino_tokenizers.dll"))
