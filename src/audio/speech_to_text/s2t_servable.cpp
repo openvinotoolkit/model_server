@@ -97,6 +97,38 @@ absl::Status SttServable::updateTranscriptionConfig(ov::genai::ASRGenerationConf
         SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received language: {}", language);
         config.language = "<|" + language + "|>";
     }
+    const std::string prompt = payload.multipartParser->getFieldByName("prompt");
+    if (!prompt.empty()) {
+        SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received prompt: {}", prompt);
+        config.initial_prompt = prompt;
+        config.context = prompt;
+    }
+    std::vector<std::string> keywords = payload.multipartParser->getArrayFieldByName("keywords[]");
+    if (keywords.empty()) {
+        keywords = payload.multipartParser->getArrayFieldByName("keywords");
+    }
+    if (!keywords.empty()) {
+        std::string hotwords;
+        for (const auto& keyword : keywords) {
+            if (keyword.empty()) {
+                continue;
+            }
+            if (!hotwords.empty()) {
+                hotwords += ' ';
+            }
+            hotwords += keyword;
+        }
+        if (!hotwords.empty()) {
+            SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received keywords: {}", hotwords);
+            config.hotwords = std::move(hotwords);
+        }
+    } else {
+        const std::string hotwords = payload.multipartParser->getFieldByName("hotwords");
+        if (!hotwords.empty()) {
+            SPDLOG_LOGGER_TRACE(s2t_calculator_logger, "Received hotwords: {}", hotwords);
+            config.hotwords = hotwords;
+        }
+    }
     std::vector<std::string> timestampsTypes = payload.multipartParser->getArrayFieldByName("timestamp_granularities[]");
     config.word_timestamps = false;
     for (const auto& timestampsType : timestampsTypes) {
