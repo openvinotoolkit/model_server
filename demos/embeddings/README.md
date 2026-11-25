@@ -29,7 +29,7 @@ docker run --user $(id -u):$(id -g) --rm -v ${HOME}/models:/models:rw openvino/m
 
 **On Bare Metal (Windows)**
 ```bat
-mkdir C:/models
+mkdir C:\models
 ovms --pull --model_repository_path C:/models --source_model OpenVINO/Qwen3-Embedding-0.6B-int8-ov --pooling LAST --task embeddings
 ovms --add_to_config --config_path C:/models/config.json --model_name OpenVINO/Qwen3-Embedding-0.6B-int8-ov --model_path OpenVINO/Qwen3-Embedding-0.6B-int8-ov
 ```
