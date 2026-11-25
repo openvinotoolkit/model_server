@@ -123,11 +123,13 @@ extern "C" OVMS_IMAGE_EXPORT int ovmsResizeOpenCvV1(
         cv::Mat output = wrapNhwc(*destination);
         if (input.channels() != output.channels())
             throw std::runtime_error("OpenCV resize requires matching channel count");
-        cv::Mat converted;
-        input.convertTo(converted, output.depth());
-        if (converted.size() == output.size()) {
-            converted.copyTo(output);
+        if (input.size() == output.size()) {
+            input.convertTo(output, output.depth());
+        } else if (input.depth() == output.depth()) {
+            cv::resize(input, output, output.size());
         } else {
+            cv::Mat converted;
+            input.convertTo(converted, output.depth());
             cv::resize(converted, output, output.size());
         }
         if (output.data != destination->data())

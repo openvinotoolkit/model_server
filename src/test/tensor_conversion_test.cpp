@@ -367,7 +367,7 @@ TEST(ImagePreprocessingCompatibility, OpenCvPluginMatchesConvertThenResize) {
     random.fill(source, cv::RNG::UNIFORM, 0, 256);
     ov::Tensor input(ov::element::u8, {1, 13, 17, 3}, source.data);
     for (const auto& [precision, depth] : {std::pair{ov::element::u8, CV_8U}, std::pair{ov::element::f32, CV_32F}}) {
-        for (const auto& size : {cv::Size(7, 5), cv::Size(31, 27)}) {
+        for (const auto& size : {cv::Size(7, 5), cv::Size(17, 13), cv::Size(31, 27)}) {
             SCOPED_TRACE(::testing::Message() << "precision=" << precision << " size=" << size);
             cv::Mat converted, reference;
             source.convertTo(converted, depth);
