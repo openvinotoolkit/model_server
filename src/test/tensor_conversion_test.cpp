@@ -299,8 +299,9 @@ TYPED_TEST(NativeFileInputConversionTest, positive_resizing_with_dynamic_shape_c
 }
 
 TYPED_TEST(NativeFileInputConversionTest, positive_resizing_with_dynamic_shape_cols_bigger) {
-    // OpenVINO rounds the float interpolation result; OpenCV's fixed-point u8 path was one lower in two channels.
-    uint8_t rgb_expected_tensor[] = {0x96, 0x8f, 0xf3, 0x98, 0x9a, 0x81, 0x9e, 0xaa, 0x12};
+    // OpenVINO rounds the float interpolation result; OpenCV's fixed-point u8 path is one lower in two channels.
+    const bool openCvResize = image_utils::openCvImageDecoderUnavailableReason().empty();
+    const std::vector<uint8_t> rgb_expected_tensor = openCvResize ? std::vector<uint8_t>{0x96, 0x8f, 0xf3, 0x98, 0x9a, 0x81, 0x9d, 0xa9, 0x12} : std::vector<uint8_t>{0x96, 0x8f, 0xf3, 0x98, 0x9a, 0x81, 0x9e, 0xaa, 0x12};
 
     size_t filesize;
     std::unique_ptr<char[]> image_bytes;
@@ -340,6 +341,29 @@ TEST(ImagePreprocessingCompatibility, LinearIntegerResizeDiffersFromOpenCvByAtMo
                 cv::Mat actual(size.height, size.width, source.type(), output.data());
                 EXPECT_LE(cv::norm(reference, actual, cv::NORM_INF), 1);
             }
+        }
+    }
+}
+
+TEST(ImagePreprocessingCompatibility, OpenCvPluginMatchesConvertThenResize) {
+    if (!image_utils::openCvImageDecoderUnavailableReason().empty()) {
+        GTEST_SKIP() << "Requires the OpenCV image decoder plugin";
+    }
+    cv::RNG random(12345);
+    cv::Mat source(13, 17, CV_8UC3);
+    random.fill(source, cv::RNG::UNIFORM, 0, 256);
+    ov::Tensor input(ov::element::u8, {1, 13, 17, 3}, source.data);
+    for (const auto& [precision, depth] : {std::pair{ov::element::u8, CV_8U}, std::pair{ov::element::f32, CV_32F}}) {
+        for (const auto& size : {cv::Size(7, 5), cv::Size(31, 27)}) {
+            SCOPED_TRACE(::testing::Message() << "precision=" << precision << " size=" << size);
+            cv::Mat converted, reference;
+            source.convertTo(converted, depth);
+            cv::resize(converted, reference, size);
+            ov::Tensor output;
+            const auto status = image_utils::preprocessImage(input, output, precision, size.height, size.width);
+            ASSERT_TRUE(status.ok()) << status.string();
+            cv::Mat actual(size.height, size.width, reference.type(), output.data());
+            EXPECT_EQ(cv::norm(reference, actual, cv::NORM_INF), 0);
         }
     }
 }
