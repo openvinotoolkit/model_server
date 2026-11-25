@@ -155,7 +155,7 @@ Task specific parameters for different tasks (text generation/image generation/e
 | option                                | Value format | Description                                                                                                                |
 |---------------------------------------|--------------|----------------------------------------------------------------------------------------------------------------------------|
 | `--max_num_seqs`                      | `integer`    | The maximum number of sequences that can be processed together. Default: 256.                                              |
-| `--pipeline_type`                     | `string`     | Type of the pipeline to be used. Choices: `LM`, `LM_CB`, `VLM`, `VLM_CB`, `OMNI`, `AUTO`. Default: `AUTO`. `OMNI` is stateful and supports speech output; `VLM_CB` supports multimodal input with continuous batching and text-only output. |
+| `--pipeline_type`                     | `string`     | Type of the pipeline to be used. Choices: `LM`, `LM_CB`, `VLM`, `VLM_CB`, `AUTO`. Default: `AUTO`.                         |
 | `--enable_prefix_caching`             | `bool`       | Enables algorithm to cache the prompt tokens. Default: true.                                                               |
 | `--max_num_batched_tokens`            | `integer`    | The maximum number of tokens that can be batched together.                                                                 |
 | `--cache_size`                        | `integer`    | KV Cache size in GB. Default: 0 which is a dynamic allocation.                              |

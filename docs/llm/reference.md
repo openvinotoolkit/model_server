@@ -27,7 +27,8 @@ The second part identifies the GenAI engine. Continuous batching is generally se
 
 Omni models auto-detect the stateful `OMNI` pipeline; they can also be explicitly loaded as `VLM_CB` for continuous batching with multimodal input, but without speech output.
 
-A user normally does not need to select the servable type. It is inferred from the model directory contents and target device. An explicit pipeline type overrides that inference; use this only when the requested deployment mode is supported by the model assets. See the [Omni model documentation](../omni.md) for the two deployment modes.
+User does not have to explicitly select servable type. It is inferred based on model directory contents and selected target device.
+Model directory contents determine if model can work only with text or visual input as well. As for target device, setting it to `NPU` will always pick Stateful servable, while any other device will result in deploying Continuous Batching servable.
 
 Stateful servables ignore most of the configuration used by Continuous Batching. Some servable types have additional limitations mentioned in the limitations section at the end of this document.
 

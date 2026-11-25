@@ -50,14 +50,14 @@ Check also the demo of [image generation](../demos/image_generation/README.md)
 ## Speech recognition
 
 The implementation is compatible with the OpenAI API for [audio/transcriptions](./model_server_rest_api_speech_to_text.md#transcription) and [audio/translations](./model_server_rest_api_speech_to_text.md#translation).
-It supports a wide range of speech recognition models from Hugging Face Hub. Qwen3 ASR can also use the `VLM_CB` continuous-batching pipeline for concurrent transcription workloads, while VLM and Omni models can consume audio as message content.
+It supports a wide range of speech recognition models from Hugging Face Hub.
 
 Check also the demo of [transcription](../demos/audio/README.md#transcription) and [translation](../demos/audio/README.md#translation).
 
 ## Speech generation
 
 The implementation is compatible with the OpenAI API for [audio/speech](./model_server_rest_api_text_to_speech.md).
-It supports Kokoro and Qwen3 TTS `CustomVoice` and `VoiceDesign` variants. Qwen3 TTS `Base` is not currently supported because its reference-audio inputs do not fit the OpenAI-compatible request schema.
+It supports Kokoro and Qwen3 TTS `CustomVoice` and `VoiceDesign` variants.
 
 Check also the demo of [speech generation](../demos/audio/README.md#speech-generation).
 

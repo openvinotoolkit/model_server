@@ -7,7 +7,7 @@ OpenVINO Model Server supports **Qwen3-Omni** models — multimodal models that 
 - Qwen3-Omni Dense (INT4/INT8/FP16/FP32)
 - Qwen3-Omni MoE (INT4/INT8/FP16/FP32) - **does not work yet**
 
-Preconverted OpenVINO models are expected to be published in the [OpenVINO Hugging Face organization](https://huggingface.co/OpenVINO). Until the desired model is available there, use a model prepared locally in the supported OpenVINO model format.
+A preconverted model is available at [OpenVINO/Qwen3-Omni-30B-A3B-Instruct-int4-ov](https://huggingface.co/OpenVINO/Qwen3-Omni-30B-A3B-Instruct-int4-ov). Hugging Face access is required while the model repository is private.
 
 ## Quick Start
 
@@ -180,9 +180,8 @@ When `voice` is omitted, the model's default speaker is used.
 
 ## Current Limitations
 
-- Native Omni serving is stateful; there is no `OMNI_CB` pipeline.
-- Speech generation starts after text generation rather than interleaving text and audio tokens.
-- Speech-output performance is still under active development and should be benchmarked for the target workload.
+- **Speech generation starts after text generation** — not interleaved
+- **Performance** — it is still under ongoing development and may be slower than expected
 
 ## Demo Clients
 

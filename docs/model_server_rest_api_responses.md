@@ -89,7 +89,7 @@ curl http://localhost/v3/responses \
 }'
 ```
 
-VLM and Omni models with an audio encoder can also accept base64-encoded `wav` or `mp3` files. Add an `input_audio` content part to the same message array:
+Models with audio input capabilities, for example Qwen3-Omni or Gemma 4, can also accept base64-encoded `wav` or `mp3` files. Add an `input_audio` content part to the same message array:
 
 ```json
 {
@@ -110,7 +110,7 @@ Audio parts can be combined with `input_text` and `input_image`. Generated Respo
 | Param | OpenVINO Model Server | OpenAI /responses API | Type | Description |
 |-----|----------|----------|---------|-----|
 | model | ✅ | ✅ | string (required) | Name of the model to use. From administrator point of view it is the name assigned to a MediaPipe graph configured to schedule generation using desired model. |
-| input | ✅ | ✅ | string or array (required) | The input to generate a response for. Accepts a plain string or an array of message items with `input_text`, `input_image`, and model-supported `input_audio` types. |
+| input | ✅ | ✅ | string or array (required) | The input to generate a response for. Accepts a plain string or an array of message items with `input_text`, `input_image`, and `input_audio` types. |
 | stream | ✅ | ✅ | bool (optional, default: `false`) | If set to true, partial message deltas will be sent to the client as [server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#event_stream_format) as they become available, with the stream terminated by a `data: [DONE]` message. See [Streaming events](#streaming-events) section for details. |
 | max_output_tokens | ✅ | ✅ | integer (optional) | An upper bound for the number of tokens that can be generated. If not set, the generation will stop once `EOS` token is generated. If `max_tokens_limit` is set in `graph.pbtxt` it will be the default value. |
 | stop | ✅ | ❌ | string/array of strings (optional) | Up to 4 sequences where the API will stop generating further tokens. If `stream` is set to `false` matched stop string **is not** included in the output by default. If `stream` is set to `true` matched stop string **is** included in the output by default. It can be changed with `include_stop_str_in_output` parameter, but for `stream=true` setting `include_stop_str_in_output=false` is invalid. |

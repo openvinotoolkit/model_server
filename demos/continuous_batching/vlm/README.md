@@ -216,7 +216,7 @@ print(response.text)
 Models with an audio encoder can process `input_audio` content parts. Encode the audio as base64 and set its container format:
 
 ```bash
-AUDIO_DATA=$(base64 -w 0 recording.wav)
+AUDIO_DATA=$(base64 -w 0 ../../omni/recording.wav)
 curl http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d "{
@@ -232,7 +232,7 @@ curl http://localhost:8000/v1/chat/completions \
   }"
 ```
 
-The same audio part shape is supported by the Responses API. Audio support depends on the selected model having `openvino_audio_embeddings_model.xml` or `openvino_audio_encoder_model.xml`; a text-and-image-only VLM will reject the audio part.
+The same audio part shape is supported by the Responses API. Audio support depends on the selected model having `openvino_audio_embeddings_model.xml` or `openvino_audio_encoder_model.xml`; a model without audio input capability will reject the audio part.
 
 :::
 :::{dropdown} **Streaming request with OpenAI client using chat/completions**

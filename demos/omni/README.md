@@ -2,7 +2,7 @@
 
 Example clients for Qwen3-Omni models served by OpenVINO Model Server. The native Omni pipeline accepts text, images, and audio and can return both text and generated speech.
 
-Preconverted OpenVINO Omni models are expected to be available from the [OpenVINO Hugging Face organization](https://huggingface.co/OpenVINO). Until the desired model is published, use a locally prepared OpenVINO model directory.
+This demo uses the preconverted [OpenVINO/Qwen3-Omni-30B-A3B-Instruct-int4-ov](https://huggingface.co/OpenVINO/Qwen3-Omni-30B-A3B-Instruct-int4-ov) model. Hugging Face access is required while the model repository is private.
 
 ## Prerequisites
 
@@ -24,7 +24,7 @@ OVMS auto-detects the native, stateful `OMNI` pipeline from the model's talker a
 mkdir -p ${HOME}/models
 docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
   openvino/model_server:weekly --rest_port 8000 \
-  --source_model <openvino-omni-model> \
+  --source_model OpenVINO/Qwen3-Omni-30B-A3B-Instruct-int4-ov \
   --model_repository_path /models \
   --task text_generation
 ```
@@ -35,7 +35,7 @@ docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:r
 
 ```text
 ovms --rest_port 8000 \
-  --source_model <openvino-omni-model> \
+  --source_model OpenVINO/Qwen3-Omni-30B-A3B-Instruct-int4-ov \
   --model_repository_path <models-directory> \
   --task text_generation
 ```
@@ -94,7 +94,7 @@ python3 responses.py --audio recording.wav --prompt "what is in the recording?" 
 
 ## Available Voices
 
-`f04`, `f245`, `f37`, `m02`, `m31`, `m36`, `br_f019` (model-dependent). Voice selection applies only to the native `OMNI` pipeline.
+`f04`, `f245`, `f37`, `m02`, `m31`, `m36`, `br_f019` (model-dependent).
 
 ## API Reference
 

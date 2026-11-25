@@ -198,7 +198,7 @@ curl http://localhost/v3/chat/completions \
 ```
 **Note**: check `--allowed_local_media_path` parameter described [here](parameters.md)
 
-VLM and Omni models with an audio encoder can accept base64-encoded `wav` or `mp3` files as `input_audio` content parts. Other VLM models reject this content type.
+Models with audio input capabilities, for example Qwen3-Omni or Gemma 4, can accept base64-encoded `wav` or `mp3` files as `input_audio` content parts. Other models reject this content type.
 
 ```json
 {
