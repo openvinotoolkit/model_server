@@ -87,14 +87,14 @@ JOBS ?= $(CORES_TOTAL)
 
 
 # Image on which OVMS is compiled. If DIST_OS is not set, it's also used for a release image.
-# Currently supported BASE_OS values are: ubuntu26 ubuntu24 ubuntu22 redhat
+# Currently supported BASE_OS values are: ubuntu26 ubuntu24 ubuntu22 redhat redhat9 redhat10
 BASE_OS ?= ubuntu24
 
 # do not change this; change versions per OS a few lines below (BASE_OS_TAG_*)!
 BASE_OS_TAG ?= latest
 
 BASE_OS_TAG_UBUNTU ?= 24.04
-BASE_OS_TAG_REDHAT ?= 9.9
+BASE_OS_TAG_REDHAT ?= $(if $(filter redhat10,$(BASE_OS)),10.3,9.9)
 
 INSTALL_RPMS_FROM_URL ?=
 BUILD_IMAGE ?= build
@@ -178,7 +178,7 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
       $(error OV_USE_BINARY = 0 not supported on Ubuntu22 OS)
     endif
   endif
-else ifeq ($(findstring redhat,$(BASE_OS)),redhat)
+else ifneq ($(filter redhat redhat9 redhat10,$(BASE_OS)),)
   TARGET_DISTRO_PARAMS = " --//:distro=redhat"
 else
   $(error BASE_OS must be either ubuntu or redhat)
@@ -222,15 +222,17 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
 	DLDT_PACKAGE_SHA256 ?= $(DLDT_PACKAGE_SHA256_UBUNTU22)
   endif
 endif
-ifeq ($(BASE_OS),redhat)
+ifneq ($(filter redhat redhat9 redhat10,$(BASE_OS)),)
   BASE_OS_TAG=$(BASE_OS_TAG_REDHAT)
-  OS=redhat
-  BASE_IMAGE ?= registry.access.redhat.com/ubi9/ubi:$(BASE_OS_TAG_REDHAT)
-  BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
+	OS=$(if $(filter redhat,$(BASE_OS)),redhat9,$(BASE_OS))
+	REDHAT_MAJOR=$(if $(filter redhat10,$(BASE_OS)),10,9)
+	BASE_IMAGE ?= registry.access.redhat.com/ubi$(REDHAT_MAJOR)/ubi:$(BASE_OS_TAG_REDHAT)
+	BASE_IMAGE_RELEASE=registry.access.redhat.com/ubi$(REDHAT_MAJOR)/ubi-minimal:$(BASE_OS_TAG_REDHAT)
   DIST_OS=redhat
   DLDT_PACKAGE_URL ?= $(DLDT_PACKAGE_URL_RHEL) # not used
 	DLDT_PACKAGE_SHA256 ?= $(DLDT_PACKAGE_SHA256_RHEL)
-  INSTALL_DRIVER_VERSION ?= $(GPU_DRIVER_VERSION_REDHAT)
+	INSTALL_DRIVER_VERSION ?= "26.40.40196.8"
+    INSTALL_DRIVER_VERSION ?= $(GPU_DRIVER_VERSION_REDHAT)
 endif
 
 OVMS_CPP_DOCKER_IMAGE ?= openvino/model_server
@@ -298,7 +300,7 @@ BUILD_ARGS = --build-arg http_proxy=$(HTTP_PROXY)\
 	--build-arg PROJECT_VERSION=$(PROJECT_VERSION)\
 	--build-arg OPENCV_VERSION=$(OPENCV_VERSION)\
 	--build-arg BASE_IMAGE=$(BASE_IMAGE)\
-	--build-arg BASE_OS=$(BASE_OS)\
+	--build-arg BASE_OS=$(OS)\
 	--build-arg INSTALL_RPMS_FROM_URL=$(INSTALL_RPMS_FROM_URL)\
 	--build-arg INSTALL_DRIVER_VERSION=$(INSTALL_DRIVER_VERSION)\
 	--build-arg RELEASE_BASE_IMAGE=$(BASE_IMAGE_RELEASE)\
@@ -426,7 +428,7 @@ ifeq ($(FUZZER_BUILD),1)
   ifeq ($(CHECK_COVERAGE),1)
 	@echo "Cannot check coverage with fuzzer build"; exit 1 ;
   endif
-  ifeq ($(BASE_OS),redhat)
+  ifneq ($(filter redhat redhat9 redhat10,$(BASE_OS)),)
 	@echo "Cannot run fuzzer with redhat"; exit 1 ;
   endif
 endif
@@ -434,8 +436,8 @@ ifeq ($(NO_DOCKER_CACHE),true)
 	$(eval NO_CACHE_OPTION:=--no-cache)
 	@echo "Docker image will be rebuilt from scratch"
 	@docker pull $(BASE_IMAGE)
-  ifeq ($(BASE_OS),redhat)
-	@docker pull registry.access.redhat.com/ubi9/ubi-minimal:$(BASE_OS_TAG_REDHAT)
+  ifneq ($(filter redhat redhat9 redhat10,$(BASE_OS)),)
+	@docker pull $(BASE_IMAGE_RELEASE)
   endif
 endif
 
@@ -476,13 +478,19 @@ targz_package:
 	gzip ovms.tar && \
 	rm -f libovms_shared.so && \
 	sha256sum ovms.tar.gz > ovms.tar.gz.sha256
+ifneq ($(filter redhat redhat9 redhat10,$(BASE_OS)),)
+	docker $(BUILDX) build -f Dockerfile.$(DIST_OS) . \
+		$(BUILD_ARGS) \
+		-t $(OVMS_CPP_DOCKER_IMAGE)-drivers:$(OVMS_CPP_IMAGE_TAG) \
+		--target=drivers-pkg && \
+	ID=$$(docker create $(OVMS_CPP_DOCKER_IMAGE)-drivers:$(OVMS_CPP_IMAGE_TAG)) && \
+	docker cp $$ID:/ovms-drivers.tar.gz dist/$(OS)/ && \
+	docker rm $$ID && \
+	cd dist/$(OS) && sha256sum ovms-drivers.tar.gz > ovms-drivers.tar.gz.sha256
+endif
 
 ovms_release_images:
-ifeq ($(BASE_OS),redhat)
-	$(eval NPU:=0)
-else
 	$(eval NPU:=1)
-endif
 	docker $(BUILDX) build $(NO_CACHE_OPTION) -f Dockerfile.$(DIST_OS) . \
 		$(BUILD_ARGS) \
 		-t $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) \
@@ -507,9 +515,9 @@ ifeq ($(findstring ubuntu,$(BASE_OS)),ubuntu)
 	@docker run -u 0 --entrypoint bash -v ${PWD}:/ovms $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) -c 'sed -Ei "s/^Types: deb$$/Types: deb deb-src/" /etc/apt/sources.list.d/ubuntu.sources ; apt update ; cd /ovms ; d="ovms_ubuntu_$(OVMS_CPP_IMAGE_TAG)" ;mkdir "$$d" ; cd "$$d" ; for I in `cat /ovms/sources.txt | cut -d"/" -f5`; do apt-get source -q --download-only $$I; done'
 	@rm ubuntu.txt sources.txt
 endif
-ifeq ($(BASE_OS),redhat)
+ifneq ($(filter redhat redhat9 redhat10,$(BASE_OS)),)
 	touch base_packages.txt
-	docker run registry.access.redhat.com/ubi9-minimal:9.9 rpm -qa  --qf "%{NAME}\n" | sort > base_packages.txt
+	docker run $(BASE_IMAGE_RELEASE) rpm -qa  --qf "%{NAME}\n" | sort > base_packages.txt
 	docker run --entrypoint rpm $(OVMS_CPP_DOCKER_IMAGE):$(OVMS_CPP_IMAGE_TAG)$(IMAGE_TAG_SUFFIX) -qa  --qf "%{NAME}\n" | sort > all_packages.txt
 	rm -rf ovms_rhel_$(OVMS_CPP_IMAGE_TAG)
 	mkdir ovms_rhel_$(OVMS_CPP_IMAGE_TAG)

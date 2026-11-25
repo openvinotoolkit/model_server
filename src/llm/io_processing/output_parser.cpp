@@ -185,7 +185,7 @@ std::optional<Delta> OutputParser::parseReasoningChunk(const std::vector<int64_t
     return result;
 }
 
-OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName,
+OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string& toolParserName, const std::string& reasoningParserName,
     const ToolsSchemas_t& toolNameSchemaMap, const std::string& contentParserName) :
     tokenizer(tokenizer) {
     if (toolParserName == "llama3") {

@@ -965,7 +965,7 @@ StatusCode AzureStorageFile::downloadFileFolderTo(const std::string& local_path)
     return StatusCode::AS_FILE_NOT_FOUND;
 }
 
-std::vector<std::string> AzureStorageAdapter::FindSubdirectories(std::string path) {
+std::vector<std::string> AzureStorageAdapter::FindSubdirectories(const std::string& path) {
     std::vector<std::string> output;
 
     std::string::size_type prev_pos = 0, pos = 0;
@@ -1049,7 +1049,7 @@ std::shared_ptr<AzureStorageAdapter> AzureStorageFactory::getNewAzureStorageObje
     return std::make_shared<AzureStorageFile>(path, connection_string);
 }
 
-bool AzureStorageFactory::isBlobStoragePath(std::string path) {
+bool AzureStorageFactory::isBlobStoragePath(const std::string& path) {
     return (path.find(FileSystem::AZURE_URL_BLOB_PREFIX) != std::string::npos);
 }
 

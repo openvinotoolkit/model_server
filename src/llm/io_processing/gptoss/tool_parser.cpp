@@ -28,6 +28,8 @@
 
 namespace ovms {
 
+static const std::string FUNCTIONS_PREFIX = "functions.";
+
 /*
     Prepares document with {"arguments": "escaped_chunk"}
     String gets escaped automatically by rapidjson
@@ -152,7 +154,7 @@ GptOssToolParser::StepResult GptOssToolParser::consumeMessage(std::string& chunk
 }
 
 GptOssToolParser::StepResult GptOssToolParser::consumePartialHeader(std::string chunk) {
-    if (!isStreamingFunctionName && startsWith(cache, "functions.")) {
+    if (!isStreamingFunctionName && startsWith(cache, FUNCTIONS_PREFIX)) {
         isStreamingFunctionName = true;
         functionNameCache.clear();
         const std::size_t dotPos = chunk.find('.');
@@ -179,9 +181,9 @@ bool GptOssToolParser::consumeCompleteHeader(std::string& chunk, std::optional<D
     const std::size_t constrainPos = chunk.find(openai::Harmony::TOKEN_CONSTRAIN);
     const std::size_t messagePos = chunk.find(openai::Harmony::TOKEN_MESSAGE);
     const std::size_t headerEnd = std::min(constrainPos, messagePos);
-    const std::size_t functionPos = chunk.find("functions.");
+    const std::size_t functionPos = chunk.find(FUNCTIONS_PREFIX);
     if (functionPos != std::string::npos && headerEnd != std::string::npos && functionPos < headerEnd) {
-        const std::size_t nameStart = functionPos + std::string("functions.").size();
+        const std::size_t nameStart = functionPos + FUNCTIONS_PREFIX.size();
         const std::size_t nameEnd = chunk.find_first_of(" \t\n\r<", nameStart);
         functionNameCache = chunk.substr(nameStart, nameEnd == std::string::npos ? std::string::npos : nameEnd - nameStart);
         if (!functionNameCache.empty()) {
