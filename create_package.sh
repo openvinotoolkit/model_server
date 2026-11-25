@@ -155,7 +155,7 @@ if [ -n "$ESPEAK_LICENSE_SRC" ] && [ -f "$ESPEAK_LICENSE_SRC" ] ; then
 	cp -v "$ESPEAK_LICENSE_SRC" /ovms/release_files/thirdparty-licenses/espeak-ng.LICENSE.txt
 fi
 
-if [ "$BASE_OS" == "redhat" ] ; then cp -P /usr/lib64/libOpenCL.so* /ovms_release/lib/ ; fi
+if [[ "$BASE_OS" == redhat* ]] ; then cp -P /usr/lib64/libOpenCL.so* /ovms_release/lib/ ; fi
 if [[ "$BASE_OS" =~ "ubuntu" ]] ; then cp -P /usr/lib/x86_64-linux-gnu/libOpenCL.so* /ovms_release/lib/ ; fi
 
 if [ "$FUZZER_BUILD" == "0" ]; then find /ovms/bazel-bin/src -name 'ovms' -type f -exec cp -v {} /ovms_release/bin \; ; fi;

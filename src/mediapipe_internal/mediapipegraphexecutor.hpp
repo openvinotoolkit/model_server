@@ -81,7 +81,7 @@ struct ActiveInferenceGuard {
             if (lastActivityTimeNs) {
                 lastActivityTimeNs->store(nanosSinceEpochStart(), std::memory_order_relaxed);
             }
-            counter->fetch_sub(1, std::memory_order_acq_rel);
+            (void)counter->fetch_sub(1, std::memory_order_acq_rel);
         }
     }
 

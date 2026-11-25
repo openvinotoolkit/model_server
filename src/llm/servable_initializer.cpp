@@ -456,7 +456,7 @@ ChatTemplateEngine GenAiServableInitializer::determineChatTemplateModeWithRuntim
     return ChatTemplateEngine::MINJA;
 }
 
-Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string graphPath) {
+Status parseModelsPath(std::string& outPath, const std::string& modelsPath, const std::string& graphPath) {
     auto fsModelsPath = std::filesystem::path(modelsPath);
     if (fsModelsPath.is_relative()) {
         outPath = (std::filesystem::path(graphPath) / fsModelsPath).string();
@@ -610,7 +610,7 @@ Status configureVideoInputProcessing(VisionInputConfig& config, const mediapipe:
 }
 
 Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig,
-    std::string graphPath, std::optional<LLMMetricReporterFactory> createMetricReporter) {
+    const std::string& graphPath, std::optional<LLMMetricReporterFactory> createMetricReporter) {
     mediapipe::LLMCalculatorOptions nodeOptions;
     graphNodeConfig.node_options(0).UnpackTo(&nodeOptions);
     Status status = StatusCode::OK;
