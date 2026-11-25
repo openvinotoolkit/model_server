@@ -1,4 +1,4 @@
-; Copyright (c) 2026 Intel Corporation
+﻿; Copyright (c) 2026 Intel Corporation
 ;
 ; Licensed under the Apache License, Version 2.0 (the "License");
 ; you may not use this file except in compliance with the License.
@@ -167,10 +167,14 @@ var
   LegacyInstallMigrationPending: Boolean;
   LegacyInstallDirToMigrate: String;
   LegacyUninstallStringToMigrate: String;
+  AllowUserWritableServiceLocationCheck: TNewCheckBox;
 
 procedure StopOvmsProcessButtonClick(Sender: TObject); forward;
 procedure UpdateOvmsProcessStatus; forward;
 function RunExistingUninstaller(UninstallString: String): Boolean; forward;
+procedure UpdateUserWritableServiceLocationControl; forward;
+procedure AllowUserWritableServiceLocationCheckClick(Sender: TObject); forward;
+procedure UpdateRuntimePageControls; forward;
 
 function BoolToJson(Value: Boolean): String;
 begin
@@ -676,7 +680,7 @@ begin
     MsgBox(Message, mbError, MB_OK);
   end;
 
-  UpdateOvmsServiceStatus;
+  UpdateRuntimePageControls;
 end;
 
 function GetDefaultModelRepositoryPath: String;
@@ -727,7 +731,9 @@ begin
       '"paddle":' + BoolToJson(WizardIsComponentSelected('paddle_frontend')) + ',' +
       '"tensorflow":' + BoolToJson(WizardIsComponentSelected('tensorflow_frontend')) + ',' +
       '"tensorflow_lite":' + BoolToJson(WizardIsComponentSelected('tensorflow_frontend')) +
-    '}' +
+    '},' +
+    '"allowUserWritableServiceLocation":' +
+      BoolToJson(Assigned(AllowUserWritableServiceLocationCheck) and AllowUserWritableServiceLocationCheck.Checked) +
     '}';
 
   SaveStringToFile(FilePath, Json, False);
@@ -1039,6 +1045,16 @@ begin
   Lbl.WordWrap := True;
   Lbl.Caption := 'Run "Start OVMS Server" from Start Windows Menu.';
   Lbl.Height := ScaleY(26);
+
+  AllowUserWritableServiceLocationCheck := TNewCheckBox.Create(AdditionalTasksPage);
+  AllowUserWritableServiceLocationCheck.Parent := AdditionalTasksPage.Surface;
+  AllowUserWritableServiceLocationCheck.Left := ScaleX(18);
+  AllowUserWritableServiceLocationCheck.Top := Lbl.Top + Lbl.Height + ScaleY(8);
+  AllowUserWritableServiceLocationCheck.Width := AdditionalTasksPage.SurfaceWidth - ScaleX(18);
+  AllowUserWritableServiceLocationCheck.Checked := False;
+  AllowUserWritableServiceLocationCheck.Caption := 'Allow OVMS service installation in a user-writable location';
+  AllowUserWritableServiceLocationCheck.Enabled := True;
+  AllowUserWritableServiceLocationCheck.OnClick := @AllowUserWritableServiceLocationCheckClick;
 end;
 
 function GetSelectedModelRepositoryPath: String;
@@ -1157,9 +1173,9 @@ begin
   begin
     if Assigned(SettingsSummaryEdit) then
       SettingsSummaryEdit.Text := GetOvmsSettingsSummary;
-    UpdateOvmsServiceStatus;
-    UpdateOvmsProcessStatus;
+    UpdateRuntimePageControls;
   end;
+  UpdateUserWritableServiceLocationControl;
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
@@ -1223,6 +1239,7 @@ var
   PythonVariant: String;
   ResultCode: Integer;
   RecoveryResultCode: Integer;
+  AllowUserWritableLocationSwitch: String;
 begin
   if CurStep = ssPostInstall then
   begin
@@ -1272,43 +1289,50 @@ begin
     begin
       SaveStringToFile(GetSetupLogPath, '[SETUP] Stage: configure OVMS Windows service' + #13#10, True);
       ServiceScriptPath := ExpandConstant('{app}\scripts\install-service.ps1');
-      if FileExists(ServiceScriptPath) then
+      AllowUserWritableLocationSwitch := '';
+      if Assigned(AllowUserWritableServiceLocationCheck) and AllowUserWritableServiceLocationCheck.Checked then
       begin
-        Exec('cmd.exe',
-          '/C powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + ServiceScriptPath + '" -InstallDir "' + ExpandConstant('{app}') + '" -DataDir "' + ExpandConstant('{commonappdata}\OVMS') + '" -SetupLogPath "' + GetSetupLogPath + '"',
-          '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-        if ResultCode <> 0 then
+        AllowUserWritableLocationSwitch := ' -AllowUserWritableServiceLocation';
+        SaveStringToFile(GetSetupLogPath,
+          '[SETUP] Administrator override enabled for user-writable OVMS install location: ' + ExpandConstant('{app}') + #13#10,
+          True);
+      end;
+
+      Exec('cmd.exe',
+        '/C powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + ServiceScriptPath + '" -InstallDir "' + ExpandConstant('{app}') + '" -DataDir "' + ExpandConstant('{commonappdata}\OVMS') + '"' +
+        ' -SetupLogPath "' + GetSetupLogPath + '"' + AllowUserWritableLocationSwitch,
+        '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+      if ResultCode <> 0 then
+      begin
+        SaveStringToFile(GetSetupLogPath, '[SETUP] Service setup failed. Attempting run-mode recovery to user-login.' + #13#10, True);
+
+        PythonVariant := GetSelectedPythonVariant;
+        if PythonVariant = '' then
+          PythonVariant := 'none';
+
+        ConfigureScriptPath := ExpandConstant('{app}\scripts\configure-ovms.ps1');
+        RecoveryResultCode := 1;
+        if FileExists(ConfigureScriptPath) then
         begin
-          SaveStringToFile(GetSetupLogPath, '[SETUP] Service setup failed. Attempting run-mode recovery to user-login.' + #13#10, True);
+          Exec('cmd.exe',
+            '/C powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + ConfigureScriptPath + '" -InstallDir "' + ExpandConstant('{app}') + '" -DataDir "' + ExpandConstant('{localappdata}\OVMS') + '" -ModelRepositoryPath "' + GetSelectedModelRepositoryPath + '" -PythonVariant "' + PythonVariant + '" -RunMode "user-login" -SetupLogPath "' + GetSetupLogPath + '"',
+            '', SW_HIDE, ewWaitUntilTerminated, RecoveryResultCode);
+        end;
 
-          PythonVariant := GetSelectedPythonVariant;
-          if PythonVariant = '' then
-            PythonVariant := 'none';
-
-          ConfigureScriptPath := ExpandConstant('{app}\scripts\configure-ovms.ps1');
-          RecoveryResultCode := 1;
-          if FileExists(ConfigureScriptPath) then
-          begin
-            Exec('cmd.exe',
-              '/C powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + ConfigureScriptPath + '" -InstallDir "' + ExpandConstant('{app}') + '" -DataDir "' + ExpandConstant('{localappdata}\OVMS') + '" -ModelRepositoryPath "' + GetSelectedModelRepositoryPath + '" -PythonVariant "' + PythonVariant + '" -RunMode "user-login" -SetupLogPath "' + GetSetupLogPath + '"',
-              '', SW_HIDE, ewWaitUntilTerminated, RecoveryResultCode);
-          end;
-
-          if RecoveryResultCode = 0 then
-          begin
-            MsgBox('OVMS service mode was selected, but elevated service setup failed.' + #13#10 +
-              'The installer recovered run mode to Manual - start in terminal.' + #13#10 +
-              'Details were logged to:' + #13#10 + GetSetupLogPath,
-              mbError, MB_OK);
-          end
-          else
-          begin
-            MsgBox('OVMS service mode was selected, but elevated service setup failed.' + #13#10 +
-              'Run-mode recovery to Manual mode also failed, so settings may still indicate service mode.' + #13#10 +
-              'Please run configure-ovms.ps1 manually with -RunMode user-login.' + #13#10 +
-              'Details were logged to:' + #13#10 + GetSetupLogPath,
-              mbError, MB_OK);
-          end;
+        if RecoveryResultCode = 0 then
+        begin
+          MsgBox('OVMS service mode was selected, but elevated service setup failed.' + #13#10 +
+            'The installer recovered run mode to Manual - start in terminal.' + #13#10 +
+            'Details were logged to:' + #13#10 + GetSetupLogPath,
+            mbError, MB_OK);
+        end
+        else
+        begin
+          MsgBox('OVMS service mode was selected, but elevated service setup failed.' + #13#10 +
+            'Run-mode recovery to Manual mode also failed, so settings may still indicate service mode.' + #13#10 +
+            'Please run configure-ovms.ps1 manually with -RunMode user-login.' + #13#10 +
+            'Details were logged to:' + #13#10 + GetSetupLogPath,
+            mbError, MB_OK);
         end;
       end;
     end;
@@ -1420,7 +1444,7 @@ begin
   Exec('powershell.exe',
     '-NoProfile -ExecutionPolicy Bypass -Command "$dest=[IO.Path]::GetFullPath(''' + DestinationPath + ''').TrimEnd(''\\''); Get-Process ovms -ErrorAction SilentlyContinue | Where-Object { try { [IO.Path]::GetFullPath($_.Path).TrimEnd(''\\'').Equals($dest,[StringComparison]::OrdinalIgnoreCase) } catch { $false } } | Stop-Process -Force -ErrorAction SilentlyContinue"',
     '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  UpdateOvmsProcessStatus;
+  UpdateRuntimePageControls;
   MsgBox('Matching OVMS processes were stopped.', mbInformation, MB_OK);
 end;
 
@@ -1440,6 +1464,44 @@ begin
     OvmsProcessStatusLabel.Caption := 'OVMS process from this installation: stopped';
     if Assigned(StopOvmsProcessButton) then
       StopOvmsProcessButton.Enabled := False;
+  end;
+end;
+
+procedure UpdateUserWritableServiceLocationControl;
+begin
+  if not Assigned(AllowUserWritableServiceLocationCheck) then
+    Exit;
+
+  AllowUserWritableServiceLocationCheck.Enabled := True;
+end;
+
+procedure AllowUserWritableServiceLocationCheckClick(Sender: TObject);
+begin
+  if not Assigned(AllowUserWritableServiceLocationCheck) then
+    Exit;
+
+  if AllowUserWritableServiceLocationCheck.Checked then
+    SaveStringToFile(GetSetupLogPath,
+      '[SETUP] Administrator selected the user-writable service-location override.' + #13#10,
+      True)
+  else
+    SaveStringToFile(GetSetupLogPath,
+      '[SETUP] Administrator cleared the user-writable service-location override.' + #13#10,
+      True);
+
+  WriteOptionalInstallSelection;
+end;
+
+procedure UpdateRuntimePageControls;
+begin
+  UpdateOvmsServiceStatus;
+  UpdateOvmsProcessStatus;
+
+  if Assigned(WizardForm) then
+  begin
+    WizardForm.NextButton.Enabled :=
+      (not IsOvmsServiceRunning) and
+      (not IsOvmsProcessAtDestinationRunning);
   end;
 end;
 

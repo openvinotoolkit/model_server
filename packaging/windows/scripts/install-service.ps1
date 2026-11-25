@@ -17,7 +17,8 @@
 param(
     [Parameter(Mandatory = $true)][string]$InstallDir,
     [Parameter(Mandatory = $true)][string]$DataDir,
-    [string]$SetupLogPath = (Join-Path (Split-Path -Parent $PSScriptRoot) "setup.log")
+    [string]$SetupLogPath = (Join-Path (Split-Path -Parent $PSScriptRoot) "setup.log"),
+    [switch]$AllowUserWritableServiceLocation
 )
 
 $ErrorActionPreference = "Stop"
@@ -67,6 +68,9 @@ if (-not (Test-IsAdministrator)) {
             "-DataDir", ('"{0}"' -f $DataDir),
             "-SetupLogPath", ('"{0}"' -f $SetupLogPath)
         )
+        if ($AllowUserWritableServiceLocation) {
+            $argumentList += "-AllowUserWritableServiceLocation"
+        }
 
         $process = Start-Process -FilePath "powershell.exe" -ArgumentList $argumentList -Verb RunAs -PassThru -Wait
         if ($null -eq $process) {
@@ -83,12 +87,18 @@ if (-not (Test-IsAdministrator)) {
 function Test-ProtectedServiceLocation {
     param(
         [Parameter(Mandatory = $true)][string]$Path,
-        [Parameter(Mandatory = $true)][string]$Description
+        [Parameter(Mandatory = $true)][string]$Description,
+        [switch]$AllowUserWritableLocation
     )
 
     $fullPath = [System.IO.Path]::GetFullPath($Path).TrimEnd('\\')
     if (-not (Test-Path -LiteralPath $fullPath)) {
         throw "$Description does not exist: $fullPath"
+    }
+
+    if ($AllowUserWritableLocation) {
+        Write-SetupLog -Message "[WARNING] Administrator override enabled: allowing service installation in user-writable location '$fullPath'. Untrusted users may replace executable or library files." -LogPath $SetupLogPath
+        return
     }
 
     $userProfileRoot = [System.IO.Path]::GetFullPath([Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile)).TrimEnd('\')
@@ -176,15 +186,16 @@ try {
         throw "ovms.exe not found: $ovmsExe"
     }
 
-    Test-ProtectedServiceLocation -Path $InstallDir -Description "OVMS install directory"
-    Test-ProtectedServiceLocation -Path $DataDir -Description "OVMS service data directory"
+    Test-ProtectedServiceLocation -Path $InstallDir -Description "OVMS install directory" -AllowUserWritableLocation:$AllowUserWritableServiceLocation
+
+    Test-ProtectedServiceLocation -Path $DataDir -Description "OVMS service data directory" -AllowUserWritableLocation:$AllowUserWritableServiceLocation
 
     if (-not [string]::IsNullOrWhiteSpace([string]$settings.configPath)) {
         $configPath = [string]$settings.configPath
-        Test-ProtectedServiceLocation -Path (Split-Path -Parent $configPath) -Description "OVMS model configuration directory"
+        Test-ProtectedServiceLocation -Path (Split-Path -Parent $configPath) -Description "OVMS model configuration directory" -AllowUserWritableLocation:$AllowUserWritableServiceLocation
     }
     if (-not [string]::IsNullOrWhiteSpace([string]$settings.modelRepositoryPath)) {
-        Test-ProtectedServiceLocation -Path ([string]$settings.modelRepositoryPath) -Description "OVMS model repository"
+        Test-ProtectedServiceLocation -Path ([string]$settings.modelRepositoryPath) -Description "OVMS model repository" -AllowUserWritableLocation:$AllowUserWritableServiceLocation
     }
     if (-not [string]::IsNullOrWhiteSpace([string]$settings.logPath)) {
         $logParent = Split-Path -Parent ([string]$settings.logPath)
@@ -192,7 +203,7 @@ try {
             if (-not (Test-Path -LiteralPath $logParent)) {
                 New-Item -ItemType Directory -Force -Path $logParent | Out-Null
             }
-            Test-ProtectedServiceLocation -Path $logParent -Description "OVMS log directory"
+            Test-ProtectedServiceLocation -Path $logParent -Description "OVMS log directory" -AllowUserWritableLocation:$AllowUserWritableServiceLocation
         }
     }
     Write-SetupLog -Message "[INFO] Verified protected paths for the restricted OVMS service account." -LogPath $SetupLogPath
