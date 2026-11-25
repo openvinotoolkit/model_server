@@ -137,7 +137,7 @@ class TestTextGeneration:
 
     @pytest.mark.conditional_run_type(
         single_mark="api_regression_single",
-        default_mark="api_on_commit",
+        default_mark="api_regression",
         single_if_device=[TargetDevice.GPU, TargetDevice.NPU],
     )
     @pytest.mark.reqids(Requirements.llm, Requirements.openai_api, Requirements.sdl)
