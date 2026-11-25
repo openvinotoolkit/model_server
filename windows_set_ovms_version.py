@@ -21,7 +21,7 @@ import subprocess
 WIN_OV_VERSION_REGEX = re.compile(r'[0-9]{4}.[0-9].[0-9]+')
 WIN_OV_ZIP_PACKAGE_DIR = "openvino_genai_windows_"
 VERSION_FILE = "src\\version.cpp"
-OVMS_PROJECT_VERSION="2026.5.0"
+OVMS_PROJECT_VERSION = "2026.5.1"
 
 def help():
     print("Usage:\n\
@@ -49,8 +49,21 @@ def get_ovms_sha():
     return output.rstrip()
 
 def check_get_product_version():
-    version = os.environ.get('PRODUCT_VERSION', OVMS_PROJECT_VERSION)
-    return version
+    version = os.environ.get('PRODUCT_VERSION')
+    if version:
+        return version
+
+    versions_file = os.path.join(os.getcwd(), 'versions.mk')
+    try:
+        with open(versions_file, 'r', encoding='utf-8') as file:
+            for line in file:
+                match = re.match(r'^OVMS_PRODUCT_VERSION\s*\?=\s*(\S+)', line.strip())
+                if match:
+                    return match.group(1).strip('"')
+    except OSError:
+        pass
+
+    return OVMS_PROJECT_VERSION
 
 def main():
     if len(sys.argv) < 2:

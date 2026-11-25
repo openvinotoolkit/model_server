@@ -103,10 +103,28 @@ if ($buildLogParent -and -not (Test-Path $buildLogParent)) {
     New-Item -ItemType Directory -Force -Path $buildLogParent | Out-Null
 }
 
+$ovmsVersion = $env:PRODUCT_VERSION
+if (-not $ovmsVersion) {
+    $versionsFile = Join-Path $SourceRoot "versions.mk"
+    if (Test-Path -LiteralPath $versionsFile) {
+        foreach ($line in Get-Content -LiteralPath $versionsFile) {
+            if ($line -match '^OVMS_PRODUCT_VERSION\s*[?:]?=\s*(\S+)') {
+                $ovmsVersion = $Matches[1].Trim('"')
+                break
+            }
+        }
+    }
+}
+if (-not $ovmsVersion) {
+    $ovmsVersion = "2026.5.1"
+}
+
 $compilerArgs = @(
     "/DSourceRoot=$SourceRoot",
     "/DOvmsSourceDir=$ovmsDir",
     "/DOutputDir=$outputDir",
+    "/DOVMS_VERSION=$ovmsVersion",
+    "/DOvmsVersion=$ovmsVersion",
     $installerScript
 )
 

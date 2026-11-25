@@ -25,10 +25,14 @@
 #endif
 #define MyAppURL "https://github.com/openvinotoolkit/model_server"
 
+#ifndef OvmsVersion
+#define OvmsVersion "2026.5.1"
+#endif
+
 [Setup]
 AppId={{9F35B167-C72A-4E1D-93E9-448CE4AE5270}
 AppName={#AppName}
-AppVersion=2026.5.1
+AppVersion={#OvmsVersion}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
@@ -129,7 +133,7 @@ Name: "{group}\Uninstall OpenVINO Model Server"; Filename: "{uninstallexe}"
 [Registry]
 Root: HKCU; Subkey: "Software\OpenVINO\OVMS"; ValueType: string; ValueName: "InstallDir"; ValueData: "{app}"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\OpenVINO\OVMS"; ValueType: string; ValueName: "DataDir"; ValueData: "{localappdata}\OVMS"; Flags: uninsdeletekey
-Root: HKCU; Subkey: "Software\OpenVINO\OVMS"; ValueType: string; ValueName: "Version"; ValueData: "2026.5.0"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\OpenVINO\OVMS"; ValueType: string; ValueName: "Version"; ValueData: "{#OvmsVersion}"; Flags: uninsdeletekey
 
 [UninstallRun]
 Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\uninstall-ovms.ps1"" -InstallDir ""{app}"" -DataDir ""{localappdata}\OVMS"" -DataMode ""{code:GetDataMode}"""; Flags: runhidden waituntilterminated; RunOnceId: "OVMSCleanup"
@@ -332,7 +336,7 @@ begin
   if ExistingInstallVersion = '' then
     exit;
 
-  Result := CompareVersionStrings(ExistingInstallVersion, '2026.5.0') < 0;
+  Result := CompareVersionStrings(ExistingInstallVersion, '{#OvmsVersion}') < 0;
 end;
 
 function IsIntelGpuDriverAvailable: Boolean;
@@ -507,25 +511,113 @@ begin
     Result := DriverName + ': not detected';
 end;
 
+function GetGpuDeviceNames: String;
+var
+  MarkerPath: String;
+  ResultCode: Integer;
+  Lines: TArrayOfString;
+  Index: Integer;
+begin
+  Result := '';
+  MarkerPath := ExpandConstant('{tmp}\ovms-gpu-devices.txt');
+  DeleteFile(MarkerPath);
+
+  Exec('powershell.exe',
+    '-NoProfile -ExecutionPolicy Bypass -Command "Get-CimInstance Win32_VideoController | Where-Object { $_.Name -and (($_.Name -match ''Intel'') -or ($_.AdapterCompatibility -match ''Intel'')) } | Select-Object -ExpandProperty Name | Sort-Object -Unique | Set-Content -LiteralPath ''' + MarkerPath + ''' -Encoding ASCII"',
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+
+  if (ResultCode = 0) and LoadStringsFromFile(MarkerPath, Lines) then
+  begin
+    for Index := 0 to GetArrayLength(Lines) - 1 do
+    begin
+      if Result <> '' then
+        Result := Result + #13#10;
+      Result := Result + Lines[Index];
+    end;
+  end;
+
+  DeleteFile(MarkerPath);
+end;
+
+function GetNpuDeviceNames: String;
+var
+  MarkerPath: String;
+  ResultCode: Integer;
+  Lines: TArrayOfString;
+  Index: Integer;
+begin
+  Result := '';
+  MarkerPath := ExpandConstant('{tmp}\ovms-npu-devices.txt');
+  DeleteFile(MarkerPath);
+
+  Exec('powershell.exe',
+    '-NoProfile -ExecutionPolicy Bypass -Command "Get-CimInstance Win32_PnPEntity | Where-Object { (($_.Name -match ''Intel'' ) -or ($_.PNPDeviceID -match ''VEN_8086'')) -and ($_.Name -match ''NPU|Neural|AI Boost|VPU'' ) } | Select-Object -ExpandProperty Name | Sort-Object -Unique | Set-Content -LiteralPath ''' + MarkerPath + ''' -Encoding ASCII"',
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+
+  if (ResultCode = 0) and LoadStringsFromFile(MarkerPath, Lines) then
+  begin
+    for Index := 0 to GetArrayLength(Lines) - 1 do
+    begin
+      if Result <> '' then
+        Result := Result + #13#10;
+      Result := Result + Lines[Index];
+    end;
+  end;
+
+  DeleteFile(MarkerPath);
+end;
+
+function GetFirstDeviceName(Names: String): String;
+var
+  SeparatorPosition: Integer;
+begin
+  Result := Trim(Names);
+  SeparatorPosition := Pos(#13#10, Result);
+  if SeparatorPosition > 0 then
+    Result := Trim(Copy(Result, 1, SeparatorPosition - 1));
+end;
+
 function GetOvmsSettingsSummary: String;
 var
   CpuName: String;
+  GpuName: String;
+  NpuName: String;
 begin
-  Result :=
-    GetPythonStatusLine + #13#10 +
-    GetIntelDriverStatusLine('Intel GPU driver', IsIntelGpuDriverAvailable, GetIntelGpuDriverPath);
+  GpuName := GetFirstDeviceName(GetGpuDeviceNames);
+  NpuName := GetFirstDeviceName(GetNpuDeviceNames);
 
-  if IsIntelGpuDriverAvailable then
-    Result := Result + #13#10 + 'It is recommended to increase RAM allocation for GPU';
-
-  Result := Result + #13#10 +
-    GetIntelDriverStatusLine('Intel NPU driver', IsNpuDriverAvailable, GetNpuDriverPath);
+  Result := GetPythonStatusLine;
 
   CpuName := GetIntelCpuName;
   if CpuName <> '' then
     Result := Result + #13#10 + 'Intel CPU: ' + CpuName
   else
     Result := Result + #13#10 + 'Intel CPU: not detected';
+
+  if GpuName <> '' then
+    Result := Result + #13#10 + 'Intel GPU: ' + GpuName
+  else
+    Result := Result + #13#10 + 'Intel GPU: not detected';
+
+  Result := Result + #13#10 +
+    GetIntelDriverStatusLine('Intel GPU driver', IsIntelGpuDriverAvailable, GetIntelGpuDriverPath);
+
+  if IsIntelGpuDriverAvailable then
+    Result := Result + #13#10 + ' - It is recommended to increase RAM allocation for GPU';
+
+  if NpuName <> '' then
+  begin
+    Result := Result + #13#10 + 'Intel NPU: ' + NpuName;
+    if IsNpuDriverAvailable then
+      Result := Result + #13#10 + GetIntelDriverStatusLine('Intel NPU driver', True, GetNpuDriverPath)
+    else
+      Result := Result + #13#10 + 'Intel NPU driver: not detected';
+  end
+  else
+  begin
+    Result := Result + #13#10 + 'Intel NPU: not detected';
+    Result := Result + #13#10 + 'Intel NPU driver: not detected';
+  end;
 end;
 
 function IsOvmsServiceRunning: Boolean;
@@ -784,7 +876,7 @@ begin
       'An existing install was found at:' + #13#10 +
       ExistingInstallDir + #13#10#13#10 +
       'Installed version: ' + ExistingInstallVersion + #13#10 +
-      'Installer version: 2026.5.0' + #13#10#13#10 +
+      'Installer version: {#OvmsVersion}' + #13#10#13#10 +
       'Choose how to continue:';
     Lbl.Height := ScaleY(80);
 

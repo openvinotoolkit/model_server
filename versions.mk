@@ -62,3 +62,6 @@ LEVEL_ZERO_LOADER_SHA256_UBUNTU26 ?= ddd80bf4c5cef21716bc1d7370cc055dc8803451c6e
 # Windows Python runtime and build interpreters.
 WINDOWS_PYTHON312_VERSION ?= 3.12.10
 WINDOWS_PYTHON314_VERSION ?= 3.14.10
+
+# OVMS product version used by package and installer builds.
+OVMS_PRODUCT_VERSION ?= 2026.5.1
