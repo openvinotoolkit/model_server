@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -221,7 +222,7 @@ static Status createTextGenerationGraphTemplate(const std::string& directoryPath
             # Speculative decoding configuration)";
         if (graphSettings.draftModelPath.has_value()) {
             oss << R"(
-            draft_models_path: ")" << graphSettings.draftModelPath.value() << R"(",)";
+            draft_models_path: )" << std::quoted(toGenericPath(graphSettings.draftModelPath.value())) << R"(,)";
         } else {
             oss << R"(
             draft_models_path: ")" << GraphExport::getDraftModelDirectoryName(graphSettings.draftModelDirName.value()) << R"(",)";

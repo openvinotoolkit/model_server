@@ -109,7 +109,7 @@ private:
 
 public:
     OutputParser() = delete;
-    explicit OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName,
+    explicit OutputParser(ov::genai::Tokenizer& tokenizer, const std::string& toolParserName, const std::string& reasoningParserName,
         const ToolsSchemas_t& toolNameSchemaMap, const std::string& contentParserName = "");
 
     bool isToolParserAvailable() const;
