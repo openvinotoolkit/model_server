@@ -412,7 +412,7 @@ The script [compare_results.py](https://raw.githubusercontent.com/openvinotoolki
 ```bash
 pip install torch transformers openai numpy --extra-index-url "https://download.pytorch.org/whl/cpu"
 curl -fL https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/compare_results.py -o compare_results.py
-python compare_results.py --model_name bge-base-en-v1.5-int8-ov --hf_model_name BAAI/bge-base-en-v1.5 --service_url http://localhost:8000/v1 --pooling CLS --input "hello world" --input "goodbye world"
+python compare_results.py --model_name Qwen3-Embedding-0.6B-int8-ov --hf_model_name Qwen/Qwen3-Embedding-0.6B --service_url http://localhost:8000/v1 --pooling LAST --input "hello world" --input "goodbye world"
 
 input ['hello world', 'goodbye world']
 HF Duration: 93.921 ms BertModel
