@@ -151,55 +151,40 @@ Preconfigured speech-to-text models can be pulled directly from the [OpenVINO Hu
 
 ::::{tab-set}
 :::{tab-item} Whisper Large v3
-:sync: Whisper Large v3
+:sync: whisper-large-v3-int8-ov
 ```bash
 mkdir -p ${HOME}/models
 docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 \
   -v ${HOME}/models:/models:rw openvino/model_server:weekly \
   --rest_port 8000 \
-  --source_model OpenVINO/whisper-large-v3-fp16-ov \
-  --model_name whisper-large-v3-fp16-ov \
+  --source_model OpenVINO/whisper-large-v3-int8-ov \
+  --model_name whisper-large-v3-int8-ov \
   --model_repository_path /models
 ```
 :::
 :::{tab-item} Whisper Large v3 Turbo
-:sync: Whisper Large v3 Turbo
+:sync: whisper-large-v3-turbo-int8-ov
 ```bash
 mkdir -p ${HOME}/models
 docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 \
   -v ${HOME}/models:/models:rw openvino/model_server:weekly \
   --rest_port 8000 \
-  --source_model OpenVINO/whisper-large-v3-turbo-fp16-ov \
-  --model_name whisper-large-v3-turbo-fp16-ov \
+  --source_model OpenVINO/whisper-large-v3-turbo-int8-ov \
+  --model_name whisper-large-v3-turbo-int8-ov \
   --model_repository_path /models
 ```
 :::
 :::{tab-item} Distil-Whisper
-:sync: Distil-Whisper
+:sync: distil-whisper-large-v3-int8-ov
 ```bash
 mkdir -p ${HOME}/models
 docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 \
   -v ${HOME}/models:/models:rw openvino/model_server:weekly \
   --rest_port 8000 \
-  --source_model <openvino-distil-whisper-model> \
-  --model_name distil-whisper \
+  --source_model OpenVINO/distil-whisper-large-v3-int8-ov \
+  --model_name distil-whisper-large-v3-int8-ov \
   --model_repository_path /models
 ```
-:::
-:::{tab-item} Qwen3 ASR
-:sync: Qwen3 ASR
-```bash
-mkdir -p ${HOME}/models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 \
-  -v ${HOME}/models:/models:rw openvino/model_server:weekly \
-  --rest_port 8000 \
-  --source_model <openvino-qwen3-asr-model> \
-  --model_name qwen3-asr \
-  --model_repository_path /models \
-  --task text_generation
-```
-
-OVMS detects Qwen3 ASR audio and text assets and automatically selects `VLM_CB`. Add `--pipeline_type VLM_CB` to make that selection explicit.
 :::
 ::::
 
@@ -219,43 +204,84 @@ Transcribe the speech.wav file generated in the [Speech generation](#speech-gene
 
 > **Note:** Streaming responses are supported for `audio/transcriptions`. `audio/translations` does not support streaming.
 
-:::{dropdown} **Unary call with cURL**
-
-
+::::{tab-set}
+:::{tab-item} Whisper Large v3
+:sync: whisper-large-v3-int8-ov
+**cURL**
 ```bash
-curl http://localhost:8000/v1/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="whisper-large-v3-turbo-fp16-ov" -F language="en"
+curl http://localhost:8000/v1/audio/transcriptions \
+  -F 'file=@speech.wav' \
+  -F 'model=whisper-large-v3-int8-ov' \
+  -F 'language=en'
 ```
+
+**OpenAI Python client**
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="not_used")
+with open("speech.wav", "rb") as audio_file:
+    transcript = client.audio.transcriptions.create(
+        model="whisper-large-v3-int8-ov",
+        language="en",
+        file=audio_file,
+    )
+print(transcript.text)
+```
+:::
+:::{tab-item} Whisper Large v3 Turbo
+:sync: whisper-large-v3-turbo-int8-ov
+**cURL**
+```bash
+curl http://localhost:8000/v1/audio/transcriptions \
+  -F 'file=@speech.wav' \
+  -F 'model=whisper-large-v3-turbo-int8-ov' \
+  -F 'language=en'
+```
+
+**OpenAI Python client**
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="not_used")
+with open("speech.wav", "rb") as audio_file:
+    transcript = client.audio.transcriptions.create(
+        model="whisper-large-v3-turbo-int8-ov",
+        language="en",
+        file=audio_file,
+    )
+print(transcript.text)
+```
+:::
+:::{tab-item} Distil-Whisper
+:sync: distil-whisper-large-v3-int8-ov
+**cURL**
+```bash
+curl http://localhost:8000/v1/audio/transcriptions \
+  -F 'file=@speech.wav' \
+  -F 'model=distil-whisper-large-v3-int8-ov' \
+  -F 'language=en'
+```
+
+**OpenAI Python client**
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="not_used")
+with open("speech.wav", "rb") as audio_file:
+    transcript = client.audio.transcriptions.create(
+        model="distil-whisper-large-v3-int8-ov",
+        language="en",
+        file=audio_file,
+    )
+print(transcript.text)
+```
+:::
+::::
+
 ```json
 {"text": " The quick brown fox jumped over the lazy dog."}
 ```
-:::
-
-:::{dropdown} **Unary call with python OpenAI library**
-
-```python
-from pathlib import Path
-from openai import OpenAI
-
-filename = "speech.wav"
-url="http://localhost:8000/v1"
-
-
-speech_file_path = Path(__file__).parent / filename
-client = OpenAI(base_url=url, api_key="not_used")
-
-audio_file = open(filename, "rb")
-transcript = client.audio.transcriptions.create(
-  model="whisper-large-v3-turbo-fp16-ov",
-  language="en",
-  file=audio_file
-)
-
-print(transcript.text)
-```
-```
-The quick brown fox jumped over the lazy dog.
-```
-:::
 
 :::{dropdown} **Streaming call with cURL**
 
@@ -263,7 +289,7 @@ The quick brown fox jumped over the lazy dog.
 curl -N http://localhost:8000/v1/audio/transcriptions \
   -H "Content-Type: multipart/form-data" \
   -F file="@speech.wav" \
-  -F model="whisper-large-v3-turbo-fp16-ov" \
+  -F model="whisper-large-v3-turbo-int8-ov" \
   -F language="en" \
   -F stream="true"
 ```
@@ -282,7 +308,7 @@ data: {"type":"transcript.text.done","text":"The quick brown fox jumped over the
 
 
 ```bash
-curl http://localhost:8000/v1/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="whisper-large-v3-turbo-fp16-ov" -F language="en" -F timestamp_granularities[]="segment"
+curl http://localhost:8000/v1/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="whisper-large-v3-turbo-int8-ov" -F language="en" -F timestamp_granularities[]="segment"
 ```
 ```json
 {"text":" A quick brown fox jumped over the lazy dog","segments":[{"text":" A quick brown fox jumped over the lazy dog","start":0.0,"end":3.1399998664855957}]}
@@ -304,7 +330,7 @@ client = OpenAI(base_url=url, api_key="not_used")
 
 audio_file = open(filename, "rb")
 transcript = client.audio.transcriptions.create(
-  model="whisper-large-v3-turbo-fp16-ov",
+  model="whisper-large-v3-turbo-int8-ov",
   language="en",
   response_format="verbose_json",
   timestamp_granularities=["segment"],
@@ -456,7 +482,7 @@ pip install -r requirements/requirements.txt -r requirements/requirements-api.tx
 Run evaluation example:
 ```text
 PYTHONPATH=. python api/run_eval.py \
-  --model_name openai/whisper-large-v3-turbo-fp16-ov \
+  --model_name openai/whisper-large-v3-turbo-int8-ov \
   --dataset_path "hf-audio/esb-datasets-test-only-sorted" \
   --max_workers 1 \
   --split test.clean  \
@@ -470,7 +496,7 @@ Transcribing: 100%|█████████▉| 2618/2620 [12:15<00:00,  5.31
 Transcribing: 100%|█████████▉| 2619/2620 [12:16<00:00,  5.41it/s]
 Transcribing: 100%|██████████| 2620/2620 [12:16<00:00,  5.20it/s]
 Transcribing: 100%|██████████| 2620/2620 [12:16<00:00,  3.56it/s]
-Results saved at path: ./results/MODEL_openai-OpenVINO-whisper-large-v3-turbo-fp16-ov_DATASET_hf-audio-esb-datasets-test-only-sorted_librispeech_test.clean.jsonl
+Results saved at path: ./results/MODEL_openai-OpenVINO-whisper-large-v3-turbo-int8-ov_DATASET_hf-audio-esb-datasets-test-only-sorted_librispeech_test.clean.jsonl
 WER: 1.97 %
 RTFx: 28.87
 ```
@@ -479,8 +505,8 @@ Where:
 - WER (Word Error Rate) is the percentage of transcription errors compared to the reference text (substitutions + deletions + insertions). Lower is better.
 - RTFx (Real-Time Factor, expressed as speedup) indicates processing speed relative to audio duration. Values above 1 mean faster-than-real-time transcription (for example, 5.16 means about 5.16x real time).
 
-**For Open ASR Leaderboard, run `run_eval.py` with model name prefixed by `openai/` (for example `openai/whisper-large-v3-turbo-fp16-ov`).**
-**OVMS should still be deployed with `--model_name whisper-large-v3-turbo-fp16-ov` (evaluation script does not include `openai/` prefix in requests).**
+**For Open ASR Leaderboard, run `run_eval.py` with model name prefixed by `openai/` (for example `openai/whisper-large-v3-turbo-int8-ov`).**
+**OVMS should still be deployed with `--model_name whisper-large-v3-turbo-int8-ov` (evaluation script does not include `openai/` prefix in requests).**
 You can replace `librispeech` with other datasets supported by the leaderboard configuration. For multilingual models run_eval_ml.py should be used.
 
 ## Translation
@@ -516,7 +542,7 @@ curl --fail-with-body -sS http://localhost:8000/v1/audio/speech -H "Content-Type
 
 ### Deployment
 Whisper models can be deployed in a single command by using pre-configured models from [OpenVINO HuggingFace organization](https://huggingface.co/collections/OpenVINO/speech-to-text) and used both for translations and transcriptions endpoints.
-Here is an example of OpenVINO/whisper-large-v3-fp16-ov deployment:
+Here is an example of OpenVINO/whisper-large-v3-int8-ov deployment:
 
 :::{dropdown} **Deploying with Docker**
 ```bash
@@ -524,7 +550,7 @@ mkdir -p ${HOME}/models
 # in case GPU is available
 export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
 
-docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:weekly --rest_port 8000 --source_model OpenVINO/whisper-large-v3-fp16-ov --model_repository_path /models --model_name whisper-large-v3-fp16-ov
+docker run -d ${GPU_ARGS} -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:weekly --rest_port 8000 --source_model OpenVINO/whisper-large-v3-int8-ov --model_repository_path /models --model_name whisper-large-v3-int8-ov
 ```
 :::
 
@@ -534,7 +560,7 @@ The same command can be used for CPU and GPU deployments. OVMS will auto-detect 
 
 ```bat
 mkdir c:\models
-ovms --rest_port 8000 --source_model OpenVINO/whisper-large-v3-fp16-ov --model_repository_path c:\models --model_name whisper-large-v3-fp16-ov
+ovms --rest_port 8000 --source_model OpenVINO/whisper-large-v3-int8-ov --model_repository_path c:\models --model_name whisper-large-v3-int8-ov
 ```
 :::
 
@@ -545,7 +571,7 @@ Translate the speech_spanish.wav file generated above.
 
 
 ```bash
-curl http://localhost:8000/v1/audio/translations -H "Content-Type: multipart/form-data" -F file="@speech_spanish.wav" -F model="whisper-large-v3-fp16-ov"
+curl http://localhost:8000/v1/audio/translations -H "Content-Type: multipart/form-data" -F file="@speech_spanish.wav" -F model="whisper-large-v3-int8-ov"
 ```
 ```json
 {"text": " Madrid is the capital of Spain."}
@@ -567,7 +593,7 @@ client = OpenAI(base_url=url, api_key="not_used")
 
 audio_file = open(filename, "rb")
 translation = client.audio.translations.create(
-  model="whisper-large-v3-fp16-ov",
+  model="whisper-large-v3-int8-ov",
   file=audio_file
 )
 
