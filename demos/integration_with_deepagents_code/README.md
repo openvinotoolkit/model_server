@@ -142,7 +142,7 @@ dcode --default-model openai:OpenVINO/Qwen3.8-27B-int4-ov
 - **`OPENAI_BASE_URL`**: points dcode at the OVMS endpoint. 
 - **`OPENAI_API_KEY=not_used`**: OVMS does not require a key for local serving, but the OpenAI client library expects the variable to be set.
 - **`DEEPAGENTS_CODE_PRICES_AUTO_UPDATE=0`**: avoids external pricing refresh.
-- **`DEMO_DIR`**: expanded inside [`.deepagents/.mcp.json`](https://github.com/openvinotoolkit/model_server/blob/main/demos/integration_with_deepagents_code/.deepagents/.mcp.json) so the MCP server script is located reliably.
+- **`DEMO_DIR`**: expanded inside [`.deepagents/.mcp.json`](https://github.com/openvinotoolkit/model_server/blob/releases/2026/5/demos/integration_with_deepagents_code/.deepagents/.mcp.json) so the MCP server script is located reliably.
 
 dcode uses git to track file state and pins its project root (and its skill / MCP / subagent discovery) at the closest `.git` directory. Initialize a repository *inside the demo folder* so dcode scopes to it, even when the folder itself lives inside another checkout (like the `model_server` clone):
 
@@ -188,7 +188,7 @@ First response can be slower because initial dcode context is large. Later turns
 
 ### Step 3: Create MCP server
 
-The project ships with a preconfigured MCP client entry in [`.deepagents/.mcp.json`](https://github.com/openvinotoolkit/model_server/blob/main/demos/integration_with_deepagents_code/.deepagents/.mcp.json), but the actual server script does not exist yet. In interactive mode, dcode surfaces this as a tool-loading error — a good signal that the agent is aware of the MCP configuration. Ask the agent to create the script using the project skill located at [`.deepagents/skills/python-mcp-sdk-skill/SKILL.md`](https://github.com/openvinotoolkit/model_server/blob/main/demos/integration_with_deepagents_code/.deepagents/skills/python-mcp-sdk-skill/SKILL.md). Invoking a skill with `/skill:<name>` gives the agent a focused, tested recipe instead of relying on generic knowledge:
+The project ships with a preconfigured MCP client entry in [`.deepagents/.mcp.json`](https://github.com/openvinotoolkit/model_server/blob/releases/2026/5/demos/integration_with_deepagents_code/.deepagents/.mcp.json), but the actual server script does not exist yet. In interactive mode, dcode surfaces this as a tool-loading error — a good signal that the agent is aware of the MCP configuration. Ask the agent to create the script using the project skill located at [`.deepagents/skills/python-mcp-sdk-skill/SKILL.md`](https://github.com/openvinotoolkit/model_server/blob/releases/2026/5/demos/integration_with_deepagents_code/.deepagents/skills/python-mcp-sdk-skill/SKILL.md). Invoking a skill with `/skill:<name>` gives the agent a focused, tested recipe instead of relying on generic knowledge:
 
 ```text
 /skill:python-mcp-sdk-skill implement a Python MCP stdio server at mcp_server/time_mcp_server.py that provides current UTC time using the Python MCP SDK.
@@ -226,7 +226,7 @@ Once the goal is satisfied, clear it so subsequent prompts run in normal mode:
 
 Instead of running tests in the main context, delegate validation to a dedicated subagent. This keeps the main conversation focused. The subagent definition lives in:
 
-- [`.deepagents/agents/mcp-tester/AGENTS.md`](https://github.com/openvinotoolkit/model_server/blob/main/demos/integration_with_deepagents_code/.deepagents/agents/mcp-tester/AGENTS.md)
+- [`.deepagents/agents/mcp-tester/AGENTS.md`](https://github.com/openvinotoolkit/model_server/blob/releases/2026/5/demos/integration_with_deepagents_code/.deepagents/agents/mcp-tester/AGENTS.md)
 
 `mcp-tester` verifies static structure and runtime behavior of the MCP server and returns a concise `PASS`/`FAIL` verdict.
 

@@ -64,7 +64,7 @@ On Windows, the DLL is loaded from the OVMS package directory and registers calc
 
 ## PyTensorOvTensorConverterCalculator
 
-`PyTensorOvTensorConverterCalculator` enables conversion between nodes that are run by `PythonExecutorCalculator` and nodes that receive and/or produce [OV Tensors](https://docs.openvino.ai/2026/api/c_cpp_api/classov_1_1_tensor.html)
+`PyTensorOvTensorConverterCalculator` enables conversion between nodes that are run by `PythonExecutorCalculator` and nodes that receive and/or produce OV Tensors.
 
 ## How to create the graph for deployment in OpenVINO Model Server
 
@@ -315,8 +315,8 @@ the version parameter is ignored. MediaPipe graphs are not versioned. Though, th
 MediaPipe graphs can include only the calculators built-in the model server image.
 If you want to add your own mediapipe calculator to OpenVINO Model Server functionality you need to add it as a dependency and rebuild the OpenVINO Model Server binary.
 
-If you have it in external repository, you need to add the http_archive() definition or git_repository() definition to the bazel [WORKSPACE](https://github.com/openvinotoolkit/model_server/blob/main/WORKSPACE) file.
-Then you need to add the calculator target as a bazel dependency to the [src/BUILD](https://github.com/openvinotoolkit/model_server/blob/main/src/BUILD) file. This should be done for:
+If you have it in external repository, you need to add the http_archive() definition or git_repository() definition to the bazel [WORKSPACE](https://github.com/openvinotoolkit/model_server/blob/releases/2026/5/WORKSPACE) file.
+Then you need to add the calculator target as a bazel dependency to the [src/BUILD](https://github.com/openvinotoolkit/model_server/blob/releases/2026/5/src/BUILD) file. This should be done for:
 
 ```
 cc_library(

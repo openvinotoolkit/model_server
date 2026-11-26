@@ -245,8 +245,8 @@ If you need word-level timestamps support, export the model with `export_model.p
 
 Prepare export script and dependencies:
 ```console
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/export_model.py -o export_model.py
-pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/export_models/requirements.txt
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/5/demos/common/export_models/export_model.py -o export_model.py
+pip install -r https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/5/demos/common/export_models/requirements.txt
 ```
 
 Export Speech-to-Text model with word timestamps enabled.
@@ -345,7 +345,7 @@ cd open_asr_leaderboard
 
 Download and apply OVMS API compatibility patch:
 
-    curl -L https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/external/open_asr_leaderboard.patch -o ovms_open_asr_leaderboard.patch
+    curl -L https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/5/external/open_asr_leaderboard.patch -o ovms_open_asr_leaderboard.patch
     git apply ovms_open_asr_leaderboard.patch
 
 Set OpenAI-compatible endpoint variables for OVMS:

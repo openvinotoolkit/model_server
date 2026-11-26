@@ -231,7 +231,7 @@ In different use cases and load specification, requests and tokens scheduling mi
     optional uint64 xattention_block_size = 6;
     optional uint64 xattention_stride = 7;
     ```
-    Description of parameters in that config can be found in GenAI docs about [SparseAttentionConfig](https://docs.openvino.ai/2026/api/genai_api/_autosummary/openvino_genai.SparseAttentionConfig.html#openvino-genai-sparseattentionconfig).
+    Description of parameters in that config can be found in GenAI docs about [SparseAttentionConfig](https://openvinotoolkit.github.io/openvino.genai/docs/concepts/optimization-techniques/sparse-attention-prefill).
 
     Example of graph with sparse attention configured:
 

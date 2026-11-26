@@ -151,8 +151,6 @@ In case of using CPU plugin to run the inference, it might be also beneficial to
 | ENABLE_CPU_PINNING | This property allows CPU threads pinning during inference. |
 
 
-> **NOTE:** For additional information about all parameters read about [OpenVINO device properties](https://docs.openvino.ai/2026/api/c_cpp_api/group__ov__runtime__cpp__prop__api.html).
-
 - Example:
 Following docker command will set `NUM_STREAMS` parameter to a value `1`:
 
