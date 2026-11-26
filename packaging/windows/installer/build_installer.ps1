@@ -116,7 +116,7 @@ if (-not $ovmsVersion) {
     }
 }
 if (-not $ovmsVersion) {
-    $ovmsVersion = "2026.5.1"
+    $ovmsVersion = "2026.5.0"
 }
 
 $compilerArgs = @(

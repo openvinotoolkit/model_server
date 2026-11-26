@@ -72,31 +72,57 @@ function Ensure-SystemPythonRequirements {
         return
     }
 
-    $pythonCommand = $null
-    $pythonName = "python"
-
-    if (Get-Command python -ErrorAction SilentlyContinue) {
-        $pythonCommand = (Get-Command python).Source
-    } elseif (Get-Command py -ErrorAction SilentlyContinue) {
-        $pythonCommand = "py"
-        $pythonName = "py"
-    } else {
-        throw "System Python was selected, but no Python executable was found on PATH. Install Python 3.14 and try again."
-    }
+    $previousPythonHome = $env:PYTHONHOME
+    $previousPythonPath = $env:PYTHONPATH
 
     try {
+        Remove-Item Env:PYTHONHOME -ErrorAction SilentlyContinue
+        Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
+
+        $pythonCandidates = @()
+        $programFiles = [Environment]::GetEnvironmentVariable("ProgramFiles")
+        $programW6432 = [Environment]::GetEnvironmentVariable("ProgramW6432")
+        $localAppData = [Environment]::GetEnvironmentVariable("LOCALAPPDATA")
+        $systemDrive = [Environment]::GetEnvironmentVariable("SystemDrive")
+
+        foreach ($candidate in @(
+            $(if ($programFiles) { Join-Path $programFiles "Python314\python.exe" }),
+            $(if ($programW6432) { Join-Path $programW6432 "Python314\python.exe" }),
+            $(if ($localAppData) { Join-Path $localAppData "Programs\Python\Python314\python.exe" }),
+            $(if ($systemDrive) { Join-Path $systemDrive "opt\Python314\python.exe" })
+        )) {
+            if (-not [string]::IsNullOrWhiteSpace($candidate) -and (Test-Path -LiteralPath $candidate)) {
+                $pythonCandidates += $candidate
+            }
+        }
+
+        if (-not $pythonCandidates) {
+            $pyLauncher = Get-Command py -ErrorAction SilentlyContinue
+            if ($pyLauncher) {
+                $resolvedPython = & $pyLauncher.Source -3.14 -c "import sys; print(sys.executable)" 2>$null
+                $resolvedPython = ($resolvedPython | Select-Object -First 1)
+                if (-not [string]::IsNullOrWhiteSpace([string]$resolvedPython) -and (Test-Path -LiteralPath ([string]$resolvedPython).Trim())) {
+                    $pythonCandidates += ([string]$resolvedPython).Trim()
+                }
+            }
+        }
+
+        if (-not $pythonCandidates) {
+            throw "System Python was selected, but Python 3.14 was not found. Install Python 3.14 and try again."
+        }
+
+        $pythonCommand = $pythonCandidates | Select-Object -First 1
+        $pythonHome = Split-Path -Parent $pythonCommand
+        $env:PYTHONHOME = $pythonHome
+        $env:PYTHONPATH = (($pythonHome, (Join-Path $pythonHome "Lib"), (Join-Path $pythonHome "DLLs")) -join ";")
+
         $pythonBindingDir = Join-Path $InstallDir "python"
         $pythonBindingModule = Join-Path $pythonBindingDir "pyovms.pyd"
         if (-not (Test-Path -LiteralPath $pythonBindingModule)) {
             throw "OVMS Python binding was not found at '$pythonBindingModule'. Reinstall OVMS with Python support enabled."
         }
 
-        if ($pythonName -eq "py") {
-            $versionOutput = & $pythonCommand -3.14 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>$null
-        } else {
-            $versionOutput = & $pythonCommand -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>$null
-        }
-
+        $versionOutput = & $pythonCommand -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>&1
         $versionText = ($versionOutput | Select-Object -First 1).ToString().Trim()
         if (-not $versionText) {
             throw "Unable to detect the system Python version."
@@ -116,29 +142,32 @@ function Ensure-SystemPythonRequirements {
             "MarkupSafe==3.0.4"
         )
 
-        if ($pythonName -eq "py") {
-            & $pythonCommand -3.14 @pipArgs
-        } else {
-            & $pythonCommand @pipArgs
-        }
-
+        & $pythonCommand @pipArgs
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to install the required Python dependencies for the system-Python configuration."
         }
 
         $escapedInstallDir = $InstallDir.Replace('\\', '\\\\').Replace("'", "\\'")
         $validateBindingCommand = "import os,sys; install_dir='${escapedInstallDir}'; binding_dir=os.path.join(install_dir,'python'); os.add_dll_directory(install_dir) if hasattr(os,'add_dll_directory') else None; sys.path.insert(0,binding_dir) if binding_dir not in sys.path else None; import pyovms"
-        if ($pythonName -eq "py") {
-            & $pythonCommand -3.14 -c $validateBindingCommand
-        } else {
-            & $pythonCommand -c $validateBindingCommand
-        }
+        & $pythonCommand -c $validateBindingCommand
 
         if ($LASTEXITCODE -ne 0) {
             throw "System Python cannot import OVMS bindings (pyovms). Ensure '$pythonBindingDir' is available and DLL loading from '$InstallDir' is allowed."
         }
     } catch {
         throw "System Python validation failed: $($_.Exception.Message)"
+    } finally {
+        if ($null -eq $previousPythonHome) {
+            Remove-Item Env:PYTHONHOME -ErrorAction SilentlyContinue
+        } else {
+            $env:PYTHONHOME = $previousPythonHome
+        }
+
+        if ($null -eq $previousPythonPath) {
+            Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
+        } else {
+            $env:PYTHONPATH = $previousPythonPath
+        }
     }
 }
 

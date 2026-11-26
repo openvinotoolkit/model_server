@@ -26,7 +26,7 @@
 #define MyAppURL "https://github.com/openvinotoolkit/model_server"
 
 #ifndef OvmsVersion
-#define OvmsVersion "2026.5.1"
+#define OvmsVersion "2026.5.0"
 #endif
 
 [Setup]
