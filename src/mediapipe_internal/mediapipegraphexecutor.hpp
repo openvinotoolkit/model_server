@@ -322,13 +322,13 @@ public:
         }
         resetLlmExecutionContexts(this->guard->graphHelper->genAiExecutionContextMap);
         MP_RETURN_ON_FAIL(status, "graph wait until idle", mediapipeAbslToOvmsStatus(status.code()));
-        reinitOnFailureGuard.dismiss();
-        // Increment timestamp for next request reusing this graph from the queue
-        this->guard->graphHelper->currentTimestamp = ::mediapipe::Timestamp(this->guard->graphHelper->currentTimestamp.Value() + 1);
         timer.stop(PROCESS);
         double processTime = timer.template elapsed<std::chrono::microseconds>(PROCESS);
         OBSERVE_IF_ENABLED(this->mediapipeServableMetricReporter->getProcessingTimeMetric(executionContext), processTime);
         INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getResponsesMetric(executionContext));
+        reinitOnFailureGuard.dismiss();
+        // Increment timestamp for next request reusing this graph from the queue
+        this->guard->graphHelper->currentTimestamp = ::mediapipe::Timestamp(this->guard->graphHelper->currentTimestamp.Value() + 1);
         SPDLOG_DEBUG("Received all output stream packets for graph: {}", this->name);
         return StatusCode::OK;
     }
