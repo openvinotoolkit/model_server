@@ -84,6 +84,7 @@ Integrations <ovms_demos_integrations>
 | Demo | Description |
 |---|---|
 |[Integration with Open WebUI](integration_with_OpenWebUI/README.md)|Using Open WebUI with OVMS as inference provider. Shows text and image generation as well as usage with RAG and tools.|
+|[Integration with OpenHands](integration_with_OpenHands/README.md)|Use OpenHands as a software engineering agent with OVMS as the local inference provider.|
 |[Visual Studio Code assistant](./code_local_assistant/README.md)|Use Continue extension in Visual Studio Code with local OVMS serving.|
 |[Cline coding agent integration](./cline_integration/README.md)|Use the Cline coding agent in Visual Studio Code with local OVMS serving, including MCP, image input and reasoning_effort usage.|
 |[Integration with DeepAgents Code](integration_with_deepagents_code/README.md)|Using DeepAgents Code with OVMS as inference provider. Shows MCP server creation, subagent-based validation and tool use.|

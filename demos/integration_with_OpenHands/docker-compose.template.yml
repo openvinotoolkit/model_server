@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   ovms-llm:
     image: ${OVMS_IMAGE}
@@ -8,24 +6,24 @@ services:
     user: "${HOST_UID}:${HOST_GID}"
 ${GPU_ARGS}
     ports:
-      - "${OVMS_REST_PORT}:8000"  # REST API
+      - "127.0.0.1:${OVMS_REST_PORT}:8000"
     volumes:
       # Model cache directory - OVMS will materialize models here on --source_model pull
-      - ${MODEL_CACHE_DIR}:/models:rw
+      - "${MODEL_CACHE_DIR}:/models:rw"
     environment:
       # Hugging Face token for gated models.
-      HF_TOKEN: ${HF_TOKEN}
+      HF_TOKEN: "${HF_TOKEN}"
       # Model configuration variables
-      MODEL_ID: ${MODEL_ID}
-      LOCAL_NAME: ${LOCAL_NAME}
-      TARGET_DEVICE: ${TARGET_DEVICE}
+      MODEL_ID: "${MODEL_ID}"
+      LOCAL_NAME: "${LOCAL_NAME}"
+      TARGET_DEVICE: "${TARGET_DEVICE}"
       # Proxy configuration (forwarded from host if set)
-      http_proxy: ${http_proxy}
-      https_proxy: ${https_proxy}
-      HTTP_PROXY: ${HTTP_PROXY}
-      HTTPS_PROXY: ${HTTPS_PROXY}
-      no_proxy: ${no_proxy}
-      NO_PROXY: ${NO_PROXY}
+      http_proxy: "${http_proxy}"
+      https_proxy: "${https_proxy}"
+      HTTP_PROXY: "${HTTP_PROXY}"
+      HTTPS_PROXY: "${HTTPS_PROXY}"
+      no_proxy: "${no_proxy}"
+      NO_PROXY: "${NO_PROXY}"
     command:
       - /bin/bash
       - -c
@@ -39,15 +37,22 @@ ${GPU_ARGS}
         )
         [[ -n "${TARGET_DEVICE}" ]] && ARGS+=(--target_device "${TARGET_DEVICE}")
         exec ovms "$${ARGS[@]}"
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://localhost:8000/v1/config | grep --quiet '\"AVAILABLE\"'"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 10s
     networks:
       - ovms-net
     restart: unless-stopped
 
   openhands:
-    image: ghcr.io/all-hands-ai/openhands:latest
+    image: ghcr.io/all-hands-ai/openhands:0.59.0
     container_name: openhands
     depends_on:
-      - ovms-llm
+      ovms-llm:
+        condition: service_healthy
     ports:
       - "127.0.0.1:${OPENHANDS_PORT}:3000"
     extra_hosts:
@@ -60,20 +65,26 @@ ${GPU_ARGS}
       LLM_MODEL: openai/${LOCAL_NAME}
       # OpenHands requires a non-empty API key even though OVMS doesn't authenticate
       LLM_API_KEY: unused
+      # OVMS exposes native OpenAI-compatible tool calling. Explicit configuration avoids
+      # OpenHands treating the custom model name as text-only.
+      LLM_NATIVE_TOOL_CALLING: "true"
       # Generation parameters
       LLM_TEMPERATURE: "0.0"
       LLM_MAX_OUTPUT_TOKENS: "5000"
       LLM_MAX_INPUT_TOKENS: "4096"
       LLM_TIMEOUT: "120000"
-      # Memory limit for OpenHands runtime sandboxes (agent code execution).
-      SANDBOX_DOCKER_ARGS: --memory=1536m --memory-swap=1536m
+      # Use a runtime image matching the OpenHands application version.
+      SANDBOX_RUNTIME_CONTAINER_IMAGE: "${OPENHANDS_RUNTIME_IMAGE}"
+      # Run OpenHands and its sandboxes as the host user with bounded memory.
+      SANDBOX_USER_ID: "${HOST_UID}"
+      SANDBOX_DOCKER_RUNTIME_KWARGS: '{"mem_limit": "1536m", "memswap_limit": "1536m"}'
       # Proxy configuration (forwarded from host if set)
-      http_proxy: ${http_proxy}
-      https_proxy: ${https_proxy}
-      HTTP_PROXY: ${HTTP_PROXY}
-      HTTPS_PROXY: ${HTTPS_PROXY}
-      no_proxy: ${no_proxy}
-      NO_PROXY: ${NO_PROXY}
+      http_proxy: "${http_proxy}"
+      https_proxy: "${https_proxy}"
+      HTTP_PROXY: "${HTTP_PROXY}"
+      HTTPS_PROXY: "${HTTPS_PROXY}"
+      no_proxy: "${OPENHANDS_NO_PROXY}"
+      NO_PROXY: "${OPENHANDS_NO_PROXY_UPPER}"
     volumes:
       # Docker socket for OpenHands to create runtime sandbox containers
       - /var/run/docker.sock:/var/run/docker.sock
