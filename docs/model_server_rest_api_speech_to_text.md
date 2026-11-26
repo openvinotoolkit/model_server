@@ -12,6 +12,8 @@ The are two endpoints exposed:
 
 Request body must be in `multipart/form-data` format.
 
+Qwen3 ASR can be deployed through the dedicated speech-to-text pipeline or through the text-generation graph. In the latter mode, `VLM_CB` is selected by default on CPU and GPU, and `--pipeline_type VLM_CB` can be specified to make the selection explicit. The endpoint and multipart request format are unchanged. See the [Qwen3 ASR continuous-batching example](../demos/audio/README.md#qwen3-asr-continuous-batching).
+
 ### Example request
 #### Transcription
 ```

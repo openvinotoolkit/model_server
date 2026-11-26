@@ -198,6 +198,20 @@ curl http://localhost/v3/chat/completions \
 ```
 **Note**: check `--allowed_local_media_path` parameter described [here](parameters.md)
 
+Models with audio input capabilities, for example Qwen3-Omni or Gemma 4, can accept base64-encoded `wav` or `mp3` files as `input_audio` content parts. Other models reject this content type.
+
+```json
+{
+  "type": "input_audio",
+  "input_audio": {
+    "data": "<base64-encoded-audio>",
+    "format": "wav"
+  }
+}
+```
+
+Audio parts can be combined with text and image parts in the same message. Stereo audio is converted to mono, and audio for continuous-batching VLM models is resampled as required by the pipeline.
+
 In case of VLM models that support video understanding (e.g. Qwen3-VL), a video can be sent as a `video_url` content part. The `url` field accepts either an **array of already-decoded image frames** or a single encoded H.264/AVC MP4 source. Each frame in an array uses the same formats as `image_url` (base64 data URI, HTTP(S) URL, or local filesystem path) and is sent in temporal order. An encoded MP4 source is an HTTP(S) URL or a local filesystem path; OVMS decodes it server-side with minimp4 and OpenH264.
 
 ```

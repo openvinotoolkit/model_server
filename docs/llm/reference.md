@@ -22,10 +22,10 @@ The servable types are:
 - Visual Language Model Stateful,
 - Omni Model Stateful
 
-First part - Language Model / Visual Language Model / Omni Model - determines whether servable accepts only text, both text and images on the input or operates on multiple modalities on both input and output.
-Second part - Continuous Batching / Stateful - determines what kind of GenAI pipeline is used as the engine. By default CPU and GPU devices work on Continuous Batching pipelines. NPU device works only with the Stateful servable type.
+The first part identifies the input and output modalities. A Language Model accepts text, a Visual Language Model accepts multimodal input and produces text, and an Omni model accepts multimodal input and can produce text or speech.
+The second part identifies the GenAI engine. Continuous batching is generally selected for CPU and GPU deployments, while NPU uses a stateful servable.
 
-The Omni servable support is currently limited to stateful only. See the [Omni model documentation](../omni.md) for configuration and usage details.
+Omni models auto-detect the stateful `OMNI` pipeline; they can also be explicitly loaded as `VLM_CB` for continuous batching with multimodal input, but without speech output.
 
 User does not have to explicitly select servable type. It is inferred based on model directory contents and selected target device.
 Model directory contents determine if model can work only with text or visual input as well. As for target device, setting it to `NPU` will always pick Stateful servable, while any other device will result in deploying Continuous Batching servable.
