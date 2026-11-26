@@ -286,6 +286,13 @@ public:
 
         GraphReinitGuard reinitOnFailureGuard(*this->guard->graphHelper, this->config, this->sidePacketMaps);
 
+        enum : unsigned int {
+            PROCESS,
+            TIMER_END2
+        };
+        Timer<TIMER_END2> timer;
+        timer.start(PROCESS);
+
         size_t numberOfPacketsCreated = 0;
         ::mediapipe::CalculatorGraph& graph = this->guard->graph;
         auto ovms_status = createAndPushPacketsImpl(
@@ -315,6 +322,10 @@ public:
         }
         resetLlmExecutionContexts(this->guard->graphHelper->genAiExecutionContextMap);
         MP_RETURN_ON_FAIL(status, "graph wait until idle", mediapipeAbslToOvmsStatus(status.code()));
+        timer.stop(PROCESS);
+        double processTime = timer.template elapsed<std::chrono::microseconds>(PROCESS);
+        OBSERVE_IF_ENABLED(this->mediapipeServableMetricReporter->getProcessingTimeMetric(executionContext), processTime);
+        INCREMENT_IF_ENABLED(this->mediapipeServableMetricReporter->getResponsesMetric(executionContext));
         reinitOnFailureGuard.dismiss();
         // Increment timestamp for next request reusing this graph from the queue
         this->guard->graphHelper->currentTimestamp = ::mediapipe::Timestamp(this->guard->graphHelper->currentTimestamp.Value() + 1);

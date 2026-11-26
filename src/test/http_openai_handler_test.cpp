@@ -28,6 +28,7 @@
 #include "absl/strings/escaping.h"
 
 #include "../config.hpp"
+#include "src/metrics/metric_config.hpp"
 #include "../http_rest_api_handler.hpp"
 #include "../filesystem/filesystem.hpp"
 #include "../llm/apis/openai_completions.hpp"
@@ -4289,6 +4290,26 @@ Body:
 JSON Parser:
 {"model":"gpt","stream":false,"messages":[]}012345678)";
     ASSERT_EQ(response, expectedResponse);
+}
+
+// Regression test for #4768: on queue-enabled servables the unary success path
+// never reported ovms_responses / ovms_graph_processing_time_us (both stayed 0).
+TEST_F(HttpOpenAIHandlerWithQueueTest, UnaryWithQueueMetrics) {
+    std::string requestBody = R"(
+        {
+            "model": "gpt",
+            "stream": false,
+            "messages": []
+        }
+    )";
+
+    ASSERT_EQ(
+        handler->dispatchToProcessor("/v1/something", requestBody, &response, comp, responseComponents, writer, multiPartParser),
+        ovms::StatusCode::OK);
+
+    const std::string collected = server.collect();
+    EXPECT_THAT(collected, HasSubstr(std::string(METRIC_NAME_RESPONSES) + "{api=\"V3\",interface=\"REST\",method=\"Unary\",name=\"gpt\"} 1\n"));
+    EXPECT_THAT(collected, HasSubstr(std::string(METRIC_NAME_PROCESSING_TIME) + "_count{method=\"Unary\",name=\"gpt\"} 1\n"));
 }
 
 TEST_F(HttpOpenAIHandlerWithQueueTest, StreamWithQueue) {
