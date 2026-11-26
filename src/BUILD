@@ -78,6 +78,7 @@ cc_binary(
     linkstatic = True,
     linkopts = select({
         "//src:windows": [],
+        "//:fuzzer_build": [],
         "//conditions:default": ["-Wl,-z,defs"],
     }),
     deps = [
