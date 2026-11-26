@@ -49,6 +49,7 @@ void VisualLanguageModelLegacyExecutor::processRequest() {
                 {},
                 requestExecutionContext->inputRequest.generationConfig,
                 requestExecutionContext->textStreamer);
+            VisualLanguageModelLegacyServable::logPerfMetrics(requestExecutionContext->results.perf_metrics);
             if (requestExecutionContext->textStreamer && requestExecutionContext->textStreamer->hadParserError()) {
                 requestExecutionContext->success = false;
             }

@@ -158,4 +158,20 @@ message LLMCalculatorOptions {
     }
 
     optional VisionInputOptions input_vision = 27;
+
+    message LoraAdapter {
+      required string alias = 1;
+      // Absolute or relative to the graph directory.
+      required string path = 2;
+    }
+
+    // Supported only with pipeline_type: VLM. Requests select adapters via "lora_adapters": {"alias": weight}.
+    // Prefix caching stays off unless enable_prefix_caching is set. Enable it only with an OpenVINO GenAI build
+    // whose prefix cache keys include the request adapters; otherwise KV can be reused across adapters.
+    repeated LoraAdapter lora_adapters = 28;
+
+    // Multiply request weights by the PEFT scale from adapter_config.json next to each adapter
+    // (lora_alpha / r, or lora_alpha / sqrt(r) with use_rslora), so weight 1.0 applies the adapter as trained.
+    // GenAI ignores adapter_config.json; set to false to pass request weights to GenAI unchanged.
+    optional bool lora_scale_from_config = 29 [default = true];
 }
