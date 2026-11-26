@@ -18,11 +18,11 @@ from dataclasses import dataclass
 from typing import Union
 
 from tests.functional.utils.logger import get_logger
-from tests.functional.constants.os_type import OsType
 from tests.functional.config import enable_plugin_config_target_device
 from tests.functional.constants.metrics import MetricsPolicy
 from tests.functional.constants.ovms import Ovms, set_plugin_config_boolean_value
 from tests.functional.constants.ovms_openai import ImagesRequestParamsValues
+from tests.functional.constants.ovms_type import OvmsType
 from tests.functional.constants.paths import Paths
 from tests.functional.utils.helpers import get_base_device
 
@@ -272,7 +272,7 @@ class OvmsCommand:
 
             if self.allowed_local_media_path is not None:
                 command_parts.append("--allowed_local_media_path")
-                images_path = Paths.IMAGES_PATH_INTERNAL if self.base_os != OsType.Windows \
+                images_path = Paths.IMAGES_PATH_INTERNAL if OvmsType.DOCKER in self.ovms_type \
                     else self.allowed_local_media_path
                 command_parts.append(images_path)
 

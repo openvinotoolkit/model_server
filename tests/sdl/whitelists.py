@@ -131,6 +131,7 @@ libraries = {
         'libcurl-x64.dll',
         'libovmspython.dll',
         'libpython_calculators.dll',
+        'libtommath.dll',
         'opencv_world4140.dll',
         'openvino.dll',
         'openvino_auto_batch_plugin.dll',
@@ -283,20 +284,7 @@ packages = {
         'python3.12-libs',
         'python3.12-pip-wheel',
     },
-    OvmsBaseType.REDHAT_GPU: {
-        'intel-gmmlib',
-        'intel-igc-core',
-        'intel-igc-opencl',
-        'intel-level-zero-gpu',
-        'intel-opencl',
-        'level-zero',
-        'libedit',
-        'libnl3',
-        'ocl-icd',
-        'libpsl',
-        'publicsuffix-list-dafsa',
-        'wget',
-    },
+    OvmsBaseType.REDHAT_GPU: set(),
 }
 
 whitelisted_packages = {
