@@ -72,78 +72,23 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
-cc_shared_library(
-    name = "ovms_shared",
-    dynamic_deps = [],
-    static_deps = [
-        #"//src/filesystem:libovmsfilesystemfactory", // TODO missing symbols
-        "@minitrace//:__subpackages__",
-        "@com_github_gabime_spdlog//:__subpackages__",
-        "@fmtlib//:__subpackages__",
-        "@com_github_jarro2783_cxxopts//:__subpackages__",
-        "@aws-sdk-cpp//:__subpackages__",
-        "@com_github_googleapis_google_cloud_cpp//:__subpackages__",
-        "//third_party:curl//:__subpackages__",
-        "@com_github_google_crc32c//:__subpackages__",
-        "@com_github_googleapis_google_cloud_cpp_common//:__subpackages__",
-        "@com_github_libevent_libevent//:__subpackages__",
-        "@com_google_protobuf//:__subpackages__",
-        "@com_github_tencent_rapidjson//:__subpackages__",
-        "@com_google_absl//:__subpackages__",
-        "@gif//:__subpackages__",
-        "@libjpeg_turbo//:__subpackages__",
-        "@farmhash_archive//:__subpackages__",
-        "@fft2d//:__subpackages__",
-        "@highwayhash//:__subpackages__",
-        "@com_googlesource_code_re2//:__subpackages__",
-        "@snappy//:__subpackages__",
-        "@double_conversion//:__subpackages__",
-        "@nsync//:__subpackages__",
-        "@eigen//:__subpackages__",
-        "//third_party:openvino//:__subpackages__",
-        "@com_github_jupp0r_prometheus_cpp//:__subpackages__",
-        "@//:__subpackages__",
-        "@com_github_grpc_grpc//:__subpackages__",
-        "@upb//:__subpackages__",
-        "@zlib//:__subpackages__",
-        "@com_github_glog_glog//:__subpackages__",
-        "@com_github_gflags_gflags//:__subpackages__",
-        "@XNNPACK//:__subpackages__",
-        "@pthreadpool//:__subpackages__",
-        "@FXdiv//:__subpackages__",
-        "@FP16//:__subpackages__",
-        "@flatbuffers//:__subpackages__",
-        "@ruy//:__subpackages__",
-        "@azure//:__subpackages__",
-    ] + select({
-        "//:not_disable_mediapipe": [
-            "@mediapipe//:__subpackages__",
-            "@mediapipe_calculators//:__subpackages__",
-            "@model_api//:__subpackages__",
-            "@arm_neon_2_x86_sse//:__subpackages__",
-            "@ruy//:__subpackages__",
-            "@cpuinfo//:__subpackages__",
-            "@clog//:__subpackages__",
-            "@gemmlowp//:__subpackages__",
-            "@flatbuffers//:__subpackages__",],
-        "//:disable_mediapipe": []
-        })
-      + [
-          "@pybind11//:__subpackages__",
-          "//third_party:=python3//:__subpackages__",
-          "@local_config_python//:__subpackages__",
-          ]
-     + select({
-            "//conditions:default": [
-                "@boringssl//:__subpackages__",
-            ],
-            "//src:windows" : [],
-        }),
-    features = [],
-    roots = [
+cc_binary(
+    name = "libovms_shared.so",
+    linkshared = True,
+    linkstatic = True,
+    linkopts = select({
+        "//src:windows": [],
+        "//conditions:default": ["-Wl,-z,defs"],
+    }),
+    deps = [
         "//src:ovms_lib",
-        "@libgit2_engine//:libgit2_engine", # roots = deps, adding dependency so that the libs will be built with the FUZZER=1 build for this shared library
+        "@libgit2_engine//:libgit2_engine",
     ],
+)
+
+alias(
+    name = "ovms_shared",
+    actual = ":libovms_shared.so",
 )
 
 ovms_cc_library(
