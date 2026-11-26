@@ -1,4 +1,4 @@
-# Omni Pipeline Demo
+# Omni Pipeline Demo {#ovms_demos_omni}
 
 Example clients for Qwen3-Omni models served by OpenVINO Model Server. The native Omni pipeline accepts text, images, and audio and can return both text and generated speech.
 

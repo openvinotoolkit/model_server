@@ -25,10 +25,11 @@ pip install openai
 Supported models and variants:
 
 - **Kokoro** - primary example in this demo; uses predefined speaker embeddings from the model's `voices/` directory.
-- **SpeechT5** - supported for existing deployments.
 - **Qwen3 TTS CustomVoice** - selects a model-defined speaker with `voice` and optionally accepts `instructions` to guide delivery.
 - **Qwen3 TTS VoiceDesign** - creates a voice from `instructions`; no `voice` is required.
 - **Qwen3 TTS Base** - not supported because reference-audio inputs are outside the OpenAI-compatible `audio/speech` request schema.
+
+SpeechT5 remains supported for existing deployments.
 
 For Kokoro requests, `language` selects the phonemization path. Supported values are `en-us`, `en-gb`, `es`, `fr-fr`, `it`, `pt-br`, and `hi`; the default is `en-us`.
 
@@ -57,19 +58,6 @@ docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 \
   --model_repository_path /models \
   --model_name Kokoro-82M-int8-ov \
   --target_device CPU
-```
-:::
-:::{tab-item} SpeechT5
-:sync: SpeechT5
-```bash
-mkdir -p ${HOME}/models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 \
-  -v ${HOME}/models:/models:rw openvino/model_server:latest \
-  --rest_port 8000 \
-  --source_model <ovms_model> \
-  --model_repository_path /models \
-  --model_name speecht5 \
-  --task text2speech
 ```
 :::
 :::{tab-item} Qwen3 TTS CustomVoice
@@ -129,33 +117,6 @@ client = OpenAI(base_url="http://localhost:8000/v1", api_key="not_used")
 with client.audio.speech.with_streaming_response.create(
     model="Kokoro-82M-int8-ov",
     voice="af_alloy",
-    input="The quick brown fox jumped over the lazy dog.",
-) as response:
-    response.stream_to_file("speech.wav")
-```
-:::
-:::{tab-item} SpeechT5
-:sync: SpeechT5
-**cURL**
-```bash
-curl http://localhost:8000/v1/audio/speech \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "speecht5",
-    "voice": "default",
-    "input": "The quick brown fox jumped over the lazy dog."
-  }' \
-  -o speech.wav
-```
-
-**OpenAI Python client**
-```python
-from openai import OpenAI
-
-client = OpenAI(base_url="http://localhost:8000/v1", api_key="not_used")
-with client.audio.speech.with_streaming_response.create(
-    model="speecht5",
-    voice="default",
     input="The quick brown fox jumped over the lazy dog.",
 ) as response:
     response.stream_to_file("speech.wav")

@@ -9,6 +9,7 @@ hidden:
 Text generation <ovms_text_generation>
 Image generation <ovms_demos_image_generation>
 Audio <ovms_demos_audio>
+Omni <ovms_demos_omni>
 Text Embeddings <ovms_demos_embeddings>
 Text Reranking <ovms_demos_rerank>
 Classic models <ovms_demos_classic_models>
@@ -45,7 +46,7 @@ Integrations <ovms_demos_integrations>
 ## Omni
 | Demo | Description |
 |---|---|
-|[Omni models](omni/README.md)|Multimodal text, image, and audio input with text and speech output.|
+|[Omni demos](omni/README.md)|Multimodal text, image, and audio input with text and speech output.|
 
 ## Text Embeddings
 | Demo | Description |
