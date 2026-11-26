@@ -43,34 +43,73 @@ See the [T2s calculator documentation](../../docs/speech_generation/reference.md
 
 ### Deployment
 
-**Deploying with Docker**
-
-```bash
-mkdir -p ${HOME}/models
-docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:latest --rest_port 8000 --source_model OpenVINO/Kokoro-82M-int8-ov --model_repository_path /models --model_name Kokoro-82M-int8-ov --target_device CPU
-```
-
-**Deploying with Docker on NPU**
-
-```bash
-mkdir -p ${HOME}/models
-docker run -d --rm --device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) -u $(id -u):$(id -g) -p 8000:8000 -v ${HOME}/models:/models:rw openvino/model_server:latest-gpu --rest_port 8000 --source_model OpenVINO/Kokoro-82M-int8-ov --model_repository_path /models --model_name Kokoro-82M-int8-ov --target_device NPU
-```
-
-**Deploying on Bare Metal**
-
-```bat
-mkdir c:\models
-ovms --rest_port 8000 --source_model OpenVINO/Kokoro-82M-int8-ov --model_repository_path c:\models --model_name Kokoro-82M-int8-ov --target_device CPU
-```
-
-### Request Generation
-
-Select the request shape for the deployed model:
+Select the model to deploy. Replace `<ovms_model>` with the OpenVINO model repository or local model path when the converted model is not published on Hugging Face.
 
 ::::{tab-set}
 :::{tab-item} Kokoro
 :sync: Kokoro
+```bash
+mkdir -p ${HOME}/models
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 \
+  -v ${HOME}/models:/models:rw openvino/model_server:latest \
+  --rest_port 8000 \
+  --source_model OpenVINO/Kokoro-82M-int8-ov \
+  --model_repository_path /models \
+  --model_name Kokoro-82M-int8-ov \
+  --target_device CPU
+```
+:::
+:::{tab-item} SpeechT5
+:sync: SpeechT5
+```bash
+mkdir -p ${HOME}/models
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 \
+  -v ${HOME}/models:/models:rw openvino/model_server:latest \
+  --rest_port 8000 \
+  --source_model <ovms_model> \
+  --model_repository_path /models \
+  --model_name speecht5 \
+  --task text2speech
+```
+:::
+:::{tab-item} Qwen3 TTS CustomVoice
+:sync: Qwen3 TTS CustomVoice
+```bash
+mkdir -p ${HOME}/models
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 \
+  -v ${HOME}/models:/models:rw openvino/model_server:latest \
+  --rest_port 8000 \
+  --source_model <ovms_model> \
+  --model_repository_path /models \
+  --model_name qwen3-tts-customvoice \
+  --task text2speech
+```
+:::
+:::{tab-item} Qwen3 TTS VoiceDesign
+:sync: Qwen3 TTS VoiceDesign
+```bash
+mkdir -p ${HOME}/models
+docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 \
+  -v ${HOME}/models:/models:rw openvino/model_server:latest \
+  --rest_port 8000 \
+  --source_model <ovms_model> \
+  --model_repository_path /models \
+  --model_name qwen3-tts-voicedesign \
+  --task text2speech
+```
+:::
+::::
+
+For Kokoro on NPU, add `--device /dev/accel --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1)` to the Docker command, use the `openvino/model_server:latest-gpu` image, and set `--target_device NPU`. On bare metal, use the same selected model arguments with local repository paths.
+
+### Request Generation
+
+Select the model to show the matching request examples:
+
+::::{tab-set}
+:::{tab-item} Kokoro
+:sync: Kokoro
+**cURL**
 ```bash
 curl http://localhost:8000/v1/audio/speech \
   -H "Content-Type: application/json" \
@@ -81,61 +120,104 @@ curl http://localhost:8000/v1/audio/speech \
   }' \
   -o speech.wav
 ```
+
+**OpenAI Python client**
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="not_used")
+with client.audio.speech.with_streaming_response.create(
+    model="Kokoro-82M-int8-ov",
+    voice="af_alloy",
+    input="The quick brown fox jumped over the lazy dog.",
+) as response:
+    response.stream_to_file("speech.wav")
+```
 :::
-:::{tab-item} Qwen3 TTS CustomVoice
-:sync: Qwen3 TTS CustomVoice
+:::{tab-item} SpeechT5
+:sync: SpeechT5
+**cURL**
 ```bash
 curl http://localhost:8000/v1/audio/speech \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "<qwen3-tts-customvoice>",
+    "model": "speecht5",
+    "voice": "default",
+    "input": "The quick brown fox jumped over the lazy dog."
+  }' \
+  -o speech.wav
+```
+
+**OpenAI Python client**
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="not_used")
+with client.audio.speech.with_streaming_response.create(
+    model="speecht5",
+    voice="default",
+    input="The quick brown fox jumped over the lazy dog.",
+) as response:
+    response.stream_to_file("speech.wav")
+```
+:::
+:::{tab-item} Qwen3 TTS CustomVoice
+:sync: Qwen3 TTS CustomVoice
+**cURL**
+```bash
+curl http://localhost:8000/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "qwen3-tts-customvoice",
     "voice": "<model-speaker>",
     "instructions": "Speak warmly and at a measured pace.",
     "input": "Welcome to OpenVINO Model Server."
   }' \
   -o custom_voice.wav
 ```
+
+**OpenAI Python client**
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="not_used")
+with client.audio.speech.with_streaming_response.create(
+    model="qwen3-tts-customvoice",
+    voice="<model-speaker>",
+    instructions="Speak warmly and at a measured pace.",
+    input="Welcome to OpenVINO Model Server.",
+) as response:
+    response.stream_to_file("custom_voice.wav")
+```
 :::
 :::{tab-item} Qwen3 TTS VoiceDesign
 :sync: Qwen3 TTS VoiceDesign
+**cURL**
 ```bash
 curl http://localhost:8000/v1/audio/speech \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "<qwen3-tts-voicedesign>",
+    "model": "qwen3-tts-voicedesign",
     "instructions": "A calm, clear adult voice with a warm conversational tone.",
     "input": "Welcome to OpenVINO Model Server."
   }' \
   -o designed_voice.wav
 ```
-:::
-::::
 
-:::{dropdown} **Unary call with OpenAI python library**
-
+**OpenAI Python client**
 ```python
-from pathlib import Path
 from openai import OpenAI
 
-prompt = "The quick brown fox jumped over the lazy dog"
-filename = "speech.wav"
-url="http://localhost:8000/v1"
-
-
-speech_file_path = Path(__file__).parent / "speech.wav"
-client = OpenAI(base_url=url, api_key="not_used")
-
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="not_used")
 with client.audio.speech.with_streaming_response.create(
-  model="Kokoro-82M-int8-ov",
-  voice="af_alloy",
-  input=prompt
+    model="qwen3-tts-voicedesign",
+    instructions="A calm, clear adult voice with a warm conversational tone.",
+    input="Welcome to OpenVINO Model Server.",
 ) as response:
-  response.stream_to_file(speech_file_path)
-
-
-print("Generation finished")
+    response.stream_to_file("designed_voice.wav")
 ```
 :::
+::::
 
 Play the generated audio file to verify the response.
 
@@ -193,7 +275,7 @@ mkdir -p ${HOME}/models
 docker run -d -u $(id -u):$(id -g) --rm -p 8000:8000 \
   -v ${HOME}/models:/models:rw openvino/model_server:weekly \
   --rest_port 8000 \
-  --source_model <qwen_asr_model> \
+  --source_model <ovms_model> \
   --model_name qwen3-asr \
   --model_repository_path /models \
   --task text_generation
@@ -222,7 +304,7 @@ Transcribe the speech.wav file generated in the [Speech generation](#speech-gene
 ::::{tab-set}
 :::{tab-item} Whisper Large v3
 :sync: whisper-large-v3-int8-ov
-**cURL**
+**Unary call with cURL**
 ```bash
 curl http://localhost:8000/v1/audio/transcriptions \
   -F 'file=@speech.wav' \
@@ -230,7 +312,7 @@ curl http://localhost:8000/v1/audio/transcriptions \
   -F 'language=en'
 ```
 
-**OpenAI Python client**
+**Unary call with OpenAI Python client**
 ```python
 from openai import OpenAI
 
@@ -243,10 +325,42 @@ with open("speech.wav", "rb") as audio_file:
     )
 print(transcript.text)
 ```
+
+**Streaming call with cURL**
+```bash
+curl -N http://localhost:8000/v1/audio/transcriptions \
+  -F 'file=@speech.wav' \
+  -F 'model=whisper-large-v3-int8-ov' \
+  -F 'language=en' \
+  -F 'stream=true'
+```
+
+**Sentence timestamps**
+```bash
+curl http://localhost:8000/v1/audio/transcriptions \
+  -F 'file=@speech.wav' \
+  -F 'model=whisper-large-v3-int8-ov' \
+  -F 'language=en' \
+  -F 'timestamp_granularities[]=segment'
+```
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="not_used")
+with open("speech.wav", "rb") as audio_file:
+    transcript = client.audio.transcriptions.create(
+        model="whisper-large-v3-int8-ov",
+        language="en",
+        response_format="verbose_json",
+        timestamp_granularities=["segment"],
+        file=audio_file,
+    )
+print(transcript.segments)
+```
 :::
 :::{tab-item} Whisper Large v3 Turbo
 :sync: whisper-large-v3-turbo-int8-ov
-**cURL**
+**Unary call with cURL**
 ```bash
 curl http://localhost:8000/v1/audio/transcriptions \
   -F 'file=@speech.wav' \
@@ -254,7 +368,7 @@ curl http://localhost:8000/v1/audio/transcriptions \
   -F 'language=en'
 ```
 
-**OpenAI Python client**
+**Unary call with OpenAI Python client**
 ```python
 from openai import OpenAI
 
@@ -267,10 +381,42 @@ with open("speech.wav", "rb") as audio_file:
     )
 print(transcript.text)
 ```
+
+**Streaming call with cURL**
+```bash
+curl -N http://localhost:8000/v1/audio/transcriptions \
+  -F 'file=@speech.wav' \
+  -F 'model=whisper-large-v3-turbo-int8-ov' \
+  -F 'language=en' \
+  -F 'stream=true'
+```
+
+**Sentence timestamps**
+```bash
+curl http://localhost:8000/v1/audio/transcriptions \
+  -F 'file=@speech.wav' \
+  -F 'model=whisper-large-v3-turbo-int8-ov' \
+  -F 'language=en' \
+  -F 'timestamp_granularities[]=segment'
+```
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="not_used")
+with open("speech.wav", "rb") as audio_file:
+    transcript = client.audio.transcriptions.create(
+        model="whisper-large-v3-turbo-int8-ov",
+        language="en",
+        response_format="verbose_json",
+        timestamp_granularities=["segment"],
+        file=audio_file,
+    )
+print(transcript.segments)
+```
 :::
 :::{tab-item} Distil-Whisper
 :sync: distil-whisper-large-v3-int8-ov
-**cURL**
+**Unary call with cURL**
 ```bash
 curl http://localhost:8000/v1/audio/transcriptions \
   -F 'file=@speech.wav' \
@@ -278,7 +424,7 @@ curl http://localhost:8000/v1/audio/transcriptions \
   -F 'language=en'
 ```
 
-**OpenAI Python client**
+**Unary call with OpenAI Python client**
 ```python
 from openai import OpenAI
 
@@ -291,17 +437,49 @@ with open("speech.wav", "rb") as audio_file:
     )
 print(transcript.text)
 ```
+
+**Streaming call with cURL**
+```bash
+curl -N http://localhost:8000/v1/audio/transcriptions \
+  -F 'file=@speech.wav' \
+  -F 'model=distil-whisper-large-v3-int8-ov' \
+  -F 'language=en' \
+  -F 'stream=true'
+```
+
+**Sentence timestamps**
+```bash
+curl http://localhost:8000/v1/audio/transcriptions \
+  -F 'file=@speech.wav' \
+  -F 'model=distil-whisper-large-v3-int8-ov' \
+  -F 'language=en' \
+  -F 'timestamp_granularities[]=segment'
+```
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="not_used")
+with open("speech.wav", "rb") as audio_file:
+    transcript = client.audio.transcriptions.create(
+        model="distil-whisper-large-v3-int8-ov",
+        language="en",
+        response_format="verbose_json",
+        timestamp_granularities=["segment"],
+        file=audio_file,
+    )
+print(transcript.segments)
+```
 :::
 :::{tab-item} Qwen3 ASR
 :sync: qwen3-asr
-**cURL**
+**Unary call with cURL**
 ```bash
 curl http://localhost:8000/v1/audio/transcriptions \
   -F 'file=@speech.wav' \
   -F 'model=qwen3-asr'
 ```
 
-**OpenAI Python client**
+**Unary call with OpenAI Python client**
 ```python
 from openai import OpenAI
 
@@ -313,25 +491,25 @@ with open("speech.wav", "rb") as audio_file:
     )
 print(transcript.text)
 ```
+
+**Streaming call with cURL**
+```bash
+curl -N http://localhost:8000/v1/audio/transcriptions \
+  -F 'file=@speech.wav' \
+  -F 'model=qwen3-asr' \
+  -F 'stream=true'
+```
+
+Qwen3 ASR does not expose Whisper's `timestamp_granularities` fields through this endpoint.
 :::
 ::::
 
+Example unary response:
 ```json
 {"text": " The quick brown fox jumped over the lazy dog."}
 ```
 
-:::{dropdown} **Streaming call with cURL**
-
-```bash
-curl -N http://localhost:8000/v1/audio/transcriptions \
-  -H "Content-Type: multipart/form-data" \
-  -F file="@speech.wav" \
-  -F model="whisper-large-v3-turbo-int8-ov" \
-  -F language="en" \
-  -F stream="true"
-```
-
-Example streamed chunks (SSE format):
+Example streamed chunks:
 ```text
 data: {"type":"transcript.text.delta","delta":"The quick ","logprobs":[]}
 
@@ -339,49 +517,6 @@ data: {"type":"transcript.text.delta","delta":"brown fox ","logprobs":[]}
 
 data: {"type":"transcript.text.done","text":"The quick brown fox jumped over the lazy dog.","logprobs":[]}
 ```
-:::
-
-:::{dropdown} **Unary call with sentence timestamps**
-
-
-```bash
-curl http://localhost:8000/v1/audio/transcriptions -H "Content-Type: multipart/form-data" -F file="@speech.wav" -F model="whisper-large-v3-turbo-int8-ov" -F language="en" -F timestamp_granularities[]="segment"
-```
-```json
-{"text":" A quick brown fox jumped over the lazy dog","segments":[{"text":" A quick brown fox jumped over the lazy dog","start":0.0,"end":3.1399998664855957}]}
-```
-:::
-
-:::{dropdown} **Unary call with python OpenAI library with sentence timestamps**
-
-```python
-from pathlib import Path
-from openai import OpenAI
-
-filename = "speech.wav"
-url="http://localhost:8000/v1"
-
-
-speech_file_path = Path(__file__).parent / filename
-client = OpenAI(base_url=url, api_key="not_used")
-
-audio_file = open(filename, "rb")
-transcript = client.audio.transcriptions.create(
-  model="whisper-large-v3-turbo-int8-ov",
-  language="en",
-  response_format="verbose_json",
-  timestamp_granularities=["segment"],
-  file=audio_file
-)
-
-print(transcript.text)
-print(transcript.segments)
-```
-```
- A quick brown fox jumped over the lazy dog
-[TranscriptionSegment(id=None, avg_logprob=None, compression_ratio=None, end=3.1399998664855957, no_speech_prob=None, seek=None, start=0.0, temperature=None, text=' A quick brown fox jumped over the lazy dog', tokens=None)]
-```
-:::
 
 ### Qwen3 ASR continuous batching
 
