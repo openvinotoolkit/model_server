@@ -176,7 +176,7 @@ Status JsonParser::parsePluginConfig(const rapidjson::Value& node, plugin_config
  *
  * @return status
  */
-Status JsonParser::parsePluginConfig(std::string command, plugin_config_t& pluginConfig) {
+Status JsonParser::parsePluginConfig(const std::string& command, plugin_config_t& pluginConfig) {
     rapidjson::Document node;
     if (command.empty()) {
         return StatusCode::OK;

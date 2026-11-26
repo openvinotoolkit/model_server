@@ -31,9 +31,11 @@ if [ "$os" == "auto" ] ; then
     os=$( . /etc/os-release ; echo "${ID}${VERSION_ID}" )
     if [[ "$os" =~ "rhel9".* ]] ; then
       os="rhel9"
+        elif [[ "$os" =~ "rhel10".* ]] ; then
+            os="rhel10"
     fi
     case $os in
-        rhel9|ubuntu22.04|ubuntu24.04|ubuntu26.04) [ -z "$print" ] && echo "Detected OS: ${os}" ;;
+            rhel9|rhel10|ubuntu22.04|ubuntu24.04|ubuntu26.04) [ -z "$print" ] && echo "Detected OS: ${os}" ;;
         *) echo "Unsupported OS: ${os:-detection failed}" >&2 ; exit 1 ;;
     esac
 fi
@@ -45,7 +47,7 @@ if [ "$os" == "ubuntu20.04" ] || [ "$os" == "ubuntu22.04" ] || [ "$os" == "ubunt
     export DEBIAN_FRONTEND=noninteractive
     apt update && apt install -y build-essential git cmake \
         && rm -rf /var/lib/apt/lists/*
-elif [ "$os" == "rhel8" ] || [ "$os" == "rhel9" ] ; then
+elif [ "$os" == "rhel8" ] || [ "$os" == "rhel9" ] || [ "$os" == "rhel10" ] ; then
     yum install -d6 -y git cmake gcc-c++
 else
     echo "Internal script error: unsupported OS" >&2
@@ -63,7 +65,7 @@ cd $work_dir/opencv_repo
 mkdir -p $work_dir/opencv_repo/build
 cd $work_dir/opencv_repo/build
 cmake $(cat $current_working_dir/opencv_cmake_flags.txt) -DCMAKE_CXX_FLAGS="${SDL_OPS}" $work_dir/opencv_repo && \
-    make "-j$(nproc)" && \
+    make "-j${JOBS:-$(nproc)}" && \
     make install
 
 #===================================================================================================

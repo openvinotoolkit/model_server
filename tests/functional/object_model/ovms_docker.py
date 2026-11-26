@@ -580,21 +580,24 @@ class OvmsDockerInstance(OvmsInstance):
         return self.container.container.short_id
 
     def cleanup(self, timeout=30):
-        if not self.container.deleted:
+        if self.container.deleted:
+            # stop_ovms marks the container deleted, which skips super().cleanup()
+            self.release_target_device_lock()
+            return
+        try:
+            super().cleanup()
+        except ValueError as e:
+            print(f"Error occurred during cleanup:\n{e}")
+        finally:
             try:
-                super().cleanup()
-            except ValueError as e:
-                print(f"Error occurred during cleanup:\n{e}")
-            finally:
-                try:
-                    logger.info(f"Removing container {self.container.container.short_id}")
-                    self.container.cleanup()
-                    logger.info("Container removed")
-                    self.release_ports()
-                    self._dmesg_log.raise_on_unexpected_messages(filter_known_messages=True)
-                except Exception as e:
-                    logger.info(f"Cleanup triggered exception: {str(e)}")
-                    raise e
+                logger.info(f"Removing container {self.container.container.short_id}")
+                self.container.cleanup()
+                logger.info("Container removed")
+                self.release_ports()
+                self._dmesg_log.raise_on_unexpected_messages(filter_known_messages=True)
+            except Exception as e:
+                logger.info(f"Cleanup triggered exception: {str(e)}")
+                raise e
 
     def start(self, ensure_started=False, *args, **kwargs):
         self.container.start_container()

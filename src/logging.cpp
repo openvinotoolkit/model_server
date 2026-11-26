@@ -44,7 +44,7 @@ std::shared_ptr<spdlog::logger> ov_logger = std::make_shared<spdlog::logger>("op
 #endif
 const std::string default_pattern = "[%Y-%m-%d %T.%e][%t][%n][%l][%s:%#] %v";
 
-static void set_log_level(const std::string log_level, std::shared_ptr<spdlog::logger> logger) {
+static void set_log_level(const std::string& log_level, std::shared_ptr<spdlog::logger> logger) {
     logger->set_level(spdlog::level::info);
     if (!log_level.empty()) {
         if (log_level == "DEBUG") {

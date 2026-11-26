@@ -29,7 +29,7 @@
 
 namespace ovms {
 
-std::string joins(const std::vector<std::string>& listOfStrings, const std::string delimiter) {
+std::string joins(const std::vector<std::string>& listOfStrings, const std::string& delimiter) {
     std::stringstream ss;
     auto it = listOfStrings.cbegin();
     if (it == listOfStrings.end()) {

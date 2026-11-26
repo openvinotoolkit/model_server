@@ -97,7 +97,7 @@ static std::string joinPath(std::initializer_list<std::string> segments) {
     return joined;
 }
 
-static void writeToFile(std::stringstream& stream, std::string name) {
+static void writeToFile(std::stringstream& stream, const std::string& name) {
     std::ofstream ofs;
     ofs.open(name);
     ofs << stream.rdbuf();
