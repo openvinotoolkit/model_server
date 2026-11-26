@@ -203,6 +203,12 @@ build:windows --repo_env=HERMETIC_PYTHON_VERSION=3.14
 build:win_mp_on --config=windows
 build:win_mp_on --define=MEDIAPIPE_DISABLE=0
 
+# Opt-in Windows CI diagnostic: rebuild without using or populating the remote cache.
+# Local builds and normal Windows CI retain win_mp_on cache behavior.
+build:win_no_remote_cache --config=win_mp_on
+build:win_no_remote_cache --remote_accept_cached=false
+build:win_no_remote_cache --remote_upload_local_results=false
+
 # Tests settings ############################################################################################################################
 test --test_timeout=1200
 # sometimes failed logs exceed this threshold

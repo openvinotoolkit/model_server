@@ -86,6 +86,7 @@ Source: "{#OvmsSourceDir}\openvino.dll"; DestDir: "{app}"; Components: core; Fla
 Source: "{#OvmsSourceDir}\openvino_c.dll"; DestDir: "{app}"; Components: core; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\openvino_genai.dll"; DestDir: "{app}"; Components: core; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\openvino_genai_c.dll"; DestDir: "{app}"; Components: core; Flags: ignoreversion
+Source: "{#OvmsSourceDir}\openvino_gguf_frontend.dll"; DestDir: "{app}"; Components: core; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\openvino_tokenizers.dll"; DestDir: "{app}"; Components: core; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\openvino_auto_plugin.dll"; DestDir: "{app}"; Components: core; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\openvino_auto_batch_plugin.dll"; DestDir: "{app}"; Components: core; Flags: ignoreversion
@@ -189,6 +190,28 @@ begin
   Result := AddBackslash(ExtractFileDir(ExpandConstant('{srcexe}'))) + 'OVMSSetup.log';
 end;
 
+function OvmsMsgBox(MessageText: String; Kind: TMsgBoxType; Buttons: Integer): Integer;
+var
+  LogText: String;
+begin
+  LogText := MessageText;
+
+  if WizardSilent() or UninstallSilent() then
+  begin
+    SaveStringToFile(GetSetupLogPath,
+      '[SETUP] ' + LogText + #13#10,
+      True);
+
+    if Buttons = MB_YESNO then
+      Result := IDYES
+    else
+      Result := IDOK;
+    Exit;
+  end;
+
+  Result := MsgBox(MessageText, Kind, Buttons);
+end;
+
 procedure InitializeSetupLog;
 var
   LogPath: String;
@@ -271,7 +294,10 @@ begin
      (CompareText(PythonMode, 'embedded') <> 0) and
      (CompareText(PythonMode, 'none') <> 0) then
   begin
-    RaiseException('Invalid /PYTHONMODE value. Use system, embedded, or none.');
+    SaveStringToFile(GetSetupLogPath,
+      '[SETUP] Invalid /PYTHONMODE value. Use system, embedded, or none.' + #13#10,
+      True);
+    Abort;
   end;
 
   Components := 'core';
@@ -735,12 +761,12 @@ begin
   if ResultCode = 0 then
   begin
     Message := 'The OVMS Windows service was stopped successfully.';
-    MsgBox(Message, mbInformation, MB_OK);
+    OvmsMsgBox(Message, mbInformation, MB_OK);
   end
   else
   begin
     Message := 'OVMS service could not be stopped. Please stop it manually and then continue with installation.';
-    MsgBox(Message, mbError, MB_OK);
+    OvmsMsgBox(Message, mbError, MB_OK);
   end;
 
   UpdateRuntimePageControls;
@@ -899,13 +925,30 @@ begin
       exit;
     end;
 
-    if MsgBox(
+    if OvmsMsgBox(
       'Other running ovms.exe processes were detected outside this installer destination.' + #13#10#13#10 +
       'This setup does not stop them. Stop external servers manually if they use conflicting ports.' + #13#10#13#10 +
       'Continue setup?',
       mbConfirmation, MB_YESNO) = IDNO then
     begin
       Result := False;
+    end;
+  end;
+end;
+
+function GetCommandLineDirValue: String;
+var
+  I: Integer;
+  Arg: String;
+begin
+  Result := '';
+  for I := 1 to ParamCount do
+  begin
+    Arg := ParamStr(I);
+    if CompareText(Copy(Arg, 1, 5), '/DIR=') = 0 then
+    begin
+      Result := Copy(Arg, 6, Length(Arg) - 5);
+      Exit;
     end;
   end;
 end;
@@ -923,7 +966,7 @@ begin
 
   if ExistingInstallDetected then
   begin
-    if Length(ExistingInstallDir) > 0 then
+    if (Length(ExistingInstallDir) > 0) and (GetCommandLineDirValue = '') then
     begin
       WizardForm.DirEdit.Text := ExistingInstallDir;
     end;
@@ -1153,7 +1196,7 @@ begin
       'OVMS could not persist the model repository path to the user environment.' + #13#10 +
       'Path: ' + ModelRepositoryPath + #13#10 +
       'The installation will continue, but you may need to set OVMS_MODEL_REPOSITORY_PATH manually.';
-    MsgBox(Message, mbError, MB_OK);
+    OvmsMsgBox(Message, mbError, MB_OK);
   end;
 end;
 
@@ -1193,7 +1236,7 @@ begin
   ScriptPath := ExpandConstant('{app}\scripts\configure-ovms.ps1');
   if not FileExists(ScriptPath) then
   begin
-    MsgBox('The OVMS Python configuration helper script was not installed with the package. Expected path:' + #13#10 + ScriptPath + #13#10#13#10 + 'Rebuild the installer or reinstall the package with the full scripts bundle.', mbError, MB_OK);
+    OvmsMsgBox('The OVMS Python configuration helper script was not installed with the package. Expected path:' + #13#10 + ScriptPath + #13#10#13#10 + 'Rebuild the installer or reinstall the package with the full scripts bundle.', mbError, MB_OK);
     Result := False;
     exit;
   end;
@@ -1207,17 +1250,21 @@ begin
   if ResultCode = 0 then
   begin
     if Variant = 'system' then
-      Message := 'System Python configuration succeeded.' + #13#10 + 'The detected Python 3.14 environment is ready for OVMS.'
+      SaveStringToFile(LogPath,
+        '[SETUP] System Python configuration succeeded. The detected Python 3.14 environment is ready for OVMS.' + #13#10,
+        True)
     else if Variant = 'none' then
-      Message := 'OVMS runtime configuration succeeded.' + #13#10 + 'Python support is disabled for this installation.'
+      SaveStringToFile(LogPath,
+        '[SETUP] OVMS runtime configuration succeeded. Python support is disabled for this installation.' + #13#10,
+        True)
     else
-      Message := 'Embedded Python configuration succeeded.';
+      SaveStringToFile(LogPath,
+        '[SETUP] Embedded Python configuration succeeded.' + #13#10,
+        True);
 
-    if FileExists(LogPath) then
-      Message := Message + #13#10 + #13#10 + 'Log file: ' + LogPath;
-
-    MsgBox(Message, mbInformation, MB_OK);
-    Result := True;
+    SaveStringToFile(LogPath,
+      '[SETUP] Setup log: ' + LogPath + #13#10,
+      True);
   end
   else
   begin
@@ -1226,7 +1273,7 @@ begin
     if not FileExists(LogPath) then
       Message := 'OVMS configuration failed for the selected ' + Variant + ' Python mode.' + #13#10 +
         'No detailed output was captured. Please check the installer log and try again.';
-    MsgBox(Message, mbError, MB_OK);
+    OvmsMsgBox(Message, mbError, MB_OK);
     Result := False;
   end;
 end;
@@ -1269,14 +1316,12 @@ begin
   begin
     if IsOvmsServiceRunning then
     begin
-      MsgBox('The OVMS Windows service is still running. Stop it before continuing with the installation.', mbError, MB_OK);
       Result := False;
       Exit;
     end;
 
     if IsOvmsProcessAtDestinationRunning then
     begin
-      MsgBox('An OVMS process from this installation is still running. Stop it before continuing.', mbError, MB_OK);
       Result := False;
       Exit;
     end;
@@ -1322,7 +1367,7 @@ begin
         if ResultCode <> 0 then
         begin
           SaveStringToFile(GetSetupLogPath, '[SETUP] Repair cleanup failed with exit code ' + IntToStr(ResultCode) + #13#10, True);
-          MsgBox('Repair cleanup failed for the existing installation. Some deselected components may still be present.' + #13#10 + 'See the setup log for details: ' + GetSetupLogPath, mbError, MB_OK);
+          OvmsMsgBox('Repair cleanup failed for the existing installation. Some deselected components may still be present.' + #13#10 + 'See the setup log for details: ' + GetSetupLogPath, mbError, MB_OK);
         end;
       end;
     end;
@@ -1339,7 +1384,7 @@ begin
         '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
       if ResultCode <> 0 then
       begin
-        MsgBox('OVMS PATH configuration failed. See the setup log for details: ' + GetSetupLogPath, mbError, MB_OK);
+        OvmsMsgBox('OVMS PATH configuration failed. See the setup log for details: ' + GetSetupLogPath, mbError, MB_OK);
       end;
     end;
 
@@ -1385,14 +1430,14 @@ begin
 
         if RecoveryResultCode = 0 then
         begin
-          MsgBox('OVMS service mode was selected, but elevated service setup failed.' + #13#10 +
+          OvmsMsgBox('OVMS service mode was selected, but elevated service setup failed.' + #13#10 +
             'The installer recovered run mode to Manual - start in terminal.' + #13#10 +
             'Details were logged to:' + #13#10 + GetSetupLogPath,
             mbError, MB_OK);
         end
         else
         begin
-          MsgBox('OVMS service mode was selected, but elevated service setup failed.' + #13#10 +
+          OvmsMsgBox('OVMS service mode was selected, but elevated service setup failed.' + #13#10 +
             'Run-mode recovery to Manual mode also failed, so settings may still indicate service mode.' + #13#10 +
             'Please run configure-ovms.ps1 manually with -RunMode user-login.' + #13#10 +
             'Details were logged to:' + #13#10 + GetSetupLogPath,
@@ -1409,7 +1454,7 @@ begin
 
       if LegacyUninstallStringToMigrate <> '' then
       begin
-        MsgBox(
+        OvmsMsgBox(
           'A previous OVMS installation was preserved at:' + #13#10 +
           LegacyInstallDirToMigrate + #13#10#13#10 +
           'The new installation completed successfully.' + #13#10 +
@@ -1419,7 +1464,7 @@ begin
       end
       else
       begin
-        MsgBox(
+        OvmsMsgBox(
           'A previous OVMS installation was preserved at:' + #13#10 +
           LegacyInstallDirToMigrate + #13#10#13#10 +
           'The new installation completed successfully.' + #13#10 +
@@ -1491,7 +1536,7 @@ begin
   Result := False;
   if UninstallString = '' then
   begin
-    MsgBox('An existing OpenVINO Model Server install was detected, but its uninstaller could not be found.', mbError, MB_OK);
+    SaveStringToFile(GetSetupLogPath, '[SETUP] An existing OpenVINO Model Server install was detected, but its uninstaller could not be found.', True);
     exit;
   end;
 
@@ -1509,7 +1554,7 @@ begin
     '-NoProfile -ExecutionPolicy Bypass -Command "$dest=[IO.Path]::GetFullPath(''' + DestinationPath + ''').TrimEnd(''\\''); Get-Process ovms -ErrorAction SilentlyContinue | Where-Object { try { [IO.Path]::GetFullPath($_.Path).TrimEnd(''\\'').Equals($dest,[StringComparison]::OrdinalIgnoreCase) } catch { $false } } | Stop-Process -Force -ErrorAction SilentlyContinue"',
     '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   UpdateRuntimePageControls;
-  MsgBox('Matching OVMS processes were stopped.', mbInformation, MB_OK);
+  OvmsMsgBox('Matching OVMS processes were stopped.', mbInformation, MB_OK);
 end;
 
 procedure UpdateOvmsProcessStatus;

@@ -114,7 +114,7 @@ pipeline {
               if (git_diff =~ /(\n|^)(demos\/common\/export_models\/|prepare_llm_models\.sh$)/) {
                   export_models_changed = "true"
               }
-              if (git_diff =~ /src|third_party|external|ci|test_install_ovms_service_windows\\.py|\.c|\.h|\.bazel|\.bzl|BUILD|versions\.mk|WORKSPACE|\.bat|\.groovy/) {
+              if (git_diff =~ /src|third_party|external|ci|test_install_ovms_service_windows\.py|windows_installer_smoke_test\.py|packaging\/windows|\.iss|\.c|\.h|\.bazel|\.bzl|BUILD|versions\.mk|WORKSPACE|\.bat|\.groovy/) {
                   win_image_build_needed = "true"
               }
 
@@ -289,7 +289,7 @@ pipeline {
                       // release_image
                       sh "make release_image BASE_OS=ubuntu24 RUN_TESTS=0 GPU=1 NPU=1 OVMS_CPP_IMAGE_TAG=${shortCommit} BUILD_IMAGE=openvino/model_server-build:${shortCommit}"
                       sh "make run_lib_files_test OVMS_CPP_IMAGE_TAG=${shortCommit}"
-                      if ( test_doc_files_linux ) {
+                      if (test_doc_files_linux) {
                           sh "docker save openvino/model_server:${shortCommit} | gzip > ovms_release_image.tar.gz"
                           stash name: 'ovms-release-image', includes: 'ovms_release_image.tar.gz'
                           sh "rm -f ovms_release_image.tar.gz"
@@ -325,7 +325,7 @@ pipeline {
                           windows.install_dependencies()
                           windows.clean()
                           windows.build()
-                          stash name: 'ovms-windows-package', includes: 'dist\\windows\\ovms.zip'
+                          stash name: 'ovms-windows-package', includes: 'dist\\windows\\ovms.zip,dist\\windows\\OVMS-Setup.exe'
                         } finally {
                           windows.archive_build_artifacts()
                         }
@@ -603,6 +603,31 @@ python3 -m tests.functional.docker_compose_smoke_test openvino/model_server:${sh
                       }
                     }
                   }
+                  }
+                }
+              }
+            }
+          }
+        }
+        stage("Windows installer CLI tests") {
+          agent {
+            label "${agent_name_windows}"
+          }
+          when { expression { win_image_build_needed == "true" } }
+          steps {
+            script {
+              timeout(time: 45, unit: 'MINUTES') {
+                lock(resource: 'ovms-windows-installer-tests') {
+                  withGithubStageStatus('jenkins/oncommit/windows-installer-cli-tests', 'Windows installer CLI tests') {
+                    unstash 'ovms-windows-package'
+                    try {
+                      def exitCode = bat(returnStatus: true, script: "python -m tests.functional.windows_installer_smoke_test --installer dist\\windows\\OVMS-Setup.exe --report windows_installer_smoke_report.md > windows_installer_smoke_test.log 2>&1\nset \"rc=%errorlevel%\"\n@if exist windows_installer_smoke_test.log type windows_installer_smoke_test.log\n@exit /b %rc%")
+                      if (exitCode != 0) {
+                        error "Windows installer CLI tests failed with exit code ${exitCode}"
+                      }
+                    } finally {
+                      archiveArtifacts allowEmptyArchive: true, artifacts: 'windows_installer_smoke_report.md,windows_installer_smoke_test.log,*.log'
+                    }
                   }
                 }
               }
