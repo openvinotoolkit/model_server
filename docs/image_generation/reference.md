@@ -223,7 +223,7 @@ Each individual adapter can optionally specify a default alpha weight by appendi
 
 The alpha value controls how strongly the adapter influences generation (default: `1.0`). Examples:
 
-```bash
+```text
 # Linux - adapter with alpha 0.6
 --source_loras="pokemon=/models/loras/pokemon.safetensors:0.6"
 
@@ -239,12 +239,12 @@ The alpha value controls how strongly the adapter influences generation (default
 > **Important:** Alpha must be specified at only one level — either on the individual adapter OR on the composite components, not both. If both have non-default values, the server will reject the configuration with an error.
 
 **Example:**
-```bash
+```text
 ovms --rest_port 8000 \
   --model_repository_path /models/ \
   --task image_generation \
   --source_model stabilityai/stable-diffusion-xl-base-1.0 \
-  --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors"
+  --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors"
 ```
 
 > **Important:** LoRA adapters must be compatible with the base model architecture. For example, SDXL adapters can only be used with an SDXL base model.
@@ -263,7 +263,7 @@ The `mix` adapter is a composite that blends `pokemon` at weight 0.7 and `anime`
 
 Adapter selection is driven by the `model` field in the request. When the `model` field matches a registered adapter alias, that adapter is automatically applied:
 
-```bash
+```text
 curl http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
   -d '{"model": "xray", "prompt": "xray a human hand", "num_inference_steps": 20}'
@@ -273,7 +273,7 @@ In this example, `xray` is the alias defined in `--source_loras` (e.g. `xray=Doc
 
 When the `model` field matches a **composite** adapter alias, all component adapters are activated with their pre-defined weights:
 
-```bash
+```text
 curl http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
   -d '{"model": "mix", "prompt": "a landscape"}'
@@ -300,7 +300,7 @@ The `lora_alphas` field in the request body allows overriding the default alpha 
 {
   "model": "mix",
   "prompt": "a landscape in mixed style",
-  "lora_alphas": {"ukiyo": 0.3, "vector": 0.8}
+  "lora_alphas": {"pokemon": 0.3, "anime": 0.8}
 }
 ```
 
@@ -309,11 +309,11 @@ The `lora_alphas` field in the request body allows overriding the default alpha 
 To blend multiple adapters simultaneously, define a **composite adapter** at startup:
 
 ```
---source_loras="xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e Art.safetensors,blend=@xray:0.5+@ukiyo:0.4"
+--source_loras="xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,blend=@xray:0.5+@ukiyo:0.4"
 ```
 
 Then use the composite alias in requests:
-```bash
+```text
 curl http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
   -d '{"model": "blend", "prompt": "a cat"}'
