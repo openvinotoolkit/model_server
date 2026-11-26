@@ -78,7 +78,6 @@ from tests.functional.constants.ovms_images import (
     calculate_ovms_test_image_name,
     calculate_ovms_image_name,
     get_ovms_calculated_images,
-    get_driver_version,
     GPU_INSTALL_SCRIPTS,
 )
 from tests.functional.constants.ovms_type import (
@@ -145,6 +144,36 @@ TIMEOUT_MULTIPLIER: dict = {
 }
 
 SkippedItem = namedtuple("SkippedItem", "test_name reason")
+
+def get_data_from_versions_mk():
+    filepath = os.path.join(ovms_c_repo_path, "versions.mk")
+    if not os.path.exists(filepath):
+        return None
+
+    with open(filepath, "r") as f:
+        data = f.read()
+
+    return data
+
+
+def get_driver_version(os_type):
+    data = get_data_from_versions_mk()
+
+    ubuntu_22_driver = re.search(r"GPU_DRIVER_VERSION_UBUNTU22 \?= [^\n]+", data).group().split()[-1]
+    ubuntu_24_driver = re.search(r"GPU_DRIVER_VERSION_UBUNTU24 \?= [^\n]+", data).group().split()[-1]
+    ubuntu_26_driver = re.search(r"GPU_DRIVER_VERSION_UBUNTU26 \?= [^\n]+", data).group().split()[-1]
+    redhat_driver = re.search(r"GPU_DRIVER_VERSION_REDHAT \?= [^\n]+", data).group().split()[-1]
+
+    if os_type == OsType.Redhat:
+        return redhat_driver
+    elif os_type == OsType.Ubuntu22:
+        return ubuntu_22_driver
+    elif os_type == OsType.Ubuntu24:
+        return ubuntu_24_driver
+    elif os_type == OsType.Ubuntu26:
+        return ubuntu_26_driver
+    else:
+        raise NotImplementedError(f"Unsupported OS type: {os_type}")
 
 
 def init_environment(_config):

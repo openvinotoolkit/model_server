@@ -16,7 +16,6 @@
 
 import re
 
-from tests.functional.utils.helpers import get_data_from_versions_mk
 from tests.functional.utils.environment_info import EnvironmentInfo
 from tests.functional.constants.os_type import OsType, UBUNTU
 from tests.functional.constants.os_version import OPENVINO_MODEL_SERVER
@@ -36,33 +35,12 @@ from tests.functional.constants.target_device import TargetDevice
 from tests.functional.constants.ovms import CurrentOvmsType
 from tests.functional.constants.ovms import CurrentTarget as ct
 
-
-def get_driver_version(os_type):
-    data = get_data_from_versions_mk()
-
-    ubuntu_22_driver = re.search(r"GPU_DRIVER_VERSION_UBUNTU22 \?= [^\n]+", data).group().split()[-1]
-    ubuntu_24_driver = re.search(r"GPU_DRIVER_VERSION_UBUNTU24 \?= [^\n]+", data).group().split()[-1]
-    ubuntu_26_driver = re.search(r"GPU_DRIVER_VERSION_UBUNTU26 \?= [^\n]+", data).group().split()[-1]
-    redhat_driver = re.search(r"GPU_DRIVER_VERSION_REDHAT \?= [^\n]+", data).group().split()[-1]
-
-    if os_type == OsType.Redhat:
-        return redhat_driver
-    elif os_type == OsType.Ubuntu22:
-        return ubuntu_22_driver
-    elif os_type == OsType.Ubuntu24:
-        return ubuntu_24_driver
-    elif os_type == OsType.Ubuntu26:
-        return ubuntu_26_driver
-    else:
-        raise NotImplementedError(f"Unsupported OS type: {os_type}")
-
 GPU_INSTALL_SCRIPTS = {
     OsType.Ubuntu22: ["install_ubuntu_gpu_drivers.sh", "install_va.sh"],
     OsType.Ubuntu24: ["install_ubuntu_gpu_drivers.sh", "install_va.sh"],
     OsType.Ubuntu26: ["install_ubuntu_gpu_drivers.sh", "install_va.sh"],
     OsType.Redhat: ["install_redhat_gpu_drivers.sh"],
 }
-
 
 class OvmsImages:
     _os_type = None
