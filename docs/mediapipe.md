@@ -64,7 +64,7 @@ On Windows, the DLL is loaded from the OVMS package directory and registers calc
 
 ## PyTensorOvTensorConverterCalculator
 
-`PyTensorOvTensorConverterCalculator` enables conversion between nodes that are run by `PythonExecutorCalculator` and nodes that receive and/or produce [OV Tensors](https://docs.openvino.ai/2026/api/c_cpp_api/classov_1_1_tensor.html)
+`PyTensorOvTensorConverterCalculator` enables conversion between nodes that are run by `PythonExecutorCalculator` and nodes that receive and/or produce OV Tensors.
 
 ## How to create the graph for deployment in OpenVINO Model Server
 

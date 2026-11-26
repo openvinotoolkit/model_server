@@ -1231,7 +1231,6 @@ def run_llm_inference_and_validate_against_reference(
 
 
 def streaming_api_inference_language_models(mediapipe_model, kfs_client, prompts):
-    # Fetched from: https://github.com/openvinotoolkit/model_server/blob/main/demos/python_demos/llm_text_generation/client_stream.py
     results_decoded = []
     event, client, results = prepare_streaming_api_inference(mediapipe_model, kfs_client, prompts, results_decoded)
     infer_inputs = streaming_api_inference_prepare_infer_inputs(mediapipe_model, prompts)
