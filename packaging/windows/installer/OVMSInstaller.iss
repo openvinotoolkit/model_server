@@ -238,6 +238,69 @@ begin
     Result := 'none';
 end;
 
+function GetPythonModeCommandLineValue: String;
+var
+  I: Integer;
+  Arg: String;
+begin
+  Result := '';
+  for I := 1 to ParamCount do
+  begin
+    Arg := ParamStr(I);
+    if (CompareText(Copy(Arg, 1, 12), '/PYTHONMODE=') = 0) then
+    begin
+      Result := Copy(Arg, 13, Length(Arg) - 12);
+      Exit;
+    end;
+  end;
+end;
+
+procedure ApplyPythonModeCommandLineSelection;
+var
+  PythonMode: String;
+  Components: String;
+begin
+  if not WizardSilent() then
+    Exit;
+
+  PythonMode := GetPythonModeCommandLineValue;
+  if PythonMode = '' then
+    Exit;
+
+  if (CompareText(PythonMode, 'system') <> 0) and
+     (CompareText(PythonMode, 'embedded') <> 0) and
+     (CompareText(PythonMode, 'none') <> 0) then
+  begin
+    RaiseException('Invalid /PYTHONMODE value. Use system, embedded, or none.');
+  end;
+
+  Components := 'core';
+
+  if WizardIsComponentSelected('espeak') then
+    Components := Components + ',espeak';
+  if WizardIsComponentSelected('npu') then
+    Components := Components + ',npu';
+  if WizardIsComponentSelected('gpu') then
+    Components := Components + ',gpu';
+  if WizardIsComponentSelected('opencv_mp') then
+    Components := Components + ',opencv_mp';
+  if WizardIsComponentSelected('onnx_frontend') then
+    Components := Components + ',onnx_frontend';
+  if WizardIsComponentSelected('paddle_frontend') then
+    Components := Components + ',paddle_frontend';
+  if WizardIsComponentSelected('tensorflow_frontend') then
+    Components := Components + ',tensorflow_frontend';
+
+  if CompareText(PythonMode, 'system') = 0 then
+    Components := Components + ',python_system'
+  else if CompareText(PythonMode, 'embedded') = 0 then
+    Components := Components + ',python_embedded'
+  else
+    Components := Components + ',python_none';
+
+  WizardSelectComponents(Components);
+end;
+
 function GetDataMode(Param: String): String;
 begin
   Result := DataModeChoice;
@@ -852,6 +915,7 @@ var
   Lbl: TNewStaticText;
 begin
   InitializeSetupLog;
+  ApplyPythonModeCommandLineSelection;
 
   LegacyInstallMigrationPending := False;
   LegacyInstallDirToMigrate := '';
