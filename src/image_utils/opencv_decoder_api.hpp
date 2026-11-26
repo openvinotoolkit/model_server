@@ -24,5 +24,7 @@ namespace ovms {
 namespace image_utils {
 // The plugin and host are distributed together and must use the same OpenVINO ABI.
 using DecodeOpenCvV1 = int (*)(const unsigned char*, size_t, ov::Tensor*, char*, size_t);
+// Converts source to destination's precision, then resizes into destination's preallocated NHWC shape.
+using ResizeOpenCvV1 = int (*)(const ov::Tensor*, ov::Tensor*, char*, size_t);
 }  // namespace image_utils
 }  // namespace ovms
