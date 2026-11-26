@@ -316,7 +316,7 @@ server-side, so this measures a different workload from tensor-only inference.
 Download an image:
 
 ```console
-curl -fL https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/static/images/bee.jpeg -o image.jpeg
+curl -fL https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2026/5/demos/common/static/images/bee.jpeg -o image.jpeg
 ```
 
 Benchmark it over gRPC:

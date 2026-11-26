@@ -84,7 +84,7 @@ curl http://localhost:8000/v1/chat/completions \
           {
             "type": "image_url",
             "image_url": {
-              "url": "http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg"
+              "url": "http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/5/demos/common/static/images/zebra.jpeg"
             }
           }
         ]
@@ -142,7 +142,7 @@ curl http://localhost:8000/v1/responses \
           },
           {
             "type": "input_image",
-            "image_url": "http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg"
+            "image_url": "http://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/5/demos/common/static/images/zebra.jpeg"
           }
         ]
       }
@@ -213,7 +213,7 @@ curl http://localhost:8000/v1/responses \
 
 ```console
 pip3 install requests
-curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/common/static/images/zebra.jpeg -o zebra.jpeg
+curl https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/releases/2026/5/demos/common/static/images/zebra.jpeg -o zebra.jpeg
 ```
 ```python
 import requests

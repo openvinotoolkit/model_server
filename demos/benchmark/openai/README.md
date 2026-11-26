@@ -96,7 +96,7 @@ curl -f http://localhost:8000/v1/models
 Download an image on the client:
 
 ```console
-curl -fL https://raw.githubusercontent.com/openvinotoolkit/model_server/main/demos/common/static/images/bee.jpeg -o image.jpeg
+curl -fL https://raw.githubusercontent.com/openvinotoolkit/model_server/releases/2026/5/demos/common/static/images/bee.jpeg -o image.jpeg
 ```
 
 The local image is sent as a data URI, so no server media-domain allowlist is
