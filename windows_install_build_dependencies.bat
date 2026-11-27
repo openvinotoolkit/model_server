@@ -686,6 +686,9 @@ if !errorlevel! neq 0 exit /b !errorlevel!
 
 cd %opencv_dir%
 if !errorlevel! neq 0 exit /b !errorlevel!
+:: CVS-200752: OpenCV 4.14.0 bundles OpenJPEG 2.5.3, which has an unchecked tile-part index write in opj_j2k_read_sod
+git apply -p1 "%~dp0third_party\opencv\openjpeg_read_sod_tp_index_bound.patch"
+if !errorlevel! neq 0 exit /b !errorlevel!
 if not exist build (
     echo [INFO] Creating missing OpenCV build directory: %opencv_dir%\build
     mkdir build
