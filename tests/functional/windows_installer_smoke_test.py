@@ -30,7 +30,7 @@ except ImportError:
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "tests" / "docker_compose_fixtures"
-BASE_CASES = ("invalid-mode", "none-components", "system-python", "embedded-python", "components-only")
+BASE_CASES = ("invalid-mode", "python-none", "system-python", "embedded-python", "components-only")
 COMPONENTS = (
     "core",
     "python_system",
@@ -141,16 +141,16 @@ def wait_model_ready(base_url: str, model: str, process: subprocess.Popen, timeo
 
 
 def start_and_check(install_dir: Path) -> str:
+    """Generic, non-component-specific Level 1 check: start OVMS with the built-in dummy IR
+    model and run one simple KServe v2 infer request, mirroring the Docker composer smoke
+    runner's Level 1 basic check against its own dummy IR model."""
     ovms = install_dir / "ovms.exe"
     if not ovms.is_file():
         raise RuntimeError(f"missing OVMS executable: {ovms}")
 
+    model_dir = ROOT / "src" / "test" / "dummy"
     work = install_dir.parent / "ovms-smoke-data"
     work.mkdir(parents=True, exist_ok=True)
-    models = work / "models"
-    models.mkdir(parents=True, exist_ok=True)
-    config = work / "config.json"
-    config.write_text('{"model_config_list":[]}', encoding="utf-8")
 
     rest_port = free_port()
     grpc_port = free_port()
@@ -158,18 +158,22 @@ def start_and_check(install_dir: Path) -> str:
         grpc_port = free_port()
 
     log_path = work / "ovms.log"
+    command = [str(ovms), "--model_name", "dummy", "--model_path", str(model_dir),
+               "--rest_port", str(rest_port), "--port", str(grpc_port), "--log_level", "DEBUG"]
     with log_path.open("wb") as log:
         # pylint: disable-next=consider-using-with
-        process = subprocess.Popen(
-            [str(ovms), "--config_path", str(config), "--rest_port", str(rest_port),
-             "--port", str(grpc_port), "--log_level", "DEBUG"],
-            stdout=log,
-            stderr=subprocess.STDOUT,
-            cwd=str(install_dir),
-        )
+        process = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT, cwd=str(install_dir))
     try:
-        wait_ready(f"http://127.0.0.1:{rest_port}/v2", process)
-        return f"OVMS readiness passed on REST {rest_port}/gRPC {grpc_port}"
+        base_url = f"http://127.0.0.1:{rest_port}"
+        wait_ready(f"{base_url}/v2", process)
+        wait_model_ready(base_url, "dummy", process)
+        body = json.dumps({"inputs": [{"name": "b", "shape": [1, 10], "datatype": "FP32",
+                                       "data": list(range(10))}]}).encode()
+        payload = json.loads(http_request(f"{base_url}/v2/models/dummy/infer", "POST", body,
+                                          {"Content-Type": "application/json"}))
+        if not payload.get("outputs"):
+            raise RuntimeError("dummy inference response did not contain outputs")
+        return f"Dummy IR inference passed on REST {rest_port}/gRPC {grpc_port}"
     finally:
         if process.poll() is None:
             process.terminate()
@@ -195,8 +199,16 @@ def read_install_options() -> dict:
 
 def uninstall(install_dir: Path) -> None:
     uninstaller = install_dir / "unins000.exe"
-    if uninstaller.is_file():
-        run([str(uninstaller), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART"])
+    if not uninstaller.is_file():
+        return
+    run([str(uninstaller), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART"])
+    # Inno Setup's silent uninstaller copies itself into %TEMP% and exits immediately while
+    # that background copy keeps deleting files; without waiting, the next test's install can
+    # race it and fail with WinError 32 (file in use). Wait for the directory to actually be
+    # gone before returning.
+    deadline = time.monotonic() + 60
+    while install_dir.exists() and time.monotonic() < deadline:
+        time.sleep(1)
 
 
 def detect_intel_gpu() -> bool:
@@ -269,9 +281,15 @@ def run_successful_install(installer: Path, work_root: Path, python_mode: str,
                           components: str, artifacts: tuple[str, ...] = ()) -> tuple[str, str]:
     install_dir = install_component(installer, work_root, python_mode, components, artifacts)
     try:
-        readiness = start_and_check(install_dir)
-        level1 = verify_component_artifacts(install_dir, artifacts)
-        level2 = readiness
+        level1_files = verify_component_artifacts(install_dir, artifacts)
+        level1_ready = start_and_check(install_dir)
+        level1 = f"{level1_files}; {level1_ready}"
+        # These CLI-flag cases combine multiple components to validate /PYTHONMODE and
+        # /COMPONENTS parsing; component-specific feature requests for each selected component
+        # are already covered individually by the Individual Component Matrix cases, so Level 2
+        # here is a documented SKIP rather than an arbitrary/ambiguous pick among them.
+        level2 = ("SKIP-ready: CLI-flag case combines multiple components; component-specific "
+                 "Level 2 coverage is provided by the Individual Component Matrix cases")
         return level1, level2
     finally:
         uninstall(install_dir)
@@ -293,7 +311,7 @@ def check_case(case: str, installer: Path) -> list[tuple[str, bool, str]]:
                     return [("", False, "installer rejection did not contain the expected validation message")]
                 return [("", True, "Invalid /PYTHONMODE was rejected by the installer")]
 
-            if case == "none-components":
+            if case == "python-none":
                 level1, level2 = run_successful_install(
                     installer, work_root, "none",
                     "python_none,gpu,opencv_mp,onnx_frontend",
@@ -588,6 +606,73 @@ def python_summator_check(install_dir: Path, python_mode: str) -> str:
                 f"(REST {rest_port}/gRPC {grpc_port})")
 
 
+def python_none_check(install_dir: Path) -> str:
+    """Level 2 expected-failure check for python_none: OVMS has no Python runtime, so a
+    mediapipe Python-node graph must be rejected gracefully (server keeps running, request
+    fails with a clear error) instead of crashing or silently succeeding, matching the
+    degraded-mode behavior documented in docs/troubleshooting.md."""
+    work = install_dir.parent / "level2"
+    work.mkdir(parents=True, exist_ok=True)
+    handler = (ROOT / "src" / "test" / "mediapipe" / "python" / "scripts" / "add_two_inputs.py").resolve()
+    graph = re.sub(r'handler_path:.*', f'handler_path: "{handler.as_posix()}"',
+                   (ROOT / "src" / "test" / "mediapipe" / "graphpythonsummator.pbtxt").read_text(encoding="utf-8"))
+    graph_path = work / "summator_none.pbtxt"
+    graph_path.write_text(graph, encoding="utf-8")
+
+    config = {"model_config_list": [], "mediapipe_config_list": [
+        {"name": "smoke", "graph_path": graph_path.as_posix()}]}
+    config_path = work / "summator_none.json"
+    config_path.write_text(json.dumps(config), encoding="utf-8")
+    body = (FIXTURES / "python" / "request.json").read_bytes()
+
+    rest_port = free_port()
+    grpc_port = free_port()
+    while grpc_port == rest_port:
+        grpc_port = free_port()
+    log_path = work / "python_none.log"
+    command = [str(install_dir / "ovms.exe"), "--config_path", str(config_path),
+               "--rest_port", str(rest_port), "--port", str(grpc_port), "--log_level", "DEBUG"]
+    with log_path.open("wb") as log:
+        # pylint: disable-next=consider-using-with
+        process = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT, cwd=str(install_dir))
+    try:
+        base_url = f"http://127.0.0.1:{rest_port}"
+        wait_ready(f"{base_url}/v2", process)
+
+        endpoint = f"{base_url}/v2/models/smoke/infer"
+        deadline = time.monotonic() + 60
+        last_error = "python node graph never reached a terminal state"
+        while time.monotonic() < deadline:
+            if process.poll() is not None:
+                raise RuntimeError(f"OVMS crashed instead of failing gracefully; exit={process.returncode}")
+            succeeded = False
+            try:
+                http_request(endpoint, "POST", body, {"Content-Type": "application/json"})
+                succeeded = True
+            except RuntimeError as error:
+                last_error = str(error)
+            if succeeded:
+                raise RuntimeError(
+                    "python node graph unexpectedly succeeded in python_none mode; expected a "
+                    "graceful failure because no Python runtime is installed")
+            if "Mediapipe is not loaded yet" in last_error:
+                time.sleep(1)
+                continue
+            break
+
+        if process.poll() is not None:
+            raise RuntimeError(f"OVMS crashed instead of failing gracefully; exit={process.returncode}")
+        return (f"Expected failure detected: python node graph was correctly rejected at {endpoint} "
+                f"in python_none mode while OVMS kept running ({last_error})")
+    finally:
+        if process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=15)
+            except subprocess.TimeoutExpired:
+                process.kill()
+
+
 def level2_component_check(component: str, install_dir: Path, python_mode: str = "none") -> str:
     if component == "core":
         llm_path = Path(os.environ.get("TEST_LLM_PATH") or ROOT / "src" / "test" / "llm_testing").resolve()
@@ -657,7 +742,7 @@ def level2_component_check(component: str, install_dir: Path, python_mode: str =
                     process.kill()
 
     if component == "python_none":
-        return "SKIP-ready: no component-specific request for python_none"
+        return python_none_check(install_dir)
 
     if component in ("python_system", "python_embedded"):
         return python_summator_check(install_dir, python_mode)
