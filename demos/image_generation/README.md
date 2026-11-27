@@ -183,7 +183,7 @@ To deploy an SDXL model (higher quality, 1024×1024 native resolution), use a di
 :sync: docker
 
 Start docker container:
-```bash
+```text
 mkdir -p ${HOME}/models
 
 docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
@@ -711,7 +711,7 @@ The registered adapters and their recommended use:
 Use the adapter alias as the `model` field to select which adapter to apply per request. The adapter is activated via **model name routing** — when the `model` field matches a registered LoRA alias, that adapter is automatically applied.
 
 **X-Ray style:**
-```bash
+```text
 curl http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
   -d '{
@@ -726,7 +726,7 @@ curl http://localhost:8000/v3/images/generations \
 ![xray_cat](./xray_cat.png)
 
 **Artistic illustration (The Point):**
-```bash
+```text
 curl http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
   -d '{
@@ -741,7 +741,7 @@ curl http://localhost:8000/v3/images/generations \
 ![thepoint_cat](./thepoint_cat.png)
 
 **Ukiyo-e Japanese art:**
-```bash
+```text
 curl http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
   -d '{
@@ -756,7 +756,7 @@ curl http://localhost:8000/v3/images/generations \
 ![ukiyo_cat](./ukiyo_cat.png)
 
 **Vector art:**
-```bash
+```text
 curl http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
   -d '{
@@ -771,7 +771,7 @@ curl http://localhost:8000/v3/images/generations \
 ![vector_cat](./vector_cat.png)
 
 **Chalkboard drawing:**
-```bash
+```text
 curl http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
   -d '{
@@ -786,7 +786,7 @@ curl http://localhost:8000/v3/images/generations \
 ![chalk_cat](./chalk_cat.png)
 
 Optionally override the adapter alpha using `lora_alphas`:
-```bash
+```text
 curl http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
   -d '{
@@ -800,7 +800,7 @@ curl http://localhost:8000/v3/images/generations \
 ```
 ### Using OpenAI Python Client with LoRA
 
-```python
+```text
 from openai import OpenAI
 import base64
 from io import BytesIO
@@ -848,7 +848,7 @@ To blend multiple adapters, define a **composite adapter** at startup using the 
 ```
 
 The server started in [Start Server with Multiple LoRA Adapters](#start-server-with-multiple-lora-adapters) already defines the `blend` composite. Use the composite alias as the model name:
-```python
+```text
 from openai import OpenAI
 import base64
 from io import BytesIO
@@ -873,7 +873,7 @@ image.save('blend_cat.png')
 ```
 
 You can override individual component alphas at request time:
-```python
+```text
 from openai import OpenAI
 import base64
 from io import BytesIO
