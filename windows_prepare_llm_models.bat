@@ -60,17 +60,22 @@ echo Downloading LLM testing models to directory %~1
 set "PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
 set "PYTHONHOME="
 set "PYTHONPATH="
-if exist ".venv-llm\pyvenv.cfg" (
-  findstr /i /c:"Python312" ".venv-llm\pyvenv.cfg" >nul
-  if errorlevel 1 rmdir /s /q ".venv-llm"
+if exist ".venv-llm\pyvenv.cfg" (
+
+  findstr /i /c:"Python314" ".venv-llm\pyvenv.cfg" >nul
+
+  if errorlevel 1 rmdir /s /q ".venv-llm"
+
 )
-C:\opt\Python312\python.exe -m venv .venv-llm
+C:\opt\Python314\python.exe -m venv .venv-llm
+
 if !errorlevel! neq 0 exit /b !errorlevel!
-call .\.venv-llm\Scripts\Activate.bat
+call .\.venv-llm\Scripts\Activate.bat
+
 if !errorlevel! neq 0 exit /b !errorlevel!
 python -m pip install --upgrade pip
 if !errorlevel! neq 0 exit /b !errorlevel!
-pip install -U nncf sentence_transformers==5.3.0 sentencepiece requests protobuf==7.35.0 kokoro==0.9.4 openvino-tokenizers
+pip install -U nncf sentence_transformers==5.3.0 sentencepiece requests protobuf==7.35.0 openvino-tokenizers
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 if not exist "%~1" mkdir "%~1"
