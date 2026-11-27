@@ -137,7 +137,7 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
     legacyExecutionContext->inputRequest = std::move(*inputRequestResult);
 
     if (!properties->loraAdapters.empty()) {
-        std::unordered_map<std::string, float> requestedWeights;
+        std::unordered_map<std::string, double> requestedWeights;
         const auto& doc = *legacyExecutionContext->payload.parsedJson;
         auto it = doc.FindMember("lora_adapters");
         if (it != doc.MemberEnd()) {
@@ -145,7 +145,8 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
                 return absl::InvalidArgumentError("lora_adapters must be an object mapping adapter alias to weight");
             }
             for (const auto& member : it->value.GetObject()) {
-                const std::string alias = member.name.GetString();
+                // Keep the full length so an alias with an embedded NUL is not truncated to a registered one.
+                const std::string alias(member.name.GetString(), member.name.GetStringLength());
                 if (properties->loraAdapters.find(alias) == properties->loraAdapters.end()) {
                     return absl::InvalidArgumentError("Unknown LoRA adapter alias: " + alias);
                 }
@@ -153,10 +154,10 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
                     return absl::InvalidArgumentError("LoRA weight must be a number for adapter: " + alias);
                 }
                 const double weight = member.value.GetDouble();
-                if (!std::isfinite(weight) || std::fabs(weight) > std::numeric_limits<float>::max()) {
+                if (!std::isfinite(weight)) {
                     return absl::InvalidArgumentError("LoRA weight must be a finite number for adapter: " + alias);
                 }
-                requestedWeights[alias] = static_cast<float>(weight);
+                requestedWeights[alias] = weight;
             }
         }
         // Pass every registered adapter in registration order, with weight 0 for the unselected ones (the base model
@@ -166,7 +167,11 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
         for (const auto& alias : properties->loraAdapterOrder) {
             const auto& entry = properties->loraAdapters.at(alias);
             auto weight = requestedWeights.find(alias);
-            requestAdapters.add(entry.adapter, weight == requestedWeights.end() ? 0.0f : weight->second * entry.scale);
+            const double alpha = weight == requestedWeights.end() ? 0.0 : weight->second * entry.scale;
+            if (!std::isfinite(alpha) || std::fabs(alpha) > std::numeric_limits<float>::max()) {
+                return absl::InvalidArgumentError("LoRA weight multiplied by the adapter scale is out of float range for adapter: " + alias);
+            }
+            requestAdapters.add(entry.adapter, static_cast<float>(alpha));
         }
         legacyExecutionContext->loraAdapters = std::move(requestAdapters);
     }

@@ -172,6 +172,7 @@ message LLMCalculatorOptions {
 
     // Multiply request weights by the PEFT scale from adapter_config.json next to each adapter
     // (lora_alpha / r, or lora_alpha / sqrt(r) with use_rslora), so weight 1.0 applies the adapter as trained.
-    // GenAI ignores adapter_config.json; set to false to pass request weights to GenAI unchanged.
+    // GenAI ignores adapter_config.json; set to false to pass request weights to GenAI unchanged. Either way, adapters
+    // whose adapter_config.json uses PEFT features GenAI cannot apply (e.g. use_dora) are rejected.
     optional bool lora_scale_from_config = 29 [default = true];
 }

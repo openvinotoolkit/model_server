@@ -51,11 +51,12 @@ namespace ovms {
 namespace {
 // PEFT scales the LoRA update by lora_alpha / r (lora_alpha / sqrt(r) with rsLoRA), but GenAI only applies the
 // alpha passed in AdapterConfig. Read the scale from adapter_config.json so request weight 1.0 matches PEFT.
-Status readLoraScale(const std::filesystem::path& adapterPath, const std::string& alias, float& scale) {
+// Unsupported PEFT features are rejected even when the scale is not used.
+Status readLoraConfig(const std::filesystem::path& adapterPath, const std::string& alias, bool scaleFromConfig, float& scale) {
     scale = 1.0f;
     const auto configPath = adapterPath.parent_path() / "adapter_config.json";
     if (!std::filesystem::exists(configPath)) {
-        SPDLOG_WARN("LoRA adapter {}: {} not found, using scale 1.0", alias, configPath.string());
+        SPDLOG_WARN("LoRA adapter {}: {} not found, using scale 1.0 and skipping the PEFT feature check", alias, configPath.string());
         return StatusCode::OK;
     }
     std::ifstream ifs(configPath);
@@ -92,6 +93,9 @@ Status readLoraScale(const std::filesystem::path& adapterPath, const std::string
             return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
         }
     }
+    if (!scaleFromConfig) {
+        return StatusCode::OK;
+    }
     auto rank = config.FindMember("r");
     auto loraAlpha = config.FindMember("lora_alpha");
     if (rank == config.MemberEnd() || !rank->value.IsNumber() || rank->value.GetDouble() <= 0 ||
@@ -101,7 +105,12 @@ Status readLoraScale(const std::filesystem::path& adapterPath, const std::string
     }
     const double r = rank->value.GetDouble();
     const double alpha = loraAlpha->value.GetDouble();
-    scale = static_cast<float>(isSet("use_rslora") ? alpha / std::sqrt(r) : alpha / r);
+    const double peftScale = isSet("use_rslora") ? alpha / std::sqrt(r) : alpha / r;
+    if (!std::isfinite(peftScale) || std::fabs(peftScale) > std::numeric_limits<float>::max()) {
+        SPDLOG_ERROR("LoRA adapter {}: scale lora_alpha / r from {} is out of float range", alias, configPath.string());
+        return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+    }
+    scale = static_cast<float>(peftScale);
     return StatusCode::OK;
 }
 
@@ -230,11 +239,9 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
                     return status;
                 }
                 float scale = 1.0f;
-                if (nodeOptions.lora_scale_from_config()) {
-                    status = readLoraScale(adapterPath, entry.alias(), scale);
-                    if (!status.ok()) {
-                        return status;
-                    }
+                status = readLoraConfig(adapterPath, entry.alias(), nodeOptions.lora_scale_from_config(), scale);
+                if (!status.ok()) {
+                    return status;
                 }
                 ov::genai::Adapter adapter(adapterPath);
                 if (!properties->loraAdapters.emplace(entry.alias(), LoraAdapterEntry{adapter, scale}).second) {
@@ -274,8 +281,9 @@ Status VisualLanguageModelLegacyServableInitializer::initialize(std::shared_ptr<
         try {
             properties->pipeline = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, properties->device, pipelineConfig);
         } catch (const std::exception& e) {
-            // An explicit scheduler_config disables GenAI's own fallback to SDPA, so retry it here.
-            if (pipelineConfig.count(ov::genai::scheduler_config.name()) == 0) {
+            // An explicit scheduler_config disables GenAI's own fallback to SDPA, so retry it here. Like GenAI, keep
+            // the error when the graph selects the backend explicitly.
+            if (pipelineConfig.count(ov::genai::scheduler_config.name()) == 0 || properties->pluginConfig.count("ATTENTION_BACKEND") > 0) {
                 throw;
             }
             SPDLOG_WARN("Paged attention initialization with LoRA adapters failed, falling back to SDPA: {}", e.what());
