@@ -9,7 +9,7 @@ GGUF detection uses the `.gguf` filename extension. GenAI validates model metada
  This preview supports text generation with `LM` and `LM_CB` only. `AUTO` selects `LM_CB`, or `LM` on NPU. Companion vision projectors are not loaded.
 
 Currently recommended model is Ternary-Bonsai-2-27B PQ2_0.
-The model is recommended for GPU and the gguf support is in preview mode, so other models and hardware may not give satisfactory performance for 2026.5 release.
+The model is recommended for GPU and the gguf support is in preview mode, so other models and hardware may not give satisfactory performance for 2026.5.1 release.
 Check the [list of supported models](https://github.com/openvinotoolkit/openvino/blob/master/src/frontends/gguf/docs/supported_models.md) for more details.
 
 If the model already exists locally, it will skip the downloading and immediately start the serving.
@@ -25,12 +25,12 @@ Deploy the model:
 Start docker container:
 ```bash
 mkdir -p ${HOME}/models
-docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v ${HOME}/models:/models/:rw \
-  -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+export GPU_ARGS=$(if ls /dev/dri/render* >/dev/null 2>&1; then echo "--device /dev/dri --group-add $(stat -c '%g' /dev/dri/render* | head -n1)"; fi)
+docker run -d --rm ${GPU_ARGS} --user $(id -u):$(id -g) -p 8000:8000 -v ${HOME}/models:/models/:rw \
   openvino/model_server:weekly \
     --rest_port 8000 \
     --model_repository_path /models/ \
-    --source_model "prism-ml/Ternary-Bonsai-2-27B-gguf" \
+    --source_model prism-ml/Ternary-Bonsai-2-27B-gguf \
     --gguf_filename Ternary-Bonsai-2-27B-PQ2_0.gguf \
     --model_name prism-ml/Ternary-Bonsai-2-27B
 ```
@@ -42,8 +42,7 @@ docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v ${HOME}/models:/mode
 mkdir C:/models
 ovms --rest_port 8000 ^
   --model_repository_path C:/models/ ^
-  --task text_generation ^
-  --source_model "prism-ml/Ternary-Bonsai-2-27B-gguf" ^
+  --source_model prism-ml/Ternary-Bonsai-2-27B-gguf ^
   --gguf_filename Ternary-Bonsai-2-27B-PQ2_0.gguf ^
   --model_name prism-ml/Ternary-Bonsai-2-27B
 ```
