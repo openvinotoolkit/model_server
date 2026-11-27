@@ -8,10 +8,12 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
 import time
+import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -173,6 +175,21 @@ def uninstall(install_dir: Path) -> None:
         run([str(uninstaller), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART"])
 
 
+def detect_intel_gpu() -> bool:
+    command = ["powershell.exe", "-NoProfile", "-Command",
+               "Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name"]
+    result = run(command, timeout=30)
+    return result.returncode == 0 and any("intel" in line.lower() for line in result.stdout.splitlines())
+
+
+def detect_intel_npu() -> bool:
+    command = ["powershell.exe", "-NoProfile", "-Command",
+               "Get-CimInstance Win32_PnPEntity | Select-Object -ExpandProperty Name"]
+    result = run(command, timeout=30)
+    return result.returncode == 0 and any("intel" in line.lower() and "npu" in line.lower()
+                                         for line in result.stdout.splitlines())
+
+
 def verify_component_artifacts(install_dir: Path, artifacts: tuple[str, ...]) -> str:
     missing = []
     for relative_path in artifacts:
@@ -193,7 +210,7 @@ def install_component(installer: Path, work_root: Path, python_mode: str,
     install_dir.mkdir(parents=True, exist_ok=True)
     command = [
         str(installer), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART",
-        f'/DIR={install_dir}', f'/LOG={log_path}',
+        f'/DIR={install_dir}', f'/LOG={log_path}', '/MULTIINSTANCE=1',
         f'/COMPONENTS={components}', f'/PYTHONMODE={python_mode}',
     ]
     result = run(command)
@@ -243,7 +260,7 @@ def check_case(case: str, installer: Path) -> list[tuple[str, bool, str]]:
             if case == "invalid-mode":
                 log_path = work_root / "invalid.log"
                 result = run([str(installer), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART",
-                              "/PYTHONMODE=invalid", f"/LOG={log_path}"], timeout=120)
+                              "/PYTHONMODE=invalid", f"/LOG={log_path}", "/MULTIINSTANCE=1"], timeout=120)
                 if result.returncode == 0:
                     return [("", False, "installer accepted invalid /PYTHONMODE")]
                 log_candidates = [log_path, installer.parent / "OVMSSetup.log"]
@@ -284,7 +301,7 @@ def check_case(case: str, installer: Path) -> list[tuple[str, bool, str]]:
                 if case == "python_system":
                     if discover_python314() is None:
                         return [(" Level 1", True, "SKIP-ready: Python 3.14 not found"),
-                                (" Level 2", True, "SKIP-ready: Python 3.14 not found")]
+                                (" Level 1", True, "SKIP-ready: Python 3.14 not found")]
                     python_mode, component_selection = "system", "core,python_system"
                 elif case == "python_embedded":
                     python_mode, component_selection = "embedded", "core,python_embedded"
@@ -307,7 +324,10 @@ def check_case(case: str, installer: Path) -> list[tuple[str, bool, str]]:
                         return [(" Level 1", False, str(error))]
 
                     try:
-                        level2 = start_and_check(install_dir)
+                        level2 = level2_component_check(case, install_dir)
+                        if level2.startswith("SKIP-ready:"):
+                            detail = level2.removeprefix("SKIP-ready:").strip()
+                            return [(" Level 1", True, level1), (" Level 2", True, "SKIP-ready: " + detail)]
                         return [(" Level 1", True, level1), (" Level 2", True, level2)]
                     except Exception as error:
                         return [(" Level 1", True, level1), (" Level 2", False, str(error))]
@@ -317,6 +337,86 @@ def check_case(case: str, installer: Path) -> list[tuple[str, bool, str]]:
             return [("", False, f"unknown case: {case}")]
     except Exception as error:
         return [(" Level 1", False, str(error))]
+
+
+def post_json(url: str, body: bytes, timeout: int = 45) -> dict:
+    request = urllib.request.Request(url, data=body, method="POST",
+                                     headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        response_body = error.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"HTTP {error.code} from {url}: {response_body.strip()}") from error
+
+
+def level2_component_check(component: str, install_dir: Path) -> str:
+    if component == "core":
+        llm_path = Path(os.environ.get("TEST_LLM_PATH") or ROOT / "src" / "test" / "llm_testing").resolve()
+        model_dir = llm_path / "mzeglars" / "dummy-cyclic-gpt2-ov"
+        if not model_dir.is_dir():
+            return "SKIP-ready: Base LLM model directory was not prepared"
+
+        work = install_dir.parent / "level2"
+        work.mkdir(parents=True, exist_ok=True)
+        rest_port = free_port()
+        grpc_port = free_port()
+        while grpc_port == rest_port:
+            grpc_port = free_port()
+
+        graph = re.sub(r'models_path:.*', f'models_path: "{model_dir.as_posix()}"',
+                       (ROOT / "src" / "test" / "llm" / "lm_cb_regular.pbtxt").read_text(encoding="utf-8"))
+        graph_path = work / "llm.pbtxt"
+        graph_path.write_text(graph, encoding="utf-8")
+
+        fixture_dir = ROOT / "tests" / "docker_compose_fixtures" / "base"
+        config = json.loads((fixture_dir / "config.json").read_text(encoding="utf-8"))
+        for entry in config.get("mediapipe_config_list", []):
+            entry["graph_path"] = graph_path.as_posix()
+        config_path = work / "base.json"
+        config_path.write_text(json.dumps(config), encoding="utf-8")
+
+        endpoint = f"http://127.0.0.1:{rest_port}/v3/completions"
+        body = (fixture_dir / "request.json").read_bytes()
+        log_path = work / "core.log"
+        command = [str(install_dir / "ovms.exe"), "--config_path", str(config_path),
+                   "--rest_port", str(rest_port), "--port", str(grpc_port), "--log_level", "DEBUG"]
+        with log_path.open("wb") as log:
+            process = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT, cwd=str(install_dir))
+        try:
+            wait_ready(f"http://127.0.0.1:{rest_port}/v2", process)
+            deadline = time.monotonic() + 90
+            payload = None
+            last_error = ""
+            while time.monotonic() < deadline:
+                if process.poll() is not None:
+                    raise RuntimeError(f"OVMS exited before base LLM completion; exit={process.returncode}")
+                try:
+                    payload = post_json(endpoint, body)
+                    break
+                except RuntimeError as error:
+                    last_error = str(error)
+                    if "Mediapipe is not loaded yet" not in last_error:
+                        raise
+                time.sleep(1)
+            if payload is None:
+                log_tail = ""
+                if log_path.is_file():
+                    log_tail = "\n".join(log_path.read_text(encoding="utf-8", errors="replace").splitlines()[-40:])
+                raise RuntimeError(f"base LLM model did not become ready: {last_error}\nOVMS log tail:\n{log_tail}")
+            if not payload.get("choices") or not isinstance(payload["choices"][0].get("text"), str) or not payload["choices"][0]["text"].strip():
+                raise RuntimeError("base LLM completion returned empty text")
+            return f"Composer-style Level 2 base LLM completion passed at {endpoint}"
+        finally:
+            if process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=15)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+
+    if component == "python_none":
+        return start_and_check(install_dir)
 
 
 def report_passed(path: Path) -> bool:
@@ -335,12 +435,29 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Windows OVMS installer CLI smoke tests")
     parser.add_argument("--installer", type=Path, default=ROOT / "dist" / "windows" / "OVMS-Setup.exe")
     parser.add_argument("--report", type=Path, default=ROOT / "windows_installer_smoke_report.md")
+    parser.add_argument("--prepare-models", action="store_true",
+                        help="Prepare ONNX and Paddle models before component tests")
+    parser.add_argument("--prepare-llm", action="store_true",
+                        help="Prepare LLM, embeddings, and TTS fixtures")
     parser.add_argument("--case", dest="cases", action="append", choices=CASES,
                         help="Run one case; repeat for multiple cases")
     args = parser.parse_args()
 
     if os.name != "nt":
         parser.error("the Windows installer smoke tests require Windows")
+
+    if args.prepare_models:
+        prepare_script = ROOT / "tests" / "functional" / "windows_installer_prepare_models.ps1"
+        result = run(["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass",
+                      "-File", str(prepare_script)])
+        if result.returncode:
+            raise RuntimeError("windows_installer_prepare_models.ps1 failed: " + result.stdout[-2000:])
+
+    if args.prepare_llm:
+        llm_dir = ROOT / "src" / "test" / "llm_testing"
+        result = run([str(ROOT / "windows_prepare_llm_models.bat"), str(llm_dir)])
+        if result.returncode:
+            raise RuntimeError("windows_prepare_llm_models.bat failed: " + result.stdout[-2000:])
 
     try:
         installer = find_installer(args.installer)
@@ -361,11 +478,10 @@ def main() -> int:
             print(f"Running installer smoke test: {case}", flush=True)
             results = check_case(case, installer)
             for level, passed, detail in results:
+                status = "PASS" if passed else "FAIL"
                 if detail.startswith("SKIP-ready:"):
                     status = "SKIP"
                     detail = detail.removeprefix("SKIP-ready:").strip()
-                else:
-                    status = "PASS" if passed else "FAIL"
                 summary = " ".join(detail.splitlines()).replace("|", "/")
                 label = f"`{case}`{level}"
                 print(f"{status}: {case}{level}: {summary}", flush=True)

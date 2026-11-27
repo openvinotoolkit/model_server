@@ -30,7 +30,7 @@
 #endif
 
 [Setup]
-AppId={{9F35B167-C72A-4E1D-93E9-448CE4AE5270}
+AppId={code:GetSetupAppId}
 AppName={#AppName}
 AppVersion={#OvmsVersion}
 AppPublisherURL={#MyAppURL}
@@ -58,6 +58,7 @@ WizardSmallImageFile=assets\ovms-small.bmp
 WizardImageStretch=yes
 DisableWelcomePage=no
 ShowLanguageDialog=no
+UsePreviousLanguage=no
 DisableReadyPage=no
 
 [Languages]
@@ -132,9 +133,9 @@ Name: "{group}\Repair OVMS Server"; Filename: "powershell.exe"; Parameters: "-No
 Name: "{group}\Uninstall OpenVINO Model Server"; Filename: "{uninstallexe}"
 
 [Registry]
-Root: HKCU; Subkey: "Software\OpenVINO\OVMS"; ValueType: string; ValueName: "InstallDir"; ValueData: "{app}"; Flags: uninsdeletekey
-Root: HKCU; Subkey: "Software\OpenVINO\OVMS"; ValueType: string; ValueName: "DataDir"; ValueData: "{localappdata}\OVMS"; Flags: uninsdeletekey
-Root: HKCU; Subkey: "Software\OpenVINO\OVMS"; ValueType: string; ValueName: "Version"; ValueData: "{#OvmsVersion}"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\OpenVINO\OVMS"; ValueType: string; ValueName: "InstallDir"; ValueData: "{app}"; Flags: uninsdeletekey; Check: NotMultiInstanceMode
+Root: HKCU; Subkey: "Software\OpenVINO\OVMS"; ValueType: string; ValueName: "DataDir"; ValueData: "{localappdata}\OVMS"; Flags: uninsdeletekey; Check: NotMultiInstanceMode
+Root: HKCU; Subkey: "Software\OpenVINO\OVMS"; ValueType: string; ValueName: "Version"; ValueData: "{#OvmsVersion}"; Flags: uninsdeletekey; Check: NotMultiInstanceMode
 
 [UninstallRun]
 Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\scripts\uninstall-ovms.ps1"" -InstallDir ""{app}"" -DataDir ""{localappdata}\OVMS"" -DataMode ""{code:GetDataMode}"""; Flags: runhidden waituntilterminated; RunOnceId: "OVMSCleanup"
@@ -169,6 +170,7 @@ var
   LegacyInstallDirToMigrate: String;
   LegacyUninstallStringToMigrate: String;
   AllowUserWritableServiceLocationCheck: TNewCheckBox;
+  CachedSetupAppId: String;
 
 procedure StopOvmsProcessButtonClick(Sender: TObject); forward;
 procedure UpdateOvmsProcessStatus; forward;
@@ -901,6 +903,47 @@ begin
     '-NoProfile -ExecutionPolicy Bypass -Command "$dest=[IO.Path]::GetFullPath(''' + DestinationPath + ''').TrimEnd(''\\''); Get-Process ovms -ErrorAction SilentlyContinue | Where-Object { try { [IO.Path]::GetFullPath($_.Path).TrimEnd(''\\'').Equals($dest,[StringComparison]::OrdinalIgnoreCase) } catch { $false } } | Select-Object -First 1 | ForEach-Object { exit 0 }; exit 1"',
     '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Result := ResultCode = 0;
+end;
+
+function IsMultiInstanceMode: Boolean;
+var
+  I: Integer;
+  Arg: String;
+begin
+  Result := False;
+  for I := 1 to ParamCount do
+  begin
+    Arg := ParamStr(I);
+    if CompareText(Copy(Arg, 1, 15), '/MULTIINSTANCE=') = 0 then
+    begin
+      Result := CompareText(Copy(Arg, 16, Length(Arg) - 15), '1') = 0;
+      Exit;
+    end;
+  end;
+end;
+
+function NotMultiInstanceMode: Boolean;
+begin
+  Result := not IsMultiInstanceMode;
+end;
+
+// /MULTIINSTANCE=1 gives each test/CI install its own AppId, so it gets its
+// own Program-and-Features/Uninstall registry key instead of overwriting (and
+// later deleting, via uninsdeletekey) the real installation's entry at
+// {9F35B167-C72A-4E1D-93E9-448CE4AE5270}_is1. Normal installs (no flag) keep
+// using the fixed AppId so upgrade/repair detection keeps working as before.
+function GetSetupAppId(Param: String): String;
+begin
+  // {code:} constants may be evaluated more than once during Setup, so the
+  // generated id is cached to ensure every evaluation within this run agrees.
+  if CachedSetupAppId = '' then
+  begin
+    if IsMultiInstanceMode then
+      CachedSetupAppId := 'OVMSTestInstance_' + IntToStr(Random(2147483647)) + '_' + IntToStr(Random(2147483647))
+    else
+      CachedSetupAppId := '{9F35B167-C72A-4E1D-93E9-448CE4AE5270}';
+  end;
+  Result := CachedSetupAppId;
 end;
 
 function InitializeSetup: Boolean;
