@@ -101,6 +101,9 @@ public:
             nodeOptions.target_device(),
             nodeOptions.plugin_config(),
             basePath);
+        if (!nodeOptions.normalize_embeddings()) {
+            SPDLOG_WARN("Deployment configured with normalize_embeddings=false. Requests that specify dimensions will apply L2 normalization, effectively overriding that setting. Embeddings node '{}' in graph '{}'.", nodeName, graphName);
+        }
         embeddingsServableMap.insert(std::pair<std::string, std::shared_ptr<EmbeddingsServable>>(nodeName, std::move(servable)));
         return StatusCode::OK;
     }

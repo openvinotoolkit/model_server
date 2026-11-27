@@ -427,6 +427,21 @@ It will report results like `Similarity score as cos_sim 0.9605122725993963`.
 
 :::
 
+### Request shorter embeddings with `dimensions`
+
+Prepare `OpenVINO/Qwen3-Embedding-0.6B-int8-ov` using the Docker commands for CPU and start an OVMS build that supports `dimensions`. [Model preparation](#direct-pulling-of-pre-configured-huggingface-models) · [Server deployment](#server-deployment)
+
+Qwen3-Embedding-0.6B uses Matryoshka Representation Learning and produces 1024-dimensional embeddings by default. [Qwen model card](https://huggingface.co/Qwen/Qwen3-Embedding-0.6B)
+
+```bash
+curl --fail --silent --show-error http://localhost:8000/v3/embeddings \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"Qwen3-Embedding-0.6B-int8-ov","input":"hello world","dimensions":256}' \
+  | python3 -c 'import json, sys; print(len(json.load(sys.stdin)["data"][0]["embedding"]))'
+```
+
+The command prints `256`. OVMS L2-normalizes the shortened vector. Omit `dimensions` to request the full 1024 values.
+
 ## Benchmarking feature extraction
 For synthetic and Hugging Face dataset examples, setup, and token-counting details,
 see [Text Embeddings](../benchmark/openai/README.md#text-embeddings) in the benchmark guide.
