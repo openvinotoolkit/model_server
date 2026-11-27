@@ -382,7 +382,7 @@ def check_case(case: str, installer: Path) -> list[tuple[str, bool, str]]:
                         # Embedded Python mode is expected to actually support Python nodes,
                         # so Level 2 runs the same mediapipe Python-node summation request as
                         # the python_embedded component case, instead of a blanket SKIP.
-                        level2 = python_summator_check(install_dir, "embedded")
+                        level2 = python_summator_check(install_dir)
                         return [(" Level 1", True, level1), (" Level 2", True, level2)]
                     except Exception as error:
                         return [(" Level 1", True, level1), (" Level 2", False, str(error))]
@@ -427,7 +427,7 @@ def check_case(case: str, installer: Path) -> list[tuple[str, bool, str]]:
                         return [(" Level 1", False, str(error))]
 
                     try:
-                        level2 = level2_component_check(case, install_dir, python_mode)
+                        level2 = level2_component_check(case, install_dir)
                         if level2.startswith("SKIP-ready:"):
                             detail = level2.removeprefix("SKIP-ready:").strip()
                             return [(" Level 1", True, level1), (" Level 2", True, "SKIP-ready: " + detail)]
@@ -627,19 +627,7 @@ def static_model_check(component: str, config_source: Path, model_dir: Path,
                 f"(REST {rest_port}/gRPC {grpc_port})")
 
 
-def python_summator_check(install_dir: Path, python_mode: str) -> str:
-    if python_mode == "system":
-        # KNOWN BUG (see "Known issues" in installer.md): ovms.exe loads libovmspython.dll /
-        # libpython_calculators.dll via LoadLibraryExW with LOAD_LIBRARY_SEARCH_* flags, which
-        # ignore PATH entirely and only consult AddDllDirectory()-registered directories. The
-        # loader only registers the embedded Python directory, never the system Python
-        # installation directory, so python314.dll can never be resolved in system-Python mode.
-        # No test-harness environment variable (PATH/PYTHONHOME/PYTHONPATH) can work around this;
-        # it requires a fix in src/python/python_runtime_loader.cpp.
-        return ("SKIP-ready: known bug - system-Python mode cannot load libovmspython.dll on "
-                "Windows (LOAD_LIBRARY_SEARCH_* ignores PATH; system Python dir is never "
-                "registered via AddDllDirectory); see installer.md Known issues")
-
+def python_summator_check(install_dir: Path) -> str:
     work = install_dir.parent / "level2"
     work.mkdir(parents=True, exist_ok=True)
     handler = (ROOT / "src" / "test" / "mediapipe" / "python" / "scripts" / "add_two_inputs.py").resolve()
@@ -729,7 +717,7 @@ def python_none_check(install_dir: Path) -> str:
                 process.kill()
 
 
-def level2_component_check(component: str, install_dir: Path, python_mode: str = "none") -> str:
+def level2_component_check(component: str, install_dir: Path) -> str:
     if component == "core":
         llm_path = Path(os.environ.get("TEST_LLM_PATH") or ROOT / "src" / "test" / "llm_testing").resolve()
         model_dir = llm_path / "mzeglars" / "dummy-cyclic-gpt2-ov"
@@ -801,7 +789,7 @@ def level2_component_check(component: str, install_dir: Path, python_mode: str =
         return python_none_check(install_dir)
 
     if component in ("python_system", "python_embedded"):
-        return python_summator_check(install_dir, python_mode)
+        return python_summator_check(install_dir)
 
     if component == "gpu":
         if not detect_intel_gpu():
