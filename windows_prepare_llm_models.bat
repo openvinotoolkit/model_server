@@ -60,13 +60,13 @@ echo Downloading LLM testing models to directory %~1
 set "PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
 set "PYTHONHOME="
 set "PYTHONPATH="
-if exist ".venv\pyvenv.cfg" (
-  findstr /i /c:"Python312" ".venv\pyvenv.cfg" >nul
-  if errorlevel 1 rmdir /s /q ".venv"
+if exist ".venv-llm\pyvenv.cfg" (
+  findstr /i /c:"Python312" ".venv-llm\pyvenv.cfg" >nul
+  if errorlevel 1 rmdir /s /q ".venv-llm"
 )
-C:\opt\Python312\python.exe -m venv .venv
+C:\opt\Python312\python.exe -m venv .venv-llm
 if !errorlevel! neq 0 exit /b !errorlevel!
-call .\.venv\Scripts\Activate.bat
+call .\.venv-llm\Scripts\Activate.bat
 if !errorlevel! neq 0 exit /b !errorlevel!
 python -m pip install --upgrade pip
 if !errorlevel! neq 0 exit /b !errorlevel!
