@@ -52,6 +52,53 @@ ValidatePythonEnvironmentFn validatePythonEnvironmentFn = nullptr;
 ConfigureRuntimeLoggingFn configureRuntimeLoggingFn = nullptr;
 #ifdef _WIN32
 DLL_DIRECTORY_COOKIE pythonDllDirectoryCookie = nullptr;
+std::vector<DLL_DIRECTORY_COOKIE> systemPythonDllDirectoryCookies;
+
+// Discovers the installation directory of a system-wide Python 3.14, mirroring the
+// well-known locations probed by Ensure-SystemPythonRequirements in
+// packaging/windows/scripts/configure-ovms.ps1. This is required because
+// LoadLibraryExW with LOAD_LIBRARY_SEARCH_* flags (used below) switches to the "safe"
+// DLL search order, which ignores the PATH/PYTHONHOME environment variables entirely
+// and only consults directories explicitly registered via AddDllDirectory().
+std::vector<std::wstring> systemPythonSearchDirectories() {
+    std::vector<std::wstring> directories;
+
+    auto addIfContainsPythonDll = [&directories](const std::filesystem::path& directory) {
+        std::error_code errorCode;
+        if (!directory.empty() && std::filesystem::exists(directory / "python314.dll", errorCode) && !errorCode) {
+            directories.push_back(std::filesystem::absolute(directory).wstring());
+        }
+    };
+
+    auto envVar = [](const char* name) -> std::string {
+        char buffer[MAX_PATH] = {0};
+        DWORD length = GetEnvironmentVariableA(name, buffer, MAX_PATH);
+        return (length > 0 && length < MAX_PATH) ? std::string(buffer, length) : std::string();
+    };
+
+    // Highest priority: PYTHONHOME, when set, is the authoritative system-Python directory.
+    addIfContainsPythonDll(std::filesystem::path(envVar("PYTHONHOME")));
+
+    const std::string programFiles = envVar("ProgramFiles");
+    const std::string programW6432 = envVar("ProgramW6432");
+    const std::string localAppData = envVar("LOCALAPPDATA");
+    const std::string systemDrive = envVar("SystemDrive");
+
+    if (!programFiles.empty()) {
+        addIfContainsPythonDll(std::filesystem::path(programFiles) / "Python314");
+    }
+    if (!programW6432.empty()) {
+        addIfContainsPythonDll(std::filesystem::path(programW6432) / "Python314");
+    }
+    if (!localAppData.empty()) {
+        addIfContainsPythonDll(std::filesystem::path(localAppData) / "Programs" / "Python" / "Python314");
+    }
+    if (!systemDrive.empty()) {
+        addIfContainsPythonDll(std::filesystem::path(systemDrive) / "opt" / "Python314");
+    }
+
+    return directories;
+}
 #endif
 
 void applyConfiguredLoggingToRuntimeLibrary() {
@@ -77,6 +124,10 @@ void unloadPythonRuntimeLibrary() {
         RemoveDllDirectory(pythonDllDirectoryCookie);
         pythonDllDirectoryCookie = nullptr;
     }
+    for (DLL_DIRECTORY_COOKIE cookie : systemPythonDllDirectoryCookies) {
+        RemoveDllDirectory(cookie);
+    }
+    systemPythonDllDirectoryCookies.clear();
 #endif
     pythonRuntimeHandle = nullptr;
 }
@@ -234,6 +285,14 @@ Module* ensurePythonRuntimeLoaded() {
         const auto pythonDirectory = std::filesystem::absolute(std::filesystem::path(exeDir) / "python").wstring();
         pythonDllDirectoryCookie = AddDllDirectory(pythonDirectory.c_str());
 
+        // System-Python mode: <exeDir>\python only contains pyovms.pyd, not python314.dll,
+        // so the system Python installation directory must be registered explicitly too.
+        for (const auto& systemPythonDirectory : systemPythonSearchDirectories()) {
+            if (DLL_DIRECTORY_COOKIE cookie = AddDllDirectory(systemPythonDirectory.c_str()); cookie != nullptr) {
+                systemPythonDllDirectoryCookies.push_back(cookie);
+            }
+        }
+
         std::vector<std::string> executableRelativeCandidates{
             exeDir + "\\libovmspython.dll",
             exeDir + "\\src\\python\\libovmspython.dll",
@@ -268,6 +327,10 @@ Module* ensurePythonRuntimeLoaded() {
             RemoveDllDirectory(pythonDllDirectoryCookie);
             pythonDllDirectoryCookie = nullptr;
         }
+        for (DLL_DIRECTORY_COOKIE cookie : systemPythonDllDirectoryCookies) {
+            RemoveDllDirectory(cookie);
+        }
+        systemPythonDllDirectoryCookies.clear();
         SPDLOG_WARN("Python runtime library libovmspython.dll failed to load: {} ({})", error, std::system_category().message(error));
         return nullptr;
     }

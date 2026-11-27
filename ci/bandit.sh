@@ -35,6 +35,8 @@ function cleanup {
 }
 trap error_handle ERR
 trap cleanup EXIT
+unset PYTHONHOME
+unset PYTHONPATH
 "${BANDIT_BIN}" -x demos/benchmark/python -r demos/*/python > ${BANDIT_RESULTS}
 if ! grep -FRq "No issues identified." ${BANDIT_RESULTS}; then
     echo "Bandit scan failed for demos";

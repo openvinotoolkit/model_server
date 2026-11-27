@@ -27,6 +27,9 @@ set "PATH=%setPath%"
 set "libovmspython_src="
 set "libpython_calculators_src="
 
+if exist dist\windows\OVMS-Setup.exe del /f /q dist\windows\OVMS-Setup.exe
+if exist build_installer.log del /f /q build_installer.log
+
 :: Load chosen dependency versions from versions.mk
 for /f "usebackq eol=# tokens=1,3" %%A in ("%cd%\versions.mk") do (
     if "%%A"=="OPENCV_VERSION" if "!opencv_version!"=="" set "opencv_version=%%B"
@@ -331,5 +334,20 @@ cd dist\windows
 C:\Windows\System32\tar.exe -a -c -f ovms.zip ovms
 if !errorlevel! neq 0 exit /b !errorlevel!
 cd ..\..
+
+set "PYTHONHOME="
+set "PYTHONPATH="
+echo [INFO] Building OVMS Windows installer
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%cd%\packaging\windows\installer\build_installer.ps1"
+if !errorlevel! neq 0 (
+    echo [ERROR] OVMS Windows installer build failed. See build_installer.log for details.
+    exit /b 1
+)
+if not exist dist\windows\OVMS-Setup.exe (
+    echo [ERROR] OVMS-Setup.exe was not created.
+    exit /b 1
+)
+
 dir dist\windows\ovms.zip
-echo [INFO] Package created
+dir dist\windows\OVMS-Setup.exe
+echo [INFO] Package and installer created

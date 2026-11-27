@@ -22,16 +22,31 @@ if "%~1"=="" (
   exit /b 1
 )
 
-:: Create a link to preexported models on CI workers
+if /I "%~f1"=="C:\opt\llm_testing" (
+  echo Error: destination directory must not be c:\opt\llm_testing itself.
+  exit /b 1
+)
+
 IF /I EXIST c:\opt\llm_testing (
-  if exist "%~1" (
-    rmdir /S /Q "%~1"
+  set "LLM_CACHE_OK=1"
+  powershell -NoProfile -Command "try { [void](Resolve-Path -LiteralPath 'c:\opt\llm_testing' -ErrorAction Stop) } catch { exit 1 }"
+  if !errorlevel! neq 0 set "LLM_CACHE_OK=0"
+
+  if "!LLM_CACHE_OK!"=="1" (
+    if exist "%~1" (
+      rmdir /S /Q "%~1"
+      if !errorlevel! neq 0 exit /b !errorlevel!
+    )
+    mklink /d "%~1" c:\opt\llm_testing
     if !errorlevel! neq 0 exit /b !errorlevel!
+    echo Created link to existing in c:\opt\llm_testing. Skipping downloading models.
+    exit /b 0
+  ) else (
+    echo WARNING: c:\opt\llm_testing could not be resolved ^(likely a stale or looping reparse point^).
+    echo WARNING: Removing it and downloading models fresh instead of linking to a broken cache.
+    rmdir /S /Q c:\opt\llm_testing 2>nul
+    if exist "%~1" rmdir /S /Q "%~1" 2>nul
   )
-  mklink /d "%~1" c:\opt\llm_testing
-  if !errorlevel! neq 0 exit /b !errorlevel!
-  echo Created link to existing in c:\opt\llm_testing. Skipping downloading models.
-  exit /b 0
 )
 
 set "EMBEDDING_MODEL=OpenVINO/bge-base-en-v1.5-int8-ov"
@@ -58,14 +73,19 @@ set "ONYX_MODEL=OpenVINO/Muse-Glimmer-30B-int4-ov"
 
 echo Downloading LLM testing models to directory %~1
 set "PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
+set "PYTHONHOME="
 set "PYTHONPATH="
-C:\opt\Python314\python.exe -m venv .venv
+if exist ".venv\pyvenv.cfg" (
+  findstr /i /c:"Python312" ".venv\pyvenv.cfg" >nul
+  if errorlevel 1 rmdir /s /q ".venv"
+)
+C:\opt\Python312\python.exe -m venv .venv
 if !errorlevel! neq 0 exit /b !errorlevel!
 call .\.venv\Scripts\Activate.bat
 if !errorlevel! neq 0 exit /b !errorlevel!
 python -m pip install --upgrade pip
 if !errorlevel! neq 0 exit /b !errorlevel!
-pip install -U nncf sentence_transformers==5.3.0 sentencepiece requests protobuf==7.35.0 kokoro openvino-tokenizers
+pip install -U nncf sentence_transformers==5.3.0 sentencepiece requests protobuf==7.35.0 kokoro==0.9.4 openvino-tokenizers
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 if not exist "%~1" mkdir "%~1"

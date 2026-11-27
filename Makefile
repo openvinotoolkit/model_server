@@ -23,7 +23,7 @@ ifeq ($(filter MINGW% MSYS% CYGWIN%,$(UNAME_S)),)
 	VIRTUALENV_EXE := python3 -m venv
 else
 	VIRTUALENV_BIN_DIR := Scripts
-	VIRTUALENV_EXE := python -m venv
+	VIRTUALENV_EXE := C:/opt/Python312/python.exe -m venv
 endif
 BASH_BIN := $(shell command -v bash 2>/dev/null || command -v sh 2>/dev/null || echo /bin/bash)
 GIT_BIN := $(shell command -v git 2>/dev/null || command -v git.exe 2>/dev/null || echo )
@@ -243,7 +243,7 @@ OVMS_CPP_IMAGE_TAG ?= latest
 
 OVMS_PYTHON_IMAGE_TAG ?= py
 
-PRODUCT_VERSION ?= "2026.5.0"
+PRODUCT_VERSION ?= $(OVMS_PRODUCT_VERSION)
 PROJECT_VER_PATCH =
 
 ifeq ($(strip $(GIT_BIN)),)
@@ -378,7 +378,7 @@ bandit:
 
 license-headers:
 	@echo "Checking license headers in files..."
-	@export PATH="$(STYLE_VENV_BIN):$$PATH"; "$(VIRTUALENV_STYLE_PYTHON)" '$(CI_DIR)/lib_search.py' . > missing_headers.txt
+	@export PATH="$(STYLE_VENV_BIN):$$PATH"; $(PYTHON_ENV_CLEAN) "$(VIRTUALENV_STYLE_PYTHON)" '$(CI_DIR)/lib_search.py' . > missing_headers.txt
 	@if ! grep -FRq "All files have headers" missing_headers.txt; then\
         echo "Files with missing headers";\
         cat missing_headers.txt;\
@@ -389,7 +389,7 @@ license-headers:
 sdl-check: venv-style hadolint bandit license-headers
 
 	@echo "Checking forbidden functions in files..."
-	@export PATH="$(STYLE_VENV_BIN):$$PATH"; "$(VIRTUALENV_STYLE_PYTHON)" '$(CI_DIR)/lib_search.py' . functions > forbidden_functions.txt
+	@export PATH="$(STYLE_VENV_BIN):$$PATH"; $(PYTHON_ENV_CLEAN) "$(VIRTUALENV_STYLE_PYTHON)" '$(CI_DIR)/lib_search.py' . functions > forbidden_functions.txt
 	@if ! grep -FRq "All files checked for forbidden functions" forbidden_functions.txt; then\
 		error Run python3 '$(CI_DIR)/lib_search.py' . functions - to see forbidden functions file list.;\
 	fi
