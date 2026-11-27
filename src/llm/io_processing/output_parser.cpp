@@ -28,6 +28,7 @@
 #include "qwen3/reasoning_parser.hpp"
 #include "qwen3coder/qwen3coder_tool_parser.hpp"
 #include "devstral/tool_parser.hpp"
+#include "devstral/devstral_reasoning_parser.hpp"
 #include "gemma4/gemma4_reasoning_parser.hpp"
 #include "gptoss/reasoning_parser.hpp"
 #include "lfm2/lfm2_tool_parser.hpp"
@@ -184,7 +185,7 @@ std::optional<Delta> OutputParser::parseReasoningChunk(const std::vector<int64_t
     return result;
 }
 
-OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string toolParserName, const std::string reasoningParserName,
+OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string& toolParserName, const std::string& reasoningParserName,
     const ToolsSchemas_t& toolNameSchemaMap, const std::string& contentParserName) :
     tokenizer(tokenizer) {
     if (toolParserName == "llama3") {
@@ -226,6 +227,8 @@ OutputParser::OutputParser(ov::genai::Tokenizer& tokenizer, const std::string to
         reasoningParser = std::make_unique<Lfm25ReasoningParser>(tokenizer);
     } else if (reasoningParserName == "onyx") {
         reasoningParser = std::make_unique<OnyxReasoningParser>(tokenizer);
+    } else if (reasoningParserName == "devstral") {
+        reasoningParser = std::make_unique<DevstralReasoningParser>(tokenizer);
     } else if (!reasoningParserName.empty()) {
         throw std::runtime_error("Unsupported reasoning parser: \"" + reasoningParserName +
                                  "\". Supported reasoning parsers are: " + getSupportedReasoningParserNamesAsString());

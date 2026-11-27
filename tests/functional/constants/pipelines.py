@@ -690,7 +690,7 @@ class SimpleMediaPipe(MediaPipe):
     def __init__(self, model, demultiply_count=None, **kwargs):
         pipeline = SimplePipeline
         super().__init__(model, pipeline, demultiply_count, **kwargs)
-        self.calculators = [OpenVINOModelServerSessionCalculator(model=self), OpenVINOInferenceCalculator(model=self)]
+        self.calculators = [OpenVINOModelServerSessionCalculator(), OpenVINOInferenceCalculator()]
         self._initialize([model])
         self.regular_models = self.get_regular_models()
         assert not self.name.endswith("_mediapipe")

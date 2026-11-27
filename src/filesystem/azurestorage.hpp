@@ -58,7 +58,7 @@ public:
 
     StatusCode CreateLocalDir(const std::string& path);
     bool isAbsolutePath(const std::string& path);
-    std::vector<std::string> FindSubdirectories(std::string path);
+    std::vector<std::string> FindSubdirectories(const std::string& path);
     virtual ~AzureStorageAdapter() = default;
 
 protected:
@@ -179,7 +179,7 @@ public:
     std::shared_ptr<AzureStorageAdapter> getNewAzureStorageObject(const std::string& path, const std::string& connection_string);
 
 private:
-    bool isBlobStoragePath(std::string path);
+    bool isBlobStoragePath(const std::string& path);
 };
 
 }  // namespace ovms

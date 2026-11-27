@@ -67,12 +67,14 @@ struct HttpRequestComponents {
 
 enum class ContentType {
     JSON,
-    PLAIN_TEXT
+    PLAIN_TEXT,
+    CUSTOM
 };
 
 struct HttpResponseComponents {
     std::optional<int> inferenceHeaderContentLength;
     ContentType contentType = ContentType::JSON;
+    std::string customContentType;
 };
 
 using HandlerCallbackFn = std::function<Status(
@@ -119,7 +121,7 @@ public:
         const std::unordered_map<std::string, std::string>& headers = {});
 
     Status parseModelVersion(std::string& model_version_str, std::optional<int64_t>& model_version);
-    static Status prepareGrpcRequest(const std::string modelName, const std::optional<int64_t>& modelVersion, const std::string& request_body, ::KFSRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength = {});
+    static Status prepareGrpcRequest(const std::string& modelName, const std::optional<int64_t>& modelVersion, const std::string& request_body, ::KFSRequest& grpc_request, const std::optional<int>& inferenceHeaderContentLength = {});
 
     void registerHandler(RequestType type, HandlerCallbackFn);
     void registerAll();
@@ -171,7 +173,7 @@ public:
     Status processServerLiveKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
     Status processServerMetadataKFSRequest(const HttpRequestComponents& request_components, std::string& response, const std::string& request_body);
 
-    Status processOpenAI(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser);
+    Status processOpenAI(const std::string_view uri, const HttpRequestComponents& request_components, std::string& response, const std::string& request_body, HttpResponseComponents& response_components, std::shared_ptr<HttpAsyncWriter> serverReaderWriter, std::shared_ptr<MultiPartParser> multiPartParser);
     Status processListModelsRequest(std::string& response);
     Status processRetrieveModelRequest(const std::string& name, std::string& response);
     bool isAuthorized(const std::unordered_map<std::string, std::string>& headers, const std::string& apiKey);

@@ -52,6 +52,7 @@ namespace {
 
 struct DecoderPlugin {
     DecodeOpenCvV1 decode = nullptr;
+    ResizeOpenCvV1 resize = nullptr;
     std::string error;
     DecoderPlugin() {
         std::filesystem::path directory;
@@ -90,6 +91,7 @@ struct DecoderPlugin {
                 continue;
             }
             decode = reinterpret_cast<DecodeOpenCvV1>(GetProcAddress(handle, "ovmsDecodeOpenCvV1"));
+            resize = reinterpret_cast<ResizeOpenCvV1>(GetProcAddress(handle, "ovmsResizeOpenCvV1"));
 #else
             void* handle = dlopen(candidate.c_str(), RTLD_NOW | RTLD_LOCAL);
             if (!handle) {
@@ -98,12 +100,14 @@ struct DecoderPlugin {
                 continue;
             }
             decode = reinterpret_cast<DecodeOpenCvV1>(dlsym(handle, "ovmsDecodeOpenCvV1"));
+            resize = reinterpret_cast<ResizeOpenCvV1>(dlsym(handle, "ovmsResizeOpenCvV1"));
 #endif
             if (decode) {
                 error.clear();
                 SPDLOG_INFO("Using OpenCV image decoder: {}", candidate.string());
                 return;
             }
+            resize = nullptr;
             error += "; " + candidate.string() + ": missing ovmsDecodeOpenCvV1 entry point";
         }
         SPDLOG_INFO("{}; using stb_image for supported image formats", error);
@@ -186,7 +190,7 @@ std::shared_ptr<Preprocessor> getPreprocessor(const ov::Tensor& source,
 
     auto entry = std::make_shared<Preprocessor>();
     entry->model = core.compile_model(processor.build(), "CPU", ov::hint::inference_precision(ov::element::f32),
-        ov::inference_num_threads(1), ov::num_streams(1));
+        ov::num_streams(1));
 
     {
         std::lock_guard<std::mutex> lock(mutex);
@@ -321,6 +325,15 @@ Status preprocessImage(const ov::Tensor& source, ov::Tensor& destination,
     if (source.get_element_type() == precision && source.get_shape()[1] == height && source.get_shape()[2] == width) {
         destination = source;
         return StatusCode::OK;
+    }
+    if (const auto resize = plugin().resize) {
+        ov::Tensor resized(precision, ov::Shape{1, height, width, source.get_shape()[3]});
+        std::array<char, 1024> error{};
+        if (resize(&source, &resized, error.data(), error.size())) {
+            destination = std::move(resized);
+            return StatusCode::OK;
+        }
+        SPDLOG_DEBUG("OpenCV image preprocessing failed, falling back to OpenVINO: {}", error.data());
     }
     try {
         auto entry = getPreprocessor(source, precision, height, width);

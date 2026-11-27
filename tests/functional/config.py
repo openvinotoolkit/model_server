@@ -28,6 +28,7 @@ from tests.functional.utils.core import TmpDir, get_token_value
 from tests.functional.utils.gpu_devices import resolve_default_gpu
 from tests.functional.utils.helpers import (
     generate_test_object_name,
+    get_base_device,
     get_bool,
     get_int,
     get_list,
@@ -137,6 +138,8 @@ ovms_binary_path = os.environ.get("OVMS_BINARY_PATH", None)
 requested_target_devices = get_target_devices()
 target_devices = resolve_default_gpu(requested_target_devices)
 target_device_ids = dict(zip(target_devices, requested_target_devices))
+""" Resolved device per base device, e.g. 'HETERO:GPU,CPU' -> 'HETERO:GPU.1,CPU' """
+resolved_target_devices = {get_base_device(_td): _td for _td in target_devices}
 
 # Reservation manager values, for details study tests.functional.utils.reservation_manager
 """ TT_GRPC_OVMS_STARTING_PORT - Grpc port where ovms should be exposed"""

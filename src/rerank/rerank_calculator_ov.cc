@@ -132,7 +132,7 @@ public:
         return absl::OkStatus();
     }
 
-    std::vector<int64_t> ComputeTokensForString(std::string str) const {
+    std::vector<int64_t> ComputeTokensForString(const std::string& str) const {
         auto tokens = rerank_session->getTokenizer().encode(str);
         auto& input_ids = tokens.input_ids;
         if (input_ids.get_shape().size() != 2)

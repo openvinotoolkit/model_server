@@ -77,7 +77,7 @@ public:
     */
     virtual Status initialize(std::shared_ptr<GenAiServable>& servable, const mediapipe::LLMCalculatorOptions& nodeOptions, std::string graphPath) = 0;
 };
-Status parseModelsPath(std::string& outPath, std::string modelsPath, std::string graphPath);
+Status parseModelsPath(std::string& outPath, const std::string& modelsPath, const std::string& graphPath);
 Status configureVideoInputProcessing(VisionInputConfig& config, const mediapipe::LLMCalculatorOptions& nodeOptions);
 std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath);
 // Detects draft model strategy from model artifacts without a full model load.
@@ -88,5 +88,5 @@ std::optional<uint32_t> parseMaxModelLength(std::string& modelsPath);
 GenAiServableProperties::DraftModelStrategy detectDraftModelStrategy(const std::string& draftPath);
 Status determinePipelineType(PipelineType& pipelineType, const mediapipe::LLMCalculatorOptions& nodeOptions, const std::string& graphPath);
 Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const ::mediapipe::CalculatorGraphConfig::Node& graphNodeConfig,
-    std::string graphPath, std::optional<LLMMetricReporterFactory> createMetricReporter = std::nullopt);
+    const std::string& graphPath, std::optional<LLMMetricReporterFactory> createMetricReporter = std::nullopt);
 }  // namespace ovms

@@ -32,7 +32,7 @@ from tests.functional.utils.logger import get_logger
 from tests.functional.utils.process import Process
 from tests.functional.utils.test_framework import generate_test_object_name
 from tests.functional.config import docker_client_timeout
-from tests.functional.constants.core import CONTAINER_STATUS_RUNNING
+from tests.functional.constants.core import CONTAINER_STATUS_DEAD, CONTAINER_STATUS_EXITED, CONTAINER_STATUS_RUNNING
 
 DOCKER_CONTAINER_TMP_PATH = "/tmp"
 
@@ -108,6 +108,7 @@ class DockerContainer(metaclass=ABCMeta):
     COMMAND_HEADER = "CMD"
     COMMON_RETRY = {"tries": 30, "delay": 2}
     NOT_ON_LIST_RETRY = {"tries": 10, "delay": 2}
+    STOP_RECOVERY_TIMEOUT = 60
     GETTING_LOGS_RETRY = COMMON_RETRY
     GETTING_STATUS_RETRY = COMMON_RETRY
     # Optional callback invoked before log check with (container_name).
@@ -269,17 +270,35 @@ class DockerContainer(metaclass=ABCMeta):
                                            f"Containers found:\n{repr(self.client.list_containers(all_containers=True))}"
         return self.container.kill(signal=signal)  # SIGKILL (not supported for Windows), SIGINT; default: SIGTERM
 
-    def remove_container(self, ensure_deleted: bool = False):
+    def remove_container(self, ensure_deleted: bool = False, force: bool = False):
         assert self.container is not None, f"Lack of container {self.name} to remove (is None)\n" \
                                            f"Containers found:\n{repr(self.client.list_containers(all_containers=True))}"
-        removed = self.container.remove()
+        removed = self.container.remove(force=force)
         if ensure_deleted:
             self.ensure_not_on_list(self.name)
         return removed
 
+    def _wait_until_exited(self, timeout: int) -> bool:
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if self.get_status() in (CONTAINER_STATUS_EXITED, CONTAINER_STATUS_DEAD):
+                return True
+            time.sleep(1)
+        return False
+
     def delete(self, ensure_deleted: bool = False):
-        self.stop_container()
-        self.remove_container(ensure_deleted)
+        force = False
+        try:
+            self.stop_container()
+        except docker.errors.APIError as error:
+            if error.status_code != 500:
+                raise
+            # dockerd can fail a stop with 500 while the process is still exiting or has already exited.
+            logger.warning(f"Stopping container {self.name} failed: {error}. Waiting for it to exit.")
+            force = not self._wait_until_exited(self.STOP_RECOVERY_TIMEOUT)
+            if force:
+                logger.warning(f"Container {self.name} did not exit in {self.STOP_RECOVERY_TIMEOUT}s, forcing removal.")
+        self.remove_container(ensure_deleted, force=force)
 
     def check_non_empty_logs(self, specific_str: str, acceptable_logs_length_trigger: int = 0, **kwargs):
         logs = self.get_logs(**kwargs)

@@ -56,7 +56,7 @@ class PythonBackend;
 class MediapipeGraphDefinition : public SingleVersionServableDefinition {
 public:
     virtual ~MediapipeGraphDefinition();
-    MediapipeGraphDefinition(const std::string name,
+    MediapipeGraphDefinition(const std::string& name,
         const MediapipeGraphConfig& config = MGC,
         const MetricProvider* metricsProvider = nullptr,
         PythonBackend* pythonBackend = nullptr,
