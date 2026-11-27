@@ -93,7 +93,7 @@ curl -L https://huggingface.co/OpenVINO/resnet50-int8-ov/resolve/main/resnet50.x
 ```bash
 docker run --rm -d -u $(id -u) -v ${PWD}:/models -p 9000:9000 \
   openvino/model_server:latest \
-  --model_name resnet --model_path /models/resnet50.xml \
+  --model_name resnet --model_path /models/resnet50.xml --batch_size 1 \
   --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" \
   --port 9000
 ```
@@ -101,7 +101,7 @@ docker run --rm -d -u $(id -u) -v ${PWD}:/models -p 9000:9000 \
 
 **Windows (binary package):**
 ```bat
-ovms --model_name resnet --model_path resnet50.xml --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --port 9000
+ovms --model_name resnet --model_path resnet50.xml --batch_size 1 --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" --port 9000
 ```
 
 Run inference with a sample python client
