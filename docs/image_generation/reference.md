@@ -283,10 +283,9 @@ The `mix` adapter is a composite that blends `pokemon` at weight 0.7 and `anime`
 Adapter selection is driven by the `model` field in the request. When the `model` field matches a registered adapter alias, that adapter is automatically applied:
 
 ```bash
-curl --fail http://localhost:8000/v3/images/generations \
+curl --fail -o xray_response.json http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
-  -d '{"model": "xray", "prompt": "xray a human hand", "num_inference_steps": 20, "size": "512x512"}' \
-  -o xray_response.json
+  -d '{"model": "xray", "prompt": "xray a human hand", "num_inference_steps": 20, "size": "512x512"}'
 ```
 
 In this example, `xray` is the alias defined in `--source_loras` (e.g. `xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors`). The adapter is applied with its default weight.
@@ -334,10 +333,9 @@ To blend multiple adapters simultaneously, define a **composite adapter** at sta
 
 Then use the composite alias in requests:
 ```bash
-curl --fail http://localhost:8000/v3/images/generations \
+curl --fail -o blend_response.json http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
-  -d '{"model": "blend", "prompt": "a cat", "num_inference_steps": 20, "size": "512x512"}' \
-  -o blend_response.json
+  -d '{"model": "blend", "prompt": "a cat", "num_inference_steps": 20, "size": "512x512"}'
 ```
 
 You can override individual component alphas at request time via `lora_alphas`:
