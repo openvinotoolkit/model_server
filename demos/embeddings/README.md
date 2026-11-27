@@ -413,31 +413,36 @@ The script [compare_results.py](https://raw.githubusercontent.com/openvinotoolki
 pip install torch transformers openai numpy --extra-index-url "https://download.pytorch.org/whl/cpu"
 curl -fL https://raw.githubusercontent.com/openvinotoolkit/model_server/refs/heads/main/demos/embeddings/compare_results.py -o compare_results.py
 python compare_results.py --model_name Qwen3-Embedding-0.6B-int8-ov --hf_model_name Qwen/Qwen3-Embedding-0.6B --service_url http://localhost:8000/v1 --pooling LAST --input "hello world" --input "goodbye world"
+```
 
-input ['hello world', 'goodbye world']
-HF Duration: 93.921 ms BertModel
-OVMS Duration: 160.806 ms
+```text
+HF Duration: 935.1669999999999 ms Qwen3Model
+OVMS Duration: 83.621 ms
 Batch number: 0
 OVMS embeddings: shape: (1024,) emb[:20]:
- [ 0.0336  0.0321  0.0213 -0.0373 -0.0156 -0.0122  0.0246  0.0412  0.0492
-  0.0207  0.0056  0.0169 -0.0133  0.0009 -0.0421  0.0206 -0.0222 -0.0291
- -0.0532  0.0382]
+ [-0.0145  0.0161 -0.0118 -0.0755  0.0014 -0.0208 -0.0133  0.0118 -0.1038
+ -0.0062 -0.0101 -0.0321  0.0522 -0.0114 -0.0516  0.0861 -0.0056  0.0886
+  0.1063 -0.0826]
 HF AutoModel: shape: (1024,) emb[:20]:
- [ 0.0343  0.0332  0.0219 -0.0371 -0.0158 -0.0131  0.0247  0.0408  0.0489
-  0.0208  0.0053  0.0176 -0.0132  0.001  -0.0422  0.0208 -0.0213 -0.0278
- -0.0538  0.0388]
-Difference score with HF AutoModel: 0.020708760995591734
+ [-0.0143  0.0168 -0.0121 -0.0728  0.0027 -0.02   -0.0146  0.0143 -0.1045
+ -0.0048 -0.0098 -0.032   0.0537 -0.0114 -0.052   0.0874 -0.0068  0.0884
+  0.106  -0.084 ]
+Difference score with HF AutoModel: 0.037465499796570094
+[PASS] Arrays are within tolerance (atol=1e-2)
+[PASS] Np linalg.norm: 0.037465499796570094
 Batch number: 1
 OVMS embeddings: shape: (1024,) emb[:20]:
- [ 0.0161  0.0156  0.0235  0.0199  0.0005 -0.0559  0.0124  0.0122  0.0205
- -0.027   0.0152  0.0153 -0.0429 -0.0537 -0.0514 -0.0059 -0.0294 -0.0451
- -0.0371  0.0361]
+ [-0.0148  0.0121 -0.0126 -0.0729  0.0324 -0.0574 -0.0132 -0.0058 -0.1002
+ -0.008  -0.0188 -0.0595  0.0471 -0.0134 -0.0699  0.0727 -0.0311  0.0759
+  0.1614 -0.0158]
 HF AutoModel: shape: (1024,) emb[:20]:
- [ 0.0175  0.0161  0.0234  0.0196  0.0012 -0.0565  0.0109  0.0111  0.0194
- -0.0275  0.0148  0.0144 -0.0425 -0.0538 -0.0515 -0.0062 -0.0298 -0.0447
- -0.0376  0.0359]
-Difference score with HF AutoModel: 0.020293646680283224
-
+ [-0.0157  0.0148 -0.0128 -0.0674  0.0342 -0.0596 -0.0141 -0.0056 -0.1011
+ -0.008  -0.0212 -0.0586  0.0459 -0.0137 -0.0708  0.0713 -0.033   0.0757
+  0.1641 -0.0182]
+Difference score with HF AutoModel: 0.047366423460541866
+[PASS] Arrays are within tolerance (atol=1e-2)
+[PASS] Np linalg.norm: 0.047366423460541866
+[SUCCESS]
 ```
 
 It is easy also to run model evaluation using [MTEB](https://github.com/embeddings-benchmark/mteb) framework using a custom class based on openai model:
