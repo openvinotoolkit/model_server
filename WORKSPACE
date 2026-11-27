@@ -18,6 +18,23 @@ workspace(name = "ovms")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
+# This component should be in line with install_ubuntu_level_zero_loader.sh
+http_archive(
+    name = "level_zero_headers",
+    sha256 = "b77e6e28623134ee4e99e2321c127b554bdd5bfa3e80064922eba293041c6c52",
+    strip_prefix = "level-zero-1.24.2",
+    urls = ["https://github.com/oneapi-src/level-zero/archive/refs/tags/v1.24.2.tar.gz"],
+    build_file_content = """
+cc_library(
+    name = "headers",
+    hdrs = glob(["include/*.h"]),
+    strip_include_prefix = "include",
+    include_prefix = "level_zero",
+    visibility = ["//visibility:public"],
+)
+""",
+)
+
 # 2023-06-05
 # This version of Glog is required for Windows support, but currently causes
 # crashes on some Android devices.

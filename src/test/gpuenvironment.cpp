@@ -23,7 +23,7 @@ void GPUEnvironment::SetUp() {
     const char* runGpuTestsEnv = std::getenv("RUN_GPU_TESTS");
     if (runGpuTestsEnv) {
         std::string runGpuTestsEnvContent(runGpuTestsEnv);
-        if (runGpuTestsEnvContent == "1") {
+        if (gpuTestsRequested()) {
             GPUEnvironment::gpuTestsEnabled = true;
             SPDLOG_INFO("RUN_GPU_TESTS was set to 1. Will run tests requiring GPU");
         } else {

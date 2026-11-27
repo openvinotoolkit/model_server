@@ -236,6 +236,23 @@ void ModelManager::logPluginConfiguration() {
     OV_LOGGER("ov::Core: {}, ieCore->get_available_devices()", reinterpret_cast<const void*>(this->ieCore.get()));
     auto availableDevices = ieCore->get_available_devices();
     SPDLOG_LOGGER_INFO(modelmanager_logger, "Available devices for Open VINO: {}", joins(availableDevices, std::string(", ")));
+    try {
+        const auto gpuMemory = getGpuMemoryInfo(*ieCore);
+        if (gpuMemory.status != GpuMemoryStatus::AVAILABLE) {
+            SPDLOG_LOGGER_WARN(modelmanager_logger, "GPU memory enumeration unavailable: {}", gpuMemory.reason);
+        }
+        for (const auto& gpu : gpuMemory.devices) {
+            if (gpu.availablePhysicalBytes) {
+                SPDLOG_LOGGER_INFO(modelmanager_logger, "GPU {} ({}): available {}physical memory: {} bytes",
+                    gpu.deviceId, gpu.deviceName, gpu.sharedMemory ? "shared " : "", *gpu.availablePhysicalBytes);
+            } else {
+                SPDLOG_LOGGER_INFO(modelmanager_logger, "GPU {} ({}): available {}physical memory unavailable: {}",
+                    gpu.deviceId, gpu.deviceName, gpu.sharedMemory ? "shared " : "", gpu.reason);
+            }
+        }
+    } catch (const std::exception& exception) {
+        SPDLOG_LOGGER_WARN(modelmanager_logger, "Failed to query GPU memory: {}", exception.what());
+    }
     auto availablePlugins = availableDevices;
     for (const auto& plugin : availablePlugins) {
         logOVPluginConfig([this, &plugin](const std::string& key) {

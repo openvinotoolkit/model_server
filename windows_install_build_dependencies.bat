@@ -352,6 +352,37 @@ echo [INFO] OpenVINO from source installed: %BAZEL_SHORT_PATH%\openvino
 cd !BACK_CWD!
 :finished_openvino
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+::::::::::::::::::::::: Level Zero loader (version and checksum match WORKSPACE)
+set "level_zero_version=1.24.2"
+set "level_zero_sha256=b77e6e28623134ee4e99e2321c127b554bdd5bfa3e80064922eba293041c6c52"
+set "level_zero_archive=%BAZEL_SHORT_PATH%\level-zero-%level_zero_version%.tar.gz"
+set "level_zero_source=%BAZEL_SHORT_PATH%\level-zero-%level_zero_version%"
+set "level_zero_build=%BAZEL_SHORT_PATH%\level-zero-build-%level_zero_version%"
+
+if not exist "%level_zero_archive%" (
+    curl -fL -o "%level_zero_archive%" "https://github.com/oneapi-src/level-zero/archive/refs/tags/v%level_zero_version%.tar.gz"
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+set "actual_hash="
+for /f "skip=1 tokens=*" %%H in ('certutil -hashfile "%level_zero_archive%" SHA256') do if not defined actual_hash set "actual_hash=%%H"
+if /I not "!actual_hash!"=="%level_zero_sha256%" (
+    echo [ERROR] SHA-256 mismatch for %level_zero_archive%.
+    exit /b 1
+)
+if not exist "%level_zero_source%\CMakeLists.txt" (
+    C:\Windows\System32\tar.exe -xf "%level_zero_archive%" -C "%BAZEL_SHORT_PATH%"
+    if !errorlevel! neq 0 exit /b !errorlevel!
+)
+"%CMAKE_BIN%" -S "%level_zero_source%" -B "%level_zero_build%" -G "Visual Studio 17 2022" -A x64 -T v143 -DBUILD_STATIC=OFF -DBUILD_L0_LOADER_TESTS=OFF
+if !errorlevel! neq 0 exit /b !errorlevel!
+"%CMAKE_BIN%" --build "%level_zero_build%" --config Release --target ze_loader -j
+if !errorlevel! neq 0 exit /b !errorlevel!
+if not exist "%level_zero_build%\bin\Release\ze_loader.dll" (
+    echo [ERROR] Level Zero loader DLL was not produced in %level_zero_build%\bin\Release.
+    exit /b 1
+)
+echo [INFO] Level Zero loader built: %level_zero_build%\bin\Release\ze_loader.dll
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::::::::::::::::::::::: OpenCL headers
 echo [INFO] Installing OpenCL headers ...
 set "opencl_git=https://github.com/KhronosGroup/OpenCL-SDK"

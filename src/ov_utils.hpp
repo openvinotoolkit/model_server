@@ -55,7 +55,7 @@ Status validatePluginConfiguration(const plugin_config_t& pluginConfig, const st
 struct GpuDeviceInfo {
     std::string name;
     bool isDiscrete = false;
-    int64_t freeMemBytes = 0;
+    std::optional<uint64_t> freeMemBytes;
 };
 
 // Determines the recommended target device based on available devices and their properties.
@@ -63,7 +63,8 @@ struct GpuDeviceInfo {
 // - If only CPU is available (no GPU) - returns "CPU"
 // - If a single discrete GPU is available - returns that device (e.g. "GPU.0")
 // - If only integrated GPU(s) are available - returns the first integrated GPU
-// - If multiple discrete GPUs are available - returns the one with the most free VRAM
+// - If multiple discrete GPUs are available - returns the one with the most known free VRAM
+// - If no discrete GPU has a memory reading - returns the first discrete GPU
 std::string recommendTargetDevice();
 
 // Testable overload accepting pre-collected GPU device info instead of querying ov::Core.
