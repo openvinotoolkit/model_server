@@ -22,7 +22,7 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
-from tests.functional.constants.os_type import OsType
+from tests.functional.constants.os_type import OsType, normalize_redhat_os
 from tests.functional.constants.ovms_type import OvmsType
 from tests.functional.utils.core import TmpDir, get_token_value
 from tests.functional.utils.gpu_devices import resolve_default_gpu
@@ -303,12 +303,16 @@ performance_test_timeout_minutes = get_int("TT_PERFORMANCE_TEST_TIMEOUT_MINUTES"
         ubuntu22 - use default Ubuntu 22.04 image
         ubuntu24 - use default Ubuntu 24.04 image
         ubuntu26 - use default Ubuntu 26.04 image
-        redhat - use UBI 9.7 based
+        redhat or redhat9 - use default Red Hat UBI 9.9 image
+        redhat10 - use default Red Hat UBI 10.3 image
         ubuntu22,ubuntu24,ubuntu26,redhat - iterate all tests both for ubuntu and redhat   
         windows - can't iterate (supports only BINARY ovms type)
 """
 __base_os = os.environ.get("BASE_OS", OsType.Ubuntu24)
 base_os = get_list("TT_BASE_OS", fallback=[__base_os])
+# "redhat9" is a transparent input alias for "redhat" (default RHEL 9.x image); normalize it here
+# so that no other code needs to special-case the "redhat9" spelling.
+base_os = [normalize_redhat_os(_os) for _os in base_os]
 
 """ BASE_IMAGE - Docker image used during OVMS image creation """
 base_image = os.environ.get("BASE_IMAGE", None)

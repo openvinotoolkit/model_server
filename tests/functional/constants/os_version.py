@@ -16,21 +16,28 @@
 
 from tests.functional.constants.os_type import OsType
 
-REDHAT_MINIMAL_BASE_IMAGE = "registry.access.redhat.com/ubi9/ubi-minimal:9.7"
-REDHAT_COMMON_BASE_IMAGE = "registry.access.redhat.com/ubi9/ubi:9.7"
+REDHAT9_MINIMAL_BASE_IMAGE = "registry.access.redhat.com/ubi9/ubi-minimal:9.9"
+REDHAT9_COMMON_BASE_IMAGE = "registry.access.redhat.com/ubi9/ubi:9.9"
+REDHAT10_MINIMAL_BASE_IMAGE = "registry.access.redhat.com/ubi10/ubi-minimal:10.3"
+REDHAT10_COMMON_BASE_IMAGE = "registry.access.redhat.com/ubi10/ubi:10.3"
+# Backwards compatible aliases - "redhat" means the default redhat9 image
+REDHAT_MINIMAL_BASE_IMAGE = REDHAT9_MINIMAL_BASE_IMAGE
+REDHAT_COMMON_BASE_IMAGE = REDHAT9_COMMON_BASE_IMAGE
 UBUNTU_22_BASE_IMAGE = "ubuntu:22.04"
 UBUNTU_24_BASE_IMAGE = "ubuntu:24.04"
 UBUNTU_26_BASE_IMAGE = "ubuntu:26.04"
 
 os_type_to_base_image = {
-    OsType.Redhat: REDHAT_COMMON_BASE_IMAGE,
+    OsType.Redhat: REDHAT9_COMMON_BASE_IMAGE,
+    OsType.Redhat10: REDHAT10_COMMON_BASE_IMAGE,
     OsType.Ubuntu22: UBUNTU_22_BASE_IMAGE,
     OsType.Ubuntu24: UBUNTU_24_BASE_IMAGE,
     OsType.Ubuntu26: UBUNTU_26_BASE_IMAGE,
 }
 
 os_type_to_base_image_binary_docker = {
-    OsType.Redhat: REDHAT_COMMON_BASE_IMAGE,
+    OsType.Redhat: REDHAT9_COMMON_BASE_IMAGE,
+    OsType.Redhat10: REDHAT10_COMMON_BASE_IMAGE,
     OsType.Ubuntu22: UBUNTU_22_BASE_IMAGE,
     OsType.Ubuntu24: UBUNTU_24_BASE_IMAGE,
     OsType.Ubuntu26: UBUNTU_26_BASE_IMAGE,

@@ -26,6 +26,8 @@ if [ -z "$DNF_TOOL" ]; then
     exit 1
 fi
 
+REDHAT_MAJOR=${REDHAT_MAJOR:-9}
+
 declare -a downloaded_rpms=()
 
 download_verified_rpm() {
@@ -44,6 +46,12 @@ download_verified_rpm() {
 
 mkdir -p /tmp/gpu_deps
 
+if [ "$REDHAT_MAJOR" != "9" ]; then
+    echo "ERROR: GPU driver rpm packages/checksums for RHEL${REDHAT_MAJOR} are not yet verified in this script." >&2
+    echo "       Update install_redhat_gpu_drivers.sh with verified el${REDHAT_MAJOR} package URLs and SHA-256 checksums before enabling GPU on redhat${REDHAT_MAJOR}." >&2
+    exit 1
+fi
+
 case $INSTALL_DRIVER_VERSION in \
 "25.18.33578") \
         $DNF_TOOL install --nodocs -y libedit libnl3; \
@@ -58,7 +66,7 @@ case $INSTALL_DRIVER_VERSION in \
         echo "ERROR: Unrecognized driver ${INSTALL_DRIVER_VERSION}." ; \
         exit 1 ; \
 esac ; \
-download_verified_rpm https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/ocl-icd-2.2.13-4.el9.x86_64.rpm 0a589ca7000927ee350d1d54493ec159efc80a4fa957eecf37650c65991ee520 && \
+download_verified_rpm https://mirror.stream.centos.org/${REDHAT_MAJOR}-stream/AppStream/x86_64/os/Packages/ocl-icd-2.2.13-4.el${REDHAT_MAJOR}.x86_64.rpm 0a589ca7000927ee350d1d54493ec159efc80a4fa957eecf37650c65991ee520 && \
 rpm -ivh "${downloaded_rpms[@]}" && rm -rf /tmp/gpu_deps && \
 echo "Installed opencl driver version:" ;\
 echo `rpm -qa | grep intel-opencl` ; \
