@@ -30,7 +30,7 @@ except ImportError:
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "tests" / "docker_compose_fixtures"
-BASE_CASES = ("invalid-mode", "python-none", "system-python", "embedded-python", "components-only")
+BASE_CASES = ("invalid-mode", "python-none", "system-python", "embedded-python", "components-flag")
 COMPONENTS = (
     "core",
     "python_system",
@@ -295,6 +295,17 @@ def run_successful_install(installer: Path, work_root: Path, python_mode: str,
         uninstall(install_dir)
 
 
+def run_level1_only_install(installer: Path, work_root: Path, python_mode: str,
+                            components: str, artifacts: tuple[str, ...] = ()) -> str:
+    install_dir = install_component(installer, work_root, python_mode, components, artifacts)
+    try:
+        level1_files = verify_component_artifacts(install_dir, artifacts)
+        level1_ready = start_and_check(install_dir)
+        return f"{level1_files}; {level1_ready}"
+    finally:
+        uninstall(install_dir)
+
+
 def check_case(case: str, installer: Path) -> list[tuple[str, bool, str]]:
     try:
         with tempfile.TemporaryDirectory(prefix="ovms-installer-", dir=os.environ.get("TEMP")) as temp:
@@ -312,11 +323,33 @@ def check_case(case: str, installer: Path) -> list[tuple[str, bool, str]]:
                 return [("", True, "Invalid /PYTHONMODE was rejected by the installer")]
 
             if case == "python-none":
-                level1, level2 = run_successful_install(
-                    installer, work_root, "none",
-                    "python_none,gpu,opencv_mp,onnx_frontend",
-                    ("ovms.exe", "openvino_intel_gpu_plugin.dll", "opencv_world4140.dll", "openvino_onnx_frontend.dll"))
-                return [(" Level 1", True, level1), (" Level 2", True, level2)]
+                artifacts = ("ovms.exe", "openvino_intel_gpu_plugin.dll",
+                            "opencv_world4140.dll", "openvino_onnx_frontend.dll")
+                try:
+                    install_dir = install_component(
+                        installer, work_root, "none", "python_none,gpu,opencv_mp,onnx_frontend", artifacts)
+                except Exception as error:
+                    return [(" Level 1", False, str(error))]
+
+                try:
+                    try:
+                        level1_files = verify_component_artifacts(install_dir, artifacts)
+                        level1 = f"{level1_files}; {start_and_check(install_dir)}"
+                    except Exception as error:
+                        return [(" Level 1", False, str(error))]
+
+                    try:
+                        # /PYTHONMODE=none is the defining characteristic of this case, so
+                        # Level 2 verifies the same graceful-rejection behavior as the
+                        # python_none component case: no Python runtime is installed, so a
+                        # mediapipe Python-node graph must fail cleanly (server stays up,
+                        # request fails) instead of crashing.
+                        level2 = python_none_check(install_dir)
+                        return [(" Level 1", True, level1), (" Level 2", True, level2)]
+                    except Exception as error:
+                        return [(" Level 1", True, level1), (" Level 2", False, str(error))]
+                finally:
+                    uninstall(install_dir)
 
             if case == "system-python":
                 if discover_python314() is None:
@@ -328,17 +361,40 @@ def check_case(case: str, installer: Path) -> list[tuple[str, bool, str]]:
                 return [(" Level 1", True, level1), (" Level 2", True, level2)]
 
             if case == "embedded-python":
-                level1, level2 = run_successful_install(
-                    installer, work_root, "embedded", "python_embedded,onnx_frontend",
-                    ("ovms.exe", "python\\python.exe", "python\\pyovms.pyd", "openvino_onnx_frontend.dll"))
-                return [(" Level 1", True, level1), (" Level 2", True, level2)]
+                # opencv_mp is required because PythonExecutorCalculator (used by the Level 2
+                # mediapipe Python-node request) is hosted in the opencv_mp plugin DLL.
+                artifacts = ("ovms.exe", "python\\python.exe", "python\\pyovms.pyd",
+                            "openvino_onnx_frontend.dll")
+                try:
+                    install_dir = install_component(
+                        installer, work_root, "embedded", "python_embedded,onnx_frontend,opencv_mp", artifacts)
+                except Exception as error:
+                    return [(" Level 1", False, str(error))]
 
-            if case == "components-only":
-                level1, level2 = run_successful_install(
+                try:
+                    try:
+                        level1_files = verify_component_artifacts(install_dir, artifacts)
+                        level1 = f"{level1_files}; {start_and_check(install_dir)}"
+                    except Exception as error:
+                        return [(" Level 1", False, str(error))]
+
+                    try:
+                        # Embedded Python mode is expected to actually support Python nodes,
+                        # so Level 2 runs the same mediapipe Python-node summation request as
+                        # the python_embedded component case, instead of a blanket SKIP.
+                        level2 = python_summator_check(install_dir, "embedded")
+                        return [(" Level 1", True, level1), (" Level 2", True, level2)]
+                    except Exception as error:
+                        return [(" Level 1", True, level1), (" Level 2", False, str(error))]
+                finally:
+                    uninstall(install_dir)
+
+            if case == "components-flag":
+                level1 = run_level1_only_install(
                     installer, work_root, "none", "python_none,paddle_frontend,tensorflow_frontend",
                     ("ovms.exe", "openvino_paddle_frontend.dll",
                      "openvino_tensorflow_frontend.dll", "openvino_tensorflow_lite_frontend.dll"))
-                return [(" Level 1", True, level1), (" Level 2", True, level2)]
+                return [("", True, level1)]
 
             if case in COMPONENTS:
                 if case == "python_system":
