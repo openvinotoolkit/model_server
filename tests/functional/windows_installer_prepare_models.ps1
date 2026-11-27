@@ -77,13 +77,13 @@ if ($PrepareLLM) {
         $LLMDir = Join-Path $repoRoot "src\test\llm_testing"
     }
 
-    $prepareLLM = Join-Path $repoRoot "windows_prepare_llm_models.bat"
-    if (-not (Test-Path -LiteralPath $prepareLLM)) {
-        throw "Missing Windows LLM model preparation script: $prepareLLM"
+    $prepareLlmScript = Join-Path $repoRoot "windows_prepare_llm_models.bat"
+    if (-not (Test-Path -LiteralPath $prepareLlmScript)) {
+        throw "Missing Windows LLM model preparation script: $prepareLlmScript"
     }
 
     Write-Host "Preparing LLM fixtures: $LLMDir"
-    & cmd.exe /d /c "`"$prepareLLM`" `"$LLMDir`""
+    & cmd.exe /d /c "`"$prepareLlmScript`" `"$LLMDir`""
     if ($LASTEXITCODE -ne 0) {
         throw "windows_prepare_llm_models.bat failed"
     }
