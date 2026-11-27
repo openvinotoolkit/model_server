@@ -15,13 +15,12 @@
 #
 
 from transformers import AutoTokenizer, AutoModel
-from optimum.intel import OVModelForFeatureExtraction, OVSentenceTransformer
 import torch
 import datetime
 import numpy as np
 import argparse
 
-parser = argparse.ArgumentParser(description='Compare embeddings responses from HF transformers, OVSentenceTransformer and OVMS')
+parser = argparse.ArgumentParser(description='Compare embeddings responses from HF transformers and OVMS')
 parser.add_argument('--service_url', required=False, default='http://localhost:8000/v1',
                     help='Specify API base URL. default:http://localhost:8000/v1', dest='service_url')
 parser.add_argument('--model_name', default='Alibaba-NLP/gte-large-en-v1.5', help='Model name to query. default: Alibaba-NLP/gte-large-en-v1.5',
@@ -40,7 +39,6 @@ if len(hf_model_name) == 0:
     hf_model_name = model_id
 tokenizer = AutoTokenizer.from_pretrained(hf_model_name, trust_remote_code=True)
 model_pt = AutoModel.from_pretrained(hf_model_name, trust_remote_code=True)
-#model_ov = OVSentenceTransformer.from_pretrained(model_id, trust_remote_code=True)
 
 text = args['input']
 print("input", text)
@@ -61,7 +59,7 @@ def run_model():
         end_time = datetime.datetime.now()
         duration = (end_time - start_time).total_seconds() * 1000
         print("HF Duration:", duration, "ms", type(model_pt).__name__)
-        return np.array(embeddings)
+        return embeddings.float().numpy()
 
 def run_OV():
     with torch.no_grad():
@@ -84,7 +82,6 @@ def run_ovms():
     return responses.data
 
 HF_embeddings = run_model()
-#OV_embeddings = run_OV()
 OVMS_embeddings = run_ovms()
 
 i=0
@@ -94,7 +91,6 @@ for res in OVMS_embeddings:
     ovmsresult = np.array(res.embedding)
     with np.printoptions(precision=4, suppress=True):
         print("OVMS embeddings: shape:",ovmsresult.shape, "emb[:20]:\n", ovmsresult[:20])
-        #print("OVSentenceTransformer: shape:",OV_embeddings[i].shape, "emb[:20]:\n", OV_embeddings[i][:20])
         print("HF AutoModel: shape:",HF_embeddings[i].shape, "emb[:20]:\n", HF_embeddings[i][:20])
     print("Difference score with HF AutoModel:", np.linalg.norm(ovmsresult - HF_embeddings[i]))
     if np.allclose(ovmsresult, HF_embeddings[i], atol=1e-2):
@@ -106,10 +102,11 @@ for res in OVMS_embeddings:
         diff = np.abs(ovmsresult - HF_embeddings[i])
         print(f"Max difference: {diff.max():.6f}")
         print(f"Mean difference: {diff.mean():.6f}")
-    if (np.linalg.norm(ovmsresult - HF_embeddings[i]) < 0.06):
-        print("[PASS] Np linalg.norm")
+
+    if ((norm := np.linalg.norm(ovmsresult - HF_embeddings[i])) < 0.06):
+        print(f"[PASS] Np linalg.norm: {norm}")
     else:
-        print("[FAIL] Np linalg.norm")
+        print(f"[FAIL] Np linalg.norm: {norm}")
         failed+=1
     i+=1
 
