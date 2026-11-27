@@ -58,14 +58,24 @@ set "ONYX_MODEL=OpenVINO/Muse-Glimmer-30B-int4-ov"
 
 echo Downloading LLM testing models to directory %~1
 set "PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu https://storage.openvinotoolkit.org/simple/wheels/nightly"
+set "PYTHONHOME="
 set "PYTHONPATH="
-C:\opt\Python314\python.exe -m venv .venv
+if exist ".venv-llm\pyvenv.cfg" (
+
+  findstr /i /c:"Python314" ".venv-llm\pyvenv.cfg" >nul
+
+  if errorlevel 1 rmdir /s /q ".venv-llm"
+
+)
+C:\opt\Python314\python.exe -m venv .venv-llm
+
 if !errorlevel! neq 0 exit /b !errorlevel!
-call .\.venv\Scripts\Activate.bat
+call .\.venv-llm\Scripts\Activate.bat
+
 if !errorlevel! neq 0 exit /b !errorlevel!
 python -m pip install --upgrade pip
 if !errorlevel! neq 0 exit /b !errorlevel!
-pip install -U nncf sentence_transformers==5.3.0 sentencepiece requests protobuf==7.35.0 kokoro openvino-tokenizers
+pip install -U nncf sentence_transformers==5.3.0 sentencepiece requests protobuf==7.35.0 openvino-tokenizers
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 if not exist "%~1" mkdir "%~1"
