@@ -32,16 +32,17 @@ COPY ovms/ ovms/
 ENV LD_LIBRARY_PATH=/ovms/lib
 
 RUN /ovms/bin/ovms --version
-RUN dnf install -y https://rpmfind.net/linux/centos-stream/9-stream/BaseOS/x86_64/os/Packages/libnl3-3.11.0-1.el9.x86_64.rpm && dnf clean all
-RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && dnf clean all && \
+ARG REDHAT_MAJOR=9
+RUN dnf install -y https://rpmfind.net/linux/centos-stream/${REDHAT_MAJOR}-stream/BaseOS/x86_64/os/Packages/libnl3-3.11.0-1.el${REDHAT_MAJOR}.x86_64.rpm && dnf clean all
+RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${REDHAT_MAJOR}.noarch.rpm && dnf clean all && \
     yum update -d6 -y && yum install -d6 -y gcc-c++
-RUN dnf install -y pkg-config && rpm -ivh https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages/opencl-headers-3.0-6.20201007gitd65bcc5.el9.noarch.rpm && dnf clean all
+RUN dnf install -y pkg-config && rpm -ivh https://mirror.stream.centos.org/${REDHAT_MAJOR}-stream/AppStream/x86_64/os/Packages/opencl-headers-3.0-6.20201007gitd65bcc5.el${REDHAT_MAJOR}.noarch.rpm && dnf clean all
 
 # Enable GPU
 ARG INSTALL_DRIVER_VERSION="24.52.32224"
 ARG DNF_TOOL="dnf"
 COPY install_redhat_gpu_drivers.sh /tmp/install_redhat_gpu_drivers.sh
-RUN chmod 775 /tmp/install_redhat_gpu_drivers.sh && /tmp/install_redhat_gpu_drivers.sh
+RUN chmod 775 /tmp/install_redhat_gpu_drivers.sh && REDHAT_MAJOR=${REDHAT_MAJOR} /tmp/install_redhat_gpu_drivers.sh
 
 # use for debug with GPU target device
 #RUN yum update -d6 -y && yum install -d6 -y clinfo

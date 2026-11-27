@@ -39,6 +39,7 @@ from tests.functional.constants.ovms import CurrentTarget as ct
 # should be checked periodically with OVMS Dockerfiles
 GPU_INSTALL_DRIVER_VERSION = {
     "redhat": "25.18.33578",
+    "redhat10": "25.18.33578",
     "ubuntu22": "24.52.32224",
     "ubuntu24": "26.31.39395",
     "ubuntu26": "26.31.39395",
@@ -49,6 +50,7 @@ GPU_INSTALL_SCRIPTS = {
     OsType.Ubuntu24: ["install_ubuntu_gpu_drivers.sh", "install_va.sh"],
     OsType.Ubuntu26: ["install_ubuntu_gpu_drivers.sh", "install_va.sh"],
     OsType.Redhat: ["install_redhat_gpu_drivers.sh"],
+    OsType.Redhat10: ["install_redhat_gpu_drivers.sh"],
 }
 
 
@@ -85,7 +87,10 @@ class OvmsImages:
                 break
 
         if "red hat" in os_name_lower:
-            cls._os_type = OsType.Redhat
+            if cls._os_version and cls._os_version.split(".")[0] == "10":
+                cls._os_type = OsType.Redhat10
+            else:
+                cls._os_type = OsType.Redhat
         elif "ubuntu 22" in os_name_lower:
             cls._os_type = OsType.Ubuntu22
         elif "ubuntu 24" in os_name_lower:

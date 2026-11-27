@@ -342,6 +342,7 @@ def get_ovms_capi_docker_build_cmd(ovms_image, base_os, dockerfile, ovms_binary_
     base_image = config.base_image if config.base_image else os_type_to_base_image_binary_docker[base_os]
     ovms_test_image = calculate_ovms_test_image_name(ovms_image) if build_test_image else base_image
     target_device = TargetDevice.GPU if TargetDevice.GPU.lower() in ovms_image else TargetDevice.CPU
+    redhat_major = "10" if OsType.Redhat10 in base_os else "9"
     cmd = (
         f"docker build -f {dockerfile} -t {ovms_binary_image_name} . "
         f"--build-arg BASE_IMAGE={base_image} "
@@ -350,6 +351,7 @@ def get_ovms_capi_docker_build_cmd(ovms_image, base_os, dockerfile, ovms_binary_
         f"--build-arg OVMS_DEPENDENCIES='{OVMS_CAPI_DEPENDENCIES[base_os]}' "
         f"--build-arg TOOLS_DEPENDENCIES='{OVMS_CAPI_TOOLS_DEPENDENCIES[target_device][base_os]}' "
         f"--build-arg INSTALL_DRIVER_VERSION='{GPU_INSTALL_DRIVER_VERSION[base_os]}' "
+        f"--build-arg REDHAT_MAJOR={redhat_major} "
         f"--build-arg http_proxy={http_proxy} "
         f"--build-arg https_proxy={https_proxy} "
         f"--build-arg no_proxy={no_proxy} "
@@ -384,7 +386,7 @@ def build_ovms_binary_image():
         ovms_binary_dst_path = os.path.join(tmp_dir, "ovms_binary", base_os)
         get_binary_artifacts(ovms_c_artifacts[base_os], ovms_binary_dst_path)
 
-        dockerfile = f"Dockerfile.{UBUNTU if UBUNTU in base_os else base_os}"
+        dockerfile = f"Dockerfile.{UBUNTU if UBUNTU in base_os else (OsType.Redhat if OsType.Redhat in base_os else base_os)}"
         shutil.copy(
             os.path.join(os.path.dirname(__file__), "ovms_binary_image", dockerfile),
             ovms_binary_dst_path,
@@ -409,7 +411,7 @@ def build_ovms_capi_image():
                 with open(os.path.join(ovms_capi_dst_path, gpu_install_script), "a", encoding="utf-8"):
                     pass
 
-        dockerfile = f"Dockerfile.{UBUNTU if UBUNTU in base_os else base_os}"
+        dockerfile = f"Dockerfile.{UBUNTU if UBUNTU in base_os else (OsType.Redhat if OsType.Redhat in base_os else base_os)}"
         shutil.copy(
             os.path.join(os.path.dirname(__file__), "ovms_capi_image", dockerfile),
             ovms_capi_dst_path,
@@ -776,7 +778,12 @@ def parametrize_base_os(metafunc):
             elif dist_name.startswith("Ubuntu 26.04") or dist_name.startswith(OsType.Ubuntu26):
                 os_name = OsType.Ubuntu26
             elif dist_name.startswith("Red Hat") or dist_name.startswith(OsType.Redhat):
-                os_name = OsType.Redhat
+                dist_name_lower = dist_name.lower()
+                version_part = next((p for p in dist_name_lower.split() if p and p[0].isdigit()), "")
+                if version_part.split(".")[0] == "10":
+                    os_name = OsType.Redhat10
+                else:
+                    os_name = OsType.Redhat
             else:
                 raise NotImplementedError(f"Unsupported OS distribution: {dist_name} (base_os: {_os}, image: {image})")
         else:
