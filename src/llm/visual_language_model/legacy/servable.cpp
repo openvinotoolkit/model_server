@@ -16,9 +16,12 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -60,7 +63,7 @@ void VisualLanguageModelLegacyServable::logPerfMetrics(ov::genai::VLMPerfMetrics
 
     SPDLOG_LOGGER_DEBUG(
         llm_calculator_logger,
-        "Request processing metrics | input_token_count: {} | output_token_count: {} | total_token_count: {} | prepare_embeddings_time_ms: {:.3f} | llm_ttft_ms: {:.3f} | ttft_ms: {:.3f} | prefill_speed_tps: {:.3f} | image_slice_count: {}",
+        "Request processing metrics | input_token_count: {} | output_token_count: {} | total_token_count: {} | prepare_embeddings_time_ms: {:.3f} | llm_ttft_ms: {:.3f} | ttft_ms: {:.3f} | prefill_speed_tps: {:.3f} | tpot_ms: {:.3f} | throughput_tps: {:.3f} | image_slice_count: {}",
         inputTokenCount,
         outputTokenCount,
         inputTokenCount + outputTokenCount,
@@ -68,6 +71,8 @@ void VisualLanguageModelLegacyServable::logPerfMetrics(ov::genai::VLMPerfMetrics
         llmTtftMs,
         ttftMs,
         prefillSpeedTps,
+        perfMetrics.get_tpot().mean,
+        perfMetrics.get_throughput().mean,
         perfMetrics.get_total_image_slice_count());
 }
 
@@ -130,6 +135,58 @@ absl::Status VisualLanguageModelLegacyServable::parseRequest(std::shared_ptr<Gen
         return inputRequestResult.status();
     }
     legacyExecutionContext->inputRequest = std::move(*inputRequestResult);
+
+    if (!properties->loraAdapters.empty()) {
+        std::unordered_map<std::string, double> requestedWeights;
+        const auto& doc = *legacyExecutionContext->payload.parsedJson;
+        auto it = doc.FindMember("lora_adapters");
+        if (it != doc.MemberEnd()) {
+            if (!it->value.IsObject()) {
+                return absl::InvalidArgumentError("lora_adapters must be an object mapping adapter alias to weight");
+            }
+            for (const auto& member : it->value.GetObject()) {
+                // Keep the full length so an alias with an embedded NUL is not truncated to a registered one.
+                const std::string alias(member.name.GetString(), member.name.GetStringLength());
+                if (properties->loraAdapters.find(alias) == properties->loraAdapters.end()) {
+                    return absl::InvalidArgumentError("Unknown LoRA adapter alias: " + alias);
+                }
+                if (!member.value.IsNumber()) {
+                    return absl::InvalidArgumentError("LoRA weight must be a number for adapter: " + alias);
+                }
+                const double weight = member.value.GetDouble();
+                if (!std::isfinite(weight)) {
+                    return absl::InvalidArgumentError("LoRA weight must be a finite number for adapter: " + alias);
+                }
+                requestedWeights[alias] = weight;
+            }
+        }
+        // Pass every registered adapter in registration order, with weight 0 for the unselected ones (the base model
+        // when none is selected). Switching then only updates alphas, and no LoRA layer gets a rank-0 state: on GPU,
+        // rank-0 states on attention q/k/v/o projections made outputs nondeterministic.
+        ov::genai::AdapterConfig requestAdapters;
+        for (const auto& alias : properties->loraAdapterOrder) {
+            const auto& entry = properties->loraAdapters.at(alias);
+            auto weight = requestedWeights.find(alias);
+            const double alpha = weight == requestedWeights.end() ? 0.0 : weight->second * entry.scale;
+            if (!std::isfinite(alpha) || std::fabs(alpha) > std::numeric_limits<float>::max()) {
+                return absl::InvalidArgumentError("LoRA weight multiplied by the adapter scale is out of float range for adapter: " + alias);
+            }
+            requestAdapters.add(entry.adapter, static_cast<float>(alpha));
+        }
+        legacyExecutionContext->loraAdapters = std::move(requestAdapters);
+    }
+    return absl::OkStatus();
+}
+
+absl::Status VisualLanguageModelLegacyServable::prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
+    auto status = GenAiServable::prepareInputs(executionContext);
+    if (!status.ok()) {
+        return status;
+    }
+    auto legacyExecutionContext = std::static_pointer_cast<VisualLanguageModelLegacyServableExecutionContext>(executionContext);
+    if (legacyExecutionContext->loraAdapters.has_value()) {
+        legacyExecutionContext->inputRequest.generationConfig.adapters = legacyExecutionContext->loraAdapters;
+    }
     return absl::OkStatus();
 }
 

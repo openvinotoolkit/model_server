@@ -190,6 +190,9 @@ public:
                 }
 
                 // Creates internal API handler in executionContext with data from the payload and parses the request
+                status = servable->validateLoraAdaptersSupport(*executionContext);
+                if (status != absl::OkStatus())
+                    return handlePreSchedulingError(cc, std::move(status));
                 status = servable->parseRequest(executionContext);
                 if (status != absl::OkStatus())
                     return handlePreSchedulingError(cc, std::move(status));

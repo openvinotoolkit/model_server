@@ -269,6 +269,12 @@ public:
         return absl::OkStatus();
     }
 
+    // Servables that apply per-request LoRA adapters return true.
+    virtual bool supportsLoraAdapters() const { return false; }
+
+    // Rejects "lora_adapters" in requests to servables that cannot apply them, instead of silently ignoring the field.
+    absl::Status validateLoraAdaptersSupport(const GenAiServableExecutionContext& executionContext) const;
+
     // Creates execution context for the request
     virtual std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() = 0;
 

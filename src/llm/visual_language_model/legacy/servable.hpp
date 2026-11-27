@@ -16,7 +16,9 @@
 #pragma once
 #include <future>
 #include <memory>
+#include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include <openvino/genai/visual_language/pipeline.hpp>
@@ -32,6 +34,8 @@ struct VisualLanguageModelLegacyServableExecutionContext : public LegacyServable
     // readySignal, finished, success are inherited from LegacyServableExecutionContextBase
     // Workaround needed to pass generation config to the executor that requires it
     ov::genai::GenerationConfig baseGenerationConfig;
+    // Parsed in parseRequest(). prepareInputs() rebuilds generationConfig, so it is applied after that.
+    std::optional<ov::genai::AdapterConfig> loraAdapters;
 
     // Disconnection handling
     std::atomic<bool> clientDisconnected{false};
@@ -53,15 +57,23 @@ struct VisualLanguageModelLegacyServableExecutionContext : public LegacyServable
     }
 };
 
+struct LoraAdapterEntry {
+    ov::genai::Adapter adapter;
+    // PEFT scale (lora_alpha / r) applied to request weights, or 1.0 when lora_scale_from_config is false.
+    float scale = 1.0f;
+};
+
 struct VisualLanguageModelLegacyServableProperties : public GenAiServableProperties {
     ov::genai::SchedulerConfig schedulerConfig;
     std::shared_ptr<ov::genai::VLMPipeline> pipeline;
     std::shared_ptr<VisualLanguageModelLegacyExecutorWrapper> legacyExecutor;
+    std::unordered_map<std::string, LoraAdapterEntry> loraAdapters;
+    // Aliases in registration order. Requests pass adapters in this order so GenAI only updates alphas on a switch.
+    std::vector<std::string> loraAdapterOrder;
 };
 
 class VisualLanguageModelLegacyServable : public LegacyServableBase {
     std::shared_ptr<VisualLanguageModelLegacyServableProperties> properties;
-    void logPerfMetrics(ov::genai::VLMPerfMetrics& perfMetrics);
 
 protected:
     void initializeTextStreamer(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
@@ -73,11 +85,16 @@ public:
         properties->inputProcessorContext.config.visionInputConfig = VisionInputConfig{};
     }
 
+    // Called by the executor after generate(), so unary and streaming requests are both logged.
+    static void logPerfMetrics(ov::genai::VLMPerfMetrics& perfMetrics);
+
     // Interface methods
+    bool supportsLoraAdapters() const override { return !properties->loraAdapters.empty(); }
     absl::Status validateEndpoint(Endpoint endpoint) const override;
     std::shared_ptr<GenAiServableExecutionContext> createExecutionContext() override;
     std::shared_ptr<GenAiServableProperties> getProperties() override;
     absl::Status parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
+    absl::Status prepareInputs(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status scheduleExecution(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status readCompleteExecutionResults(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;
     absl::Status prepareCompleteResponse(std::shared_ptr<GenAiServableExecutionContext>& executionContext) override;

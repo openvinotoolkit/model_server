@@ -622,6 +622,10 @@ Status initializeGenAiServable(std::shared_ptr<GenAiServable>& servable, const :
         if (status != StatusCode::OK) {
             return status;
         }
+        if (nodeOptions.lora_adapters_size() > 0 && pipelineType != PipelineType::VLM) {
+            SPDLOG_LOGGER_ERROR(modelmanager_logger, "lora_adapters are supported only with pipeline_type: VLM. Set it explicitly; AUTO selects VLM_CB on GPU.");
+            return StatusCode::LLM_NODE_RESOURCE_STATE_INITIALIZATION_FAILED;
+        }
         if (pipelineType == PipelineType::LM_CB) {
             SPDLOG_LOGGER_INFO(modelmanager_logger, "Initializing Language Model Continuous Batching servable");
             ContinuousBatchingServableInitializer cbServableInitializer(std::move(createMetricReporter));

@@ -184,6 +184,15 @@ void GenAiServable::initializeTextStreamer(std::shared_ptr<GenAiServableExecutio
         streamerConfig);
 }
 
+absl::Status GenAiServable::validateLoraAdaptersSupport(const GenAiServableExecutionContext& executionContext) const {
+    const auto& request = executionContext.payload.parsedJson;
+    if (supportsLoraAdapters() || request == nullptr || !request->IsObject() || !request->HasMember("lora_adapters")) {
+        return absl::OkStatus();
+    }
+    return absl::InvalidArgumentError(
+        "lora_adapters is not supported by this model: it has no LoRA adapters configured or its pipeline_type is not VLM");
+}
+
 absl::Status GenAiServable::parseRequest(std::shared_ptr<GenAiServableExecutionContext>& executionContext) {
     try {
         if (executionContext->endpoint == Endpoint::RESPONSES) {
