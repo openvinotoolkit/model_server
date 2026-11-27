@@ -13,7 +13,7 @@
 # Options:
 #   --device DEVICE   Target device: CPU or GPU (default: automatic)
 #   --cache-dir DIR   Model cache directory (default: ${HOME}/ovms-openhands/models)
-#   --skip-wait       Skip health check and return immediately after deploy
+#   --skip-wait       Skip waiting for OVMS model health
 #
 # Example:
 #   ./scripts/deploy_model_ovms.sh OpenVINO/Qwen3-8b-int8-ov --device CPU
@@ -25,7 +25,6 @@
 #   TARGET_DEVICE     Override target device
 #   OVMS_REST_PORT    OVMS REST API published port (default: 8000)
 #   OPENHANDS_PORT    OpenHands Web UI published port (default: 3000)
-#   OPENHANDS_RUNTIME_IMAGE  Prebuilt sandbox runtime image
 
 set -euo pipefail
 
@@ -35,7 +34,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEMO_ROOT="$(dirname "$SCRIPT_DIR")"
 COMPOSE_TEMPLATE="${DEMO_ROOT}/docker-compose.template.yml"
 COMPOSE_FILE="${DEMO_ROOT}/docker-compose.yml"
-OPENHANDS_STATE_DIR="${DEMO_ROOT}/.openhands"
 DEFAULT_MODEL_CACHE_DIR="${HOME}/ovms-openhands/models"
 OVMS_CONTAINER_NAME="ovms-llm"
 
@@ -165,7 +163,6 @@ normalize_model_name() {
 export_runtime_configuration() {
     LOCAL_NAME="${LOCAL_NAME:-$(normalize_model_name "$MODEL_ID")}"
     OVMS_IMAGE="${OVMS_IMAGE:-openvino/model_server:weekly}"
-    OPENHANDS_RUNTIME_IMAGE="${OPENHANDS_RUNTIME_IMAGE:-ghcr.io/all-hands-ai/runtime:0.59-nikolaik}"
 
     GPU_ARGS=""
     if [[ "$TARGET_DEVICE" == "GPU" ]]; then
@@ -185,7 +182,7 @@ export_runtime_configuration() {
     # Every variable referenced in the template must be exported (even if empty)
     # so that envsubst replaces it cleanly instead of leaving a literal ${VAR}.
     export MODEL_ID LOCAL_NAME TARGET_DEVICE MODEL_CACHE_DIR
-    export OVMS_REST_PORT OPENHANDS_PORT OVMS_IMAGE OPENHANDS_RUNTIME_IMAGE GPU_ARGS HOST_UID HOST_GID
+    export OVMS_REST_PORT OPENHANDS_PORT OVMS_IMAGE GPU_ARGS HOST_UID HOST_GID
 
     # Token and proxy variables: default to empty so envsubst produces blank values
     # rather than leaving shell default expressions in the generated file.
@@ -196,8 +193,8 @@ export_runtime_configuration() {
     export HTTPS_PROXY="${HTTPS_PROXY:-}"
     export no_proxy="${no_proxy:-}"
     export NO_PROXY="${NO_PROXY:-}"
-    export OPENHANDS_NO_PROXY="${no_proxy:+${no_proxy},}ovms-llm,host.docker.internal"
-    export OPENHANDS_NO_PROXY_UPPER="${NO_PROXY:+${NO_PROXY},}ovms-llm,host.docker.internal"
+    export OPENHANDS_NO_PROXY="${no_proxy:+${no_proxy},}localhost,127.0.0.1,ovms-llm"
+    export OPENHANDS_NO_PROXY_UPPER="${NO_PROXY:+${NO_PROXY},}localhost,127.0.0.1,ovms-llm"
 
     echo "Runtime configuration:"
     echo "  MODEL_ID:       $MODEL_ID"
@@ -206,7 +203,6 @@ export_runtime_configuration() {
     echo "  MODEL_CACHE_DIR:$MODEL_CACHE_DIR"
     echo "  HF_TOKEN:       ${HF_TOKEN:+<set>}"
     echo "  OVMS_IMAGE:     $OVMS_IMAGE"
-    echo "  RUNTIME_IMAGE:  $OPENHANDS_RUNTIME_IMAGE"
     echo "  OVMS_REST_PORT: $OVMS_REST_PORT"
     echo "  OPENHANDS_PORT: $OPENHANDS_PORT"
 }
@@ -214,34 +210,40 @@ export_runtime_configuration() {
 # --- OpenHands Initial Settings ---
 
 initialize_openhands_settings() {
-    local settings_file="${OPENHANDS_STATE_DIR}/settings.json"
+    local container="${1:-openhands}"
+    local attempt
+    local ready=false
 
-    if [[ -f "$settings_file" ]]; then
-        echo "Keeping existing OpenHands settings: $settings_file"
-        return
+    echo "Waiting for OpenHands Agent Server..."
+    for attempt in $(seq 1 90); do
+        if docker exec "$container" sh -c 'curl --noproxy "*" -fsS http://127.0.0.1:18000/alive >/dev/null' 2>/dev/null; then
+            ready=true
+            break
+        fi
+        sleep 2
+    done
+    if [[ "$ready" != "true" ]]; then
+        echo "ERROR: OpenHands Agent Server did not become ready. Check: docker logs $container" >&2
+        return 1
     fi
 
-    if ! [[ "$LOCAL_NAME" =~ ^[A-Za-z0-9._-]+$ ]]; then
-        echo "ERROR: LOCAL_NAME contains unsupported characters: $LOCAL_NAME" >&2
-        exit 1
-    fi
-
-    cat > "$settings_file" <<EOF
-{
-  "language": "en",
-  "agent": "CodeActAgent",
-  "llm_model": "openai/${LOCAL_NAME}",
-  "llm_api_key": "unused",
-  "llm_base_url": "http://ovms-llm:8000/v3",
-  "security_analyzer": "llm",
-  "confirmation_mode": false,
-  "enable_default_condenser": true,
-  "user_consents_to_analytics": false,
-  "secrets_store": {"provider_tokens": {}}
-}
-EOF
-    chmod 600 "$settings_file"
-    echo "Preconfigured OpenHands settings: $settings_file"
+    docker exec "$container" sh -c '
+        set -eu
+        key=$(cat /home/openhands/.openhands/agent-canvas/api-key.txt)
+        api=http://127.0.0.1:18000/api/profiles
+        profiles=$(curl --noproxy "*" -fsS -H "X-Session-API-Key: $key" "$api")
+        count=$(printf "%s" "$profiles" | jq -er ".profiles | length")
+        if [ "$count" -ne 0 ]; then
+            echo "Keeping existing OpenHands LLM profiles."
+            exit 0
+        fi
+        body=$(jq -n --arg model "openai/$1" \
+            "{llm:{model:\$model,base_url:\"http://ovms-llm:8000/v3\",api_key:\"unused\",native_tool_calling:true,max_output_tokens:5000,temperature:0}}")
+        curl --noproxy "*" -fsS -o /dev/null -H "X-Session-API-Key: $key" \
+            -H "Content-Type: application/json" -d "$body" "$api/ovms"
+        curl --noproxy "*" -fsS -o /dev/null -X POST -H "X-Session-API-Key: $key" "$api/ovms/activate"
+        echo "Configured and activated the OVMS LLM profile."
+    ' sh "$LOCAL_NAME"
 }
 
 # --- Docker Compose Deployment ---
@@ -249,17 +251,12 @@ EOF
 deploy_ovms() {
     echo "Generating docker-compose.yml from template..."
     envsubst '$MODEL_ID $LOCAL_NAME $TARGET_DEVICE $MODEL_CACHE_DIR $HF_TOKEN
-        $OVMS_IMAGE $OPENHANDS_RUNTIME_IMAGE $GPU_ARGS $HOST_UID $HOST_GID $OVMS_REST_PORT $OPENHANDS_PORT
+        $OVMS_IMAGE $GPU_ARGS $HOST_UID $HOST_GID $OVMS_REST_PORT $OPENHANDS_PORT
         $http_proxy $https_proxy $HTTP_PROXY $HTTPS_PROXY $no_proxy $NO_PROXY
         $OPENHANDS_NO_PROXY $OPENHANDS_NO_PROXY_UPPER' \
         < "$COMPOSE_TEMPLATE" > "$COMPOSE_FILE"
     chmod 600 "$COMPOSE_FILE"
     echo "  Generated: $COMPOSE_FILE"
-
-    if ! docker image inspect "$OPENHANDS_RUNTIME_IMAGE" &>/dev/null; then
-        echo "Pulling OpenHands runtime image: $OPENHANDS_RUNTIME_IMAGE"
-        docker pull "$OPENHANDS_RUNTIME_IMAGE"
-    fi
 
     echo "Deploying OVMS and OpenHands via Docker Compose..."
     if [[ "$SKIP_WAIT" == "true" ]]; then
@@ -313,7 +310,7 @@ main() {
     validate_port_available "OVMS_REST_PORT" "$OVMS_REST_PORT" "ovms-llm"
     validate_port_available "OPENHANDS_PORT" "$OPENHANDS_PORT" "openhands"
 
-    mkdir -p "$MODEL_CACHE_DIR" "$OPENHANDS_STATE_DIR"
+    mkdir -p "$MODEL_CACHE_DIR"
 
     echo "Using model cache directory: $MODEL_CACHE_DIR"
 
@@ -326,8 +323,8 @@ main() {
     echo "Model cache ready: $MODEL_CACHE_DIR"
 
     export_runtime_configuration
-    initialize_openhands_settings
     deploy_ovms
+    initialize_openhands_settings
 
     if [[ "$SKIP_WAIT" == "false" ]]; then
         if ! wait_for_health; then
@@ -345,12 +342,12 @@ main() {
     echo ""
     echo "Services running:"
     echo "  - OVMS:        http://localhost:${OVMS_REST_PORT}/v3"
-    echo "  - OpenHands:   http://localhost:${OPENHANDS_PORT}"
+    echo "  - OpenHands:   http://localhost:${OPENHANDS_PORT}/canvas"
     echo ""
     echo "Next steps:"
     echo "  1. Verify OVMS: curl http://localhost:${OVMS_REST_PORT}/v3/models"
-    echo "  2. Open OpenHands: http://localhost:${OPENHANDS_PORT}"
-    echo "  3. Create an agent task to test the integration"
+    echo "  2. Open OpenHands: http://localhost:${OPENHANDS_PORT}/canvas"
+    echo "  3. Check the active LLM profile and create an agent task"
     echo ""
 }
 

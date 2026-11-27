@@ -15,7 +15,7 @@ Requirements:
 * [Docker Engine](https://docs.docker.com/engine/) and the Docker Compose v2 plugin
 * `envsubst` from the `gettext` package
 * 16 GB RAM or more, plus enough disk space for the model and container images
-* Access to `ghcr.io` to download the OpenHands application and runtime images
+* Access to `ghcr.io` to download the OpenHands Agent Canvas image
 * An Intel GPU supported by OpenVINO for the optional GPU deployment
 * A Hugging Face token in `HF_TOKEN` when the selected model requires authentication
 
@@ -55,7 +55,7 @@ OVMS_REST_PORT=8001 OPENHANDS_PORT=3001 \
   ./scripts/deploy_model_ovms.sh OpenVINO/Qwen3-8b-int8-ov --device CPU
 ```
 
-Use `--cache-dir` to change the model cache location and `--skip-wait` to return while OVMS downloads and loads the model. Run `./scripts/deploy_model_ovms.sh --help` for all options.
+Use `--cache-dir` to change the model cache location and `--skip-wait` to skip waiting for OVMS to download and load the model. The helper still waits for OpenHands to start so it can configure the LLM profile. Run `./scripts/deploy_model_ovms.sh --help` for all options.
 
 ## Step 2: Verify OVMS
 
@@ -81,15 +81,15 @@ The model name is the lowercase final component of the Hugging Face repository I
 
 ## Step 3: Start an OpenHands Task
 
-Open [http://localhost:3000](http://localhost:3000), or use the configured `OPENHANDS_PORT`. The helper preconfigures the first-run LLM settings in `.openhands/settings.json`, so the **AI Provider Configuration** window is skipped on a fresh deployment. Existing OpenHands settings are preserved when the helper is run again.
+Open [http://localhost:3000/canvas](http://localhost:3000/canvas), or use the configured `OPENHANDS_PORT`. OpenHands Agent Canvas 1.46.0 stores its settings and conversations in a Docker volume. Settings from the previous 0.59 demo are not imported, and the existing `.openhands` directory is left unchanged.
 
-To verify or change the connection later, open **Settings** > **LLM**. For the example model, the values are:
+On a fresh installation, the helper creates and activates an `ovms` LLM profile with native tool calling enabled. Select the OpenHands agent during first-time setup. Existing LLM profiles are preserved when the helper runs again; edit the active profile in **Settings** > **LLM** if you change the model. For the example model, the profile uses:
 
-* **Custom Model:** `openai/qwen3-8b-int8-ov`
+* **Model:** `openai/qwen3-8b-int8-ov`
 * **Base URL:** `http://ovms-llm:8000/v3`
 * **API Key:** `unused`
 
-![OpenHands LLM settings](./screenshots/LLM-settings.png)
+For another model, use the local model name printed by the helper. The backend must be able to reach the base URL; `localhost` inside the OpenHands container does not refer to OVMS.
 
 Create a task such as:
 
@@ -97,17 +97,13 @@ Create a task such as:
 Create a Python function that calculates the factorial of a number and run a test.
 ```
 
-OpenHands should create a sandbox, write the implementation, and execute the test. The deployment explicitly enables native OpenAI-compatible tool calling for the custom OVMS model. This ensures tools such as `str_replace_editor` receive all required structured arguments, including OpenHands' `security_risk` assessment. The helper also pins a prebuilt runtime image matching the OpenHands application version, so the first task starts a sandbox directly instead of building one with `apt-get`. The initial image pull can take several minutes. Host proxy settings are bypassed for `host.docker.internal`, which OpenHands uses to contact its runtime sandbox.
+OpenHands should write the implementation and execute the test inside the Agent Canvas container. Choose a model that supports tool calling. Conversations share the container environment; this deployment does not create a separate sandbox container for each conversation. Do not mount sensitive host directories into it.
 
-If the UI remains on **Building runtime**, recreate the failed conversation after confirming the current helper completed successfully. OpenHands does not recover an already failed runtime build in place. Diagnose container or image errors with:
+If the UI or backend does not start, inspect its logs:
 
 ```bash
 docker logs openhands
-docker ps -a --filter name=openhands-runtime
-docker images ghcr.io/all-hands-ai/runtime
 ```
-
-![OpenHands task UI](./screenshots/OpenHands-UI.png)
 
 > The OVMS base URL is an internal Docker network address. Use `http://localhost:8000/v3` only for clients running directly on the host.
 
