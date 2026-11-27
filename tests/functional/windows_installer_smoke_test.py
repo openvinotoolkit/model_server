@@ -46,6 +46,7 @@ COMPONENT_ARTIFACTS = {
         "openvino.dll",
         "openvino_genai.dll",
         "openvino_gguf_frontend.dll",
+        "openvino_ir_frontend.dll",
         "libovmspython.dll",
     ),
     "python_system": ("python\\pyovms.pyd",),
@@ -417,6 +418,8 @@ def level2_component_check(component: str, install_dir: Path) -> str:
 
     if component == "python_none":
         return start_and_check(install_dir)
+
+    return start_and_check(install_dir)
 
 
 def report_passed(path: Path) -> bool:

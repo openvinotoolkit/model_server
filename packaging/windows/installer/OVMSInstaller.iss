@@ -88,6 +88,7 @@ Source: "{#OvmsSourceDir}\openvino_c.dll"; DestDir: "{app}"; Components: core; F
 Source: "{#OvmsSourceDir}\openvino_genai.dll"; DestDir: "{app}"; Components: core; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\openvino_genai_c.dll"; DestDir: "{app}"; Components: core; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\openvino_gguf_frontend.dll"; DestDir: "{app}"; Components: core; Flags: ignoreversion
+Source: "{#OvmsSourceDir}\openvino_ir_frontend.dll"; DestDir: "{app}"; Components: core; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\openvino_tokenizers.dll"; DestDir: "{app}"; Components: core; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\openvino_auto_plugin.dll"; DestDir: "{app}"; Components: core; Flags: ignoreversion
 Source: "{#OvmsSourceDir}\openvino_auto_batch_plugin.dll"; DestDir: "{app}"; Components: core; Flags: ignoreversion
