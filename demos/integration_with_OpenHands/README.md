@@ -46,19 +46,20 @@ export LOCAL_NAME="$(basename "$MODEL_ID" | tr '[:upper:]' '[:lower:]' | tr ' ' 
 
 For gated models, set `HF_TOKEN` in your shell before starting Compose. The token is passed to the OVMS container; avoid putting it in the Compose file or shell history.
 
-For CPU inference:
+By default, OVMS selects a target device from those available inside its container. Start without passing GPU devices to the container:
 
 ```bash
 docker compose -f compose.yaml up -d
 ```
 
-For Intel GPU inference, grant the container access to the render device and use the GPU override:
+To make an Intel GPU available to OVMS, grant the container access to the render device and use the GPU override:
 
 ```bash
-export TARGET_DEVICE=GPU
-export RENDER_GID="$(stat -c '%g' /dev/dri/render* | head -n 1)"
+export GPU_DEVICE_GID="$(stat -c '%g' /dev/dri/render* | head -n 1)"
 docker compose -f compose.yaml -f compose.gpu.yaml up -d
 ```
+
+To select a device explicitly, export `TARGET_DEVICE` (for example, `CPU` or `GPU`) before starting Compose. Unset it to let OVMS choose automatically. The GPU override is still required for GPU access.
 
 The default published ports are `8000` for OVMS and `3000` for OpenHands. To change them, export `OVMS_REST_PORT` and `OPENHANDS_PORT` before starting Compose. `MODEL_CACHE_DIR` changes the cache location and `OVMS_IMAGE` overrides the default `openvino/model_server:weekly` image. OpenHands starts while OVMS downloads and loads the model.
 
