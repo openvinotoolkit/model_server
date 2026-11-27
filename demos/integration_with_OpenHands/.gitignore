@@ -9,6 +9,6 @@
 
 openvino-env/
 
-# Generated Docker Compose file (docker-compose.template.yml is the source)
+# Legacy generated Docker Compose file
 docker-compose.yml
 
