@@ -238,6 +238,21 @@ The alpha value controls how strongly the adapter influences generation (default
 >
 > **Important:** Alpha must be specified at only one level — either on the individual adapter OR on the composite components, not both. If both have non-default values, the server will reject the configuration with an error.
 
+**Example (Docker, CPU):**
+```bash
+mkdir -p ${HOME}/models
+
+docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
+  --user $(id -u):$(id -g) \
+  -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+  openvino/model_server:latest \
+    --rest_port 8000 \
+    --model_repository_path /models \
+    --task image_generation \
+    --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov \
+    --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,blend=@xray:0.5+@ukiyo:0.4"
+```
+
 **Example (Docker, GPU):**
 ```bash
 mkdir -p ${HOME}/models
