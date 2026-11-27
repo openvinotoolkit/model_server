@@ -22,16 +22,31 @@ if "%~1"=="" (
   exit /b 1
 )
 
-:: Create a link to preexported models on CI workers
+if /I "%~f1"=="C:\opt\llm_testing" (
+  echo Error: destination directory must not be c:\opt\llm_testing itself.
+  exit /b 1
+)
+
 IF /I EXIST c:\opt\llm_testing (
-  if exist "%~1" (
-    rmdir /S /Q "%~1"
+  set "LLM_CACHE_OK=1"
+  powershell -NoProfile -Command "try { [void](Resolve-Path -LiteralPath 'c:\opt\llm_testing' -ErrorAction Stop) } catch { exit 1 }"
+  if !errorlevel! neq 0 set "LLM_CACHE_OK=0"
+
+  if "!LLM_CACHE_OK!"=="1" (
+    if exist "%~1" (
+      rmdir /S /Q "%~1"
+      if !errorlevel! neq 0 exit /b !errorlevel!
+    )
+    mklink /d "%~1" c:\opt\llm_testing
     if !errorlevel! neq 0 exit /b !errorlevel!
+    echo Created link to existing in c:\opt\llm_testing. Skipping downloading models.
+    exit /b 0
+  ) else (
+    echo WARNING: c:\opt\llm_testing could not be resolved ^(likely a stale or looping reparse point^).
+    echo WARNING: Removing it and downloading models fresh instead of linking to a broken cache.
+    rmdir /S /Q c:\opt\llm_testing 2>nul
+    if exist "%~1" rmdir /S /Q "%~1" 2>nul
   )
-  mklink /d "%~1" c:\opt\llm_testing
-  if !errorlevel! neq 0 exit /b !errorlevel!
-  echo Created link to existing in c:\opt\llm_testing. Skipping downloading models.
-  exit /b 0
 )
 
 set "EMBEDDING_MODEL=OpenVINO/bge-base-en-v1.5-int8-ov"

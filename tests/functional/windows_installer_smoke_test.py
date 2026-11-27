@@ -92,6 +92,18 @@ def run(command: list[str], timeout: int = 900) -> subprocess.CompletedProcess:
                           text=True, encoding="utf-8", errors="replace", check=False, timeout=timeout)
 
 
+def resolve_llm_path() -> Path:
+    raw_path = Path(os.environ.get("TEST_LLM_PATH") or ROOT / "src" / "test" / "llm_testing")
+    try:
+        return raw_path.resolve()
+    except OSError as error:
+        raise RuntimeError(
+            f"could not resolve LLM fixture directory {raw_path}: {error}. This usually means "
+            "c:\\opt\\llm_testing is a stale or looping symlink on this machine/CI worker; "
+            "remove c:\\opt\\llm_testing and re-run windows_prepare_llm_models.bat to "
+            "re-download the models fresh.") from error
+
+
 def find_installer(path: Path) -> Path:
     installer = path.resolve()
     if not installer.is_file():
@@ -501,7 +513,7 @@ def localize_graph(graph_path: Path, model_dir: Path, device_field: str | None, 
 
 
 def embeddings_check(component: str, device: str, install_dir: Path) -> str:
-    llm_path = Path(os.environ.get("TEST_LLM_PATH") or ROOT / "src" / "test" / "llm_testing").resolve()
+    llm_path = resolve_llm_path()
     model_dir = llm_path / "OpenVINO" / "bge-base-en-v1.5-int8-ov"
     if not model_dir.is_dir():
         raise RuntimeError(f"embeddings model directory was not prepared: {model_dir}")
@@ -528,7 +540,7 @@ def embeddings_check(component: str, device: str, install_dir: Path) -> str:
 
 
 def espeak_check(install_dir: Path) -> str:
-    llm_path = Path(os.environ.get("TEST_LLM_PATH") or ROOT / "src" / "test" / "llm_testing").resolve()
+    llm_path = resolve_llm_path()
     model_dir = llm_path / "OpenVINO" / "Kokoro-82M-int8-ov"
     if not model_dir.is_dir():
         raise RuntimeError(f"TTS model directory was not prepared: {model_dir}")
@@ -719,7 +731,7 @@ def python_none_check(install_dir: Path) -> str:
 
 def level2_component_check(component: str, install_dir: Path) -> str:
     if component == "core":
-        llm_path = Path(os.environ.get("TEST_LLM_PATH") or ROOT / "src" / "test" / "llm_testing").resolve()
+        llm_path = resolve_llm_path()
         model_dir = llm_path / "mzeglars" / "dummy-cyclic-gpt2-ov"
         if not model_dir.is_dir():
             raise RuntimeError(f"base LLM model directory was not prepared: {model_dir}")
@@ -849,8 +861,11 @@ def main() -> int:
     # Model/fixture preparation is a mandatory part of standard testing, not an opt-in step:
     # the prepare scripts skip any model that is already present, so this is cheap once fixtures
     # have been downloaded (or linked from c:\opt\llm_testing on CI workers).
+    # Use .absolute() rather than .resolve(): this path may still be a broken/looping symlink
+    # left over from a previous run, and windows_prepare_llm_models.bat (invoked below) is
+    # responsible for detecting and self-healing that case before anything tries to follow it.
     prepare_script = ROOT / "tests" / "functional" / "windows_installer_prepare_models.ps1"
-    llm_dir = Path(os.environ.get("TEST_LLM_PATH") or ROOT / "src" / "test" / "llm_testing").resolve()
+    llm_dir = Path(os.environ.get("TEST_LLM_PATH") or ROOT / "src" / "test" / "llm_testing").absolute()
     result = run(["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass",
                   "-File", str(prepare_script), "-PrepareLLM", "-LLMDir", str(llm_dir)], timeout=3600)
     if result.returncode:
