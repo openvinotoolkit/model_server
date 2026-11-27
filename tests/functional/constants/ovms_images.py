@@ -35,15 +35,6 @@ from tests.functional.constants.target_device import TargetDevice
 from tests.functional.constants.ovms import CurrentOvmsType
 from tests.functional.constants.ovms import CurrentTarget as ct
 
-
-# should be checked periodically with OVMS Dockerfiles
-GPU_INSTALL_DRIVER_VERSION = {
-    "redhat": "25.18.33578",
-    "ubuntu22": "24.52.32224",
-    "ubuntu24": "26.31.39395",
-    "ubuntu26": "26.31.39395",
-}
-
 GPU_INSTALL_SCRIPTS = {
     OsType.Ubuntu22: ["install_ubuntu_gpu_drivers.sh", "install_va.sh"],
     OsType.Ubuntu24: ["install_ubuntu_gpu_drivers.sh", "install_va.sh"],
