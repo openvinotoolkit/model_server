@@ -223,7 +223,7 @@ Each individual adapter can optionally specify a default alpha weight by appendi
 
 The alpha value controls how strongly the adapter influences generation (default: `1.0`). Examples:
 
-```bash
+```text
 # Linux - adapter with alpha 0.6
 --source_loras="pokemon=/models/loras/pokemon.safetensors:0.6"
 
@@ -238,14 +238,48 @@ The alpha value controls how strongly the adapter influences generation (default
 >
 > **Important:** Alpha must be specified at only one level — either on the individual adapter OR on the composite components, not both. If both have non-default values, the server will reject the configuration with an error.
 
-**Example:**
+**Example (Docker, CPU):**
 ```bash
+mkdir -p ${HOME}/models
+
+docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
+  --user $(id -u):$(id -g) \
+  -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+  openvino/model_server:latest \
+    --rest_port 8000 \
+    --model_repository_path /models \
+    --task image_generation \
+    --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov \
+    --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,blend=@xray:0.5+@ukiyo:0.4"
+```
+
+**Example (Docker, GPU):**
+```bash
+mkdir -p ${HOME}/models
+
+docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
+  --user $(id -u):$(id -g) --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
+  -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+  openvino/model_server:latest-gpu \
+    --rest_port 8000 \
+    --model_repository_path /models \
+    --task image_generation \
+    --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov \
+    --target_device GPU \
+    --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,blend=@xray:0.5+@ukiyo:0.4"
+```
+
+**Example (bare metal):**
+```text
 ovms --rest_port 8000 \
   --model_repository_path /models/ \
   --task image_generation \
-  --source_model stabilityai/stable-diffusion-xl-base-1.0 \
-  --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors"
+  --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov \
+  --target_device GPU \
+  --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,blend=@xray:0.5+@ukiyo:0.4"
 ```
+
+The requests below use the adapters (`xray`, `ukiyo`) and the composite (`blend`) defined in this deployment.
 
 > **Important:** LoRA adapters must be compatible with the base model architecture. For example, SDXL adapters can only be used with an SDXL base model.
 
@@ -264,16 +298,16 @@ The `mix` adapter is a composite that blends `pokemon` at weight 0.7 and `anime`
 Adapter selection is driven by the `model` field in the request. When the `model` field matches a registered adapter alias, that adapter is automatically applied:
 
 ```bash
-curl http://localhost:8000/v3/images/generations \
+curl --fail -o xray_response.json http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
-  -d '{"model": "xray", "prompt": "xray a human hand", "num_inference_steps": 20}'
+  -d '{"model": "xray", "prompt": "xray a human hand", "num_inference_steps": 20, "size": "512x512"}'
 ```
 
 In this example, `xray` is the alias defined in `--source_loras` (e.g. `xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors`). The adapter is applied with its default weight.
 
 When the `model` field matches a **composite** adapter alias, all component adapters are activated with their pre-defined weights:
 
-```bash
+```text
 curl http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
   -d '{"model": "mix", "prompt": "a landscape"}'
@@ -300,7 +334,7 @@ The `lora_alphas` field in the request body allows overriding the default alpha 
 {
   "model": "mix",
   "prompt": "a landscape in mixed style",
-  "lora_alphas": {"ukiyo": 0.3, "vector": 0.8}
+  "lora_alphas": {"pokemon": 0.3, "anime": 0.8}
 }
 ```
 
@@ -309,14 +343,14 @@ The `lora_alphas` field in the request body allows overriding the default alpha 
 To blend multiple adapters simultaneously, define a **composite adapter** at startup:
 
 ```
---source_loras="xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e Art.safetensors,blend=@xray:0.5+@ukiyo:0.4"
+--source_loras="xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,blend=@xray:0.5+@ukiyo:0.4"
 ```
 
 Then use the composite alias in requests:
 ```bash
-curl http://localhost:8000/v3/images/generations \
+curl --fail -o blend_response.json http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
-  -d '{"model": "blend", "prompt": "a cat"}'
+  -d '{"model": "blend", "prompt": "a cat", "num_inference_steps": 20, "size": "512x512"}'
 ```
 
 You can override individual component alphas at request time via `lora_alphas`:

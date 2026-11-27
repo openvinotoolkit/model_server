@@ -183,7 +183,7 @@ To deploy an SDXL model (higher quality, 1024×1024 native resolution), use a di
 :sync: docker
 
 Start docker container:
-```bash
+```text
 mkdir -p ${HOME}/models
 
 docker run -d --rm -p 8000:8000 -v ${HOME}/models:/models:rw \
@@ -482,6 +482,47 @@ image = Image.open(BytesIO(image_data))
 image.save('inpaint_output.png')
 ```
 
+### Deploying on NPU for outpainting
+
+The outpainting examples below use 768x768 resolution. NPU supports only a single static resolution, so if you deployed on NPU with `--resolution 512x512`, restart the server with `--resolution 768x768` before sending outpainting requests.
+
+::::{tab-set}
+:::{tab-item} Docker (Linux)
+:sync: docker
+```bash
+docker stop $(docker ps -q --filter publish=8000)
+
+docker run -d --rm -p 8000:8000 \
+  -v ${HOME}/models:/models:rw \
+  --user $(id -u):$(id -g) --device /dev/accel --device /dev/dri --group-add=$(stat -c "%g" /dev/dri/render* | head -n 1) \
+  -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e no_proxy=$no_proxy \
+  openvino/model_server:latest-gpu \
+    --rest_port 8000 \
+    --model_repository_path /models \
+    --task image_generation \
+    --source_model OpenVINO/stable-diffusion-v1-5-int8-ov \
+    --target_device 'NPU NPU NPU' \
+    --resolution 768x768 \
+    --cache_dir /models/cache
+```
+:::
+
+:::{tab-item} Bare metal (Windows)
+:sync: bare-metal
+Stop the running `ovms` process first, then start:
+```bat
+ovms --rest_port 8000 ^
+  --model_repository_path c:\models ^
+  --task image_generation ^
+  --source_model OpenVINO/stable-diffusion-v1-5-int8-ov ^
+  --target_device "NPU NPU NPU" ^
+  --resolution 768x768 ^
+  --cache_dir C:/models/cache
+```
+:::
+
+::::
+
 ### Requesting outpainting with cURL
 
 Outpainting extends an image beyond its original borders. Prepare two images:
@@ -634,7 +675,7 @@ docker run -d --rm --user $(id -u):$(id -g) -p 8000:8000 -v $(pwd)/models:/model
     --task image_generation \
     --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov \
     --target_device GPU \
-    --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,thepoint=alvdansen/the-point@araminta_k_the_point.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors,chalk=Norod78/sdxl-chalkboarddrawing-lora@SDXL_ChalkBoardDrawing_LoRA_r8.safetensors"
+    --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,thepoint=alvdansen/the-point@araminta_k_the_point.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors,chalk=Norod78/sdxl-chalkboarddrawing-lora@SDXL_ChalkBoardDrawing_LoRA_r8.safetensors,blend=@xray:0.5+@ukiyo:0.4"
 ```
 :::
 
@@ -648,7 +689,7 @@ ovms --rest_port 8000 ^
   --task image_generation ^
   --source_model OpenVINO/stable-diffusion-xl-base-1.0-int8-ov ^
   --target_device GPU ^
-  --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,thepoint=alvdansen/the-point@araminta_k_the_point.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors,chalk=Norod78/sdxl-chalkboarddrawing-lora@SDXL_ChalkBoardDrawing_LoRA_r8.safetensors"
+  --source_loras "xray=DoctorDiffusion/doctor-diffusion-s-xray-xl-lora@DD-xray-v1.safetensors,thepoint=alvdansen/the-point@araminta_k_the_point.safetensors,ukiyo=KappaNeuro/ukiyo-e-art@Ukiyo-e%20Art.safetensors,vector=DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora@DD-vector-v2.safetensors,chalk=Norod78/sdxl-chalkboarddrawing-lora@SDXL_ChalkBoardDrawing_LoRA_r8.safetensors,blend=@xray:0.5+@ukiyo:0.4"
 ```
 :::
 
@@ -663,13 +704,14 @@ The registered adapters and their recommended use:
 | `ukiyo` | KappaNeuro/ukiyo-e-art | Ukiyo-e Japanese art | 1.0 | `an illustration of <subject> in Ukiyo-e Art style` |
 | `vector` | DoctorDiffusion/doctor-diffusion-s-controllable-vector-art-xl-lora | Vector art | 1.0 | `vector <subject>` |
 | `chalk` | Norod78/sdxl-chalkboarddrawing-lora | Chalkboard drawing | 1.0 | `A colorful chalkboard drawing of <subject>` |
+| `blend` | composite of `xray` and `ukiyo` | X-Ray + Ukiyo-e blend | xray 0.5, ukiyo 0.4 | `<subject>` |
 
 ### Generate Images with Different Styles
 
 Use the adapter alias as the `model` field to select which adapter to apply per request. The adapter is activated via **model name routing** — when the `model` field matches a registered LoRA alias, that adapter is automatically applied.
 
 **X-Ray style:**
-```bash
+```text
 curl http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
   -d '{
@@ -684,7 +726,7 @@ curl http://localhost:8000/v3/images/generations \
 ![xray_cat](./xray_cat.png)
 
 **Artistic illustration (The Point):**
-```bash
+```text
 curl http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
   -d '{
@@ -699,7 +741,7 @@ curl http://localhost:8000/v3/images/generations \
 ![thepoint_cat](./thepoint_cat.png)
 
 **Ukiyo-e Japanese art:**
-```bash
+```text
 curl http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
   -d '{
@@ -714,7 +756,7 @@ curl http://localhost:8000/v3/images/generations \
 ![ukiyo_cat](./ukiyo_cat.png)
 
 **Vector art:**
-```bash
+```text
 curl http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
   -d '{
@@ -729,7 +771,7 @@ curl http://localhost:8000/v3/images/generations \
 ![vector_cat](./vector_cat.png)
 
 **Chalkboard drawing:**
-```bash
+```text
 curl http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
   -d '{
@@ -744,7 +786,7 @@ curl http://localhost:8000/v3/images/generations \
 ![chalk_cat](./chalk_cat.png)
 
 Optionally override the adapter alpha using `lora_alphas`:
-```bash
+```text
 curl http://localhost:8000/v3/images/generations \
   -H "Content-Type: application/json" \
   -d '{
@@ -758,7 +800,7 @@ curl http://localhost:8000/v3/images/generations \
 ```
 ### Using OpenAI Python Client with LoRA
 
-```python
+```text
 from openai import OpenAI
 import base64
 from io import BytesIO
@@ -801,12 +843,22 @@ for style_name, style_config in styles.items():
 
 To blend multiple adapters, define a **composite adapter** at startup using the `@alias:alpha` syntax:
 
-```bash
+```text
 --source_loras="xray=...,ukiyo=...,blend=@xray:0.5+@ukiyo:0.4"
 ```
 
-Then use the composite alias as the model name:
-```python
+The server started in [Start Server with Multiple LoRA Adapters](#start-server-with-multiple-lora-adapters) already defines the `blend` composite. Use the composite alias as the model name:
+```text
+from openai import OpenAI
+import base64
+from io import BytesIO
+from PIL import Image
+
+client = OpenAI(
+    base_url="http://localhost:8000/v3",
+    api_key="unused"
+)
+
 response = client.images.generate(
     model="blend",  # activates both xray and ukiyo
     prompt="a cute cat in sunglasses",
@@ -816,10 +868,22 @@ response = client.images.generate(
         "size": "1024x1024",
     }
 )
+image = Image.open(BytesIO(base64.b64decode(response.data[0].b64_json)))
+image.save('blend_cat.png')
 ```
 
 You can override individual component alphas at request time:
-```python
+```text
+from openai import OpenAI
+import base64
+from io import BytesIO
+from PIL import Image
+
+client = OpenAI(
+    base_url="http://localhost:8000/v3",
+    api_key="unused"
+)
+
 response = client.images.generate(
     model="blend",
     prompt="a cute cat in sunglasses",
@@ -830,6 +894,8 @@ response = client.images.generate(
         "size": "1024x1024",
     }
 )
+image = Image.open(BytesIO(base64.b64decode(response.data[0].b64_json)))
+image.save('blend_cat_custom_alpha.png')
 ```
 
 > **Note:** For more details on LoRA adapter configuration, see the [Image Generation reference documentation](../../docs/image_generation/reference.md#lora-adapters).
