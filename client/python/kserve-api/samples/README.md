@@ -58,12 +58,12 @@ Start the server container with the image pulled in the previous step and mount 
 ```Bash
 docker run --rm -d -u $(id -u) -v ${HOME}/models:/models -p 9000:9000 -p 8000:8000 \
   openvino/model_server:latest \
-  --model_name resnet --model_path /models/resnet50.xml \
+  --model_name resnet --model_path /models/resnet50.xml --batch_size 1 \
   --mean "[123.675,116.28,103.53]" --scale "[58.395,57.12,57.375]" --layout "NHWC:NCHW" \
   --port 9000 --rest_port 8000
 ```
 
-> Note: The model default setting is to accept inputs in layout NCHW, but we change it to NHWC to make it work with samples using either regular, array-like input data or JPEG encoded images.
+> Note: The model default setting is to accept inputs in layout NCHW, but we change it to NHWC to make it work with samples using either regular, array-like input data or JPEG encoded images. The model has a dynamic batch dimension, so `--batch_size 1` is set to enable resizing JPEG images to the model resolution.
 
 Once you finish above steps, you are ready to run the samples.
 

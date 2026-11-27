@@ -42,6 +42,7 @@ GPU_INSTALL_SCRIPTS = {
     OsType.Redhat: ["install_redhat_gpu_drivers.sh"],
 }
 
+
 class OvmsImages:
     _os_type = None
     _os_version = None
