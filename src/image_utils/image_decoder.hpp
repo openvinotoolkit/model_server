@@ -40,7 +40,7 @@ Status decodeImage(std::string_view encoded, ov::Tensor& tensor, ImageDecoder de
 /// Return the runtime loader diagnostic, or an empty string when OpenCV decoding is available.
 const std::string& openCvImageDecoderUnavailableReason();
 
-/// Convert precision, then resize using a cached OpenVINO CPU preprocessing graph.
+/// Convert precision, then resize; uses the optional OpenCV plugin when loaded, otherwise a cached OpenVINO CPU graph.
 Status preprocessImage(const ov::Tensor& source, ov::Tensor& destination,
     const ov::element::Type& precision, size_t height, size_t width);
 
