@@ -1,0 +1,16 @@
+--- a/3rdparty/openjpeg/openjp2/j2k.c
++++ b/3rdparty/openjpeg/openjp2/j2k.c
+@@ -5082,6 +5082,13 @@
+ 
+         OPJ_UINT32 l_current_tile_part =
+             l_cstr_index->tile_index[p_j2k->m_current_tile_number].current_tpsno;
++        if (l_current_tile_part >=
++                l_cstr_index->tile_index[p_j2k->m_current_tile_number].current_nb_tps) {
++            opj_event_msg(p_manager, EVT_ERROR,
++                          "Tile-part index %u exceeds the number of indexed tile-parts\n",
++                          l_current_tile_part);
++            return OPJ_FALSE;
++        }
+         l_cstr_index->tile_index[p_j2k->m_current_tile_number].tp_index[l_current_tile_part].end_header
+             =
+                 l_current_pos;

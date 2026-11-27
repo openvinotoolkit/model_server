@@ -80,7 +80,11 @@ ovms_cc_test_library(
         "@stb//:image",
         "@com_google_googletest//:gtest",
     ],
-    data = ["//src:test/images/gray16.png"],
+    data = [
+        "//src:test/images/gray16.png",
+        "//src:test/images/openjpeg_tp_index_oob.j2k",
+        "//src:test/images/openjpeg_five_tile_parts.j2k",
+    ],
     visibility = ["//src:__pkg__"],
 )
 

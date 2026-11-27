@@ -94,6 +94,31 @@ TEST(ImageDecoder, StbPreserves16BitPng) {
     EXPECT_EQ(tensor.get_shape(), (ov::Shape{1, 11, 7, 1}));
 }
 
+std::string readTestImage(const std::string& name) {
+    std::ifstream input("src/test/images/" + name, std::ios::binary);
+    EXPECT_TRUE(input.good()) << name;
+    return std::string{std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
+}
+
+TEST(ImageDecoder, OpenCvRejectsJpeg2000WithTilePartIndexOutOfRange) {
+    ov::Tensor tensor;
+    const Status status = decodeImage(readTestImage("openjpeg_tp_index_oob.j2k"), tensor, ImageDecoder::OPENCV);
+    EXPECT_EQ(status.getCode(), StatusCode::IMAGE_PARSING_FAILED) << status.string();
+    EXPECT_FALSE(tensor);
+}
+
+TEST(ImageDecoder, OpenCvDecodesJpeg2000WithMultipleTileParts) {
+    ov::Tensor tensor;
+    const Status status = decodeImage(readTestImage("openjpeg_five_tile_parts.j2k"), tensor, ImageDecoder::OPENCV);
+    if (image_utils::openCvImageDecoderUnavailableReason().empty()) {
+        ASSERT_TRUE(status.ok()) << status.string();
+        EXPECT_EQ(tensor.get_shape().size(), 4);
+    } else {
+        EXPECT_EQ(status.getCode(), StatusCode::IMAGE_PARSING_FAILED);
+        EXPECT_NE(status.string().find("OpenCV"), std::string::npos);
+    }
+}
+
 TEST(ImageDecoder, MalformedImageIsNotASuccessfulFallback) {
     ov::Tensor tensor(ov::element::u8, {1, 1, 1, 3});
     const Status status = decodeImage("not an image", tensor);

@@ -24,6 +24,8 @@ load("//:common_settings.bzl",
 exports_files([
     "test/image_decoder_test.cpp",
     "test/images/gray16.png",
+    "test/images/openjpeg_tp_index_oob.j2k",
+    "test/images/openjpeg_five_tile_parts.j2k",
     "test/no_opencv_audit.c",
     "test/no_opencv_runtime_test.sh",
     "test/no_opencv_server_test.py",

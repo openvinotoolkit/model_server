@@ -62,6 +62,8 @@ mkdir -p "$work_dir/opencv_repo" "$work_dir/opencv_contrib_repo"
 curl -fLsS "https://github.com/opencv/opencv/archive/refs/tags/${opencv_branch}.tar.gz" | tar -xz --strip-components=1 -C "$work_dir/opencv_repo"
 curl -fLsS "https://github.com/opencv/opencv_contrib/archive/refs/tags/${opencv_branch}.tar.gz" | tar -xz --strip-components=1 -C "$work_dir/opencv_contrib_repo"
 cd $work_dir/opencv_repo
+# CVS-200752: OpenCV 4.14.0 bundles OpenJPEG 2.5.3, which has an unchecked tile-part index write in opj_j2k_read_sod
+git apply -p1 "$current_working_dir/openjpeg_read_sod_tp_index_bound.patch"
 mkdir -p $work_dir/opencv_repo/build
 cd $work_dir/opencv_repo/build
 cmake $(cat $current_working_dir/opencv_cmake_flags.txt) -DCMAKE_CXX_FLAGS="${SDL_OPS}" $work_dir/opencv_repo && \
