@@ -15,17 +15,16 @@
 #
 
 def _python_repository_impl(repository_ctx):
-    lib_path = "Python314"
     version = "python314"
     build_file_content = """
 cc_library(
     name = "python3-lib",
-    srcs = ["{lib_path}/{version}.dll"],
-    hdrs = glob(["{lib_path}/include/*.h"]),
-    includes = ["{lib_path}/include"],
+    srcs = ["{version}.dll"],
+    hdrs = glob(["include/*.h"]),
+    includes = ["include"],
     visibility = ["//visibility:public"]
 )"""
-    repository_ctx.file("BUILD", build_file_content.format(version=version, lib_path=lib_path))
+    repository_ctx.file("BUILD", build_file_content.format(version=version))
 
 python_repository = repository_rule(
     implementation = _python_repository_impl,

@@ -407,7 +407,7 @@ new_local_repository(
 
 new_local_repository(
     name = "python3_windows",
-    path = "C:\\opt\\",
+    path = "C:\\opt\\Python314",
     build_file = "@_python3-windows//:BUILD"
 )
 
