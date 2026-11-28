@@ -65,7 +65,7 @@ call .\.venv\Scripts\Activate.bat
 if !errorlevel! neq 0 exit /b !errorlevel!
 python -m pip install --upgrade pip
 if !errorlevel! neq 0 exit /b !errorlevel!
-pip install -U nncf sentence_transformers==5.3.0 sentencepiece requests protobuf==7.35.0 kokoro openvino-tokenizers
+pip install -U nncf sentence_transformers==5.3.0 sentencepiece requests protobuf==7.35.0 openvino-tokenizers
 if !errorlevel! neq 0 exit /b !errorlevel!
 
 if not exist "%~1" mkdir "%~1"
