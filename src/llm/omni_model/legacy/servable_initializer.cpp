@@ -17,8 +17,6 @@
 #include <string>
 
 #include <openvino/genai/omni/pipeline.hpp>
-#include <openvino/genai/omni/talker.hpp>
-#include <openvino/genai/visual_language/pipeline.hpp>
 #include <openvino/genai/tokenizer.hpp>
 #include <openvino/openvino.hpp>
 #include <spdlog/spdlog.h>
@@ -94,9 +92,8 @@ Status OmniModelLegacyServableInitializer::initialize(std::shared_ptr<GenAiServa
     }
 
     try {
-        auto vlm = std::make_shared<ov::genai::VLMPipeline>(parsedModelsPath, properties->device, properties->pluginConfig);
-        auto talker = std::make_shared<ov::genai::Talker>(parsedModelsPath, properties->device, properties->pluginConfig);
-        properties->pipeline = std::make_shared<ov::genai::OmniPipeline>(vlm, talker);
+        properties->pipeline = std::make_shared<ov::genai::OmniPipeline>(
+            parsedModelsPath, properties->device, properties->pluginConfig);
         properties->tokenizer = ov::genai::Tokenizer(parsedModelsPath);
     } catch (const std::exception& e) {
         SPDLOG_ERROR("Error during omni model node initialization for models_path: {} exception: {}", parsedModelsPath, e.what());
