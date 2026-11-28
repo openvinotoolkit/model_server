@@ -14,7 +14,7 @@ In the cohere client library specify the `base_url=http://server_name:port/v3`.
 ```
 curl http://localhost:8000/v3/rerank \
   -H "Content-Type: application/json" \
-  -d '{"model": "BAAI/bge-reranker-large", \
+  -d '{"model": "BAAI/bge-reranker-large",
   "query": "Hello", "documents":["Welcome","Farewell"]}'
 ```
 
